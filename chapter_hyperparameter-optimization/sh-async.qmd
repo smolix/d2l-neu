@@ -20,7 +20,7 @@ networks with more filters, which implies idle worker time due to stragglers.
 Moreover, the number of slots in a rung level is not always a multiple of the number
 of workers, in which case some workers may even sit idle for a full batch.
 
-Figure @synchronous-sh shows the scheduling of synchronous SH with $\eta=2$
+Figure @fig-synchronous-sh shows the scheduling of synchronous SH with $\eta=2$
 for four different trials with two workers. We start with evaluating Trial-0 and
 Trial-1 for one epoch and immediately continue with the next two trials once they
 are finished. We first have to wait until Trial-2 finishes, which takes
@@ -32,7 +32,7 @@ the best trial, Trial-0, remains which occupies only one worker. To avoid that
 Worker-1 idles during that time, most implementaitons of SH continue already with
 the next round, and start evaluating new trials (e.g Trial-4) on the first rung.
 
-![Synchronous successive halving with two workers.](../img/sync_sh.svg){#synchronous-sh}
+![Synchronous successive halving with two workers.](../img/sync_sh.svg){#fig-synchronous-sh}
 
 Asynchronous successive halving (ASHA) [@li-arxiv18] adapts SH to the asynchronous
 parallel scenario. The main idea of ASHA is to promote configurations to the next rung
@@ -47,7 +47,7 @@ reflect the distribution of metric values at this level better and better. If a
 worker is free, but no configuration can be promoted, we start a new configuration
 with $r = r_{\mathrm{min}}$, i.e the first rung level.
 
-@asha shows the scheduling of the same configurations for ASHA. Once Trial-1
+@fig-asha shows the scheduling of the same configurations for ASHA. Once Trial-1
 finishes, we collect the results of two trials (i.e Trial-0 and Trial-1) and
 immediately promote the better of them (Trial-0) to the next rung level. After Trial-0
 finishes on rung 1, there are too few trials there in order to support a further
@@ -62,7 +62,7 @@ rung 2. At the same time, Worker-1 continues with evaluating new trials (i.e.,
 Trial-5) on rung 0.
 
 
-![Asynchronous successive halving (ASHA) with two workers.](../img/asha.svg){#asha}
+![Asynchronous successive halving (ASHA) with two workers.](../img/asha.svg){#fig-asha}
 
 
 ```{python}

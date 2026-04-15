@@ -89,7 +89,7 @@ from mxnet.gluon import nn
 :::
 
 
-## Utilities {#oo-design-utilities}
+## Utilities {#sec-oo-design-utilities}
 
 We need a few utilities to simplify object-oriented programming in Jupyter notebooks. One of the challenges is that class definitions tend to be fairly long blocks of code. Notebook readability demands short code fragments, interspersed with explanations, a requirement incompatible with the style of programming common for Python libraries. The first
 utility function allows us to register functions as methods in a class *after* the class has been created. In fact, we can do so *even after* we have created instances of the class! It allows us to split the implementation of a class into multiple code blocks.
@@ -572,7 +572,7 @@ It provides convenient features for handling neural networks. For example, if we
 :::
 
 
-##  Data {#oo-design-data}
+##  Data {#sec-oo-design-data}
 
 The `DataModule` class is the base class for data. Quite frequently the `__init__` method is used to prepare the data. This includes downloading and preprocessing if needed. The `train_dataloader` returns the data loader for the training dataset. A data loader is a (Python) generator that yields a data batch each time it is used. This batch is then fed into the `training_step` method of `Module` to compute the loss. There is an optional `val_dataloader` to return the validation dataset loader. It behaves in the same manner, except that it yields data batches for the `validation_step` method in `Module`.
 
@@ -599,7 +599,7 @@ class DataModule(d2l.HyperParameters):
 ```
 
 
-## Training {#oo-design-training}
+## Training {#sec-oo-design-training}
 
 ::: {.panel-tabset group="framework"}
 

@@ -17,7 +17,7 @@ to the task of machine translation
 
 Here, the encoder RNN will take a variable-length sequence as input 
 and transform it into a fixed-shape hidden state.
-Later, in @sec-attention-and-transformers,
+Later, in @sec-chap-attention-and-transformers,
 we will introduce attention mechanisms, 
 which allow us to access encoded inputs
 without having to compress the entire input

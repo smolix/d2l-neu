@@ -645,11 +645,11 @@ A series of experiments on a range of animals using different stimuli
 cortex on said stimuli. By and large they found that lower levels respond to edges and related
 shapes. Later on, @Field.1987 illustrated this effect on natural
 images with, what can only be called, convolutional kernels.
-We reprint a key figure in @field-visual to illustrate the striking similarities.
+We reprint a key figure in @fig-field-visual to illustrate the striking similarities.
 
-![Figure and caption taken from @Field.1987: An example of coding with six different channels. (Left) Examples of the six types of sensor associated with each channel. (Right) Convolution of the image in (Middle) with the six sensors shown in (Left). The response of the individual sensors is determined by sampling these filtered images at a distance proportional to the size of the sensor (shown with dots). This diagram shows the response of only the even symmetric sensors.](../img/field-visual.png){#field-visual}
+![Figure and caption taken from @Field.1987: An example of coding with six different channels. (Left) Examples of the six types of sensor associated with each channel. (Right) Convolution of the image in (Middle) with the six sensors shown in (Left). The response of the individual sensors is determined by sampling these filtered images at a distance proportional to the size of the sensor (shown with dots). This diagram shows the response of only the even symmetric sensors.](../img/field-visual.png){#fig-field-visual}
 
-As it turns out, this relation even holds for the features computed by deeper layers of networks trained on image classification tasks, as demonstrated in, for example, @Kuzovkin.Vicente.Petton.ea.2018. Suffice it to say, convolutions have proven to be an incredibly powerful tool for computer vision, both in biology and in code. As such, it is not surprising (in hindsight) that they heralded the recent success in deep learning.
+As it turns out, this relation even holds for the features computed by deeper layers of networks trained on image classification tasks, as demonstrated in, for example, @Kuzovkin.Vicente.Petton.ea.2018 . Suffice it to say, convolutions have proven to be an incredibly powerful tool for computer vision, both in biology and in code. As such, it is not surprising (in hindsight) that they heralded the recent success in deep learning.
 
 ## Summary
 

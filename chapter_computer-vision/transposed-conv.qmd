@@ -282,7 +282,7 @@ tconv(conv(X)).shape == X.shape
 :::
 
 
-## Connection to Matrix Transposition {#subsec-connection-to-mat-transposition}
+## Connection to Matrix Transposition {#sec-connection-to-mat-transposition}
 
 The transposed convolution is named after
 the matrix transposition.
@@ -384,7 +384,7 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 
 ## Exercises
 
-1. In @subsec-connection-to-mat-transposition, the convolution input `X` and the transposed convolution output `Z` have the same shape. Do they have the same value? Why?
+1. In @sec-connection-to-mat-transposition, the convolution input `X` and the transposed convolution output `Z` have the same shape. Do they have the same value? Why?
 1. Is it efficient to use matrix multiplications to implement convolutions? Why?
 
 ::: {.panel-tabset group="framework"}

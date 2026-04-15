@@ -286,17 +286,23 @@ def main():
             dst_file.write_text(content, encoding='utf-8')
             generated += 1
 
-            if args.render:
+        if args.render:
+            qmd_files = sorted(fw_dir.rglob('*.qmd'))
+
+            def render_one(qmd):
                 try:
                     result = subprocess.run(
-                        ['quarto', 'render', str(dst_file), '--to', 'revealjs'],
-                        capture_output=True, text=True, timeout=30)
-                    if result.returncode == 0:
-                        rendered += 1
-                    else:
-                        print(f'    WARN: {dst_file.name}: {result.stderr.strip()[:80]}')
+                        ['quarto', 'render', str(qmd), '--to', 'revealjs'],
+                        capture_output=True, text=True, timeout=60)
+                    return result.returncode == 0
                 except subprocess.TimeoutExpired:
-                    print(f'    WARN: {dst_file.name}: timeout')
+                    return False
+
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=10) as pool:
+                results = list(pool.map(render_one, qmd_files))
+
+            rendered = sum(results)
 
         print(f'  Generated {generated} slide decks')
         if args.render:

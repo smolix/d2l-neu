@@ -1,4 +1,4 @@
-#  Preliminaries {#sec-preliminaries}
+#  Preliminaries {#sec-chap-preliminaries}
 
 To prepare for your dive into deep learning,
 you will need a few survival skills:

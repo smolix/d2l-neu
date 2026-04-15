@@ -84,9 +84,9 @@ npx.set_np()
 At a high level, LeNet (LeNet-5) consists of two parts:
 (i) a convolutional encoder consisting of two convolutional layers; and
 (ii) a dense block consisting of three fully connected layers.
-The architecture is summarized in @img-lenet.
+The architecture is summarized in @fig-lenet.
 
-![Data flow in LeNet. The input is a handwritten digit, the output is a probability over 10 possible outcomes.](../img/lenet.svg){#img-lenet}
+![Data flow in LeNet. The input is a handwritten digit, the output is a probability over 10 possible outcomes.](../img/lenet.svg){#fig-lenet}
 
 The basic units in each convolutional block
 are a convolutional layer, a sigmoid activation function,
@@ -279,7 +279,7 @@ $28 \times 28$ image through the network
 and printing the output shape at each layer,
 we can inspect the model to ensure
 that its operations line up with
-what we expect from @img-lenet-vert.
+what we expect from @fig-lenet-vert.
 
 ## TensorFlow
 
@@ -289,7 +289,7 @@ $28 \times 28$ image through the network
 and printing the output shape at each layer,
 we can inspect the model to ensure
 that its operations line up with
-what we expect from @img-lenet-vert.
+what we expect from @fig-lenet-vert.
 
 ## JAX
 
@@ -299,7 +299,7 @@ $28 \times 28$ image through the network
 and printing the output shape at each layer,
 we can inspect the model to ensure
 that its operations line up with
-what we expect from @img-lenet-vert.
+what we expect from @fig-lenet-vert.
 Flax provides `nn.tabulate`, a nifty method to summarise the layers and
 parameters in our network. Here we use the `bind` method to create a bounded model.
 The variables are now bound to the `d2l.Module` class, i.e., this bounded model
@@ -316,12 +316,12 @@ $28 \times 28$ image through the network
 and printing the output shape at each layer,
 we can inspect the model to ensure
 that its operations line up with
-what we expect from @img-lenet-vert.
+what we expect from @fig-lenet-vert.
 
 :::
 
 
-![Compressed notation for LeNet-5.](../img/lenet-vert.svg){#img-lenet-vert}
+![Compressed notation for LeNet-5.](../img/lenet-vert.svg){#fig-lenet-vert}
 
 
 ::: {.panel-tabset group="framework"}

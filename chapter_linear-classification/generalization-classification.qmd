@@ -1,4 +1,4 @@
-# Generalization in Classification {#sec-classification-generalization}
+# Generalization in Classification {#sec-chap-classification-generalization}
 
 
 So far, we have focused on how to tackle multiclass classification problems
@@ -67,7 +67,7 @@ that have generalized well
 on similar problems in the past,
 and certifying generalization *post hoc*
 through empirical evaluations.
-When we get to @sec-perceptrons,
+When we get to @sec-chap-perceptrons,
 we will revisit generalization
 and provide a light introduction
 to the vast scientific literature

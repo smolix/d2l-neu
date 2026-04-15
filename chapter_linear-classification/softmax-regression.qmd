@@ -177,7 +177,7 @@ drawn from a normal distribution.
 In other words, $\mathbf{y} = \mathbf{o} + \boldsymbol{\epsilon}$,
 where $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$.
 This is the so-called [probit model](https://en.wikipedia.org/wiki/Probit_model),
-first introduced by @Fechner.1860.
+first introduced by @Fechner.1860 .
 While appealing, it does not work quite as well
 nor lead to a particularly nice optimization problem,
 when compared to the softmax.

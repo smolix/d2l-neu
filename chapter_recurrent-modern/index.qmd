@@ -1,4 +1,4 @@
-# Modern Recurrent Neural Networks {#sec-modern-rnn}
+# Modern Recurrent Neural Networks {#sec-chap-modern-rnn}
 
 The previous chapter introduced the key ideas 
 behind recurrent neural networks (RNNs). 
@@ -10,7 +10,7 @@ In particular, the most popular designs
 feature mechanisms for mitigating the notorious
 numerical instability faced by RNNs,
 as typified by vanishing and exploding gradients.
-Recall that in @sec-rnn we dealt 
+Recall that in @sec-chap-rnn we dealt 
 with exploding gradients by applying a blunt
 gradient clipping heuristic. 
 Despite the efficacy of this hack,

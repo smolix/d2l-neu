@@ -74,9 +74,9 @@ npx.set_np()
 ## Padding
 
 As described above, one tricky issue when applying convolutional layers
-is that we tend to lose pixels on the perimeter of our image. Consider @img-conv-reuse that depicts the pixel utilization as a function of the convolution kernel size and the position within the image. The pixels in the corners are hardly used at all. 
+is that we tend to lose pixels on the perimeter of our image. Consider @fig-conv-reuse that depicts the pixel utilization as a function of the convolution kernel size and the position within the image. The pixels in the corners are hardly used at all. 
 
-![Pixel utilization for convolutions of size $1 \times 1$, $2 \times 2$, and $3 \times 3$ respectively.](../img/conv-reuse.svg){#img-conv-reuse}
+![Pixel utilization for convolutions of size $1 \times 1$, $2 \times 2$, and $3 \times 3$ respectively.](../img/conv-reuse.svg){#fig-conv-reuse}
 
 Since we typically use small kernels,
 for any given convolution
@@ -87,12 +87,12 @@ One straightforward solution to this problem
 is to add extra pixels of filler around the boundary of our input image,
 thus increasing the effective size of the image.
 Typically, we set the values of the extra pixels to zero.
-In @img-conv-pad, we pad a $3 \times 3$ input,
+In @fig-conv-pad, we pad a $3 \times 3$ input,
 increasing its size to $5 \times 5$.
 The corresponding output then increases to a $4 \times 4$ matrix.
 The shaded portions are the first output element as well as the input and kernel tensor elements used for the output computation: $0\times0+0\times1+0\times2+0\times3=0$.
 
-![Two-dimensional cross-correlation with padding.](../img/conv-pad.svg){#img-conv-pad}
+![Two-dimensional cross-correlation with padding.](../img/conv-pad.svg){#fig-conv-pad}
 
 In general, if we add a total of $p_\textrm{h}$ rows of padding
 (roughly half on top and half on bottom)
@@ -297,7 +297,7 @@ kernel is large since it captures a large area of the underlying image.
 We refer to the number of rows and columns traversed per slide as *stride*.
 So far, we have used strides of 1, both for height and width.
 Sometimes, we may want to use a larger stride.
-@img-conv-stride shows a two-dimensional cross-correlation operation
+@fig-conv-stride shows a two-dimensional cross-correlation operation
 with a stride of 3 vertically and 2 horizontally.
 The shaded portions are the output elements as well as the input and kernel tensor elements used for the output computation: $0\times0+0\times1+1\times2+2\times3=8$, $0\times0+6\times1+0\times2+0\times3=6$.
 We can see that when the second element of the first column is generated,
@@ -308,7 +308,7 @@ When the convolution window continues to slide two columns to the right on the i
 there is no output because the input element cannot fill the window
 (unless we add another column of padding).
 
-![Cross-correlation with strides of 3 and 2 for height and width, respectively.](../img/conv-stride.svg){#img-conv-stride}
+![Cross-correlation with strides of 3 and 2 for height and width, respectively.](../img/conv-stride.svg){#fig-conv-stride}
 
 In general, when the stride for the height is $s_\textrm{h}$
 and the stride for the width is $s_\textrm{w}$, the output shape is

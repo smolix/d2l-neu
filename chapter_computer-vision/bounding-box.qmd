@@ -1,7 +1,7 @@
 # Object Detection and Bounding Boxes {#sec-bbox}
 
 
-In earlier sections (e.g., @sec-alexnet--@sec-googlenet),
+In earlier sections (e.g., @sec-alexnet to @sec-googlenet),
 we introduced various models for image classification.
 In image classification tasks,
 we assume that there is only *one*

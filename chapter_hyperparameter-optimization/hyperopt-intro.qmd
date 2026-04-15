@@ -6,7 +6,7 @@ large number of parameters or weights that are learned during training. On
 top of these, every neural network has additional *hyperparameters* that need
 to be configured by the user. For example, to ensure that stochastic gradient
 descent converges to a local optimum of the training loss
-(see @sec-optimization), we have to adjust the learning rate and batch
+(see @sec-chap-optimization), we have to adjust the learning rate and batch
 size. To avoid overfitting on training datasets,
 we might have to set regularization parameters, such as weight decay
 (see @sec-weight-decay) or dropout (see @sec-dropout). We can

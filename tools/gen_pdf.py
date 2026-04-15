@@ -135,6 +135,11 @@ def emit_pdf_qmd(blocks, framework):
 
     output = '\n'.join(parts)
     output = re.sub(r'\n{4,}', '\n\n\n', output)
+
+    # Post-process table captions (same as HTML preprocessor)
+    from d2l_preprocess import postprocess_table_captions
+    output = postprocess_table_captions(output)
+
     return output
 
 

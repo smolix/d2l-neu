@@ -5,7 +5,7 @@ Training deep neural networks is difficult.
 Getting them to converge in a reasonable amount of time can be tricky.
 In this section, we describe *batch normalization*, a popular and effective technique
 that consistently accelerates the convergence of deep networks [@Ioffe.Szegedy.2015].
-Together with residual blocks---covered later in @sec-resnet---batch normalization
+Together with residual blocks---covered later in @sec-resnet --- batch normalization
 has made it possible for practitioners to routinely train networks with over 100 layers.
 A secondary (serendipitous) benefit of batch normalization lies in its inherent regularization.
 
@@ -787,7 +787,7 @@ Since `BatchNorm` layers need to calculate the batch statistics
 (mean and variance), Flax keeps track of the `batch_stats` dictionary, updating
 them with every minibatch. Collections like `batch_stats` can be stored in the
 `TrainState` object (in the `d2l.Trainer` class defined in
-@oo-design-training) as an attribute and during the model's forward pass,
+@sec-oo-design-training) as an attribute and during the model's forward pass,
 these should be passed to the `mutable` argument, so that Flax returns the mutated
 variables.
 

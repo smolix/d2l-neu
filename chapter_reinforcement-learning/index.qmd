@@ -1,4 +1,4 @@
-# Reinforcement Learning {#sec-reinforcement-learning}
+# Reinforcement Learning {#sec-chap-reinforcement-learning}
 
 
 **Pratik Chaudhari** (*University of Pennsylvania and Amazon*), **Rasool Fakoor** (*Amazon*), and **Kavosh Asadi** (*Amazon*)

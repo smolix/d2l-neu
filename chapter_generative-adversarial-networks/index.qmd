@@ -1,2 +1,2 @@
-# Generative Adversarial Networks {#sec-gans}
+# Generative Adversarial Networks {#sec-chap-gans}
 

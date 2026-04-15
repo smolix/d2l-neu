@@ -12,13 +12,13 @@ amount of compute required.
 In this section, we will show how the evaluation of hyperparameter configurations
 can be sped up. Methods such as random search allocate the same amount of
 resources (e.g., number of epochs, training data points) to each hyperparameter
-evaluation. @img-samples-lc depicts learning curves of a set of neural
+evaluation. @fig-samples-lc depicts learning curves of a set of neural
 networks trained with different hyperparameter configurations. After a few epochs we are
 already able to visually distinguish between well-performing and suboptimal
 configurations. However, the learning curves are noisy, and we might still require
 the full amount of 100 epochs to identify the best performing one.
 
-![Learning curves of random hyperparameter configurations](../img/samples_lc.svg){#img-samples-lc}
+![Learning curves of random hyperparameter configurations](../img/samples_lc.svg){#fig-samples-lc}
 
 Multi-fidelity hyperparameter optimization allocates more resources
 to promising configurations and stop evaluations of poorly performing ones early.

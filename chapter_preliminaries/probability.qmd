@@ -1100,7 +1100,7 @@ offering only a 1.41 times reduction.
 This is a persistent feature of machine learning:
 while there are often easy gains, it takes a very large amount of data,
 and often with it an enormous amount of computation, to make further gains.
-For an empirical review of this fact for large scale language models see @Revels.Lubin.Papamarkou.2016.
+For an empirical review of this fact for large scale language models see @Revels.Lubin.Papamarkou.2016 .
 
 We also sharpened our language and tools for statistical modeling.
 In the process of that we learned about conditional probabilities

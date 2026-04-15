@@ -167,20 +167,26 @@ def main():
 
         if args.convert:
             print(f'  Converting to .ipynb...')
-            nb_count = 0
-            for qmd in sorted(fw_dir.rglob('*.qmd')):
+            qmd_files = sorted(fw_dir.rglob('*.qmd'))
+
+            def convert_one(qmd):
                 try:
                     result = subprocess.run(
                         ['quarto', 'convert', str(qmd)],
                         capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
-                        nb_count += 1
-                        # Remove .qmd after conversion
                         qmd.unlink()
+                        return True
                     else:
-                        print(f'    WARN: {qmd.name}: {result.stderr.strip()[:80]}')
+                        return False
                 except subprocess.TimeoutExpired:
-                    print(f'    WARN: {qmd.name}: timeout')
+                    return False
+
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=10) as pool:
+                results = list(pool.map(convert_one, qmd_files))
+
+            nb_count = sum(results)
             print(f'  Produced {nb_count} .ipynb files')
 
     print(f'\nDone. Notebooks in {args.output}/')

@@ -504,7 +504,7 @@ with every epoch in the training loop, otherwise the generated dropout
 mask will not be stochastic and different between the epoch runs.
 This `dropout_rng` can be stored in the
 `TrainState` object (in the `d2l.Trainer` class defined in
-@oo-design-training) as an attribute and with every epoch
+@sec-oo-design-training) as an attribute and with every epoch
 it is replaced with a new `dropout_rng`. We already handled this with the
 `fit_epoch` method defined in @sec-linear-scratch.
 

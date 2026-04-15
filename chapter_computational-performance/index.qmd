@@ -1,4 +1,4 @@
-# Computational Performance {#sec-performance}
+# Computational Performance {#sec-chap-performance}
 
 In deep learning, 
 datasets and models are usually large,

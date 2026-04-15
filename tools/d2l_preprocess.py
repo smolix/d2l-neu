@@ -229,17 +229,36 @@ def convert_label_id(label):
     """
     prefix_map = [
         ('fig_',    'fig-'),
+        ('img_',    'fig-'),     # d2l uses img_ for some figures
         ('tab_',    'tbl-'),
+        ('table_',  'tbl-'),     # d2l uses table_ for some tables
         ('eq_',     'eq-'),
+        ('eqref_',  'eq-'),      # some d2l eqlabels have eqref_ prefix
         ('sec_',    'sec-'),
-        ('chap_',   'sec-'),
+        ('chap_',   'sec-chap-'),  # chapter labels get sec-chap- to avoid collisions
         ('subsec_', 'sec-'),
     ]
     for old, new in prefix_map:
         if label.startswith(old):
             rest = label[len(old):]
             return new + rest.replace('_', '-')
-    return label.replace('_', '-')
+    # No recognized prefix — use explicit mapping for known bare labels
+    bare_label = label.replace('_', '-')
+    return BARE_LABEL_MAP.get(bare_label, bare_label)
+
+
+# Known bare labels (no standard prefix in original d2l source)
+# mapped to their correct Quarto type prefix.
+BARE_LABEL_MAP = {
+    'asha': 'fig-asha',
+    'field-visual': 'fig-field-visual',
+    'distributed-scheduling': 'fig-distributed-scheduling',
+    'synchronous-sh': 'fig-synchronous-sh',
+    'oo-design-data': 'sec-oo-design-data',
+    'oo-design-training': 'sec-oo-design-training',
+    'oo-design-utilities': 'sec-oo-design-utilities',
+    'subsec-connection-to-mat-transposition': 'sec-connection-to-mat-transposition',
+}
 
 
 def translate_directives(text):
@@ -278,23 +297,36 @@ def translate_directives(text):
 
     # ── Display equation + label (same line) ──
     # $$...$$ :eqlabel:`eq_foo`  →  $$...$$ {#eq-foo}
+    # eqlabel ALWAYS produces eq- prefix regardless of the label's own prefix
+    def eqlabel_to_eq(label):
+        """Force eq- prefix for equation labels."""
+        converted = convert_label_id(label)
+        # Strip any non-eq prefix that convert_label_id might have added
+        for pfx in ('fig-', 'tbl-', 'sec-'):
+            if converted.startswith(pfx):
+                converted = 'eq-' + converted[len(pfx):]
+                break
+        if not converted.startswith('eq-'):
+            converted = 'eq-' + converted
+        return converted
+
     text = re.sub(
         r'(\$\$[^\n]*\$\$)\s*:eqlabel:`([^`]+)`',
-        lambda m: f'{m.group(1)} {{#{convert_label_id(m.group(2))}}}',
+        lambda m: f'{m.group(1)} {{#{eqlabel_to_eq(m.group(2))}}}',
         text)
 
     # ── Display equation + label (next line) ──
     # $$..$$\n:eqlabel:`eq_foo`  →  $$...$$ {#eq-foo}
     text = re.sub(
         r'(\$\$[^\n]*\$\$)\s*\n:eqlabel:`([^`]+)`',
-        lambda m: f'{m.group(1)} {{#{convert_label_id(m.group(2))}}}',
+        lambda m: f'{m.group(1)} {{#{eqlabel_to_eq(m.group(2))}}}',
         text, flags=re.MULTILINE)
 
     # ── Multi-line display equation labels ──
     # $$\n...\n$$\n:eqlabel:`eq_foo`
     text = re.sub(
         r'^(\$\$)\s*\n:eqlabel:`([^`]+)`',
-        lambda m: f'{m.group(1)} {{#{convert_label_id(m.group(2))}}}',
+        lambda m: f'{m.group(1)} {{#{eqlabel_to_eq(m.group(2))}}}',
         text, flags=re.MULTILINE)
 
     # ── Table caption + label ──
@@ -313,9 +345,10 @@ def translate_directives(text):
         text, flags=re.MULTILINE)
 
     # ── Inline equation references ──
+    # eqref always produces eq- prefix
     text = re.sub(
         r':eqref:`([^`]+)`',
-        lambda m: f'@{convert_label_id(m.group(1))}',
+        lambda m: f'@{eqlabel_to_eq(m.group(1))}',
         text)
 
     # ── Numbered cross-references (single or double backticks) ──
@@ -323,6 +356,16 @@ def translate_directives(text):
         r':numref:`{1,2}([^`]+)`{1,2}',
         lambda m: f'@{convert_label_id(m.group(1))}',
         text)
+
+    # ── Section range references ──
+    # @sec-foo--@sec-bar → @sec-foo to @sec-bar
+    text = re.sub(
+        r'@(sec-[a-zA-Z0-9-]+)--@(sec-[a-zA-Z0-9-]+)',
+        r'@\1 to @\2', text)
+    # @sec-foo---word → @sec-foo --- word (em-dash separated from ref)
+    text = re.sub(
+        r'@(sec-[a-zA-Z0-9-]+)---(\w)',
+        r'@\1 --- \2', text)
 
     # ── Named cross-references ──
     text = re.sub(
@@ -341,11 +384,17 @@ def translate_directives(text):
 
     # ── Citations (textual) ──
     # :citet:`Key.2023` → @Key.2023
+    # Ensure trailing sentence punctuation doesn't attach to the citation key
     def replace_citet(m):
         keys = [k.strip() for k in m.group(1).split(',')]
         return '; '.join(f'@{k}' for k in keys)
 
     text = re.sub(r':citet:`([^`]+)`', replace_citet, text)
+
+    # Fix citation keys with trailing sentence period: @Key.2023. → @Key.2023 .
+    # Pandoc would otherwise treat "Key.2023." as the citation key.
+    text = re.sub(r'(@[A-Z][A-Za-z.]+\.\d{4}[a-z]?)\.(\s)', r'\1 .\2', text)
+    text = re.sub(r'(@[A-Z][A-Za-z.]+\.\d{4}[a-z]?)\.\n', r'\1 .\n', text)
 
     # ── Slide/highlight markers ──
     # [**text**] and (**text**) → text (keep in book, strip wrappers)
@@ -472,7 +521,59 @@ def postprocess_table_captions(text):
         table = m.group(3).rstrip('\n')
         return f'{table}\n\n: {caption_attr}\n'
 
-    return pattern.sub(replace, text)
+    text = pattern.sub(replace, text)
+
+    # Fix bare {#tbl-*} on its own line (from standalone :label: conversion).
+    # Convert to Quarto table caption format: `: Caption {#tbl-*}`
+    # Use the PRECEDING :Caption line (d2l puts caption before the table).
+    # Search backwards for d2l-style `:Caption.` line before each table.
+    lines = text.split('\n')
+    # First pass: find all bare {#tbl-*} lines and the caption that precedes their table
+    tbl_labels = {}  # line_index → label
+    for i, l in enumerate(lines):
+        m = re.match(r'^\{#(tbl-[a-zA-Z0-9-]+)\}$', l.strip())
+        if m:
+            tbl_labels[i] = m.group(1)
+
+    # For each table label, find the d2l-style :Caption line before the table
+    for label_line, label in sorted(tbl_labels.items(), reverse=True):
+        # Search backwards for the start of the table (first | line)
+        table_start = label_line
+        for j in range(label_line - 1, -1, -1):
+            if lines[j].startswith('|'):
+                table_start = j
+            elif lines[j].strip() == '':
+                continue
+            else:
+                break
+        # Search backwards from table_start for :Caption line
+        caption = ''
+        caption_line = None
+        for j in range(table_start - 1, max(table_start - 5, -1), -1):
+            if j < 0:
+                break
+            cl = lines[j].strip()
+            if cl.startswith(':') and not cl.startswith(':label') and not cl.startswith(':::') and len(cl) > 2:
+                caption = cl[1:].strip().rstrip('.')
+                caption_line = j
+                break
+            elif cl == '':
+                continue
+            else:
+                break
+
+        if not caption:
+            caption = label.replace('tbl-', '').replace('-', ' ').title()
+
+        # Replace the {#tbl-*} line with `: Caption {#tbl-*}`
+        lines[label_line] = f'\n: {caption} {{#{label}}}\n'
+        # Remove the d2l :Caption line if we found one
+        if caption_line is not None:
+            lines[caption_line] = ''
+
+    text = '\n'.join(lines)
+
+    return text
 
 # ──────────────────────────────────────────────────────────
 # Output generation

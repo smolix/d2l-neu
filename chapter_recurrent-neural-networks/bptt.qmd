@@ -196,7 +196,7 @@ terminates at that time step $t$.
 This leads to a weighted sum of sequences of varying lengths,
 where long sequences are rare but appropriately overweighted. 
 This idea was proposed by 
-@Tallec.Ollivier.2017.
+@Tallec.Ollivier.2017 .
 
 ### Comparing Strategies
 

@@ -1,6 +1,6 @@
 # Single Shot Multibox Detection {#sec-ssd}
 
-In @sec-bbox--@sec-object-detection-dataset,
+In @sec-bbox to @sec-object-detection-dataset,
 we introduced bounding boxes, anchor boxes,
 multiscale object detection, and the dataset for object detection.
 Now we are ready to use such background

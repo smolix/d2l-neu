@@ -451,7 +451,7 @@ the advantages of the high-level API will grow considerably.
 Now that we have all the basic pieces in place,
 the training loop itself is the same
 as the one we implemented from scratch.
-So we just call the `fit` method (introduced in @oo-design-training),
+So we just call the `fit` method (introduced in @sec-oo-design-training),
 which relies on the implementation of the `fit_epoch` method
 in @sec-linear-scratch,
 to train our model.

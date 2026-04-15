@@ -16,7 +16,7 @@ to require a more elaborate solution.
 One of the first and most successful techniques 
 for addressing vanishing gradients 
 came in the form of the long short-term memory (LSTM) model 
-due to @Hochreiter.Schmidhuber.1997. 
+due to @Hochreiter.Schmidhuber.1997 . 
 LSTMs resemble standard recurrent neural networks 
 but here each ordinary recurrent node
 is replaced by a *memory cell*.

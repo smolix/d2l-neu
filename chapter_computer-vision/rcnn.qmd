@@ -309,7 +309,7 @@ in subsequent sections of this chapter.
 ## Exercises
 
 1. Can we frame object detection as a single regression problem, such as predicting bounding boxes and class probabilities? You may refer to the design of the YOLO model [@Redmon.Divvala.Girshick.ea.2016].
-1. Compare single shot multibox detection with the methods introduced in this section. What are their major differences? You may refer to Figure 2 of @Zhao.Zheng.Xu.ea.2019.
+1. Compare single shot multibox detection with the methods introduced in this section. What are their major differences? You may refer to Figure 2 of @Zhao.Zheng.Xu.ea.2019 .
 
 ::: {.panel-tabset group="framework"}
 

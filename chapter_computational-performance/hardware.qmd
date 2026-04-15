@@ -137,9 +137,9 @@ On one end we have WiFi that has a pretty good range, is very easy to use (no wi
 
 ## More Latency Numbers
 
-The summary in @table-latency-numbers and @table-latency-numbers-tesla are from [Eliot Eshelman](https://gist.github.com/eshelman) who maintains an updated version of the numbers as a [GitHub gist](https://gist.github.com/eshelman/343a1c46cb3fba142c1afdcdeec17646).
+The summary in @tbl-latency-numbers and @tbl-latency-numbers-tesla are from [Eliot Eshelman](https://gist.github.com/eshelman) who maintains an updated version of the numbers as a [GitHub gist](https://gist.github.com/eshelman/343a1c46cb3fba142c1afdcdeec17646).
 
-:Common Latency Numbers.
+
 
 | Action | Time | Notes |
 | :----------------------------------------- | -----: | :---------------------------------------------- |
@@ -174,8 +174,10 @@ The summary in @table-latency-numbers and @table-latency-numbers-tesla are from 
 | Read 1MB sequentially from disk            |   5 ms | ~200MB/s server HDD                           |
 | Random Disk Access (seek+rotation)         |  10 ms |                                                 |
 | Send packet CA->Netherlands->CA            | 150 ms |                                                 |
-{#table-latency-numbers}
-:Latency Numbers for NVIDIA Tesla GPUs.
+
+: Common Latency Numbers {#tbl-latency-numbers}
+
+
 
 | Action | Time | Notes |
 | :------------------------------ | -----: | :---------------------------------------- |
@@ -184,7 +186,9 @@ The summary in @table-latency-numbers and @table-latency-numbers-tesla are from 
 | Launch CUDA kernel on GPU       |  10 μs | Host CPU instructs GPU to start kernel    |
 | Transfer 1MB to/from NVLink GPU |  30 μs | ~33GB/s on NVIDIA 40GB NVLink           |
 | Transfer 1MB to/from PCI-E GPU  |  80 μs | ~12GB/s on PCI-Express x16 link         |
-{#table-latency-numbers-tesla}
+
+: Latency Numbers for NVIDIA Tesla GPUs {#tbl-latency-numbers-tesla}
+
 ## Summary
 
 * Devices have overheads for operations. Hence it is important to aim for a small number of large transfers rather than many small ones. This applies to RAM, SSDs, networks and GPUs.

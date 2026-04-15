@@ -197,7 +197,7 @@ when we add a vector and a scalar,
 the scalar is added to each component of the vector.
 The resulting `forward` method 
 is registered in the `LinearRegressionScratch` class
-via `add_to_class` (introduced in @oo-design-utilities).
+via `add_to_class` (introduced in @sec-oo-design-utilities).
 
 
 ```{python}
@@ -301,7 +301,7 @@ For now, we can ignore this dependency.
 ## PyTorch
 
 We define our `SGD` class,
-a subclass of `d2l.HyperParameters` (introduced in @oo-design-utilities),
+a subclass of `d2l.HyperParameters` (introduced in @sec-oo-design-utilities),
 to have a similar API 
 as the built-in SGD optimizer.
 We update the parameters in the `step` method.
@@ -311,7 +311,7 @@ which must be run before a backpropagation step.
 ## TensorFlow
 
 We define our `SGD` class,
-a subclass of `d2l.HyperParameters` (introduced in @oo-design-utilities),
+a subclass of `d2l.HyperParameters` (introduced in @sec-oo-design-utilities),
 to have a similar API
 as the built-in SGD optimizer.
 We update the parameters in the `apply_gradients` method.
@@ -320,7 +320,7 @@ It accepts a list of parameter and gradient pairs.
 ## MXNet
 
 We define our `SGD` class, 
-a subclass of `d2l.HyperParameters` (introduced in @oo-design-utilities),
+a subclass of `d2l.HyperParameters` (introduced in @sec-oo-design-utilities),
 to have a similar API
 as the built-in SGD optimizer.
 We update the parameters in the `step` method.
@@ -479,7 +479,7 @@ once in each epoch to measure the model performance.
 Following our object-oriented design,
 the `prepare_batch` and `fit_epoch` methods
 are registered in the `d2l.Trainer` class
-(introduced in @oo-design-training).
+(introduced in @sec-oo-design-training).
 
 
 ```{python}

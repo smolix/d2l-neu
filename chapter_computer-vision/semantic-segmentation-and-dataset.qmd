@@ -1,7 +1,7 @@
 # Semantic Segmentation and the Dataset {#sec-semantic-segmentation}
 
 When discussing object detection tasks
-in @sec-bbox--@sec-rcnn,
+in @sec-bbox to @sec-rcnn,
 rectangular bounding boxes
 are used to label and predict objects in images.
 This section will discuss the problem of *semantic segmentation*,
@@ -275,7 +275,7 @@ y[105:115, 130:140], VOC_CLASSES[1]
 ### Data Preprocessing
 
 In previous experiments
-such as in @sec-alexnet--@sec-googlenet,
+such as in @sec-alexnet to @sec-googlenet,
 images are rescaled
 to fit the model's required input shape.
 However, in semantic segmentation,

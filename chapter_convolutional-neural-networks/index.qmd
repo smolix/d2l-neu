@@ -1,4 +1,4 @@
-# Convolutional Neural Networks {#sec-cnn}
+# Convolutional Neural Networks {#sec-chap-cnn}
 
 Image data is represented as a two-dimensional grid of pixels, be the image
 monochromatic or in color. Accordingly each pixel corresponds to one

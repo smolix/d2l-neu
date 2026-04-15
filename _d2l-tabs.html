@@ -1,0 +1,104 @@
+<script>
+// D2L framework tab sync + visibility
+// Self-contained implementation that works on file:// URLs
+// (Quarto's built-in tabsets.js is an ES module which browsers block on file://)
+//
+// Features:
+// 1. Syncs tab selection across all panel-tabsets with group="framework"
+// 2. Hides tabsets that don't have the selected framework's tab
+// 3. Persists selection in localStorage
+
+(function() {
+  var GROUP = 'framework';
+  var STORAGE_KEY = 'quarto-persistent-tabsets-data';
+
+  function getStored() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch(e) { return {}; }
+  }
+
+  function setStored(name) {
+    try {
+      var data = getStored();
+      data[GROUP] = name;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  function syncTabs(selectedName) {
+    if (!selectedName) return;
+
+    document.querySelectorAll('.panel-tabset[data-group="' + GROUP + '"]').forEach(function(tabset) {
+      var navLinks = tabset.querySelectorAll('.nav-link');
+      var hasMatch = false;
+
+      navLinks.forEach(function(link) {
+        var panelId = link.getAttribute('aria-controls');
+        var panel = panelId ? document.getElementById(panelId) : null;
+
+        if (link.textContent.trim() === selectedName) {
+          hasMatch = true;
+          link.classList.add('active');
+          link.setAttribute('aria-selected', 'true');
+          if (panel) {
+            panel.classList.add('active');
+            panel.classList.add('show');
+          }
+        } else {
+          link.classList.remove('active');
+          link.setAttribute('aria-selected', 'false');
+          if (panel) {
+            panel.classList.remove('active');
+            panel.classList.remove('show');
+          }
+        }
+      });
+
+      // Hide entire tabset if it doesn't have the selected framework
+      tabset.style.display = hasMatch ? '' : 'none';
+      var prev = tabset.previousElementSibling;
+      if (prev && prev.classList.contains('tabset-margin-container')) {
+        prev.style.display = hasMatch ? '' : 'none';
+      }
+    });
+
+    setStored(selectedName);
+  }
+
+  function init() {
+    var tabsets = document.querySelectorAll('.panel-tabset[data-group="' + GROUP + '"]');
+    if (tabsets.length === 0) return;
+
+    // Register click handlers on all framework tab links
+    tabsets.forEach(function(tabset) {
+      tabset.querySelectorAll('.nav-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();  // prevent Bootstrap's default single-tabset handling
+          syncTabs(link.textContent.trim());
+        });
+      });
+    });
+
+    // Restore saved preference, or default to whatever is currently active
+    var stored = getStored();
+    var initial = stored[GROUP];
+    if (!initial) {
+      var firstActive = document.querySelector(
+        '.panel-tabset[data-group="' + GROUP + '"] .nav-link.active'
+      );
+      initial = firstActive ? firstActive.textContent.trim() : null;
+    }
+    if (initial) {
+      syncTabs(initial);
+    }
+  }
+
+  // Run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

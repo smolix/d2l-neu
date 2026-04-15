@@ -1,0 +1,38 @@
+# Build artifacts
+_book/
+_pdf/
+_notebooks/
+_slides/
+_freeze/
+
+# Quarto intermediates
+*.tex
+*.aux
+*.log
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+index_files/
+*_files/
+.quarto/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

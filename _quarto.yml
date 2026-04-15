@@ -1,0 +1,302 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "Dive into Deep Learning"
+  author:
+    - Aston Zhang
+    - Zachary C. Lipton
+    - Mu Li
+    - Alexander J. Smola
+  date: today
+  chapters:
+    - index.qmd
+    - chapter_preface/index.qmd
+    - chapter_installation/index.qmd
+    - chapter_notation/index.qmd
+    - part: "Fundamentals"
+      chapters:
+        - chapter_introduction/index.qmd
+    - part: "Preliminaries"
+      chapters:
+        - chapter_preliminaries/index.qmd
+        - chapter_preliminaries/ndarray.qmd
+        - chapter_preliminaries/pandas.qmd
+        - chapter_preliminaries/linear-algebra.qmd
+        - chapter_preliminaries/calculus.qmd
+        - chapter_preliminaries/autograd.qmd
+        - chapter_preliminaries/probability.qmd
+        - chapter_preliminaries/lookup-api.qmd
+    - part: "Linear Neural Networks"
+      chapters:
+        - chapter_linear-regression/index.qmd
+        - chapter_linear-regression/linear-regression.qmd
+        - chapter_linear-regression/oo-design.qmd
+        - chapter_linear-regression/synthetic-regression-data.qmd
+        - chapter_linear-regression/linear-regression-scratch.qmd
+        - chapter_linear-regression/linear-regression-concise.qmd
+        - chapter_linear-regression/generalization.qmd
+        - chapter_linear-regression/weight-decay.qmd
+        - chapter_linear-classification/index.qmd
+        - chapter_linear-classification/softmax-regression.qmd
+        - chapter_linear-classification/image-classification-dataset.qmd
+        - chapter_linear-classification/classification.qmd
+        - chapter_linear-classification/softmax-regression-scratch.qmd
+        - chapter_linear-classification/softmax-regression-concise.qmd
+        - chapter_linear-classification/generalization-classification.qmd
+        - chapter_linear-classification/environment-and-distribution-shift.qmd
+    - part: "Multilayer Perceptrons"
+      chapters:
+        - chapter_multilayer-perceptrons/index.qmd
+        - chapter_multilayer-perceptrons/mlp.qmd
+        - chapter_multilayer-perceptrons/mlp-implementation.qmd
+        - chapter_multilayer-perceptrons/backprop.qmd
+        - chapter_multilayer-perceptrons/numerical-stability-and-init.qmd
+        - chapter_multilayer-perceptrons/generalization-deep.qmd
+        - chapter_multilayer-perceptrons/dropout.qmd
+        - chapter_multilayer-perceptrons/kaggle-house-price.qmd
+    - part: "Deep Learning Computation"
+      chapters:
+        - chapter_builders-guide/index.qmd
+        - chapter_builders-guide/model-construction.qmd
+        - chapter_builders-guide/parameters.qmd
+        - chapter_builders-guide/init-param.qmd
+        - chapter_builders-guide/lazy-init.qmd
+        - chapter_builders-guide/custom-layer.qmd
+        - chapter_builders-guide/read-write.qmd
+        - chapter_builders-guide/use-gpu.qmd
+    - part: "Convolutional Neural Networks"
+      chapters:
+        - chapter_convolutional-neural-networks/index.qmd
+        - chapter_convolutional-neural-networks/why-conv.qmd
+        - chapter_convolutional-neural-networks/conv-layer.qmd
+        - chapter_convolutional-neural-networks/padding-and-strides.qmd
+        - chapter_convolutional-neural-networks/channels.qmd
+        - chapter_convolutional-neural-networks/pooling.qmd
+        - chapter_convolutional-neural-networks/lenet.qmd
+        - chapter_convolutional-modern/index.qmd
+        - chapter_convolutional-modern/alexnet.qmd
+        - chapter_convolutional-modern/vgg.qmd
+        - chapter_convolutional-modern/nin.qmd
+        - chapter_convolutional-modern/googlenet.qmd
+        - chapter_convolutional-modern/batch-norm.qmd
+        - chapter_convolutional-modern/resnet.qmd
+        - chapter_convolutional-modern/densenet.qmd
+        - chapter_convolutional-modern/cnn-design.qmd
+    - part: "Recurrent Neural Networks"
+      chapters:
+        - chapter_recurrent-neural-networks/index.qmd
+        - chapter_recurrent-neural-networks/sequence.qmd
+        - chapter_recurrent-neural-networks/text-sequence.qmd
+        - chapter_recurrent-neural-networks/language-model.qmd
+        - chapter_recurrent-neural-networks/rnn.qmd
+        - chapter_recurrent-neural-networks/rnn-scratch.qmd
+        - chapter_recurrent-neural-networks/rnn-concise.qmd
+        - chapter_recurrent-neural-networks/bptt.qmd
+        - chapter_recurrent-modern/index.qmd
+        - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/gru.qmd
+        - chapter_recurrent-modern/deep-rnn.qmd
+        - chapter_recurrent-modern/bi-rnn.qmd
+        - chapter_recurrent-modern/machine-translation-and-dataset.qmd
+        - chapter_recurrent-modern/encoder-decoder.qmd
+        - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/beam-search.qmd
+    - part: "Attention Mechanisms and Transformers"
+      chapters:
+        - chapter_attention-mechanisms-and-transformers/index.qmd
+        - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
+        - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
+        - chapter_attention-mechanisms-and-transformers/attention-scoring-functions.qmd
+        - chapter_attention-mechanisms-and-transformers/bahdanau-attention.qmd
+        - chapter_attention-mechanisms-and-transformers/multihead-attention.qmd
+        - chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.qmd
+        - chapter_attention-mechanisms-and-transformers/transformer.qmd
+        - chapter_attention-mechanisms-and-transformers/vision-transformer.qmd
+        - chapter_attention-mechanisms-and-transformers/large-pretraining-transformers.qmd
+    - part: "Optimization"
+      chapters:
+        - chapter_optimization/index.qmd
+        - chapter_optimization/optimization-intro.qmd
+        - chapter_optimization/convexity.qmd
+        - chapter_optimization/gd.qmd
+        - chapter_optimization/sgd.qmd
+        - chapter_optimization/minibatch-sgd.qmd
+        - chapter_optimization/momentum.qmd
+        - chapter_optimization/adagrad.qmd
+        - chapter_optimization/rmsprop.qmd
+        - chapter_optimization/adadelta.qmd
+        - chapter_optimization/adam.qmd
+        - chapter_optimization/lr-scheduler.qmd
+    - part: "Computational Performance"
+      chapters:
+        - chapter_computational-performance/index.qmd
+        - chapter_computational-performance/hybridize.qmd
+        - chapter_computational-performance/async-computation.qmd
+        - chapter_computational-performance/auto-parallelism.qmd
+        - chapter_computational-performance/hardware.qmd
+        - chapter_computational-performance/multiple-gpus.qmd
+        - chapter_computational-performance/multiple-gpus-concise.qmd
+        - chapter_computational-performance/parameterserver.qmd
+    - part: "Computer Vision"
+      chapters:
+        - chapter_computer-vision/index.qmd
+        - chapter_computer-vision/image-augmentation.qmd
+        - chapter_computer-vision/fine-tuning.qmd
+        - chapter_computer-vision/bounding-box.qmd
+        - chapter_computer-vision/anchor.qmd
+        - chapter_computer-vision/multiscale-object-detection.qmd
+        - chapter_computer-vision/object-detection-dataset.qmd
+        - chapter_computer-vision/ssd.qmd
+        - chapter_computer-vision/rcnn.qmd
+        - chapter_computer-vision/semantic-segmentation-and-dataset.qmd
+        - chapter_computer-vision/transposed-conv.qmd
+        - chapter_computer-vision/fcn.qmd
+        - chapter_computer-vision/neural-style.qmd
+        - chapter_computer-vision/kaggle-cifar10.qmd
+        - chapter_computer-vision/kaggle-dog.qmd
+    - part: "Natural Language Processing"
+      chapters:
+        - chapter_natural-language-processing-pretraining/index.qmd
+        - chapter_natural-language-processing-pretraining/word2vec.qmd
+        - chapter_natural-language-processing-pretraining/approx-training.qmd
+        - chapter_natural-language-processing-pretraining/word-embedding-dataset.qmd
+        - chapter_natural-language-processing-pretraining/word2vec-pretraining.qmd
+        - chapter_natural-language-processing-pretraining/glove.qmd
+        - chapter_natural-language-processing-pretraining/subword-embedding.qmd
+        - chapter_natural-language-processing-pretraining/similarity-analogy.qmd
+        - chapter_natural-language-processing-pretraining/bert.qmd
+        - chapter_natural-language-processing-pretraining/bert-dataset.qmd
+        - chapter_natural-language-processing-pretraining/bert-pretraining.qmd
+        - chapter_natural-language-processing-applications/index.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-rnn.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-cnn.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-and-dataset.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
+        - chapter_natural-language-processing-applications/finetuning-bert.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
+    - part: "Advanced Topics"
+      chapters:
+        - chapter_reinforcement-learning/index.qmd
+        - chapter_reinforcement-learning/mdp.qmd
+        - chapter_reinforcement-learning/value-iter.qmd
+        - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_gaussian-processes/index.qmd
+        - chapter_gaussian-processes/gp-intro.qmd
+        - chapter_gaussian-processes/gp-priors.qmd
+        - chapter_gaussian-processes/gp-inference.qmd
+        - chapter_hyperparameter-optimization/index.qmd
+        - chapter_hyperparameter-optimization/hyperopt-intro.qmd
+        - chapter_hyperparameter-optimization/hyperopt-api.qmd
+        - chapter_hyperparameter-optimization/rs-async.qmd
+        - chapter_hyperparameter-optimization/sh-intro.qmd
+        - chapter_hyperparameter-optimization/sh-async.qmd
+        - chapter_generative-adversarial-networks/index.qmd
+        - chapter_generative-adversarial-networks/gan.qmd
+        - chapter_generative-adversarial-networks/dcgan.qmd
+        - chapter_recommender-systems/index.qmd
+        - chapter_recommender-systems/recsys-intro.qmd
+        - chapter_recommender-systems/movielens.qmd
+        - chapter_recommender-systems/mf.qmd
+        - chapter_recommender-systems/autorec.qmd
+        - chapter_recommender-systems/ranking.qmd
+        - chapter_recommender-systems/neumf.qmd
+        - chapter_recommender-systems/seqrec.qmd
+        - chapter_recommender-systems/ctr.qmd
+        - chapter_recommender-systems/fm.qmd
+        - chapter_recommender-systems/deepfm.qmd
+    - part: "Appendix"
+      chapters:
+        - chapter_appendix-mathematics-for-deep-learning/index.qmd
+        - chapter_appendix-mathematics-for-deep-learning/geometry-linear-algebraic-ops.qmd
+        - chapter_appendix-mathematics-for-deep-learning/eigendecomposition.qmd
+        - chapter_appendix-mathematics-for-deep-learning/single-variable-calculus.qmd
+        - chapter_appendix-mathematics-for-deep-learning/multivariable-calculus.qmd
+        - chapter_appendix-mathematics-for-deep-learning/integral-calculus.qmd
+        - chapter_appendix-mathematics-for-deep-learning/random-variables.qmd
+        - chapter_appendix-mathematics-for-deep-learning/maximum-likelihood.qmd
+        - chapter_appendix-mathematics-for-deep-learning/distributions.qmd
+        - chapter_appendix-mathematics-for-deep-learning/naive-bayes.qmd
+        - chapter_appendix-mathematics-for-deep-learning/statistics.qmd
+        - chapter_appendix-mathematics-for-deep-learning/information-theory.qmd
+        - chapter_appendix-tools-for-deep-learning/index.qmd
+        - chapter_appendix-tools-for-deep-learning/jupyter.qmd
+        - chapter_appendix-tools-for-deep-learning/sagemaker.qmd
+        - chapter_appendix-tools-for-deep-learning/aws.qmd
+        - chapter_appendix-tools-for-deep-learning/colab.qmd
+        - chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.qmd
+        - chapter_appendix-tools-for-deep-learning/contributing.qmd
+        - chapter_appendix-tools-for-deep-learning/utils.qmd
+        - chapter_appendix-tools-for-deep-learning/d2l.qmd
+    - references.qmd
+
+bibliography: d2l.bib
+link-citations: true
+number-sections: true
+crossref:
+  chapters: true
+
+format:
+  html:
+    theme: cosmo
+    code-copy: true
+    code-overflow: wrap
+    toc: true
+    css: _d2l-style.css
+    include-after-body: _d2l-tabs.html
+  pdf:
+    pdf-engine: xelatex
+    documentclass: book
+    papersize: a4
+    fontsize: 11pt
+    classoption:
+      - twoside
+      - openright
+    mainfont: "SourceSerif4"
+    mainfontoptions:
+      - Path=static/fonts/
+      - Extension=.ttf
+      - UprightFont=*-Regular
+      - BoldFont=*-Bold
+      - ItalicFont=*-Italic
+    sansfont: "SourceSans3"
+    sansfontoptions:
+      - Path=static/fonts/
+      - Extension=.ttf
+      - UprightFont=*-Regular
+      - BoldFont=*-Bold
+      - ItalicFont=*-Italic
+    monofont: "Inconsolata"
+    monofontoptions:
+      - Path=static/fonts/
+      - Extension=.ttf
+      - UprightFont=*-Regular
+      - BoldFont=*-Bold
+      - Scale=0.9
+    geometry:
+      - left=1.9in
+      - right=1.4in
+      - top=1.3in
+      - bottom=1.5in
+      - twoside
+      - asymmetric
+    linkcolor: black
+    citecolor: black
+    urlcolor: black
+    include-in-header: static/d2l-preamble.tex
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-block-bg: "#f2f2f2"
+    fig-pos: "htbp"
+    keep-tex: true
+    latex-auto-install: false
+
+filters:
+  - _svg-to-pdf.lua
+
+execute:
+  enabled: false
+  freeze: auto

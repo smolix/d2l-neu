@@ -1,4 +1,4 @@
-# Linear Neural Networks for Regression {#sec-chap-regression}
+# Linear Neural Networks for Regression {#sec-regression}
 
 Before we worry about making our neural networks deep,
 it will be helpful to implement some shallow ones,

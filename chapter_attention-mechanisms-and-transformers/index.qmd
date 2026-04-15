@@ -1,4 +1,4 @@
-# Attention Mechanisms and Transformers {#sec-chap-attention-and-transformers}
+# Attention Mechanisms and Transformers {#sec-attention-and-transformers}
 
 
 The earliest years of the deep learning boom were driven primarily
@@ -15,7 +15,7 @@ and adaptive learning rate schedules come to mind---the core
 underlying architectures were clearly recognizable as
 scaled-up implementations of classic ideas.
 Despite thousands of papers proposing alternative ideas,
-models resembling classical convolutional neural networks (@sec-chap-cnn)
+models resembling classical convolutional neural networks (@sec-cnn)
 retained *state-of-the-art* status in computer vision
 and models resembling Sepp Hochreiter's original design
 for the LSTM recurrent neural network (@sec-lstm),

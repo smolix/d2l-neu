@@ -170,7 +170,7 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-12.1/lib64
 ## Installing Libraries for Running the Code
 
 To run the code of this book,
-just follow steps in @sec-chap-installation
+just follow steps in @sec-installation
 for Linux users on the EC2 instance
 and use the following tips 
 for working on a remote Linux server:

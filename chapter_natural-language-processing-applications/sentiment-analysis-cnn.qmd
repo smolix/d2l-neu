@@ -1,7 +1,7 @@
 # Sentiment Analysis: Using Convolutional Neural Networks {#sec-sentiment-cnn} 
 
 
-In @sec-chap-cnn,
+In @sec-cnn,
 we investigated mechanisms
 for processing
 two-dimensional image data

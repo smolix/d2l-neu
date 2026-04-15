@@ -1,4 +1,4 @@
-# Natural Language Processing: Pretraining {#sec-chap-nlp-pretrain}
+# Natural Language Processing: Pretraining {#sec-nlp-pretrain}
 
 
 Humans need to communicate.
@@ -48,6 +48,6 @@ For sight of the big picture,
 @fig-nlp-map-pretrain shows that
 the pretrained text representations can be fed to
 a variety of deep learning architectures for different downstream natural language processing applications.
-We will cover them in @sec-chap-nlp-app.
+We will cover them in @sec-nlp-app.
 
 

@@ -1,4 +1,4 @@
-# Recommender Systems {#sec-chap-recsys}
+# Recommender Systems {#sec-recsys}
 
 
 **Shuai Zhang** (*Amazon*), **Aston Zhang** (*Amazon*), and **Yi Tay** (*Google*)

@@ -1,9 +1,9 @@
-# Recurrent Neural Networks {#sec-chap-rnn}
+# Recurrent Neural Networks {#sec-rnn}
 
 Up until now, we have focused primarily on fixed-length data.
 When introducing linear and logistic regression
-in @sec-chap-regression and @sec-chap-classification
-and multilayer perceptrons in @sec-chap-perceptrons,
+in @sec-regression and @sec-classification
+and multilayer perceptrons in @sec-perceptrons,
 we were happy to assume that each feature vector $\mathbf{x}_i$
 consisted of a fixed number of components $x_1, \dots, x_d$,
 where each numerical feature $x_j$
@@ -15,7 +15,7 @@ and each attribute gets its own column.
 Crucially, with tabular data, we seldom
 assume any particular structure over the columns.
 
-Subsequently, in @sec-chap-cnn,
+Subsequently, in @sec-cnn,
 we moved on to image data, where inputs consist
 of the raw pixel values at each coordinate in an image.
 Image data hardly fitted the bill
@@ -96,7 +96,7 @@ can be adapted to handle data of varying length,
 e.g., images of varying resolution.
 Moreover, RNNs have recently ceded considerable
 market share to Transformer models,
-which will be covered in @sec-chap-attention-and-transformers.
+which will be covered in @sec-attention-and-transformers.
 However, RNNs rose to prominence as the default models
 for handling complex sequential structure in deep learning,
 and remain staple models for sequential modeling to this day.
@@ -134,6 +134,6 @@ Finally, we describe the method for calculating gradients
 when backpropagating through RNNs and explore some challenges
 that are often encountered when training such networks,
 motivating the modern RNN architectures that will follow
-in @sec-chap-modern-rnn.
+in @sec-modern-rnn.
 
 

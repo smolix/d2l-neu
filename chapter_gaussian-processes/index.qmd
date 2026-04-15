@@ -1,4 +1,4 @@
-# Gaussian Processes {#sec-chap-gp}
+# Gaussian Processes {#sec-gp}
 
 **Andrew Gordon Wilson** (*New York University and Amazon*)
 

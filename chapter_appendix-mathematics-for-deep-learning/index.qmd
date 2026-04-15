@@ -1,4 +1,4 @@
-# Appendix: Mathematics for Deep Learning {#sec-chap-appendix-math}
+# Appendix: Mathematics for Deep Learning {#sec-appendix-math}
 
 **Brent Werness** (*Amazon*), **Rachel Hu** (*Amazon*), and authors of this book
 

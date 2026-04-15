@@ -1,7 +1,7 @@
 ---
 number-sections: false
 ---
-# Installation {#sec-chap-installation}
+# Installation {#sec-installation}
 
 In order to get up and running,
 we will need an environment for running Python,

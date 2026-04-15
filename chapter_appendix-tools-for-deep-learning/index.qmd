@@ -1,4 +1,4 @@
-# Appendix: Tools for Deep Learning {#sec-chap-appendix-tools}
+# Appendix: Tools for Deep Learning {#sec-appendix-tools}
 
 
 To get the most out of *Dive into Deep Learning*,

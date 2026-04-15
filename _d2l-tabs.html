@@ -102,3 +102,106 @@
   }
 })();
 </script>
+
+<script>
+// Make sidebar part headers clickable — navigate to the first chapter (index page)
+(function() {
+  function init() {
+    document.querySelectorAll('.sidebar-item-section').forEach(function(section) {
+      var firstLink = section.querySelector('.sidebar-item-container li:first-child a');
+      var partHeader = section.querySelector(':scope > .sidebar-item-text');
+      if (firstLink && partHeader) {
+        var url = firstLink.getAttribute('href');
+        if (url) {
+          partHeader.style.cursor = 'pointer';
+          partHeader.addEventListener('click', function(e) {
+            // Only navigate if the click wasn't on the collapse toggle
+            if (!e.target.closest('.sidebar-item-toggle')) {
+              window.location.href = url;
+            }
+          });
+        }
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<script>
+// Sidebar section collapse persistence
+// - Default: all collapsed
+// - User toggles are saved to localStorage and restored across pages
+(function() {
+  var STORAGE_KEY = 'd2l-sidebar-expanded';
+
+  function getExpanded() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch(e) { return {}; }
+  }
+
+  function saveExpanded(state) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch(e) {}
+  }
+
+  function init() {
+    var sections = document.querySelectorAll('.sidebar-item-section');
+    var state = getExpanded();
+
+    sections.forEach(function(section) {
+      var toggle = section.querySelector('[data-bs-target]');
+      if (!toggle) return;
+      var targetId = toggle.getAttribute('data-bs-target');
+      if (!targetId) return;
+      var target = document.querySelector(targetId);
+      if (!target) return;
+
+      var id = targetId.replace('#', '');
+
+      // Check if the current page is inside this section
+      var isActive = section.querySelector('.sidebar-link.active') !== null;
+
+      // Determine initial state: expanded if (a) user previously expanded it,
+      // or (b) it contains the active page. Otherwise collapsed.
+      var shouldExpand = state[id] === true || isActive;
+
+      if (shouldExpand) {
+        target.classList.add('show');
+        section.querySelectorAll('[aria-expanded]').forEach(function(el) {
+          el.setAttribute('aria-expanded', 'true');
+        });
+      } else {
+        target.classList.remove('show');
+        section.querySelectorAll('[aria-expanded]').forEach(function(el) {
+          el.setAttribute('aria-expanded', 'false');
+        });
+      }
+
+      // Listen for Bootstrap collapse events to persist state
+      target.addEventListener('shown.bs.collapse', function() {
+        var s = getExpanded();
+        s[id] = true;
+        saveExpanded(s);
+      });
+      target.addEventListener('hidden.bs.collapse', function() {
+        var s = getExpanded();
+        s[id] = false;
+        saveExpanded(s);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

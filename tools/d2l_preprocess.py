@@ -235,7 +235,7 @@ def convert_label_id(label):
         ('eq_',     'eq-'),
         ('eqref_',  'eq-'),      # some d2l eqlabels have eqref_ prefix
         ('sec_',    'sec-'),
-        ('chap_',   'sec-chap-'),  # chapter labels get sec-chap- to avoid collisions
+        ('chap_',   'sec-'),       # chapter index labels
         ('subsec_', 'sec-'),
     ]
     for old, new in prefix_map:

@@ -1,7 +1,7 @@
 # Generalization in Deep Learning
 
 
-In @sec-chap-regression and @sec-chap-classification,
+In @sec-regression and @sec-classification,
 we tackled regression and classification problems
 by fitting linear models to training data.
 In both cases, we provided practical algorithms
@@ -284,7 +284,7 @@ Training models until they interpolate noisy data is typically a bad idea.
 
 ## Classical Regularization Methods for Deep Networks
 
-In @sec-chap-regression, we described
+In @sec-regression, we described
 several  classical regularization techniques
 for constraining the complexity of our models.
 In particular, @sec-weight-decay

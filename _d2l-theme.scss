@@ -1,0 +1,149 @@
+/*-- scss:defaults --*/
+
+// d2l.ai color palette (Material Design blue + deep orange)
+$blue:          #2196F3;
+$blue-dark:     #1976D2;
+$blue-light:    #BBDEFB;
+$deep-orange:   #FF5722;
+$white:         #FFFFFF;
+$gray-100:      #f8f9fa;
+$gray-200:      #e9ecef;
+
+// Bootstrap variable overrides
+$primary:       $blue;
+$link-color:    $blue-dark;
+$link-hover-color: $blue;
+
+// Navbar
+$navbar-bg:     $blue;
+$navbar-fg:     $white;
+
+// Sidebar
+$sidebar-bg:    $gray-100;
+
+// Code blocks
+$code-bg:       #f5f5f5;
+
+/*-- scss:rules --*/
+
+// Sidebar logo — fill sidebar width
+.sidebar-logo {
+  max-height: none;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  padding: 0.8rem 0;
+}
+
+// Sidebar title — hide text since we have a logo
+.sidebar-title {
+  font-size: 0;
+  line-height: 0;
+  padding: 0;
+  margin: 0;
+  a {
+    display: block;
+  }
+}
+
+// Navbar styling
+.navbar {
+  background-color: $blue !important;
+  border-bottom: 3px solid $blue-dark;
+
+  .navbar-brand {
+    color: $white !important;
+    font-weight: 600;
+  }
+
+  .nav-link {
+    color: rgba($white, 0.85) !important;
+    &:hover {
+      color: $white !important;
+    }
+  }
+}
+
+// Links
+a {
+  color: $blue-dark;
+  text-decoration: none;
+  &:hover {
+    color: $blue;
+    text-decoration: underline;
+  }
+}
+
+// Sidebar items — match the muted, clean style of the right-side TOC
+.sidebar-item-text {
+  color: #595959;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+// Active sidebar item — subtle highlight
+.sidebar-item-text.sidebar-link.active {
+  color: $blue-dark !important;
+  font-weight: 500;
+  border-left: 3px solid $blue;
+  padding-left: 0.5rem;
+}
+
+// Part headers in sidebar — slightly bolder but not blue
+.sidebar-item-section > .sidebar-item-text {
+  color: #333;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+// Hide the first chapter under each part (the index file that duplicates
+// the part title). The part header is made clickable via JS to navigate there.
+.sidebar-item-section > .sidebar-item-container > li:first-child {
+  display: none;
+}
+
+// Panel tabset tabs — d2l blue
+.nav-tabs .nav-link.active {
+  color: $blue-dark;
+  border-bottom-color: $blue;
+  font-weight: 600;
+}
+
+.nav-tabs .nav-link {
+  color: #555;
+  &:hover {
+    color: $blue;
+    border-bottom-color: $blue-light;
+  }
+}
+
+// Code block styling
+div.sourceCode {
+  border-left: 3px solid $blue-light;
+  border-radius: 0 4px 4px 0;
+}
+
+// Figure captions
+.quarto-float-caption {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+// Table captions
+caption {
+  color: #555;
+  font-size: 0.9rem;
+  caption-side: bottom;
+}
+
+// Chapter headings
+h1 {
+  color: #333;
+  border-bottom: 2px solid $blue-light;
+  padding-bottom: 0.3rem;
+}
+
+// Section headings
+h2 {
+  color: #444;
+}

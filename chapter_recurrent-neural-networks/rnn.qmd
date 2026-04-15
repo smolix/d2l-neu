@@ -18,7 +18,7 @@ $$h_t = f(x_{t}, h_{t-1}).$$ {#eq-ht-xt}
 For a sufficiently powerful function $f$ in @eq-ht-xt, the latent variable model is not an approximation. After all, $h_t$ may simply store all the data it has observed so far.
 However, it could potentially make both computation and storage expensive.
 
-Recall that we have discussed hidden layers with hidden units in @sec-chap-perceptrons.
+Recall that we have discussed hidden layers with hidden units in @sec-perceptrons.
 It is noteworthy that
 hidden layers and hidden states refer to two very different concepts.
 Hidden layers are, as explained, layers that are hidden from view on the path from input to output.

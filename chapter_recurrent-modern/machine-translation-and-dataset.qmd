@@ -23,7 +23,7 @@ Broadly, such problems are called
 *sequence-to-sequence* (seq2seq) problems 
 and they are our focus for 
 both the remainder of this chapter
-and much of @sec-chap-attention-and-transformers.
+and much of @sec-attention-and-transformers.
 
 In this section, we introduce the machine translation problem
 and an example dataset that we will use in the subsequent examples.

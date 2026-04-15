@@ -1,4 +1,4 @@
-# Modern Convolutional Neural Networks {#sec-chap-modern-cnn}
+# Modern Convolutional Neural Networks {#sec-modern-cnn}
 
 Now that we understand the basics of wiring together CNNs, let's take
 a tour of modern CNN architectures. This tour is, by
@@ -18,7 +18,7 @@ which has served as a barometer of progress on supervised learning in
 computer vision since 2010. It is only recently that Transformers have begun
 to displace CNNs, starting with @Dosovitskiy.Beyer.Kolesnikov.ea.2021 and 
 followed by the Swin Transformer [@liu2021swin]. We will cover this development later 
-in @sec-chap-attention-and-transformers. 
+in @sec-attention-and-transformers. 
 
 While the idea of *deep* neural networks is quite simple (stack
 together a bunch of layers), performance can vary wildly across

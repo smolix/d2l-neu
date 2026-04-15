@@ -169,7 +169,7 @@ the subsequent value is the history of prices to date.
 The trader is thus interested in knowing
 the probability distribution
 
-$$P(x_t \mid x_{t-1}, \ldots, x_1)$$
+$$P(x_t \mid x_{t-1}, \ldots, x_1)$$ {#eq-sequence-auto-1}
 
 over prices that the index might take
 in the subsequent time step.
@@ -180,7 +180,7 @@ to focus on a few key statistics of the distribution,
 particularly the expected value and the variance.
 One simple strategy for estimating the conditional expectation
 
-$$\mathbb{E}[(x_t \mid x_{t-1}, \ldots, x_1)],$$
+$$\mathbb{E}[(x_t \mid x_{t-1}, \ldots, x_1)],$$ {#eq-sequence-auto-2}
 
 would be to apply a linear regression model
 (recall @sec-linear-regression).
@@ -272,7 +272,7 @@ into the product of conditional densities
 in a left-to-right fashion
 by applying the chain rule of probability:
 
-$$P(x_1, \ldots, x_T) = P(x_1) \prod_{t=2}^T P(x_t \mid x_{t-1}, \ldots, x_1).$$
+$$P(x_1, \ldots, x_T) = P(x_1) \prod_{t=2}^T P(x_t \mid x_{t-1}, \ldots, x_1).$$ {#eq-sequence-auto-3}
 
 Note that if we are working with discrete signals such as words,
 then the autoregressive model must be a probabilistic classifier,
@@ -302,7 +302,7 @@ For when the first-order Markov condition holds ($\tau = 1$)
 the factorization of our joint probability becomes a product
 of probabilities of each word given the previous *word*:
 
-$$P(x_1, \ldots, x_T) = P(x_1) \prod_{t=2}^T P(x_t \mid x_{t-1}).$$
+$$P(x_1, \ldots, x_T) = P(x_1) \prod_{t=2}^T P(x_t \mid x_{t-1}).$$ {#eq-sequence-auto-4}
 
 We often find it useful to work with models that proceed
 as though a Markov condition were satisfied,
@@ -337,7 +337,7 @@ In principle, there is nothing wrong with unfolding
 $P(x_1, \ldots, x_T)$ in reverse order.
 The result is a valid factorization:
 
-$$P(x_1, \ldots, x_T) = P(x_T) \prod_{t=T-1}^1 P(x_t \mid x_{t+1}, \ldots, x_T).$$
+$$P(x_1, \ldots, x_T) = P(x_T) \prod_{t=T-1}^1 P(x_t \mid x_{t+1}, \ldots, x_T).$$ {#eq-sequence-auto-5}
 
 
 However, there are many reasons why factorizing text
@@ -535,7 +535,7 @@ $$\begin{aligned}
 \hat{x}_{607} &= f(x_{603}, x_{604}, \hat{x}_{605}, \hat{x}_{606}),\\
 \hat{x}_{608} &= f(x_{604}, \hat{x}_{605}, \hat{x}_{606}, \hat{x}_{607}),\\
 \hat{x}_{609} &= f(\hat{x}_{605}, \hat{x}_{606}, \hat{x}_{607}, \hat{x}_{608}),\\
-&\vdots\end{aligned}$$
+&\vdots\end{aligned}$$ {#eq-sequence-auto-6}
 
 Generally, for an observed sequence $x_1, \ldots, x_t$,
 its predicted output $\hat{x}_{t+k}$ at time step $t+k$

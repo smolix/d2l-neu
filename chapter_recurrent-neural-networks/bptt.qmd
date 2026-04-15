@@ -246,7 +246,7 @@ and the output $\mathbf{o}_t \in \mathbb{R}^q$
 are computed as
 
 $$\begin{aligned}\mathbf{h}_t &= \mathbf{W}_\textrm{hx} \mathbf{x}_t + \mathbf{W}_\textrm{hh} \mathbf{h}_{t-1},\\
-\mathbf{o}_t &= \mathbf{W}_\textrm{qh} \mathbf{h}_{t},\end{aligned}$$
+\mathbf{o}_t &= \mathbf{W}_\textrm{qh} \mathbf{h}_{t},\end{aligned}$$ {#eq-bptt-auto-1}
 
 where $\mathbf{W}_\textrm{hx} \in \mathbb{R}^{h \times d}$, $\mathbf{W}_\textrm{hh} \in \mathbb{R}^{h \times h}$, and
 $\mathbf{W}_\textrm{qh} \in \mathbb{R}^{q \times h}$
@@ -257,7 +257,7 @@ Our objective function,
 the loss over $T$ time steps
 from the beginning of the sequence is thus
 
-$$L = \frac{1}{T} \sum_{t=1}^T l(\mathbf{o}_t, y_t).$$
+$$L = \frac{1}{T} \sum_{t=1}^T l(\mathbf{o}_t, y_t).$$ {#eq-bptt-auto-2}
 
 
 In order to visualize the dependencies among

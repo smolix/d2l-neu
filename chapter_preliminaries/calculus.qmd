@@ -192,7 +192,7 @@ $$f'(x) = y' = \frac{dy}{dx} = \frac{df}{dx} = \frac{d}{dx} f(x) = Df(x) = D_x f
 where the symbols $\frac{d}{dx}$ and $D$ are *differentiation operators*.
 Below, we present the derivatives of some common functions:
 
-$$\begin{aligned} \frac{d}{dx} C & = 0 && \textrm{for any constant $C$} \\ \frac{d}{dx} x^n & = n x^{n-1} && \textrm{for } n \neq 0 \\ \frac{d}{dx} e^x & = e^x \\ \frac{d}{dx} \ln x & = x^{-1}. \end{aligned}$$
+$$\begin{aligned} \frac{d}{dx} C & = 0 && \textrm{for any constant $C$} \\ \frac{d}{dx} x^n & = n x^{n-1} && \textrm{for } n \neq 0 \\ \frac{d}{dx} e^x & = e^x \\ \frac{d}{dx} \ln x & = x^{-1}. \end{aligned}$$ {#eq-calculus-auto-1}
 
 Functions composed from differentiable functions 
 are often themselves differentiable.
@@ -201,12 +201,12 @@ for working with compositions
 of any differentiable functions 
 $f$ and $g$, and constant $C$.
 
-$$\begin{aligned} \frac{d}{dx} [C f(x)] & = C \frac{d}{dx} f(x) && \textrm{Constant multiple rule} \\ \frac{d}{dx} [f(x) + g(x)] & = \frac{d}{dx} f(x) + \frac{d}{dx} g(x) && \textrm{Sum rule} \\ \frac{d}{dx} [f(x) g(x)] & = f(x) \frac{d}{dx} g(x) + g(x) \frac{d}{dx} f(x) && \textrm{Product rule} \\ \frac{d}{dx} \frac{f(x)}{g(x)} & = \frac{g(x) \frac{d}{dx} f(x) - f(x) \frac{d}{dx} g(x)}{g^2(x)} && \textrm{Quotient rule} \end{aligned}$$
+$$\begin{aligned} \frac{d}{dx} [C f(x)] & = C \frac{d}{dx} f(x) && \textrm{Constant multiple rule} \\ \frac{d}{dx} [f(x) + g(x)] & = \frac{d}{dx} f(x) + \frac{d}{dx} g(x) && \textrm{Sum rule} \\ \frac{d}{dx} [f(x) g(x)] & = f(x) \frac{d}{dx} g(x) + g(x) \frac{d}{dx} f(x) && \textrm{Product rule} \\ \frac{d}{dx} \frac{f(x)}{g(x)} & = \frac{g(x) \frac{d}{dx} f(x) - f(x) \frac{d}{dx} g(x)}{g^2(x)} && \textrm{Quotient rule} \end{aligned}$$ {#eq-calculus-auto-2}
 
 Using this, we can apply the rules 
 to find the derivative of $3 x^2 - 4x$ via
 
-$$\frac{d}{dx} [3 x^2 - 4x] = 3 \frac{d}{dx} x^2 - 4 \frac{d}{dx} x = 6x - 4.$$
+$$\frac{d}{dx} [3 x^2 - 4x] = 3 \frac{d}{dx} x^2 - 4 \frac{d}{dx} x = 6x - 4.$$ {#eq-calculus-auto-3}
 
 Plugging in $x = 1$ shows that, indeed, 
 the derivative equals $2$ at this location. 
@@ -326,7 +326,7 @@ Let $y = f(x_1, x_2, \ldots, x_n)$ be a function with $n$ variables.
 The *partial derivative* of $y$ 
 with respect to its $i^\textrm{th}$ parameter $x_i$ is
 
-$$ \frac{\partial y}{\partial x_i} = \lim_{h \rightarrow 0} \frac{f(x_1, \ldots, x_{i-1}, x_i+h, x_{i+1}, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}.$$
+$$ \frac{\partial y}{\partial x_i} = \lim_{h \rightarrow 0} \frac{f(x_1, \ldots, x_{i-1}, x_i+h, x_{i+1}, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}.$$ {#eq-calculus-auto-4}
 
 
 To calculate $\frac{\partial y}{\partial x_i}$, 
@@ -335,7 +335,7 @@ and calculate the derivative of $y$ with respect to $x_i$.
 The following notational conventions for partial derivatives 
 are all common and all mean the same thing:
 
-$$\frac{\partial y}{\partial x_i} = \frac{\partial f}{\partial x_i} = \partial_{x_i} f = \partial_i f = f_{x_i} = f_i = D_i f = D_{x_i} f.$$
+$$\frac{\partial y}{\partial x_i} = \frac{\partial f}{\partial x_i} = \partial_{x_i} f = \partial_i f = f_{x_i} = f_i = D_i f = D_{x_i} f.$$ {#eq-calculus-auto-5}
 
 We can concatenate partial derivatives 
 of a multivariate function 
@@ -352,7 +352,7 @@ with respect to $\mathbf{x}$
 is a vector of $n$ partial derivatives:
 
 $$\nabla_{\mathbf{x}} f(\mathbf{x}) = \left[\partial_{x_1} f(\mathbf{x}), \partial_{x_2} f(\mathbf{x}), \ldots
-\partial_{x_n} f(\mathbf{x})\right]^\top.$$ 
+\partial_{x_n} f(\mathbf{x})\right]^\top.$$  {#eq-calculus-auto-6}
 
 When there is no ambiguity,
 $\nabla_{\mathbf{x}} f(\mathbf{x})$ 
@@ -385,7 +385,7 @@ are both differentiable.
 The chain rule states that 
 
 
-$$\frac{dy}{dx} = \frac{dy}{du} \frac{du}{dx}.$$
+$$\frac{dy}{dx} = \frac{dy}{du} \frac{du}{dx}.$$ {#eq-calculus-auto-7}
 
 
 Turning back to multivariate functions,
@@ -396,7 +396,7 @@ has variables $x_1, x_2, \ldots, x_n$,
 i.e.,  $\mathbf{u} = g(\mathbf{x})$.
 Then the chain rule states that
 
-$$\frac{\partial y}{\partial x_{i}} = \frac{\partial y}{\partial u_{1}} \frac{\partial u_{1}}{\partial x_{i}} + \frac{\partial y}{\partial u_{2}} \frac{\partial u_{2}}{\partial x_{i}} + \ldots + \frac{\partial y}{\partial u_{m}} \frac{\partial u_{m}}{\partial x_{i}} \ \textrm{ and so } \ \nabla_{\mathbf{x}} y =  \mathbf{A} \nabla_{\mathbf{u}} y,$$
+$$\frac{\partial y}{\partial x_{i}} = \frac{\partial y}{\partial u_{1}} \frac{\partial u_{1}}{\partial x_{i}} + \frac{\partial y}{\partial u_{2}} \frac{\partial u_{2}}{\partial x_{i}} + \ldots + \frac{\partial y}{\partial u_{m}} \frac{\partial u_{m}}{\partial x_{i}} \ \textrm{ and so } \ \nabla_{\mathbf{x}} y =  \mathbf{A} \nabla_{\mathbf{u}} y,$$ {#eq-calculus-auto-8}
 
 where $\mathbf{A} \in \mathbb{R}^{n \times m}$ is a *matrix*
 that contains the derivative of vector $\mathbf{u}$

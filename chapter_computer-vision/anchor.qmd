@@ -68,7 +68,7 @@ In practice,
 we can only consider those combinations
 containing $s_1$ or $r_1$:
 
-$$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$
+$$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$ {#eq-anchor-auto-1}
 
 That is to say, the number of anchor boxes centered on the same pixel is $n+m-1$. For the entire input image, we will generate a total of $wh(n+m-1)$ anchor boxes.
 
@@ -274,7 +274,7 @@ Intuitively, we can measure the similarity between
 the anchor box and the ground-truth bounding box.
 We know that the *Jaccard index* can measure the similarity between two sets. Given sets $\mathcal{A}$ and $\mathcal{B}$, their Jaccard index is the size of their intersection divided by the size of their union:
 
-$$J(\mathcal{A},\mathcal{B}) = \frac{\left|\mathcal{A} \cap \mathcal{B}\right|}{\left| \mathcal{A} \cup \mathcal{B}\right|}.$$
+$$J(\mathcal{A},\mathcal{B}) = \frac{\left|\mathcal{A} \cap \mathcal{B}\right|}{\left| \mathcal{A} \cup \mathcal{B}\right|}.$$ {#eq-anchor-auto-2}
 
 
 In fact, we can consider the pixel area of any bounding box as a set of pixels. 
@@ -500,7 +500,7 @@ We may label the offset of $A$ as
 $$\left( \frac{ \frac{x_b - x_a}{w_a} - \mu_x }{\sigma_x},
 \frac{ \frac{y_b - y_a}{h_a} - \mu_y }{\sigma_y},
 \frac{ \log \frac{w_b}{w_a} - \mu_w }{\sigma_w},
-\frac{ \log \frac{h_b}{h_a} - \mu_h }{\sigma_h}\right),$$
+\frac{ \log \frac{h_b}{h_a} - \mu_h }{\sigma_h}\right),$$ {#eq-anchor-auto-3}
 
 where default values of the constants are $\mu_x = \mu_y = \mu_w = \mu_h = 0, \sigma_x=\sigma_y=0.1$, and $\sigma_w=\sigma_h=0.2$.
 This transformation is implemented below in the `offset_boxes` function.

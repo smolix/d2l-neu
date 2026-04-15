@@ -177,13 +177,13 @@ into the current hidden state $\mathbf{h}_t$.
 We can use a function $f$ to express 
 the transformation of the RNN's recurrent layer:
 
-$$\mathbf{h}_t = f(\mathbf{x}_t, \mathbf{h}_{t-1}). $$
+$$\mathbf{h}_t = f(\mathbf{x}_t, \mathbf{h}_{t-1}). $$ {#eq-seq2seq-auto-1}
 
 In general, the encoder transforms 
 the hidden states at all time steps
 into a context variable through a customized function $q$:
 
-$$\mathbf{c} =  q(\mathbf{h}_1, \ldots, \mathbf{h}_T).$$
+$$\mathbf{c} =  q(\mathbf{h}_1, \ldots, \mathbf{h}_T).$$ {#eq-seq2seq-auto-2}
 
 For example, in @fig-seq2seq,
 the context variable is just the hidden state $\mathbf{h}_T$

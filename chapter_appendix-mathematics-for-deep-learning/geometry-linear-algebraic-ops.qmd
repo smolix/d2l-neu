@@ -957,7 +957,7 @@ $$
 
 or equivalently
 
-$$ c_{i, j} = \sum_{k} a_{i, k}b_{k, j}.$$
+$$ c_{i, j} = \sum_{k} a_{i, k}b_{k, j}.$$ {#eq-geometry-linear-algebraic-ops-auto-1}
 
 This pattern is one we can repeat for tensors.
 For tensors, there is no one case of what

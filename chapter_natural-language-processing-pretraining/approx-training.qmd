@@ -54,7 +54,7 @@ is considered as an event with the probability
 modeled by
 
 
-$$P(D=1\mid w_c, w_o) = \sigma(\mathbf{u}_o^\top \mathbf{v}_c),$$
+$$P(D=1\mid w_c, w_o) = \sigma(\mathbf{u}_o^\top \mathbf{v}_c),$$ {#eq-approx-training-auto-1}
 
 where $\sigma$ uses the definition of the sigmoid activation function:
 
@@ -177,7 +177,7 @@ $L(w_3) = 4$ in  @fig-hi-softmax.
 Hierarchical softmax approximates the conditional probability in @eq-skip-gram-softmax as
 
 
-$$P(w_o \mid w_c) = \prod_{j=1}^{L(w_o)-1} \sigma\left( [\![  n(w_o, j+1) = \textrm{leftChild}(n(w_o, j)) ]\!] \cdot \mathbf{u}_{n(w_o, j)}^\top \mathbf{v}_c\right),$$
+$$P(w_o \mid w_c) = \prod_{j=1}^{L(w_o)-1} \sigma\left( [\![  n(w_o, j+1) = \textrm{leftChild}(n(w_o, j)) ]\!] \cdot \mathbf{u}_{n(w_o, j)}^\top \mathbf{v}_c\right),$$ {#eq-approx-training-auto-2}
 
 where function $\sigma$
 is defined in @eq-sigma-f,
@@ -197,7 +197,7 @@ on the path (the path in bold in @fig-hi-softmax) from the root to $w_3$,
 which is traversed left, right, then left:
 
 
-$$P(w_3 \mid w_c) = \sigma(\mathbf{u}_{n(w_3, 1)}^\top \mathbf{v}_c) \cdot \sigma(-\mathbf{u}_{n(w_3, 2)}^\top \mathbf{v}_c) \cdot \sigma(\mathbf{u}_{n(w_3, 3)}^\top \mathbf{v}_c).$$
+$$P(w_3 \mid w_c) = \sigma(\mathbf{u}_{n(w_3, 1)}^\top \mathbf{v}_c) \cdot \sigma(-\mathbf{u}_{n(w_3, 2)}^\top \mathbf{v}_c) \cdot \sigma(\mathbf{u}_{n(w_3, 3)}^\top \mathbf{v}_c).$$ {#eq-approx-training-auto-3}
 
 Since $\sigma(x)+\sigma(-x) = 1$,
 it holds that

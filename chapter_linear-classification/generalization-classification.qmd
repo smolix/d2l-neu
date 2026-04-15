@@ -92,7 +92,7 @@ for which the prediction $f(\mathbf{x}^{(i)})$
 disagrees with the true label $y^{(i)}$,
 and is given by the following expression:
 
-$$\epsilon_{\mathcal{D}}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(f(\mathbf{x}^{(i)}) \neq y^{(i)}).$$
+$$\epsilon_{\mathcal{D}}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(f(\mathbf{x}^{(i)}) \neq y^{(i)}).$$ {#eq-generalization-classification-auto-1}
 
 By contrast, the *population error*
 is the *expected* fraction
@@ -103,7 +103,7 @@ for which our classifier disagrees
 with the true label:
 
 $$\epsilon(f) =  E_{(\mathbf{x}, y) \sim P} \mathbf{1}(f(\mathbf{x}) \neq y) =
-\int\int \mathbf{1}(f(\mathbf{x}) \neq y) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$
+\int\int \mathbf{1}(f(\mathbf{x}) \neq y) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$ {#eq-generalization-classification-auto-2}
 
 While $\epsilon(f)$ is the quantity that we actually care about,
 we cannot observe it directly,
@@ -201,7 +201,7 @@ Fortunately, because our random variable is bounded,
 we can obtain valid finite sample bounds
 by applying an inequality due to Hoeffding (1963):
 
-$$P(\epsilon_{\mathcal{D}}(f) - \epsilon(f) \geq t) < \exp\left( - 2n t^2 \right).$$
+$$P(\epsilon_{\mathcal{D}}(f) - \epsilon(f) \geq t) < \exp\left( - 2n t^2 \right).$$ {#eq-generalization-classification-auto-3}
 
 Solving for the smallest dataset size
 that would allow us to conclude
@@ -457,7 +457,7 @@ and the population error as a function
 of the VC dimension and the number of samples:
 
 $$P\left(R[p, f] - R_\textrm{emp}[\mathbf{X}, \mathbf{Y}, f] < \alpha\right) \geq 1-\delta
-\ \textrm{ for }\ \alpha \geq c \sqrt{(\textrm{VC} - \log \delta)/n}.$$
+\ \textrm{ for }\ \alpha \geq c \sqrt{(\textrm{VC} - \log \delta)/n}.$$ {#eq-generalization-classification-auto-4}
 
 Here $\delta > 0$ is the probability that the bound is violated,
 $\alpha$ is the upper bound on the generalization gap,

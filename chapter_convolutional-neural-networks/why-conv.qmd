@@ -128,7 +128,7 @@ Suppose that $\mathbf{U}$ contains biases,
 we could formally express the fully connected layer as
 
 $$\begin{aligned} \left[\mathbf{H}\right]_{i, j} &= [\mathbf{U}]_{i, j} + \sum_k \sum_l[\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}\\ &=  [\mathbf{U}]_{i, j} +
-\sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.\end{aligned}$$
+\sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.\end{aligned}$$ {#eq-why-conv-auto-1}
 
 The switch from $\mathsf{W}$ to $\mathsf{V}$ is entirely cosmetic for now
 since there is a one-to-one correspondence
@@ -152,7 +152,7 @@ This is only possible if $\mathsf{V}$ and $\mathbf{U}$ do not actually depend on
 we have $[\mathsf{V}]_{i, j, a, b} = [\mathbf{V}]_{a, b}$ and $\mathbf{U}$ is a constant, say $u$.
 As a result, we can simplify the definition for $\mathbf{H}$:
 
-$$[\mathbf{H}]_{i, j} = u + \sum_a\sum_b [\mathbf{V}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
+$$[\mathbf{H}]_{i, j} = u + \sum_a\sum_b [\mathbf{V}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$ {#eq-why-conv-auto-2}
 
 
 This is a *convolution*!
@@ -219,7 +219,7 @@ For instance, for vectors from
 the set of square-summable infinite-dimensional vectors
 with index running over $\mathbb{Z}$ we obtain the following definition:
 
-$$(f * g)(i) = \sum_a f(a) g(i-a).$$
+$$(f * g)(i) = \sum_a f(a) g(i-a).$$ {#eq-why-conv-auto-3}
 
 For two-dimensional tensors, we have a corresponding sum
 with indices $(a, b)$ for $f$ and $(i-a, j-b)$ for $g$, respectively:

@@ -1137,7 +1137,7 @@ denoting by $p_j$ the predicted probability for the ground-truth class $j$, the 
 [@Lin.Goyal.Girshick.ea.2017]: given hyperparameters $\gamma > 0$
 and $\alpha > 0$, this loss is defined as:
 
-$$ - \alpha (1-p_j)^{\gamma} \log p_j.$$
+$$ - \alpha (1-p_j)^{\gamma} \log p_j.$$ {#eq-ssd-auto-1}
 
 As we can see, increasing $\gamma$
 can effectively reduce the relative loss

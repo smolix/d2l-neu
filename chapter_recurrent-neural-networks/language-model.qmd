@@ -4,7 +4,7 @@ In @sec-text-sequence, we saw how to map text sequences into tokens, where these
 The goal of *language models*
 is to estimate the joint probability of the whole sequence:
 
-$$P(x_1, x_2, \ldots, x_T),$$
+$$P(x_1, x_2, \ldots, x_T),$$ {#eq-language-model-auto-1}
 
 where statistical tools
 in @sec-sequence
@@ -67,13 +67,13 @@ The obvious question is how we should model a document, or even a sequence of to
 Suppose that we tokenize text data at the word level.
 Let's start by applying basic probability rules:
 
-$$P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t  \mid  x_1, \ldots, x_{t-1}).$$
+$$P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t  \mid  x_1, \ldots, x_{t-1}).$$ {#eq-language-model-auto-2}
 
 For example, 
 the probability of a text sequence containing four words would be given as:
 
 $$\begin{aligned}&P(\textrm{deep}, \textrm{learning}, \textrm{is}, \textrm{fun}) \\
-=&P(\textrm{deep}) P(\textrm{learning}  \mid  \textrm{deep}) P(\textrm{is}  \mid  \textrm{deep}, \textrm{learning}) P(\textrm{fun}  \mid  \textrm{deep}, \textrm{learning}, \textrm{is}).\end{aligned}$$
+=&P(\textrm{deep}) P(\textrm{learning}  \mid  \textrm{deep}) P(\textrm{is}  \mid  \textrm{deep}, \textrm{learning}) P(\textrm{fun}  \mid  \textrm{deep}, \textrm{learning}, \textrm{is}).\end{aligned}$$ {#eq-language-model-auto-3}
 
 ### Markov Models and $n$-grams {#sec-markov-models-and-n-grams}
 
@@ -115,7 +115,7 @@ the corpus.
 This works fairly well, particularly for frequent
 words. Moving on, we could attempt to estimate
 
-$$\hat{P}(\textrm{learning} \mid \textrm{deep}) = \frac{n(\textrm{deep, learning})}{n(\textrm{deep})},$$
+$$\hat{P}(\textrm{learning} \mid \textrm{deep}) = \frac{n(\textrm{deep, learning})}{n(\textrm{deep})},$$ {#eq-language-model-auto-4}
 
 where $n(x)$ and $n(x, x')$ are the number of occurrences of singletons
 and consecutive word pairs, respectively.
@@ -144,7 +144,7 @@ $$\begin{aligned}
 	\hat{P}(x) & = \frac{n(x) + \epsilon_1/m}{n + \epsilon_1}, \\
 	\hat{P}(x' \mid x) & = \frac{n(x, x') + \epsilon_2 \hat{P}(x')}{n(x) + \epsilon_2}, \\
 	\hat{P}(x'' \mid x,x') & = \frac{n(x, x',x'') + \epsilon_3 \hat{P}(x'')}{n(x, x') + \epsilon_3}.
-\end{aligned}$$
+\end{aligned}$$ {#eq-language-model-auto-5}
 
 Here $\epsilon_1,\epsilon_2$, and $\epsilon_3$ are hyperparameters.
 Take $\epsilon_1$ as an example:

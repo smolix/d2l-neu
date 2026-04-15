@@ -78,7 +78,7 @@ a *ground truth* linear function,
 corrupting them via additive noise $\boldsymbol{\epsilon}$, 
 drawn independently and identically for each example:
 
-$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
+$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$ {#eq-synthetic-regression-data-auto-1}
 
 For convenience we assume that $\boldsymbol{\epsilon}$ is drawn 
 from a normal distribution with mean $\mu= 0$ 

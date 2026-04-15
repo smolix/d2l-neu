@@ -56,12 +56,12 @@ npx.set_np()
 
 Recall the Taylor expansion for functions. At the point $x = 0$ it can be written as
 
-$$f(x) = f(0) + x \cdot \left[f'(0) + x \cdot \left[\frac{f''(0)}{2!}  + x \cdot \left[\frac{f'''(0)}{3!}  + \cdots \right]\right]\right].$$
+$$f(x) = f(0) + x \cdot \left[f'(0) + x \cdot \left[\frac{f''(0)}{2!}  + x \cdot \left[\frac{f'''(0)}{3!}  + \cdots \right]\right]\right].$$ {#eq-densenet-auto-1}
 
 
 The key point is that it decomposes a function into terms of increasingly higher order. In a similar vein, ResNet decomposes functions into
 
-$$f(\mathbf{x}) = \mathbf{x} + g(\mathbf{x}).$$
+$$f(\mathbf{x}) = \mathbf{x} + g(\mathbf{x}).$$ {#eq-densenet-auto-2}
 
 That is, ResNet decomposes $f$ into a simple linear term and a more complex
 nonlinear one.
@@ -76,7 +76,7 @@ As a result, we perform a mapping from $\mathbf{x}$ to its values after applying
 $$\mathbf{x} \to \left[
 \mathbf{x},
 f_1(\mathbf{x}),
-f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), f_3\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right), f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right)\right]\right), \ldots\right].$$
+f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), f_3\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right), f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right)\right]\right), \ldots\right].$$ {#eq-densenet-auto-3}
 
 In the end, all these functions are combined in MLP to reduce the number of features again. In terms of implementation this is quite simple:
 rather than adding terms, we concatenate them. The name DenseNet arises from the fact that the dependency graph between variables becomes quite dense. The final layer of such a chain is densely connected to all previous layers. The dense connections are shown in @fig-densenet.

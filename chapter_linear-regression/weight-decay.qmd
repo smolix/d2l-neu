@@ -138,7 +138,7 @@ we revive our previous example
 from @sec-linear-regression for linear regression.
 There, our loss was given by
 
-$$L(\mathbf{w}, b) = \frac{1}{n}\sum_{i=1}^n \frac{1}{2}\left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right)^2.$$
+$$L(\mathbf{w}, b) = \frac{1}{n}\sum_{i=1}^n \frac{1}{2}\left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right)^2.$$ {#eq-weight-decay-auto-1}
 
 Recall that $\mathbf{x}^{(i)}$ are the features,
 $y^{(i)}$ is the label for any data example $i$, and $(\mathbf{w}, b)$
@@ -152,7 +152,7 @@ via the *regularization constant* $\lambda$,
 a nonnegative hyperparameter
 that we fit using validation data:
 
-$$L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|^2.$$
+$$L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|^2.$$ {#eq-weight-decay-auto-2}
 
 
 For $\lambda = 0$, we recover our original loss function.
@@ -203,7 +203,7 @@ for $\ell_2$-regularized regression as follows:
 
 $$\begin{aligned}
 \mathbf{w} & \leftarrow \left(1- \eta\lambda \right) \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} \mathbf{x}^{(i)} \left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right).
-\end{aligned}$$
+\end{aligned}$$ {#eq-weight-decay-auto-3}
 
 As before, we update $\mathbf{w}$ based on the amount
 by which our estimate differs from the observation.
@@ -236,7 +236,7 @@ through a simple synthetic example.
 First, we generate some data as before:
 
 $$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
-\epsilon \sim \mathcal{N}(0, 0.01^2).$$
+\epsilon \sim \mathcal{N}(0, 0.01^2).$$ {#eq-weight-decay-auto-4}
 
 In this synthetic dataset, our label is given 
 by an underlying linear function of our inputs,

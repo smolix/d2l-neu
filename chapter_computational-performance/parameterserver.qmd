@@ -77,7 +77,7 @@ This is why it pays to use a common abstraction, namely that of a *key--value st
 
 Across many workers and many GPUs the computation for gradient $i$ can be defined as
 
-$$\mathbf{g}_{i} = \sum_{k \in \textrm{workers}} \sum_{j \in \textrm{GPUs}} \mathbf{g}_{ijk},$$
+$$\mathbf{g}_{i} = \sum_{k \in \textrm{workers}} \sum_{j \in \textrm{GPUs}} \mathbf{g}_{ijk},$$ {#eq-parameterserver-auto-1}
 
 where $\mathbf{g}_{ijk}$ is part of gradient $i$ split on GPU $j$ of worker $k$.
 The key aspect in this operation is that it is a *commutative reduction*, that is, it turns many vectors into one and the order in which the operation is applied does not matter. This is great for our purposes since we do not (need to) have fine grained control over when which gradient is received. Besides, note that this operation is independent among different $i$.

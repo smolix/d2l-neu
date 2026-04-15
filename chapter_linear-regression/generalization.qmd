@@ -135,13 +135,13 @@ to an infinite stream of additional data examples
 drawn from the same underlying data distribution.
 Formally the training error is expressed as a *sum* (with the same notation as @sec-linear-regression):
 
-$$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n} \sum_{i=1}^n l(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})),$$
+$$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n} \sum_{i=1}^n l(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})),$$ {#eq-generalization-auto-1}
 
 
 while the generalization error is expressed as an integral:
 
 $$R[p, f] = E_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] =
-\int \int l(\mathbf{x}, y, f(\mathbf{x})) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$
+\int \int l(\mathbf{x}, y, f(\mathbf{x})) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$ {#eq-generalization-auto-2}
 
 Problematically, we can never calculate
 the generalization error $R$ exactly.
@@ -300,7 +300,7 @@ given training data consisting of a single feature $x$
 and a corresponding real-valued label $y$,
 we try to find the polynomial of degree $d$
 
-$$\hat{y}= \sum_{i=0}^d x^i w_i$$
+$$\hat{y}= \sum_{i=0}^d x^i w_i$$ {#eq-generalization-auto-3}
 
 for estimating the label $y$.
 This is just a linear regression problem

@@ -77,7 +77,7 @@ a sequence of the same length
 $\mathbf{y}_1, \ldots, \mathbf{y}_n$,
 where
 
-$$\mathbf{y}_i = f(\mathbf{x}_i, (\mathbf{x}_1, \mathbf{x}_1), \ldots, (\mathbf{x}_n, \mathbf{x}_n)) \in \mathbb{R}^d$$
+$$\mathbf{y}_i = f(\mathbf{x}_i, (\mathbf{x}_1, \mathbf{x}_1), \ldots, (\mathbf{x}_n, \mathbf{x}_n)) \in \mathbb{R}^d$$ {#eq-self-attention-and-positional-encoding-auto-1}
 
 according to the definition of attention pooling in
 @eq-attention-pooling.

@@ -430,7 +430,7 @@ One common noise reduction method is
 Denote by $x_{i, j}$ the pixel value at coordinate $(i, j)$.
 Reducing total variation loss
 
-$$\sum_{i, j} \left|x_{i, j} - x_{i+1, j}\right| + \left|x_{i, j} - x_{i, j+1}\right|$$
+$$\sum_{i, j} \left|x_{i, j} - x_{i+1, j}\right| + \left|x_{i, j} - x_{i, j+1}\right|$$ {#eq-neural-style-auto-1}
 
 makes values of neighboring pixels on the synthesized image closer.
 

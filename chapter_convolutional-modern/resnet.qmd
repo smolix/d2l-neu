@@ -62,7 +62,7 @@ given a dataset with features $\mathbf{X}$
 and labels $\mathbf{y}$,
 we might try finding it by solving the following optimization problem:
 
-$$f^*_{\mathcal{F}} \stackrel{\textrm{def}}{=} \mathop{\mathrm{argmin}}_f L(\mathbf{X}, \mathbf{y}, f) \textrm{ subject to } f \in \mathcal{F}.$$
+$$f^*_{\mathcal{F}} \stackrel{\textrm{def}}{=} \mathop{\mathrm{argmin}}_f L(\mathbf{X}, \mathbf{y}, f) \textrm{ subject to } f \in \mathcal{F}.$$ {#eq-resnet-auto-1}
 
 We know that regularization [@tikhonov1977solutions; @morozov2012methods] may control complexity of $\mathcal{F}$
 and achieve consistency, so a larger size of training data

@@ -322,7 +322,7 @@ ReLU provides a very simple nonlinear transformation.
 Given an element $x$, the function is defined
 as the maximum of that element and $0$:
 
-$$\operatorname{ReLU}(x) = \max(x, 0).$$
+$$\operatorname{ReLU}(x) = \max(x, 0).$$ {#eq-mlp-auto-1}
 
 Informally, the ReLU function retains only positive
 elements and discards all negative elements
@@ -447,7 +447,7 @@ This variation adds a linear term to ReLU,
 so some information still gets through,
 even when the argument is negative:
 
-$$\operatorname{pReLU}(x) = \max(0, x) + \alpha \min(0, x).$$
+$$\operatorname{pReLU}(x) = \max(0, x) + \alpha \min(0, x).$$ {#eq-mlp-auto-2}
 
 ### Sigmoid Function
 
@@ -459,7 +459,7 @@ often called a *squashing function*:
 it squashes any input in the range (-inf, inf)
 to some value in the range (0, 1):
 
-$$\operatorname{sigmoid}(x) = \frac{1}{1 + \exp(-x)}.$$
+$$\operatorname{sigmoid}(x) = \frac{1}{1 + \exp(-x)}.$$ {#eq-mlp-auto-3}
 
 In the earliest neural networks, scientists
 were interested in modeling biological neurons
@@ -537,7 +537,7 @@ d2l.plot(x, y, 'x', 'sigmoid(x)', figsize=(5, 2.5))
 
 The derivative of the sigmoid function is given by the following equation:
 
-$$\frac{d}{dx} \operatorname{sigmoid}(x) = \frac{\exp(-x)}{(1 + \exp(-x))^2} = \operatorname{sigmoid}(x)\left(1-\operatorname{sigmoid}(x)\right).$$
+$$\frac{d}{dx} \operatorname{sigmoid}(x) = \frac{\exp(-x)}{(1 + \exp(-x))^2} = \operatorname{sigmoid}(x)\left(1-\operatorname{sigmoid}(x)\right).$$ {#eq-mlp-auto-4}
 
 
 The derivative of the sigmoid function is plotted below.
@@ -596,7 +596,7 @@ Like the sigmoid function, the tanh (hyperbolic tangent)
 function also squashes its inputs,
 transforming them into elements on the interval between $-1$ and $1$:
 
-$$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$
+$$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$ {#eq-mlp-auto-5}
 
 We plot the tanh function below. Note that as input nears 0, the tanh function approaches a linear transformation. Although the shape of the function is similar to that of the sigmoid function, the tanh function exhibits point symmetry about the origin of the coordinate system [@Kalman.Kwasny.1992].
 
@@ -642,7 +642,7 @@ d2l.plot(x, y, 'x', 'tanh(x)', figsize=(5, 2.5))
 
 The derivative of the tanh function is:
 
-$$\frac{d}{dx} \operatorname{tanh}(x) = 1 - \operatorname{tanh}^2(x).$$
+$$\frac{d}{dx} \operatorname{tanh}(x) = 1 - \operatorname{tanh}^2(x).$$ {#eq-mlp-auto-6}
 
 It is plotted below.
 As the input nears 0,

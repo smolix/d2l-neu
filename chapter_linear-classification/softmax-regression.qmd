@@ -104,7 +104,7 @@ In our case, a label $y$ would be a three-dimensional vector,
 with $(1, 0, 0)$ corresponding to "cat", $(0, 1, 0)$ to "chicken",
 and $(0, 0, 1)$ to "dog":
 
-$$y \in \{(1, 0, 0), (0, 1, 0), (0, 0, 1)\}.$$
+$$y \in \{(1, 0, 0), (0, 1, 0), (0, 0, 1)\}.$$ {#eq-softmax-regression-auto-1}
 
 ### Linear Model
 

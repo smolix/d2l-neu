@@ -137,10 +137,17 @@ def emit_pdf_qmd(blocks, framework):
     output = re.sub(r'\n{4,}', '\n\n\n', output)
 
     # Post-process table captions (same as HTML preprocessor)
-    from d2l_preprocess import postprocess_table_captions
+    from d2l_preprocess import postprocess_table_captions, number_all_equations
     output = postprocess_table_captions(output)
 
     return output
+
+
+def _add_equation_numbers(output, src_path):
+    """Add auto-numbering to display equations."""
+    from d2l_preprocess import number_all_equations
+    file_slug = str(src_path).split('/')[-1].replace('.md', '')
+    return number_all_equations(output, file_slug)
 
 
 def convert_file_pdf(src_path, framework, chapter_number=None):
@@ -160,6 +167,9 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
 
     # Emit single-framework output
     output = emit_pdf_qmd(blocks, framework)
+
+    # Auto-number all display equations
+    output = _add_equation_numbers(output, src_path)
 
     # Add front matter for unnumbered chapters
     if chapter_number is None:

@@ -38,6 +38,7 @@ def build_chapter_map(book_dir):
                     flat.append(ch)
 
     ch_map = {}        # pandoc_ch → logical prefix string (for numbered files)
+    section_files = set()  # pandoc chapter numbers that are section-level (not chapter-level)
     unnumbered = set()  # pandoc chapter numbers for frontmatter (to strip)
     for i, qmd in enumerate(flat):
         pandoc_ch = i + 1
@@ -47,11 +48,13 @@ def build_chapter_map(book_dir):
             logical_prefix = '.'.join(str(n) for n in logical)
             if str(pandoc_ch) != logical_prefix:
                 ch_map[pandoc_ch] = logical_prefix
+            if len(logical) >= 2:
+                section_files.add(pandoc_ch)
         else:
             # Frontmatter or references — these should have no chapter number
             unnumbered.add(pandoc_ch)
 
-    return ch_map, unnumbered, flat
+    return ch_map, unnumbered, section_files, flat
 
 
 def fix_section_numbers(content, ch_map):
@@ -98,6 +101,12 @@ def fix_section_numbers(content, ch_map):
             rf'({label} )(\d+)((?:\.\d+)*</span>)',
             replace_number, content)
 
+    # Fix inline chapter cross-refs in quarto-xref links:
+    #   <span>54&nbsp; Title</span> → <span>8.1&nbsp; Title</span>
+    content = re.sub(
+        r'(<span>)(\d+)(&nbsp; )',
+        replace_number, content)
+
     # Fix figure/table/listing references and captions:
     #   Figure&nbsp;54.1  or  Figure&nbsp;<span>54.1
     for label in ['Figure', 'Table', 'Listing']:
@@ -114,6 +123,104 @@ def fix_section_numbers(content, ch_map):
     content = re.sub(
         r'(Equation&nbsp;\()(\d+)(\.\d+)',
         replace_number, content)
+
+    return content, count
+
+
+def fix_chapter_to_section(content, ch_map, section_files):
+    """Replace 'Chapter X.Y' with 'Section X.Y' for section-level files.
+
+    Quarto renders all cross-refs as 'Chapter N' since each file is a chapter.
+    Section-level files (e.g., 3.1, 8.6) should use 'Section' not 'Chapter'.
+    """
+    count = 0
+
+    # Build set of logical prefixes that are section-level
+    section_prefixes = set()
+    for pandoc_ch, logical in ch_map.items():
+        if pandoc_ch in section_files:
+            section_prefixes.add(logical)
+
+    def replace_chapter_with_section(m):
+        nonlocal count
+        num = m.group(1)
+        after = m.group(2)
+        # Check if this number matches a section-level file
+        # The number could be "8.1" or "8.1.2" — check if the base matches
+        base = num.split('.')[0] + '.' + num.split('.')[1] if '.' in num else num
+        if base in section_prefixes or num in section_prefixes:
+            count += 1
+            return f'Section {num}{after}'
+        return m.group(0)
+
+    content = re.sub(
+        r'Chapter (\d+\.\d+(?:\.\d+)*)(</span>)',
+        replace_chapter_with_section, content)
+
+    return content, count
+
+
+def fix_equation_crossrefs(content, ch_map):
+    """Fix equation cross-reference link text.
+
+    Quarto renders equation refs as 'Equation&nbsp;N.M' where N is the
+    file-position chapter number. Fix to use the logical chapter number.
+    Also handles 'Equation&nbsp;(N.M)' and 'Equation&nbsp;<span>N.M</span>'.
+    """
+    count = 0
+
+    def replace_eq_number(m):
+        nonlocal count
+        before = m.group(1)
+        pandoc = int(m.group(2))
+        after = m.group(3)
+        logical = ch_map.get(pandoc)
+        if logical is not None:
+            count += 1
+            return f'{before}{logical}{after}'
+        return m.group(0)
+
+    # Equation&nbsp;N.M  or  Equation&nbsp;<span>N.M
+    content = re.sub(
+        r'(Equation&nbsp;(?:<span>)?)(\d+)(\.\d+)',
+        replace_eq_number, content)
+
+    # Equation&nbsp;(N.M)
+    content = re.sub(
+        r'(Equation&nbsp;\()(\d+)(\.\d+)',
+        replace_eq_number, content)
+
+    return content, count
+
+
+def strip_frontmatter_figures(content, unnumbered):
+    """Strip figure numbers from frontmatter pages.
+
+    Figures in unnumbered chapters (Preface, etc.) shouldn't have chapter-based
+    numbers like 'Figure 2.1'. Replace with just 'Figure' or strip the number.
+    """
+    count = 0
+    for pandoc_ch in unnumbered:
+        # Figure&nbsp;N.M → Figure
+        old = f'Figure&nbsp;{pandoc_ch}.'
+        while old in content:
+            # Find the full number (e.g., "Figure&nbsp;2.1")
+            m = re.search(rf'Figure&nbsp;{pandoc_ch}\.\d+', content)
+            if m:
+                content = content.replace(m.group(), 'Figure', 1)
+                count += 1
+            else:
+                break
+
+        # Also in <span> form
+        old_span = f'Figure&nbsp;<span>{pandoc_ch}.'
+        while old_span in content:
+            m = re.search(rf'Figure&nbsp;<span>{pandoc_ch}\.\d+', content)
+            if m:
+                content = content.replace(m.group(), 'Figure&nbsp;<span>', 1)
+                count += 1
+            else:
+                break
 
     return content, count
 
@@ -184,45 +291,40 @@ def main():
         print("Error: _book/ not found. Run `quarto render` first.")
         sys.exit(1)
 
-    ch_map, unnumbered, flat = build_chapter_map(book_dir)
-    print(f"Chapter mapping: {len(ch_map)} entries to fix, "
-          f"{len(unnumbered)} frontmatter to strip")
+    ch_map, unnumbered, section_files, flat = build_chapter_map(book_dir)
+    print(f"Chapter mapping: {len(ch_map)} entries, "
+          f"{len(section_files)} section-level, "
+          f"{len(unnumbered)} frontmatter")
 
-    total_num_fixes = 0
-    total_cite_fixes = 0
-    total_strip = 0
+    totals = {'numbers': 0, 'chap2sec': 0, 'eqrefs': 0,
+              'citations': 0, 'strip': 0, 'figstrip': 0}
     files_modified = 0
 
     for html_path in sorted(output_dir.rglob('*.html')):
         with open(html_path) as f:
             content = f.read()
 
-        new_content, num_fixes = fix_section_numbers(content, ch_map)
-        new_content, cite_fixes = fix_narrative_citations(new_content)
-        new_content, strip_fixes = strip_frontmatter_numbers(
-            new_content, unnumbered)
+        # Order matters: strip frontmatter BEFORE renumbering,
+        # because renumbering maps e.g. pandoc 5→1, and pandoc 1 is in the
+        # unnumbered set (index.qmd). Stripping after would hit the wrong files.
+        c, n = strip_frontmatter_numbers(content, unnumbered); content = c; totals['strip'] += n
+        c, n = strip_frontmatter_figures(content, unnumbered); content = c; totals['figstrip'] += n
+        c, n = fix_section_numbers(content, ch_map);      content = c; totals['numbers'] += n
+        c, n = fix_chapter_to_section(content, ch_map, section_files); content = c; totals['chap2sec'] += n
+        c, n = fix_equation_crossrefs(content, ch_map);   content = c; totals['eqrefs'] += n
+        c, n = fix_narrative_citations(content);           content = c; totals['citations'] += n
 
-        total = num_fixes + cite_fixes + strip_fixes
-        if total > 0:
+        total = sum(totals.values()) - files_modified  # crude check if anything changed
+        if content != open(html_path).read():
             with open(html_path, 'w') as f:
-                f.write(new_content)
-            rel = html_path.relative_to(output_dir)
-            parts = []
-            if num_fixes:
-                parts.append(f'{num_fixes} numbers')
-            if cite_fixes:
-                parts.append(f'{cite_fixes} citations')
-            if strip_fixes:
-                parts.append(f'{strip_fixes} stripped')
-            print(f'  {rel}: {", ".join(parts)}')
-            total_num_fixes += num_fixes
-            total_cite_fixes += cite_fixes
-            total_strip += strip_fixes
+                f.write(content)
             files_modified += 1
 
-    print(f'\nFixed {total_num_fixes} section/figure numbers, '
-          f'{total_cite_fixes} narrative citations, '
-          f'stripped {total_strip} frontmatter numbers '
+    print(f'\nFixed: {totals["numbers"]} numbers, '
+          f'{totals["chap2sec"]} Chapter→Section, '
+          f'{totals["eqrefs"]} equation refs, '
+          f'{totals["citations"]} citations, '
+          f'stripped {totals["strip"]} sidebar + {totals["figstrip"]} frontmatter figs '
           f'in {files_modified} files')
 
 

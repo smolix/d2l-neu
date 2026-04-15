@@ -100,7 +100,7 @@ and a total of $p_\textrm{w}$ columns of padding
 (roughly half on the left and half on the right),
 the output shape will be
 
-$$(n_\textrm{h}-k_\textrm{h}+p_\textrm{h}+1)\times(n_\textrm{w}-k_\textrm{w}+p_\textrm{w}+1).$$
+$$(n_\textrm{h}-k_\textrm{h}+p_\textrm{h}+1)\times(n_\textrm{w}-k_\textrm{w}+p_\textrm{w}+1).$$ {#eq-padding-and-strides-auto-1}
 
 This means that the height and width of the output
 will increase by $p_\textrm{h}$ and $p_\textrm{w}$, respectively.
@@ -313,7 +313,7 @@ there is no output because the input element cannot fill the window
 In general, when the stride for the height is $s_\textrm{h}$
 and the stride for the width is $s_\textrm{w}$, the output shape is
 
-$$\lfloor(n_\textrm{h}-k_\textrm{h}+p_\textrm{h}+s_\textrm{h})/s_\textrm{h}\rfloor \times \lfloor(n_\textrm{w}-k_\textrm{w}+p_\textrm{w}+s_\textrm{w})/s_\textrm{w}\rfloor.$$
+$$\lfloor(n_\textrm{h}-k_\textrm{h}+p_\textrm{h}+s_\textrm{h})/s_\textrm{h}\rfloor \times \lfloor(n_\textrm{w}-k_\textrm{w}+p_\textrm{w}+s_\textrm{w})/s_\textrm{w}\rfloor.$$ {#eq-padding-and-strides-auto-2}
 
 If we set $p_\textrm{h}=k_\textrm{h}-1$ and $p_\textrm{w}=k_\textrm{w}-1$,
 then the output shape can be simplified to

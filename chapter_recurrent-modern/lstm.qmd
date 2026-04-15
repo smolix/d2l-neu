@@ -171,7 +171,7 @@ Its computation is similar to that of the three gates described above,
 but uses a $\tanh$ function with a value range for $(-1, 1)$ as the activation function. 
 This leads to the following equation at time step $t$:
 
-$$\tilde{\mathbf{C}}_t = \textrm{tanh}(\mathbf{X}_t \mathbf{W}_{\textrm{xc}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hc}} + \mathbf{b}_\textrm{c}),$$
+$$\tilde{\mathbf{C}}_t = \textrm{tanh}(\mathbf{X}_t \mathbf{W}_{\textrm{xc}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hc}} + \mathbf{b}_\textrm{c}),$$ {#eq-lstm-auto-1}
 
 where $\mathbf{W}_{\textrm{xc}} \in \mathbb{R}^{d \times h}$ and $\mathbf{W}_{\textrm{hc}} \in \mathbb{R}^{h \times h}$ are weight parameters and $\mathbf{b}_\textrm{c} \in \mathbb{R}^{1 \times h}$ is a bias parameter.
 
@@ -189,7 +189,7 @@ how much of the old cell internal state $\mathbf{C}_{t-1} \in \mathbb{R}^{n \tim
 Using the Hadamard (elementwise) product operator $\odot$
 we arrive at the following update equation:
 
-$$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$
+$$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$ {#eq-lstm-auto-2}
 
 If the forget gate is always 1 and the input gate is always 0, 
 the memory cell internal state $\mathbf{C}_{t-1}$
@@ -220,7 +220,7 @@ this time with the output gate.
 This ensures that the values of $\mathbf{H}_t$ 
 are always in the interval $(-1, 1)$:
 
-$$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
+$$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$ {#eq-lstm-auto-3}
 
 
 Whenever the output gate is close to 1, 

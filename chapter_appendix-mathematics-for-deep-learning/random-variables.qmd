@@ -851,9 +851,9 @@ This now ranges between $-1$ and $1$ with the expected behavior of $1$ meaning m
 
 As another example, consider $X$ as any random variable, and $Y=aX+b$ as any linear deterministic function of $X$.  Then, one can compute that
 
-$$\sigma_{Y} = \sigma_{aX+b} = |a|\sigma_{X},$$
+$$\sigma_{Y} = \sigma_{aX+b} = |a|\sigma_{X},$$ {#eq-random-variables-auto-1}
 
-$$\textrm{Cov}(X, Y) = \textrm{Cov}(X, aX+b) = a\textrm{Cov}(X, X) = a\textrm{Var}(X),$$
+$$\textrm{Cov}(X, Y) = \textrm{Cov}(X, aX+b) = a\textrm{Cov}(X, X) = a\textrm{Var}(X),$$ {#eq-random-variables-auto-2}
 
 and thus by @eq-cor-def that
 

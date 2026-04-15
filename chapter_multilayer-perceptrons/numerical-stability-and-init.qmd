@@ -78,13 +78,13 @@ parametrized by weights $\mathbf{W}^{(l)}$,
 whose hidden layer output is $\mathbf{h}^{(l)}$ (let $\mathbf{h}^{(0)} = \mathbf{x}$),
 our network can be expressed as:
 
-$$\mathbf{h}^{(l)} = f_l (\mathbf{h}^{(l-1)}) \textrm{ and thus } \mathbf{o} = f_L \circ \cdots \circ f_1(\mathbf{x}).$$
+$$\mathbf{h}^{(l)} = f_l (\mathbf{h}^{(l-1)}) \textrm{ and thus } \mathbf{o} = f_L \circ \cdots \circ f_1(\mathbf{x}).$$ {#eq-numerical-stability-and-init-auto-1}
 
 If all the hidden layer output and the input are vectors,
 we can write the gradient of $\mathbf{o}$ with respect to
 any set of parameters $\mathbf{W}^{(l)}$ as follows:
 
-$$\partial_{\mathbf{W}^{(l)}} \mathbf{o} = \underbrace{\partial_{\mathbf{h}^{(L-1)}} \mathbf{h}^{(L)}}_{ \mathbf{M}^{(L)} \stackrel{\textrm{def}}{=}} \cdots \underbrace{\partial_{\mathbf{h}^{(l)}} \mathbf{h}^{(l+1)}}_{ \mathbf{M}^{(l+1)} \stackrel{\textrm{def}}{=}} \underbrace{\partial_{\mathbf{W}^{(l)}} \mathbf{h}^{(l)}}_{ \mathbf{v}^{(l)} \stackrel{\textrm{def}}{=}}.$$
+$$\partial_{\mathbf{W}^{(l)}} \mathbf{o} = \underbrace{\partial_{\mathbf{h}^{(L-1)}} \mathbf{h}^{(L)}}_{ \mathbf{M}^{(L)} \stackrel{\textrm{def}}{=}} \cdots \underbrace{\partial_{\mathbf{h}^{(l)}} \mathbf{h}^{(l+1)}}_{ \mathbf{M}^{(l+1)} \stackrel{\textrm{def}}{=}} \underbrace{\partial_{\mathbf{W}^{(l)}} \mathbf{h}^{(l)}}_{ \mathbf{v}^{(l)} \stackrel{\textrm{def}}{=}}.$$ {#eq-numerical-stability-and-init-auto-2}
 
 In other words, this gradient is
 the product of $L-l$ matrices
@@ -334,7 +334,7 @@ With $n_\textrm{in}$ inputs $x_j$
 and their associated weights $w_{ij}$ for this layer,
 an output is given by
 
-$$o_{i} = \sum_{j=1}^{n_\textrm{in}} w_{ij} x_j.$$
+$$o_{i} = \sum_{j=1}^{n_\textrm{in}} w_{ij} x_j.$$ {#eq-numerical-stability-and-init-auto-3}
 
 The weights $w_{ij}$ are all drawn
 independently from the same distribution.
@@ -396,7 +396,7 @@ Note that the uniform distribution $U(-a, a)$ has variance $\frac{a^2}{3}$.
 Plugging $\frac{a^2}{3}$ into our condition on $\sigma^2$
 prompts us to initialize according to
 
-$$U\left(-\sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}, \sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}\right).$$
+$$U\left(-\sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}, \sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}\right).$$ {#eq-numerical-stability-and-init-auto-4}
 
 Though the assumption for nonexistence of nonlinearities
 in the above mathematical reasoning

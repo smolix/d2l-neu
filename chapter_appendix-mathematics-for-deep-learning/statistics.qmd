@@ -337,7 +337,7 @@ To complete the story of how to work with hypothesis testing, we need to now int
 
 The *statistical significance* measures the probability of erroneously rejecting the null hypothesis, $H_0$, when it should not be rejected, i.e.,
 
-$$ \textrm{statistical significance }= 1 - \alpha = 1 - P(\textrm{reject } H_0 \mid H_0 \textrm{ is true} ).$$
+$$ \textrm{statistical significance }= 1 - \alpha = 1 - P(\textrm{reject } H_0 \mid H_0 \textrm{ is true} ).$$ {#eq-statistics-auto-1}
 
 It is also referred to as the *type I error* or *false positive*. The $\alpha$, is called as the *significance level* and its commonly used value is $5\%$, i.e., $1-\alpha = 95\%$. The significance level can be explained as the level of risk that we are willing to take, when we reject a true null hypothesis.
 
@@ -350,7 +350,7 @@ It is also referred to as the *type I error* or *false positive*. The $\alpha$, 
 
 The *statistical power* (or *sensitivity*) measures the probability of reject the null hypothesis, $H_0$, when it should be rejected, i.e.,
 
-$$ \textrm{statistical power }= 1 - \beta = 1 - P(\textrm{ fail to reject } H_0  \mid H_0 \textrm{ is false} ).$$
+$$ \textrm{statistical power }= 1 - \beta = 1 - P(\textrm{ fail to reject } H_0  \mid H_0 \textrm{ is false} ).$$ {#eq-statistics-auto-2}
 
 Recall that a *type I error* is error caused by rejecting the null hypothesis when it is true, whereas a *type II error* is resulted from failing to reject the null hypothesis when it is false. A type II error is usually denoted as $\beta$, and hence the corresponding statistical power is $1-\beta$.
 
@@ -373,7 +373,7 @@ Often, $T(X)$ (the distribution of the test statistic under our null hypothesis)
 
 The $p$-value (or the *probability value*) is the probability that $T(X)$ is at least as extreme as the observed test statistic $T(x)$ assuming that the null hypothesis is *true*, i.e.,
 
-$$ p\textrm{-value} = P_{H_0}(T(X) \geq T(x)).$$
+$$ p\textrm{-value} = P_{H_0}(T(X) \geq T(x)).$$ {#eq-statistics-auto-3}
 
 If the $p$-value is smaller than or equal to a predefined and fixed statistical significance level $\alpha$, we may reject the null hypothesis. Otherwise, we will conclude that we are lack of evidence to reject the null hypothesis. For a given population distribution, the *region of rejection* will be the interval contained of all the points which has a $p$-value smaller than the statistical significance level $\alpha$.
 
@@ -544,7 +544,7 @@ sigma_hat = samples.std(ddof=1)
 
 1. Let $X_1, X_2, \ldots, X_n \overset{\textrm{iid}}{\sim} \textrm{Unif}(0, \theta)$, where "iid" stands for *independent and identically distributed*. Consider the following estimators of $\theta$:
 $$\hat{\theta} = \max \{X_1, X_2, \ldots, X_n \};$$
-$$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
+$$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$ {#eq-statistics-auto-4}
     * Find the statistical bias, standard deviation, and mean square error of $\hat{\theta}.$
     * Find the statistical bias, standard deviation, and mean square error of $\tilde{\theta}.$
     * Which estimator is better?

@@ -120,7 +120,7 @@ each indexed word $w_i$
 in the dataset will be discarded with probability
 
 
-$$ P(w_i) = \max\left(1 - \sqrt{\frac{t}{f(w_i)}}, 0\right),$$
+$$ P(w_i) = \max\left(1 - \sqrt{\frac{t}{f(w_i)}}, 0\right),$$ {#eq-word-embedding-dataset-auto-1}
 
 where $f(w_i)$ is the ratio of 
 the number of words $w_i$

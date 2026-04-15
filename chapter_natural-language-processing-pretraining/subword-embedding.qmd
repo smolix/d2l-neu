@@ -66,7 +66,7 @@ word $w$ as a center word
 in the skip-gram model
 is the sum of its subword vectors:
 
-$$\mathbf{v}_w = \sum_{g\in\mathcal{G}_w} \mathbf{z}_g.$$
+$$\mathbf{v}_w = \sum_{g\in\mathcal{G}_w} \mathbf{z}_g.$$ {#eq-subword-embedding-auto-1}
 
 The rest of fastText is the same as the skip-gram model. Compared with the skip-gram model, 
 the vocabulary in fastText is larger,

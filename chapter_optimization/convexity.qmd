@@ -58,7 +58,7 @@ They lead to mathematical tools that are commonly applied to machine learning.
 
 Sets are the basis of convexity. Simply put, a set $\mathcal{X}$ in a vector space is *convex* if for any $a, b \in \mathcal{X}$ the line segment connecting $a$ and $b$ is also in $\mathcal{X}$. In mathematical terms this means that for all $\lambda \in [0, 1]$ we have
 
-$$\lambda  a + (1-\lambda)  b \in \mathcal{X} \textrm{ whenever } a, b \in \mathcal{X}.$$
+$$\lambda  a + (1-\lambda)  b \in \mathcal{X} \textrm{ whenever } a, b \in \mathcal{X}.$$ {#eq-convexity-auto-1}
 
 This sounds a bit abstract. Consider @fig-pacman. The first set is not convex since there exist line segments that are not contained in it.
 The other two sets suffer no such problem.
@@ -85,7 +85,7 @@ is a convex set (after all, the line between any two points in $\mathbb{R}^d$ re
 Now that we have convex sets we can introduce *convex functions* $f$.
 Given a convex set $\mathcal{X}$, a function $f: \mathcal{X} \to \mathbb{R}$ is *convex* if for all $x, x' \in \mathcal{X}$ and for all $\lambda \in [0, 1]$ we have
 
-$$\lambda f(x) + (1-\lambda) f(x') \geq f(\lambda x + (1-\lambda) x').$$
+$$\lambda f(x) + (1-\lambda) f(x') \geq f(\lambda x + (1-\lambda) x').$$ {#eq-convexity-auto-2}
 
 To illustrate this let's plot a few functions and check which ones satisfy the requirement.
 Below we define a few functions, both convex and nonconvex.
@@ -162,7 +162,7 @@ $$\begin{aligned}
     f(\lambda x^{\ast} + (1-\lambda) x') &\leq \lambda f(x^{\ast}) + (1-\lambda) f(x') \\
     &< \lambda f(x^{\ast}) + (1-\lambda) f(x^{\ast}) \\
     &= f(x^{\ast}),
-\end{aligned}$$
+\end{aligned}$$ {#eq-convexity-auto-3}
 
 which contradicts with our statement that $x^{\ast}$ is a local minimum.
 Therefore, there does not exist $x' \in \mathcal{X}$ for which $f(x') < f(x^{\ast})$. The local minimum $x^{\ast}$ is also the global minimum.
@@ -190,7 +190,7 @@ Concretely,
 given a convex function $f$ defined on a convex set $\mathcal{X}$,
 any below set
 
-$$\mathcal{S}_b \stackrel{\textrm{def}}{=} \{x | x \in \mathcal{X} \textrm{ and } f(x) \leq b\}$$
+$$\mathcal{S}_b \stackrel{\textrm{def}}{=} \{x | x \in \mathcal{X} \textrm{ and } f(x) \leq b\}$$ {#eq-convexity-auto-4}
 
 is convex. 
 
@@ -198,7 +198,7 @@ Let's prove this quickly. Recall that for any $x, x' \in \mathcal{S}_b$ we need 
 Since $f(x) \leq b$ and $f(x') \leq b$,
 by the definition of convexity we have 
 
-$$f(\lambda x + (1-\lambda) x') \leq \lambda f(x) + (1-\lambda) f(x') \leq b.$$
+$$f(\lambda x + (1-\lambda) x') \leq \lambda f(x) + (1-\lambda) f(x') \leq b.$$ {#eq-convexity-auto-5}
 
 
 ### Convexity and Second Derivatives
@@ -220,11 +220,11 @@ To see that
 convexity of $f$ implies 
 $f'' \geq 0$  we use the fact that
 
-$$\frac{1}{2} f(x + \epsilon) + \frac{1}{2} f(x - \epsilon) \geq f\left(\frac{x + \epsilon}{2} + \frac{x - \epsilon}{2}\right) = f(x).$$
+$$\frac{1}{2} f(x + \epsilon) + \frac{1}{2} f(x - \epsilon) \geq f\left(\frac{x + \epsilon}{2} + \frac{x - \epsilon}{2}\right) = f(x).$$ {#eq-convexity-auto-6}
 
 Since the second derivative is given by the limit over finite differences it follows that
 
-$$f''(x) = \lim_{\epsilon \to 0} \frac{f(x+\epsilon) + f(x - \epsilon) - 2f(x)}{\epsilon^2} \geq 0.$$
+$$f''(x) = \lim_{\epsilon \to 0} \frac{f(x+\epsilon) + f(x - \epsilon) - 2f(x)}{\epsilon^2} \geq 0.$$ {#eq-convexity-auto-7}
 
 To see that 
 $f'' \geq 0$ implies that $f$ is convex
@@ -234,17 +234,17 @@ According to the mean value theorem,
 there exist $\alpha \in [a, x]$ and $\beta \in [x, b]$
 such that
 
-$$f'(\alpha) = \frac{f(x) - f(a)}{x-a} \textrm{ and } f'(\beta) = \frac{f(b) - f(x)}{b-x}.$$
+$$f'(\alpha) = \frac{f(x) - f(a)}{x-a} \textrm{ and } f'(\beta) = \frac{f(b) - f(x)}{b-x}.$$ {#eq-convexity-auto-8}
 
 
 By monotonicity $f'(\beta) \geq f'(\alpha)$, hence
 
-$$\frac{x-a}{b-a}f(b) + \frac{b-x}{b-a}f(a) \geq f(x).$$
+$$\frac{x-a}{b-a}f(b) + \frac{b-x}{b-a}f(a) \geq f(x).$$ {#eq-convexity-auto-9}
 
 Since $x = (1-\lambda)a + \lambda b$,
 we have
 
-$$\lambda f(b) + (1-\lambda)f(a) \geq f((1-\lambda)a + \lambda b),$$
+$$\lambda f(b) + (1-\lambda)f(a) \geq f((1-\lambda)a + \lambda b),$$ {#eq-convexity-auto-10}
 
 thus proving convexity.
 
@@ -253,7 +253,7 @@ proving the multidimensional case:
 $f: \mathbb{R}^n \rightarrow \mathbb{R}$
 is convex if and only if for all $\mathbf{x}, \mathbf{y} \in \mathbb{R}^n$
 
-$$g(z) \stackrel{\textrm{def}}{=} f(z \mathbf{x} + (1-z)  \mathbf{y}) \textrm{ where } z \in [0,1]$$ 
+$$g(z) \stackrel{\textrm{def}}{=} f(z \mathbf{x} + (1-z)  \mathbf{y}) \textrm{ where } z \in [0,1]$$  {#eq-convexity-auto-11}
 
 is convex.
 
@@ -266,7 +266,7 @@ $$\begin{aligned} &g(\lambda a + (1-\lambda) b)\\
 =&f\left(\lambda \left(a \mathbf{x} + (1-a)  \mathbf{y}\right)  + (1-\lambda) \left(b \mathbf{x} + (1-b)  \mathbf{y}\right) \right)\\
 \leq& \lambda f\left(a \mathbf{x} + (1-a)  \mathbf{y}\right)  + (1-\lambda) f\left(b \mathbf{x} + (1-b)  \mathbf{y}\right) \\
 =& \lambda g(a) + (1-\lambda) g(b).
-\end{aligned}$$
+\end{aligned}$$ {#eq-convexity-auto-12}
 
 To prove the converse,
 we can show that for 
@@ -276,7 +276,7 @@ $$\begin{aligned} &f(\lambda \mathbf{x} + (1-\lambda) \mathbf{y})\\
 =&g(\lambda \cdot 1 + (1-\lambda) \cdot 0)\\
 \leq& \lambda g(1)  + (1-\lambda) g(0) \\
 =& \lambda f(\mathbf{x}) + (1-\lambda) f(\mathbf{y}).
-\end{aligned}$$
+\end{aligned}$$ {#eq-convexity-auto-13}
 
 
 Finally,
@@ -300,7 +300,7 @@ One of the nice properties of convex optimization is that it allows us to handle
 
 $$\begin{aligned} \mathop{\textrm{minimize~}}_{\mathbf{x}} & f(\mathbf{x}) \\
     \textrm{ subject to } & c_i(\mathbf{x}) \leq 0 \textrm{ for all } i \in \{1, \ldots, n\},
-\end{aligned}$$
+\end{aligned}$$ {#eq-convexity-auto-14}
 
 where $f$ is the objective and the functions $c_i$ are constraint functions. To see what this does consider the case where $c_1(\mathbf{x}) = \|\mathbf{x}\|_2 - 1$. In this case the parameters $\mathbf{x}$ are constrained to the unit ball. If a second constraint is $c_2(\mathbf{x}) = \mathbf{v}^\top \mathbf{x} + b$, then this corresponds to all $\mathbf{x}$ lying on a half-space. Satisfying both constraints simultaneously amounts to selecting a slice of a ball.
 
@@ -316,7 +316,7 @@ Skipping over the derivation of the *Lagrangian* $L$,
 the above reasoning
 can be expressed via the following saddle point optimization problem:
 
-$$L(\mathbf{x}, \alpha_1, \ldots, \alpha_n) = f(\mathbf{x}) + \sum_{i=1}^n \alpha_i c_i(\mathbf{x}) \textrm{ where } \alpha_i \geq 0.$$
+$$L(\mathbf{x}, \alpha_1, \ldots, \alpha_n) = f(\mathbf{x}) + \sum_{i=1}^n \alpha_i c_i(\mathbf{x}) \textrm{ where } \alpha_i \geq 0.$$ {#eq-convexity-auto-15}
 
 Here the variables $\alpha_i$ ($i=1,\ldots,n$) are the so-called *Lagrange multipliers* that ensure that constraints are properly enforced. They are chosen just large enough to ensure that $c_i(\mathbf{x}) \leq 0$ for all $i$. For instance, for any $\mathbf{x}$ where $c_i(\mathbf{x}) < 0$ naturally, we'd end up picking $\alpha_i = 0$. Moreover, this is a saddle point optimization problem where one wants to *maximize* $L$ with respect to all $\alpha_i$ and simultaneously *minimize* it with respect to $\mathbf{x}$. There is a rich body of literature explaining how to arrive at the function $L(\mathbf{x}, \alpha_1, \ldots, \alpha_n)$. For our purposes it is sufficient to know that the saddle point of $L$ is where the original constrained optimization problem is solved optimally.
 
@@ -333,11 +333,11 @@ In general, adding penalties is a good way of ensuring approximate constraint sa
 
 An alternative strategy for satisfying constraints is projections. Again, we encountered them before, e.g., when dealing with gradient clipping in @sec-rnn-scratch. There we ensured that a gradient has length bounded by $\theta$ via
 
-$$\mathbf{g} \leftarrow \mathbf{g} \cdot \mathrm{min}(1, \theta/\|\mathbf{g}\|).$$
+$$\mathbf{g} \leftarrow \mathbf{g} \cdot \mathrm{min}(1, \theta/\|\mathbf{g}\|).$$ {#eq-convexity-auto-16}
 
 This turns out to be a *projection* of $\mathbf{g}$ onto the ball of radius $\theta$. More generally, a projection on a convex set $\mathcal{X}$ is defined as
 
-$$\textrm{Proj}_{\mathcal{X}}(\mathbf{x}) = \mathop{\mathrm{argmin}}_{\mathbf{x}' \in \mathcal{X}} \|\mathbf{x} - \mathbf{x}'\|,$$
+$$\textrm{Proj}_{\mathcal{X}}(\mathbf{x}) = \mathop{\mathrm{argmin}}_{\mathbf{x}' \in \mathcal{X}} \|\mathbf{x} - \mathbf{x}'\|,$$ {#eq-convexity-auto-17}
 
 which is the closest point in $\mathcal{X}$ to $\mathbf{x}$. 
 

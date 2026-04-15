@@ -236,7 +236,7 @@ $$L(\mathbf{w}, b) =\frac{1}{n}\sum_{i=1}^n l^{(i)}(\mathbf{w}, b) =\frac{1}{n} 
 When training the model, we seek parameters ($\mathbf{w}^*, b^*$)
 that minimize the total loss across all training examples:
 
-$$\mathbf{w}^*, b^* = \operatorname*{argmin}_{\mathbf{w}, b}\  L(\mathbf{w}, b).$$
+$$\mathbf{w}^*, b^* = \operatorname*{argmin}_{\mathbf{w}, b}\  L(\mathbf{w}, b).$$ {#eq-linear-regression-auto-1}
 
 ### Analytic Solution
 
@@ -261,13 +261,13 @@ $$\begin{aligned}
     2 \mathbf{X}^\top (\mathbf{X} \mathbf{w} - \mathbf{y}) = 0
     \textrm{ and hence }
     \mathbf{X}^\top \mathbf{y} = \mathbf{X}^\top \mathbf{X} \mathbf{w}.
-\end{aligned}$$
+\end{aligned}$$ {#eq-linear-regression-auto-2}
 
 Solving for $\mathbf{w}$ provides us with the optimal solution
 for the optimization problem.
 Note that this solution 
 
-$$\mathbf{w}^* = (\mathbf X^\top \mathbf X)^{-1}\mathbf X^\top \mathbf{y}$$
+$$\mathbf{w}^* = (\mathbf X^\top \mathbf X)^{-1}\mathbf X^\top \mathbf{y}$$ {#eq-linear-regression-auto-3}
 
 will only be unique
 when the matrix $\mathbf X^\top \mathbf X$ is invertible,
@@ -346,7 +346,7 @@ called the *learning rate*,
 and subtract the resulting term from the current parameter values.
 We can express the update as follows:
 
-$$(\mathbf{w},b) \leftarrow (\mathbf{w},b) - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \partial_{(\mathbf{w},b)} l^{(i)}(\mathbf{w},b).$$
+$$(\mathbf{w},b) \leftarrow (\mathbf{w},b) - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \partial_{(\mathbf{w},b)} l^{(i)}(\mathbf{w},b).$$ {#eq-linear-regression-auto-4}
 
 In summary, minibatch SGD proceeds as follows:
 (i) initialize the values of the model parameters, typically at random;
@@ -604,19 +604,19 @@ is to assume that observations arise from noisy measurements,
 where the noise $\epsilon$ follows the normal distribution 
 $\mathcal{N}(0, \sigma^2)$:
 
-$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon \textrm{ where } \epsilon \sim \mathcal{N}(0, \sigma^2).$$
+$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon \textrm{ where } \epsilon \sim \mathcal{N}(0, \sigma^2).$$ {#eq-linear-regression-auto-5}
 
 Thus, we can now write out the *likelihood*
 of seeing a particular $y$ for a given $\mathbf{x}$ via
 
-$$P(y \mid \mathbf{x}) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (y - \mathbf{w}^\top \mathbf{x} - b)^2\right).$$
+$$P(y \mid \mathbf{x}) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (y - \mathbf{w}^\top \mathbf{x} - b)^2\right).$$ {#eq-linear-regression-auto-6}
 
 As such, the likelihood factorizes.
 According to *the principle of maximum likelihood*,
 the best values of parameters $\mathbf{w}$ and $b$ are those
 that maximize the *likelihood* of the entire dataset:
 
-$$P(\mathbf y \mid \mathbf X) = \prod_{i=1}^{n} p(y^{(i)} \mid \mathbf{x}^{(i)}).$$
+$$P(\mathbf y \mid \mathbf X) = \prod_{i=1}^{n} p(y^{(i)} \mid \mathbf{x}^{(i)}).$$ {#eq-linear-regression-auto-7}
 
 The equality follows since all pairs $(\mathbf{x}^{(i)}, y^{(i)})$
 were drawn independently of each other.
@@ -632,7 +632,7 @@ So, without changing anything,
 we can *minimize* the *negative log-likelihood*,
 which we can express as follows:
 
-$$-\log P(\mathbf y \mid \mathbf X) = \sum_{i=1}^n \frac{1}{2} \log(2 \pi \sigma^2) + \frac{1}{2 \sigma^2} \left(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\right)^2.$$
+$$-\log P(\mathbf y \mid \mathbf X) = \sum_{i=1}^n \frac{1}{2} \log(2 \pi \sigma^2) + \frac{1}{2 \sigma^2} \left(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\right)^2.$$ {#eq-linear-regression-auto-8}
 
 If we assume that $\sigma$ is fixed,
 we can ignore the first term,

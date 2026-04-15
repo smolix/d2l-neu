@@ -88,7 +88,7 @@ and a value $\mathbf{v} \in \mathbb{R}^{d_v}$,
 each attention head $\mathbf{h}_i$  ($i = 1, \ldots, h$)
 is computed as
 
-$$\mathbf{h}_i = f(\mathbf W_i^{(q)}\mathbf q, \mathbf W_i^{(k)}\mathbf k,\mathbf W_i^{(v)}\mathbf v) \in \mathbb R^{p_v},$$
+$$\mathbf{h}_i = f(\mathbf W_i^{(q)}\mathbf q, \mathbf W_i^{(k)}\mathbf k,\mathbf W_i^{(v)}\mathbf v) \in \mathbb R^{p_v},$$ {#eq-multihead-attention-auto-1}
 
 where 
 $\mathbf W_i^{(q)}\in\mathbb R^{p_q\times d_q}$,
@@ -105,7 +105,7 @@ learnable parameters
 $\mathbf W_o\in\mathbb R^{p_o\times h p_v}$
 of the concatenation of $h$ heads:
 
-$$\mathbf W_o \begin{bmatrix}\mathbf h_1\\\vdots\\\mathbf h_h\end{bmatrix} \in \mathbb{R}^{p_o}.$$
+$$\mathbf W_o \begin{bmatrix}\mathbf h_1\\\vdots\\\mathbf h_h\end{bmatrix} \in \mathbb{R}^{p_o}.$$ {#eq-multihead-attention-auto-2}
 
 Based on this design, each head may attend
 to different parts of the input.

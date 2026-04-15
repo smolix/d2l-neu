@@ -217,7 +217,7 @@ Then, to put all features on a common scale,
 we *standardize* the data by
 rescaling features to zero mean and unit variance:
 
-$$x \leftarrow \frac{x - \mu}{\sigma},$$
+$$x \leftarrow \frac{x - \mu}{\sigma},$$ {#eq-kaggle-house-price-auto-1}
 
 where $\mu$ and $\sigma$ denote mean and standard deviation, respectively.
 To verify that this indeed transforms
@@ -307,7 +307,7 @@ After all, a small value $\delta$ for $|\log y - \log \hat{y}| \leq \delta$
 translates into $e^{-\delta} \leq \frac{\hat{y}}{y} \leq e^\delta$.
 This leads to the following root-mean-squared-error between the logarithm of the predicted price and the logarithm of the label price:
 
-$$\sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i -\log \hat{y}_i\right)^2}.$$
+$$\sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i -\log \hat{y}_i\right)^2}.$$ {#eq-kaggle-house-price-auto-2}
 
 
 ```{python}

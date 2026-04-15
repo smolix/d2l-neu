@@ -672,7 +672,11 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     # Step 4: Emit .qmd output (directive translation happens per markdown block)
     output = emit_qmd(blocks, primary)
 
-    # Step 5: Add YAML front matter
+    # Step 5: Auto-number all display equations that don't have labels
+    rel_path = str(src_path).split('/')[-1].replace('.md', '')
+    output = number_all_equations(output, rel_path)
+
+    # Step 6: Add YAML front matter
     # Frontmatter files: suppress Pandoc auto-numbering.
     # Numbered files: no front matter needed — Pandoc auto-numbers headings
     # and the post-render script (fix_crossref_numbers.py) corrects the numbers.
@@ -680,8 +684,67 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
         output = '---\nnumber-sections: false\n---\n' + output
 
     return output
-    offset = logical_chapter - pandoc_chapter
-    return f'---\nnumber-offset: [{offset}]\n---'
+
+
+def number_all_equations(text, file_slug):
+    """Add {#eq-*} labels to all display equations that don't have one.
+
+    Quarto only numbers equations with explicit labels. d2l.ai numbers all
+    display equations. This function auto-assigns labels like
+    {#eq-linear-regression-auto-1}, {#eq-linear-regression-auto-2}, etc.
+    """
+    lines = text.split('\n')
+    result = []
+    eq_counter = 0
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        # Single-line display equation: $$...$$ (opens and closes on one line)
+        if stripped.startswith('$$') and stripped.endswith('$$') and len(stripped) > 4:
+            if '{#eq-' in line:
+                result.append(line)
+            else:
+                eq_counter += 1
+                label = f'{{#eq-{file_slug}-auto-{eq_counter}}}'
+                result.append(f'{line} {label}')
+            i += 1
+            continue
+
+        # Multi-line display equation: line starts with $$ (possibly with content after)
+        # The closing is a line that ends with $$ (possibly with content before)
+        if stripped.startswith('$$') and not stripped.endswith('$$'):
+            eq_lines = [line]
+            i += 1
+            while i < len(lines):
+                l = lines[i]
+                eq_lines.append(l)
+                # Closing: line ends with $$ (possibly preceded by content)
+                if l.strip().endswith('$$'):
+                    i += 1
+                    break
+                i += 1
+
+            # Check if closing line or next line has a label
+            has_label = any('{#eq-' in el for el in eq_lines)
+            if not has_label and i < len(lines) and '{#eq-' in lines[i]:
+                has_label = True
+
+            if not has_label:
+                eq_counter += 1
+                label = f'{{#eq-{file_slug}-auto-{eq_counter}}}'
+                # Append label AFTER the closing $$ line
+                eq_lines[-1] = f'{eq_lines[-1]} {label}'
+
+            result.extend(eq_lines)
+            continue
+
+        result.append(line)
+        i += 1
+
+    return '\n'.join(result)
 
 
 def number_headings(text, chapter_number):

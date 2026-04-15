@@ -33,7 +33,7 @@ A main reason is that one-hot word vectors cannot accurately express the similar
 For vectors $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$, their cosine similarity is the cosine of the angle between them:
 
 
-$$\frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\| \|\mathbf{y}\|} \in [-1, 1].$$
+$$\frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\| \|\mathbf{y}\|} \in [-1, 1].$$ {#eq-word2vec-auto-1}
 
 
 Since the cosine similarity between one-hot vectors of any two different words is 0,
@@ -69,7 +69,7 @@ the skip-gram model considers
 the conditional probability for generating the *context words*: "the", "man", "his", and "son",
 which are no more than 2 words away from the center word:
 
-$$P(\textrm{"the"},\textrm{"man"},\textrm{"his"},\textrm{"son"}\mid\textrm{"loves"}).$$
+$$P(\textrm{"the"},\textrm{"man"},\textrm{"his"},\textrm{"son"}\mid\textrm{"loves"}).$$ {#eq-word2vec-auto-2}
 
 Assume that
 the context words are independently generated
@@ -77,7 +77,7 @@ given the center word (i.e., conditional independence).
 In this case, the above conditional probability
 can be rewritten as
 
-$$P(\textrm{"the"}\mid\textrm{"loves"})\cdot P(\textrm{"man"}\mid\textrm{"loves"})\cdot P(\textrm{"his"}\mid\textrm{"loves"})\cdot P(\textrm{"son"}\mid\textrm{"loves"}).$$
+$$P(\textrm{"the"}\mid\textrm{"loves"})\cdot P(\textrm{"man"}\mid\textrm{"loves"})\cdot P(\textrm{"his"}\mid\textrm{"loves"})\cdot P(\textrm{"son"}\mid\textrm{"loves"}).$$ {#eq-word2vec-auto-3}
 
 ![The skip-gram model considers the conditional probability of generating the surrounding context words given a center word.](../img/skip-gram.svg){#fig-skip-gram}
 
@@ -117,7 +117,7 @@ where any time step that is less than $1$ or greater than $T$ can be omitted.
 The skip-gram model parameters are the center word vector and context word vector for each word in the vocabulary.
 In training, we learn the model parameters by maximizing the likelihood function (i.e., maximum likelihood estimation). This is equivalent to minimizing the following loss function:
 
-$$ - \sum_{t=1}^{T} \sum_{-m \leq j \leq m,\ j \neq 0} \textrm{log}\, P(w^{(t+j)} \mid w^{(t)}).$$
+$$ - \sum_{t=1}^{T} \sum_{-m \leq j \leq m,\ j \neq 0} \textrm{log}\, P(w^{(t+j)} \mid w^{(t)}).$$ {#eq-word2vec-auto-4}
 
 When using stochastic gradient descent to minimize the loss,
 in each iteration
@@ -200,7 +200,7 @@ is the probability of generating all center words
 given their context words:
 
 
-$$ \prod_{t=1}^{T}  P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$
+$$ \prod_{t=1}^{T}  P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$ {#eq-word2vec-auto-5}
 
 ### Training
 
@@ -211,11 +211,11 @@ The maximum likelihood estimation of the
 continuous bag of words model is equivalent to minimizing the following loss function:
 
 
-$$  -\sum_{t=1}^T  \textrm{log}\, P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$
+$$  -\sum_{t=1}^T  \textrm{log}\, P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$ {#eq-word2vec-auto-6}
 
 Notice that
 
-$$\log\,P(w_c \mid \mathcal{W}_o) = \mathbf{u}_c^\top \bar{\mathbf{v}}_o - \log\,\left(\sum_{i \in \mathcal{V}} \exp\left(\mathbf{u}_i^\top \bar{\mathbf{v}}_o\right)\right).$$
+$$\log\,P(w_c \mid \mathcal{W}_o) = \mathbf{u}_c^\top \bar{\mathbf{v}}_o - \log\,\left(\sum_{i \in \mathcal{V}} \exp\left(\mathbf{u}_i^\top \bar{\mathbf{v}}_o\right)\right).$$ {#eq-word2vec-auto-7}
 
 Through differentiation, we can obtain its gradient
 with respect to any context word vector $\mathbf{v}_{o_i}$($i = 1, \ldots, 2m$)

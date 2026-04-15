@@ -8,11 +8,11 @@ $$\begin{aligned}
 \alpha(\mathbf{q}, \mathbf{k}) & = 1 \textrm{ if } \|\mathbf{q} - \mathbf{k}\| \leq 1 && \textrm{Boxcar;} \\
 \alpha(\mathbf{q}, \mathbf{k}) & = \mathop{\mathrm{max}}\left(0, 1 - \|\mathbf{q} - \mathbf{k}\|\right) && \textrm{Epanechikov.}
 \end{aligned}
-$$
+$$ {#eq-attention-pooling-auto-1}
 
 There are many more choices that we could pick. See a [Wikipedia article](https://en.wikipedia.org/wiki/Kernel_(statistics)) for a more extensive review and how the choice of kernels is related to kernel density estimation, sometimes also called *Parzen Windows* [@parzen1957consistent]. All of the kernels are heuristic and can be tuned. For instance, we can adjust the width, not only on a global basis but even on a per-coordinate basis. Regardless, all of them lead to the following equation for regression and classification alike:
 
-$$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}.$$
+$$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}.$$ {#eq-attention-pooling-auto-2}
 
 In the case of a (scalar) regression with observations $(\mathbf{x}_i, y_i)$ for features and labels respectively, $\mathbf{v}_i = y_i$ are scalars, $\mathbf{k}_i = \mathbf{x}_i$ are vectors, and the query $\mathbf{q}$ denotes the new location where $f$ should be evaluated. In the case of (multiclass) classification, we use one-hot-encoding of $y_i$ to obtain $\mathbf{v}_i$. One of the convenient properties of this estimator is that it requires no training. Even more so, if we suitably narrow the kernel with increasing amounts of data, the approach is consistent [@mack1982weak], i.e., it will converge to some statistically optimal solution. Let's start by inspecting some kernels.
 
@@ -120,7 +120,7 @@ Different kernels correspond to different notions of range and smoothness. For i
 
 To see Nadaraya--Watson estimation in action, let's define some training data. In the following we use the dependency
 
-$$y_i = 2\sin(x_i) + x_i + \epsilon,$$
+$$y_i = 2\sin(x_i) + x_i + \epsilon,$$ {#eq-attention-pooling-auto-3}
 
 where $\epsilon$ is drawn from a normal distribution with zero mean and unit variance. We draw 40 training examples.
 

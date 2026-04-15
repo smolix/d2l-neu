@@ -664,7 +664,7 @@ where the comma indicates "and".
 Note that for any values $a$ and $b$,
 it follows that
 
-$$P(A=a, B=b) \leq P(A=a) \textrm{ and } P(A=a, B=b) \leq P(B = b),$$
+$$P(A=a, B=b) \leq P(A=a) \textrm{ and } P(A=a, B=b) \leq P(B = b),$$ {#eq-probability-auto-1}
 
 since for $A=a$ and $B=b$ to happen,
 $A=a$ has to happen *and* $B=b$ also has to happen.
@@ -685,7 +685,7 @@ turns out to be extremely important.
 It is called the *conditional probability*,
 and is denoted via the "$\mid$" symbol:
 
-$$P(B=b \mid A=a) = P(A=a,B=b)/P(A=a).$$
+$$P(B=b \mid A=a) = P(A=a,B=b)/P(A=a).$$ {#eq-probability-auto-2}
 
 It tells us the new probability
 associated with the event $B=b$,
@@ -713,7 +713,7 @@ and $P(A, B) = P(A\mid B) P(B)$.
 Combining both equations yields
 $P(B\mid A) P(A) = P(A\mid B) P(B)$ and hence
 
-$$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$
+$$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$ {#eq-probability-auto-3}
 
 
 This simple equation has profound implications because
@@ -730,12 +730,12 @@ In some cases we might not have direct access to $P(B)$,
 such as the prevalence of symptoms.
 In this case a simplified version of Bayes' theorem comes in handy:
 
-$$P(A \mid B) \propto P(B \mid A) P(A).$$
+$$P(A \mid B) \propto P(B \mid A) P(A).$$ {#eq-probability-auto-4}
 
 Since we know that $P(A \mid B)$ must be normalized to $1$, i.e., $\sum_a P(A=a \mid B) = 1$,
 we can use it to compute
 
-$$P(A \mid B) = \frac{P(B \mid A) P(A)}{\sum_a P(B \mid A=a) P(A = a)}.$$
+$$P(A \mid B) = \frac{P(B \mid A) P(A)}{\sum_a P(B \mid A=a) P(A = a)}.$$ {#eq-probability-auto-5}
 
 In Bayesian statistics, we think of an observer
 as possessing some (subjective) prior beliefs
@@ -756,7 +756,7 @@ we can get away with simply normalizing over the hypotheses.
 
 Note that $\sum_a P(A=a \mid B) = 1$ also allows us to *marginalize* over random variables. That is, we can drop variables from a joint distribution such as $P(A, B)$. After all, we have that
 
-$$\sum_a P(B \mid A=a) P(A=a) = \sum_a P(B, A=a) = P(B).$$
+$$\sum_a P(B \mid A=a) P(A=a) = \sum_a P(B, A=a) = P(B).$$ {#eq-probability-auto-6}
 
 Independence is another fundamentally important concept
 that forms the backbone of
@@ -848,11 +848,11 @@ P(D_1 = 1)
 =& P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
 =& 0.011485.
 \end{aligned}
-$$
+$$ {#eq-probability-auto-7}
 
 This leads us to
 
-$$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = 0.1306.$$
+$$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = 0.1306.$$ {#eq-probability-auto-8}
 
 In other words, there is only a 13.06% chance
 that the patient actually has HIV,
@@ -881,7 +881,7 @@ P(D_1 = 1, D_2 = 1 \mid H = 1)
 & = P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1)
 =& 0.98.
 \end{aligned}
-$$
+$$ {#eq-probability-auto-9}
 
 Now we can apply marginalization to obtain the probability
 that both tests come back positive:
@@ -892,13 +892,13 @@ $$\begin{aligned}
 &= P(D_1 = 1, D_2 = 1 \mid H = 0)P(H=0) + P(D_1 = 1, D_2 = 1 \mid H = 1)P(H=1)\\
 &= 0.00176955.
 \end{aligned}
-$$
+$$ {#eq-probability-auto-10}
 
 Finally, the probability of the patient having HIV given that both tests are positive is
 
 $$P(H = 1 \mid D_1 = 1, D_2 = 1)
 = \frac{P(D_1 = 1, D_2 = 1 \mid H=1) P(H=1)}{P(D_1 = 1, D_2 = 1)}
-= 0.8307.$$
+= 0.8307.$$ {#eq-probability-auto-11}
 
 That is, the second test allowed us to gain much higher confidence that not all is well.
 Despite the second test being considerably less accurate than the first one,
@@ -943,14 +943,14 @@ Hence the expected return is 1.8$\times$.
 In general, the *expectation* (or average)
 of the random variable $X$ is defined as
 
-$$E[X] = E_{x \sim P}[x] = \sum_{x} x P(X = x).$$
+$$E[X] = E_{x \sim P}[x] = \sum_{x} x P(X = x).$$ {#eq-probability-auto-12}
 
 Likewise, for densities we obtain $E[X] = \int x \;dp(x)$.
 Sometimes we are interested in the expected value
 of some function of $x$.
 We can calculate these expectations as
 
-$$E_{x \sim P}[f(x)] = \sum_x f(x) P(x) \textrm{ and } E_{x \sim P}[f(x)] = \int f(x) p(x) \;dx$$
+$$E_{x \sim P}[f(x)] = \sum_x f(x) P(x) \textrm{ and } E_{x \sim P}[f(x)] = \int f(x) p(x) \;dx$$ {#eq-probability-auto-13}
 
 for discrete probabilities and densities, respectively.
 Returning to the investment example from above,
@@ -997,7 +997,7 @@ of any non-negative function of this difference.
 The *variance* of a random variable is calculated by looking
 at the expected value of the *squared* differences:
 
-$$\textrm{Var}[X] = E\left[(X - E[X])^2\right] = E[X^2] - E[X]^2.$$
+$$\textrm{Var}[X] = E\left[(X - E[X])^2\right] = E[X^2] - E[X]^2.$$ {#eq-probability-auto-14}
 
 Here the equality follows by expanding
 $(X - E[X])^2 = X^2 - 2 X E[X] + E[X]^2$
@@ -1015,7 +1015,7 @@ Lastly, the variance of a function
 of a random variable
 is defined analogously as
 
-$$\textrm{Var}_{x \sim P}[f(x)] = E_{x \sim P}[f^2(x)] - E_{x \sim P}[f(x)]^2.$$
+$$\textrm{Var}_{x \sim P}[f(x)] = E_{x \sim P}[f^2(x)] - E_{x \sim P}[f(x)]^2.$$ {#eq-probability-auto-15}
 
 Returning to our investment example,
 we can now compute the variance of the investment.
@@ -1036,14 +1036,14 @@ has coordinates $\mu_i = E_{\mathbf{x} \sim P}[x_i]$.
 We define them by taking expectations of the *outer product*
 of the difference between random variables and their mean:
 
-$$\boldsymbol{\Sigma} \stackrel{\textrm{def}}{=} \textrm{Cov}_{\mathbf{x} \sim P}[\mathbf{x}] = E_{\mathbf{x} \sim P}\left[(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top\right].$$
+$$\boldsymbol{\Sigma} \stackrel{\textrm{def}}{=} \textrm{Cov}_{\mathbf{x} \sim P}[\mathbf{x}] = E_{\mathbf{x} \sim P}\left[(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top\right].$$ {#eq-probability-auto-16}
 
 This matrix $\boldsymbol{\Sigma}$ is referred to as the covariance matrix.
 An easy way to see its effect is to consider some vector $\mathbf{v}$
 of the same size as $\mathbf{x}$.
 It follows that
 
-$$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \textrm{Var}_{x \sim P}[\mathbf{v}^\top \mathbf{x}].$$
+$$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \textrm{Var}_{x \sim P}[\mathbf{v}^\top \mathbf{x}].$$ {#eq-probability-auto-17}
 
 As such, $\boldsymbol{\Sigma}$ allows us to compute the variance
 for any linear function of $\mathbf{x}$

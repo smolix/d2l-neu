@@ -1111,7 +1111,7 @@ $$\mathbf{A}=
 \mathbf{a}^\top_{2} \\
 \vdots \\
 \mathbf{a}^\top_m \\
-\end{bmatrix},$$
+\end{bmatrix},$$ {#eq-linear-algebra-auto-1}
 
 where each $\mathbf{a}^\top_{i} \in \mathbb{R}^n$
 is a row vector representing the $i^\textrm{th}$ row
@@ -1240,7 +1240,7 @@ $$\mathbf{A}=\begin{bmatrix}
  b_{21} & b_{22} & \cdots & b_{2m} \\
 \vdots & \vdots & \ddots & \vdots \\
  b_{k1} & b_{k2} & \cdots & b_{km} \\
-\end{bmatrix}.$$
+\end{bmatrix}.$$ {#eq-linear-algebra-auto-2}
 
 
 Let $\mathbf{a}^\top_{i} \in \mathbb{R}^k$ denote
@@ -1260,7 +1260,7 @@ $$\mathbf{A}=
 \quad \mathbf{B}=\begin{bmatrix}
  \mathbf{b}_{1} & \mathbf{b}_{2} & \cdots & \mathbf{b}_{m} \\
 \end{bmatrix}.
-$$
+$$ {#eq-linear-algebra-auto-3}
 
 
 To form the matrix product $\mathbf{C} \in \mathbb{R}^{n \times m}$,
@@ -1285,7 +1285,7 @@ $$\mathbf{C} = \mathbf{AB} = \begin{bmatrix}
  \vdots & \vdots & \ddots &\vdots\\
 \mathbf{a}^\top_{n} \mathbf{b}_1 & \mathbf{a}^\top_{n}\mathbf{b}_2& \cdots& \mathbf{a}^\top_{n} \mathbf{b}_m
 \end{bmatrix}.
-$$
+$$ {#eq-linear-algebra-auto-4}
 
 We can think of the matrix--matrix multiplication $\mathbf{AB}$
 as performing $m$ matrix--vector products
@@ -1356,12 +1356,12 @@ to a scalar and satisfies the following three properties:
 
 1. Given any vector $\mathbf{x}$, if we scale (all elements of) the vector
    by a scalar $\alpha \in \mathbb{R}$, its norm scales accordingly:
-   $$\|\alpha \mathbf{x}\| = |\alpha| \|\mathbf{x}\|.$$
+   $$\|\alpha \mathbf{x}\| = |\alpha| \|\mathbf{x}\|.$$ {#eq-linear-algebra-auto-5}
 2. For any vectors $\mathbf{x}$ and $\mathbf{y}$:
    norms satisfy the triangle inequality:
-   $$\|\mathbf{x} + \mathbf{y}\| \leq \|\mathbf{x}\| + \|\mathbf{y}\|.$$
+   $$\|\mathbf{x} + \mathbf{y}\| \leq \|\mathbf{x}\| + \|\mathbf{y}\|.$$ {#eq-linear-algebra-auto-6}
 3. The norm of a vector is nonnegative and it only vanishes if the vector is zero:
-   $$\|\mathbf{x}\| > 0 \textrm{ for all } \mathbf{x} \neq 0.$$
+   $$\|\mathbf{x}\| > 0 \textrm{ for all } \mathbf{x} \neq 0.$$ {#eq-linear-algebra-auto-7}
 
 Many functions are valid norms and different norms
 encode different notions of size.
@@ -1370,7 +1370,7 @@ when calculating the hypotenuse of a right triangle
 is the square root of the sum of squares of a vector's elements.
 Formally, this is called the $\ell_2$ *norm* and expressed as
 
-$$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}.$$
+$$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}.$$ {#eq-linear-algebra-auto-8}
 
 The method `norm` calculates the $\ell_2$ norm.
 
@@ -1418,7 +1418,7 @@ and the associated measure is called the Manhattan distance.
 By definition, the $\ell_1$ norm sums
 the absolute values of a vector's elements:
 
-$$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$
+$$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$ {#eq-linear-algebra-auto-9}
 
 Compared to the $\ell_2$ norm, it is less sensitive to outliers.
 To compute the $\ell_1$ norm,
@@ -1463,7 +1463,7 @@ np.abs(u).sum()
 Both the $\ell_2$ and $\ell_1$ norms are special cases
 of the more general $\ell_p$ *norms*:
 
-$$\|\mathbf{x}\|_p = \left(\sum_{i=1}^n \left|x_i \right|^p \right)^{1/p}.$$
+$$\|\mathbf{x}\|_p = \left(\sum_{i=1}^n \left|x_i \right|^p \right)^{1/p}.$$ {#eq-linear-algebra-auto-10}
 
 In the case of matrices, matters are more complicated.
 After all, matrices can be viewed both as collections of individual entries
@@ -1477,7 +1477,7 @@ which is much easier to compute and defined as
 the square root of the sum of the squares
 of a matrix's elements:
 
-$$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$
+$$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$ {#eq-linear-algebra-auto-11}
 
 The Frobenius norm behaves as if it were
 an $\ell_2$ norm of a matrix-shaped vector.

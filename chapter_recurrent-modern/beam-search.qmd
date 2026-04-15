@@ -57,7 +57,7 @@ we simply select the token
 with the highest conditional probability
 from $\mathcal{Y}$, i.e., 
 
-$$y_{t'} = \operatorname*{argmax}_{y \in \mathcal{Y}} P(y \mid y_1, \ldots, y_{t'-1}, \mathbf{c}).$$
+$$y_{t'} = \operatorname*{argmax}_{y \in \mathcal{Y}} P(y \mid y_1, \ldots, y_{t'-1}, \mathbf{c}).$$ {#eq-beam-search-auto-1}
 
 Once our model outputs "&lt;eos&gt;" 
 (or we reach the maximum length $T'$)
@@ -193,13 +193,13 @@ $P(y_1 \mid \mathbf{c})$ are $A$ and $C$.
 At time step 2, for all $y_2 \in \mathcal{Y},$ 
 we compute 
 
-$$\begin{aligned}P(A, y_2 \mid \mathbf{c}) = P(A \mid \mathbf{c})P(y_2 \mid A, \mathbf{c}),\\ P(C, y_2 \mid \mathbf{c}) = P(C \mid \mathbf{c})P(y_2 \mid C, \mathbf{c}),\end{aligned}$$  
+$$\begin{aligned}P(A, y_2 \mid \mathbf{c}) = P(A \mid \mathbf{c})P(y_2 \mid A, \mathbf{c}),\\ P(C, y_2 \mid \mathbf{c}) = P(C \mid \mathbf{c})P(y_2 \mid C, \mathbf{c}),\end{aligned}$$   {#eq-beam-search-auto-2}
 
 and pick the largest two among these ten values, say
 $P(A, B \mid \mathbf{c})$ and $P(C, E \mid \mathbf{c})$.
 Then at time step 3, for all $y_3 \in \mathcal{Y}$, we compute 
 
-$$\begin{aligned}P(A, B, y_3 \mid \mathbf{c}) = P(A, B \mid \mathbf{c})P(y_3 \mid A, B, \mathbf{c}),\\P(C, E, y_3 \mid \mathbf{c}) = P(C, E \mid \mathbf{c})P(y_3 \mid C, E, \mathbf{c}),\end{aligned}$$ 
+$$\begin{aligned}P(A, B, y_3 \mid \mathbf{c}) = P(A, B \mid \mathbf{c})P(y_3 \mid A, B, \mathbf{c}),\\P(C, E, y_3 \mid \mathbf{c}) = P(C, E \mid \mathbf{c})P(y_3 \mid C, E, \mathbf{c}),\end{aligned}$$  {#eq-beam-search-auto-3}
 
 and pick the largest two among these ten values, say 
 $P(A, B, D \mid \mathbf{c})$   and  $P(C, E, D \mid  \mathbf{c}).$

@@ -75,7 +75,7 @@ such information is passed on as *input* to the next bidirectional layer.
 Last, the output layer computes the output
 $\mathbf{O}_t \in \mathbb{R}^{n \times q}$ (number of outputs $=q$):
 
-$$\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$
+$$\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$ {#eq-bi-rnn-auto-1}
 
 Here, the weight matrix $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{2h \times q}$
 and the bias $\mathbf{b}_\textrm{q} \in \mathbb{R}^{1 \times q}$

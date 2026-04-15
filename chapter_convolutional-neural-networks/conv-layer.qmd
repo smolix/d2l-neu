@@ -106,7 +106,7 @@ the output size is given by the input size $n_\textrm{h} \times n_\textrm{w}$
 minus the size of the convolution kernel $k_\textrm{h} \times k_\textrm{w}$
 via
 
-$$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1).$$
+$$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1).$$ {#eq-conv-layer-auto-1}
 
 This is the case since we need enough space
 to "shift" the convolution kernel across the image.

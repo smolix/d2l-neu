@@ -7,7 +7,7 @@ we need to increase $n$.
 However, the number of model parameters would also increase exponentially with it, as we need to store $|\mathcal{V}|^n$ numbers for a vocabulary set $\mathcal{V}$.
 Hence, rather than modeling $P(x_t \mid x_{t-1}, \ldots, x_{t-n+1})$ it is preferable to use a latent variable model,
 
-$$P(x_t \mid x_{t-1}, \ldots, x_1) \approx P(x_t \mid h_{t-1}),$$
+$$P(x_t \mid x_{t-1}, \ldots, x_1) \approx P(x_t \mid h_{t-1}),$$ {#eq-rnn-auto-1}
 
 where $h_{t-1}$ is a *hidden state*  that stores the sequence information up to time step $t-1$.
 In general,

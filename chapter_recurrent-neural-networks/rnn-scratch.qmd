@@ -731,14 +731,14 @@ Formally, we say that the objective
 is *Lipschitz continuous* with constant $L$,
 meaning that for any $\mathbf{x}$ and $\mathbf{y}$, we have
 
-$$|f(\mathbf{x}) - f(\mathbf{y})| \leq L \|\mathbf{x} - \mathbf{y}\|.$$
+$$|f(\mathbf{x}) - f(\mathbf{y})| \leq L \|\mathbf{x} - \mathbf{y}\|.$$ {#eq-rnn-scratch-auto-1}
 
 As you can see, when we update the parameter vector by subtracting $\eta \mathbf{g}$,
 the change in the value of the objective
 depends on the learning rate,
 the norm of the gradient and $L$ as follows:
 
-$$|f(\mathbf{x}) - f(\mathbf{x} - \eta\mathbf{g})| \leq L \eta\|\mathbf{g}\|.$$
+$$|f(\mathbf{x}) - f(\mathbf{x} - \eta\mathbf{g})| \leq L \eta\|\mathbf{g}\|.$$ {#eq-rnn-scratch-auto-2}
 
 In other words, the objective cannot
 change by more than $L \eta \|\mathbf{g}\|$. 
@@ -774,7 +774,7 @@ A popular alternative is to adopt a *gradient clipping* heuristic
 projecting the gradients $\mathbf{g}$ onto a ball 
 of some given radius $\theta$ as follows:
 
-$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$ {#eq-rnn-scratch-auto-3}
 
 This ensures that the gradient norm never exceeds $\theta$ 
 and that the updated gradient is entirely aligned 

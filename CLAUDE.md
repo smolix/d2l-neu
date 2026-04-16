@@ -59,8 +59,32 @@ static/                     Fonts (Source Serif 4, Source Sans 3, Inconsolata) +
 - XeLaTeX + rsvg-convert (for PDF only)
 - Source d2l-en repo expected at ../d2l-en (relative to this repo)
 
+## UV environment
+```bash
+uv sync --extra pytorch --extra run   # PyTorch + CUDA 12.4 + Jupyter
+uv sync --extra jax --extra run       # JAX + TF (swaps out PyTorch)
+./build.sh run-notebooks pytorch      # uv sync + execute all notebooks
+```
+- pyproject.toml defines extras: pytorch, jax, run
+- torch/torchvision pinned to pytorch-cu124 index
+- uv.lock covers Python 3.10-3.14, linux x86_64 only
+- PyTorch and JAX extras are mutually exclusive (conflicting CUDA packages)
+
+## Notebook execution status
+- **~172/191 PyTorch notebooks pass** on RTX 3060
+- ~4 need multi-GPU (use-gpu, auto-parallelism, multiple-gpus, multiple-gpus-concise)
+- ~2 have broken upstream data URL (bert-dataset, bert-pretraining — wikitext-2 S3 endpoint dead, reconstructed from HuggingFace parquet as workaround)
+- Remaining failures are individual notebook issues, not systemic
+
+### d2l-en source fixes applied (in ../d2l-en, not committed there)
+- matplotlib: removed deprecated `use_line_collection` from stem() calls
+- gymnasium: `import gym` → `import gymnasium as gym`, removed `env.seed()` 
+- syne_tune: updated PythonBackend import path
+- pandas 3.0: `select_dtypes(include='number')` instead of `dtypes!='object'`
+- wikitext-2: updated DATA_HUB URL and hash in bert-dataset.md
+
 ## Current status
 - Zero build errors, zero warnings across all 2,007 artifacts
 - 192 HTML pages, 34MB PDF, 764 notebooks, 600 slides, d2l package
 - d2l.ai blue theme with logo, collapsible sidebar
-- Next: execute notebooks on GPU machine, test d2l package
+- Next: run JAX notebooks, test multi-GPU notebooks on bigger machine

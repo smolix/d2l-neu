@@ -21,6 +21,41 @@ nn_Module = nn.Module
 import sys
 d2l = sys.modules[__name__]
 
+import inspect
+import collections
+from collections import defaultdict
+from IPython import display
+import math
+from matplotlib import pyplot as plt
+from matplotlib_inline import backend_inline
+import os
+import pandas as pd
+import random
+import re
+import shutil
+import sys
+import tarfile
+import time
+import requests
+import zipfile
+import hashlib
+d2l = sys.modules[__name__]
+
+from dataclasses import field
+from functools import partial
+import flax
+from flax import linen as nn
+from flax.training import train_state
+import jax
+from jax import numpy as jnp
+from jax import grad, vmap
+import numpy as np
+import optax
+import tensorflow as tf
+import tensorflow_datasets as tfds
+from types import FunctionType
+from typing import Any
+
 def use_svg_display():
     """Use the svg format to display a plot in Jupyter.
 
@@ -344,6 +379,11 @@ class Trainer(d2l.HyperParameters):
         self.save_hyperparameters()
         self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
 
+    def prepare_batch(self, batch):
+        if self.gpus:
+            batch = [d2l.to(a, self.gpus[0]) for a in batch]
+        return batch
+
     def clip_gradients(self, grad_clip_val, grads):
         grad_leaves, _ = jax.tree_util.tree_flatten(grads)
         norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in grad_leaves))
@@ -360,9 +400,6 @@ class SyntheticRegressionData(d2l.DataModule):
         super().__init__()
         self.save_hyperparameters()
         n = num_train + num_val
-        if tab.selected('pytorch') or tab.selected('mxnet'):                
-            self.X = d2l.randn(n, len(w))
-            noise = d2l.randn(n, 1) * noise
         key = jax.random.PRNGKey(0)
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))
@@ -395,8 +432,6 @@ class LinearRegressionScratch(d2l.Module):
         return d2l.reduce_mean(l)
 
     def configure_optimizers(self):
-        if tab.selected('mxnet') or tab.selected('pytorch'):
-            return SGD([self.w, self.b], self.lr)
         return SGD(self.lr)
 
 class SGD(d2l.HyperParameters):
@@ -509,11 +544,11 @@ class Classifier(d2l.Module):
         self.plot('acc', self.accuracy(params, batch[:-1], batch[-1], state),
                   train=False)
 
-    @partial(jax.jit, static_argnums=(0, 5))
 
-    @partial(jax.jit, static_argnums=(0, 5))
 
-    @partial(jax.jit, static_argnums=(0, 5))
+
+
+
 
     def layer_summary(self, X_shape, key=d2l.get_key()):
         X = jnp.zeros(X_shape)
@@ -524,7 +559,7 @@ class Classifier(d2l.Module):
             X = layer(X)
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
 
-    @partial(jax.jit, static_argnums=(0, 5))
+
 
 class SoftmaxRegression(d2l.Classifier):
     num_outputs: int
@@ -542,8 +577,10 @@ def cpu():
     Defined in :numref:`sec_use_gpu`"""
     return jax.devices('cpu')[0]
 
-def gpu(i=0):  #@save
-    """Get a GPU device."""
+def gpu(i=0):
+    """Get a GPU device.
+
+    Defined in :numref:`sec_use_gpu`"""
     return jax.devices('gpu')[i]
 
 def num_gpus():
@@ -563,8 +600,10 @@ def try_gpu(i=0):
         return gpu(i)
     return cpu()
 
-def try_all_gpus():  #@save
-    """Return all available GPUs, or [cpu(),] if no GPU exists."""
+def try_all_gpus():
+    """Return all available GPUs, or [cpu(),] if no GPU exists.
+
+    Defined in :numref:`sec_use_gpu`"""
     return [gpu(i) for i in range(num_gpus())]
 
 def corr2d(X, K):
@@ -773,9 +812,11 @@ def check_len(a, n):
 
     Defined in :numref:`sec_rnn-scratch`"""
     assert len(a) == n, f'list\'s length {len(a)} != expected length {n}'
-    
-def check_shape(a, shape):  #@save
-    """Check the shape of a tensor."""
+
+def check_shape(a, shape):
+    """Check the shape of a tensor.
+
+    Defined in :numref:`sec_rnn-scratch`"""
     assert a.shape == shape, \
             f'tensor\'s shape {a.shape} != expected shape {shape}'
 
@@ -810,6 +851,11 @@ class RNNLMScratch(d2l.Classifier):
     def output_layer(self, rnn_outputs):
         outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
         return d2l.stack(outputs, 1)
+
+    def forward(self, X, state=None):
+        embs = self.one_hot(X)
+        rnn_outputs, _ = self.rnn(embs, state)
+        return self.output_layer(rnn_outputs)
 
     def predict(self, prefix, num_preds, vocab, params):
         state, outputs = None, [vocab[prefix[0]]]
@@ -1236,6 +1282,14 @@ class MultiHeadAttention(nn.Module):
         # pairs, num_hiddens / num_heads)
         return X.reshape((-1, X.shape[2], X.shape[3]))
 
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        X = X.reshape((-1, self.num_heads, X.shape[1], X.shape[2]))
+        X = jnp.transpose(X, (0, 2, 1, 3))
+        return X.reshape((X.shape[0], X.shape[1], -1))
+
 class PositionalEncoding(nn.Module):
     """Positional encoding.
 
@@ -1406,6 +1460,9 @@ class Benchmark:
     def __exit__(self, *args):
         print(f'{self.description}: {self.timer.stop():.4f} sec')
 
+d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
+                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
+
 def box_corner_to_center(boxes):
     """Convert from (upper-left, lower-right) to (center, width, height).
 
@@ -1416,6 +1473,18 @@ def box_corner_to_center(boxes):
     w = x2 - x1
     h = y2 - y1
     boxes = d2l.stack((cx, cy, w, h), axis=-1)
+    return boxes
+
+def box_center_to_corner(boxes):
+    """Convert from (center, width, height) to (upper-left, lower-right).
+
+    Defined in :numref:`sec_bbox`"""
+    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    x1 = cx - 0.5 * w
+    y1 = cy - 0.5 * h
+    x2 = cx + 0.5 * w
+    y2 = cy + 0.5 * h
+    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
     return boxes
 
 def bbox_to_rect(bbox, color):
@@ -1475,6 +1544,28 @@ def offset_inverse(anchors, offset_preds):
     predicted_bbox = d2l.box_center_to_corner(pred_bbox)
     return predicted_bbox
 
+d2l.DATA_HUB['banana-detection'] = (
+    d2l.DATA_URL + 'banana-detection.zip',
+    '5de26c8fce5ccdea9f91267273464dc968d20d72')
+
+d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
+                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
+                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
+                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
+                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
+                [0, 64, 128]]
+
+VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
+               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
+               'diningtable', 'dog', 'horse', 'motorbike', 'person',
+               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
+                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
+
 def read_csv_labels(fname):
     """Read `fname` to return a filename to label dictionary.
 
@@ -1492,6 +1583,30 @@ def copyfile(filename, target_dir):
     os.makedirs(target_dir, exist_ok=True)
     shutil.copy(filename, target_dir)
 
+def reorg_train_valid(data_dir, labels, valid_ratio):
+    """Split the validation set out of the original training set.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    # The number of examples of the class that has the fewest examples in the
+    # training dataset
+    n = collections.Counter(labels.values()).most_common()[-1][1]
+    # The number of examples per class for the validation set
+    n_valid_per_label = max(1, math.floor(n * valid_ratio))
+    label_count = {}
+    for train_file in os.listdir(os.path.join(data_dir, 'train')):
+        label = labels[train_file.split('.')[0]]
+        fname = os.path.join(data_dir, 'train', train_file)
+        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                     'train_valid', label))
+        if label not in label_count or label_count[label] < n_valid_per_label:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'valid', label))
+            label_count[label] = label_count.get(label, 0) + 1
+        else:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'train', label))
+    return n_valid_per_label
+
 def reorg_test(data_dir):
     """Organize the testing set for data loading during prediction.
 
@@ -1500,6 +1615,22 @@ def reorg_test(data_dir):
         copyfile(os.path.join(data_dir, 'test', test_file),
                  os.path.join(data_dir, 'train_valid_test', 'test',
                               'unknown'))
+
+d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
+                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
+
+d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
+                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+
+def read_ptb():
+    """Load the PTB dataset into a list of text lines.
+
+    Defined in :numref:`sec_word2vec_data`"""
+    data_dir = d2l.download_extract('ptb')
+    # Read the training set
+    with open(os.path.join(data_dir, 'ptb.train.txt')) as f:
+        raw_text = f.read()
+    return [line.split() for line in raw_text.split('\n')]
 
 def subsample(sentences, vocab):
     """Subsample high-frequency words.
@@ -1594,6 +1725,18 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
+                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
+
+d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
+                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
+
+d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
+                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
+
+d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
+                           'c1816da3821ae9f43899be655002f6c723e91b88')
+
 class TokenEmbedding:
     """Token Embedding.
 
@@ -1641,6 +1784,20 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         tokens += tokens_b + ['<sep>']
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
+
+d2l.DATA_HUB['wikitext-2'] = (
+    d2l.DATA_URL + 'wikitext-2-v1.zip',
+    '5e20b4f746bd0cb008dbfe13a108e3fb1eb73927')
+
+def _read_wiki(data_dir):
+    file_name = os.path.join(data_dir, 'wiki.train.tokens')
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+    # Uppercase letters are converted to lowercase ones
+    paragraphs = [line.strip().lower().split(' . ')
+                  for line in lines if len(line.split(' . ')) >= 2]
+    random.shuffle(paragraphs)
+    return paragraphs
 
 def _get_next_sentence(sentence, next_sentence, paragraphs):
     if random.random() < 0.5:
@@ -1709,6 +1866,9 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     pred_positions = [v[0] for v in pred_positions_and_labels]
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
+
+d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
+                          '01ada507287d82875905620988597833ad4e0903')
 
 def read_imdb(data_dir, is_train):
     """Read the IMDb review dataset text sequences and labels.
@@ -1813,8 +1973,10 @@ def download(url, folder='../data', sha1_hash=None):
         f.write(r.content)
     return fname
 
-def extract(filename, folder=None):  #@save
-    """Extract a zip/tar file into folder."""
+def extract(filename, folder=None):
+    """Extract a zip/tar file into folder.
+
+    Defined in :numref:`sec_utils`"""
     base_dir = os.path.dirname(filename)
     _, ext = os.path.splitext(filename)
     assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'

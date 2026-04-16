@@ -63,17 +63,24 @@ def extract_tab(lines):
     if not lines:
         return None, lines
 
-    first = lines[0]
+    # Skip leading blank lines
+    start = 0
+    while start < len(lines) and lines[start].strip() == '':
+        start += 1
+    if start >= len(lines):
+        return None, lines
+
+    first = lines[start]
 
     # %%tab style (IPython magic)
     m = re.match(r'^%%tab\s+([\w,\s]+)$', first)
     if m:
-        return m.group(1).strip(), lines[1:]
+        return m.group(1).strip(), lines[start + 1:]
 
     # #@tab style (comment)
     m = re.match(r'^#@tab\s+([\w,\s]+)$', first)
     if m:
-        return m.group(1).strip(), lines[1:]
+        return m.group(1).strip(), lines[start + 1:]
 
     return None, lines
 
@@ -192,8 +199,13 @@ def group_code_tabs(blocks, primary):
                 if is_fw_specific(blocks[i]):
                     cb = blocks[i]
                     fws = [t.strip() for t in cb.tab.split(',')]
+                    # If any listed framework already has content in this
+                    # tabset, start a new one (separate code cell).
+                    if any(fw in tabset.tabs for fw in fws if fw in FRAMEWORKS):
+                        result.append(tabset)
+                        tabset = CodeTabSet()
                     for fw in fws:
-                        if fw in FRAMEWORKS and fw not in tabset.tabs:
+                        if fw in FRAMEWORKS:
                             tabset.tabs[fw] = cb.lines
                     i += 1
                 elif (is_blank_md(blocks[i])

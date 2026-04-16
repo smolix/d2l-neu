@@ -78,7 +78,19 @@ build_pdf() {
 build_notebooks() {
     echo "=== Building Jupyter notebooks ==="
     python3 tools/gen_notebooks.py "$SOURCE" _notebooks --convert
+    # Symlink img/ so notebooks can resolve ../img/ references
+    for fw_dir in _notebooks/*/; do
+        [ -d "$fw_dir" ] && [ ! -e "${fw_dir}img" ] && ln -s ../../img "${fw_dir}img"
+    done
     echo "  Output: _notebooks/{pytorch,tensorflow,jax,mxnet}/"
+}
+
+run_notebooks() {
+    local fw="${1:?Usage: $0 run-notebooks <framework> [extra-args...]}"
+    shift
+    echo "=== Running $fw notebooks ==="
+    uv sync --extra "$fw" --extra run
+    uv run python tools/run_notebooks.py "$fw" --continue-on-error "$@"
 }
 
 build_slides() {
@@ -104,11 +116,12 @@ clean() {
 # ── Main ──
 
 case "${1:-}" in
-    html)       build_html ;;
-    pdf)        build_pdf "${2:-pytorch}" ;;
-    notebooks)  build_notebooks ;;
-    slides)     build_slides "${2:-}" ;;
-    lib)        build_lib ;;
+    html)           build_html ;;
+    pdf)            build_pdf "${2:-pytorch}" ;;
+    notebooks)      build_notebooks ;;
+    run-notebooks)  shift; run_notebooks "$@" ;;
+    slides)         build_slides "${2:-}" ;;
+    lib)            build_lib ;;
     all)
         build_html
         build_pdf pytorch
@@ -116,11 +129,12 @@ case "${1:-}" in
         build_slides
         build_lib
         ;;
-    clean)      clean ;;
+    clean)          clean ;;
     *)
-        echo "Usage: $0 {html|pdf|notebooks|slides|lib|all|clean}"
-        echo "  pdf [framework]    - default: pytorch"
-        echo "  slides [framework] - default: all"
+        echo "Usage: $0 {html|pdf|notebooks|run-notebooks|slides|lib|all|clean}"
+        echo "  pdf [framework]            - default: pytorch"
+        echo "  run-notebooks <framework>  - execute notebooks (uses uv)"
+        echo "  slides [framework]         - default: all"
         exit 1
         ;;
 esac

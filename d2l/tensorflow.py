@@ -14,6 +14,29 @@ nn_Module = tf.keras.Model
 import sys
 d2l = sys.modules[__name__]
 
+import inspect
+import collections
+from collections import defaultdict
+from IPython import display
+import math
+from matplotlib import pyplot as plt
+from matplotlib_inline import backend_inline
+import os
+import pandas as pd
+import random
+import re
+import shutil
+import sys
+import tarfile
+import time
+import requests
+import zipfile
+import hashlib
+d2l = sys.modules[__name__]
+
+import numpy as np
+import tensorflow as tf
+
 def use_svg_display():
     """Use the svg format to display a plot in Jupyter.
 
@@ -291,9 +314,6 @@ class SyntheticRegressionData(d2l.DataModule):
         super().__init__()
         self.save_hyperparameters()
         n = num_train + num_val
-        if tab.selected('pytorch') or tab.selected('mxnet'):                
-            self.X = d2l.randn(n, len(w))
-            noise = d2l.randn(n, 1) * noise
         self.X = tf.random.normal((n, w.shape[0]))
         noise = tf.random.normal((n, 1)) * noise
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
@@ -322,8 +342,6 @@ class LinearRegressionScratch(d2l.Module):
         return d2l.reduce_mean(l)
 
     def configure_optimizers(self):
-        if tab.selected('mxnet') or tab.selected('pytorch'):
-            return SGD([self.w, self.b], self.lr)
         return SGD(self.lr)
 
 class SGD(d2l.HyperParameters):
@@ -447,8 +465,11 @@ def cpu():
 
     Defined in :numref:`sec_use_gpu`"""
     return tf.device('/CPU:0')
-def gpu(i=0):  #@save
-    """Get a GPU device."""
+
+def gpu(i=0):
+    """Get a GPU device.
+
+    Defined in :numref:`sec_use_gpu`"""
     return tf.device(f'/GPU:{i}')
 
 def num_gpus():
@@ -465,8 +486,10 @@ def try_gpu(i=0):
         return gpu(i)
     return cpu()
 
-def try_all_gpus():  #@save
-    """Return all available GPUs, or [cpu(),] if no GPU exists."""
+def try_all_gpus():
+    """Return all available GPUs, or [cpu(),] if no GPU exists.
+
+    Defined in :numref:`sec_use_gpu`"""
     return [gpu(i) for i in range(num_gpus())]
 
 def corr2d(X, K):
@@ -658,9 +681,11 @@ def check_len(a, n):
 
     Defined in :numref:`sec_rnn-scratch`"""
     assert len(a) == n, f'list\'s length {len(a)} != expected length {n}'
-    
-def check_shape(a, shape):  #@save
-    """Check the shape of a tensor."""
+
+def check_shape(a, shape):
+    """Check the shape of a tensor.
+
+    Defined in :numref:`sec_rnn-scratch`"""
     assert a.shape == shape, \
             f'tensor\'s shape {a.shape} != expected shape {shape}'
 
@@ -694,6 +719,11 @@ class RNNLMScratch(d2l.Classifier):
     def output_layer(self, rnn_outputs):
         outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
         return d2l.stack(outputs, 1)
+
+    def forward(self, X, state=None):
+        embs = self.one_hot(X)
+        rnn_outputs, _ = self.rnn(embs, state)
+        return self.output_layer(rnn_outputs)
 
     def predict(self, prefix, num_preds, vocab, device=None):
         state, outputs = None, [vocab[prefix[0]]]
@@ -1099,6 +1129,14 @@ class MultiHeadAttention(d2l.Module):
         # pairs, num_hiddens / num_heads)
         return tf.reshape(X, shape=(-1, X.shape[2], X.shape[3]))
 
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        X = tf.reshape(X, shape=(-1, self.num_heads, X.shape[1], X.shape[2]))
+        X = tf.transpose(X, perm=(0, 2, 1, 3))
+        return tf.reshape(X, shape=(X.shape[0], X.shape[1], -1))
+
 class PositionalEncoding(tf.keras.layers.Layer):
     """Positional encoding.
 
@@ -1252,6 +1290,17 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+def get_data_ch11(batch_size=10, n=1500):
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = (data - data.mean(axis=0)) / data.std(axis=0)
+    data_iter = d2l.load_array((data[:n, :-1], data[:n, -1]),
+                               batch_size, is_train=True)
+    return data_iter, data.shape[1]-1
+
 def train_ch11(trainer_fn, states, hyperparams, data_iter,
                feature_dim, num_epochs=2):
     # Initialization
@@ -1327,6 +1376,9 @@ class Benchmark:
     def __exit__(self, *args):
         print(f'{self.description}: {self.timer.stop():.4f} sec')
 
+d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
+                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
+
 def box_corner_to_center(boxes):
     """Convert from (upper-left, lower-right) to (center, width, height).
 
@@ -1337,6 +1389,18 @@ def box_corner_to_center(boxes):
     w = x2 - x1
     h = y2 - y1
     boxes = d2l.stack((cx, cy, w, h), axis=-1)
+    return boxes
+
+def box_center_to_corner(boxes):
+    """Convert from (center, width, height) to (upper-left, lower-right).
+
+    Defined in :numref:`sec_bbox`"""
+    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    x1 = cx - 0.5 * w
+    y1 = cy - 0.5 * h
+    x2 = cx + 0.5 * w
+    y2 = cy + 0.5 * h
+    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
     return boxes
 
 def bbox_to_rect(bbox, color):
@@ -1396,6 +1460,28 @@ def offset_inverse(anchors, offset_preds):
     predicted_bbox = d2l.box_center_to_corner(pred_bbox)
     return predicted_bbox
 
+d2l.DATA_HUB['banana-detection'] = (
+    d2l.DATA_URL + 'banana-detection.zip',
+    '5de26c8fce5ccdea9f91267273464dc968d20d72')
+
+d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
+                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
+                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
+                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
+                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
+                [0, 64, 128]]
+
+VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
+               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
+               'diningtable', 'dog', 'horse', 'motorbike', 'person',
+               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
+                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
+
 def read_csv_labels(fname):
     """Read `fname` to return a filename to label dictionary.
 
@@ -1413,6 +1499,30 @@ def copyfile(filename, target_dir):
     os.makedirs(target_dir, exist_ok=True)
     shutil.copy(filename, target_dir)
 
+def reorg_train_valid(data_dir, labels, valid_ratio):
+    """Split the validation set out of the original training set.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    # The number of examples of the class that has the fewest examples in the
+    # training dataset
+    n = collections.Counter(labels.values()).most_common()[-1][1]
+    # The number of examples per class for the validation set
+    n_valid_per_label = max(1, math.floor(n * valid_ratio))
+    label_count = {}
+    for train_file in os.listdir(os.path.join(data_dir, 'train')):
+        label = labels[train_file.split('.')[0]]
+        fname = os.path.join(data_dir, 'train', train_file)
+        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                     'train_valid', label))
+        if label not in label_count or label_count[label] < n_valid_per_label:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'valid', label))
+            label_count[label] = label_count.get(label, 0) + 1
+        else:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'train', label))
+    return n_valid_per_label
+
 def reorg_test(data_dir):
     """Organize the testing set for data loading during prediction.
 
@@ -1421,6 +1531,22 @@ def reorg_test(data_dir):
         copyfile(os.path.join(data_dir, 'test', test_file),
                  os.path.join(data_dir, 'train_valid_test', 'test',
                               'unknown'))
+
+d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
+                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
+
+d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
+                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+
+def read_ptb():
+    """Load the PTB dataset into a list of text lines.
+
+    Defined in :numref:`sec_word2vec_data`"""
+    data_dir = d2l.download_extract('ptb')
+    # Read the training set
+    with open(os.path.join(data_dir, 'ptb.train.txt')) as f:
+        raw_text = f.read()
+    return [line.split() for line in raw_text.split('\n')]
 
 def subsample(sentences, vocab):
     """Subsample high-frequency words.
@@ -1515,6 +1641,18 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
+                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
+
+d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
+                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
+
+d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
+                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
+
+d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
+                           'c1816da3821ae9f43899be655002f6c723e91b88')
+
 class TokenEmbedding:
     """Token Embedding.
 
@@ -1562,6 +1700,20 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         tokens += tokens_b + ['<sep>']
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
+
+d2l.DATA_HUB['wikitext-2'] = (
+    d2l.DATA_URL + 'wikitext-2-v1.zip',
+    '5e20b4f746bd0cb008dbfe13a108e3fb1eb73927')
+
+def _read_wiki(data_dir):
+    file_name = os.path.join(data_dir, 'wiki.train.tokens')
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+    # Uppercase letters are converted to lowercase ones
+    paragraphs = [line.strip().lower().split(' . ')
+                  for line in lines if len(line.split(' . ')) >= 2]
+    random.shuffle(paragraphs)
+    return paragraphs
 
 def _get_next_sentence(sentence, next_sentence, paragraphs):
     if random.random() < 0.5:
@@ -1630,6 +1782,9 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     pred_positions = [v[0] for v in pred_positions_and_labels]
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
+
+d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
+                          '01ada507287d82875905620988597833ad4e0903')
 
 def read_imdb(data_dir, is_train):
     """Read the IMDb review dataset text sequences and labels.
@@ -1724,6 +1879,9 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
     optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
     return loss_G
 
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a TensorFlow data iterator.
 
@@ -1734,14 +1892,87 @@ def load_array(data_arrays, batch_size, is_train=True):
     dataset = dataset.batch(batch_size)
     return dataset
 
-def synthetic_data(w, b, num_examples):  #@save
-    """Generate y = Xw + b + noise."""
+def synthetic_data(w, b, num_examples):
+    """Generate y = Xw + b + noise.
+
+    Defined in :numref:`sec_utils`"""
     X = tf.zeros((num_examples, w.shape[0]))
     X += tf.random.normal(shape=X.shape)
     y = tf.matmul(X, tf.reshape(w, (-1, 1))) + b
     y += tf.random.normal(shape=y.shape, stddev=0.01)
     y = tf.reshape(y, (-1, 1))
     return X, y
+
+def sgd(params, grads, lr, batch_size):
+    """Minibatch stochastic gradient descent.
+
+    Defined in :numref:`sec_utils`"""
+    for param, grad in zip(params, grads):
+        param.assign_sub(lr * grad / batch_size)
+
+def load_data_fashion_mnist(batch_size, resize=None):
+    """Download the Fashion-MNIST dataset and then load it into memory.
+
+    Defined in :numref:`sec_utils`"""
+    mnist_train, mnist_test = tf.keras.datasets.fashion_mnist.load_data()
+    # Divide all numbers by 255 so that all pixel values are between
+    # 0 and 1, add a batch dimension at the last. And cast label to int32
+    process = lambda X, y: (tf.expand_dims(X, axis=3) / 255,
+                            tf.cast(y, dtype='int32'))
+    resize_fn = lambda X, y: (
+        tf.image.resize_with_pad(X, resize, resize) if resize else X, y)
+    return (
+        tf.data.Dataset.from_tensor_slices(process(*mnist_train)).batch(
+            batch_size).shuffle(len(mnist_train[0])).map(resize_fn),
+        tf.data.Dataset.from_tensor_slices(process(*mnist_test)).batch(
+            batch_size).map(resize_fn))
+
+class TrainCallback(tf.keras.callbacks.Callback):
+    """A callback to visiualize the training progress.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, net, train_iter, test_iter, num_epochs, device_name):
+        self.timer = d2l.Timer()
+        self.animator = d2l.Animator(
+            xlabel='epoch', xlim=[1, num_epochs], legend=[
+                'train loss', 'train acc', 'test acc'])
+        self.net = net
+        self.train_iter = train_iter
+        self.test_iter = test_iter
+        self.num_epochs = num_epochs
+        self.device_name = device_name
+    def on_epoch_begin(self, epoch, logs=None):
+        self.timer.start()
+    def on_epoch_end(self, epoch, logs):
+        self.timer.stop()
+        test_acc = self.net.evaluate(
+            self.test_iter, verbose=0, return_dict=True)['accuracy']
+        metrics = (logs['loss'], logs['accuracy'], test_acc)
+        self.animator.add(epoch + 1, metrics)
+        if epoch == self.num_epochs - 1:
+            batch_size = next(iter(self.train_iter))[0].shape[0]
+            num_examples = batch_size * tf.data.experimental.cardinality(
+                self.train_iter).numpy()
+            print(f'loss {metrics[0]:.3f}, train acc {metrics[1]:.3f}, '
+                  f'test acc {metrics[2]:.3f}')
+            print(f'{num_examples / self.timer.avg():.1f} examples/sec on '
+                  f'{str(self.device_name)}')
+
+def train_ch6(net_fn, train_iter, test_iter, num_epochs, lr, device):
+    """Train a model with a GPU (defined in Chapter 6).
+
+    Defined in :numref:`sec_utils`"""
+    device_name = device._device_name
+    strategy = tf.distribute.OneDeviceStrategy(device_name)
+    with strategy.scope():
+        optimizer = tf.keras.optimizers.SGD(learning_rate=lr)
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        net = net_fn()
+        net.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
+    callback = TrainCallback(net, train_iter, test_iter, num_epochs,
+                             device_name)
+    net.fit(train_iter, epochs=num_epochs, verbose=0, callbacks=[callback])
+    return net
 
 def evaluate_accuracy(net, data_iter):
     """Compute the accuracy for a model on a dataset.
@@ -1777,9 +2008,86 @@ def linreg(X, w, b):
     Defined in :numref:`sec_utils`"""
     return d2l.matmul(X, w) + b
 
-def squared_loss(y_hat, y):  #@save
-    """Squared loss."""
+def squared_loss(y_hat, y):
+    """Squared loss.
+
+    Defined in :numref:`sec_utils`"""
     return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
+
+def get_fashion_mnist_labels(labels):
+    """Return text labels for the Fashion-MNIST dataset.
+
+    Defined in :numref:`sec_utils`"""
+    text_labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
+                   'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
+    return [text_labels[int(i)] for i in labels]
+
+class Animator:
+    """For plotting data in animation.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
+                 ylim=None, xscale='linear', yscale='linear',
+                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
+                 figsize=(3.5, 2.5)):
+        # Incrementally plot multiple lines
+        if legend is None:
+            legend = []
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
+        if nrows * ncols == 1:
+            self.axes = [self.axes, ]
+        # Use a lambda function to capture arguments
+        self.config_axes = lambda: d2l.set_axes(
+            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+        self.X, self.Y, self.fmts = None, None, fmts
+
+    def add(self, x, y):
+        # Add multiple data points into the figure
+        if not hasattr(y, "__len__"):
+            y = [y]
+        n = len(y)
+        if not hasattr(x, "__len__"):
+            x = [x] * n
+        if not self.X:
+            self.X = [[] for _ in range(n)]
+        if not self.Y:
+            self.Y = [[] for _ in range(n)]
+        for i, (a, b) in enumerate(zip(x, y)):
+            if a is not None and b is not None:
+                self.X[i].append(a)
+                self.Y[i].append(b)
+        self.axes[0].cla()
+        for x, y, fmt in zip(self.X, self.Y, self.fmts):
+            self.axes[0].plot(x, y, fmt)
+        self.config_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+class Accumulator:
+    """For accumulating sums over `n` variables.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, n):
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+def accuracy(y_hat, y):
+    """Compute the number of correct predictions.
+
+    Defined in :numref:`sec_utils`"""
+    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
+        y_hat = d2l.argmax(y_hat, axis=1)
+    cmp = d2l.astype(y_hat, y.dtype) == y
+    return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 
 def download(url, folder='../data', sha1_hash=None):
     """Download a file to folder and return the local filepath.
@@ -1808,8 +2116,10 @@ def download(url, folder='../data', sha1_hash=None):
         f.write(r.content)
     return fname
 
-def extract(filename, folder=None):  #@save
-    """Extract a zip/tar file into folder."""
+def extract(filename, folder=None):
+    """Extract a zip/tar file into folder.
+
+    Defined in :numref:`sec_utils`"""
     base_dir = os.path.dirname(filename)
     _, ext = os.path.splitext(filename)
     assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
@@ -1837,9 +2147,10 @@ def download_extract(name, folder=None):
     fp.extractall(base_dir)
     return os.path.join(base_dir, folder) if folder else data_dir
 
+def tokenize(lines, token='word'):
+    """Split text lines into word or character tokens.
 
-def tokenize(lines, token='word'):  #@save
-    """Split text lines into word or character tokens."""
+    Defined in :numref:`sec_utils`"""
     assert token in ('word', 'char'), 'Unknown token type: ' + token
     return [line.split() if token == 'word' else list(line) for line in lines]
 
@@ -1874,6 +2185,82 @@ def grad_clipping(grads, theta):
         new_grad = new_grad
     return new_grad
 
+d2l.DATA_HUB['fra-eng'] = (d2l.DATA_URL + 'fra-eng.zip',
+                           '94646ad1522d915e7b0f9296181140edcf86a4f5')
+
+def read_data_nmt():
+    """Load the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    data_dir = d2l.download_extract('fra-eng')
+    with open(os.path.join(data_dir, 'fra.txt'), 'r', encoding='utf-8') as f:
+        return f.read()
+
+def preprocess_nmt(text):
+    """Preprocess the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    def no_space(char, prev_char):
+        return char in set(',.!?') and prev_char != ' '
+
+    # Replace non-breaking space with space, and convert uppercase letters to
+    # lowercase ones
+    text = text.replace('\u202f', ' ').replace('\xa0', ' ').lower()
+    # Insert space between words and punctuation marks
+    out = [' ' + char if i > 0 and no_space(char, text[i - 1]) else char
+           for i, char in enumerate(text)]
+    return ''.join(out)
+
+def tokenize_nmt(text, num_examples=None):
+    """Tokenize the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    source, target = [], []
+    for i, line in enumerate(text.split('\n')):
+        if num_examples and i > num_examples:
+            break
+        parts = line.split('\t')
+        if len(parts) == 2:
+            source.append(parts[0].split(' '))
+            target.append(parts[1].split(' '))
+    return source, target
+
+def truncate_pad(line, num_steps, padding_token):
+    """Truncate or pad sequences.
+
+    Defined in :numref:`sec_utils`"""
+    if len(line) > num_steps:
+        return line[:num_steps]  # Truncate
+    return line + [padding_token] * (num_steps - len(line))  # Pad
+
+def build_array_nmt(lines, vocab, num_steps):
+    """Transform text sequences of machine translation into minibatches.
+
+    Defined in :numref:`sec_utils`"""
+    lines = [vocab[l] for l in lines]
+    lines = [l + [vocab['<eos>']] for l in lines]
+    array = d2l.tensor([truncate_pad(
+        l, num_steps, vocab['<pad>']) for l in lines])
+    valid_len = d2l.reduce_sum(
+        d2l.astype(array != vocab['<pad>'], d2l.int32), 1)
+    return array, valid_len
+
+def load_data_nmt(batch_size, num_steps, num_examples=600):
+    """Return the iterator and the vocabularies of the translation dataset.
+
+    Defined in :numref:`sec_utils`"""
+    text = preprocess_nmt(read_data_nmt())
+    source, target = tokenize_nmt(text, num_examples)
+    src_vocab = d2l.Vocab(source, min_freq=2,
+                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    tgt_vocab = d2l.Vocab(target, min_freq=2,
+                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    src_array, src_valid_len = build_array_nmt(source, src_vocab, num_steps)
+    tgt_array, tgt_valid_len = build_array_nmt(target, tgt_vocab, num_steps)
+    data_arrays = (src_array, src_valid_len, tgt_array, tgt_valid_len)
+    data_iter = d2l.load_array(data_arrays, batch_size)
+    return data_iter, src_vocab, tgt_vocab
+
 def sequence_mask(X, valid_len, value=0):
     """Mask irrelevant entries in sequences.
 
@@ -1886,6 +2273,86 @@ def sequence_mask(X, valid_len, value=0):
         return tf.where(tf.expand_dims(mask, axis=-1), X, value)
     else:
         return tf.where(mask, X, value)
+
+class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
+    """The softmax cross-entropy loss with masks.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, valid_len):
+        super().__init__(reduction='none')
+        self.valid_len = valid_len
+    
+    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
+    # `label` shape: (`batch_size`, `num_steps`)
+    # `valid_len` shape: (`batch_size`,)
+    def call(self, label, pred):
+        weights = tf.ones_like(label, dtype=tf.float32)
+        weights = sequence_mask(weights, self.valid_len)
+        label_one_hot = tf.one_hot(label, depth=pred.shape[-1])
+        unweighted_loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True, reduction='none')(label_one_hot, pred)
+        weighted_loss = tf.reduce_mean((unweighted_loss*weights), axis=1)
+        return weighted_loss
+
+def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
+    """Train a model for sequence to sequence.
+
+    Defined in :numref:`sec_utils`"""
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
+    animator = d2l.Animator(xlabel="epoch", ylabel="loss",
+                            xlim=[10, num_epochs])
+    for epoch in range(num_epochs):
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
+        for batch in data_iter:
+            X, X_valid_len, Y, Y_valid_len = [x for x in batch]
+            bos = tf.reshape(tf.constant([tgt_vocab['<bos>']] * Y.shape[0]),
+                             shape=(-1, 1))
+            dec_input = tf.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
+            with tf.GradientTape() as tape:
+                Y_hat, _ = net(X, dec_input, X_valid_len, training=True)
+                l = MaskedSoftmaxCELoss(Y_valid_len)(Y, Y_hat)
+            gradients = tape.gradient(l, net.trainable_variables)
+            gradients = d2l.grad_clipping(gradients, 1)
+            optimizer.apply_gradients(zip(gradients, net.trainable_variables))
+            num_tokens = tf.reduce_sum(Y_valid_len).numpy()
+            metric.add(tf.reduce_sum(l), num_tokens)
+        if (epoch + 1) % 10 == 0:
+            animator.add(epoch + 1, (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
+          f'tokens/sec on {str(device._device_name)}')
+
+def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
+                    save_attention_weights=False):
+    """Predict for sequence to sequence.
+
+    Defined in :numref:`sec_utils`"""
+    src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
+        src_vocab['<eos>']]
+    enc_valid_len = tf.constant([len(src_tokens)])
+    src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
+    # Add the batch axis
+    enc_X = tf.expand_dims(src_tokens, axis=0)
+    enc_outputs = net.encoder(enc_X, enc_valid_len, training=False)
+    dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
+    # Add the batch axis
+    dec_X = tf.expand_dims(tf.constant([tgt_vocab['<bos>']]), axis=0)
+    output_seq, attention_weight_seq = [], []
+    for _ in range(num_steps):
+        Y, dec_state = net.decoder(dec_X, dec_state, training=False)
+        # We use the token with the highest prediction likelihood as input
+        # of the decoder at the next time step
+        dec_X = tf.argmax(Y, axis=2)
+        pred = tf.squeeze(dec_X, axis=0)
+        # Save attention weights
+        if save_attention_weights:
+            attention_weight_seq.append(net.decoder.attention_weights)
+        # Once the end-of-sequence token is predicted, the generation of the
+        # output sequence is complete
+        if pred == tgt_vocab['<eos>']:
+            break
+        output_seq.append(pred.numpy())
+    return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
 
 
 reshape = tf.reshape

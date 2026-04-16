@@ -45,12 +45,14 @@ def flatten_tab_branches(code, framework):
     i = 0
     while i < len(lines):
         line = lines[i]
-        m = re.match(r'^(\s*)if tab\.selected\(([^)]+)\):', line)
+        m = re.match(r'^(\s*)if (tab\.selected\(.+)\):\s*$', line)
         if m:
             indent = m.group(1)
-            frameworks_str = m.group(2)
-            # Parse the framework list from the if condition
-            fws = re.findall(r"'(\w+)'", frameworks_str)
+            condition = m.group(2)
+            # Parse all framework names from the condition
+            # Handles: tab.selected('pytorch') or tab.selected('mxnet')
+            #          tab.selected('pytorch', 'mxnet')
+            fws = re.findall(r"'(\w+)'", condition)
             keep = framework in fws
 
             # Collect the indented body
@@ -87,41 +89,80 @@ def flatten_tab_branches(code, framework):
     return '\n'.join(result)
 
 
-def save_block(source):
-    """Extract the code block following a #@save marker.
+def save_blocks(source):
+    """Extract all code blocks following #@save markers.
 
-    Returns the extracted code, or empty string if no #@save found.
+    Returns a list of extracted code strings (one per #@save marker).
     """
     lines = source.split('\n')
-    block_lines = []
-    for i, line in enumerate(lines):
+    results = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         m = re.search(r'#\s*@save', line)
-        if m:
-            # Keep code BEFORE the marker on the same line
-            prefix = line[:m.start()].rstrip()
-            if prefix:
-                block_lines.append(prefix)
-            # Collect the indented block that follows
-            for j in range(i + 1, len(lines)):
-                l = lines[j]
+        if not m:
+            i += 1
+            continue
+
+        block_lines = []
+        # Keep code BEFORE the marker on the same line
+        prefix = line[:m.start()].rstrip()
+        if prefix:
+            block_lines.append(prefix)
+
+        # Collect the block that follows
+        i += 1
+        if not prefix:
+            # Standalone #@save: peek at the first non-blank line
+            first_real = ''
+            for j in range(i, len(lines)):
+                if lines[j].strip():
+                    first_real = lines[j]
+                    break
+            if (first_real.startswith('def ') or
+                    first_real.startswith('class ') or
+                    first_real.startswith('@')):
+                # def/class definition — use indentation-based collection
+                while i < len(lines):
+                    l = lines[i]
+                    if (l.startswith(' ') or l.startswith('\t') or
+                            l.strip() == '' or l.startswith('def ') or
+                            l.startswith('class ') or l.startswith('@')):
+                        block_lines.append(l)
+                        i += 1
+                    else:
+                        break
+            else:
+                # Top-level statements (imports, assignments).
+                # Collect until a blank line.
+                while i < len(lines):
+                    l = lines[i]
+                    if l.strip() == '':
+                        break
+                    block_lines.append(l)
+                    i += 1
+        else:
+            # Inline #@save (e.g. "def func():  #@save" or "@decorator  #@save")
+            # Collect the def/class that follows, then its indented body
+            got_def = prefix.startswith('def ') or prefix.startswith('class ')
+            while i < len(lines):
+                l = lines[i]
                 if l.startswith(' ') or l.startswith('\t') or l.strip() == '':
                     block_lines.append(l)
+                    i += 1
+                elif not got_def and (l.startswith('def ') or
+                                      l.startswith('class ')):
+                    block_lines.append(l)
+                    got_def = True
+                    i += 1
                 else:
-                    # Hit a non-indented non-empty line → start of next block
-                    # Include this line only if it's a def/class (continuation)
-                    if l.startswith('def ') or l.startswith('class ') or l.startswith('@'):
-                        block_lines.append(l)
-                        # Continue collecting indented body
-                        for k in range(j + 1, len(lines)):
-                            l2 = lines[k]
-                            if l2.startswith(' ') or l2.startswith('\t') or l2.strip() == '':
-                                block_lines.append(l2)
-                            else:
-                                break
                     break
-            break
 
-    return '\n'.join(block_lines).rstrip() if block_lines else ''
+        text = '\n'.join(block_lines).rstrip()
+        if text:
+            results.append(text)
+
+    return results
 
 
 def find_section_label(text_before_code):
@@ -187,8 +228,7 @@ def extract_save_blocks(src_path, framework):
             # Flatten tab.selected() branches for the target framework
             code = flatten_tab_branches(code, framework)
 
-            extracted = save_block(code)
-            if extracted:
+            for extracted in save_blocks(code):
                 label = find_section_label(markdown_so_far)
                 saved.append((extracted, label, str(src_path)))
         else:

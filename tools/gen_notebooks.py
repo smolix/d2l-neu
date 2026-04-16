@@ -22,6 +22,7 @@ from d2l_preprocess import (
     clean_save_markers, translate_directives, CodeBlock, MarkdownBlock,
     CodeTabSet, TocBlock,
 )
+from build_lib import flatten_tab_branches
 
 
 def convert_prose_tabs_single(text, framework):
@@ -84,15 +85,18 @@ def emit_notebook_qmd(blocks, framework):
                 parts.append(f'\n```{lang}\n{code}\n```\n')
 
             elif block.tab is None or block.tab == 'all':
+                code = flatten_tab_branches(code, framework)
                 parts.append(f'\n```{{python}}\n{code}\n```\n')
 
             elif framework in (block.tab or ''):
+                code = flatten_tab_branches(code, framework)
                 parts.append(f'\n```{{python}}\n{code}\n```\n')
             # else: skip (different framework)
 
         elif isinstance(block, CodeTabSet):
             if framework in block.tabs:
                 code = '\n'.join(block.tabs[framework])
+                code = flatten_tab_branches(code, framework)
                 parts.append(f'\n```{{python}}\n{code}\n```\n')
             # else: skip (framework has no code for this section)
 

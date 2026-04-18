@@ -409,7 +409,7 @@ x.device
 
 ```python
 x = jnp.array([1, 2, 3])
-x.device()
+x.device
 ```
 
 
@@ -818,7 +818,7 @@ net.layers[0].weights[0].device, net.layers[0].weights[1].device
 ## JAX
 
 ```python
-print(jax.tree_util.tree_map(lambda x: x.device(), params))
+print(jax.tree_util.tree_map(lambda x: x.device, params))
 ```
 
 
@@ -833,6 +833,31 @@ net[0].weight.data().ctx
 
 
 Let the trainer support GPU.
+
+
+::: {.panel-tabset group="framework"}
+
+
+## MXNet
+
+```python
+@d2l.add_to_class(d2l.Module)
+def set_scratch_params_device(self, device):
+    for attr in dir(self):
+        a = getattr(self, attr)
+        if isinstance(a, np.ndarray):
+            with autograd.record():
+                setattr(self, attr, a.as_in_ctx(device))
+            getattr(self, attr).attach_grad()
+        if isinstance(a, d2l.Module):
+            a.set_scratch_params_device(device)
+        if isinstance(a, list):
+            for elem in a:
+                elem.set_scratch_params_device(device)
+```
+
+
+:::
 
 
 ::: {.panel-tabset group="framework"}
@@ -885,19 +910,28 @@ def prepare_batch(self, batch):
 ## MXNet
 
 ```python
-@d2l.add_to_class(d2l.Module)
-def set_scratch_params_device(self, device):
-    for attr in dir(self):
-        a = getattr(self, attr)
-        if isinstance(a, np.ndarray):
-            with autograd.record():
-                setattr(self, attr, a.as_in_ctx(device))
-            getattr(self, attr).attach_grad()
-        if isinstance(a, d2l.Module):
-            a.set_scratch_params_device(device)
-        if isinstance(a, list):
-            for elem in a:
-                elem.set_scratch_params_device(device)
+@d2l.add_to_class(d2l.Trainer)
+def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
+    self.save_hyperparameters()
+    self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+
+@d2l.add_to_class(d2l.Trainer)
+def prepare_batch(self, batch):
+    if self.gpus:
+        batch = [d2l.to(a, self.gpus[0]) for a in batch]
+    return batch
+
+@d2l.add_to_class(d2l.Trainer)
+def prepare_model(self, model):
+    model.trainer = self
+    model.board.xlim = [0, self.max_epochs]
+    if self.gpus:
+        if tab.selected('mxnet'):
+            model.collect_params().reset_ctx(self.gpus[0])
+            model.set_scratch_params_device(self.gpus[0])
+        if tab.selected('pytorch'):
+            model.to(self.gpus[0])
+    self.model = model
 ```
 
 

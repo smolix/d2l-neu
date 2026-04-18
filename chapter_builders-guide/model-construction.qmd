@@ -712,11 +712,10 @@ class FixedHiddenMLP(tf.keras.Model):
 
 ```python
 class FixedHiddenMLP(nn.Module):
-    # Random weight parameters that will not compute gradients and
-    # therefore keep constant during training
-    rand_weight: jnp.array = jax.random.uniform(d2l.get_key(), (20, 20))
-
     def setup(self):
+        # Random weight parameters that will not compute gradients and
+        # therefore keep constant during training
+        self.rand_weight = jax.random.uniform(d2l.get_key(), (20, 20))
         self.dense = nn.Dense(20)
 
     def __call__(self, X):

@@ -472,7 +472,7 @@ In a fully machine learned solution, we would learn the threshold from the datas
 
 ```{python}
 # Print test set accuracy with eyeballed threshold
-w = (ave_1 - ave_0).T
+w = ave_1 - ave_0
 # '@' is Matrix Multiplication operator in pytorch.
 predictions = X_test.reshape(2000, -1) @ (w.flatten()) > -1500000
 

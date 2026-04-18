@@ -680,7 +680,7 @@ class Trainer(d2l.HyperParameters):
             # normalization section
             class TrainState(train_state.TrainState):
                 batch_stats: Any
-                dropout_rng: jax.random.PRNGKeyArray
+                dropout_rng: jax.Array
 
             self.state = TrainState.create(apply_fn=model.apply,
                                            params=params,

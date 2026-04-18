@@ -3,7 +3,7 @@ name = "d2l"
 version = "1.0.3"
 description = "Dive into Deep Learning"
 license = "MIT-0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "D2L Developers", email = "d2l.devs@gmail.com" }]
 
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
     "scipy",
     "pillow",
     "ipython",
+    "cairosvg",
 ]
 
 [project.optional-dependencies]
@@ -25,8 +26,36 @@ pytorch = [
     "gpytorch",
     "syne-tune[gpsearchers]",
 ]
+mxnet = [
+    "mxnet-cu117>=1.9.1,<2",
+    "numpy<1.24",
+    "nvidia-cudnn-cu11<9",
+    "nvidia-nccl-cu11",
+    "nvidia-cublas-cu11",
+    "nvidia-cuda-runtime-cu11",
+    "nvidia-cuda-nvrtc-cu11",
+    "nvidia-cusolver-cu11",
+    "nvidia-cusparse-cu11",
+    "nvidia-cufft-cu11",
+    "nvidia-curand-cu11",
+    "nvidia-nvtx-cu11",
+]
+tensorflow = [
+    "tensorflow",
+    "tensorflow-datasets",
+    "nvidia-cudnn-cu12",
+    "nvidia-cublas-cu12",
+    "nvidia-cuda-runtime-cu12",
+    "nvidia-cuda-nvrtc-cu12",
+    "nvidia-cufft-cu12",
+    "nvidia-cusolver-cu12",
+    "nvidia-cusparse-cu12",
+    "nvidia-nccl-cu12",
+    "nvidia-nvjitlink-cu12",
+    "nvidia-cuda-cupti-cu12",
+]
 jax = [
-    "jax[cuda12]",
+    "jax[cuda12]>=0.10.0",
     "flax",
     "optax",
     "tensorflow",
@@ -38,6 +67,9 @@ run = [
     "ipykernel",
 ]
 
+[project.scripts]
+rsvg-convert = "d2l._rsvg_convert:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -47,6 +79,7 @@ packages = ["d2l"]
 
 [tool.uv]
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+conflicts = [[{ extra = "pytorch" }, { extra = "jax" }, { extra = "mxnet" }, { extra = "tensorflow" }]]
 
 [[tool.uv.index]]
 name = "pytorch-cu124"

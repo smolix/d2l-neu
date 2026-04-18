@@ -4,11 +4,12 @@
 # Usage:
 #   ./build.sh html           Build HTML book (multi-framework with tabs)
 #   ./build.sh pdf [fw]       Build PDF book (single framework, default: pytorch)
-#   ./build.sh notebooks      Build Jupyter notebooks (all frameworks)
+#   ./build.sh notebooks [fw...] Build Jupyter notebooks (default: all frameworks)
 #   ./build.sh slides [fw]    Build Reveal.js slides (default: all frameworks)
 #   ./build.sh lib            Build d2l Python package
 #   ./build.sh all            Build everything
-#   ./build.sh clean          Remove all build artifacts
+#   ./build.sh clean          Remove build artifacts (keeps downloaded data)
+#   ./build.sh veryclean      Remove build artifacts AND downloaded data
 #
 # Prerequisites:
 #   - Python 3.9+
@@ -23,6 +24,22 @@ SOURCE="${D2L_SOURCE:-../d2l-en}"
 cd "$SCRIPT_DIR"
 
 # ── Helpers ──
+
+# Make _notebooks/<fw>/data a symlink to ./data so all frameworks share the
+# same download cache. Migrates any existing real data dir in-place.
+link_shared_data() {
+    local fw_dir="$1"
+    mkdir -p "$SCRIPT_DIR/data"
+    if [ -L "$fw_dir/data" ]; then
+        return
+    fi
+    if [ -d "$fw_dir/data" ]; then
+        # Move contents into the shared dir without overwriting existing files.
+        cp -rn "$fw_dir/data/." "$SCRIPT_DIR/data/" 2>/dev/null || true
+        rm -rf "$fw_dir/data"
+    fi
+    ln -s "$SCRIPT_DIR/data" "$fw_dir/data"
+}
 
 convert_svgs() {
     local dir="$1"
@@ -76,21 +93,39 @@ build_pdf() {
 }
 
 build_notebooks() {
-    echo "=== Building Jupyter notebooks ==="
-    python3 tools/gen_notebooks.py "$SOURCE" _notebooks --convert
-    # Symlink img/ so notebooks can resolve ../img/ references
+    local fws=("$@")
+    if [ ${#fws[@]} -gt 0 ]; then
+        echo "=== Building Jupyter notebooks (${fws[*]}) ==="
+        python3 tools/gen_notebooks.py "$SOURCE" _notebooks --convert --frameworks "${fws[@]}"
+    else
+        echo "=== Building Jupyter notebooks ==="
+        python3 tools/gen_notebooks.py "$SOURCE" _notebooks --convert
+    fi
+    # Symlink img/ and share the data/ download cache across all frameworks
     for fw_dir in _notebooks/*/; do
-        [ -d "$fw_dir" ] && [ ! -e "${fw_dir}img" ] && ln -s ../../img "${fw_dir}img"
+        [ -d "$fw_dir" ] || continue
+        [ ! -e "${fw_dir}img" ] && ln -s ../../img "${fw_dir}img"
+        link_shared_data "${fw_dir%/}"
     done
     echo "  Output: _notebooks/{pytorch,tensorflow,jax,mxnet}/"
+    echo "  Shared data cache: ./data/"
 }
 
 run_notebooks() {
     local fw="${1:?Usage: $0 run-notebooks <framework> [extra-args...]}"
     shift
+    build_lib
+    build_notebooks "$fw"
     echo "=== Running $fw notebooks ==="
+    export UV_PROJECT_ENVIRONMENT=".venv-$fw"
     uv sync --extra "$fw" --extra run
-    uv run python tools/run_notebooks.py "$fw" --continue-on-error "$@"
+    # MXNet CUDA libs are pip-installed under nvidia/*/lib; add them to LD_LIBRARY_PATH.
+    local nvidia_libs
+    nvidia_libs=$(find "$SCRIPT_DIR/.venv-$fw/lib" -path "*/nvidia/*/lib" -type d 2>/dev/null | paste -sd: -)
+    if [ -n "$nvidia_libs" ]; then
+        export LD_LIBRARY_PATH="$nvidia_libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    fi
+    uv run --no-sync python tools/run_notebooks.py "$fw" --continue-on-error "$@"
 }
 
 build_slides() {
@@ -107,8 +142,15 @@ build_lib() {
 }
 
 clean() {
-    echo "=== Cleaning build artifacts ==="
+    echo "=== Cleaning build artifacts (keeping ./data/) ==="
     rm -rf _book _pdf _notebooks _slides
+    rm -f img/*.pdf
+    echo "  Done. Use 'veryclean' to also delete ./data/."
+}
+
+veryclean() {
+    echo "=== Cleaning build artifacts AND downloaded data ==="
+    rm -rf _book _pdf _notebooks _slides data
     rm -f img/*.pdf
     echo "  Done."
 }
@@ -118,7 +160,7 @@ clean() {
 case "${1:-}" in
     html)           build_html ;;
     pdf)            build_pdf "${2:-pytorch}" ;;
-    notebooks)      build_notebooks ;;
+    notebooks)      shift; build_notebooks "$@" ;;
     run-notebooks)  shift; run_notebooks "$@" ;;
     slides)         build_slides "${2:-}" ;;
     lib)            build_lib ;;
@@ -130,9 +172,11 @@ case "${1:-}" in
         build_lib
         ;;
     clean)          clean ;;
+    veryclean)      veryclean ;;
     *)
-        echo "Usage: $0 {html|pdf|notebooks|run-notebooks|slides|lib|all|clean}"
+        echo "Usage: $0 {html|pdf|notebooks|run-notebooks|slides|lib|all|clean|veryclean}"
         echo "  pdf [framework]            - default: pytorch"
+        echo "  notebooks [framework...]   - default: all"
         echo "  run-notebooks <framework>  - execute notebooks (uses uv)"
         echo "  slides [framework]         - default: all"
         exit 1

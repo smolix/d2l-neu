@@ -71,7 +71,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 import matplotlib.pyplot as plt
 from syne_tune.config_space import loguniform, randint
-from syne_tune.backend.python_backend import PythonBackend
+from syne_tune.backend.python_backend.python_backend import PythonBackend
 from syne_tune.optimizer.baselines import ASHA
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
@@ -134,7 +134,7 @@ upper limit on the total wall-clock time.
 
 ```{python}
 n_workers = 2  # Needs to be <= the number of available GPUs
-max_wallclock_time = 12 * 60  # 12 minutes
+max_wallclock_time = 5 * 60  # 5 minutes
 ```
 
 

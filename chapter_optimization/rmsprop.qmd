@@ -135,6 +135,47 @@ def init_rmsprop_states(feature_dim):
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+def rmsprop(params, states, hyperparams):
+    gamma, eps = hyperparams['gamma'], 1e-6
+    for p, s in zip(params, states):
+        with torch.no_grad():
+            s[:] = gamma * s + (1 - gamma) * torch.square(p.grad)
+            p[:] -= hyperparams['lr'] * p.grad / torch.sqrt(s + eps)
+        p.grad.data.zero_()
+```
+
+
+## TensorFlow
+
+```python
+def rmsprop(params, grads, states, hyperparams):
+    gamma, eps = hyperparams['gamma'], 1e-6
+    for p, s, g in zip(params, states, grads):
+        s[:].assign(gamma * s + (1 - gamma) * tf.math.square(g))
+        p[:].assign(p - hyperparams['lr'] * g / tf.math.sqrt(s + eps))
+```
+
+
+## MXNet
+
+```python
+def rmsprop(params, states, hyperparams):
+    gamma, eps = hyperparams['gamma'], 1e-6
+    for p, s in zip(params, states):
+        s[:] = gamma * s + (1 - gamma) * np.square(p.grad)
+        p[:] -= hyperparams['lr'] * p.grad / np.sqrt(s + eps)
+```
+
+
+:::
+
+
 We set the initial learning rate to 0.01 and the weighting term $\gamma$ to 0.9. That is, $\mathbf{s}$ aggregates on average over the past $1/(1-\gamma) = 10$ observations of the square gradient.
 
 

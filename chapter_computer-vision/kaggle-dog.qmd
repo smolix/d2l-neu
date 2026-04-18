@@ -336,7 +336,8 @@ by the pretrained model on ImageNet.
 ```{python}
 def get_net(devices):
     finetune_net = nn.Sequential()
-    finetune_net.features = torchvision.models.resnet34(pretrained=True)
+    finetune_net.features = torchvision.models.resnet34(
+        weights=torchvision.models.ResNet34_Weights.DEFAULT)
     # Define a new output network (there are 120 output categories)
     finetune_net.output_new = nn.Sequential(nn.Linear(1000, 256),
                                             nn.ReLU(),

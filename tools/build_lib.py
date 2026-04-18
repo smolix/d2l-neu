@@ -28,6 +28,49 @@ from d2l_preprocess import (
 # Block extraction
 # ──────────────────────────────────────────────────────────
 
+def _collect_tab_body(lines, start, body_indent=None):
+    """Collect indented body lines starting at *start*. Returns (body_lines, next_i)."""
+    body_lines = []
+    i = start
+    while i < len(lines):
+        l = lines[i]
+        if l.strip() == '':
+            body_lines.append(l)
+            i += 1
+            continue
+        current_indent = len(l) - len(l.lstrip())
+        if body_indent is None:
+            body_indent = current_indent
+        if current_indent >= body_indent:
+            body_lines.append(l)
+            i += 1
+        else:
+            break
+    return body_lines, i, body_indent
+
+
+def _resolve_nested_tabs(body_lines, framework):
+    """Resolve nested tab.selected() inside a collected body, inlining or
+    dropping in place (without changing indentation).  This ensures that
+    when the caller de-indents the body, nested content lands at the
+    correct depth relative to surrounding code (e.g. inside __init__)."""
+    result = []
+    i = 0
+    while i < len(body_lines):
+        line = body_lines[i]
+        m = re.match(r'^(\s*)if (tab\.selected\(.+)\):\s*$', line)
+        if m:
+            fws = re.findall(r"'(\w+)'", m.group(2))
+            keep = framework in fws
+            inner_body, i, _ = _collect_tab_body(body_lines, i + 1)
+            if keep:
+                result.extend(inner_body)
+        else:
+            result.append(line)
+            i += 1
+    return result
+
+
 def flatten_tab_branches(code, framework):
     """Flatten tab.selected() branches, keeping only the target framework.
 
@@ -39,6 +82,10 @@ def flatten_tab_branches(code, framework):
 
     Into (for framework='pytorch'):
         x = torch.tensor(1)
+
+    Handles nested tab.selected() inside an outer block correctly by
+    resolving inner branches *before* de-indenting, so content like
+    ``self.training = None`` stays inside the preceding method body.
     """
     lines = code.split('\n')
     result = []
@@ -48,35 +95,15 @@ def flatten_tab_branches(code, framework):
         m = re.match(r'^(\s*)if (tab\.selected\(.+)\):\s*$', line)
         if m:
             indent = m.group(1)
-            condition = m.group(2)
-            # Parse all framework names from the condition
-            # Handles: tab.selected('pytorch') or tab.selected('mxnet')
-            #          tab.selected('pytorch', 'mxnet')
-            fws = re.findall(r"'(\w+)'", condition)
+            fws = re.findall(r"'(\w+)'", m.group(2))
             keep = framework in fws
 
-            # Collect the indented body
-            body_lines = []
-            i += 1
-            body_indent = None
-            while i < len(lines):
-                l = lines[i]
-                if l.strip() == '':
-                    body_lines.append(l)
-                    i += 1
-                    continue
-                current_indent = len(l) - len(l.lstrip())
-                if body_indent is None:
-                    body_indent = current_indent
-                if current_indent >= body_indent:
-                    body_lines.append(l)
-                    i += 1
-                else:
-                    break
+            body_lines, i, body_indent = _collect_tab_body(lines, i + 1)
 
             if keep and body_lines:
-                # De-indent: remove the body indent relative to the if statement
-                dedent = body_indent - len(indent) if body_indent else 4
+                # Resolve any nested tab branches in-place first
+                body_lines = _resolve_nested_tabs(body_lines, framework)
+                # De-indent: strip body_indent chars, prepend outer indent
                 for bl in body_lines:
                     if bl.strip():
                         result.append(indent + bl[body_indent:])
@@ -86,7 +113,10 @@ def flatten_tab_branches(code, framework):
             result.append(line)
             i += 1
 
-    return '\n'.join(result)
+    out = '\n'.join(result)
+    if 'tab.selected(' in out:
+        return flatten_tab_branches(out, framework)
+    return out
 
 
 def save_blocks(source):
@@ -143,7 +173,7 @@ def save_blocks(source):
                     i += 1
         else:
             # Inline #@save (e.g. "def func():  #@save" or "@decorator  #@save")
-            # Collect the def/class that follows, then its indented body
+            # Collect any extra decorators, then the def/class and its body.
             got_def = prefix.startswith('def ') or prefix.startswith('class ')
             while i < len(lines):
                 l = lines[i]
@@ -154,6 +184,9 @@ def save_blocks(source):
                                       l.startswith('class ')):
                     block_lines.append(l)
                     got_def = True
+                    i += 1
+                elif not got_def and l.startswith('@'):
+                    block_lines.append(l)
                     i += 1
                 else:
                     break
@@ -287,6 +320,67 @@ def add_docstring_labels(blocks):
     return result
 
 
+def _block_defined_names(code):
+    """Return the top-level names a block defines (class/def/assignment)."""
+    names = set()
+    for line in code.split('\n'):
+        m = re.match(r'(class|def)\s+(\w+)', line.lstrip())
+        if m:
+            names.add(m.group(2))
+            continue
+        m = re.match(r'(\w+)\s*=', line)
+        if m:
+            names.add(m.group(1))
+    return names
+
+
+def _block_d2l_references(code):
+    """Return the set of d2l.X symbols this block references (bases + calls).
+
+    Keeps the analysis shallow: matches class-base lists and decorator calls,
+    which is where an unresolved reference at import time would blow up.
+    """
+    refs = set()
+    for m in re.finditer(r'^class\s+\w+\(([^)]*)\):', code, re.MULTILINE):
+        for b in m.group(1).split(','):
+            b = b.strip()
+            if b.startswith('d2l.'):
+                refs.add(b[4:].split('(', 1)[0])
+    for m in re.finditer(r'@d2l\.(\w+)', code):
+        refs.add(m.group(1))
+    return refs
+
+
+def drop_unresolved_blocks(blocks, extra_names):
+    """Drop #@save blocks whose bases/decorators reference d2l.X that nothing
+    in this framework defines.
+
+    A class like ``SuccessiveHalvingScheduler(d2l.HPOScheduler)`` lands in a
+    framework's save-blocks even when its parent is gated to `%%tab pytorch`;
+    left in, it raises at import time. Iterate until stable because dropping
+    one block may orphan others (e.g. subclasses of the dropped class).
+    """
+    blocks = list(blocks)
+    while True:
+        defined = set(extra_names)
+        for code, _, _ in blocks:
+            defined |= _block_defined_names(code)
+        drop = []
+        for i, (code, _, source) in enumerate(blocks):
+            refs = _block_d2l_references(code)
+            missing = refs - defined
+            if missing:
+                drop.append((i, missing, source))
+        if not drop:
+            return blocks
+        for i, missing, source in drop:
+            top = re.search(r'^(class|def)\s+(\w+)', blocks[i][0], re.MULTILINE)
+            name = top.group(2) if top else '(anonymous)'
+            print(f'    drop {name}: unresolved {sorted(missing)} '
+                  f'(from {Path(source).name})')
+        blocks = [b for i, b in enumerate(blocks) if i not in {d[0] for d in drop}]
+
+
 def merge_add_to_class(blocks):
     """Merge @d2l.add_to_class(ClassName) methods into class bodies."""
     # First pass: find all class definitions and their indices
@@ -415,6 +509,22 @@ def build_library(src_dir, output_file, framework, lib_config, files):
     # Refactor: add docstring labels, merge add_to_class methods
     all_blocks = add_docstring_labels(all_blocks)
     all_blocks = merge_add_to_class(all_blocks)
+
+    # Compute names provided by the preamble + alias config so we can detect
+    # blocks whose d2l.X references have no definition in this framework.
+    preamble_for_scan = ''
+    output_path = Path(output_file)
+    if output_path.exists():
+        existing = output_path.read_text()
+        preamble_for_scan = (existing[:existing.index('#####')]
+                             if 'WARNING' in existing else existing)
+    alias_code = generate_aliases(lib_config)
+    extra_names = _block_defined_names(preamble_for_scan) | _block_defined_names(alias_code)
+
+    before = len(all_blocks)
+    all_blocks = drop_unresolved_blocks(all_blocks, extra_names)
+    if len(all_blocks) != before:
+        print(f'  Dropped {before - len(all_blocks)} orphan blocks')
 
     print(f'  After merging: {len(all_blocks)} blocks')
 

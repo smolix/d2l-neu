@@ -142,6 +142,57 @@ def init_cnn(module):
 ```
 
 
+:::
+
+
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+class LeNet(d2l.Classifier):
+    """The LeNet-5 model."""
+    def __init__(self, lr=0.1, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        if tab.selected('mxnet'):
+            self.net = nn.Sequential()
+            self.net.add(
+                nn.Conv2D(channels=6, kernel_size=5, padding=2,
+                          activation='sigmoid'),
+                nn.AvgPool2D(pool_size=2, strides=2),
+                nn.Conv2D(channels=16, kernel_size=5, activation='sigmoid'),
+                nn.AvgPool2D(pool_size=2, strides=2),
+                nn.Dense(120, activation='sigmoid'),
+                nn.Dense(84, activation='sigmoid'),
+                nn.Dense(num_classes))
+            self.net.initialize(init.Xavier())
+        if tab.selected('pytorch'):
+            self.net = nn.Sequential(
+                nn.LazyConv2d(6, kernel_size=5, padding=2), nn.Sigmoid(),
+                nn.AvgPool2d(kernel_size=2, stride=2),
+                nn.LazyConv2d(16, kernel_size=5), nn.Sigmoid(),
+                nn.AvgPool2d(kernel_size=2, stride=2),
+                nn.Flatten(),
+                nn.LazyLinear(120), nn.Sigmoid(),
+                nn.LazyLinear(84), nn.Sigmoid(),
+                nn.LazyLinear(num_classes))
+        if tab.selected('tensorflow'):
+            self.net = tf.keras.models.Sequential([
+                tf.keras.layers.Conv2D(filters=6, kernel_size=5,
+                                       activation='sigmoid', padding='same'),
+                tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+                tf.keras.layers.Conv2D(filters=16, kernel_size=5,
+                                       activation='sigmoid'),
+                tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(120, activation='sigmoid'),
+                tf.keras.layers.Dense(84, activation='sigmoid'),
+                tf.keras.layers.Dense(num_classes)])
+```
+
+
 ## TensorFlow
 
 ```python

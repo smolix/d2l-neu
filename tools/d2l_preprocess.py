@@ -237,7 +237,8 @@ def convert_label_id(label):
     tab_intro_decade      -> tbl-intro-decade
     eq_price-area         -> eq-price-area
     chap_introduction     -> sec-chap-introduction
-    subsec_linear_model   -> sec-subsec-linear-model
+    subsec_linear_model   -> sec-linear-model
+    eq_sgd-xt+1-xstar     -> eq-sgd-xt-plus-1-xstar
     """
     prefix_map = [
         ('fig_',    'fig-'),
@@ -247,16 +248,21 @@ def convert_label_id(label):
         ('eq_',     'eq-'),
         ('eqref_',  'eq-'),      # some d2l eqlabels have eqref_ prefix
         ('sec_',    'sec-'),
-        ('chap_',   'sec-'),       # chapter index labels
+        ('chap_',   'sec-chap-'),     # chapter index labels (distinct from sec_)
         ('subsec_', 'sec-'),
     ]
     for old, new in prefix_map:
         if label.startswith(old):
             rest = label[len(old):]
-            return new + rest.replace('_', '-')
+            return _sanitize_id(new + rest.replace('_', '-'))
     # No recognized prefix — use explicit mapping for known bare labels
     bare_label = label.replace('_', '-')
-    return BARE_LABEL_MAP.get(bare_label, bare_label)
+    return _sanitize_id(BARE_LABEL_MAP.get(bare_label, bare_label))
+
+
+def _sanitize_id(ident):
+    """Replace characters pandoc-crossref rejects in identifiers."""
+    return ident.replace('+', '-plus-')
 
 
 # Known bare labels (no standard prefix in original d2l source)

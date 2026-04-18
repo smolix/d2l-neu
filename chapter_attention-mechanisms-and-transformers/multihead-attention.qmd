@@ -469,6 +469,49 @@ attention.initialize()
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## TensorFlow
+
+```python
+batch_size, num_queries, num_kvpairs = 2, 4, 6
+valid_lens = d2l.tensor([3, 2])
+X = tf.ones((batch_size, num_queries, num_hiddens))
+Y = tf.ones((batch_size, num_kvpairs, num_hiddens))
+d2l.check_shape(attention(X, Y, Y, valid_lens, training=False),
+                (batch_size, num_queries, num_hiddens))
+```
+
+
+## JAX
+
+```python
+batch_size, num_queries, num_kvpairs = 2, 4, 6
+valid_lens = d2l.tensor([3, 2])
+X = d2l.ones((batch_size, num_queries, num_hiddens))
+Y = d2l.ones((batch_size, num_kvpairs, num_hiddens))
+d2l.check_shape(attention.init_with_output(d2l.get_key(), X, Y, Y, valid_lens,
+                                           training=False)[0][0],
+                (batch_size, num_queries, num_hiddens))
+```
+
+
+## MXNet
+
+```python
+batch_size, num_queries, num_kvpairs = 2, 4, 6
+valid_lens = d2l.tensor([3, 2])
+X = d2l.ones((batch_size, num_queries, num_hiddens))
+Y = d2l.ones((batch_size, num_kvpairs, num_hiddens))
+d2l.check_shape(attention(X, Y, Y, valid_lens),
+                (batch_size, num_queries, num_hiddens))
+```
+
+
+:::
+
+
 ## Summary
 
 Multi-head attention combines knowledge of the same attention pooling 

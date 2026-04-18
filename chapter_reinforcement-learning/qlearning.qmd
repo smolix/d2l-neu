@@ -119,11 +119,13 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon):
 
     for k in range(1, num_iters + 1):
         # Reset environment
-        state, done = env.reset(), False
+        state, _ = env.reset()
+        done = False
         while not done:
             # Select an action for a given state and acts in env based on selected action
             action = e_greedy(env, Q, state, epsilon)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
 
             # Q-update:
             y = reward + gamma * np.max(Q[next_state,:])

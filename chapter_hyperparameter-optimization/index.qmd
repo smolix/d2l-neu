@@ -1,4 +1,4 @@
-# Hyperparameter Optimization {#sec-hyperopt}
+# Hyperparameter Optimization {#sec-chap-hyperopt}
 
 **Aaron Klein** (*Amazon*), **Matthias Seeger** (*Amazon*), and **Cedric Archambeau** (*Amazon*)
 

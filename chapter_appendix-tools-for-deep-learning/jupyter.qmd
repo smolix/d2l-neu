@@ -6,7 +6,7 @@ in each section of this book
 using the Jupyter Notebook. Make sure you have
 installed Jupyter and downloaded the
 code as described in
-@sec-installation.
+@sec-chap-installation.
 If you want to know more about Jupyter see the excellent tutorial in
 their [documentation](https://jupyter.readthedocs.io/en/latest/).
 

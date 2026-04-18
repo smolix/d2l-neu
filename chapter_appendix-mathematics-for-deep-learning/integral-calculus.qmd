@@ -388,7 +388,8 @@ In some cases, we will need to work in higher dimensions.  For instance, suppose
 
 ```{python}
 # Construct grid and compute function
-x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101))
+x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101),
+                      indexing='ij')
 z = torch.exp(- x**2 - y**2)
 
 # Plot function

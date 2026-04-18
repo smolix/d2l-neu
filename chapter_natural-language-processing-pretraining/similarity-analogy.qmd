@@ -11,7 +11,7 @@ on large corpora can be
 applied to downstream
 natural language processing tasks,
 which will be covered later
-in @sec-nlp-app.
+in @sec-chap-nlp-app.
 To demonstrate 
 semantics of pretrained word vectors
 from large corpora in a straightforward way,

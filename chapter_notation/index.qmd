@@ -1,7 +1,7 @@
 ---
 number-sections: false
 ---
-# Notation {#sec-notation}
+# Notation {#sec-chap-notation}
 
 Throughout this book, we adhere 
 to the following notational conventions.

@@ -105,7 +105,7 @@ conceptually simple yet empirically powerful pretraining of deep representations
 
 In the rest of this chapter,
 we will dive into the pretraining of BERT.
-When natural language processing applications are explained in @sec-nlp-app,
+When natural language processing applications are explained in @sec-chap-nlp-app,
 we will illustrate fine-tuning of BERT for downstream applications.
 
 

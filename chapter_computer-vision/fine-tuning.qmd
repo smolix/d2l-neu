@@ -224,7 +224,8 @@ Internet connection is required for download.
 ## PyTorch
 
 ```{python}
-pretrained_net = torchvision.models.resnet18(pretrained=True)
+pretrained_net = torchvision.models.resnet18(
+    weights=torchvision.models.ResNet18_Weights.DEFAULT)
 ```
 
 
@@ -294,7 +295,8 @@ Letting the base learning rate be $\eta$, a learning rate of $10\eta$ will be us
 ## PyTorch
 
 ```{python}
-finetune_net = torchvision.models.resnet18(pretrained=True)
+finetune_net = torchvision.models.resnet18(
+    weights=torchvision.models.ResNet18_Weights.DEFAULT)
 finetune_net.fc = nn.Linear(finetune_net.fc.in_features, 2)
 nn.init.xavier_uniform_(finetune_net.fc.weight);
 ```

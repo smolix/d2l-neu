@@ -1247,7 +1247,7 @@ a, a.item(), float(a), int(a)
 ## JAX
 
 ```python
-a = jnp.array([3.5])
+a = jnp.array(3.5)
 a, a.item(), float(a), int(a)
 ```
 

@@ -117,6 +117,28 @@ d2l.plt.imshow(content_img.asnumpy());
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+style_img = d2l.Image.open('../img/autumn-oak.jpg')
+d2l.plt.imshow(style_img);
+```
+
+
+## MXNet
+
+```python
+style_img = image.imread('../img/autumn-oak.jpg')
+d2l.plt.imshow(style_img.asnumpy());
+```
+
+
+:::
+
+
 ## Preprocessing and Postprocessing
 
 Below, we define two functions for preprocessing and postprocessing images.
@@ -181,7 +203,8 @@ We use the VGG-19 model pretrained on the ImageNet dataset to extract image feat
 ## PyTorch
 
 ```{python}
-pretrained_net = torchvision.models.vgg19(pretrained=True)
+pretrained_net = torchvision.models.vgg19(
+    weights=torchvision.models.VGG19_Weights.DEFAULT)
 ```
 
 

@@ -45,7 +45,7 @@ Now, the code repository of this book will be forked (i.e., copied) to your user
 
 ### Cloning the Repository
 
-To clone the repository (i.e., to make a local copy) we need to get its repository address. The green button in @fig-git-clone displays this. Make sure that your local copy is up to date with the main repository if you decide to keep this fork around for longer. For now simply follow the instructions in @sec-installation to get started. The main difference is that you are now downloading *your own fork* of the repository.
+To clone the repository (i.e., to make a local copy) we need to get its repository address. The green button in @fig-git-clone displays this. Make sure that your local copy is up to date with the main repository if you decide to keep this fork around for longer. For now simply follow the instructions in @sec-chap-installation to get started. The main difference is that you are now downloading *your own fork* of the repository.
 
 ![Cloning the repository.](../img/git-clone.png){#fig-git-clone width="700px"}
 

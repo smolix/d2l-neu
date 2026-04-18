@@ -92,7 +92,8 @@ in the fully convolutional network.
 ## PyTorch
 
 ```{python}
-pretrained_net = torchvision.models.resnet18(pretrained=True)
+pretrained_net = torchvision.models.resnet18(
+    weights=torchvision.models.ResNet18_Weights.DEFAULT)
 list(pretrained_net.children())[-3:]
 ```
 

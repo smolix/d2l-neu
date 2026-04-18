@@ -58,15 +58,14 @@ at the end of this section.
 
 ```{python}
 
-d2l.DATA_HUB['wikitext-2'] = (
-    'https://s3.amazonaws.com/research.metamind.io/wikitext/'
-    'wikitext-2-v1.zip', '3c914d17d80b1459be871a5039ac23e752a53cbe')
+WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
+                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
 
 
-def _read_wiki(data_dir):
-    file_name = os.path.join(data_dir, 'wiki.train.tokens')
-    with open(file_name, 'r') as f:
-        lines = f.readlines()
+def _read_wiki(data_dir=None):
+    import pandas as pd
+    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
@@ -404,8 +403,7 @@ and generate pretraining examples from it.
 def load_data_wiki(batch_size, max_len):
     """Load the WikiText-2 dataset."""
     num_workers = d2l.get_dataloader_workers()
-    data_dir = d2l.download_extract('wikitext-2', 'wikitext-2')
-    paragraphs = _read_wiki(data_dir)
+    paragraphs = _read_wiki()
     train_set = _WikiTextDataset(paragraphs, max_len)
     train_iter = torch.utils.data.DataLoader(train_set, batch_size,
                                         shuffle=True, num_workers=num_workers)
@@ -420,8 +418,7 @@ def load_data_wiki(batch_size, max_len):
 def load_data_wiki(batch_size, max_len):
     """Load the WikiText-2 dataset."""
     num_workers = d2l.get_dataloader_workers()
-    data_dir = d2l.download_extract('wikitext-2', 'wikitext-2')
-    paragraphs = _read_wiki(data_dir)
+    paragraphs = _read_wiki()
     train_set = _WikiTextDataset(paragraphs, max_len)
     train_iter = gluon.data.DataLoader(train_set, batch_size, shuffle=True,
                                        num_workers=num_workers)

@@ -479,7 +479,7 @@ def loss(params, X, Y):
 for i in range(10):
     l, grads = jax.value_and_grad(loss)(params, X, Y)
     # Update the kernel
-    params = jax.tree_map(lambda p, g: p - lr * g, params, grads)
+    params = jax.tree_util.tree_map(lambda p, g: p - lr * g, params, grads)
     if (i + 1) % 2 == 0:
         print(f'epoch {i + 1}, loss {l:.3f}')
 ```

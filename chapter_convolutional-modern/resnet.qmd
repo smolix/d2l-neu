@@ -725,6 +725,40 @@ class ResNet18(ResNet):
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+ResNet18().layer_summary((1, 1, 96, 96))
+```
+
+
+## TensorFlow
+
+```python
+ResNet18().layer_summary((1, 96, 96, 1))
+```
+
+
+## JAX
+
+```python
+ResNet18(training=False).layer_summary((1, 96, 96, 1))
+```
+
+
+## MXNet
+
+```python
+ResNet18().layer_summary((1, 1, 96, 96))
+```
+
+
+:::
+
+
 ## Training
 
 We train ResNet on the Fashion-MNIST dataset, just like before. ResNet is quite a powerful and flexible architecture. The plot capturing training and validation loss illustrates a significant gap between both graphs, with the training loss being considerably lower. For a network of this flexibility, more training data would offer distinct benefit in closing the gap and improving accuracy.

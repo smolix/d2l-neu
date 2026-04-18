@@ -9,6 +9,7 @@ Usage:
 """
 
 import re
+import shutil
 import argparse
 import subprocess
 from pathlib import Path
@@ -108,6 +109,23 @@ def emit_notebook_qmd(blocks, framework):
     return output
 
 
+def file_supports_framework(src_path, framework):
+    """Return True iff the source .md names this framework in a %%tab / #@tab.
+
+    A file is "in framework X" only if at least one code block is explicitly
+    tagged for X (e.g. `#@tab jax` or `#@tab pytorch, jax`).  `#@tab all`
+    doesn't count: those blocks typically rely on a framework-specific
+    `from d2l import <fw> as d2l` import that's emitted by a sibling tab,
+    so without a jax tab the file lacks jax imports and will NameError.
+    """
+    text = Path(src_path).read_text(encoding='utf-8')
+    for m in re.finditer(r'^(?:%%tab|#@tab)\s+([^\n]+)$', text, re.MULTILINE):
+        fws = [t.strip() for t in m.group(1).split(',')]
+        if framework in fws:
+            return True
+    return False
+
+
 def convert_file_notebook(src_path, framework):
     """Convert a d2l .md file to a single-framework .qmd for notebooks."""
     text = Path(src_path).read_text(encoding='utf-8')
@@ -151,10 +169,23 @@ def main():
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} ===')
 
+        # Wipe stale chapter output — skip the img/ and data/ symlinks that
+        # build.sh recreates, since those are cross-run infrastructure.
+        if fw_dir.exists():
+            for child in fw_dir.iterdir():
+                if child.is_symlink() or child.name in ('img', 'data'):
+                    continue
+                shutil.rmtree(child) if child.is_dir() else child.unlink()
+
         converted = 0
+        skipped = 0
         for rel in files:
             src_file = src / rel
             if not src_file.exists():
+                continue
+
+            if not file_supports_framework(src_file, fw):
+                skipped += 1
                 continue
 
             dst_file = fw_dir / rel.replace('.md', '.qmd')
@@ -167,7 +198,8 @@ def main():
             dst_file.write_text(output, encoding='utf-8')
             converted += 1
 
-        print(f'  Generated {converted} .qmd files in {fw_dir}')
+        print(f'  Generated {converted} .qmd files in {fw_dir}'
+              + (f' (skipped {skipped} files with no {fw} tabs)' if skipped else ''))
 
         if args.convert:
             print(f'  Converting to .ipynb...')

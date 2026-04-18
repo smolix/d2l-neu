@@ -5,6 +5,9 @@ _notebooks/
 _slides/
 _freeze/
 
+# Shared download cache for notebook datasets
+/data/
+
 # Quarto intermediates
 *.tex
 *.aux
@@ -38,3 +41,5 @@ Thumbs.db
 .idea/
 
 /.quarto/
+
+**/*.quarto_ipynb

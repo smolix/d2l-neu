@@ -17,7 +17,7 @@ to the task of machine translation
 
 Here, the encoder RNN will take a variable-length sequence as input 
 and transform it into a fixed-shape hidden state.
-Later, in @sec-attention-and-transformers,
+Later, in @sec-chap-attention-and-transformers,
 we will introduce attention mechanisms, 
 which allow us to access encoded inputs
 without having to compress the entire input
@@ -232,6 +232,58 @@ def init_seq2seq(module):
 ```
 
 
+## MXNet
+
+```python
+class Seq2SeqEncoder(d2l.Encoder):
+    """The RNN encoder for sequence-to-sequence learning."""
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.rnn = d2l.GRU(num_hiddens, num_layers, dropout)
+        self.initialize(init.Xavier())
+            
+    def forward(self, X, *args):
+        # X shape: (batch_size, num_steps)
+        embs = self.embedding(d2l.transpose(X))
+        # embs shape: (num_steps, batch_size, embed_size)    
+        outputs, state = self.rnn(embs)
+        # outputs shape: (num_steps, batch_size, num_hiddens)
+        # state shape: (num_layers, batch_size, num_hiddens)
+        return outputs, state
+```
+
+
+:::
+
+
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+class Seq2SeqEncoder(d2l.Encoder):
+    """The RNN encoder for sequence-to-sequence learning."""
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
+        self.apply(init_seq2seq)
+            
+    def forward(self, X, *args):
+        # X shape: (batch_size, num_steps)
+        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
+        # embs shape: (num_steps, batch_size, embed_size)
+        outputs, state = self.rnn(embs)
+        # outputs shape: (num_steps, batch_size, num_hiddens)
+        # state shape: (num_layers, batch_size, num_hiddens)
+        return outputs, state
+```
+
+
 ## TensorFlow
 
 ```python
@@ -274,29 +326,6 @@ class Seq2SeqEncoder(d2l.Encoder):
         embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int32))
         # embs shape: (num_steps, batch_size, embed_size)
         outputs, state = self.rnn(embs, training=training)
-        # outputs shape: (num_steps, batch_size, num_hiddens)
-        # state shape: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-```
-
-
-## MXNet
-
-```python
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(num_hiddens, num_layers, dropout)
-        self.initialize(init.Xavier())
-            
-    def forward(self, X, *args):
-        # X shape: (batch_size, num_steps)
-        embs = self.embedding(d2l.transpose(X))
-        # embs shape: (num_steps, batch_size, embed_size)    
-        outputs, state = self.rnn(embs)
         # outputs shape: (num_steps, batch_size, num_hiddens)
         # state shape: (num_layers, batch_size, num_hiddens)
         return outputs, state

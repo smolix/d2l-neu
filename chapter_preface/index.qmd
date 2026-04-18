@@ -248,9 +248,9 @@ and applications (@fig-book-org).
 
 
 * **Part 1: Basics and Preliminaries**.
-@sec-introduction is
+@sec-chap-introduction is
 an introduction to deep learning.
-Then, in @sec-preliminaries,
+Then, in @sec-chap-preliminaries,
 we quickly bring you up to speed
 on the prerequisites required
 for hands-on deep learning,
@@ -258,30 +258,30 @@ such as how to store and manipulate data,
 and how to apply various numerical operations
 based on elementary concepts from linear algebra,
 calculus, and probability.
-@sec-regression and @sec-perceptrons
+@sec-chap-regression and @sec-chap-perceptrons
 cover the most fundamental concepts and techniques in deep learning,
 including regression and classification;
 linear models; multilayer perceptrons;
 and overfitting and regularization.
 
 * **Part 2: Modern Deep Learning Techniques**.
-@sec-computation describes
+@sec-chap-computation describes
 the key computational components
 of deep learning systems
 and lays the groundwork
 for our subsequent implementations
 of more complex models.
-Next, @sec-cnn and @sec-modern-cnn
+Next, @sec-chap-cnn and @sec-chap-modern-cnn
 present convolutional neural networks (CNNs),
 powerful tools that form the backbone
 of most modern computer vision systems.
-Similarly, @sec-rnn and @sec-modern-rnn
+Similarly, @sec-chap-rnn and @sec-chap-modern-rnn
 introduce recurrent neural networks (RNNs),
 models that exploit sequential (e.g., temporal)
 structure in data and are commonly used
 for natural language processing
 and time series prediction.
-In @sec-attention-and-transformers,
+In @sec-chap-attention-and-transformers,
 we describe a relatively new class of models,
 based on so-called *attention mechanisms*,
 that has displaced RNNs as the dominant architecture
@@ -381,7 +381,7 @@ some code *in the print edition*
 may not work properly in future versions of PyTorch.
 We plan to keep the online version up to date.
 In case you encounter any problems,
-please consult @sec-installation
+please consult @sec-chap-installation
 to update your code and runtime environment.
 Below lists dependencies in our PyTorch implementation.
 
@@ -398,7 +398,7 @@ some code *in the print edition*
 may not work properly in future versions of TensorFlow.
 We plan to keep the online version up to date.
 In case you encounter any problems,
-please consult @sec-installation
+please consult @sec-chap-installation
 to update your code and runtime environment.
 Below lists dependencies in our TensorFlow implementation.
 
@@ -418,7 +418,7 @@ some code *in the print edition*
 may not work properly in future versions of Jax.
 We plan to keep the online version up to date.
 In case you encounter any problems,
-please consult @sec-installation
+please consult @sec-chap-installation
 to update your code and runtime environment.
 Below lists dependencies in our JAX implementation.
 
@@ -436,7 +436,7 @@ some code *in the print edition*
 may not work properly in future versions of MXNet.
 We plan to keep the online version up to date.
 In case you encounter any problems,
-please consult @sec-installation
+please consult @sec-chap-installation
 to update your code and runtime environment.
 Below lists dependencies in our MXNet implementation.
 

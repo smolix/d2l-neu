@@ -8,7 +8,7 @@ Subsequently, Transformers emerged as the model of choice
 in various natural language processing tasks [@Radford.Narasimhan.Salimans.ea.2018; @Radford.Wu.Child.ea.2019; @brown2020language; @Devlin.Chang.Lee.ea.2018; @raffel2020exploring].
 However, in the field of computer vision
 the dominant architecture has remained
-the CNN (@sec-modern-cnn).
+the CNN (@sec-chap-modern-cnn).
 Naturally, researchers started to wonder
 if it might be possible to do better
 by adapting Transformer models to image data.
@@ -426,7 +426,7 @@ class ViT(d2l.Classifier):
 
 ## Training
 
-Training a vision Transformer on the Fashion-MNIST dataset is just like how CNNs were trained in @sec-modern-cnn.
+Training a vision Transformer on the Fashion-MNIST dataset is just like how CNNs were trained in @sec-chap-modern-cnn.
 
 
 ```{python}

@@ -256,7 +256,7 @@ def preprocess(self):
         (self.raw_train.drop(columns=['Id', label]),
          self.raw_val.drop(columns=['Id'])))
     # Standardize numerical columns
-    numeric_features = features.dtypes[features.dtypes!='object'].index
+    numeric_features = features.select_dtypes(include='number').columns
     features[numeric_features] = features[numeric_features].apply(
         lambda x: (x - x.mean()) / (x.std()))
     # Replace NAN numerical features by 0

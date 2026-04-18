@@ -174,8 +174,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         super().__init__()
         self.save_hyperparameters()
         self.board = ProgressBoard()
-    if tab.selected('tensorflow'):
         self.training = None
+        self.__dict__.pop('loss', None)
 
     def loss(self, y_hat, y):
         raise NotImplementedError
@@ -184,9 +184,9 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         assert hasattr(self, 'net'), 'Neural network is defined'
         return self.net(X)
 
-    def call(self, X, *args, **kwargs):
-        if kwargs and "training" in kwargs:
-            self.training = kwargs['training']
+    def call(self, X, *args, training=None, **kwargs):
+        if training is not None:
+            self.training = training
         return self.forward(X, *args)
 
     def plot(self, key, value, train):
@@ -217,7 +217,7 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         raise NotImplementedError
 
     def configure_optimizers(self):
-        return tf.keras.optimizers.SGD(self.lr)
+        return tf.keras.optimizers.SGD(float(self.lr))
 
 class DataModule(d2l.HyperParameters):
     """The base class of data.
@@ -282,10 +282,13 @@ class Trainer(d2l.HyperParameters):
         for batch in self.train_dataloader:            
             with tf.GradientTape() as tape:
                 loss = self.model.training_step(self.prepare_batch(batch))
-            grads = tape.gradient(loss, self.model.trainable_variables)
+            params = self.model.trainable_variables
+            if not params:
+                params = list(tape.watched_variables())
+            grads = tape.gradient(loss, params)
             if self.gradient_clip_val > 0:
                 grads = self.clip_gradients(self.gradient_clip_val, grads)
-            self.optim.apply_gradients(zip(grads, self.model.trainable_variables))
+            self.optim.apply_gradients(zip(grads, params))
             self.train_batch_idx += 1
         if self.val_dataloader is None:
             return
@@ -735,7 +738,7 @@ class RNNLMScratch(d2l.Classifier):
                 outputs.append(vocab[prefix[i + 1]])
             else:  # Predict num_preds steps
                 Y = self.output_layer(rnn_outputs)
-                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), 1)))
+                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
         return ''.join([vocab.idx_to_token[i] for i in outputs])
 
 class RNN(d2l.Module):
@@ -746,12 +749,12 @@ class RNN(d2l.Module):
         super().__init__()
         self.save_hyperparameters()            
         self.rnn = tf.keras.layers.SimpleRNN(
-            num_hiddens, return_sequences=True, return_state=True,
-            time_major=True)
+            num_hiddens, return_sequences=True, return_state=True)
         
     def forward(self, inputs, H=None):
-        outputs, H = self.rnn(inputs, H)
-        return outputs, H
+        # inputs: (time_steps, batch_size, features) -> (batch_size, time_steps, features)
+        outputs, H = self.rnn(tf.transpose(inputs, perm=[1, 0, 2]), H)
+        return tf.transpose(outputs, perm=[1, 0, 2]), H
 
 class RNNLM(d2l.RNNLMScratch):
     """The RNN-based language model implemented with high-level APIs.
@@ -773,11 +776,12 @@ class GRU(d2l.RNN):
         gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
                      for _ in range(num_layers)]
         self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
-                                       return_state=True, time_major=True)
+                                       return_state=True)
 
     def forward(self, X, state=None):
-        outputs, *state = self.rnn(X, state)
-        return outputs, state
+        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
+        state = [s[0] if isinstance(s, list) else s for s in state]
+        return tf.transpose(outputs, perm=[1, 0, 2]), state
 
 class MTFraEng(d2l.DataModule):
     """The English-French dataset.
@@ -1029,12 +1033,14 @@ class DotProductAttention(tf.keras.layers.Layer):
     # Shape of keys: (batch_size, no. of key-value pairs, d)
     # Shape of values: (batch_size, no. of key-value pairs, value dimension)
     # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def call(self, queries, keys, values, valid_lens=None, **kwargs):
+    def call(self, queries, keys, values, valid_lens=None, training=False,
+             **kwargs):
         d = queries.shape[-1]
         scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(
             tf.cast(d, dtype=tf.float32))
         self.attention_weights = masked_softmax(scores, valid_lens)
-        return tf.matmul(self.dropout(self.attention_weights, **kwargs), values)
+        return tf.matmul(self.dropout(
+            self.attention_weights, training=training), values)
 
 class AdditiveAttention(tf.keras.layers.Layer):
     """Additive attention.
@@ -1047,7 +1053,7 @@ class AdditiveAttention(tf.keras.layers.Layer):
         self.w_v = tf.keras.layers.Dense(1, use_bias=False)
         self.dropout = tf.keras.layers.Dropout(dropout)
         
-    def call(self, queries, keys, values, valid_lens, **kwargs):
+    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
         queries, keys = self.W_q(queries), self.W_k(keys)
         # After dimension expansion, shape of queries: (batch_size, no. of
         # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
@@ -1063,7 +1069,7 @@ class AdditiveAttention(tf.keras.layers.Layer):
         # Shape of values: (batch_size, no. of key-value pairs, value
         # dimension)
         return tf.matmul(self.dropout(
-            self.attention_weights, **kwargs), values)
+            self.attention_weights, training=training), values)
 
 class AttentionDecoder(d2l.Decoder):
     """The base attention-based decoder interface.
@@ -1090,7 +1096,7 @@ class MultiHeadAttention(d2l.Module):
         self.W_v = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
         self.W_o = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
     
-    def call(self, queries, keys, values, valid_lens, **kwargs):
+    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
         # Shape of queries, keys, or values:
         # (batch_size, no. of queries or key-value pairs, num_hiddens)
         # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
@@ -1108,7 +1114,8 @@ class MultiHeadAttention(d2l.Module):
             
         # Shape of output: (batch_size * num_heads, no. of queries,
         # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens, **kwargs)
+        output = self.attention(queries, keys, values, valid_lens,
+                                training=training)
         
         # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
         output_concat = self.transpose_output(output)
@@ -1152,9 +1159,9 @@ class PositionalEncoding(tf.keras.layers.Layer):
         self.P[:, :, 0::2] = np.sin(X)
         self.P[:, :, 1::2] = np.cos(X)
         
-    def call(self, X, **kwargs):
+    def call(self, X, training=False, **kwargs):
         X = X + self.P[:, :X.shape[1], :]
-        return self.dropout(X, **kwargs)
+        return self.dropout(X, training=training)
 
 class PositionWiseFFN(tf.keras.layers.Layer):
     """The positionwise feed-forward network.
@@ -1178,8 +1185,8 @@ class AddNorm(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(dropout)
         self.ln = tf.keras.layers.LayerNormalization(norm_shape)
 
-    def call(self, X, Y, **kwargs):
-        return self.ln(self.dropout(Y, **kwargs) + X)
+    def call(self, X, Y, training=False, **kwargs):
+        return self.ln(self.dropout(Y, training=training) + X)
 
 class TransformerEncoderBlock(tf.keras.layers.Layer):
     """The Transformer encoder block.
@@ -1195,10 +1202,10 @@ class TransformerEncoderBlock(tf.keras.layers.Layer):
         self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
         self.addnorm2 = AddNorm(norm_shape, dropout)
 
-    def call(self, X, valid_lens, **kwargs):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens, **kwargs),
-                          **kwargs)
-        return self.addnorm2(Y, self.ffn(Y), **kwargs)
+    def call(self, X, valid_lens, training=False, **kwargs):
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
+                          training=training), training=training)
+        return self.addnorm2(Y, self.ffn(Y), training=training)
 
 class TransformerEncoder(d2l.Encoder):
     """The Transformer encoder.
@@ -1216,15 +1223,15 @@ class TransformerEncoder(d2l.Encoder):
             ffn_num_hiddens, num_heads, dropout, bias) for _ in range(
             num_blks)]
 
-    def call(self, X, valid_lens, **kwargs):
+    def call(self, X, valid_lens, training=False, **kwargs):
         # Since positional encoding values are between -1 and 1, the embedding
         # values are multiplied by the square root of the embedding dimension
         # to rescale before they are summed up
         X = self.pos_encoding(self.embedding(X) * tf.math.sqrt(
-            tf.cast(self.num_hiddens, dtype=tf.float32)), **kwargs)
+            tf.cast(self.num_hiddens, dtype=tf.float32)), training=training)
         self.attention_weights = [None] * len(self.blks)
         for i, blk in enumerate(self.blks):
-            X = blk(X, valid_lens, **kwargs)
+            X = blk(X, valid_lens, training=training)
             self.attention_weights[
                 i] = blk.attention.attention.attention_weights
         return X
@@ -1701,14 +1708,13 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
 
-d2l.DATA_HUB['wikitext-2'] = (
-    d2l.DATA_URL + 'wikitext-2-v1.zip',
-    '5e20b4f746bd0cb008dbfe13a108e3fb1eb73927')
+WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
+                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
 
-def _read_wiki(data_dir):
-    file_name = os.path.join(data_dir, 'wiki.train.tokens')
-    with open(file_name, 'r') as f:
-        lines = f.readlines()
+def _read_wiki(data_dir=None):
+    import pandas as pd
+    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
@@ -1825,23 +1831,6 @@ def read_snli(data_dir, is_train):
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls / 2) * (dist ** 2))
-
-class SuccessiveHalvingScheduler(d2l.HPOScheduler):
-    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
-        self.save_hyperparameters()
-        # Compute K, which is later used to determine the number of configurations
-        self.K = int(np.log(r_max / r_min) / np.log(eta))
-        # Define the rungs
-        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
-        if r_max not in self.rung_levels:
-            # The final rung should be r_max
-            self.rung_levels.append(r_max)
-            self.K += 1
-        # Bookkeeping
-        self.observed_error_at_rungs = defaultdict(list)
-        self.all_observed_error_at_rungs = defaultdict(list)
-        # Our processing queue
-        self.queue = []
 
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.
@@ -2138,6 +2127,12 @@ def download_extract(name, folder=None):
     fname = download(name)
     base_dir = os.path.dirname(fname)
     data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    # Skip re-extraction if a completion marker exists (extracting many small
+    # files is slow and unnecessary when the archive is already unpacked).
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
     if ext == '.zip':
         fp = zipfile.ZipFile(fname, 'r')
     elif ext in ('.tar', '.gz'):
@@ -2145,7 +2140,8 @@ def download_extract(name, folder=None):
     else:
         assert False, 'Only zip/tar files can be extracted.'
     fp.extractall(base_dir)
-    return os.path.join(base_dir, folder) if folder else data_dir
+    open(marker, 'w').close()
+    return target
 
 def tokenize(lines, token='word'):
     """Split text lines into word or character tokens.

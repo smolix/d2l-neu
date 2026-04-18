@@ -558,6 +558,60 @@ We can now visualize the normal distributions.
 ::: {.panel-tabset group="framework"}
 
 
+## PyTorch
+
+```{python}
+if tab.selected('jax'):
+    # Use JAX NumPy for visualization
+    x = jnp.arange(-7, 7, 0.01)
+if tab.selected('pytorch', 'mxnet', 'tensorflow'):
+    # Use NumPy again for visualization
+    x = np.arange(-7, 7, 0.01)
+
+# Mean and standard deviation pairs
+params = [(0, 1), (0, 2), (3, 1)]
+d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
+         ylabel='p(x)', figsize=(4.5, 2.5),
+         legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
+```
+
+
+## TensorFlow
+
+```python
+if tab.selected('jax'):
+    # Use JAX NumPy for visualization
+    x = jnp.arange(-7, 7, 0.01)
+if tab.selected('pytorch', 'mxnet', 'tensorflow'):
+    # Use NumPy again for visualization
+    x = np.arange(-7, 7, 0.01)
+
+# Mean and standard deviation pairs
+params = [(0, 1), (0, 2), (3, 1)]
+d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
+         ylabel='p(x)', figsize=(4.5, 2.5),
+         legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
+```
+
+
+## JAX
+
+```python
+if tab.selected('jax'):
+    # Use JAX NumPy for visualization
+    x = jnp.arange(-7, 7, 0.01)
+if tab.selected('pytorch', 'mxnet', 'tensorflow'):
+    # Use NumPy again for visualization
+    x = np.arange(-7, 7, 0.01)
+
+# Mean and standard deviation pairs
+params = [(0, 1), (0, 2), (3, 1)]
+d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
+         ylabel='p(x)', figsize=(4.5, 2.5),
+         legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
+```
+
+
 ## MXNet
 
 ```python
@@ -573,24 +627,6 @@ d2l.plot(x.asnumpy(), [normal(x, mu, sigma).asnumpy() for mu, sigma in params], 
 
 
 :::
-
-
-```{python}
-
-%%tab pytorch, tensorflow, jax
-if tab.selected('jax'):
-    # Use JAX NumPy for visualization
-    x = jnp.arange(-7, 7, 0.01)
-if tab.selected('pytorch', 'mxnet', 'tensorflow'):
-    # Use NumPy again for visualization
-    x = np.arange(-7, 7, 0.01)
-
-# Mean and standard deviation pairs
-params = [(0, 1), (0, 2), (3, 1)]
-d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
-         ylabel='p(x)', figsize=(4.5, 2.5),
-         legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
-```
 
 
 Note that changing the mean corresponds

@@ -588,7 +588,7 @@ $$
 ```{python}
 # Construct grid and compute function
 x, y = torch.meshgrid(torch.linspace(-2, 2, 101),
-                   torch.linspace(-2, 2, 101))
+                   torch.linspace(-2, 2, 101), indexing='ij')
 
 z = x*torch.exp(- x**2 - y**2)
 

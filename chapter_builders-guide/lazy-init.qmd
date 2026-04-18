@@ -259,7 +259,8 @@ net(X)
 
 ```python
 params = net.init(d2l.get_key(), jnp.zeros((2, 20)))
-jax.tree_util.tree_map(lambda x: x.shape, params).tree_flatten_with_keys()
+jax.tree_util.tree_flatten_with_path(
+    jax.tree_util.tree_map(lambda x: x.shape, params))[0]
 ```
 
 

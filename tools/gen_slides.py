@@ -293,16 +293,24 @@ def main():
                 try:
                     result = subprocess.run(
                         ['quarto', 'render', str(qmd), '--to', 'revealjs'],
-                        capture_output=True, text=True, timeout=60)
-                    return result.returncode == 0
+                        capture_output=True, text=True, timeout=300)
+                    if result.returncode != 0:
+                        return (qmd, False, (result.stderr or result.stdout).strip())
+                    return (qmd, True, None)
                 except subprocess.TimeoutExpired:
-                    return False
+                    return (qmd, False, "TIMEOUT (>300s)")
 
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=10) as pool:
                 results = list(pool.map(render_one, qmd_files))
 
-            rendered = sum(results)
+            rendered = sum(1 for _, ok, _ in results if ok)
+            failures = [(q, err) for q, ok, err in results if not ok]
+            if failures:
+                print(f'  {len(failures)} slide(s) failed to render:')
+                for q, err in failures[:10]:
+                    tail = (err or '').splitlines()[-1] if err else ''
+                    print(f'    - {q}: {tail[:160]}')
 
         print(f'  Generated {generated} slide decks')
         if args.render:

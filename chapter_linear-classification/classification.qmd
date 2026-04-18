@@ -279,6 +279,35 @@ def accuracy(self, Y_hat, Y, averaged=True):
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## MXNet
+
+```python
+
+@d2l.add_to_class(d2l.Module)
+def get_scratch_params(self):
+    params = []
+    for attr in dir(self):
+        a = getattr(self, attr)
+        if isinstance(a, np.ndarray):
+            params.append(a)
+        if isinstance(a, d2l.Module):
+            params.extend(a.get_scratch_params())
+    return params
+
+@d2l.add_to_class(d2l.Module)
+def parameters(self):
+    params = self.collect_params()
+    return params if isinstance(params, gluon.parameter.ParameterDict) and len(
+        params.keys()) else self.get_scratch_params()
+```
+
+
+:::
+
+
 ## Summary
 
 Classification is a sufficiently common problem that it warrants its own convenience functions. Of central importance in classification is the *accuracy* of the classifier. Note that while we often care primarily about accuracy, we train classifiers to optimize a variety of other objectives for statistical and computational reasons. However, regardless of which loss function was minimized during training, it is useful to have a convenience method for assessing the accuracy of our classifier empirically. 

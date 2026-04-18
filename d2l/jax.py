@@ -2,6 +2,10 @@ DATA_HUB = dict()
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
 
 import jax
+# Force JAX to initialize CUDA (and load its own cuBLAS/cuSOLVER) before any
+# subsequent `import tensorflow` pulls in TF's bundled CUDA libraries. Without
+# this, TF's older cuBLAS is loaded first and jax.xla_bridge falls back to CPU.
+jax.devices()
 import flax
 from jax import numpy as jnp
 from flax import linen as nn
@@ -322,7 +326,7 @@ class Trainer(d2l.HyperParameters):
         # normalization section
         class TrainState(train_state.TrainState):
             batch_stats: Any
-            dropout_rng: jax.random.PRNGKeyArray
+            dropout_rng: jax.Array
 
         self.state = TrainState.create(apply_fn=model.apply,
                                        params=params,
@@ -544,11 +548,42 @@ class Classifier(d2l.Module):
         self.plot('acc', self.accuracy(params, batch[:-1], batch[-1], state),
                   train=False)
 
+    @partial(jax.jit, static_argnums=(0, 5))
+    def accuracy(self, params, X, Y, state, averaged=True):
+        """Compute the number of correct predictions.
 
+        Defined in :numref:`sec_classification`"""
+        Y_hat = state.apply_fn({'params': params,
+                                'batch_stats': state.batch_stats},  # BatchNorm Only
+                               *X)
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
+        compare = d2l.astype(preds == d2l.reshape(Y, -1), d2l.float32)
+        return d2l.reduce_mean(compare) if averaged else compare
 
+    @partial(jax.jit, static_argnums=(0, 5))
+    def loss(self, params, X, Y, state, averaged=True):
+        # To be used later (e.g., for batch norm)
+        Y_hat = state.apply_fn({'params': params}, *X,
+                               mutable=False, rngs=None)
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(Y, (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        # The returned empty dictionary is a placeholder for auxiliary data,
+        # which will be used later (e.g., for batch norm)
+        return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 
-
-
+    @partial(jax.jit, static_argnums=(0, 5))
+    def loss(self, params, X, Y, state, averaged=True):
+        Y_hat = state.apply_fn({'params': params}, *X,
+                               mutable=False,  # To be used later (e.g., batch norm)
+                               rngs={'dropout': state.dropout_rng})
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(Y, (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        # The returned empty dictionary is a placeholder for auxiliary data,
+        # which will be used later (e.g., for batch norm)
+        return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 
     def layer_summary(self, X_shape, key=d2l.get_key()):
         X = jnp.zeros(X_shape)
@@ -559,7 +594,16 @@ class Classifier(d2l.Module):
             X = layer(X)
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
 
-
+    @partial(jax.jit, static_argnums=(0, 5))
+    def loss(self, params, X, Y, state, averaged=True):
+        Y_hat, updates = state.apply_fn({'params': params,
+                                         'batch_stats': state.batch_stats},
+                                        *X, mutable=['batch_stats'],
+                                        rngs={'dropout': state.dropout_rng})
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(Y, (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        return (fn(Y_hat, Y).mean(), updates) if averaged else (fn(Y_hat, Y), updates)
 
 class SoftmaxRegression(d2l.Classifier):
     num_outputs: int
@@ -869,7 +913,7 @@ class RNNLMScratch(d2l.Classifier):
             else:  # Predict num_preds steps
                 Y = self.apply({'params': params}, rnn_outputs,
                                method=self.output_layer)
-                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), 1)))
+                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
         return ''.join([vocab.idx_to_token[i] for i in outputs])
 
 class RNN(nn.Module):
@@ -913,20 +957,21 @@ class GRU(d2l.RNN):
         new_state = []
         if state is None:
             batch_size = X.shape[1]
-            state = [nn.GRUCell.initialize_carry(jax.random.PRNGKey(0),
-                    (batch_size,), self.num_hiddens)] * self.num_layers
+            state = [nn.GRUCell(features=self.num_hiddens).initialize_carry(
+                jax.random.PRNGKey(0),
+                (batch_size, self.num_hiddens))] * self.num_layers
 
         GRU = nn.scan(nn.GRUCell, variable_broadcast="params",
                       in_axes=0, out_axes=0, split_rngs={"params": False})
 
         # Introduce a dropout layer after every GRU layer except last
         for i in range(self.num_layers - 1):
-            layer_i_state, X = GRU()(state[i], outputs)
+            layer_i_state, X = GRU(features=self.num_hiddens)(state[i], outputs)
             new_state.append(layer_i_state)
             X = nn.Dropout(self.dropout, deterministic=not training)(X)
 
         # Final GRU layer without dropout
-        out_state, X = GRU()(state[-1], X)
+        out_state, X = GRU(features=self.num_hiddens)(state[-1], X)
         new_state.append(out_state)
         return X, jnp.array(new_state)
 
@@ -1785,14 +1830,13 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
 
-d2l.DATA_HUB['wikitext-2'] = (
-    d2l.DATA_URL + 'wikitext-2-v1.zip',
-    '5e20b4f746bd0cb008dbfe13a108e3fb1eb73927')
+WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
+                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
 
-def _read_wiki(data_dir):
-    file_name = os.path.join(data_dir, 'wiki.train.tokens')
-    with open(file_name, 'r') as f:
-        lines = f.readlines()
+def _read_wiki(data_dir=None):
+    import pandas as pd
+    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
@@ -1909,23 +1953,6 @@ def read_snli(data_dir, is_train):
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls / 2) * (dist ** 2))
-
-class SuccessiveHalvingScheduler(d2l.HPOScheduler):
-    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
-        self.save_hyperparameters()
-        # Compute K, which is later used to determine the number of configurations
-        self.K = int(np.log(r_max / r_min) / np.log(eta))
-        # Define the rungs
-        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
-        if r_max not in self.rung_levels:
-            # The final rung should be r_max
-            self.rung_levels.append(r_max)
-            self.K += 1
-        # Bookkeeping
-        self.observed_error_at_rungs = defaultdict(list)
-        self.all_observed_error_at_rungs = defaultdict(list)
-        # Our processing queue
-        self.queue = []
 
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
     """Plot a list of images.

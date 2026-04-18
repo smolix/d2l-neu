@@ -645,14 +645,13 @@ class LSTM(d2l.RNN):
     def __call__(self, inputs, H_C=None, training=False):
         if H_C is None:
             batch_size = inputs.shape[1]
-            H_C = nn.OptimizedLSTMCell.initialize_carry(jax.random.PRNGKey(0),
-                                                        (batch_size,),
-                                                        self.num_hiddens)
+            H_C = nn.OptimizedLSTMCell(features=self.num_hiddens).initialize_carry(
+                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
 
         LSTM = nn.scan(nn.OptimizedLSTMCell, variable_broadcast="params",
                        in_axes=0, out_axes=0, split_rngs={"params": False})
 
-        H_C, outputs = LSTM()(H_C, inputs)
+        H_C, outputs = LSTM(features=self.num_hiddens)(H_C, inputs)
         return outputs, H_C
 ```
 

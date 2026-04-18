@@ -207,6 +207,44 @@ def init_momentum_states(feature_dim):
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## PyTorch
+
+```{python}
+def sgd_momentum(params, states, hyperparams):
+    for p, v in zip(params, states):
+        with torch.no_grad():
+            v[:] = hyperparams['momentum'] * v + p.grad
+            p[:] -= hyperparams['lr'] * v
+        p.grad.data.zero_()
+```
+
+
+## TensorFlow
+
+```python
+def sgd_momentum(params, grads, states, hyperparams):
+    for p, v, g in zip(params, states, grads):
+            v[:].assign(hyperparams['momentum'] * v + g)
+            p[:].assign(p - hyperparams['lr'] * v)
+```
+
+
+## MXNet
+
+```python
+def sgd_momentum(params, states, hyperparams):
+    for p, v in zip(params, states):
+        v[:] = hyperparams['momentum'] * v + p.grad
+        p[:] -= hyperparams['lr'] * v
+```
+
+
+:::
+
+
 Let's see how this works in practice.
 
 

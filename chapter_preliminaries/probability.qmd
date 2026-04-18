@@ -455,6 +455,51 @@ estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
 :::
 
 
+::: {.panel-tabset group="framework"}
+
+
+## TensorFlow
+
+```python
+d2l.set_figsize((4.5, 3.5))
+d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+d2l.plt.gca().set_xlabel('Samples')
+d2l.plt.gca().set_ylabel('Estimated probability')
+d2l.plt.legend();
+```
+
+
+## JAX
+
+```python
+d2l.set_figsize((4.5, 3.5))
+d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+d2l.plt.gca().set_xlabel('Samples')
+d2l.plt.gca().set_ylabel('Estimated probability')
+d2l.plt.legend();
+```
+
+
+## MXNet
+
+```python
+d2l.set_figsize((4.5, 3.5))
+d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+d2l.plt.gca().set_xlabel('Samples')
+d2l.plt.gca().set_ylabel('Estimated probability')
+d2l.plt.legend();
+```
+
+
+:::
+
+
 Each solid curve corresponds to one of the two values of the coin
 and gives our estimated probability that the coin turns up that value
 after each group of experiments.

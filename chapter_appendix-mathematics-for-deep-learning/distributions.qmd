@@ -66,7 +66,7 @@ The probability mass function is plotted below.
 p = 0.3
 
 d2l.set_figsize()
-d2l.plt.stem([0, 1], [1 - p, p], use_line_collection=True)
+d2l.plt.stem([0, 1], [1 - p, p])
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -171,7 +171,7 @@ Let's first plot the probability mass function.
 ```{python}
 n = 5
 
-d2l.plt.stem([i+1 for i in range(n)], n*[1 / n], use_line_collection=True)
+d2l.plt.stem([i+1 for i in range(n)], n*[1 / n])
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -431,7 +431,7 @@ def binom(n, k):
 
 pmf = d2l.tensor([p**i * (1-p)**(n - i) * binom(n, i) for i in range(n + 1)])
 
-d2l.plt.stem([i for i in range(n + 1)], pmf, use_line_collection=True)
+d2l.plt.stem([i for i in range(n + 1)], pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -452,7 +452,7 @@ def binom(n, k):
 
 pmf = tf.constant([p**i * (1-p)**(n - i) * binom(n, i) for i in range(n + 1)])
 
-d2l.plt.stem([i for i in range(n + 1)], pmf, use_line_collection=True)
+d2l.plt.stem([i for i in range(n + 1)], pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -473,7 +473,7 @@ def binom(n, k):
 
 pmf = np.array([p**i * (1-p)**(n - i) * binom(n, i) for i in range(n + 1)])
 
-d2l.plt.stem([i for i in range(n + 1)], pmf, use_line_collection=True)
+d2l.plt.stem([i for i in range(n + 1)], pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -612,7 +612,7 @@ xs = [i for i in range(20)]
 pmf = torch.tensor([torch.exp(torch.tensor(-lam)) * lam**k
                     / factorial(k) for k in xs])
 
-d2l.plt.stem(xs, pmf, use_line_collection=True)
+d2l.plt.stem(xs, pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -628,7 +628,7 @@ xs = [i for i in range(20)]
 pmf = tf.constant([tf.exp(tf.constant(-lam)).numpy() * lam**k
                     / factorial(k) for k in xs])
 
-d2l.plt.stem(xs, pmf, use_line_collection=True)
+d2l.plt.stem(xs, pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -643,7 +643,7 @@ lam = 5.0
 xs = [i for i in range(20)]
 pmf = np.array([np.exp(-lam) * lam**k / factorial(k) for k in xs])
 
-d2l.plt.stem(xs, pmf, use_line_collection=True)
+d2l.plt.stem(xs, pmf)
 d2l.plt.xlabel('x')
 d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
@@ -762,8 +762,7 @@ for i in range(4):
                         for i in range(n + 1)])
     d2l.plt.subplot(1, 4, i + 1)
     d2l.plt.stem([(i - n*p)/torch.sqrt(torch.tensor(n*p*(1 - p)))
-                  for i in range(n + 1)], pmf,
-                 use_line_collection=True)
+                  for i in range(n + 1)], pmf)
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')
@@ -784,8 +783,7 @@ for i in range(4):
                         for i in range(n + 1)])
     d2l.plt.subplot(1, 4, i + 1)
     d2l.plt.stem([(i - n*p)/tf.sqrt(tf.constant(n*p*(1 - p)))
-                  for i in range(n + 1)], pmf,
-                 use_line_collection=True)
+                  for i in range(n + 1)], pmf)
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')
@@ -804,8 +802,7 @@ for i in range(4):
     n = ns[i]
     pmf = np.array([p**i * (1-p)**(n-i) * binom(n, i) for i in range(n + 1)])
     d2l.plt.subplot(1, 4, i + 1)
-    d2l.plt.stem([(i - n*p)/np.sqrt(n*p*(1 - p)) for i in range(n + 1)], pmf,
-                 use_line_collection=True)
+    d2l.plt.stem([(i - n*p)/np.sqrt(n*p*(1 - p)) for i in range(n + 1)], pmf)
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')

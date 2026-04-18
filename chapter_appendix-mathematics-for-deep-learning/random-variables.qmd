@@ -344,7 +344,7 @@ Let's visualize this.  We will show the probability of getting the three values 
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
     d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p], use_line_collection=True)
+    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')
@@ -368,7 +368,7 @@ plot_chebyshev(0.0, torch.tensor(0.2))
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
     d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p], use_line_collection=True)
+    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')
@@ -392,7 +392,7 @@ plot_chebyshev(0.0, tf.constant(0.2))
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
     d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p], use_line_collection=True)
+    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
     d2l.plt.xlim([-4, 4])
     d2l.plt.xlabel('x')
     d2l.plt.ylabel('p.m.f.')

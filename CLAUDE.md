@@ -15,7 +15,8 @@ tools/                      Build tools (Python scripts)
   gen_notebooks.py          Per-framework Jupyter notebooks (parallelized)
   gen_slides.py             Per-framework Reveal.js slides (parallelized)
   build_lib.py              Extracts #@save code into d2l Python package
-build.sh                    Unified build script (html|pdf|notebooks|slides|lib|all|clean)
+build.sh                    Unified build script (html|pdf|notebooks|slides|lib|all|clean|veryclean)
+data/                       Shared dataset download cache (used by all frameworks, git-ignored)
 _quarto.yml                 Quarto book project config
 _d2l-theme.scss             Custom SCSS theme (d2l.ai blue palette)
 _d2l-tabs.html              Tab sync JS + sidebar collapse JS
@@ -36,7 +37,8 @@ static/                     Fonts (Source Serif 4, Source Sans 3, Inconsolata) +
 ./build.sh slides      # Generate per-framework .qmd → quarto render revealjs (10 threads)
 ./build.sh lib         # Extract #@save blocks from d2l-en → d2l/*.py
 ./build.sh all         # All of the above
-./build.sh clean       # Remove _book/ _pdf/ _notebooks/ _slides/
+./build.sh clean       # Remove _book/ _pdf/ _notebooks/ _slides/ (keeps ./data/)
+./build.sh veryclean   # Also delete ./data/ (forces re-download)
 ```
 
 ## Key design decisions
@@ -70,11 +72,16 @@ uv sync --extra jax --extra run       # JAX + TF (swaps out PyTorch)
 - uv.lock covers Python 3.10-3.14, linux x86_64 only
 - PyTorch and JAX extras are mutually exclusive (conflicting CUDA packages)
 
+## Parallel notebook execution
+- `run_notebooks.py --parallel N --num-gpus N` runs N notebooks concurrently,
+  pinning each to a single GPU via CUDA_VISIBLE_DEVICES (round-robin).
+- A known-list of multi-GPU notebooks (use-gpu, auto-parallelism, multiple-gpus,
+  multiple-gpus-concise) runs serially after the parallel phase with all GPUs visible.
+
 ## Notebook execution status
-- **~172/191 PyTorch notebooks pass** on RTX 3060
-- ~4 need multi-GPU (use-gpu, auto-parallelism, multiple-gpus, multiple-gpus-concise)
-- ~2 have broken upstream data URL (bert-dataset, bert-pretraining — wikitext-2 S3 endpoint dead, reconstructed from HuggingFace parquet as workaround)
-- Remaining failures are individual notebook issues, not systemic
+- **191/191 PyTorch notebooks pass** on 4× RTX 4090 (full run ~40 min at --parallel 4)
+- multi-GPU notebooks all pass when ≥2 GPUs are available
+- bert-dataset / bert-pretraining pass via HuggingFace parquet workaround
 
 ### d2l-en source fixes applied (in ../d2l-en, not committed there)
 - matplotlib: removed deprecated `use_line_collection` from stem() calls

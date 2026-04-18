@@ -992,7 +992,7 @@ def predict(self, prefix, num_preds, vocab, params):
         else:  # Predict num_preds steps
             Y = self.apply({'params': params}, rnn_outputs,
                            method=self.output_layer)
-            outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), 1)))
+            outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
 

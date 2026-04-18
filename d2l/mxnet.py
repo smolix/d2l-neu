@@ -179,9 +179,6 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         super().__init__()
         self.save_hyperparameters()
         self.board = ProgressBoard()
-    if tab.selected('tensorflow'):
-        self.training = None
-
     def loss(self, y_hat, y):
         raise NotImplementedError
 
@@ -779,7 +776,7 @@ class RNNLMScratch(d2l.Classifier):
                 outputs.append(vocab[prefix[i + 1]])
             else:  # Predict num_preds steps
                 Y = self.output_layer(rnn_outputs)
-                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), 1)))
+                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
         return ''.join([vocab.idx_to_token[i] for i in outputs])
 
 class RNN(d2l.Module):
@@ -2233,14 +2230,13 @@ class BERTModel(nn.Block):
         nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
         return encoded_X, mlm_Y_hat, nsp_Y_hat
 
-d2l.DATA_HUB['wikitext-2'] = (
-    d2l.DATA_URL + 'wikitext-2-v1.zip',
-    '5e20b4f746bd0cb008dbfe13a108e3fb1eb73927')
+WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
+                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
 
-def _read_wiki(data_dir):
-    file_name = os.path.join(data_dir, 'wiki.train.tokens')
-    with open(file_name, 'r') as f:
-        lines = f.readlines()
+def _read_wiki(data_dir=None):
+    import pandas as pd
+    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
@@ -2381,8 +2377,7 @@ def load_data_wiki(batch_size, max_len):
 
     Defined in :numref:`sec_bert-dataset`"""
     num_workers = d2l.get_dataloader_workers()
-    data_dir = d2l.download_extract('wikitext-2', 'wikitext-2')
-    paragraphs = _read_wiki(data_dir)
+    paragraphs = _read_wiki()
     train_set = _WikiTextDataset(paragraphs, max_len)
     train_iter = gluon.data.DataLoader(train_set, batch_size, shuffle=True,
                                        num_workers=num_workers)
@@ -2554,23 +2549,6 @@ def predict_snli(net, vocab, premise, hypothesis):
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls / 2) * (dist ** 2))
-
-class SuccessiveHalvingScheduler(d2l.HPOScheduler):
-    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
-        self.save_hyperparameters()
-        # Compute K, which is later used to determine the number of configurations
-        self.K = int(np.log(r_max / r_min) / np.log(eta))
-        # Define the rungs
-        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
-        if r_max not in self.rung_levels:
-            # The final rung should be r_max
-            self.rung_levels.append(r_max)
-            self.K += 1
-        # Bookkeeping
-        self.observed_error_at_rungs = defaultdict(list)
-        self.all_observed_error_at_rungs = defaultdict(list)
-        # Our processing queue
-        self.queue = []
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
@@ -3119,6 +3097,12 @@ def download_extract(name, folder=None):
     fname = download(name)
     base_dir = os.path.dirname(fname)
     data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    # Skip re-extraction if a completion marker exists (extracting many small
+    # files is slow and unnecessary when the archive is already unpacked).
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
     if ext == '.zip':
         fp = zipfile.ZipFile(fname, 'r')
     elif ext in ('.tar', '.gz'):
@@ -3126,7 +3110,8 @@ def download_extract(name, folder=None):
     else:
         assert False, 'Only zip/tar files can be extracted.'
     fp.extractall(base_dir)
-    return os.path.join(base_dir, folder) if folder else data_dir
+    open(marker, 'w').close()
+    return target
 
 def tokenize(lines, token='word'):
     """Split text lines into word or character tokens.

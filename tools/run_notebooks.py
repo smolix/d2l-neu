@@ -22,7 +22,6 @@ import argparse
 import json
 import os
 import queue
-import resource
 import subprocess
 import sys
 import threading
@@ -30,71 +29,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from runtime_env import (
+    GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
+)
+
 
 NOTEBOOKS_DIR = Path(__file__).resolve().parent.parent / "_notebooks"
-
-GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
-                "device(", "/GPU:", "/device:GPU",
-                "Trainer(", "d2l.train")
-
-# Per-framework thread-limiting env vars.  Combined with the CPU-affinity
-# pinning in execute_notebook(), these keep total thread count manageable.
-THREAD_LIMIT_ENV = {
-    "pytorch": {
-        "OMP_NUM_THREADS": "4",
-        "MKL_NUM_THREADS": "4",
-        "OPENBLAS_NUM_THREADS": "4",
-    },
-    "mxnet": {
-        "OMP_NUM_THREADS": "4",
-        "OPENBLAS_NUM_THREADS": "4",
-        "MXNET_CPU_WORKER_NTHREADS": "4",
-        "MXNET_GPU_WORKER_NTHREADS": "2",
-    },
-    "jax": {
-        "OMP_NUM_THREADS": "4",
-        "OPENBLAS_NUM_THREADS": "4",
-        "TF_NUM_INTRAOP_THREADS": "4",
-        "TF_NUM_INTEROP_THREADS": "2",
-    },
-    "tensorflow": {
-        "OMP_NUM_THREADS": "4",
-        "OPENBLAS_NUM_THREADS": "4",
-        "TF_NUM_INTRAOP_THREADS": "4",
-        "TF_NUM_INTEROP_THREADS": "2",
-    },
-}
-
-# Per-framework environment variables.
-# JAX/XLA memory: preallocate only 70% of GPU memory so the XLA autotuner
-# has headroom for its temporary profiling buffers (cudnn algorithm selection).
-# Without this cap the BFC allocator grows to fill the GPU and autotuning OOMs.
-def _nvidia_lib_path():
-    """Build LD_LIBRARY_PATH from pip-installed nvidia-* packages."""
-    import glob as _glob
-    venv = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable)))
-    base = os.path.join(venv, "lib", "python*", "site-packages", "nvidia", "*", "lib")
-    dirs = sorted(os.path.abspath(d) for d in _glob.glob(base))
-    return ":".join(dirs) if dirs else ""
-
-FRAMEWORK_ENV = {
-    "jax": {
-        "XLA_PYTHON_CLIENT_MEM_FRACTION": ".70",
-    },
-    "tensorflow": {
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-        "TF_XLA_FLAGS": "--tf_xla_auto_jit=2",
-    },
-}
-
-# Notebooks that use multiple GPUs or test GPU availability across devices.
-# These are run serially with all GPUs visible.
-MULTI_GPU_NOTEBOOKS = {
-    "chapter_builders-guide/use-gpu.ipynb",
-    "chapter_computational-performance/multiple-gpus.ipynb",
-    "chapter_computational-performance/multiple-gpus-concise.ipynb",
-    "chapter_computational-performance/auto-parallelism.ipynb",
-}
 
 _print_lock = threading.Lock()
 
@@ -366,23 +307,7 @@ def main():
                         help="Do not run notebooks that require multiple GPUs")
     args = parser.parse_args()
 
-    for k, v in FRAMEWORK_ENV.get(args.framework, {}).items():
-        os.environ.setdefault(k, v)
-    for k, v in THREAD_LIMIT_ENV.get(args.framework, {}).items():
-        os.environ.setdefault(k, v)
-    nv_libs = _nvidia_lib_path()
-    if nv_libs:
-        os.environ["LD_LIBRARY_PATH"] = nv_libs + ":" + os.environ.get("LD_LIBRARY_PATH", "")
-
-    # XLA spawns hundreds of threads per JAX process; 4 parallel workers can
-    # exhaust the default 2048 nproc soft limit (`pthread_create failed`).
-    # Raise to the hard limit when it's higher.
-    try:
-        soft, hard = resource.getrlimit(resource.RLIMIT_NPROC)
-        if hard > soft:
-            resource.setrlimit(resource.RLIMIT_NPROC, (hard, hard))
-    except (ValueError, OSError):
-        pass
+    setup_framework_env(args.framework)
 
     nbs = find_notebooks(args.framework, args.glob, args.files)
     if not nbs:

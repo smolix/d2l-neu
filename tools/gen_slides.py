@@ -19,6 +19,8 @@ import queue
 import re
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -28,6 +30,7 @@ from d2l_preprocess import (
     translate_directives,
 )
 from build_lib import flatten_tab_branches
+from runtime_env import GPU_KEYWORDS, setup_framework_env
 
 
 # ──────────────────────────────────────────────────────────
@@ -294,40 +297,76 @@ def main():
 
         if args.render:
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
-            venv_python = Path(f'.venv-{fw}/bin/python').absolute()
+            venv_root = Path(f'.venv-{fw}').absolute()
+            venv_python = venv_root / 'bin' / 'python'
+
+            setup_framework_env(fw, venv_root=venv_root)
             base_env = {**os.environ}
             if venv_python.exists():
                 base_env['QUARTO_PYTHON'] = str(venv_python)
 
-            gpu_kw = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu",
-                       "try_all_gpus", "device(", "/GPU:", "/device:GPU",
-                       "Trainer(", "d2l.train")
-
             def needs_gpu(qmd):
                 text = qmd.read_text(encoding='utf-8')
-                return any(kw in text for kw in gpu_kw)
+                return any(kw in text for kw in GPU_KEYWORDS)
 
             gpu_slides = [q for q in qmd_files if needs_gpu(q)]
             cpu_slides = [q for q in qmd_files if not needs_gpu(q)]
+            total = len(gpu_slides) + len(cpu_slides)
+            print(f'  {len(gpu_slides)} GPU slides, '
+                  f'{len(cpu_slides)} CPU-only slides')
 
             gpu_q = queue.Queue()
             for g in range(args.num_gpus):
                 gpu_q.put(str(g))
 
+            _print_lock = threading.Lock()
+            _idx = [0]
+
+            error_dir = fw_dir.parent / 'errors' / fw
+            error_dir.mkdir(parents=True, exist_ok=True)
+
             def render_one(qmd, cuda_devices=None):
+                with _print_lock:
+                    _idx[0] += 1
+                    idx = _idx[0]
+                    rel = str(qmd.relative_to(fw_dir))
+                    if cuda_devices is None or cuda_devices == '':
+                        gpu_tag = '[CPU]'
+                    else:
+                        gpu_tag = f'[GPU {cuda_devices}]'
+                    print(f'  [{idx}/{total}] START {gpu_tag} {rel}',
+                          flush=True)
                 env = {**base_env}
                 if cuda_devices is not None:
                     env['CUDA_VISIBLE_DEVICES'] = cuda_devices
+                t0 = time.time()
                 try:
                     result = subprocess.run(
                         ['quarto', 'render', str(qmd), '--to', 'revealjs'],
                         capture_output=True, text=True,
                         timeout=args.timeout, env=env)
-                    if result.returncode != 0:
-                        return (qmd, False, (result.stderr or result.stdout).strip())
-                    return (qmd, True, None)
+                    elapsed = time.time() - t0
+                    stderr = (result.stderr or result.stdout).strip()
+                    ok = result.returncode == 0
                 except subprocess.TimeoutExpired:
-                    return (qmd, False, f"TIMEOUT (>{args.timeout}s)")
+                    elapsed = time.time() - t0
+                    stderr = f"TIMEOUT (>{args.timeout}s)"
+                    ok = False
+
+                status = 'OK' if ok else 'FAIL'
+                with _print_lock:
+                    print(f'  [{idx}/{total}] {status} ({elapsed:.1f}s) {rel}',
+                          flush=True)
+                    if not ok:
+                        lines = (stderr or 'unknown').splitlines()
+                        short = '\n'.join(lines[-25:])
+                        print(f'    -- error --\n{short}\n    -- end --',
+                              flush=True)
+                        log_path = error_dir / (rel.replace('.qmd', '.log'))
+                        log_path.parent.mkdir(parents=True, exist_ok=True)
+                        log_path.write_text(stderr or '')
+
+                return (qmd, ok, stderr if not ok else None)
 
             def render_gpu(qmd):
                 gpu = gpu_q.get()
@@ -337,7 +376,7 @@ def main():
                     gpu_q.put(gpu)
 
             def render_cpu(qmd):
-                return render_one(qmd, cuda_devices="")
+                return render_one(qmd, cuda_devices='')
 
             from concurrent.futures import ThreadPoolExecutor
             results = []
@@ -351,10 +390,7 @@ def main():
             rendered = sum(1 for _, ok, _ in results if ok)
             failures = [(q, err) for q, ok, err in results if not ok]
             if failures:
-                print(f'  {len(failures)} slide(s) failed to render:')
-                for q, err in failures[:10]:
-                    tail = (err or '').splitlines()[-1] if err else ''
-                    print(f'    - {q}: {tail[:160]}')
+                print(f'  {len(failures)} slide(s) failed to render')
 
         print(f'  Generated {generated} slide decks')
         if args.render:

@@ -1,2 +1,16 @@
 /* D2L custom styles */
 /* (Section numbers are fixed by the post-render script, not hidden.) */
+
+/* Scrollable output for long cell results */
+.d2l-output-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.d2l-output-scroll pre {
+  margin: 0;
+}
+
+/* Hide tab headers on output-only tabsets (content syncs via group) */
+.d2l-output-tabs > .nav {
+  display: none;
+}

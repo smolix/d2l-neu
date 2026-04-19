@@ -14,6 +14,8 @@ Usage:
     python tools/gen_slides.py <source_dir> <output_dir> [--frameworks pytorch jax]
 """
 
+import os
+import queue
 import re
 import subprocess
 import sys
@@ -212,7 +214,7 @@ def generate_slides_qmd(src_path, framework):
     out.append('    code-line-numbers: false')
     out.append('execute:')
     out.append('  echo: true')
-    out.append('  eval: false')
+    out.append('  eval: true')
     out.append('---')
     out.append('')
 
@@ -261,6 +263,10 @@ def main():
                         help='Frameworks to generate')
     parser.add_argument('--render', action='store_true',
                         help='Also render slides to HTML')
+    parser.add_argument('--num-gpus', type=int, default=4,
+                        help='Number of GPUs for parallel rendering')
+    parser.add_argument('--timeout', type=int, default=3600,
+                        help='Per-slide render timeout in seconds')
     args = parser.parse_args()
 
     src = args.source
@@ -288,21 +294,59 @@ def main():
 
         if args.render:
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
+            venv_python = Path(f'.venv-{fw}/bin/python').absolute()
+            base_env = {**os.environ}
+            if venv_python.exists():
+                base_env['QUARTO_PYTHON'] = str(venv_python)
 
-            def render_one(qmd):
+            gpu_kw = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu",
+                       "try_all_gpus", "device(", "/GPU:", "/device:GPU",
+                       "Trainer(", "d2l.train")
+
+            def needs_gpu(qmd):
+                text = qmd.read_text(encoding='utf-8')
+                return any(kw in text for kw in gpu_kw)
+
+            gpu_slides = [q for q in qmd_files if needs_gpu(q)]
+            cpu_slides = [q for q in qmd_files if not needs_gpu(q)]
+
+            gpu_q = queue.Queue()
+            for g in range(args.num_gpus):
+                gpu_q.put(str(g))
+
+            def render_one(qmd, cuda_devices=None):
+                env = {**base_env}
+                if cuda_devices is not None:
+                    env['CUDA_VISIBLE_DEVICES'] = cuda_devices
                 try:
                     result = subprocess.run(
                         ['quarto', 'render', str(qmd), '--to', 'revealjs'],
-                        capture_output=True, text=True, timeout=300)
+                        capture_output=True, text=True,
+                        timeout=args.timeout, env=env)
                     if result.returncode != 0:
                         return (qmd, False, (result.stderr or result.stdout).strip())
                     return (qmd, True, None)
                 except subprocess.TimeoutExpired:
-                    return (qmd, False, "TIMEOUT (>300s)")
+                    return (qmd, False, f"TIMEOUT (>{args.timeout}s)")
+
+            def render_gpu(qmd):
+                gpu = gpu_q.get()
+                try:
+                    return render_one(qmd, cuda_devices=gpu)
+                finally:
+                    gpu_q.put(gpu)
+
+            def render_cpu(qmd):
+                return render_one(qmd, cuda_devices="")
 
             from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=10) as pool:
-                results = list(pool.map(render_one, qmd_files))
+            results = []
+            with ThreadPoolExecutor(max_workers=args.num_gpus) as gpu_exec, \
+                 ThreadPoolExecutor(max_workers=args.num_gpus) as cpu_exec:
+                gpu_futs = [gpu_exec.submit(render_gpu, q) for q in gpu_slides]
+                cpu_futs = [cpu_exec.submit(render_cpu, q) for q in cpu_slides]
+                for f in gpu_futs + cpu_futs:
+                    results.append(f.result())
 
             rendered = sum(1 for _, ok, _ in results if ok)
             failures = [(q, err) for q, ok, err in results if not ok]

@@ -5,8 +5,21 @@ _notebooks/
 _slides/
 _freeze/
 
+# Generated .qmd files (produced by d2l_preprocess.py from d2l-en sources)
+chapter_*/*.qmd
+
+# Make stamp files
+.preprocess.stamp
+*.stamp
+
+# Build logs
+logs/
+
 # Shared download cache for notebook datasets
 /data/
+
+# Extracted output images from notebook execution
+img/outputs/
 
 # Quarto intermediates
 *.tex
@@ -20,6 +33,10 @@ _freeze/
 index_files/
 *_files/
 .quarto/
+
+# Runtime caches
+.cuda-root/
+.jax-cache/
 
 # Python
 __pycache__/

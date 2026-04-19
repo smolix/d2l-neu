@@ -457,6 +457,7 @@ tensorflow = [
     { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "tensorflow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "tensorflow-datasets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tensorflow-probability", extra = ["tf"], marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow')" },
 ]
 
 [package.dev-dependencies]
@@ -510,6 +511,7 @@ requires-dist = [
     { name = "tensorflow", marker = "extra == 'tensorflow'" },
     { name = "tensorflow-datasets", marker = "extra == 'jax'" },
     { name = "tensorflow-datasets", marker = "extra == 'tensorflow'" },
+    { name = "tensorflow-probability", extras = ["tf"], marker = "extra == 'tensorflow'" },
     { name = "torch", marker = "extra == 'pytorch'", index = "https://download.pytorch.org/whl/cu124" },
     { name = "torchvision", marker = "extra == 'pytorch'", index = "https://download.pytorch.org/whl/cu124" },
 ]
@@ -2849,6 +2851,29 @@ wheels = [
 ]
 
 [[package]]
+name = "tensorflow-probability"
+version = "0.25.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "absl-py", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "cloudpickle", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "decorator", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "dm-tree", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "gast", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "six", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/b6/e116761ceeb880b7ad4c6a7e1203538754dd7dda42538f08d6daaf8dfa4d/tensorflow_probability-0.25.0-py2.py3-none-any.whl", hash = "sha256:f3f4d6431656c0122906888afe1b67b4400e82bd7f254b45b92e6c5b84ea8e3e", size = 6979403, upload-time = "2024-11-08T16:25:57.238Z" },
+]
+
+[package.optional-dependencies]
+tf = [
+    { name = "tensorflow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tf-keras", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+]
+
+[[package]]
 name = "tensorstore"
 version = "0.1.82"
 source = { registry = "https://pypi.org/simple" }
@@ -2885,6 +2910,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8a/11/965c6fd8e5cc254f1fe142d547387da17a8ebfd75a3455f637c663fb38a0/terminado-0.18.1.tar.gz", hash = "sha256:de09f2c4b85de4765f7714688fff57d3e75bad1f909b589fde880460c753fd2e", size = 32701, upload-time = "2024-03-12T14:34:39.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/9e/2064975477fdc887e47ad42157e214526dcad8f317a948dee17e1659a62f/terminado-0.18.1-py3-none-any.whl", hash = "sha256:a4468e1b37bb318f8a86514f65814e1afc977cf29b3992a4500d9dd305dcceb0", size = 14154, upload-time = "2024-03-12T14:34:36.569Z" },
+]
+
+[[package]]
+name = "tf-keras"
+version = "2.21.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tensorflow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/76/80/b005b59f9ccdbabc1b6cd07ca1126cbd4d902288438f0c00072f91a43c6f/tf_keras-2.21.0.tar.gz", hash = "sha256:f9af0f2546cd5532de0fae7a481f34a1ca2253737d4cd1000f6b713dc733f770", size = 1255377, upload-time = "2026-03-18T22:12:02.103Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/d2/5220e3b93444f1c57c092ab5eb2c30cdc762a6e412234750f2d6a85b3769/tf_keras-2.21.0-py3-none-any.whl", hash = "sha256:f858bf3d97f892304e7fbcf5eb0942ed91674e27204f940a85de8c93cf07fe62", size = 1694939, upload-time = "2026-03-18T22:12:00.662Z" },
 ]
 
 [[package]]

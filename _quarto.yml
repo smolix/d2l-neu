@@ -246,6 +246,11 @@ format:
     theme:
       - cosmo
       - _d2l-theme.scss
+    grid:
+      sidebar-width: 280px
+      body-width: 1100px
+      margin-width: 200px
+      gutter-width: 1.5em
     code-copy: true
     code-overflow: wrap
     toc: true

@@ -43,6 +43,7 @@ mxnet = [
 tensorflow = [
     "tensorflow",
     "tensorflow-datasets",
+    "tensorflow-probability[tf]",
     "nvidia-cudnn-cu12",
     "nvidia-cublas-cu12",
     "nvidia-cuda-runtime-cu12",

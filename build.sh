@@ -20,7 +20,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SOURCE="${D2L_SOURCE:-../d2l-en}"
+SOURCE="${D2L_SOURCE:-.}"
 cd "$SCRIPT_DIR"
 
 # ── Helpers ──
@@ -59,6 +59,10 @@ convert_svgs() {
 build_html() {
     echo "=== Building HTML book ==="
     python3 tools/d2l_preprocess.py "$SOURCE" . --primary pytorch
+    if [ -d "_notebooks" ]; then
+        echo "  Injecting notebook outputs..."
+        python3 tools/inject_outputs.py html
+    fi
     quarto render --to html
     python3 tools/fix_crossref_numbers.py .
     echo "  Output: _book/index.html"
@@ -66,30 +70,41 @@ build_html() {
 
 build_pdf() {
     local fw="${1:-pytorch}"
+    local pdf_dir="_pdf/$fw"
     echo "=== Building PDF ($fw) ==="
 
     # Generate single-framework sources
-    python3 tools/gen_pdf.py "$SOURCE" _pdf --framework "$fw"
+    python3 tools/gen_pdf.py "$SOURCE" "$pdf_dir" --framework "$fw"
+
+    # Inject notebook outputs if available
+    if [ -d "_notebooks" ]; then
+        echo "  Injecting notebook outputs..."
+        python3 tools/inject_outputs.py pdf --framework "$fw" --pdf-dir "$pdf_dir"
+    fi
 
     # Convert SVGs to PDF for XeLaTeX
-    convert_svgs _pdf/img
+    convert_svgs "$pdf_dir/img"
 
     # Render via Quarto (produces .tex + initial .pdf)
-    cd _pdf
+    cd "$pdf_dir"
     quarto render --to pdf
-    cd ..
+    cd "$SCRIPT_DIR"
 
     # Post-process LaTeX for correct chapter/section hierarchy
-    python3 tools/fix_latex.py _pdf/Dive-into-Deep-Learning.tex
+    python3 tools/fix_latex.py "$pdf_dir/Dive-into-Deep-Learning.tex"
 
     # Recompile the fixed LaTeX (two passes for TOC and references)
-    cd _pdf
+    cd "$pdf_dir"
     xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1
     xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1
-    cd ..
+    cd "$SCRIPT_DIR"
 
-    # Clean up intermediate PDF images (keep only in _pdf/img during build)
-    echo "  Output: _pdf/_pdf/Dive-into-Deep-Learning.pdf"
+    # Rename output PDF to include framework
+    local final_pdf="$pdf_dir/_pdf/Dive-into-Deep-Learning-${fw}.pdf"
+    if [ -f "$pdf_dir/_pdf/Dive-into-Deep-Learning.pdf" ]; then
+        mv "$pdf_dir/_pdf/Dive-into-Deep-Learning.pdf" "$final_pdf"
+    fi
+    echo "  Output: $final_pdf"
 }
 
 build_notebooks() {
@@ -171,14 +186,18 @@ case "${1:-}" in
         build_slides
         build_lib
         ;;
+    inject-html)    python3 tools/inject_outputs.py html ;;
+    inject-pdf)     python3 tools/inject_outputs.py pdf --framework "${2:?Usage: $0 inject-pdf <framework>}" ;;
     clean)          clean ;;
     veryclean)      veryclean ;;
     *)
-        echo "Usage: $0 {html|pdf|notebooks|run-notebooks|slides|lib|all|clean|veryclean}"
+        echo "Usage: $0 {html|pdf|notebooks|run-notebooks|slides|lib|all|clean|veryclean|inject-html|inject-pdf}"
         echo "  pdf [framework]            - default: pytorch"
         echo "  notebooks [framework...]   - default: all"
         echo "  run-notebooks <framework>  - execute notebooks (uses uv)"
         echo "  slides [framework]         - default: all"
+        echo "  inject-html                - inject notebook outputs into .qmd (HTML)"
+        echo "  inject-pdf <framework>     - inject notebook outputs into _pdf/ .qmd"
         exit 1
         ;;
 esac

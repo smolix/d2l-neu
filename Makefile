@@ -18,12 +18,12 @@
 # NOT parallel-safe (GPU contention):
 #   run-notebooks-*, slides-*  Run one framework at a time
 #
-# All build output is logged to logs/<target>.log
+# All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
 SHELL      := /bin/bash
 .DEFAULT_GOAL := help
 
-SOURCE     ?= ../d2l-en
+SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
 PARALLEL   ?= 4
 NUM_GPUS   ?= 4
@@ -32,17 +32,17 @@ NUM_GPUS   ?= 4
 SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md)
 TOOLS   := $(wildcard tools/*.py)
 
-# Logging helper: recipe output goes to logs/<name>.log
+# Logging: each recipe logs to logs/<target>-YYYYMMDD-HHMMSS.log
+# PYTHONUNBUFFERED ensures output streams to the log file in real time.
 LOGDIR := logs
+TS     := $(shell date +%Y%m%d-%H%M%S)
+export PYTHONUNBUFFERED := 1
 
 # ── Phony targets ──────────────────────────────────────────
 
-.PHONY: help all html lib clean veryclean
+.PHONY: help all all-quick html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
-.PHONY: notebooks $(addprefix notebooks-,$(FRAMEWORKS))
-.PHONY: $(addprefix run-notebooks-,$(FRAMEWORKS)) run-all-notebooks
-.PHONY: slides $(addprefix slides-,$(FRAMEWORKS))
-.PHONY: $(addprefix venv-,$(FRAMEWORKS))
+.PHONY: notebooks run-all-notebooks slides
 
 # ── Help ───────────────────────────────────────────────────
 
@@ -64,11 +64,12 @@ help:
 	@echo "  venv-<fw>              Sync UV environment for one framework"
 	@echo "  clean                   Remove build artifacts (keep data/)"
 	@echo "  veryclean               Remove everything including data/"
-	@echo "  all                     Build html + pdfs + notebooks + slides + lib"
+	@echo "  all                     Full pipeline: generate, execute, rebuild with outputs"
+	@echo "  all-quick               Build html + pdfs + notebooks + slides + lib (no execution)"
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  PARALLEL=$(PARALLEL)  NUM_GPUS=$(NUM_GPUS)"
 	@echo "Frameworks: $(FRAMEWORKS)"
-	@echo "Logs:       $(LOGDIR)/<target>.log"
+	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
 
 # ── d2l library ────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ lib: d2l/.built
 d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building d2l library ==="
-	python3 tools/build_lib.py $(SOURCE) d2l/ 2>&1 | tee $(LOGDIR)/lib.log
+	python3 tools/build_lib.py $(SOURCE) d2l/ 2>&1 | tee $(LOGDIR)/lib-$(TS).log
 	@touch $@
 
 # ── UV venvs ───────────────────────────────────────────────
@@ -85,7 +86,7 @@ d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 .venv-%/.synced: pyproject.toml uv.lock
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing venv for $* ==="
-	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*.log
+	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*-$(TS).log
 	@touch $@
 
 venv-%: .venv-%/.synced
@@ -95,7 +96,7 @@ venv-%: .venv-%/.synced
 
 html: _book/index.html
 	@echo "Output: _book/index.html"
-	@echo "Log:    $(LOGDIR)/html.log"
+	@echo "Log:    $(LOGDIR)/html-$(TS).log"
 
 # Stage 1: preprocess d2l-en .md → .qmd
 .preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py
@@ -114,14 +115,14 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		quarto render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
-	} 2>&1 | tee $(LOGDIR)/html.log
+	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
 # ── Notebooks (generate) ──────────────────────────────────
 
 _notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating $* notebooks ==="
-	@python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*.log
+	@python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
 	@mkdir -p data
 	@[ -e _notebooks/$*/img ] || ln -s ../../img _notebooks/$*/img
 	@if [ -L _notebooks/$*/data ]; then :; \
@@ -154,12 +155,12 @@ _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	LD_LIBRARY_PATH="$(NVIDIA_LIBS)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	.venv-$*/bin/python tools/run_notebooks.py $* \
 		--parallel $(PARALLEL) --num-gpus $(NUM_GPUS) --continue-on-error \
-		2>&1 | tee $(LOGDIR)/run-$*.log
+		2>&1 | tee $(LOGDIR)/run-$*-$(TS).log
 	@touch $@
 
 run-notebooks-%: _notebooks/%/.executed
 	@echo "Notebooks for $* executed"
-	@echo "Log: $(LOGDIR)/run-$*.log"
+	@echo "Log: $(LOGDIR)/run-$*-$(TS).log"
 
 # Sequential execution of all frameworks (GPU-safe)
 run-all-notebooks:
@@ -173,7 +174,7 @@ run-all-notebooks:
 _pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
-	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen.log
+	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
 	@touch $@
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
@@ -202,11 +203,11 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated
 		if [ -f _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf ]; then \
 			mv _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf; \
 		fi; \
-	} 2>&1 | tee $(LOGDIR)/pdf-$(1).log
+	} 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log
 
 pdf-$(1): _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf
 	@echo "Output: $$<"
-	@echo "Log:    $(LOGDIR)/pdf-$(1).log"
+	@echo "Log:    $(LOGDIR)/pdf-$(1)-$(TS).log"
 endef
 
 $(foreach fw,$(FRAMEWORKS),$(eval $(call PDF_RULE,$(fw))))
@@ -221,18 +222,30 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --num-gpus $(NUM_GPUS) 2>&1 | tee $(LOGDIR)/slides-$*.log
+		--render --num-gpus $(NUM_GPUS) 2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
 
 slides-%: _slides/%/.built
 	@echo "Slides for $* in _slides/$*/"
-	@echo "Log: $(LOGDIR)/slides-$*.log"
+	@echo "Log: $(LOGDIR)/slides-$*-$(TS).log"
 
 slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Aggregate targets ─────────────────────────────────────
 
-all: html pdfs notebooks slides lib
+# Full pipeline: generate → execute → rebuild with outputs
+all:
+	$(MAKE) lib
+	$(MAKE) notebooks
+	$(MAKE) run-all-notebooks
+	$(MAKE) slides
+	@echo "=== Rebuilding HTML and PDFs with notebook outputs ==="
+	@rm -f _book/index.html
+	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
+	$(MAKE) html pdfs
+
+# Quick build without notebook execution
+all-quick: html pdfs notebooks slides lib
 
 # ── Clean ──────────────────────────────────────────────────
 

@@ -207,7 +207,6 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
 ```{.python .input}
 %%tab tensorflow
 class Seq2SeqAttentionDecoder(AttentionDecoder):
-    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()
@@ -237,7 +236,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         X = self.embedding(X)  # Input X has shape: (batch_size, num_steps)
         X = tf.transpose(X, perm=(1, 0, 2))
         outputs, self._attention_weights = [], []
-        for x in X:
+        for x in tf.unstack(X):
             # Shape of query: (batch_size, 1, num_hiddens)
             query = tf.expand_dims(hidden_state[-1], axis=1)
             # Shape of context: (batch_size, 1, num_hiddens)

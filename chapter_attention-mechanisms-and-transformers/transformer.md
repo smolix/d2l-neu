@@ -1078,7 +1078,6 @@ class TransformerDecoder(d2l.AttentionDecoder):
 ```{.python .input}
 %%tab tensorflow
 class TransformerDecoder(d2l.AttentionDecoder):
-    run_eagerly = True
     def __init__(self, vocab_size, key_size, query_size, value_size,
                  num_hiddens, norm_shape, ffn_num_hiddens, num_heads,
                  num_blks, dropout):

@@ -315,7 +315,6 @@ class DropoutMLPScratch(d2l.Classifier):
 ```{.python .input}
 %%tab tensorflow
 class DropoutMLPScratch(d2l.Classifier):
-    run_eagerly = True
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
                  dropout_1, dropout_2, lr):
         super().__init__()
@@ -325,7 +324,7 @@ class DropoutMLPScratch(d2l.Classifier):
         self.lin3 = tf.keras.layers.Dense(num_outputs)
 
     def forward(self, X):
-        H1 = self.lin1(tf.reshape(X, (X.shape[0], -1)))
+        H1 = self.lin1(tf.reshape(X, (tf.shape(X)[0], -1)))
         if self.training:
             H1 = dropout_layer(H1, self.dropout_1)
         H2 = self.lin2(H1)

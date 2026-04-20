@@ -92,7 +92,6 @@ class RNNScratch(d2l.Module):  #@save
 %%tab tensorflow
 class RNNScratch(d2l.Module):  #@save
     """The RNN model implemented from scratch."""
-    run_eagerly = True
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
@@ -171,12 +170,12 @@ def forward(self, inputs, state=None):
 def forward(self, inputs, state=None):
     if state is None:
         # Initial state with shape: (batch_size, num_hiddens)
-        state = d2l.zeros((inputs.shape[1], self.num_hiddens))
+        state = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
     else:
         state, = state
-        state = d2l.reshape(state, (-1, self.num_hiddens))
+        state = tf.reshape(state, (-1, self.num_hiddens))
     outputs = []
-    for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs) 
+    for X in tf.unstack(inputs):  # Shape of inputs: (num_steps, batch_size, num_inputs) 
         state = d2l.tanh(d2l.matmul(X, self.W_xh) +
                          d2l.matmul(state, self.W_hh) + self.b_h)
         outputs.append(state)
@@ -315,7 +314,6 @@ class RNNLMScratch(d2l.Classifier):  #@save
 %%tab tensorflow
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
-    run_eagerly = True
     def __init__(self, rnn, vocab_size, lr=0.01):
         super().__init__()
         self.save_hyperparameters()
@@ -657,13 +655,10 @@ def clip_gradients(self, grad_clip_val, model):
 def clip_gradients(self, grad_clip_val, grads):
     grad_clip_val = tf.constant(grad_clip_val, dtype=tf.float32)
     new_grads = [tf.convert_to_tensor(grad) if isinstance(
-        grad, tf.IndexedSlices) else grad for grad in grads]    
+        grad, tf.IndexedSlices) else grad for grad in grads]
     norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)) for grad in new_grads))
-    if tf.greater(norm, grad_clip_val):
-        for i, grad in enumerate(new_grads):
-            new_grads[i] = grad * grad_clip_val / norm
-        return new_grads
-    return grads
+    scale = tf.minimum(1.0, grad_clip_val / norm)
+    return [grad * scale for grad in new_grads]
 ```
 
 ```{.python .input  n=27}

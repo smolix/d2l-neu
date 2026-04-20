@@ -300,9 +300,9 @@ def forward(self, inputs, H=None):
 def forward(self, inputs, H=None):
     if H is None:
         # Initial state with shape: (batch_size, num_hiddens)
-        H = d2l.zeros((inputs.shape[1], self.num_hiddens))
+        H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
     outputs = []
-    for X in inputs:
+    for X in tf.unstack(inputs):
         Z = d2l.sigmoid(d2l.matmul(X, self.W_xz) +
                         d2l.matmul(H, self.W_hz) + self.b_z)
         R = d2l.sigmoid(d2l.matmul(X, self.W_xr) + 

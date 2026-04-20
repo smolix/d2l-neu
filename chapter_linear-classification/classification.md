@@ -163,7 +163,7 @@ def accuracy(self, Y_hat, Y, averaged=True):
     """Compute the number of correct predictions."""
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
-    compare = d2l.astype(preds == d2l.reshape(Y, -1), d2l.float32)
+    compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
@@ -178,7 +178,7 @@ def accuracy(self, params, X, Y, state, averaged=True):
                            *X)
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
-    compare = d2l.astype(preds == d2l.reshape(Y, -1), d2l.float32)
+    compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 

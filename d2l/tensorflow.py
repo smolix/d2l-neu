@@ -181,7 +181,7 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         raise NotImplementedError
 
     def forward(self, X):
-        assert hasattr(self, 'net'), 'Neural network is defined'
+        assert hasattr(self, 'net'), 'Neural network is not defined'
         return self.net(X)
 
     def call(self, X, *args, training=None, **kwargs):
@@ -209,9 +209,15 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         self.plot('loss', l, train=True)
         return l
 
+    def _report_train(self, loss):
+        self.plot('loss', loss, train=True)
+
     def validation_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('loss', l, train=False)
+
+    def _report_val(self, y_hat, batch):
+        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
 
     def configure_optimizers(self):
         raise NotImplementedError
@@ -247,7 +253,7 @@ class Trainer(d2l.HyperParameters):
     Defined in :numref:`sec_oo-design`"""
     def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
         self.save_hyperparameters()
-        assert num_gpus == 0, 'No GPU support yet'
+        self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
@@ -268,6 +274,7 @@ class Trainer(d2l.HyperParameters):
         self.epoch = 0
         self.train_batch_idx = 0
         self.val_batch_idx = 0
+        self._compile_steps()
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
 
@@ -277,36 +284,57 @@ class Trainer(d2l.HyperParameters):
     def prepare_batch(self, batch):
         return batch
 
-    def fit_epoch(self):
-        self.model.training = True
-        for batch in self.train_dataloader:            
+    def _compile_steps(self):
+        model, optim = self.model, self.optim
+        grad_clip = self.gradient_clip_val
+        for batch in self.train_dataloader:
+            model(*self.prepare_batch(batch)[:-1], training=True)
+            break
+
+        def train_step(batch):
             with tf.GradientTape() as tape:
-                loss = self.model.training_step(self.prepare_batch(batch))
-            params = self.model.trainable_variables
+                loss = model.loss(model(*batch[:-1], training=True),
+                                  batch[-1])
+            params = model.trainable_variables
             if not params:
                 params = list(tape.watched_variables())
             grads = tape.gradient(loss, params)
-            if self.gradient_clip_val > 0:
-                grads = self.clip_gradients(self.gradient_clip_val, grads)
-            self.optim.apply_gradients(zip(grads, params))
+            if grad_clip > 0:
+                grads = self.clip_gradients(grad_clip, grads)
+            optim.apply_gradients(zip(grads, params))
+            return loss
+
+        def val_step(batch):
+            return model(*batch[:-1], training=False)
+
+        train_step = tf.function(train_step, reduce_retracing=True)
+        val_step = tf.function(val_step, reduce_retracing=True)
+
+        self._train_step = train_step
+        self._val_step = val_step
+
+    def fit_epoch(self):
+        self.model.training = True
+        for batch in self.train_dataloader:
+            loss = self._train_step(self.prepare_batch(batch))
+            self.model._report_train(loss)
             self.train_batch_idx += 1
         if self.val_dataloader is None:
             return
         self.model.training = False
-        for batch in self.val_dataloader:        
-            self.model.validation_step(self.prepare_batch(batch))
+        for batch in self.val_dataloader:
+            b = self.prepare_batch(batch)
+            y_hat = self._val_step(b)
+            self.model._report_val(y_hat, b)
             self.val_batch_idx += 1
 
     def clip_gradients(self, grad_clip_val, grads):
         grad_clip_val = tf.constant(grad_clip_val, dtype=tf.float32)
         new_grads = [tf.convert_to_tensor(grad) if isinstance(
-            grad, tf.IndexedSlices) else grad for grad in grads]    
+            grad, tf.IndexedSlices) else grad for grad in grads]
         norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)) for grad in new_grads))
-        if tf.greater(norm, grad_clip_val):
-            for i, grad in enumerate(new_grads):
-                new_grads[i] = grad * grad_clip_val / norm
-            return new_grads
-        return grads
+        scale = tf.minimum(1.0, grad_clip_val / norm)
+        return [grad * scale for grad in new_grads]
 
 class SyntheticRegressionData(d2l.DataModule):
     """Synthetic data for linear regression.
@@ -428,13 +456,17 @@ class Classifier(d2l.Module):
         self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
         self.plot('acc', self.accuracy(Y_hat, batch[-1]), train=False)
 
+    def _report_val(self, y_hat, batch):
+        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
+        self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
+
     def accuracy(self, Y_hat, Y, averaged=True):
         """Compute the number of correct predictions.
 
         Defined in :numref:`sec_classification`"""
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
         preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
-        compare = d2l.astype(preds == d2l.reshape(Y, -1), d2l.float32)
+        compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
         return d2l.reduce_mean(compare) if averaged else compare
 
     def loss(self, Y_hat, Y, averaged=True):
@@ -668,12 +700,12 @@ class RNNScratch(d2l.Module):
     def forward(self, inputs, state=None):
         if state is None:
             # Initial state with shape: (batch_size, num_hiddens)
-            state = d2l.zeros((inputs.shape[1], self.num_hiddens))
+            state = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
         else:
             state, = state
-            state = d2l.reshape(state, (-1, self.num_hiddens))
+            state = tf.reshape(state, (-1, self.num_hiddens))
         outputs = []
-        for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs) 
+        for X in tf.unstack(inputs):  # Shape of inputs: (num_steps, batch_size, num_inputs) 
             state = d2l.tanh(d2l.matmul(X, self.W_xh) +
                              d2l.matmul(state, self.W_hh) + self.b_h)
             outputs.append(state)
@@ -710,10 +742,16 @@ class RNNLMScratch(d2l.Classifier):
         l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=True)
         return l
+
+    def _report_train(self, loss):
+        self.plot('ppl', d2l.exp(loss), train=True)
         
     def validation_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=False)
+
+    def _report_val(self, y_hat, batch):
+        self.plot('ppl', d2l.exp(self.loss(y_hat, batch[-1])), train=False)
 
     def one_hot(self, X):    
         # Output shape: (num_steps, batch_size, vocab_size)    
@@ -997,29 +1035,24 @@ def masked_softmax(X, valid_lens):
     Defined in :numref:`sec_attention-scoring-functions`"""
     # X: 3D tensor, valid_lens: 1D or 2D tensor
     def _sequence_mask(X, valid_len, value=0):
-        maxlen = X.shape[1]
+        maxlen = tf.shape(X)[1]
         mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
             None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
+        return tf.where(mask, X, value)
 
-        if len(X.shape) == 3:
-            return tf.where(tf.expand_dims(mask, axis=-1), X, value)
-        else:
-            return tf.where(mask, X, value)
-    
     if valid_lens is None:
         return tf.nn.softmax(X, axis=-1)
     else:
-        shape = X.shape
+        shape = tf.shape(X)
         if len(valid_lens.shape) == 1:
             valid_lens = tf.repeat(valid_lens, repeats=shape[1])
-            
         else:
-            valid_lens = tf.reshape(valid_lens, shape=-1)
+            valid_lens = tf.reshape(valid_lens, shape=(-1,))
         # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0    
-        X = _sequence_mask(tf.reshape(X, shape=(-1, shape[-1])), valid_lens,
-                           value=-1e6)    
-        return tf.nn.softmax(tf.reshape(X, shape=shape), axis=-1)
+        # value, whose exponentiation outputs 0
+        X = _sequence_mask(tf.reshape(X, (-1, shape[-1])), valid_lens,
+                           value=-1e6)
+        return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
 
 class DotProductAttention(tf.keras.layers.Layer):
     """Scaled dot product attention.
@@ -1035,9 +1068,8 @@ class DotProductAttention(tf.keras.layers.Layer):
     # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
     def call(self, queries, keys, values, valid_lens=None, training=False,
              **kwargs):
-        d = queries.shape[-1]
-        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(
-            tf.cast(d, dtype=tf.float32))
+        d = tf.cast(tf.shape(queries)[-1], dtype=tf.float32)
+        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(d)
         self.attention_weights = masked_softmax(scores, valid_lens)
         return tf.matmul(self.dropout(
             self.attention_weights, training=training), values)
@@ -1128,21 +1160,21 @@ class MultiHeadAttention(d2l.Module):
         # Shape of input X: (batch_size, no. of queries or key-value pairs,
         # num_hiddens). Shape of output X: (batch_size, no. of queries or
         # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = tf.reshape(X, shape=(X.shape[0], X.shape[1], self.num_heads, -1))
+        X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
         # Shape of output X: (batch_size, num_heads, no. of queries or key-value
         # pairs, num_hiddens / num_heads)
         X = tf.transpose(X, perm=(0, 2, 1, 3))
         # Shape of output: (batch_size * num_heads, no. of queries or key-value
         # pairs, num_hiddens / num_heads)
-        return tf.reshape(X, shape=(-1, X.shape[2], X.shape[3]))
+        return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
 
     def transpose_output(self, X):
         """Reverse the operation of transpose_qkv.
 
         Defined in :numref:`sec_multihead-attention`"""
-        X = tf.reshape(X, shape=(-1, self.num_heads, X.shape[1], X.shape[2]))
+        X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
         X = tf.transpose(X, perm=(0, 2, 1, 3))
-        return tf.reshape(X, shape=(X.shape[0], X.shape[1], -1))
+        return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
 
 class PositionalEncoding(tf.keras.layers.Layer):
     """Positional encoding.
@@ -1830,7 +1862,7 @@ def read_snli(data_dir, is_train):
 
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
-    return np.exp(-(1. / ls / 2) * (dist ** 2))
+    return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
 
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.
@@ -2083,7 +2115,7 @@ def download(url, folder='../data', sha1_hash=None):
 
     Defined in :numref:`sec_utils`"""
     if not url.startswith('http'):
-        # For back compatability
+        # For back compatibility
         url, sha1_hash = DATA_HUB[url]
     os.makedirs(folder, exist_ok=True)
     fname = os.path.join(folder, url.split('/')[-1])

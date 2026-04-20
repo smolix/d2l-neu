@@ -476,9 +476,8 @@ def _compile_steps(self):
     def val_step(batch):
         return model(*batch[:-1], training=False)
 
-    if not getattr(model, 'run_eagerly', False):
-        train_step = tf.function(train_step, reduce_retracing=True)
-        val_step = tf.function(val_step, reduce_retracing=True)
+    train_step = tf.function(train_step, reduce_retracing=True)
+    val_step = tf.function(val_step, reduce_retracing=True)
 
     self._train_step = train_step
     self._val_step = val_step

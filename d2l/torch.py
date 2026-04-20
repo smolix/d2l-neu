@@ -191,7 +191,7 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         raise NotImplementedError
 
     def forward(self, X):
-        assert hasattr(self, 'net'), 'Neural network is defined'
+        assert hasattr(self, 'net'), 'Neural network is not defined'
         return self.net(X)
 
     def plot(self, key, value, train):
@@ -456,13 +456,17 @@ class Classifier(d2l.Module):
         self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
         self.plot('acc', self.accuracy(Y_hat, batch[-1]), train=False)
 
+    def _report_val(self, y_hat, batch):
+        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
+        self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
+
     def accuracy(self, Y_hat, Y, averaged=True):
         """Compute the number of correct predictions.
 
         Defined in :numref:`sec_classification`"""
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
         preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
-        compare = d2l.astype(preds == d2l.reshape(Y, -1), d2l.float32)
+        compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
         return d2l.reduce_mean(compare) if averaged else compare
 
     def loss(self, Y_hat, Y, averaged=True):
@@ -2549,7 +2553,7 @@ def predict_snli(net, vocab, premise, hypothesis):
 
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
-    return np.exp(-(1. / ls / 2) * (dist ** 2))
+    return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
 
 class HPOTrainer(d2l.Trainer):
     def validation_error(self):
@@ -2606,7 +2610,7 @@ class BasicScheduler(HPOScheduler):
 class HPOTuner(d2l.HyperParameters):
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookeeping results for plotting
+        # Bookkeeping results for plotting
         self.incumbent = None
         self.incumbent_error = None
         self.incumbent_trajectory = []
@@ -2752,7 +2756,7 @@ d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
 
 def frozen_lake(seed):
     # See https://www.gymlibrary.dev/environments/toy_text/frozen_lake/ to learn more about this env
-    # How to process env.P.items is adpated from https://sites.google.com/view/deep-rl-bootcamp/labs
+    # How to process env.P.items is adapted from https://sites.google.com/view/deep-rl-bootcamp/labs
     import gymnasium as gym
 
     env = gym.make('FrozenLake-v1', is_slippery=False)
@@ -3133,7 +3137,7 @@ def download(url, folder='../data', sha1_hash=None):
 
     Defined in :numref:`sec_utils`"""
     if not url.startswith('http'):
-        # For back compatability
+        # For back compatibility
         url, sha1_hash = DATA_HUB[url]
     os.makedirs(folder, exist_ok=True)
     fname = os.path.join(folder, url.split('/')[-1])

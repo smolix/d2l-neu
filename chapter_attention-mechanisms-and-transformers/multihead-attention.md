@@ -338,20 +338,20 @@ def transpose_qkv(self, X):
     # Shape of input X: (batch_size, no. of queries or key-value pairs,
     # num_hiddens). Shape of output X: (batch_size, no. of queries or
     # key-value pairs, num_heads, num_hiddens / num_heads)
-    X = tf.reshape(X, shape=(X.shape[0], X.shape[1], self.num_heads, -1))
+    X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
     # Shape of output X: (batch_size, num_heads, no. of queries or key-value
     # pairs, num_hiddens / num_heads)
     X = tf.transpose(X, perm=(0, 2, 1, 3))
     # Shape of output: (batch_size * num_heads, no. of queries or key-value
     # pairs, num_hiddens / num_heads)
-    return tf.reshape(X, shape=(-1, X.shape[2], X.shape[3]))
+    return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
 
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_output(self, X):
     """Reverse the operation of transpose_qkv."""
-    X = tf.reshape(X, shape=(-1, self.num_heads, X.shape[1], X.shape[2]))
+    X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
     X = tf.transpose(X, perm=(0, 2, 1, 3))
-    return tf.reshape(X, shape=(X.shape[0], X.shape[1], -1))
+    return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
 ```
 
 ```{.python .input}

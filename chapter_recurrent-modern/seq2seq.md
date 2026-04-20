@@ -263,7 +263,6 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
 %%tab tensorflow
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
-    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()
@@ -500,7 +499,6 @@ class Seq2SeqDecoder(d2l.Decoder):
 %%tab tensorflow
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
-    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()
@@ -721,7 +719,7 @@ with zero equates to zero.
 @d2l.add_to_class(Seq2Seq)
 def loss(self, Y_hat, Y):
     l = super(Seq2Seq, self).loss(Y_hat, Y, averaged=False)
-    mask = d2l.astype(d2l.reshape(Y, -1) != self.tgt_pad, d2l.float32)
+    mask = d2l.astype(d2l.reshape(Y, (-1,)) != self.tgt_pad, d2l.float32)
     return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
 ```
 

@@ -299,6 +299,8 @@ def main():
                         help='Number of GPUs for parallel rendering')
     parser.add_argument('--timeout', type=int, default=3600,
                         help='Per-slide render timeout in seconds')
+    parser.add_argument('--filter', nargs='*', default=None,
+                        help='Only process slides matching these paths (e.g. chapter_foo/bar.qmd)')
     args = parser.parse_args()
 
     src = args.source
@@ -339,6 +341,12 @@ def main():
                 data_link.symlink_to(data_dir)
 
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
+            if args.filter:
+                filter_stems = {f.replace('.qmd', '').replace('.md', '')
+                                for f in args.filter}
+                qmd_files = [q for q in qmd_files
+                             if str(q.relative_to(fw_dir)).replace('.qmd', '')
+                             in filter_stems]
             venv_root = Path(f'.venv-{fw}').absolute()
             venv_python = venv_root / 'bin' / 'python'
 

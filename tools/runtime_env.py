@@ -70,6 +70,8 @@ MULTI_GPU_NOTEBOOKS = {
     "chapter_computational-performance/multiple-gpus.ipynb",
     "chapter_computational-performance/multiple-gpus-concise.ipynb",
     "chapter_computational-performance/auto-parallelism.ipynb",
+    "chapter_computational-performance/async-computation.ipynb",
+    "chapter_optimization/minibatch-sgd.ipynb",
 }
 
 

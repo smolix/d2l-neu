@@ -160,7 +160,7 @@ def masked_softmax(X, valid_lens):  #@save
             valid_lens = tf.repeat(valid_lens, repeats=shape[1])
             
         else:
-            valid_lens = tf.reshape(valid_lens, shape=-1)
+            valid_lens = tf.reshape(valid_lens, shape=(-1,))
         # On the last axis, replace masked elements with a very large negative
         # value, whose exponentiation outputs 0    
         X = _sequence_mask(tf.reshape(X, shape=(-1, shape[-1])), valid_lens,

@@ -229,6 +229,11 @@ class EncoderDecoder(d2l.Classifier):  #@save
         self.encoder = encoder
         self.decoder = decoder
 
+    @property
+    def run_eagerly(self):
+        return (getattr(self.encoder, 'run_eagerly', False) or
+                getattr(self.decoder, 'run_eagerly', False))
+
     def call(self, enc_X, dec_X, *args):
         enc_all_outputs = self.encoder(enc_X, *args, training=True)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)

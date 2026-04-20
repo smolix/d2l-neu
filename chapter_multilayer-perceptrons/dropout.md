@@ -315,6 +315,7 @@ class DropoutMLPScratch(d2l.Classifier):
 ```{.python .input}
 %%tab tensorflow
 class DropoutMLPScratch(d2l.Classifier):
+    run_eagerly = True
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
                  dropout_1, dropout_2, lr):
         super().__init__()

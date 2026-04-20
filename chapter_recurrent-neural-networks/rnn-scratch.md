@@ -92,6 +92,7 @@ class RNNScratch(d2l.Module):  #@save
 %%tab tensorflow
 class RNNScratch(d2l.Module):  #@save
     """The RNN model implemented from scratch."""
+    run_eagerly = True
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
@@ -314,6 +315,7 @@ class RNNLMScratch(d2l.Classifier):  #@save
 %%tab tensorflow
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
+    run_eagerly = True
     def __init__(self, rnn, vocab_size, lr=0.01):
         super().__init__()
         self.save_hyperparameters()

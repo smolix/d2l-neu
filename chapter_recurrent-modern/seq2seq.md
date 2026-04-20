@@ -263,6 +263,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
 %%tab tensorflow
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
+    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()
@@ -499,6 +500,7 @@ class Seq2SeqDecoder(d2l.Decoder):
 %%tab tensorflow
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
+    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()

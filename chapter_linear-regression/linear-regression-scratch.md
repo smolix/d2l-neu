@@ -460,7 +460,6 @@ def _compile_steps(self):
         model(*self.prepare_batch(batch)[:-1], training=True)
         break
 
-    @tf.function(reduce_retracing=True)
     def train_step(batch):
         with tf.GradientTape() as tape:
             loss = model.loss(model(*batch[:-1], training=True),
@@ -474,9 +473,12 @@ def _compile_steps(self):
         optim.apply_gradients(zip(grads, params))
         return loss
 
-    @tf.function(reduce_retracing=True)
     def val_step(batch):
         return model(*batch[:-1], training=False)
+
+    if not getattr(model, 'run_eagerly', False):
+        train_step = tf.function(train_step, reduce_retracing=True)
+        val_step = tf.function(val_step, reduce_retracing=True)
 
     self._train_step = train_step
     self._val_step = val_step

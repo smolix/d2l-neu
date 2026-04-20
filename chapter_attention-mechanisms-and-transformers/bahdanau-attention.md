@@ -207,6 +207,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
 ```{.python .input}
 %%tab tensorflow
 class Seq2SeqAttentionDecoder(AttentionDecoder):
+    run_eagerly = True
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()

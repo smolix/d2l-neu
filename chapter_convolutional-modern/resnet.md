@@ -461,7 +461,7 @@ def __init__(self, arch, lr=0.1, num_classes=10):
 ```
 
 ```{.python .input}
-# %%tab jax
+%%tab jax
 @d2l.add_to_class(ResNet)
 def create_net(self):
     net = nn.Sequential([self.b1()])

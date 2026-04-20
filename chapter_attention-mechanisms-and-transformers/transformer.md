@@ -875,12 +875,13 @@ class TransformerDecoderBlock(tf.keras.layers.Layer):
             key_values = tf.concat((state[2][self.i], X), axis=1)
         state[2][self.i] = key_values
         if training:
-            batch_size, num_steps, _ = X.shape
+            x_shape = tf.shape(X)
+            batch_size, num_steps = x_shape[0], x_shape[1]
             # Shape of dec_valid_lens: (batch_size, num_steps), where every
             # row is [1, 2, ..., num_steps]
             dec_valid_lens = tf.repeat(
                 tf.reshape(tf.range(1, num_steps + 1),
-                           shape=(-1, num_steps)), repeats=batch_size, axis=0)
+                           shape=(1, -1)), repeats=batch_size, axis=0)
         else:
             dec_valid_lens = None
         # Self-attention
@@ -1077,6 +1078,7 @@ class TransformerDecoder(d2l.AttentionDecoder):
 ```{.python .input}
 %%tab tensorflow
 class TransformerDecoder(d2l.AttentionDecoder):
+    run_eagerly = True
     def __init__(self, vocab_size, key_size, query_size, value_size,
                  num_hiddens, norm_shape, ffn_num_hiddens, num_heads,
                  num_blks, dropout):

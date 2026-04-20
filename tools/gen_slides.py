@@ -30,7 +30,11 @@ from d2l_preprocess import (
     translate_directives,
 )
 from build_lib import flatten_tab_branches
-from runtime_env import GPU_KEYWORDS, setup_framework_env
+from runtime_env import (
+    GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
+    MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
+    make_cpu_affinity_fn, worker_cpu_set,
+)
 
 
 # ──────────────────────────────────────────────────────────
@@ -104,11 +108,36 @@ def filter_prose_tabs(text, framework):
 # Slide generation from source .md
 # ──────────────────────────────────────────────────────────
 
+def has_framework_code(src_path, framework):
+    """Check if a source .md has code cells for this framework.
+
+    A file with only '#@tab all' blocks is framework-agnostic and included
+    for every framework. But if it has framework-specific tabs (e.g.,
+    pytorch, mxnet) and none match the target framework, skip it — the
+    import/setup cells won't be present, causing NameErrors.
+    """
+    text = Path(src_path).read_text(encoding='utf-8')
+    tabs_found = set()
+    for m in re.finditer(r'^#@tab\s+(.+)$', text, re.MULTILINE):
+        for t in m.group(1).split(','):
+            tabs_found.add(t.strip())
+    if not tabs_found:
+        return True  # no tabs at all
+    fw_specific = tabs_found - {'all'}
+    if not fw_specific:
+        return True  # only '#@tab all' blocks
+    return framework in fw_specific
+
+
 def generate_slides_qmd(src_path, framework):
     """Generate a Reveal.js .qmd slide deck from a d2l source .md file.
 
-    Returns the .qmd content string, or None if no slide markers found.
+    Returns the .qmd content string, or None if no slide markers found
+    or if the framework has no code implementation in this file.
     """
+    if not has_framework_code(src_path, framework):
+        return None
+
     text = Path(src_path).read_text(encoding='utf-8')
 
     # Filter prose tabs
@@ -296,6 +325,19 @@ def main():
             generated += 1
 
         if args.render:
+            # Create img symlink (like gen_notebooks.py does)
+            img_link = fw_dir / 'img'
+            if not img_link.exists():
+                img_target = Path('../../img')
+                img_link.symlink_to(img_target)
+
+            # Create data symlink
+            data_link = fw_dir / 'data'
+            if not data_link.exists():
+                data_dir = Path.cwd() / 'data'
+                data_dir.mkdir(exist_ok=True)
+                data_link.symlink_to(data_dir)
+
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
             venv_root = Path(f'.venv-{fw}').absolute()
             venv_python = venv_root / 'bin' / 'python'
@@ -305,15 +347,27 @@ def main():
             if venv_python.exists():
                 base_env['QUARTO_PYTHON'] = str(venv_python)
 
+            # Classify slides by resource needs
+            multi_gpu_stems = {
+                s.replace('.ipynb', '') for s in MULTI_GPU_NOTEBOOKS}
+
             def needs_gpu(qmd):
                 text = qmd.read_text(encoding='utf-8')
                 return any(kw in text for kw in GPU_KEYWORDS)
 
-            gpu_slides = [q for q in qmd_files if needs_gpu(q)]
-            cpu_slides = [q for q in qmd_files if not needs_gpu(q)]
-            total = len(gpu_slides) + len(cpu_slides)
+            def is_multi_gpu(qmd):
+                rel = str(qmd.relative_to(fw_dir)).replace('.qmd', '')
+                return rel in multi_gpu_stems
+
+            multi_gpu_slides = [q for q in qmd_files if is_multi_gpu(q)]
+            gpu_slides = [q for q in qmd_files
+                          if needs_gpu(q) and not is_multi_gpu(q)]
+            cpu_slides = [q for q in qmd_files
+                          if not needs_gpu(q) and not is_multi_gpu(q)]
+            total = len(gpu_slides) + len(cpu_slides) + len(multi_gpu_slides)
             print(f'  {len(gpu_slides)} GPU slides, '
-                  f'{len(cpu_slides)} CPU-only slides')
+                  f'{len(cpu_slides)} CPU-only slides, '
+                  f'{len(multi_gpu_slides)} multi-GPU slides')
 
             gpu_q = queue.Queue()
             for g in range(args.num_gpus):
@@ -325,7 +379,7 @@ def main():
             error_dir = fw_dir.parent / 'errors' / fw
             error_dir.mkdir(parents=True, exist_ok=True)
 
-            def render_one(qmd, cuda_devices=None):
+            def render_one(qmd, cuda_devices=None, cpu_affinity=None):
                 with _print_lock:
                     _idx[0] += 1
                     idx = _idx[0]
@@ -339,12 +393,16 @@ def main():
                 env = {**base_env}
                 if cuda_devices is not None:
                     env['CUDA_VISIBLE_DEVICES'] = cuda_devices
+                    if cuda_devices == '':
+                        from runtime_env import CPU_ONLY_ENV
+                        env.update(CPU_ONLY_ENV)
                 t0 = time.time()
                 try:
                     result = subprocess.run(
                         ['quarto', 'render', str(qmd), '--to', 'revealjs'],
                         capture_output=True, text=True,
-                        timeout=args.timeout, env=env)
+                        timeout=args.timeout, env=env,
+                        preexec_fn=make_cpu_affinity_fn(cpu_affinity))
                     elapsed = time.time() - t0
                     stderr = (result.stderr or result.stdout).strip()
                     ok = result.returncode == 0
@@ -368,15 +426,28 @@ def main():
 
                 return (qmd, ok, stderr if not ok else None)
 
+            total_workers = args.num_gpus * 2  # GPU + CPU pools
+            _cpu_worker_id = [0]
+            _cpu_id_lock = threading.Lock()
+
             def render_gpu(qmd):
                 gpu = gpu_q.get()
                 try:
-                    return render_one(qmd, cuda_devices=gpu)
+                    cpus = worker_cpu_set(
+                        int(gpu), total_workers, MAX_CPUS_PER_GPU_WORKER)
+                    return render_one(qmd, cuda_devices=gpu,
+                                      cpu_affinity=cpus)
                 finally:
                     gpu_q.put(gpu)
 
             def render_cpu(qmd):
-                return render_one(qmd, cuda_devices='')
+                with _cpu_id_lock:
+                    wid = args.num_gpus + _cpu_worker_id[0]
+                    _cpu_worker_id[0] = (
+                        (_cpu_worker_id[0] + 1) % args.num_gpus)
+                cpus = worker_cpu_set(
+                    wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
+                return render_one(qmd, cuda_devices='', cpu_affinity=cpus)
 
             from concurrent.futures import ThreadPoolExecutor
             results = []
@@ -386,6 +457,12 @@ def main():
                 cpu_futs = [cpu_exec.submit(render_cpu, q) for q in cpu_slides]
                 for f in gpu_futs + cpu_futs:
                     results.append(f.result())
+
+            # Multi-GPU slides run serially with all GPUs visible
+            if multi_gpu_slides:
+                all_gpus = ','.join(str(g) for g in range(args.num_gpus))
+                for qmd in multi_gpu_slides:
+                    results.append(render_one(qmd, cuda_devices=all_gpus))
 
             rendered = sum(1 for _, ok, _ in results if ok)
             failures = [(q, err) for q, ok, err in results if not ok]

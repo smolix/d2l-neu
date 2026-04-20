@@ -32,6 +32,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
     GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
+    MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
+    make_cpu_affinity_fn, worker_cpu_set,
 )
 
 
@@ -76,29 +78,6 @@ def find_notebooks(framework, glob_pattern=None, files=None):
     return nbs
 
 
-MAX_CPUS_PER_GPU_WORKER = 32
-MAX_CPUS_PER_CPU_WORKER = 16
-
-_HOST_CPUS = sorted(os.sched_getaffinity(0))
-
-
-def _make_cpu_affinity_fn(cpu_set):
-    """Return a preexec_fn that pins the child process to *cpu_set*.
-
-    XLA sizes its Eigen and internal thread pools from the CPU affinity mask,
-    so restricting visible cores is the only reliable way to cap per-process
-    thread count (env-var flags like xla_gpu_force_compilation_parallelism
-    have no effect on JAX's XLA build).
-    """
-    if cpu_set is None:
-        return None
-    frozen = frozenset(cpu_set)
-    def _set():
-        try:
-            os.sched_setaffinity(0, frozen)
-        except OSError:
-            pass
-    return _set
 
 
 def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
@@ -112,6 +91,9 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
     env = os.environ.copy()
     if cuda_devices is not None:
         env["CUDA_VISIBLE_DEVICES"] = cuda_devices
+        if cuda_devices == "":
+            from runtime_env import CPU_ONLY_ENV
+            env.update(CPU_ONLY_ENV)
 
     t0 = time.time()
     try:
@@ -129,7 +111,7 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
             text=True,
             timeout=timeout + 120,
             env=env,
-            preexec_fn=_make_cpu_affinity_fn(cpu_affinity),
+            preexec_fn=make_cpu_affinity_fn(cpu_affinity),
         )
     except subprocess.TimeoutExpired as e:
         elapsed = time.time() - t0
@@ -200,18 +182,6 @@ def run_sequential(nbs, timeout, continue_on_error, framework):
     return passed, failed, errors
 
 
-def _worker_cpu_set(worker_id, num_workers, max_cpus):
-    """Return a set of CPU indices for worker *worker_id*.
-
-    Distributes *max_cpus* cores per worker, strided across _HOST_CPUS so
-    that adjacent workers overlap minimally.
-    """
-    n = len(_HOST_CPUS)
-    if n <= max_cpus:
-        return set(_HOST_CPUS)
-    stride = n // num_workers
-    start = worker_id * stride
-    return {_HOST_CPUS[(start + i) % n] for i in range(min(max_cpus, n))}
 
 
 def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, framework):
@@ -232,7 +202,7 @@ def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, 
     def _run_gpu(idx, nb, rel):
         gpu = gpu_pool.get()
         try:
-            cpus = _worker_cpu_set(int(gpu), total_workers, MAX_CPUS_PER_GPU_WORKER)
+            cpus = worker_cpu_set(int(gpu), total_workers, MAX_CPUS_PER_GPU_WORKER)
             return _run_one(idx, total, nb, rel, timeout, gpu, cpu_affinity=cpus)
         finally:
             gpu_pool.put(gpu)
@@ -241,7 +211,7 @@ def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, 
         with _cpu_id_lock:
             wid = gpu_workers + _cpu_worker_id[0]
             _cpu_worker_id[0] = (_cpu_worker_id[0] + 1) % cpu_workers
-        cpus = _worker_cpu_set(wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
+        cpus = worker_cpu_set(wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
         return _run_one(idx, total, nb, rel, timeout, cuda_devices="", cpu_affinity=cpus)
 
     with ThreadPoolExecutor(max_workers=gpu_workers) as gpu_exec, \

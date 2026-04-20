@@ -52,6 +52,16 @@ FRAMEWORK_ENV = {
         "TF_FORCE_GPU_ALLOW_GROWTH": "true",
         "TF_XLA_FLAGS": "--tf_xla_auto_jit=2",
     },
+    "mxnet": {
+        "MXNET_CUDNN_LIB_CHECKING": "0",
+    },
+}
+
+# Env vars to suppress CUDA noise when running CPU-only (CUDA_VISIBLE_DEVICES="").
+# Only apply these when GPU is deliberately hidden — NOT for GPU workloads.
+CPU_ONLY_ENV = {
+    "TF_CPP_MIN_LOG_LEVEL": "3",
+    "JAX_PLATFORMS": "cpu",
 }
 
 # Notebooks that use multiple GPUs or test GPU availability across devices.
@@ -99,3 +109,41 @@ def setup_framework_env(framework, venv_root=None):
             resource.setrlimit(resource.RLIMIT_NPROC, (hard, hard))
     except (ValueError, OSError):
         pass
+
+
+# ── CPU affinity helpers ──────────────────────────────────────────────
+# XLA sizes its Eigen and internal thread pools from the CPU affinity mask,
+# so restricting visible cores is the only reliable way to cap per-process
+# thread count.
+
+MAX_CPUS_PER_GPU_WORKER = 32
+MAX_CPUS_PER_CPU_WORKER = 16
+
+_HOST_CPUS = sorted(os.sched_getaffinity(0))
+
+
+def make_cpu_affinity_fn(cpu_set):
+    """Return a preexec_fn that pins the child process to *cpu_set*."""
+    if cpu_set is None:
+        return None
+    frozen = frozenset(cpu_set)
+    def _set():
+        try:
+            os.sched_setaffinity(0, frozen)
+        except OSError:
+            pass
+    return _set
+
+
+def worker_cpu_set(worker_id, num_workers, max_cpus):
+    """Return a set of CPU indices for *worker_id*.
+
+    Distributes *max_cpus* cores per worker, strided across host CPUs so
+    that adjacent workers overlap minimally.
+    """
+    n = len(_HOST_CPUS)
+    if n <= max_cpus:
+        return set(_HOST_CPUS)
+    stride = n // num_workers
+    start = worker_id * stride
+    return {_HOST_CPUS[(start + i) % n] for i in range(min(max_cpus, n))}

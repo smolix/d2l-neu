@@ -417,6 +417,79 @@ def merge_add_to_class(blocks):
     return [b for i, b in enumerate(merged) if i not in to_remove]
 
 
+def _dedup_class_methods(code):
+    """Remove duplicate method defs within a class body, keeping the last."""
+    lines = code.split('\n')
+    method_spans = []
+    i = 0
+    while i < len(lines):
+        m = re.match(r'^(    )def (\w+)\(', lines[i])
+        if m:
+            name = m.group(2)
+            start = i
+            i += 1
+            while i < len(lines) and (lines[i].startswith('        ')
+                                       or lines[i].strip() == ''):
+                i += 1
+            end = i
+            while end > start and lines[end - 1].strip() == '':
+                end -= 1
+            method_spans.append((name, start, end))
+        else:
+            i += 1
+
+    seen_last = {}
+    for idx, (name, start, end) in enumerate(method_spans):
+        seen_last[name] = idx
+
+    drop_lines = set()
+    for idx, (name, start, end) in enumerate(method_spans):
+        if seen_last[name] != idx:
+            for j in range(start, end):
+                drop_lines.add(j)
+
+    if not drop_lines:
+        return code
+    kept = [l for i, l in enumerate(lines) if i not in drop_lines]
+    return re.sub(r'\n{3,}', '\n\n', '\n'.join(kept))
+
+
+def deduplicate_blocks(blocks):
+    """Remove earlier blocks when a later block redefines the same name.
+
+    Also deduplicates methods within class bodies (e.g. placeholder stubs
+    replaced by real implementations via add_to_class merging).
+    """
+    result = []
+    for code, label, source in blocks:
+        if re.match(r'class\s+\w+', code):
+            code = _dedup_class_methods(code)
+        result.append((code, label, source))
+
+    name_to_last = {}
+    for i, (code, _, _) in enumerate(result):
+        names = set()
+        for m in re.finditer(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE):
+            names.add(m.group(1))
+        if len(names) == 1:
+            name = next(iter(names))
+            name_to_last[name] = i
+
+    drop = set()
+    seen = {}
+    for i, (code, _, _) in enumerate(result):
+        names = set()
+        for m in re.finditer(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE):
+            names.add(m.group(1))
+        if len(names) == 1:
+            name = next(iter(names))
+            if name in seen and name_to_last.get(name) == i:
+                drop.add(seen[name])
+            seen[name] = i
+
+    return [b for i, b in enumerate(result) if i not in drop]
+
+
 # ──────────────────────────────────────────────────────────
 # Alias generation
 # ──────────────────────────────────────────────────────────
@@ -506,9 +579,10 @@ def build_library(src_dir, output_file, framework, lib_config, files):
 
     print(f'  Found {len(all_blocks)} #@save blocks')
 
-    # Refactor: add docstring labels, merge add_to_class methods
+    # Refactor: add docstring labels, merge add_to_class methods, deduplicate
     all_blocks = add_docstring_labels(all_blocks)
     all_blocks = merge_add_to_class(all_blocks)
+    all_blocks = deduplicate_blocks(all_blocks)
 
     # Compute names provided by the preamble + alias config so we can detect
     # blocks whose d2l.X references have no definition in this framework.

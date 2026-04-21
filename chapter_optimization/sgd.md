@@ -76,8 +76,8 @@ def f_grad(x1, x2):  # Gradient of the objective function
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
     # Simulate noisy gradient
-    g1 += d2l.normal(0.0, 1, (1,))
-    g2 += d2l.normal(0.0, 1, (1,))
+    g1 += d2l.normal(0.0, 1, (1,)).item()
+    g2 += d2l.normal(0.0, 1, (1,)).item()
     eta_t = eta * lr()
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```

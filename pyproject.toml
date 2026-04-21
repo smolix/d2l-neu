@@ -15,7 +15,6 @@ dependencies = [
     "scipy",
     "pillow",
     "ipython",
-    "cairosvg",
 ]
 
 [project.optional-dependencies]
@@ -67,9 +66,6 @@ run = [
     "nbconvert",
     "ipykernel",
 ]
-
-[project.scripts]
-rsvg-convert = "d2l._rsvg_convert:main"
 
 [build-system]
 requires = ["hatchling"]

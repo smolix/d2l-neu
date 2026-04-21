@@ -123,8 +123,6 @@ class HyperParameters:
     """The base class of hyperparameters.
 
     Defined in :numref:`sec_oo-design`"""
-    def save_hyperparameters(self, ignore=[]):
-        raise NotImplemented
 
     def save_hyperparameters(self, ignore=[]):
         """Save function arguments into class attributes.
@@ -146,9 +144,6 @@ class ProgressBoard(d2l.HyperParameters):
                  ls=['-', '--', '-.', ':'], colors=['C0', 'C1', 'C2', 'C3'],
                  fig=None, axes=None, figsize=(3.5, 2.5), display=True):
         self.save_hyperparameters()
-
-    def draw(self, x, y, label, every_n=1):
-        raise NotImplemented
 
     def draw(self, x, y, label, every_n=1):
         Point = collections.namedtuple('Point', ['x', 'y'])
@@ -240,12 +235,6 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         l = self.loss(params, batch[:-1], batch[-1], state)
         self.plot('loss', l, train=False)
         
-    def apply_init(self, dummy_input, key):
-        """To be defined later in :numref:`sec_lazy_init`"""
-        raise NotImplementedError
-
-    def configure_optimizers(self):
-        raise NotImplementedError
 
     def configure_optimizers(self):
         return optax.sgd(self.lr)
@@ -283,9 +272,6 @@ class Trainer(d2l.HyperParameters):
     """The base class for training models with data.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
-        self.save_hyperparameters()
-        assert num_gpus == 0, 'No GPU support yet'
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
@@ -338,12 +324,6 @@ class Trainer(d2l.HyperParameters):
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
-
-    def fit_epoch(self):
-        raise NotImplementedError
-
-    def prepare_batch(self, batch):
-        return batch
 
     def fit_epoch(self):
         self.model.training = True
@@ -521,12 +501,6 @@ class FashionMNIST(d2l.DataModule):
             labels = self.text_labels(y)
         d2l.show_images(jnp.squeeze(X), nrows, ncols, titles=labels)
 
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
-
-    Defined in :numref:`sec_fashion_mnist`"""
-    raise NotImplementedError
-
 class Classifier(d2l.Module):
     """The base class of classification models.
 
@@ -562,28 +536,8 @@ class Classifier(d2l.Module):
         return d2l.reduce_mean(compare) if averaged else compare
 
     @partial(jax.jit, static_argnums=(0, 5))
-    def loss(self, params, X, Y, state, averaged=True):
-        # To be used later (e.g., for batch norm)
-        Y_hat = state.apply_fn({'params': params}, *X,
-                               mutable=False, rngs=None)
-        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-        Y = d2l.reshape(Y, (-1,))
-        fn = optax.softmax_cross_entropy_with_integer_labels
-        # The returned empty dictionary is a placeholder for auxiliary data,
-        # which will be used later (e.g., for batch norm)
-        return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 
     @partial(jax.jit, static_argnums=(0, 5))
-    def loss(self, params, X, Y, state, averaged=True):
-        Y_hat = state.apply_fn({'params': params}, *X,
-                               mutable=False,  # To be used later (e.g., batch norm)
-                               rngs={'dropout': state.dropout_rng})
-        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-        Y = d2l.reshape(Y, (-1,))
-        fn = optax.softmax_cross_entropy_with_integer_labels
-        # The returned empty dictionary is a placeholder for auxiliary data,
-        # which will be used later (e.g., for batch norm)
-        return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 
     def layer_summary(self, X_shape, key=d2l.get_key()):
         X = jnp.zeros(X_shape)

@@ -1,8 +1,14 @@
 DATA_HUB = dict()
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
 
+import os as _os
+_os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
+
 import numpy as np
 import tensorflow as tf
+
+for _gpu in tf.config.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(_gpu, True)
 
 nn_Module = tf.keras.Model
 
@@ -100,8 +106,6 @@ class HyperParameters:
     """The base class of hyperparameters.
 
     Defined in :numref:`sec_oo-design`"""
-    def save_hyperparameters(self, ignore=[]):
-        raise NotImplemented
 
     def save_hyperparameters(self, ignore=[]):
         """Save function arguments into class attributes.
@@ -123,9 +127,6 @@ class ProgressBoard(d2l.HyperParameters):
                  ls=['-', '--', '-.', ':'], colors=['C0', 'C1', 'C2', 'C3'],
                  fig=None, axes=None, figsize=(3.5, 2.5), display=True):
         self.save_hyperparameters()
-
-    def draw(self, x, y, label, every_n=1):
-        raise NotImplemented
 
     def draw(self, x, y, label, every_n=1):
         Point = collections.namedtuple('Point', ['x', 'y'])
@@ -220,9 +221,6 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
 
     def configure_optimizers(self):
-        raise NotImplementedError
-
-    def configure_optimizers(self):
         return tf.keras.optimizers.SGD(float(self.lr))
 
 class DataModule(d2l.HyperParameters):
@@ -277,9 +275,6 @@ class Trainer(d2l.HyperParameters):
         self._compile_steps()
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
-
-    def fit_epoch(self):
-        raise NotImplementedError
 
     def prepare_batch(self, batch):
         return batch
@@ -440,12 +435,6 @@ class FashionMNIST(d2l.DataModule):
         if not labels:
             labels = self.text_labels(y)
         d2l.show_images(tf.squeeze(X), nrows, ncols, titles=labels)
-
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
-
-    Defined in :numref:`sec_fashion_mnist`"""
-    raise NotImplementedError
 
 class Classifier(d2l.Module):
     """The base class of classification models.

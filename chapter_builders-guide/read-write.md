@@ -318,7 +318,7 @@ clone.load_weights('mlp.weights.h5')
 %%tab jax
 clone = MLP()
 cloned_params = flax.core.freeze(checkpoints.restore_checkpoint(
-    os.path.abspath('ckpt_dir'), target=None))
+    os.path.abspath('ckpt_dir'), target=params))
 ```
 
 Since both instances have the same model parameters,

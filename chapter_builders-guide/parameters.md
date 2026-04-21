@@ -298,8 +298,8 @@ print(net[2].weight.data[0] == net[4].weight.data[0])
 
 ```{.python .input}
 %%tab tensorflow
-# tf.keras behaves a bit differently. It removes the duplicate layer
-# automatically
+# Keras keeps both references to the shared layer in net.layers,
+# but the shared layer's parameters are tied
 shared = tf.keras.layers.Dense(4, activation=tf.nn.relu)
 net = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(),
@@ -309,8 +309,8 @@ net = tf.keras.models.Sequential([
 ])
 
 net(X)
-# Check whether the parameters are different
-print(len(net.layers) == 3)
+# Check whether the parameters are the same object
+print(net.layers[1].weights[0] is net.layers[2].weights[0])
 ```
 
 ```{.python .input}

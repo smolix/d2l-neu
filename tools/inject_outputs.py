@@ -33,7 +33,7 @@ FALLBACK_ORDER = ['pytorch', 'mxnet', 'tensorflow', 'jax']
 
 OUTPUT_START = '<!-- d2l:output -->'
 OUTPUT_END = '<!-- /d2l:output -->'
-MAX_TEXT_LINES = 20
+MAX_TEXT_LINES = 40
 
 
 # ── QMD Parsing ──────────────────────────────────────────────
@@ -158,7 +158,12 @@ def _output_fingerprint(raw_outputs):
         if otype == 'error':
             continue
         data = out.get('data', {})
-        if 'image/png' in data:
+        if 'image/svg+xml' in data:
+            svg = data['image/svg+xml']
+            if isinstance(svg, list):
+                svg = ''.join(svg)
+            h.update(svg.encode())
+        elif 'image/png' in data:
             h.update(base64.b64decode(data['image/png']))
         elif otype == 'stream':
             h.update(''.join(out.get('text', [])).encode())

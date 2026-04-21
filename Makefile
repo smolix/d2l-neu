@@ -101,10 +101,11 @@ html: _book/index.html
 	@echo "Output: _book/index.html"
 	@echo "Log:    $(LOGDIR)/html-$(TS).log"
 
-# Stage 1: preprocess d2l-en .md → .qmd
-.preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py
+# Stage 1: preprocess d2l-en .md → .qmd + generate API docs
+.preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py tools/gen_api_doc.py d2l/.built
 	@echo "=== Preprocessing .md → .qmd ==="
 	python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch
+	python3 tools/gen_api_doc.py
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + quarto render + fix numbering

@@ -110,19 +110,34 @@ def emit_notebook_qmd(blocks, framework):
 
 
 def file_supports_framework(src_path, framework):
-    """Return True iff the source .md names this framework in a %%tab / #@tab.
+    """Return True iff the source .md should produce a notebook for *framework*.
 
-    A file is "in framework X" only if at least one code block is explicitly
-    tagged for X (e.g. `#@tab jax` or `#@tab pytorch, jax`).  `#@tab all`
-    doesn't count: those blocks typically rely on a framework-specific
-    `from d2l import <fw> as d2l` import that's emitted by a sibling tab,
-    so without a jax tab the file lacks jax imports and will NameError.
+    A file supports framework X if:
+    1. A code block is explicitly tagged for X (#@tab X or %%tab X), OR
+    2. tab.interact_select lists X, OR
+    3. The file has code but no framework-specific tags at all (only #@tab all
+       / %%tab all, or bare blocks) — generated as pytorch notebooks only.
     """
     text = Path(src_path).read_text(encoding='utf-8')
+
+    has_any_specific = False
     for m in re.finditer(r'^(?:%%tab|#@tab)\s+([^\n]+)$', text, re.MULTILINE):
         fws = [t.strip() for t in m.group(1).split(',')]
         if framework in fws:
             return True
+        if fws != ['all']:
+            has_any_specific = True
+
+    for m in re.finditer(r'tab\.interact_select\(\s*\[([^\]]+)\]\s*\)', text):
+        fws = [t.strip().strip("'\"") for t in m.group(1).split(',')]
+        if framework in fws:
+            return True
+        has_any_specific = True
+
+    if not has_any_specific and framework == 'pytorch':
+        if re.search(r'```\{\.python', text):
+            return True
+
     return False
 
 

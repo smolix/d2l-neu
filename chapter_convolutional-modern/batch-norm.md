@@ -606,8 +606,8 @@ class BNLeNetScratch(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(filters=6, kernel_size=5,
-                                   input_shape=(28, 28, 1)),
+            tf.keras.Input(shape=(28, 28, 1)),
+            tf.keras.layers.Conv2D(filters=6, kernel_size=5),
             BatchNorm(), tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
             tf.keras.layers.Conv2D(filters=16, kernel_size=5),
@@ -766,8 +766,8 @@ class BNLeNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(filters=6, kernel_size=5,
-                                   input_shape=(28, 28, 1)),
+            tf.keras.Input(shape=(28, 28, 1)),
+            tf.keras.layers.Conv2D(filters=6, kernel_size=5),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),

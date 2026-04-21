@@ -40,6 +40,10 @@ from d2l import torch as d2l
 import torch
 import torchvision
 from torch import nn
+import warnings
+import numpy as np
+warnings.filterwarnings('ignore', message='.*dtype.*align.*',
+                        category=np.exceptions.VisibleDeprecationWarning)
 ```
 
 ## Common Image Augmentation Methods

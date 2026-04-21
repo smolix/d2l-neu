@@ -49,7 +49,7 @@ FRAMEWORK_ENV = {
         "XLA_PYTHON_CLIENT_MEM_FRACTION": ".70",
     },
     "tensorflow": {
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+        "TF_CPP_MIN_LOG_LEVEL": "2",
         "TF_XLA_FLAGS": "--tf_xla_auto_jit=2",
     },
     "mxnet": {

@@ -329,7 +329,10 @@ RegNetX32().layer_summary((1, 1, 96, 96))
 
 ```{.python .input}
 %%tab tensorflow
+import logging
+tf.get_logger().setLevel(logging.ERROR)
 RegNetX32().layer_summary((1, 96, 96, 1))
+tf.get_logger().setLevel(logging.WARNING)
 ```
 
 ```{.python .input}

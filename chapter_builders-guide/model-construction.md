@@ -613,6 +613,11 @@ class FixedHiddenMLP(tf.keras.Model):
         self.rand_weight = tf.constant(tf.random.uniform((20, 20)))
         self.dense = tf.keras.layers.Dense(20, activation=tf.nn.relu)
 
+    def build(self, input_shape):
+        self.flatten.build(input_shape)
+        self.dense.build((input_shape[0], 20))
+        super().build(input_shape)
+
     def call(self, inputs):
         X = self.flatten(inputs)
         # Use the created constant parameters, as well as the relu and

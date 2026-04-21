@@ -141,7 +141,8 @@ from tensorflow.keras.layers import Dense
 # Factory for networks
 def get_net():
     net = tf.keras.Sequential()
-    net.add(Dense(256, input_shape = (512,), activation = "relu"))
+    net.add(tf.keras.Input(shape=(512,)))
+    net.add(Dense(256, activation = "relu"))
     net.add(Dense(128, activation = "relu"))
     net.add(Dense(2, activation = "linear"))
     return net

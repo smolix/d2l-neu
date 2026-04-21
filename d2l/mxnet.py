@@ -105,8 +105,6 @@ class HyperParameters:
     """The base class of hyperparameters.
 
     Defined in :numref:`sec_oo-design`"""
-    def save_hyperparameters(self, ignore=[]):
-        raise NotImplemented
 
     def save_hyperparameters(self, ignore=[]):
         """Save function arguments into class attributes.
@@ -128,9 +126,6 @@ class ProgressBoard(d2l.HyperParameters):
                  ls=['-', '--', '-.', ':'], colors=['C0', 'C1', 'C2', 'C3'],
                  fig=None, axes=None, figsize=(3.5, 2.5), display=True):
         self.save_hyperparameters()
-
-    def draw(self, x, y, label, every_n=1):
-        raise NotImplemented
 
     def draw(self, x, y, label, every_n=1):
         Point = collections.namedtuple('Point', ['x', 'y'])
@@ -211,9 +206,6 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         self.plot('loss', l, train=False)
 
     def configure_optimizers(self):
-        raise NotImplementedError
-
-    def configure_optimizers(self):
         params = self.parameters()
         if isinstance(params, list):
             return d2l.SGD(params, self.lr)
@@ -273,9 +265,6 @@ class Trainer(d2l.HyperParameters):
     """The base class for training models with data.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
-        self.save_hyperparameters()
-        assert num_gpus == 0, 'No GPU support yet'
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
@@ -283,11 +272,6 @@ class Trainer(d2l.HyperParameters):
         self.num_train_batches = len(self.train_dataloader)
         self.num_val_batches = (len(self.val_dataloader)
                                 if self.val_dataloader is not None else 0)
-
-    def prepare_model(self, model):
-        model.trainer = self
-        model.board.xlim = [0, self.max_epochs]
-        self.model = model
 
     def fit(self, model, data):
         self.prepare_data(data)
@@ -298,12 +282,6 @@ class Trainer(d2l.HyperParameters):
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
-
-    def fit_epoch(self):
-        raise NotImplementedError
-
-    def prepare_batch(self, batch):
-        return batch
 
     def fit_epoch(self):
         for batch in self.train_dataloader:
@@ -452,12 +430,6 @@ class FashionMNIST(d2l.DataModule):
         if not labels:
             labels = self.text_labels(y)
         d2l.show_images(X.squeeze(1), nrows, ncols, titles=labels)
-
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
-
-    Defined in :numref:`sec_fashion_mnist`"""
-    raise NotImplementedError
 
 class Classifier(d2l.Module):
     """The base class of classification models.

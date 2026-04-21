@@ -150,7 +150,8 @@ net_D = nn.Sequential(
 ```{.python .input}
 #@tab tensorflow
 net_D = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(5, activation="tanh", input_shape=(2,)),
+    tf.keras.Input(shape=(2,)),
+    tf.keras.layers.Dense(5, activation="tanh"),
     tf.keras.layers.Dense(3, activation="tanh"),
     tf.keras.layers.Dense(1)
 ])

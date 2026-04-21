@@ -682,7 +682,7 @@ def main():
             if '#####' in existing:
                 preamble = existing[:existing.index('#####')]
             else:
-                preamble = ''
+                preamble = existing
             output_file.parent.mkdir(parents=True, exist_ok=True)
             with open(output_file, 'w') as f:
                 f.write(preamble)

@@ -2120,16 +2120,24 @@ def download(url, folder='../data', sha1_hash=None):
         if sha1.hexdigest() == sha1_hash:
             return fname
     # Download
+    import tempfile
     print(f'Downloading {fname} from {url}...')
     r = requests.get(url, stream=True, verify=True)
-    with open(fname, 'wb') as f:
-        f.write(r.content)
+    fd, tmp = tempfile.mkstemp(dir=folder)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(r.content)
+        os.replace(tmp, fname)
+    except BaseException:
+        os.unlink(tmp)
+        raise
     return fname
 
 def extract(filename, folder=None):
     """Extract a zip/tar file into folder.
 
     Defined in :numref:`sec_utils`"""
+    import tempfile, shutil
     base_dir = os.path.dirname(filename)
     _, ext = os.path.splitext(filename)
     assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
@@ -2139,7 +2147,17 @@ def extract(filename, folder=None):
         fp = tarfile.open(filename, 'r')
     if folder is None:
         folder = base_dir
-    fp.extractall(folder)
+    tmp = tempfile.mkdtemp(dir=folder)
+    try:
+        fp.extractall(tmp)
+        for name in os.listdir(tmp):
+            src = os.path.join(tmp, name)
+            dst = os.path.join(folder, name)
+            if os.path.isdir(dst):
+                shutil.rmtree(dst)
+            os.rename(src, dst)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 def download_extract(name, folder=None):
     """Download and extract a zip/tar file.

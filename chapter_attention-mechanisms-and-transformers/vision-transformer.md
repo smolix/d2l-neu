@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select(['pytorch', 'jax'])
+tab.interact_select('pytorch', 'jax')
 ```
 
 # Transformers for Vision

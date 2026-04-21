@@ -164,7 +164,7 @@ def generate_slides_qmd(src_path, framework):
                 i += 1
             i += 1
 
-            if info == 'toc' or info.startswith('eval_rst'):
+            if info == 'toc':
                 continue
             if is_python_block(info):
                 if is_boilerplate(code_lines):
@@ -295,6 +295,8 @@ def main():
                         help='Frameworks to generate')
     parser.add_argument('--render', action='store_true',
                         help='Also render slides to HTML')
+    parser.add_argument('--parallel', type=int, default=None,
+                        help='Number of GPU workers (default: num-gpus)')
     parser.add_argument('--num-gpus', type=int, default=4,
                         help='Number of GPUs for parallel rendering')
     parser.add_argument('--timeout', type=int, default=3600,
@@ -377,9 +379,13 @@ def main():
                   f'{len(cpu_slides)} CPU-only slides, '
                   f'{len(multi_gpu_slides)} multi-GPU slides')
 
+            gpu_workers = args.parallel if args.parallel else args.num_gpus
+            cpu_workers = args.num_gpus
+            workers_per_gpu = max(1, gpu_workers // args.num_gpus)
             gpu_q = queue.Queue()
             for g in range(args.num_gpus):
-                gpu_q.put(str(g))
+                for _ in range(workers_per_gpu):
+                    gpu_q.put(str(g))
 
             _print_lock = threading.Lock()
             _idx = [0]
@@ -434,7 +440,7 @@ def main():
 
                 return (qmd, ok, stderr if not ok else None)
 
-            total_workers = args.num_gpus * 2  # GPU + CPU pools
+            total_workers = gpu_workers + cpu_workers
             _cpu_worker_id = [0]
             _cpu_id_lock = threading.Lock()
 
@@ -450,17 +456,17 @@ def main():
 
             def render_cpu(qmd):
                 with _cpu_id_lock:
-                    wid = args.num_gpus + _cpu_worker_id[0]
+                    wid = gpu_workers + _cpu_worker_id[0]
                     _cpu_worker_id[0] = (
-                        (_cpu_worker_id[0] + 1) % args.num_gpus)
+                        (_cpu_worker_id[0] + 1) % cpu_workers)
                 cpus = worker_cpu_set(
                     wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
                 return render_one(qmd, cuda_devices='', cpu_affinity=cpus)
 
             from concurrent.futures import ThreadPoolExecutor
             results = []
-            with ThreadPoolExecutor(max_workers=args.num_gpus) as gpu_exec, \
-                 ThreadPoolExecutor(max_workers=args.num_gpus) as cpu_exec:
+            with ThreadPoolExecutor(max_workers=gpu_workers) as gpu_exec, \
+                 ThreadPoolExecutor(max_workers=cpu_workers) as cpu_exec:
                 gpu_futs = [gpu_exec.submit(render_gpu, q) for q in gpu_slides]
                 cpu_futs = [cpu_exec.submit(render_cpu, q) for q in cpu_slides]
                 for f in gpu_futs + cpu_futs:

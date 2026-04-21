@@ -24,7 +24,7 @@ it is worthwhile knowing that "dog bites man" is much more frequent than "man bi
 
 ```{.python .input  n=1}
 %load_ext d2lbook.tab
-tab.interact_select(['mxnet', 'pytorch', 'tensorflow', 'jax'])
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 ```{.python .input  n=2}

@@ -256,15 +256,6 @@ def inject_into_qmd(qmd_path, markdown_content):
     """Replace the empty Classes/Functions sections in the .qmd file."""
     text = Path(qmd_path).read_text(encoding='utf-8')
 
-    # Clean up stale :begin_tab: / panel-tabset artifacts between the intro
-    # paragraph and the Classes heading (leftover from eval_rst currentmodule
-    # directives that the preprocessor couldn't fully convert).
-    text = re.sub(
-        r'(::: \{\.panel-tabset[^}]*\}.*?:::\s*\n)',
-        '', text, count=1, flags=re.DOTALL)
-    text = re.sub(r':begin_tab:`[^`]*`\s*\n', '', text)
-    text = re.sub(r':end_tab:\s*\n', '', text)
-
     pattern = re.compile(
         r'(## Classes\s*\n)(.*?)(## Functions\s*\n)(.*?)(\Z)',
         re.DOTALL)

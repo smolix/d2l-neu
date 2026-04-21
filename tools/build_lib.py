@@ -427,6 +427,8 @@ def _dedup_class_methods(code):
         if m:
             name = m.group(2)
             start = i
+            while start > 0 and re.match(r'^    @', lines[start - 1]):
+                start -= 1
             i += 1
             while i < len(lines) and (lines[i].startswith('        ')
                                        or lines[i].strip() == ''):

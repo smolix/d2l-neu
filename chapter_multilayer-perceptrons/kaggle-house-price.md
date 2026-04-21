@@ -1,6 +1,6 @@
 ```{.python .input  n=1}
 %load_ext d2lbook.tab
-tab.interact_select(['mxnet', 'pytorch', 'tensorflow', 'jax'])
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Predicting House Prices on Kaggle

@@ -136,9 +136,6 @@ def parse_blocks(text):
             # Classify the block
             if info == 'toc':
                 blocks.append(TocBlock(code_lines))
-            elif info.startswith('eval_rst'):
-                # Drop eval_rst (not used in target chapters)
-                pass
             elif is_python_block(info):
                 if is_boilerplate(code_lines):
                     # Drop the d2lbook tab boilerplate cell

@@ -5,15 +5,16 @@ Runs each notebook in _notebooks/<framework>/ using nbconvert's execute
 preprocessor.  Produces executed notebooks in-place and writes a summary
 report to stdout.
 
-With --parallel N, runs N notebooks concurrently, pinning each to a single
-GPU via CUDA_VISIBLE_DEVICES (round-robin over --num-gpus).  CPU-only
-notebooks run on N additional workers concurrently (no GPU allocated).
-Notebooks that require multiple GPUs (see MULTI_GPU_NOTEBOOKS) are run
-serially after the parallel batch, with all GPUs visible.
+With --parallel N, runs N GPU notebooks concurrently, round-robin over
+--num-gpus.  Multiple workers may share a GPU (e.g. --parallel 8 --num-gpus 4
+puts 2 workers per GPU).  CPU-only notebooks run on --num-gpus additional
+workers concurrently (no GPU allocated).  Notebooks that require multiple GPUs
+(see MULTI_GPU_NOTEBOOKS) are run serially after the parallel batch, with all
+GPUs visible.
 
 Usage:
     python tools/run_notebooks.py pytorch                          # sequential
-    python tools/run_notebooks.py pytorch --parallel 4 --num-gpus 4
+    python tools/run_notebooks.py pytorch --parallel 8 --num-gpus 4  # 2/GPU
     python tools/run_notebooks.py pytorch --glob "chapter_linear*/**"
     python tools/run_notebooks.py pytorch --list                   # dry-run
 """
@@ -191,9 +192,11 @@ def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, 
     passed, failed, errors = 0, 0, []
     total = len(gpu_nbs) + len(cpu_nbs)
 
+    workers_per_gpu = max(1, gpu_workers // num_gpus)
     gpu_pool = queue.Queue()
     for g in range(num_gpus):
-        gpu_pool.put(str(g))
+        for _ in range(workers_per_gpu):
+            gpu_pool.put(str(g))
 
     total_workers = gpu_workers + cpu_workers
     _cpu_worker_id = [0]
@@ -314,9 +317,10 @@ def main():
 
     if args.parallel > 1:
         gpu_workers = args.parallel
-        cpu_workers = args.parallel
-        print(f"\n=== Parallel phase: {gpu_workers} GPU workers + {cpu_workers} CPU workers "
-              f"across {args.num_gpus} GPUs ===")
+        cpu_workers = args.num_gpus
+        wpg = max(1, gpu_workers // args.num_gpus)
+        print(f"\n=== Parallel phase: {gpu_workers} GPU workers ({wpg}/GPU) + "
+              f"{cpu_workers} CPU workers across {args.num_gpus} GPUs ===")
         p, f, e = run_parallel(single_gpu, cpu_only, args.timeout,
                                gpu_workers, cpu_workers, args.num_gpus, args.framework)
     else:

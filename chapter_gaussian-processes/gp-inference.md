@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select(["pytorch"])
+tab.interact_select('pytorch')
 #required_libs("gpytorch")
 ```
 

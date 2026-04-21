@@ -18,6 +18,10 @@
 # NOT parallel-safe (GPU contention):
 #   run-notebooks-*, slides-*  Run one framework at a time
 #
+# GPU workers per framework:
+#   pytorch/tensorflow/mxnet: 2 per GPU (8 total on 4 GPUs)
+#   jax: 1 per GPU (4 total) — high GPU memory usage
+#
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
 SHELL      := /bin/bash
@@ -25,8 +29,12 @@ SHELL      := /bin/bash
 
 SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
-PARALLEL   ?= 4
 NUM_GPUS   ?= 4
+# Per-framework GPU parallelism: 2 notebooks per GPU for most, 1 for JAX
+PARALLEL_pytorch    ?= 8
+PARALLEL_tensorflow ?= 8
+PARALLEL_jax        ?= 4
+PARALLEL_mxnet      ?= 8
 SLIDES_FILTER ?=
 NB_FILES      ?=
 
@@ -69,7 +77,8 @@ help:
 	@echo "  all                     Full pipeline: generate, execute, rebuild with outputs"
 	@echo "  all-quick               Build html + pdfs + notebooks + slides + lib (no execution)"
 	@echo ""
-	@echo "Variables:  SOURCE=$(SOURCE)  PARALLEL=$(PARALLEL)  NUM_GPUS=$(NUM_GPUS)"
+	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
+	@echo "           PARALLEL: pytorch=$(PARALLEL_pytorch) tf=$(PARALLEL_tensorflow) jax=$(PARALLEL_jax) mxnet=$(PARALLEL_mxnet)"
 	@echo "           SLIDES_FILTER=$(SLIDES_FILTER)  NB_FILES=$(NB_FILES)"
 	@echo "Frameworks: $(FRAMEWORKS)"
 	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
@@ -158,7 +167,7 @@ _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	UV_PROJECT_ENVIRONMENT=.venv-$* \
 	LD_LIBRARY_PATH="$(NVIDIA_LIBS)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	.venv-$*/bin/python tools/run_notebooks.py $* \
-		--parallel $(PARALLEL) --num-gpus $(NUM_GPUS) --continue-on-error \
+		--parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) --continue-on-error \
 		$(if $(NB_FILES),--files $(NB_FILES)) \
 		2>&1 | tee $(LOGDIR)/run-$*-$(TS).log
 	@touch $@
@@ -227,7 +236,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --num-gpus $(NUM_GPUS) \
+		--render --parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) \
 		$(if $(SLIDES_FILTER),--filter $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
@@ -249,7 +258,8 @@ all:
 	@echo "=== Rebuilding HTML and PDFs with notebook outputs ==="
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
-	$(MAKE) html pdfs
+	$(MAKE) html
+	$(MAKE) -j4 pdfs
 
 # Quick build without notebook execution
 all-quick: html pdfs notebooks slides lib

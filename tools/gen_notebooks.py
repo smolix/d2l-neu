@@ -128,11 +128,12 @@ def file_supports_framework(src_path, framework):
         if fws != ['all']:
             has_any_specific = True
 
-    for m in re.finditer(r'tab\.interact_select\(\s*\[([^\]]+)\]\s*\)', text):
-        fws = [t.strip().strip("'\"") for t in m.group(1).split(',')]
+    for m in re.finditer(r'tab\.interact_select\(([^)]+)\)', text):
+        fws = re.findall(r"['\"](\w+)['\"]", m.group(1))
         if framework in fws:
             return True
-        has_any_specific = True
+        if fws:
+            has_any_specific = True
 
     if not has_any_specific and framework == 'pytorch':
         if re.search(r'```\{\.python', text):

@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select(['mxnet', 'pytorch', 'tensorflow', 'jax'])
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Numerical Stability and Initialization

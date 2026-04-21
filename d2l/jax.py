@@ -535,10 +535,6 @@ class Classifier(d2l.Module):
         compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
         return d2l.reduce_mean(compare) if averaged else compare
 
-    @partial(jax.jit, static_argnums=(0, 5))
-
-    @partial(jax.jit, static_argnums=(0, 5))
-
     def layer_summary(self, X_shape, key=d2l.get_key()):
         X = jnp.zeros(X_shape)
         params = self.init(key, X)

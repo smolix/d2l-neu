@@ -17,7 +17,7 @@ to compute :cite:`Chung.Gulcehre.Cho.ea.2014`.
 
 ```{.python .input  n=5}
 %load_ext d2lbook.tab
-tab.interact_select(['mxnet', 'pytorch', 'tensorflow', 'jax'])
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 ```{.python .input  n=6}

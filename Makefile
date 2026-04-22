@@ -33,8 +33,9 @@ PARALLEL_pytorch    ?= 8
 PARALLEL_tensorflow ?= 8
 PARALLEL_jax        ?= 8
 PARALLEL_mxnet      ?= 8
-SLIDES_FILTER ?=
-NB_FILES      ?=
+FILES         ?=
+SLIDES_FILTER ?= $(FILES)
+NB_FILES      ?= $(FILES)
 
 # Source files — the ultimate upstream for everything
 SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md)
@@ -77,7 +78,7 @@ help:
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
 	@echo "           PARALLEL: pytorch=$(PARALLEL_pytorch) tf=$(PARALLEL_tensorflow) jax=$(PARALLEL_jax) mxnet=$(PARALLEL_mxnet)"
-	@echo "           SLIDES_FILTER=$(SLIDES_FILTER)  NB_FILES=$(NB_FILES)"
+	@echo "           FILES=$(FILES)  NB_FILES=$(NB_FILES)  SLIDES_FILTER=$(SLIDES_FILTER)"
 	@echo "Frameworks: $(FRAMEWORKS)"
 	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
 
@@ -235,7 +236,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
 		--render --parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) \
-		$(if $(SLIDES_FILTER),--filter $(SLIDES_FILTER)) \
+		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
 

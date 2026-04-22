@@ -205,3 +205,97 @@
   }
 })();
 </script>
+
+<script>
+// Discourse discussion embed
+// Replaces plain discuss.d2l.ai links with inline Discourse comment streams.
+// When framework tabs switch, the embed reloads with the new topic.
+(function() {
+  var DISCOURSE_URL = 'https://discuss.d2l.ai/';
+  var LINK_RE = /^https:\/\/discuss\.d2l\.ai\/t\/(\d+)/;
+
+  function createEmbed(topicId) {
+    var container = document.getElementById('d2l-discourse-embed');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'd2l-discourse-embed';
+      var main = document.querySelector('main.content');
+      if (main) main.appendChild(container);
+    }
+    container.innerHTML = '';
+
+    var iframe = document.createElement('div');
+    iframe.id = 'discourse-comments';
+    container.appendChild(iframe);
+
+    window.DiscourseEmbed = {
+      discourseUrl: DISCOURSE_URL,
+      topicId: topicId
+    };
+
+    var oldScript = document.getElementById('d2l-discourse-script');
+    if (oldScript) oldScript.remove();
+
+    var s = document.createElement('script');
+    s.id = 'd2l-discourse-script';
+    s.type = 'text/javascript';
+    s.async = true;
+    s.src = DISCOURSE_URL + 'javascripts/embed.js';
+    (document.head || document.getElementsByTagName('head')[0]).appendChild(s);
+  }
+
+  function findActiveTopicId() {
+    var activePanel = document.querySelector(
+      '.panel-tabset[data-group="framework"] .tab-pane.active'
+    );
+    if (activePanel) {
+      var link = activePanel.querySelector('a[href*="discuss.d2l.ai/t/"]');
+      if (link) {
+        var m = link.href.match(LINK_RE);
+        if (m) return m[1];
+      }
+    }
+    var links = document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]');
+    for (var i = 0; i < links.length; i++) {
+      var m = links[i].href.match(LINK_RE);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
+  function hideDiscussionLinks() {
+    document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]').forEach(function(link) {
+      var p = link.closest('p') || link;
+      p.style.display = 'none';
+    });
+  }
+
+  function loadEmbed() {
+    var topicId = findActiveTopicId();
+    if (topicId) {
+      hideDiscussionLinks();
+      createEmbed(topicId);
+    }
+  }
+
+  function init() {
+    var links = document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]');
+    if (links.length === 0) return;
+
+    loadEmbed();
+
+    document.querySelectorAll('.panel-tabset[data-group="framework"] .nav-link')
+      .forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          setTimeout(loadEmbed, 50);
+        });
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

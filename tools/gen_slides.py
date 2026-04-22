@@ -36,6 +36,17 @@ from runtime_env import (
     make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
 )
 
+TRANSIENT_ERRORS = (
+    "Kernel didn't respond",
+    "Address already in use",
+    "Kernel died before replying to kernel_info",
+    "KernelDied",
+)
+
+
+def _is_transient(stderr):
+    return stderr and any(msg in stderr for msg in TRANSIENT_ERRORS)
+
 
 # ──────────────────────────────────────────────────────────
 # Slide marker extraction
@@ -301,8 +312,11 @@ def main():
                         help='Number of GPUs for parallel rendering')
     parser.add_argument('--timeout', type=int, default=3600,
                         help='Per-slide render timeout in seconds')
+    parser.add_argument('--files', nargs='*', default=None,
+                        help='Only render slides matching these paths relative to _slides/<fw>/ '
+                             '(e.g. chapter_foo/bar.qmd or chapter_foo/bar)')
     parser.add_argument('--filter', nargs='*', default=None,
-                        help='Only process slides matching these paths (e.g. chapter_foo/bar.qmd)')
+                        help='Deprecated alias for --files')
     args = parser.parse_args()
 
     src = args.source
@@ -343,9 +357,10 @@ def main():
                 data_link.symlink_to(data_dir)
 
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
-            if args.filter:
-                filter_stems = {f.replace('.qmd', '').replace('.md', '')
-                                for f in args.filter}
+            file_filter = args.files or args.filter
+            if file_filter:
+                filter_stems = {f.replace('.qmd', '').replace('.md', '').replace('.ipynb', '')
+                                for f in file_filter}
                 qmd_files = [q for q in qmd_files
                              if str(q.relative_to(fw_dir)).replace('.qmd', '')
                              in filter_stems]
@@ -410,20 +425,30 @@ def main():
                     if cuda_devices == '':
                         from runtime_env import CPU_ONLY_ENV
                         env.update(CPU_ONLY_ENV)
-                t0 = time.time()
-                try:
-                    result = subprocess.run(
-                        ['quarto', 'render', str(qmd), '--to', 'revealjs'],
-                        capture_output=True, text=True,
-                        timeout=args.timeout, env=env,
-                        preexec_fn=make_cpu_affinity_fn(cpu_affinity))
-                    elapsed = time.time() - t0
-                    stderr = (result.stderr or result.stdout).strip()
-                    ok = result.returncode == 0
-                except subprocess.TimeoutExpired:
-                    elapsed = time.time() - t0
-                    stderr = f"TIMEOUT (>{args.timeout}s)"
-                    ok = False
+                def _try_render():
+                    t0 = time.time()
+                    try:
+                        result = subprocess.run(
+                            ['quarto', 'render', str(qmd), '--to', 'revealjs'],
+                            capture_output=True, text=True,
+                            timeout=args.timeout, env=env,
+                            preexec_fn=make_cpu_affinity_fn(cpu_affinity))
+                        elapsed = time.time() - t0
+                        stderr = (result.stderr or result.stdout).strip()
+                        ok = result.returncode == 0
+                    except subprocess.TimeoutExpired:
+                        elapsed = time.time() - t0
+                        stderr = f"TIMEOUT (>{args.timeout}s)"
+                        ok = False
+                    return ok, elapsed, stderr
+
+                ok, elapsed, stderr = _try_render()
+                if not ok and _is_transient(stderr):
+                    with _print_lock:
+                        print(f'  [{idx}/{total}] RETRY (transient failure) {rel}',
+                              flush=True)
+                    time.sleep(2)
+                    ok, elapsed, stderr = _try_render()
 
                 status = 'OK' if ok else 'FAIL'
                 with _print_lock:

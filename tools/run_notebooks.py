@@ -208,6 +208,18 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
     return False, elapsed, err
 
 
+TRANSIENT_ERRORS = (
+    "Kernel didn't respond",
+    "Address already in use",
+    "Kernel died before replying to kernel_info",
+    "KernelDied",
+)
+
+
+def _is_transient(stderr):
+    return stderr and any(msg in stderr for msg in TRANSIENT_ERRORS)
+
+
 def _shorten_error(err):
     if not err:
         return "unknown"
@@ -225,7 +237,8 @@ def _write_error_log(fw_root, rel, stderr):
     log_path.write_text(stderr or "")
 
 
-def _run_one(idx, total, nb, rel, timeout, cuda_devices, cpu_affinity=None):
+def _run_one(idx, total, nb, rel, timeout, cuda_devices, cpu_affinity=None,
+             max_retries=1):
     with _print_lock:
         if cuda_devices is None:
             gpu_tag = "[all GPUs]"
@@ -236,6 +249,12 @@ def _run_one(idx, total, nb, rel, timeout, cuda_devices, cpu_affinity=None):
         print(f"[{idx}/{total}] START {gpu_tag} {rel}", flush=True)
     ok, elapsed, stderr = execute_notebook(nb, timeout=timeout, cuda_devices=cuda_devices,
                                            cpu_affinity=cpu_affinity)
+    if not ok and _is_transient(stderr) and max_retries > 0:
+        with _print_lock:
+            print(f"[{idx}/{total}] RETRY (transient failure) {rel}", flush=True)
+        time.sleep(2)
+        ok, elapsed, stderr = execute_notebook(nb, timeout=timeout, cuda_devices=cuda_devices,
+                                               cpu_affinity=cpu_affinity)
     status = "OK" if ok else "FAIL"
     with _print_lock:
         print(f"[{idx}/{total}] {status} ({elapsed:.1f}s) {rel}", flush=True)

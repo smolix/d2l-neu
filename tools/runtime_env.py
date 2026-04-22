@@ -46,7 +46,7 @@ THREAD_LIMIT_ENV = {
 # Per-framework runtime env vars (memory management, JIT flags, etc.).
 FRAMEWORK_ENV = {
     "jax": {
-        "XLA_PYTHON_CLIENT_MEM_FRACTION": ".70",
+        "XLA_PYTHON_CLIENT_MEM_FRACTION": ".40",
     },
     "tensorflow": {
         "TF_CPP_MIN_LOG_LEVEL": "2",
@@ -149,3 +149,43 @@ def worker_cpu_set(worker_id, num_workers, max_cpus):
     stride = n // num_workers
     start = worker_id * stride
     return {_HOST_CPUS[(start + i) % n] for i in range(min(max_cpus, n))}
+
+
+# ── Stale kernel cleanup ────────────────────────────────────────────
+
+def kill_stale_kernels(venv_dir):
+    """Kill orphaned ipykernel processes from a previous run of *venv_dir*.
+
+    After notebook/slide execution, jupyter kernels occasionally survive
+    their parent nbconvert/quarto process and hold GPU memory.  This finds
+    any ``ipykernel_launcher`` processes whose executable lives under
+    *venv_dir* and sends them SIGKILL.  Returns the number of processes
+    killed.
+    """
+    import signal
+    venv_dir = str(Path(venv_dir).resolve())
+    killed = 0
+    try:
+        for entry in Path("/proc").iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                exe = (entry / "exe").resolve()
+            except (OSError, PermissionError):
+                continue
+            if not str(exe).startswith(venv_dir):
+                continue
+            try:
+                cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
+            except (OSError, PermissionError):
+                continue
+            if any(b"ipykernel_launcher" in arg for arg in cmdline):
+                pid = int(entry.name)
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    killed += 1
+                except OSError:
+                    pass
+    except (OSError, PermissionError):
+        pass
+    return killed

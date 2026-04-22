@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
     GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
     MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
-    make_cpu_affinity_fn, worker_cpu_set,
+    make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
 )
 
 
@@ -342,6 +342,11 @@ def main():
         for rel, _ in all_errors:
             print(f"  - {rel}")
     print(f"{'='*70}")
+
+    venv_dir = Path(sys.executable).resolve().parent.parent
+    n = kill_stale_kernels(venv_dir)
+    if n:
+        print(f"Killed {n} stale ipykernel process(es) from {venv_dir.name}")
 
     sys.exit(1 if all_failed else 0)
 

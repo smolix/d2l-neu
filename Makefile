@@ -18,9 +18,7 @@
 # NOT parallel-safe (GPU contention):
 #   run-notebooks-*, slides-*  Run one framework at a time
 #
-# GPU workers per framework:
-#   pytorch/tensorflow/mxnet: 2 per GPU (8 total on 4 GPUs)
-#   jax: 1 per GPU (4 total) — high GPU memory usage
+# GPU workers per framework: 2 per GPU (8 total on 4 GPUs)
 #
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
@@ -30,10 +28,10 @@ SHELL      := /bin/bash
 SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
 NUM_GPUS   ?= 4
-# Per-framework GPU parallelism: 2 notebooks per GPU for most, 1 for JAX
+# Per-framework GPU parallelism: 2 notebooks per GPU
 PARALLEL_pytorch    ?= 8
 PARALLEL_tensorflow ?= 8
-PARALLEL_jax        ?= 4
+PARALLEL_jax        ?= 8
 PARALLEL_mxnet      ?= 8
 SLIDES_FILTER ?=
 NB_FILES      ?=

@@ -33,7 +33,7 @@ from build_lib import flatten_tab_branches
 from runtime_env import (
     GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
     MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
-    make_cpu_affinity_fn, worker_cpu_set,
+    make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
 )
 
 
@@ -482,6 +482,10 @@ def main():
             failures = [(q, err) for q, ok, err in results if not ok]
             if failures:
                 print(f'  {len(failures)} slide(s) failed to render')
+
+            n = kill_stale_kernels(venv_root)
+            if n:
+                print(f'  Killed {n} stale ipykernel process(es)')
 
         print(f'  Generated {generated} slide decks')
         if args.render:

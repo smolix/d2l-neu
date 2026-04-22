@@ -6,6 +6,10 @@ import jax
 # subsequent `import tensorflow` pulls in TF's bundled CUDA libraries. Without
 # this, TF's older cuBLAS is loaded first and jax.xla_bridge falls back to CPU.
 jax.devices()
+import tensorflow as _tf
+for _tf_gpu in _tf.config.list_physical_devices('GPU'):
+    _tf.config.experimental.set_memory_growth(_tf_gpu, True)
+del _tf
 import flax
 from jax import numpy as jnp
 from flax import linen as nn

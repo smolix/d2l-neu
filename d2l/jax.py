@@ -463,7 +463,7 @@ class LinearRegression(d2l.Module):
 
     def loss(self, params, X, y, state):
         y_hat = state.apply_fn({'params': params}, *X)
-        return d2l.reduce_mean(optax.l2_loss(y_hat, y))
+        return d2l.reduce_mean(jnp.square(y_hat - y))
 
     def configure_optimizers(self):
         return optax.sgd(self.lr)

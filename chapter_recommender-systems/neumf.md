@@ -191,7 +191,7 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
                                               input_data[-1])]
                 ls = [loss(p, n) for p, n in zip(p_pos, p_neg)]
             [l.backward(retain_graph=False) for l in ls]
-            l += sum([l.asnumpy() for l in ls]).mean()/len(devices)
+            l += sum([l.asnumpy() for l in ls]).mean()
             trainer.step(values[0].shape[0])
             metric.add(l, values[0].shape[0], values[0].size)
             timer.stop()

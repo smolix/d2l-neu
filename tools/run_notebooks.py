@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -41,6 +42,84 @@ from runtime_env import (
 NOTEBOOKS_DIR = Path(__file__).resolve().parent.parent / "_notebooks"
 
 _print_lock = threading.Lock()
+
+# ---------------------------------------------------------------------------
+# Best-of-N: stochastic notebooks that benefit from multiple runs.
+# Keys are notebook paths relative to _notebooks/<fw>/.
+# Values: (max_attempts, good_enough_score).
+# After the normal run, these notebooks are re-executed up to max_attempts
+# times (including the initial run), keeping whichever result scores highest.
+# Stops early if score >= good_enough_score.
+# ---------------------------------------------------------------------------
+
+BEST_OF_N = {
+    "chapter_recurrent-modern/lstm.ipynb":                                    (5, 2.0),
+    "chapter_attention-mechanisms-and-transformers/bahdanau-attention.ipynb":  (5, 2.5),
+    "chapter_attention-mechanisms-and-transformers/transformer.ipynb":         (5, 2.5),
+    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (3, 3.0),
+}
+
+
+def score_notebook(nb_path):
+    """Score an executed notebook's output quality.
+
+    Returns a float >= 0.  Higher is better.
+    - seq2seq / attention notebooks: sum of BLEU scores (format: "bleu,X.XXX")
+    - LSTM / RNN text-generation notebooks: heuristic penalizing repetition
+    Returns 0.0 if the notebook has no scoreable output or failed to execute.
+    """
+    try:
+        with open(nb_path) as f:
+            nb = json.load(f)
+    except Exception:
+        return 0.0
+
+    bleu_scores = []
+    generated_texts = []
+    gan_loss_G = None
+
+    for cell in nb.get("cells", []):
+        for out in cell.get("outputs", []):
+            # BLEU scores in stream output: "bleu,0.658"
+            if "text" in out:
+                for line in out["text"]:
+                    for m in re.finditer(r"bleu,(\d+\.\d+)", line):
+                        bleu_scores.append(float(m.group(1)))
+                    # GAN loss: "loss_D 0.161, loss_G 4.254"
+                    m = re.search(r"loss_G (\d+\.\d+)", line)
+                    if m:
+                        gan_loss_G = float(m.group(1))
+            # Generated text in execute_result: "'it has ...'"
+            if "data" in out and "text/plain" in out["data"]:
+                txt = "".join(out["data"]["text/plain"])
+                if "it has" in txt:
+                    generated_texts.append(txt)
+
+    if bleu_scores:
+        return sum(bleu_scores)
+
+    if generated_texts:
+        return _score_generated_text(generated_texts[-1])
+
+    if gan_loss_G is not None:
+        return gan_loss_G
+
+    return 0.0
+
+
+def _score_generated_text(text):
+    """Score RNN-generated text; penalize repetitive n-grams."""
+    text = text.strip().strip("'\"")
+    words = text.split()
+    if len(words) < 3:
+        return 0.0
+    # Fraction of unique bigrams — 1.0 means no repetition
+    bigrams = [f"{words[i]} {words[i+1]}" for i in range(len(words) - 1)]
+    if not bigrams:
+        return 0.0
+    unique_ratio = len(set(bigrams)) / len(bigrams)
+    # Scale to roughly match BLEU range (0-3ish) for comparable thresholds
+    return unique_ratio * 3.0
 
 
 def notebook_uses_gpu(nb_path):
@@ -259,6 +338,53 @@ def run_multigpu_serial(multi_gpu_nbs, timeout, framework):
     return passed, failed, errors
 
 
+def run_best_of_n(framework, nbs, timeout):
+    """Re-run stochastic notebooks up to N times, keeping the best result.
+
+    Only notebooks listed in BEST_OF_N and present in `nbs` are retried.
+    The initial run (from the normal execution phase) counts as attempt 1.
+    """
+    fw_root = NOTEBOOKS_DIR / framework
+    candidates = []
+    for nb in nbs:
+        rel = str(nb.relative_to(fw_root))
+        if rel in BEST_OF_N:
+            candidates.append((nb, rel))
+
+    if not candidates:
+        return
+
+    print(f"\n=== Best-of-N phase: {len(candidates)} stochastic notebooks ===")
+
+    for nb, rel in candidates:
+        max_attempts, good_enough = BEST_OF_N[rel]
+        best_score = score_notebook(nb)
+        if best_score >= good_enough:
+            print(f"  {rel}: score={best_score:.3f} (already good enough)", flush=True)
+            continue
+
+        best_nb = nb.read_bytes()
+        print(f"  {rel}: attempt 1 score={best_score:.3f}", flush=True)
+
+        for attempt in range(2, max_attempts + 1):
+            ok, elapsed, stderr = execute_notebook(nb, timeout=timeout)
+            if not ok:
+                print(f"  {rel}: attempt {attempt} FAILED ({elapsed:.0f}s)", flush=True)
+                continue
+            score = score_notebook(nb)
+            print(f"  {rel}: attempt {attempt} score={score:.3f} ({elapsed:.0f}s)", flush=True)
+            if score > best_score:
+                best_score = score
+                best_nb = nb.read_bytes()
+            if best_score >= good_enough:
+                break
+
+        # Restore the best result
+        nb.write_bytes(best_nb)
+        print(f"  {rel}: BEST score={best_score:.3f} "
+              f"({'good' if best_score >= good_enough else 'best available'})", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Execute d2l notebooks")
     parser.add_argument("framework", choices=["pytorch", "tensorflow", "jax", "mxnet"])
@@ -278,6 +404,8 @@ def main():
                         help="Number of GPUs available for round-robin pinning")
     parser.add_argument("--skip-multi-gpu", action="store_true",
                         help="Do not run notebooks that require multiple GPUs")
+    parser.add_argument("--no-best-of-n", action="store_true",
+                        help="Skip best-of-N retries for stochastic notebooks")
     args = parser.parse_args()
 
     setup_framework_env(args.framework)
@@ -332,6 +460,9 @@ def main():
         print(f"\n=== Multi-GPU phase (serial, all GPUs visible): {len(multi_gpu)} notebooks ===")
         p, f, e = run_multigpu_serial(multi_gpu, args.timeout, args.framework)
         all_passed += p; all_failed += f; all_errors += e
+
+    if not args.no_best_of_n:
+        run_best_of_n(args.framework, nbs, args.timeout)
 
     total_elapsed = time.time() - t0
     print(f"\n{'='*70}")

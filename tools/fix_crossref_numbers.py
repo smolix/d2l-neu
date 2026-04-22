@@ -114,6 +114,11 @@ def fix_section_numbers(content, ch_map):
             rf'({label}&nbsp;(?:<span>)?)(\d+)(\.\d+)',
             replace_number, content)
 
+    # Fix <title> tag: <title>54&nbsp; Title</title>
+    content = re.sub(
+        r'(<title>)(\d+)(&nbsp; )',
+        replace_number, content)
+
     # Fix equation tags: \tag{54.1}
     content = re.sub(
         r'(\\tag\{)(\d+)(\.\d+)',
@@ -212,12 +217,12 @@ def strip_frontmatter_figures(content, unnumbered):
             else:
                 break
 
-        # Also in <span> form
+        # Also in <span> form: Figure&nbsp;<span>N.M</span> → Figure
         old_span = f'Figure&nbsp;<span>{pandoc_ch}.'
         while old_span in content:
-            m = re.search(rf'Figure&nbsp;<span>{pandoc_ch}\.\d+', content)
+            m = re.search(rf'Figure&nbsp;<span>{pandoc_ch}\.\d+</span>', content)
             if m:
-                content = content.replace(m.group(), 'Figure&nbsp;<span>', 1)
+                content = content.replace(m.group(), 'Figure', 1)
                 count += 1
             else:
                 break
@@ -283,6 +288,98 @@ def fix_narrative_citations(content):
     return content, count
 
 
+def fix_search_json(search_path, ch_map, unnumbered, section_files):
+    """Fix chapter numbers in search.json.
+
+    Quarto's search index contains plain-text references (Figure 54.1, etc.)
+    and HTML crumbs with chapter-number spans — both use raw Pandoc numbers.
+    """
+    import json
+
+    with open(search_path) as f:
+        data = json.load(f)
+
+    section_prefixes = set()
+    for pandoc_ch, logical in ch_map.items():
+        if pandoc_ch in section_files:
+            section_prefixes.add(logical)
+
+    count = 0
+
+    def replace_text_number(m):
+        nonlocal count
+        label = m.group(1)
+        sep = m.group(2)
+        pandoc = int(m.group(3))
+        rest = m.group(4)
+        logical = ch_map.get(pandoc)
+        if logical is not None:
+            count += 1
+            return f'{label}{sep}{logical}{rest}'
+        return m.group(0)
+
+    def replace_crumb_number(m):
+        nonlocal count
+        before = m.group(1)
+        pandoc = int(m.group(2))
+        after = m.group(3)
+        logical = ch_map.get(pandoc)
+        if logical is not None:
+            count += 1
+            return f'{before}{logical}{after}'
+        return m.group(0)
+
+    def strip_unnumbered_crumb(text):
+        nonlocal count
+        for pandoc_ch in unnumbered:
+            old = f"<span class='chapter-number'>{pandoc_ch}</span>\xa0 "
+            if old in text:
+                n = text.count(old)
+                text = text.replace(old, '')
+                count += n
+        return text
+
+    def fix_chapter_label(text):
+        nonlocal count
+        def repl(m):
+            nonlocal count
+            num = m.group(1)
+            base = num.split('.')[0] + '.' + num.split('.')[1] if '.' in num else num
+            if base in section_prefixes or num in section_prefixes:
+                count += 1
+                return f'Section {num}'
+            return m.group(0)
+        return re.sub(r'Chapter[ \xa0](\d+\.\d+(?:\.\d+)*)', repl, text)
+
+    for entry in data:
+        for field in ['text', 'title', 'section']:
+            val = entry.get(field, '')
+            if not val:
+                continue
+            new_val = re.sub(
+                r'(Figure|Table|Section|Equation|Listing)([ \xa0])(\d+)(\.\d+(?:\.\d+)*)',
+                replace_text_number, val)
+            new_val = fix_chapter_label(new_val)
+            if new_val != val:
+                entry[field] = new_val
+
+        crumbs = entry.get('crumbs', [])
+        if crumbs:
+            new_crumbs = []
+            for c in crumbs:
+                c = strip_unnumbered_crumb(c)
+                c = re.sub(
+                    r"(chapter-number['\"]?>)(\d+)(<)",
+                    replace_crumb_number, c)
+                new_crumbs.append(c)
+            entry['crumbs'] = new_crumbs
+
+    with open(search_path, 'w') as f:
+        json.dump(data, f, ensure_ascii=False)
+
+    return count
+
+
 def main():
     book_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('.')
     output_dir = book_dir / '_book'
@@ -320,12 +417,19 @@ def main():
                 f.write(content)
             files_modified += 1
 
+    # Fix search.json (plain-text references + crumb HTML)
+    search_json = output_dir / 'search.json'
+    search_fixes = 0
+    if search_json.exists():
+        search_fixes = fix_search_json(search_json, ch_map, unnumbered, section_files)
+
     print(f'\nFixed: {totals["numbers"]} numbers, '
           f'{totals["chap2sec"]} Chapter→Section, '
           f'{totals["eqrefs"]} equation refs, '
           f'{totals["citations"]} citations, '
           f'stripped {totals["strip"]} sidebar + {totals["figstrip"]} frontmatter figs '
-          f'in {files_modified} files')
+          f'in {files_modified} files, '
+          f'{search_fixes} search.json entries')
 
 
 if __name__ == '__main__':

@@ -389,7 +389,7 @@ class LinearRegression(d2l.Module):
 
     def loss(self, y_hat, y):
         fn = gluon.loss.L2Loss()
-        return fn(y_hat, y).mean()
+        return 2 * fn(y_hat, y).mean()
 
     def configure_optimizers(self):
         return gluon.Trainer(self.collect_params(),
@@ -2745,7 +2745,7 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
                                               input_data[-1])]
                 ls = [loss(p, n) for p, n in zip(p_pos, p_neg)]
             [l.backward(retain_graph=False) for l in ls]
-            l += sum([l.asnumpy() for l in ls]).mean()/len(devices)
+            l += sum([l.asnumpy() for l in ls]).mean()
             trainer.step(values[0].shape[0])
             metric.add(l, values[0].shape[0], values[0].size)
             timer.stop()
@@ -2787,7 +2787,7 @@ class CTRDataset(gluon.data.Dataset):
         if self.feat_mapper is None and self.defaults is None:
             feat_mapper = {i: {feat for feat, c in cnt.items() if c >=
                                min_threshold} for i, cnt in feat_cnts.items()}
-            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(feat_values)}
+            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(sorted(feat_values))}
                                 for i, feat_values in feat_mapper.items()}
             self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
         for i, fm in self.feat_mapper.items():

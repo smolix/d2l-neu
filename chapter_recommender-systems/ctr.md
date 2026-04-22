@@ -65,7 +65,7 @@ class CTRDataset(gluon.data.Dataset):
         if self.feat_mapper is None and self.defaults is None:
             feat_mapper = {i: {feat for feat, c in cnt.items() if c >=
                                min_threshold} for i, cnt in feat_cnts.items()}
-            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(feat_values)}
+            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(sorted(feat_values))}
                                 for i, feat_values in feat_mapper.items()}
             self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
         for i, fm in self.feat_mapper.items():

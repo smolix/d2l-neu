@@ -238,7 +238,7 @@ def loss(self, y_hat, y):
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, y_hat, y):
     fn = gluon.loss.L2Loss()
-    return fn(y_hat, y).mean()
+    return 2 * fn(y_hat, y).mean()
 ```
 
 ```{.python .input}
@@ -254,7 +254,7 @@ def loss(self, y_hat, y):
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, params, X, y, state):
     y_hat = state.apply_fn({'params': params}, *X)
-    return d2l.reduce_mean(optax.l2_loss(y_hat, y))
+    return d2l.reduce_mean(jnp.square(y_hat - y))
 ```
 
 ## Defining the Optimization Algorithm

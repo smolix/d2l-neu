@@ -104,6 +104,35 @@
 </script>
 
 <script>
+// Hide tab chrome on text-only tabsets.
+// A tabset is "text-only" if none of its panes contain a code block.
+// Adds d2l-text-only class AND directly hides the nav to beat Bootstrap timing.
+(function() {
+  function update() {
+    document.querySelectorAll('.panel-tabset[data-group="framework"]').forEach(function(tabset) {
+      if (tabset.classList.contains('d2l-output-tabs')) return;
+      var hasCode = tabset.querySelector('.sourceCode, .cell-code, pre > code');
+      if (hasCode) {
+        tabset.classList.remove('d2l-text-only');
+      } else {
+        tabset.classList.add('d2l-text-only');
+        var nav = tabset.querySelector(':scope > .nav');
+        if (nav) nav.style.display = 'none';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', update);
+  } else {
+    update();
+  }
+  // Run again after a short delay to catch any Quarto/Bootstrap re-rendering
+  setTimeout(update, 100);
+})();
+</script>
+
+<script>
 // Make sidebar part headers clickable — navigate to the first chapter (index page)
 (function() {
   function init() {

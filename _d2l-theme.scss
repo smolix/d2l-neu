@@ -1,32 +1,56 @@
 /*-- scss:defaults --*/
 
-// d2l.ai color palette (Material Design blue + deep orange)
+// ── Color tokens ──────────────────────────────────────────
 $blue:          #2196F3;
 $blue-dark:     #1976D2;
+$blue-darker:   #0D47A1;
 $blue-light:    #BBDEFB;
+$blue-50:       #E8F3FD;
 $deep-orange:   #FF5722;
+
+$ink:           #15181C;
+$ink-2:         #3A4049;
+$ink-3:         #6A717B;
+$ink-4:         #9CA3AD;
+$line:          #E7E9EC;
+$line-soft:     #F0F2F5;
+$bg:            #FFFFFF;
+$bg-soft:       #F8F9FB;
+$bg-code:       #F5F7FA;
 $white:         #FFFFFF;
-$gray-100:      #f8f9fa;
-$gray-200:      #e9ecef;
 
-// Bootstrap variable overrides
-$primary:       $blue;
-$link-color:    $blue-dark;
-$link-hover-color: $blue;
+// ── Bootstrap overrides ───────────────────────────────────
+$primary:               $blue;
+$link-color:            $blue-dark;
+$link-hover-color:      $blue;
+$body-color:            $ink-2;
+$body-bg:               $bg-soft;
+$headings-color:        $ink;
+$border-color:          $line;
 
-// Navbar
-$navbar-bg:     $blue;
-$navbar-fg:     $white;
+$font-family-sans-serif: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-family-monospace:  'JetBrains Mono', ui-monospace, monospace;
 
-// Sidebar
-$sidebar-bg:    $gray-100;
+$font-size-base:        0.9375rem;  // 15px
+$line-height-base:      1.65;
 
-// Code blocks
-$code-bg:       #f5f5f5;
+$h1-font-size:          2.125rem;   // 34px
+$h2-font-size:          1.5rem;     // 24px
+$h3-font-size:          1.1875rem;  // 19px
+$headings-font-weight:  600;
+
+$code-font-size:        0.78125rem; // 12.5px
+
+$navbar-bg:             $blue;
+$navbar-fg:             $white;
+
+$sidebar-bg:            $bg;
+
+$code-bg:               $bg-code;
 
 /*-- scss:rules --*/
 
-// Sidebar logo — fill sidebar width
+// ── Sidebar logo ─────────────────────────────────────────
 .sidebar-logo {
   max-height: none;
   width: 100%;
@@ -35,36 +59,65 @@ $code-bg:       #f5f5f5;
   padding: 0.8rem 0;
 }
 
-// Sidebar title — hide text since we have a logo
 .sidebar-title {
   font-size: 0;
   line-height: 0;
   padding: 0;
   margin: 0;
-  a {
-    display: block;
-  }
+  a { display: block; }
 }
 
-// Navbar styling
+// ── Navbar ───────────────────────────────────────────────
 .navbar {
   background-color: $blue !important;
-  border-bottom: 3px solid $blue-dark;
+  border-bottom: none;
 
-  .navbar-brand {
-    color: $white !important;
-    font-weight: 600;
+  .navbar-brand-container {
+    display: none;
   }
 
   .nav-link {
-    color: rgba($white, 0.85) !important;
+    color: rgba($white, 0.88) !important;
+    font-size: 13px;
+    font-weight: 500;
+
     &:hover {
       color: $white !important;
     }
   }
 }
 
-// Links
+// ── Sidebar ──────────────────────────────────────────────
+#quarto-sidebar {
+  background: $bg;
+  border-right: 1px solid $line;
+}
+
+.sidebar-item-text {
+  color: $ink-2;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.sidebar-item-text.sidebar-link.active {
+  color: $blue-dark !important;
+  font-weight: 500;
+  border-left: 3px solid $blue;
+  padding-left: 0.5rem;
+}
+
+.sidebar-item-section > .sidebar-item-text {
+  color: $ink;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+// Hide first chapter under each part (duplicates part title)
+.sidebar-item-section > .sidebar-item-container > li:first-child {
+  display: none;
+}
+
+// ── Links ────────────────────────────────────────────────
 a {
   color: $blue-dark;
   text-decoration: none;
@@ -74,35 +127,7 @@ a {
   }
 }
 
-// Sidebar items — match the muted, clean style of the right-side TOC
-.sidebar-item-text {
-  color: #595959;
-  font-weight: 400;
-  font-size: 0.875rem;
-}
-
-// Active sidebar item — subtle highlight
-.sidebar-item-text.sidebar-link.active {
-  color: $blue-dark !important;
-  font-weight: 500;
-  border-left: 3px solid $blue;
-  padding-left: 0.5rem;
-}
-
-// Part headers in sidebar — slightly bolder but not blue
-.sidebar-item-section > .sidebar-item-text {
-  color: #333;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-// Hide the first chapter under each part (the index file that duplicates
-// the part title). The part header is made clickable via JS to navigate there.
-.sidebar-item-section > .sidebar-item-container > li:first-child {
-  display: none;
-}
-
-// Panel tabset tabs — d2l blue
+// ── Panel tabsets ────────────────────────────────────────
 .nav-tabs .nav-link.active {
   color: $blue-dark;
   border-bottom-color: $blue;
@@ -110,40 +135,55 @@ a {
 }
 
 .nav-tabs .nav-link {
-  color: #555;
+  color: $ink-3;
   &:hover {
     color: $blue;
     border-bottom-color: $blue-light;
   }
 }
 
-// Code block styling
+// ── Code blocks ──────────────────────────────────────────
 div.sourceCode {
   border-left: 3px solid $blue-light;
   border-radius: 0 4px 4px 0;
+  background: $bg-code;
 }
 
-// Figure captions
-.quarto-float-caption {
-  color: #555;
-  font-size: 0.9rem;
+code {
+  font-family: $font-family-monospace;
 }
 
-// Table captions
-caption {
-  color: #555;
-  font-size: 0.9rem;
-  caption-side: bottom;
-}
-
-// Chapter headings
+// ── Headings ─────────────────────────────────────────────
 h1 {
-  color: #333;
+  color: $ink;
   border-bottom: 2px solid $blue-light;
   padding-bottom: 0.3rem;
 }
 
-// Section headings
 h2 {
-  color: #444;
+  color: $ink;
+}
+
+h3 {
+  color: $ink;
+}
+
+// ── Captions ─────────────────────────────────────────────
+.quarto-float-caption,
+caption {
+  color: $ink-3;
+  font-size: 0.9rem;
+}
+
+caption {
+  caption-side: bottom;
+}
+
+// ── Content area ─────────────────────────────────────────
+#quarto-content {
+  background: $bg;
+}
+
+.content {
+  background: $bg;
 }

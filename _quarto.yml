@@ -10,6 +10,19 @@ book:
     - Mu Li
     - Alexander J. Smola
   date: today
+  navbar:
+    background: "#2196F3"
+    search: true
+    right:
+      - text: Courses
+        href: https://courses.d2l.ai
+      - text: GitHub
+        icon: github
+        href: https://github.com/d2l-ai/d2l-en
+      - text: Discuss
+        href: https://discuss.d2l.ai
+      - text: PDF
+        href: https://d2l.ai/d2l-en.pdf
   sidebar:
     logo: static/logo-with-text.png
   chapters:

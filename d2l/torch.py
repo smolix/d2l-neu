@@ -2726,6 +2726,242 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
+d2l.DATA_HUB['ml-100k'] = (
+    'https://files.grouplens.org/datasets/movielens/ml-100k.zip',
+    'cd4dcac4241c8a4ad7badc7ca635da8a69dddb83')
+
+def read_data_ml100k():
+    data_dir = d2l.download_extract('ml-100k')
+    names = ['user_id', 'item_id', 'rating', 'timestamp']
+    data = pd.read_csv(os.path.join(data_dir, 'u.data'), sep='\t',
+                       names=names, engine='python')
+    num_users = data.user_id.unique().shape[0]
+    num_items = data.item_id.unique().shape[0]
+    return data, num_users, num_items
+
+def split_data_ml100k(data, num_users, num_items,
+                      split_mode='random', test_ratio=0.1):
+    """Split the dataset in random mode or seq-aware mode."""
+    if split_mode == 'seq-aware':
+        train_items, test_items, train_list = {}, {}, []
+        for line in data.itertuples():
+            u, i, rating, time = line[1], line[2], line[3], line[4]
+            train_items.setdefault(u, []).append((u, i, rating, time))
+            if u not in test_items or test_items[u][-1] < time:
+                test_items[u] = (i, rating, time)
+        for u in range(1, num_users + 1):
+            train_list.extend(sorted(train_items[u], key=lambda k: k[3]))
+        test_data = [(key, *value) for key, value in test_items.items()]
+        train_data = [item for item in train_list if item not in test_data]
+        train_data = pd.DataFrame(train_data)
+        test_data = pd.DataFrame(test_data)
+    else:
+        mask = [True if x == 1 else False for x in np.random.uniform(
+            0, 1, len(data)) < 1 - test_ratio]
+        neg_mask = [not x for x in mask]
+        train_data, test_data = data[mask], data[neg_mask]
+    return train_data, test_data
+
+def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
+    users, items, scores = [], [], []
+    inter = np.zeros((num_items, num_users)) if feedback == 'explicit' else {}
+    for line in data.itertuples():
+        user_index, item_index = int(line[1] - 1), int(line[2] - 1)
+        score = int(line[3]) if feedback == 'explicit' else 1
+        users.append(user_index)
+        items.append(item_index)
+        scores.append(score)
+        if feedback == 'implicit':
+            inter.setdefault(user_index, []).append(item_index)
+        else:
+            inter[item_index, user_index] = score
+    return users, items, scores, inter
+
+def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
+                          test_ratio=0.1, batch_size=256):
+    data, num_users, num_items = read_data_ml100k()
+    train_data, test_data = split_data_ml100k(
+        data, num_users, num_items, split_mode, test_ratio)
+    train_u, train_i, train_r, _ = load_data_ml100k(
+        train_data, num_users, num_items, feedback)
+    test_u, test_i, test_r, _ = load_data_ml100k(
+        test_data, num_users, num_items, feedback)
+    train_set = torch.utils.data.TensorDataset(
+        torch.tensor(train_u), torch.tensor(train_i),
+        torch.tensor(train_r).float())
+    test_set = torch.utils.data.TensorDataset(
+        torch.tensor(test_u), torch.tensor(test_i),
+        torch.tensor(test_r).float())
+    train_iter = torch.utils.data.DataLoader(
+        train_set, shuffle=True, drop_last=True,
+        batch_size=batch_size)
+    test_iter = torch.utils.data.DataLoader(
+        test_set, batch_size=batch_size)
+    return num_users, num_items, train_iter, test_iter
+
+def train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
+                        devices=d2l.try_all_gpus(), evaluator=None,
+                        **kwargs):
+    net = net.to(devices[0])
+    timer = d2l.Timer()
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 2],
+                            legend=['train loss', 'test RMSE'])
+    for epoch in range(num_epochs):
+        net.train()
+        metric, l = d2l.Accumulator(3), 0.
+        for i, values in enumerate(train_iter):
+            timer.start()
+            users, items, ratings = [v.to(devices[0]) for v in values]
+            trainer.zero_grad()
+            preds = net(users, items)
+            ls = loss(preds, ratings)
+            ls.backward()
+            trainer.step()
+            l += ls.item()
+            metric.add(ls.item() * users.shape[0], users.shape[0],
+                       users.numel())
+            timer.stop()
+        if len(kwargs) > 0:  # It will be used in section AutoRec
+            test_rmse = evaluator(net, test_iter, kwargs['inter_mat'],
+                                  devices)
+        else:
+            test_rmse = evaluator(net, test_iter, devices)
+        train_l = l / (i + 1)
+        animator.add(epoch + 1, (train_l, test_rmse))
+    print(f'train loss {metric[0] / metric[1]:.3f}, '
+          f'test RMSE {test_rmse:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
+          f'on {str(devices)}')
+
+class BPRLoss(nn.Module):
+    def __init__(self):
+        super(BPRLoss, self).__init__()
+
+    def forward(self, positive, negative):
+        distances = positive - negative
+        loss = -torch.sum(torch.log(torch.sigmoid(distances)), dim=0,
+                          keepdim=True)
+        return loss
+
+class HingeLossbRec(nn.Module):
+    def __init__(self):
+        super(HingeLossbRec, self).__init__()
+
+    def forward(self, positive, negative, margin=1):
+        distances = positive - negative
+        loss = torch.sum(torch.clamp(-distances + margin, min=0))
+        return loss
+
+def hit_and_auc(rankedlist, test_matrix, k):
+    hits_k = [(idx, val) for idx, val in enumerate(rankedlist[:k])
+              if val in set(test_matrix)]
+    hits_all = [(idx, val) for idx, val in enumerate(rankedlist)
+                if val in set(test_matrix)]
+    max = len(rankedlist) - 1
+    auc = 1.0 * (max - hits_all[0][0]) / max if len(hits_all) > 0 else 0
+    return len(hits_k), auc
+
+def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
+                     devices):
+    ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
+    all_items = set([i for i in range(num_users)])
+    for u in range(num_users):
+        neg_items = list(all_items - set(candidates[int(u)]))
+        user_ids, item_ids, scores = [], [], []
+        [item_ids.append(i) for i in neg_items]
+        [user_ids.append(u) for _ in neg_items]
+        x = [torch.tensor(user_ids)]
+        if seq is not None:
+            x.append(seq[user_ids, :])
+        x.extend([torch.tensor(item_ids)])
+        test_data_iter = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(*x), shuffle=False,
+            batch_size=1024)
+        for values in test_data_iter:
+            values = [v.to(devices[0]) for v in values]
+            scores.extend(list(net(*values).detach().cpu().numpy()))
+        scores = [item for sublist in scores for item in sublist]
+        item_scores = list(zip(item_ids, scores))
+        ranked_list[u] = sorted(item_scores, key=lambda t: t[1], reverse=True)
+        ranked_items[u] = [r[0] for r in ranked_list[u]]
+        temp = hit_and_auc(ranked_items[u], test_input[u], 50)
+        hit_rate.append(temp[0])
+        auc.append(temp[1])
+    return sum(hit_rate) / len(hit_rate), sum(auc) / len(auc)
+
+def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
+                  num_users, num_items, num_epochs, devices, evaluator,
+                  candidates, eval_step=1):
+    timer, hit_rate, auc = d2l.Timer(), 0, 0
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['test hit rate', 'test AUC'])
+    for epoch in range(num_epochs):
+        metric, l = d2l.Accumulator(3), 0.
+        for i, values in enumerate(train_iter):
+            input_data = [v.to(devices[0]) for v in values]
+            p_pos = net(*input_data[:-1])
+            p_neg = net(*input_data[:-2], input_data[-1])
+            ls = loss(p_pos, p_neg)
+            optimizer.zero_grad()
+            ls.backward()
+            optimizer.step()
+            l += ls.item()
+            metric.add(l, values[0].shape[0], values[0].numel())
+            timer.stop()
+        with torch.no_grad():
+            if (epoch + 1) % eval_step == 0:
+                hit_rate, auc = evaluator(net, test_iter, test_seq_iter,
+                                          candidates, num_users, num_items,
+                                          devices)
+                animator.add(epoch + 1, (hit_rate, auc))
+    print(f'train loss {metric[0] / metric[1]:.3f}, '
+          f'test hit rate {float(hit_rate):.3f}, test AUC {float(auc):.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
+          f'on {str(devices)}')
+
+d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
+                       'e18327c48c8e8e5c23da714dd614e390d369843f')
+
+class CTRDataset(torch.utils.data.Dataset):
+    def __init__(self, data_path, feat_mapper=None, defaults=None,
+                 min_threshold=4, num_feat=34):
+        self.NUM_FEATS, self.count, self.data = num_feat, 0, {}
+        feat_cnts = defaultdict(lambda: defaultdict(int))
+        self.feat_mapper, self.defaults = feat_mapper, defaults
+        self.field_dims = torch.zeros(self.NUM_FEATS, dtype=torch.long)
+        with open(data_path) as f:
+            for line in f:
+                instance = {}
+                values = line.rstrip('\n').split('\t')
+                if len(values) != self.NUM_FEATS + 1:
+                    continue
+                label = torch.zeros(2)
+                label[int(values[0])] = 1
+                instance['y'] = [float(values[0])]
+                for i in range(1, self.NUM_FEATS + 1):
+                    feat_cnts[i][values[i]] += 1
+                    instance.setdefault('x', []).append(values[i])
+                self.data[self.count] = instance
+                self.count = self.count + 1
+        if self.feat_mapper is None and self.defaults is None:
+            feat_mapper = {i: {feat for feat, c in cnt.items() if c >=
+                               min_threshold} for i, cnt in feat_cnts.items()}
+            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(sorted(feat_values))}
+                                for i, feat_values in feat_mapper.items()}
+            self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
+        for i, fm in self.feat_mapper.items():
+            self.field_dims[i - 1] = len(fm) + 1
+        self.offsets = torch.tensor(
+            (0, *torch.cumsum(self.field_dims, dim=0).numpy()[:-1]))
+
+    def __len__(self):
+        return self.count
+
+    def __getitem__(self, idx):
+        feat = torch.tensor([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
+                             for i, v in enumerate(self.data[idx]['x'])])
+        return feat + self.offsets, torch.tensor(self.data[idx]['y'])
+
 def frozen_lake(seed):
     # See https://www.gymlibrary.dev/environments/toy_text/frozen_lake/ to learn more about this env
     # How to process env.P.items is adapted from https://sites.google.com/view/deep-rl-bootcamp/labs

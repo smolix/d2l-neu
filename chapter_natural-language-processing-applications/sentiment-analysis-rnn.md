@@ -50,6 +50,20 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import flax
+from flax import linen as nn
+import optax
+import numpy as np
+
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
 ## Representing Single Text with RNNs
 
 In text classification tasks,
@@ -138,6 +152,40 @@ class BiRNN(nn.Module):
         return outs
 ```
 
+```{.python .input}
+#@tab jax
+class BiRNN(nn.Module):
+    vocab_size: int
+    embed_size: int
+    num_hiddens: int
+    num_layers: int
+
+    def setup(self):
+        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
+        # Forward and backward LSTMs for bidirectional encoding
+        self.forward_rnn = nn.RNN(
+            nn.OptimizedLSTMCell(self.num_hiddens), reverse=False)
+        self.backward_rnn = nn.RNN(
+            nn.OptimizedLSTMCell(self.num_hiddens), reverse=True)
+        self.decoder = nn.Dense(2)
+
+    def __call__(self, inputs):
+        # The shape of `inputs` is (batch size, no. of time steps)
+        embeddings = self.embedding(inputs)
+        # Run forward and backward RNNs
+        # Each output shape is (batch size, no. of time steps, num_hiddens)
+        forward_out = self.forward_rnn(embeddings)
+        backward_out = self.backward_rnn(embeddings)
+        # Concatenate the hidden states at the initial and final time steps as
+        # the input of the fully connected layer. Its shape is (batch size,
+        # 4 * no. of hidden units)
+        encoding = jnp.concatenate(
+            [forward_out[:, 0, :], forward_out[:, -1, :],
+             backward_out[:, 0, :], backward_out[:, -1, :]], axis=1)
+        outs = self.decoder(encoding)
+        return outs
+```
+
 Let's construct a bidirectional RNN with two hidden layers to represent single text for sentiment analysis.
 
 ```{.python .input}
@@ -161,6 +209,13 @@ def init_weights(module):
             if "weight" in param:
                 nn.init.xavier_uniform_(module._parameters[param])
 net.apply(init_weights);
+```
+
+```{.python .input}
+#@tab jax
+# JAX/Flax modules are initialized lazily; we initialize parameters here
+dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
+params = net.init(jax.random.PRNGKey(0), dummy_input)
 ```
 
 ## Loading Pretrained Word Vectors
@@ -199,6 +254,14 @@ net.embedding.weight.data.copy_(embeds)
 net.embedding.weight.requires_grad = False
 ```
 
+```{.python .input}
+#@tab jax
+# Set pretrained embedding weights in the parameters
+params = flax.core.unfreeze(params)
+params['params']['embedding']['embedding'] = jnp.array(embeds)
+params = flax.core.freeze(params)
+```
+
 ## Training and Evaluating the Model
 
 Now we can train the bidirectional RNN for sentiment analysis.
@@ -217,6 +280,44 @@ lr, num_epochs = 0.01, 5
 trainer = torch.optim.Adam(net.parameters(), lr=lr)
 loss = nn.CrossEntropyLoss(reduction="none")
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
+```
+
+```{.python .input}
+#@tab jax
+lr, num_epochs = 0.01, 5
+optimizer = optax.adam(lr)
+opt_state = optimizer.init(params['params'])
+loss_fn = optax.softmax_cross_entropy_with_integer_labels
+
+@jax.jit
+def train_step(params, opt_state, X, y):
+    def compute_loss(p):
+        logits = net.apply({'params': p}, X)
+        return loss_fn(logits, y).mean(), logits
+    (loss, logits), grads = jax.value_and_grad(
+        compute_loss, has_aux=True)(params)
+    updates, opt_state_new = optimizer.update(grads, opt_state, params)
+    params_new = optax.apply_updates(params, updates)
+    return params_new, opt_state_new, loss, logits
+
+for epoch in range(num_epochs):
+    metric = d2l.Accumulator(4)
+    for X, y in train_iter:
+        params_p = params['params']
+        params_p, opt_state, l, logits = train_step(
+            params_p, opt_state, X, y)
+        params = {'params': params_p}
+        metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
+                   len(y), len(y))
+    # Evaluate
+    correct, total = 0, 0
+    for X, y in test_iter:
+        logits = net.apply(params, X)
+        correct += int((logits.argmax(axis=-1) == y).sum())
+        total += len(y)
+    print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
+          f'train acc {metric[1] / metric[3]:.3f}, '
+          f'test acc {correct / total:.3f}')
 ```
 
 We define the following function to predict the sentiment of a text sequence using the trained model `net`.
@@ -241,16 +342,36 @@ def predict_sentiment(net, vocab, sequence):
     return 'positive' if label == 1 else 'negative'
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def predict_sentiment(net, params, vocab, sequence):
+    """Predict the sentiment of a text sequence."""
+    sequence = jnp.array(vocab[sequence.split()])
+    label = jnp.argmax(net.apply(params, sequence.reshape(1, -1)), axis=1)
+    return 'positive' if label == 1 else 'negative'
+```
+
 Finally, let's use the trained model to predict the sentiment for two simple sentences.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
 ```{.python .input}
-#@tab all
+#@tab jax
+predict_sentiment(net, params, vocab, 'this movie is so great')
+```
+
+```{.python .input}
+#@tab mxnet, pytorch
 predict_sentiment(net, vocab, 'this movie is so bad')
+```
+
+```{.python .input}
+#@tab jax
+predict_sentiment(net, params, vocab, 'this movie is so bad')
 ```
 
 ## Summary
@@ -271,5 +392,9 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1424)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1424)
 :end_tab:

@@ -29,6 +29,20 @@ from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from PIL import Image
+import tensorflow as tf
+import os
+```
+
 ## The Pokemon Dataset
 
 The dataset we will use is a collection of Pokemon sprites obtained from [pokemondb](https://pokemondb.net/sprites). First download, extract and load this dataset.
@@ -63,6 +77,15 @@ data_dir = d2l.download_extract('pokemon')
 batch_size = 256
 pokemon = tf.keras.preprocessing.image_dataset_from_directory(
     data_dir, batch_size=batch_size, image_size=(64, 64))
+```
+
+```{.python .input}
+#@tab jax
+#@save
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+data_dir = d2l.download_extract('pokemon')
 ```
 
 We resize each image into $64\times 64$. The `ToTensor` transformation will project the pixel value into $[0, 1]$, while our generator will use the tanh function to obtain outputs in $[-1, 1]$. Therefore we normalize the data with $0.5$ mean and $0.5$ standard deviation to match the value range.
@@ -108,6 +131,28 @@ data_iter = data_iter.cache().shuffle(buffer_size=1000).prefetch(
     buffer_size=tf.data.experimental.AUTOTUNE)
 ```
 
+```{.python .input}
+#@tab jax
+batch_size = 256
+
+# Load all Pokemon images via PIL, resize to 64x64, normalise to [-1, 1]
+_all_images = []
+for root, dirs, files in os.walk(data_dir):
+    for fname in sorted(files):
+        if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+            img = Image.open(os.path.join(root, fname)).convert('RGB')
+            img = img.resize((64, 64))
+            arr = np.array(img, dtype=np.float32) / 255.0
+            arr = (arr - 0.5) / 0.5  # normalise to [-1, 1]
+            _all_images.append(arr)  # (H, W, C)
+
+_all_images = np.stack(_all_images)  # (N, H, W, C)
+_all_labels = np.zeros(len(_all_images), dtype=np.int32)  # dummy labels
+
+data_iter = d2l.load_array((_all_images, _all_labels), batch_size,
+                           is_train=True)
+```
+
 Let's visualize the first 20 images.
 
 ```{.python .input}
@@ -135,6 +180,16 @@ d2l.set_figsize(figsize=(4, 4))
 for X, y in data_iter.take(1):
     imgs = X[:20, :, :, :] / 2 + 0.5
     d2l.show_images(imgs, num_rows=4, num_cols=5)
+```
+
+```{.python .input}
+#@tab jax
+d2l.set_figsize((4, 4))
+for batch in data_iter:
+    X = np.array(batch[0])  # (N, H, W, C), values in [-1, 1]
+    imgs = X[:20] / 2 + 0.5
+    d2l.show_images(imgs, num_rows=4, num_cols=5)
+    break
 ```
 
 ## The Generator
@@ -186,6 +241,28 @@ class G_block(tf.keras.layers.Layer):
         return self.activation(self.batch_norm(self.conv2d_trans(X)))
 ```
 
+```{.python .input}
+#@tab jax
+class G_block(nn.Module):
+    out_channels: int
+    kernel_size: int = 4
+    strides: int = 2
+    padding: str = 'SAME'
+    use_running_average: bool = False
+
+    @nn.compact
+    def __call__(self, X):
+        X = nn.ConvTranspose(
+            self.out_channels, kernel_size=(self.kernel_size, self.kernel_size),
+            strides=(self.strides, self.strides), padding=self.padding,
+            use_bias=False,
+            kernel_init=nn.initializers.normal(0.02))(X)
+        X = nn.BatchNorm(
+            use_running_average=self.use_running_average)(X)
+        X = nn.relu(X)
+        return X
+```
+
 In default, the transposed convolution layer uses a $k_h = k_w = 4$ kernel, a $s_h = s_w = 2$ strides, and a $p_h = p_w = 1$ padding. With a input shape of $n_h^{'} \times n_w^{'} = 16 \times 16$, the generator block will double input's width and height.
 
 $$
@@ -219,6 +296,14 @@ g_blk = G_block(20)
 g_blk(x).shape
 ```
 
+```{.python .input}
+#@tab jax
+x = jnp.zeros((2, 16, 16, 3))  # Channel last convention
+g_blk = G_block(out_channels=20)
+params = g_blk.init(jax.random.PRNGKey(0), x)
+g_blk.apply(params, x).shape
+```
+
 If changing the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding. With a input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
 
 ```{.python .input}
@@ -242,6 +327,15 @@ x = tf.zeros((2, 1, 1, 3))
 # `padding="valid"` corresponds to no padding
 g_blk = G_block(20, strides=1, padding="valid")
 g_blk(x).shape
+```
+
+```{.python .input}
+#@tab jax
+x = jnp.zeros((2, 1, 1, 3))
+# `padding="VALID"` corresponds to no padding
+g_blk = G_block(out_channels=20, strides=1, padding='VALID')
+params = g_blk.init(jax.random.PRNGKey(0), x)
+g_blk.apply(params, x).shape
 ```
 
 The generator consists of four basic blocks that increase input's both width and height from 1 to 32. At the same time, it first projects the latent variable into $64\times 8$ channels, and then halve the channels each time. At last, a transposed convolution layer is used to generate the output. It further doubles the width and height to match the desired $64\times 64$ shape, and reduces the channel size to $3$. The tanh activation function is applied to project output values into the $(-1, 1)$ range.
@@ -289,6 +383,39 @@ net_G = tf.keras.Sequential([
 ])
 ```
 
+```{.python .input}
+#@tab jax
+n_G = 64
+
+class Generator(nn.Module):
+    n_G: int = 64
+    use_running_average: bool = False
+
+    @nn.compact
+    def __call__(self, X):
+        X = G_block(out_channels=self.n_G*8, strides=1, padding='VALID',
+                     use_running_average=self.use_running_average)(X)
+        # Output: (4, 4, 64 * 8)
+        X = G_block(out_channels=self.n_G*4,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (8, 8, 64 * 4)
+        X = G_block(out_channels=self.n_G*2,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (16, 16, 64 * 2)
+        X = G_block(out_channels=self.n_G,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (32, 32, 64)
+        X = nn.ConvTranspose(
+            3, kernel_size=(4, 4), strides=(2, 2), padding='SAME',
+            use_bias=False,
+            kernel_init=nn.initializers.normal(0.02))(X)
+        X = nn.tanh(X)
+        # Output: (64, 64, 3)
+        return X
+
+net_G = Generator(n_G=n_G)
+```
+
 Generate a 100 dimensional latent variable to verify the generator's output shape.
 
 ```{.python .input}
@@ -308,6 +435,13 @@ net_G(x).shape
 #@tab tensorflow
 x = tf.zeros((1, 1, 1, 100))
 net_G(x).shape
+```
+
+```{.python .input}
+#@tab jax
+x = jnp.zeros((1, 1, 1, 100))
+params_G = net_G.init(jax.random.PRNGKey(0), x)
+net_G.apply(params_G, x).shape
 ```
 
 ## Discriminator
@@ -332,6 +466,14 @@ alphas = [0, .2, .4, .6, .8, 1]
 x = tf.range(-2, 1, 0.1)
 Y = [tf.keras.layers.LeakyReLU(alpha)(x).numpy() for alpha in alphas]
 d2l.plot(x.numpy(), Y, 'x', 'y', alphas)
+```
+
+```{.python .input}
+#@tab jax
+alphas = [0, .2, .4, .6, .8, 1]
+x = jnp.arange(-2, 1, 0.1)
+Y = [np.array(nn.leaky_relu(x, negative_slope=alpha)) for alpha in alphas]
+d2l.plot(np.array(x), Y, 'x', 'y', alphas)
 ```
 
 The basic block of the discriminator is a convolution layer followed by a batch normalization layer and a leaky ReLU activation. The hyperparameters of the convolution layer are similar to the transpose convolution layer in the generator block.
@@ -381,6 +523,29 @@ class D_block(tf.keras.layers.Layer):
         return self.activation(self.batch_norm(self.conv2d(X)))
 ```
 
+```{.python .input}
+#@tab jax
+class D_block(nn.Module):
+    out_channels: int
+    kernel_size: int = 4
+    strides: int = 2
+    padding: str = 'SAME'
+    alpha: float = 0.2
+    use_running_average: bool = False
+
+    @nn.compact
+    def __call__(self, X):
+        X = nn.Conv(
+            self.out_channels, kernel_size=(self.kernel_size, self.kernel_size),
+            strides=(self.strides, self.strides), padding=self.padding,
+            use_bias=False,
+            kernel_init=nn.initializers.normal(0.02))(X)
+        X = nn.BatchNorm(
+            use_running_average=self.use_running_average)(X)
+        X = nn.leaky_relu(X, negative_slope=self.alpha)
+        return X
+```
+
 A basic block with default settings will halve the width and height of the inputs, as we demonstrated in :numref:`sec_padding`. For example, given a input shape $n_h = n_w = 16$, with a kernel shape $k_h = k_w = 4$, a stride shape $s_h = s_w = 2$, and a padding shape $p_h = p_w = 1$, the output shape will be:
 
 $$
@@ -411,6 +576,14 @@ d_blk(x).shape
 x = tf.zeros((2, 16, 16, 3))
 d_blk = D_block(20)
 d_blk(x).shape
+```
+
+```{.python .input}
+#@tab jax
+x = jnp.zeros((2, 16, 16, 3))
+d_blk = D_block(out_channels=20)
+params = d_blk.init(jax.random.PRNGKey(0), x)
+d_blk.apply(params, x).shape
 ```
 
 The discriminator is a mirror of the generator.
@@ -451,6 +624,37 @@ net_D = tf.keras.Sequential([
 ])
 ```
 
+```{.python .input}
+#@tab jax
+n_D = 64
+
+class Discriminator(nn.Module):
+    n_D: int = 64
+    use_running_average: bool = False
+
+    @nn.compact
+    def __call__(self, X):
+        X = D_block(out_channels=self.n_D,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (32, 32, 64)
+        X = D_block(out_channels=self.n_D*2,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (16, 16, 64 * 2)
+        X = D_block(out_channels=self.n_D*4,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (8, 8, 64 * 4)
+        X = D_block(out_channels=self.n_D*8,
+                     use_running_average=self.use_running_average)(X)
+        # Output: (4, 4, 64 * 8)
+        X = nn.Conv(
+            1, kernel_size=(4, 4), use_bias=False,
+            kernel_init=nn.initializers.normal(0.02))(X)
+        # Output: (1, 1, 1)
+        return X
+
+net_D = Discriminator(n_D=n_D)
+```
+
 It uses a convolution layer with output channel $1$ as the last layer to obtain a single prediction value.
 
 ```{.python .input}
@@ -470,6 +674,13 @@ net_D(x).shape
 #@tab tensorflow
 x = tf.zeros((1, 64, 64, 3))
 net_D(x).shape
+```
+
+```{.python .input}
+#@tab jax
+x = jnp.zeros((1, 64, 64, 3))
+params_D = net_D.init(jax.random.PRNGKey(0), x)
+net_D.apply(params_D, x).shape
 ```
 
 ## Training
@@ -611,6 +822,113 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           f'{metric[2] / timer.stop():.1f} examples/sec on {str(device._device_name)}')
 ```
 
+```{.python .input}
+#@tab jax
+def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
+    key = jax.random.PRNGKey(0)
+
+    # Initialize generator and discriminator parameters
+    dummy_Z = jnp.ones((1, 1, 1, latent_dim))
+    dummy_X = jnp.ones((1, 64, 64, 3))
+    key, key_G, key_D = jax.random.split(key, 3)
+    variables_G = net_G.init(key_G, dummy_Z)
+    variables_D = net_D.init(key_D, dummy_X)
+
+    # Reinitialize with normal(0, 0.02)
+    params_G = jax.tree.map(
+        lambda p: jax.random.normal(key_G, p.shape) * 0.02, variables_G['params'])
+    batch_stats_G = variables_G.get('batch_stats', {})
+    params_D = jax.tree.map(
+        lambda p: jax.random.normal(key_D, p.shape) * 0.02, variables_D['params'])
+    batch_stats_D = variables_D.get('batch_stats', {})
+
+    optimizer_D = optax.adam(lr, b1=0.5, b2=0.999)
+    optimizer_G = optax.adam(lr, b1=0.5, b2=0.999)
+    opt_state_D = optimizer_D.init(params_D)
+    opt_state_G = optimizer_G.init(params_G)
+
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[1, num_epochs], nrows=2, figsize=(5, 5),
+                            legend=['discriminator', 'generator'])
+    animator.fig.subplots_adjust(hspace=0.3)
+
+    for epoch in range(1, num_epochs + 1):
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(3)  # loss_D, loss_G, num_examples
+        for batch in data_iter:
+            X = jnp.array(batch[0])  # Already (N, H, W, C)
+            batch_size = X.shape[0]
+            key, subkey = jax.random.split(key)
+            Z = jax.random.normal(subkey, (batch_size, 1, 1, latent_dim))
+
+            # Update discriminator
+            fake_X, updates_G = net_G.apply(
+                {'params': params_G, 'batch_stats': batch_stats_G},
+                Z, mutable=['batch_stats'])
+            batch_stats_G = updates_G['batch_stats']
+
+            def loss_D_fn(params_D):
+                real_Y, updates_D = net_D.apply(
+                    {'params': params_D, 'batch_stats': batch_stats_D},
+                    X, mutable=['batch_stats'])
+                fake_Y, _ = net_D.apply(
+                    {'params': params_D, 'batch_stats': batch_stats_D},
+                    fake_X, mutable=['batch_stats'])
+                ones = jnp.ones((batch_size,))
+                zeros = jnp.zeros((batch_size,))
+                loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(
+                              real_Y.squeeze(), ones)) +
+                          jnp.sum(optax.sigmoid_binary_cross_entropy(
+                              fake_Y.squeeze(), zeros))) / 2
+                return loss_D, updates_D
+
+            (loss_D_val, updates_D), grads_D = jax.value_and_grad(
+                loss_D_fn, has_aux=True)(params_D)
+            batch_stats_D = updates_D['batch_stats']
+            updates_optax_D, opt_state_D = optimizer_D.update(
+                grads_D, opt_state_D, params_D)
+            params_D = optax.apply_updates(params_D, updates_optax_D)
+
+            # Update generator
+            def loss_G_fn(params_G):
+                fake_X, updates_G = net_G.apply(
+                    {'params': params_G, 'batch_stats': batch_stats_G},
+                    Z, mutable=['batch_stats'])
+                fake_Y, _ = net_D.apply(
+                    {'params': params_D, 'batch_stats': batch_stats_D},
+                    fake_X, mutable=['batch_stats'])
+                ones = jnp.ones((batch_size,))
+                loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    fake_Y.squeeze(), ones))
+                return loss_G, updates_G
+
+            (loss_G_val, updates_G), grads_G = jax.value_and_grad(
+                loss_G_fn, has_aux=True)(params_G)
+            batch_stats_G = updates_G['batch_stats']
+            updates_optax_G, opt_state_G = optimizer_G.update(
+                grads_G, opt_state_G, params_G)
+            params_G = optax.apply_updates(params_G, updates_optax_G)
+
+            metric.add(loss_D_val, loss_G_val, batch_size)
+
+        # Show generated examples
+        key, subkey = jax.random.split(key)
+        Z = jax.random.normal(subkey, (21, 1, 1, latent_dim))
+        fake_x = net_G.apply(
+            {'params': params_G, 'batch_stats': batch_stats_G},
+            Z, mutable=False) / 2 + 0.5
+        imgs = jnp.concatenate(
+            [jnp.concatenate([fake_x[i * 7 + j] for j in range(7)], axis=1)
+             for i in range(len(fake_x) // 7)], axis=0)
+        animator.axes[1].cla()
+        animator.axes[1].imshow(np.array(imgs))
+        # Show the losses
+        loss_D, loss_G = metric[0] / metric[2], metric[1] / metric[2]
+        animator.add(epoch, (loss_D, loss_G))
+    print(f'loss_D {loss_D:.3f}, loss_G {loss_G:.3f}, '
+          f'{metric[2] / timer.stop():.1f} examples/sec')
+```
+
 We train the model with a small number of epochs just for demonstration.
 For better performance,
 the variable `num_epochs` can be set to a larger number.
@@ -624,6 +942,12 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```{.python .input}
 #@tab tensorflow
 latent_dim, lr, num_epochs = 100, 0.0005, 40
+train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
+```
+
+```{.python .input}
+#@tab jax
+latent_dim, lr, num_epochs = 100, 0.005, 20
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 
@@ -644,5 +968,9 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1083)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1083)
 :end_tab:

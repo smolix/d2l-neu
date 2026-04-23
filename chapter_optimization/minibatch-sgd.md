@@ -75,6 +75,22 @@ B = tf.Variable(d2l.normal([256, 256], 0, 1))
 C = tf.Variable(d2l.normal([256, 256], 0, 1))
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from flax import linen as nn
+import jax
+from jax import numpy as jnp
+import numpy as np
+import optax
+import time
+
+A = jnp.zeros((256, 256))
+B = jnp.array(np.random.normal(0, 1, (256, 256)))
+C = jnp.array(np.random.normal(0, 1, (256, 256)))
+```
+
 Since we will benchmark the running time frequently in the rest of the book, let's define a timer.
 
 ```{.python .input}
@@ -142,6 +158,17 @@ for i in range(256):
 timer.stop()
 ```
 
+```{.python .input}
+#@tab jax
+# Compute A = BC one element at a time
+timer.start()
+for i in range(256):
+    for j in range(256):
+        A = A.at[i, j].set(jnp.dot(B[i, :], C[:, j]))
+A.block_until_ready()
+timer.stop()
+```
+
 A faster strategy is to perform column-wise assignment.
 
 ```{.python .input}
@@ -168,6 +195,16 @@ timer.stop()
 timer.start()
 for j in range(256):
     A[:, j].assign(tf.tensordot(B, C[:, j], axes=1))
+timer.stop()
+```
+
+```{.python .input}
+#@tab jax
+# Compute A = BC one column at a time
+timer.start()
+for j in range(256):
+    A = A.at[:, j].set(jnp.dot(B, C[:, j]))
+A.block_until_ready()
 timer.stop()
 ```
 
@@ -214,6 +251,19 @@ print(f'performance in Gigaflops: element {gigaflops[0]:.3f}, '
       f'column {gigaflops[1]:.3f}, full {gigaflops[2]:.3f}')
 ```
 
+```{.python .input}
+#@tab jax
+# Compute A = BC in one go
+timer.start()
+A = jnp.dot(B, C)
+A.block_until_ready()
+timer.stop()
+
+gigaflops = [0.03 / i for i in timer.times]
+print(f'performance in Gigaflops: element {gigaflops[0]:.3f}, '
+      f'column {gigaflops[1]:.3f}, full {gigaflops[2]:.3f}')
+```
+
 ## Minibatches
 
 :label:`sec_minibatches`
@@ -253,6 +303,16 @@ print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
 timer.start()
 for j in range(0, 256, 64):
     A[:, j:j+64].assign(tf.tensordot(B, C[:, j:j+64], axes=1))
+timer.stop()
+print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
+```
+
+```{.python .input}
+#@tab jax
+timer.start()
+for j in range(0, 256, 64):
+    A = A.at[:, j:j+64].set(jnp.dot(B, C[:, j:j+64]))
+A.block_until_ready()
 timer.stop()
 print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
 ```
@@ -311,6 +371,23 @@ def get_data_ch11(batch_size=10, n=1500):
     return data_iter, data.shape[1]-1
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+#@save
+def get_data_ch11(batch_size=10, n=1500):
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = (data - data.mean(axis=0)) / data.std(axis=0)
+    data_iter = d2l.load_array(
+        (jnp.array(data[:n, :-1]), jnp.array(data[:n, -1])),
+        batch_size, is_train=True)
+    return data_iter, data.shape[1]-1
+```
+
 ## Implementation from Scratch
 
 Recall the minibatch stochastic gradient descent implementation from :numref:`sec_linear_scratch`. In the following we provide a slightly more general implementation. For convenience it has the same call signature as the other optimization algorithms introduced later in this chapter. Specifically, we add the status
@@ -339,6 +416,15 @@ def sgd(params, states, hyperparams):
 def sgd(params, grads, states, hyperparams):
     for param, grad in zip(params, grads):
         param.assign_sub(hyperparams['lr']*grad)
+```
+
+```{.python .input}
+#@tab jax
+def sgd(params, grads, states, hyperparams):
+    updated = []
+    for param, grad in zip(params, grads):
+        updated.append(param - hyperparams['lr'] * grad)
+    return updated
 ```
 
 Next, we implement a generic training function to facilitate the use of the other optimization algorithms introduced later in this chapter. It initializes a linear regression model and can be used to train the model with minibatch stochastic gradient descent and other algorithms introduced subsequently.
@@ -434,6 +520,38 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
               r = (d2l.evaluate_loss(net, data_iter, loss),)
               animator.add(q, r)
               timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    return timer.cumsum(), animator.Y[0]
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def train_ch11(trainer_fn, states, hyperparams, data_iter,
+               feature_dim, num_epochs=2):
+    # Initialization
+    w = jnp.array(np.random.normal(scale=0.01, size=(feature_dim, 1)),
+                  dtype=jnp.float32)
+    b = jnp.zeros(1)
+    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
+    # Train
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            X, y = jnp.array(X), jnp.array(y)
+            def loss_fn(w, b):
+                return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
+            grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
+            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                net = lambda X: d2l.linreg(X, w, b)
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (d2l.evaluate_loss(net, data_iter, loss),))
+                timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
     return timer.cumsum(), animator.Y[0]
 ```
@@ -582,6 +700,50 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
+    # Initialization
+    net = nn.Dense(1)
+    key = jax.random.PRNGKey(0)
+    X_dummy = jnp.ones((1, 5))
+    params = net.init(key, X_dummy)
+
+    optimizer = trainer_fn(**hyperparams)
+    opt_state = optimizer.init(params)
+
+    loss = lambda pred, y: jnp.mean((pred - y) ** 2) / 2
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            X, y = jnp.array(X), jnp.array(y)
+            def loss_fn(params):
+                out = net.apply(params, X)
+                y_reshaped = y.reshape(out.shape)
+                return jnp.mean((out - y_reshaped) ** 2) / 2
+            l, grads = jax.value_and_grad(loss_fn)(params)
+            updates, opt_state = optimizer.update(grads, opt_state, params)
+            params = optax.apply_updates(params, updates)
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                def eval_loss():
+                    ls = []
+                    for X_eval, y_eval in data_iter:
+                        X_eval, y_eval = jnp.array(X_eval), jnp.array(y_eval)
+                        out = net.apply(params, X_eval)
+                        y_eval = y_eval.reshape(out.shape)
+                        ls.append(jnp.mean((out - y_eval) ** 2) / 2)
+                    return sum(ls) / len(ls)
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (eval_loss(),))
+                timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+```
+
 Using Gluon to repeat the last experiment shows identical behavior.
 
 ```{.python .input}
@@ -601,6 +763,13 @@ train_concise_ch11(trainer, {'lr': 0.01}, data_iter)
 #@tab tensorflow
 data_iter, _ = get_data_ch11(10)
 trainer = tf.keras.optimizers.SGD
+train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
+```
+
+```{.python .input}
+#@tab jax
+data_iter, _ = get_data_ch11(10)
+trainer = optax.sgd
 train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 ```
 
@@ -629,5 +798,9 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1069)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1069)
 :end_tab:

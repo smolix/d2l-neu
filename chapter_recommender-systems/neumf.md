@@ -47,6 +47,14 @@ import random
 npx.set_np()
 ```
 
+```{.python .input  n=1}
+#@tab pytorch
+from d2l import torch as d2l
+import torch
+from torch import nn
+import random
+```
+
 ## Model Implementation
 The following code implements the NeuMF model. It consists of a generalized matrix factorization model and an MLP with different user and item embedding vectors. The structure of the MLP is controlled with the parameter `nums_hiddens`. ReLU is used as the default activation function.
 
@@ -77,6 +85,38 @@ class NeuMF(nn.Block):
         return self.prediction_layer(con_res)
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+class NeuMF(nn.Module):
+    def __init__(self, num_factors, num_users, num_items, nums_hiddens,
+                 **kwargs):
+        super(NeuMF, self).__init__(**kwargs)
+        self.P = nn.Embedding(num_users, num_factors)
+        self.Q = nn.Embedding(num_items, num_factors)
+        self.U = nn.Embedding(num_users, num_factors)
+        self.V = nn.Embedding(num_items, num_factors)
+        mlp_layers = []
+        input_size = num_factors * 2
+        for num_hiddens in nums_hiddens:
+            mlp_layers.append(nn.Linear(input_size, num_hiddens))
+            mlp_layers.append(nn.ReLU())
+            input_size = num_hiddens
+        self.mlp = nn.Sequential(*mlp_layers)
+        self.prediction_layer = nn.Sequential(
+            nn.Linear(num_factors + nums_hiddens[-1], 1, bias=False),
+            nn.Sigmoid())
+
+    def forward(self, user_id, item_id):
+        p_mf = self.P(user_id)
+        q_mf = self.Q(item_id)
+        gmf = p_mf * q_mf
+        p_mlp = self.U(user_id)
+        q_mlp = self.V(item_id)
+        mlp = self.mlp(torch.cat([p_mlp, q_mlp], dim=1))
+        con_res = torch.cat([gmf, mlp], dim=1)
+        return self.prediction_layer(con_res)
+```
+
 ## Customized Dataset with Negative Sampling
 
 For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with are candidate items (unobserved entries). The following function takes users identity and candidate items as input, and samples negative items randomly for each user from the candidate set of that user. During the training stage, the model ensures that the items that a user likes to be ranked higher than items he dislikes or has not interacted with.
@@ -84,6 +124,24 @@ For pairwise ranking loss, an important step is negative sampling. For each user
 ```{.python .input  n=3}
 #@tab mxnet
 class PRDataset(gluon.data.Dataset):
+    def __init__(self, users, items, candidates, num_items):
+        self.users = users
+        self.items = items
+        self.cand = candidates
+        self.all = set([i for i in range(num_items)])
+
+    def __len__(self):
+        return len(self.users)
+
+    def __getitem__(self, idx):
+        neg_items = list(self.all - set(self.cand[int(self.users[idx])]))
+        indices = random.randint(0, len(neg_items) - 1)
+        return self.users[idx], self.items[idx], neg_items[indices]
+```
+
+```{.python .input  n=3}
+#@tab pytorch
+class PRDataset(torch.utils.data.Dataset):
     def __init__(self, users, items, candidates, num_items):
         self.users = users
         self.items = items
@@ -131,6 +189,19 @@ def hit_and_auc(rankedlist, test_matrix, k):
     return len(hits_k), auc
 ```
 
+```{.python .input  n=4}
+#@tab pytorch
+#@save
+def hit_and_auc(rankedlist, test_matrix, k):
+    hits_k = [(idx, val) for idx, val in enumerate(rankedlist[:k])
+              if val in set(test_matrix)]
+    hits_all = [(idx, val) for idx, val in enumerate(rankedlist)
+                if val in set(test_matrix)]
+    max = len(rankedlist) - 1
+    auc = 1.0 * (max - hits_all[0][0]) / max if len(hits_all) > 0 else 0
+    return len(hits_k), auc
+```
+
 Then, the overall Hit rate and AUC are calculated as follows.
 
 ```{.python .input  n=5}
@@ -164,6 +235,38 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
         hit_rate.append(temp[0])
         auc.append(temp[1])
     return np.mean(np.array(hit_rate)), np.mean(np.array(auc))
+```
+
+```{.python .input  n=5}
+#@tab pytorch
+#@save
+def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
+                     devices):
+    ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
+    all_items = set([i for i in range(num_users)])
+    for u in range(num_users):
+        neg_items = list(all_items - set(candidates[int(u)]))
+        user_ids, item_ids, scores = [], [], []
+        [item_ids.append(i) for i in neg_items]
+        [user_ids.append(u) for _ in neg_items]
+        x = [torch.tensor(user_ids)]
+        if seq is not None:
+            x.append(seq[user_ids, :])
+        x.extend([torch.tensor(item_ids)])
+        test_data_iter = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(*x), shuffle=False,
+            batch_size=1024)
+        for values in test_data_iter:
+            values = [v.to(devices[0]) for v in values]
+            scores.extend(list(net(*values).detach().cpu().numpy()))
+        scores = [item for sublist in scores for item in sublist]
+        item_scores = list(zip(item_ids, scores))
+        ranked_list[u] = sorted(item_scores, key=lambda t: t[1], reverse=True)
+        ranked_items[u] = [r[0] for r in ranked_list[u]]
+        temp = hit_and_auc(ranked_items[u], test_input[u], 50)
+        hit_rate.append(temp[0])
+        auc.append(temp[1])
+    return sum(hit_rate) / len(hit_rate), sum(auc) / len(auc)
 ```
 
 ## Training and Evaluating the Model
@@ -207,6 +310,40 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
           f'on {str(devices)}')
 ```
 
+```{.python .input  n=6}
+#@tab pytorch
+#@save
+def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
+                  num_users, num_items, num_epochs, devices, evaluator,
+                  candidates, eval_step=1):
+    timer, hit_rate, auc = d2l.Timer(), 0, 0
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['test hit rate', 'test AUC'])
+    for epoch in range(num_epochs):
+        metric, l = d2l.Accumulator(3), 0.
+        for i, values in enumerate(train_iter):
+            input_data = [v.to(devices[0]) for v in values]
+            p_pos = net(*input_data[:-1])
+            p_neg = net(*input_data[:-2], input_data[-1])
+            ls = loss(p_pos, p_neg)
+            optimizer.zero_grad()
+            ls.backward()
+            optimizer.step()
+            l += ls.item()
+            metric.add(l, values[0].shape[0], values[0].numel())
+            timer.stop()
+        with torch.no_grad():
+            if (epoch + 1) % eval_step == 0:
+                hit_rate, auc = evaluator(net, test_iter, test_seq_iter,
+                                          candidates, num_users, num_items,
+                                          devices)
+                animator.add(epoch + 1, (hit_rate, auc))
+    print(f'train loss {metric[0] / metric[1]:.3f}, '
+          f'test hit rate {float(hit_rate):.3f}, test AUC {float(auc):.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
+          f'on {str(devices)}')
+```
+
 Now, we can load the MovieLens 100k dataset and train the model. Since there are only ratings in the MovieLens dataset, with some losses of accuracy, we binarize these ratings to zeros and ones. If a user rated an item, we consider the implicit feedback as one, otherwise as zero. The action of rating an item can be treated as a form of providing implicit feedback.  Here, we split the dataset in the `seq-aware` mode where users' latest interacted items are left out for test.
 
 ```{.python .input  n=11}
@@ -224,6 +361,21 @@ train_iter = gluon.data.DataLoader(
     True, last_batch="rollover", num_workers=d2l.get_dataloader_workers())
 ```
 
+```{.python .input  n=11}
+#@tab pytorch
+batch_size = 1024
+df, num_users, num_items = d2l.read_data_ml100k()
+train_data, test_data = d2l.split_data_ml100k(df, num_users, num_items,
+                                              'seq-aware')
+users_train, items_train, ratings_train, candidates = d2l.load_data_ml100k(
+    train_data, num_users, num_items, feedback="implicit")
+users_test, items_test, ratings_test, test_iter = d2l.load_data_ml100k(
+    test_data, num_users, num_items, feedback="implicit")
+train_iter = torch.utils.data.DataLoader(
+    PRDataset(users_train, items_train, candidates, num_items), batch_size,
+    True, num_workers=d2l.get_dataloader_workers())
+```
+
 We then create and initialize the model. We use a three-layer MLP with constant hidden size 10.
 
 ```{.python .input  n=8}
@@ -231,6 +383,17 @@ We then create and initialize the model. We use a three-layer MLP with constant 
 devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
 net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
+```
+
+```{.python .input  n=8}
+#@tab pytorch
+devices = d2l.try_all_gpus()
+net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
+def init_weights(m):
+    if type(m) == nn.Linear or type(m) == nn.Embedding:
+        nn.init.normal_(m.weight, std=0.01)
+net.apply(init_weights)
+net = net.to(devices[0])
 ```
 
 The following code trains the model.
@@ -242,6 +405,15 @@ loss = d2l.BPRLoss()
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {"learning_rate": lr, 'wd': wd})
 train_ranking(net, train_iter, test_iter, loss, trainer, None, num_users,
+              num_items, num_epochs, devices, evaluate_ranking, candidates)
+```
+
+```{.python .input  n=12}
+#@tab pytorch
+lr, num_epochs, wd = 0.01, 10, 1e-5
+loss = d2l.BPRLoss()
+optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
+train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
               num_items, num_epochs, devices, evaluate_ranking, candidates)
 ```
 
@@ -258,5 +430,9 @@ train_ranking(net, train_iter, test_iter, loss, trainer, None, num_users,
 * Try to use hinge loss defined in the last section to optimize this model.
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/403)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/403)
 :end_tab:

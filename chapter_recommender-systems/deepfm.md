@@ -42,6 +42,14 @@ import os
 npx.set_np()
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+from d2l import torch as d2l
+import torch
+from torch import nn
+import os
+```
+
 ## Implementation of DeepFM
 The implementation of DeepFM is similar to that of FM. We keep the FM part unchanged and use an MLP block with `relu` as the activation function. Dropout is also used to regularize the model. The number of neurons of the MLP can be adjusted with the `mlp_dims` hyperparameter.
 
@@ -74,6 +82,37 @@ class DeepFM(nn.Block):
         return x
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+class DeepFM(nn.Module):
+    def __init__(self, field_dims, num_factors, mlp_dims, drop_rate=0.1):
+        super().__init__()
+        num_inputs = int(sum(field_dims))
+        self.embedding = nn.Embedding(num_inputs, num_factors)
+        self.fc = nn.Embedding(num_inputs, 1)
+        self.linear_layer = nn.Linear(1, 1)
+        input_dim = self.embed_output_dim = len(field_dims) * num_factors
+        mlp_layers = []
+        for dim in mlp_dims:
+            mlp_layers.append(nn.Linear(input_dim, dim))
+            mlp_layers.append(nn.ReLU())
+            mlp_layers.append(nn.Dropout(p=drop_rate))
+            input_dim = dim
+        mlp_layers.append(nn.Linear(input_dim, 1))
+        self.mlp = nn.Sequential(*mlp_layers)
+
+    def forward(self, x):
+        embed_x = self.embedding(x)
+        square_of_sum = embed_x.sum(dim=1) ** 2
+        sum_of_square = (embed_x ** 2).sum(dim=1)
+        inputs = embed_x.reshape(-1, self.embed_output_dim)
+        x = self.linear_layer(self.fc(x).sum(dim=1)) \
+            + 0.5 * (square_of_sum - sum_of_square).sum(dim=1, keepdim=True) \
+            + self.mlp(inputs)
+        x = torch.sigmoid(x)
+        return x
+```
+
 ## Training and Evaluating the Model
 The data loading process is the same as that of FM. We set the MLP component of DeepFM to a three-layered dense network with a pyramid structure (30-20-10). All other hyperparameters remain the same as FM.
 
@@ -102,6 +141,37 @@ loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
+```{.python .input  n=4}
+#@tab pytorch
+batch_size = 2048
+data_dir = d2l.download_extract('ctr')
+train_data = d2l.CTRDataset(os.path.join(data_dir, 'train.csv'))
+test_data = d2l.CTRDataset(os.path.join(data_dir, 'test.csv'),
+                           feat_mapper=train_data.feat_mapper,
+                           defaults=train_data.defaults)
+field_dims = train_data.field_dims
+train_iter = torch.utils.data.DataLoader(
+    train_data, shuffle=True, drop_last=True, batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
+test_iter = torch.utils.data.DataLoader(
+    test_data, shuffle=False, drop_last=True, batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
+devices = d2l.try_all_gpus()
+net = DeepFM(field_dims, num_factors=10, mlp_dims=[30, 20, 10])
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform_(m.weight)
+    if type(m) == nn.Embedding:
+        nn.init.xavier_uniform_(m.weight)
+
+net.apply(init_weights)
+lr, num_epochs = 0.01, 30
+optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+loss = nn.BCEWithLogitsLoss()
+d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
+```
+
 Compared with FM, DeepFM converges faster and achieves better performance.
 
 ## Summary
@@ -115,5 +185,9 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 * Change the dataset to Criteo and compare it with the original FM model.
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/407)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/407)
 :end_tab:

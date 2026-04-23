@@ -57,6 +57,17 @@ from torch import nn
 import os
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import os
+```
+
 ##  Reading the Dataset
 
 First, download and extract this IMDb review dataset
@@ -162,6 +173,16 @@ for X, y in train_iter:
 print('# batches:', len(train_iter))
 ```
 
+```{.python .input}
+#@tab jax
+train_iter = d2l.load_array((train_features, jnp.array(train_data[1])), 64)
+
+for X, y in train_iter:
+    print('X:', X.shape, ', y:', y.shape)
+    break
+print('# batches:', len(train_iter))
+```
+
 ## Putting It All Together
 
 Last, we wrap up the above steps into the `load_data_imdb` function.
@@ -211,6 +232,29 @@ def load_data_imdb(batch_size, num_steps=500):
     return train_iter, test_iter, vocab
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def load_data_imdb(batch_size, num_steps=500):
+    """Return data iterators and the vocabulary of the IMDb review dataset."""
+    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
+    train_data = read_imdb(data_dir, True)
+    test_data = read_imdb(data_dir, False)
+    train_tokens = d2l.tokenize(train_data[0], token='word')
+    test_tokens = d2l.tokenize(test_data[0], token='word')
+    vocab = d2l.Vocab(train_tokens, min_freq=5)
+    train_features = jnp.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
+    test_features = jnp.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
+    train_iter = d2l.load_array((train_features, jnp.array(train_data[1])),
+                                batch_size)
+    test_iter = d2l.load_array((test_features, jnp.array(test_data[1])),
+                               batch_size,
+                               is_train=False)
+    return train_iter, test_iter, vocab
+```
+
 ## Summary
 
 * Sentiment analysis studies people's sentiments in their produced text, which is considered as a text classification problem that transforms a varying-length text sequence
@@ -230,5 +274,9 @@ into a fixed-length text category.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1387)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1387)
 :end_tab:

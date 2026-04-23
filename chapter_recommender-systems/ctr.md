@@ -17,6 +17,14 @@ from mxnet import gluon, np
 import os
 ```
 
+```{.python .input}
+#@tab pytorch
+from collections import defaultdict
+from d2l import torch as d2l
+import torch
+import os
+```
+
 ## An Online Advertising Dataset
 
 With the considerable advancements of Internet and mobile technology, online advertising has become an important income resource and generates vast majority of revenue in the Internet industry. It is important to display relevant advertisements or advertisements that pique users' interests so that casual visitors can be converted into paying customers. The dataset we introduced is an online advertising dataset. It consists of 34 fields, with the first column representing the target variable that indicates if an ad was clicked (1) or not (0). All the other columns are categorical features. The columns might represent the advertisement id, site or application id, device id, time, user profiles and so on. The real semantics of the features are undisclosed due to anonymization and privacy concern.
@@ -25,6 +33,15 @@ The following code downloads the dataset from our server and saves it into the l
 
 ```{.python .input  n=15}
 #@tab mxnet
+#@save
+d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
+                       'e18327c48c8e8e5c23da714dd614e390d369843f')
+
+data_dir = d2l.download_extract('ctr')
+```
+
+```{.python .input  n=15}
+#@tab pytorch
 #@save
 d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
                        'e18327c48c8e8e5c23da714dd614e390d369843f')
@@ -82,10 +99,60 @@ class CTRDataset(gluon.data.Dataset):
         return feat + self.offsets, self.data[idx]['y']
 ```
 
+```{.python .input  n=13}
+#@tab pytorch
+#@save
+class CTRDataset(torch.utils.data.Dataset):
+    def __init__(self, data_path, feat_mapper=None, defaults=None,
+                 min_threshold=4, num_feat=34):
+        self.NUM_FEATS, self.count, self.data = num_feat, 0, {}
+        feat_cnts = defaultdict(lambda: defaultdict(int))
+        self.feat_mapper, self.defaults = feat_mapper, defaults
+        self.field_dims = torch.zeros(self.NUM_FEATS, dtype=torch.long)
+        with open(data_path) as f:
+            for line in f:
+                instance = {}
+                values = line.rstrip('\n').split('\t')
+                if len(values) != self.NUM_FEATS + 1:
+                    continue
+                label = torch.zeros(2)
+                label[int(values[0])] = 1
+                instance['y'] = [float(values[0])]
+                for i in range(1, self.NUM_FEATS + 1):
+                    feat_cnts[i][values[i]] += 1
+                    instance.setdefault('x', []).append(values[i])
+                self.data[self.count] = instance
+                self.count = self.count + 1
+        if self.feat_mapper is None and self.defaults is None:
+            feat_mapper = {i: {feat for feat, c in cnt.items() if c >=
+                               min_threshold} for i, cnt in feat_cnts.items()}
+            self.feat_mapper = {i: {feat_v: idx for idx, feat_v in enumerate(sorted(feat_values))}
+                                for i, feat_values in feat_mapper.items()}
+            self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
+        for i, fm in self.feat_mapper.items():
+            self.field_dims[i - 1] = len(fm) + 1
+        self.offsets = torch.tensor(
+            (0, *torch.cumsum(self.field_dims, dim=0).numpy()[:-1]))
+
+    def __len__(self):
+        return self.count
+
+    def __getitem__(self, idx):
+        feat = torch.tensor([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
+                             for i, v in enumerate(self.data[idx]['x'])])
+        return feat + self.offsets, torch.tensor(self.data[idx]['y'])
+```
+
 The following example loads the training data and print out the first record.
 
 ```{.python .input  n=16}
 #@tab mxnet
+train_data = CTRDataset(os.path.join(data_dir, 'train.csv'))
+train_data[0]
+```
+
+```{.python .input  n=16}
+#@tab pytorch
 train_data = CTRDataset(os.path.join(data_dir, 'train.csv'))
 train_data[0]
 ```
@@ -101,5 +168,9 @@ As can be seen, all the 34 fields are categorical features. Each value represent
 * Can you load the Criteo and Avazu dataset with the provided `CTRDataset`. It is worth noting that the Criteo dataset consisting of real-valued features so you may have to revise the code a bit.
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/405)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/405)
 :end_tab:

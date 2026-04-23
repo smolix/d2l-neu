@@ -37,6 +37,14 @@ import mxnet as mx
 npx.set_np()
 ```
 
+```{.python .input  n=3}
+#@tab pytorch
+from d2l import torch as d2l
+import torch
+from torch import nn
+import numpy as np
+```
+
 ## Implementing the Model
 
 A typical autoencoder consists of an encoder and a decoder. The encoder projects the input to hidden representations and the decoder maps the hidden layer to the reconstruction layer. We follow this practice and create the encoder and decoder with fully connected layers. The activation of encoder is set to `sigmoid` by default and no activation is applied for decoder. Dropout is included after the encoding transformation to reduce over-fitting. The gradients of unobserved inputs are masked out to ensure that only observed ratings contribute to the model learning process.
@@ -60,6 +68,24 @@ class AutoRec(nn.Block):
             return pred
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+class AutoRec(nn.Module):
+    def __init__(self, num_hidden, num_users, dropout=0.05):
+        super().__init__()
+        self.encoder = nn.Linear(num_users, num_hidden)
+        self.decoder = nn.Linear(num_hidden, num_users)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, input):
+        hidden = self.dropout(torch.sigmoid(self.encoder(input)))
+        pred = self.decoder(hidden)
+        if self.training:  # Mask the gradient during training
+            return pred * torch.sign(input)
+        else:
+            return pred
+```
+
 ## Reimplementing the Evaluator
 
 Since the input and output have been changed, we need to reimplement the evaluation function, while we still use RMSE as the accuracy measure.
@@ -75,6 +101,23 @@ def evaluator(network, inter_matrix, test_data, devices):
     # Calculate the test RMSE
     rmse = np.sqrt(np.sum(np.square(test_data - np.sign(test_data) * recons))
                    / np.sum(np.sign(test_data)))
+    return float(rmse)
+```
+
+```{.python .input  n=3}
+#@tab pytorch
+def evaluator(network, inter_matrix, test_data, devices):
+    network.eval()
+    scores = []
+    with torch.no_grad():
+        for values in inter_matrix:
+            values = values.to(devices[0])
+            scores.append(network(values).cpu().numpy())
+    recons = np.concatenate(scores, axis=0)
+    # Calculate the test RMSE
+    rmse = np.sqrt(
+        np.sum(np.square(test_data - np.sign(test_data) * recons))
+        / np.sum(np.sign(test_data)))
     return float(rmse)
 ```
 
@@ -109,6 +152,55 @@ d2l.train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
                         devices, evaluator, inter_mat=test_inter_mat)
 ```
 
+```{.python .input  n=4}
+#@tab pytorch
+devices = d2l.try_all_gpus()
+# Load the MovieLens 100K dataset
+df, num_users, num_items = d2l.read_data_ml100k()
+train_data, test_data = d2l.split_data_ml100k(df, num_users, num_items)
+_, _, _, train_inter_mat = d2l.load_data_ml100k(train_data, num_users,
+                                                num_items)
+_, _, _, test_inter_mat = d2l.load_data_ml100k(test_data, num_users,
+                                               num_items)
+train_inter_mat_t = torch.tensor(train_inter_mat, dtype=torch.float32)
+test_inter_mat_np = np.array(test_inter_mat)
+train_iter = torch.utils.data.DataLoader(train_inter_mat_t, shuffle=True,
+                                         drop_last=True, batch_size=256,
+                                         num_workers=d2l.get_dataloader_workers())
+test_iter = torch.utils.data.DataLoader(train_inter_mat_t, shuffle=False,
+                                        batch_size=1024,
+                                        num_workers=d2l.get_dataloader_workers())
+# Model initialization, training, and evaluation
+net = AutoRec(500, num_users)
+nn.init.normal_(net.encoder.weight, std=0.01)
+nn.init.normal_(net.decoder.weight, std=0.01)
+net = net.to(devices[0])
+lr, num_epochs, wd = 0.002, 25, 1e-5
+loss = nn.MSELoss(reduction='sum')
+optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
+timer = d2l.Timer()
+animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 2],
+                        legend=['train loss', 'test RMSE'])
+for epoch in range(num_epochs):
+    net.train()
+    total_loss, n = 0., 0
+    for i, values in enumerate(train_iter):
+        timer.start()
+        values = values.to(devices[0])
+        optimizer.zero_grad()
+        preds = net(values)
+        l = loss(preds, values * torch.sign(values))
+        l.backward()
+        optimizer.step()
+        total_loss += l.item()
+        n += values.shape[0]
+        timer.stop()
+    test_rmse = evaluator(net, test_iter, test_inter_mat_np, devices)
+    train_l = total_loss / n
+    animator.add(epoch + 1, (train_l, test_rmse))
+print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
+```
+
 ## Summary
 
 * We can frame the matrix factorization algorithm with autoencoders, while integrating non-linear layers and dropout regularization.
@@ -123,5 +215,9 @@ d2l.train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
 * Can you find a better combination of decoder and encoder activation functions?
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/401)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/401)
 :end_tab:

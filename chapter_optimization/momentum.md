@@ -87,6 +87,23 @@ def gd_2d(x1, x2, s1, s2):
 d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+
+eta = 0.4
+def f_2d(x1, x2):
+    return 0.1 * x1 ** 2 + 2 * x2 ** 2
+def gd_2d(x1, x2, s1, s2):
+    return (x1 - eta * 0.2 * x1, x2 - eta * 4 * x2, 0, 0)
+
+d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
+```
+
 By construction, the gradient in the $x_2$ direction is *much* higher and changes much more rapidly than in the horizontal $x_1$ direction. Thus we are stuck between two undesirable choices: if we pick a small learning rate we ensure that the solution does not diverge in the $x_2$ direction but we are saddled with slow convergence in the $x_1$ direction. Conversely, with a large learning rate we progress rapidly in the $x_1$ direction but diverge in $x_2$. The example below illustrates what happens even after a slight increase in learning rate from $0.4$ to $0.6$. Convergence in the $x_1$ direction improves but the overall solution quality is much worse.
 
 ```{.python .input}
@@ -171,6 +188,14 @@ def init_momentum_states(features_dim):
 ```
 
 ```{.python .input}
+#@tab jax
+def init_momentum_states(feature_dim):
+    v_w = d2l.zeros((feature_dim, 1))
+    v_b = d2l.zeros(1)
+    return [v_w, v_b]
+```
+
+```{.python .input}
 #@tab mxnet
 def sgd_momentum(params, states, hyperparams):
     for p, v in zip(params, states):
@@ -194,6 +219,15 @@ def sgd_momentum(params, grads, states, hyperparams):
     for p, v, g in zip(params, states, grads):
             v[:].assign(hyperparams['momentum'] * v + g)
             p[:].assign(p - hyperparams['lr'] * v)
+```
+
+```{.python .input}
+#@tab jax
+def sgd_momentum(params, grads, states, hyperparams):
+    for i in range(len(params)):
+        states[i] = hyperparams['momentum'] * states[i] + grads[i]
+        params[i] = params[i] - hyperparams['lr'] * states[i]
+    return params[0], params[1]
 ```
 
 Let's see how this works in practice.
@@ -242,6 +276,15 @@ d2l.train_concise_ch11(trainer, {'lr': 0.005, 'momentum': 0.9}, data_iter)
 ```{.python .input}
 #@tab tensorflow
 trainer = tf.keras.optimizers.SGD
+d2l.train_concise_ch11(trainer, {'learning_rate': 0.005, 'momentum': 0.9},
+                       data_iter)
+```
+
+```{.python .input}
+#@tab jax
+import optax
+
+trainer = optax.sgd
 d2l.train_concise_ch11(trainer, {'learning_rate': 0.005, 'momentum': 0.9},
                        data_iter)
 ```
@@ -335,5 +378,9 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1071)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1071)
 :end_tab:

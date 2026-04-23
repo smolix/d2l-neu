@@ -65,6 +65,17 @@ from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+```
+
 ## Generate Some "Real" Data
 
 Since this is going to be the world's lamest example, we simply generate data drawn from a Gaussian.
@@ -85,6 +96,14 @@ b = d2l.tensor([1, 2], tf.float32)
 data = d2l.matmul(X, A) + b
 ```
 
+```{.python .input}
+#@tab jax
+X = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
+A = jnp.array([[1, 2], [-0.1, 0.5]])
+b = jnp.array([1, 2])
+data = jnp.matmul(X, A) + b
+```
+
 Let's see what we got. This should be a Gaussian shifted in some rather arbitrary way with mean $b$ and covariance matrix $A^TA$.
 
 ```{.python .input}
@@ -99,6 +118,13 @@ print(f'The covariance matrix is\n{d2l.matmul(A.T, A)}')
 d2l.set_figsize()
 d2l.plt.scatter(d2l.numpy(data[:100, 0]), d2l.numpy(data[:100, 1]));
 print(f'The covariance matrix is\n{tf.matmul(A, A, transpose_a=True)}')
+```
+
+```{.python .input}
+#@tab jax
+d2l.set_figsize()
+d2l.plt.scatter(np.array(data[:100, 0]), np.array(data[:100, 1]));
+print(f'The covariance matrix is\n{jnp.matmul(A.T, A)}')
 ```
 
 ```{.python .input}
@@ -125,6 +151,16 @@ net_G = nn.Sequential(nn.Linear(2, 2))
 ```{.python .input}
 #@tab tensorflow
 net_G = tf.keras.layers.Dense(2)
+```
+
+```{.python .input}
+#@tab jax
+class Generator(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        return nn.Dense(2)(x)
+
+net_G = Generator()
 ```
 
 ## Discriminator
@@ -155,6 +191,18 @@ net_D = tf.keras.models.Sequential([
     tf.keras.layers.Dense(3, activation="tanh"),
     tf.keras.layers.Dense(1)
 ])
+```
+
+```{.python .input}
+#@tab jax
+class Discriminator(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.tanh(nn.Dense(5)(x))
+        x = nn.tanh(nn.Dense(3)(x))
+        return nn.Dense(1)(x)
+
+net_D = Discriminator()
 ```
 
 ## Training
@@ -223,6 +271,30 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     return loss_D
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def update_D(X, Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_D,
+             optimizer_D):
+    """Update discriminator."""
+    batch_size = X.shape[0]
+    ones = jnp.ones((batch_size,))
+    zeros = jnp.zeros((batch_size,))
+    # Do not need to compute gradient for `net_G`
+    fake_X = net_G.apply(params_G, Z)
+    def loss_D_fn(params_D):
+        real_Y = net_D.apply(params_D, X).squeeze()
+        fake_Y = net_D.apply(params_D, fake_X).squeeze()
+        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
+                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
+                  ) / 2
+        return loss_D
+    loss_D, grads_D = jax.value_and_grad(loss_D_fn)(params_D)
+    updates, opt_state_D = optimizer_D.update(grads_D, opt_state_D, params_D)
+    params_D = optax.apply_updates(params_D, updates)
+    return loss_D, params_D, opt_state_D
+```
+
 The generator is updated similarly. Here we reuse the cross-entropy loss but change the label of the fake data from $0$ to $1$.
 
 ```{.python .input}
@@ -278,6 +350,27 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
     grads_G = tape.gradient(loss_G, net_G.trainable_variables)
     optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
     return loss_G
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
+             optimizer_G):
+    """Update generator."""
+    batch_size = Z.shape[0]
+    ones = jnp.ones((batch_size,))
+    def loss_G_fn(params_G):
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G.apply(params_G, Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D.apply(params_D, fake_X).squeeze()
+        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
+        return loss_G
+    loss_G, grads_G = jax.value_and_grad(loss_G_fn)(params_G)
+    updates, opt_state_G = optimizer_G.update(grads_G, opt_state_G, params_G)
+    params_G = optax.apply_updates(params_G, updates)
+    return loss_G, params_G, opt_state_G
 ```
 
 Both the discriminator and the generator performs a binary logistic regression with the cross-entropy loss. We use Adam to smooth the training process. In each iteration, we first update the discriminator and then the generator. We visualize both losses and generated examples.
@@ -400,6 +493,59 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
           f'{metric[2] / timer.stop():.1f} examples/sec')
 ```
 
+```{.python .input}
+#@tab jax
+def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
+    key = jax.random.PRNGKey(42)
+    key, key_D, key_G = jax.random.split(key, 3)
+    # Initialize parameters
+    dummy = jnp.ones((1, 2))
+    params_D = net_D.init(key_D, dummy)
+    params_G = net_G.init(key_G, dummy)
+    # Reinitialize with normal(0, 0.02)
+    params_D = jax.tree.map(
+        lambda p: jax.random.normal(key_D, p.shape) * 0.02, params_D)
+    params_G = jax.tree.map(
+        lambda p: jax.random.normal(key_G, p.shape) * 0.02, params_G)
+    optimizer_D = optax.adam(lr_D)
+    optimizer_G = optax.adam(lr_G)
+    opt_state_D = optimizer_D.init(params_D)
+    opt_state_G = optimizer_G.init(params_G)
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[1, num_epochs], nrows=2, figsize=(5, 5),
+                            legend=['discriminator', 'generator'])
+    animator.fig.subplots_adjust(hspace=0.3)
+    for epoch in range(num_epochs):
+        # Train one epoch
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(3)  # loss_D, loss_G, num_examples
+        for (X,) in data_iter:
+            X = jnp.array(X)
+            batch_size = X.shape[0]
+            key, subkey = jax.random.split(key)
+            Z = jax.random.normal(subkey, (batch_size, latent_dim))
+            loss_D, params_D, opt_state_D = update_D(
+                X, Z, net_D, net_G, params_D, params_G, None,
+                opt_state_D, optimizer_D)
+            loss_G, params_G, opt_state_G = update_G(
+                Z, net_D, net_G, params_D, params_G, None,
+                opt_state_G, optimizer_G)
+            metric.add(loss_D, loss_G, batch_size)
+        # Visualize generated examples
+        key, subkey = jax.random.split(key)
+        Z = jax.random.normal(subkey, (100, latent_dim))
+        fake_X = np.array(net_G.apply(params_G, Z))
+        animator.axes[1].cla()
+        animator.axes[1].scatter(data[:, 0], data[:, 1])
+        animator.axes[1].scatter(fake_X[:, 0], fake_X[:, 1])
+        animator.axes[1].legend(['real', 'generated'])
+        # Show the losses
+        loss_D, loss_G = metric[0]/metric[2], metric[1]/metric[2]
+        animator.add(epoch + 1, (loss_D, loss_G))
+    print(f'loss_D {loss_D:.3f}, loss_G {loss_G:.3f}, '
+          f'{metric[2] / timer.stop():.1f} examples/sec')
+```
+
 Now we specify the hyperparameters to fit the Gaussian distribution.
 
 ```{.python .input}
@@ -424,5 +570,9 @@ train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1082)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1082)
 :end_tab:

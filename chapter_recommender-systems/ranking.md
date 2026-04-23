@@ -38,6 +38,12 @@ from mxnet import gluon, np, npx
 npx.set_np()
 ```
 
+```{.python .input  n=5}
+#@tab pytorch
+import torch
+from torch import nn
+```
+
 The implementation of BPR loss is as follows.
 
 ```{.python .input  n=2}
@@ -50,6 +56,20 @@ class BPRLoss(gluon.loss.Loss):
     def forward(self, positive, negative):
         distances = positive - negative
         loss = - np.sum(np.log(npx.sigmoid(distances)), 0, keepdims=True)
+        return loss
+```
+
+```{.python .input  n=2}
+#@tab pytorch
+#@save
+class BPRLoss(nn.Module):
+    def __init__(self):
+        super(BPRLoss, self).__init__()
+
+    def forward(self, positive, negative):
+        distances = positive - negative
+        loss = -torch.sum(torch.log(torch.sigmoid(distances)), dim=0,
+                          keepdim=True)
         return loss
 ```
 
@@ -77,6 +97,19 @@ class HingeLossbRec(gluon.loss.Loss):
         return loss
 ```
 
+```{.python .input  n=3}
+#@tab pytorch
+#@save
+class HingeLossbRec(nn.Module):
+    def __init__(self):
+        super(HingeLossbRec, self).__init__()
+
+    def forward(self, positive, negative, margin=1):
+        distances = positive - negative
+        loss = torch.sum(torch.clamp(-distances + margin, min=0))
+        return loss
+```
+
 These two losses are interchangeable for personalized ranking in recommendation.
 
 ## Summary
@@ -90,5 +123,9 @@ These two losses are interchangeable for personalized ranking in recommendation.
 - Can you find any recommendation models that use BPR or hinge loss?
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/402)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/402)
 :end_tab:

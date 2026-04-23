@@ -181,6 +181,105 @@ def train(net_fn, train_iter, test_iter, num_epochs, lr,
     return net
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import math
+import numpy as np
+
+class Net(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Conv(features=6, kernel_size=(5, 5), padding='SAME')(x)
+        x = nn.relu(x)
+        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = nn.Conv(features=16, kernel_size=(5, 5))(x)
+        x = nn.relu(x)
+        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = x.reshape((x.shape[0], -1))
+        x = nn.Dense(features=120)(x)
+        x = nn.relu(x)
+        x = nn.Dense(features=84)(x)
+        x = nn.relu(x)
+        x = nn.Dense(features=10)(x)
+        return x
+
+def net_fn():
+    return Net()
+
+loss_fn = optax.softmax_cross_entropy_with_integer_labels
+
+batch_size = 256
+data = d2l.FashionMNIST(batch_size=batch_size)
+train_iter = data.get_dataloader(train=True)
+test_iter = data.get_dataloader(train=False)
+
+def evaluate_accuracy_jax(params, apply_fn, data_iter):
+    metric = d2l.Accumulator(2)  # num_correct, num_examples
+    for X, y in data_iter:
+        X, y = jnp.array(X), jnp.array(y)
+        y_hat = apply_fn({'params': params}, X)
+        metric.add(float(jnp.sum(jnp.argmax(y_hat, axis=1) == y)),
+                   float(y.shape[0]))
+    return metric[0] / metric[1]
+
+def train(net, train_iter, test_iter, num_epochs, lr, scheduler=None):
+    model = net if not callable(net) else net()
+    key = jax.random.PRNGKey(0)
+    dummy = jnp.ones((1, 28, 28, 1))
+    params = model.init(key, dummy)['params']
+    if scheduler is not None:
+        # Use inject_hyperparams so we can update the LR each epoch
+        tx = optax.inject_hyperparams(optax.sgd)(learning_rate=lr)
+    else:
+        tx = optax.sgd(lr)
+    opt_state = tx.init(params)
+
+    @jax.jit
+    def train_step(params, opt_state, X, y):
+        def compute_loss(params):
+            logits = model.apply({'params': params}, X)
+            return jnp.mean(loss_fn(logits, y))
+        l, grads = jax.value_and_grad(compute_loss)(params)
+        updates, opt_state_new = tx.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        logits = model.apply({'params': params}, X)
+        acc = jnp.mean(jnp.argmax(logits, axis=1) == y)
+        return params, opt_state_new, l, acc
+
+    animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs],
+                            legend=['train loss', 'train acc', 'test acc'])
+    num_batches = len(train_iter)
+    for epoch in range(num_epochs):
+        metric = d2l.Accumulator(3)  # train_loss, train_acc, num_examples
+        for i, (X, y) in enumerate(train_iter):
+            X, y = jnp.array(X), jnp.array(y)
+            params, opt_state, l, acc = train_step(
+                params, opt_state, X, y)
+            metric.add(float(l) * X.shape[0], float(acc) * X.shape[0],
+                       X.shape[0])
+            train_loss = metric[0] / metric[2]
+            train_acc = metric[1] / metric[2]
+            if (i + 1) % 50 == 0:
+                animator.add(epoch + i / num_batches,
+                             (train_loss, train_acc, None))
+
+        test_acc = evaluate_accuracy_jax(params, model.apply, test_iter)
+        animator.add(epoch + 1, (None, None, test_acc))
+
+        if scheduler:
+            new_lr = scheduler(epoch)
+            opt_state.hyperparams['learning_rate'] = jnp.array(new_lr)
+
+    print(f'train loss {train_loss:.3f}, train acc {train_acc:.3f}, '
+          f'test acc {test_acc:.3f}')
+```
+
 Let's have a look at what happens if we invoke this algorithm with default settings, such as a learning rate of $0.3$ and train for $30$ iterations. Note how the training accuracy keeps on increasing while progress in terms of test accuracy stalls beyond a point. The gap between both curves indicates overfitting.
 
 ```{.python .input}
@@ -203,6 +302,12 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 #@tab tensorflow
 lr, num_epochs = 0.3, 30
 train(net, train_iter, test_iter, num_epochs, lr)
+```
+
+```{.python .input}
+#@tab jax
+lr, num_epochs = 0.3, 30
+train(net_fn, train_iter, test_iter, num_epochs, lr)
 ```
 
 ## Schedulers
@@ -228,6 +333,15 @@ lr = 0.1
 dummy_model = tf.keras.models.Sequential([tf.keras.layers.Dense(10)])
 dummy_model.compile(tf.keras.optimizers.SGD(learning_rate=lr), loss='mse')
 print(f'learning rate is now ,', dummy_model.optimizer.learning_rate.numpy())
+```
+
+```{.python .input}
+#@tab jax
+lr = 0.1
+tx = optax.inject_hyperparams(optax.sgd)(learning_rate=lr)
+dummy_params = {'w': jnp.zeros(10)}
+opt_state = tx.init(dummy_params)
+print(f'learning rate is now {opt_state.hyperparams["learning_rate"]:.2f}')
 ```
 
 More generally we want to define a scheduler. When invoked with the number of updates it returns the appropriate value of the learning rate. Let's define a simple one that sets the learning rate to $\eta = \eta_0 (t + 1)^{-\frac{1}{2}}$.
@@ -271,6 +385,11 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
+```
+
+```{.python .input}
+#@tab jax
+train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
 This worked quite a bit better than previously. Two things stand out: the curve was rather more smooth than previously. Secondly, there was less overfitting. Unfortunately it is not a well-resolved question as to why certain strategies lead to less overfitting in *theory*. There is some argument that a smaller stepsize will lead to parameters that are closer to zero and thus simpler. However, this does not explain the phenomenon entirely since we do not really stop early but simply reduce the learning rate gently.
@@ -347,6 +466,25 @@ scheduler = MultiFactorScheduler(step=[15, 30], factor=0.5, base_lr=0.5)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
+```{.python .input}
+#@tab jax
+class MultiFactorScheduler:
+    def __init__(self, step, factor, base_lr):
+        self.step = step
+        self.factor = factor
+        self.base_lr = base_lr
+
+    def __call__(self, epoch):
+        if epoch in self.step:
+            self.base_lr = self.base_lr * self.factor
+            return self.base_lr
+        else:
+            return self.base_lr
+
+scheduler = MultiFactorScheduler(step=[15, 30], factor=0.5, base_lr=0.5)
+d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
+```
+
 The intuition behind this piecewise constant learning rate schedule is that one lets optimization proceed until a stationary point has been reached in terms of the distribution of weight vectors. Then (and only then) do we decrease the rate such as to obtain a higher quality proxy to a good local minimum. The example below shows how this can produce ever slightly better solutions.
 
 ```{.python .input}
@@ -368,6 +506,11 @@ train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
+```{.python .input}
+#@tab jax
+train(net_fn, train_iter, test_iter, num_epochs, 0.5, scheduler)
+```
+
 ### Cosine Scheduler
 
 A rather perplexing heuristic was proposed by :citet:`Loshchilov.Hutter.2016`. It relies on the observation that we might not want to decrease the learning rate too drastically in the beginning and moreover, that we might want to "refine" the solution in the end using a very small learning rate. This results in a cosine-like schedule with the following functional form for learning rates in the range $t \in [0, T]$.
@@ -385,7 +528,7 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
 ```{.python .input}
-#@tab pytorch, tensorflow
+#@tab pytorch, tensorflow, jax
 class CosineScheduler:
     def __init__(self, max_update, base_lr=0.01, final_lr=0,
                warmup_steps=0, warmup_begin_lr=0):
@@ -437,6 +580,11 @@ train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
+```{.python .input}
+#@tab jax
+train(net_fn, train_iter, test_iter, num_epochs, 0.3, scheduler)
+```
+
 ### Warmup
 
 In some cases initializing the parameters is not sufficient to guarantee a good solution. This is particularly a problem for some advanced network designs that may lead to unstable optimization problems. We could address this by choosing a sufficiently small learning rate to prevent divergence in the beginning. Unfortunately this means that progress is slow. Conversely, a large learning rate initially leads to divergence.
@@ -451,7 +599,7 @@ d2l.plot(np.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
 ```{.python .input}
-#@tab pytorch, tensorflow
+#@tab pytorch, tensorflow, jax
 scheduler = CosineScheduler(20, warmup_steps=5, base_lr=0.3, final_lr=0.01)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
@@ -477,6 +625,11 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
+```
+
+```{.python .input}
+#@tab jax
+train(net_fn, train_iter, test_iter, num_epochs, 0.3, scheduler)
 ```
 
 Warmup can be applied to any scheduler (not just cosine). For a more detailed discussion of learning rate schedules and many more experiments see also :cite:`Gotmare.Keskar.Xiong.ea.2018`. In particular they find that a warmup phase limits the amount of divergence of parameters in very deep networks. This makes intuitively sense since we would expect significant divergence due to random initialization in those parts of the network that take the most time to make progress in the beginning.
@@ -506,5 +659,9 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1081)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1081)
 :end_tab:

@@ -1416,6 +1416,18 @@ def train_2d(trainer, steps=20, f_grad=None):
     print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
 
+def show_trace_2d(f, results):
+    """Show the trace of 2D variables during optimization.
+
+    Defined in :numref:`sec_gd`"""
+    d2l.set_figsize()
+    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
+    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
+                          d2l.arange(-3.0, 1.0, 0.1))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
+    d2l.plt.xlabel('x1')
+    d2l.plt.ylabel('x2')
+
 class Timer:
     """Record multiple running times.
 
@@ -1445,6 +1457,86 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+def get_data_ch11(batch_size=10, n=1500):
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = (data - data.mean(axis=0)) / data.std(axis=0)
+    data_iter = d2l.load_array(
+        (jnp.array(data[:n, :-1]), jnp.array(data[:n, -1])),
+        batch_size, is_train=True)
+    return data_iter, data.shape[1]-1
+
+def train_ch11(trainer_fn, states, hyperparams, data_iter,
+               feature_dim, num_epochs=2):
+    # Initialization
+    w = jnp.array(np.random.normal(scale=0.01, size=(feature_dim, 1)),
+                  dtype=jnp.float32)
+    b = jnp.zeros(1)
+    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
+    # Train
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            X, y = jnp.array(X), jnp.array(y)
+            def loss_fn(w, b):
+                return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
+            grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
+            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                net = lambda X: d2l.linreg(X, w, b)
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (d2l.evaluate_loss(net, data_iter, loss),))
+                timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    return timer.cumsum(), animator.Y[0]
+
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
+    # Initialization
+    net = nn.Dense(1)
+    key = jax.random.PRNGKey(0)
+    X_dummy = jnp.ones((1, 5))
+    params = net.init(key, X_dummy)
+
+    optimizer = trainer_fn(**hyperparams)
+    opt_state = optimizer.init(params)
+
+    loss = lambda pred, y: jnp.mean((pred - y) ** 2) / 2
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            X, y = jnp.array(X), jnp.array(y)
+            def loss_fn(params):
+                out = net.apply(params, X)
+                y_reshaped = y.reshape(out.shape)
+                return jnp.mean((out - y_reshaped) ** 2) / 2
+            l, grads = jax.value_and_grad(loss_fn)(params)
+            updates, opt_state = optimizer.update(grads, opt_state, params)
+            params = optax.apply_updates(params, updates)
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                def eval_loss():
+                    ls = []
+                    for X_eval, y_eval in data_iter:
+                        X_eval, y_eval = jnp.array(X_eval), jnp.array(y_eval)
+                        out = net.apply(params, X_eval)
+                        y_eval = y_eval.reshape(out.shape)
+                        ls.append(jnp.mean((out - y_eval) ** 2) / 2)
+                    return sum(ls) / len(ls)
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (eval_loss(),))
+                timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+
 class Benchmark:
     """For measuring running time.
 
@@ -1458,6 +1550,110 @@ class Benchmark:
 
     def __exit__(self, *args):
         print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, num_devices):
+    """Split `X` and `y` across devices by reshaping.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    batch_size = X.shape[0]
+    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
+    def _reshape(a):
+        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
+    return _reshape(X), _reshape(y)
+
+class ResNet18(nn.Module):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    num_classes: int = 10
+    training: bool = True
+
+    def setup(self):
+        self.net = nn.Sequential([
+            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding='same'),
+            nn.BatchNorm(not self.training),
+            nn.relu,
+            # ResNet blocks
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(128, training=self.training),
+            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(256, training=self.training),
+            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(512, training=self.training),
+            # Global average pooling and classifier
+            lambda x: x.mean(axis=(1, 2)),
+            nn.Dense(self.num_classes),
+        ])
+
+    def __call__(self, x):
+        return self.net(x)
+
+def train_batch_ch13(state, X, y, net, loss_fn):
+    """Train for a minibatch with JAX (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    # X and y are numpy arrays from tfds.as_numpy() — HWC format already
+    X = jnp.array(X)
+    y = jnp.array(y)
+    def compute_loss(params):
+        logits, updates = state.apply_fn(
+            {'params': params, 'batch_stats': state.batch_stats},
+            X, mutable=['batch_stats'])
+        loss = loss_fn(logits, y).mean()
+        return loss, (logits, updates)
+    (loss, (logits, updates)), grads = jax.value_and_grad(
+        compute_loss, has_aux=True)(state.params)
+    state = state.apply_gradients(grads=grads)
+    state = state.replace(batch_stats=updates['batch_stats'])
+    train_loss_sum = float(loss) * X.shape[0]
+    train_acc_sum = float((logits.argmax(axis=-1) == y).sum())
+    return state, train_loss_sum, train_acc_sum
+
+def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
+    """Train a model with JAX (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    num_batches = sum(1 for _ in tfds.as_numpy(train_iter))
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['train loss', 'train acc', 'test acc'])
+    timer = d2l.Timer()
+    for epoch in range(num_epochs):
+        # Sum of training loss, sum of training accuracy, no. of examples,
+        # no. of predictions
+        metric = d2l.Accumulator(4)
+        for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
+            timer.start()
+            state, l, acc = train_batch_ch13(
+                state, features, labels, net, loss_fn)
+            n = features.shape[0]
+            metric.add(l, acc, n, n)
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[3],
+                              None))
+        # Evaluate on test set
+        correct, total = 0, 0
+        for X, y in tfds.as_numpy(test_iter):
+            X = jnp.array(X)
+            y = jnp.array(y)
+            logits = state.apply_fn(
+                {'params': state.params, 'batch_stats': state.batch_stats},
+                X)
+            correct += int((logits.argmax(axis=-1) == y).sum())
+            total += y.shape[0]
+        test_acc = correct / total
+        animator.add(epoch + 1, (None, None, test_acc))
+    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
+          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec')
+    return state
 
 d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
                          'fba480ffa8aa7e0febbb511d181409f899b9baa5')
@@ -1497,6 +1693,45 @@ def bbox_to_rect(bbox, color):
         xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
         fill=False, edgecolor=color, linewidth=2)
 
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel.
+
+    Defined in :numref:`sec_anchor`"""
+    in_height, in_width = data.shape[-2:]
+    num_sizes, num_ratios = len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = jnp.array(sizes)
+    ratio_tensor = jnp.array(ratios)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (jnp.arange(in_height) + offset_h) * steps_h
+    center_w = (jnp.arange(in_width) + offset_w) * steps_w
+    shift_y, shift_x = jnp.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = jnp.concatenate((size_tensor * jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] * jnp.sqrt(ratio_tensor[1:])))\
+                         * in_height / in_width  # Handle rectangular inputs
+    h = jnp.concatenate((size_tensor / jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] / jnp.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = jnp.tile(jnp.stack((-w, -h, w, h)).T,
+                                    (in_height * in_width, 1)) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = jnp.repeat(jnp.stack([shift_x, shift_y, shift_x, shift_y],
+                          axis=1), boxes_per_pixel, axis=0)
+    output = out_grid + anchor_manipulations
+    return jnp.expand_dims(output, axis=0)
+
 def show_bboxes(axes, bboxes, labels=None, colors=None):
     """Show bounding boxes.
 
@@ -1521,6 +1756,56 @@ def show_bboxes(axes, bboxes, labels=None, colors=None):
                       va='center', ha='center', fontsize=9, color=text_color,
                       bbox=dict(facecolor=color, lw=0))
 
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = jnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = jnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = jnp.clip(inter_lowerrights - inter_upperlefts, 0)
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    # box i and the ground-truth bounding box j
+    jaccard = box_iou(anchors, ground_truth)
+    # Initialize the tensor to hold the assigned ground-truth bounding box for
+    # each anchor
+    anchors_bbox_map = jnp.full((num_anchors,), -1, dtype=jnp.int32)
+    # Assign ground-truth bounding boxes according to the threshold
+    max_ious = jnp.max(jaccard, axis=1)
+    indices = jnp.argmax(jaccard, axis=1)
+    anc_i = jnp.nonzero(max_ious >= iou_threshold, size=num_anchors,
+                         fill_value=-1)[0]
+    anc_i = anc_i[anc_i >= 0]
+    box_j = indices[anc_i]
+    anchors_bbox_map = anchors_bbox_map.at[anc_i].set(box_j)
+    col_discard = jnp.full((num_anchors,), -1.0)
+    row_discard = jnp.full((num_gt_boxes,), -1.0)
+    for _ in range(num_gt_boxes):
+        max_idx = jnp.argmax(jaccard)  # Find the largest IoU
+        box_idx = int(max_idx % num_gt_boxes)
+        anc_idx = int(max_idx // num_gt_boxes)
+        anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
+        jaccard = jaccard.at[:, box_idx].set(col_discard)
+        jaccard = jaccard.at[anc_idx, :].set(row_discard)
+    return anchors_bbox_map
+
 def offset_boxes(anchors, assigned_bb, eps=1e-6):
     """Transform for anchor box offsets.
 
@@ -1531,6 +1816,44 @@ def offset_boxes(anchors, assigned_bb, eps=1e-6):
     offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
     offset = d2l.concat([offset_xy, offset_wh], axis=1)
     return offset
+
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size, anchors = labels.shape[0], anchors.squeeze(axis=0)
+    batch_offset, batch_mask, batch_class_labels = [], [], []
+    num_anchors = anchors.shape[0]
+    for i in range(batch_size):
+        label = labels[i, :, :]
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, None)
+        bbox_mask = jnp.tile(
+            jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
+                            axis=-1), (1, 4))
+        # Initialize class labels and assigned bounding box coordinates with
+        # zeros
+        class_labels = jnp.zeros(num_anchors, dtype=jnp.int32)
+        assigned_bb = jnp.zeros((num_anchors, 4), dtype=jnp.float32)
+        # Label classes of anchor boxes using their assigned ground-truth
+        # bounding boxes. If an anchor box is not assigned any, we label its
+        # class as background (the value remains zero)
+        indices_true = jnp.nonzero(anchors_bbox_map >= 0,
+                                    size=num_anchors, fill_value=-1)[0]
+        indices_true = indices_true[indices_true >= 0]
+        bb_idx = anchors_bbox_map[indices_true]
+        class_labels = class_labels.at[indices_true].set(
+            label[bb_idx, 0].astype(jnp.int32) + 1)
+        assigned_bb = assigned_bb.at[indices_true].set(label[bb_idx, 1:])
+        # Offset transformation
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        batch_offset.append(offset.reshape(-1))
+        batch_mask.append(bbox_mask.reshape(-1))
+        batch_class_labels.append(class_labels)
+    bbox_offset = jnp.stack(batch_offset)
+    bbox_mask = jnp.stack(batch_mask)
+    class_labels = jnp.stack(batch_class_labels)
+    return (bbox_offset, bbox_mask, class_labels)
 
 def offset_inverse(anchors, offset_preds):
     """Predict bounding boxes based on anchor boxes with predicted offsets.
@@ -1543,12 +1866,131 @@ def offset_inverse(anchors, offset_preds):
     predicted_bbox = d2l.box_center_to_corner(pred_bbox)
     return predicted_bbox
 
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    B = list(jnp.argsort(scores)[::-1])
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while len(B) > 0:
+        i = B[0]
+        keep.append(i)
+        if len(B) == 1: break
+        B_rest = jnp.array(B[1:])
+        iou = box_iou(boxes[i, :].reshape(-1, 4),
+                      boxes[B_rest, :].reshape(-1, 4)).reshape(-1)
+        inds = jnp.where(iou <= iou_threshold)[0]
+        B = [B_rest[j] for j in inds]
+    return jnp.array(keep, dtype=jnp.int32)
+
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size = cls_probs.shape[0]
+    anchors = anchors.squeeze(axis=0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
+        conf, class_id = jnp.max(cls_prob[1:], axis=0), jnp.argmax(
+            cls_prob[1:], axis=0)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = jnp.arange(num_anchors, dtype=jnp.int32)
+        combined = jnp.concatenate((keep, all_idx))
+        unique, counts = jnp.unique(combined, return_counts=True)
+        non_keep = unique[counts == 1]
+        all_id_sorted = jnp.concatenate((keep, non_keep))
+        class_id = class_id.at[non_keep].set(-1)
+        class_id = class_id[all_id_sorted].astype(jnp.float32)
+        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = (conf < pos_threshold)
+        class_id = jnp.where(below_min_idx, -1, class_id)
+        conf = jnp.where(below_min_idx, 1 - conf, conf)
+        pred_info = jnp.concatenate((jnp.expand_dims(class_id, axis=1),
+                                     jnp.expand_dims(conf, axis=1),
+                                     predicted_bb), axis=1)
+        out.append(pred_info)
+    return jnp.stack(out)
+
 d2l.DATA_HUB['banana-detection'] = (
     d2l.DATA_URL + 'banana-detection.zip',
     '5de26c8fce5ccdea9f91267273464dc968d20d72')
 
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        img = Image.open(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}'))
+        images.append(jnp.array(img).transpose(2, 0, 1))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
+
+class BananasDataset:
+    """A customized dataset to load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].astype(jnp.float32), self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    train_dataset = BananasDataset(is_train=True)
+    val_dataset = BananasDataset(is_train=False)
+    train_iter = d2l.ArrayDataLoader(
+        jnp.stack(train_dataset.features), train_dataset.labels,
+        batch_size, shuffle=True)
+    val_iter = d2l.ArrayDataLoader(
+        jnp.stack(val_dataset.features), val_dataset.labels,
+        batch_size)
+    return train_iter, val_iter
+
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+def read_voc_images(voc_dir, is_train=True):
+    """Read all VOC feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    from PIL import Image
+    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
+                             'train.txt' if is_train else 'val.txt')
+    with open(txt_fname, 'r') as f:
+        images = f.read().split()
+    features, labels = [], []
+    for i, fname in enumerate(images):
+        features.append(np.array(Image.open(os.path.join(
+            voc_dir, 'JPEGImages', f'{fname}.jpg'))))
+        labels.append(np.array(Image.open(os.path.join(
+            voc_dir, 'SegmentationClass', f'{fname}.png')).convert('RGB')))
+    return features, labels
 
 VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
                 [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
@@ -1561,6 +2003,83 @@ VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
                'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
                'diningtable', 'dog', 'horse', 'motorbike', 'person',
                'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+def voc_colormap2label():
+    """Build the mapping from RGB to class indices for VOC labels.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap2label = np.zeros(256 ** 3, dtype=np.int32)
+    for i, colormap in enumerate(VOC_COLORMAP):
+        colormap2label[
+            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
+    return colormap2label
+
+def voc_label_indices(colormap, colormap2label):
+    """Map any RGB values in VOC labels to their class indices.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap = colormap.astype(np.int32)
+    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
+           + colormap[:, :, 2])
+    return colormap2label[idx]
+
+def voc_rand_crop(feature, label, height, width):
+    """Randomly crop both feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    # feature and label are HWC numpy arrays
+    h, w = feature.shape[0], feature.shape[1]
+    top = np.random.randint(0, h - height + 1)
+    left = np.random.randint(0, w - width + 1)
+    feature = feature[top:top+height, left:left+width, :]
+    label = label[top:top+height, left:left+width, :]
+    return feature, label
+
+class VOCSegDataset:
+    """A customized dataset to load the VOC dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+
+    def __init__(self, is_train, crop_size, voc_dir):
+        self.rgb_mean = np.array([0.485, 0.456, 0.406])
+        self.rgb_std = np.array([0.229, 0.224, 0.225])
+        self.crop_size = crop_size
+        features, labels = read_voc_images(voc_dir, is_train=is_train)
+        self.features = [self.normalize_image(feature)
+                         for feature in self.filter(features)]
+        self.labels = self.filter(labels)
+        self.colormap2label = voc_colormap2label()
+        print('read ' + str(len(self.features)) + ' examples')
+
+    def normalize_image(self, img):
+        return (img.astype(np.float32) / 255 - self.rgb_mean) / self.rgb_std
+
+    def filter(self, imgs):
+        return [img for img in imgs if (
+            img.shape[0] >= self.crop_size[0] and
+            img.shape[1] >= self.crop_size[1])]
+
+    def __getitem__(self, idx):
+        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
+                                       *self.crop_size)
+        return (jnp.array(feature.transpose(2, 0, 1)),
+                jnp.array(voc_label_indices(label, self.colormap2label)))
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_voc(batch_size, crop_size):
+    """Load the VOC semantic segmentation dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    voc_dir = d2l.download_extract('voc2012', os.path.join(
+        'VOCdevkit', 'VOC2012'))
+    train_dataset = VOCSegDataset(True, crop_size, voc_dir)
+    test_dataset = VOCSegDataset(False, crop_size, voc_dir)
+    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size, shuffle=True,
+                                     drop_last=True)
+    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size, drop_last=True)
+    return train_iter, test_iter
 
 d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
                                 '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
@@ -1724,6 +2243,34 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """Download the PTB dataset and then load it into memory.
+
+    Defined in :numref:`sec_word2vec_data`"""
+    sentences = read_ptb()
+    vocab = d2l.Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(
+        corpus, max_window_size)
+    all_negatives = get_negatives(
+        all_contexts, vocab, counter, num_noise_words)
+
+    all_data = list(zip(all_centers, all_contexts, all_negatives))
+
+    class PTBDataIter:
+        def __len__(self):
+            return math.ceil(len(all_data) / batch_size)
+        def __iter__(self):
+            random.shuffle(all_data)
+            for i in range(0, len(all_data), batch_size):
+                batch = all_data[i: min(i + batch_size, len(all_data))]
+                centers, contexts_negatives, masks, labels = batchify(batch)
+                yield (jnp.array(centers), jnp.array(contexts_negatives),
+                       jnp.array(masks), jnp.array(labels))
+
+    return PTBDataIter(), vocab
+
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
                                 '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
 
@@ -1783,6 +2330,107 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         tokens += tokens_b + ['<sep>']
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
+
+class BERTEncoder(nn.Module):
+    """BERT encoder.
+
+    Defined in :numref:`sec_bert`"""
+    vocab_size: int
+    num_hiddens: int
+    ffn_num_hiddens: int
+    num_heads: int
+    num_blks: int
+    dropout: float
+    max_len: int = 1000
+
+    def setup(self):
+        self.token_embedding = nn.Embed(self.vocab_size, self.num_hiddens)
+        self.segment_embedding = nn.Embed(2, self.num_hiddens)
+        self.blks = [d2l.TransformerEncoderBlock(
+            self.num_hiddens, self.ffn_num_hiddens, self.num_heads,
+            self.dropout, True) for _ in range(self.num_blks)]
+        # In BERT, positional embeddings are learnable, thus we create a
+        # parameter of positional embeddings that are long enough
+        self.pos_embedding = self.param('pos_embedding',
+                                        nn.initializers.normal(0.02),
+                                        (1, self.max_len, self.num_hiddens))
+
+    def __call__(self, tokens, segments, valid_lens, training=False):
+        # Shape of `X` remains unchanged in the following code snippet:
+        # (batch size, max sequence length, `num_hiddens`)
+        X = self.token_embedding(tokens) + self.segment_embedding(segments)
+        X = X + self.pos_embedding[:, :X.shape[1], :]
+        for blk in self.blks:
+            X, _ = blk(X, valid_lens, training=training)
+        return X
+
+class MaskLM(nn.Module):
+    """The masked language model task of BERT.
+
+    Defined in :numref:`sec_bert`"""
+    vocab_size: int
+    num_hiddens: int
+
+    @nn.compact
+    def __call__(self, X, pred_positions):
+        num_pred_positions = pred_positions.shape[1]
+        pred_positions = pred_positions.reshape(-1)
+        batch_size = X.shape[0]
+        batch_idx = jnp.arange(0, batch_size)
+        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
+        # `batch_idx` is `jnp.array([0, 0, 0, 1, 1, 1])`
+        batch_idx = jnp.repeat(batch_idx, num_pred_positions)
+        masked_X = X[batch_idx, pred_positions]
+        masked_X = masked_X.reshape((batch_size, num_pred_positions, -1))
+        mlm_Y_hat = nn.Dense(self.num_hiddens)(masked_X)
+        mlm_Y_hat = nn.relu(mlm_Y_hat)
+        mlm_Y_hat = nn.LayerNorm()(mlm_Y_hat)
+        mlm_Y_hat = nn.Dense(self.vocab_size)(mlm_Y_hat)
+        return mlm_Y_hat
+
+class NextSentencePred(nn.Module):
+    """The next sentence prediction task of BERT.
+
+    Defined in :numref:`sec_bert`"""
+    @nn.compact
+    def __call__(self, X):
+        # `X` shape: (batch size, `num_hiddens`)
+        return nn.Dense(2)(X)
+
+class BERTModel(nn.Module):
+    """The BERT model.
+
+    Defined in :numref:`sec_bert`"""
+    vocab_size: int
+    num_hiddens: int
+    ffn_num_hiddens: int
+    num_heads: int
+    num_blks: int
+    dropout: float
+    max_len: int = 1000
+
+    def setup(self):
+        self.encoder = BERTEncoder(
+            self.vocab_size, self.num_hiddens, self.ffn_num_hiddens,
+            self.num_heads, self.num_blks, self.dropout,
+            max_len=self.max_len)
+        self.hidden = nn.Dense(self.num_hiddens)
+        self.mlm = MaskLM(self.vocab_size, self.num_hiddens)
+        self.nsp = NextSentencePred()
+
+    def __call__(self, tokens, segments, valid_lens=None, pred_positions=None,
+                 training=False):
+        encoded_X = self.encoder(tokens, segments, valid_lens,
+                                 training=training)
+        if pred_positions is not None:
+            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
+        else:
+            mlm_Y_hat = None
+        # The hidden layer of the MLP classifier for next sentence prediction.
+        # 0 is the index of the '<cls>' token
+        nsp_Y_hat = self.nsp(
+            jnp.tanh(self.hidden(encoded_X[:, 0, :])))
+        return encoded_X, mlm_Y_hat, nsp_Y_hat
 
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
@@ -1865,6 +2513,113 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
 
+def _pad_bert_inputs(examples, max_len, vocab):
+    max_num_mlm_preds = round(max_len * 0.15)
+    all_token_ids, all_segments, valid_lens,  = [], [], []
+    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
+    nsp_labels = []
+    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
+         is_next) in examples:
+        all_token_ids.append(jnp.array(token_ids + [vocab['<pad>']] * (
+            max_len - len(token_ids)), dtype=jnp.int32))
+        all_segments.append(jnp.array(segments + [0] * (
+            max_len - len(segments)), dtype=jnp.int32))
+        # `valid_lens` excludes count of '<pad>' tokens
+        valid_lens.append(jnp.array(len(token_ids), dtype=jnp.float32))
+        all_pred_positions.append(jnp.array(pred_positions + [0] * (
+            max_num_mlm_preds - len(pred_positions)), dtype=jnp.int32))
+        # Predictions of padded tokens will be filtered out in the loss via
+        # multiplication of 0 weights
+        all_mlm_weights.append(
+            jnp.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
+                max_num_mlm_preds - len(pred_positions)),
+                dtype=jnp.float32))
+        all_mlm_labels.append(jnp.array(mlm_pred_label_ids + [0] * (
+            max_num_mlm_preds - len(mlm_pred_label_ids)), dtype=jnp.int32))
+        nsp_labels.append(jnp.array(is_next, dtype=jnp.int32))
+    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
+            all_mlm_weights, all_mlm_labels, nsp_labels)
+
+class _WikiTextDataset:
+    def __init__(self, paragraphs, max_len):
+        # Input `paragraphs[i]` is a list of sentence strings representing a
+        # paragraph; while output `paragraphs[i]` is a list of sentences
+        # representing a paragraph, where each sentence is a list of tokens
+        paragraphs = [d2l.tokenize(
+            paragraph, token='word') for paragraph in paragraphs]
+        sentences = [sentence for paragraph in paragraphs
+                     for sentence in paragraph]
+        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
+            '<pad>', '<mask>', '<cls>', '<sep>'])
+        # Get data for the next sentence prediction task
+        examples = []
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(
+                paragraph, paragraphs, self.vocab, max_len))
+        # Get data for the masked language model task
+        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
+                      + (segments, is_next))
+                     for tokens, segments, is_next in examples]
+        # Pad inputs
+        (self.all_token_ids, self.all_segments, self.valid_lens,
+         self.all_pred_positions, self.all_mlm_weights,
+         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
+            examples, max_len, self.vocab)
+
+    def __getitem__(self, idx):
+        return (self.all_token_ids[idx], self.all_segments[idx],
+                self.valid_lens[idx], self.all_pred_positions[idx],
+                self.all_mlm_weights[idx], self.all_mlm_labels[idx],
+                self.nsp_labels[idx])
+
+    def __len__(self):
+        return len(self.all_token_ids)
+
+def load_data_wiki(batch_size, max_len):
+    """Load the WikiText-2 dataset.
+
+    Defined in :numref:`sec_bert-dataset`"""
+    paragraphs = _read_wiki()
+    train_set = _WikiTextDataset(paragraphs, max_len)
+    # Create an index array and shuffle it
+    indices = list(range(len(train_set)))
+    random.shuffle(indices)
+
+    def data_iter():
+        for i in range(0, len(indices), batch_size):
+            batch_indices = indices[i:i + batch_size]
+            if len(batch_indices) < batch_size:
+                continue
+            batch = [train_set[idx] for idx in batch_indices]
+            yield (jnp.stack([b[0] for b in batch]),
+                   jnp.stack([b[1] for b in batch]),
+                   jnp.stack([b[2] for b in batch]),
+                   jnp.stack([b[3] for b in batch]),
+                   jnp.stack([b[4] for b in batch]),
+                   jnp.stack([b[5] for b in batch]),
+                   jnp.stack([b[6] for b in batch]))
+    return data_iter(), train_set.vocab
+
+def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
+                         segments_X, valid_lens_x,
+                         pred_positions_X, mlm_weights_X,
+                         mlm_Y, nsp_y):
+    # Forward pass
+    _, mlm_Y_hat, nsp_Y_hat = net.apply(params, tokens_X, segments_X,
+                                        valid_lens_x.reshape(-1),
+                                        pred_positions_X, training=True,
+                                        rngs={'dropout': jax.random.PRNGKey(0)})
+    # Compute masked language model loss
+    mlm_l = optax.softmax_cross_entropy_with_integer_labels(
+        mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1))
+    mlm_l = (mlm_l * mlm_weights_X.reshape(-1)).sum() / (
+        mlm_weights_X.sum() + 1e-8)
+    # Compute next sentence prediction loss
+    nsp_l = optax.softmax_cross_entropy_with_integer_labels(
+        nsp_Y_hat, nsp_y).mean()
+    l = mlm_l + nsp_l
+    return l, (mlm_l, nsp_l)
+
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
                           '01ada507287d82875905620988597833ad4e0903')
 
@@ -1882,6 +2637,39 @@ def read_imdb(data_dir, is_train):
                 data.append(review)
                 labels.append(1 if label == 'pos' else 0)
     return data, labels
+
+def load_data_imdb(batch_size, num_steps=500):
+    """Return data iterators and the vocabulary of the IMDb review dataset.
+
+    Defined in :numref:`sec_sentiment`"""
+    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
+    train_data = read_imdb(data_dir, True)
+    test_data = read_imdb(data_dir, False)
+    train_tokens = d2l.tokenize(train_data[0], token='word')
+    test_tokens = d2l.tokenize(test_data[0], token='word')
+    vocab = d2l.Vocab(train_tokens, min_freq=5)
+    train_features = jnp.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
+    test_features = jnp.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
+    train_iter = d2l.load_array((train_features, jnp.array(train_data[1])),
+                                batch_size)
+    test_iter = d2l.load_array((test_features, jnp.array(test_data[1])),
+                               batch_size,
+                               is_train=False)
+    return train_iter, test_iter, vocab
+
+def predict_sentiment(net, params, vocab, sequence):
+    """Predict the sentiment of a text sequence.
+
+    Defined in :numref:`sec_sentiment_rnn`"""
+    sequence = jnp.array(vocab[sequence.split()])
+    label = jnp.argmax(net.apply(params, sequence.reshape(1, -1)), axis=1)
+    return 'positive' if label == 1 else 'negative'
+
+d2l.DATA_HUB['SNLI'] = (
+    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
+    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
 
 def read_snli(data_dir, is_train):
     """Read the SNLI dataset into premises, hypotheses, and labels.
@@ -1904,9 +2692,441 @@ def read_snli(data_dir, is_train):
     labels = [label_set[row[0]] for row in rows if row[0] in label_set]
     return premises, hypotheses, labels
 
+class SNLIDataset:
+    """A customized dataset to load the SNLI dataset.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    def __init__(self, dataset, num_steps, vocab=None):
+        self.num_steps = num_steps
+        all_premise_tokens = d2l.tokenize(dataset[0])
+        all_hypothesis_tokens = d2l.tokenize(dataset[1])
+        if vocab is None:
+            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
+                                   min_freq=5, reserved_tokens=['<pad>'])
+        else:
+            self.vocab = vocab
+        self.premises = self._pad(all_premise_tokens)
+        self.hypotheses = self._pad(all_hypothesis_tokens)
+        self.labels = jnp.array(dataset[2])
+        print('read ' + str(len(self.premises)) + ' examples')
+
+    def _pad(self, lines):
+        return jnp.array([d2l.truncate_pad(
+            self.vocab[line], self.num_steps, self.vocab['<pad>'])
+                         for line in lines])
+
+    def __getitem__(self, idx):
+        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
+
+    def __len__(self):
+        return len(self.premises)
+
+def load_data_snli(batch_size, num_steps=50):
+    """Download the SNLI dataset and return data iterators and vocabulary.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    data_dir = d2l.download_extract('SNLI')
+    train_data = read_snli(data_dir, True)
+    test_data = read_snli(data_dir, False)
+    train_set = SNLIDataset(train_data, num_steps)
+    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
+    train_iter = d2l.load_array(
+        (train_set.premises, train_set.hypotheses, train_set.labels),
+        batch_size, is_train=True)
+    test_iter = d2l.load_array(
+        (test_set.premises, test_set.hypotheses, test_set.labels),
+        batch_size, is_train=False)
+    return train_iter, test_iter, train_set.vocab
+
+def predict_snli(net, params, vocab, premise, hypothesis):
+    """Predict the logical relationship between the premise and hypothesis.
+
+    Defined in :numref:`sec_natural-language-inference-attention`"""
+    premise = jnp.array(vocab[premise]).reshape((1, -1))
+    hypothesis = jnp.array(vocab[hypothesis]).reshape((1, -1))
+    label = jnp.argmax(net.apply(params, premise, hypothesis, training=False),
+                       axis=1)
+    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
+            else 'neutral'
+
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
+
+class HPOTrainer(d2l.Trainer):
+    def validation_error(self):
+        self.model.training = False
+        accuracy = 0
+        val_batch_idx = 0
+        for batch in self.val_dataloader:
+            batch = self.prepare_batch(batch)
+            accuracy += self.model.accuracy(
+                self.state.params, batch[:-1], batch[-1], self.state)
+            val_batch_idx += 1
+        return 1 - accuracy / val_batch_idx
+
+class HPOSearcher(d2l.HyperParameters):
+    def sample_configuration() -> dict:
+        raise NotImplementedError
+
+    def update(self, config: dict, error: float, additional_info=None):
+        pass
+
+class RandomSearcher(HPOSearcher):
+    def __init__(self, config_space: dict, initial_config=None):
+        self.save_hyperparameters()
+
+    def sample_configuration(self) -> dict:
+        if self.initial_config is not None:
+            result = self.initial_config
+            self.initial_config = None
+        else:
+            result = {
+                name: domain.rvs()
+                for name, domain in self.config_space.items()
+            }
+        return result
+
+class HPOScheduler(d2l.HyperParameters):
+    def suggest(self) -> dict:
+        raise NotImplementedError
+    
+    def update(self, config: dict, error: float, info=None):
+        raise NotImplementedError
+
+class BasicScheduler(HPOScheduler):
+    def __init__(self, searcher: HPOSearcher):
+        self.save_hyperparameters()
+
+    def suggest(self) -> dict:
+        return self.searcher.sample_configuration()
+
+    def update(self, config: dict, error: float, info=None):
+        self.searcher.update(config, error, additional_info=info)
+
+class HPOTuner(d2l.HyperParameters):
+    def __init__(self, scheduler: HPOScheduler, objective: callable):
+        self.save_hyperparameters()
+        # Bookkeeping results for plotting
+        self.incumbent = None
+        self.incumbent_error = None
+        self.incumbent_trajectory = []
+        self.cumulative_runtime = []
+        self.current_runtime = 0
+        self.records = []
+
+    def run(self, number_of_trials):
+        for i in range(number_of_trials):
+            start_time = time.time()
+            config = self.scheduler.suggest()
+            print(f"Trial {i}: config = {config}")
+            error = self.objective(**config)
+            error = float(error)
+            self.scheduler.update(config, error)
+            runtime = time.time() - start_time
+            self.bookkeeping(config, error, runtime)
+            print(f"    error = {error}, runtime = {runtime}")
+
+    def bookkeeping(self, config: dict, error: float, runtime: float):
+        self.records.append({"config": config, "error": error, "runtime": runtime})
+        # Check if the last hyperparameter configuration performs better 
+        # than the incumbent
+        if self.incumbent is None or self.incumbent_error > error:
+            self.incumbent = config
+            self.incumbent_error = error
+        # Add current best observed performance to the optimization trajectory
+        self.incumbent_trajectory.append(self.incumbent_error)
+        # Update runtime
+        self.current_runtime += runtime
+        self.cumulative_runtime.append(self.current_runtime)
+
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
+    model = d2l.LeNet(lr=learning_rate, num_classes=10)
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs, num_gpus=1)
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    trainer.fit(model=model, data=data)
+    validation_error = trainer.validation_error()
+    return validation_error
+
+class SuccessiveHalvingScheduler(d2l.HPOScheduler):
+    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
+        self.save_hyperparameters()
+        # Compute K, which is later used to determine the number of configurations
+        self.K = int(np.log(r_max / r_min) / np.log(eta))
+        # Define the rungs
+        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
+        if r_max not in self.rung_levels:
+            # The final rung should be r_max
+            self.rung_levels.append(r_max)
+            self.K += 1
+        # Bookkeeping
+        self.observed_error_at_rungs = defaultdict(list)
+        self.all_observed_error_at_rungs = defaultdict(list)
+        # Our processing queue
+        self.queue = []
+
+    def suggest(self):
+        if len(self.queue) == 0:
+            # Start a new round of successive halving
+            # Number of configurations for the first rung:
+            n0 = int(self.prefact * self.eta ** self.K)
+            for _ in range(n0):
+                config = self.searcher.sample_configuration()
+                config["max_epochs"] = self.r_min  # Set r = r_min
+                self.queue.append(config)
+        # Return an element from the queue
+        return self.queue.pop()
+
+    def update(self, config: dict, error: float, info=None):
+        ri = int(config["max_epochs"])  # Rung r_i
+        # Update our searcher, e.g if we use Bayesian optimization later
+        self.searcher.update(config, error, additional_info=info)
+        self.all_observed_error_at_rungs[ri].append((config, error))
+        if ri < self.r_max:
+            # Bookkeeping
+            self.observed_error_at_rungs[ri].append((config, error))
+            # Determine how many configurations should be evaluated on this rung
+            ki = self.K - self.rung_levels.index(ri)
+            ni = int(self.prefact * self.eta ** ki)
+            # If we observed all configuration on this rung r_i, we estimate the
+            # top 1 / eta configuration, add them to queue and promote them for
+            # the next rung r_{i+1}
+            if len(self.observed_error_at_rungs[ri]) >= ni:
+                kiplus1 = ki - 1
+                niplus1 = int(self.prefact * self.eta ** kiplus1)
+                best_performing_configurations = self.get_top_n_configurations(
+                    rung_level=ri, n=niplus1
+                )
+                riplus1 = self.rung_levels[self.K - kiplus1]  # r_{i+1}
+                # Queue may not be empty: insert new entries at the beginning
+                self.queue = [
+                    dict(config, max_epochs=riplus1)
+                    for config in best_performing_configurations
+                ] + self.queue
+                self.observed_error_at_rungs[ri] = []  # Reset
+
+    def get_top_n_configurations(self, rung_level, n):
+        rung = self.observed_error_at_rungs[rung_level]
+        if not rung:
+            return []
+        sorted_rung = sorted(rung, key=lambda x: x[1])
+        return [x[0] for x in sorted_rung[:n]]
+
+def update_D(X, Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_D,
+             optimizer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = jnp.ones((batch_size,))
+    zeros = jnp.zeros((batch_size,))
+    # Do not need to compute gradient for `net_G`
+    fake_X = net_G.apply(params_G, Z)
+    def loss_D_fn(params_D):
+        real_Y = net_D.apply(params_D, X).squeeze()
+        fake_Y = net_D.apply(params_D, fake_X).squeeze()
+        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
+                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
+                  ) / 2
+        return loss_D
+    loss_D, grads_D = jax.value_and_grad(loss_D_fn)(params_D)
+    updates, opt_state_D = optimizer_D.update(grads_D, opt_state_D, params_D)
+    params_D = optax.apply_updates(params_D, updates)
+    return loss_D, params_D, opt_state_D
+
+def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
+             optimizer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = jnp.ones((batch_size,))
+    def loss_G_fn(params_G):
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G.apply(params_G, Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D.apply(params_D, fake_X).squeeze()
+        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
+        return loss_G
+    loss_G, grads_G = jax.value_and_grad(loss_G_fn)(params_G)
+    updates, opt_state_G = optimizer_G.update(grads_G, opt_state_G, params_G)
+    params_G = optax.apply_updates(params_G, updates)
+    return loss_G, params_G, opt_state_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+def linreg(X, w, b):
+    """The linear regression model.
+
+    Defined in :numref:`sec_utils`"""
+    return d2l.matmul(X, w) + b
+
+def squared_loss(y_hat, y):
+    """Squared loss.
+
+    Defined in :numref:`sec_utils`"""
+    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
+
+def load_array(data_arrays, batch_size, is_train=True):
+    """Construct a JAX-compatible data iterator.
+
+    Defined in :numref:`sec_utils`"""
+    n = data_arrays[0].shape[0]
+    indices = np.arange(n)
+    def data_iter():
+        if is_train:
+            np.random.shuffle(indices)
+        for i in range(0, n, batch_size):
+            batch_indices = indices[i: min(i + batch_size, n)]
+            yield tuple(jnp.array(a[batch_indices]) for a in data_arrays)
+    class DataIter:
+        def __iter__(self):
+            return data_iter()
+        def __len__(self):
+            return (n + batch_size - 1) // batch_size
+    return DataIter()
+
+class ArrayDataLoader:
+    """A simple data loader for JAX that batches arrays or dataset objects.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False,
+                 **kwargs):
+        if len(args) == 1 and hasattr(args[0], '__len__') and hasattr(args[0], '__getitem__'):
+            dataset = args[0]
+            items = [dataset[i] for i in range(len(dataset))]
+            if isinstance(items[0], (tuple, list)):
+                self.arrays = tuple(np.array([item[j] for item in items])
+                                    for j in range(len(items[0])))
+            else:
+                self.arrays = (np.array(items),)
+        else:
+            self.arrays = tuple(np.asarray(a) for a in args)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.drop_last = drop_last
+
+    def __iter__(self):
+        n = self.arrays[0].shape[0]
+        indices = np.arange(n)
+        if self.shuffle:
+            np.random.shuffle(indices)
+        for i in range(0, n, self.batch_size):
+            end = i + self.batch_size
+            if self.drop_last and end > n:
+                break
+            batch_idx = indices[i:min(end, n)]
+            yield tuple(jnp.array(a[batch_idx]) for a in self.arrays)
+
+    def __len__(self):
+        n = self.arrays[0].shape[0]
+        if self.drop_last:
+            return n // self.batch_size
+        return (n + self.batch_size - 1) // self.batch_size
+
+class Animator:
+    """For plotting data in animation.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
+                 ylim=None, xscale='linear', yscale='linear',
+                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
+                 figsize=(3.5, 2.5)):
+        if legend is None:
+            legend = []
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
+        if nrows * ncols == 1:
+            self.axes = [self.axes, ]
+        self.config_axes = lambda: d2l.set_axes(
+            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+        self.X, self.Y, self.fmts = None, None, fmts
+
+    def add(self, x, y):
+        if not hasattr(y, "__len__"):
+            y = [y]
+        n = len(y)
+        if not hasattr(x, "__len__"):
+            x = [x] * n
+        if not self.X:
+            self.X = [[] for _ in range(n)]
+        if not self.Y:
+            self.Y = [[] for _ in range(n)]
+        for i, (a, b) in enumerate(zip(x, y)):
+            if a is not None and b is not None:
+                self.X[i].append(a)
+                self.Y[i].append(b)
+        self.axes[0].cla()
+        for x, y, fmt in zip(self.X, self.Y, self.fmts):
+            self.axes[0].plot(x, y, fmt)
+        self.config_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+class Accumulator:
+    """For accumulating sums over `n` variables.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, n):
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+def tokenize(lines, token='word'):
+    """Split text lines into word or character tokens.
+
+    Defined in :numref:`sec_utils`"""
+    assert token in ('word', 'char'), 'Unknown token type: ' + token
+    return [line.split() if token == 'word' else list(line) for line in lines]
+
+def truncate_pad(line, num_steps, padding_token):
+    """Truncate or pad sequences.
+
+    Defined in :numref:`sec_utils`"""
+    if len(line) > num_steps:
+        return line[:num_steps]
+    return line + [padding_token] * (num_steps - len(line))
+
+def download_extract(name, folder=None):
+    """Download and extract a zip/tar file.
+
+    Defined in :numref:`sec_utils`"""
+    fname = download(name)
+    base_dir = os.path.dirname(fname)
+    data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
+    if ext == '.zip':
+        fp = zipfile.ZipFile(fname, 'r')
+    elif ext in ('.tar', '.gz'):
+        fp = tarfile.open(fname, 'r')
+    else:
+        assert False, 'Only zip/tar files can be extracted.'
+    fp.extractall(base_dir)
+    open(marker, 'w').close()
+    return target
+
+def evaluate_loss(net, data_iter, loss):
+    """Evaluate the loss of a model on the given dataset.
+
+    Defined in :numref:`sec_utils`"""
+    metric = d2l.Accumulator(2)
+    for X, y in data_iter:
+        out = net(X)
+        y = d2l.reshape(y, out.shape)
+        l = loss(out, y)
+        metric.add(d2l.reduce_sum(l), d2l.size(l))
+    return metric[0] / metric[1]
 
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
     """Plot a list of images.
@@ -2024,3 +3244,4 @@ to = jax.device_put
 numpy = np.asarray
 transpose = lambda a: a.T
 sigmoid = jax.nn.sigmoid
+size = lambda x, *args, **kwargs: x.size

@@ -52,6 +52,16 @@ from mpl_toolkits import mplot3d
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+from mpl_toolkits import mplot3d
+```
+
 To illustrate the aforementioned different goals,
 let's consider
 the empirical risk and the risk.
@@ -170,7 +180,7 @@ d2l.plt.ylabel('y');
 ```
 
 ```{.python .input}
-#@tab pytorch, tensorflow
+#@tab pytorch, tensorflow, jax
 x, y = d2l.meshgrid(
     d2l.linspace(-1.0, 1.0, 101), d2l.linspace(-1.0, 1.0, 101))
 z = x**2 - y**2
@@ -246,5 +256,9 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/489)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/489)
 :end_tab:

@@ -37,6 +37,18 @@ import random
 import torch
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import os
+import random
+```
+
 In [**the WikiText-2 dataset**],
 each line represents a paragraph where
 space is inserted between any punctuation and its preceding token.
@@ -260,6 +272,37 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def _pad_bert_inputs(examples, max_len, vocab):
+    max_num_mlm_preds = round(max_len * 0.15)
+    all_token_ids, all_segments, valid_lens,  = [], [], []
+    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
+    nsp_labels = []
+    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
+         is_next) in examples:
+        all_token_ids.append(jnp.array(token_ids + [vocab['<pad>']] * (
+            max_len - len(token_ids)), dtype=jnp.int32))
+        all_segments.append(jnp.array(segments + [0] * (
+            max_len - len(segments)), dtype=jnp.int32))
+        # `valid_lens` excludes count of '<pad>' tokens
+        valid_lens.append(jnp.array(len(token_ids), dtype=jnp.float32))
+        all_pred_positions.append(jnp.array(pred_positions + [0] * (
+            max_num_mlm_preds - len(pred_positions)), dtype=jnp.int32))
+        # Predictions of padded tokens will be filtered out in the loss via
+        # multiplication of 0 weights
+        all_mlm_weights.append(
+            jnp.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
+                max_num_mlm_preds - len(pred_positions)),
+                dtype=jnp.float32))
+        all_mlm_labels.append(jnp.array(mlm_pred_label_ids + [0] * (
+            max_num_mlm_preds - len(mlm_pred_label_ids)), dtype=jnp.int32))
+        nsp_labels.append(jnp.array(is_next, dtype=jnp.int32))
+    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
+            all_mlm_weights, all_mlm_labels, nsp_labels)
+```
+
 Putting the helper functions for
 generating training examples of the two pretraining tasks,
 and the helper function for padding inputs together,
@@ -352,6 +395,45 @@ class _WikiTextDataset(torch.utils.data.Dataset):
         return len(self.all_token_ids)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+class _WikiTextDataset:
+    def __init__(self, paragraphs, max_len):
+        # Input `paragraphs[i]` is a list of sentence strings representing a
+        # paragraph; while output `paragraphs[i]` is a list of sentences
+        # representing a paragraph, where each sentence is a list of tokens
+        paragraphs = [d2l.tokenize(
+            paragraph, token='word') for paragraph in paragraphs]
+        sentences = [sentence for paragraph in paragraphs
+                     for sentence in paragraph]
+        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
+            '<pad>', '<mask>', '<cls>', '<sep>'])
+        # Get data for the next sentence prediction task
+        examples = []
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(
+                paragraph, paragraphs, self.vocab, max_len))
+        # Get data for the masked language model task
+        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
+                      + (segments, is_next))
+                     for tokens, segments, is_next in examples]
+        # Pad inputs
+        (self.all_token_ids, self.all_segments, self.valid_lens,
+         self.all_pred_positions, self.all_mlm_weights,
+         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
+            examples, max_len, self.vocab)
+
+    def __getitem__(self, idx):
+        return (self.all_token_ids[idx], self.all_segments[idx],
+                self.valid_lens[idx], self.all_pred_positions[idx],
+                self.all_mlm_weights[idx], self.all_mlm_labels[idx],
+                self.nsp_labels[idx])
+
+    def __len__(self):
+        return len(self.all_token_ids)
+```
+
 By using the `_read_wiki` function and the `_WikiTextDataset` class,
 we define the following `load_data_wiki` to [**download and WikiText-2 dataset
 and generate pretraining examples**] from it.
@@ -380,6 +462,33 @@ def load_data_wiki(batch_size, max_len):
     train_iter = torch.utils.data.DataLoader(train_set, batch_size,
                                         shuffle=True, num_workers=num_workers)
     return train_iter, train_set.vocab
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def load_data_wiki(batch_size, max_len):
+    """Load the WikiText-2 dataset."""
+    paragraphs = _read_wiki()
+    train_set = _WikiTextDataset(paragraphs, max_len)
+    # Create an index array and shuffle it
+    indices = list(range(len(train_set)))
+    random.shuffle(indices)
+
+    def data_iter():
+        for i in range(0, len(indices), batch_size):
+            batch_indices = indices[i:i + batch_size]
+            if len(batch_indices) < batch_size:
+                continue
+            batch = [train_set[idx] for idx in batch_indices]
+            yield (jnp.stack([b[0] for b in batch]),
+                   jnp.stack([b[1] for b in batch]),
+                   jnp.stack([b[2] for b in batch]),
+                   jnp.stack([b[3] for b in batch]),
+                   jnp.stack([b[4] for b in batch]),
+                   jnp.stack([b[5] for b in batch]),
+                   jnp.stack([b[6] for b in batch]))
+    return data_iter(), train_set.vocab
 ```
 
 Setting the batch size to 512 and the maximum length of a BERT input sequence to be 64,
@@ -425,5 +534,9 @@ len(vocab)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1496)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1496)
 :end_tab:

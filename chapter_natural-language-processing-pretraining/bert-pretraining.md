@@ -19,6 +19,17 @@ import torch
 from torch import nn
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from flax.training import train_state
+```
+
 To start, we load the WikiText-2 dataset as minibatches
 of pretraining examples for masked language modeling and next sentence prediction.
 The batch size is 512 and the maximum length of a BERT input sequence is 64.
@@ -56,6 +67,12 @@ net = d2l.BERTModel(len(vocab), num_hiddens=128,
                     ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
 devices = d2l.try_all_gpus()
 loss = nn.CrossEntropyLoss()
+```
+
+```{.python .input}
+#@tab jax
+net = d2l.BERTModel(len(vocab), num_hiddens=128,
+                    ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
 ```
 
 Before defining the training loop,
@@ -118,6 +135,30 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
     nsp_l = loss(nsp_Y_hat, nsp_y)
     l = mlm_l + nsp_l
     return mlm_l, nsp_l, l
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
+                         segments_X, valid_lens_x,
+                         pred_positions_X, mlm_weights_X,
+                         mlm_Y, nsp_y):
+    # Forward pass
+    _, mlm_Y_hat, nsp_Y_hat = net.apply(params, tokens_X, segments_X,
+                                        valid_lens_x.reshape(-1),
+                                        pred_positions_X, training=True,
+                                        rngs={'dropout': jax.random.PRNGKey(0)})
+    # Compute masked language model loss
+    mlm_l = optax.softmax_cross_entropy_with_integer_labels(
+        mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1))
+    mlm_l = (mlm_l * mlm_weights_X.reshape(-1)).sum() / (
+        mlm_weights_X.sum() + 1e-8)
+    # Compute next sentence prediction loss
+    nsp_l = optax.softmax_cross_entropy_with_integer_labels(
+        nsp_Y_hat, nsp_y).mean()
+    l = mlm_l + nsp_l
+    return l, (mlm_l, nsp_l)
 ```
 
 Invoking the two aforementioned helper functions,
@@ -217,12 +258,69 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
           f'{str(devices)}')
 ```
 
+```{.python .input}
+#@tab jax
+def train_bert(train_iter, net, vocab_size, num_steps):
+    # Initialize model parameters using a dummy batch
+    dummy_tokens = jnp.ones((2, 64), dtype=jnp.int32)
+    dummy_segments = jnp.zeros((2, 64), dtype=jnp.int32)
+    dummy_valid_lens = jnp.array([64, 64], dtype=jnp.float32)
+    dummy_pred_positions = jnp.zeros((2, 10), dtype=jnp.int32)
+    key = jax.random.PRNGKey(0)
+    params = net.init(key, dummy_tokens, dummy_segments, dummy_valid_lens,
+                      dummy_pred_positions, training=False)
+    tx = optax.adam(learning_rate=0.01)
+    state = train_state.TrainState.create(
+        apply_fn=net.apply, params=params, tx=tx)
+
+    grad_fn = jax.value_and_grad(_get_batch_loss_bert, has_aux=True)
+    step, timer = 0, d2l.Timer()
+    animator = d2l.Animator(xlabel='step', ylabel='loss',
+                            xlim=[1, num_steps], legend=['mlm', 'nsp'])
+    # Sum of masked language modeling losses, sum of next sentence prediction
+    # losses, no. of sentence pairs, count
+    metric = d2l.Accumulator(4)
+    num_steps_reached = False
+    while step < num_steps and not num_steps_reached:
+        for (tokens_X, segments_X, valid_lens_x, pred_positions_X,
+             mlm_weights_X, mlm_Y, nsp_y) in train_iter:
+            timer.start()
+            (l, (mlm_l, nsp_l)), grads = grad_fn(
+                state.params, net, vocab_size, tokens_X, segments_X,
+                valid_lens_x, pred_positions_X, mlm_weights_X, mlm_Y, nsp_y)
+            state = state.apply_gradients(grads=grads)
+            metric.add(float(mlm_l), float(nsp_l), tokens_X.shape[0], 1)
+            timer.stop()
+            animator.add(step + 1,
+                         (metric[0] / metric[3], metric[1] / metric[3]))
+            step += 1
+            if step == num_steps:
+                num_steps_reached = True
+                break
+
+    print(f'MLM loss {metric[0] / metric[3]:.3f}, '
+          f'NSP loss {metric[1] / metric[3]:.3f}')
+    print(f'{metric[2] / timer.sum():.1f} sentence pairs/sec on '
+          f'{str(jax.devices())}')
+    return state
+```
+
 We can plot both the masked language modeling loss and the next sentence prediction loss
 during BERT pretraining.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet
 train_bert(train_iter, net, loss, len(vocab), devices, 50)
+```
+
+```{.python .input}
+#@tab pytorch
+train_bert(train_iter, net, loss, len(vocab), devices, 50)
+```
+
+```{.python .input}
+#@tab jax
+state = train_bert(train_iter, net, len(vocab), 50)
 ```
 
 ## [**Representing Text with BERT**]
@@ -255,6 +353,18 @@ def get_bert_encoding(net, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
+```{.python .input}
+#@tab jax
+def get_bert_encoding(net, params, tokens_a, tokens_b=None):
+    tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
+    token_ids = jnp.array(vocab[tokens], dtype=jnp.int32)[None, :]
+    segments = jnp.array(segments, dtype=jnp.int32)[None, :]
+    valid_len = jnp.array([len(tokens)], dtype=jnp.float32)
+    encoded_X, _, _ = net.apply(params, token_ids, segments, valid_len,
+                                training=False)
+    return encoded_X
+```
+
 [**Consider the sentence "a crane is flying".**]
 Recall the input representation of BERT as discussed in :numref:`subsec_bert_input_rep`.
 After inserting special tokens “&lt;cls&gt;” (used for classification)
@@ -266,9 +376,19 @@ To evaluate the polysemy token "crane",
 we also print out the first three elements of the BERT representation of the token.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 tokens_a = ['a', 'crane', 'is', 'flying']
 encoded_text = get_bert_encoding(net, tokens_a)
+# Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
+encoded_text_cls = encoded_text[:, 0, :]
+encoded_text_crane = encoded_text[:, 2, :]
+encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
+```
+
+```{.python .input}
+#@tab jax
+tokens_a = ['a', 'crane', 'is', 'flying']
+encoded_text = get_bert_encoding(net, state.params, tokens_a)
 # Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
 encoded_text_cls = encoded_text[:, 0, :]
 encoded_text_crane = encoded_text[:, 2, :]
@@ -282,9 +402,20 @@ Note that the first three elements of the polysemy token "crane" are different f
 This supports that BERT representations are context-sensitive.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
 encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
+# Tokens: '<cls>', 'a', 'crane', 'driver', 'came', '<sep>', 'he', 'just',
+# 'left', '<sep>'
+encoded_pair_cls = encoded_pair[:, 0, :]
+encoded_pair_crane = encoded_pair[:, 2, :]
+encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
+```
+
+```{.python .input}
+#@tab jax
+tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
+encoded_pair = get_bert_encoding(net, state.params, tokens_a, tokens_b)
 # Tokens: '<cls>', 'a', 'crane', 'driver', 'came', '<sep>', 'he', 'just',
 # 'left', '<sep>'
 encoded_pair_cls = encoded_pair[:, 0, :]
@@ -312,5 +443,9 @@ for downstream natural language processing applications.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1497)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1497)
 :end_tab:

@@ -83,6 +83,10 @@ The `HybridSequential` class is a subclass of `HybridBlock` (just like `Sequenti
 As mentioned above, PyTorch is based on imperative programming and uses dynamic computation graphs. In an effort to leverage the portability and efficiency of symbolic programming, developers considered whether it would be possible to combine the benefits of both programming paradigms. This led to a torchscript that lets users develop and debug using pure imperative programming, while having the ability to convert most programs into symbolic programs to be run when product-level computing performance and deployment are required.
 :end_tab:
 
+:begin_tab:`jax`
+JAX takes a unique approach that blends functional programming with compilation. Programs are written in an imperative style using familiar NumPy-like operations, but JAX's `jit` (just-in-time compilation) transformation traces functions and compiles them into optimized XLA (Accelerated Linear Algebra) code. This gives developers the best of both worlds: the ease of writing and debugging Python code, combined with the performance of compiled computation graphs. The `jax.jit` decorator is the primary mechanism for "hybridizing" JAX code.
+:end_tab:
+
 :begin_tab:`tensorflow`
 The imperative programming paradigm is now the default in Tensorflow 2, a welcoming change for those new to the language. However, the same symbolic programming techniques and subsequent computational graphs still exist in TensorFlow, and can be accessed by the easy-to-use `tf.function` decorator. This brought the imperative programming paradigm to TensorFlow, allowed users to define more intuitive functions, then wrap them and compile them into computational graphs automatically using a feature the TensorFlow team refers to as [autograph](https://www.tensorflow.org/api_docs/python/tf/autograph).
 :end_tab:
@@ -152,6 +156,31 @@ net = get_net()
 net(x)
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import numpy as np
+
+# Factory for networks
+class Net(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Dense(256)(x)
+        x = nn.relu(x)
+        x = nn.Dense(128)(x)
+        x = nn.relu(x)
+        x = nn.Dense(2)(x)
+        return x
+
+net = Net()
+x = jnp.ones((1, 512))
+params = net.init(jax.random.PRNGKey(0), x)
+net.apply(params, x)
+```
+
 :begin_tab:`mxnet`
 By calling the `hybridize` function, we are able to compile and optimize the computation in the MLP. The model's computation result remains unchanged.
 :end_tab:
@@ -163,6 +192,10 @@ By converting the model using `torch.jit.script` function, we are able to compil
 :begin_tab:`tensorflow`
 Formerly, all functions built in TensorFlow were built as a computational graph, and therefore JIT compiled by default. However, with the release of TensorFlow 2.X and EagerTensor, this is no longer the default behaviour. 
 We cen re-enable this functionality with tf.function. tf.function is more commonly used as a function decorator, however it is possible to call it directly as a normal python function, shown below. The model's computation result remains unchanged.
+:end_tab:
+
+:begin_tab:`jax`
+By wrapping the model's `apply` function with `jax.jit`, we compile the computation into an optimized XLA program. The first call traces the function and compiles it; subsequent calls execute the compiled version directly. The model's computation result remains unchanged.
 :end_tab:
 
 ```{.python .input}
@@ -183,6 +216,12 @@ net = tf.function(net)
 net(x)
 ```
 
+```{.python .input}
+#@tab jax
+jitted_apply = jax.jit(net.apply)
+jitted_apply(params, x)
+```
+
 :begin_tab:`mxnet`
 This seems almost too good to be true: simply designate a block to be `HybridSequential`, write the same code as before and invoke `hybridize`. Once this happens the network is optimized (we will benchmark the performance below). Unfortunately this does not work magically for every layer. That said, a layer will not be optimized if it inherits from the `Block` class instead of the `HybridBlock` class.
 :end_tab:
@@ -194,6 +233,10 @@ This seems almost too good to be true: write the same code as before and simply 
 :begin_tab:`tensorflow`
 This seems almost too good to be true: write the same code as before and simply convert the model using `tf.function`. Once this happens the network is built as a computational graph in TensorFlow's MLIR intermediate representation and is heavily optimized at the compiler level for rapid execution (we will benchmark the performance below).
 Explicitly adding the `jit_compile = True` flag to the `tf.function()` call enables XLA (Accelerated Linear Algebra) functionality in TensorFlow. XLA can further optimize JIT compiled code in certain instances. Graph-mode execution is enabled without this explicit definition, however XLA can make certain large linear algebra operations (in the vein of those we see in deep learning applications) much faster, particularly in a GPU environment.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, `jax.jit` is the natural way to compile computations. Simply wrapping a function with `jax.jit` causes JAX to trace the function, build an XLA computation graph, and compile it for the target device (CPU, GPU, or TPU). The first call incurs compilation overhead, but all subsequent calls execute the optimized compiled code directly (we will benchmark the performance below). Unlike other frameworks where JIT compilation is an add-on, JAX's entire design is built around this transformation.
 :end_tab:
 
 ### Acceleration by Hybridization
@@ -226,6 +269,10 @@ Now we can invoke the network twice, once with and once without torchscript.
 
 :begin_tab:`tensorflow`
 Now we can invoke the network three times, once executed eagerly, once with graph-mode execution, and again using JIT compiled XLA.
+:end_tab:
+
+:begin_tab:`jax`
+Now we can invoke the network twice, once without and once with `jax.jit`. Note that the first JIT call includes compilation time, so we call the jitted function once before timing to warm up the compiled cache.
 :end_tab:
 
 ```{.python .input}
@@ -263,6 +310,17 @@ with Benchmark('Graph Mode'):
     for i in range(1000): net(x)
 ```
 
+```{.python .input}
+#@tab jax
+with Benchmark('Without jax.jit'):
+    for i in range(1000): net.apply(params, x)
+
+jitted_apply = jax.jit(net.apply)
+jitted_apply(params, x)  # Warm-up (triggers compilation)
+with Benchmark('With jax.jit'):
+    for i in range(1000): jitted_apply(params, x).block_until_ready()
+```
+
 :begin_tab:`mxnet`
 As is observed in the above results, after a `HybridSequential` instance calls the `hybridize` function, computing performance is improved through the use of symbolic programming.
 :end_tab:
@@ -273,6 +331,10 @@ As is observed in the above results, after an `nn.Sequential` instance is script
 
 :begin_tab:`tensorflow`
 As is observed in the above results, after a `tf.keras.Sequential` instance is scripted using the `tf.function` function, computing performance is improved through the use of symbolic programming via graph-mode execution in tensorflow. 
+:end_tab:
+
+:begin_tab:`jax`
+As is observed in the above results, after wrapping the model's `apply` function with `jax.jit`, computing performance is improved through XLA compilation. Note that we call `block_until_ready()` to ensure accurate timing, since JAX uses asynchronous dispatch by default.
 :end_tab:
 
 ### Serialization
@@ -289,6 +351,10 @@ One of the benefits of compiling the models is that we can serialize (save) the 
 One of the benefits of compiling the models is that we can serialize (save) the model and its parameters to disk. This allows us to store a model in a manner that is independent of the front-end language of choice. This allows us to deploy trained models to other devices and easily use other front-end programming languages or execute a trained model on a server. At the same time the code is often faster than what can be achieved in imperative programming. 
 The low-level API that allows us to save in tensorflow is `tf.saved_model`. 
 Let's see the `saved_model` instance in action.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, model parameters are stored as nested Python dictionaries (pytrees), which can be serialized using standard tools. The `flax.serialization` module provides `to_bytes` and `from_bytes` for converting parameters to and from byte strings. Additionally, `jax.jit`-compiled functions can be exported to StableHLO, a portable intermediate representation that can be executed independently of Python.
 :end_tab:
 
 ```{.python .input}
@@ -308,6 +374,15 @@ net.save('my_mlp')
 net = get_net()
 tf.saved_model.save(net, 'my_mlp')
 !ls -lh my_mlp*
+```
+
+```{.python .input}
+#@tab jax
+from flax import serialization
+param_bytes = serialization.to_bytes(params)
+print(f'Serialized parameter size: {len(param_bytes)} bytes')
+# We can also inspect the computation graph via jaxpr
+print(jax.make_jaxpr(net.apply)(params, x))
 ```
 
 :begin_tab:`mxnet`

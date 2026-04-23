@@ -1,6 +1,6 @@
 ```{.python .input  n=1}
 %load_ext d2lbook.tab
-tab.interact_select('pytorch')
+tab.interact_select('pytorch', 'jax')
 ```
 
 # Hyperparameter Optimization API
@@ -28,6 +28,18 @@ from d2l import torch as d2l
 from scipy import stats
 ```
 
+```{.python .input  n=2}
+%%tab jax
+import time
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from scipy import stats
+```
+
 ## Searcher
 
 Below we define a base class for searchers, which provides a new candidate
@@ -41,7 +53,7 @@ algorithms are able to sample more promising candidates over time. We add the
 then be exploited to improve our sampling distribution.
 
 ```{.python .input  n=3}
-%%tab pytorch
+%%tab pytorch, jax
 class HPOSearcher(d2l.HyperParameters):  #@save
     def sample_configuration() -> dict:
         raise NotImplementedError
@@ -56,7 +68,7 @@ prescribe the first configuration to be evaluated via `initial_config`, while
 subsequent ones are drawn at random.
 
 ```{.python .input  n=4}
-%%tab pytorch
+%%tab pytorch, jax
 class RandomSearcher(HPOSearcher):  #@save
     def __init__(self, config_space: dict, initial_config=None):
         self.save_hyperparameters()
@@ -85,7 +97,7 @@ model for). The `update` method is called whenever a trial returns a new
 observation.
 
 ```{.python .input  n=5}
-%%tab pytorch
+%%tab pytorch, jax
 class HPOScheduler(d2l.HyperParameters):  #@save
     def suggest(self) -> dict:
         raise NotImplementedError
@@ -99,7 +111,7 @@ scheduler that schedules a new configuration every time new resources become
 available.
 
 ```{.python .input  n=6}
-%%tab pytorch
+%%tab pytorch, jax
 class BasicScheduler(HPOScheduler):  #@save
     def __init__(self, searcher: HPOSearcher):
         self.save_hyperparameters()
@@ -145,6 +157,32 @@ class HPOTuner(d2l.HyperParameters):  #@save
             print(f"    error = {error}, runtime = {runtime}")
 ```
 
+```{.python .input  n=7}
+%%tab jax
+class HPOTuner(d2l.HyperParameters):  #@save
+    def __init__(self, scheduler: HPOScheduler, objective: callable):
+        self.save_hyperparameters()
+        # Bookkeeping results for plotting
+        self.incumbent = None
+        self.incumbent_error = None
+        self.incumbent_trajectory = []
+        self.cumulative_runtime = []
+        self.current_runtime = 0
+        self.records = []
+
+    def run(self, number_of_trials):
+        for i in range(number_of_trials):
+            start_time = time.time()
+            config = self.scheduler.suggest()
+            print(f"Trial {i}: config = {config}")
+            error = self.objective(**config)
+            error = float(error)
+            self.scheduler.update(config, error)
+            runtime = time.time() - start_time
+            self.bookkeeping(config, error, runtime)
+            print(f"    error = {error}, runtime = {runtime}")
+```
+
 ## Bookkeeping the Performance of HPO Algorithms
 
 With any HPO algorithm, we are mostly interested in the best performing
@@ -158,7 +196,7 @@ make a decision (call of `scheduler.suggest`). In the sequel, we will plot
 found by an optimizer works, but also how quickly an optimizer is able to find it.
 
 ```{.python .input  n=8}
-%%tab pytorch
+%%tab pytorch, jax
 @d2l.add_to_class(HPOTuner)  #@save
 def bookkeeping(self, config: dict, error: float, runtime: float):
     self.records.append({"config": config, "error": error, "runtime": runtime})
@@ -188,6 +226,17 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     trainer = d2l.HPOTrainer(max_epochs=max_epochs, num_gpus=1)
     data = d2l.FashionMNIST(batch_size=batch_size)
     model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
+    trainer.fit(model=model, data=data)
+    validation_error = trainer.validation_error()
+    return validation_error
+```
+
+```{.python .input  n=9}
+%%tab jax
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
+    model = d2l.LeNet(lr=learning_rate, num_classes=10)
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs, num_gpus=1)
+    data = d2l.FashionMNIST(batch_size=batch_size)
     trainer.fit(model=model, data=data)
     validation_error = trainer.validation_error()
     return validation_error
@@ -272,5 +321,9 @@ algorithms, and potential pitfalls one needs to be aware of.
 
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/12092)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12092)
 :end_tab:

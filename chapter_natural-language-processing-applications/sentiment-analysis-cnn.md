@@ -59,6 +59,20 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import flax
+
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
 ## One-Dimensional Convolutions
 
 Before introducing the model,
@@ -321,6 +335,43 @@ class TextCNN(nn.Module):
         return outputs
 ```
 
+```{.python .input}
+#@tab jax
+class TextCNN(nn.Module):
+    vocab_size: int
+    embed_size: int
+    kernel_sizes: list
+    num_channels: list
+    training: bool = True
+
+    def setup(self):
+        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
+        # The embedding layer not to be trained
+        self.constant_embedding = nn.Embed(self.vocab_size, self.embed_size)
+        self.dropout = nn.Dropout(0.5)
+        self.decoder = nn.Dense(2)
+        # Create multiple one-dimensional convolutional layers
+        self.convs = [nn.Conv(features=c, kernel_size=(k,))
+                      for c, k in zip(self.num_channels, self.kernel_sizes)]
+
+    def __call__(self, inputs, deterministic=False):
+        # Concatenate two embedding layer outputs with shape (batch size, no.
+        # of tokens, token vector dimension) along vectors
+        embeddings = jnp.concatenate((
+            self.embedding(inputs), self.constant_embedding(inputs)), axis=2)
+        # For Flax Conv, input shape is (batch, length, channels) which is
+        # already the shape of embeddings
+        # For each one-dimensional convolutional layer, after max-over-time
+        # pooling, a tensor of shape (batch size, no. of channels) is obtained.
+        # Concatenate along channels
+        encoding = jnp.concatenate([
+            jnp.max(nn.relu(conv(embeddings)), axis=1)
+            for conv in self.convs], axis=1)
+        outputs = self.decoder(self.dropout(encoding,
+                                            deterministic=deterministic))
+        return outputs
+```
+
 Let's create a textCNN instance.
 It has 3 convolutional layers with kernel widths of 3, 4, and 5, all with 100 output channels.
 
@@ -343,6 +394,16 @@ def init_weights(module):
         nn.init.xavier_uniform_(module.weight)
 
 net.apply(init_weights);
+```
+
+```{.python .input}
+#@tab jax
+embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
+devices = d2l.try_all_gpus()
+net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
+# Initialize parameters
+dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
+params = net.init(jax.random.PRNGKey(0), dummy_input, deterministic=True)
 ```
 
 ### Loading Pretrained Word Vectors
@@ -372,6 +433,17 @@ net.constant_embedding.weight.data.copy_(embeds)
 net.constant_embedding.weight.requires_grad = False
 ```
 
+```{.python .input}
+#@tab jax
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
+embeds = glove_embedding[vocab.idx_to_token]
+# Set pretrained embedding weights in the parameters
+params = flax.core.unfreeze(params)
+params['params']['embedding']['embedding'] = jnp.array(embeds)
+params['params']['constant_embedding']['embedding'] = jnp.array(embeds)
+params = flax.core.freeze(params)
+```
+
 ### Training and Evaluating the Model
 
 Now we can train the textCNN model for sentiment analysis.
@@ -392,16 +464,65 @@ loss = nn.CrossEntropyLoss(reduction="none")
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
+```{.python .input}
+#@tab jax
+lr, num_epochs = 0.001, 5
+optimizer = optax.adam(lr)
+opt_state = optimizer.init(params['params'])
+loss_fn = optax.softmax_cross_entropy_with_integer_labels
+
+@jax.jit
+def train_step(params, opt_state, X, y):
+    def compute_loss(p):
+        logits = net.apply({'params': p}, X, deterministic=False,
+                           rngs={'dropout': jax.random.PRNGKey(0)})
+        return loss_fn(logits, y).mean(), logits
+    (loss, logits), grads = jax.value_and_grad(
+        compute_loss, has_aux=True)(params)
+    updates, opt_state_new = optimizer.update(grads, opt_state, params)
+    params_new = optax.apply_updates(params, updates)
+    return params_new, opt_state_new, loss, logits
+
+for epoch in range(num_epochs):
+    metric = d2l.Accumulator(4)
+    for X, y in train_iter:
+        params_p = params['params']
+        params_p, opt_state, l, logits = train_step(
+            params_p, opt_state, X, y)
+        params = {'params': params_p}
+        metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
+                   len(y), len(y))
+    # Evaluate
+    correct, total = 0, 0
+    for X, y in test_iter:
+        logits = net.apply(params, X, deterministic=True)
+        correct += int((logits.argmax(axis=-1) == y).sum())
+        total += len(y)
+    print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
+          f'train acc {metric[1] / metric[3]:.3f}, '
+          f'test acc {correct / total:.3f}')
+```
+
 Below we use the trained model to predict the sentiment for two simple sentences.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 d2l.predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
 ```{.python .input}
-#@tab all
+#@tab jax
+d2l.predict_sentiment(net, params, vocab, 'this movie is so great')
+```
+
+```{.python .input}
+#@tab mxnet, pytorch
 d2l.predict_sentiment(net, vocab, 'this movie is so bad')
+```
+
+```{.python .input}
+#@tab jax
+d2l.predict_sentiment(net, params, vocab, 'this movie is so bad')
 ```
 
 ## Summary
@@ -423,5 +544,9 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1425)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1425)
 :end_tab:

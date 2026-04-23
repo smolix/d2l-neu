@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select('pytorch')
+tab.interact_select('pytorch', 'jax')
 ```
 
 # What Is Hyperparameter Optimization?
@@ -76,6 +76,17 @@ from torch import nn
 from scipy import stats
 ```
 
+```{.python .input}
+%%tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from scipy import stats
+```
+
 Before we can run HPO, we first need to define two ingredients: the objective
 function and the configuration space.
 
@@ -128,6 +139,21 @@ class HPOTrainer(d2l.Trainer):  #@save
         return 1 -  accuracy / val_batch_idx
 ```
 
+```{.python .input  n=8}
+%%tab jax
+class HPOTrainer(d2l.Trainer):  #@save
+    def validation_error(self):
+        self.model.training = False
+        accuracy = 0
+        val_batch_idx = 0
+        for batch in self.val_dataloader:
+            batch = self.prepare_batch(batch)
+            accuracy += self.model.accuracy(
+                self.state.params, batch[:-1], batch[-1], self.state)
+            val_batch_idx += 1
+        return 1 - accuracy / val_batch_idx
+```
+
 We optimize validation error with respect to the hyperparameter configuration
 `config`, consisting of the `learning_rate`. For each evaluation, we train our
 model for `max_epochs` epochs, then compute and return its validation error:
@@ -141,6 +167,17 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
     model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
     trainer.fit(model=model, data=data)
     return d2l.numpy(trainer.validation_error())
+```
+
+```{.python .input  n=5}
+%%tab jax
+def hpo_objective_softmax_classification(config, max_epochs=8):
+    learning_rate = config["learning_rate"]
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs)
+    data = d2l.FashionMNIST(batch_size=16)
+    model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
+    trainer.fit(model=model, data=data)
+    return float(trainer.validation_error())
 ```
 
 ### The Configuration Space
@@ -278,5 +315,9 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/12090)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12090)
 :end_tab:

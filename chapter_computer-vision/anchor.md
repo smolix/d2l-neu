@@ -38,6 +38,19 @@ import torch
 torch.set_printoptions(2)  # Simplify printing accuracy
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+
+np.set_printoptions(2)  # Simplify printing accuracy
+```
+
 ## Generating Multiple Anchor Boxes
 
 Suppose that the input image has a height of $h$ and width of $w$. 
@@ -146,6 +159,47 @@ def multibox_prior(data, sizes, ratios):
     return output.unsqueeze(0)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel."""
+    in_height, in_width = data.shape[-2:]
+    num_sizes, num_ratios = len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = jnp.array(sizes)
+    ratio_tensor = jnp.array(ratios)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (jnp.arange(in_height) + offset_h) * steps_h
+    center_w = (jnp.arange(in_width) + offset_w) * steps_w
+    shift_y, shift_x = jnp.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = jnp.concatenate((size_tensor * jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] * jnp.sqrt(ratio_tensor[1:])))\
+                         * in_height / in_width  # Handle rectangular inputs
+    h = jnp.concatenate((size_tensor / jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] / jnp.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = jnp.tile(jnp.stack((-w, -h, w, h)).T,
+                                    (in_height * in_width, 1)) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = jnp.repeat(jnp.stack([shift_x, shift_y, shift_x, shift_y],
+                          axis=1), boxes_per_pixel, axis=0)
+    output = out_grid + anchor_manipulations
+    return jnp.expand_dims(output, axis=0)
+```
+
 We can see that [**the shape of the returned anchor box variable `Y`**] is
 (batch size, number of anchor boxes, 4).
 
@@ -167,6 +221,17 @@ h, w = img.shape[:2]
 
 print(h, w)
 X = torch.rand(size=(1, 3, h, w))  # Construct input data
+Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
+Y.shape
+```
+
+```{.python .input}
+#@tab jax
+img = d2l.plt.imread('../img/catdog.jpg')
+h, w = img.shape[:2]
+
+print(h, w)
+X = jax.random.uniform(jax.random.PRNGKey(0), shape=(1, 3, h, w))
 Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
@@ -300,6 +365,28 @@ def box_iou(boxes1, boxes2):
     return inter_areas / union_areas
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes."""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = jnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = jnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = jnp.clip(inter_lowerrights - inter_upperlefts, 0)
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+```
+
 ## Labeling Anchor Boxes in Training Data
 :label:`subsec_labeling-anchor-boxes`
 
@@ -413,6 +500,38 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
         anchors_bbox_map[anc_idx] = box_idx
         jaccard[:, box_idx] = col_discard
         jaccard[anc_idx, :] = row_discard
+    return anchors_bbox_map
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes."""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    # box i and the ground-truth bounding box j
+    jaccard = box_iou(anchors, ground_truth)
+    # Initialize the tensor to hold the assigned ground-truth bounding box for
+    # each anchor
+    anchors_bbox_map = jnp.full((num_anchors,), -1, dtype=jnp.int32)
+    # Assign ground-truth bounding boxes according to the threshold
+    max_ious = jnp.max(jaccard, axis=1)
+    indices = jnp.argmax(jaccard, axis=1)
+    anc_i = jnp.nonzero(max_ious >= iou_threshold, size=num_anchors,
+                         fill_value=-1)[0]
+    anc_i = anc_i[anc_i >= 0]
+    box_j = indices[anc_i]
+    anchors_bbox_map = anchors_bbox_map.at[anc_i].set(box_j)
+    col_discard = jnp.full((num_anchors,), -1.0)
+    row_discard = jnp.full((num_gt_boxes,), -1.0)
+    for _ in range(num_gt_boxes):
+        max_idx = jnp.argmax(jaccard)  # Find the largest IoU
+        box_idx = int(max_idx % num_gt_boxes)
+        anc_idx = int(max_idx // num_gt_boxes)
+        anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
+        jaccard = jaccard.at[:, box_idx].set(col_discard)
+        jaccard = jaccard.at[anc_idx, :].set(row_discard)
     return anchors_bbox_map
 ```
 
@@ -546,6 +665,46 @@ def multibox_target(anchors, labels):
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes."""
+    batch_size, anchors = labels.shape[0], anchors.squeeze(axis=0)
+    batch_offset, batch_mask, batch_class_labels = [], [], []
+    num_anchors = anchors.shape[0]
+    for i in range(batch_size):
+        label = labels[i, :, :]
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, None)
+        bbox_mask = jnp.tile(
+            jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
+                            axis=-1), (1, 4))
+        # Initialize class labels and assigned bounding box coordinates with
+        # zeros
+        class_labels = jnp.zeros(num_anchors, dtype=jnp.int32)
+        assigned_bb = jnp.zeros((num_anchors, 4), dtype=jnp.float32)
+        # Label classes of anchor boxes using their assigned ground-truth
+        # bounding boxes. If an anchor box is not assigned any, we label its
+        # class as background (the value remains zero)
+        indices_true = jnp.nonzero(anchors_bbox_map >= 0,
+                                    size=num_anchors, fill_value=-1)[0]
+        indices_true = indices_true[indices_true >= 0]
+        bb_idx = anchors_bbox_map[indices_true]
+        class_labels = class_labels.at[indices_true].set(
+            label[bb_idx, 0].astype(jnp.int32) + 1)
+        assigned_bb = assigned_bb.at[indices_true].set(label[bb_idx, 1:])
+        # Offset transformation
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        batch_offset.append(offset.reshape(-1))
+        batch_mask.append(bbox_mask.reshape(-1))
+        batch_class_labels.append(class_labels)
+    bbox_offset = jnp.stack(batch_offset)
+    bbox_mask = jnp.stack(batch_mask)
+    class_labels = jnp.stack(batch_class_labels)
+    return (bbox_offset, bbox_mask, class_labels)
+```
+
 ### An Example
 
 Let's illustrate anchor box labeling
@@ -595,6 +754,12 @@ labels = multibox_target(np.expand_dims(anchors, axis=0),
 #@tab pytorch
 labels = multibox_target(anchors.unsqueeze(dim=0),
                          ground_truth.unsqueeze(dim=0))
+```
+
+```{.python .input}
+#@tab jax
+labels = multibox_target(jnp.expand_dims(anchors, axis=0),
+                         jnp.expand_dims(ground_truth, axis=0))
 ```
 
 There are three items in the returned result, all of which are in the tensor format.
@@ -736,6 +901,25 @@ def nms(boxes, scores, iou_threshold):
     return d2l.tensor(keep, device=boxes.device)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes."""
+    B = list(jnp.argsort(scores)[::-1])
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while len(B) > 0:
+        i = B[0]
+        keep.append(i)
+        if len(B) == 1: break
+        B_rest = jnp.array(B[1:])
+        iou = box_iou(boxes[i, :].reshape(-1, 4),
+                      boxes[B_rest, :].reshape(-1, 4)).reshape(-1)
+        inds = jnp.where(iou <= iou_threshold)[0]
+        B = [B_rest[j] for j in inds]
+    return jnp.array(keep, dtype=jnp.int32)
+```
+
 We define the following `multibox_detection`
 to [**apply non-maximum suppression
 to predicting bounding boxes**].
@@ -815,6 +999,43 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return d2l.stack(out)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression."""
+    batch_size = cls_probs.shape[0]
+    anchors = anchors.squeeze(axis=0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
+        conf, class_id = jnp.max(cls_prob[1:], axis=0), jnp.argmax(
+            cls_prob[1:], axis=0)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = jnp.arange(num_anchors, dtype=jnp.int32)
+        combined = jnp.concatenate((keep, all_idx))
+        unique, counts = jnp.unique(combined, return_counts=True)
+        non_keep = unique[counts == 1]
+        all_id_sorted = jnp.concatenate((keep, non_keep))
+        class_id = class_id.at[non_keep].set(-1)
+        class_id = class_id[all_id_sorted].astype(jnp.float32)
+        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = (conf < pos_threshold)
+        class_id = jnp.where(below_min_idx, -1, class_id)
+        conf = jnp.where(below_min_idx, 1 - conf, conf)
+        pred_info = jnp.concatenate((jnp.expand_dims(class_id, axis=1),
+                                     jnp.expand_dims(conf, axis=1),
+                                     predicted_bb), axis=1)
+        out.append(pred_info)
+    return jnp.stack(out)
+```
+
 Now let's [**apply the above implementations
 to a concrete example with four anchor boxes**].
 For simplicity, we assume that the
@@ -875,6 +1096,15 @@ output = multibox_detection(cls_probs.unsqueeze(dim=0),
 output
 ```
 
+```{.python .input}
+#@tab jax
+output = multibox_detection(jnp.expand_dims(cls_probs, axis=0),
+                            jnp.expand_dims(offset_preds, axis=0),
+                            jnp.expand_dims(anchors, axis=0),
+                            nms_threshold=0.5)
+output
+```
+
 After removing those predicted bounding boxes
 of class -1, 
 we can [**output the final predicted bounding box
@@ -917,5 +1147,9 @@ in the final output.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1603)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1603)
 :end_tab:

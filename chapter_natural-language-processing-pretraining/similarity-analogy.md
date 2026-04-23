@@ -36,6 +36,14 @@ from torch import nn
 import os
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import os
+```
+
 ## Loading Pretrained Word Vectors
 
 Below lists pretrained GloVe embeddings of dimension 50, 100, and 300,
@@ -165,6 +173,17 @@ def knn(W, x, k):
         torch.sqrt(torch.sum(W * W, axis=1) + 1e-9) *
         torch.sqrt((x * x).sum()))
     _, topk = torch.topk(cos, k=k)
+    return topk, [cos[int(i)] for i in topk]
+```
+
+```{.python .input}
+#@tab jax
+def knn(W, x, k):
+    # Add 1e-9 for numerical stability
+    cos = jnp.dot(W, x.reshape(-1,)) / (
+        jnp.sqrt(jnp.sum(W * W, axis=1) + 1e-9) *
+        jnp.sqrt((x * x).sum()))
+    topk = jnp.argsort(-cos)[:k]
     return topk, [cos[int(i)] for i in topk]
 ```
 

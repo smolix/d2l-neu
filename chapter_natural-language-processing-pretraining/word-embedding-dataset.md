@@ -36,6 +36,18 @@ import os
 import random
 ```
 
+```{.python .input}
+#@tab jax
+import collections
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import math
+import numpy as np
+import os
+import random
+```
+
 ## Reading the Dataset
 
 The dataset that we use here
@@ -289,6 +301,18 @@ generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
+```{.python .input}
+#@tab pytorch
+generator = RandomGenerator([2, 3, 4])
+[generator.draw() for _ in range(10)]
+```
+
+```{.python .input}
+#@tab jax
+generator = RandomGenerator([2, 3, 4])
+[generator.draw() for _ in range(10)]
+```
+
 For a pair of center word and context word, 
 we randomly sample `K` (5 in the experiment) noise words. According to the suggestions in the word2vec paper,
 the sampling probability $P(w)$ of 
@@ -466,6 +490,36 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return data_iter, vocab
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """Download the PTB dataset and then load it into memory."""
+    sentences = read_ptb()
+    vocab = d2l.Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(
+        corpus, max_window_size)
+    all_negatives = get_negatives(
+        all_contexts, vocab, counter, num_noise_words)
+
+    all_data = list(zip(all_centers, all_contexts, all_negatives))
+
+    class PTBDataIter:
+        def __len__(self):
+            return math.ceil(len(all_data) / batch_size)
+        def __iter__(self):
+            random.shuffle(all_data)
+            for i in range(0, len(all_data), batch_size):
+                batch = all_data[i: min(i + batch_size, len(all_data))]
+                centers, contexts_negatives, masks, labels = batchify(batch)
+                yield (jnp.array(centers), jnp.array(contexts_negatives),
+                       jnp.array(masks), jnp.array(labels))
+
+    return PTBDataIter(), vocab
+```
+
 Let's print the first minibatch of the data iterator.
 
 ```{.python .input}
@@ -495,5 +549,9 @@ for batch in data_iter:
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1330)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1330)
 :end_tab:

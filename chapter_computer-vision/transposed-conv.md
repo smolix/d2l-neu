@@ -44,6 +44,15 @@ from torch import nn
 from d2l import torch as d2l
 ```
 
+```{.python .input}
+#@tab jax
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+from d2l import jax as d2l
+import numpy as np
+```
+
 ## Basic Operation
 
 Ignoring channels for now,
@@ -87,13 +96,24 @@ how transposed convolution with a $2\times 2$ kernel is computed for a $2\times 
 We can (**implement this basic transposed convolution operation**) `trans_conv` for a input matrix `X` and a kernel matrix `K`.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 def trans_conv(X, K):
     h, w = K.shape
     Y = d2l.zeros((X.shape[0] + h - 1, X.shape[1] + w - 1))
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             Y[i: i + h, j: j + w] += X[i, j] * K
+    return Y
+```
+
+```{.python .input}
+#@tab jax
+def trans_conv(X, K):
+    h, w = K.shape
+    Y = d2l.zeros((X.shape[0] + h - 1, X.shape[1] + w - 1))
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            Y = Y.at[i: i + h, j: j + w].add(X[i, j] * K)
     return Y
 ```
 
@@ -134,6 +154,15 @@ tconv.weight.data = K
 tconv(X)
 ```
 
+```{.python .input}
+#@tab jax
+X, K = X.reshape(1, 2, 2, 1), K.reshape(2, 2, 1, 1)
+tconv = nn.ConvTranspose(1, kernel_size=(2, 2), use_bias=False)
+params = tconv.init(jax.random.PRNGKey(0), X)
+params = {**params, 'params': {'kernel': K}}
+tconv.apply(params, X)
+```
+
 ## [**Padding, Strides, and Multiple Channels**]
 
 Different from in the regular convolution
@@ -159,6 +188,16 @@ tconv(X)
 tconv = nn.ConvTranspose2d(1, 1, kernel_size=2, padding=1, bias=False)
 tconv.weight.data = K
 tconv(X)
+```
+
+```{.python .input}
+#@tab jax
+tconv = nn.ConvTranspose(1, kernel_size=(2, 2), padding='VALID', use_bias=False)
+params = tconv.init(jax.random.PRNGKey(0), X)
+params = {**params, 'params': {'kernel': K}}
+# Apply then remove the outer border (equivalent to padding=1 in PyTorch)
+out = tconv.apply(params, X)
+out[:, 1:-1, 1:-1, :]
 ```
 
 In the transposed convolution,
@@ -190,6 +229,14 @@ tconv(X)
 tconv = nn.ConvTranspose2d(1, 1, kernel_size=2, stride=2, bias=False)
 tconv.weight.data = K
 tconv(X)
+```
+
+```{.python .input}
+#@tab jax
+tconv = nn.ConvTranspose(1, kernel_size=(2, 2), strides=(2, 2), use_bias=False)
+params = tconv.init(jax.random.PRNGKey(0), X)
+params = {**params, 'params': {'kernel': K}}
+tconv.apply(params, X)
 ```
 
 For multiple input and output channels,
@@ -229,6 +276,18 @@ tconv = nn.ConvTranspose2d(20, 10, kernel_size=5, padding=2, stride=3)
 tconv(conv(X)).shape == X.shape
 ```
 
+```{.python .input}
+#@tab jax
+# JAX uses channels-last format: (batch, height, width, channels)
+X = jax.random.normal(jax.random.PRNGKey(0), (1, 16, 16, 10))
+conv = nn.Conv(20, kernel_size=(5, 5), padding='SAME', strides=(3, 3))
+tconv = nn.ConvTranspose(10, kernel_size=(5, 5), padding='SAME', strides=(3, 3))
+params_conv = conv.init(jax.random.PRNGKey(1), X)
+Y = conv.apply(params_conv, X)
+params_tconv = tconv.init(jax.random.PRNGKey(2), Y)
+tconv.apply(params_tconv, Y).shape == X.shape
+```
+
 ## [**Connection to Matrix Transposition**]
 :label:`subsec-connection-to-mat-transposition`
 
@@ -256,11 +315,28 @@ where the non-zero elements come from
 the convolution kernel `K`.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch, tensorflow
 def kernel2matrix(K):
     k, W = d2l.zeros(5), d2l.zeros((4, 9))
     k[:2], k[3:5] = K[0, :], K[1, :]
     W[0, :5], W[1, 1:6], W[2, 3:8], W[3, 4:] = k, k, k, k
+    return W
+
+W = kernel2matrix(K)
+W
+```
+
+```{.python .input}
+#@tab jax
+def kernel2matrix(K):
+    k = jnp.zeros(5)
+    k = k.at[:2].set(K[0, :])
+    k = k.at[3:5].set(K[1, :])
+    W = jnp.zeros((4, 9))
+    W = W.at[0, :5].set(k)
+    W = W.at[1, 1:6].set(k)
+    W = W.at[2, 3:8].set(k)
+    W = W.at[3, 4:].set(k)
     return W
 
 W = kernel2matrix(K)
@@ -336,5 +412,9 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1450)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1450)
 :end_tab:

@@ -156,6 +156,22 @@ def cls_predictor(num_inputs, num_anchors, num_classes):
                      kernel_size=3, padding=1)
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from PIL import Image
+
+def cls_predictor(num_anchors, num_classes):
+    return nn.Conv(num_anchors * (num_classes + 1), kernel_size=(3, 3),
+                   padding='SAME')
+```
+
 ### (**Bounding Box Prediction Layer**)
 
 The design of the bounding box prediction layer is similar to that of the class prediction layer.
@@ -172,6 +188,12 @@ def bbox_predictor(num_anchors):
 #@tab pytorch
 def bbox_predictor(num_inputs, num_anchors):
     return nn.Conv2d(num_inputs, num_anchors * 4, kernel_size=3, padding=1)
+```
+
+```{.python .input}
+#@tab jax
+def bbox_predictor(num_anchors):
+    return nn.Conv(num_anchors * 4, kernel_size=(3, 3), padding='SAME')
 ```
 
 ### [**Concatenating Predictions for Multiple Scales**]
@@ -225,6 +247,17 @@ Y2 = forward(torch.zeros((2, 16, 10, 10)), cls_predictor(16, 3, 10))
 Y1.shape, Y2.shape
 ```
 
+```{.python .input}
+#@tab jax
+def forward(x, block):
+    # Flax uses NHWC format; input shape: (N, H, W, C)
+    return block.init_with_output(jax.random.PRNGKey(0), x)[0]
+
+Y1 = forward(jnp.zeros((2, 20, 20, 8)), cls_predictor(5, 10))
+Y2 = forward(jnp.zeros((2, 10, 10, 16)), cls_predictor(3, 10))
+Y1.shape, Y2.shape
+```
+
 As we can see, except for the batch size dimension,
 the other three dimensions all have different sizes.
 To concatenate these two prediction outputs for more efficient computation,
@@ -258,6 +291,16 @@ def flatten_pred(pred):
 
 def concat_preds(preds):
     return torch.cat([flatten_pred(p) for p in preds], dim=1)
+```
+
+```{.python .input}
+#@tab jax
+def flatten_pred(pred):
+    # Flax output is NHWC, flatten H*W*C
+    return pred.reshape(pred.shape[0], -1)
+
+def concat_preds(preds):
+    return jnp.concatenate([flatten_pred(p) for p in preds], axis=1)
 ```
 
 In this way,
@@ -316,6 +359,22 @@ def down_sample_blk(in_channels, out_channels):
     return nn.Sequential(*blk)
 ```
 
+```{.python .input}
+#@tab jax
+class DownSampleBlk(nn.Module):
+    num_channels: int
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        for _ in range(2):
+            x = nn.Conv(self.num_channels, kernel_size=(3, 3),
+                        padding='SAME')(x)
+            x = nn.BatchNorm(use_running_average=not training)(x)
+            x = nn.relu(x)
+        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+        return x
+```
+
 In the following example, our constructed downsampling block changes the number of input channels and halves the height and width of the input feature maps.
 
 ```{.python .input}
@@ -326,6 +385,11 @@ forward(np.zeros((2, 3, 20, 20)), down_sample_blk(10)).shape
 ```{.python .input}
 #@tab pytorch
 forward(torch.zeros((2, 3, 20, 20)), down_sample_blk(3, 10)).shape
+```
+
+```{.python .input}
+#@tab jax
+forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(num_channels=10)).shape
 ```
 
 ### [**Base Network Block**]
@@ -359,6 +423,18 @@ def base_net():
     return nn.Sequential(*blk)
 
 forward(torch.zeros((2, 3, 256, 256)), base_net()).shape
+```
+
+```{.python .input}
+#@tab jax
+class BaseNet(nn.Module):
+    @nn.compact
+    def __call__(self, x, training=False):
+        for num_filters in [16, 32, 64]:
+            x = DownSampleBlk(num_channels=num_filters)(x, training)
+        return x
+
+forward(jnp.zeros((2, 256, 256, 3)), BaseNet()).shape
 ```
 
 ### The Complete Model
@@ -412,6 +488,17 @@ def get_blk(i):
     return blk
 ```
 
+```{.python .input}
+#@tab jax
+def get_blk(i):
+    if i == 0:
+        return BaseNet()
+    elif i == 4:
+        return None  # Global max pooling handled in TinySSD
+    else:
+        return DownSampleBlk(num_channels=128)
+```
+
 Now we [**define the forward propagation**]
 for each block.
 Different from
@@ -440,6 +527,35 @@ def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
     cls_preds = cls_predictor(Y)
     bbox_preds = bbox_predictor(Y)
     return (Y, anchors, cls_preds, bbox_preds)
+```
+
+```{.python .input}
+#@tab jax
+def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
+                cls_apply, bbox_params, bbox_apply, training=False,
+                batch_stats=None):
+    if blk_apply is not None:
+        if batch_stats is not None:
+            Y, updates = blk_apply({'params': blk_params,
+                                    'batch_stats': batch_stats},
+                                   X, training=training,
+                                   mutable=['batch_stats'])
+        else:
+            Y = blk_apply({'params': blk_params}, X, training=training)
+            updates = {}
+    else:
+        # Global max pooling
+        Y = X.max(axis=(1, 2), keepdims=True)
+        updates = {}
+    # Convert NHWC to NCHW for multibox_prior
+    Y_nchw = jnp.transpose(Y, (0, 3, 1, 2))
+    anchors = d2l.multibox_prior(Y_nchw, sizes=size, ratios=ratio)
+    cls_preds = cls_apply({'params': cls_params}, Y)
+    bbox_preds = bbox_apply({'params': bbox_params}, Y)
+    # Convert NHWC predictions to NCHW format
+    cls_preds = jnp.transpose(cls_preds, (0, 3, 1, 2))
+    bbox_preds = jnp.transpose(bbox_preds, (0, 3, 1, 2))
+    return (Y, anchors, cls_preds, bbox_preds, updates)
 ```
 
 Recall that
@@ -531,6 +647,45 @@ class TinySSD(nn.Module):
         return anchors, cls_preds, bbox_preds
 ```
 
+```{.python .input}
+#@tab jax
+class TinySSD(nn.Module):
+    num_classes: int
+
+    def setup(self):
+        self.blks = [get_blk(i) for i in range(5)]
+        self.cls_layers = [cls_predictor(num_anchors, self.num_classes)
+                           for _ in range(5)]
+        self.bbox_layers = [bbox_predictor(num_anchors) for _ in range(5)]
+
+    def __call__(self, X, training=False):
+        anchors, cls_preds, bbox_preds = [None] * 5, [None] * 5, [None] * 5
+        # Convert NCHW input to NHWC for Flax
+        X = jnp.transpose(X, (0, 2, 3, 1))
+        for i in range(5):
+            blk = self.blks[i]
+            if blk is not None:
+                X = blk(X, training=training)
+            else:
+                # Global max pooling
+                X = X.max(axis=(1, 2), keepdims=True)
+            # Convert NHWC to NCHW for multibox_prior
+            X_nchw = jnp.transpose(X, (0, 3, 1, 2))
+            anchors[i] = d2l.multibox_prior(X_nchw, sizes=sizes[i],
+                                            ratios=ratios[i])
+            cls_out = self.cls_layers[i](X)
+            bbox_out = self.bbox_layers[i](X)
+            # Convert NHWC outputs to NCHW for concat_preds
+            cls_preds[i] = jnp.transpose(cls_out, (0, 3, 1, 2))
+            bbox_preds[i] = jnp.transpose(bbox_out, (0, 3, 1, 2))
+        anchors = jnp.concatenate(anchors, axis=1)
+        cls_preds = concat_preds(cls_preds)
+        cls_preds = cls_preds.reshape(
+            cls_preds.shape[0], -1, self.num_classes + 1)
+        bbox_preds = concat_preds(bbox_preds)
+        return anchors, cls_preds, bbox_preds
+```
+
 We [**create a model instance
 and use it to perform forward propagation**]
 on a minibatch of $256 \times 256$ images `X`.
@@ -564,6 +719,18 @@ print('output bbox preds:', bbox_preds.shape)
 net = TinySSD(num_classes=1)
 X = torch.zeros((32, 3, 256, 256))
 anchors, cls_preds, bbox_preds = net(X)
+
+print('output anchors:', anchors.shape)
+print('output class preds:', cls_preds.shape)
+print('output bbox preds:', bbox_preds.shape)
+```
+
+```{.python .input}
+#@tab jax
+net = TinySSD(num_classes=1)
+X = jnp.zeros((32, 3, 256, 256))
+variables = net.init(jax.random.PRNGKey(0), X)
+anchors, cls_preds, bbox_preds = net.apply(variables, X)
 
 print('output anchors:', anchors.shape)
 print('output class preds:', cls_preds.shape)
@@ -606,6 +773,17 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd',
 #@tab pytorch
 device, net = d2l.try_gpu(), TinySSD(num_classes=1)
 trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
+```
+
+```{.python .input}
+#@tab jax
+net = TinySSD(num_classes=1)
+dummy_X = jnp.zeros((32, 3, 256, 256))
+variables = net.init(jax.random.PRNGKey(0), dummy_X, training=True)
+params = variables['params']
+batch_stats = variables.get('batch_stats', {})
+trainer = optax.sgd(learning_rate=0.2)
+opt_state = trainer.init(params)
 ```
 
 ### [**Defining Loss and Evaluation Functions**]
@@ -660,6 +838,19 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     return cls + bbox
 ```
 
+```{.python .input}
+#@tab jax
+def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
+    batch_size, num_classes = cls_preds.shape[0], cls_preds.shape[2]
+    cls = optax.softmax_cross_entropy_with_integer_labels(
+        cls_preds.reshape(-1, num_classes),
+        cls_labels.reshape(-1)).reshape(batch_size, -1).mean(axis=1)
+    bbox = jnp.abs(
+        (bbox_preds * bbox_masks) -
+        (bbox_labels * bbox_masks)).mean(axis=1)
+    return cls + bbox
+```
+
 We can use accuracy to evaluate the classification results.
 Due to the used $\ell_1$ norm loss for the offsets,
 we use the *mean absolute error* to evaluate the
@@ -690,6 +881,18 @@ def cls_eval(cls_preds, cls_labels):
 
 def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((torch.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
+```
+
+```{.python .input}
+#@tab jax
+def cls_eval(cls_preds, cls_labels):
+    # Because the class prediction results are on the final dimension,
+    # `argmax` needs to specify this dimension
+    return float((cls_preds.argmax(axis=-1).astype(
+        cls_labels.dtype) == cls_labels).sum())
+
+def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
+    return float((jnp.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
 ```
 
 ### [**Training the Model**]
@@ -777,6 +980,53 @@ print(f'{len(train_iter.dataset) / timer.stop():.1f} examples/sec on '
       f'{str(device)}')
 ```
 
+```{.python .input}
+#@tab jax
+@jax.jit
+def train_step(params, batch_stats, opt_state, X, Y):
+    def loss_fn(params):
+        variables = {'params': params, 'batch_stats': batch_stats}
+        (anchors, cls_preds, bbox_preds), updates = net.apply(
+            variables, X, training=True, mutable=['batch_stats'])
+        bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(anchors, Y)
+        l = calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels,
+                      bbox_masks)
+        return l.mean(), (updates, anchors, cls_preds, bbox_preds,
+                          bbox_labels, bbox_masks, cls_labels)
+
+    (loss, aux), grads = jax.value_and_grad(
+        loss_fn, has_aux=True)(params)
+    updates_dict, anchors, cls_preds, bbox_preds, bbox_labels, bbox_masks, \
+        cls_labels = aux
+    new_batch_stats = updates_dict['batch_stats']
+    param_updates, opt_state = trainer.update(grads, opt_state, params)
+    params = optax.apply_updates(params, param_updates)
+    return (params, new_batch_stats, opt_state, loss, cls_preds, cls_labels,
+            bbox_preds, bbox_labels, bbox_masks)
+
+num_epochs, timer = 20, d2l.Timer()
+animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                        legend=['class error', 'bbox mae'])
+for epoch in range(num_epochs):
+    # Sum of training accuracy, no. of examples in sum of training accuracy,
+    # Sum of absolute error, no. of examples in sum of absolute error
+    metric = d2l.Accumulator(4)
+    for features, target in train_iter:
+        timer.start()
+        X, Y = jnp.array(features), jnp.array(target)
+        (params, batch_stats, opt_state, loss, cls_preds, cls_labels,
+         bbox_preds, bbox_labels, bbox_masks) = train_step(
+            params, batch_stats, opt_state, X, Y)
+        metric.add(cls_eval(cls_preds, cls_labels), cls_labels.size,
+                   bbox_eval(bbox_preds, bbox_labels, bbox_masks),
+                   bbox_labels.size)
+    cls_err, bbox_mae = 1 - metric[0] / metric[1], metric[2] / metric[3]
+    animator.add(epoch + 1, (cls_err, bbox_mae))
+print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
+print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec on '
+      f'{str(jax.devices()[0])}')
+```
+
 ## [**Prediction**]
 
 During prediction,
@@ -799,6 +1049,15 @@ X = np.expand_dims(feature.transpose(2, 0, 1), axis=0)
 #@tab pytorch
 X = torchvision.io.read_image('../img/banana.jpg').unsqueeze(0).float()
 img = X.squeeze(0).permute(1, 2, 0).long()
+```
+
+```{.python .input}
+#@tab jax
+from PIL import Image as PILImage
+img_pil = PILImage.open('../img/banana.jpg')
+img = jnp.array(img_pil)
+X = jnp.transpose(img, (2, 0, 1)).astype(jnp.float32)
+X = jnp.expand_dims(X, axis=0)
 ```
 
 Using the `multibox_detection` function below,
@@ -826,6 +1085,19 @@ def predict(X):
     net.eval()
     anchors, cls_preds, bbox_preds = net(X.to(device))
     cls_probs = F.softmax(cls_preds, dim=2).permute(0, 2, 1)
+    output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
+    idx = [i for i, row in enumerate(output[0]) if row[0] != -1]
+    return output[0, idx]
+
+output = predict(X)
+```
+
+```{.python .input}
+#@tab jax
+def predict(X):
+    variables = {'params': params, 'batch_stats': batch_stats}
+    anchors, cls_preds, bbox_preds = net.apply(variables, X, training=False)
+    cls_probs = jax.nn.softmax(cls_preds, axis=2).transpose(0, 2, 1)
     output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
     idx = [i for i, row in enumerate(output[0]) if row[0] != -1]
     return output[0, idx]
@@ -868,6 +1140,22 @@ def display(img, output, threshold):
         d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
 
 display(img, output.cpu(), threshold=0.9)
+```
+
+```{.python .input}
+#@tab jax
+def display(img, output, threshold):
+    d2l.set_figsize((5, 5))
+    fig = d2l.plt.imshow(img)
+    for row in output:
+        score = float(row[1])
+        if score < threshold:
+            continue
+        h, w = img.shape[:2]
+        bbox = [row[2:6] * jnp.array((w, h, w, h))]
+        d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
+
+display(img, output, threshold=0.9)
 ```
 
 ## Summary
@@ -926,6 +1214,28 @@ for l, s in zip(lines, sigmas):
 d2l.plt.legend();
 ```
 
+```{.python .input}
+#@tab jax
+def smooth_l1(data, scalar):
+    out = []
+    for i in data:
+        if abs(i) < 1 / (scalar ** 2):
+            out.append(((scalar * i) ** 2) / 2)
+        else:
+            out.append(abs(i) - 0.5 / (scalar ** 2))
+    return jnp.array(out)
+
+sigmas = [10, 1, 0.5]
+lines = ['-', '--', '-.']
+x = jnp.arange(-2, 2, 0.1)
+d2l.set_figsize()
+
+for l, s in zip(lines, sigmas):
+    y = smooth_l1(x, scalar=s)
+    d2l.plt.plot(x, y, l, label='sigma=%.1f' % s)
+d2l.plt.legend();
+```
+
 Besides, in the experiment we used cross-entropy loss for class prediction:
 denoting by $p_j$ the predicted probability for the ground-truth class $j$, the cross-entropy loss is $-\log p_j$. We can also use the focal loss
 :cite:`Lin.Goyal.Girshick.ea.2017`: given hyperparameters $\gamma > 0$
@@ -962,6 +1272,17 @@ for l, gamma in zip(lines, [0, 1, 5]):
 d2l.plt.legend();
 ```
 
+```{.python .input}
+#@tab jax
+def focal_loss(gamma, x):
+    return -(1 - x) ** gamma * jnp.log(x)
+
+x = jnp.arange(0.01, 1, 0.01)
+for l, gamma in zip(lines, [0, 1, 5]):
+    y = d2l.plt.plot(x, focal_loss(gamma, x), l, label='gamma=%.1f' % gamma)
+d2l.plt.legend();
+```
+
 2. Due to space limitations, we have omitted some implementation details of the single shot multibox detection model in this section. Can you further improve the model in the following aspects:
     1. When an object is much smaller compared with the image, the model could resize the input image bigger.
     1. There are typically a vast number of negative anchor boxes. To make the class distribution more balanced, we could downsample negative anchor boxes.
@@ -975,5 +1296,9 @@ d2l.plt.legend();
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1604)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1604)
 :end_tab:

@@ -39,6 +39,20 @@ import pandas as pd
 ```
 
 ```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import os
+import pandas as pd
+from PIL import Image
+```
+
+```{.python .input}
 #@tab all
 #@save
 d2l.DATA_HUB['banana-detection'] = (
@@ -99,6 +113,29 @@ def read_data_bananas(is_train=True):
     return images, torch.tensor(targets).unsqueeze(1) / 256
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels."""
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        img = Image.open(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}'))
+        images.append(jnp.array(img).transpose(2, 0, 1))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
+```
+
 By using the `read_data_bananas` function to read images and labels,
 the following `BananasDataset` class
 will allow us to [**create a customized `Dataset` instance**]
@@ -139,6 +176,23 @@ class BananasDataset(torch.utils.data.Dataset):
         return len(self.features)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+class BananasDataset:
+    """A customized dataset to load the banana detection dataset."""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].astype(jnp.float32), self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+```
+
 Finally, we define
 the `load_data_bananas` function to [**return two
 data iterator instances for both the training and test sets.**]
@@ -166,6 +220,22 @@ def load_data_bananas(batch_size):
                                              batch_size, shuffle=True)
     val_iter = torch.utils.data.DataLoader(BananasDataset(is_train=False),
                                            batch_size)
+    return train_iter, val_iter
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset."""
+    train_dataset = BananasDataset(is_train=True)
+    val_dataset = BananasDataset(is_train=False)
+    train_iter = d2l.ArrayDataLoader(
+        jnp.stack(train_dataset.features), train_dataset.labels,
+        batch_size, shuffle=True)
+    val_iter = d2l.ArrayDataLoader(
+        jnp.stack(val_dataset.features), val_dataset.labels,
+        batch_size)
     return train_iter, val_iter
 ```
 
@@ -232,6 +302,14 @@ for ax, label in zip(axes, batch[1][:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
+```{.python .input}
+#@tab jax
+imgs = jnp.transpose(batch[0][:10], (0, 2, 3, 1)) / 255
+axes = d2l.show_images(imgs, 2, 5, scale=2)
+for ax, label in zip(axes, np.array(batch[1][:10])):
+    d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
+```
+
 ## Summary
 
 * The banana detection dataset we collected can be used to demonstrate object detection models.
@@ -248,5 +326,9 @@ for ax, label in zip(axes, batch[1][:10]):
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1608)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1608)
 :end_tab:

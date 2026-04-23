@@ -98,6 +98,14 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+```
+
 ## [**A Toy Network**]
 
 We use LeNet as introduced in :numref:`sec_lenet` (with slight modifications). We define it from scratch to illustrate parameter exchange and synchronization in detail.
@@ -170,6 +178,51 @@ def lenet(X, params):
 loss = nn.CrossEntropyLoss(reduction='none')
 ```
 
+```{.python .input}
+#@tab jax
+import functools
+import optax
+
+# Initialize model parameters
+scale = 0.01
+key = jax.random.PRNGKey(0)
+keys = jax.random.split(key, 4)
+W1 = jax.random.normal(keys[0], (20, 1, 3, 3)) * scale
+b1 = jnp.zeros(20)
+W2 = jax.random.normal(keys[1], (50, 20, 5, 5)) * scale
+b2 = jnp.zeros(50)
+W3 = jax.random.normal(keys[2], (800, 128)) * scale
+b3 = jnp.zeros(128)
+W4 = jax.random.normal(keys[3], (128, 10)) * scale
+b4 = jnp.zeros(10)
+params = [W1, b1, W2, b2, W3, b3, W4, b4]
+
+# Define the model
+def lenet(params, X):
+    h1_conv = jax.lax.conv_general_dilated(
+        X, params[0], window_strides=(1, 1), padding='VALID',
+        dimension_numbers=('NCHW', 'OIHW', 'NCHW'))
+    h1_conv = h1_conv + params[1].reshape(1, -1, 1, 1)
+    h1_activation = jax.nn.relu(h1_conv)
+    # Average pooling
+    h1 = jax.lax.reduce_window(
+        h1_activation, 0.0, jax.lax.add, (1, 1, 2, 2), (1, 1, 2, 2),
+        'VALID') / 4.0
+    h2_conv = jax.lax.conv_general_dilated(
+        h1, params[2], window_strides=(1, 1), padding='VALID',
+        dimension_numbers=('NCHW', 'OIHW', 'NCHW'))
+    h2_conv = h2_conv + params[3].reshape(1, -1, 1, 1)
+    h2_activation = jax.nn.relu(h2_conv)
+    h2 = jax.lax.reduce_window(
+        h2_activation, 0.0, jax.lax.add, (1, 1, 2, 2), (1, 1, 2, 2),
+        'VALID') / 4.0
+    h2 = h2.reshape(h2.shape[0], -1)
+    h3_linear = jnp.dot(h2, params[4]) + params[5]
+    h3 = jax.nn.relu(h3_linear)
+    y_hat = jnp.dot(h3, params[6]) + params[7]
+    return y_hat
+```
+
 ## Data Synchronization
 
 For efficient multi-GPU training we need two basic operations.
@@ -194,13 +247,35 @@ def get_params(params, device):
     return new_params
 ```
 
+```{.python .input}
+#@tab jax
+def get_params(params, num_devices):
+    """Replicate parameters across multiple devices."""
+    return jax.tree.map(
+        lambda x: jnp.stack([x] * num_devices), params)
+```
+
 Let's try it out by copying the model parameters to one GPU.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet
 new_params = get_params(params, d2l.try_gpu(0))
 print('b1 weight:', new_params[1])
 print('b1 grad:', new_params[1].grad)
+```
+
+```{.python .input}
+#@tab pytorch
+new_params = get_params(params, d2l.try_gpu(0))
+print('b1 weight:', new_params[1])
+print('b1 grad:', new_params[1].grad)
+```
+
+```{.python .input}
+#@tab jax
+replicated = get_params(params, 1)
+print('b1 weight:', replicated[1])
+print('b1 devices:', replicated[1].devices())
 ```
 
 Since we did not perform any computation yet, the gradient with regard to the bias parameter is still zero.
@@ -224,6 +299,16 @@ def allreduce(data):
         data[i][:] = data[0].to(data[i].device)
 ```
 
+:begin_tab:`jax`
+In JAX, all-reduce operations are expressed declaratively inside `jax.pmap`
+using collective primitives such as `jax.lax.psum` (sum across devices) and
+`jax.lax.pmean` (mean across devices). Unlike the imperative approach used in
+MXNet and PyTorch, there is no need to manually copy tensors between devices.
+The XLA runtime handles the communication automatically.
+We will see this in action when we define the `pmap_step` training function
+below.
+:end_tab:
+
 Let's test this by creating vectors with different values on different devices and aggregate them.
 
 ```{.python .input}
@@ -240,6 +325,19 @@ data = [torch.ones((1, 2), device=d2l.try_gpu(i)) * (i + 1) for i in range(2)]
 print('before allreduce:\n', data[0], '\n', data[1])
 allreduce(data)
 print('after allreduce:\n', data[0], '\n', data[1])
+```
+
+```{.python .input}
+#@tab jax
+# In JAX, allreduce is done inside pmap via jax.lax.psum/pmean.
+# Here we demonstrate with a simple pmap example.
+devices = jax.local_devices()[:2]
+data = jax.device_put_sharded(
+    [jnp.ones((1, 2)) * (i + 1) for i in range(2)], devices)
+print('before allreduce:\n', data[0], '\n', data[1])
+summed = jax.pmap(lambda x: jax.lax.psum(x, axis_name='i'),
+                  axis_name='i')(data)
+print('after allreduce:\n', summed[0], '\n', summed[1])
 ```
 
 ## Distributing Data
@@ -267,6 +365,19 @@ print('load into', devices)
 print('output:', split)
 ```
 
+```{.python .input}
+#@tab jax
+data = jnp.arange(20).reshape(4, 5)
+devices = jax.local_devices()[:2]
+# Reshape into (num_devices, batch_per_device, ...)
+split = data.reshape(2, 2, 5)
+# Place each shard on its corresponding device
+split = jax.device_put_sharded(list(split), devices)
+print('input :', data)
+print('load into', devices)
+print('output:', split)
+```
+
 For later reuse we define a `split_batch` function that splits both data and labels.
 
 ```{.python .input}
@@ -287,6 +398,19 @@ def split_batch(X, y, devices):
     assert X.shape[0] == y.shape[0]
     return (nn.parallel.scatter(X, devices),
             nn.parallel.scatter(y, devices))
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def split_batch(X, y, num_devices):
+    """Split `X` and `y` across devices by reshaping."""
+    assert X.shape[0] == y.shape[0]
+    batch_size = X.shape[0]
+    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
+    def _reshape(a):
+        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
+    return _reshape(X), _reshape(y)
 ```
 
 ## Training
@@ -328,6 +452,29 @@ def train_batch(X, y, device_params, devices, lr):
     # The model parameters are updated separately on each GPU
     for param in device_params:
         d2l.sgd(param, lr, X.shape[0]) # Here, we use a full-size batch
+```
+
+```{.python .input}
+#@tab jax
+@functools.partial(jax.pmap, axis_name='batch')
+def pmap_step(params, X_shard, y_shard, lr):
+    """One training step executed in parallel on each device."""
+    def loss_fn(p):
+        y_hat = lenet(p, X_shard)
+        return jnp.mean(optax.softmax_cross_entropy_with_integer_labels(
+            y_hat, y_shard))
+    grads = jax.grad(loss_fn)(params)
+    # All-reduce: sum gradients across devices
+    grads = jax.lax.pmean(grads, axis_name='batch')
+    # SGD update
+    params = jax.tree.map(lambda p, g: p - lr * g, params, grads)
+    return params
+
+def train_batch(replicated_params, X, y, num_gpus, lr):
+    X_shards, y_shards = split_batch(X, y, num_gpus)
+    replicated_params = pmap_step(
+        replicated_params, X_shards, y_shards, jnp.array(lr))
+    return replicated_params
 ```
 
 Now, we can define [**the training function**]. It is slightly different from the ones used in the previous chapters: we need to allocate the GPUs and copy all the model parameters to all the devices.
@@ -381,11 +528,60 @@ def train(num_gpus, batch_size, lr):
           f'on {str(devices)}')
 ```
 
+```{.python .input}
+#@tab jax
+def evaluate_accuracy_jax(predict_fn, data_iter):
+    """Evaluate accuracy using JAX predict function."""
+    num_correct, num_total = 0, 0
+    for X, y in data_iter:
+        X, y = jnp.array(X), jnp.array(y)
+        y_hat = predict_fn(X)
+        num_correct += jnp.sum(jnp.argmax(y_hat, axis=1) == y).item()
+        num_total += y.shape[0]
+    return num_correct / num_total
+
+def train(num_gpus, batch_size, lr):
+    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+    devices = jax.local_devices()[:num_gpus]
+    # Replicate model parameters to `num_gpus` GPUs
+    replicated_params = jax.tree.map(
+        lambda x: jnp.stack([x] * num_gpus), params)
+    num_epochs = 10
+    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
+    timer = d2l.Timer()
+    for epoch in range(num_epochs):
+        timer.start()
+        for X, y in train_iter:
+            X, y = jnp.array(X), jnp.array(y)
+            # Perform multi-GPU training for a single minibatch
+            replicated_params = train_batch(
+                replicated_params, X, y, num_gpus, lr)
+        # Block until computation is done
+        jax.tree.map(lambda x: x.block_until_ready(), replicated_params)
+        timer.stop()
+        # Evaluate on the first replica's parameters
+        host_params = jax.tree.map(lambda x: x[0], replicated_params)
+        animator.add(epoch + 1, (evaluate_accuracy_jax(
+            lambda x: lenet(host_params, x), test_iter),))
+    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
+          f'on {str(devices)}')
+```
+
 Let's see how well this works [**on a single GPU**].
 We first use a batch size of 256 and a learning rate of 0.2.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet
+train(num_gpus=1, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab pytorch
+train(num_gpus=1, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab jax
 train(num_gpus=1, batch_size=256, lr=0.2)
 ```
 
@@ -395,7 +591,17 @@ In terms of the optimization algorithms, they are identical. Unfortunately there
 Let's see what happens nonetheless for Fashion-MNIST.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet
+train(num_gpus=2, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab pytorch
+train(num_gpus=2, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab jax
 train(num_gpus=2, batch_size=256, lr=0.2)
 ```
 
@@ -418,5 +624,9 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1669)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1669)
 :end_tab:

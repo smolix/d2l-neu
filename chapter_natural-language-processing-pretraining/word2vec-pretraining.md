@@ -39,6 +39,21 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import math
+import numpy as np
+import optax
+
+batch_size, max_window_size, num_noise_words = 512, 5, 5
+data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
+                                     num_noise_words)
+```
+
 ## The Skip-Gram Model
 
 We implement the skip-gram model
@@ -74,6 +89,14 @@ print(f'Parameter embedding_weight ({embed.weight.shape}, '
       f'dtype={embed.weight.dtype})')
 ```
 
+```{.python .input}
+#@tab jax
+embed = nn.Embed(num_embeddings=20, features=4)
+params = embed.init(jax.random.PRNGKey(0), jnp.ones((1,), dtype=jnp.int32))
+print(f'Parameter embedding ({params["params"]["embedding"].shape}, '
+      f'dtype={params["params"]["embedding"].dtype})')
+```
+
 The input of an embedding layer is the
 index of a token (word).
 For any token index $i$,
@@ -89,9 +112,15 @@ for a minibatch of token indices with shape
 (2, 3).
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 x = d2l.tensor([[1, 2, 3], [4, 5, 6]])
 embed(x)
+```
+
+```{.python .input}
+#@tab jax
+x = jnp.array([[1, 2, 3], [4, 5, 6]])
+embed.apply(params, x)
 ```
 
 ### Defining the Forward Propagation
@@ -134,6 +163,16 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     return pred
 ```
 
+```{.python .input}
+#@tab jax
+def skip_gram(center, contexts_and_negatives, embed_v, embed_u,
+              params_v, params_u):
+    v = embed_v.apply(params_v, center)
+    u = embed_u.apply(params_u, contexts_and_negatives)
+    pred = jnp.matmul(v, jnp.transpose(u, (0, 2, 1)))
+    return pred
+```
+
 Let's print the output shape of this `skip_gram` function for some example inputs.
 
 ```{.python .input}
@@ -145,6 +184,13 @@ skip_gram(np.ones((2, 1)), np.ones((2, 4)), embed, embed).shape
 #@tab pytorch
 skip_gram(torch.ones((2, 1), dtype=torch.long),
           torch.ones((2, 4), dtype=torch.long), embed, embed).shape
+```
+
+```{.python .input}
+#@tab jax
+skip_gram(jnp.ones((2, 1), dtype=jnp.int32),
+          jnp.ones((2, 4), dtype=jnp.int32), embed, embed,
+          params, params).shape
 ```
 
 ## Training
@@ -178,6 +224,16 @@ class SigmoidBCELoss(nn.Module):
         return out.mean(dim=1)
 
 loss = SigmoidBCELoss()
+```
+
+```{.python .input}
+#@tab jax
+def loss(inputs, target, mask=None):
+    """Binary cross-entropy loss with masking."""
+    out = optax.sigmoid_binary_cross_entropy(inputs, target)
+    if mask is not None:
+        out = out * mask
+    return out.mean(axis=1)
 ```
 
 Recall our descriptions
@@ -241,6 +297,13 @@ net = nn.Sequential(nn.Embedding(num_embeddings=len(vocab),
                                  embedding_dim=embed_size),
                     nn.Embedding(num_embeddings=len(vocab),
                                  embedding_dim=embed_size))
+```
+
+```{.python .input}
+#@tab jax
+embed_size = 100
+embed_v = nn.Embed(num_embeddings=len(vocab), features=embed_size)
+embed_u = nn.Embed(num_embeddings=len(vocab), features=embed_size)
 ```
 
 ### Defining the Training Loop
@@ -309,12 +372,63 @@ def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
           f'{metric[1] / timer.stop():.1f} tokens/sec on {str(device)}')
 ```
 
+```{.python .input}
+#@tab jax
+def train(embed_v, embed_u, data_iter, lr, num_epochs):
+    key = jax.random.PRNGKey(42)
+    key, key_v, key_u = jax.random.split(key, 3)
+    # Initialize parameters
+    dummy = jnp.ones((1,), dtype=jnp.int32)
+    params_v = embed_v.init(key_v, dummy)
+    params_u = embed_u.init(key_u, dummy)
+    all_params = {'v': params_v, 'u': params_u}
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(all_params)
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[1, num_epochs])
+
+    def train_step(all_params, center, context_negative, mask, label):
+        def compute_loss(all_params):
+            pred = skip_gram(center, context_negative, embed_v, embed_u,
+                             all_params['v'], all_params['u'])
+            l = (loss(pred.reshape(label.shape), label, mask)
+                 / mask.sum(axis=1) * mask.shape[1])
+            return l.sum(), l
+        (loss_val, l), grads = jax.value_and_grad(
+            compute_loss, has_aux=True)(all_params)
+        return loss_val, l, grads
+
+    # Sum of normalized losses, no. of normalized losses
+    metric = d2l.Accumulator(2)
+    for epoch in range(num_epochs):
+        timer, num_batches = d2l.Timer(), len(data_iter)
+        for i, batch in enumerate(data_iter):
+            center, context_negative, mask, label = batch
+            loss_val, l, grads = train_step(
+                all_params, center, context_negative, mask, label)
+            updates, opt_state = optimizer.update(grads, opt_state, all_params)
+            all_params = optax.apply_updates(all_params, updates)
+            metric.add(float(loss_val), float(l.size))
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, '
+          f'{metric[1] / timer.stop():.1f} tokens/sec')
+    return all_params
+```
+
 Now we can train a skip-gram model using negative sampling.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch
 lr, num_epochs = 0.002, 5
 train(net, data_iter, lr, num_epochs)
+```
+
+```{.python .input}
+#@tab jax
+lr, num_epochs = 0.002, 5
+all_params = train(embed_v, embed_u, data_iter, lr, num_epochs)
 ```
 
 ## Applying Word Embeddings
@@ -358,6 +472,21 @@ def get_similar_tokens(query_token, k, embed):
 get_similar_tokens('chip', 3, net[0])
 ```
 
+```{.python .input}
+#@tab jax
+def get_similar_tokens(query_token, k, embed_params):
+    W = embed_params['params']['embedding']
+    x = W[vocab[query_token]]
+    # Compute the cosine similarity. Add 1e-9 for numerical stability
+    cos = jnp.dot(W, x) / jnp.sqrt(jnp.sum(W * W, axis=1) *
+                                    jnp.sum(x * x) + 1e-9)
+    topk = jnp.argsort(-cos)[:k + 1]
+    for i in topk[1:]:  # Remove the input words
+        print(f'cosine sim={float(cos[i]):.3f}: {vocab.to_tokens(int(i))}')
+
+get_similar_tokens('chip', 3, all_params['v'])
+```
+
 ## Summary
 
 * We can train a skip-gram model with negative sampling using embedding layers and the binary cross-entropy loss.
@@ -374,5 +503,9 @@ get_similar_tokens('chip', 3, net[0])
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1335)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1335)
 :end_tab:

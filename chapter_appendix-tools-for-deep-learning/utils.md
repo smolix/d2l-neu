@@ -582,6 +582,162 @@ def train_ch6(net_fn, train_iter, test_iter, num_epochs, lr, device):
 ```
 
 ```{.python .input}
+%%tab jax
+
+def linreg(X, w, b):  #@save
+    """The linear regression model."""
+    return d2l.matmul(X, w) + b
+
+def squared_loss(y_hat, y):  #@save
+    """Squared loss."""
+    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
+
+def load_array(data_arrays, batch_size, is_train=True):  #@save
+    """Construct a JAX-compatible data iterator."""
+    n = data_arrays[0].shape[0]
+    indices = np.arange(n)
+    def data_iter():
+        if is_train:
+            np.random.shuffle(indices)
+        for i in range(0, n, batch_size):
+            batch_indices = indices[i: min(i + batch_size, n)]
+            yield tuple(jnp.array(a[batch_indices]) for a in data_arrays)
+    class DataIter:
+        def __iter__(self):
+            return data_iter()
+        def __len__(self):
+            return (n + batch_size - 1) // batch_size
+    return DataIter()
+
+class ArrayDataLoader:  #@save
+    """A simple data loader for JAX that batches arrays or dataset objects."""
+    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False,
+                 **kwargs):
+        if len(args) == 1 and hasattr(args[0], '__len__') and hasattr(args[0], '__getitem__'):
+            dataset = args[0]
+            items = [dataset[i] for i in range(len(dataset))]
+            if isinstance(items[0], (tuple, list)):
+                self.arrays = tuple(np.array([item[j] for item in items])
+                                    for j in range(len(items[0])))
+            else:
+                self.arrays = (np.array(items),)
+        else:
+            self.arrays = tuple(np.asarray(a) for a in args)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.drop_last = drop_last
+
+    def __iter__(self):
+        n = self.arrays[0].shape[0]
+        indices = np.arange(n)
+        if self.shuffle:
+            np.random.shuffle(indices)
+        for i in range(0, n, self.batch_size):
+            end = i + self.batch_size
+            if self.drop_last and end > n:
+                break
+            batch_idx = indices[i:min(end, n)]
+            yield tuple(jnp.array(a[batch_idx]) for a in self.arrays)
+
+    def __len__(self):
+        n = self.arrays[0].shape[0]
+        if self.drop_last:
+            return n // self.batch_size
+        return (n + self.batch_size - 1) // self.batch_size
+
+class Animator:  #@save
+    """For plotting data in animation."""
+    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
+                 ylim=None, xscale='linear', yscale='linear',
+                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
+                 figsize=(3.5, 2.5)):
+        if legend is None:
+            legend = []
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
+        if nrows * ncols == 1:
+            self.axes = [self.axes, ]
+        self.config_axes = lambda: d2l.set_axes(
+            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+        self.X, self.Y, self.fmts = None, None, fmts
+
+    def add(self, x, y):
+        if not hasattr(y, "__len__"):
+            y = [y]
+        n = len(y)
+        if not hasattr(x, "__len__"):
+            x = [x] * n
+        if not self.X:
+            self.X = [[] for _ in range(n)]
+        if not self.Y:
+            self.Y = [[] for _ in range(n)]
+        for i, (a, b) in enumerate(zip(x, y)):
+            if a is not None and b is not None:
+                self.X[i].append(a)
+                self.Y[i].append(b)
+        self.axes[0].cla()
+        for x, y, fmt in zip(self.X, self.Y, self.fmts):
+            self.axes[0].plot(x, y, fmt)
+        self.config_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+class Accumulator:  #@save
+    """For accumulating sums over `n` variables."""
+    def __init__(self, n):
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+def tokenize(lines, token='word'):  #@save
+    """Split text lines into word or character tokens."""
+    assert token in ('word', 'char'), 'Unknown token type: ' + token
+    return [line.split() if token == 'word' else list(line) for line in lines]
+
+def truncate_pad(line, num_steps, padding_token):  #@save
+    """Truncate or pad sequences."""
+    if len(line) > num_steps:
+        return line[:num_steps]
+    return line + [padding_token] * (num_steps - len(line))
+
+def download_extract(name, folder=None):  #@save
+    """Download and extract a zip/tar file."""
+    fname = download(name)
+    base_dir = os.path.dirname(fname)
+    data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
+    if ext == '.zip':
+        fp = zipfile.ZipFile(fname, 'r')
+    elif ext in ('.tar', '.gz'):
+        fp = tarfile.open(fname, 'r')
+    else:
+        assert False, 'Only zip/tar files can be extracted.'
+    fp.extractall(base_dir)
+    open(marker, 'w').close()
+    return target
+
+def evaluate_loss(net, data_iter, loss):  #@save
+    """Evaluate the loss of a model on the given dataset."""
+    metric = d2l.Accumulator(2)
+    for X, y in data_iter:
+        out = net(X)
+        y = d2l.reshape(y, out.shape)
+        l = loss(out, y)
+        metric.add(d2l.reduce_sum(l), d2l.size(l))
+    return metric[0] / metric[1]
+```
+
+```{.python .input}
 %%tab mxnet, tensorflow
 def evaluate_accuracy(net, data_iter):  #@save
     """Compute the accuracy for a model on a dataset."""

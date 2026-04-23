@@ -63,6 +63,18 @@ import torchvision
 import os
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import os
+```
+
 The tar file of the dataset is about 2 GB,
 so it may take a while to download the file.
 The extracted dataset is located at `../data/VOCdevkit/VOC2012`.
@@ -130,6 +142,27 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def read_voc_images(voc_dir, is_train=True):
+    """Read all VOC feature and label images."""
+    from PIL import Image
+    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
+                             'train.txt' if is_train else 'val.txt')
+    with open(txt_fname, 'r') as f:
+        images = f.read().split()
+    features, labels = [], []
+    for i, fname in enumerate(images):
+        features.append(np.array(Image.open(os.path.join(
+            voc_dir, 'JPEGImages', f'{fname}.jpg'))))
+        labels.append(np.array(Image.open(os.path.join(
+            voc_dir, 'SegmentationClass', f'{fname}.png')).convert('RGB')))
+    return features, labels
+
+train_features, train_labels = read_voc_images(voc_dir, True)
+```
+
 We [**draw the first five input images and their labels**].
 In the label images, white and black represent borders and  background, respectively, while the other colors correspond to different classes.
 
@@ -145,6 +178,13 @@ d2l.show_images(imgs, 2, n);
 n = 5
 imgs = train_features[:n] + train_labels[:n]
 imgs = [img.permute(1,2,0) for img in imgs]
+d2l.show_images(imgs, 2, n);
+```
+
+```{.python .input}
+#@tab jax
+n = 5
+imgs = train_features[:n] + train_labels[:n]
 d2l.show_images(imgs, 2, n);
 ```
 
@@ -218,6 +258,26 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def voc_colormap2label():
+    """Build the mapping from RGB to class indices for VOC labels."""
+    colormap2label = np.zeros(256 ** 3, dtype=np.int32)
+    for i, colormap in enumerate(VOC_COLORMAP):
+        colormap2label[
+            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
+    return colormap2label
+
+#@save
+def voc_label_indices(colormap, colormap2label):
+    """Map any RGB values in VOC labels to their class indices."""
+    colormap = colormap.astype(np.int32)
+    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
+           + colormap[:, :, 2])
+    return colormap2label[idx]
+```
+
 [**For example**], in the first example image,
 the class index for the front part of the airplane is 1,
 while the background index is 0.
@@ -266,6 +326,20 @@ def voc_rand_crop(feature, label, height, width):
 ```
 
 ```{.python .input}
+#@tab jax
+#@save
+def voc_rand_crop(feature, label, height, width):
+    """Randomly crop both feature and label images."""
+    # feature and label are HWC numpy arrays
+    h, w = feature.shape[0], feature.shape[1]
+    top = np.random.randint(0, h - height + 1)
+    left = np.random.randint(0, w - width + 1)
+    feature = feature[top:top+height, left:left+width, :]
+    label = label[top:top+height, left:left+width, :]
+    return feature, label
+```
+
+```{.python .input}
 #@tab mxnet
 imgs = []
 for _ in range(n):
@@ -280,6 +354,14 @@ for _ in range(n):
     imgs += voc_rand_crop(train_features[0], train_labels[0], 200, 300)
 
 imgs = [img.permute(1, 2, 0) for img in imgs]
+d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
+```
+
+```{.python .input}
+#@tab jax
+imgs = []
+for _ in range(n):
+    imgs += voc_rand_crop(train_features[0], train_labels[0], 200, 300)
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
@@ -365,6 +447,41 @@ class VOCSegDataset(torch.utils.data.Dataset):
         return len(self.features)
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+class VOCSegDataset:
+    """A customized dataset to load the VOC dataset."""
+
+    def __init__(self, is_train, crop_size, voc_dir):
+        self.rgb_mean = np.array([0.485, 0.456, 0.406])
+        self.rgb_std = np.array([0.229, 0.224, 0.225])
+        self.crop_size = crop_size
+        features, labels = read_voc_images(voc_dir, is_train=is_train)
+        self.features = [self.normalize_image(feature)
+                         for feature in self.filter(features)]
+        self.labels = self.filter(labels)
+        self.colormap2label = voc_colormap2label()
+        print('read ' + str(len(self.features)) + ' examples')
+
+    def normalize_image(self, img):
+        return (img.astype(np.float32) / 255 - self.rgb_mean) / self.rgb_std
+
+    def filter(self, imgs):
+        return [img for img in imgs if (
+            img.shape[0] >= self.crop_size[0] and
+            img.shape[1] >= self.crop_size[1])]
+
+    def __getitem__(self, idx):
+        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
+                                       *self.crop_size)
+        return (jnp.array(feature.transpose(2, 0, 1)),
+                jnp.array(voc_label_indices(label, self.colormap2label)))
+
+    def __len__(self):
+        return len(self.features)
+```
+
 ### [**Reading the Dataset**]
 
 We use the custom `VOCSegDatase`t class to
@@ -410,6 +527,18 @@ for X, Y in train_iter:
     break
 ```
 
+```{.python .input}
+#@tab jax
+batch_size = 64
+num_examples = len(voc_train) // batch_size * batch_size
+indices = np.random.permutation(len(voc_train))[:num_examples]
+batch = [voc_train[i] for i in indices[:batch_size]]
+X = jnp.stack([b[0] for b in batch])
+Y = jnp.stack([b[1] for b in batch])
+print(X.shape)
+print(Y.shape)
+```
+
 ### [**Putting It All Together**]
 
 Finally, we define the following `load_data_voc` function
@@ -450,6 +579,21 @@ def load_data_voc(batch_size, crop_size):
     return train_iter, test_iter
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def load_data_voc(batch_size, crop_size):
+    """Load the VOC semantic segmentation dataset."""
+    voc_dir = d2l.download_extract('voc2012', os.path.join(
+        'VOCdevkit', 'VOC2012'))
+    train_dataset = VOCSegDataset(True, crop_size, voc_dir)
+    test_dataset = VOCSegDataset(False, crop_size, voc_dir)
+    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size, shuffle=True,
+                                     drop_last=True)
+    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size, drop_last=True)
+    return train_iter, test_iter
+```
+
 ## Summary
 
 * Semantic segmentation recognizes and understands what are in an image in pixel level by dividing the image into regions belonging to different semantic classes.
@@ -468,5 +612,9 @@ def load_data_voc(batch_size, crop_size):
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1480)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1480)
 :end_tab:

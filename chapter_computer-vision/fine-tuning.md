@@ -81,6 +81,15 @@ import torchvision
 import os
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import tensorflow as tf
+import numpy as np
+import os
+```
+
 ### Reading the Dataset
 
 [**The hot dog dataset we use was taken from online images**].
@@ -117,6 +126,32 @@ test_imgs = gluon.data.vision.ImageFolderDataset(
 #@tab pytorch
 train_imgs = torchvision.datasets.ImageFolder(os.path.join(data_dir, 'train'))
 test_imgs = torchvision.datasets.ImageFolder(os.path.join(data_dir, 'test'))
+```
+
+```{.python .input}
+#@tab jax
+# Load images as (PIL.Image, label) lists for compatibility with show_images
+from PIL import Image as _PILImage
+import pathlib
+
+def _load_image_folder(path):
+    """Load images from a directory with class subfolders, returning
+    a list of (PIL.Image, class_index) tuples."""
+    path = pathlib.Path(path)
+    class_names = sorted([p.name for p in path.iterdir() if p.is_dir()])
+    class_to_idx = {c: i for i, c in enumerate(class_names)}
+    items = []
+    for cls in class_names:
+        for img_path in sorted((path / cls).iterdir()):
+            try:
+                img = _PILImage.open(str(img_path)).convert('RGB')
+                items.append((img, class_to_idx[cls]))
+            except Exception:
+                continue
+    return items
+
+train_imgs = _load_image_folder(os.path.join(data_dir, 'train'))
+test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
 ```
 
 The first 8 positive examples and the last 8 negative images are shown below. As you can see, [**the images vary in size and aspect ratio**].
@@ -180,6 +215,31 @@ test_augs = torchvision.transforms.Compose([
     normalize])
 ```
 
+```{.python .input}
+#@tab jax
+# Image preprocessing using tf.keras for the JAX tab
+IMG_SIZE = 224
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype='float32')
+IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype='float32')
+
+def _imagenet_normalize(x):
+    return (x - IMAGENET_MEAN) / IMAGENET_STD
+
+train_preprocess = tf.keras.Sequential([
+    tf.keras.layers.RandomCrop(IMG_SIZE, IMG_SIZE),
+    tf.keras.layers.RandomFlip('horizontal'),
+    tf.keras.layers.Rescaling(1./255),
+    tf.keras.layers.Lambda(_imagenet_normalize),
+])
+
+test_preprocess = tf.keras.Sequential([
+    tf.keras.layers.Resizing(256, 256),
+    tf.keras.layers.CenterCrop(IMG_SIZE, IMG_SIZE),
+    tf.keras.layers.Rescaling(1./255),
+    tf.keras.layers.Lambda(_imagenet_normalize),
+])
+```
+
 ### [**Defining and Initializing the Model**]
 
 We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. Here, we specify `pretrained=True` to automatically download the pretrained model parameters. 
@@ -197,6 +257,12 @@ pretrained_net = torchvision.models.resnet18(
     weights=torchvision.models.ResNet18_Weights.DEFAULT)
 ```
 
+```{.python .input}
+#@tab jax
+# Load a pretrained ResNet50 from tf.keras.applications
+pretrained_net = tf.keras.applications.ResNet50(weights='imagenet')
+```
+
 :begin_tab:`mxnet`
 The pretrained source model instance contains two member variables: `features` and `output`. The former contains all layers of the model except the output layer, and the latter is the output layer of the model. 
 The main purpose of this division is to facilitate the fine-tuning of model parameters of all layers but the output layer. The member variable `output` of source model is shown below.
@@ -207,6 +273,12 @@ The pretrained source model instance contains a number of feature layers and an 
 The main purpose of this division is to facilitate the fine-tuning of model parameters of all layers but the output layer. The member variable `fc` of source model is given below.
 :end_tab:
 
+:begin_tab:`jax`
+The pretrained source model from `tf.keras.applications` contains a number of feature layers and an output layer.
+We will use the pretrained weights for transfer learning.
+The final layer of the source model is shown below.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 pretrained_net.output
@@ -215,6 +287,11 @@ pretrained_net.output
 ```{.python .input}
 #@tab pytorch
 pretrained_net.fc
+```
+
+```{.python .input}
+#@tab jax
+pretrained_net.layers[-1]
 ```
 
 As a fully connected layer, it transforms ResNet's final global average pooling outputs into 1000 class outputs of the ImageNet dataset.
@@ -247,6 +324,20 @@ finetune_net = torchvision.models.resnet18(
     weights=torchvision.models.ResNet18_Weights.DEFAULT)
 finetune_net.fc = nn.Linear(finetune_net.fc.in_features, 2)
 nn.init.xavier_uniform_(finetune_net.fc.weight);
+```
+
+```{.python .input}
+#@tab jax
+# Build a fine-tuning model using TF/Keras: pretrained ResNet50 base + new head
+base_model = tf.keras.applications.ResNet50(weights='imagenet',
+                                            include_top=False,
+                                            input_shape=(IMG_SIZE, IMG_SIZE, 3))
+base_model.trainable = False  # Freeze pretrained layers
+finetune_net = tf.keras.Sequential([
+    base_model,
+    tf.keras.layers.GlobalAveragePooling2D(),
+    tf.keras.layers.Dense(2, kernel_initializer='glorot_uniform'),
+])
 ```
 
 ### [**Fine-Tuning the Model**]
@@ -298,6 +389,47 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
                    devices)
 ```
 
+```{.python .input}
+#@tab jax
+def _make_tf_dataset(img_dir, preprocess, batch_size, shuffle=False):
+    """Create a tf.data.Dataset from an image folder directory."""
+    ds = tf.keras.utils.image_dataset_from_directory(
+        img_dir, label_mode='int', image_size=(256, 256),
+        batch_size=None, shuffle=shuffle)
+    ds = ds.map(lambda x, y: (preprocess(x, training=shuffle), y),
+                num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return ds
+
+def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
+                      param_group=True):
+    train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
+                                train_preprocess, batch_size, shuffle=True)
+    test_ds = _make_tf_dataset(os.path.join(data_dir, 'test'),
+                               test_preprocess, batch_size, shuffle=False)
+    # Compile with differential learning rates if param_group
+    if param_group:
+        # Use a smaller lr for the pretrained base, 10x for the new head
+        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate * 10,
+                                            momentum=0.9)
+        # Freeze base so only head trains at the higher lr
+        net.layers[0].trainable = False
+    else:
+        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
+                                            momentum=0.9)
+    net.compile(optimizer=optimizer,
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(
+                    from_logits=True),
+                metrics=['accuracy'])
+    history = net.fit(train_ds, validation_data=test_ds, epochs=num_epochs,
+                      verbose=1)
+    train_loss = history.history['loss'][-1]
+    train_acc = history.history['accuracy'][-1]
+    test_acc = history.history['val_accuracy'][-1]
+    print(f'loss {train_loss:.3f}, train acc {train_acc:.3f}, '
+          f'test acc {test_acc:.3f}')
+```
+
 We [**set the base learning rate to a small value**]
 in order to *fine-tune* the model parameters obtained via pretraining. Based on the previous settings, we will train the output layer parameters of the target model from scratch using a learning rate ten times greater.
 
@@ -308,6 +440,11 @@ train_fine_tuning(finetune_net, 0.01)
 
 ```{.python .input}
 #@tab pytorch
+train_fine_tuning(finetune_net, 5e-5)
+```
+
+```{.python .input}
+#@tab jax
 train_fine_tuning(finetune_net, 5e-5)
 ```
 
@@ -324,6 +461,19 @@ train_fine_tuning(scratch_net, 0.1)
 #@tab pytorch
 scratch_net = torchvision.models.resnet18()
 scratch_net.fc = nn.Linear(scratch_net.fc.in_features, 2)
+train_fine_tuning(scratch_net, 5e-4, param_group=False)
+```
+
+```{.python .input}
+#@tab jax
+# Train from scratch: same architecture but with random weights
+scratch_base = tf.keras.applications.ResNet50(weights=None, include_top=False,
+                                              input_shape=(IMG_SIZE, IMG_SIZE, 3))
+scratch_net = tf.keras.Sequential([
+    scratch_base,
+    tf.keras.layers.GlobalAveragePooling2D(),
+    tf.keras.layers.Dense(2, kernel_initializer='glorot_uniform'),
+])
 train_fine_tuning(scratch_net, 5e-4, param_group=False)
 ```
 
@@ -355,6 +505,11 @@ for param in finetune_net.parameters():
     param.requires_grad = False
 ```
 
+```{.python .input}
+#@tab jax
+finetune_net.layers[0].trainable = False
+```
+
 4. In fact, there is a "hotdog" class in the `ImageNet` dataset. Its corresponding weight parameter in the output layer can be obtained via the following code. How can we leverage this weight parameter?
 
 ```{.python .input}
@@ -371,10 +526,21 @@ hotdog_w = torch.split(weight.data, 1, dim=0)[934]
 hotdog_w.shape
 ```
 
+```{.python .input}
+#@tab jax
+weight = pretrained_net.layers[-1].get_weights()[0]  # Shape: (2048, 1000)
+hotdog_w = weight[:, 934]
+hotdog_w.shape
+```
+
 :begin_tab:`mxnet`
 [Discussions](https://discuss.d2l.ai/t/368)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1439)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1439)
 :end_tab:

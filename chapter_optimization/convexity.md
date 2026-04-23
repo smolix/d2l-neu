@@ -35,6 +35,16 @@ from mpl_toolkits import mplot3d
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+from mpl_toolkits import mplot3d
+```
+
 ## Definitions
 
 Before convex analysis,

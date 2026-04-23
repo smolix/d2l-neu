@@ -112,6 +112,33 @@ def adam(params, grads, states, hyperparams):
                     / tf.math.sqrt(s_bias_corr) + eps)
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+
+def init_adam_states(feature_dim):
+    v_w, v_b = jnp.zeros((feature_dim, 1)), jnp.zeros(1)
+    s_w, s_b = jnp.zeros((feature_dim, 1)), jnp.zeros(1)
+    return [(v_w, s_w), (v_b, s_b)]
+
+def adam(params, grads, states, hyperparams):
+    beta1, beta2, eps = 0.9, 0.999, 1e-6
+    for i, (p, (v, s), grad) in enumerate(zip(params, states, grads)):
+        v = beta1 * v + (1 - beta1) * grad
+        s = beta2 * s + (1 - beta2) * jnp.square(grad)
+        v_bias_corr = v / (1 - beta1 ** hyperparams['t'])
+        s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
+        params[i] = p - hyperparams['lr'] * v_bias_corr / (jnp.sqrt(s_bias_corr)
+                                                            + eps)
+        states[i] = (v, s)
+    hyperparams['t'] += 1
+    return params[0], params[1]
+```
+
 We are ready to use Adam to train the model. We use a learning rate of $\eta = 0.01$.
 
 ```{.python .input}
@@ -137,6 +164,14 @@ d2l.train_concise_ch11(trainer, {'lr': 0.01}, data_iter)
 ```{.python .input}
 #@tab tensorflow
 trainer = tf.keras.optimizers.Adam
+d2l.train_concise_ch11(trainer, {'learning_rate': 0.01}, data_iter)
+```
+
+```{.python .input}
+#@tab jax
+import optax
+
+trainer = optax.adam
 d2l.train_concise_ch11(trainer, {'learning_rate': 0.01}, data_iter)
 ```
 
@@ -210,6 +245,27 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
                {'lr': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
+```{.python .input}
+#@tab jax
+def yogi(params, grads, states, hyperparams):
+    beta1, beta2, eps = 0.9, 0.999, 1e-3
+    for i, (p, (v, s), grad) in enumerate(zip(params, states, grads)):
+        v = beta1 * v + (1 - beta1) * grad
+        s = s + (1 - beta2) * jnp.sign(
+            jnp.square(grad) - s) * jnp.square(grad)
+        v_bias_corr = v / (1 - beta1 ** hyperparams['t'])
+        s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
+        params[i] = p - hyperparams['lr'] * v_bias_corr / (jnp.sqrt(s_bias_corr)
+                                                            + eps)
+        states[i] = (v, s)
+    hyperparams['t'] += 1
+    return params[0], params[1]
+
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(yogi, init_adam_states(feature_dim),
+               {'lr': 0.01, 't': 1}, data_iter, feature_dim);
+```
+
 ## Summary
 
 * Adam combines features of many optimization algorithms into a fairly robust update rule. 
@@ -234,5 +290,9 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1079)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1079)
 :end_tab:

@@ -42,6 +42,14 @@ import os
 npx.set_np()
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+from d2l import torch as d2l
+import torch
+from torch import nn
+import os
+```
+
 ## Model Implementation
 The following code implement the factorization machines. It is clear to see that FM consists a linear regression block and an efficient feature interaction block. We apply a sigmoid function over the final score since we treat the CTR prediction as a classification task.
 
@@ -64,6 +72,25 @@ class FM(nn.Block):
         return x
 ```
 
+```{.python .input  n=2}
+#@tab pytorch
+class FM(nn.Module):
+    def __init__(self, field_dims, num_factors):
+        super().__init__()
+        num_inputs = int(sum(field_dims))
+        self.embedding = nn.Embedding(num_inputs, num_factors)
+        self.fc = nn.Embedding(num_inputs, 1)
+        self.linear_layer = nn.Linear(1, 1)
+
+    def forward(self, x):
+        square_of_sum = self.embedding(x).sum(dim=1) ** 2
+        sum_of_square = (self.embedding(x) ** 2).sum(dim=1)
+        x = self.linear_layer(self.fc(x).sum(dim=1)) \
+            + 0.5 * (square_of_sum - sum_of_square).sum(dim=1, keepdim=True)
+        x = torch.sigmoid(x)
+        return x
+```
+
 ## Load the Advertising Dataset
 We use the CTR data wrapper from the last section to load the online advertising dataset.
 
@@ -83,6 +110,22 @@ test_iter = gluon.data.DataLoader(
     num_workers=d2l.get_dataloader_workers())
 ```
 
+```{.python .input  n=3}
+#@tab pytorch
+batch_size = 2048
+data_dir = d2l.download_extract('ctr')
+train_data = d2l.CTRDataset(os.path.join(data_dir, 'train.csv'))
+test_data = d2l.CTRDataset(os.path.join(data_dir, 'test.csv'),
+                           feat_mapper=train_data.feat_mapper,
+                           defaults=train_data.defaults)
+train_iter = torch.utils.data.DataLoader(
+    train_data, shuffle=True, drop_last=True, batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
+test_iter = torch.utils.data.DataLoader(
+    test_data, shuffle=False, drop_last=True, batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
+```
+
 ## Train the Model
 Afterwards, we train the model. The learning rate is set to 0.02 and the embedding size is set to 20 by default. The `Adam` optimizer and the `SigmoidBinaryCrossEntropyLoss` loss are used for model training.
 
@@ -98,6 +141,24 @@ loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
+```{.python .input  n=5}
+#@tab pytorch
+devices = d2l.try_all_gpus()
+net = FM(train_data.field_dims, num_factors=20)
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform_(m.weight)
+    if type(m) == nn.Embedding:
+        nn.init.xavier_uniform_(m.weight)
+
+net.apply(init_weights)
+lr, num_epochs = 0.02, 30
+optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+loss = nn.BCEWithLogitsLoss()
+d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
+```
+
 ## Summary
 
 * FM is a general framework that can be applied on a variety of tasks such as regression, classification, and ranking.
@@ -109,5 +170,9 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 * Vary the embedding size to check its impact on performance, can you observe a similar pattern as that of matrix factorization?
 
 :begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/406)
+:end_tab:
+
+:begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/406)
 :end_tab:

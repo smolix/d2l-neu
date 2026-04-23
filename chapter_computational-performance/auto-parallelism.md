@@ -2,7 +2,7 @@
 :label:`sec_auto_para`
 
 
-Deep learning frameworks (e.g., MXNet and PyTorch) automatically construct computational graphs at the backend. Using a
+Deep learning frameworks (e.g., MXNet, PyTorch, and JAX) automatically construct computational graphs at the backend. Using a
 computational graph, the system is aware of all the dependencies,
 and can selectively execute multiple non-interdependent tasks in parallel to
 improve speed. For instance, :numref:`fig_asyncgraph` in :numref:`sec_async` initializes two variables independently. Consequently the system can choose to execute them in parallel.
@@ -23,6 +23,13 @@ npx.set_np()
 #@tab pytorch
 from d2l import torch as d2l
 import torch
+```
+
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
 ```
 
 ## Parallel Computation on GPUs
@@ -49,12 +56,28 @@ x_gpu1 = torch.rand(size=(4000, 4000), device=devices[0])
 x_gpu2 = torch.rand(size=(4000, 4000), device=devices[1])
 ```
 
+```{.python .input}
+#@tab jax
+devices = jax.devices('gpu')
+def run(x):
+    return [jnp.dot(x, x) for _ in range(50)]
+
+x_gpu1 = jax.device_put(jax.random.normal(jax.random.PRNGKey(0), (4000, 4000)),
+                         devices[0])
+x_gpu2 = jax.device_put(jax.random.normal(jax.random.PRNGKey(1), (4000, 4000)),
+                         devices[1])
+```
+
 :begin_tab:`mxnet`
 Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring.
 :end_tab:
 
 :begin_tab:`pytorch`
 Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring. `torch.cuda.synchronize()` waits for all kernels in all streams on a CUDA device to complete. It takes in a `device` argument, the device for which we need to synchronize. It uses the current device, given by `current_device()`, if the device argument is `None` (default).
+:end_tab:
+
+:begin_tab:`jax`
+Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring. In JAX, computations are dispatched asynchronously. We call `block_until_ready()` on the result to wait for the computation to complete before taking a timing measurement.
 :end_tab:
 
 ```{.python .input}
@@ -88,12 +111,28 @@ with d2l.Benchmark('GPU2 time'):
     torch.cuda.synchronize(devices[1])
 ```
 
+```{.python .input}
+#@tab jax
+run(x_gpu1)[-1].block_until_ready()  # Warm-up both devices
+run(x_gpu2)[-1].block_until_ready()
+
+with d2l.Benchmark('GPU1 time'):
+    run(x_gpu1)[-1].block_until_ready()
+
+with d2l.Benchmark('GPU2 time'):
+    run(x_gpu2)[-1].block_until_ready()
+```
+
 :begin_tab:`mxnet`
 If we remove the `waitall` statement between both tasks the system is free to parallelize computation on both devices automatically.
 :end_tab:
 
 :begin_tab:`pytorch`
 If we remove the `synchronize` statement between both tasks the system is free to parallelize computation on both devices automatically.
+:end_tab:
+
+:begin_tab:`jax`
+If we remove the `block_until_ready` call between both tasks the system is free to parallelize computation on both devices automatically.
 :end_tab:
 
 ```{.python .input}
@@ -110,6 +149,13 @@ with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
     run(x_gpu2)
     torch.cuda.synchronize()
+```
+
+```{.python .input}
+#@tab jax
+with d2l.Benchmark('GPU1 & GPU2'):
+    run(x_gpu1)
+    run(x_gpu2)[-1].block_until_ready()
 ```
 
 In the above case the total execution time is less than the sum of its parts, since the deep learning framework automatically schedules computation on both GPU devices without the need for sophisticated code on behalf of the user.
@@ -150,12 +196,30 @@ with d2l.Benchmark('Copy to CPU'):
     torch.cuda.synchronize()
 ```
 
+```{.python .input}
+#@tab jax
+def copy_to_cpu(x):
+    return [jax.device_put(y, jax.devices('cpu')[0]) for y in x]
+
+with d2l.Benchmark('Run on GPU1'):
+    y = run(x_gpu1)
+    y[-1].block_until_ready()
+
+with d2l.Benchmark('Copy to CPU'):
+    y_cpu = copy_to_cpu(y)
+    y_cpu[-1].block_until_ready()
+```
+
 :begin_tab:`mxnet`
 This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. Removing `waitall` between both parts allows us to simulate this scenario.
 :end_tab:
 
 :begin_tab:`pytorch`
 This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In PyTorch, several functions such as `to()` and `copy_()` admit an explicit `non_blocking` argument, which lets the caller bypass synchronization when it is unnecessary. Setting `non_blocking=True` allows us to simulate this scenario.
+:end_tab:
+
+:begin_tab:`jax`
+This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In JAX, `jax.device_put` dispatches the transfer asynchronously and returns immediately. By deferring `block_until_ready` we allow computation and communication to overlap.
 :end_tab:
 
 ```{.python .input}
@@ -172,6 +236,14 @@ with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
     y_cpu = copy_to_cpu(y, True)
     torch.cuda.synchronize()
+```
+
+```{.python .input}
+#@tab jax
+with d2l.Benchmark('Run on GPU1 and copy to CPU'):
+    y = run(x_gpu1)
+    y_cpu = copy_to_cpu(y)
+    y_cpu[-1].block_until_ready()
 ```
 
 The total time required for both operations is (as expected) less than the sum of their parts.
@@ -202,5 +274,9 @@ We conclude with an illustration of the computational graph and its dependencies
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1681)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1681)
 :end_tab:

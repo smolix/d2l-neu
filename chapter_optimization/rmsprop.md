@@ -53,6 +53,15 @@ import math
 ```
 
 ```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import math
+import numpy as np
+```
+
+```{.python .input}
 #@tab all
 d2l.set_figsize()
 gammas = [0.95, 0.9, 0.8, 0.7]
@@ -102,6 +111,14 @@ def init_rmsprop_states(feature_dim):
 ```
 
 ```{.python .input}
+#@tab jax
+def init_rmsprop_states(feature_dim):
+    s_w = jnp.zeros((feature_dim, 1))
+    s_b = jnp.zeros(1)
+    return [s_w, s_b]
+```
+
+```{.python .input}
 #@tab mxnet
 def rmsprop(params, states, hyperparams):
     gamma, eps = hyperparams['gamma'], 1e-6
@@ -128,6 +145,17 @@ def rmsprop(params, grads, states, hyperparams):
     for p, s, g in zip(params, states, grads):
         s[:].assign(gamma * s + (1 - gamma) * tf.math.square(g))
         p[:].assign(p - hyperparams['lr'] * g / tf.math.sqrt(s + eps))
+```
+
+```{.python .input}
+#@tab jax
+def rmsprop(params, grads, states, hyperparams):
+    gamma, eps = hyperparams['gamma'], 1e-6
+    for i, (p, s, g) in enumerate(zip(params, states, grads)):
+        s = gamma * s + (1 - gamma) * jnp.square(g)
+        params[i] = p - hyperparams['lr'] * g / jnp.sqrt(s + eps)
+        states[i] = s
+    return params[0], params[1]
 ```
 
 We set the initial learning rate to 0.01 and the weighting term $\gamma$ to 0.9. That is, $\mathbf{s}$ aggregates on average over the past $1/(1-\gamma) = 10$ observations of the square gradient.
@@ -163,6 +191,14 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'rho': 0.9},
                        data_iter)
 ```
 
+```{.python .input}
+#@tab jax
+import optax
+trainer = optax.rmsprop
+d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
+                       data_iter)
+```
+
 ## Summary
 
 * RMSProp is very similar to Adagrad insofar as both use the square of the gradient to scale coefficients.
@@ -186,5 +222,9 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'rho': 0.9},
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1075)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1075)
 :end_tab:

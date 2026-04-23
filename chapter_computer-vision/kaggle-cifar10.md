@@ -53,6 +53,22 @@ import pandas as pd
 import shutil
 ```
 
+```{.python .input}
+#@tab jax
+import collections
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+import tensorflow as tf
+import math
+import os
+import pandas as pd
+import shutil
+```
+
 ## Obtaining and Organizing the Dataset
 
 The competition dataset is divided into
@@ -250,6 +266,28 @@ transform_train = torchvision.transforms.Compose([
                                      [0.2023, 0.1994, 0.2010])])
 ```
 
+```{.python .input}
+#@tab jax
+CIFAR_MEAN = np.array([0.4914, 0.4822, 0.4465], dtype=np.float32)
+CIFAR_STD = np.array([0.2023, 0.1994, 0.2010], dtype=np.float32)
+
+def transform_train_fn(image, label):
+    """Training augmentation: resize, random crop, flip, normalize."""
+    image = tf.cast(image, tf.float32)
+    image = tf.image.resize(image, [40, 40])
+    image = tf.image.random_crop(image, size=[32, 32, 3])
+    image = tf.image.random_flip_left_right(image)
+    image = image / 255.0
+    image = (image - CIFAR_MEAN) / CIFAR_STD
+    return image, label
+
+def transform_test_fn(image, label):
+    """Test preprocessing: normalize only."""
+    image = tf.cast(image, tf.float32) / 255.0
+    image = (image - CIFAR_MEAN) / CIFAR_STD
+    return image, label
+```
+
 During testing,
 we only perform standardization on images
 so as to
@@ -269,6 +307,11 @@ transform_test = torchvision.transforms.Compose([
     torchvision.transforms.ToTensor(),
     torchvision.transforms.Normalize([0.4914, 0.4822, 0.4465],
                                      [0.2023, 0.1994, 0.2010])])
+```
+
+```{.python .input}
+#@tab jax
+# Test transform is defined above as transform_test_fn
 ```
 
 ## Reading the Dataset
@@ -292,6 +335,26 @@ train_ds, train_valid_ds = [torchvision.datasets.ImageFolder(
 valid_ds, test_ds = [torchvision.datasets.ImageFolder(
     os.path.join(data_dir, 'train_valid_test', folder),
     transform=transform_test) for folder in ['valid', 'test']]
+```
+
+```{.python .input}
+#@tab jax
+def _load_image_folder_tf(folder_path):
+    """Load images from a class-subfolder directory into a tf.data.Dataset
+    of (image, label) where image is uint8 [H, W, 3] and label is int."""
+    ds = tf.keras.utils.image_dataset_from_directory(
+        folder_path, label_mode='int', image_size=(32, 32),
+        batch_size=None, shuffle=False)
+    return ds
+
+train_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train'))
+train_valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid'))
+valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'valid'))
+test_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'test'))
 ```
 
 During training,
@@ -328,6 +391,23 @@ valid_iter = torch.utils.data.DataLoader(valid_ds, batch_size, shuffle=False,
 
 test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
                                         drop_last=False)
+```
+
+```{.python .input}
+#@tab jax
+train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .shuffle(10000).batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+train_valid_iter = (train_valid_ds.map(transform_train_fn,
+                    num_parallel_calls=tf.data.AUTOTUNE)
+                    .shuffle(10000).batch(batch_size, drop_remainder=True)
+                    .prefetch(tf.data.AUTOTUNE))
+valid_iter = (valid_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+             .batch(batch_size, drop_remainder=False)
+             .prefetch(tf.data.AUTOTUNE))
 ```
 
 ## Defining the [**Model**]
@@ -400,6 +480,11 @@ We define the ResNet-18 model described in
 :numref:`sec_resnet`.
 :end_tab:
 
+:begin_tab:`jax`
+We define the ResNet-18 model described in
+:numref:`sec_resnet` using Flax.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 def get_net(devices):
@@ -419,6 +504,56 @@ def get_net():
     return net
 
 loss = nn.CrossEntropyLoss(reduction="none")
+```
+
+```{.python .input}
+#@tab jax
+class Residual(nn.Module):
+    num_channels: int
+    use_1x1conv: bool = False
+    strides: int = 1
+
+    @nn.compact
+    def __call__(self, X, training=False):
+        Y = nn.relu(nn.BatchNorm(use_running_average=not training)(
+            nn.Conv(self.num_channels, kernel_size=(3, 3),
+                    strides=(self.strides, self.strides), padding='SAME')(X)))
+        Y = nn.BatchNorm(use_running_average=not training)(
+            nn.Conv(self.num_channels, kernel_size=(3, 3), padding='SAME')(Y))
+        if self.use_1x1conv:
+            X = nn.Conv(self.num_channels, kernel_size=(1, 1),
+                        strides=(self.strides, self.strides))(X)
+        return nn.relu(Y + X)
+
+class ResNet18(nn.Module):
+    num_classes: int = 10
+
+    @nn.compact
+    def __call__(self, X, training=False):
+        X = nn.relu(nn.BatchNorm(use_running_average=not training)(
+            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1),
+                    padding='SAME')(X)))
+        # Block 1
+        for _ in range(2):
+            X = Residual(64)(X, training=training)
+        # Block 2
+        X = Residual(128, use_1x1conv=True, strides=2)(X, training=training)
+        X = Residual(128)(X, training=training)
+        # Block 3
+        X = Residual(256, use_1x1conv=True, strides=2)(X, training=training)
+        X = Residual(256)(X, training=training)
+        # Block 4
+        X = Residual(512, use_1x1conv=True, strides=2)(X, training=training)
+        X = Residual(512)(X, training=training)
+        X = jnp.mean(X, axis=(1, 2))  # Global average pooling
+        X = nn.Dense(self.num_classes)(X)
+        return X
+
+def get_net():
+    return ResNet18(num_classes=10)
+
+def loss_fn(logits, labels):
+    return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
 ```
 
 ## Defining the [**Training Function**]
@@ -504,6 +639,78 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           f' examples/sec on {str(devices)}')
 ```
 
+```{.python .input}
+#@tab jax
+def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+          lr_decay):
+    dummy = jnp.ones((1, 32, 32, 3))
+    variables = net.init(jax.random.PRNGKey(0), dummy, training=True)
+    # Use optax schedule for step-wise lr decay
+    schedule = optax.exponential_decay(
+        init_value=lr, transition_steps=lr_period,
+        decay_rate=lr_decay, staircase=True)
+    tx = optax.chain(optax.add_decayed_weights(wd),
+                     optax.sgd(schedule, momentum=0.9))
+    opt_state = tx.init(variables['params'])
+    num_batches = sum(1 for _ in train_iter)
+    timer = d2l.Timer()
+    legend = ['train loss', 'train acc']
+    if valid_iter is not None:
+        legend.append('valid acc')
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                            legend=legend)
+
+    @jax.jit
+    def train_step(variables, opt_state, X, y):
+        def compute_loss(params):
+            variables_ = {'params': params,
+                          'batch_stats': variables.get('batch_stats', {})}
+            logits, updates = net.apply(
+                variables_, X, training=True, mutable=['batch_stats'])
+            l = loss_fn(logits, y)
+            return l.mean(), (l.sum(), (logits.argmax(axis=-1) == y).sum(),
+                              updates)
+        grads, (l_sum, acc, updates) = jax.grad(
+            compute_loss, has_aux=True)(variables['params'])
+        param_updates, new_opt_state = tx.update(
+            grads, opt_state, variables['params'])
+        new_params = optax.apply_updates(variables['params'], param_updates)
+        new_variables = {'params': new_params, **updates}
+        return new_variables, new_opt_state, l_sum, acc
+
+    for epoch in range(num_epochs):
+        metric = d2l.Accumulator(3)
+        for i, (features, labels) in enumerate(train_iter):
+            timer.start()
+            X = jnp.array(features.numpy())  # Already NHWC from tf.data
+            y = jnp.array(labels.numpy())
+            variables, opt_state, l, acc = train_step(
+                variables, opt_state, X, y)
+            metric.add(float(l), float(acc), len(labels))
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[2],
+                              None))
+        if valid_iter is not None:
+            valid_metric = d2l.Accumulator(2)
+            for features, labels in valid_iter:
+                X = jnp.array(features.numpy())  # Already NHWC
+                y = jnp.array(labels.numpy())
+                logits = net.apply(variables, X, training=False)
+                valid_metric.add(
+                    float((logits.argmax(axis=-1) == y).sum()), len(labels))
+            valid_acc = valid_metric[0] / valid_metric[1]
+            animator.add(epoch + 1, (None, None, valid_acc))
+    measures = (f'train loss {metric[0] / metric[2]:.3f}, '
+                f'train acc {metric[1] / metric[2]:.3f}')
+    if valid_iter is not None:
+        measures += f', valid acc {valid_acc:.3f}'
+    print(measures + f'\n{metric[2] * num_epochs / timer.sum():.1f}'
+          f' examples/sec')
+    return variables
+```
+
 ## [**Training and Validating the Model**]
 
 Now, we can train and validate the model.
@@ -528,6 +735,15 @@ lr_period, lr_decay, net = 4, 0.9, get_net()
 net(next(iter(train_iter))[0])
 train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
+```
+
+```{.python .input}
+#@tab jax
+num_epochs, lr, wd = 20, 2e-4, 5e-4
+lr_period, lr_decay = 4, 0.9
+net = get_net()
+variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+                  lr_decay)
 ```
 
 ## [**Classifying the Testing Set**] and Submitting Results on Kaggle
@@ -569,6 +785,26 @@ df['label'] = df['label'].apply(lambda x: train_valid_ds.classes[x])
 df.to_csv('submission.csv', index=False)
 ```
 
+```{.python .input}
+#@tab jax
+net, preds = get_net(), []
+variables = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
+                  lr_decay)
+
+for X, _ in test_iter:
+    X_jax = jnp.array(X.numpy())  # Already NHWC from tf.data
+    y_hat = net.apply(variables, X_jax, training=False)
+    preds.extend(np.array(y_hat.argmax(axis=-1)))
+# Get class names from the train_valid dataset directory
+class_names = sorted(os.listdir(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid')))
+sorted_ids = list(range(1, sum(1 for _ in test_ds) + 1))
+sorted_ids.sort(key=lambda x: str(x))
+df = pd.DataFrame({'id': sorted_ids, 'label': preds})
+df['label'] = df['label'].apply(lambda x: class_names[x])
+df.to_csv('submission.csv', index=False)
+```
+
 The above code
 will generate a `submission.csv` file,
 whose format
@@ -589,6 +825,10 @@ is similar to that in :numref:`sec_kaggle_house`.
 * We can use convolutional neural networks and image augmentation in an image classification competition.
 :end_tab:
 
+:begin_tab:`jax`
+* We can use convolutional neural networks and image augmentation in an image classification competition.
+:end_tab:
+
 ## Exercises
 
 1. Use the complete CIFAR-10 dataset for this Kaggle competition. Set hyperparameters as `batch_size = 128`, `num_epochs = 100`, `lr = 0.1`, `lr_period = 50`, and `lr_decay = 0.1`.  See what accuracy and ranking you can achieve in this competition. Can you further improve them?
@@ -599,5 +839,9 @@ is similar to that in :numref:`sec_kaggle_house`.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1479)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1479)
 :end_tab:

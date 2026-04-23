@@ -67,6 +67,19 @@ h, w = img.shape[:2]
 h, w
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+
+img = d2l.plt.imread('../img/catdog.jpg')
+h, w = img.shape[:2]
+h, w
+```
+
 Recall that in :numref:`sec_conv_layer`
 we call a two-dimensional array output of 
 a convolutional layer a feature map.
@@ -116,6 +129,18 @@ def display_anchors(fmap_w, fmap_h, s):
     fmap = d2l.zeros((1, 10, fmap_h, fmap_w))
     anchors = d2l.multibox_prior(fmap, sizes=s, ratios=[1, 2, 0.5])
     bbox_scale = d2l.tensor((w, h, w, h))
+    d2l.show_bboxes(d2l.plt.imshow(img).axes,
+                    anchors[0] * bbox_scale)
+```
+
+```{.python .input}
+#@tab jax
+def display_anchors(fmap_w, fmap_h, s):
+    d2l.set_figsize()
+    # Values on the first two dimensions do not affect the output
+    fmap = jnp.zeros((1, 10, fmap_h, fmap_w))
+    anchors = d2l.multibox_prior(fmap, sizes=s, ratios=[1, 2, 0.5])
+    bbox_scale = jnp.array((w, h, w, h))
     d2l.show_bboxes(d2l.plt.imshow(img).axes,
                     anchors[0] * bbox_scale)
 ```
@@ -234,5 +259,9 @@ in :numref:`sec_ssd`.
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1607)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1607)
 :end_tab:

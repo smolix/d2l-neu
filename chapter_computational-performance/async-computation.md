@@ -4,6 +4,7 @@
 Today's computers are highly parallel systems, consisting of multiple CPU cores (often multiple threads per core), multiple processing elements per GPU, and often multiple GPUs per device. In short, we can process many different things at the same time, often on different devices. Unfortunately Python is not a great way of writing parallel and asynchronous code, at least not without some extra help. After all, Python is single-threaded and this is unlikely to change in the future. Deep learning frameworks such as MXNet and TensorFlow adopt an *asynchronous programming* model to improve performance,
 while PyTorch uses Python's own scheduler leading to a different performance trade-off.
 For PyTorch, by default, GPU operations are asynchronous. When you call a function that uses the GPU, the operations are enqueued to the particular device, but not necessarily executed until later. This allows us to execute more computations in parallel, including operations on the CPU or other GPUs.
+JAX takes a similar approach: all JAX operations are dispatched asynchronously. When you call a JAX function, the operation is enqueued and a future is returned immediately. The actual computation may not have completed by the time control returns to Python. To force synchronization, you call `.block_until_ready()` on the result.
 
 Hence, understanding how asynchronous programming works helps us to develop more efficient programs, by proactively reducing computational requirements and mutual dependencies. This allows us to reduce memory overhead and increase processor utilization.
 
@@ -24,6 +25,14 @@ import torch
 from torch import nn
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy
+```
+
 ## Asynchrony via Backend
 
 :begin_tab:`mxnet`
@@ -33,6 +42,11 @@ For a warmup consider the following toy problem: we want to generate a random ma
 :begin_tab:`pytorch`
 For a warmup consider the following toy problem: we want to generate a random matrix and multiply it. Let's do that both in NumPy and in PyTorch tensor to see the difference.
 Note that PyTorch `tensor` is defined on a GPU.
+:end_tab:
+
+:begin_tab:`jax`
+For a warmup consider the following toy problem: we want to generate a random matrix and multiply it. Let's do that both in NumPy and in JAX to see the difference.
+Note that JAX dispatches the computation to the GPU asynchronously.
 :end_tab:
 
 ```{.python .input}
@@ -66,6 +80,25 @@ with d2l.Benchmark('torch'):
         b = torch.mm(a, a)
 ```
 
+```{.python .input}
+#@tab jax
+# Warmup for GPU computation
+device = jax.devices('gpu')[0]
+key = jax.random.PRNGKey(0)
+a = jax.device_put(jax.random.normal(key, (1000, 1000)), device)
+b = jnp.dot(a, a).block_until_ready()
+
+with d2l.Benchmark('numpy'):
+    for _ in range(10):
+        a = numpy.random.normal(size=(1000, 1000))
+        b = numpy.dot(a, a)
+
+with d2l.Benchmark('jax'):
+    for _ in range(10):
+        a = jax.random.normal(key, (1000, 1000))
+        b = jnp.dot(a, a)
+```
+
 :begin_tab:`mxnet`
 The benchmark output via MXNet is orders of magnitude faster. Since both are executed on the same processor something else must be going on.
 Forcing MXNet to finish all the backend computation prior to returning shows what happened previously: computation is executed by the backend while the frontend returns control to Python.
@@ -81,6 +114,18 @@ By default, GPU operations are asynchronous in PyTorch.
 Forcing PyTorch to finish all computation prior to returning shows
 what happened previously: computation is being executed by the backend
 while the frontend returns control to Python.
+:end_tab:
+
+:begin_tab:`jax`
+The benchmark output via JAX is orders of magnitude faster.
+NumPy dot product is executed on the CPU processor while
+JAX dispatches the matrix multiplication to the GPU asynchronously.
+The huge time difference suggests something else must be going on.
+By default, JAX operations return futures immediately without waiting for the
+computation to complete.
+Forcing JAX to finish all computation via `block_until_ready()` prior to
+returning shows what happened previously: computation is being executed by the
+XLA backend while the frontend returns control to Python.
 :end_tab:
 
 ```{.python .input}
@@ -101,6 +146,15 @@ with d2l.Benchmark():
     torch.cuda.synchronize(device)
 ```
 
+```{.python .input}
+#@tab jax
+with d2l.Benchmark():
+    for _ in range(10):
+        a = jax.random.normal(key, (1000, 1000))
+        b = jnp.dot(a, a)
+    b.block_until_ready()
+```
+
 :begin_tab:`mxnet`
 Broadly speaking, MXNet has a frontend for direct interactions with users, e.g., via Python, as well as a backend used by the system to perform the computation. 
 As shown in :numref:`fig_frontends`, users can write MXNet programs in various frontend languages, such as Python, R, Scala, and C++. Regardless of the frontend programming language used, the execution of MXNet programs occurs primarily in the backend of C++ implementations. Operations issued by the frontend language are passed on to the backend for execution. 
@@ -111,6 +165,14 @@ The backend manages its own threads that continuously collect and execute queued
 Broadly speaking, PyTorch has a frontend for direct interaction with the users, e.g., via Python, as well as a backend used by the system to perform the computation. 
 As shown in :numref:`fig_frontends`, users can write PyTorch programs in various frontend languages, such as Python and C++. Regardless of the frontend programming language used, the execution of PyTorch programs occurs primarily in the backend of C++ implementations. Operations issued by the frontend language are passed on to the backend for execution.
 The backend manages its own threads that continuously collect and execute queued tasks.
+Note that for this to work the backend must be able to keep track of the
+dependencies between various steps in the computational graph.
+Hence, it is not possible to parallelize operations that depend on each other.
+:end_tab:
+
+:begin_tab:`jax`
+Broadly speaking, JAX has a Python frontend for direct interaction with the users and an XLA (Accelerated Linear Algebra) backend used by the system to perform the computation.
+As shown in :numref:`fig_frontends`, operations issued by the Python frontend are traced and compiled by XLA into optimized device code. The XLA backend manages its own execution, dispatching compiled kernels to the GPU asynchronously.
 Note that for this to work the backend must be able to keep track of the
 dependencies between various steps in the computational graph.
 Hence, it is not possible to parallelize operations that depend on each other.
@@ -138,6 +200,14 @@ z = x * y + 2
 z
 ```
 
+```{.python .input}
+#@tab jax
+x = jax.device_put(jnp.ones((1, 2)), device)
+y = jax.device_put(jnp.ones((1, 2)), device)
+z = x * y + 2
+z
+```
+
 ![The backend tracks dependencies between various steps in the computational graph.](../img/asyncgraph.svg)
 :label:`fig_asyncgraph`
 
@@ -159,6 +229,16 @@ There are a number of operations that will force Python to wait for completion:
 
 * Most obviously `npx.waitall()` waits until all computation has completed, regardless of when the compute instructions were issued. In practice it is a bad idea to use this operator unless absolutely necessary since it can lead to poor performance.
 * If we just want to wait until a specific variable is available we can call `z.wait_to_read()`. In this case MXNet blocks return to Python until the variable `z` has been computed. Other computation may well continue afterwards.
+
+Let's see how this works in practice.
+:end_tab:
+
+:begin_tab:`jax`
+There are a number of operations that will force Python to wait for completion:
+
+* Calling `result.block_until_ready()` on a JAX array blocks until that specific computation has completed. This is the primary synchronization mechanism in JAX.
+* Converting to NumPy via `np.asarray(result)` or calling `result.item()` for scalars will also block, since NumPy has no notion of asynchrony and needs access to the actual values.
+* Printing a variable via `print` likewise requires the value to be available and is thus a blocker.
 
 Let's see how this works in practice.
 :end_tab:

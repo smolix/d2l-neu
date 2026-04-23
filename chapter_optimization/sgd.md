@@ -33,6 +33,16 @@ import math
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import math
+import numpy as np
+```
+
 ## Stochastic Gradient Updates
 
 In deep learning, the objective function is usually the average of the loss functions for each example in the training dataset.
@@ -100,6 +110,17 @@ def sgd(x1, x2, s1, s2, f_grad):
     # Simulate noisy gradient
     g1 += d2l.normal([], 0.0, 1)
     g2 += d2l.normal([], 0.0, 1)
+    eta_t = eta * lr()
+    return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
+```
+
+```{.python .input}
+#@tab jax
+def sgd(x1, x2, s1, s2, f_grad):
+    g1, g2 = f_grad(x1, x2)
+    # Simulate noisy gradient
+    g1 += np.random.normal(0.0, 1)
+    g2 += np.random.normal(0.0, 1)
     eta_t = eta * lr()
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
@@ -297,5 +318,9 @@ Sampling with replacement leads to an increased variance and decreased data effi
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1067)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1067)
 :end_tab:

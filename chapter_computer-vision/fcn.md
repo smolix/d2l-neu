@@ -46,6 +46,18 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+import numpy as np
+from PIL import Image
+```
+
 ## The Model
 
 Here we describe the basic design of the fully convolutional network model. 
@@ -89,6 +101,64 @@ pretrained_net = torchvision.models.resnet18(
 list(pretrained_net.children())[-3:]
 ```
 
+```{.python .input}
+#@tab jax
+# Define ResNet building blocks for the feature extractor
+class ResNetBlock(nn.Module):
+    num_channels: int
+    strides: tuple = (1, 1)
+    use_1x1conv: bool = False
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        residual = x
+        y = nn.Conv(self.num_channels, kernel_size=(3, 3),
+                    strides=self.strides, padding='SAME')(x)
+        y = nn.BatchNorm(use_running_average=not training)(y)
+        y = nn.relu(y)
+        y = nn.Conv(self.num_channels, kernel_size=(3, 3),
+                    strides=(1, 1), padding='SAME')(y)
+        y = nn.BatchNorm(use_running_average=not training)(y)
+        if self.use_1x1conv:
+            residual = nn.Conv(self.num_channels, kernel_size=(1, 1),
+                               strides=self.strides)(x)
+            residual = nn.BatchNorm(
+                use_running_average=not training)(residual)
+        return nn.relu(y + residual)
+
+class ResNetFeatures(nn.Module):
+    """ResNet-18 feature extractor (without global avg pool and FC)."""
+    @nn.compact
+    def __call__(self, x, training=False):
+        # Initial conv + bn + relu + maxpool
+        x = nn.Conv(64, kernel_size=(7, 7), strides=(2, 2),
+                    padding='SAME')(x)
+        x = nn.BatchNorm(use_running_average=not training)(x)
+        x = nn.relu(x)
+        x = nn.max_pool(x, window_shape=(3, 3), strides=(2, 2),
+                        padding='SAME')
+        # Stage 1: 64 channels
+        x = ResNetBlock(64)(x, training)
+        x = ResNetBlock(64)(x, training)
+        # Stage 2: 128 channels, downsample
+        x = ResNetBlock(128, strides=(2, 2), use_1x1conv=True)(x, training)
+        x = ResNetBlock(128)(x, training)
+        # Stage 3: 256 channels, downsample
+        x = ResNetBlock(256, strides=(2, 2), use_1x1conv=True)(x, training)
+        x = ResNetBlock(256)(x, training)
+        # Stage 4: 512 channels, downsample
+        x = ResNetBlock(512, strides=(2, 2), use_1x1conv=True)(x, training)
+        x = ResNetBlock(512)(x, training)
+        return x
+
+pretrained_net = ResNetFeatures()
+# Initialize with a dummy input to see the architecture
+dummy = jnp.ones((1, 320, 480, 3))
+variables = pretrained_net.init(jax.random.PRNGKey(0), dummy)
+print('Feature extractor output shape:',
+      pretrained_net.apply(variables, dummy).shape)
+```
+
 Next, we [**create the fully convolutional network instance `net`**].
 It copies all the pretrained layers in the ResNet-18
 except for the final global average pooling layer
@@ -107,6 +177,12 @@ for layer in pretrained_net.features[:-2]:
 net = nn.Sequential(*list(pretrained_net.children())[:-2])
 ```
 
+```{.python .input}
+#@tab jax
+# The ResNetFeatures module already excludes global avg pool and FC.
+# We define the full FCN model below.
+```
+
 Given an input with height and width of 320 and 480 respectively,
 the forward propagation of `net`
 reduces the input height and width to 1/32 of the original, namely 10 and 15.
@@ -121,6 +197,12 @@ net(X).shape
 #@tab pytorch
 X = torch.rand(size=(1, 3, 320, 480))
 net(X).shape
+```
+
+```{.python .input}
+#@tab jax
+X = jnp.ones((1, 320, 480, 3))
+pretrained_net.apply(variables, X).shape
 ```
 
 Next, we [**use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset.**]
@@ -153,6 +235,31 @@ num_classes = 21
 net.add_module('final_conv', nn.Conv2d(512, num_classes, kernel_size=1))
 net.add_module('transpose_conv', nn.ConvTranspose2d(num_classes, num_classes,
                                     kernel_size=64, padding=16, stride=32))
+```
+
+```{.python .input}
+#@tab jax
+num_classes = 21
+
+class FCN(nn.Module):
+    """Fully Convolutional Network for semantic segmentation."""
+    num_classes: int
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        # Feature extraction (ResNet-18 backbone)
+        x = ResNetFeatures()(x, training)
+        # 1x1 conv to map to num_classes channels
+        x = nn.Conv(self.num_classes, kernel_size=(1, 1))(x)
+        # Transposed conv to upsample by 32x
+        x = nn.ConvTranspose(self.num_classes, kernel_size=(64, 64),
+                              strides=(32, 32), padding='SAME')(x)
+        return x
+
+net = FCN(num_classes=num_classes)
+variables = net.init(jax.random.PRNGKey(0), jnp.ones((1, 320, 480, 3)))
+print('FCN output shape:',
+      net.apply(variables, jnp.ones((1, 320, 480, 3))).shape)
 ```
 
 ## [**Initializing Transposed Convolutional Layers**]
@@ -224,6 +331,25 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return weight
 ```
 
+```{.python .input}
+#@tab jax
+def bilinear_kernel(in_channels, out_channels, kernel_size):
+    factor = (kernel_size + 1) // 2
+    if kernel_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = (np.arange(kernel_size).reshape(-1, 1),
+          np.arange(kernel_size).reshape(1, -1))
+    filt = (1 - np.abs(og[0] - center) / factor) * \
+           (1 - np.abs(og[1] - center) / factor)
+    # Flax uses HWIO format for ConvTranspose kernels
+    weight = np.zeros((kernel_size, kernel_size, in_channels, out_channels))
+    for i in range(min(in_channels, out_channels)):
+        weight[:, :, i, i] = filt
+    return jnp.array(weight)
+```
+
 Let's [**experiment with upsampling of bilinear interpolation**] 
 that is implemented by a transposed convolutional layer. 
 We construct a transposed convolutional layer that 
@@ -243,6 +369,32 @@ conv_trans = nn.ConvTranspose2d(3, 3, kernel_size=4, padding=1, stride=2,
 conv_trans.weight.data.copy_(bilinear_kernel(3, 3, 4));
 ```
 
+```{.python .input}
+#@tab jax
+class BilinearConvTranspose(nn.Module):
+    """A transposed conv layer initialized with bilinear interpolation."""
+    channels: int
+    kernel_size: int
+    strides: tuple
+
+    @nn.compact
+    def __call__(self, x):
+        return nn.ConvTranspose(self.channels,
+                                kernel_size=(self.kernel_size,
+                                             self.kernel_size),
+                                strides=self.strides,
+                                padding='SAME')(x)
+
+conv_trans = BilinearConvTranspose(channels=3, kernel_size=4, strides=(2, 2))
+dummy_img = jnp.ones((1, 100, 100, 3))
+ct_variables = conv_trans.init(jax.random.PRNGKey(0), dummy_img)
+# Replace the kernel with bilinear weights
+bilinear_w = bilinear_kernel(3, 3, 4)
+ct_variables = {**ct_variables,
+    'params': {**ct_variables['params'],
+               'ConvTranspose_0': {'kernel': bilinear_w}}}
+```
+
 Read the image `X` and assign the upsampling output to `Y`. In order to print the image, we need to adjust the position of the channel dimension.
 
 ```{.python .input}
@@ -259,6 +411,14 @@ img = torchvision.transforms.ToTensor()(d2l.Image.open('../img/catdog.jpg'))
 X = img.unsqueeze(0)
 Y = conv_trans(X)
 out_img = Y[0].permute(1, 2, 0).detach()
+```
+
+```{.python .input}
+#@tab jax
+img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
+X = jnp.expand_dims(jnp.array(img), axis=0)  # NHWC
+Y = conv_trans.apply(ct_variables, X)
+out_img = np.array(Y[0])
 ```
 
 As we can see, the transposed convolutional layer increases both the height and width of the image by a factor of two.
@@ -283,6 +443,15 @@ print('output image shape:', out_img.shape)
 d2l.plt.imshow(out_img);
 ```
 
+```{.python .input}
+#@tab jax
+d2l.set_figsize()
+print('input image shape:', img.shape)
+d2l.plt.imshow(img);
+print('output image shape:', out_img.shape)
+d2l.plt.imshow(out_img);
+```
+
 In a fully convolutional network, we [**initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization.**]
 
 ```{.python .input}
@@ -296,6 +465,25 @@ net[-2].initialize(init=init.Xavier())
 #@tab pytorch
 W = bilinear_kernel(num_classes, num_classes, 64)
 net.transpose_conv.weight.data.copy_(W);
+```
+
+```{.python .input}
+#@tab jax
+# Initialize the FCN with bilinear weights for the transposed conv layer
+# and Xavier initialization for the 1x1 conv layer
+W = bilinear_kernel(num_classes, num_classes, 64)
+
+def init_fcn_weights(rng):
+    """Initialize FCN with bilinear upsampling for transposed conv."""
+    variables = net.init(rng, jnp.ones((1, 320, 480, 3)))
+    params = variables['params']
+    # Set bilinear kernel for the transposed conv layer
+    flat_params = dict(params)
+    flat_params['ConvTranspose_0'] = {
+        **params['ConvTranspose_0'], 'kernel': W}
+    return {**variables, 'params': flat_params}
+
+variables = init_fcn_weights(jax.random.PRNGKey(42))
 ```
 
 ## [**Reading the Dataset**]
@@ -347,6 +535,42 @@ trainer = torch.optim.SGD(net.parameters(), lr=lr, weight_decay=wd)
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
+```{.python .input}
+#@tab jax
+def loss_fn(params, batch_stats, X, Y):
+    # X is NHWC, Y is NHW with integer class labels
+    logits, updates = net.apply(
+        {'params': params, 'batch_stats': batch_stats},
+        X, training=True, mutable=['batch_stats'])
+    # logits shape: (N, H, W, num_classes)
+    loss = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
+    return loss.mean(), updates
+
+num_epochs, lr, wd = 5, 0.001, 1e-3
+optimizer = optax.sgd(lr, momentum=0.9)
+opt_state = optimizer.init(variables['params'])
+batch_stats = variables.get('batch_stats', {})
+
+@jax.jit
+def train_step(params, batch_stats, opt_state, X, Y):
+    (loss_val, updates), grads = jax.value_and_grad(
+        loss_fn, has_aux=True)(params, batch_stats, X, Y)
+    param_updates, opt_state_new = optimizer.update(grads, opt_state, params)
+    params_new = optax.apply_updates(params, param_updates)
+    return params_new, updates['batch_stats'], opt_state_new, loss_val
+
+params = variables['params']
+for epoch in range(num_epochs):
+    for X, Y in train_iter:
+        # Convert CHW to HWC for JAX
+        X = jnp.transpose(jnp.array(X), (0, 2, 3, 1))
+        Y = jnp.array(Y)
+        params, batch_stats, opt_state, loss_val = train_step(
+            params, batch_stats, opt_state, X, Y)
+    print(f'epoch {epoch + 1}, loss {float(loss_val):.3f}')
+variables = {'params': params, 'batch_stats': batch_stats}
+```
+
 ## [**Prediction**]
 
 
@@ -370,6 +594,17 @@ def predict(img):
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
+```{.python .input}
+#@tab jax
+def predict(img):
+    rgb_mean = np.array([0.485, 0.456, 0.406])
+    rgb_std = np.array([0.229, 0.224, 0.225])
+    X = (img.astype(np.float32) / 255 - rgb_mean) / rgb_std
+    X = jnp.expand_dims(jnp.array(X), axis=0)  # NHWC
+    pred = net.apply(variables, X, training=False)
+    return jnp.argmax(pred, axis=-1).reshape(pred.shape[1], pred.shape[2])
+```
+
 To [**visualize the predicted class**] of each pixel, we map the predicted class back to its label color in the dataset.
 
 ```{.python .input}
@@ -385,6 +620,14 @@ def label2image(pred):
 def label2image(pred):
     colormap = torch.tensor(d2l.VOC_COLORMAP, device=devices[0])
     X = pred.long()
+    return colormap[X, :]
+```
+
+```{.python .input}
+#@tab jax
+def label2image(pred):
+    colormap = jnp.array(d2l.VOC_COLORMAP, dtype=jnp.uint8)
+    X = pred.astype(jnp.int32)
     return colormap[X, :]
 ```
 
@@ -442,6 +685,20 @@ for i in range(n):
 d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ```
 
+```{.python .input}
+#@tab jax
+voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
+test_images, test_labels = d2l.read_voc_images(voc_dir, False)
+n, imgs = 4, []
+for i in range(n):
+    # Crop HWC arrays: top=0, left=0, height=320, width=480
+    X = test_images[i][:320, :480, :]
+    pred = label2image(predict(X))
+    label_crop = test_labels[i][:320, :480, :]
+    imgs += [X, np.array(pred), label_crop]
+d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
+```
+
 ## Summary
 
 * The fully convolutional network first uses a CNN to extract image features, then transforms the number of channels into the number of classes via a $1\times 1$ convolutional layer, and finally transforms the height and width of the feature maps to those of the input image via the transposed convolution.
@@ -460,5 +717,9 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1582)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1582)
 :end_tab:

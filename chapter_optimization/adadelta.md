@@ -106,6 +106,29 @@ def adadelta(params, grads, states, hyperparams):
         delta[:].assign(rho * delta + (1 - rho) * g * g)
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+
+def init_adadelta_states(feature_dim):
+    s_w, s_b = jnp.zeros((feature_dim, 1)), jnp.zeros(1)
+    delta_w, delta_b = jnp.zeros((feature_dim, 1)), jnp.zeros(1)
+    return [(s_w, delta_w), (s_b, delta_b)]
+
+def adadelta(params, grads, states, hyperparams):
+    rho, eps = hyperparams['rho'], 1e-5
+    for i, (p, (s, delta), grad) in enumerate(zip(params, states, grads)):
+        s = rho * s + (1 - rho) * jnp.square(grad)
+        g = (jnp.sqrt(delta + eps) / jnp.sqrt(s + eps)) * grad
+        params[i] = p - g
+        states[i] = (s, rho * delta + (1 - rho) * g * g)
+    return params[0], params[1]
+```
+
 Choosing $\rho = 0.9$ amounts to a half-life time of 10 for each parameter update. This tends to work quite well. We get the following behavior.
 
 ```{.python .input}
@@ -136,6 +159,13 @@ trainer = tf.keras.optimizers.Adadelta
 d2l.train_concise_ch11(trainer, {'learning_rate':5.0, 'rho': 0.9}, data_iter)
 ```
 
+```{.python .input}
+#@tab jax
+import optax
+trainer = optax.adadelta
+d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
+```
+
 ## Summary
 
 * Adadelta has no learning rate parameter. Instead, it uses the rate of change in the parameters itself to adapt the learning rate.
@@ -159,5 +189,9 @@ d2l.train_concise_ch11(trainer, {'learning_rate':5.0, 'rho': 0.9}, data_iter)
 
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1077)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1077)
 :end_tab:

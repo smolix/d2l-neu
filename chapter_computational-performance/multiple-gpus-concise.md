@@ -20,6 +20,18 @@ import torch
 from torch import nn
 ```
 
+```{.python .input}
+#@tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
+from flax.training import train_state
+import flax
+import numpy as np
+```
+
 ## [**A Toy Network**]
 
 Let's use a slightly more meaningful network than LeNet from :numref:`sec_multi_gpu` that is still sufficiently easy and quick to train.
@@ -86,6 +98,40 @@ def resnet18(num_classes, in_channels=1):
     return net
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+class ResNet18(nn.Module):
+    """A slightly modified ResNet-18 model."""
+    num_classes: int = 10
+    training: bool = True
+
+    def setup(self):
+        self.net = nn.Sequential([
+            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding='same'),
+            nn.BatchNorm(not self.training),
+            nn.relu,
+            # ResNet blocks
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(128, training=self.training),
+            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(256, training=self.training),
+            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(512, training=self.training),
+            # Global average pooling and classifier
+            lambda x: x.mean(axis=(1, 2)),
+            nn.Dense(self.num_classes),
+        ])
+
+    def __call__(self, x):
+        return self.net(x)
+```
+
 ## Network Initialization
 
 :begin_tab:`mxnet`
@@ -96,6 +142,10 @@ For a refresher on initialization methods see :numref:`sec_numerical_stability`.
 :begin_tab:`pytorch`
 We will initialize the network inside the training loop.
 For a refresher on initialization methods see :numref:`sec_numerical_stability`.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, we initialize the model parameters and create a `TrainState` that bundles the parameters with the optimizer. For multi-GPU training, we replicate the state across all devices using `flax.jax_utils.replicate`.
 :end_tab:
 
 ```{.python .input}
@@ -112,6 +162,15 @@ net.initialize(init=init.Normal(sigma=0.01), ctx=devices)
 net = resnet18(10)
 # Get a list of GPUs
 devices = d2l.try_all_gpus()
+# We will initialize the network inside the training loop
+```
+
+```{.python .input}
+#@tab jax
+net = ResNet18(num_classes=10)
+# Count available devices (GPUs/TPUs)
+num_devices = jax.local_device_count()
+print(f'Using {num_devices} devices: {jax.devices()}')
 # We will initialize the network inside the training loop
 ```
 
@@ -234,6 +293,90 @@ def train(net, num_gpus, batch_size, lr):
           f'on {str(devices)}')
 ```
 
+```{.python .input}
+#@tab jax
+def train(num_devices, batch_size, lr):
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    train_iter = data.get_dataloader(train=True)
+    test_iter = data.get_dataloader(train=False)
+    net = ResNet18(num_classes=10, training=True)
+    # Initialize parameters
+    dummy_input = jnp.ones((1, 28, 28, 1))
+    key = jax.random.PRNGKey(0)
+    variables = net.init(key, dummy_input)
+    params = variables['params']
+    batch_stats = variables.get('batch_stats', {})
+    # Create optimizer and training state
+    tx = optax.sgd(lr)
+
+    class TrainState(train_state.TrainState):
+        batch_stats: dict
+
+    state = TrainState.create(apply_fn=net.apply, params=params,
+                              tx=tx, batch_stats=batch_stats)
+    # Replicate state across devices
+    state = flax.jax_utils.replicate(state)
+
+    @jax.pmap(axis_name='batch')
+    def train_step(state, images, labels):
+        """A single training step on one device."""
+        def loss_fn(params):
+            logits, updates = state.apply_fn(
+                {'params': params, 'batch_stats': state.batch_stats},
+                images, mutable=['batch_stats'])
+            loss = optax.softmax_cross_entropy_with_integer_labels(
+                logits, labels).mean()
+            return loss, updates
+        (loss, updates), grads = jax.value_and_grad(
+            loss_fn, has_aux=True)(state.params)
+        # Average gradients across devices
+        grads = jax.lax.pmean(grads, axis_name='batch')
+        state = state.apply_gradients(grads=grads)
+        state = state.replace(
+            batch_stats=updates['batch_stats'])
+        return state, loss
+
+    @jax.pmap(axis_name='batch')
+    def eval_step(state, images, labels):
+        """Evaluate accuracy on one device."""
+        logits = state.apply_fn(
+            {'params': state.params,
+             'batch_stats': state.batch_stats},
+            images)
+        return (logits.argmax(axis=-1) == labels).sum(), labels.shape[0]
+
+    def reshape_batch(X, y, num_devices):
+        """Reshape a batch for pmap: (batch, ...) -> (num_devices, per_device, ...)."""
+        per_device = X.shape[0] // num_devices
+        X = X[:per_device * num_devices].reshape(
+            num_devices, per_device, *X.shape[1:])
+        y = y[:per_device * num_devices].reshape(num_devices, per_device)
+        return X, y
+
+    timer, num_epochs = d2l.Timer(), 10
+    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
+    for epoch in range(num_epochs):
+        timer.start()
+        for X, y in train_iter:
+            X, y = np.array(X), np.array(y)
+            X, y = reshape_batch(X, y, num_devices)
+            state, loss = train_step(state, X, y)
+        jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+        timer.stop()
+        # Evaluate accuracy
+        correct, total = 0, 0
+        for X, y in test_iter:
+            X, y = np.array(X), np.array(y)
+            X, y = reshape_batch(X, y, num_devices)
+            c, t = eval_step(state, X, y)
+            correct += int(c.sum())
+            total += int(t.sum())
+        test_acc = correct / total
+        animator.add(epoch + 1, (test_acc,))
+    print(f'test acc: {test_acc:.2f}, {timer.avg():.1f} sec/epoch '
+          f'on {num_devices} devices')
+```
+
 Let's see how this works in practice. As a warm-up we [**train the network on a single GPU.**]
 
 ```{.python .input}
@@ -244,6 +387,11 @@ train(num_gpus=1, batch_size=256, lr=0.1)
 ```{.python .input}
 #@tab pytorch
 train(net, num_gpus=1, batch_size=256, lr=0.1)
+```
+
+```{.python .input}
+#@tab jax
+train(num_devices=1, batch_size=256, lr=0.1)
 ```
 
 Next we [**use 2 GPUs for training**]. Compared with LeNet
@@ -260,10 +408,20 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 train(net, num_gpus=2, batch_size=512, lr=0.2)
 ```
 
+```{.python .input}
+#@tab jax
+train(num_devices=2, batch_size=512, lr=0.2)
+```
+
 ## Summary
 
 :begin_tab:`mxnet`
 * Gluon provides primitives for model initialization across multiple devices by providing a context list.
+:end_tab:
+
+:begin_tab:`jax`
+* JAX provides `jax.pmap` for data-parallel training across multiple devices with automatic gradient aggregation via `jax.lax.pmean`.
+* Flax's `jax_utils.replicate` and `jax_utils.unreplicate` handle distributing and collecting state across devices.
 :end_tab:
 * Data is automatically evaluated on the devices where the data can be found.
 * Take care to initialize the networks on each device before trying to access the parameters on that device. Otherwise you will encounter an error.
@@ -284,6 +442,12 @@ train(net, num_gpus=2, batch_size=512, lr=0.2)
 1. Sometimes, different devices provide different computing power. We could use the GPUs and the CPU at the same time. How should we divide the work? Is it worth the effort? Why? Why not?
 :end_tab:
 
+:begin_tab:`jax`
+1. This section uses ResNet-18. Try different epochs, batch sizes, and learning rates. Use more GPUs for computation. What happens if you try this with 16 GPUs (e.g., on an AWS p2.16xlarge instance) or with TPUs?
+1. Sometimes, different devices provide different computing power. We could use the GPUs and the CPU at the same time. How should we divide the work? Is it worth the effort? Why? Why not?
+1. What happens if we replace `jax.pmap` with `jax.vmap`? How does the behavior differ?
+:end_tab:
+
 
 
 :begin_tab:`mxnet`
@@ -291,5 +455,9 @@ train(net, num_gpus=2, batch_size=512, lr=0.2)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1403)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1403)
 :end_tab:

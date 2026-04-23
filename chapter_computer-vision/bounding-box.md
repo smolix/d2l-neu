@@ -56,6 +56,15 @@ from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+```
+
 We will load the sample image to be used in this section. We can see that there is a dog on the left side of the image and a cat on the right.
 They are the two major objects in this image.
 
@@ -67,7 +76,7 @@ d2l.plt.imshow(img);
 ```
 
 ```{.python .input}
-#@tab pytorch, tensorflow
+#@tab pytorch, tensorflow, jax
 d2l.set_figsize()
 img = d2l.plt.imread('../img/catdog.jpg')
 d2l.plt.imshow(img);
@@ -178,5 +187,9 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1527)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1527)
 :end_tab:

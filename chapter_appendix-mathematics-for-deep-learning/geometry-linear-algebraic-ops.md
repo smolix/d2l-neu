@@ -188,6 +188,21 @@ def angle(v, w):
 angle(tf.constant([0, 1, 2], dtype=tf.float32), tf.constant([2.0, 3, 4]))
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from IPython import display
+import jax
+from jax import numpy as jnp
+import numpy as np
+
+def angle(v, w):
+    return jnp.arccos(jnp.dot(v, w) / (jnp.linalg.norm(v) * jnp.linalg.norm(w)))
+
+angle(jnp.array([0, 1, 2], dtype=jnp.float32), jnp.array([2.0, 3, 4]))
+```
+
 We will not use it right now, but it is useful to know
 that we will refer to vectors for which the angle is $\pi/2$
 (or equivalently $90^{\circ}$) as being *orthogonal*.
@@ -370,6 +385,25 @@ ave_0 = tf.reduce_mean(X_train_0, axis=0)
 ave_1 = tf.reduce_mean(X_train_1, axis=0)
 ```
 
+```{.python .input}
+#@tab jax
+# Load in the dataset
+import tensorflow as tf
+((train_images, train_labels), (
+    test_images, test_labels)) = tf.keras.datasets.fashion_mnist.load_data()
+
+X_train_0 = jnp.array(train_images[train_labels == 0], dtype=jnp.float32) * 256
+X_train_1 = jnp.array(train_images[train_labels == 1], dtype=jnp.float32) * 256
+X_test = jnp.array(
+    test_images[(test_labels == 0) | (test_labels == 1)], dtype=jnp.float32) * 256
+y_test = jnp.array(
+    test_labels[(test_labels == 0) | (test_labels == 1)], dtype=jnp.float32)
+
+# Compute averages
+ave_0 = jnp.mean(X_train_0, axis=0)
+ave_1 = jnp.mean(X_train_1, axis=0)
+```
+
 It can be informative to examine these averages in detail, so let's plot what they look like.  In this case, we see that the average indeed resembles a blurry image of a t-shirt.
 
 ```{.python .input}
@@ -388,6 +422,14 @@ d2l.plt.imshow(tf.reshape(ave_0, (28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
+```{.python .input}
+#@tab jax
+# Plot average t-shirt
+d2l.set_figsize()
+d2l.plt.imshow(np.array(ave_0.reshape(28, 28)), cmap='Greys')
+d2l.plt.show()
+```
+
 In the second case, we again see that the average resembles a blurry image of trousers.
 
 ```{.python .input}
@@ -401,6 +443,13 @@ d2l.plt.show()
 #@tab tensorflow
 # Plot average trousers
 d2l.plt.imshow(tf.reshape(ave_1, (28, 28)), cmap='Greys')
+d2l.plt.show()
+```
+
+```{.python .input}
+#@tab jax
+# Plot average trousers
+d2l.plt.imshow(np.array(ave_1.reshape(28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
@@ -436,6 +485,16 @@ predictions = tf.reduce_sum(X_test * tf.nest.flatten(w), axis=0) > -1500000
 # Accuracy
 tf.reduce_mean(
     tf.cast(tf.cast(predictions, y_test.dtype) == y_test, tf.float32))
+```
+
+```{.python .input}
+#@tab jax
+# Print test set accuracy with eyeballed threshold
+w = ave_1 - ave_0
+predictions = X_test.reshape(2000, -1) @ w.flatten() > -1500000
+
+# Accuracy
+jnp.mean((predictions.astype(y_test.dtype) == y_test).astype(jnp.float32))
 ```
 
 ## Geometry of Linear Transformations
@@ -710,6 +769,13 @@ M_inv = tf.constant([[2, -1], [-0.5, 0.5]])
 tf.matmul(M_inv, M)
 ```
 
+```{.python .input}
+#@tab jax
+M = jnp.array([[1, 2], [1, 4]], dtype=jnp.float32)
+M_inv = jnp.array([[2, -1], [-0.5, 0.5]])
+M_inv @ M
+```
+
 ### Numerical Issues
 While the inverse of a matrix is useful in theory,
 we must say that most of the time we do not wish
@@ -799,6 +865,11 @@ torch.det(torch.tensor([[1, -1], [2, 3]], dtype=torch.float32))
 ```{.python .input}
 #@tab tensorflow
 tf.linalg.det(tf.constant([[1, -1], [2, 3]], dtype=tf.float32))
+```
+
+```{.python .input}
+#@tab jax
+jnp.linalg.det(jnp.array([[1, -1], [2, 3]], dtype=jnp.float32))
 ```
 
 The eagle-eyed amongst us will notice
@@ -940,6 +1011,17 @@ v = tf.constant([1, 2])
 A.shape, B.shape, v.shape
 ```
 
+```{.python .input}
+#@tab jax
+# Define tensors
+B = jnp.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+A = jnp.array([[1, 2], [3, 4]])
+v = jnp.array([1, 2])
+
+# Print out the shapes
+A.shape, B.shape, v.shape
+```
+
 Einstein summation has been implemented directly.
 The indices that occur in the Einstein summation can be passed as a string,
 followed by the tensors that are being acted upon.
@@ -964,6 +1046,12 @@ torch.einsum("ij, j -> i", A, v), A@v
 #@tab tensorflow
 # Reimplement matrix multiplication
 tf.einsum("ij, j -> i", A, v), tf.matmul(A, tf.reshape(v, (2, 1)))
+```
+
+```{.python .input}
+#@tab jax
+# Reimplement matrix multiplication
+jnp.einsum("ij, j -> i", A, v), A @ v
 ```
 
 This is a highly flexible notation.
@@ -991,6 +1079,11 @@ torch.einsum("ijk, il, j -> kl", B, A, v)
 tf.einsum("ijk, il, j -> kl", B, A, v)
 ```
 
+```{.python .input}
+#@tab jax
+jnp.einsum("ijk, il, j -> kl", B, A, v)
+```
+
 This notation is readable and efficient for humans,
 however bulky if for whatever reason
 we need to generate a tensor contraction programmatically.
@@ -1011,6 +1104,11 @@ torch.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
 ```{.python .input}
 #@tab tensorflow
 # TensorFlow does not support this type of notation.
+```
+
+```{.python .input}
+#@tab jax
+jnp.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
 ```
 
 Either notation allows for concise and efficient representation of tensor contractions in code.
@@ -1059,5 +1157,9 @@ $$
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1085)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1085)
 :end_tab:

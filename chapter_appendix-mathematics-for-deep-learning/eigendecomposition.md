@@ -118,6 +118,17 @@ import tensorflow as tf
 tf.linalg.eig(tf.constant([[2, 1], [2, 3]], dtype=tf.float64))
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from IPython import display
+import jax
+from jax import numpy as jnp
+
+jnp.linalg.eig(jnp.array([[2, 1], [2, 3]], dtype=jnp.float64))
+```
+
 Note that `numpy` normalizes the eigenvectors to be of length one,
 whereas we took ours to be of arbitrary length.
 Additionally, the choice of sign is arbitrary.
@@ -309,6 +320,17 @@ v, _ = tf.linalg.eigh(A)
 v
 ```
 
+```{.python .input}
+#@tab jax
+A = jnp.array([[1.0, 0.1, 0.1, 0.1],
+               [0.1, 3.0, 0.2, 0.3],
+               [0.1, 0.2, 5.0, 0.5],
+               [0.1, 0.3, 0.5, 9.0]])
+
+v, _ = jnp.linalg.eig(A)
+v
+```
+
 In this way, eigenvalues can be approximated,
 and the approximations will be fairly accurate
 in the case that the diagonal is
@@ -366,6 +388,13 @@ A
 #@tab tensorflow
 k = 5
 A = tf.random.normal((k, k), dtype=tf.float64)
+A
+```
+
+```{.python .input}
+#@tab jax
+k = 5
+A = jax.random.normal(jax.random.PRNGKey(42), (k, k), dtype=jnp.float64)
 A
 ```
 
@@ -433,6 +462,19 @@ for i in range(1, 100):
 d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
+```{.python .input}
+#@tab jax
+# Calculate the sequence of norms after repeatedly applying `A`
+v_in = jax.random.normal(jax.random.PRNGKey(1), (k, 1), dtype=jnp.float64)
+
+norm_list = [float(jnp.linalg.norm(v_in))]
+for i in range(1, 100):
+    v_in = A @ v_in
+    norm_list.append(float(jnp.linalg.norm(v_in)))
+
+d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
+```
+
 The norm is growing uncontrollably!
 Indeed if we take the list of quotients, we will see a pattern.
 
@@ -464,6 +506,16 @@ for i in range(1, 100):
     norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
 
 d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
+```{.python .input}
+#@tab jax
+# Compute the scaling factor of the norms
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
+
+d2l.plot(jnp.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
 If we look at the last portion of the above computation,
@@ -507,6 +559,15 @@ print(f'norms of eigenvalues: {norm_eigs}')
 # Compute the eigenvalues
 eigs = tf.linalg.eigh(A)[0].numpy().tolist()
 norm_eigs = [tf.abs(tf.constant(x, dtype=tf.float64)) for x in eigs]
+norm_eigs.sort()
+print(f'norms of eigenvalues: {norm_eigs}')
+```
+
+```{.python .input}
+#@tab jax
+# Compute the eigenvalues
+eigs = jnp.linalg.eigvals(A).tolist()
+norm_eigs = [abs(x) for x in eigs]
 norm_eigs.sort()
 print(f'norms of eigenvalues: {norm_eigs}')
 ```
@@ -602,6 +663,22 @@ for i in range(1, 100):
 d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
+```{.python .input}
+#@tab jax
+# Rescale the matrix `A`
+A = A / norm_eigs[-1]
+
+# Do the same experiment again
+v_in = jax.random.normal(jax.random.PRNGKey(2), (k, 1), dtype=jnp.float64)
+
+norm_list = [float(jnp.linalg.norm(v_in))]
+for i in range(1, 100):
+    v_in = A @ v_in
+    norm_list.append(float(jnp.linalg.norm(v_in)))
+
+d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
+```
+
 We can also plot the ratio between consecutive norms as before and see that indeed it stabilizes.
 
 ```{.python .input}
@@ -632,6 +709,16 @@ for i in range(1, 100):
     norm_ratio_list.append(norm_list[i]/norm_list[i-1])
 
 d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
+```{.python .input}
+#@tab jax
+# Also plot the ratio
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
+
+d2l.plot(jnp.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
 ## Discussion
@@ -691,5 +778,9 @@ $$
 
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1087)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1087)
 :end_tab:

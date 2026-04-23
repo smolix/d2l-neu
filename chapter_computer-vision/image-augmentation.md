@@ -46,6 +46,21 @@ warnings.filterwarnings('ignore', message='.*dtype.*align.*',
                         category=np.exceptions.VisibleDeprecationWarning)
 ```
 
+```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+from flax.training import train_state
+import flax
+import optax
+import numpy as np
+import tensorflow as tf
+import tensorflow_datasets as tfds
+```
+
 ## Common Image Augmentation Methods
 
 In our investigation of common image augmentation methods, we will use the following $400\times 500$ image an example.
@@ -61,6 +76,14 @@ d2l.plt.imshow(img.asnumpy());
 #@tab pytorch
 d2l.set_figsize()
 img = d2l.Image.open('../img/cat1.jpg')
+d2l.plt.imshow(img);
+```
+
+```{.python .input}
+#@tab jax
+from PIL import Image
+d2l.set_figsize()
+img = Image.open('../img/cat1.jpg')
 d2l.plt.imshow(img);
 ```
 
@@ -89,6 +112,13 @@ Next, we use the `transforms` module to create the `RandomHorizontalFlip` instan
 an image left and right with a 50% chance.
 :end_tab:
 
+:begin_tab:`jax`
+[**Flipping the image left and right**] usually does not change the category of the object. 
+This is one of the earliest and most widely used methods of image augmentation.
+Next, we define a `RandomHorizontalFlip` function using `tf.image`, which flips
+an image left and right with a 50% chance. We convert between PIL images and TensorFlow tensors as needed.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomFlipLeftRight())
@@ -97,6 +127,18 @@ apply(img, gluon.data.vision.transforms.RandomFlipLeftRight())
 ```{.python .input}
 #@tab pytorch
 apply(img, torchvision.transforms.RandomHorizontalFlip())
+```
+
+```{.python .input}
+#@tab jax
+def RandomHorizontalFlip():
+    def aug(img):
+        img_tf = tf.constant(np.array(img))
+        img_tf = tf.image.random_flip_left_right(img_tf)
+        return Image.fromarray(img_tf.numpy())
+    return aug
+
+apply(img, RandomHorizontalFlip())
 ```
 
 :begin_tab:`mxnet`
@@ -111,6 +153,12 @@ Next, we create a `RandomVerticalFlip` instance to flip
 an image up and down with a 50% chance.
 :end_tab:
 
+:begin_tab:`jax`
+[**Flipping up and down**] is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
+Next, we create a `RandomVerticalFlip` function to flip
+an image up and down with a 50% chance.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomFlipTopBottom())
@@ -119,6 +167,18 @@ apply(img, gluon.data.vision.transforms.RandomFlipTopBottom())
 ```{.python .input}
 #@tab pytorch
 apply(img, torchvision.transforms.RandomVerticalFlip())
+```
+
+```{.python .input}
+#@tab jax
+def RandomVerticalFlip():
+    def aug(img):
+        img_tf = tf.constant(np.array(img))
+        img_tf = tf.image.random_flip_up_down(img_tf)
+        return Image.fromarray(img_tf.numpy())
+    return aug
+
+apply(img, RandomVerticalFlip())
 ```
 
 In the example image we used, the cat is in the middle of the image, but this may not be the case in general. 
@@ -142,6 +202,35 @@ shape_aug = torchvision.transforms.RandomResizedCrop(
 apply(img, shape_aug)
 ```
 
+```{.python .input}
+#@tab jax
+def RandomResizedCrop(size, scale=(0.1, 1), ratio=(0.5, 2)):
+    target_h, target_w = size
+    def aug(img):
+        img_tf = tf.constant(np.array(img))
+        h, w = tf.shape(img_tf)[0], tf.shape(img_tf)[1]
+        area = tf.cast(h * w, tf.float32)
+        log_ratio = (tf.math.log(ratio[0]), tf.math.log(ratio[1]))
+        target_area = tf.random.uniform([], scale[0], scale[1]) * area
+        aspect = tf.exp(tf.random.uniform([], log_ratio[0], log_ratio[1]))
+        crop_h = tf.cast(tf.round(tf.sqrt(target_area / aspect)), tf.int32)
+        crop_w = tf.cast(tf.round(tf.sqrt(target_area * aspect)), tf.int32)
+        crop_h = tf.minimum(crop_h, h)
+        crop_w = tf.minimum(crop_w, w)
+        offset_h = tf.random.uniform([], 0, h - crop_h + 1, dtype=tf.int32)
+        offset_w = tf.random.uniform([], 0, w - crop_w + 1, dtype=tf.int32)
+        img_tf = tf.image.crop_to_bounding_box(img_tf, offset_h, offset_w,
+                                                crop_h, crop_w)
+        img_tf = tf.cast(img_tf, tf.float32)
+        img_tf = tf.image.resize(img_tf, [target_h, target_w])
+        img_tf = tf.cast(img_tf, tf.uint8)
+        return Image.fromarray(img_tf.numpy())
+    return aug
+
+shape_aug = RandomResizedCrop((200, 200), scale=(0.1, 1), ratio=(0.5, 2))
+apply(img, shape_aug)
+```
+
 ### Changing Colors
 
 Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we [**randomly change the brightness**] of the image to a value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
@@ -157,6 +246,19 @@ apply(img, torchvision.transforms.ColorJitter(
     brightness=0.5, contrast=0, saturation=0, hue=0))
 ```
 
+```{.python .input}
+#@tab jax
+def RandomBrightness(max_delta):
+    def aug(img):
+        img_tf = tf.cast(tf.constant(np.array(img)), tf.float32) / 255.0
+        img_tf = tf.image.random_brightness(img_tf, max_delta)
+        img_tf = tf.clip_by_value(img_tf, 0.0, 1.0)
+        return Image.fromarray((img_tf.numpy() * 255).astype(np.uint8))
+    return aug
+
+apply(img, RandomBrightness(0.5))
+```
+
 Similarly, we can [**randomly change the hue**] of the image.
 
 ```{.python .input}
@@ -168,6 +270,19 @@ apply(img, gluon.data.vision.transforms.RandomHue(0.5))
 #@tab pytorch
 apply(img, torchvision.transforms.ColorJitter(
     brightness=0, contrast=0, saturation=0, hue=0.5))
+```
+
+```{.python .input}
+#@tab jax
+def RandomHue(max_delta):
+    def aug(img):
+        img_tf = tf.cast(tf.constant(np.array(img)), tf.float32) / 255.0
+        img_tf = tf.image.random_hue(img_tf, max_delta)
+        img_tf = tf.clip_by_value(img_tf, 0.0, 1.0)
+        return Image.fromarray((img_tf.numpy() * 255).astype(np.uint8))
+    return aug
+
+apply(img, RandomHue(0.5))
 ```
 
 We can also create a `RandomColorJitter` instance and set how to [**randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time**].
@@ -183,6 +298,30 @@ apply(img, color_aug)
 #@tab pytorch
 color_aug = torchvision.transforms.ColorJitter(
     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5)
+apply(img, color_aug)
+```
+
+```{.python .input}
+#@tab jax
+def RandomColorJitter(brightness=0, contrast=0, saturation=0, hue=0):
+    def aug(img):
+        img_tf = tf.cast(tf.constant(np.array(img)), tf.float32) / 255.0
+        if brightness > 0:
+            img_tf = tf.image.random_brightness(img_tf, brightness)
+        if contrast > 0:
+            img_tf = tf.image.random_contrast(img_tf, 1 - contrast,
+                                              1 + contrast)
+        if saturation > 0:
+            img_tf = tf.image.random_saturation(img_tf, 1 - saturation,
+                                                1 + saturation)
+        if hue > 0:
+            img_tf = tf.image.random_hue(img_tf, hue)
+        img_tf = tf.clip_by_value(img_tf, 0.0, 1.0)
+        return Image.fromarray((img_tf.numpy() * 255).astype(np.uint8))
+    return aug
+
+color_aug = RandomColorJitter(brightness=0.5, contrast=0.5, saturation=0.5,
+                              hue=0.5)
 apply(img, color_aug)
 ```
 
@@ -206,6 +345,19 @@ augs = torchvision.transforms.Compose([
 apply(img, augs)
 ```
 
+```{.python .input}
+#@tab jax
+def Compose(transforms):
+    def aug(img):
+        for t in transforms:
+            img = t(img)
+        return img
+    return aug
+
+augs = Compose([RandomHorizontalFlip(), color_aug, shape_aug])
+apply(img, augs)
+```
+
 ## [**Training with Image Augmentation**]
 
 Let's train a model with image augmentation.
@@ -224,6 +376,13 @@ d2l.show_images(gluon.data.vision.CIFAR10(
 all_images = torchvision.datasets.CIFAR10(train=True, root="../data",
                                           download=True)
 d2l.show_images([all_images[i][0] for i in range(32)], 4, 8, scale=0.8);
+```
+
+```{.python .input}
+#@tab jax
+(train_images, train_labels), _ = tf.keras.datasets.cifar10.load_data()
+d2l.show_images([Image.fromarray(train_images[i]) for i in range(32)],
+                4, 8, scale=0.8);
 ```
 
 In order to obtain definitive results during prediction, we usually only apply image augmentation to training examples, and do not use image augmentation with random operations during prediction. 
@@ -250,6 +409,18 @@ test_augs = torchvision.transforms.Compose([
      torchvision.transforms.ToTensor()])
 ```
 
+```{.python .input}
+#@tab jax
+def train_augs(image, label):
+    image = tf.cast(image, tf.float32) / 255.0
+    image = tf.image.random_flip_left_right(image)
+    return image, label
+
+def test_augs(image, label):
+    image = tf.cast(image, tf.float32) / 255.0
+    return image, label
+```
+
 :begin_tab:`mxnet`
 Next, we define an auxiliary function to facilitate reading the image and
 applying image augmentation. 
@@ -269,6 +440,15 @@ For
 a detailed introduction to `DataLoader`, please refer to :numref:`sec_fashion_mnist`.
 :end_tab:
 
+:begin_tab:`jax`
+Next, we [**define an auxiliary function to facilitate reading the image and
+applying image augmentation**]. 
+We use `tf.keras.datasets` to load CIFAR-10 and `tf.data.Dataset` for batching,
+then convert each batch to NumPy arrays via `tfds.as_numpy()` for use with JAX.
+For
+a detailed introduction to data loading, please refer to :numref:`sec_fashion_mnist`.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 def load_cifar10(is_train, augs, batch_size):
@@ -286,6 +466,23 @@ def load_cifar10(is_train, augs, batch_size):
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                     shuffle=is_train, num_workers=d2l.get_dataloader_workers())
     return dataloader
+```
+
+```{.python .input}
+#@tab jax
+def load_cifar10(is_train, aug_fn, batch_size):
+    (train_imgs, train_lbls), (test_imgs, test_lbls) = (
+        tf.keras.datasets.cifar10.load_data())
+    if is_train:
+        images, labels = train_imgs, train_lbls.squeeze()
+    else:
+        images, labels = test_imgs, test_lbls.squeeze()
+    ds = tf.data.Dataset.from_tensor_slices((images, labels))
+    if is_train:
+        ds = ds.shuffle(10000)
+    ds = ds.map(aug_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return ds
 ```
 
 ### Multi-GPU Training
@@ -340,6 +537,29 @@ def train_batch_ch13(net, X, y, loss, trainer, devices):
     train_loss_sum = l.sum()
     train_acc_sum = d2l.accuracy(pred, y)
     return train_loss_sum, train_acc_sum
+```
+
+```{.python .input}
+#@tab jax
+#@save
+def train_batch_ch13(state, X, y, net, loss_fn):
+    """Train for a minibatch with JAX (defined in Chapter 13)."""
+    # X and y are numpy arrays from tfds.as_numpy() — HWC format already
+    X = jnp.array(X)
+    y = jnp.array(y)
+    def compute_loss(params):
+        logits, updates = state.apply_fn(
+            {'params': params, 'batch_stats': state.batch_stats},
+            X, mutable=['batch_stats'])
+        loss = loss_fn(logits, y).mean()
+        return loss, (logits, updates)
+    (loss, (logits, updates)), grads = jax.value_and_grad(
+        compute_loss, has_aux=True)(state.params)
+    state = state.apply_gradients(grads=grads)
+    state = state.replace(batch_stats=updates['batch_stats'])
+    train_loss_sum = float(loss) * X.shape[0]
+    train_acc_sum = float((logits.argmax(axis=-1) == y).sum())
+    return state, train_loss_sum, train_acc_sum
 ```
 
 ```{.python .input}
@@ -405,6 +625,48 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
           f'{str(devices)}')
 ```
 
+```{.python .input}
+#@tab jax
+#@save
+def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
+    """Train a model with JAX (defined in Chapter 13)."""
+    num_batches = sum(1 for _ in tfds.as_numpy(train_iter))
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['train loss', 'train acc', 'test acc'])
+    timer = d2l.Timer()
+    for epoch in range(num_epochs):
+        # Sum of training loss, sum of training accuracy, no. of examples,
+        # no. of predictions
+        metric = d2l.Accumulator(4)
+        for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
+            timer.start()
+            state, l, acc = train_batch_ch13(
+                state, features, labels, net, loss_fn)
+            n = features.shape[0]
+            metric.add(l, acc, n, n)
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[3],
+                              None))
+        # Evaluate on test set
+        correct, total = 0, 0
+        for X, y in tfds.as_numpy(test_iter):
+            X = jnp.array(X)
+            y = jnp.array(y)
+            logits = state.apply_fn(
+                {'params': state.params, 'batch_stats': state.batch_stats},
+                X)
+            correct += int((logits.argmax(axis=-1) == y).sum())
+            total += y.shape[0]
+        test_acc = correct / total
+        animator.add(epoch + 1, (None, None, test_acc))
+    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
+          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec')
+    return state
+```
+
 Now we can [**define the `train_with_data_aug` function to train the model with image augmentation**].
 This function gets all available GPUs, 
 uses Adam as the optimization algorithm,
@@ -439,6 +701,58 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
 
+```{.python .input}
+#@tab jax
+batch_size = 256
+
+class ResNet18(nn.Module):
+    num_classes: int = 10
+    training: bool = True
+
+    def setup(self):
+        self.net = nn.Sequential([
+            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding='same'),
+            nn.BatchNorm(not self.training),
+            nn.relu,
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(64, training=self.training),
+            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(128, training=self.training),
+            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(256, training=self.training),
+            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
+                         training=self.training),
+            d2l.Residual(512, training=self.training),
+            lambda x: x.mean(axis=(1, 2)),
+            nn.Dense(self.num_classes),
+        ])
+
+    def __call__(self, x):
+        return self.net(x)
+
+net = ResNet18(num_classes=10, training=True)
+
+def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
+    train_iter = load_cifar10(True, train_aug_fn, batch_size)
+    test_iter = load_cifar10(False, test_aug_fn, batch_size)
+    loss_fn = optax.softmax_cross_entropy_with_integer_labels
+    # Initialize model parameters
+    dummy_input = jnp.ones((1, 32, 32, 3))
+    key = jax.random.PRNGKey(0)
+    variables = net.init(key, dummy_input)
+    params = variables['params']
+    batch_stats = variables.get('batch_stats', {})
+
+    class TrainState(train_state.TrainState):
+        batch_stats: dict
+
+    state = TrainState.create(apply_fn=net.apply, params=params,
+                              tx=optax.adam(lr), batch_stats=batch_stats)
+    state = train_ch13(net, train_iter, test_iter, loss_fn, state, 10)
+```
+
 Let's [**train the model**] using image augmentation based on random left-right flipping.
 
 ```{.python .input}
@@ -464,5 +778,9 @@ train_with_data_aug(train_augs, test_augs, net)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1404)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1404)
 :end_tab:

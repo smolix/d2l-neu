@@ -91,6 +91,16 @@ import tensorflow as tf
 ```
 
 ```{.python .input}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import math
+import numpy as np
+```
+
+```{.python .input}
 #@tab all
 def adagrad_2d(x1, x2, s1, s2):
     eps = 1e-6
@@ -164,6 +174,22 @@ def adagrad(params, grads, states, hyperparams):
         p[:].assign(p - hyperparams['lr'] * g / tf.math.sqrt(s + eps))
 ```
 
+```{.python .input}
+#@tab jax
+def init_adagrad_states(feature_dim):
+    s_w = jnp.zeros((feature_dim, 1))
+    s_b = jnp.zeros(1)
+    return [s_w, s_b]
+
+def adagrad(params, grads, states, hyperparams):
+    eps = 1e-6
+    for i, (p, s, g) in enumerate(zip(params, states, grads)):
+        s = s + jnp.square(g)
+        params[i] = p - hyperparams['lr'] * g / jnp.sqrt(s + eps)
+        states[i] = s
+    return params[0], params[1]
+```
+
 Compared to the experiment in :numref:`sec_minibatch_sgd` we use a
 larger learning rate to train the model.
 
@@ -195,6 +221,13 @@ trainer = tf.keras.optimizers.Adagrad
 d2l.train_concise_ch11(trainer, {'learning_rate' : 0.1}, data_iter)
 ```
 
+```{.python .input}
+#@tab jax
+import optax
+trainer = optax.adagrad
+d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
+```
+
 ## Summary
 
 * Adagrad decreases the learning rate dynamically on a per-coordinate basis.
@@ -222,5 +255,9 @@ d2l.train_concise_ch11(trainer, {'learning_rate' : 0.1}, data_iter)
 :end_tab:
 
 :begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1073)
+:end_tab:
+
+:begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1073)
 :end_tab:

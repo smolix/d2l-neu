@@ -432,6 +432,36 @@ for name, data in zip(names, batch):
 
 Last, we define the `load_data_ptb` function that reads the PTB dataset and returns the data iterator and the vocabulary.
 
+Instead of padding to each minibatch's max length on every iteration, we
+pad once to the *global* max context+negative length and store the result
+as dense NumPy arrays. Per-epoch shuffling and per-batch slicing then
+become O(1) per batch, which matters for JAX in particular where the
+Python iterator runs on a single thread rather than worker processes.
+
+```{.python .input}
+#@tab all
+#@save
+def _pad_ptb(all_centers, all_contexts, all_negatives):
+    """Pre-pad all skip-gram examples to the global max length.
+
+    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+    masks (N, L), labels (N, L), where L = max(len(c) + len(n))."""
+    import numpy as _np
+    n = len(all_centers)
+    max_len = max(len(c) + len(neg)
+                  for c, neg in zip(all_contexts, all_negatives))
+    centers = _np.asarray(all_centers, dtype=_np.int64)
+    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
+    masks = _np.zeros((n, max_len), dtype=_np.float32)
+    labels = _np.zeros((n, max_len), dtype=_np.float32)
+    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
+        cur_len = len(c) + len(neg)
+        contexts_negatives[i, :cur_len] = c + neg
+        masks[i, :cur_len] = 1.
+        labels[i, :len(c)] = 1.
+    return centers, contexts_negatives, masks, labels
+```
+
 ```{.python .input}
 #@tab mxnet
 #@save
@@ -445,10 +475,13 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         corpus, max_window_size)
     all_negatives = get_negatives(
         all_contexts, vocab, counter, num_noise_words)
-    dataset = gluon.data.ArrayDataset(
+    centers, cn, masks, labels = _pad_ptb(
         all_centers, all_contexts, all_negatives)
+    # reshape(-1, 1) for centers matches the shape batchify used to produce
+    dataset = gluon.data.ArrayDataset(
+        centers.reshape(-1, 1), cn, masks, labels)
     data_iter = gluon.data.DataLoader(
-        dataset, batch_size, shuffle=True,batchify_fn=batchify,
+        dataset, batch_size, shuffle=True,
         num_workers=d2l.get_dataloader_workers())
     return data_iter, vocab
 ```
@@ -467,26 +500,14 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         corpus, max_window_size)
     all_negatives = get_negatives(
         all_contexts, vocab, counter, num_noise_words)
-
-    class PTBDataset(torch.utils.data.Dataset):
-        def __init__(self, centers, contexts, negatives):
-            assert len(centers) == len(contexts) == len(negatives)
-            self.centers = centers
-            self.contexts = contexts
-            self.negatives = negatives
-
-        def __getitem__(self, index):
-            return (self.centers[index], self.contexts[index],
-                    self.negatives[index])
-
-        def __len__(self):
-            return len(self.centers)
-
-    dataset = PTBDataset(all_centers, all_contexts, all_negatives)
-
-    data_iter = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True,
-                                      collate_fn=batchify,
-                                      num_workers=num_workers)
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    dataset = torch.utils.data.TensorDataset(
+        torch.from_numpy(centers).unsqueeze(1),
+        torch.from_numpy(cn), torch.from_numpy(masks),
+        torch.from_numpy(labels))
+    data_iter = torch.utils.data.DataLoader(
+        dataset, batch_size, shuffle=True, num_workers=num_workers)
     return data_iter, vocab
 ```
 
@@ -503,19 +524,21 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         corpus, max_window_size)
     all_negatives = get_negatives(
         all_contexts, vocab, counter, num_noise_words)
-
-    all_data = list(zip(all_centers, all_contexts, all_negatives))
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    centers = centers.reshape(-1, 1)
+    n = len(centers)
 
     class PTBDataIter:
         def __len__(self):
-            return math.ceil(len(all_data) / batch_size)
+            return math.ceil(n / batch_size)
         def __iter__(self):
-            random.shuffle(all_data)
-            for i in range(0, len(all_data), batch_size):
-                batch = all_data[i: min(i + batch_size, len(all_data))]
-                centers, contexts_negatives, masks, labels = batchify(batch)
-                yield (jnp.array(centers), jnp.array(contexts_negatives),
-                       jnp.array(masks), jnp.array(labels))
+            import numpy as _np
+            idx = _np.random.permutation(n)
+            for i in range(0, n, batch_size):
+                b = idx[i:i + batch_size]
+                yield (jnp.asarray(centers[b]), jnp.asarray(cn[b]),
+                       jnp.asarray(masks[b]), jnp.asarray(labels[b]))
 
     return PTBDataIter(), vocab
 ```

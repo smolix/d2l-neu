@@ -13,10 +13,22 @@ del _tf
 import flax
 from jax import numpy as jnp
 from flax import linen as nn
-import random
+import random as _random
 
-get_seed = lambda: random.randint(0, 1e6)
-get_key = lambda: jax.random.PRNGKey(get_seed())
+# Deterministic seed generator so d2l.get_key()/d2l.get_seed() produce
+# reproducible output across runs. Uses a private RNG so that user code
+# calling random.seed() or random.randint() is unaffected.
+_seed_rng = _random.Random(0)
+
+
+def get_seed():
+    """Return a deterministic seed int (fresh value on each call)."""
+    return _seed_rng.randint(0, 10**6)
+
+
+def get_key():
+    """Return a deterministic jax.random.PRNGKey (fresh on each call)."""
+    return jax.random.PRNGKey(get_seed())
 
 nn_Module = nn.Module
 
@@ -335,27 +347,31 @@ class Trainer(d2l.HyperParameters):
 
     def fit_epoch(self):
         self.model.training = True
+        # Some hand-rolled optimizers (e.g. LinearRegressionScratch.SGD) are not
+        # JIT-traceable: detect that by probing opt_state and skip the JIT path.
+        jit_ok = isinstance(self.state.opt_state, tuple)
         if self.state.batch_stats:
             # Mutable states will be used later (e.g., for batch norm)
             for batch in self.train_dataloader:
-                (_, mutated_vars), grads = self.model.training_step(self.state.params,
-                                                               self.prepare_batch(batch),
-                                                               self.state)
-                self.state = self.state.apply_gradients(grads=grads)
-                # Can be ignored for models without Dropout Layers
-                self.state = self.state.replace(
-                    dropout_rng=jax.random.split(self.state.dropout_rng)[0])
-                self.state = self.state.replace(batch_stats=mutated_vars['batch_stats'])
+                (_, mutated_vars), grads = self.model.training_step(
+                    self.state.params, self.prepare_batch(batch), self.state)
+                if jit_ok:
+                    self.state = _trainer_update_with_bn(
+                        self.state, grads, mutated_vars['batch_stats'])
+                else:
+                    self.state = self.state.apply_gradients(grads=grads).replace(
+                        dropout_rng=jax.random.split(self.state.dropout_rng)[0],
+                        batch_stats=mutated_vars['batch_stats'])
                 self.train_batch_idx += 1
         else:
             for batch in self.train_dataloader:
-                _, grads = self.model.training_step(self.state.params,
-                                                    self.prepare_batch(batch),
-                                                    self.state)
-                self.state = self.state.apply_gradients(grads=grads)
-                # Can be ignored for models without Dropout Layers
-                self.state = self.state.replace(
-                    dropout_rng=jax.random.split(self.state.dropout_rng)[0])
+                _, grads = self.model.training_step(
+                    self.state.params, self.prepare_batch(batch), self.state)
+                if jit_ok:
+                    self.state = _trainer_update(self.state, grads)
+                else:
+                    self.state = self.state.apply_gradients(grads=grads).replace(
+                        dropout_rng=jax.random.split(self.state.dropout_rng)[0])
                 self.train_batch_idx += 1
 
         if self.val_dataloader is None:
@@ -452,6 +468,17 @@ class SGD(d2l.HyperParameters):
 
     def __call__():
         return optax.GradientTransformation(self.init, self.update)
+
+@jax.jit
+def _trainer_update(state, grads):
+    return state.apply_gradients(grads=grads).replace(
+        dropout_rng=jax.random.split(state.dropout_rng)[0])
+
+@jax.jit
+def _trainer_update_with_bn(state, grads, batch_stats):
+    return state.apply_gradients(grads=grads).replace(
+        dropout_rng=jax.random.split(state.dropout_rng)[0],
+        batch_stats=batch_stats)
 
 class LinearRegression(d2l.Module):
     """The linear regression model implemented with high-level APIs.
@@ -2249,6 +2276,27 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+def _pad_ptb(all_centers, all_contexts, all_negatives):
+    """Pre-pad all skip-gram examples to the global max length.
+
+    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+
+    Defined in :numref:`sec_word2vec_data`"""
+    import numpy as _np
+    n = len(all_centers)
+    max_len = max(len(c) + len(neg)
+                  for c, neg in zip(all_contexts, all_negatives))
+    centers = _np.asarray(all_centers, dtype=_np.int64)
+    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
+    masks = _np.zeros((n, max_len), dtype=_np.float32)
+    labels = _np.zeros((n, max_len), dtype=_np.float32)
+    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
+        cur_len = len(c) + len(neg)
+        contexts_negatives[i, :cur_len] = c + neg
+        masks[i, :cur_len] = 1.
+        labels[i, :len(c)] = 1.
+    return centers, contexts_negatives, masks, labels
+
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
     """Download the PTB dataset and then load it into memory.
 
@@ -2261,19 +2309,21 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         corpus, max_window_size)
     all_negatives = get_negatives(
         all_contexts, vocab, counter, num_noise_words)
-
-    all_data = list(zip(all_centers, all_contexts, all_negatives))
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    centers = centers.reshape(-1, 1)
+    n = len(centers)
 
     class PTBDataIter:
         def __len__(self):
-            return math.ceil(len(all_data) / batch_size)
+            return math.ceil(n / batch_size)
         def __iter__(self):
-            random.shuffle(all_data)
-            for i in range(0, len(all_data), batch_size):
-                batch = all_data[i: min(i + batch_size, len(all_data))]
-                centers, contexts_negatives, masks, labels = batchify(batch)
-                yield (jnp.array(centers), jnp.array(contexts_negatives),
-                       jnp.array(masks), jnp.array(labels))
+            import numpy as _np
+            idx = _np.random.permutation(n)
+            for i in range(0, n, batch_size):
+                b = idx[i:i + batch_size]
+                yield (jnp.asarray(centers[b]), jnp.asarray(cn[b]),
+                       jnp.asarray(masks[b]), jnp.asarray(labels[b]))
 
     return PTBDataIter(), vocab
 

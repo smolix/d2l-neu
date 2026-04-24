@@ -2037,6 +2037,27 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+def _pad_ptb(all_centers, all_contexts, all_negatives):
+    """Pre-pad all skip-gram examples to the global max length.
+
+    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+
+    Defined in :numref:`sec_word2vec_data`"""
+    import numpy as _np
+    n = len(all_centers)
+    max_len = max(len(c) + len(neg)
+                  for c, neg in zip(all_contexts, all_negatives))
+    centers = _np.asarray(all_centers, dtype=_np.int64)
+    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
+    masks = _np.zeros((n, max_len), dtype=_np.float32)
+    labels = _np.zeros((n, max_len), dtype=_np.float32)
+    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
+        cur_len = len(c) + len(neg)
+        contexts_negatives[i, :cur_len] = c + neg
+        masks[i, :cur_len] = 1.
+        labels[i, :len(c)] = 1.
+    return centers, contexts_negatives, masks, labels
+
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
     """Download the PTB dataset and then load it into memory.
 
@@ -2050,26 +2071,14 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         corpus, max_window_size)
     all_negatives = get_negatives(
         all_contexts, vocab, counter, num_noise_words)
-
-    class PTBDataset(torch.utils.data.Dataset):
-        def __init__(self, centers, contexts, negatives):
-            assert len(centers) == len(contexts) == len(negatives)
-            self.centers = centers
-            self.contexts = contexts
-            self.negatives = negatives
-
-        def __getitem__(self, index):
-            return (self.centers[index], self.contexts[index],
-                    self.negatives[index])
-
-        def __len__(self):
-            return len(self.centers)
-
-    dataset = PTBDataset(all_centers, all_contexts, all_negatives)
-
-    data_iter = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True,
-                                      collate_fn=batchify,
-                                      num_workers=num_workers)
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    dataset = torch.utils.data.TensorDataset(
+        torch.from_numpy(centers).unsqueeze(1),
+        torch.from_numpy(cn), torch.from_numpy(masks),
+        torch.from_numpy(labels))
+    data_iter = torch.utils.data.DataLoader(
+        dataset, batch_size, shuffle=True, num_workers=num_workers)
     return data_iter, vocab
 
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',

@@ -501,30 +501,50 @@ def fit_epoch(self):
 
 ```{.python .input  n=19}
 %%tab jax
+# Fuse the optimizer + state.replace updates into a single JIT'd call so
+# JAX dispatches one compiled kernel per batch instead of many Python-level
+# optax ops.
+@jax.jit  #@save
+def _trainer_update(state, grads):
+    return state.apply_gradients(grads=grads).replace(
+        dropout_rng=jax.random.split(state.dropout_rng)[0])
+
+
+@jax.jit  #@save
+def _trainer_update_with_bn(state, grads, batch_stats):
+    return state.apply_gradients(grads=grads).replace(
+        dropout_rng=jax.random.split(state.dropout_rng)[0],
+        batch_stats=batch_stats)
+
+
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
     self.model.training = True
+    # Some hand-rolled optimizers (e.g. LinearRegressionScratch.SGD) are not
+    # JIT-traceable: detect that by probing opt_state and skip the JIT path.
+    jit_ok = isinstance(self.state.opt_state, tuple)
     if self.state.batch_stats:
         # Mutable states will be used later (e.g., for batch norm)
         for batch in self.train_dataloader:
-            (_, mutated_vars), grads = self.model.training_step(self.state.params,
-                                                           self.prepare_batch(batch),
-                                                           self.state)
-            self.state = self.state.apply_gradients(grads=grads)
-            # Can be ignored for models without Dropout Layers
-            self.state = self.state.replace(
-                dropout_rng=jax.random.split(self.state.dropout_rng)[0])
-            self.state = self.state.replace(batch_stats=mutated_vars['batch_stats'])
+            (_, mutated_vars), grads = self.model.training_step(
+                self.state.params, self.prepare_batch(batch), self.state)
+            if jit_ok:
+                self.state = _trainer_update_with_bn(
+                    self.state, grads, mutated_vars['batch_stats'])
+            else:
+                self.state = self.state.apply_gradients(grads=grads).replace(
+                    dropout_rng=jax.random.split(self.state.dropout_rng)[0],
+                    batch_stats=mutated_vars['batch_stats'])
             self.train_batch_idx += 1
     else:
         for batch in self.train_dataloader:
-            _, grads = self.model.training_step(self.state.params,
-                                                self.prepare_batch(batch),
-                                                self.state)
-            self.state = self.state.apply_gradients(grads=grads)
-            # Can be ignored for models without Dropout Layers
-            self.state = self.state.replace(
-                dropout_rng=jax.random.split(self.state.dropout_rng)[0])
+            _, grads = self.model.training_step(
+                self.state.params, self.prepare_batch(batch), self.state)
+            if jit_ok:
+                self.state = _trainer_update(self.state, grads)
+            else:
+                self.state = self.state.apply_gradients(grads=grads).replace(
+                    dropout_rng=jax.random.split(self.state.dropout_rng)[0])
             self.train_batch_idx += 1
 
     if self.val_dataloader is None:

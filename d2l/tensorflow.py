@@ -1669,6 +1669,27 @@ def batchify(data):
     return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
         contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
+def _pad_ptb(all_centers, all_contexts, all_negatives):
+    """Pre-pad all skip-gram examples to the global max length.
+
+    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+
+    Defined in :numref:`sec_word2vec_data`"""
+    import numpy as _np
+    n = len(all_centers)
+    max_len = max(len(c) + len(neg)
+                  for c, neg in zip(all_contexts, all_negatives))
+    centers = _np.asarray(all_centers, dtype=_np.int64)
+    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
+    masks = _np.zeros((n, max_len), dtype=_np.float32)
+    labels = _np.zeros((n, max_len), dtype=_np.float32)
+    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
+        cur_len = len(c) + len(neg)
+        contexts_negatives[i, :cur_len] = c + neg
+        masks[i, :cur_len] = 1.
+        labels[i, :len(c)] = 1.
+    return centers, contexts_negatives, masks, labels
+
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
                                 '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
 

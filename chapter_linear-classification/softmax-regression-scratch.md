@@ -106,7 +106,7 @@ X_prob, d2l.reduce_sum(X_prob, 1)
 
 ```{.python .input}
 %%tab jax
-X = jax.random.uniform(jax.random.PRNGKey(d2l.get_seed()), (2, 5))
+X = jax.random.uniform(d2l.get_key(), (2, 5))
 X_prob = softmax(X)
 X_prob, d2l.reduce_sum(X_prob, 1)
 ```

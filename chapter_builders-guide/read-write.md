@@ -262,8 +262,8 @@ class MLP(nn.Module):
         return self.output(nn.relu(self.hidden(x)))
 
 net = MLP()
-X = jax.random.normal(jax.random.PRNGKey(d2l.get_seed()), (2, 20))
-Y, params = net.init_with_output(jax.random.PRNGKey(d2l.get_seed()), X)
+X = jax.random.normal(d2l.get_key(), (2, 20))
+Y, params = net.init_with_output(d2l.get_key(), X)
 ```
 
 Next, we [**store the parameters of the model as a file**] with the name "mlp.params".

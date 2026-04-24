@@ -165,7 +165,7 @@ net(X).shape
 %%tab jax
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 
-# get_key is a d2l saved function returning jax.random.PRNGKey(random_seed)
+# d2l.get_key() returns a fresh sub-key split from the module's master key
 X = jax.random.uniform(d2l.get_key(), (2, 20))
 params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape

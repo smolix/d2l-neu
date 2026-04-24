@@ -196,14 +196,14 @@ comp_conv2d(conv2d, X).shape
 # elevations and reductions on the input and output
 def comp_conv2d(conv2d, X):
     # (1, X.shape, 1) indicates that batch size and the number of channels are both 1
-    key = jax.random.PRNGKey(d2l.get_seed())
+    key = d2l.get_key()
     X = X.reshape((1,) + X.shape + (1,))
     Y, _ = conv2d.init_with_output(key, X)
     # Strip the dimensions: examples and channels
     return Y.reshape(Y.shape[1:3])
 # 1 row and column is padded on either side, so a total of 2 rows or columns are added
 conv2d = nn.Conv(1, kernel_size=(3, 3), padding='SAME')
-X = jax.random.uniform(jax.random.PRNGKey(d2l.get_seed()), shape=(8, 8))
+X = jax.random.uniform(d2l.get_key(), shape=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
 

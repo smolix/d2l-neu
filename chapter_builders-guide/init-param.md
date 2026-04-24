@@ -155,7 +155,7 @@ net = nn.Sequential([nn.Dense(8, kernel_init=weight_init, bias_init=bias_init),
                      nn.relu,
                      nn.Dense(1, kernel_init=weight_init, bias_init=bias_init)])
 
-params = net.init(jax.random.PRNGKey(d2l.get_seed()), X)
+params = net.init(d2l.get_key(), X)
 layer_0 = params['params']['layers_0']
 layer_0['kernel'][:, 0], layer_0['bias'][0]
 ```
@@ -203,7 +203,7 @@ net = nn.Sequential([nn.Dense(8, kernel_init=weight_init, bias_init=bias_init),
                      nn.relu,
                      nn.Dense(1, kernel_init=weight_init, bias_init=bias_init)])
 
-params = net.init(jax.random.PRNGKey(d2l.get_seed()), X)
+params = net.init(d2l.get_key(), X)
 layer_0 = params['params']['layers_0']
 layer_0['kernel'][:, 0], layer_0['bias'][0]
 ```
@@ -263,7 +263,7 @@ net = nn.Sequential([nn.Dense(8, kernel_init=nn.initializers.xavier_uniform(),
                      nn.Dense(1, kernel_init=nn.initializers.constant(42),
                               bias_init=bias_init)])
 
-params = net.init(jax.random.PRNGKey(d2l.get_seed()), X)
+params = net.init(d2l.get_key(), X)
 params['params']['layers_0']['kernel'][:, 0], params['params']['layers_2']['kernel']
 ```
 

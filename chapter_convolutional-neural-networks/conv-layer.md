@@ -418,7 +418,7 @@ X = X.reshape((1, 6, 8, 1))
 Y = Y.reshape((1, 6, 7, 1))
 lr = 3e-2  # Learning rate
 
-params = conv2d.init(jax.random.PRNGKey(d2l.get_seed()), X)
+params = conv2d.init(d2l.get_key(), X)
 
 def loss(params, X, Y):
     Y_hat = conv2d.apply(params, X)

@@ -323,7 +323,7 @@ net = nn.Sequential([nn.Dense(8), nn.relu,
                      shared, nn.relu,
                      nn.Dense(1)])
 
-params = net.init(jax.random.PRNGKey(d2l.get_seed()), X)
+params = net.init(d2l.get_key(), X)
 
 # Check whether the parameters are different
 print(len(params['params']) == 3)

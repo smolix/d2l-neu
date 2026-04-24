@@ -15,20 +15,26 @@ from jax import numpy as jnp
 from flax import linen as nn
 import random as _random
 
-# Deterministic seed generator so d2l.get_key()/d2l.get_seed() produce
-# reproducible output across runs. Uses a private RNG so that user code
-# calling random.seed() or random.randint() is unaffected.
+# Seed the d2l PRNG once per interpreter. Every d2l.get_key() call splits
+# and advances _master_key, so the whole notebook draws from a single
+# continuous stream of uncorrelated sub-keys. Do not build a fresh
+# jax.random.PRNGKey(seed) at each call site — independently seeded keys
+# can produce correlated samples in the JAX counter-based PRNG.
+_master_key = jax.random.PRNGKey(0)
 _seed_rng = _random.Random(0)
 
 
-def get_seed():
-    """Return a deterministic seed int (fresh value on each call)."""
-    return _seed_rng.randint(0, 10**6)
-
-
 def get_key():
-    """Return a deterministic jax.random.PRNGKey (fresh on each call)."""
-    return jax.random.PRNGKey(get_seed())
+    """Return a fresh sub-key split from the module-level master key."""
+    global _master_key
+    _master_key, sub = jax.random.split(_master_key)
+    return sub
+
+
+def get_seed():
+    """Return a fresh deterministic int seed, for non-JAX APIs that want
+    an int (numpy.random.seed, tf.random.set_seed, stdlib random)."""
+    return _seed_rng.randint(0, 10**6)
 
 nn_Module = nn.Module
 

@@ -303,39 +303,14 @@ The remainder of this section grows considerably more technical.
 The impatient reader could continue on to the next section
 as this material is not prerequisite to subsequent concepts.
 
-### Empirical Risk and  Risk
-:label:`subsec_empirical-risk-and-risk`
-
-Let's first reflect on what exactly
-is happening during model training:
-we iterate over features and associated labels
-of training data
-$\{(\mathbf{x}_1, y_1), \ldots, (\mathbf{x}_n, y_n)\}$
-and update the parameters of a model $f$ after every minibatch.
-For simplicity we do not consider regularization,
-so we largely minimize the loss on the training:
-
-$$\mathop{\mathrm{minimize}}_f \frac{1}{n} \sum_{i=1}^n l(f(\mathbf{x}_i), y_i),$$
-:eqlabel:`eq_empirical-risk-min`
-
-where $l$ is the loss function
-measuring "how bad" the prediction $f(\mathbf{x}_i)$ is given the associated label $y_i$.
-Statisticians call the term in :eqref:`eq_empirical-risk-min` *empirical risk*.
-The *empirical risk* is an average loss over the training data
-for approximating the *risk*,
-which is the
-expectation of the loss over the entire population of data drawn from their true distribution
-$p(\mathbf{x},y)$:
-
-$$E_{p(\mathbf{x}, y)} [l(f(\mathbf{x}), y)] = \int\int l(f(\mathbf{x}), y) p(\mathbf{x}, y) \;d\mathbf{x}dy.$$
-:eqlabel:`eq_true-risk`
-
-However, in practice we typically cannot obtain the entire population of data.
-Thus, *empirical risk minimization*,
-which is minimizing the empirical risk in :eqref:`eq_empirical-risk-min`,
-is a practical strategy for machine learning,
-with the hope of approximately
-minimizing the risk.
+Recall from :numref:`subsec_empirical-risk-and-risk` the distinction
+between the *empirical risk* :eqref:`eq_empirical-risk-min` — the average
+loss on the training data — and the *risk*
+:eqref:`eq_true-risk` — the expected loss under the true data
+distribution $p(\mathbf{x}, y)$. In practice we cannot evaluate the risk
+directly and so we turn to *empirical risk minimization*, hoping that
+minimizing the empirical risk on the training set will approximately
+minimize the risk.
 
 
 

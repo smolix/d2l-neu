@@ -75,7 +75,7 @@ class BPRLoss(nn.Module):
 
 ## Hinge Loss and its Implementation
 
-The Hinge loss for ranking has different form to the [hinge loss](https://mxnet.incubator.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.HingeLoss) provided within the gluon library that is often used in classifiers such as SVMs.  The loss used for ranking in recommender systems has the following form.
+The Hinge loss for ranking has a different form from the standard hinge loss that is often used in classifiers such as SVMs.  The loss used for ranking in recommender systems has the following form.
 
 $$
  \sum_{(u, i, j \in D)} \max( m - \hat{y}_{ui} + \hat{y}_{uj}, 0)

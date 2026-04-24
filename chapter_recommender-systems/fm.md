@@ -51,7 +51,7 @@ import os
 ```
 
 ## Model Implementation
-The following code implement the factorization machines. It is clear to see that FM consists a linear regression block and an efficient feature interaction block. We apply a sigmoid function over the final score since we treat the CTR prediction as a classification task.
+The following code implement the factorization machines. It is clear to see that FM consists a linear regression block and an efficient feature interaction block. The model returns raw scores (logits); the sigmoid transformation is absorbed into the loss function (`SigmoidBinaryCrossEntropyLoss` / `BCEWithLogitsLoss`) for numerical stability.
 
 ```{.python .input  n=2}
 #@tab mxnet
@@ -68,7 +68,6 @@ class FM(nn.Block):
         sum_of_square = np.sum(self.embedding(x) ** 2, axis=1)
         x = self.linear_layer(self.fc(x).sum(1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(1, keepdims=True)
-        x = npx.sigmoid(x)
         return x
 ```
 
@@ -87,7 +86,6 @@ class FM(nn.Module):
         sum_of_square = (self.embedding(x) ** 2).sum(dim=1)
         x = self.linear_layer(self.fc(x).sum(dim=1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(dim=1, keepdim=True)
-        x = torch.sigmoid(x)
         return x
 ```
 

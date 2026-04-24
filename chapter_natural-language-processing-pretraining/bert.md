@@ -606,30 +606,30 @@ returns binary predictions for each BERT input sequence.
 
 ```{.python .input}
 #@tab mxnet
+# Use the `<cls>` token (index 0) as input to NSP
 nsp = NextSentencePred()
 nsp.initialize()
-nsp_Y_hat = nsp(encoded_X)
+nsp_Y_hat = nsp(encoded_X[:, 0, :])
 nsp_Y_hat.shape
 ```
 
 ```{.python .input}
 #@tab pytorch
-# PyTorch by default will not flatten the tensor as seen in mxnet where, if
-# flatten=True, all but the first axis of input data are collapsed together
-encoded_X = torch.flatten(encoded_X, start_dim=1)
+# Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
 nsp = NextSentencePred()
-nsp_Y_hat = nsp(encoded_X)
+nsp_Y_hat = nsp(encoded_X[:, 0, :])
 nsp_Y_hat.shape
 ```
 
 ```{.python .input}
 #@tab jax
+# Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
-encoded_X_flat = encoded_X.reshape((encoded_X.shape[0], -1))
+cls_X = encoded_X[:, 0, :]
 nsp = NextSentencePred()
-nsp_params = nsp.init(jax.random.PRNGKey(0), encoded_X_flat)
-nsp_Y_hat = nsp.apply(nsp_params, encoded_X_flat)
+nsp_params = nsp.init(jax.random.PRNGKey(0), cls_X)
+nsp_Y_hat = nsp.apply(nsp_params, cls_X)
 nsp_Y_hat.shape
 ```
 

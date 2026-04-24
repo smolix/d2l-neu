@@ -27,7 +27,7 @@ In other words, for a given discriminator $D$, we update the parameters of the g
 
 $$ \max_G \{ - (1-y) \log(1-D(G(\mathbf z))) \} = \max_G \{ - \log(1-D(G(\mathbf z))) \}.$$
 
-If the generator does a perfect job, then $D(\mathbf x')\approx 1$, so the above loss is near 0, which results in the gradients that are too small to make good progress for the discriminator. So commonly, we minimize the following loss:
+Early in training, when the generator is weak, the discriminator easily classifies fakes as fake, so $D(\mathbf x')\approx 0$. Then $-\log(1-D(\mathbf x'))\approx 0$ and, because $D$ is saturated in this regime, its gradient with respect to the generator's parameters is close to zero as well. As a result, the generator receives almost no learning signal and makes little progress. To avoid this vanishing-gradient issue, we commonly minimize the following equivalent loss instead, which yields larger gradients precisely when $D(\mathbf x')$ is small:
 
 $$ \min_G \{ - y \log(D(G(\mathbf z))) \} = \min_G \{ - \log(D(G(\mathbf z))) \}, $$
 

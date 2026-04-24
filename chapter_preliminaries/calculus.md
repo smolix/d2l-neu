@@ -331,7 +331,13 @@ $\nabla_{\mathbf{x}} f(\mathbf{x})$
 is typically replaced 
 by $\nabla f(\mathbf{x})$.
 The following rules come in handy 
-for differentiating multivariate functions:
+for differentiating multivariate functions.
+Note that the notation $\nabla_{\mathbf{x}}$ is also used for
+vector-valued functions $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$:
+in that case $\nabla_{\mathbf{x}} \mathbf{f}(\mathbf{x})$ denotes the
+transpose of the Jacobian (the denominator-layout convention), so
+that the identities below reduce to the familiar scalar forms when
+$m=1$.
 
 * For all $\mathbf{A} \in \mathbb{R}^{m \times n}$ we have $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$ and $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$.
 * For square matrices $\mathbf{A} \in \mathbb{R}^{n \times n}$ we have that $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A} \mathbf{x}  = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ and in particular

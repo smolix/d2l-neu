@@ -172,8 +172,8 @@ def knn(W, x, k):
     cos = torch.mv(W, x.reshape(-1,)) / (
         torch.sqrt(torch.sum(W * W, axis=1) + 1e-9) *
         torch.sqrt((x * x).sum()))
-    _, topk = torch.topk(cos, k=k)
-    return topk, [cos[int(i)] for i in topk]
+    vals, topk = torch.topk(cos, k=k)
+    return topk, vals
 ```
 
 ```{.python .input}

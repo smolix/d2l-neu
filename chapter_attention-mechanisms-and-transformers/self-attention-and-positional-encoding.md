@@ -271,7 +271,7 @@ class PositionalEncoding(nn.Block):  #@save
         X = d2l.arange(max_len).reshape(-1, 1) / np.power(
             10000, np.arange(0, num_hiddens, 2) / num_hiddens)
         self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X)
+        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
 
     def forward(self, X):
         X = X + self.P[:, :X.shape[1], :].as_in_ctx(X.ctx)
@@ -291,7 +291,7 @@ class PositionalEncoding(nn.Module):  #@save
             -1, 1) / torch.pow(10000, torch.arange(
             0, num_hiddens, 2, dtype=torch.float32) / num_hiddens)
         self.P[:, :, 0::2] = torch.sin(X)
-        self.P[:, :, 1::2] = torch.cos(X)
+        self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
 
     def forward(self, X):
         X = X + self.P[:, :X.shape[1], :].to(X.device)
@@ -311,7 +311,7 @@ class PositionalEncoding(tf.keras.layers.Layer):  #@save
             -1,1)/np.power(10000, np.arange(
             0, num_hiddens, 2, dtype=np.float32) / num_hiddens)
         self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X)
+        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
         
     def call(self, X, training=False, **kwargs):
         X = X + self.P[:, :X.shape[1], :]
@@ -333,7 +333,7 @@ class PositionalEncoding(nn.Module):  #@save
             -1, 1) / jnp.power(10000, jnp.arange(
             0, self.num_hiddens, 2, dtype=jnp.float32) / self.num_hiddens)
         self.P = self.P.at[:, :, 0::2].set(jnp.sin(X))
-        self.P = self.P.at[:, :, 1::2].set(jnp.cos(X))
+        self.P = self.P.at[:, :, 1::2].set(jnp.cos(X[:, :self.num_hiddens // 2]))
 
     @nn.compact
     def __call__(self, X, training=False):

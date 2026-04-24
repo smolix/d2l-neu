@@ -245,18 +245,22 @@ def preprocess(self):
     features = pd.concat(
         (self.raw_train.drop(columns=['Id', label]),
          self.raw_val.drop(columns=['Id'])))
-    # Standardize numerical columns
+    # Standardize numerical columns using training-set statistics only
+    # (to avoid leaking test-set information into the normalization).
     numeric_features = features.select_dtypes(include='number').columns
-    features[numeric_features] = features[numeric_features].apply(
-        lambda x: (x - x.mean()) / (x.std()))
+    n_train = self.raw_train.shape[0]
+    train_mean = features[numeric_features].iloc[:n_train].mean()
+    train_std = features[numeric_features].iloc[:n_train].std()
+    features[numeric_features] = (
+        features[numeric_features] - train_mean) / train_std
     # Replace NAN numerical features by 0
     features[numeric_features] = features[numeric_features].fillna(0)
     # Replace discrete features by one-hot encoding
     features = pd.get_dummies(features, dummy_na=True)
     # Save preprocessed features
-    self.train = features[:self.raw_train.shape[0]].copy()
+    self.train = features[:n_train].copy()
     self.train[label] = self.raw_train[label]
-    self.val = features[self.raw_train.shape[0]:].copy()
+    self.val = features[n_train:].copy()
 ```
 
 You can see that this conversion increases

@@ -463,8 +463,7 @@ Dimensionality and storage for networks are automatically inferred
 
 ## Exercises
 
-1. How would you need to change the learning rate if you replace the aggregate loss over the minibatch
-   with an average over the loss on the minibatch?
+1. The framework loss functions used above (e.g., `nn.MSELoss`) return the mean loss over the minibatch by default. How would you need to change the learning rate if instead you replaced this average with the *sum* of the losses over the minibatch (e.g., by passing `reduction='sum'`)?
 1. Review the framework documentation to see which loss functions are provided. In particular,
    replace the squared loss with Huber's robust loss function. That is, use the loss function
    $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise}\end{cases}$$

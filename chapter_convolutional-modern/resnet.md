@@ -137,7 +137,8 @@ class Residual(nn.Block):  #@save
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
                                strides=strides)
         self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = nn.Conv2D(num_channels, kernel_size=1,
                                    strides=strides)
         else:
@@ -162,7 +163,8 @@ class Residual(nn.Module):  #@save
         self.conv1 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
                                    stride=strides)
         self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1,
                                        stride=strides)
         else:
@@ -190,7 +192,8 @@ class Residual(tf.keras.Model):  #@save
         self.conv2 = tf.keras.layers.Conv2D(num_channels, kernel_size=3,
                                             padding='same')
         self.conv3 = None
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = tf.keras.layers.Conv2D(num_channels, kernel_size=1,
                                                 strides=strides)
         self.bn1 = tf.keras.layers.BatchNormalization()
@@ -219,7 +222,8 @@ class Residual(nn.Module):  #@save
                              padding='same', strides=self.strides)
         self.conv2 = nn.Conv(self.num_channels, kernel_size=(3, 3),
                              padding='same')
-        if self.use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if self.use_1x1conv or any(s != 1 for s in self.strides):
             self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
                                  strides=self.strides)
         else:
@@ -588,7 +592,7 @@ class ResNeXtBlock(nn.Block):  #@save
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
                                strides=1)
         self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1, 
-                               strides=strides, groups=bot_channels//groups)
+                               strides=strides, groups=groups)
         self.conv3 = nn.Conv2D(num_channels, kernel_size=1, padding=0,
                                strides=1)
         self.bn1 = nn.BatchNorm()
@@ -621,7 +625,7 @@ class ResNeXtBlock(nn.Module):  #@save
         self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1)
         self.conv2 = nn.LazyConv2d(bot_channels, kernel_size=3,
                                    stride=strides, padding=1,
-                                   groups=bot_channels//groups)
+                                   groups=groups)
         self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1)
         self.bn1 = nn.LazyBatchNorm2d()
         self.bn2 = nn.LazyBatchNorm2d()
@@ -653,7 +657,7 @@ class ResNeXtBlock(tf.keras.Model):  #@save
         self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1)
         self.conv2 = tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
                                             padding="same",
-                                            groups=bot_channels//groups)
+                                            groups=groups)
         self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1)
         self.bn1 = tf.keras.layers.BatchNormalization()
         self.bn2 = tf.keras.layers.BatchNormalization()
@@ -691,7 +695,7 @@ class ResNeXtBlock(nn.Module):  #@save
                                strides=(1, 1))
         self.conv2 = nn.Conv(bot_channels, kernel_size=(3, 3),
                                strides=self.strides, padding='same',
-                               feature_group_count=bot_channels//self.groups)
+                               feature_group_count=self.groups)
         self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
                                strides=(1, 1))
         self.bn1 = nn.BatchNorm(not self.training)

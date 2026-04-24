@@ -223,10 +223,13 @@ $$ \frac{1}{L^\alpha} \log P(y_1, \ldots, y_{L}\mid \mathbf{c}) = \frac{1}{L^\al
 
 here $L$ is the length of the final candidate sequence 
 and $\alpha$ is usually set to 0.75. 
-Since a longer sequence has more logarithmic terms 
-in the summation of :eqref:`eq_beam-search-score`,
-the term $L^\alpha$ in the denominator penalizes
-long sequences.
+Since log-probabilities are non-positive, the raw sum
+$\sum_{t'=1}^L \log P(y_{t'}\mid\ldots)$ becomes more and more
+negative as $L$ grows, which would otherwise bias beam search
+toward shorter candidates.
+Dividing by $L^\alpha$ normalizes the score by a power of the
+length, partially compensating for this length bias (with
+$\alpha = 1$ recovering the per-token average log-probability).
 
 The computational cost of beam search is $\mathcal{O}(k\left|\mathcal{Y}\right|T')$. 
 This result is in between that of greedy search and that of exhaustive search.

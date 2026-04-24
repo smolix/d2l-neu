@@ -23,6 +23,14 @@ Some sections may support multiple framework implementations.
 If you add a new code block, please use `%%tab` to mark this block on the beginning line. For example,
 `%%tab pytorch` for a PyTorch code block, `%%tab tensorflow` for a TensorFlow code block, or `%%tab all` a shared code block for all implementations. You may refer to the `d2lbook` package for more information.
 
+**Warning:** The files `mxnet.py`, `torch.py`, `tensorflow.py`, and `jax.py`
+inside the `d2l/` package are *auto-generated* from the notebooks in each
+chapter (every function or class marked with `#@save` is extracted into
+the corresponding framework file). Do not edit these files directly — any
+manual changes will be overwritten the next time the package is
+regenerated from the source notebooks. Make your edits to the source
+`.md` notebooks instead.
+
 ## Submitting Major Changes
 
 We suggest you use the standard Git process to submit a major change. In a nutshell the process works as described in :numref:`fig_contribute`.

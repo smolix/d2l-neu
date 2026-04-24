@@ -44,7 +44,7 @@ import jax
 
 ## From ResNet to DenseNet
 
-Recall the Taylor expansion for functions. At the point $x = 0$ it can be written as
+Recall the Taylor expansion for functions. Expanding around $x = 0$ it can be written as
 
 $$f(x) = f(0) + x \cdot \left[f'(0) + x \cdot \left[\frac{f''(0)}{2!}  + x \cdot \left[\frac{f'''(0)}{3!}  + \cdots \right]\right]\right].$$
 

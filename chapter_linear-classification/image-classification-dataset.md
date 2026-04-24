@@ -186,8 +186,8 @@ def get_dataloader(self, train):
                             tf.cast(y, dtype='int32'))
     resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
     shuffle_buf = len(data[0]) if train else 1
-    return tf.data.Dataset.from_tensor_slices(process(*data)).batch(
-        self.batch_size).map(resize_fn).shuffle(shuffle_buf)
+    return tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+        shuffle_buf).batch(self.batch_size).map(resize_fn)
 ```
 
 ```{.python .input}
@@ -200,8 +200,8 @@ def get_dataloader(self, train):
     resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
     shuffle_buf = len(data[0]) if train else 1
     return tfds.as_numpy(
-        tf.data.Dataset.from_tensor_slices(process(*data)).batch(
-            self.batch_size).map(resize_fn).shuffle(shuffle_buf))
+        tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+            shuffle_buf).batch(self.batch_size).map(resize_fn))
 ```
 
 To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.

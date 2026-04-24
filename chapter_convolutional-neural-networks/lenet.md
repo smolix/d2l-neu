@@ -214,7 +214,10 @@ class LeNet(d2l.Classifier):  #@save
 
 We have taken some liberty in the reproduction of LeNet insofar as we have replaced the Gaussian activation layer by
 a softmax layer. This greatly simplifies the implementation, not least due to the
-fact that the Gaussian decoder is rarely used nowadays. Other than that, this network matches
+fact that the Gaussian decoder is rarely used nowadays. We also use the
+logistic sigmoid instead of the scaled hyperbolic tangent of the
+original LeNet-5; the two behave similarly for the purposes of
+this demonstration. Other than that, this network matches
 the original LeNet-5 architecture.
 
 :begin_tab:`pytorch, mxnet, tensorflow`

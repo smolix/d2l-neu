@@ -339,7 +339,9 @@ class AlexNet(d2l.Classifier):
             nn.LazyLinear(4096), nn.ReLU(), nn.Dropout(p=0.5),
             nn.LazyLinear(4096), nn.ReLU(),nn.Dropout(p=0.5),
             nn.LazyLinear(num_classes))
-        self.net.apply(d2l.init_cnn)
+        # Note: lazy layers have no parameters at construction time, so weight
+        # initialization (d2l.init_cnn) is applied later via apply_init after
+        # a dummy forward pass materializes the parameters.
 ```
 
 ```{.python .input  n=5}
@@ -464,6 +466,10 @@ the higher image resolution, and the more costly convolutions.
 model = AlexNet(lr=0.01)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+if tab.selected('pytorch'):
+    # Lazy layers have no weights at construction time; apply_init runs a
+    # dummy forward pass to materialize parameters and then applies init_cnn.
+    model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 

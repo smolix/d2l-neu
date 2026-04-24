@@ -24,6 +24,13 @@ Specifically, if a GPU is needed,
 Colab will be automatically requested 
 for connecting to a GPU instance.
 
+If you plan to work through many notebooks, it is often easier to
+`git clone` the entire book repository into your Colab session, so that
+all chapters, images, and auxiliary files are available on the local
+filesystem. This also sidesteps "No such file" errors that can occur
+when a notebook tries to load images via relative paths that are not
+present when only a single notebook is uploaded.
+
 
 ## Summary
 

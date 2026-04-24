@@ -326,7 +326,7 @@ As is observed in the above results, after a `HybridSequential` instance calls t
 :end_tab:
 
 :begin_tab:`pytorch`
-As is observed in the above results, after an `nn.Sequential` instance is scripted using the `torch.jit.script` function, computing performance is improved through the use of symbolic programming.
+As is observed in the above results, after an `nn.Sequential` instance is scripted using the `torch.jit.script` function, computing performance is improved through the use of symbolic programming. The speedup is most noticeable on GPUs and for compute-intensive models; on CPU, small MLPs like this one may show little or no improvement because the Python overhead is already dwarfed by the underlying kernel cost.
 :end_tab:
 
 :begin_tab:`tensorflow`

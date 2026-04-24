@@ -685,7 +685,7 @@ $$
 
 and show that $\mathbf{C}$ has rank two since, for instance,
 the first two columns are linearly independent,
-however any of the four collections of three columns are dependent.
+however any of the $\binom{5}{3} = 10$ collections of three columns are linearly dependent.
 
 This procedure, as described, is very inefficient.
 It requires looking at every subset of the columns of our given matrix,

@@ -328,6 +328,7 @@ comp_conv2d(conv2d, X).shape
 
 ```{.python .input}
 %%tab tensorflow
+# padding='valid' means no padding (equivalent to padding=(0, 1) here)
 conv2d = tf.keras.layers.Conv2D(1, kernel_size=(3,5), padding='valid',
                                 strides=(3, 4))
 comp_conv2d(conv2d, X).shape

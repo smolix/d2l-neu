@@ -846,6 +846,10 @@ def accuracy(y_hat, y):  #@save
     """Compute the number of correct predictions."""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
+    elif y_hat.dtype != y.dtype:
+        # Binary classification with float scores (logits or probabilities):
+        # threshold at 0 (logits) to get class labels, then reshape to match y.
+        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
     cmp = d2l.astype(y_hat, y.dtype) == y
     return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 ```

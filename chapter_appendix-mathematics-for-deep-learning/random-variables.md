@@ -537,7 +537,7 @@ $$
 As a warning, let's examine one more example, known as the *Cauchy distribution*.  This is the distribution with p.d.f. given by
 
 $$
-p(x) = \frac{1}{1+x^2}.
+p(x) = \frac{1}{\pi(1+x^2)}.
 $$
 
 ```{.python .input}
@@ -953,7 +953,7 @@ d2l.plt.show()
 Let's list a few properties of the correlation below.
 
 * For any random variable $X$, $\rho(X, X) = 1$.
-* For any random variables $X, Y$ and numbers $a$ and $b$, $\rho(aX+b, Y) = \rho(X, aY+b) = \rho(X, Y)$.
+* For any random variables $X, Y$ and numbers $a$ and $b$, $\rho(aX+b, Y) = \rho(X, aY+b) = \textrm{sign}(a)\,\rho(X, Y)$.
 * If $X$ and $Y$ are independent with non-zero variance then $\rho(X, Y) = 0$.
 
 As a final note, you may feel like some of these formulae are familiar.  Indeed, if we expand everything out assuming that $\mu_X = \mu_Y = 0$, we see that this is

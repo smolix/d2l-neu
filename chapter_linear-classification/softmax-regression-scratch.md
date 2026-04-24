@@ -276,6 +276,8 @@ def cross_entropy(y_hat, y):
 cross_entropy(y_hat, y)
 ```
 
+Note that we take $\log(\hat{y})$ without clipping. In practice this can produce $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically clamps the argument away from zero or, preferably, uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation. We keep the code as written to mirror the mathematical definition.
+
 ```{.python .input}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(SoftmaxRegressionScratch)

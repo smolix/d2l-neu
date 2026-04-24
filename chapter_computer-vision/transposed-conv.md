@@ -275,6 +275,7 @@ for the number of output channels
 being the number of channels in $\mathsf{X}$,
 then $g(Y)$ will have the same shape as $\mathsf{X}$.
 This can be illustrated in the following example.
+Note that when the stride is greater than 1, multiple input shapes can map to the same output shape under convolution, so the shape match is not guaranteed in general. In such cases, an additional `output_padding` parameter (available in PyTorch's `ConvTranspose2d`) can be used to resolve the ambiguity.
 
 ```{.python .input}
 #@tab mxnet
@@ -433,7 +434,7 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 ## Summary
 
 * In contrast to the regular convolution that reduces input elements via the kernel, the transposed convolution broadcasts input elements via the kernel, thereby producing an output that is larger than the input.
-* If we feed $\mathsf{X}$ into a convolutional layer $f$ to output $\mathsf{Y}=f(\mathsf{X})$ and create a transposed convolutional layer $g$ with the same hyperparameters as $f$ except for the number of output channels being the number of channels in $\mathsf{X}$, then $g(Y)$ will have the same shape as $\mathsf{X}$.
+* If we feed $\mathsf{X}$ into a convolutional layer $f$ to output $\mathsf{Y}=f(\mathsf{X})$ and create a transposed convolutional layer $g$ with the same hyperparameters as $f$ except for the number of output channels being the number of channels in $\mathsf{X}$, then $g(Y)$ will have the same shape as $\mathsf{X}$. This holds when the stride is 1; for stride > 1, an additional `output_padding` may be needed since multiple input shapes can share the same convolution output shape.
 * We can implement convolutions using matrix multiplications. The transposed convolutional layer can just exchange the forward propagation function and the backpropagation function of the convolutional layer.
 
 

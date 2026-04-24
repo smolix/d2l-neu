@@ -78,7 +78,6 @@ class DeepFM(nn.Block):
         x = self.linear_layer(self.fc(x).sum(1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(1, keepdims=True) \
             + self.mlp(inputs)
-        x = npx.sigmoid(x)
         return x
 ```
 
@@ -109,7 +108,6 @@ class DeepFM(nn.Module):
         x = self.linear_layer(self.fc(x).sum(dim=1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(dim=1, keepdim=True) \
             + self.mlp(inputs)
-        x = torch.sigmoid(x)
         return x
 ```
 

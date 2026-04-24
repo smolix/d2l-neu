@@ -269,7 +269,7 @@ def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
 def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
     def _build_array(sentences, vocab, is_tgt=False):
         pad_or_trim = lambda seq, t: (
-            seq[:t] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
+            seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
         sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
         if is_tgt:
             sentences = [['<bos>'] + s for s in sentences]

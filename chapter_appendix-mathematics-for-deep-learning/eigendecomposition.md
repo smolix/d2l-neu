@@ -519,11 +519,13 @@ d2l.plot(jnp.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
 If we look at the last portion of the above computation,
-we see that the random vector is stretched by a factor of `1.974459321485[...]`,
-where the portion at the end shifts a little,
-but the stretching factor is stable.
+we see that the random vector is stretched by a factor that stabilizes
+(the exact numerical value depends on the random seed used by each
+framework; see :numref:`subsec_eig-stretch-back` for the connection to the
+largest eigenvalue of $\mathbf{A}$).
 
 ### Relating Back to Eigenvectors
+:label:`subsec_eig-stretch-back`
 
 We have seen that eigenvectors and eigenvalues correspond
 to the amount something is stretched,
@@ -556,9 +558,9 @@ print(f'norms of eigenvalues: {norm_eigs}')
 
 ```{.python .input}
 #@tab tensorflow
-# Compute the eigenvalues
-eigs = tf.linalg.eigh(A)[0].numpy().tolist()
-norm_eigs = [tf.abs(tf.constant(x, dtype=tf.float64)) for x in eigs]
+# Compute the eigenvalues (A is not symmetric in general, so use eig).
+eigs = tf.linalg.eig(A)[0].numpy().tolist()
+norm_eigs = [abs(x) for x in eigs]
 norm_eigs.sort()
 print(f'norms of eigenvalues: {norm_eigs}')
 ```

@@ -104,6 +104,7 @@ on tasks of practical interest.
 
 
 ## Training Error and Generalization Error
+:label:`subsec_empirical-risk-and-risk`
 
 
 In the standard supervised learning setting,
@@ -138,12 +139,14 @@ drawn from the same underlying data distribution.
 Formally the training error is expressed as a *sum* (with the same notation as :numref:`sec_linear_regression`):
 
 $$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n} \sum_{i=1}^n l(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})),$$
+:eqlabel:`eq_empirical-risk-min`
 
 
-while the generalization error is expressed as an integral:
+while the generalization error (also called the *risk*) is expressed as an integral:
 
 $$R[p, f] = E_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] =
 \int \int l(\mathbf{x}, y, f(\mathbf{x})) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$
+:eqlabel:`eq_true-risk`
 
 Problematically, we can never calculate
 the generalization error $R$ exactly.

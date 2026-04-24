@@ -831,6 +831,7 @@ based on beam search (:numref:`sec_beam-search`).
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
 def predict_step(self, batch, device, num_steps,
                  save_attention_weights=False):
+    self.eval()
     batch = [d2l.to(a, device) for a in batch]
     src, tgt, src_valid_len, _ = batch
     enc_all_outputs = self.encoder(src, src_valid_len)

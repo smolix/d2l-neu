@@ -119,7 +119,7 @@ class NeuMF(nn.Module):
 
 ## Customized Dataset with Negative Sampling
 
-For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with are candidate items (unobserved entries). The following function takes users identity and candidate items as input, and samples negative items randomly for each user from the candidate set of that user. During the training stage, the model ensures that the items that a user likes to be ranked higher than items he dislikes or has not interacted with.
+For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with form the pool of negative items. The following function takes user identities and the per-user set of *observed* items (the `candidates` argument, holding items each user has interacted with) and samples a random negative item for each user by drawing from the complement — items not in that user's observed set. During the training stage, the model ensures that the items that a user likes are ranked higher than items he dislikes or has not interacted with.
 
 ```{.python .input  n=3}
 #@tab mxnet
@@ -172,7 +172,7 @@ $$
 \textrm{AUC} = \frac{1}{m} \sum_{u \in \mathcal{U}} \frac{1}{|\mathcal{I} \backslash S_u|} \sum_{j \in I \backslash S_u} \textbf{1}(rank_{u, g_u} < rank_{u, j}),
 $$
 
-where $\mathcal{I}$ is the item set. $S_u$ is the candidate items of user $u$. Note that many other evaluation protocols such as precision, recall and normalized discounted cumulative gain (NDCG) can also be used.
+where $\mathcal{I}$ is the item set and $S_u$ is the set of items user $u$ has already interacted with, so $\mathcal{I} \setminus S_u$ denotes the user's unobserved items that are ranked at evaluation time. Note that many other evaluation protocols such as precision, recall and normalized discounted cumulative gain (NDCG) can also be used.
 
 The following function calculates the hit counts and AUC for each user.
 
@@ -210,7 +210,7 @@ Then, the overall Hit rate and AUC are calculated as follows.
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
                      devices):
     ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
-    all_items = set([i for i in range(num_users)])
+    all_items = set([i for i in range(num_items)])
     for u in range(num_users):
         neg_items = list(all_items - set(candidates[int(u)]))
         user_ids, item_ids, x, scores = [], [], [], []
@@ -243,7 +243,7 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
                      devices):
     ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
-    all_items = set([i for i in range(num_users)])
+    all_items = set([i for i in range(num_items)])
     for u in range(num_users):
         neg_items = list(all_items - set(candidates[int(u)]))
         user_ids, item_ids, scores = [], [], []

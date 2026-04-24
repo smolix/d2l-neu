@@ -288,12 +288,11 @@ net = nn.Sequential(nn.LazyLinear(8), nn.ReLU(),
                     nn.LazyLinear(1))
 
 net(X)
-# Check whether the parameters are the same
-print(net[2].weight.data[0] == net[4].weight.data[0])
+# Check whether the parameters are the same object (tied, not just equal)
+assert net[2].weight is net[4].weight
 net[2].weight.data[0, 0] = 100
-# Make sure that they are actually the same object rather than just having the
-# same value
-print(net[2].weight.data[0] == net[4].weight.data[0])
+# Modifying one affects the other since they share the same tensor
+assert net[2].weight.data[0, 0] == net[4].weight.data[0, 0]
 ```
 
 ```{.python .input}

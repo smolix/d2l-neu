@@ -193,8 +193,9 @@ config_space = {"learning_rate": stats.loguniform(1e-4, 1)}
 ```
 
 Here we use the `loguniform` object from SciPy, which represents a
-uniform distribution between -4 and -1 in the logarithmic space. This object
-allows us to sample random variables from this distribution.
+uniform distribution between -4 and 0 in the $\log_{10}$ space (so values
+between $10^{-4}$ and $10^{0}=1$). This object allows us to sample random
+variables from this distribution.
 
 Each hyperparameter has a data type, such as `float` for `learning_rate`, as
 well as a closed bounded range (i.e., lower and upper bounds). We usually assign

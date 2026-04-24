@@ -393,7 +393,6 @@ X = tf.reshape(X, (1, 6, 8, 1))
 Y = tf.reshape(Y, (1, 6, 7, 1))
 lr = 3e-2  # Learning rate
 
-Y_hat = conv2d(X)
 for i in range(10):
     with tf.GradientTape() as g:
         Y_hat = conv2d(X)

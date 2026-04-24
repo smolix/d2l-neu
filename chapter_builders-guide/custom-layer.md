@@ -197,14 +197,14 @@ class MyDense(nn.Block):
 
 ```{.python .input}
 %%tab pytorch
-class MyLinear(nn.Module):
+class MyDense(nn.Module):
     def __init__(self, in_units, units):
         super().__init__()
         self.weight = nn.Parameter(torch.randn(in_units, units))
         self.bias = nn.Parameter(torch.randn(units,))
         
     def forward(self, X):
-        linear = torch.matmul(X, self.weight.data) + self.bias.data
+        linear = torch.matmul(X, self.weight) + self.bias
         return F.relu(linear)
 ```
 
@@ -250,7 +250,7 @@ and access its model parameters.
 :end_tab:
 
 :begin_tab:`pytorch`
-Next, we instantiate the `MyLinear` class
+Next, we instantiate the `MyDense` class
 and access its model parameters.
 :end_tab:
 
@@ -262,8 +262,8 @@ dense.params
 
 ```{.python .input}
 %%tab pytorch
-linear = MyLinear(5, 3)
-linear.weight
+dense = MyDense(5, 3)
+dense.weight
 ```
 
 ```{.python .input}
@@ -290,7 +290,7 @@ dense(np.random.uniform(size=(2, 5)))
 
 ```{.python .input}
 %%tab pytorch
-linear(torch.rand(2, 5))
+dense(torch.rand(2, 5))
 ```
 
 ```{.python .input}
@@ -318,7 +318,7 @@ net(np.random.uniform(size=(2, 64)))
 
 ```{.python .input}
 %%tab pytorch
-net = nn.Sequential(MyLinear(64, 8), MyLinear(8, 1))
+net = nn.Sequential(MyDense(64, 8), MyDense(8, 1))
 net(torch.rand(2, 64))
 ```
 

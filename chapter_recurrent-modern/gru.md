@@ -90,7 +90,10 @@ $$
 where $\mathbf{W}_{\textrm{xr}}, \mathbf{W}_{\textrm{xz}} \in \mathbb{R}^{d \times h}$ 
 and $\mathbf{W}_{\textrm{hr}}, \mathbf{W}_{\textrm{hz}} \in \mathbb{R}^{h \times h}$ 
 are weight parameters and $\mathbf{b}_\textrm{r}, \mathbf{b}_\textrm{z} \in \mathbb{R}^{1 \times h}$ 
-are bias parameters.
+are bias parameters. Note that broadcasting (see :numref:`subsec_broadcasting`)
+is triggered when summing these $1 \times h$ biases with the $n \times h$
+matrix product, yielding the $\mathbf{R}_t, \mathbf{Z}_t \in \mathbb{R}^{n \times h}$
+claimed above.
 
 
 ## Candidate Hidden State

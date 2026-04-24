@@ -227,13 +227,14 @@ Thus, we can design a function
 of three word vectors
 to fit this ratio.
 For the ratio of co-occurrence probabilities
-${p_{ij}}/{p_{ik}}$
-with $w_i$ being the center word
-and $w_j$ and $w_k$ being the context words,
+${p_{ji}}/{p_{ki}}$
+with $w_j$ and $w_k$ being the center words
+(played by "ice" and "steam" in :numref:`tab_glove`)
+and $w_i$ being the shared context word,
 we want to fit this ratio
 using some function $f$:
 
-$$f(\mathbf{u}_j, \mathbf{u}_k, {\mathbf{v}}_i) \approx \frac{p_{ij}}{p_{ik}}.$$
+$$f(\mathbf{v}_j, \mathbf{v}_k, \mathbf{u}_i) \approx \frac{p_{ji}}{p_{ki}}.$$
 :eqlabel:`eq_glove-f`
 
 Among many possible designs for $f$,
@@ -242,7 +243,7 @@ Since the ratio of co-occurrence probabilities
 is a scalar,
 we require that
 $f$ be a scalar function, such as
-$f(\mathbf{u}_j, \mathbf{u}_k, {\mathbf{v}}_i) = f\left((\mathbf{u}_j - \mathbf{u}_k)^\top {\mathbf{v}}_i\right)$.
+$f(\mathbf{v}_j, \mathbf{v}_k, \mathbf{u}_i) = f\left((\mathbf{v}_j - \mathbf{v}_k)^\top \mathbf{u}_i\right)$.
 Switching word indices
 $j$ and $k$ in :eqref:`eq_glove-f`,
 it must hold that
@@ -250,13 +251,13 @@ $f(x)f(-x)=1$,
 so one possibility is $f(x)=\exp(x)$,
 i.e.,
 
-$$f(\mathbf{u}_j, \mathbf{u}_k, {\mathbf{v}}_i) = \frac{\exp\left(\mathbf{u}_j^\top {\mathbf{v}}_i\right)}{\exp\left(\mathbf{u}_k^\top {\mathbf{v}}_i\right)} \approx \frac{p_{ij}}{p_{ik}}.$$
+$$f(\mathbf{v}_j, \mathbf{v}_k, \mathbf{u}_i) = \frac{\exp\left(\mathbf{v}_j^\top \mathbf{u}_i\right)}{\exp\left(\mathbf{v}_k^\top \mathbf{u}_i\right)} \approx \frac{p_{ji}}{p_{ki}}.$$
 
 Now let's pick
-$\exp\left(\mathbf{u}_j^\top {\mathbf{v}}_i\right) \approx \alpha p_{ij}$,
+$\exp\left(\mathbf{v}_j^\top \mathbf{u}_i\right) \approx \alpha p_{ji}$,
 where $\alpha$ is a constant.
-Since $p_{ij}=x_{ij}/x_i$, after taking the logarithm on both sides we get $\mathbf{u}_j^\top {\mathbf{v}}_i \approx \log\,\alpha + \log\,x_{ij} - \log\,x_i$.
-We may use additional bias terms to fit $- \log\, \alpha + \log\, x_i$, such as the center word bias $b_i$ and the context word bias $c_j$:
+Since $p_{ji}=x_{ji}/x_j$, after taking the logarithm on both sides we get $\mathbf{v}_j^\top \mathbf{u}_i \approx \log\,\alpha + \log\,x_{ji} - \log\,x_j$.
+Renaming $j \to i$ and $i \to j$ so that the final relation is stated in the conventional form (center word $w_i$, context word $w_j$) and absorbing $-\log\alpha + \log x_i$ into bias terms ($b_i$ for the center word and $c_j$ for the context word), we obtain
 
 $$\mathbf{u}_j^\top \mathbf{v}_i + b_i + c_j \approx \log\, x_{ij}.$$
 :eqlabel:`eq_glove-square`

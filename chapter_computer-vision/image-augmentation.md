@@ -572,7 +572,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
                             legend=['train loss', 'train acc', 'test acc'])
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
@@ -604,7 +604,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
@@ -643,7 +643,7 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
 
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
             timer.start()

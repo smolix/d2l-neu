@@ -103,7 +103,7 @@ and a kernel tensor `K`,
 it returns the output tensor `Y`.
 
 ```{.python .input}
-#@tab mxnet, pytorch, tensorflow
+#@tab mxnet, pytorch
 def corr1d(X, K):
     w = K.shape[0]
     Y = d2l.zeros((X.shape[0] - w + 1))
@@ -482,10 +482,10 @@ opt_state = optimizer.init(params['params'])
 loss_fn = optax.softmax_cross_entropy_with_integer_labels
 
 @jax.jit
-def train_step(params, opt_state, X, y):
+def train_step(params, opt_state, X, y, key):
     def compute_loss(p):
         logits = net.apply({'params': p}, X, deterministic=False,
-                           rngs={'dropout': jax.random.PRNGKey(0)})
+                           rngs={'dropout': key})
         return loss_fn(logits, y).mean(), logits
     (loss, logits), grads = jax.value_and_grad(
         compute_loss, has_aux=True)(params)
@@ -493,12 +493,14 @@ def train_step(params, opt_state, X, y):
     params_new = optax.apply_updates(params, updates)
     return params_new, opt_state_new, loss, logits
 
+key = jax.random.PRNGKey(0)
 for epoch in range(num_epochs):
     metric = d2l.Accumulator(4)
     for X, y in train_iter:
+        key, subkey = jax.random.split(key)
         params_p = params['params']
         params_p, opt_state, l, logits = train_step(
-            params_p, opt_state, X, y)
+            params_p, opt_state, X, y, subkey)
         params = {'params': params_p}
         metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
                    len(y), len(y))

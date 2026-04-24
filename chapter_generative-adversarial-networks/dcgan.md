@@ -847,6 +847,66 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
     opt_state_D = optimizer_D.init(params_D)
     opt_state_G = optimizer_G.init(params_G)
 
+    @jax.jit
+    def update_D(params_D, params_G, batch_stats_D, batch_stats_G,
+                 opt_state_D, X, Z):
+        # Compute fake_X once inside JIT
+        fake_X, updates_G = net_G.apply(
+            {'params': params_G, 'batch_stats': batch_stats_G},
+            Z, mutable=['batch_stats'])
+        batch_stats_G_new = updates_G['batch_stats']
+        batch_size = X.shape[0]
+
+        def loss_D_fn(params_D):
+            real_Y, updates_real = net_D.apply(
+                {'params': params_D, 'batch_stats': batch_stats_D},
+                X, mutable=['batch_stats'])
+            fake_Y, updates_fake = net_D.apply(
+                {'params': params_D,
+                 'batch_stats': updates_real['batch_stats']},
+                fake_X, mutable=['batch_stats'])
+            ones = jnp.ones((batch_size,))
+            zeros = jnp.zeros((batch_size,))
+            loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(
+                          real_Y.squeeze(), ones)) +
+                      jnp.sum(optax.sigmoid_binary_cross_entropy(
+                          fake_Y.squeeze(), zeros))) / 2
+            return loss_D, updates_fake
+
+        (loss_D_val, updates_D), grads_D = jax.value_and_grad(
+            loss_D_fn, has_aux=True)(params_D)
+        updates_optax_D, opt_state_D_new = optimizer_D.update(
+            grads_D, opt_state_D, params_D)
+        params_D_new = optax.apply_updates(params_D, updates_optax_D)
+        batch_stats_D_new = updates_D['batch_stats']
+        return (params_D_new, batch_stats_D_new, batch_stats_G_new,
+                opt_state_D_new, loss_D_val)
+
+    @jax.jit
+    def update_G(params_G, params_D, batch_stats_G, batch_stats_D,
+                 opt_state_G, Z):
+        batch_size = Z.shape[0]
+
+        def loss_G_fn(params_G):
+            fake_X, updates_G = net_G.apply(
+                {'params': params_G, 'batch_stats': batch_stats_G},
+                Z, mutable=['batch_stats'])
+            fake_Y, _ = net_D.apply(
+                {'params': params_D, 'batch_stats': batch_stats_D},
+                fake_X, mutable=['batch_stats'])
+            ones = jnp.ones((batch_size,))
+            loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(
+                fake_Y.squeeze(), ones))
+            return loss_G, updates_G
+
+        (loss_G_val, updates_G), grads_G = jax.value_and_grad(
+            loss_G_fn, has_aux=True)(params_G)
+        updates_optax_G, opt_state_G_new = optimizer_G.update(
+            grads_G, opt_state_G, params_G)
+        params_G_new = optax.apply_updates(params_G, updates_optax_G)
+        batch_stats_G_new = updates_G['batch_stats']
+        return (params_G_new, batch_stats_G_new, opt_state_G_new, loss_G_val)
+
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs], nrows=2, figsize=(5, 5),
                             legend=['discriminator', 'generator'])
@@ -862,52 +922,15 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
             Z = jax.random.normal(subkey, (batch_size, 1, 1, latent_dim))
 
             # Update discriminator
-            fake_X, updates_G = net_G.apply(
-                {'params': params_G, 'batch_stats': batch_stats_G},
-                Z, mutable=['batch_stats'])
-            batch_stats_G = updates_G['batch_stats']
-
-            def loss_D_fn(params_D):
-                real_Y, updates_D = net_D.apply(
-                    {'params': params_D, 'batch_stats': batch_stats_D},
-                    X, mutable=['batch_stats'])
-                fake_Y, _ = net_D.apply(
-                    {'params': params_D, 'batch_stats': batch_stats_D},
-                    fake_X, mutable=['batch_stats'])
-                ones = jnp.ones((batch_size,))
-                zeros = jnp.zeros((batch_size,))
-                loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(
-                              real_Y.squeeze(), ones)) +
-                          jnp.sum(optax.sigmoid_binary_cross_entropy(
-                              fake_Y.squeeze(), zeros))) / 2
-                return loss_D, updates_D
-
-            (loss_D_val, updates_D), grads_D = jax.value_and_grad(
-                loss_D_fn, has_aux=True)(params_D)
-            batch_stats_D = updates_D['batch_stats']
-            updates_optax_D, opt_state_D = optimizer_D.update(
-                grads_D, opt_state_D, params_D)
-            params_D = optax.apply_updates(params_D, updates_optax_D)
+            (params_D, batch_stats_D, batch_stats_G, opt_state_D,
+             loss_D_val) = update_D(
+                params_D, params_G, batch_stats_D, batch_stats_G,
+                opt_state_D, X, Z)
 
             # Update generator
-            def loss_G_fn(params_G):
-                fake_X, updates_G = net_G.apply(
-                    {'params': params_G, 'batch_stats': batch_stats_G},
-                    Z, mutable=['batch_stats'])
-                fake_Y, _ = net_D.apply(
-                    {'params': params_D, 'batch_stats': batch_stats_D},
-                    fake_X, mutable=['batch_stats'])
-                ones = jnp.ones((batch_size,))
-                loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(
-                    fake_Y.squeeze(), ones))
-                return loss_G, updates_G
-
-            (loss_G_val, updates_G), grads_G = jax.value_and_grad(
-                loss_G_fn, has_aux=True)(params_G)
-            batch_stats_G = updates_G['batch_stats']
-            updates_optax_G, opt_state_G = optimizer_G.update(
-                grads_G, opt_state_G, params_G)
-            params_G = optax.apply_updates(params_G, updates_optax_G)
+            (params_G, batch_stats_G, opt_state_G, loss_G_val) = update_G(
+                params_G, params_D, batch_stats_G, batch_stats_D,
+                opt_state_G, Z)
 
             metric.add(loss_D_val, loss_G_val, batch_size)
 

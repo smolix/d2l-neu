@@ -96,7 +96,7 @@ upper limit on the total wall-clock time.
 ```{.python .input  n=37}
 n_workers = 2  # Needs to be <= the number of available GPUs
 
-max_wallclock_time = 5 * 60  # 5 minutes
+max_wallclock_time = 2 * 60  # 2 minutes
 ```
 
 Next, we state which metric we want to optimize and whether we want to minimize or
@@ -166,7 +166,7 @@ tuner = Tuner(
 ```
 
 Let us run our distributed HPO experiment. According to our stopping criterion,
-it will run for about 12 minutes.
+it will run for a few minutes.
 
 ```{.python .input  n=43}
 tuner.run()

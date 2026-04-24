@@ -136,7 +136,7 @@ upper limit on the total wall-clock time.
 
 ```{.python .input  n=56}
 n_workers = 2  # Needs to be <= the number of available GPUs
-max_wallclock_time = 5 * 60  # 5 minutes
+max_wallclock_time = 2 * 60  # 2 minutes
 ```
 
 The code for running ASHA is a simple variation of what we did for asynchronous
@@ -163,7 +163,7 @@ Here, `metric` and `resource_attr` specify the key names used with the `report`
 callback, and `max_resource_attr` denotes which input to the objective function
 corresponds to $r_{\mathrm{max}}$. Moreover, `grace_period` provides $r_{\mathrm{min}}$, and
 `reduction_factor` is $\eta$. We can run Syne Tune as before (this will
-take about 12 minutes):
+take a few minutes):
 
 ```{.python .input  n=57}
 trial_backend = PythonBackend(

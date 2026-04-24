@@ -364,6 +364,10 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
+        # Skip device sync unless this point will be plotted; every_n
+        # buckets ensure alignment with the board's own filter
+        if train and int(n) > 1 and self.trainer.train_batch_idx % int(n):
+            return
         self.board.draw(x, d2l.to(value, d2l.cpu()),
                         ('train_' if train else 'val_') + key,
                         every_n=int(n))

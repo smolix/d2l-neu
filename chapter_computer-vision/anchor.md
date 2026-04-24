@@ -517,13 +517,20 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     anchors_bbox_map = jnp.where(mask, indices, anchors_bbox_map)
     col_discard = jnp.full((num_anchors,), -1.0)
     row_discard = jnp.full((num_gt_boxes,), -1.0)
-    for _ in range(num_gt_boxes):
+
+    # Use lax.fori_loop so JIT does not unroll (and re-trace) per gt box
+    def body(_, carry):
+        jaccard, anchors_bbox_map = carry
         max_idx = jnp.argmax(jaccard)
         box_idx = max_idx % num_gt_boxes
         anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
         jaccard = jaccard.at[:, box_idx].set(col_discard)
         jaccard = jaccard.at[anc_idx, :].set(row_discard)
+        return (jaccard, anchors_bbox_map)
+
+    _, anchors_bbox_map = jax.lax.fori_loop(
+        0, num_gt_boxes, body, (jaccard, anchors_bbox_map))
     return anchors_bbox_map
 ```
 
@@ -662,31 +669,29 @@ def multibox_target(anchors, labels):
 #@save
 def multibox_target(anchors, labels):
     """Label anchor boxes using ground-truth bounding boxes."""
-    batch_size, anchors = labels.shape[0], anchors.squeeze(axis=0)
-    batch_offset, batch_mask, batch_class_labels = [], [], []
+    anchors = anchors.squeeze(axis=0)
     num_anchors = anchors.shape[0]
-    for i in range(batch_size):
-        label = labels[i, :, :]
+
+    def per_image(label):
         anchors_bbox_map = assign_anchor_to_bbox(
             label[:, 1:], anchors, None)
         bbox_mask = jnp.tile(
             jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
                             axis=-1), (1, 4))
-        class_labels = jnp.zeros(num_anchors, dtype=jnp.int32)
-        assigned_bb = jnp.zeros((num_anchors, 4), dtype=jnp.float32)
         valid = anchors_bbox_map >= 0
         safe_idx = jnp.maximum(anchors_bbox_map, 0)
-        class_labels = jnp.where(valid,
-            label[safe_idx, 0].astype(jnp.int32) + 1, class_labels)
-        assigned_bb = jnp.where(valid[:, None],
-            label[safe_idx, 1:], assigned_bb)
+        class_labels = jnp.where(
+            valid, label[safe_idx, 0].astype(jnp.int32) + 1,
+            jnp.zeros(num_anchors, dtype=jnp.int32))
+        assigned_bb = jnp.where(
+            valid[:, None], label[safe_idx, 1:],
+            jnp.zeros((num_anchors, 4), dtype=jnp.float32))
         offset = offset_boxes(anchors, assigned_bb) * bbox_mask
-        batch_offset.append(offset.reshape(-1))
-        batch_mask.append(bbox_mask.reshape(-1))
-        batch_class_labels.append(class_labels)
-    bbox_offset = jnp.stack(batch_offset)
-    bbox_mask = jnp.stack(batch_mask)
-    class_labels = jnp.stack(batch_class_labels)
+        return offset.reshape(-1), bbox_mask.reshape(-1), class_labels
+
+    # vmap over batch instead of Python for loop: one compiled kernel
+    # is reused for every image instead of unrolling 32x
+    bbox_offset, bbox_mask, class_labels = jax.vmap(per_image)(labels)
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
@@ -891,17 +896,25 @@ def nms(boxes, scores, iou_threshold):
 #@save
 def nms(boxes, scores, iou_threshold):
     """Sort confidence scores of predicted bounding boxes."""
-    B = list(jnp.argsort(scores)[::-1])
+    # Work in NumPy so the Python while-loop isn't forcing a host/device
+    # sync every iteration.
+    boxes_np = np.asarray(boxes)
+    B = np.argsort(-np.asarray(scores))
     keep = []  # Indices of predicted bounding boxes that will be kept
-    while len(B) > 0:
-        i = B[0]
+    while B.size > 0:
+        i = int(B[0])
         keep.append(i)
-        if len(B) == 1: break
-        B_rest = jnp.array(B[1:])
-        iou = box_iou(boxes[i, :].reshape(-1, 4),
-                      boxes[B_rest, :].reshape(-1, 4)).reshape(-1)
-        inds = jnp.where(iou <= iou_threshold)[0]
-        B = [B_rest[j] for j in inds]
+        if B.size == 1: break
+        rest = B[1:]
+        # Pairwise IoU between box i and every remaining box, in NumPy
+        box_i, rest_boxes = boxes_np[i], boxes_np[rest]
+        lt = np.maximum(box_i[:2], rest_boxes[:, :2])
+        rb = np.minimum(box_i[2:], rest_boxes[:, 2:])
+        inter = np.clip(rb - lt, 0, None).prod(axis=1)
+        area_i = (box_i[2:] - box_i[:2]).prod()
+        area_rest = (rest_boxes[:, 2:] - rest_boxes[:, :2]).prod(axis=1)
+        iou = inter / (area_i + area_rest - inter)
+        B = rest[iou <= iou_threshold]
     return jnp.array(keep, dtype=jnp.int32)
 ```
 

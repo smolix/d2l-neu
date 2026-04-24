@@ -285,39 +285,45 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```{.python .input}
 #@tab jax
 lr, num_epochs = 0.01, 5
+# Work with the inner params dict directly so JIT caches across iterations
+params_p = params['params']
 optimizer = optax.adam(lr)
-opt_state = optimizer.init(params['params'])
+opt_state = optimizer.init(params_p)
 loss_fn = optax.softmax_cross_entropy_with_integer_labels
 
 @jax.jit
-def train_step(params, opt_state, X, y):
+def train_step(params_p, opt_state, X, y):
     def compute_loss(p):
         logits = net.apply({'params': p}, X)
         return loss_fn(logits, y).mean(), logits
     (loss, logits), grads = jax.value_and_grad(
-        compute_loss, has_aux=True)(params)
-    updates, opt_state_new = optimizer.update(grads, opt_state, params)
-    params_new = optax.apply_updates(params, updates)
-    return params_new, opt_state_new, loss, logits
+        compute_loss, has_aux=True)(params_p)
+    updates, opt_state = optimizer.update(grads, opt_state, params_p)
+    params_p = optax.apply_updates(params_p, updates)
+    return params_p, opt_state, loss, logits
+
+@jax.jit
+def eval_step(params_p, X):
+    return net.apply({'params': params_p}, X)
 
 for epoch in range(num_epochs):
     metric = d2l.Accumulator(4)
     for X, y in train_iter:
-        params_p = params['params']
         params_p, opt_state, l, logits = train_step(
             params_p, opt_state, X, y)
-        params = {'params': params_p}
         metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
                    len(y), len(y))
     # Evaluate
     correct, total = 0, 0
     for X, y in test_iter:
-        logits = net.apply(params, X)
+        logits = eval_step(params_p, X)
         correct += int((logits.argmax(axis=-1) == y).sum())
         total += len(y)
     print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
           f'train acc {metric[1] / metric[3]:.3f}, '
           f'test acc {correct / total:.3f}')
+# Re-wrap params for downstream use (e.g. predict_sentiment)
+params = {'params': params_p}
 ```
 
 We define the following function to predict the sentiment of a text sequence using the trained model `net`.

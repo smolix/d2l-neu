@@ -387,33 +387,38 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs])
 
-    def train_step(all_params, center, context_negative, mask, label):
+    @jax.jit
+    def train_step(all_params, opt_state, center, context_negative,
+                   mask, label):
         def compute_loss(all_params):
             pred = skip_gram(center, context_negative, embed_v, embed_u,
                              all_params['v'], all_params['u'])
             l = (loss(pred.reshape(label.shape), label, mask)
                  / mask.sum(axis=1) * mask.shape[1])
-            return l.sum(), l
-        (loss_val, l), grads = jax.value_and_grad(
+            return l.sum(), l.size
+        (loss_val, l_size), grads = jax.value_and_grad(
             compute_loss, has_aux=True)(all_params)
-        return loss_val, l, grads
+        updates, opt_state = optimizer.update(grads, opt_state, all_params)
+        all_params = optax.apply_updates(all_params, updates)
+        return all_params, opt_state, loss_val, l_size
 
-    # Sum of normalized losses, no. of normalized losses
-    metric = d2l.Accumulator(2)
     for epoch in range(num_epochs):
         timer, num_batches = d2l.Timer(), len(data_iter)
+        # Accumulate on device to avoid per-batch host syncs
+        loss_sum, count = jnp.array(0.0), jnp.array(0, dtype=jnp.int32)
         for i, batch in enumerate(data_iter):
             center, context_negative, mask, label = batch
-            loss_val, l, grads = train_step(
-                all_params, center, context_negative, mask, label)
-            updates, opt_state = optimizer.update(grads, opt_state, all_params)
-            all_params = optax.apply_updates(all_params, updates)
-            metric.add(float(loss_val), float(l.size))
+            all_params, opt_state, loss_val, l_size = train_step(
+                all_params, opt_state, center, context_negative, mask, label)
+            loss_sum = loss_sum + loss_val
+            count = count + l_size
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
                 animator.add(epoch + (i + 1) / num_batches,
-                             (metric[0] / metric[1],))
-    print(f'loss {metric[0] / metric[1]:.3f}, '
-          f'{metric[1] / timer.stop():.1f} tokens/sec')
+                             (float(loss_sum / count),))
+    total_loss = float(loss_sum)
+    total_count = int(count)
+    print(f'loss {total_loss / total_count:.3f}, '
+          f'{total_count / timer.stop():.1f} tokens/sec')
     return all_params
 ```
 

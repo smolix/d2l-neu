@@ -50,6 +50,7 @@ warnings.filterwarnings('ignore', message='.*dtype.*align.*',
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from functools import partial
 import jax
 from jax import numpy as jnp
 from flax import linen as nn
@@ -542,11 +543,9 @@ def train_batch_ch13(net, X, y, loss, trainer, devices):
 ```{.python .input}
 #@tab jax
 #@save
+@partial(jax.jit, static_argnums=(3, 4))  # net, loss_fn are static
 def train_batch_ch13(state, X, y, net, loss_fn):
     """Train for a minibatch with JAX (defined in Chapter 13)."""
-    # X and y are numpy arrays from tfds.as_numpy() — HWC format already
-    X = jnp.array(X)
-    y = jnp.array(y)
     def compute_loss(params):
         logits, updates = state.apply_fn(
             {'params': params, 'batch_stats': state.batch_stats},
@@ -557,8 +556,8 @@ def train_batch_ch13(state, X, y, net, loss_fn):
         compute_loss, has_aux=True)(state.params)
     state = state.apply_gradients(grads=grads)
     state = state.replace(batch_stats=updates['batch_stats'])
-    train_loss_sum = float(loss) * X.shape[0]
-    train_acc_sum = float((logits.argmax(axis=-1) == y).sum())
+    train_loss_sum = loss * X.shape[0]
+    train_acc_sum = (logits.argmax(axis=-1) == y).sum()
     return state, train_loss_sum, train_acc_sum
 ```
 
@@ -634,6 +633,14 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['train loss', 'train acc', 'test acc'])
     timer = d2l.Timer()
+
+    @jax.jit
+    def eval_step(params, batch_stats, X):
+        logits, _ = state.apply_fn(
+            {'params': params, 'batch_stats': batch_stats},
+            X, mutable=['batch_stats'])
+        return logits
+
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
         # no. of predictions
@@ -641,9 +648,9 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
         for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
             timer.start()
             state, l, acc = train_batch_ch13(
-                state, features, labels, net, loss_fn)
+                state, jnp.array(features), jnp.array(labels), net, loss_fn)
             n = features.shape[0]
-            metric.add(l, acc, n, n)
+            metric.add(float(l), float(acc), n, n)
             timer.stop()
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
                 animator.add(epoch + (i + 1) / num_batches,
@@ -652,11 +659,7 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
         # Evaluate on test set
         correct, total = 0, 0
         for X, y in tfds.as_numpy(test_iter):
-            X = jnp.array(X)
-            y = jnp.array(y)
-            logits, _ = state.apply_fn(
-                {'params': state.params, 'batch_stats': state.batch_stats},
-                X, mutable=['batch_stats'])
+            logits = eval_step(state.params, state.batch_stats, jnp.array(X))
             correct += int((logits.argmax(axis=-1) == y).sum())
             total += y.shape[0]
         test_acc = correct / total

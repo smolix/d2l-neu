@@ -84,10 +84,15 @@ import os
 ```{.python .input}
 #@tab jax
 %matplotlib inline
-from d2l import jax as d2l
-import tensorflow as tf
-import numpy as np
 import os
+os.environ['KERAS_BACKEND'] = 'jax'
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import optax
+import keras
+import numpy as np
+import tensorflow as tf  # only used for tf.data input pipeline
 ```
 
 ### Reading the Dataset
@@ -217,27 +222,25 @@ test_augs = torchvision.transforms.Compose([
 
 ```{.python .input}
 #@tab jax
-# Image preprocessing using tf.keras for the JAX tab
+# Image preprocessing. We use `tf.image` ops so the pipeline can run
+# inside `tf.data.Dataset.map` (Keras preprocessing layers don't work
+# there when Keras is set to the JAX backend). The ImageNet-style
+# mean subtraction (in BGR) matches the preprocessing expected by the
+# pretrained ResNet50 weights.
 IMG_SIZE = 224
-IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype='float32')
-IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype='float32')
+_IMAGENET_MEAN_BGR = tf.constant([103.939, 116.779, 123.68], dtype=tf.float32)
 
-def _imagenet_normalize(x):
-    return (x - IMAGENET_MEAN) / IMAGENET_STD
+def train_preprocess(x):
+    # `x` is a (256, 256, 3) float32 RGB image with values in [0, 255].
+    x = tf.image.random_crop(x, size=(IMG_SIZE, IMG_SIZE, 3))
+    x = tf.image.random_flip_left_right(x)
+    x = x[..., ::-1]  # RGB -> BGR
+    return x - _IMAGENET_MEAN_BGR
 
-train_preprocess = tf.keras.Sequential([
-    tf.keras.layers.RandomCrop(IMG_SIZE, IMG_SIZE),
-    tf.keras.layers.RandomFlip('horizontal'),
-    tf.keras.layers.Rescaling(1./255),
-    tf.keras.layers.Lambda(_imagenet_normalize),
-])
-
-test_preprocess = tf.keras.Sequential([
-    tf.keras.layers.Resizing(256, 256),
-    tf.keras.layers.CenterCrop(IMG_SIZE, IMG_SIZE),
-    tf.keras.layers.Rescaling(1./255),
-    tf.keras.layers.Lambda(_imagenet_normalize),
-])
+def test_preprocess(x):
+    x = tf.image.resize_with_crop_or_pad(x, IMG_SIZE, IMG_SIZE)
+    x = x[..., ::-1]  # RGB -> BGR
+    return x - _IMAGENET_MEAN_BGR
 ```
 
 ### [**Defining and Initializing the Model**]
@@ -259,8 +262,8 @@ pretrained_net = torchvision.models.resnet18(
 
 ```{.python .input}
 #@tab jax
-# Load a pretrained ResNet50 from tf.keras.applications
-pretrained_net = tf.keras.applications.ResNet50(weights='imagenet')
+# Load a pretrained ResNet50 via Keras 3 (with JAX backend)
+pretrained_net = keras.applications.ResNet50(weights='imagenet')
 ```
 
 :begin_tab:`mxnet`
@@ -328,16 +331,16 @@ nn.init.xavier_uniform_(finetune_net.fc.weight);
 
 ```{.python .input}
 #@tab jax
-# Build a fine-tuning model using TF/Keras: pretrained ResNet50 base + new head
-base_model = tf.keras.applications.ResNet50(weights='imagenet',
-                                            include_top=False,
-                                            input_shape=(IMG_SIZE, IMG_SIZE, 3))
-base_model.trainable = False  # Freeze pretrained layers
-finetune_net = tf.keras.Sequential([
-    base_model,
-    tf.keras.layers.GlobalAveragePooling2D(),
-    tf.keras.layers.Dense(2, kernel_initializer='glorot_uniform'),
-])
+# Pretrained ResNet50 base + a fresh 2-way classification head
+base_model = keras.applications.ResNet50(weights='imagenet',
+                                         include_top=False,
+                                         pooling='avg',
+                                         input_shape=(IMG_SIZE, IMG_SIZE, 3))
+inputs = keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
+features = base_model(inputs, training=True)
+outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
+                             name='classifier')(features)
+finetune_net = keras.Model(inputs=inputs, outputs=outputs)
 ```
 
 ### [**Fine-Tuning the Model**]
@@ -396,38 +399,85 @@ def _make_tf_dataset(img_dir, preprocess, batch_size, shuffle=False):
     ds = tf.keras.utils.image_dataset_from_directory(
         img_dir, label_mode='int', image_size=(256, 256),
         batch_size=None, shuffle=shuffle)
-    ds = ds.map(lambda x, y: (preprocess(x, training=shuffle), y),
+    ds = ds.map(lambda x, y: (preprocess(x), y),
                 num_parallel_calls=tf.data.AUTOTUNE)
-    ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     return ds
 
-def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
+# If `param_group=True`, we freeze the pretrained base (an extreme form of
+# "use a much smaller learning rate on the base than on the head") and only
+# train the new classification head. This keeps the training loop simple
+# while illustrating the core fine-tuning idea.
+def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=2,
                       param_group=True):
     train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
                                 train_preprocess, batch_size, shuffle=True)
     test_ds = _make_tf_dataset(os.path.join(data_dir, 'test'),
                                test_preprocess, batch_size, shuffle=False)
-    # Compile with differential learning rates if param_group
+
+    # Identify head variables (the final Dense layer) so we can either
+    # train only them (param_group=True) or train everything together.
+    head_ids = {id(v) for v in net.layers[-1].trainable_variables}
+    head_mask = tuple(id(v) in head_ids for v in net.trainable_variables)
     if param_group:
-        # Use a smaller lr for the pretrained base, 10x for the new head
-        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate * 10,
-                                            momentum=0.9)
-        # Freeze base so only head trains at the higher lr
-        net.layers[0].trainable = False
+        head_lr = learning_rate * 10
+        base_lr = 0.0  # freeze base
     else:
-        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
-                                            momentum=0.9)
-    net.compile(optimizer=optimizer,
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(
-                    from_logits=True),
-                metrics=['accuracy'])
-    history = net.fit(train_ds, validation_data=test_ds, epochs=num_epochs,
-                      verbose=1)
-    train_loss = history.history['loss'][-1]
-    train_acc = history.history['accuracy'][-1]
-    test_acc = history.history['val_accuracy'][-1]
-    print(f'loss {train_loss:.3f}, train acc {train_acc:.3f}, '
-          f'test acc {test_acc:.3f}')
+        head_lr = learning_rate
+        base_lr = learning_rate
+    lr_schedule = tuple(head_lr if h else base_lr for h in head_mask)
+
+    # Collect current variable values as JAX arrays
+    trainable = [v.value for v in net.trainable_variables]
+    non_trainable = [v.value for v in net.non_trainable_variables]
+
+    # SGD with momentum; we scale per-parameter learning rates by hand.
+    tx = optax.sgd(learning_rate=1.0, momentum=0.9)
+    opt_state = tx.init(trainable)
+
+    @jax.jit
+    def train_step(trainable, non_trainable, opt_state, x, y):
+        def loss_fn(trainable):
+            logits, new_nt = net.stateless_call(
+                trainable, non_trainable, x, training=True)
+            loss = optax.softmax_cross_entropy_with_integer_labels(
+                logits, y).mean()
+            return loss, (logits, new_nt)
+        (loss, (logits, new_nt)), grads = jax.value_and_grad(
+            loss_fn, has_aux=True)(trainable)
+        grads_scaled = [g * lr for g, lr in zip(grads, lr_schedule)]
+        updates, new_opt_state = tx.update(grads_scaled, opt_state)
+        new_trainable = optax.apply_updates(trainable, updates)
+        acc = (jnp.argmax(logits, axis=-1) == y).mean()
+        return new_trainable, new_nt, new_opt_state, loss, acc
+
+    @jax.jit
+    def eval_step(trainable, non_trainable, x, y):
+        logits, _ = net.stateless_call(
+            trainable, non_trainable, x, training=False)
+        return (jnp.argmax(logits, axis=-1) == y).mean()
+
+    for epoch in range(num_epochs):
+        total_loss, total_acc, n_batches = 0.0, 0.0, 0
+        for x, y in train_ds:
+            x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
+            trainable, non_trainable, opt_state, loss, acc = train_step(
+                trainable, non_trainable, opt_state, x, y)
+            total_loss += float(loss); total_acc += float(acc); n_batches += 1
+        test_acc, test_n = 0.0, 0
+        for x, y in test_ds:
+            x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
+            test_acc += float(eval_step(trainable, non_trainable, x, y))
+            test_n += 1
+        print(f'epoch {epoch + 1}, loss {total_loss / n_batches:.3f}, '
+              f'train acc {total_acc / n_batches:.3f}, '
+              f'test acc {test_acc / max(test_n, 1):.3f}')
+
+    # Persist the trained variable values back into the Keras model.
+    for v, val in zip(net.trainable_variables, trainable):
+        v.assign(val)
+    for v, val in zip(net.non_trainable_variables, non_trainable):
+        v.assign(val)
 ```
 
 We [**set the base learning rate to a small value**]
@@ -466,14 +516,15 @@ train_fine_tuning(scratch_net, 5e-4, param_group=False)
 
 ```{.python .input}
 #@tab jax
-# Train from scratch: same architecture but with random weights
-scratch_base = tf.keras.applications.ResNet50(weights=None, include_top=False,
-                                              input_shape=(IMG_SIZE, IMG_SIZE, 3))
-scratch_net = tf.keras.Sequential([
-    scratch_base,
-    tf.keras.layers.GlobalAveragePooling2D(),
-    tf.keras.layers.Dense(2, kernel_initializer='glorot_uniform'),
-])
+# Train from scratch: same architecture but with random weights.
+scratch_base = keras.applications.ResNet50(weights=None, include_top=False,
+                                           pooling='avg',
+                                           input_shape=(IMG_SIZE, IMG_SIZE, 3))
+sc_inputs = keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
+sc_features = scratch_base(sc_inputs, training=True)
+sc_outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
+                                name='classifier')(sc_features)
+scratch_net = keras.Model(inputs=sc_inputs, outputs=sc_outputs)
 train_fine_tuning(scratch_net, 5e-4, param_group=False)
 ```
 
@@ -507,7 +558,8 @@ for param in finetune_net.parameters():
 
 ```{.python .input}
 #@tab jax
-finetune_net.layers[0].trainable = False
+# Freeze the pretrained ResNet50 base (layer index 1); only the head trains.
+finetune_net.get_layer('resnet50').trainable = False
 ```
 
 4. In fact, there is a "hotdog" class in the `ImageNet` dataset. Its corresponding weight parameter in the output layer can be obtained via the following code. How can we leverage this weight parameter?

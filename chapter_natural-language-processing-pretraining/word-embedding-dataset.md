@@ -430,13 +430,14 @@ for name, data in zip(names, batch):
 
 ## Putting It All Together
 
-Last, we define the `load_data_ptb` function that reads the PTB dataset and returns the data iterator and the vocabulary.
-
-Instead of padding to each minibatch's max length on every iteration, we
-pad once to the *global* max context+negative length and store the result
-as dense NumPy arrays. Per-epoch shuffling and per-batch slicing then
-become O(1) per batch, which matters for JAX in particular where the
-Python iterator runs on a single thread rather than worker processes.
+`batchify` makes the padding/masking logic explicit on a single minibatch,
+but calling it once per training step would dominate the cost of our tiny
+skip-gram step. A simple optimization is to apply the same idea *once*
+to the whole dataset at load time: pad every example to the *global* max
+of `len(context) + len(negative)`, and store the result as dense NumPy
+arrays. Per-epoch shuffling and per-batch slicing are then both O(1)
+per batch. The helper `_pad_ptb` below does the one-time padding and is
+what `load_data_ptb` actually calls.
 
 ```{.python .input}
 #@tab all
@@ -461,6 +462,10 @@ def _pad_ptb(all_centers, all_contexts, all_negatives):
         labels[i, :len(c)] = 1.
     return centers, contexts_negatives, masks, labels
 ```
+
+Finally, `load_data_ptb` wires everything together: read the PTB dataset,
+build the vocabulary, extract centers/contexts/negatives, pad once, and
+return a framework-native data iterator backed by those arrays.
 
 ```{.python .input}
 #@tab mxnet

@@ -401,6 +401,21 @@ since `tf.function` needs all variables
 to exist at trace time.
 :end_tab:
 
+:begin_tab:`jax`
+JAX shares the same "compile, then dispatch" cost model as TensorFlow:
+executing optax updates and `state.replace` calls one at a time in Python
+is far slower than doing them as a single compiled kernel. We therefore
+wrap the optimizer step and the bookkeeping
+(`state.apply_gradients`, `state.replace(dropout_rng=…, batch_stats=…)`)
+in two small `@jax.jit` functions, `_trainer_update` and
+`_trainer_update_with_bn`, and call the appropriate one per batch.
+The forward + gradient computation is already inside `self.model.loss`
+(itself `@jax.jit`-decorated), so after this change the entire per-batch
+work consists of two JIT-ed calls with no Python-side optax dispatch.
+We fall back to the non-JIT path when the optimizer state is not a
+pytree, which covers the hand-rolled `SGD` we will define below.
+:end_tab:
+
 ```{.python .input  n=15}
 %%tab all    
 @d2l.add_to_class(d2l.Trainer)  #@save

@@ -45,6 +45,12 @@ from d2l import torch as d2l
 ```
 
 ```{.python .input}
+#@tab tensorflow
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input}
 #@tab jax
 import jax
 from jax import numpy as jnp
@@ -104,6 +110,18 @@ def trans_conv(X, K):
         for j in range(X.shape[1]):
             Y[i: i + h, j: j + w] += X[i, j] * K
     return Y
+```
+
+```{.python .input}
+#@tab tensorflow
+def trans_conv(X, K):
+    h, w = K.shape
+    Y = tf.Variable(d2l.zeros((X.shape[0] + h - 1, X.shape[1] + w - 1)))
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            Y[i: i + h, j: j + w].assign(
+                Y[i: i + h, j: j + w] + X[i, j] * K)
+    return Y.value()
 ```
 
 ```{.python .input}
@@ -301,7 +319,7 @@ In the example below, we define a $3\times 3$ input `X` and a $2\times 2$ convol
 
 ```{.python .input}
 #@tab all
-X = d2l.arange(9.0).reshape(3, 3)
+X = d2l.reshape(d2l.arange(9.0), (3, 3))
 K = d2l.tensor([[1.0, 2.0], [3.0, 4.0]])
 Y = d2l.corr2d(X, K)
 Y
@@ -315,12 +333,29 @@ where the non-zero elements come from
 the convolution kernel `K`.
 
 ```{.python .input}
-#@tab mxnet, pytorch, tensorflow
+#@tab mxnet, pytorch
 def kernel2matrix(K):
     k, W = d2l.zeros(5), d2l.zeros((4, 9))
     k[:2], k[3:5] = K[0, :], K[1, :]
     W[0, :5], W[1, 1:6], W[2, 3:8], W[3, 4:] = k, k, k, k
     return W
+
+W = kernel2matrix(K)
+W
+```
+
+```{.python .input}
+#@tab tensorflow
+def kernel2matrix(K):
+    k = tf.Variable(d2l.zeros(5))
+    W = tf.Variable(d2l.zeros((4, 9)))
+    k[:2].assign(K[0, :])
+    k[3:5].assign(K[1, :])
+    W[0, :5].assign(k)
+    W[1, 1:6].assign(k)
+    W[2, 3:8].assign(k)
+    W[3, 4:].assign(k)
+    return W.value()
 
 W = kernel2matrix(K)
 W
@@ -350,7 +385,7 @@ we just implemented convolutions using matrix multiplications.
 
 ```{.python .input}
 #@tab all
-Y == d2l.matmul(W, d2l.reshape(X, -1)).reshape(2, 2)
+Y == d2l.reshape(d2l.matmul(W, d2l.reshape(X, (-1, 1))), (2, 2))
 ```
 
 Likewise, we can implement transposed convolutions using
@@ -366,7 +401,7 @@ with the new shape $(9, 4)$.
 ```{.python .input}
 #@tab all
 Z = trans_conv(Y, K)
-Z == d2l.matmul(W.T, d2l.reshape(Y, -1)).reshape(3, 3)
+Z == d2l.reshape(d2l.matmul(d2l.transpose(W), d2l.reshape(Y, (-1, 1))), (3, 3))
 ```
 
 Consider implementing the convolution

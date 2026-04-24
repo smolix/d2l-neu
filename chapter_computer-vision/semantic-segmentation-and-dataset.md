@@ -588,9 +588,10 @@ def load_data_voc(batch_size, crop_size):
         'VOCdevkit', 'VOC2012'))
     train_dataset = VOCSegDataset(True, crop_size, voc_dir)
     test_dataset = VOCSegDataset(False, crop_size, voc_dir)
-    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size, shuffle=True,
-                                     drop_last=True)
-    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size, drop_last=True)
+    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size=batch_size,
+                                     shuffle=True, drop_last=True)
+    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size=batch_size,
+                                    drop_last=True)
     return train_iter, test_iter
 ```
 

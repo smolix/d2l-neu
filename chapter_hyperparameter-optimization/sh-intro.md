@@ -51,6 +51,8 @@ d2l.set_figsize()
 
 ```{.python .input}
 %%tab jax
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp

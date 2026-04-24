@@ -36,6 +36,7 @@ from runtime_env import (
     GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
     MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
     make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
+    file_uses_gpu,
 )
 
 
@@ -123,18 +124,8 @@ def _score_generated_text(text):
 
 
 def notebook_uses_gpu(nb_path):
-    """Return True if any code cell contains GPU-related keywords."""
-    try:
-        with open(nb_path) as f:
-            nb = json.load(f)
-        for cell in nb.get("cells", []):
-            if cell["cell_type"] == "code":
-                src = "".join(cell["source"])
-                if any(kw in src for kw in GPU_KEYWORDS):
-                    return True
-    except Exception:
-        pass
-    return False
+    """Return True if any framework's version of this notebook uses GPU."""
+    return file_uses_gpu(nb_path, NOTEBOOKS_DIR)
 
 
 def find_notebooks(framework, glob_pattern=None, files=None):

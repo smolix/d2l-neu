@@ -104,6 +104,7 @@ from torch.nn import functional as F
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
+import numpy as np
 ```
 
 ## [**A Toy Network**]
@@ -332,8 +333,7 @@ print('after allreduce:\n', data[0], '\n', data[1])
 # In JAX, allreduce is done inside pmap via jax.lax.psum/pmean.
 # Here we demonstrate with a simple pmap example.
 devices = jax.local_devices()[:2]
-data = jax.device_put_sharded(
-    [jnp.ones((1, 2)) * (i + 1) for i in range(2)], devices)
+data = jnp.stack([jnp.ones((1, 2)) * (i + 1) for i in range(2)])
 print('before allreduce:\n', data[0], '\n', data[1])
 summed = jax.pmap(lambda x: jax.lax.psum(x, axis_name='i'),
                   axis_name='i')(data)
@@ -369,10 +369,9 @@ print('output:', split)
 #@tab jax
 data = jnp.arange(20).reshape(4, 5)
 devices = jax.local_devices()[:2]
-# Reshape into (num_devices, batch_per_device, ...)
-split = data.reshape(2, 2, 5)
-# Place each shard on its corresponding device
-split = jax.device_put_sharded(list(split), devices)
+mesh = jax.sharding.Mesh(np.array(devices), ('dev',))
+sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec('dev'))
+split = jax.device_put(data.reshape(2, 2, 5), sharding)
 print('input :', data)
 print('load into', devices)
 print('output:', split)
@@ -456,7 +455,8 @@ def train_batch(X, y, device_params, devices, lr):
 
 ```{.python .input}
 #@tab jax
-@functools.partial(jax.pmap, axis_name='batch')
+@functools.partial(jax.pmap, axis_name='batch',
+                   static_broadcasted_argnums=(3,))
 def pmap_step(params, X_shard, y_shard, lr):
     """One training step executed in parallel on each device."""
     def loss_fn(p):
@@ -473,7 +473,7 @@ def pmap_step(params, X_shard, y_shard, lr):
 def train_batch(replicated_params, X, y, num_gpus, lr):
     X_shards, y_shards = split_batch(X, y, num_gpus)
     replicated_params = pmap_step(
-        replicated_params, X_shards, y_shards, jnp.array(lr))
+        replicated_params, X_shards, y_shards, lr)
     return replicated_params
 ```
 
@@ -534,14 +534,16 @@ def evaluate_accuracy_jax(predict_fn, data_iter):
     """Evaluate accuracy using JAX predict function."""
     num_correct, num_total = 0, 0
     for X, y in data_iter:
-        X, y = jnp.array(X), jnp.array(y)
+        X, y = jnp.array(X).transpose(0, 3, 1, 2), jnp.array(y)
         y_hat = predict_fn(X)
         num_correct += jnp.sum(jnp.argmax(y_hat, axis=1) == y).item()
         num_total += y.shape[0]
     return num_correct / num_total
 
 def train(num_gpus, batch_size, lr):
-    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    train_iter = data.get_dataloader(train=True)
+    test_iter = data.get_dataloader(train=False)
     devices = jax.local_devices()[:num_gpus]
     # Replicate model parameters to `num_gpus` GPUs
     replicated_params = jax.tree.map(
@@ -552,7 +554,8 @@ def train(num_gpus, batch_size, lr):
     for epoch in range(num_epochs):
         timer.start()
         for X, y in train_iter:
-            X, y = jnp.array(X), jnp.array(y)
+            X = jnp.array(X).transpose(0, 3, 1, 2)
+            y = jnp.array(y)
             # Perform multi-GPU training for a single minibatch
             replicated_params = train_batch(
                 replicated_params, X, y, num_gpus, lr)

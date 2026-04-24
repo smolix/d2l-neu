@@ -301,7 +301,7 @@ g_blk(x).shape
 x = jnp.zeros((2, 16, 16, 3))  # Channel last convention
 g_blk = G_block(out_channels=20)
 params = g_blk.init(jax.random.PRNGKey(0), x)
-g_blk.apply(params, x).shape
+g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 ```
 
 If changing the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding. With a input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
@@ -335,7 +335,7 @@ x = jnp.zeros((2, 1, 1, 3))
 # `padding="VALID"` corresponds to no padding
 g_blk = G_block(out_channels=20, strides=1, padding='VALID')
 params = g_blk.init(jax.random.PRNGKey(0), x)
-g_blk.apply(params, x).shape
+g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 ```
 
 The generator consists of four basic blocks that increase input's both width and height from 1 to 32. At the same time, it first projects the latent variable into $64\times 8$ channels, and then halve the channels each time. At last, a transposed convolution layer is used to generate the output. It further doubles the width and height to match the desired $64\times 64$ shape, and reduces the channel size to $3$. The tanh activation function is applied to project output values into the $(-1, 1)$ range.
@@ -441,7 +441,7 @@ net_G(x).shape
 #@tab jax
 x = jnp.zeros((1, 1, 1, 100))
 params_G = net_G.init(jax.random.PRNGKey(0), x)
-net_G.apply(params_G, x).shape
+net_G.apply(params_G, x, mutable=['batch_stats'])[0].shape
 ```
 
 ## Discriminator
@@ -583,7 +583,7 @@ d_blk(x).shape
 x = jnp.zeros((2, 16, 16, 3))
 d_blk = D_block(out_channels=20)
 params = d_blk.init(jax.random.PRNGKey(0), x)
-d_blk.apply(params, x).shape
+d_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 ```
 
 The discriminator is a mirror of the generator.
@@ -647,7 +647,7 @@ class Discriminator(nn.Module):
                      use_running_average=self.use_running_average)(X)
         # Output: (4, 4, 64 * 8)
         X = nn.Conv(
-            1, kernel_size=(4, 4), use_bias=False,
+            1, kernel_size=(4, 4), padding='VALID', use_bias=False,
             kernel_init=nn.initializers.normal(0.02))(X)
         # Output: (1, 1, 1)
         return X
@@ -680,7 +680,7 @@ net_D(x).shape
 #@tab jax
 x = jnp.zeros((1, 64, 64, 3))
 params_D = net_D.init(jax.random.PRNGKey(0), x)
-net_D.apply(params_D, x).shape
+net_D.apply(params_D, x, mutable=['batch_stats'])[0].shape
 ```
 
 ## Training
@@ -914,9 +914,10 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
         # Show generated examples
         key, subkey = jax.random.split(key)
         Z = jax.random.normal(subkey, (21, 1, 1, latent_dim))
-        fake_x = net_G.apply(
+        fake_x, _ = net_G.apply(
             {'params': params_G, 'batch_stats': batch_stats_G},
-            Z, mutable=False) / 2 + 0.5
+            Z, mutable=['batch_stats'])
+        fake_x = fake_x / 2 + 0.5
         imgs = jnp.concatenate(
             [jnp.concatenate([fake_x[i * 7 + j] for j in range(7)], axis=1)
              for i in range(len(fake_x) // 7)], axis=0)

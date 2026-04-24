@@ -210,7 +210,7 @@ def RandomResizedCrop(size, scale=(0.1, 1), ratio=(0.5, 2)):
         img_tf = tf.constant(np.array(img))
         h, w = tf.shape(img_tf)[0], tf.shape(img_tf)[1]
         area = tf.cast(h * w, tf.float32)
-        log_ratio = (tf.math.log(ratio[0]), tf.math.log(ratio[1]))
+        log_ratio = (tf.math.log(float(ratio[0])), tf.math.log(float(ratio[1])))
         target_area = tf.random.uniform([], scale[0], scale[1]) * area
         aspect = tf.exp(tf.random.uniform([], log_ratio[0], log_ratio[1]))
         crop_h = tf.cast(tf.round(tf.sqrt(target_area / aspect)), tf.int32)
@@ -654,9 +654,9 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
         for X, y in tfds.as_numpy(test_iter):
             X = jnp.array(X)
             y = jnp.array(y)
-            logits = state.apply_fn(
+            logits, _ = state.apply_fn(
                 {'params': state.params, 'batch_stats': state.batch_stats},
-                X)
+                X, mutable=['batch_stats'])
             correct += int((logits.argmax(axis=-1) == y).sum())
             total += y.shape[0]
         test_acc = correct / total

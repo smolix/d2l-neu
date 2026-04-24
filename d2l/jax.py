@@ -1643,9 +1643,9 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
         for X, y in tfds.as_numpy(test_iter):
             X = jnp.array(X)
             y = jnp.array(y)
-            logits = state.apply_fn(
+            logits, _ = state.apply_fn(
                 {'params': state.params, 'batch_stats': state.batch_stats},
-                X)
+                X, mutable=['batch_stats'])
             correct += int((logits.argmax(axis=-1) == y).sum())
             total += y.shape[0]
         test_acc = correct / total
@@ -1781,26 +1781,18 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
 
     Defined in :numref:`sec_anchor`"""
     num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
-    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
-    # box i and the ground-truth bounding box j
     jaccard = box_iou(anchors, ground_truth)
-    # Initialize the tensor to hold the assigned ground-truth bounding box for
-    # each anchor
     anchors_bbox_map = jnp.full((num_anchors,), -1, dtype=jnp.int32)
-    # Assign ground-truth bounding boxes according to the threshold
     max_ious = jnp.max(jaccard, axis=1)
     indices = jnp.argmax(jaccard, axis=1)
-    anc_i = jnp.nonzero(max_ious >= iou_threshold, size=num_anchors,
-                         fill_value=-1)[0]
-    anc_i = anc_i[anc_i >= 0]
-    box_j = indices[anc_i]
-    anchors_bbox_map = anchors_bbox_map.at[anc_i].set(box_j)
+    mask = max_ious >= iou_threshold
+    anchors_bbox_map = jnp.where(mask, indices, anchors_bbox_map)
     col_discard = jnp.full((num_anchors,), -1.0)
     row_discard = jnp.full((num_gt_boxes,), -1.0)
     for _ in range(num_gt_boxes):
-        max_idx = jnp.argmax(jaccard)  # Find the largest IoU
-        box_idx = int(max_idx % num_gt_boxes)
-        anc_idx = int(max_idx // num_gt_boxes)
+        max_idx = jnp.argmax(jaccard)
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
         jaccard = jaccard.at[:, box_idx].set(col_discard)
         jaccard = jaccard.at[anc_idx, :].set(row_discard)
@@ -1831,21 +1823,14 @@ def multibox_target(anchors, labels):
         bbox_mask = jnp.tile(
             jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
                             axis=-1), (1, 4))
-        # Initialize class labels and assigned bounding box coordinates with
-        # zeros
         class_labels = jnp.zeros(num_anchors, dtype=jnp.int32)
         assigned_bb = jnp.zeros((num_anchors, 4), dtype=jnp.float32)
-        # Label classes of anchor boxes using their assigned ground-truth
-        # bounding boxes. If an anchor box is not assigned any, we label its
-        # class as background (the value remains zero)
-        indices_true = jnp.nonzero(anchors_bbox_map >= 0,
-                                    size=num_anchors, fill_value=-1)[0]
-        indices_true = indices_true[indices_true >= 0]
-        bb_idx = anchors_bbox_map[indices_true]
-        class_labels = class_labels.at[indices_true].set(
-            label[bb_idx, 0].astype(jnp.int32) + 1)
-        assigned_bb = assigned_bb.at[indices_true].set(label[bb_idx, 1:])
-        # Offset transformation
+        valid = anchors_bbox_map >= 0
+        safe_idx = jnp.maximum(anchors_bbox_map, 0)
+        class_labels = jnp.where(valid,
+            label[safe_idx, 0].astype(jnp.int32) + 1, class_labels)
+        assigned_bb = jnp.where(valid[:, None],
+            label[safe_idx, 1:], assigned_bb)
         offset = offset_boxes(anchors, assigned_bb) * bbox_mask
         batch_offset.append(offset.reshape(-1))
         batch_mask.append(bbox_mask.reshape(-1))
@@ -1926,6 +1911,7 @@ def read_data_bananas(is_train=True):
     """Read the banana detection dataset images and labels.
 
     Defined in :numref:`sec_object-detection-dataset`"""
+    from PIL import Image
     data_dir = d2l.download_extract('banana-detection')
     csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
                              else 'bananas_val', 'label.csv')
@@ -1966,10 +1952,10 @@ def load_data_bananas(batch_size):
     val_dataset = BananasDataset(is_train=False)
     train_iter = d2l.ArrayDataLoader(
         jnp.stack(train_dataset.features), train_dataset.labels,
-        batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=True)
     val_iter = d2l.ArrayDataLoader(
         jnp.stack(val_dataset.features), val_dataset.labels,
-        batch_size)
+        batch_size=batch_size)
     return train_iter, val_iter
 
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
@@ -2076,9 +2062,10 @@ def load_data_voc(batch_size, crop_size):
         'VOCdevkit', 'VOC2012'))
     train_dataset = VOCSegDataset(True, crop_size, voc_dir)
     test_dataset = VOCSegDataset(False, crop_size, voc_dir)
-    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size, shuffle=True,
-                                     drop_last=True)
-    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size, drop_last=True)
+    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size=batch_size,
+                                     shuffle=True, drop_last=True)
+    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size=batch_size,
+                                    drop_last=True)
     return train_iter, test_iter
 
 d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',

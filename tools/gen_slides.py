@@ -34,6 +34,7 @@ from runtime_env import (
     GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
     MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
     make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
+    file_uses_gpu,
 )
 
 TRANSIENT_ERRORS = (
@@ -376,9 +377,10 @@ def main():
             multi_gpu_stems = {
                 s.replace('.ipynb', '') for s in MULTI_GPU_NOTEBOOKS}
 
+            slides_root = args.output
+
             def needs_gpu(qmd):
-                text = qmd.read_text(encoding='utf-8')
-                return any(kw in text for kw in GPU_KEYWORDS)
+                return file_uses_gpu(qmd, slides_root)
 
             def is_multi_gpu(qmd):
                 rel = str(qmd.relative_to(fw_dir)).replace('.qmd', '')

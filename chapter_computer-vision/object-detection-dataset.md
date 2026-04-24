@@ -118,6 +118,7 @@ def read_data_bananas(is_train=True):
 #@save
 def read_data_bananas(is_train=True):
     """Read the banana detection dataset images and labels."""
+    from PIL import Image
     data_dir = d2l.download_extract('banana-detection')
     csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
                              else 'bananas_val', 'label.csv')
@@ -232,10 +233,10 @@ def load_data_bananas(batch_size):
     val_dataset = BananasDataset(is_train=False)
     train_iter = d2l.ArrayDataLoader(
         jnp.stack(train_dataset.features), train_dataset.labels,
-        batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=True)
     val_iter = d2l.ArrayDataLoader(
         jnp.stack(val_dataset.features), val_dataset.labels,
-        batch_size)
+        batch_size=batch_size)
     return train_iter, val_iter
 ```
 

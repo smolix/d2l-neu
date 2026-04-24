@@ -392,7 +392,8 @@ ct_variables = conv_trans.init(jax.random.PRNGKey(0), dummy_img)
 bilinear_w = bilinear_kernel(3, 3, 4)
 ct_variables = {**ct_variables,
     'params': {**ct_variables['params'],
-               'ConvTranspose_0': {'kernel': bilinear_w}}}
+               'ConvTranspose_0': {**ct_variables['params']['ConvTranspose_0'],
+                                   'kernel': bilinear_w}}}
 ```
 
 Read the image `X` and assign the upsampling output to `Y`. In order to print the image, we need to adjust the position of the channel dimension.

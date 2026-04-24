@@ -23,6 +23,7 @@ from torch import nn
 ```{.python .input}
 #@tab jax
 from d2l import jax as d2l
+import functools
 import jax
 from jax import numpy as jnp
 from flax import linen as nn
@@ -315,9 +316,11 @@ def train(num_devices, batch_size, lr):
     state = TrainState.create(apply_fn=net.apply, params=params,
                               tx=tx, batch_stats=batch_stats)
     # Replicate state across devices
-    state = flax.jax_utils.replicate(state)
+    num_devices = jax.local_device_count()
+    state = jax.tree.map(
+        lambda x: jnp.stack([x] * num_devices), state)
 
-    @jax.pmap(axis_name='batch')
+    @functools.partial(jax.pmap, axis_name='batch')
     def train_step(state, images, labels):
         """A single training step on one device."""
         def loss_fn(params):
@@ -336,13 +339,13 @@ def train(num_devices, batch_size, lr):
             batch_stats=updates['batch_stats'])
         return state, loss
 
-    @jax.pmap(axis_name='batch')
+    @functools.partial(jax.pmap, axis_name='batch')
     def eval_step(state, images, labels):
         """Evaluate accuracy on one device."""
-        logits = state.apply_fn(
+        logits, _ = state.apply_fn(
             {'params': state.params,
              'batch_stats': state.batch_stats},
-            images)
+            images, mutable=['batch_stats'])
         return (logits.argmax(axis=-1) == labels).sum(), labels.shape[0]
 
     def reshape_batch(X, y, num_devices):

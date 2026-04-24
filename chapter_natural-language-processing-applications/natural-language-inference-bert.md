@@ -51,7 +51,6 @@ from flax import linen as nn
 import optax
 import numpy as np
 import json
-import multiprocessing
 import os
 ```
 
@@ -453,8 +452,8 @@ class SNLIBERTDataset:
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
-        pool = multiprocessing.Pool(4)  # Use 4 worker processes
-        out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
+        out = [self._mp_worker(tokens)
+               for tokens in all_premise_hypothesis_tokens]
         all_token_ids = [
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]

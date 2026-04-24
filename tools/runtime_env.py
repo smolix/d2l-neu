@@ -75,6 +75,47 @@ MULTI_GPU_NOTEBOOKS = {
 }
 
 
+def _text_has_gpu_keywords(text):
+    """Return True if text contains any GPU-related keywords."""
+    return any(kw in text for kw in GPU_KEYWORDS)
+
+
+def file_uses_gpu(filepath, siblings_root):
+    """Return True if this file or any framework sibling uses GPU keywords.
+
+    ``filepath`` is e.g. ``_notebooks/jax/chapter_cv/foo.ipynb`` or
+    ``_slides/pytorch/chapter_cv/foo.qmd``.  ``siblings_root`` is the
+    parent that contains framework directories (``_notebooks`` or
+    ``_slides``).  If the PyTorch or MXNet version of the same file
+    contains GPU keywords, the JAX version is GPU too.
+    """
+    filepath = Path(filepath)
+    siblings_root = Path(siblings_root)
+    try:
+        text = filepath.read_text(encoding="utf-8")
+    except Exception:
+        text = ""
+    if _text_has_gpu_keywords(text):
+        return True
+    try:
+        rel = filepath.relative_to(siblings_root)
+    except ValueError:
+        return False
+    parts = rel.parts  # (framework, chapter, file, ...)
+    if len(parts) >= 2:
+        for sibling in siblings_root.iterdir():
+            if sibling.is_dir() and sibling.name != parts[0]:
+                candidate = sibling / Path(*parts[1:])
+                if candidate.is_file():
+                    try:
+                        if _text_has_gpu_keywords(
+                                candidate.read_text(encoding="utf-8")):
+                            return True
+                    except Exception:
+                        pass
+    return False
+
+
 def nvidia_lib_path(venv_root=None):
     """Build LD_LIBRARY_PATH entries from pip-installed nvidia-* packages.
 

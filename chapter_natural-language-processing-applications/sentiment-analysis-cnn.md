@@ -103,12 +103,22 @@ and a kernel tensor `K`,
 it returns the output tensor `Y`.
 
 ```{.python .input}
-#@tab all
+#@tab mxnet, pytorch, tensorflow
 def corr1d(X, K):
     w = K.shape[0]
     Y = d2l.zeros((X.shape[0] - w + 1))
     for i in range(Y.shape[0]):
         Y[i] = (X[i: i + w] * K).sum()
+    return Y
+```
+
+```{.python .input}
+#@tab jax
+def corr1d(X, K):
+    w = K.shape[0]
+    Y = d2l.zeros((X.shape[0] - w + 1))
+    for i in range(Y.shape[0]):
+        Y = Y.at[i].set((X[i: i + w] * K).sum())
     return Y
 ```
 
@@ -495,7 +505,8 @@ for epoch in range(num_epochs):
     # Evaluate
     correct, total = 0, 0
     for X, y in test_iter:
-        logits = net.apply(params, X, deterministic=True)
+        logits = net.apply(params, X, deterministic=True,
+                           rngs={'dropout': jax.random.PRNGKey(0)})
         correct += int((logits.argmax(axis=-1) == y).sum())
         total += len(y)
     print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
@@ -512,7 +523,10 @@ d2l.predict_sentiment(net, vocab, 'this movie is so great')
 
 ```{.python .input}
 #@tab jax
-d2l.predict_sentiment(net, params, vocab, 'this movie is so great')
+tokens = jnp.array(vocab['this movie is so great'.split()])
+logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
+                   rngs={'dropout': jax.random.PRNGKey(0)})
+'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 
 ```{.python .input}
@@ -522,7 +536,10 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 
 ```{.python .input}
 #@tab jax
-d2l.predict_sentiment(net, params, vocab, 'this movie is so bad')
+tokens = jnp.array(vocab['this movie is so bad'.split()])
+logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
+                   rngs={'dropout': jax.random.PRNGKey(0)})
+'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 
 ## Summary

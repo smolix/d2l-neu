@@ -7,8 +7,15 @@ import jax
 # this, TF's older cuBLAS is loaded first and jax.xla_bridge falls back to CPU.
 jax.devices()
 import tensorflow as _tf
-for _tf_gpu in _tf.config.list_physical_devices('GPU'):
-    _tf.config.experimental.set_memory_growth(_tf_gpu, True)
+# TF is only used for data loading in JAX notebooks; hide GPUs from it so it
+# doesn't fight JAX for the pre-allocated GPU memory (avoids transient
+# "Dst tensor is not initialized" OOMs seen when multiple notebooks share a
+# device).
+try:
+    _tf.config.set_visible_devices([], 'GPU')
+except RuntimeError:
+    for _tf_gpu in _tf.config.list_physical_devices('GPU'):
+        _tf.config.experimental.set_memory_growth(_tf_gpu, True)
 del _tf
 import flax
 from jax import numpy as jnp
@@ -533,8 +540,8 @@ class FashionMNIST(d2l.DataModule):
         resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
         shuffle_buf = len(data[0]) if train else 1
         return tfds.as_numpy(
-            tf.data.Dataset.from_tensor_slices(process(*data)).batch(
-                self.batch_size).map(resize_fn).shuffle(shuffle_buf))
+            tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+                shuffle_buf).batch(self.batch_size).map(resize_fn))
 
     def visualize(self, batch, nrows=1, ncols=8, labels=[]):
         X, y = batch
@@ -692,7 +699,8 @@ class Residual(nn.Module):
                              padding='same', strides=self.strides)
         self.conv2 = nn.Conv(self.num_channels, kernel_size=(3, 3),
                              padding='same')
-        if self.use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if self.use_1x1conv or any(s != 1 for s in self.strides):
             self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
                                  strides=self.strides)
         else:
@@ -725,7 +733,7 @@ class ResNeXtBlock(nn.Module):
                                strides=(1, 1))
         self.conv2 = nn.Conv(bot_channels, kernel_size=(3, 3),
                                strides=self.strides, padding='same',
-                               feature_group_count=bot_channels//self.groups)
+                               feature_group_count=self.groups)
         self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
                                strides=(1, 1))
         self.bn1 = nn.BatchNorm(not self.training)
@@ -1006,7 +1014,7 @@ class MTFraEng(d2l.DataModule):
     def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
         def _build_array(sentences, vocab, is_tgt=False):
             pad_or_trim = lambda seq, t: (
-                seq[:t] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
+                seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
             sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
             if is_tgt:
                 sentences = [['<bos>'] + s for s in sentences]
@@ -1341,7 +1349,7 @@ class PositionalEncoding(nn.Module):
             -1, 1) / jnp.power(10000, jnp.arange(
             0, self.num_hiddens, 2, dtype=jnp.float32) / self.num_hiddens)
         self.P = self.P.at[:, :, 0::2].set(jnp.sin(X))
-        self.P = self.P.at[:, :, 1::2].set(jnp.cos(X))
+        self.P = self.P.at[:, :, 1::2].set(jnp.cos(X[:, :self.num_hiddens // 2]))
 
     @nn.compact
     def __call__(self, X, training=False):
@@ -1668,7 +1676,7 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
 
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
             timer.start()

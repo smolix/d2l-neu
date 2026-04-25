@@ -44,6 +44,13 @@ from jax import numpy as jnp
 import os
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import os
+```
+
 ## Loading Pretrained Word Vectors
 
 Below lists pretrained GloVe embeddings of dimension 50, 100, and 300,
@@ -74,7 +81,7 @@ d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
 To load these pretrained GloVe and fastText embeddings, we define the following `TokenEmbedding` class.
 
 ```{.python .input}
-#@tab all
+#@tab pytorch, mxnet, jax
 #@save
 class TokenEmbedding:
     """Token Embedding."""
@@ -106,6 +113,40 @@ class TokenEmbedding:
                    for token in tokens]
         vecs = self.idx_to_vec[d2l.tensor(indices)]
         return vecs
+
+    def __len__(self):
+        return len(self.idx_to_token)
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+class TokenEmbedding:
+    """Token Embedding."""
+    def __init__(self, embedding_name):
+        self.idx_to_token, self.idx_to_vec = self._load_embedding(
+            embedding_name)
+        self.unknown_idx = 0
+        self.token_to_idx = {token: idx for idx, token in
+                             enumerate(self.idx_to_token)}
+
+    def _load_embedding(self, embedding_name):
+        idx_to_token, idx_to_vec = ['<unk>'], []
+        data_dir = d2l.download_extract(embedding_name)
+        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
+            for line in f:
+                elems = line.rstrip().split(' ')
+                token, elems = elems[0], [float(elem) for elem in elems[1:]]
+                if len(elems) > 1:
+                    idx_to_token.append(token)
+                    idx_to_vec.append(elems)
+        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
+        return idx_to_token, tf.constant(idx_to_vec, dtype=tf.float32)
+
+    def __getitem__(self, tokens):
+        indices = [self.token_to_idx.get(token, self.unknown_idx)
+                   for token in tokens]
+        return tf.gather(self.idx_to_vec, indices)
 
     def __len__(self):
         return len(self.idx_to_token)
@@ -184,6 +225,17 @@ def knn(W, x, k):
         jnp.sqrt(jnp.sum(W * W, axis=1) + 1e-9) *
         jnp.sqrt((x * x).sum()))
     topk = jnp.argsort(-cos)[:k]
+    return topk, [cos[int(i)] for i in topk]
+```
+
+```{.python .input}
+#@tab tensorflow
+def knn(W, x, k):
+    # Add 1e-9 for numerical stability
+    cos = tf.linalg.matvec(W, tf.reshape(x, (-1,))) / (
+        tf.sqrt(tf.reduce_sum(W * W, axis=1) + 1e-9) *
+        tf.sqrt(tf.reduce_sum(x * x)))
+    topk = tf.argsort(-cos)[:k]
     return topk, [cos[int(i)] for i in topk]
 ```
 
@@ -311,5 +363,13 @@ get_analogy('do', 'did', 'go', glove_6b50d)
 :end_tab:
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1336)
+:end_tab:
+
+:begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1336)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1336)
 :end_tab:

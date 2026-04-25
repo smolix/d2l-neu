@@ -162,6 +162,17 @@ X = jnp.arange(16.).reshape(1, 1, 4, 4)
 X
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import numpy as np
+
+# TF uses NHWC; we store the 4x4 feature map as (1, 4, 4, 1)
+X = tf.cast(tf.reshape(tf.range(16), (1, 4, 4, 1)), tf.float32)
+X
+```
+
 Let's further suppose
 that  the height and width of the input image are both 40 pixels and that selective search generates two region proposals on this image.
 Each region proposal
@@ -181,6 +192,11 @@ rois = torch.Tensor([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```{.python .input}
 #@tab jax
 rois = jnp.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
+```
+
+```{.python .input}
+#@tab tensorflow
+rois = np.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]], dtype=np.float32)
 ```
 
 Because the height and width of `X` are $1/10$ of the height and width of the input image,
@@ -230,6 +246,45 @@ def roi_pool(X, rois, pooled_size, spatial_scale):
                 pooled = pooled.at[:, pi, pj].set(sub.max(axis=(1, 2)))
         outputs.append(pooled)
     return jnp.stack(outputs, axis=0).reshape(num_rois, c, ph, pw)
+
+roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
+```
+
+```{.python .input}
+#@tab tensorflow
+# TensorFlow does not ship a built-in RoI pooling op in the public API,
+# so we implement max-RoI pooling manually.  X is NHWC here.
+def roi_pool(X, rois, pooled_size, spatial_scale):
+    """RoI max-pooling for NHWC tensors."""
+    num_rois = rois.shape[0]
+    ph, pw = pooled_size
+    outputs = []
+    for i in range(num_rois):
+        roi = rois[i]
+        batch_idx = int(roi[0])
+        x1 = int(np.round(float(roi[1]) * spatial_scale))
+        y1 = int(np.round(float(roi[2]) * spatial_scale))
+        x2 = int(np.round(float(roi[3]) * spatial_scale))
+        y2 = int(np.round(float(roi[4]) * spatial_scale))
+        x2, y2 = max(x2, x1 + 1), max(y2, y1 + 1)
+        # roi_feat shape: (h_roi, w_roi, C)
+        roi_feat = X[batch_idx, y1:y2, x1:x2, :]
+        h = roi_feat.shape[0]
+        w = roi_feat.shape[1]
+        bin_h = np.linspace(0, h, ph + 1).astype(int)
+        bin_w = np.linspace(0, w, pw + 1).astype(int)
+        pooled_bins = []
+        for pi in range(ph):
+            row_bins = []
+            for pj in range(pw):
+                sub = roi_feat[bin_h[pi]:bin_h[pi+1],
+                               bin_w[pj]:bin_w[pj+1], :]
+                row_bins.append(tf.reduce_max(sub, axis=[0, 1]))
+            pooled_bins.append(tf.stack(row_bins, axis=0))  # (pw, C)
+        # stack rows -> (ph, pw, C)
+        outputs.append(tf.stack(pooled_bins, axis=0))
+    # (num_rois, ph, pw, C)
+    return tf.stack(outputs, axis=0)
 
 roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
@@ -348,5 +403,9 @@ in subsequent sections of this chapter.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1409)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1409)
 :end_tab:

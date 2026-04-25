@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
+tab.interact_select('pytorch', 'tensorflow', 'jax')
 ```
 
 # What Is Hyperparameter Optimization?
@@ -77,6 +77,16 @@ from scipy import stats
 ```
 
 ```{.python .input}
+%%tab tensorflow
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
+from d2l import tensorflow as d2l
+import keras
+import numpy as np
+from scipy import stats
+```
+
+```{.python .input}
 %%tab jax
 from d2l import jax as d2l
 import jax
@@ -140,6 +150,20 @@ class HPOTrainer(d2l.Trainer):  #@save
 ```
 
 ```{.python .input  n=8}
+%%tab tensorflow
+class HPOTrainer(d2l.Trainer):  #@save
+    def validation_error(self):
+        accuracy = 0
+        val_batch_idx = 0
+        for batch in self.val_dataloader:
+            x, y = self.prepare_batch(batch)
+            y_hat = self.model(x, training=False)
+            accuracy += self.model.accuracy(y_hat, y)
+            val_batch_idx += 1
+        return 1 - accuracy / val_batch_idx
+```
+
+```{.python .input  n=8}
 %%tab jax
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
@@ -167,6 +191,29 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
     model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
     trainer.fit(model=model, data=data)
     return d2l.numpy(trainer.validation_error())
+```
+
+```{.python .input  n=5}
+%%tab tensorflow
+def hpo_objective_softmax_classification(config, max_epochs=8):
+    learning_rate = config["learning_rate"]
+    import keras
+    model = keras.Sequential([
+        keras.layers.Flatten(),
+        keras.layers.Dense(10),
+    ])
+    model.compile(
+        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy'],
+    )
+    data = d2l.FashionMNIST(batch_size=16)
+    train_ds = data.get_dataloader(True)
+    val_ds = data.get_dataloader(False)
+    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
+                        verbose=0)
+    val_acc = history.history['val_accuracy'][-1]
+    return 1 - val_acc
 ```
 
 ```{.python .input  n=5}
@@ -316,6 +363,10 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/12090)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/12090)
 :end_tab:
 

@@ -95,6 +95,15 @@ import numpy as np
 import tensorflow as tf  # only used for tf.data input pipeline
 ```
 
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+import os
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+```
+
 ### Reading the Dataset
 
 [**The hot dog dataset we use was taken from online images**].
@@ -136,6 +145,31 @@ test_imgs = torchvision.datasets.ImageFolder(os.path.join(data_dir, 'test'))
 ```{.python .input}
 #@tab jax
 # Load images as (PIL.Image, label) lists for compatibility with show_images
+from PIL import Image as _PILImage
+import pathlib
+
+def _load_image_folder(path):
+    """Load images from a directory with class subfolders, returning
+    a list of (PIL.Image, class_index) tuples."""
+    path = pathlib.Path(path)
+    class_names = sorted([p.name for p in path.iterdir() if p.is_dir()])
+    class_to_idx = {c: i for i, c in enumerate(class_names)}
+    items = []
+    for cls in class_names:
+        for img_path in sorted((path / cls).iterdir()):
+            try:
+                img = _PILImage.open(str(img_path)).convert('RGB')
+                items.append((img, class_to_idx[cls]))
+            except Exception:
+                continue
+    return items
+
+train_imgs = _load_image_folder(os.path.join(data_dir, 'train'))
+test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
+```
+
+```{.python .input}
+#@tab tensorflow
 from PIL import Image as _PILImage
 import pathlib
 
@@ -243,6 +277,35 @@ def test_preprocess(x):
     return x - _IMAGENET_MEAN_BGR
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Plain tf.image / tf.data preprocessing for ImageNet-style normalization
+# (NHWC). Wrapping these in a `keras.Sequential` and calling it inside
+# `tf.data.map` causes a SymbolicTensor leak under Keras 3, so we keep the
+# pipeline as plain tensor ops.
+IMG_SIZE = 224
+
+# ImageNet channel-wise mean and std (RGB order)
+_IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+_IMAGENET_STD  = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+
+def _normalize(x):
+    return (tf.cast(x, tf.float32) / 255.0 - _IMAGENET_MEAN) / _IMAGENET_STD
+
+def train_augs(x, training=False):
+    # Input is (256, 256, 3) — already resized by image_dataset_from_directory.
+    x = tf.image.random_crop(x, (IMG_SIZE, IMG_SIZE, 3))
+    x = tf.image.random_flip_left_right(x)
+    return _normalize(x)
+
+def test_augs(x, training=False):
+    # Input is (256, 256, 3) — already resized by image_dataset_from_directory.
+    # Center crop to IMG_SIZE x IMG_SIZE.
+    off = (256 - IMG_SIZE) // 2
+    x = x[off:off + IMG_SIZE, off:off + IMG_SIZE, :]
+    return _normalize(x)
+```
+
 ### [**Defining and Initializing the Model**]
 
 We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. Here, we specify `pretrained=True` to automatically download the pretrained model parameters. 
@@ -266,6 +329,12 @@ pretrained_net = torchvision.models.resnet18(
 pretrained_net = keras.applications.ResNet50(weights='imagenet')
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Load pretrained ResNet50 (full model with top) to inspect the output layer
+pretrained_net = keras.applications.ResNet50(weights='imagenet')
+```
+
 :begin_tab:`mxnet`
 The pretrained source model instance contains two member variables: `features` and `output`. The former contains all layers of the model except the output layer, and the latter is the output layer of the model. 
 The main purpose of this division is to facilitate the fine-tuning of model parameters of all layers but the output layer. The member variable `output` of source model is shown below.
@@ -282,6 +351,12 @@ We will use the pretrained weights for transfer learning.
 The final layer of the source model is shown below.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The pretrained ResNet50 from `keras.applications` contains a number of feature layers and an output layer.
+We will reuse the pretrained weights for transfer learning.
+The final layer of the source model is shown below.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 pretrained_net.output
@@ -294,6 +369,11 @@ pretrained_net.fc
 
 ```{.python .input}
 #@tab jax
+pretrained_net.layers[-1]
+```
+
+```{.python .input}
+#@tab tensorflow
 pretrained_net.layers[-1]
 ```
 
@@ -341,6 +421,18 @@ features = base_model(inputs, training=True)
 outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
                              name='classifier')(features)
 finetune_net = keras.Model(inputs=inputs, outputs=outputs)
+```
+
+```{.python .input}
+#@tab tensorflow
+# Pretrained ResNet50 base (no top) + global average pool + fresh 2-class head
+finetune_net = keras.Sequential([
+    keras.applications.ResNet50(weights='imagenet', include_top=False,
+                                pooling='avg',
+                                input_shape=(IMG_SIZE, IMG_SIZE, 3)),
+    keras.layers.Dense(2, kernel_initializer='glorot_uniform',
+                       name='classifier'),
+])
 ```
 
 ### [**Fine-Tuning the Model**]
@@ -480,6 +572,41 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=2,
         v.assign(val)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
+    """Create a tf.data.Dataset from an image folder using Keras pipelines."""
+    ds = keras.utils.image_dataset_from_directory(
+        img_dir, label_mode='int', image_size=(256, 256),
+        batch_size=None, shuffle=shuffle)
+    ds = ds.map(lambda x, y: (augs(x, training=True), y),
+                num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
+    return ds
+
+# If `param_group=True`, the backbone is frozen and only the head is
+# trained at the base learning rate; effectively the head gets all updates.
+# This mirrors the PT version's 10x lr on the head (here we keep it simple:
+# freeze backbone = 0x, head = 1x, which is a common Keras fine-tuning idiom).
+def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
+                      param_group=True):
+    train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
+                                train_augs, batch_size, shuffle=True)
+    test_ds  = _make_tf_dataset(os.path.join(data_dir, 'test'),
+                                test_augs, batch_size, shuffle=False)
+    # Freeze or unfreeze the backbone (layer 0 of the Sequential)
+    net.layers[0].trainable = not param_group
+    net.compile(
+        optimizer=keras.optimizers.SGD(
+            learning_rate=learning_rate * (10 if param_group else 1),
+            momentum=0.9, weight_decay=0.001),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy'])
+    history = net.fit(train_ds, epochs=num_epochs,
+                      validation_data=test_ds)
+    return history
+```
+
 We [**set the base learning rate to a small value**]
 in order to *fine-tune* the model parameters obtained via pretraining. Based on the previous settings, we will train the output layer parameters of the target model from scratch using a learning rate ten times greater.
 
@@ -495,6 +622,11 @@ train_fine_tuning(finetune_net, 5e-5)
 
 ```{.python .input}
 #@tab jax
+train_fine_tuning(finetune_net, 5e-5)
+```
+
+```{.python .input}
+#@tab tensorflow
 train_fine_tuning(finetune_net, 5e-5)
 ```
 
@@ -525,6 +657,19 @@ sc_features = scratch_base(sc_inputs, training=True)
 sc_outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
                                 name='classifier')(sc_features)
 scratch_net = keras.Model(inputs=sc_inputs, outputs=sc_outputs)
+train_fine_tuning(scratch_net, 5e-4, param_group=False)
+```
+
+```{.python .input}
+#@tab tensorflow
+# Train from scratch: same architecture but with random (no-pretrain) weights.
+scratch_net = keras.Sequential([
+    keras.applications.ResNet50(weights=None, include_top=False,
+                                pooling='avg',
+                                input_shape=(IMG_SIZE, IMG_SIZE, 3)),
+    keras.layers.Dense(2, kernel_initializer='glorot_uniform',
+                       name='classifier'),
+])
 train_fine_tuning(scratch_net, 5e-4, param_group=False)
 ```
 
@@ -562,6 +707,12 @@ for param in finetune_net.parameters():
 finetune_net.get_layer('resnet50').trainable = False
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Freeze the ResNet50 backbone (layer 0 of the Sequential); only head trains.
+finetune_net.layers[0].trainable = False
+```
+
 4. In fact, there is a "hotdog" class in the `ImageNet` dataset. Its corresponding weight parameter in the output layer can be obtained via the following code. How can we leverage this weight parameter?
 
 ```{.python .input}
@@ -585,6 +736,13 @@ hotdog_w = weight[:, 934]
 hotdog_w.shape
 ```
 
+```{.python .input}
+#@tab tensorflow
+weight = pretrained_net.layers[-1].get_weights()[0]  # Shape: (2048, 1000)
+hotdog_w = weight[:, 934]
+hotdog_w.shape
+```
+
 :begin_tab:`mxnet`
 [Discussions](https://discuss.d2l.ai/t/368)
 :end_tab:
@@ -594,5 +752,9 @@ hotdog_w.shape
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1439)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1439)
 :end_tab:

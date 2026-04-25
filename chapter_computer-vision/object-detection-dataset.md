@@ -53,6 +53,17 @@ from PIL import Image
 ```
 
 ```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import numpy as np
+import os
+import pandas as pd
+from PIL import Image
+```
+
+```{.python .input}
 #@tab all
 #@save
 d2l.DATA_HUB['banana-detection'] = (
@@ -137,6 +148,31 @@ def read_data_bananas(is_train=True):
     return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels."""
+    from PIL import Image
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        img = Image.open(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}'))
+        images.append(tf.constant(np.array(img), dtype=tf.float32))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, tf.expand_dims(tf.constant(targets, dtype=tf.float32),
+                                  axis=1) / 256
+```
+
 By using the `read_data_bananas` function to read images and labels,
 the following `BananasDataset` class
 will allow us to [**create a customized `Dataset` instance**]
@@ -194,6 +230,23 @@ class BananasDataset:
         return len(self.features)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class BananasDataset:
+    """A customized dataset to load the banana detection dataset."""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx], self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+```
+
 Finally, we define
 the `load_data_bananas` function to [**return two
 data iterator instances for both the training and test sets.**]
@@ -237,6 +290,26 @@ def load_data_bananas(batch_size):
     val_iter = d2l.ArrayDataLoader(
         jnp.stack(val_dataset.features), val_dataset.labels,
         batch_size=batch_size)
+    return train_iter, val_iter
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset."""
+    train_dataset = BananasDataset(is_train=True)
+    val_dataset = BananasDataset(is_train=False)
+    # Stack images: result shape is (N, H, W, C) — NHWC for TF
+    train_images = tf.stack(train_dataset.features)
+    val_images = tf.stack(val_dataset.features)
+    train_iter = tf.data.Dataset.from_tensor_slices(
+        (train_images, train_dataset.labels))
+    train_iter = train_iter.shuffle(len(train_dataset.features)).batch(
+        batch_size).prefetch(tf.data.AUTOTUNE)
+    val_iter = tf.data.Dataset.from_tensor_slices(
+        (val_images, val_dataset.labels))
+    val_iter = val_iter.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return train_iter, val_iter
 ```
 
@@ -311,6 +384,15 @@ for ax, label in zip(axes, np.array(batch[1][:10])):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Images are already NHWC (H, W, C) in TF; normalize to [0, 1]
+imgs = batch[0][:10] / 255
+axes = d2l.show_images(imgs, 2, 5, scale=2)
+for ax, label in zip(axes, batch[1][:10]):
+    d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
+```
+
 ## Summary
 
 * The banana detection dataset we collected can be used to demonstrate object detection models.
@@ -331,5 +413,9 @@ for ax, label in zip(axes, np.array(batch[1][:10])):
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1608)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1608)
 :end_tab:

@@ -53,6 +53,13 @@ import optax
 import numpy as np
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+```
+
 ### Attending
 
 The first step is to align tokens in one text sequence to each token in the other sequence.
@@ -126,6 +133,21 @@ class MLP(nn.Module):
         if self.flatten:
             x = x.reshape((x.shape[0], -1))
         return x
+```
+
+```{.python .input}
+#@tab tensorflow
+def mlp(num_hiddens, flatten):
+    net = keras.Sequential()
+    net.add(keras.layers.Dropout(0.2))
+    net.add(keras.layers.Dense(num_hiddens, activation='relu'))
+    if flatten:
+        net.add(keras.layers.Flatten())
+    net.add(keras.layers.Dropout(0.2))
+    net.add(keras.layers.Dense(num_hiddens, activation='relu'))
+    if flatten:
+        net.add(keras.layers.Flatten())
+    return net
 ```
 
 It should be highlighted that, in :eqref:`eq_nli_e`
@@ -234,6 +256,35 @@ class Attend(nn.Module):
         return beta, alpha
 ```
 
+```{.python .input}
+#@tab tensorflow
+class Attend(keras.layers.Layer):
+    def __init__(self, num_hiddens, **kwargs):
+        super(Attend, self).__init__(**kwargs)
+        self.f = mlp(num_hiddens=num_hiddens, flatten=False)
+
+    def call(self, A, B):
+        # Shape of `A`/`B`: (`batch_size`, no. of tokens in sequence A/B,
+        # `embed_size`)
+        # Shape of `f_A`/`f_B`: (`batch_size`, no. of tokens in sequence A/B,
+        # `num_hiddens`)
+        f_A = self.f(A)
+        f_B = self.f(B)
+        # Shape of `e`: (`batch_size`, no. of tokens in sequence A,
+        # no. of tokens in sequence B)
+        e = tf.matmul(f_A, tf.transpose(f_B, perm=[0, 2, 1]))
+        # Shape of `beta`: (`batch_size`, no. of tokens in sequence A,
+        # `embed_size`), where sequence B is softly aligned with each token
+        # (axis 1 of `beta`) in sequence A
+        beta = tf.matmul(tf.nn.softmax(e, axis=-1), B)
+        # Shape of `alpha`: (`batch_size`, no. of tokens in sequence B,
+        # `embed_size`), where sequence A is softly aligned with each token
+        # (axis 1 of `alpha`) in sequence B
+        alpha = tf.matmul(
+            tf.nn.softmax(tf.transpose(e, perm=[0, 2, 1]), axis=-1), A)
+        return beta, alpha
+```
+
 ### Comparing
 
 In the next step, we compare a token in one sequence with the other sequence that is softly aligned with that token.
@@ -288,6 +339,19 @@ class Compare(nn.Module):
         g = MLP(self.num_hiddens, flatten=False)
         V_A = g(jnp.concatenate([A, beta], axis=2), training=training)
         V_B = g(jnp.concatenate([B, alpha], axis=2), training=training)
+        return V_A, V_B
+```
+
+```{.python .input}
+#@tab tensorflow
+class Compare(keras.layers.Layer):
+    def __init__(self, num_hiddens, **kwargs):
+        super(Compare, self).__init__(**kwargs)
+        self.g = mlp(num_hiddens=num_hiddens, flatten=False)
+
+    def call(self, A, B, beta, alpha):
+        V_A = self.g(tf.concat([A, beta], axis=2))
+        V_B = self.g(tf.concat([B, alpha], axis=2))
         return V_A, V_B
 ```
 
@@ -361,6 +425,23 @@ class Aggregate(nn.Module):
         return Y_hat
 ```
 
+```{.python .input}
+#@tab tensorflow
+class Aggregate(keras.layers.Layer):
+    def __init__(self, num_hiddens, num_outputs, **kwargs):
+        super(Aggregate, self).__init__(**kwargs)
+        self.h = mlp(num_hiddens=num_hiddens, flatten=True)
+        self.linear = keras.layers.Dense(num_outputs)
+
+    def call(self, V_A, V_B):
+        # Sum up both sets of comparison vectors
+        V_A = tf.reduce_sum(V_A, axis=1)
+        V_B = tf.reduce_sum(V_B, axis=1)
+        # Feed the concatenation of both summarization results into an MLP
+        Y_hat = self.linear(self.h(tf.concat([V_A, V_B], axis=1)))
+        return Y_hat
+```
+
 ### Putting It All Together
 
 By putting the attending, comparing, and aggregating steps together,
@@ -429,6 +510,27 @@ class DecomposableAttention(nn.Module):
         return Y_hat
 ```
 
+```{.python .input}
+#@tab tensorflow
+class DecomposableAttention(keras.Model):
+    def __init__(self, vocab, embed_size, num_hiddens, **kwargs):
+        super(DecomposableAttention, self).__init__(**kwargs)
+        self.embedding = keras.layers.Embedding(len(vocab), embed_size)
+        self.attend = Attend(num_hiddens)
+        self.compare = Compare(num_hiddens)
+        # There are 3 possible outputs: entailment, contradiction, and neutral
+        self.aggregate = Aggregate(num_hiddens, 3)
+
+    def call(self, inputs, training=False, **kwargs):
+        premises, hypotheses = inputs
+        A = self.embedding(premises)
+        B = self.embedding(hypotheses)
+        beta, alpha = self.attend(A, B)
+        V_A, V_B = self.compare(A, B, beta, alpha)
+        Y_hat = self.aggregate(V_A, V_B)
+        return Y_hat
+```
+
 ## Training and Evaluating the Model
 
 Now we will train and evaluate the defined decomposable attention model on the SNLI dataset.
@@ -478,6 +580,17 @@ embed_size, num_hiddens, devices = 100, 200, d2l.try_all_gpus()
 net = DecomposableAttention(len(vocab), embed_size, num_hiddens)
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
+```
+
+```{.python .input}
+#@tab tensorflow
+embed_size, num_hiddens, devices = 100, 200, d2l.try_all_gpus()
+net = DecomposableAttention(vocab, embed_size, num_hiddens)
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
+embeds = glove_embedding[vocab.idx_to_token]
+# Build the embedding layer before assigning pretrained weights.
+net.embedding.build((None,))
+net.embedding.set_weights([embeds])
 ```
 
 ### Training and Evaluating the Model
@@ -567,6 +680,22 @@ for epoch in range(num_epochs):
           f'test acc {n_correct / n_test:.4f}')
 ```
 
+```{.python .input}
+#@tab tensorflow
+lr, num_epochs = 0.001, 4
+# Wrap tf.data batches: each yields (premises, hypotheses, labels);
+# Keras model expects (X, y) where X = (premises, hypotheses)
+def reformat(premises, hypotheses, labels):
+    return (premises, hypotheses), labels
+
+train_iter_tf = train_iter.map(reformat)
+test_iter_tf = test_iter.map(reformat)
+net.compile(optimizer=keras.optimizers.Adam(lr),
+            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=['accuracy'])
+net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
+```
+
 ### Using the Model
 
 Finally, define the prediction function to output the logical relationship between a pair of premise and hypothesis.
@@ -611,6 +740,18 @@ def predict_snli(net, params, vocab, premise, hypothesis):
             else 'neutral'
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def predict_snli(net, vocab, premise, hypothesis):
+    """Predict the logical relationship between the premise and hypothesis."""
+    premise = tf.constant([vocab[premise]], dtype=tf.int32)
+    hypothesis = tf.constant([vocab[hypothesis]], dtype=tf.int32)
+    label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
+    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
+            else 'neutral'
+```
+
 We can use the trained model to obtain the natural language inference result for a sample pair of sentences.
 
 ```{.python .input}
@@ -622,6 +763,11 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 #@tab jax
 predict_snli(net, params, vocab, ['he', 'is', 'good', '.'],
              ['he', 'is', 'bad', '.'])
+```
+
+```{.python .input}
+#@tab tensorflow
+predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 ```
 
 ## Summary
@@ -647,5 +793,9 @@ predict_snli(net, params, vocab, ['he', 'is', 'good', '.'],
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1530)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1530)
 :end_tab:

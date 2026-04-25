@@ -1,6 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
+tab.interact_select('pytorch', 'tensorflow', 'jax')
 ```
 
 # Transformers for Vision
@@ -46,6 +46,13 @@ Transformers have also become a game-changer in computer vision.
 from d2l import torch as d2l
 import torch
 from torch import nn
+```
+
+```{.python .input}
+%%tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
 ```
 
 ```{.python .input}
@@ -119,6 +126,27 @@ class PatchEmbedding(nn.Module):
 ```
 
 ```{.python .input}
+%%tab tensorflow
+class PatchEmbedding(tf.keras.layers.Layer):  #@save
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
+        super().__init__()
+        def _make_tuple(x):
+            if not isinstance(x, (list, tuple)):
+                return (x, x)
+            return x
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        self.num_patches = (img_size[0] // patch_size[0]) * (
+            img_size[1] // patch_size[1])
+        self.conv = tf.keras.layers.Conv2D(num_hiddens, kernel_size=patch_size,
+                                           strides=patch_size)
+
+    def call(self, X):
+        # Input shape: (batch, H, W, C); output: (batch, num_patches, num_hiddens)
+        X = self.conv(X)
+        return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
+```
+
+```{.python .input}
 %%tab jax
 class PatchEmbedding(nn.Module):
     img_size: int = 96
@@ -156,6 +184,14 @@ d2l.check_shape(patch_emb(X),
 ```
 
 ```{.python .input}
+%%tab tensorflow
+img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
+patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
+X = tf.zeros((batch_size, img_size, img_size, 3))
+d2l.check_shape(patch_emb(X), (batch_size, (img_size//patch_size)**2, num_hiddens))
+```
+
+```{.python .input}
 %%tab jax
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
@@ -188,6 +224,22 @@ class ViTMLP(nn.Module):
     def forward(self, x):
         return self.dropout2(self.dense2(self.dropout1(self.gelu(
             self.dense1(x)))))
+```
+
+```{.python .input}
+%%tab tensorflow
+class ViTMLP(tf.keras.layers.Layer):  #@save
+    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
+        super().__init__()
+        self.dense1 = tf.keras.layers.Dense(mlp_num_hiddens, activation='gelu')
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dense2 = tf.keras.layers.Dense(mlp_num_outputs)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training=False):
+        return self.dropout2(self.dense2(
+            self.dropout1(self.dense1(x), training=training)),
+            training=training)
 ```
 
 ```{.python .input}
@@ -232,6 +284,25 @@ class ViTBlock(nn.Module):
 ```
 
 ```{.python .input}
+%%tab tensorflow
+class ViTBlock(tf.keras.layers.Layer):  #@save
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.attention = tf.keras.layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=num_hiddens // num_heads,
+            dropout=dropout, use_bias=use_bias)
+        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout)
+
+    def call(self, X, training=False):
+        X_norm = self.ln1(X, training=training)
+        X = X + self.attention(X_norm, X_norm, training=training)
+        return X + self.mlp(self.ln2(X, training=training), training=training)
+```
+
+```{.python .input}
 %%tab jax
 class ViTBlock(nn.Module):
     num_hiddens: int
@@ -261,6 +332,13 @@ X = d2l.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 24, 48, 8, 0.5)
 encoder_blk.eval()
 d2l.check_shape(encoder_blk(X), X.shape)
+```
+
+```{.python .input}
+%%tab tensorflow
+X = tf.ones((2, 100, 24))
+encoder_blk = ViTBlock(24, 48, 8, 0.5)
+d2l.check_shape(encoder_blk(X, training=False), X.shape)
 ```
 
 ```{.python .input}
@@ -314,6 +392,46 @@ class ViT(d2l.Classifier):
 ```
 
 ```{.python .input}
+%%tab tensorflow
+class ViT(d2l.Classifier):  #@save
+    """Vision Transformer."""
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.patch_embedding = PatchEmbedding(img_size, patch_size, num_hiddens)
+        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        self.num_steps = num_steps
+        self.num_hiddens = num_hiddens
+        self.emb_dropout = tf.keras.layers.Dropout(emb_dropout)
+        self.blks = [ViTBlock(num_hiddens, mlp_num_hiddens, num_heads,
+                              blk_dropout, use_bias)
+                     for _ in range(num_blks)]
+        self.head_norm = tf.keras.layers.LayerNormalization()
+        self.head_dense = tf.keras.layers.Dense(num_classes)
+
+    def build(self, input_shape):
+        self.cls_token = self.add_weight(
+            name='cls_token', shape=(1, 1, self.num_hiddens),
+            initializer='zeros', trainable=True)
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, self.num_steps, self.num_hiddens),
+            initializer='random_normal', trainable=True)
+        super().build(input_shape)
+
+    def call(self, X, training=False):
+        X = self.patch_embedding(X)
+        batch_size = tf.shape(X)[0]
+        cls_tokens = tf.tile(self.cls_token, [batch_size, 1, 1])
+        X = tf.concat([cls_tokens, X], axis=1)
+        X = self.emb_dropout(X + self.pos_embedding, training=training)
+        for blk in self.blks:
+            X = blk(X, training=training)
+        return self.head_dense(self.head_norm(X[:, 0]))
+```
+
+```{.python .input}
 %%tab jax
 class ViT(d2l.Classifier):
     """Vision Transformer."""
@@ -359,7 +477,7 @@ class ViT(d2l.Classifier):
 Training a vision Transformer on the Fashion-MNIST dataset is just like how CNNs were trained in :numref:`chap_modern_cnn`.
 
 ```{.python .input}
-%%tab all
+%%tab pytorch, jax
 img_size, patch_size = 96, 16
 num_hiddens, mlp_num_hiddens, num_heads, num_blks = 512, 2048, 8, 2
 emb_dropout, blk_dropout, lr = 0.1, 0.1, 0.1
@@ -368,6 +486,19 @@ model = ViT(img_size, patch_size, num_hiddens, mlp_num_hiddens, num_heads,
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128, resize=(img_size, img_size))
 trainer.fit(model, data)
+```
+
+```{.python .input}
+%%tab tensorflow
+img_size, patch_size = 96, 16
+num_hiddens, mlp_num_hiddens, num_heads, num_blks = 512, 2048, 8, 2
+emb_dropout, blk_dropout, lr = 0.1, 0.1, 0.1
+data = d2l.FashionMNIST(batch_size=128, resize=(img_size, img_size))
+trainer = d2l.Trainer(max_epochs=10)
+with d2l.try_gpu():
+    model = ViT(img_size, patch_size, num_hiddens, mlp_num_hiddens, num_heads,
+                num_blks, emb_dropout, blk_dropout, lr)
+    trainer.fit(model, data)
 ```
 
 ## Summary and Discussion
@@ -403,6 +534,10 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 1. Can you modify hyperparameters to improve the accuracy of the vision Transformer?
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/8943)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/8943)
 :end_tab:
 

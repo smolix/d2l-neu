@@ -33,6 +33,13 @@ import flax
 import numpy as np
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+```
+
 ## [**A Toy Network**]
 
 Let's use a slightly more meaningful network than LeNet from :numref:`sec_multi_gpu` that is still sufficiently easy and quick to train.
@@ -133,6 +140,36 @@ class ResNet18(nn.Module):
         return self.net(x)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model built with Keras."""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = tf.keras.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
+                                     strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
+
+    # Smaller conv, no max-pool (same as the PT version)
+    net = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Activation('relu'),
+        resnet_block(64, 2, first_block=True),
+        resnet_block(128, 2),
+        resnet_block(256, 2),
+        resnet_block(512, 2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(num_classes),
+    ])
+    return net
+```
+
 ## Network Initialization
 
 :begin_tab:`mxnet`
@@ -147,6 +184,10 @@ For a refresher on initialization methods see :numref:`sec_numerical_stability`.
 
 :begin_tab:`jax`
 In JAX, we initialize the model parameters and create a `TrainState` that bundles the parameters with the optimizer. For multi-GPU training, we replicate the state across all devices using `flax.jax_utils.replicate`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+With `tf.distribute.MirroredStrategy`, the model is built inside `strategy.scope()`. All variables created within the scope are automatically mirrored across all GPUs. We will initialize the network and optimizer inside the training function.
 :end_tab:
 
 ```{.python .input}
@@ -173,6 +214,14 @@ net = ResNet18(num_classes=10)
 num_devices = jax.local_device_count()
 print(f'Using {num_devices} devices: {jax.devices()}')
 # We will initialize the network inside the training loop
+```
+
+```{.python .input}
+#@tab tensorflow
+# MirroredStrategy distributes training across all available GPUs
+strategy = tf.distribute.MirroredStrategy()
+print(f'Number of devices: {strategy.num_replicas_in_sync}')
+# The model will be created inside strategy.scope() in the training function
 ```
 
 :begin_tab:`mxnet`
@@ -380,6 +429,34 @@ def train(num_devices, batch_size, lr):
           f'on {num_devices} devices')
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(num_gpus, batch_size, lr):
+    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+    # Restrict to the requested number of GPUs
+    gpus = tf.config.list_logical_devices('GPU')[:num_gpus]
+    strategy = tf.distribute.MirroredStrategy(
+        devices=[g.name for g in gpus])
+    # Build and compile the model inside strategy.scope() so that
+    # all variables are automatically mirrored across GPUs and
+    # gradients are all-reduced automatically on every step.
+    with strategy.scope():
+        net = resnet18(10)
+        net.compile(
+            optimizer=tf.keras.optimizers.SGD(learning_rate=lr),
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(
+                from_logits=True),
+            metrics=['accuracy'])
+    num_epochs = 10
+    timer = d2l.Timer()
+    timer.start()
+    history = net.fit(train_iter, epochs=num_epochs, verbose=0)
+    timer.stop()
+    test_acc = net.evaluate(test_iter, verbose=0)[1]
+    print(f'test acc: {test_acc:.2f}, {timer.sum():.1f} sec total '
+          f'on {str([g.name for g in gpus])}')
+```
+
 Let's see how this works in practice. As a warm-up we [**train the network on a single GPU.**]
 
 ```{.python .input}
@@ -395,6 +472,11 @@ train(net, num_gpus=1, batch_size=256, lr=0.1)
 ```{.python .input}
 #@tab jax
 train(num_devices=1, batch_size=256, lr=0.1)
+```
+
+```{.python .input}
+#@tab tensorflow
+train(num_gpus=1, batch_size=256, lr=0.1)
 ```
 
 Next we [**use 2 GPUs for training**]. Compared with LeNet
@@ -416,6 +498,11 @@ train(net, num_gpus=2, batch_size=512, lr=0.2)
 train(num_devices=2, batch_size=512, lr=0.2)
 ```
 
+```{.python .input}
+#@tab tensorflow
+train(num_gpus=2, batch_size=512, lr=0.2)
+```
+
 ## Summary
 
 :begin_tab:`mxnet`
@@ -426,6 +513,11 @@ train(num_devices=2, batch_size=512, lr=0.2)
 * JAX provides `jax.pmap` for data-parallel training across multiple devices with automatic gradient aggregation via `jax.lax.pmean`.
 * Flax's `jax_utils.replicate` and `jax_utils.unreplicate` handle distributing and collecting state across devices.
 :end_tab:
+
+:begin_tab:`tensorflow`
+* `tf.distribute.MirroredStrategy` provides the simplest path to multi-GPU training in TensorFlow/Keras 3. Build the model and optimizer inside `strategy.scope()` and the framework mirrors all variables and aggregates gradients automatically.
+:end_tab:
+
 * Data is automatically evaluated on the devices where the data can be found.
 * Take care to initialize the networks on each device before trying to access the parameters on that device. Otherwise you will encounter an error.
 * The optimization algorithms automatically aggregate over multiple GPUs.
@@ -451,6 +543,12 @@ train(num_devices=2, batch_size=512, lr=0.2)
 1. What happens if we replace `jax.pmap` with `jax.vmap`? How does the behavior differ?
 :end_tab:
 
+:begin_tab:`tensorflow`
+1. This section uses ResNet-18. Try different epochs, batch sizes, and learning rates. Use more GPUs for computation. What happens if you try this with 4 GPUs?
+1. Try replacing `MirroredStrategy` with `tf.distribute.MultiWorkerMirroredStrategy`. What changes are needed for multi-machine training?
+1. What happens if you move `model.compile` outside `strategy.scope()`? Does training still work correctly?
+:end_tab:
+
 
 
 :begin_tab:`mxnet`
@@ -462,5 +560,9 @@ train(num_devices=2, batch_size=512, lr=0.2)
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1403)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1403)
 :end_tab:

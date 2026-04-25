@@ -542,7 +542,8 @@ class Residual(nn.Module):
         self.conv1 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
                                    stride=strides)
         self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1,
                                        stride=strides)
         else:
@@ -569,7 +570,7 @@ class ResNeXtBlock(nn.Module):
         self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1)
         self.conv2 = nn.LazyConv2d(bot_channels, kernel_size=3,
                                    stride=strides, padding=1,
-                                   groups=bot_channels//groups)
+                                   groups=groups)
         self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1)
         self.bn1 = nn.LazyBatchNorm2d()
         self.bn2 = nn.LazyBatchNorm2d()
@@ -821,7 +822,7 @@ class MTFraEng(d2l.DataModule):
     def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
         def _build_array(sentences, vocab, is_tgt=False):
             pad_or_trim = lambda seq, t: (
-                seq[:t] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
+                seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
             sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
             if is_tgt:
                 sentences = [['<bos>'] + s for s in sentences]
@@ -904,6 +905,7 @@ class EncoderDecoder(d2l.Classifier):
 
     def predict_step(self, batch, device, num_steps,
                      save_attention_weights=False):
+        self.eval()
         batch = [d2l.to(a, device) for a in batch]
         src, tgt, src_valid_len, _ = batch
         enc_all_outputs = self.encoder(src, src_valid_len)
@@ -1157,7 +1159,7 @@ class PositionalEncoding(nn.Module):
             -1, 1) / torch.pow(10000, torch.arange(
             0, num_hiddens, 2, dtype=torch.float32) / num_hiddens)
         self.P[:, :, 0::2] = torch.sin(X)
-        self.P[:, :, 1::2] = torch.cos(X)
+        self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
 
     def forward(self, X):
         X = X + self.P[:, :X.shape[1], :].to(X.device)
@@ -1442,7 +1444,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
@@ -2392,12 +2394,12 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
     _, mlm_Y_hat, nsp_Y_hat = net(tokens_X, segments_X,
                                   valid_lens_x.reshape(-1),
                                   pred_positions_X)
-    # Compute masked language model loss
+    # Compute masked language model loss (mask per-token losses before summing)
     mlm_l = loss(mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1)) *\
-    mlm_weights_X.reshape(-1, 1)
+    mlm_weights_X.reshape(-1)
     mlm_l = mlm_l.sum() / (mlm_weights_X.sum() + 1e-8)
     # Compute next sentence prediction loss
-    nsp_l = loss(nsp_Y_hat, nsp_y)
+    nsp_l = loss(nsp_Y_hat, nsp_y).mean()
     l = mlm_l + nsp_l
     return mlm_l, nsp_l, l
 
@@ -2873,7 +2875,7 @@ def hit_and_auc(rankedlist, test_matrix, k):
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
                      devices):
     ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
-    all_items = set([i for i in range(num_users)])
+    all_items = set([i for i in range(num_items)])
     for u in range(num_users):
         neg_items = list(all_items - set(candidates[int(u)]))
         user_ids, item_ids, scores = [], [], []
@@ -3346,6 +3348,10 @@ def accuracy(y_hat, y):
     Defined in :numref:`sec_utils`"""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
+    elif y_hat.dtype != y.dtype:
+        # Binary classification with float scores (logits or probabilities):
+        # threshold at 0 (logits) to get class labels, then reshape to match y.
+        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
     cmp = d2l.astype(y_hat, y.dtype) == y
     return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 

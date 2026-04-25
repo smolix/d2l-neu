@@ -30,6 +30,13 @@ import numpy as np
 from flax.training import train_state
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+from tensorflow import keras
+```
+
 To start, we load the WikiText-2 dataset as minibatches
 of pretraining examples for masked language modeling and next sentence prediction.
 The batch size is 512 and the maximum length of a BERT input sequence is 64.
@@ -72,6 +79,12 @@ loss = nn.CrossEntropyLoss(reduction='none')
 
 ```{.python .input}
 #@tab jax
+net = d2l.BERTModel(len(vocab), num_hiddens=128,
+                    ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
+```
+
+```{.python .input}
+#@tab tensorflow
 net = d2l.BERTModel(len(vocab), num_hiddens=128,
                     ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
 ```
@@ -160,6 +173,32 @@ def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
         nsp_Y_hat, nsp_y).mean()
     l = mlm_l + nsp_l
     return l, (mlm_l, nsp_l)
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
+                         valid_lens_x, pred_positions_X, mlm_weights_X,
+                         mlm_Y, nsp_y, training=True):
+    mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    # Forward pass
+    _, mlm_Y_hat, nsp_Y_hat = net(
+        tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
+                                      dtype=tf.float32),
+        pred_positions_X, training=training)
+    # Compute masked language model loss (mask per-token losses before summing)
+    mlm_l = mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
+                        tf.reshape(mlm_Y_hat, [-1, vocab_size]))
+    mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
+        tf.reduce_sum(mlm_weights_X) + 1e-8)
+    # Compute next sentence prediction loss
+    nsp_l = tf.reduce_mean(nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
+    l = mlm_l + nsp_l
+    return mlm_l, nsp_l, l
 ```
 
 Invoking the two aforementioned helper functions,
@@ -306,6 +345,43 @@ def train_bert(train_iter, net, vocab_size, num_steps):
     return state
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train_bert(train_iter, net, vocab_size, devices, num_steps):
+    optimizer = keras.optimizers.Adam(learning_rate=0.01)
+    step, timer = 0, d2l.Timer()
+    animator = d2l.Animator(xlabel='step', ylabel='loss',
+                            xlim=[1, num_steps], legend=['mlm', 'nsp'])
+    # Sum of masked language modeling losses, sum of next sentence prediction
+    # losses, no. of sentence pairs, count
+    metric = d2l.Accumulator(4)
+    num_steps_reached = False
+    while step < num_steps and not num_steps_reached:
+        for (tokens_X, segments_X, valid_lens_x, pred_positions_X,
+             mlm_weights_X, mlm_Y, nsp_y) in train_iter:
+            timer.start()
+            with tf.GradientTape() as tape:
+                mlm_l, nsp_l, l = _get_batch_loss_bert(
+                    net, vocab_size, tokens_X, segments_X, valid_lens_x,
+                    pred_positions_X, mlm_weights_X, mlm_Y, nsp_y,
+                    training=True)
+            grads = tape.gradient(l, net.trainable_variables)
+            optimizer.apply_gradients(zip(grads, net.trainable_variables))
+            metric.add(float(mlm_l), float(nsp_l), tokens_X.shape[0], 1)
+            timer.stop()
+            animator.add(step + 1,
+                         (metric[0] / metric[3], metric[1] / metric[3]))
+            step += 1
+            if step == num_steps:
+                num_steps_reached = True
+                break
+
+    print(f'MLM loss {metric[0] / metric[3]:.3f}, '
+          f'NSP loss {metric[1] / metric[3]:.3f}')
+    print(f'{metric[2] / timer.sum():.1f} sentence pairs/sec on '
+          f'{str(devices)}')
+```
+
 We can plot both the masked language modeling loss and the next sentence prediction loss
 during BERT pretraining.
 
@@ -322,6 +398,12 @@ train_bert(train_iter, net, loss, len(vocab), devices, 50)
 ```{.python .input}
 #@tab jax
 state = train_bert(train_iter, net, len(vocab), 50)
+```
+
+```{.python .input}
+#@tab tensorflow
+devices = d2l.try_all_gpus()
+train_bert(train_iter, net, len(vocab), devices, 50)
 ```
 
 ## [**Representing Text with BERT**]
@@ -366,6 +448,19 @@ def get_bert_encoding(net, params, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_bert_encoding(net, tokens_a, tokens_b=None):
+    tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
+    token_ids = tf.expand_dims(
+        tf.constant(vocab[tokens], dtype=tf.int32), axis=0)
+    segments = tf.expand_dims(
+        tf.constant(segments, dtype=tf.int32), axis=0)
+    valid_len = tf.constant([len(tokens)], dtype=tf.float32)
+    encoded_X, _, _ = net(token_ids, segments, valid_len, training=False)
+    return encoded_X
+```
+
 [**Consider the sentence "a crane is flying".**]
 Recall the input representation of BERT as discussed in :numref:`subsec_bert_input_rep`.
 After inserting special tokens “&lt;cls&gt;” (used for classification)
@@ -390,6 +485,16 @@ encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
 #@tab jax
 tokens_a = ['a', 'crane', 'is', 'flying']
 encoded_text = get_bert_encoding(net, state.params, tokens_a)
+# Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
+encoded_text_cls = encoded_text[:, 0, :]
+encoded_text_crane = encoded_text[:, 2, :]
+encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
+```
+
+```{.python .input}
+#@tab tensorflow
+tokens_a = ['a', 'crane', 'is', 'flying']
+encoded_text = get_bert_encoding(net, tokens_a)
 # Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
 encoded_text_cls = encoded_text[:, 0, :]
 encoded_text_crane = encoded_text[:, 2, :]
@@ -424,6 +529,17 @@ encoded_pair_crane = encoded_pair[:, 2, :]
 encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
 ```
 
+```{.python .input}
+#@tab tensorflow
+tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
+encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
+# Tokens: '<cls>', 'a', 'crane', 'driver', 'came', '<sep>', 'he', 'just',
+# 'left', '<sep>'
+encoded_pair_cls = encoded_pair[:, 0, :]
+encoded_pair_crane = encoded_pair[:, 2, :]
+encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
+```
+
 In :numref:`chap_nlp_app`, we will fine-tune a pretrained BERT model
 for downstream natural language processing applications.
 
@@ -448,5 +564,9 @@ for downstream natural language processing applications.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1497)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1497)
 :end_tab:

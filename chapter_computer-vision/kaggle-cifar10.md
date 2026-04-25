@@ -69,6 +69,19 @@ import pandas as pd
 import shutil
 ```
 
+```{.python .input}
+#@tab tensorflow
+import collections
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+import math
+import os
+import pandas as pd
+import shutil
+```
+
 ## Obtaining and Organizing the Dataset
 
 The competition dataset is divided into
@@ -288,6 +301,28 @@ def transform_test_fn(image, label):
     return image, label
 ```
 
+```{.python .input}
+#@tab tensorflow
+CIFAR_MEAN = tf.constant([0.4914, 0.4822, 0.4465], dtype=tf.float32)
+CIFAR_STD = tf.constant([0.2023, 0.1994, 0.2010], dtype=tf.float32)
+
+def transform_train_fn(image, label):
+    """Training augmentation: resize, random crop, flip, normalize."""
+    image = tf.cast(image, tf.float32)
+    image = tf.image.resize(image, [40, 40])
+    image = tf.image.random_crop(image, size=[32, 32, 3])
+    image = tf.image.random_flip_left_right(image)
+    image = image / 255.0
+    image = (image - CIFAR_MEAN) / CIFAR_STD
+    return image, label
+
+def transform_test_fn(image, label):
+    """Test preprocessing: normalize only."""
+    image = tf.cast(image, tf.float32) / 255.0
+    image = (image - CIFAR_MEAN) / CIFAR_STD
+    return image, label
+```
+
 During testing,
 we only perform standardization on images
 so as to
@@ -311,6 +346,11 @@ transform_test = torchvision.transforms.Compose([
 
 ```{.python .input}
 #@tab jax
+# Test transform is defined above as transform_test_fn
+```
+
+```{.python .input}
+#@tab tensorflow
 # Test transform is defined above as transform_test_fn
 ```
 
@@ -343,6 +383,26 @@ def _load_image_folder_tf(folder_path):
     """Load images from a class-subfolder directory into a tf.data.Dataset
     of (image, label) where image is uint8 [H, W, 3] and label is int."""
     ds = tf.keras.utils.image_dataset_from_directory(
+        folder_path, label_mode='int', image_size=(32, 32),
+        batch_size=None, shuffle=False)
+    return ds
+
+train_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train'))
+train_valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid'))
+valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'valid'))
+test_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'test'))
+```
+
+```{.python .input}
+#@tab tensorflow
+def _load_image_folder_tf(folder_path):
+    """Load images from a class-subfolder directory into a tf.data.Dataset
+    of (image, label) where image is uint8 [H, W, 3] and label is int."""
+    ds = keras.utils.image_dataset_from_directory(
         folder_path, label_mode='int', image_size=(32, 32),
         batch_size=None, shuffle=False)
     return ds
@@ -395,6 +455,23 @@ test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
 
 ```{.python .input}
 #@tab jax
+train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .shuffle(10000).batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+train_valid_iter = (train_valid_ds.map(transform_train_fn,
+                    num_parallel_calls=tf.data.AUTOTUNE)
+                    .shuffle(10000).batch(batch_size, drop_remainder=True)
+                    .prefetch(tf.data.AUTOTUNE))
+valid_iter = (valid_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+             .batch(batch_size, drop_remainder=False)
+             .prefetch(tf.data.AUTOTUNE))
+```
+
+```{.python .input}
+#@tab tensorflow
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
               .prefetch(tf.data.AUTOTUNE))
@@ -556,6 +633,48 @@ def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def _resnet_block(x, num_filters, strides=1):
+    """A single residual block with Keras functional API."""
+    shortcut = x
+    x = keras.layers.Conv2D(num_filters, 3, strides=strides,
+                            padding='same', use_bias=False)(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation('relu')(x)
+    x = keras.layers.Conv2D(num_filters, 3, padding='same',
+                            use_bias=False)(x)
+    x = keras.layers.BatchNormalization()(x)
+    if strides != 1 or shortcut.shape[-1] != num_filters:
+        shortcut = keras.layers.Conv2D(num_filters, 1, strides=strides,
+                                       use_bias=False)(shortcut)
+        shortcut = keras.layers.BatchNormalization()(shortcut)
+    x = keras.layers.Add()([x, shortcut])
+    x = keras.layers.Activation('relu')(x)
+    return x
+
+def get_net():
+    inputs = keras.Input(shape=(32, 32, 3))
+    x = keras.layers.Conv2D(64, 3, strides=1, padding='same',
+                            use_bias=False)(inputs)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation('relu')(x)
+    for _ in range(2):
+        x = _resnet_block(x, 64)
+    x = _resnet_block(x, 128, strides=2)
+    x = _resnet_block(x, 128)
+    x = _resnet_block(x, 256, strides=2)
+    x = _resnet_block(x, 256)
+    x = _resnet_block(x, 512, strides=2)
+    x = _resnet_block(x, 512)
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    outputs = keras.layers.Dense(10)(x)
+    return keras.Model(inputs, outputs)
+
+loss = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+```
+
 ## Defining the [**Training Function**]
 
 We will select models and tune hyperparameters according to the model's performance on the validation set.
@@ -711,6 +830,62 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return variables
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+          lr_decay):
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=lr,
+        decay_steps=lr_period,
+        decay_rate=lr_decay,
+        staircase=True)
+    optimizer = keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9,
+                                     weight_decay=wd)
+    num_batches = sum(1 for _ in train_iter)
+    timer = d2l.Timer()
+    legend = ['train loss', 'train acc']
+    if valid_iter is not None:
+        legend.append('valid acc')
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                            legend=legend)
+    for epoch in range(num_epochs):
+        metric = d2l.Accumulator(3)
+        for i, (features, labels) in enumerate(train_iter):
+            timer.start()
+            with tf.GradientTape() as tape:
+                logits = net(features, training=True)
+                l = loss(labels, logits)
+            grads = tape.gradient(l, net.trainable_variables)
+            optimizer.apply_gradients(zip(grads, net.trainable_variables))
+            acc = tf.reduce_sum(tf.cast(
+                tf.argmax(logits, axis=1) == tf.cast(labels, tf.int64),
+                tf.float32))
+            metric.add(float(tf.reduce_sum(l)), float(acc), len(labels))
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[2],
+                              None))
+        if valid_iter is not None:
+            valid_metric = d2l.Accumulator(2)
+            for features, labels in valid_iter:
+                logits = net(features, training=False)
+                valid_metric.add(
+                    float(tf.reduce_sum(tf.cast(
+                        tf.argmax(logits, axis=1) == tf.cast(labels, tf.int64),
+                        tf.float32))),
+                    len(labels))
+            valid_acc = valid_metric[0] / valid_metric[1]
+            animator.add(epoch + 1, (None, None, valid_acc))
+    measures = (f'train loss {metric[0] / metric[2]:.3f}, '
+                f'train acc {metric[1] / metric[2]:.3f}')
+    if valid_iter is not None:
+        measures += f', valid acc {valid_acc:.3f}'
+    print(measures + f'\n{metric[2] * num_epochs / timer.sum():.1f}'
+          f' examples/sec')
+    return net
+```
+
 ## [**Training and Validating the Model**]
 
 Now, we can train and validate the model.
@@ -744,6 +919,15 @@ lr_period, lr_decay = 4, 0.9
 net = get_net()
 variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
                   lr_decay)
+```
+
+```{.python .input}
+#@tab tensorflow
+num_epochs, lr, wd = 20, 2e-4, 5e-4
+lr_period, lr_decay = 4, 0.9
+net = get_net()
+net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+            lr_decay)
 ```
 
 ## [**Classifying the Testing Set**] and Submitting Results on Kaggle
@@ -805,6 +989,25 @@ df['label'] = df['label'].apply(lambda x: class_names[x])
 df.to_csv('submission.csv', index=False)
 ```
 
+```{.python .input}
+#@tab tensorflow
+net = get_net()
+net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
+            lr_decay)
+preds = []
+for X, _ in test_iter:
+    y_hat = net(X, training=False)
+    preds.extend(tf.argmax(y_hat, axis=1).numpy())
+# Get class names from the train_valid dataset directory
+class_names = sorted(os.listdir(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid')))
+sorted_ids = list(range(1, sum(1 for _ in test_ds) + 1))
+sorted_ids.sort(key=lambda x: str(x))
+df = pd.DataFrame({'id': sorted_ids, 'label': preds})
+df['label'] = df['label'].apply(lambda x: class_names[x])
+df.to_csv('submission.csv', index=False)
+```
+
 The above code
 will generate a `submission.csv` file,
 whose format
@@ -829,6 +1032,10 @@ is similar to that in :numref:`sec_kaggle_house`.
 * We can use convolutional neural networks and image augmentation in an image classification competition.
 :end_tab:
 
+:begin_tab:`tensorflow`
+* We can use convolutional neural networks and image augmentation in an image classification competition.
+:end_tab:
+
 ## Exercises
 
 1. Use the complete CIFAR-10 dataset for this Kaggle competition. Set hyperparameters as `batch_size = 128`, `num_epochs = 100`, `lr = 0.1`, `lr_period = 50`, and `lr_decay = 0.1`.  See what accuracy and ranking you can achieve in this competition. Can you further improve them?
@@ -843,5 +1050,9 @@ is similar to that in :numref:`sec_kaggle_house`.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1479)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1479)
 :end_tab:

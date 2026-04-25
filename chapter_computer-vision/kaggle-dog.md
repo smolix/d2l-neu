@@ -50,6 +50,15 @@ import tensorflow as tf
 import os
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+import os
+```
+
 ## Obtaining and Organizing the Dataset
 
 The competition dataset is divided into a training set and a test set, which contain 10222 and 10357 JPEG images
@@ -186,6 +195,27 @@ def transform_train_fn(image, label):
     return image, label
 ```
 
+```{.python .input}
+#@tab tensorflow
+IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+IMAGENET_STD = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+
+def transform_train_fn(image, label):
+    """Training augmentation: random crop, flip, color jitter, normalize."""
+    image = tf.cast(image, tf.float32)
+    # Random resized crop to 224x224
+    image = tf.image.resize(image, [256, 256])
+    image = tf.image.random_crop(image, size=[224, 224, 3])
+    image = tf.image.random_flip_left_right(image)
+    image = tf.image.random_brightness(image, max_delta=0.4 * 255)
+    image = tf.image.random_contrast(image, lower=0.6, upper=1.4)
+    image = tf.image.random_saturation(image, lower=0.6, upper=1.4)
+    image = tf.clip_by_value(image, 0.0, 255.0)
+    image = image / 255.0
+    image = (image - IMAGENET_MEAN) / IMAGENET_STD
+    return image, label
+```
+
 During prediction,
 we only use image preprocessing operations
 without randomness.
@@ -214,6 +244,19 @@ transform_test = torchvision.transforms.Compose([
 
 ```{.python .input}
 #@tab jax
+def transform_test_fn(image, label):
+    """Test preprocessing: resize, center crop, normalize."""
+    image = tf.cast(image, tf.float32)
+    image = tf.image.resize(image, [256, 256])
+    # Center crop to 224x224
+    image = tf.image.resize_with_crop_or_pad(image, 224, 224)
+    image = image / 255.0
+    image = (image - IMAGENET_MEAN) / IMAGENET_STD
+    return image, label
+```
+
+```{.python .input}
+#@tab tensorflow
 def transform_test_fn(image, label):
     """Test preprocessing: resize, center crop, normalize."""
     image = tf.cast(image, tf.float32)
@@ -269,6 +312,25 @@ test_ds = _load_image_folder_tf(
     os.path.join(data_dir, 'train_valid_test', 'test'))
 ```
 
+```{.python .input}
+#@tab tensorflow
+def _load_image_folder_tf(folder_path):
+    """Load images from a class-subfolder directory into a tf.data.Dataset."""
+    ds = keras.utils.image_dataset_from_directory(
+        folder_path, label_mode='int', image_size=(256, 256),
+        batch_size=None, shuffle=False)
+    return ds
+
+train_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train'))
+train_valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid'))
+valid_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'valid'))
+test_ds = _load_image_folder_tf(
+    os.path.join(data_dir, 'train_valid_test', 'test'))
+```
+
 Below we create data iterator instances
 the same way
 as in :numref:`sec_kaggle_cifar10`.
@@ -303,6 +365,23 @@ test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
 
 ```{.python .input}
 #@tab jax
+train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .shuffle(10000).batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+train_valid_iter = (train_valid_ds.map(transform_train_fn,
+                    num_parallel_calls=tf.data.AUTOTUNE)
+                    .shuffle(10000).batch(batch_size, drop_remainder=True)
+                    .prefetch(tf.data.AUTOTUNE))
+valid_iter = (valid_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+              .batch(batch_size, drop_remainder=True)
+              .prefetch(tf.data.AUTOTUNE))
+test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
+             .batch(batch_size, drop_remainder=False)
+             .prefetch(tf.data.AUTOTUNE))
+```
+
+```{.python .input}
+#@tab tensorflow
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
               .prefetch(tf.data.AUTOTUNE))
@@ -413,6 +492,24 @@ def get_net():
     return _resnet_for_features, output_net
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_net():
+    # Load pretrained ResNet50, freeze backbone, add custom head
+    backbone = keras.applications.ResNet50(
+        weights='imagenet', include_top=False, pooling='avg',
+        input_shape=(224, 224, 3))
+    backbone.trainable = False
+    inputs = keras.Input(shape=(224, 224, 3))
+    # ResNet50 expects inputs in [0, 255] or preprocessed; our inputs are
+    # already normalized to ImageNet stats so we use them directly
+    x = backbone(inputs, training=False)
+    x = keras.layers.Dense(256, activation='relu')(x)
+    outputs = keras.layers.Dense(120)(x)
+    finetune_net = keras.Model(inputs, outputs)
+    return finetune_net
+```
+
 Before [**calculating the loss**],
 we first obtain the input of the pretrained model's output layer, i.e., the extracted feature.
 Then we use this feature as input for our small custom output network to calculate the loss.
@@ -471,6 +568,21 @@ def evaluate_loss(data_iter, features_net, output_net, variables):
         logits = output_net.apply(variables, feats, training=False)
         l = loss_fn(logits, y)
         l_sum += float(l.sum())
+        n += len(labels)
+    return l_sum / n
+```
+
+```{.python .input}
+#@tab tensorflow
+loss = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+
+def evaluate_loss(data_iter, net):
+    l_sum, n = 0.0, 0
+    for features, labels in data_iter:
+        logits = net(features, training=False)
+        l = loss(labels, logits)
+        l_sum += float(tf.reduce_sum(l))
         n += len(labels)
     return l_sum / n
 ```
@@ -628,6 +740,50 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     return variables
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+          lr_decay):
+    # Only train the custom head; backbone is already frozen in get_net()
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=lr,
+        decay_steps=lr_period,
+        decay_rate=lr_decay,
+        staircase=True)
+    optimizer = keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9,
+                                     weight_decay=wd)
+    num_batches = sum(1 for _ in train_iter)
+    timer = d2l.Timer()
+    legend = ['train loss']
+    if valid_iter is not None:
+        legend.append('valid loss')
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                            legend=legend)
+    for epoch in range(num_epochs):
+        metric = d2l.Accumulator(2)
+        for i, (features, labels) in enumerate(train_iter):
+            timer.start()
+            with tf.GradientTape() as tape:
+                logits = net(features, training=True)
+                l = loss(labels, logits)
+            grads = tape.gradient(l, net.trainable_variables)
+            optimizer.apply_gradients(zip(grads, net.trainable_variables))
+            metric.add(float(tf.reduce_sum(l)), len(labels))
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[1], None))
+        measures = f'train loss {metric[0] / metric[1]:.3f}'
+        if valid_iter is not None:
+            valid_loss = evaluate_loss(valid_iter, net)
+            animator.add(epoch + 1, (None, valid_loss))
+    if valid_iter is not None:
+        measures += f', valid loss {valid_loss:.3f}'
+    print(measures + f'\n{metric[1] * num_epochs / timer.sum():.1f}'
+          f' examples/sec')
+    return net
+```
+
 ## [**Training and Validating the Model**]
 
 Now we can train and validate the model.
@@ -658,6 +814,15 @@ lr_period, lr_decay = 2, 0.9
 features_net, output_net = get_net()
 variables = train(features_net, output_net, train_iter, valid_iter,
                   num_epochs, lr, wd, lr_period, lr_decay)
+```
+
+```{.python .input}
+#@tab tensorflow
+num_epochs, lr, wd = 10, 1e-4, 1e-4
+lr_period, lr_decay = 2, 0.9
+net = get_net()
+net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+            lr_decay)
 ```
 
 ## [**Classifying the Testing Set**] and Submitting Results on Kaggle
@@ -732,6 +897,28 @@ with open('submission.csv', 'w') as f:
             [str(num) for num in output]) + '\n')
 ```
 
+```{.python .input}
+#@tab tensorflow
+net = get_net()
+net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
+            lr_decay)
+preds = []
+for data, label in test_iter:
+    logits = net(data, training=False)
+    output = tf.nn.softmax(logits, axis=-1)
+    preds.extend(output.numpy())
+# Get class names from the train_valid dataset directory
+class_names = sorted(os.listdir(
+    os.path.join(data_dir, 'train_valid_test', 'train_valid')))
+ids = sorted(os.listdir(
+    os.path.join(data_dir, 'train_valid_test', 'test', 'unknown')))
+with open('submission.csv', 'w') as f:
+    f.write('id,' + ','.join(class_names) + '\n')
+    for i, output in zip(ids, preds):
+        f.write(i.split('.')[0] + ',' + ','.join(
+            [str(num) for num in output]) + '\n')
+```
+
 The above code
 will generate a `submission.csv` file
 to be submitted
@@ -759,5 +946,9 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1481)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1481)
 :end_tab:

@@ -48,6 +48,17 @@ import os
 import random
 ```
 
+```{.python .input}
+#@tab tensorflow
+import collections
+from d2l import tensorflow as d2l
+import math
+import numpy as np
+import os
+import random
+import tensorflow as tf
+```
+
 ## Reading the Dataset
 
 The dataset that we use here
@@ -313,6 +324,12 @@ generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
+```{.python .input}
+#@tab tensorflow
+generator = RandomGenerator([2, 3, 4])
+[generator.draw() for _ in range(10)]
+```
+
 For a pair of center word and context word, 
 we randomly sample `K` (5 in the experiment) noise words. According to the suggestions in the word2vec paper,
 the sampling probability $P(w)$ of 
@@ -548,6 +565,33 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return PTBDataIter(), vocab
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """Download the PTB dataset and then load it into memory."""
+    sentences = read_ptb()
+    vocab = d2l.Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(
+        corpus, max_window_size)
+    all_negatives = get_negatives(
+        all_contexts, vocab, counter, num_noise_words)
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    # centers shape: (N,) -> (N, 1) to match batchify convention
+    centers_t = tf.constant(centers[:, None], dtype=tf.int64)
+    cn_t = tf.constant(cn, dtype=tf.int64)
+    masks_t = tf.constant(masks, dtype=tf.float32)
+    labels_t = tf.constant(labels, dtype=tf.float32)
+    dataset = tf.data.Dataset.from_tensor_slices(
+        (centers_t, cn_t, masks_t, labels_t))
+    dataset = dataset.shuffle(buffer_size=len(centers)).batch(
+        batch_size).prefetch(tf.data.AUTOTUNE)
+    return dataset, vocab
+```
+
 Let's print the first minibatch of the data iterator.
 
 ```{.python .input}
@@ -581,5 +625,9 @@ for batch in data_iter:
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1330)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1330)
 :end_tab:

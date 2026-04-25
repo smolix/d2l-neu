@@ -6,6 +6,7 @@ _os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 
 import numpy as np
 import tensorflow as tf
+import keras
 
 for _gpu in tf.config.list_physical_devices('GPU'):
     tf.config.experimental.set_memory_growth(_gpu, True)
@@ -427,8 +428,8 @@ class FashionMNIST(d2l.DataModule):
                                 tf.cast(y, dtype='int32'))
         resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
         shuffle_buf = len(data[0]) if train else 1
-        return tf.data.Dataset.from_tensor_slices(process(*data)).batch(
-            self.batch_size).map(resize_fn).shuffle(shuffle_buf)
+        return tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+            shuffle_buf).batch(self.batch_size).map(resize_fn)
 
     def visualize(self, batch, nrows=1, ncols=8, labels=[]):
         X, y = batch
@@ -558,7 +559,8 @@ class Residual(tf.keras.Model):
         self.conv2 = tf.keras.layers.Conv2D(num_channels, kernel_size=3,
                                             padding='same')
         self.conv3 = None
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = tf.keras.layers.Conv2D(num_channels, kernel_size=1,
                                                 strides=strides)
         self.bn1 = tf.keras.layers.BatchNormalization()
@@ -583,7 +585,7 @@ class ResNeXtBlock(tf.keras.Model):
         self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1)
         self.conv2 = tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
                                             padding="same",
-                                            groups=bot_channels//groups)
+                                            groups=groups)
         self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1)
         self.bn1 = tf.keras.layers.BatchNormalization()
         self.bn2 = tf.keras.layers.BatchNormalization()
@@ -850,7 +852,7 @@ class MTFraEng(d2l.DataModule):
     def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
         def _build_array(sentences, vocab, is_tgt=False):
             pad_or_trim = lambda seq, t: (
-                seq[:t] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
+                seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
             sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
             if is_tgt:
                 sentences = [['<bos>'] + s for s in sentences]
@@ -1178,7 +1180,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
             -1,1)/np.power(10000, np.arange(
             0, num_hiddens, 2, dtype=np.float32) / num_hiddens)
         self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X)
+        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
         
     def call(self, X, training=False, **kwargs):
         X = X + self.P[:, :X.shape[1], :]
@@ -1204,7 +1206,11 @@ class AddNorm(tf.keras.layers.Layer):
     def __init__(self, norm_shape, dropout):
         super().__init__()
         self.dropout = tf.keras.layers.Dropout(dropout)
-        self.ln = tf.keras.layers.LayerNormalization(norm_shape)
+        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
+        # the shape of the trailing dims to normalize over. Convert that to
+        # Keras's `axis` argument (negative axis indices counting from the end).
+        self.ln = tf.keras.layers.LayerNormalization(
+            axis=list(range(-len(norm_shape), 0)))
 
     def call(self, X, Y, training=False, **kwargs):
         return self.ln(self.dropout(Y, training=training) + X)
@@ -1256,6 +1262,92 @@ class TransformerEncoder(d2l.Encoder):
             self.attention_weights[
                 i] = blk.attention.attention.attention_weights
         return X
+
+class PatchEmbedding(tf.keras.layers.Layer):
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
+        super().__init__()
+        def _make_tuple(x):
+            if not isinstance(x, (list, tuple)):
+                return (x, x)
+            return x
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        self.num_patches = (img_size[0] // patch_size[0]) * (
+            img_size[1] // patch_size[1])
+        self.conv = tf.keras.layers.Conv2D(num_hiddens, kernel_size=patch_size,
+                                           strides=patch_size)
+
+    def call(self, X):
+        # Input shape: (batch, H, W, C); output: (batch, num_patches, num_hiddens)
+        X = self.conv(X)
+        return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
+
+class ViTMLP(tf.keras.layers.Layer):
+    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
+        super().__init__()
+        self.dense1 = tf.keras.layers.Dense(mlp_num_hiddens, activation='gelu')
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dense2 = tf.keras.layers.Dense(mlp_num_outputs)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training=False):
+        return self.dropout2(self.dense2(
+            self.dropout1(self.dense1(x), training=training)),
+            training=training)
+
+class ViTBlock(tf.keras.layers.Layer):
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.attention = tf.keras.layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=num_hiddens // num_heads,
+            dropout=dropout, use_bias=use_bias)
+        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout)
+
+    def call(self, X, training=False):
+        X_norm = self.ln1(X, training=training)
+        X = X + self.attention(X_norm, X_norm, training=training)
+        return X + self.mlp(self.ln2(X, training=training), training=training)
+
+class ViT(d2l.Classifier):
+    """Vision Transformer.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.patch_embedding = PatchEmbedding(img_size, patch_size, num_hiddens)
+        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        self.num_steps = num_steps
+        self.num_hiddens = num_hiddens
+        self.emb_dropout = tf.keras.layers.Dropout(emb_dropout)
+        self.blks = [ViTBlock(num_hiddens, mlp_num_hiddens, num_heads,
+                              blk_dropout, use_bias)
+                     for _ in range(num_blks)]
+        self.head_norm = tf.keras.layers.LayerNormalization()
+        self.head_dense = tf.keras.layers.Dense(num_classes)
+
+    def build(self, input_shape):
+        self.cls_token = self.add_weight(
+            name='cls_token', shape=(1, 1, self.num_hiddens),
+            initializer='zeros', trainable=True)
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, self.num_steps, self.num_hiddens),
+            initializer='random_normal', trainable=True)
+        super().build(input_shape)
+
+    def call(self, X, training=False):
+        X = self.patch_embedding(X)
+        batch_size = tf.shape(X)[0]
+        cls_tokens = tf.tile(self.cls_token, [batch_size, 1, 1])
+        X = tf.concat([cls_tokens, X], axis=1)
+        X = self.emb_dropout(X + self.pos_embedding, training=training)
+        for blk in self.blks:
+            X = blk(X, training=training)
+        return self.head_dense(self.head_norm(X[:, 0]))
 
 def annotate(text, xy, xytext):
     d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
@@ -1404,6 +1496,91 @@ class Benchmark:
     def __exit__(self, *args):
         print(f'{self.description}: {self.timer.stop():.4f} sec')
 
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model built with Keras.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = tf.keras.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
+                                     strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
+
+    # Smaller conv, no max-pool (same as the PT version)
+    net = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Activation('relu'),
+        resnet_block(64, 2, first_block=True),
+        resnet_block(128, 2),
+        resnet_block(256, 2),
+        resnet_block(512, 2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(num_classes),
+    ])
+    return net
+
+def train_batch_ch13(net, X, y, loss, optimizer):
+    """Train for a minibatch with Keras (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    with tf.GradientTape() as tape:
+        pred = net(X, training=True)
+        l = loss(y, pred)
+    grads = tape.gradient(l, net.trainable_variables)
+    optimizer.apply_gradients(zip(grads, net.trainable_variables))
+    train_loss_sum = tf.reduce_sum(l)
+    train_acc_sum = tf.reduce_sum(
+        tf.cast(tf.argmax(pred, axis=1) == tf.cast(y, tf.int64), tf.float32))
+    return train_loss_sum, train_acc_sum
+
+def train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs):
+    """Train a model with Keras (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    num_batches = sum(1 for _ in train_iter)
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['train loss', 'train acc', 'test acc'])
+    timer = d2l.Timer()
+    for epoch in range(num_epochs):
+        # Sum of training loss, sum of training accuracy, no. of examples,
+        # no. of examples
+        metric = d2l.Accumulator(4)
+        for i, (features, labels) in enumerate(train_iter):
+            timer.start()
+            l, acc = train_batch_ch13(net, features, labels, loss, optimizer)
+            n = features.shape[0]
+            metric.add(float(l), float(acc), n, n)
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[3],
+                              None))
+        # Evaluate on test set
+        correct, total = 0, 0
+        for X, y in test_iter:
+            logits = net(X, training=False)
+            correct += int(tf.reduce_sum(tf.cast(
+                tf.argmax(logits, axis=1) == tf.cast(y, tf.int64),
+                tf.float32)))
+            total += y.shape[0]
+        test_acc = correct / total
+        animator.add(epoch + 1, (None, None, test_acc))
+    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
+          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec')
+
 d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
                          'fba480ffa8aa7e0febbb511d181409f899b9baa5')
 
@@ -1442,6 +1619,45 @@ def bbox_to_rect(bbox, color):
         xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
         fill=False, edgecolor=color, linewidth=2)
 
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel.
+
+    Defined in :numref:`sec_anchor`"""
+    in_height, in_width = data.shape[-2:]
+    num_sizes, num_ratios = len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = np.array(sizes, dtype=np.float32)
+    ratio_tensor = np.array(ratios, dtype=np.float32)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (np.arange(in_height) + offset_h) * steps_h
+    center_w = (np.arange(in_width) + offset_w) * steps_w
+    shift_y, shift_x = np.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = np.concatenate((size_tensor * np.sqrt(ratio_tensor[0]),
+                        sizes[0] * np.sqrt(ratio_tensor[1:])))\
+                        * in_height / in_width  # Handle rectangular inputs
+    h = np.concatenate((size_tensor / np.sqrt(ratio_tensor[0]),
+                        sizes[0] / np.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = np.tile(np.stack((-w, -h, w, h)).T,
+                                   (in_height * in_width, 1)) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = np.repeat(np.stack([shift_x, shift_y, shift_x, shift_y],
+                         axis=1), boxes_per_pixel, axis=0)
+    output = tf.constant(out_grid + anchor_manipulations, dtype=tf.float32)
+    return tf.expand_dims(output, axis=0)
+
 def show_bboxes(axes, bboxes, labels=None, colors=None):
     """Show bounding boxes.
 
@@ -1466,6 +1682,57 @@ def show_bboxes(axes, bboxes, labels=None, colors=None):
                       va='center', ha='center', fontsize=9, color=text_color,
                       bbox=dict(facecolor=color, lw=0))
 
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = tf.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = tf.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = tf.clip_by_value(inter_lowerrights - inter_upperlefts, 0,
+                              float('inf'))
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    # box i and the ground-truth bounding box j
+    jaccard = box_iou(anchors, ground_truth)
+    # Initialize the tensor to hold the assigned ground-truth bounding box for
+    # each anchor
+    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32)
+    # Assign ground-truth bounding boxes according to the threshold
+    max_ious = tf.reduce_max(jaccard, axis=1).numpy()
+    indices = tf.argmax(jaccard, axis=1).numpy()
+    anc_i = np.nonzero(max_ious >= iou_threshold)[0]
+    box_j = indices[max_ious >= iou_threshold]
+    anchors_bbox_map[anc_i] = box_j
+    # Use a plain Python loop — this runs once per sample, not in training
+    col_discard = np.full((num_anchors,), -1.0)
+    row_discard = np.full((num_gt_boxes,), -1.0)
+    jaccard_np = jaccard.numpy()
+    for _ in range(num_gt_boxes):
+        max_idx = int(np.argmax(jaccard_np))
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
+        anchors_bbox_map[anc_idx] = box_idx
+        jaccard_np[:, box_idx] = col_discard
+        jaccard_np[anc_idx, :] = row_discard
+    return tf.constant(anchors_bbox_map, dtype=tf.int32)
+
 def offset_boxes(anchors, assigned_bb, eps=1e-6):
     """Transform for anchor box offsets.
 
@@ -1476,6 +1743,47 @@ def offset_boxes(anchors, assigned_bb, eps=1e-6):
     offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
     offset = d2l.concat([offset_xy, offset_wh], axis=1)
     return offset
+
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size, anchors = labels.shape[0], tf.squeeze(anchors, axis=0)
+    batch_offset, batch_mask, batch_class_labels = [], [], []
+    num_anchors = anchors.shape[0]
+    for i in range(batch_size):
+        label = labels[i, :, :]
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, None)
+        bbox_mask = tf.tile(
+            tf.expand_dims(
+                tf.cast(anchors_bbox_map >= 0, dtype=tf.float32), axis=-1),
+            [1, 4])
+        # Initialize class labels and assigned bounding box coordinates with
+        # zeros
+        class_labels = tf.zeros(num_anchors, dtype=tf.int32)
+        assigned_bb = tf.zeros((num_anchors, 4), dtype=tf.float32)
+        # Label classes of anchor boxes using their assigned ground-truth
+        # bounding boxes. If an anchor box is not assigned any, we label its
+        # class as background (the value remains zero)
+        indices_true = tf.cast(
+            tf.squeeze(tf.where(anchors_bbox_map >= 0), axis=1), tf.int32)
+        bb_idx = tf.gather(anchors_bbox_map, indices_true)
+        class_labels = tf.tensor_scatter_nd_update(
+            class_labels, tf.expand_dims(indices_true, 1),
+            tf.cast(tf.gather(label[:, 0], bb_idx), tf.int32) + 1)
+        assigned_bb = tf.tensor_scatter_nd_update(
+            assigned_bb, tf.expand_dims(indices_true, 1),
+            tf.gather(label[:, 1:], bb_idx))
+        # Offset transformation
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        batch_offset.append(tf.reshape(offset, [-1]))
+        batch_mask.append(tf.reshape(bbox_mask, [-1]))
+        batch_class_labels.append(class_labels)
+    bbox_offset = tf.stack(batch_offset)
+    bbox_mask = tf.stack(batch_mask)
+    class_labels = tf.stack(batch_class_labels)
+    return (bbox_offset, bbox_mask, class_labels)
 
 def offset_inverse(anchors, offset_preds):
     """Predict bounding boxes based on anchor boxes with predicted offsets.
@@ -1488,12 +1796,216 @@ def offset_inverse(anchors, offset_preds):
     predicted_bbox = d2l.box_center_to_corner(pred_bbox)
     return predicted_bbox
 
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    # Work in NumPy so the Python while-loop isn't forcing a host/device
+    # sync every iteration.
+    boxes_np = np.asarray(boxes)
+    B = np.argsort(-np.asarray(scores))
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while B.size > 0:
+        i = int(B[0])
+        keep.append(i)
+        if B.size == 1: break
+        rest = B[1:]
+        # Pairwise IoU between box i and every remaining box, in NumPy
+        box_i, rest_boxes = boxes_np[i], boxes_np[rest]
+        lt = np.maximum(box_i[:2], rest_boxes[:, :2])
+        rb = np.minimum(box_i[2:], rest_boxes[:, 2:])
+        inter = np.clip(rb - lt, 0, None).prod(axis=1)
+        area_i = (box_i[2:] - box_i[:2]).prod()
+        area_rest = (rest_boxes[:, 2:] - rest_boxes[:, :2]).prod(axis=1)
+        iou = inter / (area_i + area_rest - inter)
+        B = rest[iou <= iou_threshold]
+    return tf.constant(keep, dtype=tf.int32)
+
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size = cls_probs.shape[0]
+    anchors = tf.squeeze(anchors, axis=0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob = cls_probs[i]
+        offset_pred = tf.reshape(offset_preds[i], (-1, 4))
+        conf = tf.reduce_max(cls_prob[1:], axis=0)
+        class_id = tf.cast(tf.argmax(cls_prob[1:], axis=0), tf.int32)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = tf.cast(tf.range(num_anchors), tf.int32)
+        combined = tf.concat((keep, all_idx), axis=0)
+        unique, _, counts = tf.unique_with_counts(combined)
+        non_keep = tf.boolean_mask(unique, counts == 1)
+        all_id_sorted = tf.concat((keep, non_keep), axis=0)
+        # Set non-kept boxes' class to -1
+        updates = tf.fill([tf.shape(non_keep)[0]], -1)
+        class_id = tf.tensor_scatter_nd_update(
+            class_id, tf.expand_dims(non_keep, 1), updates)
+        class_id = tf.cast(tf.gather(class_id, all_id_sorted), tf.float32)
+        conf = tf.gather(conf, all_id_sorted)
+        predicted_bb = tf.gather(predicted_bb, all_id_sorted)
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = conf < pos_threshold
+        class_id = tf.where(below_min_idx, tf.fill(tf.shape(class_id), -1.0),
+                            class_id)
+        conf = tf.where(below_min_idx, 1 - conf, conf)
+        pred_info = tf.concat((tf.expand_dims(class_id, axis=1),
+                               tf.expand_dims(conf, axis=1),
+                               predicted_bb), axis=1)
+        out.append(pred_info)
+    return tf.stack(out)
+
 d2l.DATA_HUB['banana-detection'] = (
     d2l.DATA_URL + 'banana-detection.zip',
     '5de26c8fce5ccdea9f91267273464dc968d20d72')
 
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    from PIL import Image
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        img = Image.open(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}'))
+        images.append(tf.constant(np.array(img), dtype=tf.float32))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, tf.expand_dims(tf.constant(targets, dtype=tf.float32),
+                                  axis=1) / 256
+
+class BananasDataset:
+    """A customized dataset to load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx], self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    train_dataset = BananasDataset(is_train=True)
+    val_dataset = BananasDataset(is_train=False)
+    # Stack images: result shape is (N, H, W, C) — NHWC for TF
+    train_images = tf.stack(train_dataset.features)
+    val_images = tf.stack(val_dataset.features)
+    train_iter = tf.data.Dataset.from_tensor_slices(
+        (train_images, train_dataset.labels))
+    train_iter = train_iter.shuffle(len(train_dataset.features)).batch(
+        batch_size).prefetch(tf.data.AUTOTUNE)
+    val_iter = tf.data.Dataset.from_tensor_slices(
+        (val_images, val_dataset.labels))
+    val_iter = val_iter.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return train_iter, val_iter
+
+class TinySSD(keras.Model):
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes = num_classes
+        self.cls_loss = keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True)
+        for i in range(5):
+            # Equivalent to: self.blk_i, self.cls_i, self.bbox_i
+            setattr(self, f'blk_{i}', get_blk(i))
+            setattr(self, f'cls_{i}', cls_predictor(num_anchors, num_classes))
+            setattr(self, f'bbox_{i}', bbox_predictor(num_anchors))
+
+    def call(self, X, training=False):
+        anchors_list = [None] * 5
+        cls_preds_list = [None] * 5
+        bbox_preds_list = [None] * 5
+        # X is expected in NHWC layout (the Keras default)
+        for i in range(5):
+            blk = getattr(self, f'blk_{i}')
+            cls_pred = getattr(self, f'cls_{i}')
+            bbox_pred = getattr(self, f'bbox_{i}')
+            X, anchors_list[i], cls_preds_list[i], bbox_preds_list[i] = \
+                blk_forward(X, blk, sizes[i], ratios[i],
+                            cls_pred, bbox_pred, training=training)
+        anchors = tf.concat(anchors_list, axis=1)
+        cls_preds = concat_preds(cls_preds_list)
+        cls_preds = tf.reshape(cls_preds,
+                               (tf.shape(cls_preds)[0], -1,
+                                self.num_classes + 1))
+        bbox_preds = concat_preds(bbox_preds_list)
+        return anchors, cls_preds, bbox_preds
+
+    def _compute_ssd_loss(self, cls_preds, cls_labels, bbox_preds,
+                          bbox_labels, bbox_masks):
+        num_classes = self.num_classes + 1
+        cls = self.cls_loss(
+            tf.reshape(cls_labels, [-1]),
+            tf.reshape(cls_preds, [-1, num_classes]))
+        bbox = tf.reduce_mean(
+            tf.abs((bbox_preds * bbox_masks) -
+                   (bbox_labels * bbox_masks)))
+        return cls + bbox
+
+    def train_step(self, data):
+        features, target = data
+        with tf.GradientTape() as tape:
+            anchors, cls_preds, bbox_preds = self(features, training=True)
+            bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
+                anchors, target)
+            loss = self._compute_ssd_loss(cls_preds, cls_labels,
+                                          bbox_preds, bbox_labels, bbox_masks)
+        grads = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
+        # Accumulate metrics without syncing large tensors to host
+        cls_correct = tf.reduce_sum(
+            tf.cast(tf.argmax(cls_preds, axis=-1) ==
+                    tf.cast(cls_labels, tf.int64), tf.int64))
+        cls_total = tf.cast(tf.size(cls_labels), tf.int64)
+        bbox_abs = tf.reduce_sum(
+            tf.abs((bbox_preds * bbox_masks) - (bbox_labels * bbox_masks)))
+        bbox_total = tf.cast(tf.size(bbox_labels), tf.float32)
+        return {'loss': loss,
+                'cls_correct': cls_correct, 'cls_total': cls_total,
+                'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
+
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+def read_voc_images(voc_dir, is_train=True):
+    """Read all VOC feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    from PIL import Image
+    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
+                             'train.txt' if is_train else 'val.txt')
+    with open(txt_fname, 'r') as f:
+        images = f.read().split()
+    features, labels = [], []
+    for i, fname in enumerate(images):
+        features.append(np.array(Image.open(os.path.join(
+            voc_dir, 'JPEGImages', f'{fname}.jpg'))))
+        labels.append(np.array(Image.open(os.path.join(
+            voc_dir, 'SegmentationClass', f'{fname}.png')).convert('RGB')))
+    return features, labels
 
 VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
                 [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
@@ -1506,6 +2018,108 @@ VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
                'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
                'diningtable', 'dog', 'horse', 'motorbike', 'person',
                'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+def voc_colormap2label():
+    """Build the mapping from RGB to class indices for VOC labels.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap2label = np.zeros(256 ** 3, dtype=np.int32)
+    for i, colormap in enumerate(VOC_COLORMAP):
+        colormap2label[
+            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
+    return colormap2label
+
+def voc_label_indices(colormap, colormap2label):
+    """Map any RGB values in VOC labels to their class indices.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap = colormap.astype(np.int32)
+    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
+           + colormap[:, :, 2])
+    return colormap2label[idx]
+
+def voc_rand_crop(feature, label, height, width):
+    """Randomly crop both feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    # Stack feature (HWC) and label (HWC) along channel axis, crop jointly,
+    # then split so both get the exact same random crop.
+    combined = np.concatenate([feature, label], axis=-1)  # HW x (C+3)
+    combined_t = tf.constant(combined)
+    crop = tf.image.random_crop(combined_t, size=[height, width,
+                                                  combined.shape[-1]])
+    crop = crop.numpy()
+    return crop[:, :, :3], crop[:, :, 3:]
+
+class VOCSegDataset:
+    """A customized dataset to load the VOC dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+
+    def __init__(self, is_train, crop_size, voc_dir):
+        self.rgb_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        self.rgb_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+        self.crop_size = crop_size
+        features, labels = read_voc_images(voc_dir, is_train=is_train)
+        self.features = [self.normalize_image(feature)
+                         for feature in self.filter(features)]
+        self.labels = self.filter(labels)
+        self.colormap2label = voc_colormap2label()
+        print('read ' + str(len(self.features)) + ' examples')
+
+    def normalize_image(self, img):
+        return (img.astype(np.float32) / 255 - self.rgb_mean) / self.rgb_std
+
+    def filter(self, imgs):
+        return [img for img in imgs if (
+            img.shape[0] >= self.crop_size[0] and
+            img.shape[1] >= self.crop_size[1])]
+
+    def __getitem__(self, idx):
+        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
+                                       *self.crop_size)
+        # feature: HWC float32; label: HWC uint8 RGB -> class indices HW int32
+        label_idx = voc_label_indices(label, self.colormap2label)
+        return (tf.constant(feature), tf.cast(tf.constant(label_idx),
+                                              tf.int32))
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_voc(batch_size, crop_size):
+    """Load the VOC semantic segmentation dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    voc_dir = d2l.download_extract('voc2012', os.path.join(
+        'VOCdevkit', 'VOC2012'))
+    train_dataset = VOCSegDataset(True, crop_size, voc_dir)
+    test_dataset = VOCSegDataset(False, crop_size, voc_dir)
+    n_train = len(train_dataset)
+    n_test = len(test_dataset)
+    # Drop last partial batch
+    n_train = (n_train // batch_size) * batch_size
+    n_test = (n_test // batch_size) * batch_size
+    def make_generator(dataset, n):
+        def gen():
+            idxs = np.random.permutation(len(dataset))[:n]
+            for i in idxs:
+                feat, label = dataset[i]
+                yield feat, label
+        return gen
+    def make_tf_dataset(dataset, n, shuffle):
+        feat0, label0 = dataset[0]
+        ds = tf.data.Dataset.from_generator(
+            make_generator(dataset, n),
+            output_signature=(
+                tf.TensorSpec(shape=feat0.shape, dtype=tf.float32),
+                tf.TensorSpec(shape=label0.shape, dtype=tf.int32)))
+        if shuffle:
+            ds = ds.shuffle(buffer_size=min(n, 1000))
+        ds = ds.batch(batch_size, drop_remainder=True)
+        return ds
+    train_iter = make_tf_dataset(train_dataset, n_train, shuffle=True)
+    test_iter = make_tf_dataset(test_dataset, n_test, shuffle=False)
+    return train_iter, test_iter
 
 d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
                                 '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
@@ -1690,6 +2304,31 @@ def _pad_ptb(all_centers, all_contexts, all_negatives):
         labels[i, :len(c)] = 1.
     return centers, contexts_negatives, masks, labels
 
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """Download the PTB dataset and then load it into memory.
+
+    Defined in :numref:`sec_word2vec_data`"""
+    sentences = read_ptb()
+    vocab = d2l.Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(
+        corpus, max_window_size)
+    all_negatives = get_negatives(
+        all_contexts, vocab, counter, num_noise_words)
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    # centers shape: (N,) -> (N, 1) to match batchify convention
+    centers_t = tf.constant(centers[:, None], dtype=tf.int64)
+    cn_t = tf.constant(cn, dtype=tf.int64)
+    masks_t = tf.constant(masks, dtype=tf.float32)
+    labels_t = tf.constant(labels, dtype=tf.float32)
+    dataset = tf.data.Dataset.from_tensor_slices(
+        (centers_t, cn_t, masks_t, labels_t))
+    dataset = dataset.shuffle(buffer_size=len(centers)).batch(
+        batch_size).prefetch(tf.data.AUTOTUNE)
+    return dataset, vocab
+
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
                                 '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
 
@@ -1716,24 +2355,20 @@ class TokenEmbedding:
     def _load_embedding(self, embedding_name):
         idx_to_token, idx_to_vec = ['<unk>'], []
         data_dir = d2l.download_extract(embedding_name)
-        # GloVe website: https://nlp.stanford.edu/projects/glove/
-        # fastText website: https://fasttext.cc/
         with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
             for line in f:
                 elems = line.rstrip().split(' ')
                 token, elems = elems[0], [float(elem) for elem in elems[1:]]
-                # Skip header information, such as the top row in fastText
                 if len(elems) > 1:
                     idx_to_token.append(token)
                     idx_to_vec.append(elems)
         idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
-        return idx_to_token, d2l.tensor(idx_to_vec)
+        return idx_to_token, tf.constant(idx_to_vec, dtype=tf.float32)
 
     def __getitem__(self, tokens):
         indices = [self.token_to_idx.get(token, self.unknown_idx)
                    for token in tokens]
-        vecs = self.idx_to_vec[d2l.tensor(indices)]
-        return vecs
+        return tf.gather(self.idx_to_vec, indices)
 
     def __len__(self):
         return len(self.idx_to_token)
@@ -1749,6 +2384,103 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
         tokens += tokens_b + ['<sep>']
         segments += [1] * (len(tokens_b) + 1)
     return tokens, segments
+
+class BERTEncoder(keras.layers.Layer):
+    """BERT encoder.
+
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, max_len=1000, **kwargs):
+        super(BERTEncoder, self).__init__(**kwargs)
+        self.token_embedding = keras.layers.Embedding(vocab_size, num_hiddens)
+        self.segment_embedding = keras.layers.Embedding(2, num_hiddens)
+        # In BERT, positional embeddings are learnable, thus we create a
+        # trainable variable of positional embeddings that are long enough
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, max_len, num_hiddens),
+            initializer='random_normal', trainable=True)
+        norm_shape = [num_hiddens]
+        # BERT's attention sublayers use biased projections; the default for
+        # `TransformerEncoderBlock` is `bias=False`, so override here.
+        self.blks = [d2l.TransformerEncoderBlock(
+            num_hiddens, num_hiddens, num_hiddens, num_hiddens, norm_shape,
+            ffn_num_hiddens, num_heads, dropout, bias=True)
+            for _ in range(num_blks)]
+
+    def call(self, tokens, segments, valid_lens, training=False, **kwargs):
+        # Shape of `X` remains unchanged in the following code snippet:
+        # (batch size, max sequence length, `num_hiddens`)
+        X = self.token_embedding(tokens) + self.segment_embedding(segments)
+        X = X + self.pos_embedding[:, :tf.shape(X)[1], :]
+        for blk in self.blks:
+            X = blk(X, valid_lens, training=training)
+        return X
+
+class MaskLM(keras.layers.Layer):
+    """The masked language model task of BERT.
+
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, vocab_size, num_hiddens, **kwargs):
+        super(MaskLM, self).__init__(**kwargs)
+        self.mlp = keras.Sequential([
+            keras.layers.Dense(num_hiddens, activation='relu'),
+            keras.layers.LayerNormalization(),
+            keras.layers.Dense(vocab_size),
+        ])
+
+    def call(self, X, pred_positions, **kwargs):
+        num_pred_positions = pred_positions.shape[1]
+        pred_positions_flat = tf.reshape(pred_positions, [-1])
+        batch_size = tf.shape(X)[0]
+        batch_idx = tf.repeat(tf.range(batch_size), num_pred_positions)
+        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
+        # `batch_idx` is `tf.tensor([0, 0, 0, 1, 1, 1])`
+        indices = tf.stack([batch_idx, pred_positions_flat], axis=1)
+        masked_X = tf.gather_nd(X, indices)
+        masked_X = tf.reshape(masked_X, [batch_size, num_pred_positions, -1])
+        mlm_Y_hat = self.mlp(masked_X)
+        return mlm_Y_hat
+
+class NextSentencePred(keras.layers.Layer):
+    """The next sentence prediction task of BERT.
+
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, **kwargs):
+        super(NextSentencePred, self).__init__(**kwargs)
+        # `output` is reserved on Keras Layer (a read-only property), so use
+        # `dense` for the head.
+        self.dense = keras.layers.Dense(2)
+
+    def call(self, X, **kwargs):
+        # `X` shape: (batch size, `num_hiddens`)
+        return self.dense(X)
+
+class BERTModel(keras.Model):
+    """The BERT model.
+
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
+                 num_heads, num_blks, dropout, max_len=1000):
+        super(BERTModel, self).__init__()
+        self.encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
+                                   num_heads, num_blks, dropout,
+                                   max_len=max_len)
+        self.hidden = keras.layers.Dense(num_hiddens, activation='tanh')
+        self.mlm = MaskLM(vocab_size, num_hiddens)
+        self.nsp = NextSentencePred()
+
+    def call(self, tokens, segments, valid_lens=None, pred_positions=None,
+             training=False, **kwargs):
+        encoded_X = self.encoder(tokens, segments, valid_lens,
+                                 training=training)
+        if pred_positions is not None:
+            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
+        else:
+            mlm_Y_hat = None
+        # The hidden layer of the MLP classifier for next sentence prediction.
+        # 0 is the index of the '<cls>' token
+        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
+        return encoded_X, mlm_Y_hat, nsp_Y_hat
 
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
@@ -1831,6 +2563,100 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
 
+def _pad_bert_inputs(examples, max_len, vocab):
+    max_num_mlm_preds = round(max_len * 0.15)
+    all_token_ids, all_segments, valid_lens,  = [], [], []
+    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
+    nsp_labels = []
+    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
+         is_next) in examples:
+        all_token_ids.append(token_ids + [vocab['<pad>']] * (
+            max_len - len(token_ids)))
+        all_segments.append(segments + [0] * (max_len - len(segments)))
+        # `valid_lens` excludes count of '<pad>' tokens
+        valid_lens.append(float(len(token_ids)))
+        all_pred_positions.append(pred_positions + [0] * (
+            max_num_mlm_preds - len(pred_positions)))
+        # Predictions of padded tokens will be filtered out in the loss via
+        # multiplication of 0 weights
+        all_mlm_weights.append(
+            [1.0] * len(mlm_pred_label_ids) + [0.0] * (
+                max_num_mlm_preds - len(pred_positions)))
+        all_mlm_labels.append(mlm_pred_label_ids + [0] * (
+            max_num_mlm_preds - len(mlm_pred_label_ids)))
+        nsp_labels.append(int(is_next))
+    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
+            all_mlm_weights, all_mlm_labels, nsp_labels)
+
+class _WikiTextDataset:
+    def __init__(self, paragraphs, max_len):
+        # Input `paragraphs[i]` is a list of sentence strings representing a
+        # paragraph; while output `paragraphs[i]` is a list of sentences
+        # representing a paragraph, where each sentence is a list of tokens
+        paragraphs = [d2l.tokenize(
+            paragraph, token='word') for paragraph in paragraphs]
+        sentences = [sentence for paragraph in paragraphs
+                     for sentence in paragraph]
+        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
+            '<pad>', '<mask>', '<cls>', '<sep>'])
+        # Get data for the next sentence prediction task
+        examples = []
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(
+                paragraph, paragraphs, self.vocab, max_len))
+        # Get data for the masked language model task
+        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
+                      + (segments, is_next))
+                     for tokens, segments, is_next in examples]
+        # Pad inputs
+        (self.all_token_ids, self.all_segments, self.valid_lens,
+         self.all_pred_positions, self.all_mlm_weights,
+         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
+            examples, max_len, self.vocab)
+
+    def __len__(self):
+        return len(self.all_token_ids)
+
+def load_data_wiki(batch_size, max_len):
+    """Load the WikiText-2 dataset.
+
+    Defined in :numref:`sec_bert-dataset`"""
+    paragraphs = _read_wiki()
+    train_set = _WikiTextDataset(paragraphs, max_len)
+    AUTOTUNE = tf.data.AUTOTUNE
+    train_iter = tf.data.Dataset.from_tensor_slices((
+        tf.constant(train_set.all_token_ids, dtype=tf.int32),
+        tf.constant(train_set.all_segments, dtype=tf.int32),
+        tf.constant(train_set.valid_lens, dtype=tf.float32),
+        tf.constant(train_set.all_pred_positions, dtype=tf.int32),
+        tf.constant(train_set.all_mlm_weights, dtype=tf.float32),
+        tf.constant(train_set.all_mlm_labels, dtype=tf.int32),
+        tf.constant(train_set.nsp_labels, dtype=tf.int32),
+    )).shuffle(buffer_size=10000).batch(batch_size).prefetch(AUTOTUNE)
+    return train_iter, train_set.vocab
+
+def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
+                         valid_lens_x, pred_positions_X, mlm_weights_X,
+                         mlm_Y, nsp_y, training=True):
+    mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    # Forward pass
+    _, mlm_Y_hat, nsp_Y_hat = net(
+        tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
+                                      dtype=tf.float32),
+        pred_positions_X, training=training)
+    # Compute masked language model loss (mask per-token losses before summing)
+    mlm_l = mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
+                        tf.reshape(mlm_Y_hat, [-1, vocab_size]))
+    mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
+        tf.reduce_sum(mlm_weights_X) + 1e-8)
+    # Compute next sentence prediction loss
+    nsp_l = tf.reduce_mean(nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
+    l = mlm_l + nsp_l
+    return mlm_l, nsp_l, l
+
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
                           '01ada507287d82875905620988597833ad4e0903')
 
@@ -1848,6 +2674,40 @@ def read_imdb(data_dir, is_train):
                 data.append(review)
                 labels.append(1 if label == 'pos' else 0)
     return data, labels
+
+def load_data_imdb(batch_size, num_steps=500):
+    """Return data iterators and the vocabulary of the IMDb review dataset.
+
+    Defined in :numref:`sec_sentiment`"""
+    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
+    train_data = read_imdb(data_dir, True)
+    test_data = read_imdb(data_dir, False)
+    train_tokens = d2l.tokenize(train_data[0], token='word')
+    test_tokens = d2l.tokenize(test_data[0], token='word')
+    vocab = d2l.Vocab(train_tokens, min_freq=5)
+    train_features = np.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
+    test_features = np.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
+    train_iter = d2l.load_array((train_features, np.array(train_data[1])),
+                                batch_size)
+    test_iter = d2l.load_array((test_features, np.array(test_data[1])),
+                               batch_size,
+                               is_train=False)
+    return train_iter, test_iter, vocab
+
+def predict_sentiment(net, vocab, sequence):
+    """Predict the sentiment of a text sequence.
+
+    Defined in :numref:`sec_sentiment_rnn`"""
+    sequence = tf.constant(vocab[sequence.split()], dtype=tf.int32)
+    sequence = tf.reshape(sequence, (1, -1))
+    label = tf.argmax(net(sequence, training=False), axis=1)
+    return 'positive' if int(label[0]) == 1 else 'negative'
+
+d2l.DATA_HUB['SNLI'] = (
+    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
+    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
 
 def read_snli(data_dir, is_train):
     """Read the SNLI dataset into premises, hypotheses, and labels.
@@ -1870,9 +2730,242 @@ def read_snli(data_dir, is_train):
     labels = [label_set[row[0]] for row in rows if row[0] in label_set]
     return premises, hypotheses, labels
 
+class SNLIDataset:
+    """A customized dataset to load the SNLI dataset.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    def __init__(self, dataset, num_steps, vocab=None):
+        self.num_steps = num_steps
+        all_premise_tokens = d2l.tokenize(dataset[0])
+        all_hypothesis_tokens = d2l.tokenize(dataset[1])
+        if vocab is None:
+            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
+                                   min_freq=5, reserved_tokens=['<pad>'])
+        else:
+            self.vocab = vocab
+        self.premises = self._pad(all_premise_tokens)
+        self.hypotheses = self._pad(all_hypothesis_tokens)
+        self.labels = np.array(dataset[2])
+        print('read ' + str(len(self.premises)) + ' examples')
+
+    def _pad(self, lines):
+        return np.array([d2l.truncate_pad(
+            self.vocab[line], self.num_steps, self.vocab['<pad>'])
+                         for line in lines])
+
+    def __getitem__(self, idx):
+        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
+
+    def __len__(self):
+        return len(self.premises)
+
+def load_data_snli(batch_size, num_steps=50):
+    """Download the SNLI dataset and return data iterators and vocabulary.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    data_dir = d2l.download_extract('SNLI')
+    train_data = read_snli(data_dir, True)
+    test_data = read_snli(data_dir, False)
+    train_set = SNLIDataset(train_data, num_steps)
+    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
+    AUTOTUNE = tf.data.AUTOTUNE
+    train_iter = tf.data.Dataset.from_tensor_slices(
+        (train_set.premises, train_set.hypotheses, train_set.labels)
+    ).shuffle(buffer_size=len(train_set.labels)).batch(batch_size).prefetch(AUTOTUNE)
+    test_iter = tf.data.Dataset.from_tensor_slices(
+        (test_set.premises, test_set.hypotheses, test_set.labels)
+    ).batch(batch_size).prefetch(AUTOTUNE)
+    return train_iter, test_iter, train_set.vocab
+
+def predict_snli(net, vocab, premise, hypothesis):
+    """Predict the logical relationship between the premise and hypothesis.
+
+    Defined in :numref:`sec_natural-language-inference-attention`"""
+    premise = tf.constant([vocab[premise]], dtype=tf.int32)
+    hypothesis = tf.constant([vocab[hypothesis]], dtype=tf.int32)
+    label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
+    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
+            else 'neutral'
+
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
+
+class HPOTrainer(d2l.Trainer):
+    def validation_error(self):
+        accuracy = 0
+        val_batch_idx = 0
+        for batch in self.val_dataloader:
+            x, y = self.prepare_batch(batch)
+            y_hat = self.model(x, training=False)
+            accuracy += self.model.accuracy(y_hat, y)
+            val_batch_idx += 1
+        return 1 - accuracy / val_batch_idx
+
+class HPOSearcher(d2l.HyperParameters):
+    def sample_configuration() -> dict:
+        raise NotImplementedError
+
+    def update(self, config: dict, error: float, additional_info=None):
+        pass
+
+class RandomSearcher(HPOSearcher):
+    def __init__(self, config_space: dict, initial_config=None):
+        self.save_hyperparameters()
+
+    def sample_configuration(self) -> dict:
+        if self.initial_config is not None:
+            result = self.initial_config
+            self.initial_config = None
+        else:
+            result = {
+                name: domain.rvs()
+                for name, domain in self.config_space.items()
+            }
+        return result
+
+class HPOScheduler(d2l.HyperParameters):
+    def suggest(self) -> dict:
+        raise NotImplementedError
+    
+    def update(self, config: dict, error: float, info=None):
+        raise NotImplementedError
+
+class BasicScheduler(HPOScheduler):
+    def __init__(self, searcher: HPOSearcher):
+        self.save_hyperparameters()
+
+    def suggest(self) -> dict:
+        return self.searcher.sample_configuration()
+
+    def update(self, config: dict, error: float, info=None):
+        self.searcher.update(config, error, additional_info=info)
+
+class HPOTuner(d2l.HyperParameters):
+    def __init__(self, scheduler: HPOScheduler, objective: callable):
+        self.save_hyperparameters()
+        # Bookkeeping results for plotting
+        self.incumbent = None
+        self.incumbent_error = None
+        self.incumbent_trajectory = []
+        self.cumulative_runtime = []
+        self.current_runtime = 0
+        self.records = []
+
+    def run(self, number_of_trials):
+        for i in range(number_of_trials):
+            start_time = time.time()
+            config = self.scheduler.suggest()
+            print(f"Trial {i}: config = {config}")
+            error = self.objective(**config)
+            error = float(error)
+            self.scheduler.update(config, error)
+            runtime = time.time() - start_time
+            self.bookkeeping(config, error, runtime)
+            print(f"    error = {error}, runtime = {runtime}")
+
+    def bookkeeping(self, config: dict, error: float, runtime: float):
+        self.records.append({"config": config, "error": error, "runtime": runtime})
+        # Check if the last hyperparameter configuration performs better 
+        # than the incumbent
+        if self.incumbent is None or self.incumbent_error > error:
+            self.incumbent = config
+            self.incumbent_error = error
+        # Add current best observed performance to the optimization trajectory
+        self.incumbent_trajectory.append(self.incumbent_error)
+        # Update runtime
+        self.current_runtime += runtime
+        self.cumulative_runtime.append(self.current_runtime)
+
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
+    import keras
+    model = keras.Sequential([
+        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
+                            input_shape=(28, 28, 1)),
+        keras.layers.MaxPooling2D(pool_size=2, strides=2),
+        keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
+        keras.layers.MaxPooling2D(pool_size=2, strides=2),
+        keras.layers.Flatten(),
+        keras.layers.Dense(120, activation='relu'),
+        keras.layers.Dense(84, activation='relu'),
+        keras.layers.Dense(10),
+    ])
+    model.compile(
+        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy'],
+    )
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    train_ds = data.get_dataloader(True)
+    val_ds = data.get_dataloader(False)
+    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
+                        verbose=0)
+    val_acc = history.history['val_accuracy'][-1]
+    return 1 - val_acc
+
+class SuccessiveHalvingScheduler(d2l.HPOScheduler):
+    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
+        self.save_hyperparameters()
+        # Compute K, which is later used to determine the number of configurations
+        self.K = int(np.log(r_max / r_min) / np.log(eta))
+        # Define the rungs
+        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
+        if r_max not in self.rung_levels:
+            # The final rung should be r_max
+            self.rung_levels.append(r_max)
+            self.K += 1
+        # Bookkeeping
+        self.observed_error_at_rungs = defaultdict(list)
+        self.all_observed_error_at_rungs = defaultdict(list)
+        # Our processing queue
+        self.queue = []
+
+    def suggest(self):
+        if len(self.queue) == 0:
+            # Start a new round of successive halving
+            # Number of configurations for the first rung:
+            n0 = int(self.prefact * self.eta ** self.K)
+            for _ in range(n0):
+                config = self.searcher.sample_configuration()
+                config["max_epochs"] = self.r_min  # Set r = r_min
+                self.queue.append(config)
+        # Return an element from the queue
+        return self.queue.pop()
+
+    def update(self, config: dict, error: float, info=None):
+        ri = int(config["max_epochs"])  # Rung r_i
+        # Update our searcher, e.g if we use Bayesian optimization later
+        self.searcher.update(config, error, additional_info=info)
+        self.all_observed_error_at_rungs[ri].append((config, error))
+        if ri < self.r_max:
+            # Bookkeeping
+            self.observed_error_at_rungs[ri].append((config, error))
+            # Determine how many configurations should be evaluated on this rung
+            ki = self.K - self.rung_levels.index(ri)
+            ni = int(self.prefact * self.eta ** ki)
+            # If we observed all configuration on this rung r_i, we estimate the
+            # top 1 / eta configuration, add them to queue and promote them for
+            # the next rung r_{i+1}
+            if len(self.observed_error_at_rungs[ri]) >= ni:
+                kiplus1 = ki - 1
+                niplus1 = int(self.prefact * self.eta ** kiplus1)
+                best_performing_configurations = self.get_top_n_configurations(
+                    rung_level=ri, n=niplus1
+                )
+                riplus1 = self.rung_levels[self.K - kiplus1]  # r_{i+1}
+                # Queue may not be empty: insert new entries at the beginning
+                self.queue = [
+                    dict(config, max_epochs=riplus1)
+                    for config in best_performing_configurations
+                ] + self.queue
+                self.observed_error_at_rungs[ri] = []  # Reset
+
+    def get_top_n_configurations(self, rung_level, n):
+        rung = self.observed_error_at_rungs[rung_level]
+        if not rung:
+            return []
+        sorted_rung = sorted(rung, key=lambda x: x[1])
+        return [x[0] for x in sorted_rung[:n]]
 
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.
@@ -2117,6 +3210,10 @@ def accuracy(y_hat, y):
     Defined in :numref:`sec_utils`"""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
+    elif y_hat.dtype != y.dtype:
+        # Binary classification with float scores (logits or probabilities):
+        # threshold at 0 (logits) to get class labels, then reshape to match y.
+        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
     cmp = d2l.astype(y_hat, y.dtype) == y
     return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 

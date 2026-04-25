@@ -819,10 +819,32 @@ def number_headings(text, chapter_number):
 
 
 def convert_index(src_path):
-    """Convert the main book index.md (just the title, TOC is in _quarto.yml)."""
-    return ('---\ntitle: "Dive into Deep Learning"\n---\n\n'
-            'An interactive deep learning book with code, math, '
-            'and discussions.\n')
+    """Convert the main book index.md.
+
+    The TOC ```toc``` blocks are dropped (handled by _quarto.yml).
+    All other content (markdown, raw HTML, divs) passes through so the
+    landing page can be richly designed in index.md.
+    """
+    text = Path(src_path).read_text(encoding='utf-8')
+
+    # Strip ```toc ... ``` fenced blocks (TOC is driven by _quarto.yml).
+    text = re.sub(r'(?ms)^```toc\s*\n.*?^```\s*\n?', '', text)
+
+    # If the source already starts with YAML front matter, keep it as-is;
+    # otherwise inject one with the title + suppressed numbering.
+    if text.lstrip().startswith('---'):
+        return text
+
+    front = (
+        '---\n'
+        'title: "Dive into Deep Learning"\n'
+        'pagetitle: "Dive into Deep Learning"\n'
+        'number-sections: false\n'
+        'toc: false\n'
+        'page-layout: full\n'
+        '---\n\n'
+    )
+    return front + text.lstrip()
 
 # ──────────────────────────────────────────────────────────
 # CLI

@@ -1,6 +1,6 @@
 ```{.python .input  n=1}
 %load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
+tab.interact_select('pytorch', 'tensorflow', 'jax')
 ```
 
 # Hyperparameter Optimization API
@@ -29,6 +29,17 @@ from scipy import stats
 ```
 
 ```{.python .input  n=2}
+%%tab tensorflow
+import time
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
+from d2l import tensorflow as d2l
+import keras
+import numpy as np
+from scipy import stats
+```
+
+```{.python .input  n=2}
 %%tab jax
 import time
 from d2l import jax as d2l
@@ -53,7 +64,7 @@ algorithms are able to sample more promising candidates over time. We add the
 then be exploited to improve our sampling distribution.
 
 ```{.python .input  n=3}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 class HPOSearcher(d2l.HyperParameters):  #@save
     def sample_configuration() -> dict:
         raise NotImplementedError
@@ -68,7 +79,7 @@ prescribe the first configuration to be evaluated via `initial_config`, while
 subsequent ones are drawn at random.
 
 ```{.python .input  n=4}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 class RandomSearcher(HPOSearcher):  #@save
     def __init__(self, config_space: dict, initial_config=None):
         self.save_hyperparameters()
@@ -97,7 +108,7 @@ model for). The `update` method is called whenever a trial returns a new
 observation.
 
 ```{.python .input  n=5}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 class HPOScheduler(d2l.HyperParameters):  #@save
     def suggest(self) -> dict:
         raise NotImplementedError
@@ -111,7 +122,7 @@ scheduler that schedules a new configuration every time new resources become
 available.
 
 ```{.python .input  n=6}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 class BasicScheduler(HPOScheduler):  #@save
     def __init__(self, searcher: HPOSearcher):
         self.save_hyperparameters()
@@ -158,6 +169,32 @@ class HPOTuner(d2l.HyperParameters):  #@save
 ```
 
 ```{.python .input  n=7}
+%%tab tensorflow
+class HPOTuner(d2l.HyperParameters):  #@save
+    def __init__(self, scheduler: HPOScheduler, objective: callable):
+        self.save_hyperparameters()
+        # Bookkeeping results for plotting
+        self.incumbent = None
+        self.incumbent_error = None
+        self.incumbent_trajectory = []
+        self.cumulative_runtime = []
+        self.current_runtime = 0
+        self.records = []
+
+    def run(self, number_of_trials):
+        for i in range(number_of_trials):
+            start_time = time.time()
+            config = self.scheduler.suggest()
+            print(f"Trial {i}: config = {config}")
+            error = self.objective(**config)
+            error = float(error)
+            self.scheduler.update(config, error)
+            runtime = time.time() - start_time
+            self.bookkeeping(config, error, runtime)
+            print(f"    error = {error}, runtime = {runtime}")
+```
+
+```{.python .input  n=7}
 %%tab jax
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
@@ -196,7 +233,7 @@ make a decision (call of `scheduler.suggest`). In the sequel, we will plot
 found by an optimizer works, but also how quickly an optimizer is able to find it.
 
 ```{.python .input  n=8}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 @d2l.add_to_class(HPOTuner)  #@save
 def bookkeeping(self, config: dict, error: float, runtime: float):
     self.records.append({"config": config, "error": error, "runtime": runtime})
@@ -229,6 +266,35 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     trainer.fit(model=model, data=data)
     validation_error = trainer.validation_error()
     return validation_error
+```
+
+```{.python .input  n=9}
+%%tab tensorflow
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
+    import keras
+    model = keras.Sequential([
+        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
+                            input_shape=(28, 28, 1)),
+        keras.layers.MaxPooling2D(pool_size=2, strides=2),
+        keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
+        keras.layers.MaxPooling2D(pool_size=2, strides=2),
+        keras.layers.Flatten(),
+        keras.layers.Dense(120, activation='relu'),
+        keras.layers.Dense(84, activation='relu'),
+        keras.layers.Dense(10),
+    ])
+    model.compile(
+        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy'],
+    )
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    train_ds = data.get_dataloader(True)
+    val_ds = data.get_dataloader(False)
+    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
+                        verbose=0)
+    val_acc = history.history['val_accuracy'][-1]
+    return 1 - val_acc
 ```
 
 ```{.python .input  n=9}
@@ -321,6 +387,10 @@ algorithms, and potential pitfalls one needs to be aware of.
 
 
 :begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/12092)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/12092)
 :end_tab:
 

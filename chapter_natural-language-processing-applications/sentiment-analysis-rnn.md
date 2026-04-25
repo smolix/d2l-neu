@@ -64,6 +64,17 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
 ## Representing Single Text with RNNs
 
 In text classification tasks,
@@ -186,6 +197,37 @@ class BiRNN(nn.Module):
         return outs
 ```
 
+```{.python .input}
+#@tab tensorflow
+class BiRNN(d2l.Classifier):
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.embedding = keras.layers.Embedding(vocab_size, embed_size)
+        # Stack bidirectional LSTM layers; only the last layer returns a
+        # single vector (return_sequences=False by default).
+        self.encoder = keras.Sequential([
+            keras.layers.Bidirectional(
+                keras.layers.LSTM(num_hiddens, return_sequences=True))
+            for _ in range(num_layers - 1)
+        ] + [
+            keras.layers.Bidirectional(
+                keras.layers.LSTM(num_hiddens, return_sequences=True))
+        ])
+        self.decoder = keras.layers.Dense(2)
+
+    def call(self, inputs, training=False):
+        # inputs shape: (batch_size, num_steps)
+        embeddings = self.embedding(inputs)
+        # outputs shape: (batch_size, num_steps, 2 * num_hiddens)
+        outputs = self.encoder(embeddings, training=training)
+        # Concatenate hidden states at initial and final time steps
+        # Shape: (batch_size, 4 * num_hiddens)
+        encoding = tf.concat([outputs[:, 0, :], outputs[:, -1, :]], axis=1)
+        outs = self.decoder(encoding)
+        return outs
+```
+
 Let's construct a bidirectional RNN with two hidden layers to represent single text for sentiment analysis.
 
 ```{.python .input}
@@ -216,6 +258,13 @@ net.apply(init_weights);
 # JAX/Flax modules are initialized lazily; we initialize parameters here
 dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
 params = net.init(jax.random.PRNGKey(0), dummy_input)
+```
+
+```{.python .input}
+#@tab tensorflow
+# Build the model by calling it once on a dummy input
+dummy_input = tf.zeros((1, 500), dtype=tf.int32)
+net(dummy_input)
 ```
 
 ## Loading Pretrained Word Vectors
@@ -260,6 +309,12 @@ net.embedding.weight.requires_grad = False
 params = flax.core.unfreeze(params)
 params['params']['embedding']['embedding'] = jnp.array(embeds)
 params = flax.core.freeze(params)
+```
+
+```{.python .input}
+#@tab tensorflow
+net.embedding.set_weights([np.array(embeds)])
+net.embedding.trainable = False
 ```
 
 ## Training and Evaluating the Model
@@ -326,6 +381,15 @@ for epoch in range(num_epochs):
 params = {'params': params_p}
 ```
 
+```{.python .input}
+#@tab tensorflow
+lr, num_epochs = 0.01, 5
+net.compile(optimizer=keras.optimizers.Adam(lr),
+            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=['accuracy'])
+net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
+```
+
 We define the following function to predict the sentiment of a text sequence using the trained model `net`.
 
 ```{.python .input}
@@ -358,6 +422,17 @@ def predict_sentiment(net, params, vocab, sequence):
     return 'positive' if label == 1 else 'negative'
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def predict_sentiment(net, vocab, sequence):
+    """Predict the sentiment of a text sequence."""
+    sequence = tf.constant(vocab[sequence.split()], dtype=tf.int32)
+    sequence = tf.reshape(sequence, (1, -1))
+    label = tf.argmax(net(sequence, training=False), axis=1)
+    return 'positive' if int(label[0]) == 1 else 'negative'
+```
+
 Finally, let's use the trained model to predict the sentiment for two simple sentences.
 
 ```{.python .input}
@@ -371,6 +446,11 @@ predict_sentiment(net, params, vocab, 'this movie is so great')
 ```
 
 ```{.python .input}
+#@tab tensorflow
+predict_sentiment(net, vocab, 'this movie is so great')
+```
+
+```{.python .input}
 #@tab mxnet, pytorch
 predict_sentiment(net, vocab, 'this movie is so bad')
 ```
@@ -378,6 +458,11 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 ```{.python .input}
 #@tab jax
 predict_sentiment(net, params, vocab, 'this movie is so bad')
+```
+
+```{.python .input}
+#@tab tensorflow
+predict_sentiment(net, vocab, 'this movie is so bad')
 ```
 
 ## Summary
@@ -402,5 +487,9 @@ predict_sentiment(net, params, vocab, 'this movie is so bad')
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1424)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1424)
 :end_tab:

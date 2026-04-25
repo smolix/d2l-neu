@@ -103,6 +103,22 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import numpy as np
+import os
+import re
+
+#@save
+d2l.DATA_HUB['SNLI'] = (
+    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
+    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
+
+data_dir = d2l.download_extract('SNLI')
+```
+
 ### [**Reading the Dataset**]
 
 The original SNLI dataset contains much richer information than what we really need in our experiments. Thus, we define a function `read_snli` to only extract part of the dataset, then return lists of premises, hypotheses, and their labels.
@@ -254,6 +270,37 @@ class SNLIDataset:
         return len(self.premises)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class SNLIDataset:
+    """A customized dataset to load the SNLI dataset."""
+    def __init__(self, dataset, num_steps, vocab=None):
+        self.num_steps = num_steps
+        all_premise_tokens = d2l.tokenize(dataset[0])
+        all_hypothesis_tokens = d2l.tokenize(dataset[1])
+        if vocab is None:
+            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
+                                   min_freq=5, reserved_tokens=['<pad>'])
+        else:
+            self.vocab = vocab
+        self.premises = self._pad(all_premise_tokens)
+        self.hypotheses = self._pad(all_hypothesis_tokens)
+        self.labels = np.array(dataset[2])
+        print('read ' + str(len(self.premises)) + ' examples')
+
+    def _pad(self, lines):
+        return np.array([d2l.truncate_pad(
+            self.vocab[line], self.num_steps, self.vocab['<pad>'])
+                         for line in lines])
+
+    def __getitem__(self, idx):
+        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
+
+    def __len__(self):
+        return len(self.premises)
+```
+
 ### [**Putting It All Together**]
 
 Now we can invoke the `read_snli` function and the `SNLIDataset` class to download the SNLI dataset and return `DataLoader` instances for both training and testing sets, together with the vocabulary of the training set.
@@ -318,6 +365,26 @@ def load_data_snli(batch_size, num_steps=50):
     return train_iter, test_iter, train_set.vocab
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def load_data_snli(batch_size, num_steps=50):
+    """Download the SNLI dataset and return data iterators and vocabulary."""
+    data_dir = d2l.download_extract('SNLI')
+    train_data = read_snli(data_dir, True)
+    test_data = read_snli(data_dir, False)
+    train_set = SNLIDataset(train_data, num_steps)
+    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
+    AUTOTUNE = tf.data.AUTOTUNE
+    train_iter = tf.data.Dataset.from_tensor_slices(
+        (train_set.premises, train_set.hypotheses, train_set.labels)
+    ).shuffle(buffer_size=len(train_set.labels)).batch(batch_size).prefetch(AUTOTUNE)
+    test_iter = tf.data.Dataset.from_tensor_slices(
+        (test_set.premises, test_set.hypotheses, test_set.labels)
+    ).batch(batch_size).prefetch(AUTOTUNE)
+    return train_iter, test_iter, train_set.vocab
+```
+
 Here we set the batch size to 128 and sequence length to 50,
 and invoke the `load_data_snli` function to get the data iterators and vocabulary.
 Then we print the vocabulary size.
@@ -350,6 +417,15 @@ for batch in train_iter:
     break
 ```
 
+```{.python .input}
+#@tab tensorflow
+for premises, hypotheses, labels in train_iter:
+    print(premises.shape)
+    print(hypotheses.shape)
+    print(labels.shape)
+    break
+```
+
 ## Summary
 
 * Natural language inference studies whether a hypothesis can be inferred from a premise, where both are a text sequence.
@@ -371,5 +447,9 @@ for batch in train_iter:
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1388)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1388)
 :end_tab:

@@ -54,6 +54,18 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import math
+import tensorflow as tf
+import keras
+
+batch_size, max_window_size, num_noise_words = 512, 5, 5
+data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
+                                     num_noise_words)
+```
+
 ## The Skip-Gram Model
 
 We implement the skip-gram model
@@ -97,6 +109,15 @@ print(f'Parameter embedding ({params["params"]["embedding"].shape}, '
       f'dtype={params["params"]["embedding"].dtype})')
 ```
 
+```{.python .input}
+#@tab tensorflow
+embed = keras.layers.Embedding(input_dim=20, output_dim=4)
+# Build the layer so weights are allocated
+embed.build((None,))
+print(f'Parameter embeddings ({embed.embeddings.shape}, '
+      f'dtype={embed.embeddings.dtype})')
+```
+
 The input of an embedding layer is the
 index of a token (word).
 For any token index $i$,
@@ -121,6 +142,12 @@ embed(x)
 #@tab jax
 x = jnp.array([[1, 2, 3], [4, 5, 6]])
 embed.apply(params, x)
+```
+
+```{.python .input}
+#@tab tensorflow
+x = tf.constant([[1, 2, 3], [4, 5, 6]])
+embed(x)
 ```
 
 ### Defining the Forward Propagation
@@ -173,6 +200,15 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u,
     return pred
 ```
 
+```{.python .input}
+#@tab tensorflow
+def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
+    v = embed_v(center)
+    u = embed_u(contexts_and_negatives)
+    pred = tf.linalg.matmul(v, tf.transpose(u, perm=[0, 2, 1]))
+    return pred
+```
+
 Let's print the output shape of this `skip_gram` function for some example inputs.
 
 ```{.python .input}
@@ -191,6 +227,12 @@ skip_gram(torch.ones((2, 1), dtype=torch.long),
 skip_gram(jnp.ones((2, 1), dtype=jnp.int32),
           jnp.ones((2, 4), dtype=jnp.int32), embed, embed,
           params, params).shape
+```
+
+```{.python .input}
+#@tab tensorflow
+skip_gram(tf.ones((2, 1), dtype=tf.int32),
+          tf.ones((2, 4), dtype=tf.int32), embed, embed).shape
 ```
 
 ## Training
@@ -236,6 +278,19 @@ def loss(inputs, target, mask=None):
     return out.mean(axis=1)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def loss(inputs, target, mask=None):
+    """Binary cross-entropy loss with masking."""
+    # Use raw per-element sigmoid BCE so we can apply the mask before reducing
+    out = tf.nn.sigmoid_cross_entropy_with_logits(
+        labels=tf.cast(target, tf.float32),
+        logits=tf.cast(inputs, tf.float32))
+    if mask is not None:
+        out = out * tf.cast(mask, tf.float32)
+    return tf.reduce_mean(out, axis=1)
+```
+
 Recall our descriptions
 of the mask variable
 and the label variable in
@@ -246,11 +301,19 @@ binary cross-entropy loss
 for the given variables.
 
 ```{.python .input}
-#@tab all
+#@tab pytorch, mxnet, jax
 pred = d2l.tensor([[1.1, -2.2, 3.3, -4.4]] * 2)
 label = d2l.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
 mask = d2l.tensor([[1, 1, 1, 1], [1, 1, 0, 0]])
 loss(pred, label, mask) * mask.shape[1] / mask.sum(axis=1)
+```
+
+```{.python .input}
+#@tab tensorflow
+pred = d2l.tensor([[1.1, -2.2, 3.3, -4.4]] * 2)
+label = d2l.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+mask = d2l.tensor([[1, 1, 1, 1], [1, 1, 0, 0]], dtype=tf.float32)
+loss(pred, label, mask) * mask.shape[1] / tf.reduce_sum(mask, axis=1)
 ```
 
 Below shows
@@ -304,6 +367,15 @@ net = nn.Sequential(nn.Embedding(num_embeddings=len(vocab),
 embed_size = 100
 embed_v = nn.Embed(num_embeddings=len(vocab), features=embed_size)
 embed_u = nn.Embed(num_embeddings=len(vocab), features=embed_size)
+```
+
+```{.python .input}
+#@tab tensorflow
+embed_size = 100
+embed_v = keras.layers.Embedding(input_dim=len(vocab),
+                                 output_dim=embed_size)
+embed_u = keras.layers.Embedding(input_dim=len(vocab),
+                                 output_dim=embed_size)
 ```
 
 ### Defining the Training Loop
@@ -422,6 +494,35 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
     return all_params
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(embed_v, embed_u, data_iter, lr, num_epochs):
+    optimizer = keras.optimizers.Adam(learning_rate=lr)
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[1, num_epochs])
+    # Sum of normalized losses, no. of normalized losses
+    metric = d2l.Accumulator(2)
+    for epoch in range(num_epochs):
+        timer, num_batches = d2l.Timer(), sum(1 for _ in data_iter)
+        for i, batch in enumerate(data_iter):
+            center, context_negative, mask, label = batch
+            with tf.GradientTape() as tape:
+                pred = skip_gram(center, context_negative, embed_v, embed_u)
+                l = (loss(tf.reshape(pred, tf.shape(label)), label, mask)
+                     / tf.reduce_sum(mask, axis=1) * tf.cast(
+                         tf.shape(mask)[1], tf.float32))
+                l_sum = tf.reduce_sum(l)
+            params = embed_v.trainable_variables + embed_u.trainable_variables
+            grads = tape.gradient(l_sum, params)
+            optimizer.apply_gradients(zip(grads, params))
+            metric.add(float(l_sum), int(tf.size(l)))
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, '
+          f'{metric[1] / timer.stop():.1f} tokens/sec')
+```
+
 Now we can train a skip-gram model using negative sampling.
 
 ```{.python .input}
@@ -434,6 +535,12 @@ train(net, data_iter, lr, num_epochs)
 #@tab jax
 lr, num_epochs = 0.002, 5
 all_params = train(embed_v, embed_u, data_iter, lr, num_epochs)
+```
+
+```{.python .input}
+#@tab tensorflow
+lr, num_epochs = 0.002, 5
+train(embed_v, embed_u, data_iter, lr, num_epochs)
 ```
 
 ## Applying Word Embeddings
@@ -492,6 +599,21 @@ def get_similar_tokens(query_token, k, embed_params):
 get_similar_tokens('chip', 3, all_params['v'])
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_similar_tokens(query_token, k, embed):
+    W = embed.embeddings
+    x = W[vocab[query_token]]
+    # Compute the cosine similarity. Add 1e-9 for numerical stability
+    cos = tf.linalg.matvec(W, x) / tf.sqrt(
+        tf.reduce_sum(W * W, axis=1) * tf.reduce_sum(x * x) + 1e-9)
+    topk = tf.argsort(-cos)[:k + 1]
+    for i in topk[1:]:  # Remove the input words
+        print(f'cosine sim={float(cos[i]):.3f}: {vocab.to_tokens(int(i))}')
+
+get_similar_tokens('chip', 3, embed_v)
+```
+
 ## Summary
 
 * We can train a skip-gram model with negative sampling using embedding layers and the binary cross-entropy loss.
@@ -512,5 +634,9 @@ get_similar_tokens('chip', 3, all_params['v'])
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1335)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1335)
 :end_tab:

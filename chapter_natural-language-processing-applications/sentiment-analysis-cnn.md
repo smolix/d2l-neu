@@ -73,6 +73,17 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
 ## One-Dimensional Convolutions
 
 Before introducing the model,
@@ -120,6 +131,14 @@ def corr1d(X, K):
     for i in range(Y.shape[0]):
         Y = Y.at[i].set((X[i: i + w] * K).sum())
     return Y
+```
+
+```{.python .input}
+#@tab tensorflow
+def corr1d(X, K):
+    w = K.shape[0]
+    Y = [tf.reduce_sum(X[i: i + w] * K) for i in range(X.shape[0] - w + 1)]
+    return tf.stack(Y)
 ```
 
 We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_conv1d` to validate the output of the above one-dimensional cross-correlation implementation.
@@ -382,6 +401,35 @@ class TextCNN(nn.Module):
         return outputs
 ```
 
+```{.python .input}
+#@tab tensorflow
+class TextCNN(d2l.Classifier):
+    def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.embedding = keras.layers.Embedding(vocab_size, embed_size)
+        # The embedding layer not to be trained
+        self.constant_embedding = keras.layers.Embedding(vocab_size, embed_size)
+        self.dropout = keras.layers.Dropout(0.5)
+        self.decoder = keras.layers.Dense(2)
+        # Create multiple one-dimensional convolutional layers
+        self.convs = [keras.layers.Conv1D(c, k, activation='relu')
+                      for c, k in zip(num_channels, kernel_sizes)]
+        self.pool = keras.layers.GlobalMaxPooling1D()
+
+    def call(self, inputs, training=False):
+        # Concatenate two embedding layer outputs with shape
+        # (batch_size, num_steps, 2 * embed_size) along the last axis
+        embeddings = tf.concat(
+            [self.embedding(inputs), self.constant_embedding(inputs)], axis=2)
+        # For each convolutional layer, apply conv → global max pooling
+        # and collect a (batch_size, num_channels) vector per kernel
+        encoding = tf.concat(
+            [self.pool(conv(embeddings)) for conv in self.convs], axis=1)
+        outputs = self.decoder(self.dropout(encoding, training=training))
+        return outputs
+```
+
 Let's create a textCNN instance.
 It has 3 convolutional layers with kernel widths of 3, 4, and 5, all with 100 output channels.
 
@@ -414,6 +462,16 @@ net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
 # Initialize parameters
 dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
 params = net.init(jax.random.PRNGKey(0), dummy_input, deterministic=True)
+```
+
+```{.python .input}
+#@tab tensorflow
+embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
+devices = d2l.try_all_gpus()
+net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
+# Build the model by calling it once on a dummy input
+dummy_input = tf.zeros((1, 500), dtype=tf.int32)
+net(dummy_input)
 ```
 
 ### Loading Pretrained Word Vectors
@@ -452,6 +510,15 @@ params = flax.core.unfreeze(params)
 params['params']['embedding']['embedding'] = jnp.array(embeds)
 params['params']['constant_embedding']['embedding'] = jnp.array(embeds)
 params = flax.core.freeze(params)
+```
+
+```{.python .input}
+#@tab tensorflow
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
+embeds = glove_embedding[vocab.idx_to_token]
+net.embedding.set_weights([np.array(embeds)])
+net.constant_embedding.set_weights([np.array(embeds)])
+net.constant_embedding.trainable = False
 ```
 
 ### Training and Evaluating the Model
@@ -516,6 +583,15 @@ for epoch in range(num_epochs):
           f'test acc {correct / total:.3f}')
 ```
 
+```{.python .input}
+#@tab tensorflow
+lr, num_epochs = 0.001, 5
+net.compile(optimizer=keras.optimizers.Adam(lr),
+            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=['accuracy'])
+net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
+```
+
 Below we use the trained model to predict the sentiment for two simple sentences.
 
 ```{.python .input}
@@ -532,6 +608,11 @@ logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
 ```
 
 ```{.python .input}
+#@tab tensorflow
+d2l.predict_sentiment(net, vocab, 'this movie is so great')
+```
+
+```{.python .input}
 #@tab mxnet, pytorch
 d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 ```
@@ -542,6 +623,11 @@ tokens = jnp.array(vocab['this movie is so bad'.split()])
 logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
                    rngs={'dropout': jax.random.PRNGKey(0)})
 'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
+```
+
+```{.python .input}
+#@tab tensorflow
+d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 ```
 
 ## Summary
@@ -567,5 +653,9 @@ logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1425)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1425)
 :end_tab:

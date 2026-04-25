@@ -107,6 +107,14 @@ from jax import numpy as jnp
 import numpy as np
 ```
 
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+```
+
 ## [**A Toy Network**]
 
 We use LeNet as introduced in :numref:`sec_lenet` (with slight modifications). We define it from scratch to illustrate parameter exchange and synchronization in detail.
@@ -224,6 +232,40 @@ def lenet(params, X):
     return y_hat
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Initialize model parameters (NHWC layout for TF)
+scale = 0.01
+# W shape: (H, W, in_channels, out_channels) for TF conv2d
+W1 = tf.Variable(tf.random.normal(shape=(3, 3, 1, 20)) * scale)
+b1 = tf.Variable(tf.zeros(20))
+W2 = tf.Variable(tf.random.normal(shape=(5, 5, 20, 50)) * scale)
+b2 = tf.Variable(tf.zeros(50))
+W3 = tf.Variable(tf.random.normal(shape=(800, 128)) * scale)
+b3 = tf.Variable(tf.zeros(128))
+W4 = tf.Variable(tf.random.normal(shape=(128, 10)) * scale)
+b4 = tf.Variable(tf.zeros(10))
+params = [W1, b1, W2, b2, W3, b3, W4, b4]
+
+# Define the model (inputs in NHWC format)
+def lenet(X, params):
+    h1_conv = tf.nn.conv2d(X, params[0], strides=1, padding='VALID') + params[1]
+    h1_activation = tf.nn.relu(h1_conv)
+    h1 = tf.nn.avg_pool2d(h1_activation, ksize=2, strides=2, padding='VALID')
+    h2_conv = tf.nn.conv2d(h1, params[2], strides=1, padding='VALID') + params[3]
+    h2_activation = tf.nn.relu(h2_conv)
+    h2 = tf.nn.avg_pool2d(h2_activation, ksize=2, strides=2, padding='VALID')
+    h2 = tf.reshape(h2, (tf.shape(h2)[0], -1))
+    h3_linear = tf.linalg.matmul(h2, params[4]) + params[5]
+    h3 = tf.nn.relu(h3_linear)
+    y_hat = tf.linalg.matmul(h3, params[6]) + params[7]
+    return y_hat
+
+# Cross-entropy loss function
+loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True,
+                                                      reduction='none')
+```
+
 ## Data Synchronization
 
 For efficient multi-GPU training we need two basic operations.
@@ -256,6 +298,15 @@ def get_params(params, num_devices):
         lambda x: jnp.stack([x] * num_devices), params)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_params(params, device):
+    """Copy model parameters to a specific device and make them trainable."""
+    with tf.device(device):
+        new_params = [tf.Variable(tf.identity(p)) for p in params]
+    return new_params
+```
+
 Let's try it out by copying the model parameters to one GPU.
 
 ```{.python .input}
@@ -277,6 +328,14 @@ print('b1 grad:', new_params[1].grad)
 replicated = get_params(params, 1)
 print('b1 weight:', replicated[1])
 print('b1 devices:', replicated[1].devices())
+```
+
+```{.python .input}
+#@tab tensorflow
+devices = tf.config.list_logical_devices('GPU')
+new_params = get_params(params, devices[0].name)
+print('b1 weight:', new_params[1].numpy())
+print('b1 grad:', new_params[1])  # No gradient yet
 ```
 
 Since we did not perform any computation yet, the gradient with regard to the bias parameter is still zero.
@@ -310,6 +369,27 @@ We will see this in action when we define the `pmap_step` training function
 below.
 :end_tab:
 
+:begin_tab:`tensorflow`
+With `tf.distribute.MirroredStrategy`, all-reduce is handled automatically by
+the framework. For the from-scratch pedagogical version here we implement it
+manually: sum the gradient tensors on the first device and broadcast the result
+to all other devices. This mirrors exactly what `MirroredStrategy` does
+internally.
+:end_tab:
+
+```{.python .input}
+#@tab tensorflow
+def allreduce(data):
+    """Sum tensors from all devices and broadcast the result back."""
+    # Accumulate on the device of data[0]
+    with tf.device(data[0].device):
+        total = tf.add_n([tf.identity(d) for d in data])
+    # Broadcast to all devices in-place
+    for i in range(len(data)):
+        with tf.device(data[i].device):
+            data[i].assign(tf.identity(total))
+```
+
 Let's test this by creating vectors with different values on different devices and aggregate them.
 
 ```{.python .input}
@@ -338,6 +418,15 @@ print('before allreduce:\n', data[0], '\n', data[1])
 summed = jax.pmap(lambda x: jax.lax.psum(x, axis_name='i'),
                   axis_name='i')(data)
 print('after allreduce:\n', summed[0], '\n', summed[1])
+```
+
+```{.python .input}
+#@tab tensorflow
+devices = tf.config.list_logical_devices('GPU')
+data = [tf.Variable(tf.ones((1, 2)) * (i + 1)) for i in range(2)]
+print('before allreduce:\n', data[0].numpy(), '\n', data[1].numpy())
+allreduce(data)
+print('after allreduce:\n', data[0].numpy(), '\n', data[1].numpy())
 ```
 
 ## Distributing Data
@@ -377,6 +466,17 @@ print('load into', devices)
 print('output:', split)
 ```
 
+```{.python .input}
+#@tab tensorflow
+devices = tf.config.list_logical_devices('GPU')
+data = tf.range(20, dtype=tf.float32)
+data = tf.reshape(data, (4, 5))
+split = tf.split(data, len(devices))
+print('input :', data.numpy())
+print('load into', [d.name for d in devices])
+print('output:', [s.numpy() for s in split])
+```
+
 For later reuse we define a `split_batch` function that splits both data and labels.
 
 ```{.python .input}
@@ -410,6 +510,15 @@ def split_batch(X, y, num_devices):
     def _reshape(a):
         return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
     return _reshape(X), _reshape(y)
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices."""
+    assert X.shape[0] == y.shape[0]
+    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
 ```
 
 ## Training
@@ -475,6 +584,35 @@ def train_batch(replicated_params, X, y, num_gpus, lr):
     replicated_params = pmap_step(
         replicated_params, X_shards, y_shards, lr)
     return replicated_params
+```
+
+```{.python .input}
+#@tab tensorflow
+def train_batch(X, y, device_params, devices, lr):
+    X_shards, y_shards = split_batch(X, y, devices)
+    # Compute loss and gradients independently on each GPU
+    grads_list = []
+    for X_shard, y_shard, device_W in zip(X_shards, y_shards, device_params):
+        with tf.device(device_W[0].device):
+            with tf.GradientTape() as tape:
+                # SparseCategoricalCrossentropy: loss(y_true, y_pred)
+                l = tf.reduce_sum(loss(y_shard, lenet(X_shard, device_W)))
+            grads_list.append(tape.gradient(l, device_W))
+    # All-reduce: sum gradients from every GPU onto GPU 0, then broadcast.
+    # grads_list[c][i] is a plain Tensor (not a Variable), so we sum them
+    # with tf.add_n and write the aggregated gradient into every replica.
+    num_params = len(device_params[0])
+    num_dev = len(devices)
+    agg_grads = []
+    for i in range(num_params):
+        with tf.device(device_params[0][i].device):
+            agg_grads.append(tf.add_n([
+                tf.identity(grads_list[c][i]) for c in range(num_dev)]))
+    # Apply SGD update on each GPU using the aggregated (all-reduced) gradient
+    for device_W in device_params:
+        for p, g in zip(device_W, agg_grads):
+            with tf.device(p.device):
+                p.assign_sub(lr / X.shape[0] * tf.identity(g))
 ```
 
 Now, we can define [**the training function**]. It is slightly different from the ones used in the previous chapters: we need to allocate the GPUs and copy all the model parameters to all the devices.
@@ -570,6 +708,29 @@ def train(num_gpus, batch_size, lr):
           f'on {str(devices)}')
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(num_gpus, batch_size, lr):
+    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+    devices = tf.config.list_logical_devices('GPU')[:num_gpus]
+    # Copy model parameters to each GPU
+    device_params = [get_params(params, d.name) for d in devices]
+    num_epochs = 10
+    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
+    timer = d2l.Timer()
+    for epoch in range(num_epochs):
+        timer.start()
+        for X, y in train_iter:
+            # TF data pipelines yield NHWC tensors — compatible with our lenet
+            train_batch(X, y, device_params, devices, lr)
+        timer.stop()
+        # Evaluate the model on GPU 0
+        animator.add(epoch + 1, (d2l.evaluate_accuracy(
+            lambda x: lenet(x, device_params[0]), test_iter),))
+    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
+          f'on {str([d.name for d in devices])}')
+```
+
 Let's see how well this works [**on a single GPU**].
 We first use a batch size of 256 and a learning rate of 0.2.
 
@@ -585,6 +746,11 @@ train(num_gpus=1, batch_size=256, lr=0.2)
 
 ```{.python .input}
 #@tab jax
+train(num_gpus=1, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab tensorflow
 train(num_gpus=1, batch_size=256, lr=0.2)
 ```
 
@@ -605,6 +771,11 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 
 ```{.python .input}
 #@tab jax
+train(num_gpus=2, batch_size=256, lr=0.2)
+```
+
+```{.python .input}
+#@tab tensorflow
 train(num_gpus=2, batch_size=256, lr=0.2)
 ```
 
@@ -631,5 +802,9 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1669)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1669)
 :end_tab:

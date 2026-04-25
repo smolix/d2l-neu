@@ -172,6 +172,19 @@ def cls_predictor(num_anchors, num_classes):
                    padding='SAME')
 ```
 
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+
+def cls_predictor(num_anchors, num_classes):
+    return keras.layers.Conv2D(num_anchors * (num_classes + 1),
+                               kernel_size=3, padding='same')
+```
+
 ### (**Bounding Box Prediction Layer**)
 
 The design of the bounding box prediction layer is similar to that of the class prediction layer.
@@ -194,6 +207,12 @@ def bbox_predictor(num_inputs, num_anchors):
 #@tab jax
 def bbox_predictor(num_anchors):
     return nn.Conv(num_anchors * 4, kernel_size=(3, 3), padding='SAME')
+```
+
+```{.python .input}
+#@tab tensorflow
+def bbox_predictor(num_anchors):
+    return keras.layers.Conv2D(num_anchors * 4, kernel_size=3, padding='same')
 ```
 
 ### [**Concatenating Predictions for Multiple Scales**]
@@ -258,6 +277,17 @@ Y2 = forward(jnp.zeros((2, 10, 10, 16)), cls_predictor(3, 10))
 Y1.shape, Y2.shape
 ```
 
+```{.python .input}
+#@tab tensorflow
+def forward(x, block):
+    # Keras uses NHWC format; input shape: (N, H, W, C)
+    return block(x)
+
+Y1 = forward(tf.zeros((2, 20, 20, 8)), cls_predictor(5, 10))
+Y2 = forward(tf.zeros((2, 10, 10, 16)), cls_predictor(3, 10))
+Y1.shape, Y2.shape
+```
+
 As we can see, except for the batch size dimension,
 the other three dimensions all have different sizes.
 To concatenate these two prediction outputs for more efficient computation,
@@ -301,6 +331,17 @@ def flatten_pred(pred):
 
 def concat_preds(preds):
     return jnp.concatenate([flatten_pred(p) for p in preds], axis=1)
+```
+
+```{.python .input}
+#@tab tensorflow
+def flatten_pred(pred):
+    # pred is (N, H, W, C); flatten H*W*C with channel innermost so that
+    # the resulting layout matches multibox_prior's anchor ordering
+    return tf.reshape(pred, (tf.shape(pred)[0], -1))
+
+def concat_preds(preds):
+    return tf.concat([flatten_pred(p) for p in preds], axis=1)
 ```
 
 In this way,
@@ -375,6 +416,19 @@ class DownSampleBlk(nn.Module):
         return x
 ```
 
+```{.python .input}
+#@tab tensorflow
+def down_sample_blk(num_channels):
+    blk = keras.Sequential()
+    for _ in range(2):
+        blk.add(keras.layers.Conv2D(num_channels, kernel_size=3,
+                                    padding='same'))
+        blk.add(keras.layers.BatchNormalization())
+        blk.add(keras.layers.ReLU())
+    blk.add(keras.layers.MaxPool2D(pool_size=2, strides=2))
+    return blk
+```
+
 In the following example, our constructed downsampling block changes the number of input channels and halves the height and width of the input feature maps.
 
 ```{.python .input}
@@ -390,6 +444,11 @@ forward(torch.zeros((2, 3, 20, 20)), down_sample_blk(3, 10)).shape
 ```{.python .input}
 #@tab jax
 forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(num_channels=10)).shape
+```
+
+```{.python .input}
+#@tab tensorflow
+forward(tf.zeros((2, 20, 20, 3)), down_sample_blk(10)).shape
 ```
 
 ### [**Base Network Block**]
@@ -435,6 +494,17 @@ class BaseNet(nn.Module):
         return x
 
 forward(jnp.zeros((2, 256, 256, 3)), BaseNet()).shape
+```
+
+```{.python .input}
+#@tab tensorflow
+def base_net():
+    blk = keras.Sequential()
+    for num_filters in [16, 32, 64]:
+        blk.add(down_sample_blk(num_filters))
+    return blk
+
+forward(tf.zeros((2, 256, 256, 3)), base_net()).shape
 ```
 
 ### The Complete Model
@@ -499,6 +569,17 @@ def get_blk(i):
         return DownSampleBlk(num_channels=128)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_blk(i):
+    if i == 0:
+        return base_net()
+    elif i == 4:
+        return keras.layers.GlobalMaxPool2D(keepdims=True)
+    else:
+        return down_sample_blk(128)
+```
+
 Now we [**define the forward propagation**]
 for each block.
 Different from
@@ -556,6 +637,21 @@ def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
     cls_preds = jnp.transpose(cls_preds, (0, 3, 1, 2))
     bbox_preds = jnp.transpose(bbox_preds, (0, 3, 1, 2))
     return (Y, anchors, cls_preds, bbox_preds, updates)
+```
+
+```{.python .input}
+#@tab tensorflow
+def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor,
+                training=False):
+    Y = blk(X, training=training)
+    # Keras uses NHWC; multibox_prior expects NCHW (shape[-2:] = H, W)
+    Y_nchw = tf.transpose(Y, (0, 3, 1, 2))
+    anchors = d2l.multibox_prior(Y_nchw, sizes=size, ratios=ratio)
+    # Keep cls_preds and bbox_preds in NHWC; flatten_pred relies on the
+    # channel-last memory layout to align with multibox_prior's anchor order
+    cls_preds = cls_predictor(Y, training=training)
+    bbox_preds = bbox_predictor(Y, training=training)
+    return (Y, anchors, cls_preds, bbox_preds)
 ```
 
 Recall that
@@ -686,6 +782,75 @@ class TinySSD(nn.Module):
         return anchors, cls_preds, bbox_preds
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class TinySSD(keras.Model):
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes = num_classes
+        self.cls_loss = keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True)
+        for i in range(5):
+            # Equivalent to: self.blk_i, self.cls_i, self.bbox_i
+            setattr(self, f'blk_{i}', get_blk(i))
+            setattr(self, f'cls_{i}', cls_predictor(num_anchors, num_classes))
+            setattr(self, f'bbox_{i}', bbox_predictor(num_anchors))
+
+    def call(self, X, training=False):
+        anchors_list = [None] * 5
+        cls_preds_list = [None] * 5
+        bbox_preds_list = [None] * 5
+        # X is expected in NHWC layout (the Keras default)
+        for i in range(5):
+            blk = getattr(self, f'blk_{i}')
+            cls_pred = getattr(self, f'cls_{i}')
+            bbox_pred = getattr(self, f'bbox_{i}')
+            X, anchors_list[i], cls_preds_list[i], bbox_preds_list[i] = \
+                blk_forward(X, blk, sizes[i], ratios[i],
+                            cls_pred, bbox_pred, training=training)
+        anchors = tf.concat(anchors_list, axis=1)
+        cls_preds = concat_preds(cls_preds_list)
+        cls_preds = tf.reshape(cls_preds,
+                               (tf.shape(cls_preds)[0], -1,
+                                self.num_classes + 1))
+        bbox_preds = concat_preds(bbox_preds_list)
+        return anchors, cls_preds, bbox_preds
+
+    def _compute_ssd_loss(self, cls_preds, cls_labels, bbox_preds,
+                          bbox_labels, bbox_masks):
+        num_classes = self.num_classes + 1
+        cls = self.cls_loss(
+            tf.reshape(cls_labels, [-1]),
+            tf.reshape(cls_preds, [-1, num_classes]))
+        bbox = tf.reduce_mean(
+            tf.abs((bbox_preds * bbox_masks) -
+                   (bbox_labels * bbox_masks)))
+        return cls + bbox
+
+    def train_step(self, data):
+        features, target = data
+        with tf.GradientTape() as tape:
+            anchors, cls_preds, bbox_preds = self(features, training=True)
+            bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
+                anchors, target)
+            loss = self._compute_ssd_loss(cls_preds, cls_labels,
+                                          bbox_preds, bbox_labels, bbox_masks)
+        grads = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
+        # Accumulate metrics without syncing large tensors to host
+        cls_correct = tf.reduce_sum(
+            tf.cast(tf.argmax(cls_preds, axis=-1) ==
+                    tf.cast(cls_labels, tf.int64), tf.int64))
+        cls_total = tf.cast(tf.size(cls_labels), tf.int64)
+        bbox_abs = tf.reduce_sum(
+            tf.abs((bbox_preds * bbox_masks) - (bbox_labels * bbox_masks)))
+        bbox_total = tf.cast(tf.size(bbox_labels), tf.float32)
+        return {'loss': loss,
+                'cls_correct': cls_correct, 'cls_total': cls_total,
+                'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
+```
+
 We [**create a model instance
 and use it to perform forward propagation**]
 on a minibatch of $256 \times 256$ images `X`.
@@ -731,6 +896,17 @@ net = TinySSD(num_classes=1)
 X = jnp.zeros((32, 3, 256, 256))
 variables = net.init(jax.random.PRNGKey(0), X)
 anchors, cls_preds, bbox_preds = net.apply(variables, X)
+
+print('output anchors:', anchors.shape)
+print('output class preds:', cls_preds.shape)
+print('output bbox preds:', bbox_preds.shape)
+```
+
+```{.python .input}
+#@tab tensorflow
+net = TinySSD(num_classes=1)
+X = tf.zeros((32, 256, 256, 3))  # NHWC for Keras
+anchors, cls_preds, bbox_preds = net(X)
 
 print('output anchors:', anchors.shape)
 print('output class preds:', cls_preds.shape)
@@ -784,6 +960,13 @@ params = variables['params']
 batch_stats = variables.get('batch_stats', {})
 trainer = optax.sgd(learning_rate=0.2)
 opt_state = trainer.init(params)
+```
+
+```{.python .input}
+#@tab tensorflow
+net = TinySSD(num_classes=1)
+net.compile(optimizer=keras.optimizers.SGD(learning_rate=0.2,
+                                           weight_decay=5e-4))
 ```
 
 ### [**Defining Loss and Evaluation Functions**]
@@ -851,6 +1034,23 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     return cls + bbox
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Loss functions are encapsulated in TinySSD._compute_ssd_loss and
+# train_step; these module-level helpers mirror the other frameworks for
+# use in evaluation after training.
+_cls_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
+    batch_size = cls_preds.shape[0]
+    num_classes = cls_preds.shape[2]
+    cls = _cls_loss(tf.reshape(cls_labels, [-1]),
+                    tf.reshape(cls_preds, [-1, num_classes]))
+    bbox = tf.reduce_mean(
+        tf.abs((bbox_preds * bbox_masks) - (bbox_labels * bbox_masks)))
+    return cls + bbox
+```
+
 We can use accuracy to evaluate the classification results.
 Due to the used $\ell_1$ norm loss for the offsets,
 we use the *mean absolute error* to evaluate the
@@ -893,6 +1093,20 @@ def cls_eval(cls_preds, cls_labels):
 
 def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((jnp.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
+```
+
+```{.python .input}
+#@tab tensorflow
+def cls_eval(cls_preds, cls_labels):
+    # Because the class prediction results are on the final dimension,
+    # `argmax` needs to specify this dimension
+    return float(tf.reduce_sum(
+        tf.cast(tf.argmax(cls_preds, axis=-1) ==
+                tf.cast(cls_labels, tf.int64), tf.int64)))
+
+def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
+    return float(tf.reduce_sum(
+        tf.abs((bbox_labels - bbox_preds) * bbox_masks)))
 ```
 
 ### [**Training the Model**]
@@ -1039,6 +1253,33 @@ print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec on '
       f'{str(jax.devices()[0])}')
 ```
 
+```{.python .input}
+#@tab tensorflow
+num_epochs, timer = 20, d2l.Timer()
+animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                        legend=['class error', 'bbox mae'])
+for epoch in range(num_epochs):
+    # Sum of training accuracy, no. of examples in sum of training accuracy,
+    # Sum of absolute error, no. of examples in sum of absolute error
+    cls_correct_sum = 0
+    cls_total = 0
+    bbox_abs_total = 0.0
+    bbox_total = 0
+    for features, target in train_iter:
+        timer.start()
+        logs = net.train_step((tf.cast(features, tf.float32),
+                               tf.cast(target, tf.float32)))
+        cls_correct_sum += int(logs['cls_correct'])
+        cls_total += int(logs['cls_total'])
+        bbox_abs_total += float(logs['bbox_abs'])
+        bbox_total += int(logs['bbox_total'])
+    cls_err = 1 - cls_correct_sum / cls_total
+    bbox_mae = bbox_abs_total / bbox_total
+    animator.add(epoch + 1, (cls_err, bbox_mae))
+print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
+print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec')
+```
+
 ## [**Prediction**]
 
 During prediction,
@@ -1070,6 +1311,15 @@ img_pil = PILImage.open('../img/banana.jpg')
 img = jnp.array(img_pil)
 X = jnp.transpose(img, (2, 0, 1)).astype(jnp.float32)
 X = jnp.expand_dims(X, axis=0)
+```
+
+```{.python .input}
+#@tab tensorflow
+from PIL import Image as PILImage
+img_pil = PILImage.open('../img/banana.jpg')
+img = np.array(img_pil)
+# img is (H, W, C); add batch dim for NHWC input
+X = tf.expand_dims(tf.cast(img, tf.float32), axis=0)
 ```
 
 Using the `multibox_detection` function below,
@@ -1113,6 +1363,22 @@ def predict(X):
     output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
     idx = [i for i, row in enumerate(output[0]) if row[0] != -1]
     return output[0, idx]
+
+output = predict(X)
+```
+
+```{.python .input}
+#@tab tensorflow
+def predict(X):
+    anchors, cls_preds, bbox_preds = net(X, training=False)
+    # cls_preds: (batch, num_anchors, num_classes+1) -> softmax -> transpose
+    # to (batch, num_classes+1, num_anchors) for multibox_detection
+    cls_probs = tf.transpose(tf.nn.softmax(cls_preds, axis=-1), (0, 2, 1))
+    output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
+    # Drop padding rows (class index -1).
+    mask = output[0, :, 0] != -1
+    idx = tf.where(mask)[:, 0]
+    return tf.gather(output[0], idx)
 
 output = predict(X)
 ```
@@ -1165,6 +1431,22 @@ def display(img, output, threshold):
             continue
         h, w = img.shape[:2]
         bbox = [row[2:6] * jnp.array((w, h, w, h))]
+        d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
+
+display(img, output, threshold=0.9)
+```
+
+```{.python .input}
+#@tab tensorflow
+def display(img, output, threshold):
+    d2l.set_figsize((5, 5))
+    fig = d2l.plt.imshow(img)
+    for row in output:
+        score = float(row[1])
+        if score < threshold:
+            continue
+        h, w = img.shape[:2]
+        bbox = [row[2:6] * np.array((w, h, w, h), dtype=np.float32)]
         d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
 
 display(img, output, threshold=0.9)
@@ -1248,6 +1530,25 @@ for l, s in zip(lines, sigmas):
 d2l.plt.legend();
 ```
 
+```{.python .input}
+#@tab tensorflow
+def smooth_l1(data, scalar):
+    cond = tf.abs(data) < 1 / (scalar ** 2)
+    quad = (scalar * data) ** 2 / 2
+    lin = tf.abs(data) - 0.5 / (scalar ** 2)
+    return tf.where(cond, quad, lin)
+
+sigmas = [10, 1, 0.5]
+lines = ['-', '--', '-.']
+x = tf.range(-2.0, 2.0, 0.1)
+d2l.set_figsize()
+
+for l, s in zip(lines, sigmas):
+    y = smooth_l1(x, scalar=s)
+    d2l.plt.plot(x, y, l, label='sigma=%.1f' % s)
+d2l.plt.legend();
+```
+
 Besides, in the experiment we used cross-entropy loss for class prediction:
 denoting by $p_j$ the predicted probability for the ground-truth class $j$, the cross-entropy loss is $-\log p_j$. We can also use the focal loss
 :cite:`Lin.Goyal.Girshick.ea.2017`: given hyperparameters $\gamma > 0$
@@ -1295,6 +1596,17 @@ for l, gamma in zip(lines, [0, 1, 5]):
 d2l.plt.legend();
 ```
 
+```{.python .input}
+#@tab tensorflow
+def focal_loss(gamma, x):
+    return -(1 - x) ** gamma * tf.math.log(x)
+
+x = tf.range(0.01, 1.0, 0.01)
+for l, gamma in zip(lines, [0, 1, 5]):
+    y = d2l.plt.plot(x, focal_loss(gamma, x), l, label='gamma=%.1f' % gamma)
+d2l.plt.legend();
+```
+
 2. Due to space limitations, we have omitted some implementation details of the single shot multibox detection model in this section. Can you further improve the model in the following aspects:
     1. When an object is much smaller compared with the image, the model could resize the input image bigger.
     1. There are typically a vast number of negative anchor boxes. To make the class distribution more balanced, we could downsample negative anchor boxes.
@@ -1312,5 +1624,9 @@ d2l.plt.legend();
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1604)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1604)
 :end_tab:

@@ -32,6 +32,12 @@ import jax
 from jax import numpy as jnp
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+```
+
 ## Parallel Computation on GPUs
 
 Let's start by defining a reference workload to test: the `run` function below performs 10 matrix-matrix multiplications on the device of our choice using data allocated into two variables: `x_gpu1` and `x_gpu2`.
@@ -68,6 +74,20 @@ x_gpu2 = jax.device_put(jax.random.normal(jax.random.PRNGKey(1), (4000, 4000)),
                          devices[1])
 ```
 
+```{.python .input}
+#@tab tensorflow
+devices = tf.config.list_logical_devices('GPU')
+
+@tf.function
+def run(x):
+    return [tf.linalg.matmul(x, x) for _ in range(50)]
+
+with tf.device(devices[0].name):
+    x_gpu1 = tf.random.normal(shape=(4000, 4000))
+with tf.device(devices[1].name):
+    x_gpu2 = tf.random.normal(shape=(4000, 4000))
+```
+
 :begin_tab:`mxnet`
 Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring.
 :end_tab:
@@ -78,6 +98,10 @@ Now we apply the function to the data. To ensure that caching does not play a ro
 
 :begin_tab:`jax`
 Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring. In JAX, computations are dispatched asynchronously. We call `block_until_ready()` on the result to wait for the computation to complete before taking a timing measurement.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring. `@tf.function` traces the function on the first call; subsequent calls run the compiled graph. We call `.numpy()` on the last result to force GPU synchronization before timing.
 :end_tab:
 
 ```{.python .input}
@@ -123,6 +147,19 @@ with d2l.Benchmark('GPU2 time'):
     run(x_gpu2)[-1].block_until_ready()
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Warm-up: trigger tf.function tracing and CUDA kernel loading on both GPUs
+run(x_gpu1)[-1].numpy()
+run(x_gpu2)[-1].numpy()
+
+with d2l.Benchmark('GPU1 time'):
+    run(x_gpu1)[-1].numpy()
+
+with d2l.Benchmark('GPU2 time'):
+    run(x_gpu2)[-1].numpy()
+```
+
 :begin_tab:`mxnet`
 If we remove the `waitall` statement between both tasks the system is free to parallelize computation on both devices automatically.
 :end_tab:
@@ -133,6 +170,10 @@ If we remove the `synchronize` statement between both tasks the system is free t
 
 :begin_tab:`jax`
 If we remove the `block_until_ready` call between both tasks the system is free to parallelize computation on both devices automatically.
+:end_tab:
+
+:begin_tab:`tensorflow`
+If we remove the per-GPU `.numpy()` barrier between both tasks the TensorFlow runtime is free to dispatch work to both GPUs concurrently. The `@tf.function`-compiled ops on GPU 0 and GPU 1 run in separate CUDA streams and overlap automatically.
 :end_tab:
 
 ```{.python .input}
@@ -156,6 +197,13 @@ with d2l.Benchmark('GPU1 & GPU2'):
 with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
     run(x_gpu2)[-1].block_until_ready()
+```
+
+```{.python .input}
+#@tab tensorflow
+with d2l.Benchmark('GPU1 & GPU2'):
+    run(x_gpu1)
+    run(x_gpu2)[-1].numpy()
 ```
 
 In the above case the total execution time is less than the sum of its parts, since the deep learning framework automatically schedules computation on both GPU devices without the need for sophisticated code on behalf of the user.
@@ -210,6 +258,21 @@ with d2l.Benchmark('Copy to CPU'):
     y_cpu[-1].block_until_ready()
 ```
 
+```{.python .input}
+#@tab tensorflow
+def copy_to_cpu(x):
+    with tf.device('/CPU:0'):
+        return [tf.identity(t) for t in x]
+
+with d2l.Benchmark('Run on GPU1'):
+    y = run(x_gpu1)
+    y[-1].numpy()  # Sync GPU
+
+with d2l.Benchmark('Copy to CPU'):
+    y_cpu = copy_to_cpu(y)
+    y_cpu[-1].numpy()  # Sync transfer
+```
+
 :begin_tab:`mxnet`
 This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. Removing `waitall` between both parts allows us to simulate this scenario.
 :end_tab:
@@ -220,6 +283,10 @@ This is somewhat inefficient. Note that we could already start copying parts of 
 
 :begin_tab:`jax`
 This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In JAX, `jax.device_put` dispatches the transfer asynchronously and returns immediately. By deferring `block_until_ready` we allow computation and communication to overlap.
+:end_tab:
+
+:begin_tab:`tensorflow`
+This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In TensorFlow, `tf.identity` with a `/CPU:0` device placement dispatches the H2D transfer asynchronously. Launching all copies before calling `.numpy()` allows computation and communication to overlap.
 :end_tab:
 
 ```{.python .input}
@@ -244,6 +311,14 @@ with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
     y_cpu = copy_to_cpu(y)
     y_cpu[-1].block_until_ready()
+```
+
+```{.python .input}
+#@tab tensorflow
+with d2l.Benchmark('Run on GPU1 and copy to CPU'):
+    y = run(x_gpu1)
+    y_cpu = copy_to_cpu(y)
+    y_cpu[-1].numpy()
 ```
 
 The total time required for both operations is (as expected) less than the sum of their parts.
@@ -278,5 +353,9 @@ We conclude with an illustration of the computational graph and its dependencies
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1681)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1681)
 :end_tab:

@@ -136,6 +136,14 @@ import optax
 import numpy as np
 ```
 
+```{.python .input}
+#@tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+```
+
 ## [**Input Representation**]
 :label:`subsec_bert_input_rep`
 
@@ -291,6 +299,39 @@ class BERTEncoder(nn.Module):
         return X
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class BERTEncoder(keras.layers.Layer):
+    """BERT encoder."""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, max_len=1000, **kwargs):
+        super(BERTEncoder, self).__init__(**kwargs)
+        self.token_embedding = keras.layers.Embedding(vocab_size, num_hiddens)
+        self.segment_embedding = keras.layers.Embedding(2, num_hiddens)
+        # In BERT, positional embeddings are learnable, thus we create a
+        # trainable variable of positional embeddings that are long enough
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, max_len, num_hiddens),
+            initializer='random_normal', trainable=True)
+        norm_shape = [num_hiddens]
+        # BERT's attention sublayers use biased projections; the default for
+        # `TransformerEncoderBlock` is `bias=False`, so override here.
+        self.blks = [d2l.TransformerEncoderBlock(
+            num_hiddens, num_hiddens, num_hiddens, num_hiddens, norm_shape,
+            ffn_num_hiddens, num_heads, dropout, bias=True)
+            for _ in range(num_blks)]
+
+    def call(self, tokens, segments, valid_lens, training=False, **kwargs):
+        # Shape of `X` remains unchanged in the following code snippet:
+        # (batch size, max sequence length, `num_hiddens`)
+        X = self.token_embedding(tokens) + self.segment_embedding(segments)
+        X = X + self.pos_embedding[:, :tf.shape(X)[1], :]
+        for blk in self.blks:
+            X = blk(X, valid_lens, training=training)
+        return X
+```
+
 Suppose that the vocabulary size is 10000.
 To demonstrate forward [**inference of `BERTEncoder`**],
 let's create an instance of it and initialize its parameters.
@@ -323,6 +364,14 @@ segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
 params = encoder.init(jax.random.PRNGKey(0), tokens, segments, None)
 ```
 
+```{.python .input}
+#@tab tensorflow
+vocab_size, num_hiddens, ffn_num_hiddens, num_heads = 10000, 768, 1024, 4
+num_blks, dropout = 2, 0.2
+encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                      num_blks, dropout)
+```
+
 We define `tokens` to be 2 BERT input sequences of length 8,
 where each token is an index of the vocabulary.
 The forward inference of `BERTEncoder` with the input `tokens`
@@ -352,6 +401,15 @@ encoded_X.shape
 tokens = jax.random.randint(jax.random.PRNGKey(0), (2, 8), 0, vocab_size)
 segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
 encoded_X = encoder.apply(params, tokens, segments, None)
+encoded_X.shape
+```
+
+```{.python .input}
+#@tab tensorflow
+tokens = tf.random.uniform(shape=(2, 8), minval=0, maxval=vocab_size,
+                           dtype=tf.int32)
+segments = tf.constant([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
+encoded_X = encoder(tokens, segments, None, training=False)
 encoded_X.shape
 ```
 
@@ -479,6 +537,33 @@ class MaskLM(nn.Module):
         return mlm_Y_hat
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class MaskLM(keras.layers.Layer):
+    """The masked language model task of BERT."""
+    def __init__(self, vocab_size, num_hiddens, **kwargs):
+        super(MaskLM, self).__init__(**kwargs)
+        self.mlp = keras.Sequential([
+            keras.layers.Dense(num_hiddens, activation='relu'),
+            keras.layers.LayerNormalization(),
+            keras.layers.Dense(vocab_size),
+        ])
+
+    def call(self, X, pred_positions, **kwargs):
+        num_pred_positions = pred_positions.shape[1]
+        pred_positions_flat = tf.reshape(pred_positions, [-1])
+        batch_size = tf.shape(X)[0]
+        batch_idx = tf.repeat(tf.range(batch_size), num_pred_positions)
+        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
+        # `batch_idx` is `tf.tensor([0, 0, 0, 1, 1, 1])`
+        indices = tf.stack([batch_idx, pred_positions_flat], axis=1)
+        masked_X = tf.gather_nd(X, indices)
+        masked_X = tf.reshape(masked_X, [batch_size, num_pred_positions, -1])
+        mlm_Y_hat = self.mlp(masked_X)
+        return mlm_Y_hat
+```
+
 To demonstrate [**the forward inference of `MaskLM`**],
 we create its instance `mlm` and initialize it.
 Recall that `encoded_X` from the forward inference of `BERTEncoder`
@@ -514,6 +599,14 @@ mlm_Y_hat = mlm.apply(mlm_params, encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
 
+```{.python .input}
+#@tab tensorflow
+mlm = MaskLM(vocab_size, num_hiddens)
+mlm_positions = tf.constant([[1, 5, 2], [6, 1, 5]])
+mlm_Y_hat = mlm(encoded_X, mlm_positions)
+mlm_Y_hat.shape
+```
+
 With the ground truth labels `mlm_Y` of the predicted tokens `mlm_Y_hat` under masks,
 we can calculate the cross-entropy loss of the masked language model task in BERT pretraining.
 
@@ -538,6 +631,16 @@ mlm_l.shape
 mlm_Y = jnp.array([[7, 8, 9], [10, 20, 30]])
 mlm_l = optax.softmax_cross_entropy_with_integer_labels(
     mlm_Y_hat.reshape((-1, vocab_size)), mlm_Y.reshape(-1))
+mlm_l.shape
+```
+
+```{.python .input}
+#@tab tensorflow
+mlm_Y = tf.constant([[7, 8, 9], [10, 20, 30]])
+loss = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+mlm_l = loss(tf.reshape(mlm_Y, [-1]),
+             tf.reshape(mlm_Y_hat, [-1, vocab_size]))
 mlm_l.shape
 ```
 
@@ -601,6 +704,22 @@ class NextSentencePred(nn.Module):
         return nn.Dense(2)(X)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class NextSentencePred(keras.layers.Layer):
+    """The next sentence prediction task of BERT."""
+    def __init__(self, **kwargs):
+        super(NextSentencePred, self).__init__(**kwargs)
+        # `output` is reserved on Keras Layer (a read-only property), so use
+        # `dense` for the head.
+        self.dense = keras.layers.Dense(2)
+
+    def call(self, X, **kwargs):
+        # `X` shape: (batch size, `num_hiddens`)
+        return self.dense(X)
+```
+
 We can see that [**the forward inference of an `NextSentencePred`**] instance
 returns binary predictions for each BERT input sequence.
 
@@ -633,6 +752,15 @@ nsp_Y_hat = nsp.apply(nsp_params, cls_X)
 nsp_Y_hat.shape
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Use the `<cls>` token (index 0) as input to NSP
+# input_shape for NSP: (batch size, `num_hiddens`)
+nsp = NextSentencePred()
+nsp_Y_hat = nsp(encoded_X[:, 0, :])
+nsp_Y_hat.shape
+```
+
 The cross-entropy loss of the 2 binary classifications can also be computed.
 
 ```{.python .input}
@@ -653,6 +781,13 @@ nsp_l.shape
 #@tab jax
 nsp_y = jnp.array([0, 1])
 nsp_l = optax.softmax_cross_entropy_with_integer_labels(nsp_Y_hat, nsp_y)
+nsp_l.shape
+```
+
+```{.python .input}
+#@tab tensorflow
+nsp_y = tf.constant([0, 1])
+nsp_l = loss(nsp_y, nsp_Y_hat)
 nsp_l.shape
 ```
 
@@ -765,6 +900,35 @@ class BERTModel(nn.Module):
         return encoded_X, mlm_Y_hat, nsp_Y_hat
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+class BERTModel(keras.Model):
+    """The BERT model."""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
+                 num_heads, num_blks, dropout, max_len=1000):
+        super(BERTModel, self).__init__()
+        self.encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
+                                   num_heads, num_blks, dropout,
+                                   max_len=max_len)
+        self.hidden = keras.layers.Dense(num_hiddens, activation='tanh')
+        self.mlm = MaskLM(vocab_size, num_hiddens)
+        self.nsp = NextSentencePred()
+
+    def call(self, tokens, segments, valid_lens=None, pred_positions=None,
+             training=False, **kwargs):
+        encoded_X = self.encoder(tokens, segments, valid_lens,
+                                 training=training)
+        if pred_positions is not None:
+            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
+        else:
+            mlm_Y_hat = None
+        # The hidden layer of the MLP classifier for next sentence prediction.
+        # 0 is the index of the '<cls>' token
+        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
+        return encoded_X, mlm_Y_hat, nsp_Y_hat
+```
+
 ## Summary
 
 * Word embedding models such as word2vec and GloVe are context-independent. They assign the same pretrained vector to the same word regardless of the context of the word (if any). It is hard for them to handle well polysemy or complex semantics in natural languages.
@@ -789,5 +953,9 @@ class BERTModel(nn.Module):
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1490)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1490)
 :end_tab:

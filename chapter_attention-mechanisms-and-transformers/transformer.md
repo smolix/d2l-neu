@@ -360,7 +360,11 @@ class AddNorm(tf.keras.layers.Layer):  #@save
     def __init__(self, norm_shape, dropout):
         super().__init__()
         self.dropout = tf.keras.layers.Dropout(dropout)
-        self.ln = tf.keras.layers.LayerNormalization(norm_shape)
+        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
+        # the shape of the trailing dims to normalize over. Convert that to
+        # Keras's `axis` argument (negative axis indices counting from the end).
+        self.ln = tf.keras.layers.LayerNormalization(
+            axis=list(range(-len(norm_shape), 0)))
 
     def call(self, X, Y, training=False, **kwargs):
         return self.ln(self.dropout(Y, training=training) + X)

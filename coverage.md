@@ -37,7 +37,7 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 | queries-keys-values | x | x | x | x |  |
 | self-attention-and-positional-encoding | x | x | x | x |  |
 | transformer | x | x | x | x | GPU |
-| vision-transformer | x |  | x |  | GPU |
+| vision-transformer | x | x | x |  | GPU |
 | **builders-guide** | | | | | |
 | custom-layer | x | x | x | x |  |
 | init-param | x | x | x | x |  |
@@ -47,25 +47,25 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 | read-write | x | x | x | x |  |
 | use-gpu | x | x | x | x | GPU |
 | **computational-performance** | | | | | |
-| async-computation | x |  | x | x | GPU |
-| auto-parallelism | x |  | x | x | GPU |
+| async-computation | x | x | x | x | GPU |
+| auto-parallelism | x | x | x | x | GPU |
 | hybridize | x | x | x | x |  |
-| multiple-gpus | x |  | x | x | GPU |
-| multiple-gpus-concise | x |  | x | x | GPU |
+| multiple-gpus | x | x | x | x | GPU |
+| multiple-gpus-concise | x | x | x | x | GPU |
 | **computer-vision** | | | | | |
-| anchor | x |  | x | x |  |
+| anchor | x | x | x | x |  |
 | bounding-box | x | x | x | x |  |
-| fcn | x |  | x | x | GPU |
-| fine-tuning | x |  | x | x | GPU |
-| image-augmentation | x |  | x | x | GPU |
-| kaggle-cifar10 | x |  | x | x | GPU |
-| kaggle-dog | x |  | x | x | GPU |
-| multiscale-object-detection | x |  | x | x |  |
-| neural-style | x |  | x | x | GPU |
-| object-detection-dataset | x |  | x | x |  |
-| rcnn | x |  | x | x |  |
-| semantic-segmentation-and-dataset | x |  | x | x |  |
-| ssd | x |  | x | x | GPU |
+| fcn | x | x | x | x | GPU |
+| fine-tuning | x | x | x | x | GPU |
+| image-augmentation | x | x | x | x | GPU |
+| kaggle-cifar10 | x | x | x | x | GPU |
+| kaggle-dog | x | x | x | x | GPU |
+| multiscale-object-detection | x | x | x | x |  |
+| neural-style | x | x | x | x | GPU |
+| object-detection-dataset | x | x | x | x |  |
+| rcnn | x | x | x | x |  |
+| semantic-segmentation-and-dataset | x | x | x | x |  |
+| ssd | x | x | x | x | GPU |
 | transposed-conv | x | x | x | x |  |
 | **convolutional-modern** | | | | | |
 | alexnet | x | x | x | x | GPU |
@@ -89,11 +89,11 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 | dcgan | x | x | x | x | GPU |
 | gan | x | x | x | x | GPU |
 | **hyperparameter-optimization** | | | | | |
-| hyperopt-api | x |  | x |  | GPU |
-| hyperopt-intro | x |  | x |  | GPU |
+| hyperopt-api | x | x | x |  | GPU |
+| hyperopt-intro | x | x | x |  | GPU |
 | rs-async | x |  |  |  | GPU |
 | sh-async | x |  |  |  | GPU |
-| sh-intro | x |  | x |  | GPU |
+| sh-intro | x | x | x |  | GPU |
 | **linear-classification** | | | | | |
 | classification | x | x | x | x | GPU |
 | image-classification-dataset | x | x | x | x |  |
@@ -113,20 +113,20 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 | mlp-implementation | x | x | x | x | GPU |
 | numerical-stability-and-init | x | x | x | x |  |
 | **natural-language-processing-applications** | | | | | |
-| natural-language-inference-and-dataset | x |  | x | x |  |
-| natural-language-inference-attention | x |  | x | x | GPU |
-| natural-language-inference-bert | x |  | x | x | GPU |
-| sentiment-analysis-and-dataset | x |  | x | x |  |
-| sentiment-analysis-cnn | x |  | x | x | GPU |
-| sentiment-analysis-rnn | x |  | x | x | GPU |
+| natural-language-inference-and-dataset | x | x | x | x |  |
+| natural-language-inference-attention | x | x | x | x | GPU |
+| natural-language-inference-bert | x | x | x | x | GPU |
+| sentiment-analysis-and-dataset | x | x | x | x |  |
+| sentiment-analysis-cnn | x | x | x | x | GPU |
+| sentiment-analysis-rnn | x | x | x | x | GPU |
 | **natural-language-processing-pretraining** | | | | | |
-| bert | x |  | x | x |  |
-| bert-dataset | x |  | x | x |  |
-| bert-pretraining | x |  | x | x | GPU |
-| similarity-analogy | x |  | x | x |  |
+| bert | x | x | x | x |  |
+| bert-dataset | x | x | x | x |  |
+| bert-pretraining | x | x | x | x | GPU |
+| similarity-analogy | x | x | x | x |  |
 | subword-embedding | x |  |  |  |  |
-| word-embedding-dataset | x |  | x | x |  |
-| word2vec-pretraining | x |  | x | x | GPU |
+| word-embedding-dataset | x | x | x | x |  |
+| word2vec-pretraining | x | x | x | x | GPU |
 | **optimization** | | | | | |
 | adadelta | x | x | x | x | GPU |
 | adagrad | x | x | x | x | GPU |
@@ -177,13 +177,13 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 | **reinforcement-learning** | | | | | |
 | qlearning | x |  |  |  |  |
 | value-iter | x |  |  |  |  |
-| **Total** | **139** | **91** | **123** | **128** | **69 GPU / 70 CPU** |
+| **Total** | **139** | **123** | **123** | **128** | **69 GPU / 70 CPU** |
 
 ## Summary
 
 - **139 unique notebooks** across all frameworks
 - **69 GPU notebooks**, **70 CPU-only notebooks**
-- PyTorch: 139, TensorFlow: 91, JAX: 123, MXNet: 128
+- PyTorch: 139, TensorFlow: 123, JAX: 123, MXNet: 128
 - 4 framework-independent chapters (no notebooks)
 
 ## Framework-Exclusive Notebooks
@@ -202,52 +202,17 @@ Legend: **x** = notebook exists for that framework, **GPU** = notebook uses GPU
 
 | Chapter/Notebook | Missing from |
 |------------------|--------------|
-| attention-mechanisms-and-transformers/vision-transformer | tensorflow, mxnet |
-| computational-performance/async-computation | tensorflow |
-| computational-performance/auto-parallelism | tensorflow |
-| computational-performance/multiple-gpus | tensorflow |
-| computational-performance/multiple-gpus-concise | tensorflow |
-| computer-vision/anchor | tensorflow |
-| computer-vision/fcn | tensorflow |
-| computer-vision/fine-tuning | tensorflow |
-| computer-vision/image-augmentation | tensorflow |
-| computer-vision/kaggle-cifar10 | tensorflow |
-| computer-vision/kaggle-dog | tensorflow |
-| computer-vision/multiscale-object-detection | tensorflow |
-| computer-vision/neural-style | tensorflow |
-| computer-vision/object-detection-dataset | tensorflow |
-| computer-vision/rcnn | tensorflow |
-| computer-vision/semantic-segmentation-and-dataset | tensorflow |
-| computer-vision/ssd | tensorflow |
-| gaussian-processes/gp-inference | tensorflow, jax, mxnet |
-| gaussian-processes/gp-priors | tensorflow, jax, mxnet |
-| hyperparameter-optimization/hyperopt-api | tensorflow, mxnet |
-| hyperparameter-optimization/hyperopt-intro | tensorflow, mxnet |
-| hyperparameter-optimization/rs-async | tensorflow, jax, mxnet |
-| hyperparameter-optimization/sh-async | tensorflow, jax, mxnet |
-| hyperparameter-optimization/sh-intro | tensorflow, mxnet |
-| natural-language-processing-applications/natural-language-inference-and-dataset | tensorflow |
-| natural-language-processing-applications/natural-language-inference-attention | tensorflow |
-| natural-language-processing-applications/natural-language-inference-bert | tensorflow |
-| natural-language-processing-applications/sentiment-analysis-and-dataset | tensorflow |
-| natural-language-processing-applications/sentiment-analysis-cnn | tensorflow |
-| natural-language-processing-applications/sentiment-analysis-rnn | tensorflow |
-| natural-language-processing-pretraining/bert | tensorflow |
-| natural-language-processing-pretraining/bert-dataset | tensorflow |
-| natural-language-processing-pretraining/bert-pretraining | tensorflow |
-| natural-language-processing-pretraining/similarity-analogy | tensorflow |
-| natural-language-processing-pretraining/subword-embedding | tensorflow, jax, mxnet |
-| natural-language-processing-pretraining/word-embedding-dataset | tensorflow |
-| natural-language-processing-pretraining/word2vec-pretraining | tensorflow |
-| recommender-systems/autorec | tensorflow, jax |
-| recommender-systems/ctr | tensorflow, jax |
-| recommender-systems/deepfm | tensorflow, jax |
-| recommender-systems/fm | tensorflow, jax |
-| recommender-systems/mf | tensorflow, jax |
-| recommender-systems/movielens | tensorflow, jax |
-| recommender-systems/neumf | tensorflow, jax |
-| recommender-systems/ranking | tensorflow, jax |
-| recommender-systems/seqrec | tensorflow, jax |
-| reinforcement-learning/qlearning | tensorflow, jax, mxnet |
-| reinforcement-learning/value-iter | tensorflow, jax, mxnet |
-| **48 notebooks with partial coverage** |  |
+| attention-mechanisms-and-transformers/vision-transformer | mxnet |
+| hyperparameter-optimization/hyperopt-api | mxnet |
+| hyperparameter-optimization/hyperopt-intro | mxnet |
+| hyperparameter-optimization/sh-intro | mxnet |
+| recommender-systems/autorec | jax, tensorflow |
+| recommender-systems/ctr | jax, tensorflow |
+| recommender-systems/deepfm | jax, tensorflow |
+| recommender-systems/fm | jax, tensorflow |
+| recommender-systems/mf | jax, tensorflow |
+| recommender-systems/movielens | jax, tensorflow |
+| recommender-systems/neumf | jax, tensorflow |
+| recommender-systems/ranking | jax, tensorflow |
+| recommender-systems/seqrec | jax, tensorflow |
+| **13 notebooks with partial coverage** |  |

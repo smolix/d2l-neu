@@ -128,6 +128,20 @@ d2l.plt.imshow(content_img);
 ```
 
 ```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+from PIL import Image
+
+d2l.set_figsize()
+content_img = Image.open('../img/rainier.jpg')
+d2l.plt.imshow(content_img);
+```
+
+```{.python .input}
 #@tab mxnet
 style_img = image.imread('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img.asnumpy());
@@ -141,6 +155,12 @@ d2l.plt.imshow(style_img);
 
 ```{.python .input}
 #@tab jax
+style_img = Image.open('../img/autumn-oak.jpg')
+d2l.plt.imshow(style_img);
+```
+
+```{.python .input}
+#@tab tensorflow
 style_img = Image.open('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img);
 ```
@@ -207,6 +227,29 @@ def postprocess(img):
     return img
 ```
 
+```{.python .input}
+#@tab tensorflow
+# We keep the synthesized image in NCHW layout internally (matching PT/JAX
+# so the #@tab-all gram/tv_loss/compute_loss cells work unchanged).
+# VGG-19 expects NHWC, so we transpose when calling the feature extractor.
+rgb_mean = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+rgb_std  = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+
+def preprocess(img, image_shape):
+    img = img.resize((image_shape[1], image_shape[0]))  # PIL: (w, h)
+    img = np.array(img, dtype=np.float32) / 255.0       # (H, W, C)
+    img = img.transpose(2, 0, 1)                        # (C, H, W)
+    img = (img - rgb_mean.numpy().reshape(3, 1, 1)) / rgb_std.numpy().reshape(
+        3, 1, 1)
+    return tf.expand_dims(tf.constant(img, dtype=tf.float32), axis=0)
+
+def postprocess(img):
+    img = img[0].numpy()                                # (C, H, W)
+    img = np.clip(img.transpose(1, 2, 0) * rgb_std.numpy() +
+                  rgb_mean.numpy(), 0, 1)
+    return img
+```
+
 ## [**Extracting Features**]
 
 We use the VGG-19 model pretrained on the ImageNet dataset to extract image features :cite:`Gatys.Ecker.Bethge.2016`.
@@ -227,6 +270,11 @@ pretrained_net = torchvision.models.vgg19(
 # Load pretrained VGG-19 via TensorFlow (JAX venv does not have torch)
 pretrained_net = tf.keras.applications.VGG19(
     weights='imagenet', include_top=False)
+```
+
+```{.python .input}
+#@tab tensorflow
+pretrained_net = keras.applications.VGG19(weights='imagenet', include_top=False)
 ```
 
 In order to extract the content features and style features of the image, we can select the output of certain layers in the VGG network.
@@ -277,6 +325,21 @@ _vgg_layers = pretrained_net.layers
 net = _vgg_layers[1:max(content_layers + style_layers) + 1]
 ```
 
+```{.python .input}
+#@tab tensorflow
+# The #@tab-all indices match torchvision's VGG-19 `features` numbering.
+# Keras VGG-19 has a different layer order, so we remap.
+_torch_to_tf = {0: 1, 5: 4, 10: 7, 19: 12, 25: 15, 28: 17}
+style_layers  = [_torch_to_tf[i] for i in style_layers]
+content_layers = [_torch_to_tf[i] for i in content_layers]
+# Build a multi-output feature-extraction model (skips InputLayer at index 0)
+_vgg_layers = pretrained_net.layers
+net = keras.Model(
+    inputs=pretrained_net.input,
+    outputs=[_vgg_layers[i].output
+             for i in sorted(set(content_layers + style_layers))])
+```
+
 Given the input `X`, if we simply invoke
 the forward propagation `net(X)`, we can only get the output of the last layer.
 Since we also need the outputs of intermediate layers,
@@ -323,6 +386,29 @@ def _to_vgg_input(X_nchw):
              + tf.constant(np.array(rgb_mean).reshape(1,1,1,3),
                            dtype=tf.float32)) * 255.0
     return tf.keras.applications.vgg19.preprocess_input(X_raw)
+```
+
+```{.python .input}
+#@tab tensorflow
+def _to_vgg_input(X_nchw):
+    """Convert NCHW tensor (ImageNet-normalised) to VGG-19 NHWC input."""
+    X_nhwc = tf.transpose(X_nchw, (0, 2, 3, 1))
+    X_raw = (X_nhwc * tf.reshape(rgb_std, (1, 1, 1, 3))
+             + tf.reshape(rgb_mean, (1, 1, 1, 3))) * 255.0
+    return keras.applications.vgg19.preprocess_input(X_raw)
+
+# _sorted_layers maps the sorted output index → original layer index
+_sorted_layer_ids = sorted(set(content_layers + style_layers))
+
+def extract_features(X, content_layers, style_layers):
+    """Run VGG-19 and return (contents, styles) as NCHW tensors."""
+    X_vgg = _to_vgg_input(X)
+    all_outputs = net(X_vgg, training=False)  # list of NHWC tensors
+    # all_outputs[i] corresponds to _sorted_layer_ids[i]
+    layer_map = {lid: out for lid, out in zip(_sorted_layer_ids, all_outputs)}
+    contents = [tf.transpose(layer_map[i], (0, 3, 1, 2)) for i in content_layers]
+    styles   = [tf.transpose(layer_map[i], (0, 3, 1, 2)) for i in style_layers]
+    return contents, styles
 ```
 
 Two functions are defined below:
@@ -378,6 +464,19 @@ def get_styles(image_shape):
     return style_X, styles_Y
 ```
 
+```{.python .input}
+#@tab tensorflow
+def get_contents(image_shape):
+    content_X = preprocess(content_img, image_shape)
+    contents_Y, _ = extract_features(content_X, content_layers, style_layers)
+    return content_X, contents_Y
+
+def get_styles(image_shape):
+    style_X = preprocess(style_img, image_shape)
+    _, styles_Y = extract_features(style_X, content_layers, style_layers)
+    return style_X, styles_Y
+```
+
 ## [**Defining the Loss Function**]
 
 Now we will describe the loss function for style transfer. The loss function consists of
@@ -415,6 +514,12 @@ def content_loss(Y_hat, Y):
     return jnp.square(Y_hat - jax.lax.stop_gradient(Y)).mean()
 ```
 
+```{.python .input}
+#@tab tensorflow
+def content_loss(Y_hat, Y):
+    return tf.reduce_mean(tf.square(Y_hat - tf.stop_gradient(Y)))
+```
+
 ### Style Loss
 
 Style loss, similar to content loss,
@@ -449,7 +554,7 @@ the Gram matrix by the number of its elements, i.e., $chw$.
 def gram(X):
     num_channels, n = X.shape[1], d2l.size(X) // X.shape[1]
     X = d2l.reshape(X, (num_channels, n))
-    return d2l.matmul(X, X.T) / (num_channels * n)
+    return d2l.matmul(X, d2l.transpose(X)) / (num_channels * n)
 ```
 
 Obviously,
@@ -476,6 +581,12 @@ def style_loss(Y_hat, gram_Y):
     return jnp.square(gram(Y_hat) - jax.lax.stop_gradient(gram_Y)).mean()
 ```
 
+```{.python .input}
+#@tab tensorflow
+def style_loss(Y_hat, gram_Y):
+    return tf.reduce_mean(tf.square(gram(Y_hat) - tf.stop_gradient(gram_Y)))
+```
+
 ### Total Variation Loss
 
 Sometimes, the learned synthesized image
@@ -493,8 +604,10 @@ makes values of neighboring pixels on the synthesized image closer.
 ```{.python .input}
 #@tab all
 def tv_loss(Y_hat):
-    return 0.5 * (d2l.abs(Y_hat[:, :, 1:, :] - Y_hat[:, :, :-1, :]).mean() +
-                  d2l.abs(Y_hat[:, :, :, 1:] - Y_hat[:, :, :, :-1]).mean())
+    return 0.5 * (d2l.reduce_mean(
+        d2l.abs(Y_hat[:, :, 1:, :] - Y_hat[:, :, :-1, :])) +
+                  d2l.reduce_mean(
+        d2l.abs(Y_hat[:, :, :, 1:] - Y_hat[:, :, :, :-1])))
 ```
 
 ### Loss Function
@@ -556,6 +669,11 @@ class SynthesizedImage(nn.Module):
 # In JAX, we optimize the synthesized image array directly (no Module needed)
 ```
 
+```{.python .input}
+#@tab tensorflow
+# In TF, we optimize the synthesized image as a tf.Variable directly
+```
+
 Next, we define the `get_inits` function.
 This function creates a synthesized image model instance and initializes it to the image `X`.
 Gram matrices for the style image at various style layers, `styles_Y_gram`, are computed prior to training.
@@ -588,6 +706,18 @@ def get_inits(X, lr, styles_Y):
     gen_img = jnp.array(X, dtype=jnp.float32)
     styles_Y_gram = [gram(jnp.array(np.array(Y))) for Y in styles_Y]
     return gen_img, styles_Y_gram
+```
+
+```{.python .input}
+#@tab tensorflow
+def get_inits(X, lr, styles_Y):
+    # Initialize synthesized image to the content image (NCHW tf.Variable)
+    gen_img = tf.Variable(tf.cast(X, tf.float32))
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=lr, decay_steps=50, decay_rate=0.8)
+    trainer = keras.optimizers.Adam(learning_rate=lr_schedule)
+    styles_Y_gram = [gram(Y) for Y in styles_Y]
+    return gen_img, styles_Y_gram, trainer
 ```
 
 ## [**Training**]
@@ -714,6 +844,29 @@ def _tf_gram(X):
         tf.cast(num_channels, tf.float32) * n)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def train(X, contents_Y, styles_Y, lr, num_epochs, lr_decay_epoch):
+    X, styles_Y_gram, trainer = get_inits(X, lr, styles_Y)
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[10, num_epochs],
+                            legend=['content', 'style', 'TV'],
+                            ncols=2, figsize=(7, 2.5))
+    for epoch in range(num_epochs):
+        with tf.GradientTape() as tape:
+            contents_Y_hat, styles_Y_hat = extract_features(
+                X, content_layers, style_layers)
+            contents_l, styles_l, tv_l, l = compute_loss(
+                X, contents_Y_hat, styles_Y_hat, contents_Y, styles_Y_gram)
+        grads = tape.gradient(l, [X])
+        trainer.apply_gradients(zip(grads, [X]))
+        if (epoch + 1) % 10 == 0:
+            animator.axes[1].imshow(postprocess(X))
+            animator.add(epoch + 1, [float(sum(contents_l)),
+                                     float(sum(styles_l)), float(tv_l)])
+    return X
+```
+
 Now we [**start to train the model**].
 We rescale the height and width of the content and style images to 300 by 450 pixels.
 We use the content image to initialize the synthesized image.
@@ -739,6 +892,14 @@ output = train(content_X, contents_Y, styles_Y, device, 0.3, 500, 50)
 ```{.python .input}
 #@tab jax
 image_shape = (300, 450)  # PIL Image (h, w)
+content_X, contents_Y = get_contents(image_shape)
+_, styles_Y = get_styles(image_shape)
+output = train(content_X, contents_Y, styles_Y, 0.3, 500, 50)
+```
+
+```{.python .input}
+#@tab tensorflow
+image_shape = (300, 450)  # (h, w)
 content_X, contents_Y = get_contents(image_shape)
 _, styles_Y = get_styles(image_shape)
 output = train(content_X, contents_Y, styles_Y, 0.3, 500, 50)
@@ -779,5 +940,9 @@ Some of these blocks even have the subtle texture of brush strokes.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1476)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1476)
 :end_tab:

@@ -549,7 +549,8 @@ class Residual(nn.Block):
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
                                strides=strides)
         self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv3 = nn.Conv2D(num_channels, kernel_size=1,
                                    strides=strides)
         else:
@@ -575,7 +576,7 @@ class ResNeXtBlock(nn.Block):
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
                                strides=1)
         self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1, 
-                               strides=strides, groups=bot_channels//groups)
+                               strides=strides, groups=groups)
         self.conv3 = nn.Conv2D(num_channels, kernel_size=1, padding=0,
                                strides=1)
         self.bn1 = nn.BatchNorm()
@@ -829,7 +830,7 @@ class MTFraEng(d2l.DataModule):
     def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
         def _build_array(sentences, vocab, is_tgt=False):
             pad_or_trim = lambda seq, t: (
-                seq[:t] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
+                seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
             sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
             if is_tgt:
                 sentences = [['<bos>'] + s for s in sentences]
@@ -1153,7 +1154,7 @@ class PositionalEncoding(nn.Block):
         X = d2l.arange(max_len).reshape(-1, 1) / np.power(
             10000, np.arange(0, num_hiddens, 2) / num_hiddens)
         self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X)
+        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
 
     def forward(self, X):
         X = X + self.P[:, :X.shape[1], :].as_in_ctx(X.ctx)
@@ -1448,7 +1449,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
                             legend=['train loss', 'train acc', 'test acc'])
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of predictions
+        # no. of examples
         metric = d2l.Accumulator(4)
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
@@ -2725,7 +2726,7 @@ def hit_and_auc(rankedlist, test_matrix, k):
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
                      devices):
     ranked_list, ranked_items, hit_rate, auc = {}, {}, [], []
-    all_items = set([i for i in range(num_users)])
+    all_items = set([i for i in range(num_items)])
     for u in range(num_users):
         neg_items = list(all_items - set(candidates[int(u)]))
         user_ids, item_ids, x, scores = [], [], [], []
@@ -3045,6 +3046,10 @@ def accuracy(y_hat, y):
     Defined in :numref:`sec_utils`"""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
+    elif y_hat.dtype != y.dtype:
+        # Binary classification with float scores (logits or probabilities):
+        # threshold at 0 (logits) to get class labels, then reshape to match y.
+        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
     cmp = d2l.astype(y_hat, y.dtype) == y
     return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 

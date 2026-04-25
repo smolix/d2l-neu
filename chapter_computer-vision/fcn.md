@@ -58,6 +58,16 @@ import numpy as np
 from PIL import Image
 ```
 
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import keras
+import numpy as np
+from PIL import Image
+```
+
 ## The Model
 
 Here we describe the basic design of the fully convolutional network model. 
@@ -159,6 +169,16 @@ print('Feature extractor output shape:',
       pretrained_net.apply(variables, dummy).shape)
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Use ResNet-50 pretrained on ImageNet as the backbone.
+# include_top=False removes the global avg pool and dense head.
+pretrained_net = keras.applications.ResNet50(
+    include_top=False, weights='imagenet')
+# Show the last few layers to understand the feature map shape
+pretrained_net.layers[-3:]
+```
+
 Next, we [**create the fully convolutional network instance `net`**].
 It copies all the pretrained layers in the ResNet-18
 except for the final global average pooling layer
@@ -183,6 +203,14 @@ net = nn.Sequential(*list(pretrained_net.children())[:-2])
 # We define the full FCN model below.
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Build the FCN feature extractor: all layers up to (but not including)
+# the global average pooling and dense head — i.e., the full conv body.
+net = keras.Model(inputs=pretrained_net.input,
+                  outputs=pretrained_net.output)
+```
+
 Given an input with height and width of 320 and 480 respectively,
 the forward propagation of `net`
 reduces the input height and width to 1/32 of the original, namely 10 and 15.
@@ -203,6 +231,12 @@ net(X).shape
 #@tab jax
 X = jnp.ones((1, 320, 480, 3))
 pretrained_net.apply(variables, X).shape
+```
+
+```{.python .input}
+#@tab tensorflow
+X = tf.random.uniform(shape=(1, 320, 480, 3))
+net(X).shape
 ```
 
 Next, we [**use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset.**]
@@ -260,6 +294,25 @@ net = FCN(num_classes=num_classes)
 variables = net.init(jax.random.PRNGKey(0), jnp.ones((1, 320, 480, 3)))
 print('FCN output shape:',
       net.apply(variables, jnp.ones((1, 320, 480, 3))).shape)
+```
+
+```{.python .input}
+#@tab tensorflow
+num_classes = 21
+# 1x1 conv to reduce channels to num_classes
+final_conv = keras.layers.Conv2D(num_classes, kernel_size=1,
+                                 kernel_initializer='glorot_uniform')
+# Transposed conv: stride=32, kernel=64, padding='same' upsamples 32x
+# (for input height/width divisible by 32, output equals input spatial size)
+transpose_conv = keras.layers.Conv2DTranspose(
+    num_classes, kernel_size=64, strides=32, padding='same', use_bias=False)
+
+inputs = net.input
+x = net.output
+x = final_conv(x)
+x = transpose_conv(x)
+fcn_net = keras.Model(inputs=inputs, outputs=x)
+print('FCN output shape:', fcn_net(tf.random.uniform((1, 320, 480, 3))).shape)
 ```
 
 ## [**Initializing Transposed Convolutional Layers**]
@@ -350,6 +403,26 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return jnp.array(weight)
 ```
 
+```{.python .input}
+#@tab tensorflow
+def bilinear_kernel(in_channels, out_channels, kernel_size):
+    factor = (kernel_size + 1) // 2
+    if kernel_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = (np.arange(kernel_size).reshape(-1, 1),
+          np.arange(kernel_size).reshape(1, -1))
+    filt = (1 - np.abs(og[0] - center) / factor) * \
+           (1 - np.abs(og[1] - center) / factor)
+    # Keras Conv2DTranspose uses HWIO kernel format (height, width, out, in)
+    weight = np.zeros((kernel_size, kernel_size, out_channels, in_channels),
+                      dtype=np.float32)
+    for i in range(min(in_channels, out_channels)):
+        weight[:, :, i, i] = filt
+    return weight
+```
+
 Let's [**experiment with upsampling of bilinear interpolation**] 
 that is implemented by a transposed convolutional layer. 
 We construct a transposed convolutional layer that 
@@ -396,6 +469,17 @@ ct_variables = {**ct_variables,
                                    'kernel': bilinear_w}}}
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Build a transposed conv layer with bilinear initialization to double H and W
+bilinear_w = bilinear_kernel(3, 3, 4)
+conv_trans = keras.layers.Conv2DTranspose(
+    3, kernel_size=4, strides=2, padding='same', use_bias=False,
+    kernel_initializer=tf.constant_initializer(bilinear_w))
+# Build the layer by passing a dummy input
+_ = conv_trans(tf.zeros((1, 1, 1, 3)))
+```
+
 Read the image `X` and assign the upsampling output to `Y`. In order to print the image, we need to adjust the position of the channel dimension.
 
 ```{.python .input}
@@ -420,6 +504,14 @@ img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
 X = jnp.expand_dims(jnp.array(img), axis=0)  # NHWC
 Y = conv_trans.apply(ct_variables, X)
 out_img = np.array(Y[0])
+```
+
+```{.python .input}
+#@tab tensorflow
+img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
+X = tf.expand_dims(tf.constant(img), axis=0)  # NHWC
+Y = conv_trans(X)
+out_img = Y[0].numpy()
 ```
 
 As we can see, the transposed convolutional layer increases both the height and width of the image by a factor of two.
@@ -451,6 +543,15 @@ print('input image shape:', img.shape)
 d2l.plt.imshow(img);
 print('output image shape:', out_img.shape)
 d2l.plt.imshow(out_img);
+```
+
+```{.python .input}
+#@tab tensorflow
+d2l.set_figsize()
+print('input image shape:', img.shape)
+d2l.plt.imshow(img);
+print('output image shape:', out_img.shape)
+d2l.plt.imshow(np.clip(out_img, 0, 1));
 ```
 
 In a fully convolutional network, we [**initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization.**]
@@ -485,6 +586,18 @@ def init_fcn_weights(rng):
     return {**variables, 'params': flat_params}
 
 variables = init_fcn_weights(jax.random.PRNGKey(42))
+```
+
+```{.python .input}
+#@tab tensorflow
+# Initialize the transpose conv kernel with bilinear upsampling weights.
+# The 1x1 conv was already initialized with Glorot (Xavier) uniform above.
+W = bilinear_kernel(num_classes, num_classes, 64)
+# Find the Conv2DTranspose layer in fcn_net and set its weights
+for layer in fcn_net.layers:
+    if isinstance(layer, keras.layers.Conv2DTranspose):
+        layer.set_weights([W])
+        break
 ```
 
 ## [**Reading the Dataset**]
@@ -572,6 +685,23 @@ for epoch in range(num_epochs):
 variables = {'params': params, 'batch_stats': batch_stats}
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Loss: SparseCategoricalCrossentropy over per-pixel logits (NHWC -> NHW).
+# Backbone weights are frozen to match the PT/JAX approach of fine-tuning only
+# the head; unfreeze to replicate full fine-tuning.
+for layer in fcn_net.layers[:-2]:
+    layer.trainable = False
+
+num_epochs, lr, wd = 5, 0.001, 1e-3
+fcn_net.compile(
+    optimizer=keras.optimizers.SGD(learning_rate=lr, momentum=0.9,
+                                   weight_decay=wd),
+    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    metrics=['accuracy'])
+fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)
+```
+
 ## [**Prediction**]
 
 
@@ -606,6 +736,17 @@ def predict(img):
     return jnp.argmax(pred, axis=-1).reshape(pred.shape[1], pred.shape[2])
 ```
 
+```{.python .input}
+#@tab tensorflow
+def predict(img):
+    rgb_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    rgb_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    X = (img.astype(np.float32) / 255 - rgb_mean) / rgb_std
+    X = tf.expand_dims(tf.constant(X), axis=0)  # NHWC
+    pred = fcn_net(X, training=False)  # (1, H, W, num_classes)
+    return tf.reshape(tf.argmax(pred, axis=-1), pred.shape[1:3])
+```
+
 To [**visualize the predicted class**] of each pixel, we map the predicted class back to its label color in the dataset.
 
 ```{.python .input}
@@ -630,6 +771,14 @@ def label2image(pred):
     colormap = jnp.array(d2l.VOC_COLORMAP, dtype=jnp.uint8)
     X = pred.astype(jnp.int32)
     return colormap[X, :]
+```
+
+```{.python .input}
+#@tab tensorflow
+def label2image(pred):
+    colormap = tf.constant(d2l.VOC_COLORMAP, dtype=tf.uint8)
+    X = tf.cast(pred, tf.int32)
+    return tf.gather(colormap, X)
 ```
 
 Images in the test dataset vary in size and shape.
@@ -700,6 +849,20 @@ for i in range(n):
 d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ```
 
+```{.python .input}
+#@tab tensorflow
+voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
+test_images, test_labels = d2l.read_voc_images(voc_dir, False)
+n, imgs = 4, []
+for i in range(n):
+    # Crop HWC arrays: top=0, left=0, height=320, width=480
+    X = test_images[i][:320, :480, :]
+    pred = label2image(predict(X))
+    label_crop = test_labels[i][:320, :480, :]
+    imgs += [X, pred.numpy(), label_crop]
+d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
+```
+
 ## Summary
 
 * The fully convolutional network first uses a CNN to extract image features, then transforms the number of channels into the number of classes via a $1\times 1$ convolutional layer, and finally transforms the height and width of the feature maps to those of the input image via the transposed convolution.
@@ -722,5 +885,9 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1582)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1582)
 :end_tab:

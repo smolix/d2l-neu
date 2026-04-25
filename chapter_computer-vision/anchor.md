@@ -51,6 +51,16 @@ import numpy as np
 np.set_printoptions(2)  # Simplify printing accuracy
 ```
 
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+import numpy as np
+
+np.set_printoptions(2)  # Simplify printing accuracy
+```
+
 ## Generating Multiple Anchor Boxes
 
 Suppose that the input image has a height of $h$ and width of $w$. 
@@ -200,6 +210,47 @@ def multibox_prior(data, sizes, ratios):
     return jnp.expand_dims(output, axis=0)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel."""
+    in_height, in_width = data.shape[-2:]
+    num_sizes, num_ratios = len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = np.array(sizes, dtype=np.float32)
+    ratio_tensor = np.array(ratios, dtype=np.float32)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (np.arange(in_height) + offset_h) * steps_h
+    center_w = (np.arange(in_width) + offset_w) * steps_w
+    shift_y, shift_x = np.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = np.concatenate((size_tensor * np.sqrt(ratio_tensor[0]),
+                        sizes[0] * np.sqrt(ratio_tensor[1:])))\
+                        * in_height / in_width  # Handle rectangular inputs
+    h = np.concatenate((size_tensor / np.sqrt(ratio_tensor[0]),
+                        sizes[0] / np.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = np.tile(np.stack((-w, -h, w, h)).T,
+                                   (in_height * in_width, 1)) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = np.repeat(np.stack([shift_x, shift_y, shift_x, shift_y],
+                         axis=1), boxes_per_pixel, axis=0)
+    output = tf.constant(out_grid + anchor_manipulations, dtype=tf.float32)
+    return tf.expand_dims(output, axis=0)
+```
+
 We can see that [**the shape of the returned anchor box variable `Y`**] is
 (batch size, number of anchor boxes, 4).
 
@@ -236,6 +287,17 @@ Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
 
+```{.python .input}
+#@tab tensorflow
+img = d2l.plt.imread('../img/catdog.jpg')
+h, w = img.shape[:2]
+
+print(h, w)
+X = tf.random.uniform(shape=(1, 3, h, w))
+Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
+Y.shape
+```
+
 After changing the shape of the anchor box variable `Y` to (image height, image width, number of anchor boxes centered on the same pixel, 4),
 we can obtain all the anchor boxes centered on a specified pixel position.
 In the following,
@@ -244,8 +306,14 @@ The coordinate values of both axes
 are divided by the width and height of the image, respectively.
 
 ```{.python .input}
-#@tab all
+#@tab pytorch, mxnet, jax
 boxes = Y.reshape(h, w, 5, 4)
+boxes[250, 250, 0, :]
+```
+
+```{.python .input}
+#@tab tensorflow
+boxes = tf.reshape(Y, (h, w, 5, 4))
 boxes[250, 250, 0, :]
 ```
 
@@ -287,9 +355,19 @@ As you can see, the blue anchor box with a scale of 0.75 and an aspect ratio of 
 surrounds the dog in the image.
 
 ```{.python .input}
-#@tab all
+#@tab pytorch, mxnet, jax
 d2l.set_figsize()
 bbox_scale = d2l.tensor((w, h, w, h))
+fig = d2l.plt.imshow(img)
+show_bboxes(fig.axes, boxes[250, 250, :, :] * bbox_scale,
+            ['s=0.75, r=1', 's=0.5, r=1', 's=0.25, r=1', 's=0.75, r=2',
+             's=0.75, r=0.5'])
+```
+
+```{.python .input}
+#@tab tensorflow
+d2l.set_figsize()
+bbox_scale = tf.constant((w, h, w, h), dtype=tf.float32)
 fig = d2l.plt.imshow(img)
 show_bboxes(fig.axes, boxes[250, 250, :, :] * bbox_scale,
             ['s=0.75, r=1', 's=0.5, r=1', 's=0.25, r=1', 's=0.75, r=2',
@@ -381,6 +459,29 @@ def box_iou(boxes1, boxes2):
     inter_upperlefts = jnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
     inter_lowerrights = jnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
     inters = jnp.clip(inter_lowerrights - inter_upperlefts, 0)
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes."""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = tf.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = tf.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = tf.clip_by_value(inter_lowerrights - inter_upperlefts, 0,
+                              float('inf'))
     # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
     inter_areas = inters[:, :, 0] * inters[:, :, 1]
     union_areas = areas1[:, None] + areas2 - inter_areas
@@ -532,6 +633,38 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     _, anchors_bbox_map = jax.lax.fori_loop(
         0, num_gt_boxes, body, (jaccard, anchors_bbox_map))
     return anchors_bbox_map
+```
+
+```{.python .input}
+#@tab tensorflow
+#@save
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes."""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    # box i and the ground-truth bounding box j
+    jaccard = box_iou(anchors, ground_truth)
+    # Initialize the tensor to hold the assigned ground-truth bounding box for
+    # each anchor
+    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32)
+    # Assign ground-truth bounding boxes according to the threshold
+    max_ious = tf.reduce_max(jaccard, axis=1).numpy()
+    indices = tf.argmax(jaccard, axis=1).numpy()
+    anc_i = np.nonzero(max_ious >= iou_threshold)[0]
+    box_j = indices[max_ious >= iou_threshold]
+    anchors_bbox_map[anc_i] = box_j
+    # Use a plain Python loop — this runs once per sample, not in training
+    col_discard = np.full((num_anchors,), -1.0)
+    row_discard = np.full((num_gt_boxes,), -1.0)
+    jaccard_np = jaccard.numpy()
+    for _ in range(num_gt_boxes):
+        max_idx = int(np.argmax(jaccard_np))
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
+        anchors_bbox_map[anc_idx] = box_idx
+        jaccard_np[:, box_idx] = col_discard
+        jaccard_np[anc_idx, :] = row_discard
+    return tf.constant(anchors_bbox_map, dtype=tf.int32)
 ```
 
 ### Labeling Classes and Offsets
@@ -695,6 +828,49 @@ def multibox_target(anchors, labels):
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes."""
+    batch_size, anchors = labels.shape[0], tf.squeeze(anchors, axis=0)
+    batch_offset, batch_mask, batch_class_labels = [], [], []
+    num_anchors = anchors.shape[0]
+    for i in range(batch_size):
+        label = labels[i, :, :]
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, None)
+        bbox_mask = tf.tile(
+            tf.expand_dims(
+                tf.cast(anchors_bbox_map >= 0, dtype=tf.float32), axis=-1),
+            [1, 4])
+        # Initialize class labels and assigned bounding box coordinates with
+        # zeros
+        class_labels = tf.zeros(num_anchors, dtype=tf.int32)
+        assigned_bb = tf.zeros((num_anchors, 4), dtype=tf.float32)
+        # Label classes of anchor boxes using their assigned ground-truth
+        # bounding boxes. If an anchor box is not assigned any, we label its
+        # class as background (the value remains zero)
+        indices_true = tf.cast(
+            tf.squeeze(tf.where(anchors_bbox_map >= 0), axis=1), tf.int32)
+        bb_idx = tf.gather(anchors_bbox_map, indices_true)
+        class_labels = tf.tensor_scatter_nd_update(
+            class_labels, tf.expand_dims(indices_true, 1),
+            tf.cast(tf.gather(label[:, 0], bb_idx), tf.int32) + 1)
+        assigned_bb = tf.tensor_scatter_nd_update(
+            assigned_bb, tf.expand_dims(indices_true, 1),
+            tf.gather(label[:, 1:], bb_idx))
+        # Offset transformation
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        batch_offset.append(tf.reshape(offset, [-1]))
+        batch_mask.append(tf.reshape(bbox_mask, [-1]))
+        batch_class_labels.append(class_labels)
+    bbox_offset = tf.stack(batch_offset)
+    bbox_mask = tf.stack(batch_mask)
+    class_labels = tf.stack(batch_class_labels)
+    return (bbox_offset, bbox_mask, class_labels)
+```
+
 ### An Example
 
 Let's illustrate anchor box labeling
@@ -750,6 +926,12 @@ labels = multibox_target(anchors.unsqueeze(dim=0),
 #@tab jax
 labels = multibox_target(jnp.expand_dims(anchors, axis=0),
                          jnp.expand_dims(ground_truth, axis=0))
+```
+
+```{.python .input}
+#@tab tensorflow
+labels = multibox_target(tf.expand_dims(anchors, axis=0),
+                         tf.expand_dims(ground_truth, axis=0))
 ```
 
 There are three items in the returned result, all of which are in the tensor format.
@@ -918,6 +1100,33 @@ def nms(boxes, scores, iou_threshold):
     return jnp.array(keep, dtype=jnp.int32)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes."""
+    # Work in NumPy so the Python while-loop isn't forcing a host/device
+    # sync every iteration.
+    boxes_np = np.asarray(boxes)
+    B = np.argsort(-np.asarray(scores))
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while B.size > 0:
+        i = int(B[0])
+        keep.append(i)
+        if B.size == 1: break
+        rest = B[1:]
+        # Pairwise IoU between box i and every remaining box, in NumPy
+        box_i, rest_boxes = boxes_np[i], boxes_np[rest]
+        lt = np.maximum(box_i[:2], rest_boxes[:, :2])
+        rb = np.minimum(box_i[2:], rest_boxes[:, 2:])
+        inter = np.clip(rb - lt, 0, None).prod(axis=1)
+        area_i = (box_i[2:] - box_i[:2]).prod()
+        area_rest = (rest_boxes[:, 2:] - rest_boxes[:, :2]).prod(axis=1)
+        iou = inter / (area_i + area_rest - inter)
+        B = rest[iou <= iou_threshold]
+    return tf.constant(keep, dtype=tf.int32)
+```
+
 We define the following `multibox_detection`
 to [**apply non-maximum suppression
 to predicting bounding boxes**].
@@ -1034,6 +1243,49 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return jnp.stack(out)
 ```
 
+```{.python .input}
+#@tab tensorflow
+#@save
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression."""
+    batch_size = cls_probs.shape[0]
+    anchors = tf.squeeze(anchors, axis=0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob = cls_probs[i]
+        offset_pred = tf.reshape(offset_preds[i], (-1, 4))
+        conf = tf.reduce_max(cls_prob[1:], axis=0)
+        class_id = tf.cast(tf.argmax(cls_prob[1:], axis=0), tf.int32)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = tf.cast(tf.range(num_anchors), tf.int32)
+        combined = tf.concat((keep, all_idx), axis=0)
+        unique, _, counts = tf.unique_with_counts(combined)
+        non_keep = tf.boolean_mask(unique, counts == 1)
+        all_id_sorted = tf.concat((keep, non_keep), axis=0)
+        # Set non-kept boxes' class to -1
+        updates = tf.fill([tf.shape(non_keep)[0]], -1)
+        class_id = tf.tensor_scatter_nd_update(
+            class_id, tf.expand_dims(non_keep, 1), updates)
+        class_id = tf.cast(tf.gather(class_id, all_id_sorted), tf.float32)
+        conf = tf.gather(conf, all_id_sorted)
+        predicted_bb = tf.gather(predicted_bb, all_id_sorted)
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = conf < pos_threshold
+        class_id = tf.where(below_min_idx, tf.fill(tf.shape(class_id), -1.0),
+                            class_id)
+        conf = tf.where(below_min_idx, 1 - conf, conf)
+        pred_info = tf.concat((tf.expand_dims(class_id, axis=1),
+                               tf.expand_dims(conf, axis=1),
+                               predicted_bb), axis=1)
+        out.append(pred_info)
+    return tf.stack(out)
+```
+
 Now let's [**apply the above implementations
 to a concrete example with four anchor boxes**].
 For simplicity, we assume that the
@@ -1043,10 +1295,21 @@ For each class among the background, dog, and cat,
 we also define its predicted likelihood.
 
 ```{.python .input}
-#@tab all
+#@tab pytorch, mxnet, jax
 anchors = d2l.tensor([[0.1, 0.08, 0.52, 0.92], [0.08, 0.2, 0.56, 0.95],
                       [0.15, 0.3, 0.62, 0.91], [0.55, 0.2, 0.9, 0.88]])
 offset_preds = d2l.tensor([0] * d2l.size(anchors))
+cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood 
+                      [0.9, 0.8, 0.7, 0.1],  # Predicted dog likelihood 
+                      [0.1, 0.2, 0.3, 0.9]])  # Predicted cat likelihood
+```
+
+```{.python .input}
+#@tab tensorflow
+anchors = d2l.tensor([[0.1, 0.08, 0.52, 0.92], [0.08, 0.2, 0.56, 0.95],
+                      [0.15, 0.3, 0.62, 0.91], [0.55, 0.2, 0.9, 0.88]])
+# Use float zeros so offset_inverse arithmetic stays in float32
+offset_preds = tf.zeros(d2l.size(anchors), dtype=tf.float32)
 cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood 
                       [0.9, 0.8, 0.7, 0.1],  # Predicted dog likelihood 
                       [0.1, 0.2, 0.3, 0.9]])  # Predicted cat likelihood
@@ -1103,6 +1366,15 @@ output = multibox_detection(jnp.expand_dims(cls_probs, axis=0),
 output
 ```
 
+```{.python .input}
+#@tab tensorflow
+output = multibox_detection(tf.expand_dims(cls_probs, axis=0),
+                            tf.expand_dims(offset_preds, axis=0),
+                            tf.expand_dims(anchors, axis=0),
+                            nms_threshold=0.5)
+output
+```
+
 After removing those predicted bounding boxes
 of class -1, 
 we can [**output the final predicted bounding box
@@ -1149,5 +1421,9 @@ in the final output.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://discuss.d2l.ai/t/1603)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1603)
 :end_tab:

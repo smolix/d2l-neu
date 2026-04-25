@@ -16,7 +16,7 @@ to run the code of this book.
 
 ## Signing Up
 
-First, we need to sign up an account at https://aws.amazon.com/.
+First, we need to sign up for an account at https://aws.amazon.com/.
 For additional security,
 using two-factor authentication 
 is encouraged.

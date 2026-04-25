@@ -20,7 +20,7 @@ A Markov decision process (MDP) :cite:`BellmanMDP` is a model for how the state 
 The different components above together form a Markov decision process (MDP)
 $$\textrm{MDP}: (\mathcal{S}, \mathcal{A}, T, r).$$
 
-Let's now consider the situation when the robot starts at a particular state $s_0 \in \mathcal{S}$ and continues taking actions to result in a trajectory
+Let us now consider the situation when the robot starts at a particular state $s_0 \in \mathcal{S}$ and continues taking actions to result in a trajectory
 $$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, s_2, a_2, r_2, \ldots).$$
 
 At each time step $t$ the robot is at a state $s_t$ and takes an action $a_t$ which results in a reward $r_t = r(s_t, a_t)$. The *return* of a trajectory is the total reward obtained by the robot along such a trajectory

@@ -34,7 +34,7 @@ The following is an example of *contradiction* as "running the coding example" i
 
 > Hypothesis: The man is sleeping.
 
-The third example shows a *neutrality* relationship because neither "famous" nor "not famous" can be inferred from the fact that "are performing for us". 
+The third example shows a *neutral* relationship because neither "famous" nor "not famous" can be inferred from the fact that "are performing for us".
 
 > Premise: The musicians are performing for us.
 

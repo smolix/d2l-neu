@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-#  Sequence-to-Sequence Learning for Machine Translation
+# Sequence-to-Sequence Learning for Machine Translation
 :label:`sec_seq2seq`
 
 In so-called sequence-to-sequence problems such as machine translation

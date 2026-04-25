@@ -537,7 +537,7 @@ def load_data_fashion_mnist(batch_size, resize=None):   #@save
             batch_size).map(resize_fn))
 
 class TrainCallback(tf.keras.callbacks.Callback):  #@save
-    """A callback to visiualize the training progress."""
+    """A callback to visualize the training progress."""
     def __init__(self, net, train_iter, test_iter, num_epochs, device_name):
         self.timer = d2l.Timer()
         self.animator = d2l.Animator(

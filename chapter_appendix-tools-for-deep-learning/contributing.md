@@ -5,13 +5,13 @@ Contributions by [readers](https://github.com/d2l-ai/d2l-en/graphs/contributors)
 
 ## Submitting Minor Changes
 
-The most common contributions are editing one sentence or fixing typos. We recommend that you find the source file in the [GitHub repository](https://github.com/d2l-ai/d2l-en) and edit the file directly. For example, you can search the file through the [Find file](https://github.com/d2l-ai/d2l-en/find/master) button (:numref:`fig_edit_file`) to locate the source file (a markdown file). Then you click the "Edit this file" button on the upper-right corner to make your changes in the markdown file.
+The most common contributions are editing one sentence or fixing typos. We recommend that you find the source file in the [GitHub repository](https://github.com/d2l-ai/d2l-en) and edit the file directly. For example, you can search for the file using the [Find file](https://github.com/d2l-ai/d2l-en/find/master) button (:numref:`fig_edit_file`) to locate the source file (a markdown file). Then you click the "Edit this file" button on the upper-right corner to make your changes in the markdown file.
 
 ![Edit the file on Github.](../img/edit-file.png)
 :width:`300px`
 :label:`fig_edit_file`
 
-After you are done, fill in your change descriptions in the "Propose file change" panel on the page bottom and then click the "Propose file change" button. It will redirect you to a new page to review your changes (:numref:`fig_git_createpr`). If everything is good, you can submit a pull request by clicking the "Create pull request" button.
+After you are done, fill in your change descriptions in the "Propose file change" panel at the bottom of the page and then click the "Propose file change" button. It will redirect you to a new page to review your changes (:numref:`fig_git_createpr`). If everything is good, you can submit a pull request by clicking the "Create pull request" button.
 
 ## Proposing Major Changes
 

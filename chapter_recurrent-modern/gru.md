@@ -491,7 +491,7 @@ model.predict('it has', 20, data.vocab, trainer.state.params)
 ## Summary
 
 Compared with LSTMs, GRUs achieve similar performance but tend to be lighter computationally.
-Generally, compared with simple RNNs, gated RNNS, just like LSTMs and GRUs,
+Generally, compared with simple RNNs, gated RNNs, just like LSTMs and GRUs,
 can better capture dependencies for sequences with large time step distances.
 GRUs contain basic RNNs as their extreme case whenever the reset gate is switched on. 
 They can also skip subsequences by turning on the update gate.

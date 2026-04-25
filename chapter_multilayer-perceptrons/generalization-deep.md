@@ -341,7 +341,7 @@ deep networks tend to be over-parametrized,
 and for most tasks are capable
 of perfectly fitting the training set.
 This *interpolation regime* challenges
-many hard fast-held intuitions.
+many hard-and-fast intuitions.
 Functionally, neural networks look like parametric models.
 But thinking of them as nonparametric models
 can sometimes be a more reliable source of intuition.

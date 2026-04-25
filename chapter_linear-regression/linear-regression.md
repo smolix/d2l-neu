@@ -116,7 +116,7 @@ Even though we will never see any newly-built homes with precisely zero area,
 we still need the bias because it allows us
 to express all linear functions of our features
 (rather than restricting us to lines that pass through the origin).
-Strictly speaking, :eqref:`eq_price-area` is an *affine transformation* of input features, which is characterized by a *linear transformation* of features via a weighted sum, combined with a *translation* via the added bias.
+Strictly speaking, :eqref:`eq_price-area` is an *affine transformation* of input features: a *linear transformation* via a weighted sum, combined with a *translation* via the added bias.
 Given a dataset, our goal is to choose
 the weights $\mathbf{w}$ and the bias $b$
 that, on average, make our model's predictions
@@ -584,7 +584,7 @@ d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
 
 ```{.python .input}
 %%tab jax
-# Use JAX NumPy for visualization
+# Use NumPy again for visualization
 x = jnp.arange(-7, 7, 0.01)
 # Mean and standard deviation pairs
 params = [(0, 1), (0, 2), (3, 1)]
@@ -622,7 +622,7 @@ The equality follows since all pairs $(\mathbf{x}^{(i)}, y^{(i)})$
 were drawn independently of each other.
 Estimators chosen according to the principle of maximum likelihood
 are called *maximum likelihood estimators*.
-While, maximizing the product of many exponential functions,
+While maximizing the product of many exponential functions
 might look difficult,
 we can simplify things significantly, without changing the objective,
 by maximizing the logarithm of the likelihood instead.

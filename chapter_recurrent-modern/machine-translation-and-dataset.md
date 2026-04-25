@@ -9,14 +9,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 Among the major breakthroughs that prompted 
 widespread interest in modern RNNs
 was a major advance in the applied field of 
-statistical  *machine translation*.
+statistical *machine translation*.
 Here, the model is presented with a sentence in one language
 and must predict the corresponding sentence in another. 
 Note that here the sentences may be of different lengths,
 and that corresponding words in the two sentences 
 may not occur in the same order, 
 owing to differences 
-in the two language's grammatical structure. 
+in the two languages' grammatical structure. 
 
 
 Many problems have this flavor of mapping 

@@ -21,8 +21,7 @@ Just click "RUN ANYWAY" to ignore it.
 
 Next, Colab will connect you to an instance to run the code of this section.
 Specifically, if a GPU is needed, 
-Colab will be automatically requested 
-for connecting to a GPU instance.
+Colab will automatically connect to a GPU instance.
 
 If you plan to work through many notebooks, it is often easier to
 `git clone` the entire book repository into your Colab session, so that

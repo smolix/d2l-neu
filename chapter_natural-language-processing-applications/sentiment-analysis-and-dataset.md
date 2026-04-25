@@ -109,7 +109,7 @@ def read_imdb(data_dir, is_train):
     return data, labels
 
 train_data = read_imdb(data_dir, is_train=True)
-print('# trainings:', len(train_data[0]))
+print('# training examples:', len(train_data[0]))
 for x, y in zip(train_data[0][:3], train_data[1][:3]):
     print('label:', y, 'review:', x[:60])
 ```

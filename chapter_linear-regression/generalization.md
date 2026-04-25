@@ -270,7 +270,7 @@ When we compare the training and validation errors,
 we want to be mindful of two common situations.
 First, we want to watch out for cases
 when our training error and validation error are both substantial
-but there is a little gap between them.
+but there is only a small gap between them.
 If the model is unable to reduce the training error,
 that could mean that our model is too simple
 (i.e., insufficiently expressive)

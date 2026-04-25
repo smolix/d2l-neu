@@ -135,7 +135,7 @@ As an extra sanity check, we can send random data
 through the network and check that the mean is in fact 0.
 Because we are dealing with floating point numbers,
 we may still see a very small nonzero number
-due to quantization.
+due to floating-point rounding.
 
 :begin_tab:`jax`
 Here we utilize the `init_with_output` method which returns both the output of

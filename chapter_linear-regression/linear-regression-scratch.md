@@ -581,7 +581,7 @@ the learning rate `lr=0.03`
 and set `max_epochs=3`. 
 Note that in general, both the number of epochs 
 and the learning rate are hyperparameters.
-In general, setting hyperparameters is tricky
+Setting hyperparameters is tricky
 and we will usually want to use a three-way split,
 one set for training, 
 a second for hyperparameter selection,

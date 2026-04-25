@@ -518,7 +518,7 @@ class WeightDecay(d2l.LinearRegression):
 ```{.python .input}
 %%tab jax
 class WeightDecay(d2l.LinearRegression):
-    wd: int = 0
+    wd: float = 0
     
     def configure_optimizers(self):
         # Weight Decay is not available directly within optax.sgd, but

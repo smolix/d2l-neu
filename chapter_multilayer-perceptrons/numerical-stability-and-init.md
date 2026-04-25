@@ -397,7 +397,7 @@ a clever idea and contribute an implementation to deep learning frameworks.
 Vanishing and exploding gradients are common issues in deep networks. Great care in parameter initialization is required to ensure that gradients and parameters remain well controlled.
 Initialization heuristics are needed to ensure that the initial gradients are neither too large nor too small.
 Random initialization is key to ensuring that symmetry is broken before optimization.
-Xavier initialization suggests that, for each layer, variance of any output is not affected by the number of inputs, and variance of any gradient is not affected by the number of outputs.
+Xavier initialization keeps the variance of activations and gradients roughly constant across layers by scaling weights according to the number of inputs and outputs.
 ReLU activation functions mitigate the vanishing gradient problem. This can accelerate convergence.
 
 ## Exercises

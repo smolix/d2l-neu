@@ -5,7 +5,7 @@ So far, our working example of a sequence learning task has been language modeli
 where we aim to predict the next token given all previous tokens in a sequence.
 In this scenario, we wish only to condition upon the leftward context,
 and thus the unidirectional chaining of a standard RNN seems appropriate.
-However, there are many other sequence learning tasks contexts
+However, there are many other sequence learning contexts
 where it is perfectly fine to condition the prediction at every time step
 on both the leftward and the rightward context.
 Consider, for example, part of speech detection.
@@ -25,7 +25,7 @@ the likely value of the missing token changes dramatically:
 
 In the first sentence "happy" seems to be a likely candidate.
 The words "not" and "very" seem plausible in the second sentence,
-but "not" seems incompatible with the third sentences.
+but "not" seems incompatible with the third sentence.
 
 
 Fortunately, a simple technique transforms any unidirectional RNN

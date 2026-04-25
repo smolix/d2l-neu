@@ -69,7 +69,7 @@ $$\mathbf{x} \to \left[
 f_1(\mathbf{x}),
 f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), f_3\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right), f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right)\right]\right), \ldots\right].$$
 
-In the end, all these functions are combined in MLP to reduce the number of features again. In terms of implementation this is quite simple:
+In the end, all these functions are combined in an MLP to reduce the number of features again. In terms of implementation this is quite simple:
 rather than adding terms, we concatenate them. The name DenseNet arises from the fact that the dependency graph between variables becomes quite dense. The final layer of such a chain is densely connected to all previous layers. The dense connections are shown in :numref:`fig_densenet`.
 
 ![Dense connections in DenseNet. Note how the dimensionality increases with depth.](../img/densenet.svg)

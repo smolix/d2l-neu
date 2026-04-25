@@ -219,10 +219,11 @@ net[2].weight.grad == None
 When we need to perform operations on all parameters,
 accessing them one-by-one can grow tedious.
 The situation can grow especially unwieldy
-when we work with more complex, e.g., nested, modules,
+when we work with more complex modules (e.g., nested ones),
 since we would need to recurse
 through the entire tree to extract
-each sub-module's parameters. Below we demonstrate accessing the parameters of all layers.
+each sub-module's parameters.
+Below we demonstrate accessing the parameters of all layers.
 
 ```{.python .input}
 %%tab mxnet

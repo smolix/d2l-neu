@@ -148,7 +148,7 @@ def get_net():
     net.add(tf.keras.Input(shape=(512,)))
     net.add(Dense(256, activation = "relu"))
     net.add(Dense(128, activation = "relu"))
-    net.add(Dense(2, activation = "linear"))
+    net.add(Dense(2))
     return net
 
 x = tf.random.normal([1,512])
@@ -330,7 +330,7 @@ As is observed in the above results, after an `nn.Sequential` instance is script
 :end_tab:
 
 :begin_tab:`tensorflow`
-As is observed in the above results, after a `tf.keras.Sequential` instance is scripted using the `tf.function` function, computing performance is improved through the use of symbolic programming via graph-mode execution in tensorflow. 
+As is observed in the above results, after a `tf.keras.Sequential` instance is scripted using the `tf.function` function, computing performance is improved through the use of symbolic programming via graph-mode execution in TensorFlow. 
 :end_tab:
 
 :begin_tab:`jax`

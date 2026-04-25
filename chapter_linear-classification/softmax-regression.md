@@ -192,7 +192,7 @@ Another way to accomplish this goal
 an exponential function $P(y = i) \propto \exp o_i$.
 This does indeed satisfy the requirement
 that the conditional class probability
-increases with increasing $o_i$, it is monotonic,
+increases monotonically with $o_i$,
 and all probabilities are nonnegative.
 We can then transform these values so that they add up to $1$
 by dividing each by their sum.
@@ -406,7 +406,7 @@ and manipulating information (also known as data).
 
 The central idea in information theory is to quantify the
 amount of information contained in data.
-This places a  limit on our ability to compress data.
+This places a limit on our ability to compress data.
 For a distribution $P$ its *entropy*, $H[P]$, is defined as:
 
 $$H[P] = \sum_j - P(j) \log P(j).$$
@@ -429,7 +429,7 @@ then this data is easy to compress.
 Take the extreme example where every token in the stream
 always takes the same value.
 That is a very boring data stream!
-And not only it is boring, but it is also easy to predict.
+And not only is it boring, but it is also easy to predict.
 Because the tokens are always the same,
 we do not have to transmit any information
 to communicate the contents of the stream.
@@ -487,7 +487,7 @@ to statistical physics and information theory.
 
 While this is enough to get you on your way,
 and hopefully enough to whet your appetite,
-we hardly dived deep here.
+we have barely scratched the surface here.
 Among other things, we skipped over computational considerations.
 Specifically, for any fully connected layer with $d$ inputs and $q$ outputs,
 the parametrization and computational cost is $\mathcal{O}(dq)$,

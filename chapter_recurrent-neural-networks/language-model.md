@@ -158,7 +158,7 @@ Second, we need to store all counts.
 Third, this entirely ignores the meaning of the words. For
 instance, "cat" and "feline" should occur in related contexts.
 It is quite difficult to adjust such models to additional contexts,
-whereas, deep learning based language models are well suited to
+whereas deep learning based language models are well suited to
 take this into account.
 Last, long word
 sequences are almost certain to be novel, hence a model that simply
@@ -170,7 +170,7 @@ in the rest of the chapter.
 ## Perplexity
 :label:`subsec_perplexity`
 
-Next, let's discuss about how to measure the quality of the language model, which we will then use to evaluate our models in the subsequent sections.
+Next, let's discuss how to measure the quality of the language model, which we will then use to evaluate our models in the subsequent sections.
 One way is to check how surprising the text is.
 A good language model is able to predict, with high accuracy, the tokens that come next.
 Consider the following continuations of the phrase "It is raining", as proposed by different language models:
@@ -189,7 +189,7 @@ After all, shorter sequences are much more likely to occur than the longer ones,
 hence evaluating the model on Tolstoy's magnum opus
 *War and Peace* will inevitably produce a much smaller likelihood than, say, on Saint-Exupery's novella *The Little Prince*. What is missing is the equivalent of an average.
 
-Information theory comes handy here.
+Information theory comes in handy here.
 We defined entropy, surprisal, and cross-entropy
 when we introduced the softmax regression
 (:numref:`subsec_info_theory_basics`).

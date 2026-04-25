@@ -30,7 +30,7 @@ The computational algorithm for applying the chain rule
 in this fashion is called *backpropagation*.
 
 While autograd libraries have become
-a hot concern over the past decade,
+a major concern over the past decade,
 they have a long history. 
 In fact the earliest references to autograd
 date back over half of a century :cite:`Wengert.1964`.
@@ -73,13 +73,13 @@ $y = 2\mathbf{x}^{\top}\mathbf{x}$
 with respect to the column vector $\mathbf{x}$.**)
 To start, we assign `x` an initial value.
 
-```{.python .input  n=1}
+```{.python .input}
 %%tab mxnet
 x = np.arange(4.0)
 x
 ```
 
-```{.python .input  n=7}
+```{.python .input}
 %%tab pytorch
 x = torch.arange(4.0)
 x
@@ -114,7 +114,7 @@ is vector-valued with
 the same shape as $\mathbf{x}$.
 :end_tab:
 
-```{.python .input  n=8}
+```{.python .input}
 %%tab mxnet
 # We allocate memory for a tensor's gradient by invoking `attach_grad`
 x.attach_grad()
@@ -123,7 +123,7 @@ x.attach_grad()
 x.grad
 ```
 
-```{.python .input  n=9}
+```{.python .input}
 %%tab pytorch
 # Can also create x = torch.arange(4.0, requires_grad=True)
 x.requires_grad_(True)
@@ -137,7 +137,7 @@ x = tf.Variable(x)
 
 (**We now calculate our function of `x` and assign the result to `y`.**)
 
-```{.python .input  n=10}
+```{.python .input}
 %%tab mxnet
 # Our code is inside an `autograd.record` scope to build the computational
 # graph
@@ -146,7 +146,7 @@ with autograd.record():
 y
 ```
 
-```{.python .input  n=11}
+```{.python .input}
 %%tab pytorch
 y = 2 * torch.dot(x, x)
 y
@@ -200,7 +200,7 @@ y.backward()
 x.grad
 ```
 
-```{.python .input  n=12}
+```{.python .input}
 %%tab pytorch
 y.backward()
 x.grad
@@ -226,12 +226,12 @@ with respect to $\mathbf{x}$ should be $4\mathbf{x}$.**)
 We can now verify that the automatic gradient computation
 and the expected result are identical.
 
-```{.python .input  n=13}
+```{.python .input}
 %%tab mxnet
 x.grad == 4 * x
 ```
 
-```{.python .input  n=14}
+```{.python .input}
 %%tab pytorch
 x.grad == 4 * x
 ```
@@ -286,7 +286,7 @@ y.backward()
 x.grad  # Overwritten by the newly calculated gradient
 ```
 
-```{.python .input  n=20}
+```{.python .input}
 %%tab pytorch
 x.grad.zero_()  # Reset the gradient
 y = x.sum()
@@ -433,7 +433,7 @@ z.backward()
 x.grad == u
 ```
 
-```{.python .input  n=21}
+```{.python .input}
 %%tab pytorch
 x.grad.zero_()
 y = x * x
@@ -666,7 +666,11 @@ Here, tools from compilers and graph manipulation
 are leveraged to compute results 
 in the most expedient and memory-efficient manner. 
 
-For now, try to remember these basics: (i) attach gradients to those variables with respect to which we desire derivatives; (ii) record the computation of the target value; (iii) execute the backpropagation function; and  (iv) access the resulting gradient.
+For now, try to remember these basics:
+(i) attach gradients to those variables with respect to which we desire derivatives;
+(ii) record the computation of the target value;
+(iii) execute the backpropagation function; and
+(iv) access the resulting gradient.
 
 
 ## Exercises

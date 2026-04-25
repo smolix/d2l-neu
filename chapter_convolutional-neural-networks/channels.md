@@ -266,8 +266,8 @@ assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
 
 ```{.python .input}
 %%tab jax
-X = jax.random.normal(d2l.get_key(), (3, 3, 3)) + 0 * 1
-K = jax.random.normal(d2l.get_key(), (2, 3, 1, 1)) + 0 * 1
+X = jax.random.normal(d2l.get_key(), (3, 3, 3))
+K = jax.random.normal(d2l.get_key(), (2, 3, 1, 1))
 Y1 = corr2d_multi_in_out_1x1(X, K)
 Y2 = corr2d_multi_in_out(X, K)
 assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6

@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 Deep learning has witnessed a sort of Cambrian explosion
 over the past decade.
-The sheer number of techniques, applications and algorithms by far surpasses the
+The sheer number of techniques, applications, and algorithms by far surpasses the
 progress of previous decades. 
 This is due to a fortuitous combination of multiple factors,
 one of which is the powerful free tools
@@ -238,7 +238,7 @@ def loss(self, y_hat, y):
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, y_hat, y):
     fn = gluon.loss.L2Loss()
-    return 2 * fn(y_hat, y).mean()
+    return 2 * fn(y_hat, y).mean()  # Gluon's L2Loss includes 1/2; multiply by 2 to get plain MSE
 ```
 
 ```{.python .input}

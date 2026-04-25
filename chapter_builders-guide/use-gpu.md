@@ -479,8 +479,8 @@ Z2 is Z
 People use GPUs to do machine learning
 because they expect them to be fast.
 But transferring variables between devices is slow: much slower than computation.
-So we want you to be 100% certain
-that you want to do something slow before we let you do it.
+So it is important to be 100% certain
+that a slow operation is intentional before performing it.
 If the deep learning framework just did the copy automatically
 without crashing then you might not realize
 that you had written some slow code.

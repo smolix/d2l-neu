@@ -14,7 +14,7 @@ the opposite of :eqref:`eq_skip-gram-log`.
 
 
 Due to the nature of the softmax operation,
-since a context word may be anyone in the
+since a context word may be any word in the
 dictionary $\mathcal{V}$,
 the opposite of :eqref:`eq_skip-gram-log`
 contains the summation
@@ -182,7 +182,7 @@ Let $n(w,j)$ be the $j^\textrm{th}$ node on this path,
 with its context word vector being
 $\mathbf{u}_{n(w, j)}$.
 For example,
-$L(w_3) = 4$ in  :numref:`fig_hi_softmax`.
+$L(w_3) = 4$ in :numref:`fig_hi_softmax`.
 Hierarchical softmax approximates the conditional probability in :eqref:`eq_skip-gram-softmax` as
 
 
@@ -221,7 +221,7 @@ $$\sum_{w \in \mathcal{V}} P(w \mid w_c) = 1.$$
 
 Fortunately, since $L(w_o)-1$ is on the order of $\mathcal{O}(\textrm{log}_2|\mathcal{V}|)$ due to the binary tree structure,
 when the dictionary size $\mathcal{V}$ is huge,
-the computational cost for  each training step using hierarchical softmax
+the computational cost for each training step using hierarchical softmax
 is significantly reduced compared with that
 without approximate training.
 

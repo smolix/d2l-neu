@@ -1,7 +1,7 @@
 # Neural Style Transfer
 
 If you are a photography enthusiast,
-you may be familiar with the filter.
+you may be familiar with filters.
 It can change the color style of photos
 so that landscape photos become sharper
 or portrait photos have whitened skins.

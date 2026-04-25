@@ -14,7 +14,7 @@ we are ready to put all this knowledge into practice
 by participating in a Kaggle competition.
 The house price prediction competition
 is a great place to start.
-The data is fairly generic and do not exhibit exotic structure
+The data is fairly generic and does not exhibit exotic structure
 that might require specialized models (as audio or video might).
 This dataset, collected by :citet:`De-Cock.2011`,
 covers house prices in Ames, Iowa from the period 2006--2010.

@@ -36,7 +36,7 @@ While we still assume that entire sequences
 are sampled independently,
 we cannot assume that the data arriving
 at each time step are independent of each other.
-For example, the words that likely to appear later in a document
+For example, the words that are likely to appear later in a document
 depend heavily on words occurring earlier in the document.
 The medicine a patient is likely to receive
 on the 10th day of a hospital visit
@@ -360,7 +360,7 @@ To convert a probability over steps $1$ through $t$
 into one that extends to word $t+1$ we simply
 multiply by the conditional probability
 of the additional token given the previous ones:
-$P(x_{t+1}, \ldots, x_1) = P(x_{t}, \ldots, x_1) \cdot P(x_{t+1} \mid x_{t}, \ldots, x_1)$.
+$P(x_1, \ldots, x_{t+1}) = P(x_1, \ldots, x_{t}) \cdot P(x_{t+1} \mid x_1, \ldots, x_{t})$.
 
 Third, we have stronger predictive models
 for predicting adjacent words than

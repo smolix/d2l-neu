@@ -160,7 +160,7 @@ Since we have not specified the action of the various gates yet,
 we first introduce the *input node* 
 $\tilde{\mathbf{C}}_t \in \mathbb{R}^{n \times h}$.
 Its computation is similar to that of the three gates described above, 
-but uses a $\tanh$ function with a value range for $(-1, 1)$ as the activation function. 
+but uses a $\tanh$ function with a value range of $(-1, 1)$ as the activation function. 
 This leads to the following equation at time step $t$:
 
 $$\tilde{\mathbf{C}}_t = \textrm{tanh}(\mathbf{X}_t \mathbf{W}_{\textrm{xc}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hc}} + \mathbf{b}_\textrm{c}),$$

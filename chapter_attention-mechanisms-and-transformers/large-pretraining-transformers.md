@@ -141,10 +141,10 @@ conditional on both encoder output and decoder output:
 (multi-head attention of decoder in :numref:`fig_transformer`)
 allows target tokens to attend to *all* input tokens;
 (ii) conditioning on decoder output is achieved
-by a so-called *causal* attention
-(this name is common in the literature but is misleading
-as it has little connection to the proper study of causality)
-pattern (masked multi-head attention of decoder in :numref:`fig_transformer`),
+by a so-called *causal* attention pattern
+(masked multi-head attention of decoder in :numref:`fig_transformer`;
+this name is common in the literature but is misleading
+as it has little connection to the proper study of causality),
 where any target token can only attend to *past* and *present* tokens in the target sequence.
 
 To pretrain encoder--decoder Transformers beyond human-labeled machine translation data,

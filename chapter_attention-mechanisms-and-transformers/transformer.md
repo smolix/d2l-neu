@@ -954,9 +954,8 @@ class TransformerDecoderBlock(nn.Module):
         return self.addnorm3(Z, self.ffn(Z), training=training), state, attention_w1, attention_w2
 ```
 
-To facilitate scaled dot product operations
-in the encoder--decoder attention
-and addition operations in the residual connections,
+To support compatible dimensions for the scaled dot product operations
+in the encoder--decoder attention and the additions in the residual connections,
 [**the feature dimension (`num_hiddens`) of the decoder is
 the same as that of the encoder.**]
 

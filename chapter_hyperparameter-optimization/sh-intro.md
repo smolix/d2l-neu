@@ -27,7 +27,7 @@ the full amount of 100 epochs to identify the best performing one.
 :label:`img_samples_lc`
 
 Multi-fidelity hyperparameter optimization allocates more resources
-to promising configurations and stop evaluations of poorly performing ones early.
+to promising configurations and stops evaluations of poorly performing ones early.
 This speeds up the optimization process, since we can try a larger number of
 configurations for the same total amount of resources.
 
@@ -162,7 +162,7 @@ def suggest(self):
 ```
 
 When we collected a new data point, we first update the searcher module.
-Afterwards we check if we already collect all data points on the current rung.
+Afterwards we check if we have already collected all data points on the current rung.
 If so, we sort all configurations and push the top $\frac{1}{\eta}$
 configurations into the queue.
 

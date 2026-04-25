@@ -213,7 +213,7 @@ without altering its size or values**],
 by invoking `reshape`.
 For example, we can transform 
 our vector `x` whose shape is (12,) 
-to a matrix `X`  with shape (3, 4).
+to a matrix `X` with shape (3, 4).
 This new tensor retains all elements
 but reconfigures them into a matrix.
 Notice that the elements of our vector
@@ -327,8 +327,8 @@ jax.random.normal(jax.random.PRNGKey(0), (3, 4))
 ```
 
 Finally, we can construct tensors by
-[**supplying the exact values for each element**] 
-by supplying (possibly nested) Python list(s) 
+[**supplying the exact values for each element**]
+via (possibly nested) Python list(s)
 containing numerical literals.
 Here, we construct a matrix with a list of lists,
 where the outermost list corresponds to axis 0,
@@ -356,7 +356,7 @@ jnp.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 
 ## Indexing and Slicing
 
-As with  Python lists,
+As with Python lists,
 we can access tensor elements 
 by indexing (starting with 0).
 To access an element based on its position
@@ -417,7 +417,7 @@ X_new_1
 If we want [**to assign multiple elements the same value,
 we apply the indexing on the left-hand side 
 of the assignment operation.**]
-For instance, `[:2, :]`  accesses 
+For instance, `[:2, :]` accesses 
 the first and second rows,
 where `:` takes all the elements along axis 1 (column).
 While we discussed indexing for matrices,

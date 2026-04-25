@@ -161,7 +161,7 @@ This is generally undesirable.
 After all, we are looking for robust estimators that generalize well. 
 Hence this strategy is almost never used in practice.
 
-### Truncating Time Steps###
+### Truncating Time Steps
 
 Alternatively,
 we can truncate the sum in
@@ -172,7 +172,7 @@ This leads to an *approximation* of the true gradient,
 simply by terminating the sum at $\partial h_{t-\tau}/\partial w_\textrm{h}$. 
 In practice this works quite well. 
 It is what is commonly referred to as truncated 
-backpropgation through time :cite:`Jaeger.2002`.
+backpropagation through time :cite:`Jaeger.2002`.
 One of the consequences of this is that the model 
 focuses primarily on short-term influence 
 rather than long-term consequences. 

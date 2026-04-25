@@ -115,7 +115,7 @@ class RNNScratch(nn.Module):  #@save
                                (self.num_inputs, self.num_hiddens))
         self.W_hh = self.param('W_hh', nn.initializers.normal(self.sigma),
                                (self.num_hiddens, self.num_hiddens))
-        self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens))
+        self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens,))
 ```
 
 [**The `forward` method below defines how to compute 
@@ -508,7 +508,7 @@ separate the input and output
 even within a single time step,
 the length of the sequence introduces
 a new notion of depth.
-In addition to the passing through the network
+In addition to passing through the network
 in the input-to-output direction,
 inputs at the first time step
 must pass through a chain of $T$ layers

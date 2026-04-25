@@ -612,6 +612,10 @@ def train_batch(X, y, device_params, devices, lr):
     for device_W in device_params:
         for p, g in zip(device_W, agg_grads):
             with tf.device(p.device):
+                # Denominator X.shape[0] normalizes for batch size.
+                # Invariant: loss uses tf.reduce_sum (not mean) and
+                # all-reduce uses tf.add_n (not mean), so dividing by
+                # batch size here gives the correct per-sample gradient.
                 p.assign_sub(lr / X.shape[0] * tf.identity(g))
 ```
 

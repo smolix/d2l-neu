@@ -3,7 +3,7 @@
 
 Whether it is medical diagnosis, self-driving vehicles, camera monitoring, or smart filters, many applications in the field of computer vision are closely related to our current and future lives. 
 In recent years, deep learning has been
-the transformative power for advancing the performance of computer vision systems.
+a transformative force in advancing the performance of computer vision systems.
 It can be said that the most advanced computer vision applications are almost inseparable from deep learning.
 In view of this, this chapter will focus on the field of computer vision, and investigate methods and applications that have recently been influential in academia and industry.
 

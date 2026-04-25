@@ -139,7 +139,7 @@ Indeed, for any two vectors $\mathbf{v}$ and $\mathbf{w}$,
 the angle between the two vectors is
 
 $$\theta = \arccos\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right).$$
-:eqlabel:`eq_angle_forumla`
+:eqlabel:`eq_angle_formula`
 
 This is a nice result since nothing in the computation references two-dimensions.
 Indeed, we can use this in three or three million dimensions without issue.
@@ -263,7 +263,7 @@ and divides the space into two half-spaces.
 
 Let's start with an example.
 Suppose that we have a column vector $\mathbf{w}=[2,1]^\top$. We want to know, "what are the points $\mathbf{v}$ with $\mathbf{w}\cdot\mathbf{v} = 1$?"
-By recalling the connection between dot products and angles above :eqref:`eq_angle_forumla`,
+By recalling the connection between dot products and angles above :eqref:`eq_angle_formula`,
 we can see that this is equivalent to
 $$
 \|\mathbf{v}\|\|\mathbf{w}\|\cos(\theta) = 1 \; \iff \; \|\mathbf{v}\|\cos(\theta) = \frac{1}{\|\mathbf{w}\|} = \frac{1}{\sqrt{5}}.
@@ -538,7 +538,7 @@ This is worth considering for a moment.
 We have essentially reduced an infinite problem
 (what happens to any pair of real numbers)
 to a finite one (what happens to these specific vectors).
-These vectors are an example a *basis*,
+These vectors are an example of a *basis*,
 where we can write any vector in our space
 as a weighted sum of these *basis vectors*.
 

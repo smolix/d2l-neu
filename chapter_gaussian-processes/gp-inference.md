@@ -218,7 +218,7 @@ up_bd_observed = post_mean + 2 * np.sqrt(np.diag(post_cov) + post_sig_est ** 2)
 
 There are two sources of uncertainty, _epistemic_ uncertainty, representing _reducible_ uncertainty, and _aleatoric_ or _irreducible_ uncertainty. The _epistemic_ uncertainty here represents uncertainty about the true values of the noise free function. This uncertainty should grow as we move away from the data points, as away from the data there are a greater variety of function values consistent with our data. As we observe more and more data, our beliefs about the true function become more confident, and the epistemic uncertainty disappears. The _aleatoric_ uncertainty in this instance is the observation noise, since the data are given to us with this noise, and it cannot be reduced.
 
-The _epistemic_ uncertainty in the data is captured by variance of the latent noise free function np.diag(post\_cov). The _aleatoric_ uncertainty is captured by the noise variance post_sig_est**2. 
+The _epistemic_ uncertainty in the data is captured by variance of the latent noise free function `np.diag(post_cov)`. The _aleatoric_ uncertainty is captured by the noise variance `post_sig_est**2`. 
 
 Unfortunately, people are often careless about how they represent uncertainty, with many papers showing error bars that are completely undefined, no clear sense of whether we are visualizing epistemic or aleatoric uncertainty or both, and confusing noise variances with noise standard deviations, standard deviations with standard errors, confidence intervals with credible sets, and so on. Without being precise about what the uncertainty represents, it is essentially meaningless. 
 
@@ -233,11 +233,11 @@ d2l.plt.plot(test_x, test_y, linewidth=2.)
 d2l.plt.plot(test_x, post_mean, linewidth=2.)
 d2l.plt.plot(test_x, post_samples.T, color='gray', alpha=0.25)
 d2l.plt.fill_between(test_x, lw_bd, up_bd, alpha=0.25)
-plt.legend(['Observed Data', 'True Function', 'Predictive Mean', 'Posterior Samples'])
+d2l.plt.legend(['Observed Data', 'True Function', 'Predictive Mean', 'Posterior Samples'])
 d2l.plt.show()
 ```
 
-In basic regression applications, it is most common to use the posterior predictive mean and standard deviation as a point predictor and metric for uncertainty, respectively. In more advanced applications, such as Bayesian optimization with Monte Carlo acquisition functions, or Gaussian processes for model-based RL, it often necessary to take posterior samples. However, even if not strictly required in the basic applications, these samples give us more intuition about the fit we have for the data, and are often useful to include in visualizations. 
+In basic regression applications, it is most common to use the posterior predictive mean and standard deviation as a point predictor and metric for uncertainty, respectively. In more advanced applications, such as Bayesian optimization with Monte Carlo acquisition functions, or Gaussian processes for model-based RL, it is often necessary to take posterior samples. However, even if not strictly required in the basic applications, these samples give us more intuition about the fit we have for the data, and are often useful to include in visualizations. 
 
 ## Making Life Easy with GPyTorch
 

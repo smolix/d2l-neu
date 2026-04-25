@@ -11,8 +11,8 @@ In this section, we will describe and implement this attention-based method (wit
 
 ## The Model
 
-Simpler than preserving the order of tokens in premises and hypotheses,
-we can just align tokens in one text sequence to every token in the other, and vice versa,
+Rather than preserving the order of tokens in premises and hypotheses,
+we can simply align tokens in one text sequence to every token in the other, and vice versa,
 then compare and aggregate such information to predict the logical relationships
 between premises and hypotheses.
 Similar to alignment of tokens between source and target sentences in machine translation,

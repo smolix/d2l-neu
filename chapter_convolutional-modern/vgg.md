@@ -77,8 +77,7 @@ more than 8 convolutional layers in this way.
 The key idea of :citet:`Simonyan.Zisserman.2014` was to use *multiple* convolutions in between downsampling
 via max-pooling in the form of a block. They were primarily interested in whether deep or 
 wide networks perform better. For instance, the successive application of two $3 \times 3$ convolutions
-touches the same pixels as a single $5 \times 5$ convolution does. At the same time, the latter uses approximately 
-as many parameters ($25 \cdot c^2$) as three $3 \times 3$ convolutions do ($3 \cdot 9 \cdot c^2$). 
+touches the same pixels as a single $5 \times 5$ convolution does (using $2 \cdot 9 \cdot c^2$ vs.\ $25 \cdot c^2$ parameters). Going one step further, three $3 \times 3$ convolutions (covering a $7 \times 7$ receptive field) use only $3 \cdot 9 \cdot c^2$ parameters, fewer than a single $7 \times 7$ convolution ($49 \cdot c^2$). 
 In a rather detailed analysis they showed that deep and narrow networks significantly outperform their shallow counterparts. This set deep learning on a quest for ever deeper networks with over 100 layers for typical applications.
 Stacking $3 \times 3$ convolutions
 has become a gold standard in later deep networks (a design decision only to be revisited recently by 

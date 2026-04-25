@@ -174,7 +174,7 @@ a nice property called *consistency*,
 our estimates will converge
 to the corresponding probability.
 In turn, these inferred probabilities
-tell about the likely statistical properties
+tell us about the likely statistical properties
 of data from the same population
 that we might encounter in the future.
 
@@ -903,7 +903,7 @@ for discrete probabilities and densities, respectively.
 Returning to the investment example from above,
 $f$ might be the *utility* (happiness)
 associated with the return.
-Behavior economists have long noted
+Behavioral economists have long noted
 that people associate greater disutility
 with losing money than the utility gained
 from earning one dollar relative to their baseline.
@@ -997,7 +997,7 @@ for any linear function of $\mathbf{x}$
 by a simple matrix multiplication.
 The off-diagonal elements tell us how correlated the coordinates are:
 a value of 0 means no correlation,
-where a larger positive value
+while a larger positive value
 means that they are more strongly correlated.
 
 

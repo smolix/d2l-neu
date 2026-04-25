@@ -412,7 +412,7 @@ plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 
 As we would expect, the narrower the kernel, the narrower the range of large attention weights. It is also clear that picking the same width might not be ideal. In fact, :citet:`Silverman86` proposed a heuristic that depends on the local density. Many more such "tricks" have been proposed. For instance, :citet:`norelli2022asif` used a similar nearest-neighbor interpolation technique for designing cross-modal image and text representations. 
 
-The astute reader might wonder why we are providing this deep dive for a method that is over half a century old. First, it is one of the earliest precursors of modern attention mechanisms. Second, it is great for visualization. Third, and just as importantly, it demonstrates the limits of hand-crafted attention mechanisms. A much better strategy is to *learn* the mechanism, by learning the representations for queries and keys. This is what we will embark on in the following sections.
+The astute reader might wonder why we are providing this deep dive for a method that is over half a century old. First, it is one of the earliest precursors of modern attention mechanisms. Second, it is great for visualization. Third, and just as importantly, it demonstrates the limits of hand-crafted attention mechanisms. A much better strategy is to *learn* the mechanism---specifically, to learn the representations of queries and keys. This is what we will embark on in the following sections.
 
 
 ## Summary

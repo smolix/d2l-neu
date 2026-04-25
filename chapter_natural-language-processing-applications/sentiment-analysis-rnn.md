@@ -1,5 +1,6 @@
 # Sentiment Analysis: Using Recurrent Neural Networks
-:label:`sec_sentiment_rnn` 
+:label:`sec_sentiment_rnn`
+
 
 
 Like word similarity and analogy tasks,
@@ -158,7 +159,7 @@ class BiRNN(nn.Module):
         # Concatenate the hidden states at the initial and final time steps as
         # the input of the fully connected layer. Its shape is (batch size,
         # 4 * no. of hidden units)
-        encoding = torch.cat((outputs[0], outputs[-1]), dim=1) 
+        encoding = torch.cat((outputs[0], outputs[-1]), dim=1)
         outs = self.decoder(encoding)
         return outs
 ```
@@ -476,7 +477,7 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 
 1. Increase the number of epochs. Can you improve the training and testing accuracies? How about tuning other hyperparameters?
 1. Use larger pretrained word vectors, such as 300-dimensional GloVe embeddings. Does it improve classification accuracy?
-1. Can we improve the classification accuracy by using the spaCy tokenization? You need to install spaCy (`pip install spacy`) and install the English package (`python -m spacy download en`). In the code, first, import spaCy (`import spacy`). Then, load the spaCy English package (`spacy_en = spacy.load('en')`). Finally, define the function `def tokenizer(text): return [tok.text for tok in spacy_en.tokenizer(text)]` and replace the original `tokenizer` function. Note the different forms of phrase tokens in GloVe and spaCy. For example, the phrase token "new york" takes the form of "new-york" in GloVe and the form of "new york" after the spaCy tokenization.
+1. Can we improve the classification accuracy by using the spaCy tokenization? You need to install spaCy (`pip install spacy`) and install the English package (`python -m spacy download en_core_web_sm`). In the code, first, import spaCy (`import spacy`). Then, load the spaCy English package (`spacy_en = spacy.load('en_core_web_sm')`). Finally, define the function `def tokenizer(text): return [tok.text for tok in spacy_en.tokenizer(text)]` and replace the original `tokenizer` function. Note the different forms of phrase tokens in GloVe and spaCy. For example, the phrase token "new york" takes the form of "new-york" in GloVe and the form of "new york" after the spaCy tokenization.
 
 :begin_tab:`mxnet`
 [Discussions](https://discuss.d2l.ai/t/392)

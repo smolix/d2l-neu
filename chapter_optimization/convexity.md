@@ -153,7 +153,7 @@ Assume that the local minimum $x^{\ast}$
 is not the global minimum of $f$:
 there exists $x' \in \mathcal{X}$ for which $f(x') < f(x^{\ast})$. 
 There also exists 
-$\lambda \in [0, 1)$ such as $\lambda = 1 - \frac{p}{|x^{\ast} - x'|}$
+$\lambda \in [0, 1)$ such that $\lambda = 1 - \frac{p}{|x^{\ast} - x'|}$
 so that
 $0 < |\lambda x^{\ast} + (1-\lambda) x' - x^{\ast}| \leq p$. 
 
@@ -348,7 +348,7 @@ which is the closest point in $\mathcal{X}$ to $\mathbf{x}$.
 The mathematical definition of projections may sound a bit abstract. :numref:`fig_projections` explains it somewhat more clearly. In it we have two convex sets, a circle and a diamond. 
 Points inside both sets (yellow) remain unchanged during projections. 
 Points outside both sets (black) are projected to 
-the points inside the sets (red) that are closet to the original points (black).
+the points inside the sets (red) that are closest to the original points (black).
 While for $\ell_2$ balls this leaves the direction unchanged, this need not be the case in general, as can be seen in the case of the diamond.
 
 

@@ -52,7 +52,8 @@ but smaller than the entire model.
 For example, the ResNet-152 architecture,
 which is wildly popular in computer vision,
 possesses hundreds of layers.
-These layers consist of repeating patterns of *groups of layers*. Implementing such a network one layer at a time can grow tedious.
+These layers consist of repeating patterns of *groups of layers*.
+Implementing such a network one layer at a time can grow tedious.
 This concern is not just hypothetical---such
 design patterns are common in practice.
 The ResNet architecture mentioned above
@@ -71,8 +72,8 @@ a component consisting of multiple layers,
 or the entire model itself!
 One benefit of working with the module abstraction
 is that they can be combined into larger artifacts,
-often recursively. This is illustrated in :numref:`fig_blocks`. By defining code to generate modules
-of arbitrary complexity on demand,
+often recursively. This is illustrated in :numref:`fig_blocks`.
+By defining code to generate modules of arbitrary complexity on demand,
 we can write surprisingly compact code
 and still implement complex neural networks.
 

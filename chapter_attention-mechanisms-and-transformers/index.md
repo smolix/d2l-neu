@@ -10,7 +10,7 @@ many of deep learning's breakthroughs in the 2010s
 had changed remarkably little relative to their
 antecedents despite the lapse of nearly 30 years.
 While plenty of new methodological innovations
-made their way into most practitioner's toolkits---ReLU
+made their way into most practitioners' toolkits---ReLU
 activations, residual layers, batch normalization, dropout,
 and adaptive learning rate schedules come to mind---the core
 underlying architectures were clearly recognizable as
@@ -93,14 +93,14 @@ In translation tasks, attention models
 often assigned high attention weights to cross-lingual synonyms
 when generating the corresponding words in the target language.
 For example, when translating the sentence "my feet hurt"
-to "j'ai mal au pieds", the neural network might assign
+to "j'ai mal aux pieds", the neural network might assign
 high attention weights to the representation of "feet"
 when generating the corresponding French word "pieds".
 These insights spurred claims that attention models confer "interpretability"
 although what precisely the attention weights mean---i.e.,
 how, if at all, they should be *interpreted* remains a hazy research topic.
 
-However, attention mechanisms soon emerged as more significant concerns,
+However, attention mechanisms soon emerged as more significant considerations,
 beyond their usefulness as an enhancement for encoder--decoder recurrent neural networks
 and their putative usefulness for picking out salient inputs.
 :citet:`Vaswani.Shazeer.Parmar.ea.2017` proposed

@@ -83,7 +83,7 @@ pixel for the lower resolution image, we can average over adjacent pixels to obt
 an image with better signal-to-noise ratio since we are combining the information 
 from multiple adjacent pixels. *Max-pooling* was introduced in 
 :citet:`Riesenhuber.Poggio.1999` in the context of cognitive neuroscience to describe 
-how information aggregation might be aggregated hierarchically for the purpose 
+how information might be aggregated hierarchically for the purpose 
 of object recognition; there already was an earlier version in speech recognition :cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. In almost all cases, max-pooling, as it is also referred to, 
 is preferable to average pooling. 
 

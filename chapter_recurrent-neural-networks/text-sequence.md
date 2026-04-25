@@ -109,7 +109,7 @@ as a sequence of 7 words,
 where the set of all words comprise
 a large vocabulary (typically tens
 or hundreds of thousands of words).
-Or we would represent the same sentence
+Or we could represent the same sentence
 as a much longer sequence of 30 characters,
 using a much smaller vocabulary
 (there are only 256 distinct ASCII characters).

@@ -597,6 +597,8 @@ class SNLIBERTDataset:
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
+        # JAX arrays cannot be passed across process boundaries, so we use a
+        # plain list comprehension instead of multiprocessing.Pool.
         out = [self._mp_worker(tokens)
                for tokens in all_premise_hypothesis_tokens]
         all_token_ids = [

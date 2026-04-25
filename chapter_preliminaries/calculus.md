@@ -403,7 +403,7 @@ requires us to multiply matrices as we trace
 the dependency graph of variables from output to input. 
 In particular, this graph is traversed in a *forward* direction 
 when we evaluate a function 
-and in a *backwards* direction 
+and in a *backward* direction
 when we compute gradients. 
 Later chapters will formally introduce backpropagation,
 a computational procedure for applying the chain rule.

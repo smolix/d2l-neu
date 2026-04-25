@@ -29,7 +29,7 @@ shown in :numref:`fig_jupyter01`.
 This notebook includes a markdown cell and a code cell. The content in the markdown cell includes "This Is a Title" and "This is text.".
 The code cell contains two lines of Python code.
 
-![Markdown and code cells in the "text.ipynb" file.](../img/jupyter01.png)
+![Markdown and code cells in the "test.ipynb" file.](../img/jupyter01.png)
 :width:`600px`
 :label:`fig_jupyter01`
 
@@ -74,14 +74,14 @@ When a notebook contains more cells, we can click "Kernel" $\rightarrow$ "Restar
 
 ## Advanced Options
 
-Beyond local editing two things are quite important: editing the notebooks in the markdown format and running Jupyter remotely.
+Beyond local editing, two things are quite important: editing the notebooks in the markdown format and running Jupyter remotely.
 The latter matters when we want to run the code on a faster server.
 The former matters since Jupyter's native ipynb format stores a lot of auxiliary data that is
 irrelevant to the content,
 mostly related to how and where the code is run.
 This is confusing for Git, making
 reviewing contributions very difficult.
-Fortunately there is an alternative---native editing in the markdown format.
+Fortunately, there is an alternative---native editing in the markdown format.
 
 ### Markdown Files in Jupyter
 

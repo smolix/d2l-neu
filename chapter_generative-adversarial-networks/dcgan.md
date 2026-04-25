@@ -194,7 +194,7 @@ for batch in data_iter:
 
 ## The Generator
 
-The generator needs to map the noise variable $\mathbf z\in\mathbb R^d$, a length-$d$ vector, to a RGB image with width and height to be $64\times 64$ . In :numref:`sec_fcn` we introduced the fully convolutional network that uses transposed convolution layer (refer to :numref:`sec_transposed_conv`) to enlarge input size. The basic block of the generator contains a transposed convolution layer followed by the batch normalization and ReLU activation.
+The generator needs to map the noise variable $\mathbf z\in\mathbb R^d$, a length-$d$ vector, to an RGB image with width and height of $64\times 64$ . In :numref:`sec_fcn` we introduced the fully convolutional network that uses transposed convolution layer (refer to :numref:`sec_transposed_conv`) to enlarge input size. The basic block of the generator contains a transposed convolution layer followed by the batch normalization and ReLU activation.
 
 ```{.python .input}
 #@tab mxnet
@@ -263,7 +263,7 @@ class G_block(nn.Module):
         return X
 ```
 
-In default, the transposed convolution layer uses a $k_h = k_w = 4$ kernel, a $s_h = s_w = 2$ strides, and a $p_h = p_w = 1$ padding. With a input shape of $n_h^{'} \times n_w^{'} = 16 \times 16$, the generator block will double input's width and height.
+In default, the transposed convolution layer uses a $k_h = k_w = 4$ kernel, a $s_h = s_w = 2$ strides, and a $p_h = p_w = 1$ padding. With an input shape of $n_h^{'} \times n_w^{'} = 16 \times 16$, the generator block will double input's width and height.
 
 $$
 \begin{aligned}
@@ -304,7 +304,7 @@ params = g_blk.init(jax.random.PRNGKey(0), x)
 g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 ```
 
-If changing the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding. With a input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
+If we change the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding, then with an input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
 
 ```{.python .input}
 #@tab mxnet
@@ -714,7 +714,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
                        batch_size)
         # Show generated examples
         Z = np.random.normal(0, 1, size=(21, latent_dim, 1, 1), ctx=device)
-        # Normalize the synthetic data to N(0, 1)
+        # Rescale output from [-1, 1] to [0, 1]
         fake_x = net_G(Z).transpose(0, 2, 3, 1) / 2 + 0.5
         imgs = np.concatenate(
             [np.concatenate([fake_x[i * 7 + j] for j in range(7)], axis=1)
@@ -758,7 +758,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
                        batch_size)
         # Show generated examples
         Z = torch.normal(0, 1, size=(21, latent_dim, 1, 1), device=device)
-        # Normalize the synthetic data to N(0, 1)
+        # Rescale output from [-1, 1] to [0, 1]
         fake_x = net_G(Z).permute(0, 2, 3, 1) / 2 + 0.5
         imgs = torch.cat(
             [torch.cat([
@@ -808,7 +808,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
 
         # Show generated examples
         Z = tf.random.normal(mean=0, stddev=1, shape=(21, 1, 1, latent_dim))
-        # Normalize the synthetic data to N(0, 1)
+        # Rescale output from [-1, 1] to [0, 1]
         fake_x = net_G(Z) / 2 + 0.5
         imgs = tf.concat([tf.concat([fake_x[i * 7 + j] for j in range(7)],
                                     axis=1)

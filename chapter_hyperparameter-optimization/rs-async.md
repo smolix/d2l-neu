@@ -30,7 +30,7 @@ become available. This will optimally exploit our resources, since we can avoid 
 synchronisation overhead. For random search, each new hyperparameter configuration
 is chosen independently of all others, and in particular without exploiting
 observations from any prior evaluation. This means we can trivially parallelize random
-search asynchronously. This is not straight-forward with more sophisticated methods
+search asynchronously. This is not straightforward with more sophisticated methods
 that make decision based on previous observations (see :numref:`sec_sh_async`).
 While we need access to more resources than in the sequential setting, asynchronous
 random search exhibits a linear speed-up, in that a certain performance is reached
@@ -40,7 +40,7 @@ $K$ times faster if $K$ trials can be run in parallel.
 ![Distributing the hyperparameter optimization process either synchronously or asynchronously. Compared to the sequential setting, we can reduce the overall wall-clock time while keep the total compute constant. Synchronous scheduling might lead to idling workers in the case of stragglers.](../img/distributed_scheduling.svg)
 :label:`distributed_scheduling`
 
-In this notebook, we will look at asynchronous random search where trials are
+In this section, we will look at asynchronous random search where trials are
 executed in multiple python processes on the same machine. Distributed job scheduling
 and execution is difficult to implement from scratch. We will use *Syne Tune*
 :cite:`salinas-automl22`, which provides us with a simple interface for asynchronous

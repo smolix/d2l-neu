@@ -54,7 +54,7 @@ $$\pi^* = \underset{\pi}{\mathrm{argmax}} V^\pi(s_0).$$
 
 Of all possible stochastic policies that the robot could have taken, the optimal policy $\pi^*$  achieves the largest average discounted *return* for trajectories starting from state $s_0$. Let us denote the value function and the action-value function of the optimal policy as $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$.
 
-Let us observe that for a deterministic policy where there is only one action that is possible under the policy at any given state. This gives us
+Let us note that for a deterministic policy, in which there is only one action possible at each state, this gives us
 
 $$\pi^*(s) = \underset{a \in \mathcal{A}}{\mathrm{argmax}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big].$$
 
@@ -69,7 +69,7 @@ For a deterministic optimal policy $\pi^*$, since there is only one action that 
 
 $$\pi^*(s) = \mathrm{argmax}_{a \in \mathcal{A}} \Big\{ r(s,a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^*(s') \Big\}$$
 
-for all states $s \in \mathcal{S}$. This identity is called the "principle of dynamic programming" :cite:`BellmanDPPaper,BellmanDPBook`. It was formulated by Richard Bellman in 1950s and we can remember it as "the remainder of an optimal trajectory is also optimal".
+for all states $s \in \mathcal{S}$. This identity is called the "principle of dynamic programming" :cite:`BellmanDPPaper,BellmanDPBook`. It was formulated by Richard Bellman in the 1950s and we can remember it as "the remainder of an optimal trajectory is also optimal".
 
 ## Value Iteration
 
@@ -99,7 +99,7 @@ The algorithm for computing the action-value function $Q^\pi(s, a)$ of a policy 
 
 ## Implementation of Value Iteration
 :label:`subsec_valueitercode`
-We next show how to implement Value Iteration for a navigation problem called FrozenLake from [Open AI Gym](https://gym.openai.com). We first need to setup the environment as shown in the following code.
+We next show how to implement Value Iteration for a navigation problem called FrozenLake from [Open AI Gym](https://gym.openai.com). We first need to set up the environment as shown in the following code.
 
 ```{.python .input}
 %%tab all

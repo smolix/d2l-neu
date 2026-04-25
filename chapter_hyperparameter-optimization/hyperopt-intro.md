@@ -37,7 +37,7 @@ trying ten hyperparameter configurations in sequence would already take us
 roughly one day. To make matters worse, hyperparameters are usually not directly
 transferable across architectures and datasets
 :cite:`feurer-arxiv22,wistuba-ml18,bardenet-icml13a`, and need to be re-optimized
-for every new task. Also, for most hyperparameters, there are no rule-of-thumbs,
+for every new task. Also, for most hyperparameters, there are no rules of thumb,
 and expert knowledge is required to find sensible values.
 
 *Hyperparameter optimization (HPO)* algorithms are designed to tackle this
@@ -51,14 +51,14 @@ Recently, hyperparameter optimization has been extended to *neural architecture
 search (NAS)* :cite:`elsken-arxiv18a,wistuba-arxiv19`, where the goal is to find
 entirely new neural network architectures. Compared to classical HPO, NAS is even
 more expensive in terms of computation and requires additional efforts to remain
-feasible in practice. Both, HPO and NAS can be considered as sub-fields of 
+feasible in practice. Both HPO and NAS can be considered as sub-fields of 
 AutoML :cite:`hutter-book19a`, which aims to automate the entire ML pipeline.
 
 In this section we will introduce HPO and show how we can automatically find
 the best hyperparameters of the logistic regression example introduced in
 :numref:`sec_softmax_concise`.
 
-##  The Optimization Problem
+## The Optimization Problem
 :label:`sec_definition_hpo`
 
 We will start with a simple toy problem: searching for the learning rate of the
@@ -146,7 +146,7 @@ class HPOTrainer(d2l.Trainer):  #@save
                 y_hat = self.model(x)
                 accuracy += self.model.accuracy(y_hat, y)
             val_batch_idx += 1
-        return 1 -  accuracy / val_batch_idx
+        return 1 - accuracy / val_batch_idx
 ```
 
 ```{.python .input  n=8}
@@ -356,7 +356,7 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
     1. Why cannot we use validation *error* for this purpose? What metric on the validation set would you use?
     2. Sketch (roughly) the computational graph of the validation metric after training for one epoch. You may assume that initial weights and hyperparameters (such as learning rate) are input nodes to this graph. Hint: Re-read about computational graphs in :numref:`sec_backprop`.
     3. Give a rough estimate of the number of floating point values you need to store during a forward pass on this graph. Hint: FashionMNIST has 60000 cases. Assume the required memory is dominated by the activations after each layer, and look up the layer widths in :numref:`sec_mlp-implementation`.
-    5. Apart from the sheer amount of compute and storage required, what other issues would gradient-based hyperparameter optimization run into? Hint: Re-read about vanishing and exploding gradients in :numref:`sec_numerical_stability`.
+    4. Apart from the sheer amount of compute and storage required, what other issues would gradient-based hyperparameter optimization run into? Hint: Re-read about vanishing and exploding gradients in :numref:`sec_numerical_stability`.
     6. *Advanced*: Read :cite:`maclaurin-icml15` for an elegant (yet still somewhat unpractical) approach to gradient-based HPO.
 3. Grid search is another HPO baseline, where we define an equispaced grid for each hyperparameter, then iterate over the (combinatorial) Cartesian product in order to suggest configurations.
     1. We stated above that random search can be much more efficient than grid search for HPO on a sizable number of hyperparameters, if the criterion most strongly depends on a small subset of the hyperparameters. Why is this? Hint: Read :citet:`bergstra-jmlr12a`.

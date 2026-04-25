@@ -44,8 +44,8 @@ one-hot vectors cannot encode similarities among words.
 ## Self-Supervised word2vec
 
 The [word2vec](https://code.google.com/archive/p/word2vec/) tool was proposed to address the above issue.
-It maps each word to a fixed-length vector, and  these vectors can better express the similarity and analogy relationship among different words.
-The word2vec tool contains two models, namely *skip-gram* :cite:`Mikolov.Sutskever.Chen.ea.2013`  and *continuous bag of words* (CBOW) :cite:`Mikolov.Chen.Corrado.ea.2013`.
+It maps each word to a fixed-length vector, and these vectors can better express the similarity and analogy relationship among different words.
+The word2vec tool contains two models, namely *skip-gram* :cite:`Mikolov.Sutskever.Chen.ea.2013` and *continuous bag of words* (CBOW) :cite:`Mikolov.Chen.Corrado.ea.2013`.
 For semantically meaningful representations,
 their training relies on
 conditional probabilities
@@ -102,8 +102,8 @@ $$P(w_o \mid w_c) = \frac{\exp(\mathbf{u}_o^\top \mathbf{v}_c)}{ \sum_{i \in \ma
 :eqlabel:`eq_skip-gram-softmax`
 
 where the vocabulary index set $\mathcal{V} = \{0, 1, \ldots, |\mathcal{V}|-1\}$.
-Given a text sequence of length $T$, where the word at time step $t$ is denoted as $w^{(t)}$.
-Assume that
+Given a text sequence of length $T$, where the word at time step $t$ is denoted as $w^{(t)}$,
+assume that
 context words are independently generated
 given any center word.
 For context window size $m$,
@@ -121,7 +121,7 @@ where any time step that is less than $1$ or greater than $T$ can be omitted.
 The skip-gram model parameters are the center word vector and context word vector for each word in the vocabulary.
 In training, we learn the model parameters by maximizing the likelihood function (i.e., maximum likelihood estimation). This is equivalent to minimizing the following loss function:
 
-$$ - \sum_{t=1}^{T} \sum_{-m \leq j \leq m,\ j \neq 0} \textrm{log}\, P(w^{(t+j)} \mid w^{(t)}).$$
+$$ - \sum_{t=1}^{T} \sum_{-m \leq j \leq m,\ j \neq 0} \log P(w^{(t+j)} \mid w^{(t)}).$$
 
 When using stochastic gradient descent to minimize the loss,
 in each iteration
@@ -143,7 +143,7 @@ $$\log P(w_o \mid w_c) =\mathbf{u}_o^\top \mathbf{v}_c - \log\left(\sum_{i \in \
 Through differentiation, we can obtain its gradient
 with respect to the center word vector $\mathbf{v}_c$ as
 
-$$\begin{aligned}\frac{\partial \textrm{log}\, P(w_o \mid w_c)}{\partial \mathbf{v}_c}&= \mathbf{u}_o - \frac{\sum_{j \in \mathcal{V}} \exp(\mathbf{u}_j^\top \mathbf{v}_c)\mathbf{u}_j}{\sum_{i \in \mathcal{V}} \exp(\mathbf{u}_i^\top \mathbf{v}_c)}\\&= \mathbf{u}_o - \sum_{j \in \mathcal{V}} \left(\frac{\exp(\mathbf{u}_j^\top \mathbf{v}_c)}{ \sum_{i \in \mathcal{V}} \exp(\mathbf{u}_i^\top \mathbf{v}_c)}\right) \mathbf{u}_j\\&= \mathbf{u}_o - \sum_{j \in \mathcal{V}} P(w_j \mid w_c) \mathbf{u}_j.\end{aligned}$$
+$$\begin{aligned}\frac{\partial \log P(w_o \mid w_c)}{\partial \mathbf{v}_c}&= \mathbf{u}_o - \frac{\sum_{j \in \mathcal{V}} \exp(\mathbf{u}_j^\top \mathbf{v}_c)\mathbf{u}_j}{\sum_{i \in \mathcal{V}} \exp(\mathbf{u}_i^\top \mathbf{v}_c)}\\&= \mathbf{u}_o - \sum_{j \in \mathcal{V}} \left(\frac{\exp(\mathbf{u}_j^\top \mathbf{v}_c)}{ \sum_{i \in \mathcal{V}} \exp(\mathbf{u}_i^\top \mathbf{v}_c)}\right) \mathbf{u}_j\\&= \mathbf{u}_o - \sum_{j \in \mathcal{V}} P(w_j \mid w_c) \mathbf{u}_j.\end{aligned}$$
 :eqlabel:`eq_skip-gram-grad`
 
 
@@ -202,8 +202,8 @@ For brevity, let $\mathcal{W}_o= \{w_{o_1}, \ldots, w_{o_{2m}}\}$ and $\bar{\mat
 
 $$P(w_c \mid \mathcal{W}_o) = \frac{\exp\left(\mathbf{u}_c^\top \bar{\mathbf{v}}_o\right)}{\sum_{i \in \mathcal{V}} \exp\left(\mathbf{u}_i^\top \bar{\mathbf{v}}_o\right)}.$$
 
-Given a text sequence of length $T$, where the word at time step $t$ is denoted as $w^{(t)}$.
-For context window size $m$,
+Given a text sequence of length $T$, where the word at time step $t$ is denoted as $w^{(t)}$,
+for context window size $m$,
 the likelihood function of the continuous bag of words model
 is the probability of generating all center words
 given their context words:
@@ -221,7 +221,7 @@ continuous bag of words model is equivalent to minimizing the following loss fun
 
 
 
-$$  -\sum_{t=1}^T  \textrm{log}\, P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$
+$$  -\sum_{t=1}^T \log P(w^{(t)} \mid  w^{(t-m)}, \ldots, w^{(t-1)}, w^{(t+1)}, \ldots, w^{(t+m)}).$$
 
 Notice that
 
@@ -248,7 +248,7 @@ uses context word vectors as the word representations.
 ## Summary
 
 * Word vectors are vectors used to represent words, and can also be considered as feature vectors or representations of words. The technique of mapping words to real vectors is called word embedding.
-* The word2vec tool contains both the skip-gram  and continuous bag of words models.
+* The word2vec tool contains both the skip-gram and continuous bag of words models.
 * The skip-gram model assumes that a word can be used to generate its surrounding words in a text sequence; while the continuous bag of words model assumes that a center word is generated based on its surrounding context words.
 
 

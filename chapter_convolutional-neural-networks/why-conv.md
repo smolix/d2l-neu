@@ -114,7 +114,6 @@ To start off, we can consider an MLP
 with two-dimensional images $\mathbf{X}$ as inputs
 and their immediate hidden representations
 $\mathbf{H}$ similarly represented as matrices (they are two-dimensional tensors in code), where both $\mathbf{X}$ and $\mathbf{H}$ have the same shape.
-Let that sink in.
 We now imagine that not only the inputs but
 also the hidden representations possess spatial structure.
 

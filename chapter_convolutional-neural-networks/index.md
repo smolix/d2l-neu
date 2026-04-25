@@ -21,9 +21,9 @@ This chapter introduces *convolutional neural networks* (CNNs)
 are designed for precisely this purpose.
 CNN-based architectures are
 now ubiquitous in the field of computer vision.
-For instance, on the Imagnet collection
+For instance, on the ImageNet collection
 :cite:`Deng.Dong.Socher.ea.2009` it was only the use of convolutional neural
-networks, in short Convnets, that provided significant performance
+networks, in short CNNs, that provided significant performance
 improvements :cite:`Krizhevsky.Sutskever.Hinton.2012`.
 
 Modern CNNs, as they are called colloquially, owe their design to

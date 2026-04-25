@@ -20,7 +20,7 @@ Subsequently, in :numref:`chap_cnn`,
 we moved on to image data, where inputs consist
 of the raw pixel values at each coordinate in an image.
 Image data hardly fitted the bill
-of a protypical tabular dataset.
+of a prototypical tabular dataset.
 There, we needed to call upon convolutional neural networks (CNNs)
 to handle the hierarchical structure and invariances.
 However, our data were still of fixed length.

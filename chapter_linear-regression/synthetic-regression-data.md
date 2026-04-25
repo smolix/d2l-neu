@@ -244,7 +244,7 @@ illustrates the power of Python's object-oriented design.
 Note that we added a method to the `SyntheticRegressionData` class
 *after* creating the `data` object. 
 Nonetheless, the object benefits from 
-the *ex post facto* addition of functionality to the class.
+the *ex post facto* (after-the-fact) addition of functionality to the class.
 
 Throughout the iteration we obtain distinct minibatches
 until the entire dataset has been exhausted (try this).

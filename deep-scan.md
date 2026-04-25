@@ -87,6 +87,44 @@ Counts include every issue surfaced; many are minor (typos, double spaces, missi
 
 ---
 
+## Fixes Applied (2026-04-25)
+
+First pass: trivial prose/readability + safe code-style items applied via 20 parallel Sonnet sub-agents (one per chapter section). **~176 items fixed across 101 source `.md` files** (215 insertions / 204 deletions). **~85 items skipped** — mostly "Code issues" where fixes would have changed runtime behavior; those overlap with the Critical / Warning / Math / Cross-framework-drift lists and **remain pending**.
+
+Critical and Warning sections were **not** touched in this pass.
+
+### Per-chapter fixes
+
+- **appendix-mathematics-for-deep-learning** — fixed: `maximum-likelihood.md:233` ("Another reason"), `multivariable-calculus.md:305` (chain-rule notation), `geometry-linear-algebraic-ops.md:541` ("of a *basis*"), `statistics.md:176` ("square root"), `naive-bayes.md:392` ("phenomenon"), `geometry-linear-algebraic-ops.md:142,266` (eq label spelling). Skipped: `single-variable-calculus.md:13` P3 (vector framing); all CO1–CO8 (runtime behavior).
+- **appendix-tools-for-deep-learning** — fixed: `index.md:8`, `jupyter.md:32,77,84`, `sagemaker.md:19`, `colab.md:24-25`, `contributing.md:8,14`, `utils.md:540` (visualize). Skipped: `utils.md` duplicate `download_extract`, `extract` file handles, `num_iters` shadow, MXNet `sys` undefined, `#@tab` directives in code cells.
+- **attention-mechanisms-and-transformers** — fixed: `index.md:13,96,103` (incl. French `aux pieds`), `attention-pooling.md:415`, `large-pretraining-transformers.md:144`, `transformer.md:957`. Skipped: I1–I5 (all behavior-changing).
+- **builders-guide** — fixed: `init-param.md:14,373`, `model-construction.md:55,74`, `parameters.md:222`, `lazy-init.md:197`, `custom-layer.md:138`, `use-gpu.md:483`. Skipped: JAX `while`-under-`jit`, non-deterministic `setup()`, TF Dense topology, `self.modules` collision, `type() == nn.Linear`, broken JAX checkpoint API.
+- **computational-performance** — fixed: `hardware.md:11,77` (incl. "Krste Asanović"), `hybridize.md:333,151`, `multiple-gpus-concise.md:186,514,549` (stale `jax_utils.replicate` → `jax.tree.map`; `model.compile` → `net.compile`), `multiple-gpus.md:615`. Skipped: `block_until_ready`, TF `.numpy()` print drift, TF per-epoch animator.
+- **computer-vision** — fixed: `index.md:5-6`, `neural-style.md:4`, `rcnn.md:85`. Skipped: `anchor.md`/`ssd.md`/`object-detection-dataset.md` editorial additions; `ssd.md` 1535-1552 (Critical), `anchor.md:610` JAX device API, image-augmentation NCHW prose.
+- **convolutional-modern** — fixed: `cnn-design.md:6`, `alexnet.md:311,489`, `densenet.md:72`, `vgg.md:79-81`, `nin.md:215,216` (dynamic global-avg-pool window). Skipped: `batch-norm.md:60` citation keys (would break build), `eps=1e-12` (numeric), `GoogleNet`→`GoogLeNet` rename (too broad).
+- **convolutional-neural-networks** — fixed: `index.md:24,26`, `why-conv.md:117`, `pooling.md:87`, `lenet.md:375`, `padding-and-strides.md:331` (removed wrong parenthetical), `channels.md:269-270` (dead `+ 0 * 1`). Skipped: `why-conv.md:100` invariance/equivariance rewrite, `lenet.md:86` historical claim, `conv-layer.md` C1/C2/C4 (Critical).
+- **gaussian-processes / GAN / references** — fixed: `gp-intro.md:19,105,170`, `gp-priors.md:29,106`, `gp-inference.md:221,236,240`, `gan.md:17`, `dcgan.md:197,266,307,718,762,811` (rescale-comment fix in 3 frameworks). Skipped: JAX discussion URL (unknown), `np.linalg.inv`→`solve` (numeric), TF Dense Sequential, `tf.data.experimental.AUTOTUNE`, `LeakyReLU(alpha)`.
+- **hyperparameter-optimization / reinforcement-learning** — fixed: `hyperopt-intro.md:40,54,61,149,359`, `rs-async.md:33,43`, `sh-intro.md:30,165`, `sh-async.md:13,37`, `value-iter.md:57,72,102`, `qlearning.md:74,153`, `mdp.md:23`. Skipped: K2–K5 (TF objective divergence; `.cpu()` tensor handling).
+- **linear-classification** — fixed: `softmax-regression.md:195,409,432,490`, `image-classification-dataset.md:11,19,71`, `classification.md:42`. Skipped: `softmax-regression-concise.md` TF `loss` ignores `averaged`; `image-classification-dataset.md` `labels=[]` mutable default; P5 stale; P9 editorial.
+- **linear-regression** — fixed: `linear-regression.md:119,587,625`, `generalization.md:273`, `linear-regression-scratch.md:584`, `oo-design.md:495`, `synthetic-regression-data.md:247`, `linear-regression-concise.md:11,241`, `weight-decay.md:521`. Skipped: `linear-regression-concise.md:249` TF arg-order flip (CO1); `weight-decay.md:515` TF `self.net.losses` (CO4).
+- **multilayer-perceptrons** — fixed: `mlp.md:64,300-301`, `generalization-deep.md:344`, `numerical-stability-and-init.md:400`, `kaggle-house-price.md:17`. Skipped: author-voice quotes (Code1–Code5: JAX PRNGKey, TF activation fused, `@d2l.add_to_class`, MXNet stale GPU warning, JAX key reuse).
+- **natural-language-processing-applications** — fixed: `natural-language-inference-and-dataset.md:37`, `sentiment-analysis-and-dataset.md:112`, `sentiment-analysis-rnn.md:2,161,479` (spaCy v2→v3), `natural-language-inference-attention.md:14`, `sentiment-analysis-cnn.md:2`, `natural-language-inference-bert.md:599` (JAX multiprocessing comment). Skipped: CODE5 (no-issue note).
+- **natural-language-processing-pretraining** — fixed: `word2vec.md:47,48,105,124,146,205,224,251`, `approx-training.md:17,185,224`, `glove.md:282,283`. Skipped: `bert.md:320-323` TF arg count (COD1), `word-embedding-dataset.md:601` `names` scoping (COD2), COD3, COD4.
+- **optimization** — fixed: `optimization-intro.md:5`, `sgd.md:171`, `convexity.md:156,351`, `adagrad.md:58`, `momentum.md:354`. Skipped: `adadelta.md:156-158` P7 (prose addition), CI2/CI3/CI5 (runtime).
+- **preliminaries** — fixed: `ndarray.md:216,330,359,420`, `calculus.md:407`, `autograd.md:33,76-436` (stripped 11 stray `n=N` cell-counter annotations), `autograd.md:669`, `probability.md:178,906,999`, `linear-algebra.md:134`. Skipped: `ndarray.md:138` MX/JAX dtype unify, `calculus.md:128-149` `%%tab all` merge, `linear-algebra.md:1018` JAX norm idiom, `autograd.md:165` JAX lambda prose.
+- **recommender-systems** — fixed: `index.md:7`, `recsys-intro.md:5-6`, `mf.md:4,205`, `neumf.md:3`, `fm.md:3,31`, `seqrec.md:325`. Skipped: `recsys-intro.md:5` broken `:numref:` (label unknown); `ctr.md:90` `.asnumpy()` device sync.
+- **recurrent-modern** — fixed: `bi-rnn.md:8,28`, `gru.md:494`, `machine-translation-and-dataset.md:12,19`, `lstm.md:163`, `seq2seq.md:6` (heading leading space). Skipped: tab-select cell reorder; `deep-rnn.md:288-289` TF GRU `s[0]` indexing.
+- **recurrent-neural-networks** — fixed: `index.md:23` (protypical), `sequence.md:39,363`, `language-model.md:161,173,192`, `rnn-scratch.md:118,511`, `bptt.md:164,175`, `text-sequence.md:112`. Skipped: CI1 JAX stub (Critical), CI2 `num_inputs`/`vocab_size` rename, CI4 `initial_state=H` (behavior).
+
+### What still needs another pass
+
+- All **Critical** and **Warning** items remain unfixed (~55 + ~120). See the executive summary at the top of this file for the deduplicated Critical list.
+- All **Math / notation** items remain unfixed (~50).
+- All **Cross-framework drift** items remain unfixed (~75).
+- The Code-issue items skipped above (~85) are mostly genuine bugs disguised as "non-critical" — they should be triaged together with the Warning bucket.
+
+---
+
 ## Per-Chapter Reports
 
 

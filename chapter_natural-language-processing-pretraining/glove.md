@@ -279,8 +279,8 @@ the GloVe loss function in
 
 ## Exercises
 
-1. If words $w_i$ and $w_j$ co-occur in the same context window, how can we use their   distance in the text sequence to redesign the method for  calculating the conditional probability $p_{ij}$? Hint: see Section 4.2 of the GloVe paper :cite:`Pennington.Socher.Manning.2014`.
-1. For any word, are its center word bias  and context word bias mathematically equivalent in GloVe? Why?
+1. If words $w_i$ and $w_j$ co-occur in the same context window, how can we use their distance in the text sequence to redesign the method for calculating the conditional probability $p_{ij}$? Hint: see Section 4.2 of the GloVe paper :cite:`Pennington.Socher.Manning.2014`.
+1. For any word, are its center word bias and context word bias mathematically equivalent in GloVe? Why?
 
 
 [Discussions](https://discuss.d2l.ai/t/385)

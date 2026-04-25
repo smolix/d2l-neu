@@ -194,7 +194,7 @@ jax.tree_util.tree_flatten_with_path(
 
 As soon as we know the input dimensionality,
 20,
-the framework can identify the shape of the first layer's weight matrix by plugging in the value of 20.
+the framework can identify the shape of the first layer's weight matrix by substituting the input dimension 20.
 Having recognized the first layer's shape, the framework proceeds
 to the second layer,
 and so on through the computational graph

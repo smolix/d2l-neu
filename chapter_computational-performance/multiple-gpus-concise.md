@@ -183,7 +183,7 @@ For a refresher on initialization methods see :numref:`sec_numerical_stability`.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX, we initialize the model parameters and create a `TrainState` that bundles the parameters with the optimizer. For multi-GPU training, we replicate the state across all devices using `flax.jax_utils.replicate`.
+In JAX, we initialize the model parameters and create a `TrainState` that bundles the parameters with the optimizer. For multi-GPU training, we replicate the state across all devices using `jax.tree.map`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -511,7 +511,7 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 
 :begin_tab:`jax`
 * JAX provides `jax.pmap` for data-parallel training across multiple devices with automatic gradient aggregation via `jax.lax.pmean`.
-* Flax's `jax_utils.replicate` and `jax_utils.unreplicate` handle distributing and collecting state across devices.
+* `jax.tree.map` handles distributing state across devices for `pmap`-based multi-GPU training.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -546,7 +546,7 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 :begin_tab:`tensorflow`
 1. This section uses ResNet-18. Try different epochs, batch sizes, and learning rates. Use more GPUs for computation. What happens if you try this with 4 GPUs?
 1. Try replacing `MirroredStrategy` with `tf.distribute.MultiWorkerMirroredStrategy`. What changes are needed for multi-machine training?
-1. What happens if you move `model.compile` outside `strategy.scope()`? Does training still work correctly?
+1. What happens if you move `net.compile` outside `strategy.scope()`? Does training still work correctly?
 :end_tab:
 
 

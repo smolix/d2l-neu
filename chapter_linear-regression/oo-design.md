@@ -492,7 +492,7 @@ class DataModule(d2l.HyperParameters):  #@save
 :label:`oo-design-training`
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It then iterates over the entire dataset `max_epochs` times to train the model. As before, we will defer the implementation of this method to later chapters.
+The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here and will be implemented in later chapters.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -508,7 +508,7 @@ in :numref:`sec_linear_scratch`.
 :end_tab:
 
 :begin_tab:`jax`
-The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It then iterates over the entire dataset `max_epochs` times to train the model. As before, we will defer the implementation of this method to later chapters.
+The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here and will be implemented in later chapters.
 :end_tab:
 
 ```{.python .input}

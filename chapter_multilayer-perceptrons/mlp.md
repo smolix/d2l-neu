@@ -61,7 +61,7 @@ We described affine transformations in
 linear transformations with added bias.
 To begin, recall the model architecture
 corresponding to our softmax regression example,
-illustrated in  :numref:`fig_softmaxreg`.
+illustrated in :numref:`fig_softmaxreg`.
 This model maps inputs directly to outputs
 via a single affine transformation,
 followed by a softmax operation.
@@ -297,10 +297,8 @@ We will touch upon more rigorous arguments in subsequent chapters.
 ## Activation Functions
 :label:`subsec_activation-functions`
 
-Activation functions decide whether a neuron should be activated or not by
-calculating the weighted sum and further adding bias to it.
-They are differentiable operators for transforming input signals to outputs,
-while most of them add nonlinearity.
+Activation functions are differentiable operators for transforming
+pre-activation signals to outputs, introducing nonlinearity into the network.
 Because activation functions are fundamental to deep learning,
 (**let's briefly survey some common ones**).
 

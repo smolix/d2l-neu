@@ -71,7 +71,7 @@ This ability to not only collect new data but also collect the right kind of dat
 
 ## Implementation of Q-Learning
 
-We now show how to implement Q-Learning on FrozenLake from [Open AI Gym](https://gym.openai.com). Note that this is the same setup as we consider in :numref:`sec_valueiter` experiment.
+We now show how to implement Q-Learning on FrozenLake from [Gymnasium](https://gymnasium.farama.org/) (the maintained successor to OpenAI Gym). Note that this is the same setup as we consider in the :numref:`sec_valueiter` experiment.
 
 ```{.python .input}
 %%tab all

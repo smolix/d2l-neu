@@ -183,20 +183,19 @@ It is important to compare :eqref:`eq_var_est` to :eqref:`eq_mse_est`.  In this 
 
 ### The Bias-Variance Trade-off
 
-It is intuitively clear that these two main components contribute to the mean squared error.  What is somewhat shocking is that we can show that this is actually a *decomposition* of the mean squared error into these two contributions plus a third one. That is to say that we can write the mean squared error as the sum of the square of the bias, the variance and the irreducible error.
+It is intuitively clear that these two components contribute to the mean squared error.  What is somewhat shocking is that we can show that this is actually a *decomposition* of the mean squared error into exactly these two contributions: the square of the bias plus the variance.  Since $\theta$ is a fixed (non-random) population parameter, $E[\theta] = \theta$ and $\textrm{Var}[\theta] = 0$, so:
 
 $$
 \begin{aligned}
 \textrm{MSE} (\hat{\theta}_n, \theta) &= E[(\hat{\theta}_n - \theta)^2] \\
- &= E[(\hat{\theta}_n)^2] + E[\theta^2] - 2E[\hat{\theta}_n\theta] \\
- &= \textrm{Var} [\hat{\theta}_n] + E[\hat{\theta}_n]^2 + \textrm{Var} [\theta] + E[\theta]^2 - 2E[\hat{\theta}_n]E[\theta] \\
- &= (E[\hat{\theta}_n] - E[\theta])^2 + \textrm{Var} [\hat{\theta}_n] + \textrm{Var} [\theta] \\
- &= (E[\hat{\theta}_n - \theta])^2 + \textrm{Var} [\hat{\theta}_n] + \textrm{Var} [\theta] \\
- &= (\textrm{bias} [\hat{\theta}_n])^2 + \textrm{Var} (\hat{\theta}_n) + \textrm{Var} [\theta].\\
+ &= E[(\hat{\theta}_n)^2] - 2 \theta\, E[\hat{\theta}_n] + \theta^2 \\
+ &= \textrm{Var} [\hat{\theta}_n] + E[\hat{\theta}_n]^2 - 2 \theta\, E[\hat{\theta}_n] + \theta^2 \\
+ &= \textrm{Var} [\hat{\theta}_n] + (E[\hat{\theta}_n] - \theta)^2 \\
+ &= (\textrm{bias} [\hat{\theta}_n])^2 + \textrm{Var} (\hat{\theta}_n).\\
 \end{aligned}
 $$
 
-We refer the above formula as *bias-variance trade-off*. The mean squared error can be divided into three sources of error: the error from high bias, the error from high variance and the irreducible error. The bias error is commonly seen in a simple model (such as a linear regression model), which cannot extract high dimensional relations between the features and the outputs. If a model suffers from high bias error, we often say it is *underfitting* or lack of *flexibility* as introduced in (:numref:`sec_generalization_basics`). The high variance usually results from a too complex model, which overfits the training data. As a result, an *overfitting* model is sensitive to small fluctuations in the data. If a model suffers from high variance, we often say it is *overfitting* and lack of *generalization* as introduced in (:numref:`sec_generalization_basics`). The irreducible error is the result from noise in the $\theta$ itself.
+We refer to the above formula as the *bias-variance trade-off*. The mean squared error decomposes into two sources of error: the error from high bias and the error from high variance. The bias error is commonly seen in a simple model (such as a linear regression model), which cannot extract high-dimensional relations between the features and the outputs. If a model suffers from high bias error, we often say it is *underfitting* or lacks *flexibility* (see :numref:`sec_generalization_basics`). The high variance usually results from a too complex model, which overfits the training data. As a result, an *overfitting* model is sensitive to small fluctuations in the data. If a model suffers from high variance, we often say it is *overfitting* and lacks *generalization* (see :numref:`sec_generalization_basics`).
 
 
 ### Evaluating Estimators in Code

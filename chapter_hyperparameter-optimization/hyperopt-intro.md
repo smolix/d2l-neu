@@ -121,7 +121,7 @@ algorithms to approach the global optimum with as few samples as possible.
 The training of neural networks is stochastic (e.g., weights are randomly
 initialized, mini-batches are randomly sampled), so that our observations will
 be noisy: $y \sim f(\mathbf{x}) + \epsilon$, where we usually assume that the
-$\epsilon \sim N(0, \sigma)$ observation noise is Gaussian distributed.
+$\epsilon \sim \mathcal{N}(0, \sigma^2)$ observation noise is Gaussian distributed.
 
 Faced with all these challenges, we usually try to identify a small set of well
 performing hyperparameter configurations quickly, instead of hitting the global

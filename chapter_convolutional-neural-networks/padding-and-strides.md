@@ -328,9 +328,13 @@ comp_conv2d(conv2d, X).shape
 
 ```{.python .input}
 %%tab tensorflow
-# padding='valid' means no padding
-conv2d = tf.keras.layers.Conv2D(1, kernel_size=(3,5), padding='valid',
-                                strides=(3, 4))
+# tf.keras.Conv2D accepts only 'same'/'valid' for `padding`; we use a
+# ZeroPadding2D layer to apply padding=(0, 1) (matching the MX/PT/JAX
+# tabs) before the convolution.
+conv2d = tf.keras.Sequential([
+    tf.keras.layers.ZeroPadding2D(padding=(0, 1)),
+    tf.keras.layers.Conv2D(1, kernel_size=(3, 5), padding='valid',
+                           strides=(3, 4))])
 comp_conv2d(conv2d, X).shape
 ```
 

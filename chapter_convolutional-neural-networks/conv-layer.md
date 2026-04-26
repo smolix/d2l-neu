@@ -397,7 +397,7 @@ lr = 3e-2  # Learning rate
 for i in range(10):
     with tf.GradientTape() as g:
         Y_hat = conv2d(X)
-        l = (abs(Y_hat - Y)) ** 2
+        l = (Y_hat - Y) ** 2
     # Update the kernel
     update = tf.multiply(lr, g.gradient(l, conv2d.trainable_weights)[0])
     conv2d.kernel.assign(conv2d.kernel - update)

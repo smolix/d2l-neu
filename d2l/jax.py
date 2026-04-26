@@ -1141,7 +1141,7 @@ class Seq2SeqEncoder(d2l.Encoder):
 
     def __call__(self, X, *args, training=False):
         # X shape: (batch_size, num_steps)
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int32))
+        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
         # embs shape: (num_steps, batch_size, embed_size)
         outputs, state = self.rnn(embs, training=training)
         # outputs shape: (num_steps, batch_size, num_hiddens)
@@ -1273,6 +1273,18 @@ class AdditiveAttention(nn.Module):
         # Shape of values: (batch_size, no. of key-value pairs, value
         # dimension)
         return dropout_layer(attention_weights)@values, attention_weights
+
+class AttentionDecoder(d2l.Decoder):
+    """The base attention-based decoder interface.
+
+    Flax modules are dataclasses, so the base class deliberately omits
+    `__init__`; subclasses declare their fields as class-level
+    annotations and (optionally) a `setup()` method.
+
+    Defined in :numref:`sec_seq2seq_attention`"""
+    @property
+    def attention_weights(self):
+        raise NotImplementedError
 
 class MultiHeadAttention(nn.Module):
     num_hiddens: int

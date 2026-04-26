@@ -337,8 +337,13 @@ loss = d2l.BPRLoss()
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {"learning_rate": lr, 'wd': wd})
 
-# Running takes > 1h (pending fix from MXNet)
-# d2l.train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter, num_users, num_items, num_epochs, devices, d2l.evaluate_ranking, candidates, eval_step=1)
+# `evaluate_ranking` (which scores every (user, item) pair) is the
+# bottleneck. Run it once at the end of training, rather than every
+# epoch, so the cell completes in well under an hour.
+d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
+                  test_seq_iter, num_users, num_items, num_epochs,
+                  devices, d2l.evaluate_ranking, candidates,
+                  eval_step=num_epochs)
 ```
 
 ```{.python .input  n=7}
@@ -347,14 +352,20 @@ devices = d2l.try_all_gpus()
 net = Caser(10, num_users, num_items, L)
 net.apply(lambda m: (nn.init.normal_(m.weight, 0, 0.01)
                      if hasattr(m, 'weight') else None))
+net = net.to(devices[0])
 lr, num_epochs, wd, optimizer = 0.04, 8, 1e-5, 'adam'
 loss = d2l.BPRLoss()
 trainer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
 
-# Training is commented out for the same reason as the MX tab: a full
-# pass over the MovieLens data takes well over an hour at this batch
-# size; readers can uncomment the next line to actually train.
-# d2l.train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter, num_users, num_items, num_epochs, devices, d2l.evaluate_ranking, candidates, eval_step=1)
+# `evaluate_ranking` is the bottleneck — it scores every (user, item)
+# pair that the user has not interacted with, so per-epoch evaluation
+# dominates total runtime. Setting `eval_step=num_epochs` defers
+# evaluation to the final epoch only, which keeps the cell well under
+# an hour while still reporting hit-rate / AUC for the trained model.
+d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
+                  test_seq_iter, num_users, num_items, num_epochs,
+                  devices, d2l.evaluate_ranking, candidates,
+                  eval_step=num_epochs)
 ```
 
 ## Summary
@@ -374,4 +385,15 @@ trainer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
 
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/404)
+:end_tab:
+
+:begin_tab:`tensorflow,jax`
+This chapter is currently implemented for MXNet and PyTorch only. The
+Caser model relies on a custom `BPRLoss`, a `SeqDataset` that materializes
+sequence windows on demand, and a `train_ranking` / `evaluate_ranking`
+loop, none of which are exposed in `d2l.tensorflow` or `d2l.jax` yet. If
+you would like to follow along, the PyTorch tab uses standard
+operations (`nn.Embedding`, `nn.Conv2d`, BPR / margin loss) that port
+straightforwardly to either framework — see the PyTorch sources as a
+reference implementation.
 :end_tab:

@@ -2891,8 +2891,10 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
             batch_size=1024)
         for values in test_data_iter:
             values = [v.to(devices[0]) for v in values]
-            scores.extend(list(net(*values).detach().cpu().numpy()))
-        scores = [item for sublist in scores for item in sublist]
+            # `net` returns a 1-D tensor of logits per batch; ravel
+            # ensures we always extend with scalars regardless of whether
+            # the model emits shape (B,) or (B, 1).
+            scores.extend(net(*values).detach().cpu().numpy().ravel().tolist())
         item_scores = list(zip(item_ids, scores))
         ranked_list[u] = sorted(item_scores, key=lambda t: t[1], reverse=True)
         ranked_items[u] = [r[0] for r in ranked_list[u]]

@@ -2654,7 +2654,7 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
     test_set = gluon.data.ArrayDataset(
         np.array(test_u), np.array(test_i), np.array(test_r))
     train_iter = gluon.data.DataLoader(
-        train_set, shuffle=True, last_batch='rollover',
+        train_set, shuffle=True, last_batch='keep',
         batch_size=batch_size)
     test_iter = gluon.data.DataLoader(
         test_set, batch_size=batch_size)

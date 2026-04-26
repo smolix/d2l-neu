@@ -251,9 +251,6 @@ class Trainer(d2l.HyperParameters):
     """The base class for training models with data.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
-        self.save_hyperparameters()
-        self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
@@ -277,9 +274,6 @@ class Trainer(d2l.HyperParameters):
         self._compile_steps()
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
-
-    def prepare_batch(self, batch):
-        return batch
 
     def _compile_steps(self):
         model, optim = self.model, self.optim
@@ -324,6 +318,19 @@ class Trainer(d2l.HyperParameters):
             y_hat = self._val_step(b)
             self.model._report_val(y_hat, b)
             self.val_batch_idx += 1
+
+    def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
+        self.save_hyperparameters()
+        self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+
+    def prepare_batch(self, batch):
+        if self.gpus:
+            # tf.data.Dataset emits batches on CPU. Re-wrap them inside the
+            # GPU device context so subsequent ops keep their inputs on-device
+            # rather than incurring an implicit copy each step.
+            with self.gpus[0]:
+                batch = [tf.identity(a) for a in batch]
+        return batch
 
     def clip_gradients(self, grad_clip_val, grads):
         grad_clip_val = tf.constant(grad_clip_val, dtype=tf.float32)

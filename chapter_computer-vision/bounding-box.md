@@ -94,7 +94,7 @@ coordinates of the bounding box center, and the width and height of the box.
 [**Here we define functions to convert between**] these (**two
 representations**):
 `box_corner_to_center` converts from the two-corner
-representation to the center-width-height presentation,
+representation to the center-width-height representation,
 and `box_center_to_corner` vice versa.
 The input argument `boxes` should be a two-dimensional tensor of
 shape ($n$, 4), where $n$ is the number of bounding boxes.

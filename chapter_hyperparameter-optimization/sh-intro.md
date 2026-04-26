@@ -105,6 +105,7 @@ successive halving is done, we start the next one with a new set of initial
 configurations, iterating until the total budget is spent.
 
 ![Learning curves of random hyperparameter configurations.](../img/sh.svg)
+:label:`fig_sh_learning_curves`
 
 We subclass the `HPOScheduler` base class from :numref:`sec_api_hpo` in order to
 implement successive halving, allowing for a generic `HPOSearcher` object to

@@ -257,5 +257,5 @@ The hidden state of an RNN can capture historical information of the sequence up
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/180013)
+[Discussions](https://discuss.d2l.ai/t/18013)
 :end_tab:

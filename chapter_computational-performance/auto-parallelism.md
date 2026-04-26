@@ -40,7 +40,7 @@ import tensorflow as tf
 
 ## Parallel Computation on GPUs
 
-Let's start by defining a reference workload to test: the `run` function below performs 10 matrix-matrix multiplications on the device of our choice using data allocated into two variables: `x_gpu1` and `x_gpu2`.
+Let's start by defining a reference workload to test: the `run` function below performs 50 matrix-matrix multiplications on the device of our choice using data allocated into two variables: `x_gpu1` and `x_gpu2`.
 
 ```{.python .input}
 #@tab mxnet
@@ -286,7 +286,7 @@ This is somewhat inefficient. Note that we could already start copying parts of 
 :end_tab:
 
 :begin_tab:`tensorflow`
-This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In TensorFlow, `tf.identity` with a `/CPU:0` device placement dispatches the H2D transfer asynchronously. Launching all copies before calling `.numpy()` allows computation and communication to overlap.
+This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In TensorFlow, `tf.identity` with a `/CPU:0` device placement dispatches the D2H transfer asynchronously. Launching all copies before calling `.numpy()` allows computation and communication to overlap.
 :end_tab:
 
 ```{.python .input}
@@ -338,7 +338,7 @@ We conclude with an illustration of the computational graph and its dependencies
 
 ## Exercises
 
-1. Eight operations were performed in the `run` function defined in this section. There are no dependencies between them. Design an experiment to see if the deep learning framework will automatically execute them in parallel.
+1. Fifty operations were performed in the `run` function defined in this section. There are no dependencies between them. Design an experiment to see if the deep learning framework will automatically execute them in parallel.
 1. When the workload of an individual operator is sufficiently small, parallelization can help even on a single CPU or GPU. Design an experiment to verify this.
 1. Design an experiment that uses parallel computation on CPUs, GPUs, and communication between both devices.
 1. Use a debugger such as NVIDIA's [Nsight](https://developer.nvidia.com/nsight-compute-2019_5) to verify that your code is efficient.

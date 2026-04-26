@@ -304,7 +304,7 @@ class MLP(tf.keras.Model):
     # Define the forward propagation of the model, that is, how to return the
     # required model output based on the input X
     def call(self, X):
-        return self.out(self.hidden((X)))
+        return self.out(self.hidden(X))
 ```
 
 ```{.python .input}
@@ -478,7 +478,7 @@ parameters also need to be initialized.
 
 :begin_tab:`pytorch`
 In the `__init__` method, we add every module
-by calling the `add_modules` method. These modules can be accessed by the `children` method at a later date.
+by calling the `add_module` method. These modules can be accessed by the `children` method at a later date.
 In this way the system knows the added modules,
 and it will properly initialize each module's parameters.
 :end_tab:

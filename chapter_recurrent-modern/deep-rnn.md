@@ -84,7 +84,7 @@ are the model parameters of the output layer.
 Just as with MLPs, the number of hidden layers $L$ 
 and the number of hidden units $h$ are hyperparameters
 that we can tune.
-Common RNN layer widths ($h$) are in the range $(64, 2056)$,
+Common RNN layer widths ($h$) are in the range $(64, 2048)$,
 and common depths ($L$) are in the range $(1, 8)$. 
 In addition, we can easily get a deep-gated RNN
 by replacing the hidden state computation in :eqref:`eq_deep_rnn_H`

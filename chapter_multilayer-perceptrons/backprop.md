@@ -32,7 +32,7 @@ techniques and their implementations,
 we rely on some basic mathematics and computational graphs.
 To start, we focus our exposition on
 a one-hidden-layer MLP
-with weight decay ($\ell_2$ regularization, to be described in subsequent chapters).
+with weight decay ($\ell_2$ regularization, introduced in :numref:`sec_weight_decay`).
 
 ## Forward Propagation
 

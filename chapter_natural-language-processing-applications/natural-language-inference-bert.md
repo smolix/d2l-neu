@@ -891,7 +891,7 @@ and the next sentence prediction loss
 during pretraining.
 These two loss functions are irrelevant to fine-tuning downstream applications,
 thus the parameters of the employed MLPs in 
-`MaskLM` and `NextSentencePred` are not updated (staled) when BERT is fine-tuned.
+`MaskLM` and `NextSentencePred` are not updated (and so their gradients become stale) when BERT is fine-tuned.
 
 To allow parameters with stale gradients,
 the flag `ignore_stale_grad=True` is set in the `step` function of `d2l.train_batch_ch13`.

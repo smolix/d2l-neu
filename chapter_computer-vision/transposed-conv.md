@@ -223,7 +223,7 @@ strides are specified for intermediate results (thus output), not for input.
 Using the same input and kernel tensors
 from :numref:`fig_trans_conv`,
 changing the stride from 1 to 2
-increases both the height and weight
+increases both the height and width
 of intermediate tensors, hence the output tensor
 in :numref:`fig_trans_conv_stride2`.
 

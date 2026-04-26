@@ -205,8 +205,9 @@ class BiRNN(d2l.Classifier):
                  **kwargs):
         super().__init__(**kwargs)
         self.embedding = keras.layers.Embedding(vocab_size, embed_size)
-        # Stack bidirectional LSTM layers; only the last layer returns a
-        # single vector (return_sequences=False by default).
+        # Stack bidirectional LSTM layers; all layers return the full
+        # sequence so we can concatenate the initial- and final-step
+        # hidden states downstream.
         self.encoder = keras.Sequential([
             keras.layers.Bidirectional(
                 keras.layers.LSTM(num_hiddens, return_sequences=True))

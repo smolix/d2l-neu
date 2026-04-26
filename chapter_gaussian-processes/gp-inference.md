@@ -147,9 +147,7 @@ $$
 V(f_{*}) = K(x_*, x_*) - K(x, x_*)^T (K(x, x) + \sigma^2 I)^{-1}K(x, x_*)
 $$
 
-Before we make predictions, we should learn our kernel hyperparameters $\theta$ and noise variance $\sigma^2$. Let's initialize our length-scale at 0.75, as our prior functions looked too quickly varying compared to the data we are fitting. We'll also guess a noise standard deviation $\sigma$ of 0.75. 
-
-In order to learn these parameters, we will maximize the marginal likelihood with respect to these parameters.
+Before we make predictions, we should learn our kernel hyperparameters $\theta$ and noise variance $\sigma^2$. To do so, we will maximize the marginal likelihood with respect to these parameters.
 
 $$
 \log p(y | X) = \log \int p(y | f, X)p(f | X)df

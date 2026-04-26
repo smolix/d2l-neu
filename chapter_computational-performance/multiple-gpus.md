@@ -42,7 +42,7 @@ Moreover, the amount of data that needs to be transferred is potentially even la
 
 Last, we could partition data across multiple GPUs. This way all GPUs perform the same type of work, albeit on different observations. Gradients are aggregated across GPUs after each minibatch of training data.
 This is the simplest approach and it can be applied in any situation.
-We only need to synchronize after each minibatch. That said, it is highly desirable to start exchanging gradients parameters already while others are still being computed.
+We only need to synchronize after each minibatch. That said, it is highly desirable to start exchanging gradients of some parameters already while others are still being computed.
 Moreover, larger numbers of GPUs lead to larger minibatch sizes, thus increasing training efficiency.
 However, adding more GPUs does not allow us to train larger models.
 

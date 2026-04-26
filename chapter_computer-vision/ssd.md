@@ -65,7 +65,7 @@ generates a varying number of anchor boxes with different sizes,
 and detects varying-size objects
 by predicting classes and offsets
 of these anchor boxes (thus the bounding boxes);
-thus, this is a multiscale object detection model.
+this is therefore a multiscale object detection model.
 
 
 ![As a multiscale object detection model, single-shot multibox detection mainly consists of a base network followed by several multiscale feature map blocks.](../img/ssd.svg)

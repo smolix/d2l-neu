@@ -601,7 +601,7 @@ class VOCSegDataset:
 
 ### [**Reading the Dataset**]
 
-We use the custom `VOCSegDatase`t class to
+We use the custom `VOCSegDataset` class to
 create instances of the training set and test set, respectively.
 Suppose that
 we specify that the output shape of randomly cropped images is $320\times 480$.

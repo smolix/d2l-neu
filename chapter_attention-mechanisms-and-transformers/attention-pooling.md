@@ -377,14 +377,14 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
 plot(x_train, y_train, x_val, y_val, kernels, names)
 ```
 
-The first thing that stands out is that all three nontrivial kernels (Gaussian, Boxcar, and Epanechikov) produce fairly workable estimates that are not too far from the true function. Only the constant kernel that leads to the trivial estimate $f(x) = \frac{1}{n} \sum_i y_i$ produces a rather unrealistic result. Let's inspect the attention weighting a bit more closely:
+The first thing that stands out is that all three nontrivial kernels (Gaussian, Boxcar, and Triangular) produce fairly workable estimates that are not too far from the true function. Only the constant kernel that leads to the trivial estimate $f(x) = \frac{1}{n} \sum_i y_i$ produces a rather unrealistic result. Let's inspect the attention weighting a bit more closely:
 
 ```{.python .input}
 %%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 ```
 
-The visualization clearly shows why the estimates for Gaussian, Boxcar, and Epanechikov are very similar: after all, they are derived from very similar attention weights, despite the different functional form of the kernel. This raises the question as to whether this is always the case. 
+The visualization clearly shows why the estimates for Gaussian, Boxcar, and Triangular are very similar: after all, they are derived from very similar attention weights, despite the different functional form of the kernel. This raises the question as to whether this is always the case. 
 
 ## [**Adapting Attention Pooling**]
 

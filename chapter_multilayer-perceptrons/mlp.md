@@ -134,7 +134,7 @@ that would take into account
 the relevant interactions among our features,
 on top of which a linear model would be suitable,
 we simply do not know how to calculate it by hand.
-With deep neural networks, we used observational data
+With deep neural networks, we use observational data
 to jointly learn both a representation via hidden layers
 and a linear predictor that acts upon that representation.
 

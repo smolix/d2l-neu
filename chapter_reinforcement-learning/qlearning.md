@@ -12,7 +12,7 @@ In the previous section, we discussed the Value Iteration algorithm which requir
 
 ## The Q-Learning Algorithm
 
-Recall that value iteration for the action-value function in :ref:`sec_valueiter` corresponds to the update
+Recall that value iteration for the action-value function in :numref:`sec_valueiter` corresponds to the update
 
 $$Q_{k+1}(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q_k (s', a'); \ \textrm{for all } s \in \mathcal{S} \textrm{ and } a \in \mathcal{A}.$$
 
@@ -71,7 +71,7 @@ This ability to not only collect new data but also collect the right kind of dat
 
 ## Implementation of Q-Learning
 
-We now show how to implement Q-Learning on FrozenLake from [Open AI Gym](https://gym.openai.com). Note that this is the same setup as we consider in :ref:`sec_valueiter` experiment.
+We now show how to implement Q-Learning on FrozenLake from [Open AI Gym](https://gym.openai.com). Note that this is the same setup as we consider in :numref:`sec_valueiter` experiment.
 
 ```{.python .input}
 %%tab all
@@ -150,7 +150,7 @@ q_learning(env_info=env_info, gamma=gamma, num_iters=num_iters, alpha=alpha, eps
 
 ```
 
-This result shows that Q-learning can find the optimal solution for this problem roughly after 250 iterations. However, when we compare this result with the Value Iteration algorithm's result (see :ref:`subsec_valueitercode`), we can see that the Value Iteration algorithm needs far fewer iterations to find the optimal solution for this problem. This happens because the Value Iteration algorithm has access to the full MDP whereas Q-learning does not.
+This result shows that Q-learning can find the optimal solution for this problem roughly after 250 iterations. However, when we compare this result with the Value Iteration algorithm's result (see :numref:`subsec_valueitercode`), we can see that the Value Iteration algorithm needs far fewer iterations to find the optimal solution for this problem. This happens because the Value Iteration algorithm has access to the full MDP whereas Q-learning does not.
 
 
 ## Summary

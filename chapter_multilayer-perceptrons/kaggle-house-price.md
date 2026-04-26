@@ -350,7 +350,7 @@ def k_fold_data(data, k):
 when we train $K$ times in the $K$-fold cross-validation.
 
 ```{.python .input}
-%%tab all
+%%tab pytorch, mxnet, tensorflow
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
@@ -360,6 +360,23 @@ def k_fold(trainer, data, k, lr):
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
         models.append(model)
+    print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+    return models
+```
+
+```{.python .input}
+%%tab jax
+def k_fold(trainer, data, k, lr):
+    val_loss, models = [], []
+    for i, data_fold in enumerate(k_fold_data(data, k)):
+        model = d2l.LinearRegression(lr)
+        model.board.yscale='log'
+        if i != 0: model.board.display = False
+        trainer.fit(model, data_fold)
+        val_loss.append(float(model.board.data['val_loss'][-1].y))
+        # In JAX/Flax, params live in trainer.state, not the (frozen) model.
+        # Capture each fold's trained params so the ensemble can use them.
+        models.append((model, trainer.state.params))
     print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
     return models
 ```
@@ -429,9 +446,9 @@ submission.to_csv('submission.csv', index=False)
 
 ```{.python .input}
 %%tab jax
-preds = [model.apply({'params': trainer.state.params},
+preds = [model.apply({'params': params},
          d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
-         for model in models]
+         for model, params in models]
 # Taking exponentiation of predictions in the logarithm scale
 ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
 submission = pd.DataFrame({'Id':data.raw_val.Id,

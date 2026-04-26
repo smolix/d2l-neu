@@ -632,7 +632,7 @@ x, y = torch.meshgrid(torch.linspace(-2, 2, 101),
 z = x*torch.exp(- x**2 - y**2)
 
 # Compute approximating quadratic with gradient and Hessian at (1, 0)
-w = torch.exp(torch.tensor([-1.]))*(-1 - (x + 1) + 2 * (x + 1)**2 + 2 * y**2)
+w = torch.exp(torch.tensor([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
@@ -658,7 +658,7 @@ x, y = tf.meshgrid(tf.linspace(-2., 2., 101),
 z = x*tf.exp(- x**2 - y**2)
 
 # Compute approximating quadratic with gradient and Hessian at (1, 0)
-w = tf.exp(tf.constant([-1.]))*(-1 - (x + 1) + 2 * (x + 1)**2 + 2 * y**2)
+w = tf.exp(tf.constant([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
@@ -684,7 +684,7 @@ x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101),
 z = x * jnp.exp(- x**2 - y**2)
 
 # Compute approximating quadratic with gradient and Hessian at (1, 0)
-w = jnp.exp(jnp.array([-1.])) * (-1 - (x + 1) + 2 * (x + 1)**2 + 2 * y**2)
+w = jnp.exp(jnp.array([-1.])) * (-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
 ax = d2l.plt.figure().add_subplot(111, projection='3d')

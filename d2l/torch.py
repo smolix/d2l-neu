@@ -805,7 +805,7 @@ class MTFraEng(d2l.DataModule):
     def _tokenize(self, text, max_examples=None):
         src, tgt = [], []
         for i, line in enumerate(text.split('\n')):
-            if max_examples and i > max_examples: break
+            if max_examples and i >= max_examples: break
             parts = line.split('\t')
             if len(parts) == 2:
                 # Skip empty tokens
@@ -2549,10 +2549,10 @@ class HPOTrainer(d2l.Trainer):
                 y_hat = self.model(x)
                 accuracy += self.model.accuracy(y_hat, y)
             val_batch_idx += 1
-        return 1 -  accuracy / val_batch_idx
+        return 1 - accuracy / val_batch_idx
 
 class HPOSearcher(d2l.HyperParameters):
-    def sample_configuration() -> dict:
+    def sample_configuration(self) -> dict:
         raise NotImplementedError
 
     def update(self, config: dict, error: float, additional_info=None):
@@ -2830,7 +2830,7 @@ def train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
             trainer.step()
             l += ls.item()
             metric.add(ls.item() * users.shape[0], users.shape[0],
-                       users.numel())
+                       users.shape[0])
             timer.stop()
         if len(kwargs) > 0:  # It will be used in section AutoRec
             test_rmse = evaluator(net, test_iter, kwargs['inter_mat'],
@@ -2946,8 +2946,6 @@ class CTRDataset(torch.utils.data.Dataset):
                 values = line.rstrip('\n').split('\t')
                 if len(values) != self.NUM_FEATS + 1:
                     continue
-                label = torch.zeros(2)
-                label[int(values[0])] = 1
                 instance['y'] = [float(values[0])]
                 for i in range(1, self.NUM_FEATS + 1):
                     feat_cnts[i][values[i]] += 1

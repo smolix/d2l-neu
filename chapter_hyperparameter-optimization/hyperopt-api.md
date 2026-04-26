@@ -66,7 +66,7 @@ then be exploited to improve our sampling distribution.
 ```{.python .input  n=3}
 %%tab pytorch, tensorflow, jax
 class HPOSearcher(d2l.HyperParameters):  #@save
-    def sample_configuration() -> dict:
+    def sample_configuration(self) -> dict:
         raise NotImplementedError
 
     def update(self, config: dict, error: float, additional_info=None):

@@ -303,7 +303,7 @@ class SGD(d2l.HyperParameters):  #@save
         updates = jax.tree_util.tree_map(lambda g: -self.lr * g, updates)
         return updates, state
 
-    def __call__():
+    def __call__(self):
         return optax.GradientTransformation(self.init, self.update)
 ```
 

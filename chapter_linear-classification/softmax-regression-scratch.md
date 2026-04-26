@@ -393,7 +393,7 @@ much more efficiently.
     1. Test whether `softmax` still works correctly if an input has a value of $100$.
     1. Test whether `softmax` still works correctly if the largest of all inputs is smaller than $-100$.
     1. Implement a fix by looking at the value relative to the largest entry in the argument.
-1. Implement a `cross_entropy` function that follows the definition of the cross-entropy loss function $\sum_i y_i \log \hat{y}_i$.
+1. Implement a `cross_entropy` function that follows the definition of the cross-entropy loss function $-\sum_i y_i \log \hat{y}_i$.
     1. Try it out in the code example of this section.
     1. Why do you think it runs more slowly?
     1. Should you use it? When would it make sense to?

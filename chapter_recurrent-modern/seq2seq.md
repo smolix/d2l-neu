@@ -480,7 +480,7 @@ class Seq2SeqDecoder(d2l.Decoder):
     def forward(self, X, state):
         # X shape: (batch_size, num_steps)
         # embs shape: (num_steps, batch_size, embed_size)
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int32))
+        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
         enc_output, hidden_state = state
         # context shape: (batch_size, num_hiddens)
         context = enc_output[-1]

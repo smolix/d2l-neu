@@ -479,7 +479,7 @@ class SGD(d2l.HyperParameters):
         updates = jax.tree_util.tree_map(lambda g: -self.lr * g, updates)
         return updates, state
 
-    def __call__():
+    def __call__(self):
         return optax.GradientTransformation(self.init, self.update)
 
 @jax.jit
@@ -837,7 +837,7 @@ class RNNScratch(nn.Module):
                                (self.num_inputs, self.num_hiddens))
         self.W_hh = self.param('W_hh', nn.initializers.normal(self.sigma),
                                (self.num_hiddens, self.num_hiddens))
-        self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens))
+        self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens,))
 
     def __call__(self, inputs, state=None):
         if state is not None:
@@ -997,7 +997,7 @@ class MTFraEng(d2l.DataModule):
     def _tokenize(self, text, max_examples=None):
         src, tgt = [], []
         for i, line in enumerate(text.split('\n')):
-            if max_examples and i > max_examples: break
+            if max_examples and i >= max_examples: break
             parts = line.split('\t')
             if len(parts) == 2:
                 # Skip empty tokens
@@ -1376,7 +1376,7 @@ class AddNorm(nn.Module):
     """The residual connection followed by layer normalization.
 
     Defined in :numref:`sec_transformer`"""
-    dropout: int
+    dropout: float
 
     @nn.compact
     def __call__(self, X, Y, training=False):
@@ -2836,7 +2836,7 @@ class HPOTrainer(d2l.Trainer):
         return 1 - accuracy / val_batch_idx
 
 class HPOSearcher(d2l.HyperParameters):
-    def sample_configuration() -> dict:
+    def sample_configuration(self) -> dict:
         raise NotImplementedError
 
     def update(self, config: dict, error: float, additional_info=None):

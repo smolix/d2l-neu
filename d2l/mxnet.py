@@ -389,7 +389,7 @@ class LinearRegression(d2l.Module):
 
     def loss(self, y_hat, y):
         fn = gluon.loss.L2Loss()
-        return 2 * fn(y_hat, y).mean()
+        return 2 * fn(y_hat, y).mean()  # Gluon's L2Loss includes 1/2; multiply by 2 to get plain MSE
 
     def configure_optimizers(self):
         return gluon.Trainer(self.collect_params(),
@@ -813,7 +813,7 @@ class MTFraEng(d2l.DataModule):
     def _tokenize(self, text, max_examples=None):
         src, tgt = [], []
         for i, line in enumerate(text.split('\n')):
-            if max_examples and i > max_examples: break
+            if max_examples and i >= max_examples: break
             parts = line.split('\t')
             if len(parts) == 2:
                 # Skip empty tokens
@@ -2801,8 +2801,6 @@ class CTRDataset(gluon.data.Dataset):
                 values = line.rstrip('\n').split('\t')
                 if len(values) != self.NUM_FEATS + 1:
                     continue
-                label = np.float32([0, 0])
-                label[int(values[0])] = 1
                 instance['y'] = [np.float32(values[0])]
                 for i in range(1, self.NUM_FEATS + 1):
                     feat_cnts[i][values[i]] += 1

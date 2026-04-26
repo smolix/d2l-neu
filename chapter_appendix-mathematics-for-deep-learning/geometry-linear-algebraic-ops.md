@@ -376,9 +376,10 @@ X_train_0 = tf.cast(tf.stack(train_images[[i for i, label in enumerate(
 X_train_1 = tf.cast(tf.stack(train_images[[i for i, label in enumerate(
     train_labels) if label == 1]]), dtype=tf.float32) * 256
 X_test = tf.cast(tf.stack(test_images[[i for i, label in enumerate(
-    test_labels) if label == 0]]), dtype=tf.float32) * 256
-y_test = tf.cast(tf.stack(test_images[[i for i, label in enumerate(
-    test_labels) if label == 1]]), dtype=tf.float32) * 256
+    test_labels) if label == 0 or label == 1]]),
+    dtype=tf.float32) * 256
+y_test = tf.cast(tf.stack([label for label in test_labels
+    if label == 0 or label == 1]), dtype=tf.float32)
 
 # Compute averages
 ave_0 = tf.reduce_mean(X_train_0, axis=0)

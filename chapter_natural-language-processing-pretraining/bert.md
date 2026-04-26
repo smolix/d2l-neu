@@ -418,7 +418,7 @@ encoded_X.shape
 
 The forward inference of `BERTEncoder` gives the BERT representation
 of each token of the input text and the inserted
-special tokens “&lt;cls&gt;” and “&lt;seq&gt;”.
+special tokens “&lt;cls&gt;” and “&lt;sep&gt;”.
 Next, we will use these representations to compute the loss function
 for pretraining BERT.
 The pretraining is composed of the following two tasks:

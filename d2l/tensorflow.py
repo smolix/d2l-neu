@@ -835,7 +835,7 @@ class MTFraEng(d2l.DataModule):
     def _tokenize(self, text, max_examples=None):
         src, tgt = [], []
         for i, line in enumerate(text.split('\n')):
-            if max_examples and i > max_examples: break
+            if max_examples and i >= max_examples: break
             parts = line.split('\t')
             if len(parts) == 2:
                 # Skip empty tokens
@@ -2803,7 +2803,7 @@ class HPOTrainer(d2l.Trainer):
         return 1 - accuracy / val_batch_idx
 
 class HPOSearcher(d2l.HyperParameters):
-    def sample_configuration() -> dict:
+    def sample_configuration(self) -> dict:
         raise NotImplementedError
 
     def update(self, config: dict, error: float, additional_info=None):
@@ -3052,7 +3052,7 @@ def load_data_fashion_mnist(batch_size, resize=None):
             batch_size).map(resize_fn))
 
 class TrainCallback(tf.keras.callbacks.Callback):
-    """A callback to visiualize the training progress.
+    """A callback to visualize the training progress.
 
     Defined in :numref:`sec_utils`"""
     def __init__(self, net, train_iter, test_iter, num_epochs, device_name):

@@ -466,7 +466,7 @@ class ViT(d2l.Classifier):
     def __call__(self, X):
         X = self.patch_embedding(X)
         X = d2l.concat((jnp.tile(self.cls_token, (X.shape[0], 1, 1)), X), 1)
-        X = nn.Dropout(emb_dropout, deterministic=not self.training)(X + self.pos_embedding)
+        X = nn.Dropout(self.emb_dropout, deterministic=not self.training)(X + self.pos_embedding)
         for blk in self.blks:
             X = blk(X, training=self.training)
         return self.head(X[:, 0])

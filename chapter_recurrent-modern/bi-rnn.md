@@ -143,9 +143,13 @@ class BiRNNScratch(d2l.Module):
     sigma: float = 0.01
 
     def setup(self):
-        self.f_rnn = d2l.RNNScratch(num_inputs, num_hiddens, sigma)
-        self.b_rnn = d2l.RNNScratch(num_inputs, num_hiddens, sigma)
-        self.num_hiddens *= 2  # The output dimension will be doubled
+        self.f_rnn = d2l.RNNScratch(self.num_inputs, self.num_hiddens,
+                                    self.sigma)
+        self.b_rnn = d2l.RNNScratch(self.num_inputs, self.num_hiddens,
+                                    self.sigma)
+        # The output dimension will be doubled (forward and backward
+        # outputs are concatenated along the last axis).
+        self.output_dim = self.num_hiddens * 2
 ```
 
 States of forward and backward RNNs

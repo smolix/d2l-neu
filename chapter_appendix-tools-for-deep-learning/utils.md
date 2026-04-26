@@ -163,6 +163,8 @@ def make_env(name ='', seed=0): #@save
 Show value function
 ```{.python .input}
 %%tab pytorch
+import matplotlib.pyplot as plt
+import numpy as np
 
 def show_value_function_progress(env_desc, V, pi): #@save
     # This function visualizes how value and policy changes over time.
@@ -222,6 +224,8 @@ def show_value_function_progress(env_desc, V, pi): #@save
 Show Q function
 ```{.python .input}
 %%tab pytorch
+import matplotlib.pyplot as plt
+import numpy as np
 
 def show_Q_function_progress(env_desc, V_all, pi_all): #@save
     # This function visualizes how value and policy changes over time.

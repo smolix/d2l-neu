@@ -374,7 +374,7 @@ class AddNorm(tf.keras.layers.Layer):  #@save
 %%tab jax
 class AddNorm(nn.Module):  #@save
     """The residual connection followed by layer normalization."""
-    dropout: int
+    dropout: float
 
     @nn.compact
     def __call__(self, X, Y, training=False):

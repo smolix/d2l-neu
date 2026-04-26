@@ -482,8 +482,10 @@ and compute its "confusion" matrix using the validation set
 The *confusion matrix*, $\mathbf{C}$, is simply a $k \times k$ matrix,
 where each column corresponds to the label category (ground truth)
 and each row corresponds to our model's predicted category.
-Each cell's value $c_{ij}$ is the fraction of total predictions on the validation set
-where the true label was $j$ and our model predicted $i$.
+Each cell's value $c_{ij}$ is the fraction of validation examples
+with true label $j$ for which our model predicted $i$,
+so that each column $j$ sums to $1$
+(an empirical estimate of $P(\hat{y}=i \mid y=j)$).
 
 Now, we cannot calculate the confusion matrix
 on the target data directly

@@ -123,7 +123,7 @@ The second one is a utility class that saves all arguments in a class's `__init_
 class HyperParameters:  #@save
     """The base class of hyperparameters."""
     def save_hyperparameters(self, ignore=[]):
-        raise NotImplemented
+        raise NotImplementedError
 ```
 
 We defer its implementation into :numref:`sec_utils`. To use it, we define our class that inherits from `HyperParameters` and calls `save_hyperparameters` in the `__init__` method.
@@ -155,7 +155,7 @@ class ProgressBoard(d2l.HyperParameters):  #@save
         self.save_hyperparameters()
 
     def draw(self, x, y, label, every_n=1):
-        raise NotImplemented
+        raise NotImplementedError
 ```
 
 In the following example, we draw `sin` and `cos` with a different smoothness. If you run this code block, you will see the lines grow in animation.

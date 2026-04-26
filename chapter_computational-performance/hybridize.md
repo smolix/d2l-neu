@@ -191,7 +191,7 @@ By converting the model using `torch.jit.script` function, we are able to compil
 
 :begin_tab:`tensorflow`
 Formerly, all functions built in TensorFlow were built as a computational graph, and therefore JIT compiled by default. However, with the release of TensorFlow 2.X and EagerTensor, this is no longer the default behaviour. 
-We cen re-enable this functionality with tf.function. tf.function is more commonly used as a function decorator, however it is possible to call it directly as a normal python function, shown below. The model's computation result remains unchanged.
+We can re-enable this functionality with tf.function. tf.function is more commonly used as a function decorator, however it is possible to call it directly as a normal python function, shown below. The model's computation result remains unchanged.
 :end_tab:
 
 :begin_tab:`jax`

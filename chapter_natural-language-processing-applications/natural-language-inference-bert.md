@@ -218,8 +218,9 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
     vocab.token_to_idx = {token: idx for idx, token in enumerate(
         vocab.idx_to_token)}
     bert = d2l.BERTModel(
-        len(vocab), num_hiddens, ffn_num_hiddens=ffn_num_hiddens, num_heads=4,
-        num_blks=2, dropout=0.2, max_len=max_len)
+        len(vocab), num_hiddens, ffn_num_hiddens=ffn_num_hiddens,
+        num_heads=num_heads, num_blks=num_blks, dropout=dropout,
+        max_len=max_len)
     # Load pretrained BERT parameters
     bert.load_state_dict(torch.load(os.path.join(data_dir,
                                                  'pretrained.params')))
@@ -237,8 +238,9 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
     vocab.token_to_idx = {token: idx for idx, token in enumerate(
         vocab.idx_to_token)}
     bert = d2l.BERTModel(
-        len(vocab), num_hiddens, ffn_num_hiddens=ffn_num_hiddens, num_heads=4,
-        num_blks=2, dropout=0.2, max_len=max_len)
+        len(vocab), num_hiddens, ffn_num_hiddens=ffn_num_hiddens,
+        num_heads=num_heads, num_blks=num_blks, dropout=dropout,
+        max_len=max_len)
     # Initialize model parameters with dummy inputs
     dummy_tokens = jnp.ones((2, max_len), dtype=jnp.int32)
     dummy_segments = jnp.zeros((2, max_len), dtype=jnp.int32)
@@ -764,7 +766,9 @@ test_iter = tf.data.Dataset.from_tensor_slices(
 As :numref:`fig_bert-two-seqs` indicates,
 fine-tuning BERT for natural language inference
 requires only an extra MLP consisting of two fully connected layers
-(see `self.hidden` and `self.output` in the following `BERTClassifier` class).
+(see `self.hidden` and `self.output`---named `self.output_layer` in the
+TensorFlow tab to avoid clashing with Keras's reserved `output` property---in
+the following `BERTClassifier` class).
 [**This MLP transforms the
 BERT representation of the special “&lt;cls&gt;” token**],
 which encodes the information of both the premise and the hypothesis,
@@ -834,7 +838,7 @@ In the following,
 the pretrained BERT model `bert` is fed into the `BERTClassifier` instance `net` for
 the downstream application.
 In common implementations of BERT fine-tuning,
-only the parameters of the output layer of the additional MLP (`net.output`) will be learned from scratch.
+only the parameters of the output layer of the additional MLP (`net.output`, or `net.output_layer` in the TensorFlow tab) will be learned from scratch.
 All the parameters of the pretrained BERT encoder (`net.encoder`) and the hidden layer of the additional MLP (`net.hidden`) will be fine-tuned.
 
 ```{.python .input}

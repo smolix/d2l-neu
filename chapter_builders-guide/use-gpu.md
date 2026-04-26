@@ -61,7 +61,7 @@ that supports CUDA 10.0 via `pip install mxnet-cu100`.
 :end_tab:
 
 :begin_tab:`pytorch`
-In PyTorch, every array has a device; we often refer it as a *context*.
+In PyTorch, every array has a device; we often refer to it as a *context*.
 So far, by default, all variables
 and associated computation
 have been assigned to the CPU.
@@ -410,7 +410,7 @@ print(X)
 print(Z)
 ```
 
-Now that [**the data (both `Z` and `Y`) are on the same GPU), we can add them up.**]
+Now that [**the data (both `Z` and `Y`) are on the same GPU, we can add them up.**]
 
 ```{.python .input}
 %%tab all

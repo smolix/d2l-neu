@@ -27,9 +27,9 @@ where $\alpha(\mathbf{q}, \mathbf{k}_i) \in \mathbb{R}$ ($i = 1, \ldots, m$) are
 * Exactly one of the weights $\alpha(\mathbf{q}, \mathbf{k}_i)$ is $1$, while all others are $0$. This is akin to a traditional database query. 
 * All weights are equal, i.e., $\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{1}{m}$ for all $i$. This amounts to averaging across the entire database, also called average pooling in deep learning. 
 
-A common strategy for ensuring that the weights sum up to $1$ is to normalize them via 
+A common strategy for ensuring that the weights sum up to $1$ is to start from any scoring function $a(\mathbf{q}, \mathbf{k})$ and normalize it via
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{{\sum_j} \alpha(\mathbf{q}, \mathbf{k}_j)}.$$
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{a(\mathbf{q}, \mathbf{k}_i)}{{\sum_j} a(\mathbf{q}, \mathbf{k}_j)}.$$
 
 In particular, to ensure that the weights are also nonnegative, one can resort to exponentiation. This means that we can now pick *any* function  $a(\mathbf{q}, \mathbf{k})$ and then apply the softmax operation used for multinomial models to it via
 

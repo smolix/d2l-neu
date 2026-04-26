@@ -513,7 +513,7 @@ class WeightDecay(d2l.LinearRegression):
         )
         
     def loss(self, y_hat, y):
-        return super().loss(y_hat, y) + self.net.losses
+        return super().loss(y_hat, y) + tf.add_n(self.net.losses)
 ```
 
 ```{.python .input}

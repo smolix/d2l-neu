@@ -299,7 +299,7 @@ $$
 Similarly, we know that the derivative of $e^{x}$ is itself, so that means
 
 $$
-\int_0^{x} e^{x} \; dx = e^{x} - e^{0} = e^x - 1.
+\int_0^{x} e^{t} \; dt = e^{x} - e^{0} = e^x - 1.
 $$
 
 In this way, we can develop the entire theory of integration leveraging ideas from differential calculus freely.  Every integration rule derives from this one fact.
@@ -608,7 +608,7 @@ We will meet this integral again when we study continuous random variables in :n
 1. What is $\int_1^2 \frac{1}{x} \;dx$?
 2. Use the change of variables formula to integrate $\int_0^{\sqrt{\pi}}x\sin(x^2)\;dx$.
 3. What is $\int_{[0,1]^2} xy \;dx\;dy$?
-4. Use the change of variables formula to compute $\int_0^2\int_0^1xy(x^2-y^2)/(x^2+y^2)^3\;dy\;dx$ and $\int_0^1\int_0^2f(x, y) = xy(x^2-y^2)/(x^2+y^2)^3\;dx\;dy$ to see they are different.
+4. Let $f(x, y) = xy(x^2-y^2)/(x^2+y^2)^3$. Use the change of variables formula to compute $\int_0^2\int_0^1 f(x, y)\;dy\;dx$ and $\int_0^1\int_0^2 f(x, y)\;dx\;dy$ to see that they are different.
 
 :begin_tab:`mxnet`
 [Discussions](https://discuss.d2l.ai/t/414)

@@ -3260,15 +3260,13 @@ def extract(filename, folder=None):
     base_dir = os.path.dirname(filename)
     _, ext = os.path.splitext(filename)
     assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
-    if ext == '.zip':
-        fp = zipfile.ZipFile(filename, 'r')
-    else:
-        fp = tarfile.open(filename, 'r')
+    opener = zipfile.ZipFile if ext == '.zip' else tarfile.open
     if folder is None:
         folder = base_dir
     tmp = tempfile.mkdtemp(dir=folder)
     try:
-        fp.extractall(tmp)
+        with opener(filename, 'r') as fp:
+            fp.extractall(tmp)
         for name in os.listdir(tmp):
             src = os.path.join(tmp, name)
             dst = os.path.join(folder, name)

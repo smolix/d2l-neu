@@ -283,6 +283,19 @@ class ViTBlock(nn.Module):
         return X + self.mlp(self.ln2(X))
 ```
 
+:begin_tab:`tensorflow`
+The TensorFlow tab uses Keras's built-in
+`tf.keras.layers.MultiHeadAttention`, which differs from our scratch
+PyTorch/JAX `d2l.MultiHeadAttention` in one important way: it does not
+accept a `valid_lens` argument. Keras instead expects an
+`attention_mask` of shape *(batch, query_len, key_len)*. For vision
+Transformers this gap is harmless — every image patch is a valid
+"token", so no masking is needed and `call(X)` (below) leaves the mask
+unset. If you reuse this block for sequence data with padding, build an
+attention mask from `valid_lens` and pass it via the `attention_mask`
+argument; the PyTorch/JAX tabs already accept `valid_lens` directly.
+:end_tab:
+
 ```{.python .input}
 %%tab tensorflow
 class ViTBlock(tf.keras.layers.Layer):  #@save

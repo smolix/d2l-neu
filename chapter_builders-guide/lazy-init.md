@@ -108,6 +108,16 @@ We confirm by attempting to access the parameters below.
 As mentioned in :numref:`subsec_param-access`, parameters and the network definition are decoupled
 in Jax and Flax, and the user handles both manually. Flax models are stateless
 hence there is no `parameters` attribute.
+
+In contrast to PyTorch's `LazyLinear` or MXNet's deferred init, Flax does
+not have a "lazy" mode in the same sense: shape inference happens at the
+moment you call `net.init(rng, dummy_input)`, which is mandatory before
+the model can be used. There is therefore nothing to inspect *before*
+initialization — the construction of `net` only records the architecture,
+and the dummy forward pass inside `init` is what materializes the
+parameter shapes. The remainder of this section is hence narrated for the
+imperative frameworks; the JAX path simply runs `net.init(...)` once and
+proceeds.
 :end_tab:
 
 ```{.python .input}

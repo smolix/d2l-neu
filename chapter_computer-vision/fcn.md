@@ -98,6 +98,17 @@ and a fully connected layer:
 they are not needed
 in the fully convolutional network.
 
+:begin_tab:`jax`
+Note: there is no pretrained ResNet bundled with Flax, and no third-party
+package providing ImageNet-pretrained ResNet weights is available in this
+JAX environment (e.g. `flaxmodels`, `transformers`). To preserve the
+pedagogical point of this section, conceptually treat the from-scratch
+ResNet feature extractor below as if its weights had been initialized
+from ImageNet pretraining; in practice you would port pretrained weights
+from PyTorch or load them via a library such as `flaxmodels`. The
+PyTorch and TensorFlow tabs use truly pretrained backbones.
+:end_tab:
+
 ```{.python .input}
 #@tab mxnet
 pretrained_net = gluon.model_zoo.vision.resnet18_v2(pretrained=True)

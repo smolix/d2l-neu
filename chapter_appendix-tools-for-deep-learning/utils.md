@@ -1369,3 +1369,19 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
         output_seq.append(pred.numpy())
     return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
 ```
+
+## A Note on Framework Coverage
+
+The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,
+`train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for
+parity with the original :cite:`Zhang.Lipton.Li.ea.2021` implementation,
+which predates the unified `d2l.Trainer` class introduced in this
+edition. They are deliberately not provided for JAX, and PyTorch only
+ships the subset that is genuinely useful outside of the `Trainer`
+flow. If you are reading the JAX tab, the corresponding chapters use
+`d2l.Trainer.fit(model, data)` end-to-end; the per-batch logic that
+these helpers spell out lives inside `Trainer.fit_epoch` and the
+`@d2l.add_to_class` extensions defined alongside it. The MXNet and
+TensorFlow tabs additionally retain `evaluate_accuracy` because some of
+their earlier-chapter snippets call it directly; for PyTorch and JAX,
+use `Trainer.validation_step` (or its return value) instead.

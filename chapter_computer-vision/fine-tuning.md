@@ -308,9 +308,17 @@ def test_augs(x, training=False):
 
 ### [**Defining and Initializing the Model**]
 
-We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. Here, we specify `pretrained=True` to automatically download the pretrained model parameters. 
+:begin_tab:`mxnet,pytorch`
+We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. Here, we specify `pretrained=True` to automatically download the pretrained model parameters.
 If this model is used for the first time,
 Internet connection is required for download.
+:end_tab:
+
+:begin_tab:`jax,tensorflow`
+We use ResNet-50, which was pretrained on the ImageNet dataset, as the source model. (Keras 3's `keras.applications` does not ship a pretrained ResNet-18, so we use ResNet-50 here even though the PyTorch and MXNet tabs use ResNet-18.) Here, we specify `weights='imagenet'` to automatically download the pretrained model parameters.
+If this model is used for the first time,
+Internet connection is required for download.
+:end_tab:
 
 ```{.python .input}
 #@tab mxnet

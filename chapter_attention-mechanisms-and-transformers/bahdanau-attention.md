@@ -96,6 +96,20 @@ class AttentionDecoder(d2l.Decoder):  #@save
         raise NotImplementedError
 ```
 
+```{.python .input}
+%%tab jax
+class AttentionDecoder(d2l.Decoder):  #@save
+    """The base attention-based decoder interface.
+
+    Flax modules are dataclasses, so the base class deliberately omits
+    `__init__`; subclasses declare their fields as class-level
+    annotations and (optionally) a `setup()` method.
+    """
+    @property
+    def attention_weights(self):
+        raise NotImplementedError
+```
+
 We need to [**implement the RNN decoder**]
 in the `Seq2SeqAttentionDecoder` class.
 The state of the decoder is initialized with

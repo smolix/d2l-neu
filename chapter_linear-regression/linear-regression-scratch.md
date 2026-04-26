@@ -402,6 +402,14 @@ to exist at trace time.
 :end_tab:
 
 :begin_tab:`jax`
+The JAX implementation looks longer than its PyTorch counterpart because
+JAX is purely functional: there is no implicit `self`-attached state,
+so each step must explicitly take in and return the optimizer state,
+dropout RNG, and (optionally) batch-statistics. PyTorch's `optim.step()`
+mutates parameters in place, but JAX's `state.apply_gradients(grads=…)`
+returns a *new* state object, which we then thread back through the
+loop. This explicit plumbing is what the extra lines below are doing.
+
 JAX shares the same "compile, then dispatch" cost model as TensorFlow:
 executing optax updates and `state.replace` calls one at a time in Python
 is far slower than doing them as a single compiled kernel. We therefore

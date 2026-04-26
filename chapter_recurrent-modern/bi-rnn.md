@@ -203,6 +203,18 @@ class BiGRU(d2l.RNN):
         self.num_hiddens *= 2
 ```
 
+```{.python .input}
+%%tab tensorflow
+class BiGRU(d2l.RNN):
+    def __init__(self, num_inputs, num_hiddens):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = tf.keras.layers.Bidirectional(
+            tf.keras.layers.GRU(num_hiddens, return_sequences=True,
+                                return_state=True))
+        self.num_hiddens *= 2
+```
+
 ## Summary
 
 In bidirectional RNNs, the hidden state for each time step is simultaneously determined by the data prior to and after the current time step. Bidirectional RNNs are mostly useful for sequence encoding and the estimation of observations given bidirectional context. Bidirectional RNNs are very costly to train due to long gradient chains.

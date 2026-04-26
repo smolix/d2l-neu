@@ -209,6 +209,10 @@ $$l^{(i)}(\mathbf{w}, b) = \frac{1}{2} \left(\hat{y}^{(i)} - y^{(i)}\right)^2.$$
 The constant $\frac{1}{2}$ makes no real difference
 but proves to be notationally convenient,
 since it cancels out when we take the derivative of the loss.
+Note that frameworks' built-in MSE losses (e.g., `nn.MSELoss` in PyTorch
+or `tf.keras.losses.MeanSquaredError`) omit this $\tfrac{1}{2}$, so the
+effective gradient is twice as large; if you swap our scratch loss for
+a built-in one, halve the learning rate to compensate.
 Because the training dataset is given to us,
 and thus is out of our control,
 the empirical error is only a function of the model parameters.

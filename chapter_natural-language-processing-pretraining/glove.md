@@ -192,6 +192,10 @@ We can also interpret the GloVe model from another perspective.
 Using the same notation in
 :numref:`subsec_skipgram-global`,
 let $p_{ij} \stackrel{\textrm{def}}{=} P(w_j \mid w_i)$ be the conditional probability of generating the context word $w_j$ given $w_i$ as the center word in the corpus.
+Throughout this section, the *first* index of $p$ denotes the
+conditioning *center* word and the *second* index the *context* word
+being generated; thus $p_{ji}$ below means "probability of context $w_i$
+given center $w_j$".
 :numref:`tab_glove`
 lists several co-occurrence probabilities
 given words "ice" and "steam"

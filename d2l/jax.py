@@ -281,7 +281,7 @@ class DataModule(d2l.HyperParameters):
     """The base class of data.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, root='../data'):
+    def __init__(self, root='../data', num_workers=4):
         self.save_hyperparameters()
 
     def get_dataloader(self, train):

@@ -442,7 +442,7 @@ class DataModule(d2l.HyperParameters):  #@save
 %%tab tensorflow
 class DataModule(d2l.HyperParameters):  #@save
     """The base class of data."""
-    def __init__(self, root='../data'):
+    def __init__(self, root='../data', num_workers=4):
         self.save_hyperparameters()
 
     def get_dataloader(self, train):
@@ -459,7 +459,7 @@ class DataModule(d2l.HyperParameters):  #@save
 %%tab jax
 class DataModule(d2l.HyperParameters):  #@save
     """The base class of data."""
-    def __init__(self, root='../data'):
+    def __init__(self, root='../data', num_workers=4):
         self.save_hyperparameters()
 
     def get_dataloader(self, train):

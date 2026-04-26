@@ -12,6 +12,7 @@ dependencies = [
     "matplotlib-inline",
     "requests",
     "pandas",
+    "pyarrow",
     "scipy",
     "pillow",
     "ipython",
@@ -41,7 +42,6 @@ mxnet = [
 ]
 tensorflow = [
     "tensorflow",
-    "tensorflow-datasets",
     "tensorflow-probability[tf]",
     "nvidia-cudnn-cu12",
     "nvidia-cublas-cu12",
@@ -62,7 +62,6 @@ jax = [
     "tensorflow-datasets",
 ]
 run = [
-    "jupyter",
     "nbconvert",
     "ipykernel",
 ]
@@ -88,6 +87,4 @@ torch = { index = "pytorch-cu124" }
 torchvision = { index = "pytorch-cu124" }
 
 [dependency-groups]
-dev = [
-    "pyarrow>=23.0.1",
-]
+dev = []

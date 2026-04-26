@@ -215,9 +215,10 @@ def dropout_layer(X, dropout):
 
 ```{.python .input}
 %%tab jax
-def dropout_layer(X, dropout, key=d2l.get_key()):
+def dropout_layer(X, dropout, key=None):
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
+    if key is None: key = d2l.get_key()
     mask = jax.random.uniform(key, X.shape) > dropout
     return jnp.asarray(mask, dtype=jnp.float32) * X / (1.0 - dropout)
 ```

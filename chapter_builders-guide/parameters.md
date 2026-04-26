@@ -87,7 +87,7 @@ net(X).shape
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(4, activation=tf.nn.relu),
+    tf.keras.layers.Dense(8, activation=tf.nn.relu),
     tf.keras.layers.Dense(1),
 ])
 
@@ -300,7 +300,7 @@ assert net[2].weight.data[0, 0] == net[4].weight.data[0, 0]
 %%tab tensorflow
 # Keras keeps both references to the shared layer in net.layers,
 # but the shared layer's parameters are tied
-shared = tf.keras.layers.Dense(4, activation=tf.nn.relu)
+shared = tf.keras.layers.Dense(8, activation=tf.nn.relu)
 net = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(),
     shared,

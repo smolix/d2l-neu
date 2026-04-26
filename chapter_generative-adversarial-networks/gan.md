@@ -150,7 +150,7 @@ net_G = nn.Sequential(nn.Linear(2, 2))
 
 ```{.python .input}
 #@tab tensorflow
-net_G = tf.keras.layers.Dense(2)
+net_G = tf.keras.models.Sequential([tf.keras.layers.Dense(2)])
 ```
 
 ```{.python .input}

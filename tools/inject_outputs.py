@@ -35,6 +35,11 @@ OUTPUT_START = '<!-- d2l:output -->'
 OUTPUT_END = '<!-- /d2l:output -->'
 MAX_TEXT_LINES = 40
 
+# Strip ANSI CSI escape sequences (e.g. Keras 3 progress bars). Leaving them
+# in the qmd corrupts Quarto's intermediate markdown — the ESC bytes confuse
+# the panel-tabset Lua filter and silently truncate the document.
+_ANSI_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
+
 
 # ── QMD Parsing ──────────────────────────────────────────────
 
@@ -235,6 +240,12 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         else:
             continue
 
+        text = _ANSI_RE.sub('', text)
+        # Drop carriage returns and the text they overwrite (terminal-style
+        # progress-bar redraws). Each \r resets to the start of the line, so
+        # only the segment after the last \r in any given line is what the
+        # user would have seen.
+        text = re.sub(r'[^\n]*\r', '', text)
         text = text.rstrip('\n')
         if not text:
             continue

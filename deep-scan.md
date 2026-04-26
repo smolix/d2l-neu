@@ -125,6 +125,201 @@ Critical and Warning sections were **not** touched in this pass.
 
 ---
 
+## Fixes Applied (2026-04-26)
+
+Second pass driven from `step1.md` (curated triage of Critical / Warning / Math / Cross-framework drift / Code Issues). **17 commits, ~145 substantive fixes**. All affected notebooks verified passing on JAX, PyTorch, TensorFlow, and MXNet (per-framework spot-runs); HTML build resolves cleanly with no cross-ref warnings.
+
+### Critical bucket — done
+
+**Math / factual prose (13 items, commit `1afa0fb`):**
+
+- `multivariable-calculus.md` (PT/TF/JAX): drop spurious `2 *` factor in Hessian quadratic approximation; matches MX tab and analytic gradient/Hessian.
+- `geometry-linear-algebraic-ops.md` (TF): `X_test`/`y_test` were both built from `test_images` (with `label==0` vs `label==1`); pull `X_test` from images of either class and `y_test` from the corresponding labels.
+- `gp-inference.md`: drop stray `$x^2$` placeholder; log-marginal likelihood uses `\log|K + σ²I|` in the determinant; "0.81 ≈ 0.283²" → "0.08 ≈ 0.283²".
+- `gp-priors.md`: NN kernel uses `\arcsin` (not `\sin`).
+- `softmax-regression.md` Exercise 6(b): translation invariance → equivariance, `g(x + b·1) = b + g(x)`.
+- `softmax-regression-scratch.md` Exercise: cross-entropy missing leading minus sign.
+- `environment-and-distribution-shift.md`: confusion-matrix cell defined as joint relative frequency, but the linear system later needs column-conditional `P(ŷ=i | y=j)`; reword so columns sum to 1.
+- `hardware.md`: complete dangling sentence "...the TPU offer."
+- `sentiment-analysis-cnn.md` (PT): `TextCNN.pool` was `nn.AdaptiveAvgPool1d` in a section titled "max-over-time pooling"; switch to `AdaptiveMaxPool1d` (matches MX/TF/JAX).
+
+**JAX functional (5 fixed; 4 left "unsure" with reasons):**
+
+- `bi-rnn.md`: `BiRNNScratch.setup()` referenced bare `num_inputs`/`num_hiddens`/`sigma`; promote to `self.*`. Replace `self.num_hiddens *= 2` (mutates a frozen Flax dataclass field) with a derived `self.output_dim`.
+- `vision-transformer.md`: `nn.Dropout(emb_dropout, ...)` referenced an out-of-scope name; use `self.emb_dropout`.
+- `transformer.md`: `AddNorm` declared `dropout: int`; should be `float`.
+- `linear-regression-scratch.md`: `def __call__():` missing `self`.
+- `oo-design.md`: ~17 occurrences of `raise NotImplemented` (the constant — raises `TypeError`, not `NotImplementedError`); replace with `raise NotImplementedError`.
+- `kaggle-house-price.md`: JAX ensemble loop captured `trainer.state.params` once at the end (last fold's params), so every "ensemble" member produced identical predictions. Split `k_fold` into framework-specific cells; the JAX version saves `(model, params)` tuples per fold and the ensemble cell iterates over those.
+- *Left alone:* `rnn-concise.md` JAX RNN stub (Flax has no vanilla RNN; never instantiated), `flax.training.checkpoints` and `jnp.float_` (still work in current Flax / JAX).
+
+**PyTorch functional (3 fixed; 1 left "unsure"):**
+
+- `seq2seq.md` PT: decoder cast embedding indices to `d2l.int32`; PT encoder uses `int64`. Make decoder `int64` too.
+- `utils.md`: `show_value_function_progress` / `show_Q_function_progress` cells used bare `plt` and `np`; add `import matplotlib.pyplot as plt; import numpy as np` so the functions resolve when defined in the notebook.
+- `ctr.md` (MX and PT): two-element one-hot `label` was computed but never stored on the instance; remove the dead lines.
+- *Left alone:* `autorec.md` PT loss masking — `pred * sign(input)` is applied in the model's forward before loss, so unobserved entries already contribute zero MSE; semantically equivalent to MX.
+
+**Cross-framework (8 items):**
+
+- `machine-translation-and-dataset.md` (#@save `_tokenize`): off-by-one `if max_examples and i > max_examples: break` (collected `max_examples + 1`); change to `>=`.
+- `natural-language-inference-bert.md` (PT/JAX): `load_pretrained_model` hardcoded `num_heads=4, num_blks=2, dropout=0.2` inside the body, ignoring its parameters; plumb through. Also clarify in prose that the TF tab uses `self.output_layer` (Keras reserves `output`).
+- `bert.md`: prose typo "&lt;seq&gt;" → "&lt;sep&gt;".
+- `hyperopt-api.md` (#@save): `def sample_configuration() -> dict:` missing `self`.
+- `qlearning.md`: three `:ref:` → `:numref:` for `sec_valueiter` and `subsec_valueitercode`.
+- `use-gpu.md`: "we often refer it as" → "refer to it as"; remove stray `)` before "we can add them up".
+- `hybridize.md`: typo "We cen re-enable" → "We can re-enable".
+- *Left alone:* `sh-intro.md` JAX TF import (TF is in JAX venv).
+
+**Documentation/structural (1 prose fix; 3 left as stale-claims):**
+
+- `natural-language-inference-bert.md`: prose mentions `self.output` / `net.output` — add note that the TF tab uses `self.output_layer` (Keras reserves the `output` property).
+- *Left alone (already healthy in current notebooks):* `lenet.md` / `pooling.md` / `mlp.md` "blank cell" claims are stale; the latest TF runs have outputs in those cells.
+
+**Build-system / cross-ref (1 item):**
+
+- `generalization.md`: collapse the multi-line `$$...$$` for `eq_true-risk` onto a single line so `d2l_preprocess.py` picks up the trailing `:eqlabel:`; resolves the lone `Unable to resolve crossref @eq-true-risk` warning that was appearing in `make all`.
+
+### Warning bucket — 8 batches
+
+**Batch 1 (`6d6c69e`) — prose / typos:**
+
+- `hardware.md`: "capable 16 Gbit/s" → "capable of 16 Gbit/s"; "We recommend to use NCCL" → "We recommend using NCCL".
+- `auto-parallelism.md`: "10 multiplications" / "Eight operations" → 50 (matching `range(50)`); "H2D transfer" → "D2H transfer" in the TF `tf.identity('/CPU:0')` description.
+- `multiple-gpus.md`: "exchanging gradients parameters already" → "gradients of some parameters while others...".
+- `model-construction.md`: prose typo `add_modules` → `add_module`; TF tab redundant double-paren `self.hidden((X))` → `self.hidden(X)`.
+- `mlp.md`: tense "we used observational data" → "we use ...".
+- `backprop.md`: forward-reference "to be described in subsequent chapters" → cite `:numref:`sec_weight_decay``.
+- `attention-pooling.md`: prose said "Epanechikov" but code/plot is Triangular kernel; rename to Triangular for consistency.
+- `attention-scoring-functions.md`: softmax denominator `\sum_{j=1}` missing `^m` upper bound.
+- `sentiment-analysis-rnn.md`: TF BiRNN comment "(return_sequences=False by default)" contradicted code; rewrite.
+- `natural-language-inference-bert.md`: prose "are not updated (staled)" → "and so their gradients become stale".
+- `deep-rnn.md`: "$(64, 2056)$" → "$(64, 2048)$" (power-of-two RNN width).
+- `rnn.md`: JAX discussion link 180013 → 18013.
+- `transposed-conv.md`: "the height and weight" → "the height and width".
+- `bounding-box.md`: "center-width-height presentation" → "center-width-height representation".
+- `semantic-segmentation-and-dataset.md`: broken inline-code span `VOCSegDatase`t → `VOCSegDataset`.
+- `ssd.md`: rephrase the awkward back-to-back "thus" in the SSD summary paragraph.
+- `gp-inference.md`: drop the stale "initialize length-scale at 0.75" paragraph that immediately preceded the next paragraph (and the code) which use 0.4.
+- `hyperparameter-optimization/index.md`: TOC entry `rs-async.md` had a spurious `.md` extension (others omit it).
+- `sh-intro.md`: add `:label:` to the `sh.svg` figure so it is cross-referenceable.
+
+**Batch 2 (`018f4ea`) — code-correctness:**
+
+- `naive-bayes.md` (TF): per-pixel evaluation cell used `train_images[0]` instead of `test_images[0]`.
+- `distributions.md` (Poisson CDF): the closed-form `F(x)` borrowed the loop variable `n` from the Binomial section, truncating the CDF plot at `n=5`. Use `len(cmf)` so the bound matches the actual pmf array length (20 entries here). Fixed in MX/PT/TF/JAX tabs.
+- `weight-decay.md` (JAX): `Data.__init__` reused `PRNGKey(0)` for both `X` and noise — same key, same draws. Split a master key once and use one half for each.
+- `oo-design.md` (#@save `add_to_class`): wrapper didn't `return obj`, so `@add_to_class(C)` on `def foo(...): ...` clobbered the local name `foo` to None.
+- `image-classification-dataset.md`: `def visualize(..., labels=[])` in 4 tabs — mutable default argument; switch to `labels=None`.
+- `softmax-regression-concise.md` (TF): `loss(..., averaged=False)` silently mean-reduced because `SparseCategoricalCrossentropy` defaults to `SUM_OVER_BATCH_SIZE`. Plumb the parameter through via the `reduction` argument so `averaged=False` actually returns per-example losses.
+- `softmax-regression-concise.md` prose: tighten the FP32 numerical range from "[-90, 90]" to ~[-88, 88]; INT8 description updated from "1 to 255" to the signed [-128, 127] range with a note about the unsigned [0, 255] variant.
+- `read-write.md` (PT): add `weights_only=True` to all four `torch.load(...)` calls so PyTorch ≥2.6 doesn't FutureWarn / error.
+- `conv-layer.md` (JAX): the from-scratch `Conv2D` used the non-existent `nn.param(...)` API and a `forward` method instead of `__call__`; rewrite as `self.param(...)` with proper initializers (`nn.initializers.uniform()` and `zeros`) and `__call__`.
+- `mf.md` (PT): `evaluator` accumulated batch means and then meaned over batches, biasing RMSE when the last batch is smaller. Switch to a proper running sum-of-squares / total-count accumulator.
+- `neumf.md` (PT): `class NeuMF(nn.Module)` declared `def __init__(..., **kwargs)` and forwarded them to `nn.Module.__init__(**kwargs)`, which raises `TypeError` if any caller passes anything extra. Drop the `**kwargs` and use a plain `super().__init__()`.
+- `ranking.md`: a sentence describing the MX-only `mxnet.gluon.loss.Loss` base class lived outside any `:begin_tab:` block, so it appeared in every framework tab; wrap in a `:begin_tab:`mxnet:` block and add a parallel `:begin_tab:`pytorch:` block describing the PT-side `nn.Module` subclass.
+- `seq2seq.md` (BLEU footnote): the original BLEU paper does not use $p_n^{1/n}$; it uses uniform log-domain weights $w_n = 1/N$, so the corresponding product form is $p_n^{1/N}$. Rewrite the footnote and add the Papineni et al. 2002 citation.
+- `gp-priors.md` OU kernel exercise: malformed `||x - x'|` (mismatched bars) and a non-standard `1/2` factor; rewrite as the standard 1-D OU kernel `\exp(-|x - x'|/\ell)`.
+
+**Batches 3–7 (`4f8c971` through `e16b3da`) — math / notation / utils:**
+
+- `statistics.md` (bias-variance): existing decomposition treated the (non-random) population parameter `θ` as if it had variance `Var[θ]`, ending up with three terms (bias², variance, irreducible error). For a fixed parameter, `Var[θ] = 0` and the standard decomposition is just bias² + variance. Rewrite the derivation accordingly and drop the spurious "irreducible error" term.
+- `hyperopt-intro.md`: `ε ~ N(0, σ)` → `N(0, σ²)`.
+- `qlearning.md`, `value-iter.md`: replace dead `gym.openai.com` link with the maintained Gymnasium project.
+- `random-variables.md`: c.d.f. integrand `\int_{-∞}^x p(x) dx` reused `x` as both upper limit and dummy; rename the dummy to `t`.
+- `preliminaries/calculus.md`: gradient vector listing missing comma between "..." and the last partial.
+- `conv-layer.md`: prose described the height-1, width-2 finite-difference kernel as computing `x_{i,j} - x_{i+1,j}` and used `∂_i` — but with the standard (row, col) = (i, j) convention "horizontally adjacent" varies `j`. Fix to `x_{i,j} - x_{i,j+1}` and `∂_j`.
+- `integral-calculus.md`: `\int_0^x e^x dx` used `x` as both upper limit and integration variable; rename dummy to `t`. Exercise 4 had `f(x, y) = ...` embedded inside an integral; pull the definition out. "no-where" → "nowhere".
+- `queries-keys-values.md`: "normalize via `α = α / Σ_j α`" was circular; rephrase as starting from a scoring function `a(q, k)` and normalizing `α = a / Σ_j a`.
+- `multivariable-calculus.md`: gradient definition introduced `∇_x L = [∂L/∂x_1, ...]` but the function `L` is defined over `w`; rename indices and subscript to `w`. Hessian section also used ordinary `d/dx` notation; switch to `∂²f / ∂x_i ∂x_j`.
+- `parameters.md`: TF tab built `Sequential([Flatten, Dense(4), Dense(1)])` while MX/PT/JAX use 8-unit hidden; bump basic Dense(8). Shared-layer example also bumped to Dense(8) but inserted a `Dense(8)` between `Flatten()` and the shared layer (else the shared layer gets called twice with mismatched input dims) and updated layer-index `is`-check.
+- `dropout.md` (JAX): `def dropout_layer(X, dropout, key=d2l.get_key())` evaluated `d2l.get_key()` once at module-load time, so every call reused the same key. Switch to `key=None` and resolve inside the body.
+- `utils.md` (#@save `extract`): wasn't closing the zipfile/tarfile handle; switch to `with opener(...) as fp:`.
+- `utils.md` (mxnet imports): `get_dataloader_workers` references `sys.platform`, but the MX import cell didn't import `sys`; add `import sys`.
+- `utils.md` (`MaskedSoftmaxCELoss`, PT): `forward` mutated `self.reduction='none'` on every call; move into `__init__` once.
+- `utils.md`: `raise ValueError("%s env is not supported in this Notebook")` had unsubstituted `%s`; switch to f-string.
+- `weight-decay.md` (TF): `super().loss(y_hat, y) + self.net.losses` was scalar + list-of-tensors; use `tf.add_n(self.net.losses)` for an unambiguous scalar sum.
+- `probability.md`: align tags `=&` → `&=` (two `aligned` blocks). Drop duplicate "10×" in expected-return example. Replace stale `Revels.Lubin.Papamarkou.2016` citation (a Julia AD paper) with `kaplan2020scaling` for the language-model scaling-laws claim.
+- `sh-intro.md`: italicize/roman mismatch — `r_{max}` was plain italic while `r_{\mathrm{min}}` was upright; switch all `r_{max}` to `r_{\mathrm{max}}` (~10 occurrences). Replace non-standard `K \in \mathbb{I}` with `K \in \mathbb{N}`.
+- `why-conv.md`: `a, b \in (-1000, 1000)` used open-interval notation for an integer index range; switch to set notation `\{-1000, \ldots, 1000\}`.
+- `padding-and-strides.md`: prose said "horizontal stride `s_h` and vertical stride `s_w`" but `s_h` is the height (vertical) stride and `s_w` is the width (horizontal) stride elsewhere. Swap.
+- `gp-intro.md`: prose said "Suppose we observe `f(x_1), f(x_2)`" but the equations immediately below use `x_{1:3}`. Change to `f(x_1), f(x_2), f(x_3)`.
+
+**Batch 4 (`233094c`) — CNN code drift:**
+
+- `conv-layer.md` (TF): `(abs(Y_hat - Y)) ** 2` — spurious `abs()` is a no-op inside the square. Match MX/PT/JAX with plain `(Y_hat - Y) ** 2`.
+- `padding-and-strides.md` (TF): the "slightly more complicated" example used `Conv2D(..., padding='valid')`, which is (0, 0) padding, while MX/PT/JAX use `padding=(0, 1)` — different output shape. tf.keras.Conv2D's `padding` argument only accepts the strings 'same' and 'valid', so wrap in a Sequential with a `ZeroPadding2D((0, 1))` first to match the cross-framework example.
+
+**Batch 8 (`6310018`) — recsys + parameters:**
+
+- `ranking.md`: BPR loss / hinge loss sums had `\sum_{(u, i, j \in D)}` with the parens enclosing the membership; conventional form is `\sum_{(u, i, j) \in D}`.
+- `movielens.md` (PT): training DataLoader used `drop_last=True`; switch to `drop_last=False` to match the MX `last_batch='rollover'` "use all training data" intent.
+- `parameters.md` (TF): see Batches 3–7 entry above.
+
+**Single-purpose commits:**
+
+- `gan.md` (TF, `89220b0`): wrap `net_G = tf.keras.layers.Dense(2)` in `tf.keras.models.Sequential([Dense(2)])` for cross-framework symmetry.
+- `oo-design.md` (`3ba3478`): align `DataModule` signature — TF and JAX now also take `num_workers=4` (PT and MX already did).
+- `multiple-gpus-concise.md` PT (`2642674`): note that `nn.DataParallel` is deprecated in favor of `nn.parallel.DistributedDataParallel`.
+- `seqrec.md` PT (`6d6c62b`): mirror the MX explanation of why the training cell is commented out.
+- `lenet.md` (`875c515`): qualify NCHW vs NHWC tensor layout in the prose introducing the conv block output shape.
+
+**Typo sweep across 18 chapters (`5e79f8f`):**
+
+- `integral-calculus.md` "no-where" → "nowhere".
+- `attention-mechanisms-and-transformers/index.md` "ascendence" → "ascendance" (consistent).
+- `use-gpu.md` doubled "in in".
+- `anchor.md` "an dimension" → "a dimension".
+- `rcnn.md` "remain" → "remains" (subject-verb).
+- `alexnet.md` "NIVIDA's" → "NVIDIA's".
+- `gp-inference.md` doubled "we we want".
+- `softmax-regression.md` missing comma after "For instance".
+- `linear-regression.md` "reloaded `+` operator" → "overloaded".
+- `dropout.md` "such an justification" → "such a justification".
+- `generalization-deep.md` "is far the bigger problem" → "by far the bigger problem".
+- `mlp-implementation.md` duplicate "implementation".
+- `bert-dataset.md` "download and WikiText-2" → "download the WikiText-2".
+- `sgd.md` inversion "are we still" → "we are still".
+- `fm.md` "elements needs to be computed" → "need".
+- `encoder-decoder.md` "one of its input" → "one of its inputs".
+- `lstm.md` "As same as the experiments" → "As in the experiments".
+
+### Items left untouched on purpose
+
+Per "if unsure, leave it for now":
+
+- JAX `rnn-concise.md` stub (Flax has no vanilla RNN; never instantiated, so the `NotImplementedError` stub doesn't actually fire).
+- `read-write.md` `from flax.training import checkpoints` — still works in flax 0.10.6 (deprecated but not removed).
+- `init-param.md` `dtype=jnp.float_` — still resolves in current jax.
+- `sh-intro.md` JAX `import tensorflow as tf; tf.config.set_visible_devices([], 'GPU')` — JAX venv has TF installed (used for tfds data loading).
+- `autorec.md` PT loss masking — `pred * sign(input)` is applied in the model's forward before loss, so unobserved entries already contribute zero MSE; semantically equivalent to MX.
+- TF `eigendecomposition.md` `eigh` (matrix is actually symmetric).
+- TF `information-theory.md` NLL "double softmax" (acknowledged "circular argument" in code; mathematically equivalent).
+- Discussion-thread IDs in RNN chapters; `gan.md` JAX discussion-thread ID — don't know the correct values.
+- BERT TF 9-arg `TransformerEncoderBlock` — Keras vs flat-arg signature; large refactor.
+- `FixedHiddenMLP.setup()` `d2l.get_key()` — intentional non-determinism per prose.
+- Additive content (missing tabs / demonstrations) in `vision-transformer.md` MX, `bahdanau-attention.md` JAX, `bi-rnn.md` TF concise BiGRU, `attention-pooling.md` TF blocks, `fcn.md` from-scratch ResNet, `fine-tuning.md` ResNet-18-vs-50.
+- `mlp.md` / `backprop.md` row-vector vs column-vector convention switch (large rewrite).
+- `clip_gradients` API divergence PT/MX (in-place) vs TF/JAX (functional) — by design.
+
+### Verification
+
+- **JAX**: 15 affected notebooks executed cleanly (transformer, vision-transformer, bi-rnn, oo-design, kaggle-house-price, seq2seq, weight-decay, conv-layer, distributions, hyperopt-api, hyperopt-intro, sh-intro, NLI-bert, machine-translation, linear-regression-scratch).
+- **PyTorch**: 18 affected notebooks executed cleanly (sentiment-analysis-cnn, seq2seq, NLI-bert, ctr, hyperopt-api, hyperopt-intro, sh-intro, sh-async, rs-async, machine-translation, mf, neumf, read-write, distributions, image-classification-dataset, naive-bayes, movielens, oo-design). One transient kernel-died on PT sh-intro; passed clean on a single-notebook retry.
+- **TensorFlow**: 11 affected notebooks executed cleanly (machine-translation, seq2seq, NLI-bert, hyperopt-api, hyperopt-intro, sh-intro, parameters, conv-layer, padding-and-strides, weight-decay, gan, oo-design).
+- **MXNet**: 6 affected notebooks executed cleanly (ctr, ranking, machine-translation, seq2seq, distributions, naive-bayes).
+- **HTML build**: 192 pages, no warnings; the `Unable to resolve crossref @eq-true-risk` from the prior `make all` run is now resolved (single-line equation in `generalization.md`).
+
+### What still needs another pass after 2026-04-26
+
+- Most of the **~75 Cross-Framework Drift** items (mostly additive features or by-design framework differences; would need user steer on which are real bugs vs. acceptable drift).
+- ~30 remaining Warning items that are either additive content or large refactors.
+- ~10 Math/Notation items in advanced sections (numerical-stability Jacobian, glove index swap, sh-intro further-itemized, recommender-systems argmin scope).
+- BERT TF 9-arg `TransformerEncoderBlock` realignment.
+- Discussion-thread IDs (whoever maintains discuss.d2l.ai needs to provide correct IDs).
+
+---
+
 ## Per-Chapter Reports
 
 

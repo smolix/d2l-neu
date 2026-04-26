@@ -351,6 +351,9 @@ lr, num_epochs, wd, optimizer = 0.04, 8, 1e-5, 'adam'
 loss = d2l.BPRLoss()
 trainer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
 
+# Training is commented out for the same reason as the MX tab: a full
+# pass over the MovieLens data takes well over an hour at this batch
+# size; readers can uncomment the next line to actually train.
 # d2l.train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter, num_users, num_items, num_epochs, devices, d2l.evaluate_ranking, candidates, eval_step=1)
 ```
 

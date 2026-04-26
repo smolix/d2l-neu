@@ -6,7 +6,7 @@ Now that we have a fairly strong understanding of derivatives of a function of a
 ## Higher-Dimensional Differentiation
 What :numref:`sec_single_variable_calculus` tells us is that if we change a single one of these billions of weights leaving every other one fixed, we know what will happen!  This is nothing more than a function of a single variable, so we can write
 
-$$L(w_1+\epsilon_1, w_2, \ldots, w_N) \approx L(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{d}{dw_1} L(w_1, w_2, \ldots, w_N).$$
+$$L(w_1+\epsilon_1, w_2, \ldots, w_N) \approx L(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N).$$
 :eqlabel:`eq_part_der`
 
 We will call the derivative in one variable while fixing the other variables the *partial derivative*, and we will use the notation $\frac{\partial}{\partial w_1}$ for the derivative in :eqref:`eq_part_der`.
@@ -711,10 +711,10 @@ Let's begin with an example.  Suppose that we have some fixed column vector $\bo
 A bit of notation that will be useful when working with matrix derivatives in ML is called the *denominator layout matrix derivative* where we assemble our partial derivatives into the shape of whatever vector, matrix, or tensor is in the denominator of the differential.  In this case, we will write
 
 $$
-\frac{df}{d\mathbf{x}} = \begin{bmatrix}
-\frac{df}{dx_1} \\
+\frac{\partial f}{\partial \mathbf{x}} = \begin{bmatrix}
+\frac{\partial f}{\partial x_1} \\
 \vdots \\
-\frac{df}{dx_n}
+\frac{\partial f}{\partial x_n}
 \end{bmatrix},
 $$
 
@@ -729,22 +729,22 @@ $$
 If we now take the partial derivative with respect to say $\beta_1$, note that everything is zero but the first term, which is just $x_1$ multiplied by $\beta_1$, so we obtain that
 
 $$
-\frac{df}{dx_1} = \beta_1,
+\frac{\partial f}{\partial x_1} = \beta_1,
 $$
 
 or more generally that
 
 $$
-\frac{df}{dx_i} = \beta_i.
+\frac{\partial f}{\partial x_i} = \beta_i.
 $$
 
 We can now reassemble this into a matrix to see
 
 $$
-\frac{df}{d\mathbf{x}} = \begin{bmatrix}
-\frac{df}{dx_1} \\
+\frac{\partial f}{\partial \mathbf{x}} = \begin{bmatrix}
+\frac{\partial f}{\partial x_1} \\
 \vdots \\
-\frac{df}{dx_n}
+\frac{\partial f}{\partial x_n}
 \end{bmatrix} = \begin{bmatrix}
 \beta_1 \\
 \vdots \\
@@ -755,12 +755,12 @@ $$
 This illustrates a few factors about matrix calculus that we will often encounter throughout this section:
 
 * First, The computations will get rather involved.
-* Second, The final results are much cleaner than the intermediate process, and will always look similar to the single variable case.  In this case, note that $\frac{d}{dx}(bx) = b$ and $\frac{d}{d\mathbf{x}} (\boldsymbol{\beta}^\top\mathbf{x}) = \boldsymbol{\beta}$ are both similar.
+* Second, The final results are much cleaner than the intermediate process, and will always look similar to the single variable case.  In this case, note that $\frac{d}{dx}(bx) = b$ and $\frac{\partial}{\partial \mathbf{x}} (\boldsymbol{\beta}^\top\mathbf{x}) = \boldsymbol{\beta}$ are both similar.
 * Third, transposes can often appear seemingly from nowhere.  The core reason for this is the convention that we match the shape of the denominator, thus when we multiply matrices, we will need to take transposes to match back to the shape of the original term.
 
 To keep building intuition, let's try a computation that is a little harder.  Suppose that we have a column vector $\mathbf{x}$, and a square matrix $A$ and we want to compute
 
-$$\frac{d}{d\mathbf{x}}(\mathbf{x}^\top A \mathbf{x}).$$
+$$\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x}).$$
 :eqlabel:`eq_mat_goal_1`
 
 To drive towards easier to manipulate notation, let's consider this problem using Einstein notation.  In this case we can write the function as
@@ -772,43 +772,43 @@ $$
 To compute our derivative, we need to understand for every $k$, what is the value of
 
 $$
-\frac{d}{dx_k}(\mathbf{x}^\top A \mathbf{x}) = \frac{d}{dx_k}x_ia_{ij}x_j.
+\frac{\partial}{\partial x_k}(\mathbf{x}^\top A \mathbf{x}) = \frac{\partial}{\partial x_k}x_ia_{ij}x_j.
 $$
 
 By the product rule, this is
 
 $$
-\frac{d}{dx_k}x_ia_{ij}x_j = \frac{dx_i}{dx_k}a_{ij}x_j + x_ia_{ij}\frac{dx_j}{dx_k}.
+\frac{\partial}{\partial x_k}x_ia_{ij}x_j = \frac{\partial x_i}{\partial x_k}a_{ij}x_j + x_ia_{ij}\frac{\partial x_j}{\partial x_k}.
 $$
 
-For a term like $\frac{dx_i}{dx_k}$, it is not hard to see that this is one when $i=k$ and zero otherwise.  This means that every term where $i$ and $k$ are different vanish from this sum, so the only terms that remain in that first sum are the ones where $i=k$.  The same reasoning holds for the second term where we need $j=k$.  This gives
+For a term like $\frac{\partial x_i}{\partial x_k}$, it is not hard to see that this is one when $i=k$ and zero otherwise.  This means that every term where $i$ and $k$ are different vanish from this sum, so the only terms that remain in that first sum are the ones where $i=k$.  The same reasoning holds for the second term where we need $j=k$.  This gives
 
 $$
-\frac{d}{dx_k}x_ia_{ij}x_j = a_{kj}x_j + x_ia_{ik}.
+\frac{\partial}{\partial x_k}x_ia_{ij}x_j = a_{kj}x_j + x_ia_{ik}.
 $$
 
 Now, the names of the indices in Einstein notation are arbitrary---the fact that $i$ and $j$ are different is immaterial to this computation at this point, so we can re-index so that they both use $i$ to see that
 
 $$
-\frac{d}{dx_k}x_ia_{ij}x_j = a_{ki}x_i + x_ia_{ik} = (a_{ki} + a_{ik})x_i.
+\frac{\partial}{\partial x_k}x_ia_{ij}x_j = a_{ki}x_i + x_ia_{ik} = (a_{ki} + a_{ik})x_i.
 $$
 
 Now, here is where we start to need some practice to go further.  Let's try and identify this outcome in terms of matrix operations.  $a_{ki} + a_{ik}$ is the $k, i$-th component of $\mathbf{A} + \mathbf{A}^\top$.  This gives
 
 $$
-\frac{d}{dx_k}x_ia_{ij}x_j = [\mathbf{A} + \mathbf{A}^\top]_{ki}x_i.
+\frac{\partial}{\partial x_k}x_ia_{ij}x_j = [\mathbf{A} + \mathbf{A}^\top]_{ki}x_i.
 $$
 
 Similarly, this term is now the product of the matrix $\mathbf{A} + \mathbf{A}^\top$ by the vector $\mathbf{x}$, so we see that
 
 $$
-\left[\frac{d}{d\mathbf{x}}(\mathbf{x}^\top A \mathbf{x})\right]_k = \frac{d}{dx_k}x_ia_{ij}x_j = [(\mathbf{A} + \mathbf{A}^\top)\mathbf{x}]_k.
+\left[\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x})\right]_k = \frac{\partial}{\partial x_k}x_ia_{ij}x_j = [(\mathbf{A} + \mathbf{A}^\top)\mathbf{x}]_k.
 $$
 
 Thus, we see that the $k$-th entry of the desired derivative from :eqref:`eq_mat_goal_1` is just the $k$-th entry of the vector on the right, and thus the two are the same.  Thus yields
 
 $$
-\frac{d}{d\mathbf{x}}(\mathbf{x}^\top A \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}.
+\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}.
 $$
 
 This required significantly more work than our last one, but the final result is small.  More than that, consider the following computation for traditional single variable derivatives:
@@ -823,7 +823,7 @@ At this point, the pattern should be looking rather suspicious, so let's try to 
 
 Let's try this out.  Suppose that $\mathbf{X}$ is a $n \times m$ matrix, $\mathbf{U}$ is an $n \times r$ and $\mathbf{V}$ is an $r \times m$.  Let's try to compute
 
-$$\frac{d}{d\mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2} = \;?$$
+$$\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2} = \;?$$
 :eqlabel:`eq_mat_goal_2`
 
 This computation is important in an area called matrix factorization.  For us, however, it is just a derivative to compute.  Let's try to imagine what this would be for $1\times1$ matrices.  In that case, we get the expression
@@ -835,45 +835,45 @@ $$
 where, the derivative is rather standard.  If we try to convert this back into a matrix expression we get
 
 $$
-\frac{d}{d\mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2(\mathbf{X} - \mathbf{U}\mathbf{V})\mathbf{U}.
+\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2(\mathbf{X} - \mathbf{U}\mathbf{V})\mathbf{U}.
 $$
 
 However, if we look at this it does not quite work.  Recall that $\mathbf{X}$ is $n \times m$, as is $\mathbf{U}\mathbf{V}$, so the matrix $2(\mathbf{X} - \mathbf{U}\mathbf{V})$ is $n \times m$.  On the other hand $\mathbf{U}$ is $n \times r$, and we cannot multiply a $n \times m$ and a $n \times r$ matrix since the dimensions do not match!
 
-We want to get $\frac{d}{d\mathbf{V}}$, which is the same shape as $\mathbf{V}$, which is $r \times m$.  So somehow we need to take a $n \times m$ matrix and a $n \times r$ matrix, multiply them together (perhaps with some transposes) to get a $r \times m$. We can do this by multiplying $U^\top$ by $(\mathbf{X} - \mathbf{U}\mathbf{V})$.  Thus, we can guess the solution to :eqref:`eq_mat_goal_2` is
+We want to get $\frac{\partial}{\partial \mathbf{V}}$, which is the same shape as $\mathbf{V}$, which is $r \times m$.  So somehow we need to take a $n \times m$ matrix and a $n \times r$ matrix, multiply them together (perhaps with some transposes) to get a $r \times m$. We can do this by multiplying $U^\top$ by $(\mathbf{X} - \mathbf{U}\mathbf{V})$.  Thus, we can guess the solution to :eqref:`eq_mat_goal_2` is
 
 $$
-\frac{d}{d\mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
+\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
 $$
 
 To show that this works, we would be remiss to not provide a detailed computation.  If we already believe that this rule-of-thumb works, feel free to skip past this derivation.  To compute
 
 $$
-\frac{d}{d\mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^2,
+\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^2,
 $$
 
 we must find for every $a$, and $b$
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \frac{d}{dv_{ab}} \sum_{i, j}\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)^2.
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \frac{\partial}{\partial v_{ab}} \sum_{i, j}\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)^2.
 $$
 
-Recalling that all entries of $\mathbf{X}$ and $\mathbf{U}$ are constants as far as $\frac{d}{dv_{ab}}$ is concerned, we may push the derivative inside the sum, and apply the chain rule to the square to get
+Recalling that all entries of $\mathbf{X}$ and $\mathbf{U}$ are constants as far as $\frac{\partial}{\partial v_{ab}}$ is concerned, we may push the derivative inside the sum, and apply the chain rule to the square to get
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \sum_{i, j}2\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)\left(-\sum_k u_{ik}\frac{dv_{kj}}{dv_{ab}} \right).
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \sum_{i, j}2\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)\left(-\sum_k u_{ik}\frac{\partial v_{kj}}{\partial v_{ab}} \right).
 $$
 
-As in the previous derivation, we may note that $\frac{dv_{kj}}{dv_{ab}}$ is only non-zero if the $k=a$ and $j=b$.  If either of those conditions do not hold, the term in the sum is zero, and we may freely discard it.  We see that
+As in the previous derivation, we may note that $\frac{\partial v_{kj}}{\partial v_{ab}}$ is only non-zero if the $k=a$ and $j=b$.  If either of those conditions do not hold, the term in the sum is zero, and we may freely discard it.  We see that
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}\left(x_{ib} - \sum_k u_{ik}v_{kb}\right)u_{ia}.
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}\left(x_{ib} - \sum_k u_{ik}v_{kb}\right)u_{ia}.
 $$
 
 An important subtlety here is that the requirement that $k=a$ does not occur inside the inner sum since that $k$ is a dummy variable which we are summing over inside the inner term.  For a notationally cleaner example, consider why
 
 $$
-\frac{d}{dx_1} \left(\sum_i x_i \right)^{2}= 2\left(\sum_i x_i \right).
+\frac{\partial}{\partial x_1} \left(\sum_i x_i \right)^{2}= 2\left(\sum_i x_i \right).
 $$
 
 From this point, we may start identifying components of the sum.  First,
@@ -891,25 +891,25 @@ $$
 This means we may now write our derivative as
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}u_{ia}.
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}u_{ia}.
 $$
 
 We want this to look like the $a, b$ element of a matrix so we can use the technique as in the previous example to arrive at a matrix expression, which means that we need to exchange the order of the indices on $u_{ia}$.  If we notice that $u_{ia} = [\mathbf{U}^\top]_{ai}$, we can then write
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i} [\mathbf{U}^\top]_{ai}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}.
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i} [\mathbf{U}^\top]_{ai}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}.
 $$
 
 This is a matrix product, and thus we can conclude that
 
 $$
-\frac{d}{dv_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2[\mathbf{U}^\top(\mathbf{X}-\mathbf{U}\mathbf{V})]_{ab}.
+\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2[\mathbf{U}^\top(\mathbf{X}-\mathbf{U}\mathbf{V})]_{ab}.
 $$
 
 and thus we may write the solution to :eqref:`eq_mat_goal_2`
 
 $$
-\frac{d}{d\mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
+\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
 $$
 
 This matches the solution we guessed above!

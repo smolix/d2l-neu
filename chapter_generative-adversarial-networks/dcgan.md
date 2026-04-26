@@ -248,6 +248,12 @@ class G_block(nn.Module):
     kernel_size: int = 4
     strides: int = 2
     padding: str = 'SAME'
+    # BatchNorm: DCGAN's convention is to keep the generator in
+    # "training mode" (use per-batch statistics, not running averages)
+    # at sampling time too, so we leave this hardcoded to False. Override
+    # via `Generator(use_running_average=True)` when you want
+    # population-statistics inference (e.g., to compare against PT/MX,
+    # which call `.eval()` on the generator at sampling time).
     use_running_average: bool = False
 
     @nn.compact

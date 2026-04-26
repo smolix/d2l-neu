@@ -211,7 +211,7 @@ def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
     return users, items, scores, inter
 ```
 
-Afterwards, we put the above steps together and it will be used in the next section. The results are wrapped with `Dataset` and `DataLoader`. Note that the `last_batch` of `DataLoader` for training data is set to the `rollover` mode (The remaining samples are rolled over to the next epoch.) and orders are shuffled.
+Afterwards, we put the above steps together and it will be used in the next section. The results are wrapped with `Dataset` and `DataLoader`. We keep the partial last batch in both frameworks (`last_batch='keep'` for MXNet, `drop_last=False` for PyTorch) so that no training samples are silently dropped from each epoch, and orders are shuffled.
 
 ```{.python .input  n=7}
 #@tab mxnet
@@ -230,7 +230,7 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
     test_set = gluon.data.ArrayDataset(
         np.array(test_u), np.array(test_i), np.array(test_r))
     train_iter = gluon.data.DataLoader(
-        train_set, shuffle=True, last_batch='rollover',
+        train_set, shuffle=True, last_batch='keep',
         batch_size=batch_size)
     test_iter = gluon.data.DataLoader(
         test_set, batch_size=batch_size)

@@ -659,6 +659,39 @@ def prepare_batch(self, batch):
     return batch
 ```
 
+```{.python .input}
+%%tab tensorflow
+@d2l.add_to_class(d2l.Trainer)  #@save
+def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
+    self.save_hyperparameters()
+    self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+
+@d2l.add_to_class(d2l.Trainer)  #@save
+def prepare_batch(self, batch):
+    if self.gpus:
+        # tf.data.Dataset emits batches on CPU. Re-wrap them inside the
+        # GPU device context so subsequent ops keep their inputs on-device
+        # rather than incurring an implicit copy each step.
+        with self.gpus[0]:
+            batch = [tf.identity(a) for a in batch]
+    return batch
+```
+
+:begin_tab:`tensorflow`
+TensorFlow's eager-mode placement automatically runs ops on the first
+visible GPU when one exists, but `tf.data.Dataset` emits its tensors on
+the CPU. Without the explicit `tf.identity` inside `tf.device(...)`
+above, every batch incurs an implicit host→device copy at the first op
+that touches it. The `prepare_batch` override mirrors the
+`prepare_batch` extensions in the other frameworks, ensuring that the
+training loop sees inputs already resident on the configured GPU.
+Keras layers create their variables on whichever device they are first
+called with — since `_compile_steps` runs a dummy forward through
+`prepare_batch` before the first training step, the model's weights end
+up on the same GPU automatically; an explicit `prepare_model` override
+is therefore unnecessary.
+:end_tab:
+
 In short, as long as all data and parameters are on the same device, we can learn models efficiently. In the following chapters we will see several such examples.
 
 ## Summary

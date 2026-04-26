@@ -33,7 +33,7 @@ configurations for the same total amount of resources.
 
 More formally, we expand our definition in :numref:`sec_definition_hpo`,
 such that our objective function $f(\mathbf{x}, r)$ gets an additional input
-$r \in [r_{\mathrm{min}}, r_{max}]$, specifying the amount of resources that we are
+$r \in [r_{\mathrm{min}}, r_{\mathrm{max}}]$, specifying the amount of resources that we are
 willing to spend for the evaluation of configuration $\mathbf{x}$. We assume that
 the error $f(\mathbf{x}, r)$ decreases with $r$, whereas the computational
 cost $c(\mathbf{x}, r)$ increases. Typically, $r$ represents the number of
@@ -84,14 +84,14 @@ idea is to start with $N$ configurations, for example randomly sampled from the
 configuration space, and to train each of them for $r_{\mathrm{min}}$ epochs only. We
 then discard a fraction of the worst performing trials and train the remaining
 ones for longer. Iterating this process, fewer trials run for longer, until at
-least one trial reaches $r_{max}$ epochs.
+least one trial reaches $r_{\mathrm{max}}$ epochs.
 
 More formally, consider a minimum budget $r_{\mathrm{min}}$ (for example 1 epoch), a maximum
-budget $r_{max}$, for example `max_epochs` in our previous example, and a halving
+budget $r_{\mathrm{max}}$, for example `max_epochs` in our previous example, and a halving
 constant $\eta\in\{2, 3, \dots\}$. For simplicity, assume that
-$r_{max} = r_{\mathrm{min}} \eta^K$, with $K \in \mathbb{I}$ . The number of initial
+$r_{\mathrm{max}} = r_{\mathrm{min}} \eta^K$, with $K \in \mathbb{N}$. The number of initial
 configurations is then $N = \eta^K$. Let us define the set of rungs
-$\mathcal{R} = \{ r_{\mathrm{min}}, r_{\mathrm{min}}\eta, r_{\mathrm{min}}\eta^2, \dots, r_{max} \}$.
+$\mathcal{R} = \{ r_{\mathrm{min}}, r_{\mathrm{min}}\eta, r_{\mathrm{min}}\eta^2, \dots, r_{\mathrm{max}} \}$.
 
 One round of successive halving proceeds as follows. We start with running $N$
 trials until the first rung $r_{\mathrm{min}}$. Sorting the validation errors, we keep
@@ -100,7 +100,7 @@ discard all the rest. The surviving trials are trained for the next rung
 ($r_{\mathrm{min}}\eta$ epochs), and the process is repeated. At each rung, a
 $1 / \eta$ fraction of trials survives and their training continues with a
 $\eta$ times larger budget. With this particular choice of $N$, only a single
-trial will be trained to the full budget $r_{max}$. Once such a round of
+trial will be trained to the full budget $r_{\mathrm{max}}$. Once such a round of
 successive halving is done, we start the next one with a new set of initial
 configurations, iterating until the total budget is spent.
 
@@ -111,7 +111,7 @@ We subclass the `HPOScheduler` base class from :numref:`sec_api_hpo` in order to
 implement successive halving, allowing for a generic `HPOSearcher` object to
 sample configurations (which, in our example below, will be a `RandomSearcher`).
 Additionally, the user has to pass the minimum resource $r_{\mathrm{min}}$, the maximum
-resource $r_{max}$ and $\eta$ as input. Inside our scheduler, we maintain a
+resource $r_{\mathrm{max}}$ and $\eta$ as input. Inside our scheduler, we maintain a
 queue of configurations that still need to be evaluated for the current rung
 $r_i$. We update the queue every time we jump to the next rung.
 
@@ -142,7 +142,7 @@ code in a different context. For the purpose of this section, we fix
 $\textrm{prefact} = 1$. Every time resources become available and the `HPOTuner`
 object queries the `suggest` function, we return an element from the queue. Once
 we finish one round of successive halving, which means that we evaluated all
-surviving configurations on the highest resource level $r_{max}$ and our queue
+surviving configurations on the highest resource level $r_{\mathrm{max}}$ and our queue
 is empty, we start the entire process again with a new, randomly sampled set
 of configurations.
 
@@ -215,7 +215,7 @@ def get_top_n_configurations(self, rung_level, n):
 ```
 
 Let us see how successive halving is doing on our neural network example. We
-will use $r_{\mathrm{min}} = 2$, $\eta = 2$, $r_{max} = 10$, so that rung levels are
+will use $r_{\mathrm{min}} = 2$, $\eta = 2$, $r_{\mathrm{max}} = 10$, so that rung levels are
 $2, 4, 8, 10$.
 
 ```{.python .input  n=5}
@@ -253,8 +253,8 @@ tuner.run(number_of_trials=30)
 
 We can visualize the learning curves of all configurations that we evaluated.
 Most of the configurations are stopped early and only the better performing
-configurations survive until $r_{max}$. Compare this to vanilla random search,
-which would allocate $r_{max}$ to every configuration.
+configurations survive until $r_{\mathrm{max}}$. Compare this to vanilla random search,
+which would allocate $r_{\mathrm{max}}$ to every configuration.
 
 ```{.python .input  n=19}
 for rung_index, rung in scheduler.all_observed_error_at_rungs.items():

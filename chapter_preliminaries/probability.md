@@ -791,9 +791,9 @@ to determine
 
 $$\begin{aligned}
 P(D_1 = 1)
-=& P(D_1=1, H=0) + P(D_1=1, H=1)  \\
-=& P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
-=& 0.011485.
+&= P(D_1=1, H=0) + P(D_1=1, H=1)  \\
+&= P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
+&= 0.011485.
 \end{aligned}
 $$
 
@@ -822,11 +822,9 @@ by assuming conditional independence:
 
 $$\begin{aligned}
 P(D_1 = 1, D_2 = 1 \mid H = 0)
-& = P(D_1 = 1 \mid H = 0) P(D_2 = 1 \mid H = 0)
-=& 0.0003, \\
+&= P(D_1 = 1 \mid H = 0) P(D_2 = 1 \mid H = 0) = 0.0003, \\
 P(D_1 = 1, D_2 = 1 \mid H = 1)
-& = P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1)
-=& 0.98.
+&= P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1) = 0.98.
 \end{aligned}
 $$
 
@@ -878,7 +876,7 @@ averaging over all the possible outcomes
 For instance, say that with 50% probability,
 an investment might fail altogether,
 with 40% probability it might provide a 2$\times$ return,
-and with 10% probability it might provide a 10$\times$ return 10$\times$.
+and with 10% probability it might provide a 10$\times$ return.
 To calculate the expected return,
 we sum over all returns, multiplying each
 by the probability that they will occur.
@@ -1048,7 +1046,7 @@ offering only a 1.41 times reduction.
 This is a persistent feature of machine learning:
 while there are often easy gains, it takes a very large amount of data,
 and often with it an enormous amount of computation, to make further gains.
-For an empirical review of this fact for large scale language models see :citet:`Revels.Lubin.Papamarkou.2016`.
+For an empirical review of this fact for large-scale language models, see :citet:`kaplan2020scaling`.
 
 We also sharpened our language and tools for statistical modeling.
 In the process of that we learned about conditional probabilities

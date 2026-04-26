@@ -162,7 +162,7 @@ We are effectively weighting pixels at $(i+a, j+b)$
 in the vicinity of location $(i, j)$ with coefficients $[\mathbf{V}]_{a, b}$
 to obtain the value $[\mathbf{H}]_{i, j}$.
 Note that $[\mathbf{V}]_{a, b}$ needs many fewer coefficients than $[\mathsf{V}]_{i, j, a, b}$ since it
-no longer depends on the location within the image. Consequently, the number of parameters required is no longer $10^{12}$ but a much more reasonable $4 \times 10^6$: we still have the dependency on $a, b \in (-1000, 1000)$. In short, we have made significant progress. Time-delay neural networks (TDNNs) are some of the first examples to exploit this idea :cite:`Waibel.Hanazawa.Hinton.ea.1989`.
+no longer depends on the location within the image. Consequently, the number of parameters required is no longer $10^{12}$ but a much more reasonable $4 \times 10^6$: we still have the dependency on $a, b \in \{-1000, \ldots, 1000\}$. In short, we have made significant progress. Time-delay neural networks (TDNNs) are some of the first examples to exploit this idea :cite:`Waibel.Hanazawa.Hinton.ea.1989`.
 
 ###  Locality
 

@@ -66,7 +66,7 @@ calling this condition *co-adaptation*.
 Dropout, they claim, breaks up co-adaptation
 just as sexual reproduction is argued to
 break up co-adapted genes.
-While such an justification of this theory is certainly up for debate,
+While such a justification of this theory is certainly up for debate,
 the dropout technique itself has proved enduring,
 and various forms of dropout are implemented
 in most deep learning libraries. 

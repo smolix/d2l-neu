@@ -908,7 +908,7 @@ the ground-truth bounding boxes**] for the dog and cat.
 In this example, indices of
 the background, dog, and cat classes
 are 0, 1, and 2, respectively. 
-Below we add an dimension for examples of anchor boxes and ground-truth bounding boxes.
+Below we add a dimension for examples of anchor boxes and ground-truth bounding boxes.
 
 ```{.python .input}
 #@tab mxnet

@@ -61,7 +61,7 @@ and (ii) how models learned by gradient descent
 manage to generalize so well, even on high-dimensional tasks.
 However, in practice, (i) is seldom a problem
 (we can always find parameters that will fit all of our training data)
-and thus understanding generalization is far the bigger problem.
+and thus understanding generalization is by far the bigger problem.
 On the other hand, even absent the comfort of a coherent scientific theory,
 practitioners have developed a large collection of techniques
 that may help you to produce models that generalize well in practice.

@@ -310,7 +310,7 @@ proposes to replace selective search with a *region proposal network* :cite:`Ren
 the faster R-CNN only changes
 the region proposal method
 from selective search to a region proposal network.
-The rest of the model remain
+The rest of the model remains
 unchanged.
 The region proposal network
 works in the following steps:

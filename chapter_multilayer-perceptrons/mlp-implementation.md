@@ -210,7 +210,7 @@ As you might expect, by relying on the high-level APIs, we can implement MLPs ev
 ### Model
 
 Compared with our concise implementation
-of softmax regression implementation
+of softmax regression
 (:numref:`sec_softmax_concise`),
 the only difference is that we add
 *two* fully connected layers where we previously added only *one*.

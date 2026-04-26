@@ -222,7 +222,7 @@ Modern laptops have 4--8 cores,
 and even high-end servers rarely exceed 64 cores per socket,
 simply because it is not cost-effective.
 
-By comparison, GPUs can consist of thousands of small processing elements (NIVIDA's latest Ampere chips have up to 6912 CUDA cores), often grouped into larger groups (NVIDIA calls them warps).
+By comparison, GPUs can consist of thousands of small processing elements (NVIDIA's latest Ampere chips have up to 6912 CUDA cores), often grouped into larger groups (NVIDIA calls them warps).
 The details differ somewhat between NVIDIA, AMD, ARM and other chip vendors. While each core is relatively weak,
 running at about 1GHz clock frequency,
 it is the total number of such cores that makes GPUs orders of magnitude faster than CPUs.

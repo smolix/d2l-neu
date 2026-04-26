@@ -202,7 +202,7 @@ In the forward propagation,
 the output of the encoder
 is used to produce the encoded state,
 and this state will be further used
-by the decoder as one of its input.
+by the decoder as one of its inputs.
 
 ```{.python .input}
 %%tab mxnet, pytorch

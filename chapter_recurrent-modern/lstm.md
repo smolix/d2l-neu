@@ -238,7 +238,7 @@ to values close to 1. :numref:`fig_lstm_3` has a graphical illustration of the d
 ## Implementation from Scratch
 
 Now let's implement an LSTM from scratch.
-As same as the experiments in :numref:`sec_rnn-scratch`,
+As in the experiments in :numref:`sec_rnn-scratch`,
 we first load *The Time Machine* dataset.
 
 ### [**Initializing Model Parameters**]

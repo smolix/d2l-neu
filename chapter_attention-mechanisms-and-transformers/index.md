@@ -120,7 +120,7 @@ using the available downstream data.
 The gap between Transformers and traditional architectures
 grew especially wide when applied in this pretraining paradigm,
 and thus the ascendance of Transformers coincided
-with the ascendence of such large-scale pretrained models,
+with the ascendance of such large-scale pretrained models,
 now sometimes called *foundation models* :cite:`bommasani2021opportunities`.
 
 

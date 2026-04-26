@@ -28,7 +28,7 @@ $$
  \end{aligned}
 $$
 
-With this reformulation, the model complexity is decreased greatly. Moreover, for sparse features, only non-zero elements needs to be computed so that the overall complexity is linear to the number of non-zero features.
+With this reformulation, the model complexity is decreased greatly. Moreover, for sparse features, only non-zero elements need to be computed so that the overall complexity is linear to the number of non-zero features.
 
 To learn the FM model, we can use the MSE loss for regression task, the cross-entropy loss for classification tasks, and the BPR loss for ranking task. Standard optimizers such as stochastic gradient descent and Adam are viable for optimization.
 

@@ -506,7 +506,7 @@ class _WikiTextDataset:
 ```
 
 By using the `_read_wiki` function and the `_WikiTextDataset` class,
-we define the following `load_data_wiki` to [**download and WikiText-2 dataset
+we define the following `load_data_wiki` to [**download the WikiText-2 dataset
 and generate pretraining examples**] from it.
 
 ```{.python .input}

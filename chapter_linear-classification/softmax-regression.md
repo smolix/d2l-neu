@@ -494,7 +494,7 @@ the parametrization and computational cost is $\mathcal{O}(dq)$,
 which can be prohibitively high in practice.
 Fortunately, this cost of transforming $d$ inputs into $q$ outputs
 can be reduced through approximation and compression.
-For instance Deep Fried Convnets :cite:`Yang.Moczulski.Denil.ea.2015`
+For instance, Deep Fried Convnets :cite:`Yang.Moczulski.Denil.ea.2015`
 uses a combination of permutations,
 Fourier transforms, and scaling
 to reduce the cost from quadratic to log-linear.

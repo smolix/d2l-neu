@@ -687,7 +687,7 @@ You can lose significant performance by moving data without care.
    matrix--matrix multiplications of $100 \times 100$ matrices
    and log the Frobenius norm of the output matrix one result at a time. Compare it with keeping a log on the GPU and transferring only the final result.
 1. Measure how much time it takes to perform two matrix--matrix multiplications
-   on two GPUs at the same time. Compare it with computing in in sequence
+   on two GPUs at the same time. Compare it with computing in sequence
    on one GPU. Hint: you should see almost linear scaling.
 
 :begin_tab:`mxnet`

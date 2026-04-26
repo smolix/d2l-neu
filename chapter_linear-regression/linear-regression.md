@@ -470,7 +470,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-(**Alternatively, we rely on the reloaded `+` operator to compute the elementwise sum.**)
+(**Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.**)
 
 ```{.python .input}
 %%tab all

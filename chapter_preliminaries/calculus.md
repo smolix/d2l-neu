@@ -323,7 +323,7 @@ The gradient of the function $f$
 with respect to $\mathbf{x}$ 
 is a vector of $n$ partial derivatives:
 
-$$\nabla_{\mathbf{x}} f(\mathbf{x}) = \left[\partial_{x_1} f(\mathbf{x}), \partial_{x_2} f(\mathbf{x}), \ldots
+$$\nabla_{\mathbf{x}} f(\mathbf{x}) = \left[\partial_{x_1} f(\mathbf{x}), \partial_{x_2} f(\mathbf{x}), \ldots,
 \partial_{x_n} f(\mathbf{x})\right]^\top.$$ 
 
 When there is no ambiguity,

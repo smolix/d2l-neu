@@ -234,7 +234,7 @@ In the previous section, we saw the notion of the p.d.f.  In practice, this is a
 In particular, by using :eqref:`eq_pdf_int_int`, we define the c.d.f. for a random variable $X$ with density $p(x)$ by
 
 $$
-F(x) = \int _ {-\infty}^{x} p(x) \; dx = P(X \le x).
+F(x) = \int _ {-\infty}^{x} p(t) \; dt = P(X \le x).
 $$
 
 Let's observe a few properties.

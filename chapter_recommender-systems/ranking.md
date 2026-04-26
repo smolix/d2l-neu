@@ -21,8 +21,8 @@ $$
 \textrm{BPR-OPT} : &= \ln p(\Theta \mid >_u) \\
          & \propto \ln p(>_u \mid \Theta) p(\Theta) \\
          &= \ln \prod_{(u, i, j \in D)} \sigma(\hat{y}_{ui} - \hat{y}_{uj}) p(\Theta) \\
-         &= \sum_{(u, i, j \in D)} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \ln p(\Theta) \\
-         &= \sum_{(u, i, j \in D)} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}) - \lambda_\Theta \|\Theta \|^2
+         &= \sum_{(u, i, j) \in D} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \ln p(\Theta) \\
+         &= \sum_{(u, i, j) \in D} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}) - \lambda_\Theta \|\Theta \|^2
 \end{aligned}
 $$
 
@@ -85,7 +85,7 @@ class BPRLoss(nn.Module):
 The Hinge loss for ranking has a different form from the standard hinge loss that is often used in classifiers such as SVMs.  The loss used for ranking in recommender systems has the following form.
 
 $$
- \sum_{(u, i, j \in D)} \max( m - \hat{y}_{ui} + \hat{y}_{uj}, 0)
+ \sum_{(u, i, j) \in D} \max( m - \hat{y}_{ui} + \hat{y}_{uj}, 0)
 $$
 
 where $m$ is the safety margin size. It aims to push negative items away from positive items. Similar to BPR, it aims to optimize for relevant distance between positive and negative samples instead of absolute outputs, making it well suited to recommender systems.

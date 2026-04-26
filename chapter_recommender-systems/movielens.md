@@ -256,7 +256,7 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
         torch.tensor(test_u), torch.tensor(test_i),
         torch.tensor(test_r).float())
     train_iter = torch.utils.data.DataLoader(
-        train_set, shuffle=True, drop_last=True,
+        train_set, shuffle=True, drop_last=False,
         batch_size=batch_size)
     test_iter = torch.utils.data.DataLoader(
         test_set, batch_size=batch_size)

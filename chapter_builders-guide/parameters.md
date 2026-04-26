@@ -303,6 +303,7 @@ assert net[2].weight.data[0, 0] == net[4].weight.data[0, 0]
 shared = tf.keras.layers.Dense(8, activation=tf.nn.relu)
 net = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(8, activation=tf.nn.relu),
     shared,
     shared,
     tf.keras.layers.Dense(1),
@@ -310,7 +311,7 @@ net = tf.keras.models.Sequential([
 
 net(X)
 # Check whether the parameters are the same object
-print(net.layers[1].weights[0] is net.layers[2].weights[0])
+print(net.layers[2].weights[0] is net.layers[3].weights[0])
 ```
 
 ```{.python .input}

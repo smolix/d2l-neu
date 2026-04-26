@@ -88,9 +88,8 @@ class NeuMF(nn.Block):
 ```{.python .input  n=2}
 #@tab pytorch
 class NeuMF(nn.Module):
-    def __init__(self, num_factors, num_users, num_items, nums_hiddens,
-                 **kwargs):
-        super(NeuMF, self).__init__(**kwargs)
+    def __init__(self, num_factors, num_users, num_items, nums_hiddens):
+        super().__init__()
         self.P = nn.Embedding(num_users, num_factors)
         self.Q = nn.Embedding(num_items, num_factors)
         self.U = nn.Embedding(num_users, num_factors)

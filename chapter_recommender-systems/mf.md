@@ -124,15 +124,16 @@ def evaluator(net, test_iter, devices):
 #@tab pytorch
 def evaluator(net, test_iter, devices):
     net.eval()
-    rmse_list = []
+    sq_err_total, n = 0.0, 0
     with torch.no_grad():
         for users, items, ratings in test_iter:
             users, items, ratings = (users.to(devices[0]),
                                      items.to(devices[0]),
                                      ratings.to(devices[0]))
             preds = net(users, items)
-            rmse_list.append(((preds - ratings) ** 2).mean().item())
-    return (sum(rmse_list) / len(rmse_list)) ** 0.5
+            sq_err_total += ((preds - ratings) ** 2).sum().item()
+            n += ratings.numel()
+    return (sq_err_total / n) ** 0.5
 ```
 
 ## Training and Evaluating the Model

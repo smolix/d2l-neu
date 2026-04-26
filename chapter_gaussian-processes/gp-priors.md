@@ -160,7 +160,7 @@ Gaussian processes are a relatively general model class, containing many example
 
 ## Exercises
 
-1. Draw sample prior functions from a GP with an Ornstein-Uhlenbeck (OU) kernel, $k_{\textrm{OU}}(x,x') = \exp\left(-\frac{1}{2\ell}||x - x'|\right)$. If you fix the lengthscale $\ell$ to be the same, how do these functions look different than sample functions from a GP with an RBF kernel?
+1. Draw sample prior functions from a GP with an Ornstein-Uhlenbeck (OU) kernel, $k_{\textrm{OU}}(x,x') = \exp\left(-\frac{|x - x'|}{\ell}\right)$. If you fix the lengthscale $\ell$ to be the same, how do these functions look different than sample functions from a GP with an RBF kernel?
 
 2. How does changing the _amplitude_ $a^2$ of the RBF kernel affect the distribution over functions?
 

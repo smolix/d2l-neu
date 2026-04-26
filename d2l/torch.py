@@ -106,6 +106,7 @@ def add_to_class(Class):
     Defined in :numref:`sec_oo-design`"""
     def wrapper(obj):
         setattr(Class, obj.__name__, obj)
+        return obj
     return wrapper
 
 class HyperParameters:
@@ -413,7 +414,7 @@ class FashionMNIST(d2l.DataModule):
         return torch.utils.data.DataLoader(data, self.batch_size, shuffle=train,
                                            num_workers=self.num_workers)
 
-    def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+    def visualize(self, batch, nrows=1, ncols=8, labels=None):
         X, y = batch
         if not labels:
             labels = self.text_labels(y)

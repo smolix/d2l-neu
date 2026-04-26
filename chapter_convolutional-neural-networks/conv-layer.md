@@ -230,13 +230,14 @@ class Conv2D(tf.keras.layers.Layer):
 ```{.python .input}
 %%tab jax
 class Conv2D(nn.Module):
-    kernel_size: int
+    kernel_size: tuple
 
     def setup(self):
-        self.weight = nn.param('w', nn.initializers.uniform, self.kernel_size)
-        self.bias = nn.param('b', nn.initializers.zeros, 1)
+        self.weight = self.param('w', nn.initializers.uniform(),
+                                 self.kernel_size)
+        self.bias = self.param('b', nn.initializers.zeros, (1,))
 
-    def forward(self, x):
+    def __call__(self, x):
         return corr2d(x, self.weight) + self.bias
 ```
 

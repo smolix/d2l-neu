@@ -101,6 +101,7 @@ def add_to_class(Class):
     Defined in :numref:`sec_oo-design`"""
     def wrapper(obj):
         setattr(Class, obj.__name__, obj)
+        return obj
     return wrapper
 
 class HyperParameters:
@@ -431,7 +432,7 @@ class FashionMNIST(d2l.DataModule):
         return tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
             shuffle_buf).batch(self.batch_size).map(resize_fn)
 
-    def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+    def visualize(self, batch, nrows=1, ncols=8, labels=None):
         X, y = batch
         if not labels:
             labels = self.text_labels(y)
@@ -462,7 +463,10 @@ class Classifier(d2l.Module):
     def loss(self, Y_hat, Y, averaged=True):
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
         Y = d2l.reshape(Y, (-1,))
-        fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        reduction = (tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
+                     if averaged else tf.keras.losses.Reduction.NONE)
+        fn = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True, reduction=reduction)
         return fn(Y, Y_hat)
 
     def layer_summary(self, X_shape):

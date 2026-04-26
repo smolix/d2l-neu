@@ -275,8 +275,9 @@ class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
         self.save_hyperparameters()                
         n = num_train + num_val 
-        self.X = jax.random.normal(jax.random.PRNGKey(0), (n, num_inputs))
-        noise = jax.random.normal(jax.random.PRNGKey(0), (n, 1)) * 0.01
+        key_X, key_noise = jax.random.split(jax.random.PRNGKey(0))
+        self.X = jax.random.normal(key_X, (n, num_inputs))
+        noise = jax.random.normal(key_noise, (n, 1)) * 0.01
         w, b = d2l.ones((num_inputs, 1)) * 0.01, 0.05
         self.y = d2l.matmul(self.X, w) + b + noise
 

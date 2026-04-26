@@ -92,7 +92,7 @@ x2
 
 ```{.python .input}
 %%tab pytorch
-x2 = torch.load('x-file')
+x2 = torch.load('x-file', weights_only=True)
 x2
 ```
 
@@ -122,7 +122,7 @@ x2, y2 = npx.load('x-files')
 %%tab pytorch
 y = torch.zeros(4)
 torch.save([x, y],'x-files')
-x2, y2 = torch.load('x-files')
+x2, y2 = torch.load('x-files', weights_only=True)
 (x2, y2)
 ```
 
@@ -159,7 +159,7 @@ mydict2
 %%tab pytorch
 mydict = {'x': x, 'y': y}
 torch.save(mydict, 'mydict')
-mydict2 = torch.load('mydict')
+mydict2 = torch.load('mydict', weights_only=True)
 mydict2
 ```
 
@@ -303,7 +303,7 @@ clone.load_parameters('mlp.params')
 ```{.python .input}
 %%tab pytorch
 clone = MLP()
-clone.load_state_dict(torch.load('mlp.params'))
+clone.load_state_dict(torch.load('mlp.params', weights_only=True))
 clone.eval()
 ```
 

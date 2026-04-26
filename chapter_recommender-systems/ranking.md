@@ -30,7 +30,14 @@ $$
 where $D \stackrel{\textrm{def}}{=} \{(u, i, j) \mid i \in I^+_u \wedge j \in I \backslash I^+_u \}$ is the training set, with $I^+_u$ denoting the items the user $u$ liked, $I$ denoting all items, and $I \backslash I^+_u$ indicating all other items excluding items the user liked. $\hat{y}_{ui}$ and $\hat{y}_{uj}$ are the predicted scores of the user $u$ to item $i$ and $j$, respectively. The prior $p(\Theta)$ is a normal distribution with zero mean and variance-covariance matrix $\Sigma_\Theta$. Here, we let $\Sigma_\Theta = \lambda_\Theta I$.
 
 ![Illustration of Bayesian Personalized Ranking](../img/rec-ranking.svg)
-We will implement the base class  `mxnet.gluon.loss.Loss` and override the `forward` method to construct the Bayesian personalized ranking loss. We begin by importing the Loss class and the np module.
+
+:begin_tab:`mxnet`
+We will implement the base class `mxnet.gluon.loss.Loss` and override the `forward` method to construct the Bayesian personalized ranking loss. We begin by importing the Loss class and the np module.
+:end_tab:
+
+:begin_tab:`pytorch`
+We will subclass `nn.Module` and implement the BPR loss in its `forward` method.
+:end_tab:
 
 ```{.python .input  n=5}
 #@tab mxnet

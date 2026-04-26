@@ -373,7 +373,7 @@ def bayes_pred(x):
     p_xy = tf.math.reduce_prod(tf.reshape(p_xy, (10, -1)), axis=1)  # p(x|y)
     return p_xy * P_y
 
-image, label = train_images[0], train_labels[0]
+image, label = test_images[0], test_labels[0]
 bayes_pred(image)
 ```
 

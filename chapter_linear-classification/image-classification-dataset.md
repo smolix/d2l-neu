@@ -242,7 +242,7 @@ for the first few examples in the training dataset.
 ```{.python .input}
 %%tab pytorch
 @d2l.add_to_class(FashionMNIST)  #@save
-def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+def visualize(self, batch, nrows=1, ncols=8, labels=None):
     X, y = batch
     if not labels:
         labels = self.text_labels(y)
@@ -254,7 +254,7 @@ data.visualize(batch)
 ```{.python .input}
 %%tab tensorflow
 @d2l.add_to_class(FashionMNIST)  #@save
-def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+def visualize(self, batch, nrows=1, ncols=8, labels=None):
     X, y = batch
     if not labels:
         labels = self.text_labels(y)
@@ -266,7 +266,7 @@ data.visualize(batch)
 ```{.python .input}
 %%tab jax
 @d2l.add_to_class(FashionMNIST)  #@save
-def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+def visualize(self, batch, nrows=1, ncols=8, labels=None):
     X, y = batch
     if not labels:
         labels = self.text_labels(y)
@@ -279,7 +279,7 @@ data.visualize(batch)
 ```{.python .input}
 %%tab mxnet
 @d2l.add_to_class(FashionMNIST)  #@save
-def visualize(self, batch, nrows=1, ncols=8, labels=[]):
+def visualize(self, batch, nrows=1, ncols=8, labels=None):
     X, y = batch
     if not labels:
         labels = self.text_labels(y)

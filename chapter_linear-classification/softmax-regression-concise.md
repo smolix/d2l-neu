@@ -150,7 +150,7 @@ we can have for certain data types. This is called *overflow*. Likewise,
 if every argument is a very large negative number, we will get *underflow*.
 For instance, single precision floating point numbers approximately
 cover the range of $10^{-38}$ to $10^{38}$. As such, if the largest term in $\mathbf{o}$
-lies outside the interval $[-90, 90]$, the result will not be stable.
+lies outside roughly $[-88, 88]$, the result will not be representable in FP32.
 A way round this problem is to subtract $\bar{o} \stackrel{\textrm{def}}{=} \max_k o_k$ from
 all entries:
 
@@ -218,7 +218,10 @@ def loss(self, Y_hat, Y, averaged=True):
 def loss(self, Y_hat, Y, averaged=True):
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     Y = d2l.reshape(Y, (-1,))
-    fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    reduction = (tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
+                 if averaged else tf.keras.losses.Reduction.NONE)
+    fn = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction=reduction)
     return fn(Y, Y_hat)
 ```
 
@@ -267,7 +270,7 @@ As such, we strongly urge you to review *both* the bare bones and the elegant ve
 
 1. Deep learning uses many different number formats, including FP64 double precision (used extremely rarely),
 FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (very unstable), TF32 (a new format from NVIDIA), and INT8. Compute the smallest and largest argument of the exponential function for which the result does not lead to numerical underflow or overflow.
-1. INT8 is a very limited format consisting of nonzero numbers from $1$ to $255$. How could you extend its dynamic range without using more bits? Do standard multiplication and addition still work?
+1. INT8 is a very limited format consisting of integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant). How could you extend its dynamic range without using more bits? Do standard multiplication and addition still work?
 1. Increase the number of epochs for training. Why might the validation accuracy decrease after a while? How could we fix this?
 1. What happens as you increase the learning rate? Compare the loss curves for several learning rates. Which one works better? When?
 

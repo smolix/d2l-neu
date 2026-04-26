@@ -625,7 +625,7 @@ Now, let's plot the cumulative distribution function :eqref:`eq_poisson_cdf`.
 x = np.arange(-1, 21, 0.01)
 cmf = np.cumsum(pmf)
 def F(x):
-    return 0 if x < 0 else 1 if x > n else cmf[int(x)]
+    return 0 if x < 0 else 1 if x >= len(cmf) else cmf[int(x)]
 
 d2l.plot(x, np.array([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
@@ -635,7 +635,7 @@ d2l.plot(x, np.array([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 x = torch.arange(-1, 21, 0.01)
 cmf = torch.cumsum(pmf, dim=0)
 def F(x):
-    return 0 if x < 0 else 1 if x > n else cmf[int(x)]
+    return 0 if x < 0 else 1 if x >= len(cmf) else cmf[int(x)]
 
 d2l.plot(x, torch.tensor([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
@@ -645,7 +645,7 @@ d2l.plot(x, torch.tensor([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 x = tf.range(-1, 21, 0.01)
 cmf = tf.cumsum(pmf)
 def F(x):
-    return 0 if x < 0 else 1 if x > n else cmf[int(x)]
+    return 0 if x < 0 else 1 if x >= len(cmf) else cmf[int(x)]
 
 d2l.plot(x, [F(y) for y in x.numpy().tolist()], 'x', 'c.d.f.')
 ```
@@ -655,7 +655,7 @@ d2l.plot(x, [F(y) for y in x.numpy().tolist()], 'x', 'c.d.f.')
 x = jnp.arange(-1, 21, 0.01)
 cmf = jnp.cumsum(pmf)
 def F(x):
-    return 0 if x < 0 else 1 if x > n else cmf[int(x)]
+    return 0 if x < 0 else 1 if x >= len(cmf) else cmf[int(x)]
 
 d2l.plot(x, jnp.array([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```

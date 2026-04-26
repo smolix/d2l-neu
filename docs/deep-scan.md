@@ -310,13 +310,99 @@ Per "if unsure, leave it for now":
 - **MXNet**: 6 affected notebooks executed cleanly (ctr, ranking, machine-translation, seq2seq, distributions, naive-bayes).
 - **HTML build**: 192 pages, no warnings; the `Unable to resolve crossref @eq-true-risk` from the prior `make all` run is now resolved (single-line equation in `generalization.md`).
 
-### What still needs another pass after 2026-04-26
+### What still needs another pass after 2026-04-26 (first/second pass)
+
+These were the leftovers after the second pass on 2026-04-26. The
+**third pass** (described in the next section) closed all the
+actionable items in this list except the BERT TF refactor and the
+discussion-thread IDs, which are still outstanding.
 
 - Most of the **~75 Cross-Framework Drift** items (mostly additive features or by-design framework differences; would need user steer on which are real bugs vs. acceptable drift).
 - ~30 remaining Warning items that are either additive content or large refactors.
 - ~10 Math/Notation items in advanced sections (numerical-stability Jacobian, glove index swap, sh-intro further-itemized, recommender-systems argmin scope).
 - BERT TF 9-arg `TransformerEncoderBlock` realignment.
 - Discussion-thread IDs (whoever maintains discuss.d2l.ai needs to provide correct IDs).
+
+---
+
+## Fixes Applied (2026-04-26 — third pass)
+
+Third pass driven from `deep-scan-rest.md`, the user-annotated triage of
+remaining items. **3 commits**, 17 source-file changes plus the d2l
+library rebuild. All 23 actionable `FIX`/`CHECK` items closed (some by
+documentation where pretrained-model availability or framework primitive
+absence prevented a full code change).
+
+### Commit 1 — `20e94c2` "Deep-scan-rest: text fixes, framework gap docs, JAX AttentionDecoder stub, TF BiGRU"
+
+Touches 14 source files. Pure prose / additive-block changes; no
+existing executable cells were modified.
+
+- `linear-regression/linear-regression.md`: noted that frameworks' built-in MSE losses (`nn.MSELoss`, `tf.keras.losses.MeanSquaredError`) omit the $\tfrac12$ factor, so swapping in a built-in doubles the gradient and the learning rate should be halved.
+- `linear-regression/linear-regression-scratch.md` (JAX `:begin_tab:`): added a "Why JAX looks longer" callout above `fit_epoch` — pure-functional state-passing means optimizer state, dropout RNG, and (optionally) batch stats must be threaded explicitly.
+- `natural-language-processing-pretraining/glove.md`: brief sentence right after the definition of $p_{ij} := P(w_j | w_i)$ clarifying that the *first* index is the conditioning center word and the *second* the generated context word.
+- `appendix-tools-for-deep-learning/utils.md`: end-of-file "A Note on Framework Coverage" section documenting that the legacy helpers (`evaluate_accuracy`, `train_ch6`, `train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for parity with the original d2l-en, that JAX deliberately omits them in favour of the unified `Trainer` flow, and that PT only ships the subset useful outside the Trainer; MX/TF retain `evaluate_accuracy` because earlier-chapter snippets call it directly.
+- `builders-guide/lazy-init.md` (JAX `:begin_tab:`): "Why Flax is different" note explaining that shape inference happens at `net.init(rng, dummy_input)` time (mandatory before use), so the imperative-framework narrative below is framed for PT/MX/TF only.
+- `attention-mechanisms-and-transformers/vision-transformer.md` (TF `:begin_tab:`): documented that `tf.keras.layers.MultiHeadAttention` does not accept `valid_lens`; for ViT this is harmless (no padding among image patches), but reusing the block for sequence data requires building an `attention_mask` of shape `(B, Q, K)` explicitly.
+- `attention-mechanisms-and-transformers/bahdanau-attention.md`: added a JAX `AttentionDecoder(d2l.Decoder)` `#@save` block alongside the existing PT/MX/TF one. Verified against `d2l.AttentionDecoder` after `make lib`; JAX bahdanau-attention notebook re-runs cleanly (157s + best-of-N second attempt at 154s, score 3.0).
+- `recurrent-modern/bi-rnn.md` (TF): added a TF `BiGRU` block using `tf.keras.layers.Bidirectional(GRU(num_hiddens, return_sequences=True, return_state=True))`. TF bi-rnn notebook executes cleanly (11.2s).
+- `computer-vision/fine-tuning.md`: split the single shared paragraph into two `:begin_tab:` blocks: `mxnet,pytorch` keeps the ResNet-18 narrative; `jax,tensorflow` documents that those tabs use ResNet-50 because `keras.applications` does not ship a pretrained ResNet-18 (`keras_hub`/`keras_cv`/`tensorflow_hub` aren't in the venv either). PT/MX code already used ResNet-18.
+- `computer-vision/fcn.md` (JAX `:begin_tab:`): note explaining that the JAX tab uses a from-scratch ResNet because no pretrained Flax model is in the venv (TF tab already uses `keras.applications.ResNet50(weights='imagenet')`, so its transfer-learning point was already preserved).
+- `recommender-systems/mf.md` line 25: `\underset{\mathbf{P}, \mathbf{Q}, b}{\mathrm{argmin}}` → `b_*` (the objective contains $b_u$ and $b_i$, not a single $b$).
+- `recommender-systems/neumf.md`: line 14 `h` → `\mathbf{h}` (consistency with surrounding lines); line 23 removed an extra trailing `)` in `\alpha^L(\mathbf{W}^{(L)} z^{(L-1)} + b^{(L)})`.
+- `recommender-systems/ranking.md` line 23: `\prod_{(u, i, j \in D)}` → `\prod_{(u, i, j) \in D}` (matches the `\sum` notation on lines 24–25).
+- `recommender-systems/seqrec.md` line 12: row-concat-then-transpose `[\mathbf{q}_{S_{t-L}^u}, \ldots, \mathbf{q}_{S_{t-1}^u}]^\top` rewritten as an explicit `\begin{bmatrix} \mathbf{q}_{...} \\ \vdots \\ ... \end{bmatrix}` so the result actually has the stated $L \times k$ shape (the $\mathbf{q}_i$ are described as rows of $\mathbf{Q}$).
+
+### Commit 2 — `ad76f3c` "Deep-scan-rest: more textual + small code fixes"
+
+Touches 5 source files. Mix of prose and small additive code blocks.
+
+- `appendix-mathematics-for-deep-learning/multivariable-calculus.md`: converted ~25 occurrences of `\frac{d}{dw_i}` / `\frac{df}{dx_i}` / `\frac{dx_i}{dx_k}` etc. to `\partial` form throughout the chain-rule, Jacobian, and matrix-factorization derivations. Single-variable analogues (`\frac{df}{dx}` for $f(x) = 3x^4 - 4x^3 - 12x^2$, the contrast `\frac{d}{dx}(bx) = b`, the 1×1 sanity checks) intentionally left as ordinary `d`.
+- `builders-guide/use-gpu.md` (TF Trainer extension): added a `%%tab tensorflow` block with `Trainer.__init__` and `Trainer.prepare_batch` extensions plus a `:begin_tab:tensorflow:` note. `prepare_batch` re-wraps each `tf.data.Dataset` batch via `tf.identity` inside `with self.gpus[0]:` so subsequent ops keep their inputs on-device, mirroring the PT/MX/JAX pattern. No `prepare_model` override is needed because Keras layers materialize variables on whichever device they're first called with — and `_compile_steps` calls `prepare_batch` once before training, so the model's weights end up on the same GPU automatically. TF use-gpu notebook executes cleanly (15.7s).
+- `generative-adversarial-networks/dcgan.md` (JAX `G_block`): added a clarifying comment explaining that DCGAN's convention is to keep the generator in training-mode BatchNorm even at sampling time (`use_running_average=False`), with a hint that users can override via `Generator(use_running_average=True)` for population-statistics inference.
+- `recommender-systems/movielens.md`: MX `split_and_load_ml100k` switched from `last_batch='rollover'` to `last_batch='keep'` (matches PT `drop_last=False`: keep the partial last batch as-is each epoch, no roll-over). Updated the surrounding prose accordingly. After `make lib`, this propagates to `d2l.split_and_load_ml100k` for MX.
+- `recurrent-modern/seq2seq.md` (JAX): encoder + decoder now use `d2l.astype(..., d2l.int64)` (was `d2l.int32`), matching PT. MX and TF do not call `astype` at all in seq2seq (they pass the raw transposed tensor to `nn.Embedding` / `tf.keras.layers.Embedding`, which accept either dtype); flagged for awareness, no change made.
+
+### Commit 3 — `4f9cc17` "seqrec: enable training in PT (and MX), fix evaluate_ranking PT bug"
+
+Touches 2 source files plus the four d2l package files (rebuilt by
+`make lib`). Closes the largest functional item on the list.
+
+- `recommender-systems/neumf.md` (PT `evaluate_ranking`): the list-of-lists flatten step (`scores = [item for sublist in scores for item in sublist]`) was iterating over scalar `numpy.float32` items because Caser returns shape `(B,)` (NeuMF returns `(B, 1)`, so the original code only worked for NeuMF). Rewritten as `scores.extend(net(*values).detach().cpu().numpy().ravel().tolist())`, which handles both `(B,)` and `(B, 1)` outputs uniformly.
+- `recommender-systems/seqrec.md` (PT and MX): uncommented the previously-disabled training cell with `eval_step=num_epochs`, deferring the costly per-user `evaluate_ranking` to the final epoch only. PT also adds `net = net.to(devices[0])` (the original code was running on CPU). PT runs in **53s**, MX in **255s** (4.3 min) — both well under the 1-hour budget that previously kept the training commented out.
+- `recommender-systems/seqrec.md` (TF/JAX `:begin_tab:`): documented that the chapter is PT/MX-only because the Caser-specific helpers (`BPRLoss`, `SeqDataset`, `train_ranking`, `evaluate_ranking`) are not yet ported to those frameworks; TF/JAX implementations would be additive new content.
+
+### Verification (third pass)
+
+After `make lib`:
+
+- `d2l.AttentionDecoder` is now exposed for JAX (verified in REPL).
+- `d2l.Trainer.prepare_batch` (TF) now uses the GPU-placement path (verified by `inspect.getsource`).
+- `d2l.split_and_load_ml100k` (MX) emits `last_batch='keep'`.
+- `d2l.evaluate_ranking` (PT) handles 1-D and 2-D model outputs uniformly.
+
+Notebook smoke runs (all green):
+
+- **PyTorch**: `seqrec.ipynb` (53s — training now runs).
+- **MXNet**: `seqrec.ipynb` (255s — training now runs).
+- **TensorFlow**: `bi-rnn.ipynb` (11.2s — new `BiGRU` block); `use-gpu.ipynb` (15.7s — new Trainer extension).
+- **JAX**: `seq2seq.ipynb` (81.6s — int64 cast); `bahdanau-attention.ipynb` (156.7s + best-of-N retry 154s, score 3.0 — new `AttentionDecoder` stub).
+
+### Items deliberately NOT changed in this pass
+
+- `hyperparameter-optimization/sh-intro.md` JAX `tf.config.set_visible_devices([], 'GPU')` — `KEPT`. Removing the explicit TF-GPU shim risks GPU-memory conflicts during the multi-trial HPO loop; the d2l/jax.py preamble's `set_memory_growth` alone may not be sufficient to keep TF off the GPU. Cosmetic gain not worth the regression risk.
+- `recurrent-modern/gru.md` `nn.LazyRNN` for PT — `SKIPPED`. PyTorch has no `nn.LazyRNN` / `nn.LazyGRU` / `nn.LazyLSTM` (only `nn.LazyLinear` / `nn.LazyConv*` / `nn.LazyBatchNorm*` / `nn.LazyInstanceNorm*`). Making PT GRU truly lazy would require a custom subclass that defers `nn.GRU` construction to first call — too invasive for stylistic alignment.
+- `computer-vision/fine-tuning.md` ResNet-18 in TF/JAX, `computer-vision/fcn.md` pretrained ResNet in JAX — gap *documented* rather than closed. `keras.applications` ships no ResNet-18, and no Flax pretrained-model library (`flaxmodels`, `transformers`, etc.) is in the JAX venv. Closing these requires adding a dependency or porting weights, both out of scope.
+- `recommender-systems/seqrec.md` TF/JAX implementations — gap *documented* rather than closed. The Caser-specific helpers (`BPRLoss`, `SeqDataset`, `train_ranking`, `evaluate_ranking`) would need to be ported to TF and JAX, a substantial amount of new code best left to a focused implementation pass.
+
+### What still needs another pass after the 2026-04-26 third pass
+
+- **BERT TF 9-arg `TransformerEncoderBlock` realignment** (cross-framework drift; non-trivial refactor).
+- **Discussion-thread IDs** for JAX-newly-added chapters and the recurrent-neural-networks shared IDs (needs the discuss.d2l.ai maintainer).
+- **JAX `clip_gradients` / `SGD` callouts**: short prose blocks explaining why the JAX functional pattern looks more verbose. (`fit_epoch` callout is already in `linear-regression-scratch.md`.)
+- **Truly cross-framework pretrained ResNet-18** for `fine-tuning.md` and `fcn.md`: requires either a weight-port from PyTorch or pulling in `flaxmodels` / `keras_hub` / `tensorflow_hub`.
+- **`mlp.md` / `backprop.md` notation homogenization** (row-vector vs column-vector, batch-first vs per-example) — large rewrite, needs author judgment.
+- **TF/JAX implementations of the `seqrec.md` Caser model** plus its helpers.
 
 ---
 

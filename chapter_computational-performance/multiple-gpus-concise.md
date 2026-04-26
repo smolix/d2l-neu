@@ -322,7 +322,10 @@ def train(net, num_gpus, batch_size, lr):
         if type(module) in [nn.Linear, nn.Conv2d]:
             nn.init.normal_(module.weight, std=0.01)
     net.apply(init_weights)
-    # Set the model on multiple GPUs
+    # Set the model on multiple GPUs. Note: `nn.DataParallel` is
+    # convenient for a single-process demo, but PyTorch recommends
+    # `nn.parallel.DistributedDataParallel` for production training
+    # because it scales better and avoids GIL contention.
     net = nn.DataParallel(net, device_ids=devices)
     trainer = torch.optim.SGD(net.parameters(), lr)
     loss = nn.CrossEntropyLoss()

@@ -93,8 +93,9 @@ The first convolutional layer has 6 output channels,
 while the second has 16.
 Each $2\times2$ pooling operation (stride 2)
 reduces dimensionality by a factor of $4$ via spatial downsampling.
-The convolutional block emits an output with shape given by
-(batch size, number of channel, height, width).
+The convolutional block emits an output with shape (batch size, number
+of channels, height, width) in the PyTorch/MXNet convention; TensorFlow
+and JAX use the channels-last layout (batch, height, width, channels).
 
 In order to pass output from the convolutional block
 to the dense block,

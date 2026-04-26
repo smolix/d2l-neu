@@ -3010,7 +3010,7 @@ def make_env(name ='', seed=0):
         return frozen_lake(seed)
 
     else:
-        raise ValueError("%s env is not supported in this Notebook")
+        raise ValueError(f"{name} env is not supported in this Notebook")
 
 def show_value_function_progress(env_desc, V, pi):
     # This function visualizes how value and policy changes over time.
@@ -3562,12 +3562,13 @@ class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
     # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
     # `label` shape: (`batch_size`, `num_steps`)
     # `valid_len` shape: (`batch_size`,)
+    def __init__(self):
+        super().__init__(reduction='none')
+
     def forward(self, pred, label, valid_len):
         weights = torch.ones_like(label)
         weights = sequence_mask(weights, valid_len)
-        self.reduction='none'
-        unweighted_loss = super(MaskedSoftmaxCELoss, self).forward(
-            pred.permute(0, 2, 1), label)
+        unweighted_loss = super().forward(pred.permute(0, 2, 1), label)
         weighted_loss = (unweighted_loss * weights).mean(dim=1)
         return weighted_loss
 

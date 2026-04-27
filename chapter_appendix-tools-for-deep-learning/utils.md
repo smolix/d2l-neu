@@ -598,20 +598,28 @@ def squared_loss(y_hat, y):  #@save
     return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
 
 def load_array(data_arrays, batch_size, is_train=True):  #@save
-    """Construct a JAX-compatible data iterator."""
+    """Construct a JAX-compatible data iterator.
+
+    For training, the last partial batch is dropped so every minibatch
+    has the same shape — this lets a `@jax.jit`'d step function compile
+    once per epoch instead of recompiling for the smaller last batch.
+    Validation iterators yield all batches (the last may be smaller),
+    matching how PyTorch / TF / MXNet behave.
+    """
     n = data_arrays[0].shape[0]
     indices = np.arange(n)
+    last = n - (n % batch_size) if is_train else n
     def data_iter():
         if is_train:
             np.random.shuffle(indices)
-        for i in range(0, n, batch_size):
+        for i in range(0, last, batch_size):
             batch_indices = indices[i: min(i + batch_size, n)]
             yield tuple(jnp.array(a[batch_indices]) for a in data_arrays)
     class DataIter:
         def __iter__(self):
             return data_iter()
         def __len__(self):
-            return (n + batch_size - 1) // batch_size
+            return last // batch_size if is_train else (n + batch_size - 1) // batch_size
     return DataIter()
 
 class ArrayDataLoader:  #@save

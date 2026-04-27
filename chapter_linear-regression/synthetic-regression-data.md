@@ -301,11 +301,16 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
     tensors = tuple(a[indices] for a in tensors)
     # Use Tensorflow Datasets & Dataloader. JAX or Flax do not provide
-    # any dataloading functionality
+    # any dataloading functionality. `drop_remainder=train` keeps every
+    # *training* minibatch the same shape, so a `@jax.jit`'d step
+    # function compiles once per epoch instead of recompiling for the
+    # smaller last batch (a common source of multi-minute slowdowns on
+    # NLP datasets where the last batch is a different shape every time).
     shuffle_buffer = tensors[0].shape[0] if train else 1
     return tfds.as_numpy(
         tf.data.Dataset.from_tensor_slices(tensors).shuffle(
-            buffer_size=shuffle_buffer).batch(self.batch_size))
+            buffer_size=shuffle_buffer
+        ).batch(self.batch_size, drop_remainder=train))
 ```
 
 ```{.python .input}

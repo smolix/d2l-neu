@@ -296,11 +296,16 @@ class DataModule(d2l.HyperParameters):
     def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         tensors = tuple(a[indices] for a in tensors)
         # Use Tensorflow Datasets & Dataloader. JAX or Flax do not provide
-        # any dataloading functionality
+        # any dataloading functionality. `drop_remainder=train` keeps every
+        # *training* minibatch the same shape, so a `@jax.jit`'d step
+        # function compiles once per epoch instead of recompiling for the
+        # smaller last batch (a common source of multi-minute slowdowns on
+        # NLP datasets where the last batch is a different shape every time).
         shuffle_buffer = tensors[0].shape[0] if train else 1
         return tfds.as_numpy(
             tf.data.Dataset.from_tensor_slices(tensors).shuffle(
-                buffer_size=shuffle_buffer).batch(self.batch_size))
+                buffer_size=shuffle_buffer
+            ).batch(self.batch_size, drop_remainder=train))
 
 class Trainer(d2l.HyperParameters):
     """The base class for training models with data.
@@ -3056,20 +3061,27 @@ def squared_loss(y_hat, y):
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a JAX-compatible data iterator.
 
+    For training, the last partial batch is dropped so every minibatch
+    has the same shape — this lets a `@jax.jit`'d step function compile
+    once per epoch instead of recompiling for the smaller last batch.
+    Validation iterators yield all batches (the last may be smaller),
+    matching how PyTorch / TF / MXNet behave.
+
     Defined in :numref:`sec_utils`"""
     n = data_arrays[0].shape[0]
     indices = np.arange(n)
+    last = n - (n % batch_size) if is_train else n
     def data_iter():
         if is_train:
             np.random.shuffle(indices)
-        for i in range(0, n, batch_size):
+        for i in range(0, last, batch_size):
             batch_indices = indices[i: min(i + batch_size, n)]
             yield tuple(jnp.array(a[batch_indices]) for a in data_arrays)
     class DataIter:
         def __iter__(self):
             return data_iter()
         def __len__(self):
-            return (n + batch_size - 1) // batch_size
+            return last // batch_size if is_train else (n + batch_size - 1) // batch_size
     return DataIter()
 
 class ArrayDataLoader:

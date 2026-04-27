@@ -253,7 +253,6 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
 ```{.python .input}
 #@tab tensorflow
 #@save
-@tf.function(reduce_retracing=True)
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator."""
     batch_size = tf.shape(X)[0]
@@ -341,7 +340,6 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
 ```{.python .input}
 #@tab tensorflow
 #@save
-@tf.function(reduce_retracing=True)
 def update_G(Z, net_D, net_G, loss, optimizer_G):
     """Update generator."""
     batch_size = tf.shape(Z)[0]
@@ -470,6 +468,19 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
         w.assign(tf.random.normal(mean=0, stddev=0.02, shape=w.shape))
     optimizer_D = tf.keras.optimizers.Adam(learning_rate=lr_D)
     optimizer_G = tf.keras.optimizers.Adam(learning_rate=lr_G)
+    # Wrap the per-batch updates in `@tf.function` *here* (rather than
+    # decorating `update_D` / `update_G` in the d2l package) so the
+    # traced graph closes over the concrete `net_D`, `net_G`,
+    # `optimizer_*`, `loss` from this scope. That eliminates retraces
+    # caused by passing those Python objects as @tf.function arguments
+    # — a bigger deal for deep DCGAN-style nets than for this toy 2-D
+    # one, but the speedup applies to both.
+    @tf.function(reduce_retracing=True)
+    def step_D(X, Z):
+        return update_D(X, Z, net_D, net_G, loss, optimizer_D)
+    @tf.function(reduce_retracing=True)
+    def step_G(Z):
+        return update_G(Z, net_D, net_G, loss, optimizer_G)
     animator = d2l.Animator(
         xlabel="epoch", ylabel="loss", xlim=[1, num_epochs], nrows=2,
         figsize=(5, 5), legend=["discriminator", "generator"])
@@ -482,8 +493,8 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
             batch_size = X.shape[0]
             Z = tf.random.normal(
                 mean=0, stddev=1, shape=(batch_size, latent_dim))
-            metric.add(update_D(X, Z, net_D, net_G, loss, optimizer_D),
-                       update_G(Z, net_D, net_G, loss, optimizer_G),
+            metric.add(step_D(X, Z),
+                       step_G(Z),
                        batch_size)
         # Visualize generated examples
         Z = tf.random.normal(mean=0, stddev=1, shape=(100, latent_dim))

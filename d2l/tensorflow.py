@@ -1976,19 +1976,12 @@ class TinySSD(keras.Model):
                    (bbox_labels * bbox_masks)))
         return cls + bbox
 
-    def cached_anchors(self, features):
-        # Anchors are deterministic functions of the feature-map shapes;
-        # for a fixed input shape they are identical every batch. Cache
-        # them on the first call to avoid invoking the (eager, NumPy)
-        # multibox_prior path inside multibox_target on every step.
-        if getattr(self, '_anchors_cache', None) is None:
-            self._anchors_cache = self(features, training=False)[0]
-        return self._anchors_cache
-
-    @tf.function(reduce_retracing=True)
-    def _grad_step(self, features, bbox_labels, bbox_masks, cls_labels):
+    def train_step(self, data):
+        features, target = data
         with tf.GradientTape() as tape:
-            _, cls_preds, bbox_preds = self(features, training=True)
+            anchors, cls_preds, bbox_preds = self(features, training=True)
+            bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
+                anchors, target)
             loss = self._compute_ssd_loss(cls_preds, cls_labels,
                                           bbox_preds, bbox_labels, bbox_masks)
         grads = tape.gradient(loss, self.trainable_variables)
@@ -2004,16 +1997,6 @@ class TinySSD(keras.Model):
         return {'loss': loss,
                 'cls_correct': cls_correct, 'cls_total': cls_total,
                 'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
-
-    def train_step(self, data):
-        features, target = data
-        # multibox_target uses NumPy (.numpy() on tensors); compute anchors
-        # eagerly (cached), run multibox_target eagerly, then run the
-        # gradient step inside @tf.function for speed.
-        anchors = self.cached_anchors(features)
-        bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
-            anchors, target)
-        return self._grad_step(features, bbox_labels, bbox_masks, cls_labels)
 
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
@@ -2914,26 +2897,7 @@ class HPOTuner(d2l.HyperParameters):
         self.current_runtime += runtime
         self.cumulative_runtime.append(self.current_runtime)
 
-_hpo_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-
-@tf.function(reduce_retracing=True)
-def _hpo_train_step(model, optimizer, x, y):
-    with tf.GradientTape() as tape:
-        logits = model(x, training=True)
-        loss = _hpo_loss(y, logits)
-    grads = tape.gradient(loss, model.trainable_variables)
-    optimizer.apply_gradients(zip(grads, model.trainable_variables))
-    return loss
-
-@tf.function(reduce_retracing=True)
-def _hpo_eval_step(model, x, y):
-    logits = model(x, training=False)
-    preds = tf.argmax(logits, axis=-1, output_type=y.dtype)
-    correct = tf.reduce_sum(tf.cast(tf.equal(preds, y), tf.int64))
-    total = tf.cast(tf.size(y), tf.int64)
-    return correct, total
-
-def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
     import keras
     model = keras.Sequential([
         keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
@@ -2946,20 +2910,17 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
         keras.layers.Dense(84, activation='relu'),
         keras.layers.Dense(10),
     ])
-    optimizer = keras.optimizers.SGD(learning_rate=learning_rate)
+    model.compile(
+        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy'],
+    )
     data = d2l.FashionMNIST(batch_size=batch_size)
-    train_ds = data.get_dataloader(True).prefetch(tf.data.AUTOTUNE)
-    val_ds = data.get_dataloader(False).prefetch(tf.data.AUTOTUNE)
-    for _ in range(max_epochs):
-        for x, y in train_ds:
-            _hpo_train_step(model, optimizer, x, y)
-    correct = tf.constant(0, dtype=tf.int64)
-    total = tf.constant(0, dtype=tf.int64)
-    for x, y in val_ds:
-        c, t = _hpo_eval_step(model, x, y)
-        correct += c
-        total += t
-    val_acc = float(correct) / float(total)
+    train_ds = data.get_dataloader(True)
+    val_ds = data.get_dataloader(False)
+    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
+                        verbose=0)
+    val_acc = history.history['val_accuracy'][-1]
     return 1 - val_acc
 
 class SuccessiveHalvingScheduler(d2l.HPOScheduler):
@@ -3026,7 +2987,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
-@tf.function(reduce_retracing=True)
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.
 
@@ -3047,7 +3007,6 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
     return loss_D
 
-@tf.function(reduce_retracing=True)
 def update_G(Z, net_D, net_G, loss, optimizer_G):
     """Update generator.
 

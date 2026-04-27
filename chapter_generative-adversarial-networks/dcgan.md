@@ -795,6 +795,20 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
     optimizer_D = tf.keras.optimizers.Adam(**optimizer_hp)
     optimizer_G = tf.keras.optimizers.Adam(**optimizer_hp)
 
+    # Wrap the per-batch updates in `@tf.function` *here* so the traced
+    # graph closes over the concrete `net_D`, `net_G`, `optimizer_*`,
+    # `loss`. Critical for DCGAN: passing those Python objects as
+    # @tf.function arguments (which is what happens if `update_D` /
+    # `update_G` are decorated in the d2l package) forces the deep
+    # Conv+BN graph to retrace per call. Closing over them gives a
+    # single concrete function per (X, Z) input shape.
+    @tf.function(reduce_retracing=True)
+    def step_D(X, Z):
+        return d2l.update_D(X, Z, net_D, net_G, loss, optimizer_D)
+    @tf.function(reduce_retracing=True)
+    def step_G(Z):
+        return d2l.update_G(Z, net_D, net_G, loss, optimizer_G)
+
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs], nrows=2, figsize=(5, 5),
                             legend=['discriminator', 'generator'])
@@ -808,8 +822,8 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
             batch_size = X.shape[0]
             Z = tf.random.normal(mean=0, stddev=1,
                                  shape=(batch_size, 1, 1, latent_dim))
-            metric.add(d2l.update_D(X, Z, net_D, net_G, loss, optimizer_D),
-                       d2l.update_G(Z, net_D, net_G, loss, optimizer_G),
+            metric.add(step_D(X, Z),
+                       step_G(Z),
                        batch_size)
 
         # Show generated examples

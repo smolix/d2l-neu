@@ -560,6 +560,32 @@ def extract_features(features_net, X_batch):
     feats = features_net.predict(X_batch, verbose=0)
     return jnp.array(feats)
 
+def precompute_features(features_net, data_iter):
+    """Run the frozen TF backbone once over the whole dataset and cache
+    the (features, labels) tensors as JAX arrays. Subsequent training
+    only iterates the small classifier head over these cached features,
+    so we never round-trip from JAX into TF on the per-step path."""
+    feats_list, labels_list = [], []
+    for features, labels in data_iter:
+        f = features_net(features, training=False).numpy()
+        feats_list.append(f)
+        labels_list.append(labels.numpy())
+    feats = jnp.array(np.concatenate(feats_list, axis=0))
+    labels = jnp.array(np.concatenate(labels_list, axis=0))
+    return feats, labels
+
+def evaluate_loss_from_feats(feats, labels, output_net, variables,
+                             batch_size):
+    l_sum, n = 0.0, 0
+    for i in range(0, feats.shape[0], batch_size):
+        fb = feats[i:i + batch_size]
+        yb = labels[i:i + batch_size]
+        logits = output_net.apply(variables, fb, training=False)
+        l = loss_fn(logits, yb)
+        l_sum += float(l.sum())
+        n += int(yb.shape[0])
+    return l_sum / n
+
 def evaluate_loss(data_iter, features_net, output_net, variables):
     l_sum, n = 0.0, 0
     for features, labels in data_iter:
@@ -692,13 +718,28 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     tx = optax.chain(optax.add_decayed_weights(wd),
                      optax.sgd(schedule, momentum=0.9))
     opt_state = tx.init(variables['params'])
-    num_batches = sum(1 for _ in train_iter)
     timer = d2l.Timer()
     legend = ['train loss']
     if valid_iter is not None:
         legend.append('valid loss')
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
                             legend=legend)
+
+    # Pre-extract features for the full training set ONCE using the frozen
+    # TF backbone, then iterate the tiny classifier head over the cached
+    # JAX arrays. This mirrors how PyTorch / MXNet keep the heavy backbone
+    # forward pass out of the per-step JAX dispatch and avoids a TF<->JAX
+    # round trip on every minibatch.
+    print('Pre-extracting train features...')
+    train_feats, train_labels = precompute_features(features_net, train_iter)
+    if valid_iter is not None:
+        print('Pre-extracting valid features...')
+        valid_feats, valid_labels = precompute_features(features_net,
+                                                       valid_iter)
+    # Use the same batch size as the data loader (defined globally).
+    bs = batch_size
+    n_train = int(train_feats.shape[0])
+    num_batches = (n_train + bs - 1) // bs
 
     @jax.jit
     def train_step(variables, opt_state, feats, y):
@@ -715,23 +756,27 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
         new_variables = {'params': new_params}
         return new_variables, new_opt_state, l_sum
 
+    rng = np.random.default_rng(0)
     for epoch in range(num_epochs):
         metric = d2l.Accumulator(2)
-        for i, (features, labels) in enumerate(train_iter):
+        # Shuffle indices each epoch
+        perm = rng.permutation(n_train)
+        for i in range(num_batches):
             timer.start()
-            feats = extract_features(features_net, features.numpy())
-            y = jnp.array(labels.numpy())
+            idx = perm[i * bs:(i + 1) * bs]
+            feats = train_feats[idx]
+            y = train_labels[idx]
             variables, opt_state, l = train_step(
                 variables, opt_state, feats, y)
-            metric.add(float(l), len(labels))
+            metric.add(float(l), int(y.shape[0]))
             timer.stop()
-            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+            if (i + 1) % max(num_batches // 5, 1) == 0 or i == num_batches - 1:
                 animator.add(epoch + (i + 1) / num_batches,
                              (metric[0] / metric[1], None))
         measures = f'train loss {metric[0] / metric[1]:.3f}'
         if valid_iter is not None:
-            valid_loss = evaluate_loss(valid_iter, features_net, output_net,
-                                       variables)
+            valid_loss = evaluate_loss_from_feats(
+                valid_feats, valid_labels, output_net, variables, bs)
             animator.add(epoch + 1, (None, valid_loss))
     if valid_iter is not None:
         measures += f', valid loss {valid_loss:.3f}'

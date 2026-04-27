@@ -401,14 +401,15 @@ def voc_rand_crop(feature, label, height, width):
 #@save
 def voc_rand_crop(feature, label, height, width):
     """Randomly crop both feature and label images."""
-    # Stack feature (HWC) and label (HWC) along channel axis, crop jointly,
-    # then split so both get the exact same random crop.
-    combined = np.concatenate([feature, label], axis=-1)  # HW x (C+3)
-    combined_t = tf.constant(combined)
-    crop = tf.image.random_crop(combined_t, size=[height, width,
-                                                  combined.shape[-1]])
-    crop = crop.numpy()
-    return crop[:, :, :3], crop[:, :, 3:]
+    # Use NumPy for the random crop so this is safe to run from worker
+    # threads (tf.image.random_crop holds graph-side state that breaks
+    # under tf.data parallel py_function calls).
+    H, W = feature.shape[0], feature.shape[1]
+    top = int(np.random.randint(0, H - height + 1))
+    left = int(np.random.randint(0, W - width + 1))
+    feat = feature[top:top + height, left:left + width, :]
+    lab = label[top:top + height, left:left + width, :]
+    return feat, lab
 ```
 
 ```{.python .input}
@@ -592,8 +593,8 @@ class VOCSegDataset:
                                        *self.crop_size)
         # feature: HWC float32; label: HWC uint8 RGB -> class indices HW int32
         label_idx = voc_label_indices(label, self.colormap2label)
-        return (tf.constant(feature), tf.cast(tf.constant(label_idx),
-                                              tf.int32))
+        return (feature.astype(np.float32),
+                label_idx.astype(np.int32))
 
     def __len__(self):
         return len(self.features)
@@ -737,23 +738,31 @@ def load_data_voc(batch_size, crop_size):
     # Drop last partial batch
     n_train = (n_train // batch_size) * batch_size
     n_test = (n_test // batch_size) * batch_size
-    def make_generator(dataset, n):
-        def gen():
-            idxs = np.random.permutation(len(dataset))[:n]
-            for i in idxs:
-                feat, label = dataset[i]
-                yield feat, label
-        return gen
     def make_tf_dataset(dataset, n, shuffle):
+        # Cropping/labeling is plain NumPy; wrap in tf.py_function and run it
+        # in parallel so the GPU isn't starved between batches. We use
+        # from_tensor_slices(indices) + map(parallel) instead of a single
+        # serial Python generator.
         feat0, label0 = dataset[0]
-        ds = tf.data.Dataset.from_generator(
-            make_generator(dataset, n),
-            output_signature=(
-                tf.TensorSpec(shape=feat0.shape, dtype=tf.float32),
-                tf.TensorSpec(shape=label0.shape, dtype=tf.int32)))
+        feat_shape, label_shape = feat0.shape, label0.shape
+        def load(i):
+            feat, label = dataset[int(i)]
+            return feat, label
+        def tf_load(i):
+            feat, label = tf.py_function(
+                load, [i], (tf.float32, tf.int32))
+            feat.set_shape(feat_shape)
+            label.set_shape(label_shape)
+            return feat, label
+        ds = tf.data.Dataset.from_tensor_slices(
+            np.arange(len(dataset), dtype=np.int64))
         if shuffle:
-            ds = ds.shuffle(buffer_size=min(n, 1000))
+            ds = ds.shuffle(buffer_size=min(n, 1000),
+                            reshuffle_each_iteration=True)
+        ds = ds.take(n)
+        ds = ds.map(tf_load, num_parallel_calls=tf.data.AUTOTUNE)
         ds = ds.batch(batch_size, drop_remainder=True)
+        ds = ds.prefetch(tf.data.AUTOTUNE)
         return ds
     train_iter = make_tf_dataset(train_dataset, n_train, shuffle=True)
     test_iter = make_tf_dataset(test_dataset, n_test, shuffle=False)

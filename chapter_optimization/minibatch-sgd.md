@@ -160,12 +160,19 @@ timer.stop()
 
 ```{.python .input}
 #@tab jax
-# Compute A = BC one element at a time
+# Compute A = BC one element at a time. JAX is functionally pure, so a
+# literal `A.at[i, j].set(...)` would copy the full matrix on every write
+# (O(n^2) memory traffic), turning a demo into a multi-minute run. We
+# instead use a NumPy buffer to mirror the eager semantics other frameworks
+# get for free; the *point* of this cell is that the elementwise dispatch
+# is much slower than vectorized matmul.
+A = np.zeros((256, 256), dtype=np.float32)
+B_np = np.array(B)
+C_np = np.array(C)
 timer.start()
 for i in range(256):
     for j in range(256):
-        A = A.at[i, j].set(jnp.dot(B[i, :], C[:, j]))
-A.block_until_ready()
+        A[i, j] = np.dot(B_np[i, :], C_np[:, j])
 timer.stop()
 ```
 
@@ -200,7 +207,9 @@ timer.stop()
 
 ```{.python .input}
 #@tab jax
-# Compute A = BC one column at a time
+# Compute A = BC one column at a time. We keep B/C on device; only the
+# Python loop and per-column dispatch cost remain.
+A = jnp.zeros((256, 256))
 timer.start()
 for j in range(256):
     A = A.at[:, j].set(jnp.dot(B, C[:, j]))
@@ -538,19 +547,32 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
     n, timer = 0, d2l.Timer()
+    # JIT-fuse the per-batch step (grad + optimizer update) so we don't
+    # round-trip through Python on every minibatch.
+    @jax.jit
+    def step(w, b, X, y):
+        def loss_fn(w, b):
+            return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
+        grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
+        return trainer_fn([w, b], list(grads), states, hyperparams)
+    # Pre-stack the full dataset on device so the periodic evaluate_loss
+    # stays inside one compiled call instead of looping in Python.
+    Xs = jnp.concatenate([jnp.array(X) for X, _ in data_iter], axis=0)
+    ys = jnp.concatenate([jnp.array(y) for _, y in data_iter], axis=0)
+    @jax.jit
+    def full_eval(w, b):
+        out = d2l.linreg(Xs, w, b)
+        y_r = ys.reshape(out.shape)
+        return ((out - y_r) ** 2 / 2).mean()
     for _ in range(num_epochs):
         for X, y in data_iter:
             X, y = jnp.array(X), jnp.array(y)
-            def loss_fn(w, b):
-                return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-            grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
-            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+            w, b = step(w, b, X, y)
             n += X.shape[0]
             if n % 200 == 0:
                 timer.stop()
-                net = lambda X: d2l.linreg(X, w, b)
                 animator.add(n/X.shape[0]/len(data_iter),
-                             (d2l.evaluate_loss(net, data_iter, loss),))
+                             (float(full_eval(w, b)),))
                 timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
     return timer.cumsum(), animator.Y[0]
@@ -717,29 +739,37 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
     n, timer = 0, d2l.Timer()
+    # JIT-fuse the per-batch optimizer update so per-step Python overhead
+    # stays out of the inner loop.
+    @jax.jit
+    def step(params, opt_state, X, y):
+        def loss_fn(params):
+            out = net.apply(params, X)
+            y_reshaped = y.reshape(out.shape)
+            return jnp.mean((out - y_reshaped) ** 2) / 2
+        l, grads = jax.value_and_grad(loss_fn)(params)
+        updates, opt_state = optimizer.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        return params, opt_state, l
+
+    # Pre-stack the full dataset on device so the periodic full-loss
+    # evaluation is a single compiled call.
+    Xs = jnp.concatenate([jnp.array(X) for X, _ in data_iter], axis=0)
+    ys = jnp.concatenate([jnp.array(y) for _, y in data_iter], axis=0)
+    @jax.jit
+    def full_eval(params):
+        out = net.apply(params, Xs)
+        y_r = ys.reshape(out.shape)
+        return jnp.mean((out - y_r) ** 2) / 2
     for _ in range(num_epochs):
         for X, y in data_iter:
             X, y = jnp.array(X), jnp.array(y)
-            def loss_fn(params):
-                out = net.apply(params, X)
-                y_reshaped = y.reshape(out.shape)
-                return jnp.mean((out - y_reshaped) ** 2) / 2
-            l, grads = jax.value_and_grad(loss_fn)(params)
-            updates, opt_state = optimizer.update(grads, opt_state, params)
-            params = optax.apply_updates(params, updates)
+            params, opt_state, _ = step(params, opt_state, X, y)
             n += X.shape[0]
             if n % 200 == 0:
                 timer.stop()
-                def eval_loss():
-                    ls = []
-                    for X_eval, y_eval in data_iter:
-                        X_eval, y_eval = jnp.array(X_eval), jnp.array(y_eval)
-                        out = net.apply(params, X_eval)
-                        y_eval = y_eval.reshape(out.shape)
-                        ls.append(jnp.mean((out - y_eval) ** 2) / 2)
-                    return sum(ls) / len(ls)
                 animator.add(n/X.shape[0]/len(data_iter),
-                             (eval_loss(),))
+                             (float(full_eval(params)),))
                 timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
 ```

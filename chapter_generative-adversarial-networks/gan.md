@@ -253,9 +253,10 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
 ```{.python .input}
 #@tab tensorflow
 #@save
+@tf.function(reduce_retracing=True)
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator."""
-    batch_size = X.shape[0]
+    batch_size = tf.shape(X)[0]
     ones = tf.ones((batch_size,)) # Labels corresponding to real data
     zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
     # Do not need to compute gradient for `net_G`, so it is outside GradientTape
@@ -264,8 +265,9 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
         real_Y = net_D(X)
         fake_Y = net_D(fake_X)
         # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
-        loss_D = (loss(ones, tf.squeeze(real_Y)) + loss(
-            zeros, tf.squeeze(fake_Y))) * batch_size / 2
+        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
+            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
+                batch_size, tf.float32) / 2
     grads_D = tape.gradient(loss_D, net_D.trainable_variables)
     optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
     return loss_D
@@ -274,6 +276,9 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
 ```{.python .input}
 #@tab jax
 #@save
+from functools import partial
+
+@partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_D'))
 def update_D(X, Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_D,
              optimizer_D):
     """Update discriminator."""
@@ -336,9 +341,10 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
 ```{.python .input}
 #@tab tensorflow
 #@save
+@tf.function(reduce_retracing=True)
 def update_G(Z, net_D, net_G, loss, optimizer_G):
     """Update generator."""
-    batch_size = Z.shape[0]
+    batch_size = tf.shape(Z)[0]
     ones = tf.ones((batch_size,))
     with tf.GradientTape() as tape:
         # We could reuse `fake_X` from `update_D` to save computation
@@ -346,7 +352,8 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
         # Recomputing `fake_Y` is needed since `net_D` is changed
         fake_Y = net_D(fake_X)
         # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
-        loss_G = loss(ones, tf.squeeze(fake_Y)) * batch_size
+        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
+            batch_size, tf.float32)
     grads_G = tape.gradient(loss_G, net_G.trainable_variables)
     optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
     return loss_G
@@ -355,6 +362,7 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
 ```{.python .input}
 #@tab jax
 #@save
+@partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_G'))
 def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
              optimizer_G):
     """Update generator."""

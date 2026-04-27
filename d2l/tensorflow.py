@@ -436,8 +436,13 @@ class FashionMNIST(d2l.DataModule):
                                 tf.cast(y, dtype='int32'))
         resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
         shuffle_buf = len(data[0]) if train else 1
+        # `drop_remainder=train` keeps every training minibatch the same
+        # shape so Keras `model.fit` / a `@tf.function`'d train-step compile
+        # once and stop retracing for the smaller last batch (a major
+        # speedup for HPO loops where a fresh model is fit per trial).
         return tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-            shuffle_buf).batch(self.batch_size).map(resize_fn)
+            shuffle_buf).batch(self.batch_size,
+                               drop_remainder=train).map(resize_fn)
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
         X, y = batch
@@ -1926,8 +1931,12 @@ def load_data_bananas(batch_size):
     val_images = tf.stack(val_dataset.features)
     train_iter = tf.data.Dataset.from_tensor_slices(
         (train_images, train_dataset.labels))
+    # `drop_remainder=True` keeps every training minibatch the same
+    # shape so the SSD `train_step` (`@tf.function`-wrapped at the call
+    # site in :numref:`sec_ssd`) traces once per epoch shape instead of
+    # retracing for the smaller last batch.
     train_iter = train_iter.shuffle(len(train_dataset.features)).batch(
-        batch_size).prefetch(tf.data.AUTOTUNE)
+        batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     val_iter = tf.data.Dataset.from_tensor_slices(
         (val_images, val_dataset.labels))
     val_iter = val_iter.batch(batch_size).prefetch(tf.data.AUTOTUNE)

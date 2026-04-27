@@ -545,9 +545,12 @@ class FashionMNIST(d2l.DataModule):
                                 tf.cast(y, dtype='int32'))
         resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
         shuffle_buf = len(data[0]) if train else 1
+        # `drop_remainder=train` for the same reason as the TF tab — JAX
+        # also retraces a `@jax.jit`'d step function per unique input shape.
         return tfds.as_numpy(
             tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-                shuffle_buf).batch(self.batch_size).map(resize_fn))
+                shuffle_buf).batch(self.batch_size,
+                                   drop_remainder=train).map(resize_fn))
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
         X, y = batch

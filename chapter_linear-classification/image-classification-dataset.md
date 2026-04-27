@@ -186,8 +186,13 @@ def get_dataloader(self, train):
                             tf.cast(y, dtype='int32'))
     resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
     shuffle_buf = len(data[0]) if train else 1
+    # `drop_remainder=train` keeps every training minibatch the same
+    # shape so Keras `model.fit` / a `@tf.function`'d train-step compile
+    # once and stop retracing for the smaller last batch (a major
+    # speedup for HPO loops where a fresh model is fit per trial).
     return tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-        shuffle_buf).batch(self.batch_size).map(resize_fn)
+        shuffle_buf).batch(self.batch_size,
+                           drop_remainder=train).map(resize_fn)
 ```
 
 ```{.python .input}
@@ -199,9 +204,12 @@ def get_dataloader(self, train):
                             tf.cast(y, dtype='int32'))
     resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
     shuffle_buf = len(data[0]) if train else 1
+    # `drop_remainder=train` for the same reason as the TF tab — JAX
+    # also retraces a `@jax.jit`'d step function per unique input shape.
     return tfds.as_numpy(
         tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-            shuffle_buf).batch(self.batch_size).map(resize_fn))
+            shuffle_buf).batch(self.batch_size,
+                               drop_remainder=train).map(resize_fn))
 ```
 
 To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.

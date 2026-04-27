@@ -305,8 +305,12 @@ def load_data_bananas(batch_size):
     val_images = tf.stack(val_dataset.features)
     train_iter = tf.data.Dataset.from_tensor_slices(
         (train_images, train_dataset.labels))
+    # `drop_remainder=True` keeps every training minibatch the same
+    # shape so the SSD `train_step` (`@tf.function`-wrapped at the call
+    # site in :numref:`sec_ssd`) traces once per epoch shape instead of
+    # retracing for the smaller last batch.
     train_iter = train_iter.shuffle(len(train_dataset.features)).batch(
-        batch_size).prefetch(tf.data.AUTOTUNE)
+        batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     val_iter = tf.data.Dataset.from_tensor_slices(
         (val_images, val_dataset.labels))
     val_iter = val_iter.batch(batch_size).prefetch(tf.data.AUTOTUNE)

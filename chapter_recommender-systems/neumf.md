@@ -383,7 +383,10 @@ We then create and initialize the model. We use a three-layer MLP with constant 
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
-net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
+# Use Xavier so MLP weights are large enough to escape the sigmoid plateau;
+# Normal(0.01) leaves the prediction layer's pre-sigmoid output near zero
+# (since MX Dense biases are zeros), and BPR gradients then vanish.
+net.initialize(ctx=devices, force_reinit=True, init=mx.init.Xavier())
 ```
 
 ```{.python .input  n=8}

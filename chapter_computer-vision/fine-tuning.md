@@ -85,12 +85,12 @@ import os
 #@tab jax
 %matplotlib inline
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
+import flax.linen as fnn
 import optax
-import keras
+import flaxmodels as fm
 import numpy as np
 import tensorflow as tf  # only used for tf.data input pipeline
 ```
@@ -257,24 +257,25 @@ test_augs = torchvision.transforms.Compose([
 ```{.python .input}
 #@tab jax
 # Image preprocessing. We use `tf.image` ops so the pipeline can run
-# inside `tf.data.Dataset.map` (Keras preprocessing layers don't work
-# there when Keras is set to the JAX backend). The ImageNet-style
-# mean subtraction (in BGR) matches the preprocessing expected by the
-# pretrained ResNet50 weights.
+# inside `tf.data.Dataset.map`. The ImageNet RGB mean/std normalization
+# matches the preprocessing expected by the `flaxmodels` pretrained
+# ResNet-18 weights (and the PyTorch/MXNet tabs).
 IMG_SIZE = 224
-_IMAGENET_MEAN_BGR = tf.constant([103.939, 116.779, 123.68], dtype=tf.float32)
+_IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+_IMAGENET_STD  = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+
+def _normalize(x):
+    return (tf.cast(x, tf.float32) / 255.0 - _IMAGENET_MEAN) / _IMAGENET_STD
 
 def train_preprocess(x):
     # `x` is a (256, 256, 3) float32 RGB image with values in [0, 255].
     x = tf.image.random_crop(x, size=(IMG_SIZE, IMG_SIZE, 3))
     x = tf.image.random_flip_left_right(x)
-    x = x[..., ::-1]  # RGB -> BGR
-    return x - _IMAGENET_MEAN_BGR
+    return _normalize(x)
 
 def test_preprocess(x):
     x = tf.image.resize_with_crop_or_pad(x, IMG_SIZE, IMG_SIZE)
-    x = x[..., ::-1]  # RGB -> BGR
-    return x - _IMAGENET_MEAN_BGR
+    return _normalize(x)
 ```
 
 ```{.python .input}
@@ -314,7 +315,13 @@ If this model is used for the first time,
 Internet connection is required for download.
 :end_tab:
 
-:begin_tab:`jax,tensorflow`
+:begin_tab:`jax`
+We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. The `flaxmodels` package provides a pure-Flax ResNet-18 with downloadable ImageNet weights via `pretrained='imagenet'`.
+If this model is used for the first time,
+Internet connection is required for download.
+:end_tab:
+
+:begin_tab:`tensorflow`
 We use ResNet-50, which was pretrained on the ImageNet dataset, as the source model. (Keras 3's `keras.applications` does not ship a pretrained ResNet-18, so we use ResNet-50 here even though the PyTorch and MXNet tabs use ResNet-18.) Here, we specify `weights='imagenet'` to automatically download the pretrained model parameters.
 If this model is used for the first time,
 Internet connection is required for download.
@@ -333,8 +340,14 @@ pretrained_net = torchvision.models.resnet18(
 
 ```{.python .input}
 #@tab jax
-# Load a pretrained ResNet50 via Keras 3 (with JAX backend)
-pretrained_net = keras.applications.ResNet50(weights='imagenet')
+# Load a pretrained ResNet-18 (Flax) with ImageNet weights via flaxmodels.
+pretrained_net = fm.ResNet18(output='logits', pretrained='imagenet',
+                             normalize=False)
+# Initialize to materialize parameters (and download/cache the pretrained
+# weights). The `init` call returns both `params` and `batch_stats`.
+_init_key = jax.random.PRNGKey(0)
+_dummy = jnp.zeros((1, IMG_SIZE, IMG_SIZE, 3), dtype=jnp.float32)
+pretrained_vars = pretrained_net.init(_init_key, _dummy, train=False)
 ```
 
 ```{.python .input}
@@ -354,9 +367,9 @@ The main purpose of this division is to facilitate the fine-tuning of model para
 :end_tab:
 
 :begin_tab:`jax`
-The pretrained source model from `tf.keras.applications` contains a number of feature layers and an output layer.
-We will use the pretrained weights for transfer learning.
-The final layer of the source model is shown below.
+The pretrained source model from `flaxmodels` contains a number of feature layers and a final fully-connected `Dense` layer (the 1000-way ImageNet classifier).
+The main purpose of this division is to facilitate the fine-tuning of model parameters of all layers but the output layer.
+The shape of the source model's classifier weight is shown below.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -377,7 +390,8 @@ pretrained_net.fc
 
 ```{.python .input}
 #@tab jax
-pretrained_net.layers[-1]
+# The 1000-way ImageNet classifier is the final Dense layer of the network.
+pretrained_vars['params']['Dense_0']['kernel'].shape
 ```
 
 ```{.python .input}
@@ -419,16 +433,27 @@ nn.init.xavier_uniform_(finetune_net.fc.weight);
 
 ```{.python .input}
 #@tab jax
-# Pretrained ResNet50 base + a fresh 2-way classification head
-base_model = keras.applications.ResNet50(weights='imagenet',
-                                         include_top=False,
-                                         pooling='avg',
-                                         input_shape=(IMG_SIZE, IMG_SIZE, 3))
-inputs = keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
-features = base_model(inputs, training=True)
-outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
-                             name='classifier')(features)
-finetune_net = keras.Model(inputs=inputs, outputs=outputs)
+# Pretrained ResNet-18 backbone + a fresh 2-way classification head.
+# The backbone returns the dictionary of intermediate activations; we use
+# the final 7x7x512 feature map (`block4_1`) and globally average-pool it.
+class FineTuneResNet18(fnn.Module):
+    num_classes: int = 2
+    @fnn.compact
+    def __call__(self, x, train: bool):
+        backbone = fm.ResNet18(output='activations', pretrained='imagenet',
+                               normalize=False)
+        feats = backbone(x, train=train)['block4_1']  # (B, 7, 7, 512)
+        feats = jnp.mean(feats, axis=(1, 2))          # global avg pool -> (B, 512)
+        logits = fnn.Dense(self.num_classes,
+                           kernel_init=fnn.initializers.glorot_uniform(),
+                           name='classifier')(feats)
+        return logits
+
+finetune_net = FineTuneResNet18(num_classes=2)
+# Initialize the wrapper. The backbone sub-module loads ImageNet weights
+# from the flaxmodels checkpoint during init; only the new `classifier`
+# Dense layer is randomly initialized.
+finetune_vars = finetune_net.init(jax.random.PRNGKey(1), _dummy, train=False)
 ```
 
 ```{.python .input}
@@ -504,80 +529,74 @@ def _make_tf_dataset(img_dir, preprocess, batch_size, shuffle=False):
     ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     return ds
 
-# If `param_group=True`, we freeze the pretrained base (an extreme form of
-# "use a much smaller learning rate on the base than on the head") and only
-# train the new classification head. This keeps the training loop simple
-# while illustrating the core fine-tuning idea.
-def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=2,
-                      param_group=True):
+# If `param_group=True`, the head is updated with a learning rate ten times
+# larger than the pretrained backbone (mirroring the PyTorch tab); otherwise
+# all parameters are trained at the same rate (used for `scratch_net`).
+def train_fine_tuning(net, variables, learning_rate, batch_size=128,
+                      num_epochs=5, param_group=True):
     train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
                                 train_preprocess, batch_size, shuffle=True)
     test_ds = _make_tf_dataset(os.path.join(data_dir, 'test'),
                                test_preprocess, batch_size, shuffle=False)
 
-    # Identify head variables (the final Dense layer) so we can either
-    # train only them (param_group=True) or train everything together.
-    head_ids = {id(v) for v in net.layers[-1].trainable_variables}
-    head_mask = tuple(id(v) in head_ids for v in net.trainable_variables)
+    params = variables['params']
+    batch_stats = variables.get('batch_stats', {})
+
+    # Per-parameter learning rate: 10x for the new classifier, 1x for the
+    # pretrained backbone. Use a label tree to drive optax.multi_transform.
     if param_group:
-        head_lr = learning_rate * 10
-        base_lr = 0.0  # freeze base
+        label_fn = lambda path, _: ('head' if path[0].key == 'classifier'
+                                    else 'base')
+        labels = jax.tree_util.tree_map_with_path(label_fn, params)
+        tx = optax.multi_transform(
+            {'head': optax.sgd(learning_rate * 10, momentum=0.9),
+             'base': optax.sgd(learning_rate, momentum=0.9)},
+            labels)
     else:
-        head_lr = learning_rate
-        base_lr = learning_rate
-    lr_schedule = tuple(head_lr if h else base_lr for h in head_mask)
-
-    # Collect current variable values as JAX arrays
-    trainable = [v.value for v in net.trainable_variables]
-    non_trainable = [v.value for v in net.non_trainable_variables]
-
-    # SGD with momentum; we scale per-parameter learning rates by hand.
-    tx = optax.sgd(learning_rate=1.0, momentum=0.9)
-    opt_state = tx.init(trainable)
+        tx = optax.sgd(learning_rate, momentum=0.9)
+    opt_state = tx.init(params)
 
     @jax.jit
-    def train_step(trainable, non_trainable, opt_state, x, y):
-        def loss_fn(trainable):
-            logits, new_nt = net.stateless_call(
-                trainable, non_trainable, x, training=True)
+    def train_step(params, batch_stats, opt_state, x, y):
+        def loss_fn(params):
+            out, new_state = net.apply(
+                {'params': params, 'batch_stats': batch_stats}, x,
+                train=True, mutable=['batch_stats'])
             loss = optax.softmax_cross_entropy_with_integer_labels(
-                logits, y).mean()
-            return loss, (logits, new_nt)
-        (loss, (logits, new_nt)), grads = jax.value_and_grad(
-            loss_fn, has_aux=True)(trainable)
-        grads_scaled = [g * lr for g, lr in zip(grads, lr_schedule)]
-        updates, new_opt_state = tx.update(grads_scaled, opt_state)
-        new_trainable = optax.apply_updates(trainable, updates)
+                out, y).mean() + 0.001 * sum(
+                jnp.sum(p ** 2) for p in jax.tree_util.tree_leaves(params))
+            return loss, (out, new_state['batch_stats'])
+        (loss, (logits, new_bs)), grads = jax.value_and_grad(
+            loss_fn, has_aux=True)(params)
+        updates, new_opt_state = tx.update(grads, opt_state, params)
+        new_params = optax.apply_updates(params, updates)
         acc = (jnp.argmax(logits, axis=-1) == y).mean()
-        return new_trainable, new_nt, new_opt_state, loss, acc
+        return new_params, new_bs, new_opt_state, loss, acc
 
     @jax.jit
-    def eval_step(trainable, non_trainable, x, y):
-        logits, _ = net.stateless_call(
-            trainable, non_trainable, x, training=False)
+    def eval_step(params, batch_stats, x, y):
+        logits = net.apply(
+            {'params': params, 'batch_stats': batch_stats}, x,
+            train=False, mutable=False)
         return (jnp.argmax(logits, axis=-1) == y).mean()
 
     for epoch in range(num_epochs):
         total_loss, total_acc, n_batches = 0.0, 0.0, 0
         for x, y in train_ds:
             x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
-            trainable, non_trainable, opt_state, loss, acc = train_step(
-                trainable, non_trainable, opt_state, x, y)
+            params, batch_stats, opt_state, loss, acc = train_step(
+                params, batch_stats, opt_state, x, y)
             total_loss += float(loss); total_acc += float(acc); n_batches += 1
         test_acc, test_n = 0.0, 0
         for x, y in test_ds:
             x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
-            test_acc += float(eval_step(trainable, non_trainable, x, y))
+            test_acc += float(eval_step(params, batch_stats, x, y))
             test_n += 1
         print(f'epoch {epoch + 1}, loss {total_loss / n_batches:.3f}, '
               f'train acc {total_acc / n_batches:.3f}, '
               f'test acc {test_acc / max(test_n, 1):.3f}')
 
-    # Persist the trained variable values back into the Keras model.
-    for v, val in zip(net.trainable_variables, trainable):
-        v.assign(val)
-    for v, val in zip(net.non_trainable_variables, non_trainable):
-        v.assign(val)
+    return {'params': params, 'batch_stats': batch_stats}
 ```
 
 ```{.python .input}
@@ -630,7 +649,7 @@ train_fine_tuning(finetune_net, 5e-5)
 
 ```{.python .input}
 #@tab jax
-train_fine_tuning(finetune_net, 5e-5)
+finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 5e-5)
 ```
 
 ```{.python .input}
@@ -657,15 +676,22 @@ train_fine_tuning(scratch_net, 5e-4, param_group=False)
 ```{.python .input}
 #@tab jax
 # Train from scratch: same architecture but with random weights.
-scratch_base = keras.applications.ResNet50(weights=None, include_top=False,
-                                           pooling='avg',
-                                           input_shape=(IMG_SIZE, IMG_SIZE, 3))
-sc_inputs = keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
-sc_features = scratch_base(sc_inputs, training=True)
-sc_outputs = keras.layers.Dense(2, kernel_initializer='glorot_uniform',
-                                name='classifier')(sc_features)
-scratch_net = keras.Model(inputs=sc_inputs, outputs=sc_outputs)
-train_fine_tuning(scratch_net, 5e-4, param_group=False)
+class ScratchResNet18(fnn.Module):
+    num_classes: int = 2
+    @fnn.compact
+    def __call__(self, x, train: bool):
+        backbone = fm.ResNet18(output='activations', pretrained=None,
+                               normalize=False)
+        feats = backbone(x, train=train)['block4_1']
+        feats = jnp.mean(feats, axis=(1, 2))
+        return fnn.Dense(self.num_classes,
+                         kernel_init=fnn.initializers.glorot_uniform(),
+                         name='classifier')(feats)
+
+scratch_net = ScratchResNet18(num_classes=2)
+scratch_vars = scratch_net.init(jax.random.PRNGKey(2), _dummy, train=False)
+scratch_vars = train_fine_tuning(scratch_net, scratch_vars, 5e-4,
+                                 param_group=False)
 ```
 
 ```{.python .input}
@@ -711,8 +737,13 @@ for param in finetune_net.parameters():
 
 ```{.python .input}
 #@tab jax
-# Freeze the pretrained ResNet50 base (layer index 1); only the head trains.
-finetune_net.get_layer('resnet50').trainable = False
+# Freeze the pretrained ResNet-18 backbone; only the new `classifier` head
+# is updated by setting the optimizer learning rate of every other parameter
+# to zero. For example, modify `train_fine_tuning` to use:
+#   optax.multi_transform(
+#       {'head': optax.sgd(lr * 10, momentum=0.9),
+#        'base': optax.set_to_zero()},
+#       labels)
 ```
 
 ```{.python .input}
@@ -739,7 +770,8 @@ hotdog_w.shape
 
 ```{.python .input}
 #@tab jax
-weight = pretrained_net.layers[-1].get_weights()[0]  # Shape: (2048, 1000)
+# The pretrained classifier maps 512-dim features to 1000 ImageNet classes.
+weight = pretrained_vars['params']['Dense_0']['kernel']  # Shape: (512, 1000)
 hotdog_w = weight[:, 934]
 hotdog_w.shape
 ```

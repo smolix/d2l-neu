@@ -198,6 +198,8 @@ class NiN(d2l.Classifier):
 
 ```{.python .input}
 %%tab jax
+import optax
+
 class NiN(d2l.Classifier):
     lr: float = 0.1
     num_classes = 10
@@ -216,6 +218,12 @@ class NiN(d2l.Classifier):
             lambda x: nn.avg_pool(x, window_shape=x.shape[1:3], strides=x.shape[1:3], padding='valid'),  # global avg pooling
             lambda x: x.reshape((x.shape[0], -1))  # flatten
         ])
+
+    def configure_optimizers(self):
+        # Add gradient clipping to stabilize training (matches PT/MX/TF
+        # behavior via d2l.Trainer.clip_gradients which is not applied in
+        # the JAX trainer).
+        return optax.chain(optax.clip_by_global_norm(1.0), optax.sgd(self.lr))
 ```
 
 We create a data example to see [**the output shape of each block**].

@@ -1976,12 +1976,19 @@ class TinySSD(keras.Model):
                    (bbox_labels * bbox_masks)))
         return cls + bbox
 
-    def train_step(self, data):
-        features, target = data
+    def cached_anchors(self, features):
+        # Anchors are deterministic functions of the feature-map shapes;
+        # for a fixed input shape they are identical every batch. Cache
+        # them on the first call to avoid invoking the (eager, NumPy)
+        # multibox_prior path inside multibox_target on every step.
+        if getattr(self, '_anchors_cache', None) is None:
+            self._anchors_cache = self(features, training=False)[0]
+        return self._anchors_cache
+
+    @tf.function(reduce_retracing=True)
+    def _grad_step(self, features, bbox_labels, bbox_masks, cls_labels):
         with tf.GradientTape() as tape:
-            anchors, cls_preds, bbox_preds = self(features, training=True)
-            bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
-                anchors, target)
+            _, cls_preds, bbox_preds = self(features, training=True)
             loss = self._compute_ssd_loss(cls_preds, cls_labels,
                                           bbox_preds, bbox_labels, bbox_masks)
         grads = tape.gradient(loss, self.trainable_variables)
@@ -1997,6 +2004,16 @@ class TinySSD(keras.Model):
         return {'loss': loss,
                 'cls_correct': cls_correct, 'cls_total': cls_total,
                 'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
+
+    def train_step(self, data):
+        features, target = data
+        # multibox_target uses NumPy (.numpy() on tensors); compute anchors
+        # eagerly (cached), run multibox_target eagerly, then run the
+        # gradient step inside @tf.function for speed.
+        anchors = self.cached_anchors(features)
+        bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(
+            anchors, target)
+        return self._grad_step(features, bbox_labels, bbox_masks, cls_labels)
 
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
@@ -2053,14 +2070,15 @@ def voc_rand_crop(feature, label, height, width):
     """Randomly crop both feature and label images.
 
     Defined in :numref:`sec_semantic_segmentation`"""
-    # Stack feature (HWC) and label (HWC) along channel axis, crop jointly,
-    # then split so both get the exact same random crop.
-    combined = np.concatenate([feature, label], axis=-1)  # HW x (C+3)
-    combined_t = tf.constant(combined)
-    crop = tf.image.random_crop(combined_t, size=[height, width,
-                                                  combined.shape[-1]])
-    crop = crop.numpy()
-    return crop[:, :, :3], crop[:, :, 3:]
+    # Use NumPy for the random crop so this is safe to run from worker
+    # threads (tf.image.random_crop holds graph-side state that breaks
+    # under tf.data parallel py_function calls).
+    H, W = feature.shape[0], feature.shape[1]
+    top = int(np.random.randint(0, H - height + 1))
+    left = int(np.random.randint(0, W - width + 1))
+    feat = feature[top:top + height, left:left + width, :]
+    lab = label[top:top + height, left:left + width, :]
+    return feat, lab
 
 class VOCSegDataset:
     """A customized dataset to load the VOC dataset.
@@ -2091,8 +2109,8 @@ class VOCSegDataset:
                                        *self.crop_size)
         # feature: HWC float32; label: HWC uint8 RGB -> class indices HW int32
         label_idx = voc_label_indices(label, self.colormap2label)
-        return (tf.constant(feature), tf.cast(tf.constant(label_idx),
-                                              tf.int32))
+        return (feature.astype(np.float32),
+                label_idx.astype(np.int32))
 
     def __len__(self):
         return len(self.features)
@@ -2110,23 +2128,31 @@ def load_data_voc(batch_size, crop_size):
     # Drop last partial batch
     n_train = (n_train // batch_size) * batch_size
     n_test = (n_test // batch_size) * batch_size
-    def make_generator(dataset, n):
-        def gen():
-            idxs = np.random.permutation(len(dataset))[:n]
-            for i in idxs:
-                feat, label = dataset[i]
-                yield feat, label
-        return gen
     def make_tf_dataset(dataset, n, shuffle):
+        # Cropping/labeling is plain NumPy; wrap in tf.py_function and run it
+        # in parallel so the GPU isn't starved between batches. We use
+        # from_tensor_slices(indices) + map(parallel) instead of a single
+        # serial Python generator.
         feat0, label0 = dataset[0]
-        ds = tf.data.Dataset.from_generator(
-            make_generator(dataset, n),
-            output_signature=(
-                tf.TensorSpec(shape=feat0.shape, dtype=tf.float32),
-                tf.TensorSpec(shape=label0.shape, dtype=tf.int32)))
+        feat_shape, label_shape = feat0.shape, label0.shape
+        def load(i):
+            feat, label = dataset[int(i)]
+            return feat, label
+        def tf_load(i):
+            feat, label = tf.py_function(
+                load, [i], (tf.float32, tf.int32))
+            feat.set_shape(feat_shape)
+            label.set_shape(label_shape)
+            return feat, label
+        ds = tf.data.Dataset.from_tensor_slices(
+            np.arange(len(dataset), dtype=np.int64))
         if shuffle:
-            ds = ds.shuffle(buffer_size=min(n, 1000))
+            ds = ds.shuffle(buffer_size=min(n, 1000),
+                            reshuffle_each_iteration=True)
+        ds = ds.take(n)
+        ds = ds.map(tf_load, num_parallel_calls=tf.data.AUTOTUNE)
         ds = ds.batch(batch_size, drop_remainder=True)
+        ds = ds.prefetch(tf.data.AUTOTUNE)
         return ds
     train_iter = make_tf_dataset(train_dataset, n_train, shuffle=True)
     test_iter = make_tf_dataset(test_dataset, n_test, shuffle=False)
@@ -2888,7 +2914,26 @@ class HPOTuner(d2l.HyperParameters):
         self.current_runtime += runtime
         self.cumulative_runtime.append(self.current_runtime)
 
-def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
+_hpo_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+@tf.function(reduce_retracing=True)
+def _hpo_train_step(model, optimizer, x, y):
+    with tf.GradientTape() as tape:
+        logits = model(x, training=True)
+        loss = _hpo_loss(y, logits)
+    grads = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    return loss
+
+@tf.function(reduce_retracing=True)
+def _hpo_eval_step(model, x, y):
+    logits = model(x, training=False)
+    preds = tf.argmax(logits, axis=-1, output_type=y.dtype)
+    correct = tf.reduce_sum(tf.cast(tf.equal(preds, y), tf.int64))
+    total = tf.cast(tf.size(y), tf.int64)
+    return correct, total
+
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     import keras
     model = keras.Sequential([
         keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
@@ -2901,17 +2946,20 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
         keras.layers.Dense(84, activation='relu'),
         keras.layers.Dense(10),
     ])
-    model.compile(
-        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy'],
-    )
+    optimizer = keras.optimizers.SGD(learning_rate=learning_rate)
     data = d2l.FashionMNIST(batch_size=batch_size)
-    train_ds = data.get_dataloader(True)
-    val_ds = data.get_dataloader(False)
-    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
-                        verbose=0)
-    val_acc = history.history['val_accuracy'][-1]
+    train_ds = data.get_dataloader(True).prefetch(tf.data.AUTOTUNE)
+    val_ds = data.get_dataloader(False).prefetch(tf.data.AUTOTUNE)
+    for _ in range(max_epochs):
+        for x, y in train_ds:
+            _hpo_train_step(model, optimizer, x, y)
+    correct = tf.constant(0, dtype=tf.int64)
+    total = tf.constant(0, dtype=tf.int64)
+    for x, y in val_ds:
+        c, t = _hpo_eval_step(model, x, y)
+        correct += c
+        total += t
+    val_acc = float(correct) / float(total)
     return 1 - val_acc
 
 class SuccessiveHalvingScheduler(d2l.HPOScheduler):
@@ -2978,11 +3026,12 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
+@tf.function(reduce_retracing=True)
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
+    batch_size = tf.shape(X)[0]
     ones = tf.ones((batch_size,)) # Labels corresponding to real data
     zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
     # Do not need to compute gradient for `net_G`, so it is outside GradientTape
@@ -2991,17 +3040,19 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
         real_Y = net_D(X)
         fake_Y = net_D(fake_X)
         # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
-        loss_D = (loss(ones, tf.squeeze(real_Y)) + loss(
-            zeros, tf.squeeze(fake_Y))) * batch_size / 2
+        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
+            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
+                batch_size, tf.float32) / 2
     grads_D = tape.gradient(loss_D, net_D.trainable_variables)
     optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
     return loss_D
 
+@tf.function(reduce_retracing=True)
 def update_G(Z, net_D, net_G, loss, optimizer_G):
     """Update generator.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
+    batch_size = tf.shape(Z)[0]
     ones = tf.ones((batch_size,))
     with tf.GradientTape() as tape:
         # We could reuse `fake_X` from `update_D` to save computation
@@ -3009,7 +3060,8 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
         # Recomputing `fake_Y` is needed since `net_D` is changed
         fake_Y = net_D(fake_X)
         # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
-        loss_G = loss(ones, tf.squeeze(fake_Y)) * batch_size
+        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
+            batch_size, tf.float32)
     grads_G = tape.gradient(loss_G, net_G.trainable_variables)
     optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
     return loss_G

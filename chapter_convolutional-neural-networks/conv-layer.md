@@ -408,8 +408,11 @@ for i in range(10):
 ```{.python .input}
 %%tab jax
 # Construct a two-dimensional convolutional layer with 1 output channel and a
-# kernel of shape (1, 2). For the sake of simplicity, we ignore the bias here
-conv2d = nn.Conv(1, kernel_size=(1, 2), use_bias=False, padding='VALID')
+# kernel of shape (1, 2). For the sake of simplicity, we ignore the bias here.
+# Use a small-stddev normal init so the toy 10-step SGD has time to converge
+# (Flax's default lecun_normal yields a much larger initial loss).
+conv2d = nn.Conv(1, kernel_size=(1, 2), use_bias=False, padding='VALID',
+                 kernel_init=nn.initializers.normal(stddev=0.01))
 
 # The two-dimensional convolutional layer uses four-dimensional input and
 # output in the format of (example, height, width, channel), where the batch

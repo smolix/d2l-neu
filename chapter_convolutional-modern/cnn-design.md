@@ -148,7 +148,7 @@ def stage(self, depth, num_channels, groups, bot_mul):
                 num_channels, groups, bot_mul, use_1x1conv=True, strides=2))
         else:
             net.add(d2l.ResNeXtBlock(
-                num_channels, num_channels, groups, bot_mul))
+                num_channels, groups, bot_mul))
     return net
 ```
 

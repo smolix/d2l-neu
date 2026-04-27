@@ -74,6 +74,13 @@ import numpy as np
 
 batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+# d2l.load_array uses shuffle(buffer_size=1000), which is too small for
+# the IMDb training set (25000 examples ordered as 12500 positives then
+# 12500 negatives). Reshuffle the full dataset so each epoch sees a
+# properly mixed class distribution, matching the PyTorch/JAX behavior.
+train_iter = (train_iter.unbatch()
+              .shuffle(25000, reshuffle_each_iteration=True)
+              .batch(batch_size))
 ```
 
 ## Representing Single Text with RNNs

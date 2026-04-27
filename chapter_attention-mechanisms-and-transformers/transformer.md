@@ -1024,7 +1024,15 @@ class TransformerDecoder(d2l.AttentionDecoder):
         return [enc_outputs, enc_valid_lens, [None] * self.num_blks]
 
     def forward(self, X, state):
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        # During step-by-step prediction, position-encode the new token using
+        # its true offset (the number of tokens already decoded), rather than
+        # always re-applying P[0:1]. This matches the pos encoding seen at
+        # training time and is critical for stable autoregressive decoding.
+        pos_offset = 0 if state[2][0] is None else state[2][0].shape[1]
+        X = self.embedding(X) * math.sqrt(self.num_hiddens)
+        seq_len = X.shape[1]
+        X = X + self.pos_encoding.P[:, pos_offset:pos_offset+seq_len, :].as_in_ctx(X.ctx)
+        X = self.pos_encoding.dropout(X)
         self._attention_weights = [[None] * len(self.blks) for _ in range (2)]
         for i, blk in enumerate(self.blks):
             X, state = blk(X, state)
@@ -1099,8 +1107,17 @@ class TransformerDecoder(d2l.AttentionDecoder):
         return [enc_outputs, enc_valid_lens, [None] * self.num_blks]
 
     def call(self, X, state, training=False, **kwargs):
-        X = self.pos_encoding(self.embedding(X) * tf.math.sqrt(
-            tf.cast(self.num_hiddens, dtype=tf.float32)), training=training)
+        # During step-by-step prediction, position-encode the new token using
+        # its true offset (the number of tokens already decoded), rather than
+        # always re-applying P[0:1]. This matches the pos encoding seen at
+        # training time and is critical for stable autoregressive decoding.
+        pos_offset = 0 if state[2][0] is None else state[2][0].shape[1]
+        seq_len = X.shape[1]
+        X = self.embedding(X) * tf.math.sqrt(
+            tf.cast(self.num_hiddens, dtype=tf.float32))
+        X = X + tf.cast(self.pos_encoding.P[:, pos_offset:pos_offset+seq_len, :],
+                        dtype=X.dtype)
+        X = self.pos_encoding.dropout(X, training=training)
         # 2 attention layers in decoder
         self._attention_weights = [[None] * len(self.blks) for _ in range(2)]
         for i, blk in enumerate(self.blks):

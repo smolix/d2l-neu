@@ -2,11 +2,63 @@
 
 Generated 2026-04-27 from `logs/make-all.log` (513 successful notebook
 runs across PyTorch, TensorFlow, JAX, MXNet — all 4 frameworks built
-cleanly; 0 failures).
+cleanly; 0 failures). Updated 2026-04-27 (later) with fix outcomes.
 
 This file is a *reporting* artifact: each notebook below is flagged
 with what is wrong, **not** how to fix it. Suggested causes are
 hypotheses and need verification before any code change.
+
+## Fix outcomes (2026-04-27 second pass)
+
+### Convergence — fixed (committed 58459a8)
+
+| notebook | bad framework | fix | result |
+|---|---|---|---|
+| `kaggle-cifar10.md` | JAX, TF | scale `transition_steps`/`decay_steps` by num_batches per epoch (per-step → per-epoch unit fix) | JAX valid_acc 0.188 → 0.375 (~2×). TF train_loss 1.426 → 0.802 |
+| `nin.md` | JAX | gradient clipping via `optax.chain(clip_by_global_norm(1.0), sgd)` in JAX `configure_optimizers` (d2l Trainer doesn't apply clip_gradients on the JAX path) | val_acc 0.76, no NaN |
+| `conv-layer.md` | JAX | smaller `kernel_init=normal(stddev=0.01)` so 10-step toy SGD has time to converge from init close to zero | loss 1.21 → 0.004 |
+| `cnn-design.md` | MX | drop a duplicate `num_channels` arg passed positionally to `d2l.ResNeXtBlock` (was being interpreted as `groups`) | val_loss now actually descends |
+| `neumf.md` | MX | switch `mx.init.Normal(0.01)` to `mx.init.Xavier()` so the prediction-layer pre-sigmoid output isn't pinned at the BPR saddle | committed but full eval re-run was killed mid-flight at rate-limit; needs final post-rate-limit verification |
+| `sentiment-analysis-{rnn,cnn}.md` | TF | reshuffle the train iter with buffer 25000 (TF's default `shuffle(1000)` was too small for class-ordered IMDb) | TF cnn loss 0.236 → 0.093 (60% drop, accuracy 0.864). TF rnn loss 0.262 → 0.257 (marginal) — accuracy fine in both |
+| `fine-tuning.md` | JAX | replace from-scratch ResNet-50 with `flaxmodels.ResNet18` ImageNet-pretrained, add `optax.multi_transform` differential head/backbone LR | valid_acc 0.604 → 0.876 (real transfer learning) |
+
+### Convergence — investigated, not fixed
+
+| notebook | bad framework | finding |
+|---|---|---|
+| `transformer.md` | TF, MX | Opus agent could not isolate root cause within scope of `transformer.md` alone; TF/MX produce repetitive output ("chez moi chez moi") on "i'm home" eval phrase even though that phrase is in the training set (idx 349). Agent identified secondary bug in `d2l/tensorflow.py` `EncoderDecoder.call` hardcoding `training=True` (out of scope). File reverted to baseline. |
+
+### Speed — fixed (committed 7caeef8)
+
+| notebook | framework | before | after | speedup | mechanism |
+|---|---|---:|---:|---:|---|
+| `neural-style.md` | JAX | 1710s | 488s | 3.5× | pre-extract content/style features once, fuse forward+grad+update into a single `@tf.function` (JAX uses TF VGG backbone) |
+| `kaggle-dog.md` | JAX | 776s | 216s | 3.6× | pre-extract features for the full training set ONCE using the frozen TF backbone; iterate small classifier head over cached JAX arrays |
+| `gan.md` | TF | 137s | 25s | 5.5× | `@tf.function(reduce_retracing=True)` on `d2l.update_D` / `d2l.update_G`; `tf.reshape` instead of `tf.squeeze` to avoid retraces |
+| `gan.md` | JAX | 309s | 61s | 5.1× | `@partial(jax.jit, static_argnames=...)` on `update_D` / `update_G` |
+| `minibatch-sgd.md` | JAX | 252s | 65s | 3.9× | JIT-fuse per-batch step (grad + optimizer); pre-stack dataset for `evaluate_loss`; switch `A.at[i,j].set` demo to NumPy buffer (was copying full matrix every write) |
+| `cnn-design.md` | MX | 781s | 280s | 2.8× | side effect of the convergence fix — model now actually trains, GPU work is meaningful instead of stalled |
+| `fcn.md` | TF | 439s | 112s | 3.9× | side effect of the d2l/tensorflow.py changes — no direct edit to `fcn.md` |
+
+### Speed — attempted but reverted or unfixed
+
+| notebook | framework | result | reason |
+|---|---|---|---|
+| `ssd.md` | TF | reverted (449s → 1860s, 4× slower with fix) | Opus agent's `@tf.function` on `_grad_step` + `cached_anchors` pattern interacted badly with Keras's eager `multibox_target` calls. Reverted to baseline. |
+| `hyperopt-api.md` | TF | reverted | agent passed `model` and `optimizer` as `@tf.function` arguments — that retraces per HPO trial because each trial passes a fresh Python-object model. Defeats the caching goal. Reverted. |
+| `sh-intro.md` | TF | not fixed (killed at 288s during rate-limit) | same issue as `hyperopt-api.md`; agent didn't get to verify before rate-limit. |
+| `dcgan.md` | TF | regression (1026s → 2021s) | dcgan inherits the `@tf.function`-decorated `d2l.update_D` / `update_G` from `gan.md` (committed). Helped gan (5.5×) but hurt dcgan (2×). Possibly retracing due to optimizer state being passed as a Python arg, or the @tf.function compilation overhead is large for the deep DCGAN generator. Not yet reverted; consider per-call caching or reverting the d2l-package decoration if dcgan is more important than gan. |
+
+### What still needs work after this round
+
+- `transformer.md` MX/TF BLEU (deep, decoder-side issue)
+- `dcgan.md` TF speed (regression vs baseline)
+- `ssd.md` TF speed (no successful fix yet)
+- `sh-intro.md` / `hyperopt-api.md` TF speed (model.fit retracing — needs proper graph caching across HPO trials)
+- `nli-attention.md` JAX (396s) and other JAX NLP variable-shape recompilation cases — not addressed in this pass
+- `bert-pretraining.md` JAX (187s), `bahdanau-attention.md` JAX (173s), `transformer.md` JAX speed (172s) — same JAX recompilation cluster
+
+Re-run `make all` after rate-limit reset to confirm overall convergence + total runtime impact.
 
 ---
 

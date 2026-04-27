@@ -24,9 +24,13 @@ hypotheses and need verification before any code change.
 
 ### Convergence — investigated, not fixed
 
-| notebook | bad framework | finding |
-|---|---|---|
-| `transformer.md` | TF, MX | Opus agent could not isolate root cause within scope of `transformer.md` alone; TF/MX produce repetitive output ("chez moi chez moi") on "i'm home" eval phrase even though that phrase is in the training set (idx 349). Agent identified secondary bug in `d2l/tensorflow.py` `EncoderDecoder.call` hardcoding `training=True` (out of scope). File reverted to baseline. |
+(none open as of 2026-04-27 third pass — see transformer fix below)
+
+### Convergence — fixed (committed a75016f, 2026-04-27 third pass)
+
+| notebook | bad framework | fix | result |
+|---|---|---|---|
+| `transformer.md` | TF, MX | offset `pos_encoding` by `state[2][0].shape[1]` in `TransformerDecoder.call/forward` so each AR decoding step adds `P[:, t:t+1, :]` instead of `P[:, 0:1, :]`. The original bug existed in all 4 frameworks but PT/JAX have large default embedding init (std≈1, ×sqrt(256)≈16) that dwarfs the PE signal and masks the bug; TF/MX have small Keras-style init (std≈0.03–0.04, ×16≈0.5) so PE dominates and the train/inference PE mismatch produces repetitive output | TF/MX `i'm home .` BLEU 0.522 → 1.000 (matches PT/JAX); other eval phrases unchanged |
 
 ### Speed — fixed (committed 7caeef8)
 
@@ -56,15 +60,6 @@ hypotheses and need verification before any code change.
 
 ### What still needs work after this round
 
-- `transformer.md` MX/TF BLEU — root cause identified by Opus agent
-  (positional encoding applied at position 0 every AR-decoding step
-  combined with Keras's small default `Embedding` init,
-  `RandomUniform(-0.05, 0.05)` vs PT's `normal(0, 1)`, makes the
-  position signal dominate the embedding signal in TF/MX). Fix in
-  flight: offset `pos_encoding` by `state[2][i].shape[1]` during
-  decoding so each AR step sees the correct position. PT/JAX
-  unaffected because their large default embedding init dwarfs the
-  positional component, masking the bug.
 - `dcgan.md` TF speed (regression vs baseline)
 - `nli-attention.md` JAX (396s) and other JAX NLP variable-shape recompilation cases — not addressed in this pass
 - `bert-pretraining.md` JAX (187s), `bahdanau-attention.md` JAX (173s), `transformer.md` JAX speed (172s) — same JAX recompilation cluster

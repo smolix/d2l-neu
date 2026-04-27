@@ -215,10 +215,16 @@ def dropout_layer(X, dropout):
 
 ```{.python .input}
 %%tab jax
-def dropout_layer(X, dropout, key=None):
+def dropout_layer(X, dropout, key=d2l.get_key()):
+    # Note: `key` is bound at function-definition time (mutable default
+    # pattern), so this educational from-scratch dropout uses one fixed
+    # key for all calls. That keeps the function JIT-traceable — calling
+    # `d2l.get_key()` at call time would mutate `d2l._master_key` and
+    # leak a tracer when invoked inside a JIT'd loss. Production
+    # randomness should go through Flax's `nn.Dropout`, which threads
+    # PRNG keys via `rngs={"dropout": ...}`.
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
-    if key is None: key = d2l.get_key()
     mask = jax.random.uniform(key, X.shape) > dropout
     return jnp.asarray(mask, dtype=jnp.float32) * X / (1.0 - dropout)
 ```

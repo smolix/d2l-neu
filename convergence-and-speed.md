@@ -40,21 +40,32 @@ hypotheses and need verification before any code change.
 | `cnn-design.md` | MX | 781s | 280s | 2.8× | side effect of the convergence fix — model now actually trains, GPU work is meaningful instead of stalled |
 | `fcn.md` | TF | 439s | 112s | 3.9× | side effect of the d2l/tensorflow.py changes — no direct edit to `fcn.md` |
 
-### Speed — attempted but reverted or unfixed
+### Speed — fixed (committed d0bf3af, 2026-04-27 third pass)
+
+| notebook | framework | before | after | speedup | mechanism |
+|---|---|---:|---:|---:|---|
+| `ssd.md` | TF | 449s | 375s | 16% | hoist `_grad_step` into a notebook-local `@tf.function(reduce_retracing=True)` that closes over `net`; cache anchors once via a single eager forward; keep `multibox_target` eager (it uses `.numpy()` calls); accumulate metrics as TF tensors to skip per-batch host syncs |
+| `sh-intro.md` | TF | 1358s | 1226s | 10% | `drop_remainder=train` on FashionMNIST loader (TF + JAX tabs in `image-classification-dataset.md`) keeps every training minibatch the same shape — Keras `model.fit` traces the train step once per epoch instead of retracing for the partial last batch |
+
+### Speed — attempted but at noise floor
 
 | notebook | framework | result | reason |
 |---|---|---|---|
-| `ssd.md` | TF | reverted (449s → 1860s, 4× slower with fix) | Opus agent's `@tf.function` on `_grad_step` + `cached_anchors` pattern interacted badly with Keras's eager `multibox_target` calls. Reverted to baseline. |
-| `hyperopt-api.md` | TF | reverted | agent passed `model` and `optimizer` as `@tf.function` arguments — that retraces per HPO trial because each trial passes a fresh Python-object model. Defeats the caching goal. Reverted. |
-| `sh-intro.md` | TF | not fixed (killed at 288s during rate-limit) | same issue as `hyperopt-api.md`; agent didn't get to verify before rate-limit. |
-| `dcgan.md` | TF | regression (1026s → 2021s) | dcgan inherits the `@tf.function`-decorated `d2l.update_D` / `update_G` from `gan.md` (committed). Helped gan (5.5×) but hurt dcgan (2×). Possibly retracing due to optimizer state being passed as a Python arg, or the @tf.function compilation overhead is large for the deep DCGAN generator. Not yet reverted; consider per-call caching or reverting the d2l-package decoration if dcgan is more important than gan. |
+| `hyperopt-api.md` | TF | ~570–650s vs 533s baseline | drop_remainder change in shared `image-classification-dataset.md` benefits `sh-intro` but is roughly noise-level for `hyperopt-api` (runs vary ±80s on the same code). `jit_compile=True` was tried and reverted — XLA compile cost wasn't amortized over a 10-epoch HPO trial. |
+| `dcgan.md` | TF | regression (1026s → 2021s) | dcgan inherits the `@tf.function`-decorated `d2l.update_D` / `update_G` from `gan.md` (committed 6f2fabe — moved decoration to notebook-local in gan/dcgan, but dcgan still regressed). Possibly @tf.function compilation overhead is large for the deep DCGAN generator. Not yet reverted; consider reverting the dcgan-side decoration if it's confirmed harmful. |
 
 ### What still needs work after this round
 
-- `transformer.md` MX/TF BLEU (deep, decoder-side issue)
+- `transformer.md` MX/TF BLEU — root cause identified by Opus agent
+  (positional encoding applied at position 0 every AR-decoding step
+  combined with Keras's small default `Embedding` init,
+  `RandomUniform(-0.05, 0.05)` vs PT's `normal(0, 1)`, makes the
+  position signal dominate the embedding signal in TF/MX). Fix in
+  flight: offset `pos_encoding` by `state[2][i].shape[1]` during
+  decoding so each AR step sees the correct position. PT/JAX
+  unaffected because their large default embedding init dwarfs the
+  positional component, masking the bug.
 - `dcgan.md` TF speed (regression vs baseline)
-- `ssd.md` TF speed (no successful fix yet)
-- `sh-intro.md` / `hyperopt-api.md` TF speed (model.fit retracing — needs proper graph caching across HPO trials)
 - `nli-attention.md` JAX (396s) and other JAX NLP variable-shape recompilation cases — not addressed in this pass
 - `bert-pretraining.md` JAX (187s), `bahdanau-attention.md` JAX (173s), `transformer.md` JAX speed (172s) — same JAX recompilation cluster
 

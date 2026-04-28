@@ -483,6 +483,15 @@ def main():
                 slides_root_yml.write_text('project:\n  type: default\n',
                                             encoding='utf-8')
 
+            # Inject executed notebook outputs into the slide qmds before
+            # rendering, so the rendered HTML carries cached outputs.
+            notebooks_dir = Path('_notebooks')
+            if notebooks_dir.exists() and (notebooks_dir / fw).exists():
+                from inject_outputs import inject_slides
+                img_outputs_dir = args.output / 'img' / 'outputs'
+                inject_slides(str(args.output), fw, str(notebooks_dir),
+                               str(img_outputs_dir))
+
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
             print(f'  Rendering {len(qmd_files)} deck(s) on '
                   f'{args.workers} CPU worker(s)')

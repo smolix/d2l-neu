@@ -110,6 +110,7 @@ def emit_pdf_qmd(blocks, framework):
 
         elif isinstance(block, CodeBlock):
             code = '\n'.join(block.lines)
+            id_prefix = f'#| label: {block.cell_id}\n' if block.cell_id else ''
 
             if not is_python_block(block.info) and block.tab is None:
                 lang = block.info or ''
@@ -117,17 +118,19 @@ def emit_pdf_qmd(blocks, framework):
             elif block.tab is None or block.tab == 'all':
                 # Flatten tab.selected() branches
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
             elif framework in (block.tab or ''):
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
             # else: different framework, skip
 
         elif isinstance(block, CodeTabSet):
             if framework in block.tabs:
                 code = '\n'.join(block.tabs[framework])
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                cid = block.ids.get(framework)
+                id_prefix = f'#| label: {cid}\n' if cid else ''
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
             # else: framework has no code, skip
 
         elif isinstance(block, TocBlock):

@@ -33,7 +33,15 @@ FALLBACK_ORDER = ['pytorch', 'mxnet', 'tensorflow', 'jax']
 
 OUTPUT_START = '<!-- d2l:output -->'
 OUTPUT_END = '<!-- /d2l:output -->'
-MAX_TEXT_LINES = 40
+
+# Per-mode caps on text-output lines. Slides default tighter than the
+# book / pdf since on-screen real estate is much smaller.
+MAX_TEXT_LINES_BY_MODE = {
+    'html': 40,
+    'pdf': 40,
+    'slides': 12,
+}
+MAX_TEXT_LINES = 40  # legacy default; some callers may pass mode='html'/'pdf'
 
 # Strip ANSI CSI escape sequences (e.g. Keras 3 progress bars). Leaving them
 # in the qmd corrupts Quarto's intermediate markdown — the ESC bytes confuse
@@ -44,13 +52,28 @@ _ANSI_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 # ── QMD Parsing ──────────────────────────────────────────────
 
 class QmdCell:
-    __slots__ = ('start_line', 'end_line', 'source', 'framework')
+    __slots__ = ('start_line', 'end_line', 'source', 'framework', 'cell_id')
 
-    def __init__(self, start_line, end_line, source, framework):
+    def __init__(self, start_line, end_line, source, framework, cell_id=None):
         self.start_line = start_line
         self.end_line = end_line
         self.source = source
         self.framework = framework  # None = shared / tab-all
+        self.cell_id = cell_id      # `#| label: <id>` extracted from source
+
+
+_LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
+
+
+def _extract_cell_id(code_lines):
+    """If first non-blank line is `#| label: <id>`, return the id."""
+    for ln in code_lines:
+        s = ln.strip()
+        if not s:
+            continue
+        m = _LABEL_LINE_RE.match(s)
+        return m.group(1) if m else None
+    return None
 
 
 def parse_qmd_cells(text):
@@ -58,6 +81,10 @@ def parse_qmd_cells(text):
 
     Tracks framework tab context via panel-tabset divs so each cell
     knows which framework it belongs to (or None for shared cells).
+
+    Each cell's `cell_id` field is populated from the first source
+    line if it matches `#| label: <id>`. Used by output injection to
+    match cells to executed notebook cells by ID.
     """
     lines = text.split('\n')
     cells = []
@@ -105,7 +132,8 @@ def parse_qmd_cells(text):
             end = i  # closing ```
 
             fw = current_fw if (True in div_stack) else None
-            cells.append(QmdCell(start, end, '\n'.join(code_lines), fw))
+            cid = _extract_cell_id(code_lines)
+            cells.append(QmdCell(start, end, '\n'.join(code_lines), fw, cid))
             i += 1
             continue
 
@@ -120,6 +148,24 @@ def parse_qmd_cells(text):
         i += 1
 
     return cells
+
+
+def index_ipynb_by_id(path):
+    """Load executed .ipynb and return:
+        ids: dict mapping cell.metadata.id (or cell.id) → outputs (list)
+        cell_count: total number of code cells (for fallback warnings)
+    """
+    nb = json.loads(Path(path).read_bytes())
+    ids = {}
+    count = 0
+    for cell in nb.get('cells', []):
+        if cell.get('cell_type') != 'code':
+            continue
+        count += 1
+        cid = cell.get('id') or cell.get('metadata', {}).get('id')
+        if cid:
+            ids[cid] = cell.get('outputs', [])
+    return ids, count
 
 
 def build_cell_map(cells, framework):
@@ -187,7 +233,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         img_dir: absolute Path to save images into
         cell_id: unique string for image filenames
         qmd_parent: absolute Path of the .qmd file's directory
-        mode: 'html' or 'pdf'
+        mode: 'html' | 'pdf' | 'slides'
 
     Returns:
         Quarto markdown string, or '' if no renderable output.
@@ -195,6 +241,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
     if not raw_outputs:
         return ''
 
+    max_lines = MAX_TEXT_LINES_BY_MODE.get(mode, MAX_TEXT_LINES)
     parts = []
     img_idx = 0
 
@@ -253,9 +300,9 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         text_lines = text.split('\n')
         n = len(text_lines)
 
-        if n > MAX_TEXT_LINES:
-            if mode == 'pdf':
-                half = MAX_TEXT_LINES // 2
+        if n > max_lines:
+            if mode in ('pdf', 'slides'):
+                half = max_lines // 2
                 text = '\n'.join(
                     text_lines[:half] + ['...'] + text_lines[-half:])
                 parts.append(
@@ -284,8 +331,13 @@ def strip_outputs(text):
 
 # ── HTML Injection ───────────────────────────────────────────
 
-def inject_file_html(qmd_path, notebooks_dir, img_base, project_root):
+def inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
+                      warnings):
     """Inject all-framework outputs into one multi-framework .qmd file.
+
+    Cells are matched to executed notebook cells by their `#| label: <id>`
+    (in the .qmd) and `cell.metadata.id` (in the .ipynb). Cells without
+    an ID are skipped; their absence is logged.
 
     Returns number of cells injected, or 0 if nothing changed.
     """
@@ -299,16 +351,16 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root):
     stem = qmd_path.stem
     rel_nb = Path(chapter) / f'{stem}.ipynb'
 
-    # Load outputs + cell maps for all available frameworks
-    fw_outputs = {}
-    fw_maps = {}
+    # Per-framework: id → outputs
+    fw_id_outputs = {}
     for fw in FRAMEWORKS:
         nb_path = Path(notebooks_dir) / fw / rel_nb
         if nb_path.exists():
-            fw_outputs[fw] = load_ipynb_outputs(nb_path)
-            fw_maps[fw] = build_cell_map(cells, fw)
+            ids, _ = index_ipynb_by_id(nb_path)
+            if ids:
+                fw_id_outputs[fw] = ids
 
-    if not fw_outputs:
+    if not fw_id_outputs:
         return 0
 
     img_dir = Path(img_base) / chapter
@@ -316,37 +368,35 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root):
     injections = []  # (after_line, markdown)
 
     for i, cell in enumerate(cells):
+        if not cell.cell_id:
+            warnings.append(f'{qmd_path}:{cell.start_line+1}: missing #| label')
+            continue
+
         if cell.framework is not None:
-            # Framework-specific cell: inject that framework's output
             fw = cell.framework
-            if fw not in fw_maps or i not in fw_maps[fw]:
+            if fw not in fw_id_outputs:
                 continue
-            idx = fw_maps[fw][i]
-            if idx >= len(fw_outputs.get(fw, [])):
-                continue
-            outs = fw_outputs[fw][idx]
+            outs = fw_id_outputs[fw].get(cell.cell_id)
             if not outs:
                 continue
             rendered = format_cell_output(
-                outs, img_dir, f'{stem}-c{idx}-{fw}',
+                outs, img_dir, f'{stem}-{cell.cell_id}-{fw}',
                 qmd_parent, 'html')
             if rendered:
                 injections.append((cell.end_line, rendered))
         else:
-            # Shared cell: collect outputs from all frameworks
+            # Shared cell: collect outputs from each framework that has
+            # this cell ID.
             fw_rendered = {}
             fw_fingerprints = {}
             for fw in FRAMEWORKS:
-                if fw not in fw_maps or i not in fw_maps[fw]:
+                if fw not in fw_id_outputs:
                     continue
-                idx = fw_maps[fw][i]
-                if idx >= len(fw_outputs.get(fw, [])):
-                    continue
-                outs = fw_outputs[fw][idx]
+                outs = fw_id_outputs[fw].get(cell.cell_id)
                 if not outs:
                     continue
                 rendered = format_cell_output(
-                    outs, img_dir, f'{stem}-c{idx}-{fw}',
+                    outs, img_dir, f'{stem}-{cell.cell_id}-{fw}',
                     qmd_parent, 'html')
                 if rendered:
                     fw_rendered[fw] = rendered
@@ -357,17 +407,14 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root):
 
             unique_fps = set(fw_fingerprints.values())
             if len(unique_fps) <= 1:
-                # All frameworks produce identical output — no tabset needed
                 injections.append(
                     (cell.end_line, next(iter(fw_rendered.values()))))
             else:
-                # Different outputs per framework — wrap in synced tabset
                 parts = ['::: {.panel-tabset group="framework" '
                          '.d2l-output-tabs}']
                 for fw in FRAMEWORKS:
                     if fw in fw_rendered:
-                        parts.append(
-                            f'\n## {FRAMEWORK_DISPLAY[fw]}\n')
+                        parts.append(f'\n## {FRAMEWORK_DISPLAY[fw]}\n')
                         parts.append(fw_rendered[fw])
                 parts.append('\n:::')
                 injections.append((cell.end_line, '\n'.join(parts)))
@@ -375,7 +422,6 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root):
     if not injections:
         return 0
 
-    # Apply injections bottom-to-top so line numbers stay valid
     lines = text.split('\n')
     for after_line, markdown in sorted(injections, key=lambda x: -x[0]):
         block = f'\n{OUTPUT_START}\n{markdown}\n{OUTPUT_END}'
@@ -394,9 +440,11 @@ def inject_html(project_root, notebooks_dir, img_base):
     qmd_files = sorted(project_root.glob('chapter_*/*.qmd'))
     total_files = 0
     total_cells = 0
+    warnings = []
 
     for qmd_path in qmd_files:
-        n = inject_file_html(qmd_path, notebooks_dir, img_base, project_root)
+        n = inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
+                              warnings)
         if n:
             rel = qmd_path.relative_to(project_root)
             print(f'  {rel}: {n} outputs')
@@ -404,18 +452,30 @@ def inject_html(project_root, notebooks_dir, img_base):
             total_cells += n
 
     print(f'  Injected {total_cells} outputs across {total_files} files')
+    if warnings:
+        print(f'  {len(warnings)} cells without #| label '
+              f'(skipped, no output injection):')
+        for w in warnings[:10]:
+            print(f'    {w}')
+        if len(warnings) > 10:
+            print(f'    ... and {len(warnings) - 10} more')
     return total_cells
 
 
 # ── PDF Injection ────────────────────────────────────────────
 
-def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
-                    project_root):
-    """Inject single-framework outputs into a PDF .qmd file.
+def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
+                       mode, fallback=True, warnings=None):
+    """Shared helper for pdf and slides modes.
 
-    Falls back through FALLBACK_ORDER if the primary framework has no
-    notebook for this file.
+    Single-framework qmd → injects outputs from the matching framework's
+    notebook by `#| label: <id>`. Cells without IDs are skipped.
+
+    `fallback`: pdf mode falls back through FALLBACK_ORDER if the target
+    framework has no notebook for this file. slides mode does not.
     """
+    if warnings is None:
+        warnings = []
     text = qmd_path.read_text(encoding='utf-8')
     text = strip_outputs(text)
     cells = parse_qmd_cells(text)
@@ -426,8 +486,10 @@ def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
     stem = qmd_path.stem
     rel_nb = Path(chapter) / f'{stem}.ipynb'
 
-    # Find notebook: target framework first, then fallback order
-    fw_order = [framework] + [f for f in FALLBACK_ORDER if f != framework]
+    fw_order = [framework]
+    if fallback:
+        fw_order += [f for f in FALLBACK_ORDER if f != framework]
+
     nb_path = None
     actual_fw = None
     for fw in fw_order:
@@ -440,26 +502,24 @@ def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
     if not nb_path:
         return 0
 
-    ipynb_outputs = load_ipynb_outputs(nb_path)
-    # PDF .qmd is single-framework: all cells are sequential
-    cell_map = build_cell_map(cells, actual_fw)
+    id_outputs, _ = index_ipynb_by_id(nb_path)
+    if not id_outputs:
+        return 0
 
     img_dir = Path(img_base) / chapter
     qmd_parent = qmd_path.parent.resolve()
     injections = []
 
-    for i, cell in enumerate(cells):
-        if i not in cell_map:
+    for cell in cells:
+        if not cell.cell_id:
+            warnings.append(f'{qmd_path}:{cell.start_line+1}: missing #| label')
             continue
-        idx = cell_map[i]
-        if idx >= len(ipynb_outputs):
-            continue
-        outs = ipynb_outputs[idx]
+        outs = id_outputs.get(cell.cell_id)
         if not outs:
             continue
         rendered = format_cell_output(
-            outs, img_dir, f'{stem}-c{idx}-{actual_fw}',
-            qmd_parent, 'pdf')
+            outs, img_dir, f'{stem}-{cell.cell_id}-{actual_fw}',
+            qmd_parent, mode)
         if rendered:
             injections.append((cell.end_line, rendered))
 
@@ -475,8 +535,13 @@ def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
     return len(injections)
 
 
+def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
+                    project_root, warnings):
+    return _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
+                              mode='pdf', fallback=True, warnings=warnings)
+
+
 def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
-    """Inject outputs into all PDF .qmd files for one framework."""
     pdf_dir = Path(pdf_dir).resolve()
     notebooks_dir = Path(notebooks_dir).resolve()
     img_base = Path(img_base).resolve()
@@ -484,10 +549,12 @@ def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
     qmd_files = sorted(pdf_dir.glob('chapter_*/*.qmd'))
     total_files = 0
     total_cells = 0
+    warnings = []
 
     for qmd_path in qmd_files:
         n = inject_file_pdf(
-            qmd_path, framework, notebooks_dir, img_base, project_root)
+            qmd_path, framework, notebooks_dir, img_base, project_root,
+            warnings)
         if n:
             rel = qmd_path.relative_to(pdf_dir)
             print(f'  {rel}: {n} outputs')
@@ -496,6 +563,47 @@ def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
 
     print(f'  Injected {total_cells} outputs across {total_files} files '
           f'(framework: {framework})')
+    if warnings:
+        print(f'  {len(warnings)} cells without #| label')
+    return total_cells
+
+
+# ── Slides Injection ─────────────────────────────────────────
+
+def inject_slides(slides_root, framework, notebooks_dir, img_base):
+    """Inject outputs into all slide .qmd files for one framework.
+
+    Slide qmd lives at `_slides/<fw>/<chapter>/<file>.qmd`. Outputs come
+    from `_notebooks/<fw>/<chapter>/<file>.ipynb`. No fallback — if the
+    framework's notebook doesn't exist, the deck has no outputs.
+    """
+    fw_dir = Path(slides_root).resolve() / framework
+    notebooks_dir = Path(notebooks_dir).resolve()
+    img_base = Path(img_base).resolve()
+
+    if not fw_dir.exists():
+        print(f'  No slides directory for {framework}')
+        return 0
+
+    qmd_files = sorted(fw_dir.rglob('*.qmd'))
+    total_files = 0
+    total_cells = 0
+    warnings = []
+
+    for qmd_path in qmd_files:
+        n = _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
+                               mode='slides', fallback=False,
+                               warnings=warnings)
+        if n:
+            rel = qmd_path.relative_to(fw_dir)
+            print(f'  {rel}: {n} outputs')
+            total_files += 1
+            total_cells += n
+
+    print(f'  Injected {total_cells} outputs across {total_files} files '
+          f'(framework: {framework})')
+    if warnings:
+        print(f'  {len(warnings)} cells without #| label')
     return total_cells
 
 
@@ -530,6 +638,18 @@ def main():
     p_pdf.add_argument('--img-dir', default='img/outputs',
         help='Directory for extracted images (default: img/outputs)')
 
+    # slides sub-command
+    p_sl = sub.add_parser('slides',
+        help='Inject single-framework outputs into _slides/<fw>/*.qmd')
+    p_sl.add_argument('--framework', required=True,
+        help='Target framework')
+    p_sl.add_argument('--slides-dir', default='_slides',
+        help='Slides root directory (default: _slides)')
+    p_sl.add_argument('--notebooks-dir', default='_notebooks',
+        help='Executed notebooks directory (default: _notebooks)')
+    p_sl.add_argument('--img-dir', default='_slides/img/outputs',
+        help='Directory for extracted images (default: _slides/img/outputs)')
+
     args = parser.parse_args()
 
     if args.mode == 'html':
@@ -539,6 +659,10 @@ def main():
         print(f'=== Injecting notebook outputs (PDF: {args.framework}) ===')
         inject_pdf(args.pdf_dir, args.framework, args.notebooks_dir,
                    args.img_dir, args.project_dir)
+    elif args.mode == 'slides':
+        print(f'=== Injecting notebook outputs (slides: {args.framework}) ===')
+        inject_slides(args.slides_dir, args.framework,
+                       args.notebooks_dir, args.img_dir)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,101 @@
+{
+  "slide": {
+    "scope": "markdown,quarto",
+    "prefix": "slide",
+    "body": [
+      "::: {.slide title=\"$1\"}",
+      "$0",
+      ":::"
+    ],
+    "description": "New slide div"
+  },
+  "subslide": {
+    "scope": "markdown,quarto",
+    "prefix": "subslide",
+    "body": [
+      "::: {.subslide title=\"$1\"}",
+      "$0",
+      ":::"
+    ],
+    "description": "Vertical sub-slide"
+  },
+  "frag": {
+    "scope": "markdown,quarto",
+    "prefix": "frag",
+    "body": [
+      "::: {.fragment .${1|fade-up,fade-in,highlight-blue,grow,shrink,fade-out|}}",
+      "$0",
+      ":::"
+    ],
+    "description": "Reveal.js fragment"
+  },
+  "pyin": {
+    "scope": "markdown,quarto",
+    "prefix": "pyin",
+    "body": [
+      "```{.python .input #${1:cell-id}}",
+      "$0",
+      "```"
+    ],
+    "description": "Python input fence with cell ID"
+  },
+  "pyin-tab": {
+    "scope": "markdown,quarto",
+    "prefix": "pyin-tab",
+    "body": [
+      "```{.python .input #${1:cell-id}}",
+      "#@tab ${2|pytorch,tensorflow,jax,mxnet|}",
+      "$0",
+      "```"
+    ],
+    "description": "Framework-specific Python input fence"
+  },
+  "pytab": {
+    "scope": "markdown,quarto",
+    "prefix": "pytab",
+    "body": [
+      ":begin_tab:`${1|pytorch,tensorflow,jax,mxnet|}`",
+      "$0",
+      ":end_tab:"
+    ],
+    "description": "Framework-specific prose tab"
+  },
+  "fwtag": {
+    "scope": "markdown,quarto",
+    "prefix": "fwtag",
+    "body": [
+      "#@tab ${1|pytorch,tensorflow,jax,mxnet|}"
+    ],
+    "description": "#@tab framework directive"
+  },
+  "section-label": {
+    "scope": "markdown,quarto",
+    "prefix": "sec",
+    "body": [
+      "## $1",
+      ":label:`sec_${2:slug}`"
+    ],
+    "description": "Section heading + :label:"
+  },
+  "numref": {
+    "scope": "markdown,quarto",
+    "prefix": "numref",
+    "body": [":numref:`${1:sec_foo}`"]
+  },
+  "eqref": {
+    "scope": "markdown,quarto",
+    "prefix": "eqref",
+    "body": [":eqref:`eq_${1:slug}`"]
+  },
+  "cite": {
+    "scope": "markdown,quarto",
+    "prefix": "cite",
+    "body": [":cite:`${1:Key.Year}`"]
+  },
+  "placeholder": {
+    "scope": "markdown,quarto",
+    "prefix": "@",
+    "body": ["@${1:cell-id}"],
+    "description": "Slide placeholder for cell ID"
+  }
+}

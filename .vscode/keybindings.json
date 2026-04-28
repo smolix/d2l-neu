@@ -1,0 +1,24 @@
+// Recommended d2l keybindings — copy these into your user keybindings.json
+// (the file lives at User-level, not workspace-level, in VS Code).
+//
+//   Cmd+E Cmd+J → Edit framework view (open .ipynb for current .md)
+//   Cmd+E Cmd+S → Switch framework
+//   Cmd+E Cmd+W → Watch slides for current file
+//
+// These bindings invoke the d2l VS Code extension commands.
+[
+  {
+    "key": "cmd+e cmd+j",
+    "command": "d2l.editFrameworkView",
+    "when": "resourceExtname == '.md'"
+  },
+  {
+    "key": "cmd+e cmd+s",
+    "command": "d2l.switchFramework"
+  },
+  {
+    "key": "cmd+e cmd+w",
+    "command": "d2l.watchSlides",
+    "when": "resourceExtname == '.md'"
+  }
+]

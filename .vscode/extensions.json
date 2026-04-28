@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "quarto.quarto",
+    "ms-python.python",
+    "ms-toolsai.jupyter",
+    "redhat.vscode-yaml"
+  ]
+}

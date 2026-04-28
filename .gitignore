@@ -58,7 +58,12 @@ Thumbs.db
 *.swp
 *.swo
 *~
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/keybindings.json
+!.vscode/d2l.code-snippets
+.d2l-sync-state/
 .idea/
 
 /.quarto/

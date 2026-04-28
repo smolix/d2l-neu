@@ -73,6 +73,7 @@ help:
 	@echo "  slides                  Build slides for all frameworks"
 	@echo "  lib                     Build d2l Python package"
 	@echo "  venv-<fw>              Sync UV environment for one framework"
+	@echo "  kernels                 Register d2l-<fw> ipykernels (for VS Code)"
 	@echo "  clean                   Remove build artifacts (keep data/)"
 	@echo "  veryclean               Remove everything including data/"
 	@echo "  all                     Full pipeline: generate, execute, rebuild with outputs"
@@ -104,6 +105,19 @@ d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 
 venv-%: .venv-%/.synced
 	@echo "Venv .venv-$* is ready"
+
+# ── Jupyter kernels ────────────────────────────────────────
+# Register one ipykernel per framework so VS Code can auto-select the
+# right interpreter from the .ipynb's metadata.kernelspec.name.
+
+.PHONY: kernels
+kernels: $(addprefix .venv-,$(addsuffix /.synced,$(FRAMEWORKS)))
+	@for fw in $(FRAMEWORKS); do \
+	  echo "Registering kernel d2l-$$fw"; \
+	  .venv-$$fw/bin/python -m ipykernel install --user \
+	    --name d2l-$$fw --display-name "d2l ($$fw)"; \
+	done
+	@echo "All d2l kernels registered."
 
 # ── HTML book ──────────────────────────────────────────────
 

@@ -1,0 +1,91 @@
+{
+  "name": "d2l-tools",
+  "displayName": "d2l Tools",
+  "description": "Workspace tools for the d2l-neu (Dive into Deep Learning) source repository: per-framework notebook editing, slide preview, source linting, and sync-back of notebook edits to source .md.",
+  "version": "0.1.0",
+  "publisher": "d2l-internal",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:tools/d2l_preprocess.py"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "d2l.editFrameworkView",
+        "title": "D2L: Edit Framework View",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.switchFramework",
+        "title": "D2L: Switch Framework",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.watchSlides",
+        "title": "D2L: Watch Slides",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.revealSourceForCell",
+        "title": "D2L: Reveal Source for Cell",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.lintSource",
+        "title": "D2L: Lint Source",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.openSlidePreview",
+        "title": "D2L: Open Slide Preview",
+        "category": "D2L"
+      },
+      {
+        "command": "d2l.toggleSyncDaemon",
+        "title": "D2L: Toggle Sync Daemon",
+        "category": "D2L"
+      }
+    ],
+    "configuration": {
+      "title": "D2L Tools",
+      "properties": {
+        "d2l.python": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python interpreter to invoke d2l tools (defaults to system python3)"
+        },
+        "d2l.syncDaemon.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Watch _notebooks/<fw>/**/*.ipynb and sync edits back to source on save"
+        },
+        "d2l.syncDaemon.debounceMs": {
+          "type": "number",
+          "default": 500,
+          "description": "Debounce window for sync_back after a notebook save"
+        },
+        "d2l.slidePreview.port": {
+          "type": "number",
+          "default": 4444,
+          "description": "Port for the quarto preview server when watching slides"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.0.0"
+  }
+}

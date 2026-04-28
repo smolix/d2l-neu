@@ -70,3 +70,4 @@ Thumbs.db
 
 **/*.quarto_ipynb
 .env
+run_one.sh

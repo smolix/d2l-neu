@@ -513,12 +513,20 @@ def main():
             counter = [0]
             total = len(qmd_files)
 
-            def render_one(qmd):
-                with print_lock:
-                    counter[0] += 1
-                    idx = counter[0]
-                    rel_q = str(qmd.relative_to(fw_dir))
-                    print(f'  [{idx}/{total}] {rel_q}', flush=True)
+            # Quarto's crossref / cites cache is shared across parallel
+            # renders; under contention, individual renders can fail with
+            # JSON-parse or stat-not-found errors. Retry once after a
+            # short jittered backoff.
+            def _is_transient(stderr):
+                return stderr and any(s in stderr for s in (
+                    'Unexpected end of JSON input',
+                    'Error opening book citations',
+                    'crossrefIndexForOutputFile',
+                    'NotFound:',
+                    'Kernel didn',
+                ))
+
+            def _try_render(qmd):
                 t0 = time.time()
                 try:
                     result = subprocess.run(
@@ -530,7 +538,25 @@ def main():
                 except subprocess.TimeoutExpired:
                     ok = False
                     stderr = f'TIMEOUT (>{args.timeout}s)'
-                elapsed = time.time() - t0
+                return ok, stderr, time.time() - t0
+
+            def render_one(qmd):
+                with print_lock:
+                    counter[0] += 1
+                    idx = counter[0]
+                    rel_q = str(qmd.relative_to(fw_dir))
+                    print(f'  [{idx}/{total}] {rel_q}', flush=True)
+                ok, stderr, elapsed = _try_render(qmd)
+                if not ok and _is_transient(stderr):
+                    import random
+                    time.sleep(0.5 + random.random())
+                    ok2, stderr2, elapsed2 = _try_render(qmd)
+                    if ok2:
+                        with print_lock:
+                            print(f'  RETRY OK ({elapsed2:.1f}s) {qmd.relative_to(fw_dir)}',
+                                  flush=True)
+                        return qmd, True, None
+                    stderr, elapsed = stderr2, elapsed + elapsed2
                 if not ok:
                     log_path = error_dir / qmd.relative_to(fw_dir).with_suffix('.log')
                     log_path.parent.mkdir(parents=True, exist_ok=True)

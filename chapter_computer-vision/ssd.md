@@ -688,7 +688,7 @@ Now we can define the complete model `TinySSD` as follows.
 #@tab mxnet
 class TinySSD(nn.Block):
     def __init__(self, num_classes, **kwargs):
-        super(TinySSD, self).__init__kwargs)
+        super(TinySSD, self).__init__(**kwargs)
         self.num_classes = num_classes
         for i in range(5):
             # Equivalent to the assignment statement `self.blk_i = get_blk(i)`
@@ -931,7 +931,7 @@ train_iter, _ = d2l.load_data_bananas(batch_size)
 ```
 
 There is only one class in the banana detection dataset. After defining the model,
-we need to (**initialize its parameters and define
+we need to initialize its parameters and define
 the optimization algorithm.
 
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}

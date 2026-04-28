@@ -65,7 +65,7 @@ from the base layer class and implement the forward propagation function.
 %%tab mxnet
 class CenteredLayer(nn.Block):
     def __init__(self, **kwargs):
-        super().__init__kwargs)
+        super().__init__(**kwargs)
 
     def forward(self, X):
         return X - X.mean()
@@ -303,7 +303,7 @@ dense.apply(params, jax.random.uniform(d2l.get_key(),
                                        (2, 5)))
 ```
 
-We can also (**construct models using custom layers.
+We can also construct models using custom layers.
 Once we have that we can use it just like the built-in fully connected layer.
 
 ```{.python .input #custom-layer-layers-with-parameters-4}

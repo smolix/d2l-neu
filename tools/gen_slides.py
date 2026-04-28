@@ -476,12 +476,26 @@ def main():
                 data_dir.mkdir(exist_ok=True)
                 data_link.symlink_to(data_dir)
 
-            # Place a minimal _quarto.yml in _slides/ so Quarto doesn't
-            # walk up into the book project context.
-            slides_root_yml = args.output / '_quarto.yml'
-            if not slides_root_yml.exists():
-                slides_root_yml.write_text('project:\n  type: default\n',
-                                            encoding='utf-8')
+            # Place a minimal _quarto.yml per-framework so Quarto's
+            # `.quarto/` cache (cites index, crossref index) is isolated
+            # between frameworks. A shared cache at _slides/.quarto/
+            # gets corrupted when one framework's render reads cached
+            # state populated by a previous framework's run, producing
+            # "Unexpected non-whitespace character after JSON" errors.
+            fw_yml = fw_dir / '_quarto.yml'
+            if not fw_yml.exists():
+                fw_yml.write_text('project:\n  type: default\n',
+                                   encoding='utf-8')
+            # Remove any legacy shared _quarto.yml at _slides/ root and
+            # its accompanying .quarto/ cache (left over from before
+            # this fix).
+            stale_root_yml = args.output / '_quarto.yml'
+            if stale_root_yml.exists():
+                stale_root_yml.unlink()
+            stale_root_cache = args.output / '.quarto'
+            if stale_root_cache.exists():
+                import shutil
+                shutil.rmtree(stale_root_cache)
 
             # Inject executed notebook outputs into the slide qmds before
             # rendering, so the rendered HTML carries cached outputs.

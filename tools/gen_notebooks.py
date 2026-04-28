@@ -69,15 +69,27 @@ def convert_prose_tabs_single(text, framework):
     return ''.join(parts)
 
 
-def emit_notebook_qmd(blocks, framework):
-    """Emit single-framework .qmd for notebook conversion."""
+def emit_notebook_qmd(blocks, framework, file_slug='cell'):
+    """Emit single-framework .qmd for notebook conversion.
+
+    Each markdown block is prepended with a hidden HTML comment header
+    `<!-- d2l:prose id=<file>-md-<seq> fw=<framework> -->`. The header
+    is invisible in rendered output but serves as a stable anchor for
+    sync_back.py to find the corresponding source location.
+    """
     parts = []
+    md_seq = 0
 
     for block in blocks:
         if isinstance(block, MarkdownBlock):
             text = '\n'.join(block.lines)
             text = translate_directives(text)
-            parts.append(text)
+            md_seq += 1
+            header = (f'<!-- d2l:prose id={file_slug}-md-{md_seq} '
+                      f'fw={framework} -->')
+            # Place header above the prose so it's the first thing in
+            # the markdown cell after `quarto convert`.
+            parts.append(f'{header}\n\n{text}')
 
         elif isinstance(block, CodeBlock):
             code = '\n'.join(block.lines)
@@ -149,13 +161,17 @@ def file_supports_framework(src_path, framework):
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
 
 
-def patch_ipynb_ids(ipynb_path: Path):
-    """Post-process a .ipynb produced by `quarto convert`: extract
-    `#| label: <id>` lines from code cells and turn them into proper
-    nbformat IDs (top-level cell.id and metadata.id), then strip the
-    label line from cell.source.
+def patch_ipynb_ids(ipynb_path: Path, framework: str):
+    """Post-process a .ipynb produced by `quarto convert`:
 
-    Idempotent. Safe to run on .ipynb files without label lines.
+    - Extract `#| label: <id>` lines from code cells and turn them into
+      proper nbformat IDs (top-level cell.id and metadata.id), then
+      strip the label line from cell.source.
+    - Set notebook-level metadata.kernelspec to point at the per-
+      framework kernel (`d2l-<fw>`), so VS Code auto-selects the
+      right interpreter.
+
+    Idempotent.
     """
     text = ipynb_path.read_text(encoding='utf-8')
     nb = json.loads(text)
@@ -166,7 +182,6 @@ def patch_ipynb_ids(ipynb_path: Path):
         source = cell.get('source')
         if not source:
             continue
-        # cell.source is a list of lines (with trailing \n) per nbformat.
         first = source[0] if isinstance(source, list) else source.split('\n', 1)[0]
         m = _LABEL_LINE_RE.match(first.rstrip('\n'))
         if not m:
@@ -174,14 +189,23 @@ def patch_ipynb_ids(ipynb_path: Path):
         cid = m.group(1)
         cell['id'] = cid
         cell.setdefault('metadata', {})['id'] = cid
-        # Strip the label line from source. The cell may begin with a
-        # blank trailing-newline line if the label was the only line; in
-        # practice it is always followed by code, so just drop the first.
         if isinstance(source, list):
             cell['source'] = source[1:]
         else:
             cell['source'] = source.split('\n', 1)[1] if '\n' in source else ''
         changed = True
+
+    # Notebook-level kernelspec
+    nb_meta = nb.setdefault('metadata', {})
+    desired_kernel = {
+        'name': f'd2l-{framework}',
+        'display_name': f'd2l ({FRAMEWORK_DISPLAY.get(framework, framework)})',
+        'language': 'python',
+    }
+    if nb_meta.get('kernelspec') != desired_kernel:
+        nb_meta['kernelspec'] = desired_kernel
+        changed = True
+
     if changed:
         ipynb_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False),
                               encoding='utf-8')
@@ -201,8 +225,15 @@ def convert_file_notebook(src_path, framework):
     from d2l_preprocess import group_code_tabs
     blocks = group_code_tabs(blocks, framework)
 
+    # Derive a file slug for prose-cell IDs
+    src_path = Path(src_path)
+    if src_path.stem == 'index':
+        slug = src_path.parent.name.removeprefix('chapter_')
+    else:
+        slug = src_path.stem
+
     # Emit single-framework output
-    output = emit_notebook_qmd(blocks, framework)
+    output = emit_notebook_qmd(blocks, framework, file_slug=slug)
 
     # Add minimal front matter for Jupyter
     front_matter = '---\njupyter: python3\nexecute:\n  enabled: false\n---\n'
@@ -274,7 +305,7 @@ def main():
                     if result.returncode == 0:
                         ipynb = qmd.with_suffix('.ipynb')
                         if ipynb.exists():
-                            patch_ipynb_ids(ipynb)
+                            patch_ipynb_ids(ipynb, fw)
                         qmd.unlink()
                         return True
                     else:

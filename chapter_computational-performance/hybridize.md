@@ -3,7 +3,7 @@
 
 So far, this book has focused on imperative programming, which makes use of statements such as `print`, `+`, and `if` to change a program's state. Consider the following example of a simple imperative program.
 
-```{.python .input}
+```{.python .input #hybridize-compilers-and-interpreters}
 #@tab all
 def add(a, b):
     return a + b
@@ -36,7 +36,7 @@ This allows for a significant amount of optimization. First, we can skip the Pyt
 Second, a compiler might optimize and rewrite the above code into `print((1 + 2) + (3 + 4))` or even `print(10)`. This is possible since a compiler gets to see the full code before turning it into machine instructions. For instance, it can release memory (or never allocate it) whenever a variable is no longer needed. Or it can transform the code entirely into an equivalent piece.
 To get a better idea, consider the following simulation of imperative programming (it is Python after all) below.
 
-```{.python .input}
+```{.python .input #hybridize-symbolic-programming}
 #@tab all
 def add_():
     return '''
@@ -95,7 +95,7 @@ The imperative programming paradigm is now the default in Tensorflow 2, a welcom
 
 The easiest way to get a feel for how hybridization works is to consider deep networks with multiple layers. Conventionally the Python interpreter will need to execute the code for all layers to generate an instruction that can then be forwarded to a CPU or a GPU. For a single (fast) computing device this does not cause any major issues. On the other hand, if we use an advanced 8-GPU server such as an AWS P3dn.24xlarge instance Python will struggle to keep all GPUs busy. The single-threaded Python interpreter becomes the bottleneck here. Let's see how we can address this for significant parts of the code by replacing `Sequential` with `HybridSequential`. We begin by defining a simple MLP.
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -116,7 +116,7 @@ net = get_net()
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-1}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -136,7 +136,7 @@ net = get_net()
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -156,7 +156,7 @@ net = get_net()
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -198,25 +198,25 @@ We can re-enable this functionality with tf.function. tf.function is more common
 By wrapping the model's `apply` function with `jax.jit`, we compile the computation into an optimized XLA program. The first call traces the function and compiles it; subsequent calls execute the compiled version directly. The model's computation result remains unchanged.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-2}
 #@tab mxnet
 net.hybridize()
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-2}
 #@tab pytorch
 net = torch.jit.script(net)
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-2}
 #@tab tensorflow
 net = tf.function(net)
 net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-hybridizing-the-sequential-class-2}
 #@tab jax
 jitted_apply = jax.jit(net.apply)
 jitted_apply(params, x)
@@ -243,7 +243,7 @@ In JAX, `jax.jit` is the natural way to compile computations. Simply wrapping a 
 
 To demonstrate the performance improvement gained by compilation we compare the time needed to evaluate `net(x)` before and after hybridization. Let's define a class to measure this time first. It will come handy throughout the chapter as we set out to measure (and improve) performance.
 
-```{.python .input}
+```{.python .input #hybridize-acceleration-by-hybridization-1}
 #@tab all
 #@save
 class Benchmark:
@@ -275,7 +275,7 @@ Now we can invoke the network three times, once executed eagerly, once with grap
 Now we can invoke the network twice, once without and once with `jax.jit`. Note that the first JIT call includes compilation time, so we call the jitted function once before timing to warm up the compiled cache.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-acceleration-by-hybridization-2}
 #@tab mxnet
 net = get_net()
 with Benchmark('Without hybridization'):
@@ -288,7 +288,7 @@ with Benchmark('With hybridization'):
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #hybridize-acceleration-by-hybridization-2}
 #@tab pytorch
 net = get_net()
 with Benchmark('Without torchscript'):
@@ -299,7 +299,7 @@ with Benchmark('With torchscript'):
     for i in range(1000): net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-acceleration-by-hybridization-2}
 #@tab tensorflow
 net = get_net()
 with Benchmark('Eager Mode'):
@@ -310,7 +310,7 @@ with Benchmark('Graph Mode'):
     for i in range(1000): net(x)
 ```
 
-```{.python .input}
+```{.python .input #hybridize-acceleration-by-hybridization-2}
 #@tab jax
 with Benchmark('Without jax.jit'):
     for i in range(1000): net.apply(params, x)
@@ -357,26 +357,26 @@ Let's see the `saved_model` instance in action.
 In JAX, model parameters are stored as nested Python dictionaries (pytrees), which can be serialized using standard tools. The `flax.serialization` module provides `to_bytes` and `from_bytes` for converting parameters to and from byte strings. Additionally, `jax.jit`-compiled functions can be exported to StableHLO, a portable intermediate representation that can be executed independently of Python.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-1}
 #@tab mxnet
 net.export('my_mlp')
 !ls -lh my_mlp*
 ```
 
-```{.python .input}
+```{.python .input #hybridize-serialization-1}
 #@tab pytorch
 net.save('my_mlp')
 !ls -lh my_mlp*
 ```
 
-```{.python .input}
+```{.python .input #hybridize-serialization-1}
 #@tab tensorflow
 net = get_net()
 tf.saved_model.save(net, 'my_mlp')
 !ls -lh my_mlp*
 ```
 
-```{.python .input}
+```{.python .input #hybridize-serialization-1}
 #@tab jax
 from flax import serialization
 param_bytes = serialization.to_bytes(params)
@@ -389,7 +389,7 @@ print(jax.make_jaxpr(net.apply)(params, x))
 The model is decomposed into a (large binary) parameter file and a JSON description of the program required to execute the model computation. The files can be read by other front-end languages supported by Python or MXNet, such as C++, R, Scala, and Perl. Let's have a look at the first few lines in the model description.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-2}
 #@tab mxnet
 !head my_mlp-symbol.json
 ```
@@ -400,7 +400,7 @@ Earlier, we demonstrated that, after calling the `hybridize` function, the model
 Besides, contrary to the `Block` instance, which needs to use the `forward` function, for a `HybridBlock` instance we need to use the `hybrid_forward` function.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-3}
 #@tab mxnet
 class HybridNet(nn.HybridBlock):
     def __init__(self, **kwargs):
@@ -420,7 +420,7 @@ class HybridNet(nn.HybridBlock):
 The code above implements a simple network with 4 hidden units and 2 outputs. The `hybrid_forward` function takes an additional argument `F`. This is needed since, depending on whether the code has been hybridized or not, it will use a slightly different library (`ndarray` or `symbol`) for processing. Both classes perform very similar functions and MXNet automatically determines the argument. To understand what is going on we print the arguments as part of the function invocation.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-4}
 #@tab mxnet
 net = HybridNet()
 net.initialize()
@@ -432,7 +432,7 @@ net(x)
 Repeating the forward computation will lead to the same output (we omit details). Now let's see what happens if we invoke the `hybridize` function.
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-5}
 #@tab mxnet
 net.hybridize()
 net(x)
@@ -442,7 +442,7 @@ net(x)
 Instead of using `ndarray` we now use the `symbol` module for `F`. Moreover, even though the input is of `ndarray` type, the data flowing through the network is now converted to `symbol` type as part of the compilation process. Repeating the function call leads to a surprising outcome:
 :end_tab:
 
-```{.python .input}
+```{.python .input #hybridize-serialization-6}
 #@tab mxnet
 net(x)
 ```

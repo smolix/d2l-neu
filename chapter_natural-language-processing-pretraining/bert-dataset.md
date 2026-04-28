@@ -19,7 +19,7 @@ we use a smaller corpus WikiText-2 :cite:`Merity.Xiong.Bradbury.ea.2016`.
 Comparing with the PTB dataset used for pretraining word2vec in :numref:`sec_word2vec_data`,
 WikiText-2 (i) retains the original punctuation, making it suitable for next sentence prediction; (ii) retains the original case and numbers; (iii) is over twice larger.
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
@@ -29,7 +29,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab pytorch
 from d2l import torch as d2l
 import os
@@ -37,7 +37,7 @@ import random
 import torch
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -49,7 +49,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -66,7 +66,7 @@ To split sentences, we only use the period as the delimiter for simplicity.
 We leave discussions of more complex sentence splitting techniques in the exercises
 at the end of this section.
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-2}
 #@tab all
 #@save
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
@@ -99,7 +99,7 @@ According to descriptions of :numref:`subsec_nsp`,
 the `_get_next_sentence` function generates a training example
 for the binary classification task.
 
-```{.python .input}
+```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-1}
 #@tab all
 #@save
 def _get_next_sentence(sentence, next_sentence, paragraphs):
@@ -117,7 +117,7 @@ from the input `paragraph` by invoking the `_get_next_sentence` function.
 Here `paragraph` is a list of sentences, where each sentence is a list of tokens.
 The argument `max_len` specifies the maximum length of a BERT input sequence during pretraining.
 
-```{.python .input}
+```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-2}
 #@tab all
 #@save
 def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
@@ -150,7 +150,7 @@ a special “&lt;mask&gt;” token or a random token, or remain unchanged.
 In the end, the function returns the input tokens after possible replacement,
 the token indices where predictions take place and labels for these predictions.
 
-```{.python .input}
+```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-1}
 #@tab all
 #@save
 def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
@@ -189,7 +189,7 @@ as an input and returns indices of the input tokens
 the token indices where predictions take place,
 and label indices for these predictions.
 
-```{.python .input}
+```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-2}
 #@tab all
 #@save
 def _get_mlm_data_from_tokens(tokens, vocab):
@@ -220,7 +220,7 @@ we still need to define a helper function `_pad_bert_inputs`
 to [**append the special “&lt;pad&gt;” tokens to the inputs.**]
 Its argument `examples` contain the outputs from the helper functions `_get_nsp_data_from_paragraph` and `_get_mlm_data_from_tokens` for the two pretraining tasks.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab mxnet
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -250,7 +250,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab pytorch
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -281,7 +281,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab jax
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -312,7 +312,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab tensorflow
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -355,7 +355,7 @@ the original byte pair encoding algorithm in :numref:`subsec_Byte_Pair_Encoding`
 For simplicity, we use the `d2l.tokenize` function for tokenization.
 Infrequent tokens that appear less than five times are filtered out.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab mxnet
 #@save
 class _WikiTextDataset(gluon.data.Dataset):
@@ -394,7 +394,7 @@ class _WikiTextDataset(gluon.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab pytorch
 #@save
 class _WikiTextDataset(torch.utils.data.Dataset):
@@ -433,7 +433,7 @@ class _WikiTextDataset(torch.utils.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab jax
 #@save
 class _WikiTextDataset:
@@ -472,7 +472,7 @@ class _WikiTextDataset:
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab tensorflow
 #@save
 class _WikiTextDataset:
@@ -509,7 +509,7 @@ By using the `_read_wiki` function and the `_WikiTextDataset` class,
 we define the following `load_data_wiki` to [**download the WikiText-2 dataset
 and generate pretraining examples**] from it.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab mxnet
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -522,7 +522,7 @@ def load_data_wiki(batch_size, max_len):
     return train_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab pytorch
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -535,7 +535,7 @@ def load_data_wiki(batch_size, max_len):
     return train_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab jax
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -562,7 +562,7 @@ def load_data_wiki(batch_size, max_len):
     return data_iter(), train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab tensorflow
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -587,7 +587,7 @@ we [**print out the shapes of a minibatch of BERT pretraining examples**].
 Note that in each BERT input sequence,
 $10$ ($64 \times 0.15$) positions are predicted for the masked language modeling task.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-4}
 #@tab all
 batch_size, max_len = 512, 64
 train_iter, vocab = load_data_wiki(batch_size, max_len)
@@ -604,7 +604,7 @@ In the end, let's take a look at the vocabulary size.
 Even after filtering out infrequent tokens,
 it is still over twice larger than that of the PTB dataset.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-5}
 #@tab all
 len(vocab)
 ```

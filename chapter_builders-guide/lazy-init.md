@@ -41,26 +41,26 @@ can greatly simplify the task of specifying
 and subsequently modifying our models.
 Next, we go deeper into the mechanics of initialization.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -70,19 +70,19 @@ from jax import numpy as jnp
 
 To begin, let's instantiate an MLP.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(256, activation='relu'))
 net.add(nn.Dense(10))
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Dense(256, activation=tf.nn.relu),
@@ -90,7 +90,7 @@ net = tf.keras.models.Sequential([
 ])
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab jax
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 ```
@@ -120,18 +120,18 @@ imperative frameworks; the JAX path simply runs `net.init(...)` once and
 proceeds.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab mxnet
 print(net.collect_params)
 print(net.collect_params())
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab pytorch
 net[0].weight
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab tensorflow
 [net.layers[i].get_weights() for i in range(len(net.layers))]
 ```
@@ -154,7 +154,7 @@ Using `net.get_weights()` would throw an error since the weights
 have not been initialized yet.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-4}
 %%tab mxnet
 net.initialize()
 net.collect_params()
@@ -172,7 +172,7 @@ to initialize the parameters.
 Next let's pass data through the network
 to make the framework finally initialize parameters.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab mxnet
 X = np.random.uniform(size=(2, 20))
 net(X)
@@ -180,7 +180,7 @@ net(X)
 net.collect_params()
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab pytorch
 X = torch.rand(2, 20)
 net(X)
@@ -188,14 +188,14 @@ net(X)
 net[0].weight.shape
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab tensorflow
 X = tf.random.uniform((2, 20))
 net(X)
 [w.shape for w in net.get_weights()]
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab jax
 params = net.init(d2l.get_key(), jnp.zeros((2, 20)))
 jax.tree_util.tree_flatten_with_path(
@@ -235,7 +235,7 @@ Ultimately the method initializes the model returning the parameters.
 We have been using it under the hood in the previous sections as well.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-6}
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
 def apply_init(self, inputs, init=None):
@@ -244,7 +244,7 @@ def apply_init(self, inputs, init=None):
         self.net.apply(init)
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-6}
 %%tab jax
 @d2l.add_to_class(d2l.Module)  #@save
 def apply_init(self, dummy_input, key):

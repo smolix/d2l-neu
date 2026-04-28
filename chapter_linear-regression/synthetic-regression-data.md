@@ -17,7 +17,7 @@ algorithms and to confirm that our implementations work as expected.
 For example, if we create data for which the correct parameters are known *a priori*,
 then we can check that our model can in fact recover them.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -26,7 +26,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -34,7 +34,7 @@ import torch
 import random
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -42,7 +42,7 @@ import tensorflow as tf
 import random
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -79,7 +79,7 @@ It is good practice to allow the setting of any additional hyperparameters.
 We accomplish this with `save_hyperparameters()`. 
 The `batch_size` will be determined later.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab pytorch
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -93,7 +93,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab tensorflow
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -107,7 +107,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab jax
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -123,7 +123,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab mxnet
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -140,14 +140,14 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
 Below, we set the true parameters to $\mathbf{w} = [2, -3.4]^\top$ and $b = 4.2$.
 Later, we can check our estimated parameters against these *ground truth* values.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-2}
 %%tab all
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
 [**Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar.**] Let's have a look at the first entry.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 %%tab all
 print('features:', data.X[0],'\nlabel:', data.y[0])
 ```
@@ -168,7 +168,7 @@ in the former, we will want to read the data in random order,
 whereas for the latter, being able to read data in a pre-defined order 
 may be important for debugging purposes.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab pytorch
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -183,7 +183,7 @@ def get_dataloader(self, train):
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab tensorflow
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -198,7 +198,7 @@ def get_dataloader(self, train):
         yield tf.gather(self.X, j), tf.gather(self.y, j)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab jax
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -213,7 +213,7 @@ def get_dataloader(self, train):
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab mxnet
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -232,7 +232,7 @@ To build some intuition, let's inspect the first minibatch of
 data. Each minibatch of features provides us with both its size and the dimensionality of input features.
 Likewise, our minibatch of labels will have a matching shape given by `batch_size`.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-2}
 %%tab all
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
@@ -275,7 +275,7 @@ and JAX suggests using them instead. Here we will grab TensorFlow’s data loade
 and modify it slightly to make it work with JAX.
 :end_tab:
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab pytorch
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -285,7 +285,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
                                        shuffle=train)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab tensorflow
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -295,7 +295,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         buffer_size=shuffle_buffer).batch(self.batch_size)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab jax
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -313,7 +313,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         ).batch(self.batch_size, drop_remainder=train))
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab mxnet
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -323,7 +323,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
                                  shuffle=train)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-2}
 %%tab all
 @d2l.add_to_class(SyntheticRegressionData)  #@save
 def get_dataloader(self, train):
@@ -333,7 +333,7 @@ def get_dataloader(self, train):
 
 The new data loader behaves just like the previous one, except that it is more efficient and has some added functionality.
 
-```{.python .input  n=4}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-3  n=4}
 %%tab all
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
@@ -344,7 +344,7 @@ supports the built-in `__len__` method,
 so we can query its length, 
 i.e., the number of batches.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-4}
 %%tab all
 len(data.train_dataloader())
 ```

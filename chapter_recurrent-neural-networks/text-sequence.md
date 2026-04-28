@@ -21,7 +21,7 @@ execute the following steps:
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=2}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=2}
 %%tab mxnet
 import collections
 import re
@@ -31,7 +31,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=3}
 %%tab pytorch
 import collections
 import re
@@ -40,7 +40,7 @@ import torch
 import random
 ```
 
-```{.python .input  n=4}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=4}
 %%tab tensorflow
 import collections
 import re
@@ -49,7 +49,7 @@ import tensorflow as tf
 import random
 ```
 
-```{.python .input}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data}
 %%tab jax
 import collections
 from d2l import jax as d2l
@@ -71,7 +71,7 @@ the preprocessing pipeline.
 The following `_download` method
 (**reads the raw text into a string**).
 
-```{.python .input  n=5}
+```{.python .input #text-sequence-reading-the-dataset-1  n=5}
 %%tab all
 class TimeMachine(d2l.DataModule): #@save
     """The Time Machine dataset."""
@@ -88,7 +88,7 @@ raw_text[:60]
 
 For simplicity, we ignore punctuation and capitalization when preprocessing the raw text.
 
-```{.python .input  n=6}
+```{.python .input #text-sequence-reading-the-dataset-2  n=6}
 %%tab all
 @d2l.add_to_class(TimeMachine)  #@save
 def _preprocess(self, text):
@@ -116,7 +116,7 @@ using a much smaller vocabulary
 Below, we tokenize our preprocessed text
 into a sequence of characters.
 
-```{.python .input  n=7}
+```{.python .input #text-sequence-tokenization  n=7}
 %%tab all
 @d2l.add_to_class(TimeMachine)  #@save
 def _tokenize(self, text):
@@ -145,7 +145,7 @@ that had not been previously seen or was dropped from the vocabulary,
 we represent it by a special "&lt;unk&gt;" token,
 signifying that this is an *unknown* value.
 
-```{.python .input  n=8}
+```{.python .input #text-sequence-vocabulary-1  n=8}
 %%tab all
 class Vocab:  #@save
     """Vocabulary for text."""
@@ -188,7 +188,7 @@ Note that we have not lost any information
 and can easily convert our dataset
 back to its original (string) representation.
 
-```{.python .input  n=9}
+```{.python .input #text-sequence-vocabulary-2  n=9}
 %%tab all
 vocab = Vocab(tokens)
 indices = vocab[tokens[:10]]
@@ -210,7 +210,7 @@ to simplify the training in later sections;
 since each text line in *The Time Machine* dataset
 is not necessarily a sentence or paragraph.
 
-```{.python .input  n=10}
+```{.python .input #text-sequence-putting-it-all-together  n=10}
 %%tab all
 @d2l.add_to_class(TimeMachine)  #@save
 def build(self, raw_text, vocab=None):
@@ -231,7 +231,7 @@ we can inspect basic statistics concerning word use in our corpus.
 Below, we construct a vocabulary from words used in *The Time Machine*
 and print the ten most frequently occurring of them.
 
-```{.python .input  n=11}
+```{.python .input #text-sequence-exploratory-language-statistics-1  n=11}
 %%tab all
 words = text.split()
 vocab = Vocab(words)
@@ -265,7 +265,7 @@ Word frequency tends to follow a power law distribution
 (specifically the Zipfian) as we go down the ranks.
 To get a better idea, we [**plot the figure of the word frequency**].
 
-```{.python .input  n=12}
+```{.python .input #text-sequence-exploratory-language-statistics-2  n=12}
 %%tab all
 freqs = [freq for token, freq in vocab.token_freqs]
 d2l.plot(freqs, xlabel='token: x', ylabel='frequency: n(x)',
@@ -292,7 +292,7 @@ to model words by counting statistics.
 After all, we will significantly overestimate the frequency of the tail, also known as the infrequent words. But [**what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams)**], and beyond?
 Let's see whether the bigram frequency behaves in the same manner as the single word (unigram) frequency.
 
-```{.python .input  n=13}
+```{.python .input #text-sequence-exploratory-language-statistics-3  n=13}
 %%tab all
 bigram_tokens = ['--'.join(pair) for pair in zip(words[:-1], words[1:])]
 bigram_vocab = Vocab(bigram_tokens)
@@ -301,7 +301,7 @@ bigram_vocab.token_freqs[:10]
 
 One thing is notable here. Out of the ten most frequent word pairs, nine are composed of both stop words and only one is relevant to the actual book---"the time". Furthermore, let's see whether the trigram frequency behaves in the same manner.
 
-```{.python .input  n=14}
+```{.python .input #text-sequence-exploratory-language-statistics-4  n=14}
 %%tab all
 trigram_tokens = ['--'.join(triple) for triple in zip(
     words[:-2], words[1:-1], words[2:])]
@@ -311,7 +311,7 @@ trigram_vocab.token_freqs[:10]
 
 Now, let's [**visualize the token frequency**] among these three models: unigrams, bigrams, and trigrams.
 
-```{.python .input  n=15}
+```{.python .input #text-sequence-exploratory-language-statistics-5  n=15}
 %%tab all
 bigram_freqs = [freq for token, freq in bigram_vocab.token_freqs]
 trigram_freqs = [freq for token, freq in trigram_vocab.token_freqs]

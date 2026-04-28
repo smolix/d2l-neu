@@ -14,7 +14,7 @@ The question then becomes something that on the surface is no easier: how do we 
 
 Let's take $x$ and try to understand what happens when we change it by a small amount to $x + \epsilon$. If you wish to be concrete, think of a number like $\epsilon = 0.0000001$.  To help us visualize what happens, let's graph an example function, $f(x) = \sin(x^x)$, over the $[0, 3]$.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -28,7 +28,7 @@ ys = np.sin(x_big**x_big)
 d2l.plot(x_big, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -42,7 +42,7 @@ ys = torch.sin(x_big**x_big)
 d2l.plot(x_big, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -56,7 +56,7 @@ ys = tf.sin(x_big**x_big)
 d2l.plot(x_big, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -73,7 +73,7 @@ d2l.plot(x_big, ys, 'x', 'f(x)')
 
 At this large scale, the function's behavior is not simple. However, if we reduce our range to something smaller like $[1.75,2.25]$, we see that the graph becomes much simpler.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-2}
 #@tab mxnet
 # Plot a the same function in a tiny range
 x_med = np.arange(1.75, 2.25, 0.001)
@@ -81,7 +81,7 @@ ys = np.sin(x_med**x_med)
 d2l.plot(x_med, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-2}
 #@tab pytorch
 # Plot a the same function in a tiny range
 x_med = torch.arange(1.75, 2.25, 0.001)
@@ -89,7 +89,7 @@ ys = torch.sin(x_med**x_med)
 d2l.plot(x_med, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-2}
 #@tab tensorflow
 # Plot a the same function in a tiny range
 x_med = tf.range(1.75, 2.25, 0.001)
@@ -97,7 +97,7 @@ ys = tf.sin(x_med**x_med)
 d2l.plot(x_med, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-2}
 #@tab jax
 # Plot a the same function in a tiny range
 x_med = jnp.arange(1.75, 2.25, 0.001)
@@ -107,7 +107,7 @@ d2l.plot(x_med, ys, 'x', 'f(x)')
 
 Taking this to an extreme, if we zoom into a tiny segment, the behavior becomes far simpler: it is just a straight line.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-3}
 #@tab mxnet
 # Plot a the same function in a tiny range
 x_small = np.arange(2.0, 2.01, 0.0001)
@@ -115,7 +115,7 @@ ys = np.sin(x_small**x_small)
 d2l.plot(x_small, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-3}
 #@tab pytorch
 # Plot a the same function in a tiny range
 x_small = torch.arange(2.0, 2.01, 0.0001)
@@ -123,7 +123,7 @@ ys = torch.sin(x_small**x_small)
 d2l.plot(x_small, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-3}
 #@tab tensorflow
 # Plot a the same function in a tiny range
 x_small = tf.range(2.0, 2.01, 0.0001)
@@ -131,7 +131,7 @@ ys = tf.sin(x_small**x_small)
 d2l.plot(x_small, ys, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-3}
 #@tab jax
 # Plot a the same function in a tiny range
 x_small = jnp.arange(2.0, 2.01, 0.0001)
@@ -149,7 +149,7 @@ $$
 
 This is already enough to start to play around with in code.  For instance, suppose that we know that $L(x) = x^{2} + 1701(x-4)^3$, then we can see how large this value is at the point $x = 4$ as follows.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-differential-calculus-4}
 #@tab all
 # Define our function
 def L(x):
@@ -296,7 +296,7 @@ $$
 
 approximates the value of $f$ by a line which passes through the point $(x, f(x))$ and has slope $\frac{df}{dx}(x)$.  In this way we say that the derivative gives a linear approximation to the function $f$, as illustrated below:
 
-```{.python .input}
+```{.python .input #single-variable-calculus-linear-approximation}
 #@tab mxnet
 # Compute sin
 xs = np.arange(-np.pi, np.pi, 0.01)
@@ -309,7 +309,7 @@ for x0 in [-1.5, 0, 2]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-linear-approximation}
 #@tab pytorch
 # Compute sin
 xs = torch.arange(-torch.pi, torch.pi, 0.01)
@@ -323,7 +323,7 @@ for x0 in [-1.5, 0.0, 2.0]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-linear-approximation}
 #@tab tensorflow
 # Compute sin
 xs = tf.range(-tf.pi, tf.pi, 0.01)
@@ -337,7 +337,7 @@ for x0 in [-1.5, 0.0, 2.0]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-linear-approximation}
 #@tab jax
 # Compute sin
 xs = jnp.arange(-jnp.pi, jnp.pi, 0.01)
@@ -392,7 +392,7 @@ $$
 
 If we have some original function $f(x)$ in mind, we may compute the first two derivatives and find the values for $a, b$, and $c$ that make them match this computation.  Similarly to the previous section where we saw that the first derivative gave the best approximation with a straight line, this construction provides the best approximation by a quadratic.  Let's visualize this for $f(x) = \sin(x)$.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-higher-order-derivatives}
 #@tab mxnet
 # Compute sin
 xs = np.arange(-np.pi, np.pi, 0.01)
@@ -406,7 +406,7 @@ for x0 in [-1.5, 0, 2]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-higher-order-derivatives}
 #@tab pytorch
 # Compute sin
 xs = torch.arange(-torch.pi, torch.pi, 0.01)
@@ -421,7 +421,7 @@ for x0 in [-1.5, 0.0, 2.0]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-higher-order-derivatives}
 #@tab tensorflow
 # Compute sin
 xs = tf.range(-tf.pi, tf.pi, 0.01)
@@ -436,7 +436,7 @@ for x0 in [-1.5, 0.0, 2.0]:
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-higher-order-derivatives}
 #@tab jax
 # Compute sin
 xs = jnp.arange(-jnp.pi, jnp.pi, 0.01)
@@ -503,7 +503,7 @@ $$
 
 Let's see how this works in code and observe how increasing the degree of the Taylor approximation brings us closer to the desired function $e^x$.
 
-```{.python .input}
+```{.python .input #single-variable-calculus-taylor-series}
 #@tab mxnet
 # Compute the exponential function
 xs = np.arange(0, 3, 0.01)
@@ -519,7 +519,7 @@ d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
     "Degree 5 Taylor Series"])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-taylor-series}
 #@tab pytorch
 # Compute the exponential function
 xs = torch.arange(0, 3, 0.01)
@@ -535,7 +535,7 @@ d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
     "Degree 5 Taylor Series"])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-taylor-series}
 #@tab tensorflow
 # Compute the exponential function
 xs = tf.range(0, 3, 0.01)
@@ -551,7 +551,7 @@ d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
     "Degree 5 Taylor Series"])
 ```
 
-```{.python .input}
+```{.python .input #single-variable-calculus-taylor-series}
 #@tab jax
 # Compute the exponential function
 xs = jnp.arange(0, 3, 0.01)

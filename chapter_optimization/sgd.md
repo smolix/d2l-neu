@@ -8,7 +8,7 @@ in :numref:`sec_gd`.
 In this section, we go on to discuss
 *stochastic gradient descent* in greater detail.
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-descent}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -17,7 +17,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-descent}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -25,7 +25,7 @@ import math
 import torch
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-descent}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -33,7 +33,7 @@ import math
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-descent}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -72,7 +72,7 @@ This means that, on average, the stochastic gradient is a good estimate of the g
 
 Now, we will compare it with gradient descent by adding random noise with a mean of 0 and a variance of 1 to the gradient to simulate a stochastic gradient descent.
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-1}
 #@tab all
 def f(x1, x2):  # Objective function
     return x1 ** 2 + 2 * x2 ** 2
@@ -81,7 +81,7 @@ def f_grad(x1, x2):  # Gradient of the objective function
     return 2 * x1, 4 * x2
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-2}
 #@tab mxnet
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
@@ -92,7 +92,7 @@ def sgd(x1, x2, s1, s2, f_grad):
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-2}
 #@tab pytorch
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
@@ -103,7 +103,7 @@ def sgd(x1, x2, s1, s2, f_grad):
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-2}
 #@tab tensorflow
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
@@ -114,7 +114,7 @@ def sgd(x1, x2, s1, s2, f_grad):
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-2}
 #@tab jax
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
@@ -125,7 +125,7 @@ def sgd(x1, x2, s1, s2, f_grad):
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
 
-```{.python .input}
+```{.python .input #sgd-stochastic-gradient-updates-3}
 #@tab all
 def constant_lr():
     return 1
@@ -155,7 +155,7 @@ In the first *piecewise constant* scenario we decrease the learning rate, e.g., 
 
 Let's see what the exponential decay looks like in practice.
 
-```{.python .input}
+```{.python .input #sgd-dynamic-learning-rate-1}
 #@tab all
 def exponential_lr():
     # Global variable that is defined outside this function and updated inside
@@ -170,7 +170,7 @@ d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=1000, f_grad=f_grad))
 
 As expected, the variance in the parameters is significantly reduced. However, this comes at the expense of failing to converge to the optimal solution $\mathbf{x} = (0, 0)$. Even after 1000 iteration steps we are still very far away from the optimal solution. Indeed, the algorithm fails to converge at all. On the other hand, if we use a polynomial decay where the learning rate decays with the inverse square root of the number of steps, convergence gets better after only 50 steps.
 
-```{.python .input}
+```{.python .input #sgd-dynamic-learning-rate-2}
 #@tab all
 def polynomial_lr():
     # Global variable that is defined outside this function and updated inside

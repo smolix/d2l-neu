@@ -62,23 +62,23 @@ For brevity, practitioners
 often assign the alias `tf`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab mxnet
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab pytorch
 import torch
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab jax
 import jax
 from jax import numpy as jnp
@@ -133,25 +133,25 @@ new tensors are stored in main memory
 and designated for CPU-based computation.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab mxnet
 x = np.arange(12)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab pytorch
 x = torch.arange(12, dtype=torch.float32)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab tensorflow
 x = tf.range(12, dtype=tf.float32)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab jax
 x = jnp.arange(12)
 x
@@ -181,17 +181,17 @@ We can inspect the total number of elements
 in a tensor via the `size` function.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab mxnet, jax
 x.size
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab pytorch
 x.numel()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab tensorflow
 tf.size(x)
 ```
@@ -203,7 +203,7 @@ Because we are dealing with a vector here,
 the `shape` contains just a single element
 and is identical to the size.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-4}
 %%tab all
 x.shape
 ```
@@ -220,13 +220,13 @@ Notice that the elements of our vector
 are laid out one row at a time and thus
 `x[3] == X[0, 3]`.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-5}
 %%tab mxnet, pytorch, jax
 X = x.reshape(3, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-5}
 %%tab tensorflow
 X = tf.reshape(x, (3, 4))
 X
@@ -250,22 +250,22 @@ initialized to contain all 0s or 1s.
 [**We can construct a tensor with all elements set to 0**] (~~or one~~)
 and a shape of (2, 3, 4) via the `zeros` function.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab mxnet
 np.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab pytorch
 torch.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab tensorflow
 tf.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab jax
 jnp.zeros((2, 3, 4))
 ```
@@ -273,22 +273,22 @@ jnp.zeros((2, 3, 4))
 Similarly, we can create a tensor 
 with all 1s by invoking `ones`.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab mxnet
 np.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab pytorch
 torch.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab tensorflow
 tf.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab jax
 jnp.ones((2, 3, 4))
 ```
@@ -303,22 +303,22 @@ with elements drawn from
 a standard Gaussian (normal) distribution
 with mean 0 and standard deviation 1.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab mxnet
 np.random.normal(0, 1, size=(3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab pytorch
 torch.randn(3, 4)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab tensorflow
 tf.random.normal(shape=[3, 4])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab jax
 # Any call of a random function in JAX requires a key to be
 # specified, feeding the same key to a random function will
@@ -334,22 +334,22 @@ Here, we construct a matrix with a list of lists,
 where the outermost list corresponds to axis 0,
 and the inner list corresponds to axis 1.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab mxnet
 np.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab pytorch
 torch.tensor([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab tensorflow
 tf.constant([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab jax
 jnp.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
@@ -373,7 +373,7 @@ Thus, in the following code,
 [**`[-1]` selects the last row and `[1:3]`
 selects the second and third rows**].
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-1}
 %%tab all
 X[-1], X[1:3]
 ```
@@ -392,20 +392,20 @@ Beyond assigning a value to the entire `Variable`, we can write elements of a
 `Variable` by specifying indices.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab mxnet, pytorch
 X[1, 2] = 17
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab tensorflow
 X_var = tf.Variable(X)
 X_var[1, 2].assign(9)
 X_var
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab jax
 # JAX arrays are immutable. jax.numpy.ndarray.at index
 # update operators create a new array with the corresponding
@@ -424,20 +424,20 @@ While we discussed indexing for matrices,
 this also works for vectors
 and for tensors of more than two dimensions.
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab mxnet, pytorch
 X[:2, :] = 12
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab tensorflow
 X_var = tf.Variable(X)
 X_var[:2, :].assign(tf.ones(X_var[:2,:].shape, dtype=tf.float32) * 12)
 X_var
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab jax
 X_new_2 = X_new_1.at[:2, :].set(12)
 X_new_2
@@ -468,22 +468,22 @@ This just means that the function maps
 from any real number onto some other real number.
 Most standard operators, including unary ones like $e^x$, can be applied elementwise.
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab mxnet
 np.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab pytorch
 torch.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab tensorflow
 tf.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab jax
 jnp.exp(x)
 ```
@@ -511,28 +511,28 @@ and exponentiation (`**`)
 have all been *lifted* to elementwise operations
 for identically-shaped tensors of arbitrary shape.
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab mxnet
 x = np.array([1, 2, 4, 8])
 y = np.array([2, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab pytorch
 x = torch.tensor([1.0, 2, 4, 8])
 y = torch.tensor([2, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab tensorflow
 x = tf.constant([1.0, 2, 4, 8])
 y = tf.constant([2.0, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab jax
 x = jnp.array([1.0, 2, 4, 8])
 y = jnp.array([2, 2, 2, 2])
@@ -557,28 +557,28 @@ is the sum of the two input tensors' axis-0 lengths ($3 + 3$);
 while the second output's axis-1 length ($8$)
 is the sum of the two input tensors' axis-1 lengths ($4 + 4$).
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab mxnet
 X = np.arange(12).reshape(3, 4)
 Y = np.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 np.concatenate([X, Y], axis=0), np.concatenate([X, Y], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab pytorch
 X = torch.arange(12, dtype=torch.float32).reshape((3,4))
 Y = torch.tensor([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 torch.cat((X, Y), dim=0), torch.cat((X, Y), dim=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab tensorflow
 X = tf.reshape(tf.range(12, dtype=tf.float32), (3, 4))
 Y = tf.constant([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 tf.concat([X, Y], axis=0), tf.concat([X, Y], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab jax
 X = jnp.arange(12, dtype=jnp.float32).reshape((3, 4))
 Y = jnp.array([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
@@ -592,19 +592,19 @@ For each position `i, j`, if `X[i, j]` and `Y[i, j]` are equal,
 then the corresponding entry in the result takes value `1`,
 otherwise it takes value `0`.
 
-```{.python .input}
+```{.python .input #ndarray-operations-4}
 %%tab all
 X == Y
 ```
 
 [**Summing all the elements in the tensor**] yields a tensor with only one element.
 
-```{.python .input}
+```{.python .input #ndarray-operations-5}
 %%tab mxnet, pytorch, jax
 X.sum()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-5}
 %%tab tensorflow
 tf.reduce_sum(X)
 ```
@@ -628,28 +628,28 @@ the two tensors have the same shape;
 (ii) perform an elementwise operation
 on the resulting arrays.
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab mxnet
 a = np.arange(3).reshape(3, 1)
 b = np.arange(2).reshape(1, 2)
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab pytorch
 a = torch.arange(3).reshape((3, 1))
 b = torch.arange(2).reshape((1, 2))
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab tensorflow
 a = tf.reshape(tf.range(3), (3, 1))
 b = tf.reshape(tf.range(2), (1, 2))
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab jax
 a = jnp.arange(3).reshape((3, 1))
 b = jnp.arange(2).reshape((1, 2))
@@ -664,7 +664,7 @@ by replicating matrix `a` along the columns
 and matrix `b` along the rows
 before adding them elementwise.
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-2}
 %%tab all
 a + b
 ```
@@ -685,7 +685,7 @@ That is because Python first evaluates `Y + X`,
 allocating new memory for the result 
 and then points `Y` to this new location in memory.
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-1}
 %%tab all
 before = id(Y)
 Y = Y + X
@@ -728,7 +728,7 @@ after initializing it, using `zeros_like`,
 to have the same shape as `Y`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab mxnet
 Z = np.zeros_like(Y)
 print('id(Z):', id(Z))
@@ -736,7 +736,7 @@ Z[:] = X + Y
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab pytorch
 Z = torch.zeros_like(Y)
 print('id(Z):', id(Z))
@@ -744,7 +744,7 @@ Z[:] = X + Y
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab tensorflow
 Z = tf.Variable(tf.zeros_like(Y))
 print('id(Z):', id(Z))
@@ -752,7 +752,7 @@ Z.assign(X + Y)
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab jax
 # JAX arrays do not allow in-place operations
 ```
@@ -780,14 +780,14 @@ and to reuse prior allocations that are no longer needed.
 This minimizes the memory overhead of TensorFlow computations.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-3}
 %%tab mxnet, pytorch
 before = id(X)
 X += Y
 id(X) == before
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-3}
 %%tab tensorflow
 @tf.function
 def computation(X, Y):
@@ -821,28 +821,28 @@ and changing one through an in-place operation
 will also change the other.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab mxnet
 A = X.asnumpy()
 B = np.array(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab pytorch
 A = X.numpy()
 B = torch.from_numpy(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab tensorflow
 A = X.numpy()
 B = tf.constant(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab jax
 A = jax.device_get(X)
 B = jax.device_put(A)
@@ -852,25 +852,25 @@ type(A), type(B)
 To (**convert a size-1 tensor to a Python scalar**),
 we can invoke the `item` function or Python's built-in functions.
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab mxnet
 a = np.array([3.5])
 a, a.item(), float(a), int(a)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab pytorch
 a = torch.tensor([3.5])
 a, a.item(), float(a), int(a)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab tensorflow
 a = tf.constant([3.5]).numpy()
 a, a.item(), float(a.item()), int(a.item())
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab jax
 a = jnp.array(3.5)
 a, a.item(), float(a), int(a)

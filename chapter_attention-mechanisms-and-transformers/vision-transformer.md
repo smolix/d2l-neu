@@ -41,21 +41,21 @@ vision Transformers outperform ResNets by a significant margin.
 Similar to the landscape of network architecture design in natural language processing,
 Transformers have also become a game-changer in computer vision.
 
-```{.python .input}
+```{.python .input #vision-transformer-transformers-for-vision}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-transformers-for-vision}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import keras
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-transformers-for-vision}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -105,7 +105,7 @@ and linearly projecting these flattened patches
 can be simplified as a single convolution operation,
 where both the kernel size and the stride size are set to the patch size.
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-1}
 %%tab pytorch
 class PatchEmbedding(nn.Module):
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
@@ -125,7 +125,7 @@ class PatchEmbedding(nn.Module):
         return self.conv(X).flatten(2).transpose(1, 2)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-1}
 %%tab tensorflow
 class PatchEmbedding(tf.keras.layers.Layer):  #@save
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
@@ -146,7 +146,7 @@ class PatchEmbedding(tf.keras.layers.Layer):  #@save
         return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-1}
 %%tab jax
 class PatchEmbedding(nn.Module):
     img_size: int = 96
@@ -174,7 +174,7 @@ In the following example, taking images with height and width of `img_size` as i
 the patch embedding outputs `(img_size//patch_size)**2` patches
 that are linearly projected to vectors of length `num_hiddens`.
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-2}
 %%tab pytorch
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
@@ -183,7 +183,7 @@ d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-2}
 %%tab tensorflow
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
@@ -191,7 +191,7 @@ X = tf.zeros((batch_size, img_size, img_size, 3))
 d2l.check_shape(patch_emb(X), (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-patch-embedding-2}
 %%tab jax
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
@@ -210,7 +210,7 @@ First, here the activation function uses the Gaussian error linear unit (GELU),
 which can be considered as a smoother version of the ReLU :cite:`Hendrycks.Gimpel.2016`.
 Second, dropout is applied to the output of each fully connected layer in the MLP for regularization.
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-1}
 %%tab pytorch
 class ViTMLP(nn.Module):
     def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
@@ -226,7 +226,7 @@ class ViTMLP(nn.Module):
             self.dense1(x)))))
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-1}
 %%tab tensorflow
 class ViTMLP(tf.keras.layers.Layer):  #@save
     def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
@@ -242,7 +242,7 @@ class ViTMLP(tf.keras.layers.Layer):  #@save
             training=training)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-1}
 %%tab jax
 class ViTMLP(nn.Module):
     mlp_num_hiddens: int
@@ -266,7 +266,7 @@ In contrast to post-normalization ("add & norm" in :numref:`fig_transformer`),
 where normalization is placed right *after* residual connections,
 pre-normalization leads to more effective or efficient training for Transformers :cite:`baevski2018adaptive,wang2019learning,xiong2020layer`.
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-2}
 %%tab pytorch
 class ViTBlock(nn.Module):
     def __init__(self, num_hiddens, norm_shape, mlp_num_hiddens,
@@ -296,7 +296,7 @@ attention mask from `valid_lens` and pass it via the `attention_mask`
 argument; the PyTorch/JAX tabs already accept `valid_lens` directly.
 :end_tab:
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-3}
 %%tab tensorflow
 class ViTBlock(tf.keras.layers.Layer):  #@save
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
@@ -315,7 +315,7 @@ class ViTBlock(tf.keras.layers.Layer):  #@save
         return X + self.mlp(self.ln2(X, training=training), training=training)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-3}
 %%tab jax
 class ViTBlock(nn.Module):
     num_hiddens: int
@@ -339,7 +339,7 @@ class ViTBlock(nn.Module):
 Just as in :numref:`subsec_transformer-encoder`,
 no vision Transformer encoder block changes its input shape.
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-4}
 %%tab pytorch
 X = d2l.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 24, 48, 8, 0.5)
@@ -347,14 +347,14 @@ encoder_blk.eval()
 d2l.check_shape(encoder_blk(X), X.shape)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-4}
 %%tab tensorflow
 X = tf.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 48, 8, 0.5)
 d2l.check_shape(encoder_blk(X, training=False), X.shape)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-vision-transformer-encoder-4}
 %%tab jax
 X = d2l.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 48, 8, 0.5)
@@ -370,7 +370,7 @@ They are summed with learnable positional embeddings before dropout.
 Then the output is fed into the Transformer encoder that stacks `num_blks` instances of the `ViTBlock` class.
 Finally, the representation of the “&lt;cls&gt;”  token is projected by the network head.
 
-```{.python .input}
+```{.python .input #vision-transformer-putting-it-all-together}
 %%tab pytorch
 class ViT(d2l.Classifier):
     """Vision Transformer."""
@@ -404,7 +404,7 @@ class ViT(d2l.Classifier):
         return self.head(X[:, 0])
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-putting-it-all-together}
 %%tab tensorflow
 class ViT(d2l.Classifier):  #@save
     """Vision Transformer."""
@@ -444,7 +444,7 @@ class ViT(d2l.Classifier):  #@save
         return self.head_dense(self.head_norm(X[:, 0]))
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-putting-it-all-together}
 %%tab jax
 class ViT(d2l.Classifier):
     """Vision Transformer."""
@@ -489,7 +489,7 @@ class ViT(d2l.Classifier):
 
 Training a vision Transformer on the Fashion-MNIST dataset is just like how CNNs were trained in :numref:`chap_modern_cnn`.
 
-```{.python .input}
+```{.python .input #vision-transformer-training}
 %%tab pytorch, jax
 img_size, patch_size = 96, 16
 num_hiddens, mlp_num_hiddens, num_heads, num_blks = 512, 2048, 8, 2
@@ -501,7 +501,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(img_size, img_size))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #vision-transformer-training}
 %%tab tensorflow
 img_size, patch_size = 96, 16
 num_hiddens, mlp_num_hiddens, num_heads, num_blks = 512, 2048, 8, 2

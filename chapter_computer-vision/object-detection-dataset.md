@@ -17,7 +17,7 @@ In the end, we labeled bounding boxes for those bananas on the images.
 The banana detection dataset with all the image and
 csv label files can be downloaded directly from the Internet.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -28,7 +28,7 @@ import pandas as pd
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -38,7 +38,7 @@ import os
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -52,7 +52,7 @@ import pandas as pd
 from PIL import Image
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -63,7 +63,7 @@ import pandas as pd
 from PIL import Image
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-2}
 #@tab all
 #@save
 d2l.DATA_HUB['banana-detection'] = (
@@ -80,7 +80,7 @@ object class labels and
 ground-truth bounding box coordinates
 at the upper-left and lower-right corners.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab mxnet
 #@save
 def read_data_bananas(is_train=True):
@@ -102,7 +102,7 @@ def read_data_bananas(is_train=True):
     return images, np.expand_dims(np.array(targets), 1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab pytorch
 #@save
 def read_data_bananas(is_train=True):
@@ -124,7 +124,7 @@ def read_data_bananas(is_train=True):
     return images, torch.tensor(targets).unsqueeze(1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab jax
 #@save
 def read_data_bananas(is_train=True):
@@ -148,7 +148,7 @@ def read_data_bananas(is_train=True):
     return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab tensorflow
 #@save
 def read_data_bananas(is_train=True):
@@ -178,7 +178,7 @@ the following `BananasDataset` class
 will allow us to [**create a customized `Dataset` instance**]
 for loading the banana detection dataset.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab mxnet
 #@save
 class BananasDataset(gluon.data.Dataset):
@@ -196,7 +196,7 @@ class BananasDataset(gluon.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab pytorch
 #@save
 class BananasDataset(torch.utils.data.Dataset):
@@ -213,7 +213,7 @@ class BananasDataset(torch.utils.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab jax
 #@save
 class BananasDataset:
@@ -230,7 +230,7 @@ class BananasDataset:
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab tensorflow
 #@save
 class BananasDataset:
@@ -253,7 +253,7 @@ data iterator instances for both the training and test sets.**]
 For the test dataset,
 there is no need to read it in random order.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab mxnet
 #@save
 def load_data_bananas(batch_size):
@@ -265,7 +265,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab pytorch
 #@save
 def load_data_bananas(batch_size):
@@ -277,7 +277,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab jax
 #@save
 def load_data_bananas(batch_size):
@@ -293,7 +293,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab tensorflow
 #@save
 def load_data_bananas(batch_size):
@@ -349,7 +349,7 @@ For the banana dataset,
 since there is only one bounding box on each image,
 we have $m=1$.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-4}
 #@tab all
 batch_size, edge_size = 32, 256
 train_iter, _ = load_data_bananas(batch_size)
@@ -364,7 +364,7 @@ We can see that the rotations, sizes, and positions of bananas vary across all t
 Of course, this is just a simple artificial dataset.
 In practice, real-world datasets are usually much more complicated.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab mxnet
 imgs = (batch[0][:10].transpose(0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -372,7 +372,7 @@ for ax, label in zip(axes, batch[1][:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab pytorch
 imgs = (batch[0][:10].permute(0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -380,7 +380,7 @@ for ax, label in zip(axes, batch[1][:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab jax
 imgs = jnp.transpose(batch[0][:10], (0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -388,7 +388,7 @@ for ax, label in zip(axes, np.array(batch[1][:10])):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab tensorflow
 # Images are already NHWC (H, W, C) in TF; normalize to [0, 1]
 imgs = batch[0][:10] / 255

@@ -101,7 +101,7 @@ The algorithm for computing the action-value function $Q^\pi(s, a)$ of a policy 
 :label:`subsec_valueitercode`
 We next show how to implement Value Iteration for a navigation problem called FrozenLake from [Gymnasium](https://gymnasium.farama.org/) (the maintained successor to OpenAI Gym). We first need to set up the environment as shown in the following code.
 
-```{.python .input}
+```{.python .input #value-iter-implementation-of-value-iteration-1}
 %%tab all
 
 %matplotlib inline
@@ -123,7 +123,7 @@ In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are
 
 The following function implements Value Iteration, where `env_info` contains MDP and environment related information and `gamma` is the discount factor:
 
-```{.python .input}
+```{.python .input #value-iter-implementation-of-value-iteration-2}
 %%tab all
 
 def value_iteration(env_info, gamma, num_iters):

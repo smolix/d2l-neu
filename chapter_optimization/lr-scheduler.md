@@ -14,7 +14,7 @@ Given the fact that there is a lot of detail needed to manage learning rates, mo
 
 We begin with a toy problem that is cheap enough to compute easily, yet sufficiently nontrivial to illustrate some of the key aspects. For that we pick a slightly modernized version of LeNet (`relu` instead of `sigmoid` activation, MaxPooling rather than AveragePooling), as applied to Fashion-MNIST. Moreover, we hybridize the network for performance. Since most of the code is standard we just introduce the basics without further detailed discussion. See :numref:`chap_cnn` for a refresher as needed.
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -64,7 +64,7 @@ def train(net, train_iter, test_iter, num_epochs, loss, trainer, device):
           f'test acc {test_acc:.3f}')
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -134,7 +134,7 @@ def train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
           f'test acc {test_acc:.3f}')
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -181,7 +181,7 @@ def train(net_fn, train_iter, test_iter, num_epochs, lr,
     return net
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -282,7 +282,7 @@ def train(net, train_iter, test_iter, num_epochs, lr, scheduler=None):
 
 Let's have a look at what happens if we invoke this algorithm with default settings, such as a learning rate of $0.3$ and train for $30$ iterations. Note how the training accuracy keeps on increasing while progress in terms of test accuracy stalls beyond a point. The gap between both curves indicates overfitting.
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-2}
 #@tab mxnet
 lr, num_epochs = 0.3, 30
 net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
@@ -290,7 +290,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': lr})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-2}
 #@tab pytorch
 lr, num_epochs = 0.3, 30
 net = net_fn()
@@ -298,13 +298,13 @@ trainer = torch.optim.SGD(net.parameters(), lr=lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-2}
 #@tab tensorflow
 lr, num_epochs = 0.3, 30
 train(net, train_iter, test_iter, num_epochs, lr)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-toy-problem-2}
 #@tab jax
 lr, num_epochs = 0.3, 30
 train(net_fn, train_iter, test_iter, num_epochs, lr)
@@ -314,20 +314,20 @@ train(net_fn, train_iter, test_iter, num_epochs, lr)
 
 One way of adjusting the learning rate is to set it explicitly at each step. This is conveniently achieved by the `set_learning_rate` method. We could adjust it downward after every epoch (or even after every minibatch), e.g., in a dynamic manner in response to how optimization is progressing.
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-1}
 #@tab mxnet
 trainer.set_learning_rate(0.1)
 print(f'learning rate is now {trainer.learning_rate:.2f}')
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-1}
 #@tab pytorch
 lr = 0.1
 trainer.param_groups[0]["lr"] = lr
 print(f'learning rate is now {trainer.param_groups[0]["lr"]:.2f}')
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-1}
 #@tab tensorflow
 lr = 0.1
 dummy_model = tf.keras.models.Sequential([tf.keras.layers.Dense(10)])
@@ -335,7 +335,7 @@ dummy_model.compile(tf.keras.optimizers.SGD(learning_rate=lr), loss='mse')
 print(f'learning rate is now ,', dummy_model.optimizer.learning_rate.numpy())
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-1}
 #@tab jax
 lr = 0.1
 tx = optax.inject_hyperparams(optax.sgd)(learning_rate=lr)
@@ -346,7 +346,7 @@ print(f'learning rate is now {opt_state.hyperparams["learning_rate"]:.2f}')
 
 More generally we want to define a scheduler. When invoked with the number of updates it returns the appropriate value of the learning rate. Let's define a simple one that sets the learning rate to $\eta = \eta_0 (t + 1)^{-\frac{1}{2}}$.
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-2}
 #@tab all
 class SquareRootScheduler:
     def __init__(self, lr=0.1):
@@ -358,7 +358,7 @@ class SquareRootScheduler:
 
 Let's plot its behavior over a range of values.
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-3}
 #@tab all
 scheduler = SquareRootScheduler(lr=0.1)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
@@ -366,14 +366,14 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 
 Now let's see how this plays out for training on Fashion-MNIST. We simply provide the scheduler as an additional argument to the training algorithm.
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-4}
 #@tab mxnet
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-4}
 #@tab pytorch
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
@@ -381,13 +381,13 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
       scheduler)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-4}
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-schedulers-4}
 #@tab jax
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
@@ -402,7 +402,7 @@ While we cannot possibly cover the entire variety of learning rate schedulers, w
 
 One alternative to a polynomial decay would be a multiplicative one, that is $\eta_{t+1} \leftarrow \eta_t \cdot \alpha$ for $\alpha \in (0, 1)$. To prevent the learning rate from decaying beyond a reasonable lower bound the update equation is often modified to $\eta_{t+1} \leftarrow \mathop{\mathrm{max}}(\eta_{\mathrm{min}}, \eta_t \cdot \alpha)$.
 
-```{.python .input}
+```{.python .input #lr-scheduler-factor-scheduler}
 #@tab all
 class FactorScheduler:
     def __init__(self, factor=1, stop_factor_lr=1e-7, base_lr=0.1):
@@ -424,14 +424,14 @@ This can also be accomplished by a built-in scheduler in MXNet via the `lr_sched
 
 A common strategy for training deep networks is to keep the learning rate piecewise constant and to decrease it by a given amount every so often. That is, given a set of times when to decrease the rate, such as $s = \{5, 10, 20\}$ decrease $\eta_{t+1} \leftarrow \eta_t \cdot \alpha$ whenever $t \in s$. Assuming that the values are halved at each step we can implement this as follows.
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-1}
 #@tab mxnet
 scheduler = lr_scheduler.MultiFactorScheduler(step=[15, 30], factor=0.5,
                                               base_lr=0.5)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-1}
 #@tab pytorch
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr=0.5)
@@ -447,7 +447,7 @@ d2l.plot(d2l.arange(num_epochs), [get_lr(trainer, scheduler)
                                   for t in range(num_epochs)])
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-1}
 #@tab tensorflow
 class MultiFactorScheduler:
     def __init__(self, step, factor, base_lr):
@@ -466,7 +466,7 @@ scheduler = MultiFactorScheduler(step=[15, 30], factor=0.5, base_lr=0.5)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-1}
 #@tab jax
 class MultiFactorScheduler:
     def __init__(self, step, factor, base_lr):
@@ -487,26 +487,26 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 
 The intuition behind this piecewise constant learning rate schedule is that one lets optimization proceed until a stationary point has been reached in terms of the distribution of weight vectors. Then (and only then) do we decrease the rate such as to obtain a higher quality proxy to a good local minimum. The example below shows how this can produce ever slightly better solutions.
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab mxnet
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab pytorch
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
       scheduler)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab jax
 train(net_fn, train_iter, test_iter, num_epochs, 0.5, scheduler)
 ```
@@ -520,14 +520,14 @@ $$\eta_t = \eta_T + \frac{\eta_0 - \eta_T}{2} \left(1 + \cos(\pi t/T)\right)$$
 
 Here $\eta_0$ is the initial learning rate, $\eta_T$ is the target rate at time $T$. Furthermore, for $t > T$ we simply pin the value to $\eta_T$ without increasing it again. In the following example, we set the max update step $T = 20$.
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-1}
 #@tab mxnet
 scheduler = lr_scheduler.CosineScheduler(max_update=20, base_lr=0.3,
                                          final_lr=0.01)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-1}
 #@tab pytorch, tensorflow, jax
 class CosineScheduler:
     def __init__(self, max_update, base_lr=0.01, final_lr=0,
@@ -559,14 +559,14 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 
 In the context of computer vision this schedule *can* lead to improved results. Note, though, that such improvements are not guaranteed (as can be seen below).
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab mxnet
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab pytorch
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr=0.3)
@@ -574,13 +574,13 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
       scheduler)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab jax
 train(net_fn, train_iter, test_iter, num_epochs, 0.3, scheduler)
 ```
@@ -591,14 +591,14 @@ In some cases initializing the parameters is not sufficient to guarantee a good 
 
 A rather simple fix for this dilemma is to use a warmup period during which the learning rate *increases* to its initial maximum and to cool down the rate until the end of the optimization process. For simplicity one typically uses a linear increase for this purpose. This leads to a schedule of the form indicated below.
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-1}
 #@tab mxnet
 scheduler = lr_scheduler.CosineScheduler(20, warmup_steps=5, base_lr=0.3,
                                          final_lr=0.01)
 d2l.plot(np.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-1}
 #@tab pytorch, tensorflow, jax
 scheduler = CosineScheduler(20, warmup_steps=5, base_lr=0.3, final_lr=0.01)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
@@ -606,14 +606,14 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 
 Note that the network converges better initially (in particular observe the performance during the first 5 epochs).
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-2}
 #@tab mxnet
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-2}
 #@tab pytorch
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr=0.3)
@@ -621,13 +621,13 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
       scheduler)
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-2}
 #@tab tensorflow
 train(net, train_iter, test_iter, num_epochs, lr,
       custom_callback=LearningRateScheduler(scheduler))
 ```
 
-```{.python .input}
+```{.python .input #lr-scheduler-warmup-2}
 #@tab jax
 train(net_fn, train_iter, test_iter, num_epochs, 0.3, scheduler)
 ```

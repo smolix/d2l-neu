@@ -3,7 +3,7 @@
 
 Now that we have learned how to work with probability in both the discrete and the continuous setting, let's get to know some of the common distributions encountered.  Depending on the area of machine learning, we may need to be familiar with vastly more of these, or for some areas of deep learning potentially none at all.  This is, however, a good basic list to be familiar with.  Let's first import some common libraries.
 
-```{.python .input}
+```{.python .input #distributions}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -12,7 +12,7 @@ from math import erf, factorial
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #distributions}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -23,7 +23,7 @@ import torch
 torch.pi = torch.acos(torch.zeros(1)) * 2  # Define pi in torch
 ```
 
-```{.python .input}
+```{.python .input #distributions}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -35,7 +35,7 @@ import tensorflow_probability as tfp
 tf.pi = tf.acos(tf.zeros(1)) * 2  # Define pi in TensorFlow
 ```
 
-```{.python .input}
+```{.python .input #distributions}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -61,7 +61,7 @@ $$F(x) = \begin{cases} 0 & x < 0, \\ 1-p & 0 \le x < 1, \\ 1 & x >= 1 . \end{cas
 
 The probability mass function is plotted below.
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-1}
 #@tab all
 p = 0.3
 
@@ -74,7 +74,7 @@ d2l.plt.show()
 
 Now, let's plot the cumulative distribution function :eqref:`eq_bernoulli_cdf`.
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-2}
 #@tab mxnet
 x = np.arange(-1, 2, 0.01)
 
@@ -84,7 +84,7 @@ def F(x):
 d2l.plot(x, np.array([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-2}
 #@tab pytorch
 x = torch.arange(-1, 2, 0.01)
 
@@ -94,7 +94,7 @@ def F(x):
 d2l.plot(x, torch.tensor([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-2}
 #@tab tensorflow
 x = tf.range(-1, 2, 0.01)
 
@@ -104,7 +104,7 @@ def F(x):
 d2l.plot(x, tf.constant([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-2}
 #@tab jax
 x = jnp.arange(-1, 2, 0.01)
 
@@ -121,22 +121,22 @@ If $X \sim \textrm{Bernoulli}(p)$, then:
 
 We can sample an array of arbitrary shape from a Bernoulli random variable as follows.
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-3}
 #@tab mxnet
 1*(np.random.rand(10, 10) < p)
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-3}
 #@tab pytorch
 1*(torch.rand(10, 10) < p)
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-3}
 #@tab tensorflow
 tf.cast(tf.random.uniform((10, 10)) < p, dtype=tf.float32)
 ```
 
-```{.python .input}
+```{.python .input #distributions-bernoulli-3}
 #@tab jax
 jax.random.bernoulli(jax.random.PRNGKey(0), p, shape=(10, 10)).astype(
     jnp.float32)
@@ -157,7 +157,7 @@ $$F(x) = \begin{cases} 0 & x < 1, \\ \frac{k}{n} & k \le x < k+1 \textrm{ with }
 
 Let's first plot the probability mass function.
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-1}
 #@tab all
 n = 5
 
@@ -169,7 +169,7 @@ d2l.plt.show()
 
 Now, let's plot the cumulative distribution function :eqref:`eq_discrete_uniform_cdf`.
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-2}
 #@tab mxnet
 x = np.arange(-1, 6, 0.01)
 
@@ -179,7 +179,7 @@ def F(x):
 d2l.plot(x, np.array([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-2}
 #@tab pytorch
 x = torch.arange(-1, 6, 0.01)
 
@@ -189,7 +189,7 @@ def F(x):
 d2l.plot(x, torch.tensor([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-2}
 #@tab tensorflow
 x = tf.range(-1, 6, 0.01)
 
@@ -199,7 +199,7 @@ def F(x):
 d2l.plot(x, [F(y) for y in x], 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-2}
 #@tab jax
 x = jnp.arange(-1, 6, 0.01)
 
@@ -216,22 +216,22 @@ If $X \sim U(n)$, then:
 
 We can sample an array of arbitrary shape from a discrete uniform random variable as follows.
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-3}
 #@tab mxnet
 np.random.randint(1, n, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-3}
 #@tab pytorch
 torch.randint(1, n, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-3}
 #@tab tensorflow
 tf.random.uniform((10, 10), 1, n, dtype=tf.int32)
 ```
 
-```{.python .input}
+```{.python .input #distributions-discrete-uniform-3}
 #@tab jax
 jax.random.randint(jax.random.PRNGKey(0), (10, 10), 1, n)
 ```
@@ -256,7 +256,7 @@ $$F(x) = \begin{cases} 0 & x < a, \\ \frac{x-a}{b-a} & x \in [a, b], \\ 1 & x >=
 
 Let's first plot the probability density function :eqref:`eq_cont_uniform_pdf`.
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-1}
 #@tab mxnet
 a, b = 1, 3
 
@@ -266,7 +266,7 @@ p = (x > a)*(x < b)/(b - a)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-1}
 #@tab pytorch
 a, b = 1, 3
 
@@ -275,7 +275,7 @@ p = (x > a).type(torch.float32)*(x < b).type(torch.float32)/(b-a)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-1}
 #@tab tensorflow
 a, b = 1, 3
 
@@ -284,7 +284,7 @@ p = tf.cast(x > a, tf.float32) * tf.cast(x < b, tf.float32) / (b - a)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-1}
 #@tab jax
 a, b = 1, 3
 
@@ -295,7 +295,7 @@ d2l.plot(x, p, 'x', 'p.d.f.')
 
 Now, let's plot the cumulative distribution function :eqref:`eq_cont_uniform_cdf`.
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-2}
 #@tab mxnet
 def F(x):
     return 0 if x < a else 1 if x > b else (x - a) / (b - a)
@@ -303,7 +303,7 @@ def F(x):
 d2l.plot(x, np.array([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-2}
 #@tab pytorch
 def F(x):
     return 0 if x < a else 1 if x > b else (x - a) / (b - a)
@@ -311,7 +311,7 @@ def F(x):
 d2l.plot(x, torch.tensor([F(y) for y in x]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-2}
 #@tab tensorflow
 def F(x):
     return 0 if x < a else 1 if x > b else (x - a) / (b - a)
@@ -319,7 +319,7 @@ def F(x):
 d2l.plot(x, [F(y) for y in x], 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-2}
 #@tab jax
 def F(x):
     return 0 if x < a else 1 if x > b else (x - a) / (b - a)
@@ -334,22 +334,22 @@ If $X \sim U(a, b)$, then:
 
 We can sample an array of arbitrary shape from a uniform random variable as follows.  Note that it by default samples from a $U(0,1)$, so if we want a different range we need to scale it.
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-3}
 #@tab mxnet
 (b - a) * np.random.rand(10, 10) + a
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-3}
 #@tab pytorch
 (b - a) * torch.rand(10, 10) + a
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-3}
 #@tab tensorflow
 (b - a) * tf.random.uniform((10, 10)) + a
 ```
 
-```{.python .input}
+```{.python .input #distributions-continuous-uniform-3}
 #@tab jax
 jax.random.uniform(jax.random.PRNGKey(0), (10, 10), minval=a, maxval=b)
 ```
@@ -377,7 +377,7 @@ $$F(x) = \begin{cases} 0 & x < 0, \\ \sum_{m \le k} \binom{n}{m} p^m(1-p)^{n-m} 
 
 Let's first plot the probability mass function.
 
-```{.python .input}
+```{.python .input #distributions-binomial-1}
 #@tab mxnet
 n, p = 10, 0.2
 
@@ -396,7 +396,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-1}
 #@tab pytorch
 n, p = 10, 0.2
 
@@ -415,7 +415,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-1}
 #@tab tensorflow
 n, p = 10, 0.2
 
@@ -434,7 +434,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-1}
 #@tab jax
 from scipy.special import gammaln as lgamma
 
@@ -455,7 +455,7 @@ d2l.plt.show()
 
 Now, let's plot the cumulative distribution function :eqref:`eq_binomial_cdf`.
 
-```{.python .input}
+```{.python .input #distributions-binomial-2}
 #@tab mxnet
 x = np.arange(-1, 11, 0.01)
 cmf = np.cumsum(pmf)
@@ -466,7 +466,7 @@ def F(x):
 d2l.plot(x, np.array([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-2}
 #@tab pytorch
 x = torch.arange(-1, 11, 0.01)
 cmf = torch.cumsum(pmf, dim=0)
@@ -477,7 +477,7 @@ def F(x):
 d2l.plot(x, torch.tensor([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-2}
 #@tab tensorflow
 x = tf.range(-1, 11, 0.01)
 cmf = tf.cumsum(pmf)
@@ -488,7 +488,7 @@ def F(x):
 d2l.plot(x, [F(y) for y in x.numpy().tolist()], 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-2}
 #@tab jax
 x = jnp.arange(-1, 11, 0.01)
 cmf = jnp.cumsum(pmf)
@@ -506,24 +506,24 @@ If $X \sim \textrm{Binomial}(n, p)$, then:
 
 This follows from the linearity of expected value over the sum of $n$ Bernoulli random variables, and the fact that the variance of the sum of independent random variables is the sum of the variances. This can be sampled as follows.
 
-```{.python .input}
+```{.python .input #distributions-binomial-3}
 #@tab mxnet
 np.random.binomial(n, p, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-3}
 #@tab pytorch
 m = torch.distributions.binomial.Binomial(n, p)
 m.sample(sample_shape=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-3}
 #@tab tensorflow
 m = tfp.distributions.Binomial(n, p)
 m.sample(sample_shape=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-binomial-3}
 #@tab jax
 # JAX doesn't have a built-in binomial sampler, so we sum Bernoulli trials
 jax.random.bernoulli(jax.random.PRNGKey(0), p, shape=(10, 10, n)).sum(axis=-1)
@@ -563,7 +563,7 @@ $$F(x) = \begin{cases} 0 & x < 0, \\ e^{-\lambda}\sum_{m = 0}^k \frac{\lambda^m}
 
 Let's first plot the probability mass function :eqref:`eq_poisson_mass`.
 
-```{.python .input}
+```{.python .input #distributions-poisson-1}
 #@tab mxnet
 lam = 5.0
 
@@ -576,7 +576,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-1}
 #@tab pytorch
 lam = 5.0
 
@@ -590,7 +590,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-1}
 #@tab tensorflow
 lam = 5.0
 
@@ -604,7 +604,7 @@ d2l.plt.ylabel('p.m.f.')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-1}
 #@tab jax
 lam = 5.0
 
@@ -620,7 +620,7 @@ d2l.plt.show()
 
 Now, let's plot the cumulative distribution function :eqref:`eq_poisson_cdf`.
 
-```{.python .input}
+```{.python .input #distributions-poisson-2}
 #@tab mxnet
 x = np.arange(-1, 21, 0.01)
 cmf = np.cumsum(pmf)
@@ -630,7 +630,7 @@ def F(x):
 d2l.plot(x, np.array([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-2}
 #@tab pytorch
 x = torch.arange(-1, 21, 0.01)
 cmf = torch.cumsum(pmf, dim=0)
@@ -640,7 +640,7 @@ def F(x):
 d2l.plot(x, torch.tensor([F(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-2}
 #@tab tensorflow
 x = tf.range(-1, 21, 0.01)
 cmf = tf.cumsum(pmf)
@@ -650,7 +650,7 @@ def F(x):
 d2l.plot(x, [F(y) for y in x.numpy().tolist()], 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-2}
 #@tab jax
 x = jnp.arange(-1, 21, 0.01)
 cmf = jnp.cumsum(pmf)
@@ -667,24 +667,24 @@ As we saw above, the means and variances are particularly concise.  If $X \sim \
 
 This can be sampled as follows.
 
-```{.python .input}
+```{.python .input #distributions-poisson-3}
 #@tab mxnet
 np.random.poisson(lam, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-3}
 #@tab pytorch
 m = torch.distributions.poisson.Poisson(lam)
 m.sample((10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-3}
 #@tab tensorflow
 m = tfp.distributions.Poisson(lam)
 m.sample((10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-poisson-3}
 #@tab jax
 jax.random.poisson(jax.random.PRNGKey(0), lam, shape=(10, 10))
 ```
@@ -700,7 +700,7 @@ $$
 
 This can be seen to have mean zero and variance one, and so it is plausible to believe that it will converge to some limiting distribution.  If we plot what these distributions look like, we will become even more convinced that it will work.
 
-```{.python .input}
+```{.python .input #distributions-gaussian-1}
 #@tab mxnet
 p = 0.2
 ns = [1, 10, 100, 1000]
@@ -717,7 +717,7 @@ for i in range(4):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-1}
 #@tab pytorch
 p = 0.2
 ns = [1, 10, 100, 1000]
@@ -736,7 +736,7 @@ for i in range(4):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-1}
 #@tab tensorflow
 p = 0.2
 ns = [1, 10, 100, 1000]
@@ -755,7 +755,7 @@ for i in range(4):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-1}
 #@tab jax
 p = 0.2
 ns = [1, 10, 100, 1000]
@@ -789,7 +789,7 @@ $$p_X(x) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}.$$
 
 Let's first plot the probability density function :eqref:`eq_gaussian_pdf`.
 
-```{.python .input}
+```{.python .input #distributions-gaussian-2}
 #@tab mxnet
 mu, sigma = 0, 1
 
@@ -799,7 +799,7 @@ p = 1 / np.sqrt(2 * np.pi * sigma**2) * np.exp(-(x - mu)**2 / (2 * sigma**2))
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-2}
 #@tab pytorch
 mu, sigma = 0, 1
 
@@ -810,7 +810,7 @@ p = 1 / torch.sqrt(2 * torch.pi * sigma**2) * torch.exp(
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-2}
 #@tab tensorflow
 mu, sigma = 0, 1
 
@@ -821,7 +821,7 @@ p = 1 / tf.sqrt(2 * tf.pi * sigma**2) * tf.exp(
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-2}
 #@tab jax
 mu, sigma = 0, 1
 
@@ -834,7 +834,7 @@ d2l.plot(x, p, 'x', 'p.d.f.')
 
 Now, let's plot the cumulative distribution function.  It is beyond the scope of this appendix, but the Gaussian c.d.f. does not have a closed-form formula in terms of more elementary functions.  We will use `erf` which provides a way to compute this integral numerically.
 
-```{.python .input}
+```{.python .input #distributions-gaussian-3}
 #@tab mxnet
 def phi(x):
     return (1.0 + erf((x - mu) / (sigma * np.sqrt(2)))) / 2.0
@@ -842,7 +842,7 @@ def phi(x):
 d2l.plot(x, np.array([phi(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-3}
 #@tab pytorch
 def phi(x):
     return (1.0 + erf((x - mu) / (sigma * torch.sqrt(d2l.tensor(2.))))) / 2.0
@@ -850,7 +850,7 @@ def phi(x):
 d2l.plot(x, torch.tensor([phi(y) for y in x.tolist()]), 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-3}
 #@tab tensorflow
 def phi(x):
     return (1.0 + erf((x - mu) / (sigma * tf.sqrt(tf.constant(2.))))) / 2.0
@@ -858,7 +858,7 @@ def phi(x):
 d2l.plot(x, [phi(y) for y in x.numpy().tolist()], 'x', 'c.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-3}
 #@tab jax
 def phi(x):
     return (1.0 + erf((x - mu) / (sigma * jnp.sqrt(2.)))) / 2.0
@@ -893,22 +893,22 @@ To close the section, let's recall that if $X \sim \mathcal{N}(\mu, \sigma^2)$, 
 
 We can sample from the Gaussian (or standard normal) distribution as shown below.
 
-```{.python .input}
+```{.python .input #distributions-gaussian-4}
 #@tab mxnet
 np.random.normal(mu, sigma, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-4}
 #@tab pytorch
 torch.normal(mu, sigma, size=(10, 10))
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-4}
 #@tab tensorflow
 tf.random.normal((10, 10), mu, sigma)
 ```
 
-```{.python .input}
+```{.python .input #distributions-gaussian-4}
 #@tab jax
 mu + sigma * jax.random.normal(jax.random.PRNGKey(0), (10, 10))
 ```

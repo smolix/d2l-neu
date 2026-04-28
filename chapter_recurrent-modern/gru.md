@@ -20,7 +20,7 @@ to compute :cite:`Chung.Gulcehre.Cho.ea.2014`.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=6}
+```{.python .input #gru-gated-recurrent-units-gru  n=6}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -28,20 +28,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input  n=7}
+```{.python .input #gru-gated-recurrent-units-gru  n=7}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input  n=8}
+```{.python .input #gru-gated-recurrent-units-gru  n=8}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #gru-gated-recurrent-units-gru}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -179,7 +179,7 @@ The hyperparameter `num_hiddens` defines the number of hidden units.
 We instantiate all weights and biases relating to the update gate, 
 the reset gate, and the candidate hidden state.
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab pytorch
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -195,7 +195,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab mxnet
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -211,7 +211,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab tensorflow
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -228,7 +228,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab jax
 class GRUScratch(d2l.Module):
     num_inputs: int
@@ -255,7 +255,7 @@ Now we are ready to [**define the GRU forward computation**].
 Its structure is the same as that of the basic RNN cell, 
 except that the update equations are more complex.
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab pytorch
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -276,7 +276,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab mxnet
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -297,7 +297,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab tensorflow
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -317,7 +317,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab jax
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -349,7 +349,7 @@ def forward(self, inputs, H=None):
 [**Training**] a language model on *The Time Machine* dataset
 works in exactly the same manner as in :numref:`sec_rnn-scratch`.
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -358,7 +358,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -368,7 +368,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -377,7 +377,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -391,7 +391,7 @@ trainer.fit(model, data)
 In high-level APIs, we can directly instantiate a GRU model.
 This encapsulates all the configuration detail that we made explicit above.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab pytorch
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -400,7 +400,7 @@ class GRU(d2l.RNN):
         self.rnn = nn.GRU(num_inputs, num_hiddens)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab mxnet
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -409,7 +409,7 @@ class GRU(d2l.RNN):
         self.rnn = rnn.GRU(num_hiddens)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab tensorflow
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -419,7 +419,7 @@ class GRU(d2l.RNN):
                                        return_state=True)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab jax
 class GRU(d2l.RNN):
     num_hiddens: int
@@ -441,14 +441,14 @@ class GRU(d2l.RNN):
 The code is significantly faster in training as it uses compiled operators 
 rather than Python.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab pytorch
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab tensorflow
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 with d2l.try_gpu():
@@ -456,14 +456,14 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab jax
 gru = GRU(num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab mxnet
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
@@ -473,17 +473,17 @@ trainer.fit(model, data)
 After training, we print out the perplexity on the training set
 and the predicted sequence following the provided prefix.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```

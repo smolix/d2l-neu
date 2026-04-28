@@ -23,7 +23,7 @@ that image augmentation was indispensable
 for the success of AlexNet at that time.
 In this section we will discuss this widely used technique in computer vision.
 
-```{.python .input}
+```{.python .input #image-augmentation}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -33,7 +33,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -46,7 +46,7 @@ warnings.filterwarnings('ignore', message='.*dtype.*align.*',
                         category=np.exceptions.VisibleDeprecationWarning)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -62,7 +62,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -76,21 +76,21 @@ import numpy as np
 
 In our investigation of common image augmentation methods, we will use the following $400\times 500$ image an example.
 
-```{.python .input}
+```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab mxnet
 d2l.set_figsize()
 img = image.imread('../img/cat1.jpg')
 d2l.plt.imshow(img.asnumpy());
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab pytorch
 d2l.set_figsize()
 img = d2l.Image.open('../img/cat1.jpg')
 d2l.plt.imshow(img);
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab jax
 from PIL import Image
 d2l.set_figsize()
@@ -98,7 +98,7 @@ img = Image.open('../img/cat1.jpg')
 d2l.plt.imshow(img);
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab tensorflow
 d2l.set_figsize()
 img = Image.open('../img/cat1.jpg')
@@ -107,7 +107,7 @@ d2l.plt.imshow(img);
 
 Most image augmentation methods have a certain degree of randomness. To make it easier for us to observe the effect of image augmentation, next we define an auxiliary function `apply`. This function runs the image augmentation method `aug` multiple times on the input image `img` and shows all the results.
 
-```{.python .input}
+```{.python .input #image-augmentation-common-image-augmentation-methods-2}
 #@tab all
 def apply(img, aug, num_rows=2, num_cols=4, scale=1.5):
     Y = [aug(img) for _ in range(num_rows * num_cols)]
@@ -144,17 +144,17 @@ Next, we define a `RandomHorizontalFlip` function using `tf.image`, which flips
 an image left and right with a 50% chance. We convert between PIL images and TensorFlow tensors as needed.
 :end_tab:
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-1}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomFlipLeftRight())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-1}
 #@tab pytorch
 apply(img, torchvision.transforms.RandomHorizontalFlip())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-1}
 #@tab jax
 def RandomHorizontalFlip():
     def aug(img):
@@ -166,7 +166,7 @@ def RandomHorizontalFlip():
 apply(img, RandomHorizontalFlip())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-1}
 #@tab tensorflow
 def RandomHorizontalFlip():
     def aug(img):
@@ -202,17 +202,17 @@ Next, we create a `RandomVerticalFlip` function to flip
 an image up and down with a 50% chance.
 :end_tab:
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-2}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomFlipTopBottom())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-2}
 #@tab pytorch
 apply(img, torchvision.transforms.RandomVerticalFlip())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-2}
 #@tab jax
 def RandomVerticalFlip():
     def aug(img):
@@ -224,7 +224,7 @@ def RandomVerticalFlip():
 apply(img, RandomVerticalFlip())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-2}
 #@tab tensorflow
 def RandomVerticalFlip():
     def aug(img):
@@ -243,21 +243,21 @@ In addition, we can also randomly crop the image to make objects appear in diffe
 In the code below, we [**randomly crop**] an area with an area of $10\% \sim 100\%$ of the original area each time, and the ratio of width to height of this area is randomly selected from $0.5 \sim 2$. Then, the width and height of the region are both scaled to 200 pixels. 
 Unless otherwise specified, the random number between $a$ and $b$ in this section refers to a continuous value obtained by random and uniform sampling from the interval $[a, b]$.
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-3}
 #@tab mxnet
 shape_aug = gluon.data.vision.transforms.RandomResizedCrop(
     (200, 200), scale=(0.1, 1), ratio=(0.5, 2))
 apply(img, shape_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-3}
 #@tab pytorch
 shape_aug = torchvision.transforms.RandomResizedCrop(
     (200, 200), scale=(0.1, 1), ratio=(0.5, 2))
 apply(img, shape_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-3}
 #@tab jax
 def RandomResizedCrop(size, scale=(0.1, 1), ratio=(0.5, 2)):
     target_h, target_w = size
@@ -286,7 +286,7 @@ shape_aug = RandomResizedCrop((200, 200), scale=(0.1, 1), ratio=(0.5, 2))
 apply(img, shape_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-flipping-and-cropping-3}
 #@tab tensorflow
 def RandomResizedCrop(size, scale=(0.1, 1), ratio=(0.5, 2)):
     target_h, target_w = size
@@ -319,18 +319,18 @@ apply(img, shape_aug)
 
 Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we [**randomly change the brightness**] of the image to a value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-1}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomBrightness(0.5))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-1}
 #@tab pytorch
 apply(img, torchvision.transforms.ColorJitter(
     brightness=0.5, contrast=0, saturation=0, hue=0))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-1}
 #@tab jax
 def RandomBrightness(max_delta):
     def aug(img):
@@ -343,7 +343,7 @@ def RandomBrightness(max_delta):
 apply(img, RandomBrightness(0.5))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-1}
 #@tab tensorflow
 def RandomBrightness(max_delta):
     def aug(img):
@@ -358,18 +358,18 @@ apply(img, RandomBrightness(0.5))
 
 Similarly, we can [**randomly change the hue**] of the image.
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-2}
 #@tab mxnet
 apply(img, gluon.data.vision.transforms.RandomHue(0.5))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-2}
 #@tab pytorch
 apply(img, torchvision.transforms.ColorJitter(
     brightness=0, contrast=0, saturation=0, hue=0.5))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-2}
 #@tab jax
 def RandomHue(max_delta):
     def aug(img):
@@ -382,7 +382,7 @@ def RandomHue(max_delta):
 apply(img, RandomHue(0.5))
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-2}
 #@tab tensorflow
 def RandomHue(max_delta):
     def aug(img):
@@ -397,21 +397,21 @@ apply(img, RandomHue(0.5))
 
 We can also create a `RandomColorJitter` instance and set how to [**randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time**].
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-3}
 #@tab mxnet
 color_aug = gluon.data.vision.transforms.RandomColorJitter(
     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5)
 apply(img, color_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-3}
 #@tab pytorch
 color_aug = torchvision.transforms.ColorJitter(
     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5)
 apply(img, color_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-3}
 #@tab jax
 def RandomColorJitter(brightness=0, contrast=0, saturation=0, hue=0):
     def aug(img):
@@ -435,7 +435,7 @@ color_aug = RandomColorJitter(brightness=0.5, contrast=0.5, saturation=0.5,
 apply(img, color_aug)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-changing-colors-3}
 #@tab tensorflow
 def RandomColorJitter(brightness=0, contrast=0, saturation=0, hue=0):
     def aug(img):
@@ -465,21 +465,21 @@ In practice, we will [**combine multiple image augmentation methods**].
 For example,
 we can combine the different image augmentation methods defined above and apply them to each image via a `Compose` instance.
 
-```{.python .input}
+```{.python .input #image-augmentation-combining-multiple-image-augmentation-methods}
 #@tab mxnet
 augs = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.RandomFlipLeftRight(), color_aug, shape_aug])
 apply(img, augs)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-combining-multiple-image-augmentation-methods}
 #@tab pytorch
 augs = torchvision.transforms.Compose([
     torchvision.transforms.RandomHorizontalFlip(), color_aug, shape_aug])
 apply(img, augs)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-combining-multiple-image-augmentation-methods}
 #@tab jax
 def Compose(transforms):
     def aug(img):
@@ -492,7 +492,7 @@ augs = Compose([RandomHorizontalFlip(), color_aug, shape_aug])
 apply(img, augs)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-combining-multiple-image-augmentation-methods}
 #@tab tensorflow
 def Compose(transforms):
     def aug(img):
@@ -512,27 +512,27 @@ Here we use the CIFAR-10 dataset instead of the Fashion-MNIST dataset that we us
 This is because the position and size of the objects in the Fashion-MNIST dataset have been normalized, while the color and size of the objects in the CIFAR-10 dataset have more significant differences. 
 The first 32 training images in the CIFAR-10 dataset are shown below.
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-1}
 #@tab mxnet
 d2l.show_images(gluon.data.vision.CIFAR10(
     train=True)[:32][0], 4, 8, scale=0.8);
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-1}
 #@tab pytorch
 all_images = torchvision.datasets.CIFAR10(train=True, root="../data",
                                           download=True)
 d2l.show_images([all_images[i][0] for i in range(32)], 4, 8, scale=0.8);
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-1}
 #@tab jax
 (train_images, train_labels), _ = tf.keras.datasets.cifar10.load_data()
 d2l.show_images([Image.fromarray(train_images[i]) for i in range(32)],
                 4, 8, scale=0.8);
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-1}
 #@tab tensorflow
 (train_images, train_labels), _ = keras.datasets.cifar10.load_data()
 d2l.show_images([Image.fromarray(train_images[i]) for i in range(32)],
@@ -543,7 +543,7 @@ In order to obtain definitive results during prediction, we usually only apply i
 [**Here we only use the simplest random left-right flipping method**]. In addition, we use a `ToTensor` instance to convert a minibatch of images into the format required by the deep learning framework, i.e., 
 32-bit floating point numbers between 0 and 1 with the shape of (batch size, number of channels, height, width).
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-2}
 #@tab mxnet
 train_augs = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.RandomFlipLeftRight(),
@@ -553,7 +553,7 @@ test_augs = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.ToTensor()])
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-2}
 #@tab pytorch
 train_augs = torchvision.transforms.Compose([
      torchvision.transforms.RandomHorizontalFlip(),
@@ -563,7 +563,7 @@ test_augs = torchvision.transforms.Compose([
      torchvision.transforms.ToTensor()])
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-2}
 #@tab jax
 def train_augs(image, label):
     image = tf.cast(image, tf.float32) / 255.0
@@ -575,7 +575,7 @@ def test_augs(image, label):
     return image, label
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-2}
 #@tab tensorflow
 def train_augs(image, label):
     image = tf.cast(image, tf.float32) / 255.0
@@ -624,7 +624,7 @@ For
 a detailed introduction to data loading, please refer to :numref:`sec_fashion_mnist`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-3}
 #@tab mxnet
 def load_cifar10(is_train, augs, batch_size):
     return gluon.data.DataLoader(
@@ -633,7 +633,7 @@ def load_cifar10(is_train, augs, batch_size):
         num_workers=d2l.get_dataloader_workers())
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-3}
 #@tab pytorch
 def load_cifar10(is_train, augs, batch_size):
     dataset = torchvision.datasets.CIFAR10(root="../data", train=is_train,
@@ -643,7 +643,7 @@ def load_cifar10(is_train, augs, batch_size):
     return dataloader
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-3}
 #@tab jax
 def load_cifar10(is_train, aug_fn, batch_size):
     (train_imgs, train_lbls), (test_imgs, test_lbls) = (
@@ -660,7 +660,7 @@ def load_cifar10(is_train, aug_fn, batch_size):
     return ds
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-training-with-image-augmentation-3}
 #@tab tensorflow
 def load_cifar10(is_train, aug_fn, batch_size):
     (train_imgs, train_lbls), (test_imgs, test_lbls) = (
@@ -687,7 +687,7 @@ multi-GPU training in :numref:`sec_multi_gpu_concise`.
 In the following,
 [**we define a function to train and evaluate the model using multiple GPUs**].
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab mxnet
 #@save
 def train_batch_ch13(net, features, labels, loss, trainer, devices,
@@ -709,7 +709,7 @@ def train_batch_ch13(net, features, labels, loss, trainer, devices,
     return train_loss_sum, train_acc_sum
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab pytorch
 #@save
 def train_batch_ch13(net, X, y, loss, trainer, devices):
@@ -731,7 +731,7 @@ def train_batch_ch13(net, X, y, loss, trainer, devices):
     return train_loss_sum, train_acc_sum
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab jax
 #@save
 @partial(jax.jit, static_argnums=(3, 4))  # net, loss_fn are static
@@ -752,7 +752,7 @@ def train_batch_ch13(state, X, y, net, loss_fn):
     return state, train_loss_sum, train_acc_sum
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab tensorflow
 #@save
 def train_batch_ch13(net, X, y, loss, optimizer):
@@ -768,7 +768,7 @@ def train_batch_ch13(net, X, y, loss, optimizer):
     return train_loss_sum, train_acc_sum
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-2}
 #@tab mxnet
 #@save
 def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
@@ -799,7 +799,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
           f'{str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-2}
 #@tab pytorch
 #@save
 def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
@@ -831,7 +831,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
           f'{str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-2}
 #@tab jax
 #@save
 def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
@@ -877,7 +877,7 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
     return state
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-2}
 #@tab tensorflow
 #@save
 def train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs):
@@ -921,7 +921,7 @@ uses Adam as the optimization algorithm,
 applies image augmentation to the training dataset,
 and finally calls the `train_ch13` function just defined to train and evaluate the model.
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab mxnet
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
 net.initialize(init=init.Xavier(), ctx=devices)
@@ -935,7 +935,7 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab pytorch
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10, 3)
 net.apply(d2l.init_cnn)
@@ -949,7 +949,7 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab jax
 batch_size = 256
 
@@ -1001,7 +1001,7 @@ def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     state = train_ch13(net, train_iter, test_iter, loss_fn, state, 10)
 ```
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab tensorflow
 batch_size = 256
 
@@ -1038,7 +1038,7 @@ net = get_net_tf()
 
 Let's [**train the model**] using image augmentation based on random left-right flipping.
 
-```{.python .input}
+```{.python .input #image-augmentation-multi-gpu-training-4}
 #@tab all
 train_with_data_aug(train_augs, test_augs, net)
 ```

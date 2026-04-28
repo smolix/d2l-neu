@@ -16,7 +16,7 @@ will be transformed
 into minibatches
 that can be iterated over during training.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab mxnet
 import collections
 from d2l import mxnet as d2l
@@ -26,7 +26,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab pytorch
 import collections
 from d2l import torch as d2l
@@ -36,7 +36,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab jax
 import collections
 from d2l import jax as d2l
@@ -48,7 +48,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab tensorflow
 import collections
 from d2l import tensorflow as d2l
@@ -71,7 +71,7 @@ each line of the text file
 represents a sentence of words that are separated by spaces.
 Here we treat each word as a token.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-reading-the-dataset-1}
 #@tab all
 #@save
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
@@ -98,7 +98,7 @@ the "&lt;unk&gt;" token.
 Note that the original dataset
 also contains "&lt;unk&gt;" tokens that represent rare (unknown) words.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-reading-the-dataset-2}
 #@tab all
 vocab = d2l.Vocab(sentences, min_freq=10)
 f'vocab size: {len(vocab)}'
@@ -144,7 +144,7 @@ $f(w_i) > t$  can the (high-frequency) word $w_i$ be discarded,
 and the higher the relative frequency of the word, 
 the greater the probability of being discarded.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-subsampling-1}
 #@tab all
 #@save
 def subsample(sentences, vocab):
@@ -176,7 +176,7 @@ subsampling significantly shortens sentences
 by dropping high-frequency words,
 which will lead to training speedup.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-subsampling-2}
 #@tab all
 d2l.show_list_len_pair_hist(['origin', 'subsampled'], '# tokens per sentence',
                             'count', sentences, subsampled);
@@ -184,7 +184,7 @@ d2l.show_list_len_pair_hist(['origin', 'subsampled'], '# tokens per sentence',
 
 For individual tokens, the sampling rate of the high-frequency word "the" is less than 1/20.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-subsampling-3}
 #@tab all
 def compare_counts(token):
     return (f'# of "{token}": '
@@ -197,14 +197,14 @@ compare_counts('the')
 In contrast, 
 low-frequency words "join" are completely kept.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-subsampling-4}
 #@tab all
 compare_counts('join')
 ```
 
 After subsampling, we map tokens to their indices for the corpus.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-subsampling-5}
 #@tab all
 corpus = [vocab[line] for line in subsampled]
 corpus[:3]
@@ -226,7 +226,7 @@ does not exceed the sampled
 context window size
 are its context words.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-1}
 #@tab all
 #@save
 def get_centers_and_contexts(corpus, max_window_size):
@@ -252,7 +252,7 @@ Next, we create an artificial dataset containing two sentences of 7 and 3 words,
 Let the maximum context window size be 2 
 and print all the center words and their context words.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-2}
 #@tab all
 tiny_dataset = [list(range(7)), list(range(7, 10))]
 print('dataset', tiny_dataset)
@@ -264,7 +264,7 @@ When training on the PTB dataset,
 we set the maximum context window size to 5. 
 The following extracts all the center words and their context words in the dataset.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-3}
 #@tab all
 all_centers, all_contexts = get_centers_and_contexts(corpus, 5)
 f'# center-context pairs: {sum([len(contexts) for contexts in all_contexts])}'
@@ -279,7 +279,7 @@ we define the following `RandomGenerator` class,
 where the (possibly unnormalized) sampling distribution is passed
 via the argument `sampling_weights`.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-1}
 #@tab all
 #@save
 class RandomGenerator:
@@ -306,25 +306,25 @@ we can draw 10 random variables $X$
 among indices 1, 2, and 3
 with sampling probabilities $P(X=1)=2/9, P(X=2)=3/9$, and $P(X=3)=4/9$ as follows.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab mxnet
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab pytorch
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab jax
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab tensorflow
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
@@ -340,7 +340,7 @@ in the dictionary
 raised to 
 the power of 0.75 :cite:`Mikolov.Sutskever.Chen.ea.2013`.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-3}
 #@tab all
 #@save
 def get_negatives(all_contexts, vocab, counter, K):
@@ -415,7 +415,7 @@ a minibatch that can be loaded for calculations
 during training,
 such as including the mask variable.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-1}
 #@tab all
 #@save
 def batchify(data):
@@ -434,7 +434,7 @@ def batchify(data):
 
 Let's test this function using a minibatch of two examples.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-2}
 #@tab all
 x_1 = (1, [2, 2], [3, 3, 3, 3])
 x_2 = (1, [2, 2, 2], [3, 3])
@@ -456,7 +456,7 @@ arrays. Per-epoch shuffling and per-batch slicing are then both O(1)
 per batch. The helper `_pad_ptb` below does the one-time padding and is
 what `load_data_ptb` actually calls.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-1}
 #@tab all
 #@save
 def _pad_ptb(all_centers, all_contexts, all_negatives):
@@ -484,7 +484,7 @@ Finally, `load_data_ptb` wires everything together: read the PTB dataset,
 build the vocabulary, extract centers/contexts/negatives, pad once, and
 return a framework-native data iterator backed by those arrays.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab mxnet
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -508,7 +508,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return data_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab pytorch
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -533,7 +533,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return data_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab jax
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -565,7 +565,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return PTBDataIter(), vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab tensorflow
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -594,7 +594,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
 
 Let's print the first minibatch of the data iterator.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-3}
 #@tab all
 data_iter, vocab = load_data_ptb(512, 5, 5)
 for batch in data_iter:

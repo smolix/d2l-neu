@@ -25,7 +25,7 @@ We have seen simple examples of estimators before in section :numref:`sec_maximu
 
 As an example, we show below the true density of a Gaussian random variable with mean zero and variance one, along with a collection samples from that Gaussian.  We constructed the $y$ coordinate so every point is visible and the relationship to the original density is clearer.
 
-```{.python .input}
+```{.python .input #statistics-evaluating-and-comparing-estimators}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -53,7 +53,7 @@ d2l.plt.title(f'sample mean: {float(np.mean(xs)):.2f}')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-and-comparing-estimators}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -83,7 +83,7 @@ d2l.plt.title(f'sample mean: {float(torch.mean(xs).item()):.2f}')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-and-comparing-estimators}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -113,7 +113,7 @@ d2l.plt.title(f'sample mean: {float(tf.reduce_mean(xs).numpy()):.2f}')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-and-comparing-estimators}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -202,7 +202,7 @@ We refer to the above formula as the *bias-variance trade-off*. The mean squared
 
 Since the standard deviation of an estimator has been implementing by simply calling `a.std()` for a tensor `a`, we will skip it but implement the statistical bias and the mean squared error.
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-1}
 #@tab mxnet
 # Statistical bias
 def stat_bias(true_theta, est_theta):
@@ -213,7 +213,7 @@ def mse(data, true_theta):
     return(np.mean(np.square(data - true_theta)))
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-1}
 #@tab pytorch
 # Statistical bias
 def stat_bias(true_theta, est_theta):
@@ -224,7 +224,7 @@ def mse(data, true_theta):
     return(torch.mean(torch.square(data - true_theta)))
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-1}
 #@tab tensorflow
 # Statistical bias
 def stat_bias(true_theta, est_theta):
@@ -235,7 +235,7 @@ def mse(data, true_theta):
     return(tf.reduce_mean(tf.square(data - true_theta)))
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-1}
 #@tab jax
 # Statistical bias
 def stat_bias(true_theta, est_theta):
@@ -248,7 +248,7 @@ def mse(data, true_theta):
 
 To illustrate the equation of the bias-variance trade-off, let's simulate of normal distribution $\mathcal{N}(\theta, \sigma^2)$ with $10,000$ samples. Here, we use a $\theta = 1$ and $\sigma = 4$. As the estimator is a function of the given samples, here we use the mean of the samples as an estimator for true $\theta$ in this normal distribution $\mathcal{N}(\theta, \sigma^2)$ .
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-2}
 #@tab mxnet
 theta_true = 1
 sigma = 4
@@ -258,7 +258,7 @@ theta_est = np.mean(samples)
 theta_est
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-2}
 #@tab pytorch
 theta_true = 1
 sigma = 4
@@ -268,7 +268,7 @@ theta_est = torch.mean(samples)
 theta_est
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-2}
 #@tab tensorflow
 theta_true = 1
 sigma = 4
@@ -278,7 +278,7 @@ theta_est = tf.reduce_mean(samples)
 theta_est
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-2}
 #@tab jax
 theta_true = 1
 sigma = 4
@@ -291,32 +291,32 @@ theta_est
 
 Let's validate the trade-off equation by calculating the summation of the squared bias and the variance of our estimator. First, calculate the MSE of our estimator.
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-3}
 #@tab all
 mse(samples, theta_true)
 ```
 
 Next, we calculate $\textrm{Var} (\hat{\theta}_n) + [\textrm{bias} (\hat{\theta}_n)]^2$ as below. As you can see, the two values agree to numerical precision.
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab mxnet
 bias = stat_bias(theta_true, theta_est)
 np.square(samples.std()) + np.square(bias)
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab pytorch
 bias = stat_bias(theta_true, theta_est)
 torch.square(samples.std(unbiased=False)) + torch.square(bias)
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab tensorflow
 bias = stat_bias(theta_true, theta_est)
 tf.square(tf.math.reduce_std(samples)) + tf.square(bias)
 ```
 
-```{.python .input}
+```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab jax
 bias = stat_bias(theta_true, theta_est)
 jnp.square(jnp.std(samples)) + jnp.square(bias)
@@ -473,7 +473,7 @@ $$\left[\hat\mu_n - 1.96\frac{\hat\sigma_n}{\sqrt{n}}, \hat\mu_n + 1.96\frac{\ha
 
 It is safe to say that :eqref:`eq_gauss_confidence` is one of the most used formula in statistics.  Let's close our discussion of statistics by implementing it.  For simplicity, we assume we are in the asymptotic regime.  Small values of $N$ should include the correct value of `t_star` obtained either programmatically or from a $t$-table.
 
-```{.python .input}
+```{.python .input #statistics-a-gaussian-example}
 #@tab mxnet
 # Number of samples
 N = 1000
@@ -490,7 +490,7 @@ sigma_hat = samples.std(ddof=1)
 (mu_hat - t_star*sigma_hat/np.sqrt(N), mu_hat + t_star*sigma_hat/np.sqrt(N))
 ```
 
-```{.python .input}
+```{.python .input #statistics-a-gaussian-example}
 #@tab pytorch
 # PyTorch uses Bessel's correction by default, which means the use of ddof=1
 # instead of default ddof=0 in numpy. We can use unbiased=False to imitate
@@ -512,7 +512,7 @@ sigma_hat = samples.std(unbiased=True)
  mu_hat + t_star*sigma_hat/torch.sqrt(torch.tensor(N, dtype=torch.float32)))
 ```
 
-```{.python .input}
+```{.python .input #statistics-a-gaussian-example}
 #@tab tensorflow
 # Number of samples
 N = 1000
@@ -530,7 +530,7 @@ sigma_hat = tf.math.reduce_std(samples)
  mu_hat + t_star*sigma_hat/tf.sqrt(tf.constant(N, dtype=tf.float32)))
 ```
 
-```{.python .input}
+```{.python .input #statistics-a-gaussian-example}
 #@tab jax
 # Number of samples
 N = 1000

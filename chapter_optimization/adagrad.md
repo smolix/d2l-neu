@@ -65,7 +65,7 @@ $$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2.$$
 
 We are going to implement Adagrad using the same learning rate previously, i.e., $\eta = 0.4$. As we can see, the iterative trajectory of the independent variable is smoother. However, due to the cumulative effect of $\boldsymbol{s}_t$, the learning rate continuously decays, so the independent variable does not move as much during later stages of iteration.
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -74,7 +74,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -82,7 +82,7 @@ import math
 import torch
 ```
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -90,7 +90,7 @@ import math
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -100,7 +100,7 @@ import math
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-2}
 #@tab all
 def adagrad_2d(x1, x2, s1, s2):
     eps = 1e-6
@@ -120,7 +120,7 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
 
 As we increase the learning rate to $2$ we see much better behavior. This already indicates that the decrease in learning rate might be rather aggressive, even in the noise-free case and we need to ensure that parameters converge appropriately.
 
-```{.python .input}
+```{.python .input #adagrad-the-algorithm-3}
 #@tab all
 eta = 2
 d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
@@ -130,7 +130,7 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
 
 Just like the momentum method, Adagrad needs to maintain a state variable of the same shape as the parameters.
 
-```{.python .input}
+```{.python .input #adagrad-implementation-from-scratch-1}
 #@tab mxnet
 def init_adagrad_states(feature_dim):
     s_w = d2l.zeros((feature_dim, 1))
@@ -144,7 +144,7 @@ def adagrad(params, states, hyperparams):
         p[:] -= hyperparams['lr'] * p.grad / np.sqrt(s + eps)
 ```
 
-```{.python .input}
+```{.python .input #adagrad-implementation-from-scratch-1}
 #@tab pytorch
 def init_adagrad_states(feature_dim):
     s_w = d2l.zeros((feature_dim, 1))
@@ -160,7 +160,7 @@ def adagrad(params, states, hyperparams):
         p.grad.data.zero_()
 ```
 
-```{.python .input}
+```{.python .input #adagrad-implementation-from-scratch-1}
 #@tab tensorflow
 def init_adagrad_states(feature_dim):
     s_w = tf.Variable(d2l.zeros((feature_dim, 1)))
@@ -174,7 +174,7 @@ def adagrad(params, grads, states, hyperparams):
         p[:].assign(p - hyperparams['lr'] * g / tf.math.sqrt(s + eps))
 ```
 
-```{.python .input}
+```{.python .input #adagrad-implementation-from-scratch-1}
 #@tab jax
 def init_adagrad_states(feature_dim):
     s_w = jnp.zeros((feature_dim, 1))
@@ -193,7 +193,7 @@ def adagrad(params, grads, states, hyperparams):
 Compared to the experiment in :numref:`sec_minibatch_sgd` we use a
 larger learning rate to train the model.
 
-```{.python .input}
+```{.python .input #adagrad-implementation-from-scratch-2}
 #@tab all
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
@@ -204,24 +204,24 @@ d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
 
 Using the `Trainer` instance of the algorithm `adagrad`, we can invoke the Adagrad algorithm in Gluon.
 
-```{.python .input}
+```{.python .input #adagrad-concise-implementation}
 #@tab mxnet
 d2l.train_concise_ch11('adagrad', {'learning_rate': 0.1}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adagrad-concise-implementation}
 #@tab pytorch
 trainer = torch.optim.Adagrad
 d2l.train_concise_ch11(trainer, {'lr': 0.1}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adagrad-concise-implementation}
 #@tab tensorflow
 trainer = tf.keras.optimizers.Adagrad
 d2l.train_concise_ch11(trainer, {'learning_rate' : 0.1}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adagrad-concise-implementation}
 #@tab jax
 import optax
 trainer = optax.adagrad

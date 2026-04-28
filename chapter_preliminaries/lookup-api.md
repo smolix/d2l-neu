@@ -29,22 +29,22 @@ provide such documentation.
 This section provides some guidance for how to explore the TensorFlow API.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab pytorch
 import torch
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab jax
 import jax
 ```
@@ -55,22 +55,22 @@ To know which functions and classes can be called in a module,
 we invoke the `dir` function. For instance, we can
 (**query all properties in the module for generating random numbers**):
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
 print(dir(np.random))
 ```
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
 print(dir(torch.distributions))
 ```
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
 print(dir(tf.random))
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
 print(dir(jax.random))
 ```
@@ -89,22 +89,22 @@ For specific instructions on how to use a given function or class,
 we can invoke the  `help` function. As an example, let's
 [**explore the usage instructions for tensors' `ones` function**].
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab mxnet
 help(np.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab pytorch
 help(torch.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab tensorflow
 help(tf.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab jax
 help(jax.numpy.ones)
 ```
@@ -115,22 +115,22 @@ and sets all the elements to the value of 1.
 Whenever possible, you should (**run a quick test**) 
 to confirm your interpretation:
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
 np.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab pytorch
 torch.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab tensorflow
 tf.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab jax
 jax.numpy.ones(4)
 ```

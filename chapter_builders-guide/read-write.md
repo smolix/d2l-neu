@@ -19,27 +19,27 @@ Thus it is time to learn how to load and store
 both individual weight vectors and entire models.
 This section addresses both issues.
 
-```{.python .input}
+```{.python .input #read-write-file-i-o}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #read-write-file-i-o}
 %%tab pytorch
 import torch
 from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #read-write-file-i-o}
 %%tab tensorflow
 import tensorflow as tf
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #read-write-file-i-o}
 %%tab jax
 from d2l import jax as d2l
 import flax
@@ -58,25 +58,25 @@ to read and write them respectively.
 Both functions require that we supply a name,
 and `save` requires as input the variable to be saved.
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-1}
 %%tab mxnet
 x = np.arange(4)
 npx.save('x-file', x)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-1}
 %%tab pytorch
 x = torch.arange(4)
 torch.save(x, 'x-file')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-1}
 %%tab tensorflow
 x = tf.range(4)
 np.save('x-file.npy', x)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-1}
 %%tab jax
 x = jnp.arange(4)
 jnp.save('x-file.npy', x)
@@ -84,25 +84,25 @@ jnp.save('x-file.npy', x)
 
 We can now read the data from the stored file back into memory.
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-2}
 %%tab mxnet
 x2 = npx.load('x-file')
 x2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-2}
 %%tab pytorch
 x2 = torch.load('x-file', weights_only=True)
 x2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-2}
 %%tab tensorflow
 x2 = np.load('x-file.npy', allow_pickle=True)
 x2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-2}
 %%tab jax
 x2 = jnp.load('x-file.npy', allow_pickle=True)
 x2
@@ -110,7 +110,7 @@ x2
 
 We can [**store a list of tensors and read them back into memory.**]
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab mxnet
 y = np.zeros(4)
 npx.save('x-files', [x, y])
@@ -118,7 +118,7 @@ x2, y2 = npx.load('x-files')
 (x2, y2)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab pytorch
 y = torch.zeros(4)
 torch.save([x, y],'x-files')
@@ -126,7 +126,7 @@ x2, y2 = torch.load('x-files', weights_only=True)
 (x2, y2)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab tensorflow
 y = tf.zeros(4)
 np.save('xy-files.npy', [x, y])
@@ -134,7 +134,7 @@ x2, y2 = np.load('xy-files.npy', allow_pickle=True)
 (x2, y2)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab jax
 y = jnp.zeros(4)
 jnp.save('xy-files.npy', [x, y])
@@ -147,7 +147,7 @@ from strings to tensors.**]
 This is convenient when we want
 to read or write all the weights in a model.
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-4}
 %%tab mxnet
 mydict = {'x': x, 'y': y}
 npx.save('mydict', mydict)
@@ -155,7 +155,7 @@ mydict2 = npx.load('mydict')
 mydict2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-4}
 %%tab pytorch
 mydict = {'x': x, 'y': y}
 torch.save(mydict, 'mydict')
@@ -163,7 +163,7 @@ mydict2 = torch.load('mydict', weights_only=True)
 mydict2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-4}
 %%tab tensorflow
 mydict = {'x': x, 'y': y}
 np.save('mydict.npy', mydict)
@@ -171,7 +171,7 @@ mydict2 = np.load('mydict.npy', allow_pickle=True)
 mydict2
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-tensors-4}
 %%tab jax
 mydict = {'x': x, 'y': y}
 jnp.save('mydict.npy', mydict)
@@ -199,7 +199,7 @@ to generate the architecture in code
 and then load the parameters from disk.
 (**Let's start with our familiar MLP.**)
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab mxnet
 class MLP(nn.Block):
     def __init__(self, **kwargs):
@@ -216,7 +216,7 @@ X = np.random.uniform(size=(2, 20))
 Y = net(X)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab pytorch
 class MLP(nn.Module):
     def __init__(self):
@@ -232,7 +232,7 @@ X = torch.randn(size=(2, 20))
 Y = net(X)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab tensorflow
 class MLP(tf.keras.Model):
     def __init__(self):
@@ -251,7 +251,7 @@ X = tf.random.uniform((2, 20))
 Y = net(X)
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab jax
 class MLP(nn.Module):
     def setup(self):
@@ -268,22 +268,22 @@ Y, params = net.init_with_output(d2l.get_key(), X)
 
 Next, we [**store the parameters of the model as a file**] with the name "mlp.params".
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab mxnet
 net.save_parameters('mlp.params')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab pytorch
 torch.save(net.state_dict(), 'mlp.params')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab tensorflow
 net.save_weights('mlp.weights.h5')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab jax
 checkpoints.save_checkpoint(os.path.abspath('ckpt_dir'), params, step=1,
                             overwrite=True)
@@ -294,27 +294,27 @@ of the original MLP model.
 Instead of randomly initializing the model parameters,
 we [**read the parameters stored in the file directly**].
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab mxnet
 clone = MLP()
 clone.load_parameters('mlp.params')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab pytorch
 clone = MLP()
 clone.load_state_dict(torch.load('mlp.params', weights_only=True))
 clone.eval()
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab tensorflow
 clone = MLP()
 clone(X)
 clone.load_weights('mlp.weights.h5')
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab jax
 clone = MLP()
 cloned_params = flax.core.freeze(checkpoints.restore_checkpoint(
@@ -325,13 +325,13 @@ Since both instances have the same model parameters,
 the computational result of the same input `X` should be the same.
 Let's verify this.
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-4}
 %%tab pytorch, mxnet, tensorflow
 Y_clone = clone(X)
 Y_clone == Y
 ```
 
-```{.python .input}
+```{.python .input #read-write-loading-and-saving-model-parameters-4}
 %%tab jax
 Y_clone = clone.apply(cloned_params, X)
 Y_clone == Y

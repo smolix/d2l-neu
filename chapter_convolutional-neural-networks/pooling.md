@@ -38,7 +38,7 @@ which serve the dual purposes of
 mitigating the sensitivity of convolutional layers to location
 and of spatially downsampling representations.
 
-```{.python .input}
+```{.python .input #pooling}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -46,14 +46,14 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #pooling}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #pooling}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -129,7 +129,7 @@ in :numref:`sec_conv_layer`.
 However, no kernel is needed, computing the output
 as either the maximum or the average of each region in the input.
 
-```{.python .input}
+```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab mxnet, pytorch
 def pool2d(X, pool_size, mode='max'):
     p_h, p_w = pool_size
@@ -143,7 +143,7 @@ def pool2d(X, pool_size, mode='max'):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab jax
 def pool2d(X, pool_size, mode='max'):
     p_h, p_w = pool_size
@@ -157,7 +157,7 @@ def pool2d(X, pool_size, mode='max'):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -176,7 +176,7 @@ def pool2d(X, pool_size, mode='max'):
 
 We can construct the input tensor `X` in :numref:`fig_pooling` to [**validate the output of the two-dimensional max-pooling layer**].
 
-```{.python .input}
+```{.python .input #pooling-maximum-pooling-and-average-pooling-2}
 %%tab all
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 pool2d(X, (2, 2))
@@ -184,7 +184,7 @@ pool2d(X, (2, 2))
 
 Also, we can experiment with (**the average pooling layer**).
 
-```{.python .input}
+```{.python .input #pooling-maximum-pooling-and-average-pooling-3}
 %%tab all
 pool2d(X, (2, 2), 'avg')
 ```
@@ -205,13 +205,13 @@ Note that unlike other frameworks, TensorFlow
 prefers and is optimized for *channels-last* input.
 :end_tab:
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-1}
 %%tab mxnet, pytorch
 X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 1, 4, 4))
 X
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-1}
 %%tab tensorflow, jax
 X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 4, 4, 1))
 X
@@ -220,28 +220,28 @@ X
 Since pooling aggregates information from an area, (**deep learning frameworks default to matching pooling window sizes and stride.**) For instance, if we use a pooling window of shape `(3, 3)`
 we get a stride shape of `(3, 3)` by default.
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-2}
 %%tab mxnet
 pool2d = nn.MaxPool2D(3)
 # Pooling has no model parameters, hence it needs no initialization
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-2}
 %%tab pytorch
 pool2d = nn.MaxPool2d(3)
 # Pooling has no model parameters, hence it needs no initialization
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-2}
 %%tab tensorflow
 pool2d = tf.keras.layers.MaxPool2D(pool_size=[3, 3])
 # Pooling has no model parameters, hence it needs no initialization
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-2}
 %%tab jax
 # Pooling has no model parameters, hence it needs no initialization
 nn.max_pool(X, window_shape=(3, 3), strides=(3, 3))
@@ -249,19 +249,19 @@ nn.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 
 Needless to say, [**the stride and padding can be manually specified**] to override framework defaults if required.
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-3}
 %%tab mxnet
 pool2d = nn.MaxPool2D(3, padding=1, strides=2)
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-3}
 %%tab pytorch
 pool2d = nn.MaxPool2d(3, padding=1, stride=2)
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-3}
 %%tab tensorflow
 paddings = tf.constant([[0, 0], [1,0], [1,0], [0,0]])
 X_padded = tf.pad(X, paddings, "CONSTANT")
@@ -270,7 +270,7 @@ pool2d = tf.keras.layers.MaxPool2D(pool_size=[3, 3], padding='valid',
 pool2d(X_padded)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-3}
 %%tab jax
 X_padded = jnp.pad(X, ((0, 0), (1, 0), (1, 0), (0, 0)), mode='constant')
 nn.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
@@ -278,19 +278,19 @@ nn.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 
 Of course, we can specify an arbitrary rectangular pooling window with arbitrary height and width respectively, as the example below shows.
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-4}
 %%tab mxnet
 pool2d = nn.MaxPool2D((2, 3), padding=(0, 1), strides=(2, 3))
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-4}
 %%tab pytorch
 pool2d = nn.MaxPool2d((2, 3), stride=(2, 3), padding=(0, 1))
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-4}
 %%tab tensorflow
 paddings = tf.constant([[0, 0], [0, 0], [1, 1], [0, 0]])
 X_padded = tf.pad(X, paddings, "CONSTANT")
@@ -300,7 +300,7 @@ pool2d = tf.keras.layers.MaxPool2D(pool_size=[2, 3], padding='valid',
 pool2d(X_padded)
 ```
 
-```{.python .input}
+```{.python .input #pooling-padding-and-stride-4}
 %%tab jax
 
 X_padded = jnp.pad(X, ((0, 0), (0, 0), (1, 1), (0, 0)), mode='constant')
@@ -323,13 +323,13 @@ Note that this will require a
 concatenation along the last dimension for TensorFlow due to the channels-last syntax.
 :end_tab:
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-1}
 %%tab mxnet, pytorch
 X = d2l.concat((X, X + 1), 1)
 X
 ```
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-1}
 %%tab tensorflow, jax
 # Concatenate along `dim=3` due to channels-last syntax
 X = d2l.concat([X, X + 1], 3)
@@ -338,19 +338,19 @@ X
 
 As we can see, the number of output channels is still two after pooling.
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-2}
 %%tab mxnet
 pool2d = nn.MaxPool2D(3, padding=1, strides=2)
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-2}
 %%tab pytorch
 pool2d = nn.MaxPool2d(3, padding=1, stride=2)
 pool2d(X)
 ```
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-2}
 %%tab tensorflow
 paddings = tf.constant([[0, 0], [1,0], [1,0], [0,0]])
 X_padded = tf.pad(X, paddings, "CONSTANT")
@@ -360,7 +360,7 @@ pool2d(X_padded)
 
 ```
 
-```{.python .input}
+```{.python .input #pooling-multiple-channels-2}
 %%tab jax
 X_padded = jnp.pad(X, ((0, 0), (1, 0), (1, 0), (0, 0)), mode='constant')
 nn.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))

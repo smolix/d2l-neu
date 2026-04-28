@@ -9,7 +9,7 @@ Understanding Gaussian processes (GPs) is important for reasoning about model co
 
 In this section, we introduce Gaussian process _priors_ over functions. In the next notebook, we show how to use these priors to do _posterior inference_ and make predictions. The next section can be viewed as "GPs in a nutshell", quickly giving what you need to apply Gaussian processes in practice.
 
-```{.python .input}
+```{.python .input #gp-priors-gaussian-process-priors}
 from d2l import torch as d2l
 import numpy as np
 from scipy.spatial import distance_matrix
@@ -36,7 +36,7 @@ For any $x$, $f(x)$ is a sum of two Gaussian random variables. Since Gaussians a
 
 In short, $f(x)$ is a _random function_, or a _distribution over functions_. We can gain some insights into this distribution by repeatedly sampling values for $w_0, w_1$, and visualizing the corresponding functions $f(x)$, which are straight lines with slopes and different intercepts, as follows:
 
-```{.python .input}
+```{.python .input #gp-priors-a-simple-gaussian-process}
 def lin_func(x, n_sample):
     preds = np.zeros((n_sample, x.shape[0]))
     for ii in range(n_sample):
@@ -114,7 +114,7 @@ We can build further intuition about Gaussian processes with RBF kernels, and hy
 
 We illustrate this process in the figure below.
 
-```{.python .input}
+```{.python .input #gp-priors-the-radial-basis-function-rbf-kernel}
 def rbfkernel(x1, x2, ls=4.):  #@save
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))

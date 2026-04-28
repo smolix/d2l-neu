@@ -9,7 +9,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 This section contains the implementations of utility functions and classes used in this book.
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-1}
 %%tab mxnet
 import inspect
 import collections
@@ -22,7 +22,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input  n=1}
+```{.python .input #utils-utility-functions-and-classes-1  n=1}
 %%tab pytorch
 import inspect
 import collections
@@ -31,7 +31,7 @@ from IPython import display
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-1}
 %%tab tensorflow
 import inspect
 from IPython import display
@@ -40,7 +40,7 @@ from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-1}
 %%tab jax
 import inspect
 from IPython import display
@@ -51,7 +51,7 @@ import jax
 
 Hyperparameters.
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-2}
 %%tab all
 @d2l.add_to_class(d2l.HyperParameters)  #@save
 def save_hyperparameters(self, ignore=[]):
@@ -66,7 +66,7 @@ def save_hyperparameters(self, ignore=[]):
 
 Progress bar.
 
-```{.python .input  n=22}
+```{.python .input #utils-utility-functions-and-classes-3  n=22}
 %%tab all
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
 def draw(self, x, y, label, every_n=1):
@@ -110,7 +110,7 @@ def draw(self, x, y, label, every_n=1):
 ```
 
 Add FrozenLake environment
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-4}
 %%tab pytorch
 
 def frozen_lake(seed): #@save
@@ -146,7 +146,7 @@ def frozen_lake(seed): #@save
 ```
 
 Create environment
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-5}
 %%tab pytorch
 
 def make_env(name ='', seed=0): #@save
@@ -162,7 +162,7 @@ def make_env(name ='', seed=0): #@save
 ```
 
 Show value function
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-6}
 %%tab pytorch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -223,7 +223,7 @@ def show_value_function_progress(env_desc, V, pi): #@save
 
 ```
 Show Q function
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-7}
 %%tab pytorch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -300,7 +300,7 @@ Trainer
 
 A bunch of functions that will be deprecated:
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-8}
 %%tab mxnet
 def load_array(data_arrays, batch_size, is_train=True):  #@save
     """Construct a Gluon data iterator."""
@@ -396,7 +396,7 @@ def grad_clipping(net, theta):  #@save
             param.grad[:] *= theta / norm
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-8}
 %%tab pytorch
 
 def load_array(data_arrays, batch_size, is_train=True):  #@save
@@ -500,7 +500,7 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
           f'on {str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-8}
 %%tab tensorflow
 
 def load_array(data_arrays, batch_size, is_train=True):  #@save
@@ -586,7 +586,7 @@ def train_ch6(net_fn, train_iter, test_iter, num_epochs, lr, device):
     return net
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-8}
 %%tab jax
 
 def linreg(X, w, b):  #@save
@@ -750,7 +750,7 @@ def evaluate_loss(net, data_iter, loss):  #@save
     return metric[0] / metric[1]
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-9}
 %%tab mxnet, tensorflow
 def evaluate_accuracy(net, data_iter):  #@save
     """Compute the accuracy for a model on a dataset."""
@@ -760,7 +760,7 @@ def evaluate_accuracy(net, data_iter):  #@save
     return metric[0] / metric[1]
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-10}
 %%tab all
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     """Plot a list of images."""
@@ -780,7 +780,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     return axes
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-11}
 %%tab pytorch, mxnet, tensorflow
 
 def linreg(X, w, b):  #@save
@@ -867,7 +867,7 @@ def accuracy(y_hat, y):  #@save
     return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-12}
 %%tab all
 
 import os
@@ -931,7 +931,7 @@ def extract(filename, folder=None):  #@save
         shutil.rmtree(tmp, ignore_errors=True)
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-13}
 %%tab pytorch, mxnet, tensorflow
 
 def download_extract(name, folder=None):  #@save
@@ -963,7 +963,7 @@ def tokenize(lines, token='word'):  #@save
 
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-14}
 %%tab pytorch
 
 def evaluate_loss(net, data_iter, loss):  #@save
@@ -977,7 +977,7 @@ def evaluate_loss(net, data_iter, loss):  #@save
     return metric[0] / metric[1]
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-14}
 %%tab mxnet, tensorflow
 def evaluate_loss(net, data_iter, loss):  #@save
     """Evaluate the loss of a model on the given dataset."""
@@ -988,7 +988,7 @@ def evaluate_loss(net, data_iter, loss):  #@save
     return metric[0] / metric[1]
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-15}
 %%tab pytorch
 def grad_clipping(net, theta):  #@save
     """Clip the gradient."""
@@ -1002,7 +1002,7 @@ def grad_clipping(net, theta):  #@save
             param.grad[:] *= theta / norm
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-15}
 %%tab tensorflow
 def grad_clipping(grads, theta):  #@save
     """Clip the gradient."""
@@ -1026,7 +1026,7 @@ def grad_clipping(grads, theta):  #@save
 
 More for the attention chapter.
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-16}
 %%tab pytorch, mxnet, tensorflow
 #@save
 d2l.DATA_HUB['fra-eng'] = (d2l.DATA_URL + 'fra-eng.zip',
@@ -1103,7 +1103,7 @@ def load_data_nmt(batch_size, num_steps, num_examples=600):
     return data_iter, src_vocab, tgt_vocab
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-17}
 %%tab mxnet
     
 #@save
@@ -1181,7 +1181,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-17}
 %%tab pytorch
 #@save
 def sequence_mask(X, valid_len, value=0):
@@ -1285,7 +1285,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 ```
 
-```{.python .input}
+```{.python .input #utils-utility-functions-and-classes-17}
 %%tab tensorflow
 #@save
 def sequence_mask(X, valid_len, value=0):

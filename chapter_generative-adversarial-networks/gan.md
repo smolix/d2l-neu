@@ -42,7 +42,7 @@ $$\min_D \max_G \{ -E_{x \sim \textrm{Data}} \log D(\mathbf x) - E_{z \sim \text
 
 Many of the GANs applications are in the context of images. As a demonstration purpose, we are going to content ourselves with fitting a much simpler distribution first. We will illustrate what happens if we use GANs to build the world's most inefficient estimator of parameters for a Gaussian. Let's get started.
 
-```{.python .input}
+```{.python .input #gan-generative-adversarial-networks}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -51,7 +51,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #gan-generative-adversarial-networks}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -59,13 +59,13 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #gan-generative-adversarial-networks}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #gan-generative-adversarial-networks}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -80,7 +80,7 @@ import numpy as np
 
 Since this is going to be the world's lamest example, we simply generate data drawn from a Gaussian.
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-1}
 #@tab mxnet, pytorch
 X = d2l.normal(0.0, 1, (1000, 2))
 A = d2l.tensor([[1, 2], [-0.1, 0.5]])
@@ -88,7 +88,7 @@ b = d2l.tensor([1, 2])
 data = d2l.matmul(X, A) + b
 ```
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-1}
 #@tab tensorflow
 X = d2l.normal((1000, 2), 0.0, 1)
 A = d2l.tensor([[1, 2], [-0.1, 0.5]])
@@ -96,7 +96,7 @@ b = d2l.tensor([1, 2], tf.float32)
 data = d2l.matmul(X, A) + b
 ```
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-1}
 #@tab jax
 X = jax.random.normal(jax.random.PRNGKey(0), (1000, 2))
 A = jnp.array([[1, 2], [-0.1, 0.5]])
@@ -106,28 +106,28 @@ data = jnp.matmul(X, A) + b
 
 Let's see what we got. This should be a Gaussian shifted in some rather arbitrary way with mean $b$ and covariance matrix $A^TA$.
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-2}
 #@tab mxnet, pytorch
 d2l.set_figsize()
 d2l.plt.scatter(d2l.numpy(data[:100, 0]), d2l.numpy(data[:100, 1]));
 print(f'The covariance matrix is\n{d2l.matmul(A.T, A)}')
 ```
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-2}
 #@tab tensorflow
 d2l.set_figsize()
 d2l.plt.scatter(d2l.numpy(data[:100, 0]), d2l.numpy(data[:100, 1]));
 print(f'The covariance matrix is\n{tf.matmul(A, A, transpose_a=True)}')
 ```
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-2}
 #@tab jax
 d2l.set_figsize()
 d2l.plt.scatter(np.array(data[:100, 0]), np.array(data[:100, 1]));
 print(f'The covariance matrix is\n{jnp.matmul(A.T, A)}')
 ```
 
-```{.python .input}
+```{.python .input #gan-generate-some-real-data-3}
 #@tab all
 batch_size = 8
 data_iter = d2l.load_array((data,), batch_size)
@@ -137,23 +137,23 @@ data_iter = d2l.load_array((data,), batch_size)
 
 Our generator network will be the simplest network possible - a single layer linear model. This is since we will be driving that linear network with a Gaussian data generator. Hence, it literally only needs to learn the parameters to fake things perfectly.
 
-```{.python .input}
+```{.python .input #gan-generator}
 #@tab mxnet
 net_G = nn.Sequential()
 net_G.add(nn.Dense(2))
 ```
 
-```{.python .input}
+```{.python .input #gan-generator}
 #@tab pytorch
 net_G = nn.Sequential(nn.Linear(2, 2))
 ```
 
-```{.python .input}
+```{.python .input #gan-generator}
 #@tab tensorflow
 net_G = tf.keras.models.Sequential([tf.keras.layers.Dense(2)])
 ```
 
-```{.python .input}
+```{.python .input #gan-generator}
 #@tab jax
 class Generator(nn.Module):
     @nn.compact
@@ -167,7 +167,7 @@ net_G = Generator()
 
 For the discriminator we will be a bit more discriminating: we will use an MLP with 3 layers to make things a bit more interesting.
 
-```{.python .input}
+```{.python .input #gan-discriminator}
 #@tab mxnet
 net_D = nn.Sequential()
 net_D.add(nn.Dense(5, activation='tanh'),
@@ -175,7 +175,7 @@ net_D.add(nn.Dense(5, activation='tanh'),
           nn.Dense(1))
 ```
 
-```{.python .input}
+```{.python .input #gan-discriminator}
 #@tab pytorch
 net_D = nn.Sequential(
     nn.Linear(2, 5), nn.Tanh(),
@@ -183,7 +183,7 @@ net_D = nn.Sequential(
     nn.Linear(3, 1))
 ```
 
-```{.python .input}
+```{.python .input #gan-discriminator}
 #@tab tensorflow
 net_D = tf.keras.models.Sequential([
     tf.keras.Input(shape=(2,)),
@@ -193,7 +193,7 @@ net_D = tf.keras.models.Sequential([
 ])
 ```
 
-```{.python .input}
+```{.python .input #gan-discriminator}
 #@tab jax
 class Discriminator(nn.Module):
     @nn.compact
@@ -209,7 +209,7 @@ net_D = Discriminator()
 
 First we define a function to update the discriminator.
 
-```{.python .input}
+```{.python .input #gan-training-1}
 #@tab mxnet
 #@save
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
@@ -229,7 +229,7 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
     return float(loss_D.sum())
 ```
 
-```{.python .input}
+```{.python .input #gan-training-1}
 #@tab pytorch
 #@save
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
@@ -250,7 +250,7 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
     return loss_D
 ```
 
-```{.python .input}
+```{.python .input #gan-training-1}
 #@tab tensorflow
 #@save
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
@@ -272,7 +272,7 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     return loss_D
 ```
 
-```{.python .input}
+```{.python .input #gan-training-1}
 #@tab jax
 #@save
 from functools import partial
@@ -301,7 +301,7 @@ def update_D(X, Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_D,
 
 The generator is updated similarly. Here we reuse the cross-entropy loss but change the label of the fake data from $0$ to $1$.
 
-```{.python .input}
+```{.python .input #gan-training-2}
 #@tab mxnet
 #@save
 def update_G(Z, net_D, net_G, loss, trainer_G):
@@ -319,7 +319,7 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
     return float(loss_G.sum())
 ```
 
-```{.python .input}
+```{.python .input #gan-training-2}
 #@tab pytorch
 #@save
 def update_G(Z, net_D, net_G, loss, trainer_G):
@@ -337,7 +337,7 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
     return loss_G
 ```
 
-```{.python .input}
+```{.python .input #gan-training-2}
 #@tab tensorflow
 #@save
 def update_G(Z, net_D, net_G, loss, optimizer_G):
@@ -357,7 +357,7 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
     return loss_G
 ```
 
-```{.python .input}
+```{.python .input #gan-training-2}
 #@tab jax
 #@save
 @partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_G'))
@@ -381,7 +381,7 @@ def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
 
 Both the discriminator and the generator performs a binary logistic regression with the cross-entropy loss. We use Adam to smooth the training process. In each iteration, we first update the discriminator and then the generator. We visualize both losses and generated examples.
 
-```{.python .input}
+```{.python .input #gan-training-3}
 #@tab mxnet
 def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
     loss = gluon.loss.SigmoidBCELoss()
@@ -419,7 +419,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
           f'{metric[2] / timer.stop():.1f} examples/sec')
 ```
 
-```{.python .input}
+```{.python .input #gan-training-3}
 #@tab pytorch
 def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
     loss = nn.BCEWithLogitsLoss(reduction='sum')
@@ -457,7 +457,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
           f'{metric[2] / timer.stop():.1f} examples/sec')
 ```
 
-```{.python .input}
+```{.python .input #gan-training-3}
 #@tab tensorflow
 def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
     loss = tf.keras.losses.BinaryCrossentropy(
@@ -512,7 +512,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
           f'{metric[2] / timer.stop():.1f} examples/sec')
 ```
 
-```{.python .input}
+```{.python .input #gan-training-3}
 #@tab jax
 def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
     key = jax.random.PRNGKey(42)
@@ -567,7 +567,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
 
 Now we specify the hyperparameters to fit the Gaussian distribution.
 
-```{.python .input}
+```{.python .input #gan-training-4}
 #@tab all
 lr_D, lr_G, latent_dim, num_epochs = 0.05, 0.005, 2, 20
 train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,

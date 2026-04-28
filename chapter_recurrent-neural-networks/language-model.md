@@ -27,26 +27,26 @@ it is worthwhile knowing that "dog bites man" is much more frequent than "man bi
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=2}
+```{.python .input #language-model-language-models  n=2}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #language-model-language-models  n=3}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input  n=4}
+```{.python .input #language-model-language-models  n=4}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #language-model-language-models}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
@@ -262,7 +262,7 @@ is $\mathbf x_{t+1}$ with length $n$.
 
 :numref:`fig_lang_model_data` shows an example of obtaining five pairs of input sequences and target sequences with $n=5$ and $d=2$.
 
-```{.python .input  n=5}
+```{.python .input #language-model-partitioning-sequences-1  n=5}
 %%tab all
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000):
@@ -282,7 +282,7 @@ The following data loader randomly generates a minibatch from the dataset each t
 The argument `batch_size` specifies the number of subsequence examples in each minibatch
 and `num_steps` is the subsequence length in tokens.
 
-```{.python .input  n=6}
+```{.python .input #language-model-partitioning-sequences-2  n=6}
 %%tab all
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def get_dataloader(self, train):
@@ -297,7 +297,7 @@ can be obtained
 by shifting the input sequences
 by one token.
 
-```{.python .input  n=7}
+```{.python .input #language-model-partitioning-sequences-3  n=7}
 %%tab all
 data = d2l.TimeMachine(batch_size=2, num_steps=10)
 for X, Y in data.train_dataloader():

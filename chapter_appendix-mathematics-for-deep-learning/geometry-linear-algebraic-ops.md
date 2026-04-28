@@ -18,7 +18,7 @@ First, we need to discuss the two common geometric interpretations of vectors,
 as either points or directions in space.
 Fundamentally, a vector is a list of numbers such as the Python list below.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-geometry-of-vectors}
 #@tab all
 v = [1, 7, 0, 1]
 ```
@@ -146,7 +146,7 @@ Indeed, we can use this in three or three million dimensions without issue.
 
 As a simple example, let's see how to compute the angle between a pair of vectors:
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -160,7 +160,7 @@ def angle(v, w):
 angle(np.array([0, 1, 2]), np.array([2, 3, 4]))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -175,7 +175,7 @@ def angle(v, w):
 angle(torch.tensor([0, 1, 2], dtype=torch.float32), torch.tensor([2.0, 3, 4]))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -188,7 +188,7 @@ def angle(v, w):
 angle(tf.constant([0, 1, 2], dtype=tf.float32), tf.constant([2.0, 3, 4]))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -321,7 +321,7 @@ to classify tiny images of t-shirts and trousers from the Fashion-MNIST dataset
 by just taking the vector between their means to define the decision plane
 and eyeball a crude threshold.  First we will load the data and compute the averages.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab mxnet
 # Load in the dataset
 train = gluon.data.vision.FashionMNIST(train=True)
@@ -339,7 +339,7 @@ ave_0 = np.mean(X_train_0, axis=0)
 ave_1 = np.mean(X_train_1, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab pytorch
 # Load in the dataset
 trans = []
@@ -364,7 +364,7 @@ ave_0 = torch.mean(X_train_0, axis=0)
 ave_1 = torch.mean(X_train_1, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab tensorflow
 # Load in the dataset
 ((train_images, train_labels), (
@@ -386,7 +386,7 @@ ave_0 = tf.reduce_mean(X_train_0, axis=0)
 ave_1 = tf.reduce_mean(X_train_1, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab jax
 # Load in the dataset
 import tensorflow as tf
@@ -407,7 +407,7 @@ ave_1 = jnp.mean(X_train_1, axis=0)
 
 It can be informative to examine these averages in detail, so let's plot what they look like.  In this case, we see that the average indeed resembles a blurry image of a t-shirt.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab mxnet, pytorch
 # Plot average t-shirt
 d2l.set_figsize()
@@ -415,7 +415,7 @@ d2l.plt.imshow(ave_0.reshape(28, 28).tolist(), cmap='Greys')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab tensorflow
 # Plot average t-shirt
 d2l.set_figsize()
@@ -423,7 +423,7 @@ d2l.plt.imshow(tf.reshape(ave_0, (28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab jax
 # Plot average t-shirt
 d2l.set_figsize()
@@ -433,21 +433,21 @@ d2l.plt.show()
 
 In the second case, we again see that the average resembles a blurry image of trousers.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
 #@tab mxnet, pytorch
 # Plot average trousers
 d2l.plt.imshow(ave_1.reshape(28, 28).tolist(), cmap='Greys')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
 #@tab tensorflow
 # Plot average trousers
 d2l.plt.imshow(tf.reshape(ave_1, (28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
 #@tab jax
 # Plot average trousers
 d2l.plt.imshow(np.array(ave_1.reshape(28, 28)), cmap='Greys')
@@ -456,7 +456,7 @@ d2l.plt.show()
 
 In a fully machine learned solution, we would learn the threshold from the dataset.  In this case, I simply eyeballed a threshold that looked good on the training data by hand.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab mxnet
 # Print test set accuracy with eyeballed threshold
 w = (ave_1 - ave_0).T
@@ -466,7 +466,7 @@ predictions = X_test.reshape(2000, -1).dot(w.flatten()) > -1500000
 np.mean(predictions.astype(y_test.dtype) == y_test, dtype=np.float64)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab pytorch
 # Print test set accuracy with eyeballed threshold
 w = ave_1 - ave_0
@@ -477,7 +477,7 @@ predictions = X_test.reshape(2000, -1) @ (w.flatten()) > -1500000
 torch.mean((predictions.type(y_test.dtype) == y_test).float(), dtype=torch.float64)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab tensorflow
 # Print test set accuracy with eyeballed threshold
 w = tf.transpose(ave_1 - ave_0)
@@ -488,7 +488,7 @@ tf.reduce_mean(
     tf.cast(tf.cast(predictions, y_test.dtype) == y_test, tf.float32))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab jax
 # Print test set accuracy with eyeballed threshold
 w = ave_1 - ave_0
@@ -749,28 +749,28 @@ $$
 We can test to see this by seeing that multiplying
 by the inverse given by the formula above works in practice.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-invertibility}
 #@tab mxnet
 M = np.array([[1, 2], [1, 4]])
 M_inv = np.array([[2, -1], [-0.5, 0.5]])
 M_inv.dot(M)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-invertibility}
 #@tab pytorch
 M = torch.tensor([[1, 2], [1, 4]], dtype=torch.float32)
 M_inv = torch.tensor([[2, -1], [-0.5, 0.5]])
 M_inv @ M
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-invertibility}
 #@tab tensorflow
 M = tf.constant([[1, 2], [1, 4]], dtype=tf.float32)
 M_inv = tf.constant([[2, -1], [-0.5, 0.5]])
 tf.matmul(M_inv, M)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-invertibility}
 #@tab jax
 M = jnp.array([[1, 2], [1, 4]], dtype=jnp.float32)
 M_inv = jnp.array([[2, -1], [-0.5, 0.5]])
@@ -852,23 +852,23 @@ This area is referred to as the *determinant*.
 
 Let's check this quickly with some example code.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab mxnet
 import numpy as np
 np.linalg.det(np.array([[1, -1], [2, 3]]))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab pytorch
 torch.det(torch.tensor([[1, -1], [2, 3]], dtype=torch.float32))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab tensorflow
 tf.linalg.det(tf.constant([[1, -1], [2, 3]], dtype=tf.float32))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab jax
 jnp.linalg.det(jnp.array([[1, -1], [2, 3]], dtype=jnp.float32))
 ```
@@ -979,7 +979,7 @@ Tensors may flexibly be operated on in code as well.
 As seen in :numref:`sec_linear-algebra`,
 we can create tensors as is shown below.
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
 #@tab mxnet
 # Define tensors
 B = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
@@ -990,7 +990,7 @@ v = np.array([1, 2])
 A.shape, B.shape, v.shape
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
 #@tab pytorch
 # Define tensors
 B = torch.tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
@@ -1001,7 +1001,7 @@ v = torch.tensor([1, 2])
 A.shape, B.shape, v.shape
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
 #@tab tensorflow
 # Define tensors
 B = tf.constant([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
@@ -1012,7 +1012,7 @@ v = tf.constant([1, 2])
 A.shape, B.shape, v.shape
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
 #@tab jax
 # Define tensors
 B = jnp.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
@@ -1031,25 +1031,25 @@ we can consider the Einstein summation seen above
 ($\mathbf{A}\mathbf{v} = a_{ij}v_j$)
 and strip out the indices themselves to get the implementation:
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab mxnet
 # Reimplement matrix multiplication
 np.einsum("ij, j -> i", A, v), A.dot(v)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab pytorch
 # Reimplement matrix multiplication
 torch.einsum("ij, j -> i", A, v), A@v
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab tensorflow
 # Reimplement matrix multiplication
 tf.einsum("ij, j -> i", A, v), tf.matmul(A, tf.reshape(v, (2, 1)))
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab jax
 # Reimplement matrix multiplication
 jnp.einsum("ij, j -> i", A, v), A @ v
@@ -1065,22 +1065,22 @@ $$
 
 it can be implemented via Einstein summation as:
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
 #@tab mxnet
 np.einsum("ijk, il, j -> kl", B, A, v)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
 #@tab pytorch
 torch.einsum("ijk, il, j -> kl", B, A, v)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
 #@tab tensorflow
 tf.einsum("ijk, il, j -> kl", B, A, v)
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
 #@tab jax
 jnp.einsum("ijk, il, j -> kl", B, A, v)
 ```
@@ -1092,22 +1092,22 @@ For this reason, `einsum` provides an alternative notation
 by providing integer indices for each tensor.
 For example, the same tensor contraction can also be written as:
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
 #@tab mxnet
 np.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
 #@tab pytorch
 torch.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
 #@tab tensorflow
 # TensorFlow does not support this type of notation.
 ```
 
-```{.python .input}
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
 #@tab jax
 jnp.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
 ```

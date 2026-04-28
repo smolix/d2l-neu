@@ -33,7 +33,7 @@ where each row corresponds to a distinct home
 and the columns correspond to the number of rooms (`NumRooms`),
 the roof type (`RoofType`), and the price (`Price`).
 
-```{.python .input}
+```{.python .input #pandas-reading-the-dataset-1}
 %%tab all
 import os
 
@@ -49,7 +49,7 @@ NA,NA,140000''')
 
 Now let's import `pandas` and load the dataset with `read_csv`.
 
-```{.python .input}
+```{.python .input #pandas-reading-the-dataset-2}
 %%tab all
 import pandas as pd
 
@@ -96,7 +96,7 @@ A row whose roof type is `Slate` will set values
 of `RoofType_Slate` and `RoofType_nan` to 1 and 0, respectively.
 The converse holds for a row with a missing `RoofType` value.
 
-```{.python .input}
+```{.python .input #pandas-data-preparation-1}
 %%tab all
 inputs, targets = data.iloc[:, 0:2], data.iloc[:, 2]
 inputs = pd.get_dummies(inputs, dummy_na=True)
@@ -108,7 +108,7 @@ one common heuristic is to
 [**replace the `NaN` entries with 
 the mean value of the corresponding column**].
 
-```{.python .input}
+```{.python .input #pandas-data-preparation-2}
 %%tab all
 inputs = inputs.fillna(inputs.mean())
 print(inputs)
@@ -119,7 +119,7 @@ print(inputs)
 Now that [**all the entries in `inputs` and `targets` are numerical,
 we can load them into a tensor**] (recall :numref:`sec_ndarray`).
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab mxnet
 from mxnet import np
 
@@ -127,7 +127,7 @@ X, y = np.array(inputs.to_numpy(dtype=float)), np.array(targets.to_numpy(dtype=f
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab pytorch
 import torch
 
@@ -136,7 +136,7 @@ y = torch.tensor(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab tensorflow
 import tensorflow as tf
 
@@ -145,7 +145,7 @@ y = tf.constant(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab jax
 from jax import numpy as jnp
 

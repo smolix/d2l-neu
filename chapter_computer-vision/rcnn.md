@@ -132,7 +132,7 @@ and 10.
 
 Below we demonstrate the computation of the region of interest pooling layer. Suppose that the height and width of the CNN-extracted features `X` are both 4, and there is only a single channel.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab mxnet
 from mxnet import np, npx
 
@@ -142,7 +142,7 @@ X = np.arange(16).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab pytorch
 import torch
 import torchvision
@@ -151,7 +151,7 @@ X = torch.arange(16.).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -162,7 +162,7 @@ X = jnp.arange(16.).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -179,22 +179,22 @@ Each region proposal
 is expressed as five elements:
 its object class followed by the $(x, y)$-coordinates of its upper-left and lower-right corners.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab mxnet
 rois = np.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab pytorch
 rois = torch.Tensor([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab jax
 rois = jnp.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab tensorflow
 rois = np.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]], dtype=np.float32)
 ```
@@ -208,17 +208,17 @@ each region of interest is divided
 into a grid of sub-windows to
 further extract features of the same shape $2\times 2$.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab mxnet
 npx.roi_pooling(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab pytorch
 torchvision.ops.roi_pool(X, rois, output_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab jax
 # JAX does not have a built-in ROI pooling operator, so we implement it
 def roi_pool(X, rois, pooled_size, spatial_scale):
@@ -250,7 +250,7 @@ def roi_pool(X, rois, pooled_size, spatial_scale):
 roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab tensorflow
 # TensorFlow does not ship a built-in RoI pooling op in the public API,
 # so we implement max-RoI pooling manually.  X is NHWC here.

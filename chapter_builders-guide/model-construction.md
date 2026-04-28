@@ -95,26 +95,26 @@ when defining our own module,
 we only need to worry about parameters
 and the forward propagation method.
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab pytorch
 import torch
 from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab jax
 from typing import List
 from d2l import jax as d2l
@@ -132,7 +132,7 @@ with 256 units and ReLU activation,
 followed by a fully connected output layer
 with ten units (no activation function).
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(256, activation='relu'))
@@ -143,7 +143,7 @@ X = np.random.uniform(size=(2, 20))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 
@@ -151,7 +151,7 @@ X = torch.rand(2, 20)
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Dense(256, activation=tf.nn.relu),
@@ -162,7 +162,7 @@ X = tf.random.uniform((2, 20))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab jax
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 
@@ -259,7 +259,7 @@ Note that the `MLP` class below inherits the class that represents a module.
 We will heavily rely on the parent class's methods,
 supplying only our own constructor (the `__init__` method in Python) and the forward propagation method.
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab mxnet
 class MLP(nn.Block):
     def __init__(self):
@@ -275,7 +275,7 @@ class MLP(nn.Block):
         return self.out(self.hidden(X))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab pytorch
 class MLP(nn.Module):
     def __init__(self):
@@ -291,7 +291,7 @@ class MLP(nn.Module):
         return self.out(F.relu(self.hidden(X)))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab tensorflow
 class MLP(tf.keras.Model):
     def __init__(self):
@@ -307,7 +307,7 @@ class MLP(tf.keras.Model):
         return self.out(self.hidden(X))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab jax
 class MLP(nn.Module):
     def setup(self):
@@ -352,26 +352,26 @@ or parameter initialization.
 The system will generate these methods automatically.
 Let's try this out.
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab pytorch
 net = MLP()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab mxnet
 net = MLP()
 net.initialize()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab tensorflow
 net = MLP()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab jax
 net = MLP()
 params = net.init(d2l.get_key(), X)
@@ -405,7 +405,7 @@ we just need to define two key methods:
 The following `MySequential` class delivers the same
 functionality of the default `Sequential` class.
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab mxnet
 class MySequential(nn.Block):
     def add(self, block):
@@ -424,7 +424,7 @@ class MySequential(nn.Block):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab pytorch
 class MySequential(nn.Module):
     def __init__(self, *args):
@@ -438,7 +438,7 @@ class MySequential(nn.Module):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab tensorflow
 class MySequential(tf.keras.Model):
     def __init__(self, *args):
@@ -451,7 +451,7 @@ class MySequential(tf.keras.Model):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab jax
 class MySequential(nn.Module):
     modules: List
@@ -489,7 +489,7 @@ in the order in which they were added.
 We can now reimplement an MLP
 using our `MySequential` class.
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab mxnet
 net = MySequential()
 net.add(nn.Dense(256, activation='relu'))
@@ -498,13 +498,13 @@ net.initialize()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab pytorch
 net = MySequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab tensorflow
 net = MySequential(
     tf.keras.layers.Dense(units=256, activation=tf.nn.relu),
@@ -512,7 +512,7 @@ net = MySequential(
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab jax
 net = MySequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 params = net.init(d2l.get_key(), X)
@@ -556,7 +556,7 @@ and $c$ is some specified constant
 that is not updated during optimization.
 So we implement a `FixedHiddenMLP` class as follows.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab mxnet
 class FixedHiddenMLP(nn.Block):
     def __init__(self):
@@ -581,7 +581,7 @@ class FixedHiddenMLP(nn.Block):
         return X.sum()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab pytorch
 class FixedHiddenMLP(nn.Module):
     def __init__(self):
@@ -603,7 +603,7 @@ class FixedHiddenMLP(nn.Module):
         return X.sum()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab tensorflow
 class FixedHiddenMLP(tf.keras.Model):
     def __init__(self):
@@ -636,7 +636,7 @@ class FixedHiddenMLP(tf.keras.Model):
         return (input_shape[0],)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab jax
 class FixedHiddenMLP(nn.Module):
     def setup(self):
@@ -681,26 +681,26 @@ Our point is only to show you how to integrate
 arbitrary code into the flow of your
 neural network computations.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab pytorch
 net = FixedHiddenMLP()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab mxnet
 net = FixedHiddenMLP()
 net.initialize()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab tensorflow
 net = FixedHiddenMLP()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab jax
 net = FixedHiddenMLP()
 params = net.init(d2l.get_key(), X)
@@ -712,7 +712,7 @@ ways of assembling modules together.**]
 In the following example, we nest modules
 in some creative ways.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab mxnet
 class NestMLP(nn.Block):
     def __init__(self, **kwargs):
@@ -731,7 +731,7 @@ chimera.initialize()
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab pytorch
 class NestMLP(nn.Module):
     def __init__(self):
@@ -747,7 +747,7 @@ chimera = nn.Sequential(NestMLP(), nn.LazyLinear(20), FixedHiddenMLP())
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab tensorflow
 class NestMLP(tf.keras.Model):
     def __init__(self):
@@ -767,7 +767,7 @@ chimera.add(FixedHiddenMLP())
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab jax
 class NestMLP(nn.Module):
     def setup(self):

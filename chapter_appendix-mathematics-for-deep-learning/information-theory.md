@@ -41,7 +41,7 @@ $$I(\textrm{"0010"}) = - \log (p(\textrm{"0010"})) = - \log \left( \frac{1}{2^4}
 
 We can calculate self information as shown below. Before that, let's first import all the necessary packages in this section.
 
-```{.python .input}
+```{.python .input #information-theory-self-information}
 #@tab mxnet
 from mxnet import np
 from mxnet.metric import NegativeLogLikelihood
@@ -54,7 +54,7 @@ def self_information(p):
 self_information(1 / 64)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-self-information}
 #@tab pytorch
 import torch
 from torch.nn import NLLLoss
@@ -69,7 +69,7 @@ def self_information(p):
 self_information(1 / 64)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-self-information}
 #@tab tensorflow
 import tensorflow as tf
 
@@ -86,7 +86,7 @@ def self_information(p):
 self_information(1 / 64)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-self-information}
 #@tab jax
 import jax
 from jax import numpy as jnp
@@ -131,7 +131,7 @@ $$H(X) = - \int_x p(x) \log p(x) \; dx.$$
 
 We can define entropy as below.
 
-```{.python .input}
+```{.python .input #information-theory-definition}
 #@tab mxnet
 def entropy(p):
     entropy = - p * np.log2(p)
@@ -142,7 +142,7 @@ def entropy(p):
 entropy(np.array([0.1, 0.5, 0.1, 0.3]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition}
 #@tab pytorch
 def entropy(p):
     entropy = - p * torch.log2(p)
@@ -153,7 +153,7 @@ def entropy(p):
 entropy(torch.tensor([0.1, 0.5, 0.1, 0.3]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition}
 #@tab tensorflow
 def entropy(p):
     return nansum(- p * log2(p))
@@ -161,7 +161,7 @@ def entropy(p):
 entropy(tf.constant([0.1, 0.5, 0.1, 0.3]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition}
 #@tab jax
 def entropy(p):
     return nansum(- p * jnp.log2(p))
@@ -224,7 +224,7 @@ $$
 
 Let's implement joint entropy from scratch.
 
-```{.python .input}
+```{.python .input #information-theory-joint-entropy}
 #@tab mxnet
 def joint_entropy(p_xy):
     joint_ent = -p_xy * np.log2(p_xy)
@@ -235,7 +235,7 @@ def joint_entropy(p_xy):
 joint_entropy(np.array([[0.1, 0.5], [0.1, 0.3]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-joint-entropy}
 #@tab pytorch
 def joint_entropy(p_xy):
     joint_ent = -p_xy * torch.log2(p_xy)
@@ -246,7 +246,7 @@ def joint_entropy(p_xy):
 joint_entropy(torch.tensor([[0.1, 0.5], [0.1, 0.3]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-joint-entropy}
 #@tab tensorflow
 def joint_entropy(p_xy):
     joint_ent = -p_xy * log2(p_xy)
@@ -257,7 +257,7 @@ def joint_entropy(p_xy):
 joint_entropy(tf.constant([[0.1, 0.5], [0.1, 0.3]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-joint-entropy}
 #@tab jax
 def joint_entropy(p_xy):
     joint_ent = -p_xy * jnp.log2(p_xy)
@@ -297,7 +297,7 @@ This has an intuitive interpretation: the information in $Y$ given $X$ ($H(Y \mi
 
 Now, let's implement conditional entropy :eqref:`eq_cond_ent_def` from scratch.
 
-```{.python .input}
+```{.python .input #information-theory-conditional-entropy}
 #@tab mxnet
 def conditional_entropy(p_xy, p_x):
     p_y_given_x = p_xy/p_x
@@ -309,7 +309,7 @@ def conditional_entropy(p_xy, p_x):
 conditional_entropy(np.array([[0.1, 0.5], [0.2, 0.3]]), np.array([0.2, 0.8]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-conditional-entropy}
 #@tab pytorch
 def conditional_entropy(p_xy, p_x):
     p_y_given_x = p_xy/p_x
@@ -322,7 +322,7 @@ conditional_entropy(torch.tensor([[0.1, 0.5], [0.2, 0.3]]),
                     torch.tensor([0.2, 0.8]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-conditional-entropy}
 #@tab tensorflow
 def conditional_entropy(p_xy, p_x):
     p_y_given_x = p_xy/p_x
@@ -335,7 +335,7 @@ conditional_entropy(tf.constant([[0.1, 0.5], [0.2, 0.3]]),
                     tf.constant([0.2, 0.8]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-conditional-entropy}
 #@tab jax
 def conditional_entropy(p_xy, p_x):
     p_y_given_x = p_xy/p_x
@@ -378,7 +378,7 @@ In many ways we can think of the mutual information :eqref:`eq_mut_ent_def` as p
 
 Now, let's implement mutual information from scratch.
 
-```{.python .input}
+```{.python .input #information-theory-mutual-information-2}
 #@tab mxnet
 def mutual_information(p_xy, p_x, p_y):
     p = p_xy / (p_x * p_y)
@@ -391,7 +391,7 @@ mutual_information(np.array([[0.1, 0.5], [0.1, 0.3]]),
                    np.array([0.2, 0.8]), np.array([[0.75, 0.25]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-mutual-information-2}
 #@tab pytorch
 def mutual_information(p_xy, p_x, p_y):
     p = p_xy / (p_x * p_y)
@@ -404,7 +404,7 @@ mutual_information(torch.tensor([[0.1, 0.5], [0.1, 0.3]]),
                    torch.tensor([0.2, 0.8]), torch.tensor([[0.75, 0.25]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-mutual-information-2}
 #@tab tensorflow
 def mutual_information(p_xy, p_x, p_y):
     p = p_xy / (p_x * p_y)
@@ -417,7 +417,7 @@ mutual_information(tf.constant([[0.1, 0.5], [0.1, 0.3]]),
                    tf.constant([0.2, 0.8]), tf.constant([[0.75, 0.25]]))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-mutual-information-2}
 #@tab jax
 def mutual_information(p_xy, p_x, p_y):
     p = p_xy / (p_x * p_y)
@@ -473,7 +473,7 @@ As with the pointwise mutual information :eqref:`eq_pmi_def`, we can again provi
 
 Let's implement the KL divergence from Scratch.
 
-```{.python .input}
+```{.python .input #information-theory-definition-2}
 #@tab mxnet
 def kl_divergence(p, q):
     kl = p * np.log2(p / q)
@@ -481,7 +481,7 @@ def kl_divergence(p, q):
     return out.abs().asscalar()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition-2}
 #@tab pytorch
 def kl_divergence(p, q):
     kl = p * torch.log2(p / q)
@@ -489,7 +489,7 @@ def kl_divergence(p, q):
     return out.abs().item()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition-2}
 #@tab tensorflow
 def kl_divergence(p, q):
     kl = p * log2(p / q)
@@ -497,7 +497,7 @@ def kl_divergence(p, q):
     return tf.abs(out).numpy()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-definition-2}
 #@tab jax
 def kl_divergence(p, q):
     kl = p * jnp.log2(p / q)
@@ -526,7 +526,7 @@ Let's go through a toy example to see the non-symmetry explicitly.
 
 First, let's generate and sort three tensors of length $10,000$: an objective tensor $p$ which follows a normal distribution $N(0, 1)$, and two candidate tensors $q_1$ and $q_2$ which follow normal distributions $N(-1, 1)$ and $N(1, 1)$ respectively.
 
-```{.python .input}
+```{.python .input #information-theory-example-1}
 #@tab mxnet
 random.seed(1)
 
@@ -540,7 +540,7 @@ q1 = np.array(sorted(q1.asnumpy()))
 q2 = np.array(sorted(q2.asnumpy()))
 ```
 
-```{.python .input}
+```{.python .input #information-theory-example-1}
 #@tab pytorch
 torch.manual_seed(1)
 
@@ -554,7 +554,7 @@ q1 = torch.sort(q1)[0]
 q2 = torch.sort(q2)[0]
 ```
 
-```{.python .input}
+```{.python .input #information-theory-example-1}
 #@tab tensorflow
 tensor_len = 10000
 p = tf.random.normal((tensor_len, ), 0, 1)
@@ -566,7 +566,7 @@ q1 = tf.sort(q1)
 q2 = tf.sort(q2)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-example-1}
 #@tab jax
 key = jax.random.PRNGKey(1)
 keys = jax.random.split(key, 3)
@@ -583,7 +583,7 @@ q2 = jnp.sort(q2)
 
 Since $q_1$ and $q_2$ are symmetric with respect to the y-axis (i.e., $x=0$), we expect a similar value of KL divergence between $D_{\textrm{KL}}(p\|q_1)$ and $D_{\textrm{KL}}(p\|q_2)$. As you can see below, there is only a less than 3% off between $D_{\textrm{KL}}(p\|q_1)$ and $D_{\textrm{KL}}(p\|q_2)$.
 
-```{.python .input}
+```{.python .input #information-theory-example-2}
 #@tab all
 kl_pq1 = kl_divergence(p, q1)
 kl_pq2 = kl_divergence(p, q2)
@@ -594,7 +594,7 @@ kl_pq1, kl_pq2, similar_percentage
 
 In contrast, you may find that $D_{\textrm{KL}}(q_2 \|p)$ and $D_{\textrm{KL}}(p \| q_2)$ are off a lot, with around 40% off as shown below.
 
-```{.python .input}
+```{.python .input #information-theory-example-3}
 #@tab all
 kl_q2p = kl_divergence(q2, p)
 differ_percentage = abs(kl_q2p - kl_pq2) / ((kl_q2p + kl_pq2) / 2) * 100
@@ -635,21 +635,21 @@ $$\textrm{CE} (P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).$$
 
 We can implement the cross-entropy loss as below.
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-1}
 #@tab mxnet
 def cross_entropy(y_hat, y):
     ce = -np.log(y_hat[range(len(y_hat)), y])
     return ce.mean()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-1}
 #@tab pytorch
 def cross_entropy(y_hat, y):
     ce = -torch.log(y_hat[range(len(y_hat)), y])
     return ce.mean()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-1}
 #@tab tensorflow
 def cross_entropy(y_hat, y):
     # `tf.gather_nd` is used to select specific indices of a tensor.
@@ -658,7 +658,7 @@ def cross_entropy(y_hat, y):
     return tf.reduce_mean(ce).numpy()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-1}
 #@tab jax
 def cross_entropy(y_hat, y):
     ce = -jnp.log(y_hat[jnp.arange(len(y_hat)), y])
@@ -667,7 +667,7 @@ def cross_entropy(y_hat, y):
 
 Now define two tensors for the labels and predictions, and calculate the cross-entropy loss of them.
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-2}
 #@tab mxnet
 labels = np.array([0, 2])
 preds = np.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
@@ -675,7 +675,7 @@ preds = np.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-2}
 #@tab pytorch
 labels = torch.tensor([0, 2])
 preds = torch.tensor([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
@@ -683,7 +683,7 @@ preds = torch.tensor([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-2}
 #@tab tensorflow
 labels = tf.constant([0, 2])
 preds = tf.constant([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
@@ -691,7 +691,7 @@ preds = tf.constant([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-```{.python .input}
+```{.python .input #information-theory-formal-definition-2}
 #@tab jax
 labels = jnp.array([0, 2])
 preds = jnp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
@@ -753,14 +753,14 @@ Since in maximum likelihood estimation, we maximizing the objective function $l(
 
 To test the above proof, let's apply the built-in measure `NegativeLogLikelihood`. Using the same `labels` and `preds` as in the earlier example, we will get the same numerical loss as the previous example up to the 5 decimal place.
 
-```{.python .input}
+```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
 nll_loss = NegativeLogLikelihood()
 nll_loss.update(labels.as_nd_ndarray(), preds.as_nd_ndarray())
 nll_loss.get()
 ```
 
-```{.python .input}
+```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab pytorch
 # Implementation of cross-entropy loss in PyTorch combines `nn.LogSoftmax()`
 # and `nn.NLLLoss()`
@@ -769,7 +769,7 @@ loss = nll_loss(torch.log(preds), labels)
 loss
 ```
 
-```{.python .input}
+```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab tensorflow
 def nll_loss(y_hat, y):
     # Convert labels to one-hot vectors.
@@ -785,7 +785,7 @@ loss = nll_loss(tf.math.log(preds), labels)
 loss
 ```
 
-```{.python .input}
+```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab jax
 import optax
 

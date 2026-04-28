@@ -26,7 +26,7 @@ and elsewhere described as *intra-attention* model :cite:`Cheng.Dong.Lapata.2016
 In this section, we will discuss sequence encoding using self-attention,
 including using additional information for the sequence order.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab mxnet
 from d2l import mxnet as d2l
 import math
@@ -35,7 +35,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab pytorch
 from d2l import torch as d2l
 import math
@@ -43,14 +43,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import numpy as np
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -77,7 +77,7 @@ computes the self-attention of a tensor
 with shape (batch size, number of time steps or sequence length in tokens, $d$).
 The output tensor has the same shape.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab pytorch
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
@@ -87,27 +87,27 @@ d2l.check_shape(attention(X, X, X, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab mxnet
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
 attention.initialize()
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab jax
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
                                    num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab mxnet
 batch_size, num_queries, valid_lens = 2, 4, d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
@@ -115,7 +115,7 @@ d2l.check_shape(attention(X, X, X, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab tensorflow
 batch_size, num_queries, valid_lens = 2, 4, tf.constant([3, 2])
 X = tf.ones((batch_size, num_queries, num_hiddens))
@@ -123,7 +123,7 @@ d2l.check_shape(attention(X, X, X, valid_lens, training=False),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab jax
 batch_size, num_queries, valid_lens = 2, 4, d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
@@ -259,7 +259,7 @@ design looks weird.
 Before we give explanations of this design,
 let's first implement it in the following `PositionalEncoding` class.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab mxnet
 class PositionalEncoding(nn.Block):  #@save
     """Positional encoding."""
@@ -278,7 +278,7 @@ class PositionalEncoding(nn.Block):  #@save
         return self.dropout(X)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab pytorch
 class PositionalEncoding(nn.Module):  #@save
     """Positional encoding."""
@@ -298,7 +298,7 @@ class PositionalEncoding(nn.Module):  #@save
         return self.dropout(X)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab tensorflow
 class PositionalEncoding(tf.keras.layers.Layer):  #@save
     """Positional encoding."""
@@ -318,7 +318,7 @@ class PositionalEncoding(tf.keras.layers.Layer):  #@save
         return self.dropout(X, training=training)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab jax
 class PositionalEncoding(nn.Module):  #@save
     """Positional encoding."""
@@ -357,7 +357,7 @@ The offset between
 the $6^{\textrm{th}}$ and the $7^{\textrm{th}}$ (same for the $8^{\textrm{th}}$ and the $9^{\textrm{th}}$) columns
 is due to the alternation of sine and cosine functions.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab mxnet
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -368,7 +368,7 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab pytorch
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -378,7 +378,7 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab tensorflow
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -388,7 +388,7 @@ d2l.plot(np.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab jax
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -410,7 +410,7 @@ As we can see, the lowest bit, the second-lowest bit,
 and the third-lowest bit alternate on every number, 
 every two numbers, and every four numbers, respectively.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-1}
 %%tab all
 for i in range(8):
     print(f'{i} in binary is {i:>03b}')
@@ -427,28 +427,28 @@ such continuous representations
 are more space-efficient
 than binary representations.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab mxnet
 P = np.expand_dims(np.expand_dims(P[0, :, :], 0), 0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab pytorch
 P = P[0, :, :].unsqueeze(0).unsqueeze(0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab tensorflow
 P = tf.expand_dims(tf.expand_dims(P[0, :, :], axis=0), axis=0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab jax
 P = jnp.expand_dims(jnp.expand_dims(P[0, :, :], axis=0), axis=0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',

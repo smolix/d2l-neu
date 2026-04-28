@@ -16,7 +16,7 @@ We start by loading the dataset.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=2}
+```{.python .input #rnn-scratch-recurrent-neural-network-implementation-from-scratch  n=2}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -25,7 +25,7 @@ from mxnet import autograd, gluon, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-recurrent-neural-network-implementation-from-scratch}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -35,7 +35,7 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-recurrent-neural-network-implementation-from-scratch}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -43,7 +43,7 @@ import math
 import tensorflow as tf
 ```
 
-```{.python .input  n=5}
+```{.python .input #rnn-scratch-recurrent-neural-network-implementation-from-scratch  n=5}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -61,7 +61,7 @@ to implement the RNN model
 Note that the number of hidden units `num_hiddens` 
 is a tunable hyperparameter.
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-1}
 %%tab pytorch
 class RNNScratch(d2l.Module):  #@save
     """The RNN model implemented from scratch."""
@@ -75,7 +75,7 @@ class RNNScratch(d2l.Module):  #@save
         self.b_h = nn.Parameter(d2l.zeros(num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-1}
 %%tab mxnet
 class RNNScratch(d2l.Module):  #@save
     """The RNN model implemented from scratch."""
@@ -88,7 +88,7 @@ class RNNScratch(d2l.Module):  #@save
         self.b_h = d2l.zeros(num_hiddens)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-1}
 %%tab tensorflow
 class RNNScratch(d2l.Module):  #@save
     """The RNN model implemented from scratch."""
@@ -102,7 +102,7 @@ class RNNScratch(d2l.Module):  #@save
         self.b_h = tf.Variable(d2l.zeros(num_hiddens))
 ```
 
-```{.python .input  n=7}
+```{.python .input #rnn-scratch-rnn-model-1  n=7}
 %%tab jax
 class RNNScratch(nn.Module):  #@save
     """The RNN model implemented from scratch."""
@@ -128,7 +128,7 @@ updating the hidden state
 one time step at a time.
 The model here uses a $\tanh$ activation function (:numref:`subsec_tanh`).
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-2}
 %%tab pytorch
 @d2l.add_to_class(RNNScratch)  #@save
 def forward(self, inputs, state=None):
@@ -146,7 +146,7 @@ def forward(self, inputs, state=None):
     return outputs, state
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-2}
 %%tab mxnet
 @d2l.add_to_class(RNNScratch)  #@save
 def forward(self, inputs, state=None):
@@ -164,7 +164,7 @@ def forward(self, inputs, state=None):
     return outputs, state
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-2}
 %%tab tensorflow
 @d2l.add_to_class(RNNScratch)  #@save
 def forward(self, inputs, state=None):
@@ -182,7 +182,7 @@ def forward(self, inputs, state=None):
     return outputs, state
 ```
 
-```{.python .input  n=9}
+```{.python .input #rnn-scratch-rnn-model-2  n=9}
 %%tab jax
 @d2l.add_to_class(RNNScratch)  #@save
 def __call__(self, inputs, state=None):
@@ -199,7 +199,7 @@ def __call__(self, inputs, state=None):
 
 We can feed a minibatch of input sequences into an RNN model as follows.
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-3}
 %%tab pytorch, mxnet, tensorflow
 batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
 rnn = RNNScratch(num_inputs, num_hiddens)
@@ -207,7 +207,7 @@ X = d2l.ones((num_steps, batch_size, num_inputs))
 outputs, state = rnn(X)
 ```
 
-```{.python .input  n=11}
+```{.python .input #rnn-scratch-rnn-model-3  n=11}
 %%tab jax
 batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
 rnn = RNNScratch(num_inputs, num_hiddens)
@@ -220,7 +220,7 @@ produces results of the correct shapes
 to ensure that the dimensionality 
 of the hidden state remains unchanged.
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-model-4}
 %%tab all
 def check_len(a, n):  #@save
     """Check the length of a list."""
@@ -260,7 +260,7 @@ we override `_report_train` and `_report_val`
 to plot perplexity instead of loss.
 :end_tab:
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-based-language-model}
 %%tab pytorch
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
@@ -285,7 +285,7 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.plot('ppl', d2l.exp(l), train=False)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-based-language-model}
 %%tab mxnet
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
@@ -310,7 +310,7 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.plot('ppl', d2l.exp(l), train=False)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-rnn-based-language-model}
 %%tab tensorflow
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
@@ -340,7 +340,7 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.plot('ppl', d2l.exp(self.loss(y_hat, batch[-1])), train=False)
 ```
 
-```{.python .input  n=14}
+```{.python .input #rnn-scratch-rnn-based-language-model  n=14}
 %%tab jax
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
@@ -396,22 +396,22 @@ For example, if the vocabulary had five elements,
 then the one-hot vectors corresponding 
 to indices 0 and 2 would be the following.
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-1}
 %%tab mxnet
 npx.one_hot(np.array([0, 2]), 5)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-1}
 %%tab pytorch
 F.one_hot(torch.tensor([0, 2]), 5)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-1}
 %%tab tensorflow
 tf.one_hot(tf.constant([0, 2]), 5)
 ```
 
-```{.python .input  n=18}
+```{.python .input #rnn-scratch-one-hot-encoding-1  n=18}
 %%tab jax
 jax.nn.one_hot(jnp.array([0, 2]), 5)
 ```
@@ -429,7 +429,7 @@ for updating hidden states of a minibatch,
 time step by time step
 (e.g., in the above `forward` method).
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-2}
 %%tab pytorch
 @d2l.add_to_class(RNNLMScratch)  #@save
 def one_hot(self, X):    
@@ -437,7 +437,7 @@ def one_hot(self, X):
     return F.one_hot(X.T, self.vocab_size).type(torch.float32)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-2}
 %%tab tensorflow
 @d2l.add_to_class(RNNLMScratch)  #@save
 def one_hot(self, X):    
@@ -445,7 +445,7 @@ def one_hot(self, X):
     return tf.one_hot(tf.transpose(X), self.vocab_size)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-2}
 %%tab jax
 @d2l.add_to_class(RNNLMScratch)  #@save
 def one_hot(self, X):    
@@ -453,7 +453,7 @@ def one_hot(self, X):
     return jax.nn.one_hot(X.T, self.vocab_size)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-one-hot-encoding-2}
 %%tab mxnet
 @d2l.add_to_class(RNNLMScratch)  #@save
 def one_hot(self, X):    
@@ -466,7 +466,7 @@ def one_hot(self, X):
 The language model uses a fully connected output layer
 to transform RNN outputs into token predictions at each time step.
 
-```{.python .input}
+```{.python .input #rnn-scratch-transforming-rnn-outputs-1}
 %%tab all
 @d2l.add_to_class(RNNLMScratch)  #@save
 def output_layer(self, rnn_outputs):
@@ -483,14 +483,14 @@ def forward(self, X, state=None):
 Let's [**check whether the forward computation
 produces outputs with the correct shape.**]
 
-```{.python .input}
+```{.python .input #rnn-scratch-transforming-rnn-outputs-2}
 %%tab pytorch, mxnet, tensorflow
 model = RNNLMScratch(rnn, num_inputs)
 outputs = model(d2l.ones((batch_size, num_steps), dtype=d2l.int64))
 check_shape(outputs, (batch_size, num_steps, num_inputs))
 ```
 
-```{.python .input  n=23}
+```{.python .input #rnn-scratch-transforming-rnn-outputs-2  n=23}
 %%tab jax
 model = RNNLMScratch(rnn, num_inputs)
 outputs, _ = model.init_with_output(d2l.get_key(),
@@ -625,7 +625,7 @@ Note that when computing the gradient norm,
 we are concatenating all model parameters,
 treating them as a single giant parameter vector.
 
-```{.python .input}
+```{.python .input #rnn-scratch-gradient-clipping}
 %%tab mxnet
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, model):
@@ -638,7 +638,7 @@ def clip_gradients(self, grad_clip_val, model):
             param.grad[:] *= grad_clip_val / norm
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-gradient-clipping}
 %%tab pytorch
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, model):
@@ -649,7 +649,7 @@ def clip_gradients(self, grad_clip_val, model):
             param.grad[:] *= grad_clip_val / norm
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-gradient-clipping}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, grads):
@@ -661,7 +661,7 @@ def clip_gradients(self, grad_clip_val, grads):
     return [grad * scale for grad in new_grads]
 ```
 
-```{.python .input  n=27}
+```{.python .input #rnn-scratch-gradient-clipping  n=27}
 %%tab jax
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, grads):
@@ -682,7 +682,7 @@ then clip them, and finally
 update the model parameters
 using the clipped gradients.
 
-```{.python .input}
+```{.python .input #rnn-scratch-training}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNNScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -691,7 +691,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-training}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -701,7 +701,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-training}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNNScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -710,7 +710,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-training}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNNScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -752,7 +752,7 @@ ready to begin emitting the subsequent characters,
 each of which will be fed back into the model 
 as the input at the next time step.
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-1}
 %%tab pytorch
 @d2l.add_to_class(RNNLMScratch)  #@save
 def predict(self, prefix, num_preds, vocab, device=None):
@@ -769,7 +769,7 @@ def predict(self, prefix, num_preds, vocab, device=None):
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-1}
 %%tab mxnet
 @d2l.add_to_class(RNNLMScratch)  #@save
 def predict(self, prefix, num_preds, vocab, device=None):
@@ -786,7 +786,7 @@ def predict(self, prefix, num_preds, vocab, device=None):
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-1}
 %%tab tensorflow
 @d2l.add_to_class(RNNLMScratch)  #@save
 def predict(self, prefix, num_preds, vocab, device=None):
@@ -803,7 +803,7 @@ def predict(self, prefix, num_preds, vocab, device=None):
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-1}
 %%tab jax
 @d2l.add_to_class(RNNLMScratch)  #@save
 def predict(self, prefix, num_preds, vocab, params):
@@ -825,17 +825,17 @@ def predict(self, prefix, num_preds, vocab, params):
 In the following, we specify the prefix 
 and have it generate 20 additional characters.
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-2}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-2}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #rnn-scratch-decoding-2}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```

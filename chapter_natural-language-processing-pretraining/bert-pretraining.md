@@ -4,7 +4,7 @@
 With the BERT model implemented in :numref:`sec_bert`
 and the pretraining examples generated from the WikiText-2 dataset in :numref:`sec_bert-dataset`, we will pretrain BERT on the WikiText-2 dataset in this section.
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -12,14 +12,14 @@ from mxnet import autograd, gluon, init, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -30,7 +30,7 @@ import numpy as np
 from flax.training import train_state
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -42,7 +42,7 @@ of pretraining examples for masked language modeling and next sentence predictio
 The batch size is 512 and the maximum length of a BERT input sequence is 64.
 Note that in the original BERT model, the maximum length is 512.
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2}
 #@tab all
 batch_size, max_len = 512, 64
 train_iter, vocab = d2l.load_data_wiki(batch_size, max_len)
@@ -59,7 +59,7 @@ Notably, the former has 110 million parameters while the latter has 340 million 
 For demonstration with ease,
 we define [**a small BERT, using 2 layers, 128 hidden units, and 2 self-attention heads**].
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-1}
 #@tab mxnet
 net = d2l.BERTModel(len(vocab), num_hiddens=128, ffn_num_hiddens=256,
                     num_heads=2, num_blks=2, dropout=0.2)
@@ -68,7 +68,7 @@ net.initialize(init.Xavier(), ctx=devices)
 loss = gluon.loss.SoftmaxCELoss()
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-1}
 #@tab pytorch
 net = d2l.BERTModel(len(vocab), num_hiddens=128, 
                     ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
@@ -77,13 +77,13 @@ devices = d2l.try_all_gpus()
 loss = nn.CrossEntropyLoss(reduction='none')
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-1}
 #@tab jax
 net = d2l.BERTModel(len(vocab), num_hiddens=128,
                     ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-1}
 #@tab tensorflow
 net = d2l.BERTModel(len(vocab), num_hiddens=128,
                     ffn_num_hiddens=256, num_heads=2, num_blks=2, dropout=0.2)
@@ -97,7 +97,7 @@ Note that the final loss of BERT pretraining
 is just the sum of both the masked language modeling loss
 and the next sentence prediction loss.
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab mxnet
 #@save
 def _get_batch_loss_bert(net, loss, vocab_size, tokens_X_shards,
@@ -130,7 +130,7 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X_shards,
     return mlm_ls, nsp_ls, ls
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab pytorch
 #@save
 def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
@@ -151,7 +151,7 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
     return mlm_l, nsp_l, l
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab jax
 #@save
 def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
@@ -175,7 +175,7 @@ def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
     return l, (mlm_l, nsp_l)
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab tensorflow
 #@save
 def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
@@ -210,7 +210,7 @@ as in the `train_ch13` function (see :numref:`sec_image_augmentation`),
 the input `num_steps` of the following function
 specifies the number of iteration steps for training.
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab mxnet
 def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
     trainer = gluon.Trainer(net.collect_params(), 'adam',
@@ -254,7 +254,7 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
           f'{str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab pytorch
 def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
     net(*next(iter(train_iter))[:4])
@@ -298,7 +298,7 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
           f'{str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab jax
 def train_bert(train_iter, net, vocab_size, num_steps):
     # Initialize model parameters using a dummy batch
@@ -345,7 +345,7 @@ def train_bert(train_iter, net, vocab_size, num_steps):
     return state
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab tensorflow
 def train_bert(train_iter, net, vocab_size, devices, num_steps):
     optimizer = keras.optimizers.Adam(learning_rate=0.01)
@@ -385,22 +385,22 @@ def train_bert(train_iter, net, vocab_size, devices, num_steps):
 We can plot both the masked language modeling loss and the next sentence prediction loss
 during BERT pretraining.
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab mxnet
 train_bert(train_iter, net, loss, len(vocab), devices, 50)
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab pytorch
 train_bert(train_iter, net, loss, len(vocab), devices, 50)
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab jax
 state = train_bert(train_iter, net, len(vocab), 50)
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab tensorflow
 devices = d2l.try_all_gpus()
 train_bert(train_iter, net, len(vocab), devices, 50)
@@ -413,7 +413,7 @@ we can use it to represent single text, text pairs, or any token in them.
 The following function returns the BERT (`net`) representations for all tokens
 in `tokens_a` and `tokens_b`.
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-1}
 #@tab mxnet
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
@@ -425,7 +425,7 @@ def get_bert_encoding(net, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-1}
 #@tab pytorch
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
@@ -436,7 +436,7 @@ def get_bert_encoding(net, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-1}
 #@tab jax
 def get_bert_encoding(net, params, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
@@ -448,7 +448,7 @@ def get_bert_encoding(net, params, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-1}
 #@tab tensorflow
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
@@ -471,7 +471,7 @@ Since zero is the index of the “&lt;cls&gt;” token,
 To evaluate the polysemy token "crane",
 we also print out the first three elements of the BERT representation of the token.
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-2}
 #@tab mxnet, pytorch
 tokens_a = ['a', 'crane', 'is', 'flying']
 encoded_text = get_bert_encoding(net, tokens_a)
@@ -481,7 +481,7 @@ encoded_text_crane = encoded_text[:, 2, :]
 encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-2}
 #@tab jax
 tokens_a = ['a', 'crane', 'is', 'flying']
 encoded_text = get_bert_encoding(net, state.params, tokens_a)
@@ -491,7 +491,7 @@ encoded_text_crane = encoded_text[:, 2, :]
 encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-2}
 #@tab tensorflow
 tokens_a = ['a', 'crane', 'is', 'flying']
 encoded_text = get_bert_encoding(net, tokens_a)
@@ -507,7 +507,7 @@ Similarly, `encoded_pair[:, 0, :]` is the encoded result of the entire sentence 
 Note that the first three elements of the polysemy token "crane" are different from those when the context is different.
 This supports that BERT representations are context-sensitive.
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-3}
 #@tab mxnet, pytorch
 tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
 encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
@@ -518,7 +518,7 @@ encoded_pair_crane = encoded_pair[:, 2, :]
 encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-3}
 #@tab jax
 tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
 encoded_pair = get_bert_encoding(net, state.params, tokens_a, tokens_b)
@@ -529,7 +529,7 @@ encoded_pair_crane = encoded_pair[:, 2, :]
 encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
 ```
 
-```{.python .input}
+```{.python .input #bert-pretraining-representing-text-with-bert-3}
 #@tab tensorflow
 tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
 encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)

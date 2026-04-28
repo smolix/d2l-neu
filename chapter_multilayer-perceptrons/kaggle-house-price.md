@@ -28,7 +28,7 @@ We hope that through a hands-on approach,
 you will gain some intuitions that will guide you
 in your career as a data scientist.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -39,7 +39,7 @@ import pandas as pd
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -48,7 +48,7 @@ from torch import nn
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -56,7 +56,7 @@ import tensorflow as tf
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -75,7 +75,7 @@ for downloading and extracting zip or tar files.
 Again, we skip implementation details of
 such utility functions.
 
-```{.python .input  n=2}
+```{.python .input #kaggle-house-price-downloading-data  n=2}
 %%tab all
 def download(url, folder, sha1_hash=None):
     """Download a file to folder and return the local filepath."""
@@ -153,7 +153,7 @@ For convenience, we can download and cache
 the Kaggle housing dataset.
 If a file corresponding to this dataset already exists in the cache directory and its SHA-1 matches `sha1_hash`, our code will use the cached file to avoid clogging up your Internet with redundant downloads.
 
-```{.python .input  n=30}
+```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
 %%tab all
 class KaggleHouse(d2l.DataModule):
     def __init__(self, batch_size, train=None, val=None):
@@ -172,7 +172,7 @@ The training dataset includes 1460 examples,
 80 features, and one label, while the validation data
 contains 1459 examples and 80 features.
 
-```{.python .input  n=31}
+```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
 %%tab all
 data = KaggleHouse(batch_size=64)
 print(data.raw_train.shape)
@@ -184,7 +184,7 @@ print(data.raw_val.shape)
 Let's [**take a look at the first four and final two features
 as well as the label (SalePrice)**] from the first four examples.
 
-```{.python .input  n=10}
+```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 %%tab all
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
@@ -236,7 +236,7 @@ if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
 
-```{.python .input  n=32}
+```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 %%tab all
 @d2l.add_to_class(KaggleHouse)
 def preprocess(self):
@@ -266,7 +266,7 @@ def preprocess(self):
 You can see that this conversion increases
 the number of features from 79 to 331 (excluding ID and label columns).
 
-```{.python .input  n=33}
+```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
 %%tab all
 data.preprocess()
 data.train.shape
@@ -301,7 +301,7 @@ This leads to the following root-mean-squared-error between the logarithm of the
 
 $$\sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i -\log \hat{y}_i\right)^2}.$$
 
-```{.python .input  n=60}
+```{.python .input #kaggle-house-price-error-measure  n=60}
 %%tab all
 @d2l.add_to_class(KaggleHouse)
 def get_dataloader(self, train):
@@ -334,7 +334,7 @@ if our dataset was considerably larger.
 But this added complexity might obfuscate our code unnecessarily
 so we can safely omit it here owing to the simplicity of our problem.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 %%tab all
 def k_fold_data(data, k):
     rets = []
@@ -349,7 +349,7 @@ def k_fold_data(data, k):
 [**The average validation error is returned**]
 when we train $K$ times in the $K$-fold cross-validation.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab pytorch, mxnet, tensorflow
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
@@ -364,7 +364,7 @@ def k_fold(trainer, data, k, lr):
     return models
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab jax
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
@@ -395,7 +395,7 @@ However, if we try an unreasonably large number of options
 we might find that our validation
 performance is no longer representative of the true error.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-model-selection}
 %%tab all
 trainer = d2l.Trainer(max_epochs=10)
 models = k_fold(trainer, data, k=5, lr=0.01)
@@ -422,7 +422,7 @@ Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
 The following code will generate a file called `submission.csv`.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab pytorch
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
@@ -433,7 +433,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab tensorflow
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
@@ -444,7 +444,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab jax
 preds = [model.apply({'params': params},
          d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
@@ -456,7 +456,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab mxnet
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]

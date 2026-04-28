@@ -38,7 +38,7 @@ describes multi-head attention.
 ![Multi-head attention, where multiple heads are concatenated then linearly transformed.](../img/multi-head-attention.svg)
 :label:`fig_multi-head-attention`
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab mxnet
 from d2l import mxnet as d2l
 import math
@@ -47,7 +47,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab pytorch
 from d2l import torch as d2l
 import math
@@ -55,13 +55,13 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -118,7 +118,7 @@ to $p_q h = p_k h = p_v h = p_o$.
 In the following implementation,
 $p_o$ is specified via the argument `num_hiddens`.
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab mxnet
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -157,7 +157,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab pytorch
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -195,7 +195,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab tensorflow
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -235,7 +235,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab jax
 class MultiHeadAttention(nn.Module):  #@save
     num_hiddens: int
@@ -282,7 +282,7 @@ Specifically,
 the `transpose_output` method reverses the operation
 of the `transpose_qkv` method.
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab mxnet
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -306,7 +306,7 @@ def transpose_output(self, X):
     return X.reshape(X.shape[0], X.shape[1], -1)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab pytorch
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -330,7 +330,7 @@ def transpose_output(self, X):
     return X.reshape(X.shape[0], X.shape[1], -1)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab tensorflow
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -354,7 +354,7 @@ def transpose_output(self, X):
     return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab jax
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -384,7 +384,7 @@ As a result,
 the shape of the multi-head attention output
 is (`batch_size`, `num_queries`, `num_hiddens`).
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab pytorch
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
@@ -396,27 +396,27 @@ d2l.check_shape(attention(X, Y, Y, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab mxnet
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 attention.initialize()
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab jax
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
                                num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab mxnet
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
@@ -426,7 +426,7 @@ d2l.check_shape(attention(X, Y, Y, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab tensorflow
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
@@ -436,7 +436,7 @@ d2l.check_shape(attention(X, Y, Y, valid_lens, training=False),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab jax
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])

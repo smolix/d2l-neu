@@ -27,7 +27,7 @@ $$
 
 where $\| \cdot \|_{\mathcal{O}}$ means only the contribution of observed ratings are considered, that is, only weights that are associated with observed inputs are updated during back-propagation.
 
-```{.python .input  n=3}
+```{.python .input #autorec-model  n=3}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, np, npx
@@ -37,7 +37,7 @@ import mxnet as mx
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #autorec-model  n=3}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -49,7 +49,7 @@ import numpy as np
 
 A typical autoencoder consists of an encoder and a decoder. The encoder projects the input to hidden representations and the decoder maps the hidden layer to the reconstruction layer. We follow this practice and create the encoder and decoder with fully connected layers. The activation of encoder is set to `sigmoid` by default and no activation is applied for decoder. Dropout is included after the encoding transformation to reduce over-fitting. The gradients of unobserved inputs are masked out to ensure that only observed ratings contribute to the model learning process.
 
-```{.python .input  n=2}
+```{.python .input #autorec-implementing-the-model  n=2}
 #@tab mxnet
 class AutoRec(nn.Block):
     def __init__(self, num_hidden, num_users, dropout=0.05):
@@ -68,7 +68,7 @@ class AutoRec(nn.Block):
             return pred
 ```
 
-```{.python .input  n=2}
+```{.python .input #autorec-implementing-the-model  n=2}
 #@tab pytorch
 class AutoRec(nn.Module):
     def __init__(self, num_hidden, num_users, dropout=0.05):
@@ -90,7 +90,7 @@ class AutoRec(nn.Module):
 
 Since the input and output have been changed, we need to reimplement the evaluation function, while we still use RMSE as the accuracy measure.
 
-```{.python .input  n=3}
+```{.python .input #autorec-reimplementing-the-evaluator  n=3}
 #@tab mxnet
 def evaluator(network, inter_matrix, test_data, devices):
     scores = []
@@ -104,7 +104,7 @@ def evaluator(network, inter_matrix, test_data, devices):
     return float(rmse)
 ```
 
-```{.python .input  n=3}
+```{.python .input #autorec-reimplementing-the-evaluator  n=3}
 #@tab pytorch
 def evaluator(network, inter_matrix, test_data, devices):
     network.eval()
@@ -125,7 +125,7 @@ def evaluator(network, inter_matrix, test_data, devices):
 
 Now, let's train and evaluate AutoRec on the MovieLens dataset. We can clearly see that the test RMSE is lower than the matrix factorization model, confirming the effectiveness of neural networks in the rating prediction task.
 
-```{.python .input  n=4}
+```{.python .input #autorec-training-and-evaluating-the-model  n=4}
 #@tab mxnet
 devices = d2l.try_all_gpus()
 # Load the MovieLens 100K dataset
@@ -152,7 +152,7 @@ d2l.train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
                         devices, evaluator, inter_mat=test_inter_mat)
 ```
 
-```{.python .input  n=4}
+```{.python .input #autorec-training-and-evaluating-the-model  n=4}
 #@tab pytorch
 devices = d2l.try_all_gpus()
 # Load the MovieLens 100K dataset

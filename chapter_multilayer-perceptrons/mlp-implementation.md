@@ -9,7 +9,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 Multilayer perceptrons (MLPs) are not much more complex to implement than simple linear models. The key conceptual
 difference is that we now concatenate multiple layers.
 
-```{.python .input}
+```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -17,20 +17,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -86,7 +86,7 @@ In the code below we use `flax.linen.Module.param`
 to define the model parameter.
 :end_tab:
 
-```{.python .input}
+```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab mxnet
 class MLPScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, num_hiddens, lr, sigma=0.01):
@@ -100,7 +100,7 @@ class MLPScratch(d2l.Classifier):
             param.attach_grad()
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab pytorch
 class MLPScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, num_hiddens, lr, sigma=0.01):
@@ -112,7 +112,7 @@ class MLPScratch(d2l.Classifier):
         self.b2 = nn.Parameter(torch.zeros(num_outputs))
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab tensorflow
 class MLPScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, num_hiddens, lr, sigma=0.01):
@@ -126,7 +126,7 @@ class MLPScratch(d2l.Classifier):
         self.b2 = tf.Variable(tf.zeros(num_outputs))
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab jax
 class MLPScratch(d2l.Classifier):
     num_inputs: int
@@ -150,26 +150,26 @@ To make sure we know how everything works,
 we will [**implement the ReLU activation**] ourselves
 rather than invoking the built-in `relu` function directly.
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
 def relu(X):
     return np.maximum(X, 0)
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-1}
 %%tab pytorch
 def relu(X):
     a = torch.zeros_like(X)
     return torch.max(X, a)
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-1}
 %%tab tensorflow
 def relu(X):
     return tf.math.maximum(X, 0)
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-1}
 %%tab jax
 def relu(X):
     return jnp.maximum(X, 0)
@@ -181,7 +181,7 @@ a flat vector of length  `num_inputs`.
 Finally, we (**implement our model**)
 with just a few lines of code. Since we use the framework built-in autograd this is all that it takes.
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-2}
 %%tab all
 @d2l.add_to_class(MLPScratch)
 def forward(self, X):
@@ -195,7 +195,7 @@ def forward(self, X):
 Fortunately, [**the training loop for MLPs
 is exactly the same as for softmax regression.**] We define the model, data, and trainer, then finally invoke the `fit` method on model and data.
 
-```{.python .input}
+```{.python .input #mlp-implementation-training}
 %%tab all
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
 data = d2l.FashionMNIST(batch_size=256)
@@ -217,7 +217,7 @@ the only difference is that we add
 The first is [**the hidden layer**],
 the second is the output layer.
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-2-2}
 %%tab mxnet
 class MLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens, lr):
@@ -229,7 +229,7 @@ class MLP(d2l.Classifier):
         self.net.initialize()
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-2-2}
 %%tab pytorch
 class MLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens, lr):
@@ -239,7 +239,7 @@ class MLP(d2l.Classifier):
                                  nn.ReLU(), nn.LazyLinear(num_outputs))
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-2-2}
 %%tab tensorflow
 class MLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens, lr):
@@ -251,7 +251,7 @@ class MLP(d2l.Classifier):
             tf.keras.layers.Dense(num_outputs)])
 ```
 
-```{.python .input}
+```{.python .input #mlp-implementation-model-2-2}
 %%tab jax
 class MLP(d2l.Classifier):
     num_outputs: int
@@ -293,7 +293,7 @@ This modularity enables us to separate
 matters concerning the model architecture
 from orthogonal considerations.
 
-```{.python .input}
+```{.python .input #mlp-implementation-training-2}
 %%tab all
 model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
 trainer.fit(model, data)

@@ -91,7 +91,7 @@ We now demonstrate a simple implementation of a bidirectional RNN.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-bidirectional-recurrent-neural-networks}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import npx, np
@@ -99,20 +99,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-bidirectional-recurrent-neural-networks}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-bidirectional-recurrent-neural-networks}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-bidirectional-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
@@ -124,7 +124,7 @@ If we want to implement a bidirectional RNN from scratch, we can
 include two unidirectional `RNNScratch` instances
 with separate learnable parameters.
 
-```{.python .input}
+```{.python .input #bi-rnn-implementation-from-scratch-1}
 %%tab pytorch, mxnet, tensorflow
 class BiRNNScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -135,7 +135,7 @@ class BiRNNScratch(d2l.Module):
         self.num_hiddens *= 2  # The output dimension will be doubled
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-implementation-from-scratch-1}
 %%tab jax
 class BiRNNScratch(d2l.Module):
     num_inputs: int
@@ -156,7 +156,7 @@ States of forward and backward RNNs
 are updated separately,
 while outputs of these two RNNs are concatenated.
 
-```{.python .input}
+```{.python .input #bi-rnn-implementation-from-scratch-2}
 %%tab all
 @d2l.add_to_class(BiRNNScratch)
 def forward(self, inputs, Hs=None):
@@ -183,7 +183,7 @@ reverse the inputs as shown in the scratch implementation,
 if a bidirectional layer is needed.
 :end_tab:
 
-```{.python .input}
+```{.python .input #bi-rnn-concise-implementation}
 %%tab mxnet
 class BiGRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -193,7 +193,7 @@ class BiGRU(d2l.RNN):
         self.num_hiddens *= 2
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-concise-implementation}
 %%tab pytorch
 class BiGRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -203,7 +203,7 @@ class BiGRU(d2l.RNN):
         self.num_hiddens *= 2
 ```
 
-```{.python .input}
+```{.python .input #bi-rnn-concise-implementation}
 %%tab tensorflow
 class BiGRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):

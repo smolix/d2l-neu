@@ -9,6 +9,7 @@ Usage:
 """
 
 import re
+import json
 import shutil
 import argparse
 import subprocess
@@ -80,6 +81,7 @@ def emit_notebook_qmd(blocks, framework):
 
         elif isinstance(block, CodeBlock):
             code = '\n'.join(block.lines)
+            id_prefix = f'#| label: {block.cell_id}\n' if block.cell_id else ''
 
             if not is_python_block(block.info) and block.tab is None:
                 lang = block.info or ''
@@ -87,18 +89,20 @@ def emit_notebook_qmd(blocks, framework):
 
             elif block.tab is None or block.tab == 'all':
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
 
             elif framework in (block.tab or ''):
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
             # else: skip (different framework)
 
         elif isinstance(block, CodeTabSet):
             if framework in block.tabs:
                 code = '\n'.join(block.tabs[framework])
                 code = flatten_tab_branches(code, framework)
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                cid = block.ids.get(framework)
+                id_prefix = f'#| label: {cid}\n' if cid else ''
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
             # else: skip (framework has no code for this section)
 
         elif isinstance(block, TocBlock):
@@ -140,6 +144,47 @@ def file_supports_framework(src_path, framework):
             return True
 
     return False
+
+
+_LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
+
+
+def patch_ipynb_ids(ipynb_path: Path):
+    """Post-process a .ipynb produced by `quarto convert`: extract
+    `#| label: <id>` lines from code cells and turn them into proper
+    nbformat IDs (top-level cell.id and metadata.id), then strip the
+    label line from cell.source.
+
+    Idempotent. Safe to run on .ipynb files without label lines.
+    """
+    text = ipynb_path.read_text(encoding='utf-8')
+    nb = json.loads(text)
+    changed = False
+    for cell in nb.get('cells', []):
+        if cell.get('cell_type') != 'code':
+            continue
+        source = cell.get('source')
+        if not source:
+            continue
+        # cell.source is a list of lines (with trailing \n) per nbformat.
+        first = source[0] if isinstance(source, list) else source.split('\n', 1)[0]
+        m = _LABEL_LINE_RE.match(first.rstrip('\n'))
+        if not m:
+            continue
+        cid = m.group(1)
+        cell['id'] = cid
+        cell.setdefault('metadata', {})['id'] = cid
+        # Strip the label line from source. The cell may begin with a
+        # blank trailing-newline line if the label was the only line; in
+        # practice it is always followed by code, so just drop the first.
+        if isinstance(source, list):
+            cell['source'] = source[1:]
+        else:
+            cell['source'] = source.split('\n', 1)[1] if '\n' in source else ''
+        changed = True
+    if changed:
+        ipynb_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False),
+                              encoding='utf-8')
 
 
 def convert_file_notebook(src_path, framework):
@@ -227,6 +272,9 @@ def main():
                         ['quarto', 'convert', str(qmd)],
                         capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
+                        ipynb = qmd.with_suffix('.ipynb')
+                        if ipynb.exists():
+                            patch_ipynb_ids(ipynb)
                         qmd.unlink()
                         return True
                     else:

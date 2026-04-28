@@ -8,26 +8,26 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 You may have noticed that the implementations from scratch and the concise implementation using framework functionality were quite similar in the case of regression. The same is true for classification. Since many models in this book deal with classification, it is worth adding functionalities to support this setting specifically. This section provides a base class for classification models to simplify future code.
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx, gluon
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab jax
 from d2l import jax as d2l
 from functools import partial
@@ -61,7 +61,7 @@ we will make the loss also return a placeholder (empty dictionary) to
 represent the auxiliary data.
 :end_tab:
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-1}
 %%tab pytorch, mxnet, tensorflow
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
@@ -75,7 +75,7 @@ class Classifier(d2l.Module):  #@save
         self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-1}
 %%tab jax
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
@@ -99,7 +99,7 @@ class Classifier(d2l.Module):  #@save
 
 By default we use a stochastic gradient descent optimizer, operating on minibatches, just as we did in the context of linear regression.
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
@@ -109,21 +109,21 @@ def configure_optimizers(self):
     return gluon.Trainer(params, 'sgd', {'learning_rate': self.lr})
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
     return torch.optim.SGD(self.parameters(), lr=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
     return tf.keras.optimizers.SGD(float(self.lr))
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab jax
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
@@ -156,7 +156,7 @@ we convert `y_hat`'s data type to match that of `y`.
 The result is a tensor containing entries of 0 (false) and 1 (true).
 Taking the sum yields the number of correct predictions.
 
-```{.python .input  n=9}
+```{.python .input #classification-accuracy-1  n=9}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(Classifier)  #@save
 def accuracy(self, Y_hat, Y, averaged=True):
@@ -167,7 +167,7 @@ def accuracy(self, Y_hat, Y, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
-```{.python .input  n=9}
+```{.python .input #classification-accuracy-1  n=9}
 %%tab jax
 @d2l.add_to_class(Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -182,7 +182,7 @@ def accuracy(self, params, X, Y, state, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
-```{.python .input  n=10}
+```{.python .input #classification-accuracy-2  n=10}
 %%tab mxnet
 
 @d2l.add_to_class(d2l.Module)  #@save

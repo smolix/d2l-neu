@@ -105,7 +105,7 @@ $$
 
 By design, the expectation remains unchanged, i.e., $E[h'] = h$.
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -113,20 +113,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -185,7 +185,7 @@ with probability `dropout`**),
 rescaling the remainder as described above:
 dividing the survivors by `1.0-dropout`.
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab mxnet
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -194,7 +194,7 @@ def dropout_layer(X, dropout):
     return mask.astype(np.float32) * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab pytorch
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -203,7 +203,7 @@ def dropout_layer(X, dropout):
     return mask * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab tensorflow
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -213,7 +213,7 @@ def dropout_layer(X, dropout):
     return tf.cast(mask, dtype=tf.float32) * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab jax
 def dropout_layer(X, dropout, key=d2l.get_key()):
     # Note: `key` is bound at function-definition time (mutable default
@@ -234,7 +234,7 @@ In the following lines of code,
 we pass our input `X` through the dropout operation,
 with probabilities 0, 0.5, and 1, respectively.
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab pytorch
 X = torch.arange(16, dtype = torch.float32).reshape((2, 8))
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -242,7 +242,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab tensorflow
 X = tf.reshape(tf.range(16, dtype=tf.float32), (2, 8))
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -250,7 +250,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab jax
 X = jnp.arange(16, dtype=jnp.float32).reshape(2, 8)
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -258,7 +258,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab mxnet
 X = np.arange(16).reshape(2, 8)
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -275,7 +275,7 @@ A common choice is to set
 a lower dropout probability closer to the input layer.
 We ensure that dropout is only active during training.
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab mxnet
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -297,7 +297,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab pytorch
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -319,7 +319,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab tensorflow
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -340,7 +340,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab jax
 class DropoutMLPScratch(d2l.Classifier):
     num_hiddens_1: int
@@ -371,7 +371,7 @@ class DropoutMLPScratch(d2l.Classifier):
 
 The following is similar to the training of MLPs described previously.
 
-```{.python .input}
+```{.python .input #dropout-training}
 %%tab all
 hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
@@ -394,7 +394,7 @@ according to the specified dropout probability.
 When not in training mode,
 the `Dropout` layer simply passes the data through during testing.
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab mxnet
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -410,7 +410,7 @@ class DropoutMLP(d2l.Classifier):
         self.net.initialize()
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab pytorch
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -423,7 +423,7 @@ class DropoutMLP(d2l.Classifier):
             nn.Dropout(dropout_2), nn.LazyLinear(num_outputs))
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab tensorflow
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -439,7 +439,7 @@ class DropoutMLP(d2l.Classifier):
             tf.keras.layers.Dense(num_outputs)])
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab jax
 class DropoutMLP(d2l.Classifier):
     num_hiddens_1: int
@@ -474,7 +474,7 @@ it is replaced with a new `dropout_rng`. We already handled this with the
 `fit_epoch` method defined in :numref:`sec_linear_scratch`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-2}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -492,7 +492,7 @@ def loss(self, params, X, Y, state, averaged=True):
 
 Next, we [**train the model**].
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-3}
 %%tab all
 model = DropoutMLP(**hparams)
 trainer.fit(model, data)

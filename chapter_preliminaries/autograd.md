@@ -44,23 +44,23 @@ forward propagation :cite:`Revels.Lubin.Papamarkou.2016`.
 Before exploring methods, 
 let's first master the autograd package.
 
-```{.python .input}
+```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
 from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #autograd-automatic-differentiation}
 %%tab pytorch
 import torch
 ```
 
-```{.python .input}
+```{.python .input #autograd-automatic-differentiation}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #autograd-automatic-differentiation}
 %%tab jax
 from jax import numpy as jnp
 ```
@@ -73,25 +73,25 @@ $y = 2\mathbf{x}^{\top}\mathbf{x}$
 with respect to the column vector $\mathbf{x}$.**)
 To start, we assign `x` an initial value.
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-1}
 %%tab mxnet
 x = np.arange(4.0)
 x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-1}
 %%tab pytorch
 x = torch.arange(4.0)
 x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-1}
 %%tab tensorflow
 x = tf.range(4, dtype=tf.float32)
 x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-1}
 %%tab jax
 x = jnp.arange(4.0)
 x
@@ -114,7 +114,7 @@ is vector-valued with
 the same shape as $\mathbf{x}$.
 :end_tab:
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-2}
 %%tab mxnet
 # We allocate memory for a tensor's gradient by invoking `attach_grad`
 x.attach_grad()
@@ -123,21 +123,21 @@ x.attach_grad()
 x.grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-2}
 %%tab pytorch
 # Can also create x = torch.arange(4.0, requires_grad=True)
 x.requires_grad_(True)
 x.grad  # The gradient is None by default
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-2}
 %%tab tensorflow
 x = tf.Variable(x)
 ```
 
 (**We now calculate our function of `x` and assign the result to `y`.**)
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-3}
 %%tab mxnet
 # Our code is inside an `autograd.record` scope to build the computational
 # graph
@@ -146,13 +146,13 @@ with autograd.record():
 y
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-3}
 %%tab pytorch
 y = 2 * torch.dot(x, x)
 y
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-3}
 %%tab tensorflow
 # Record all computations onto a tape
 with tf.GradientTape() as t:
@@ -160,7 +160,7 @@ with tf.GradientTape() as t:
 y
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-3}
 %%tab jax
 y = lambda x: 2 * jnp.dot(x, x)
 y(x)
@@ -194,25 +194,25 @@ with respect to `x`**] by passing through the
 `grad` transform.
 :end_tab:
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-4}
 %%tab mxnet
 y.backward()
 x.grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-4}
 %%tab pytorch
 y.backward()
 x.grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-4}
 %%tab tensorflow
 x_grad = t.gradient(y, x)
 x_grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-4}
 %%tab jax
 from jax import grad
 # The `grad` transform returns a Python function that
@@ -226,22 +226,22 @@ with respect to $\mathbf{x}$ should be $4\mathbf{x}$.**)
 We can now verify that the automatic gradient computation
 and the expected result are identical.
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-5}
 %%tab mxnet
 x.grad == 4 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-5}
 %%tab pytorch
 x.grad == 4 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-5}
 %%tab tensorflow
 x_grad == 4 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-5}
 %%tab jax
 x_grad == 4 * x
 ```
@@ -278,7 +278,7 @@ Note that TensorFlow resets the gradient buffer
 whenever we record a new gradient. 
 :end_tab:
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-6}
 %%tab mxnet
 with autograd.record():
     y = x.sum()
@@ -286,7 +286,7 @@ y.backward()
 x.grad  # Overwritten by the newly calculated gradient
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-6}
 %%tab pytorch
 x.grad.zero_()  # Reset the gradient
 y = x.sum()
@@ -294,14 +294,14 @@ y.backward()
 x.grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-6}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.reduce_sum(x)
 t.gradient(y, x)  # Overwritten by the newly calculated gradient
 ```
 
-```{.python .input}
+```{.python .input #autograd-a-simple-function-6}
 %%tab jax
 y = lambda x: x.sum()
 grad(y)(x)
@@ -368,7 +368,7 @@ it returns the gradient of the sum
 $\partial_{\mathbf{x}} \sum_i y_i$. 
 :end_tab:
 
-```{.python .input}
+```{.python .input #autograd-backward-for-non-scalar-variables}
 %%tab mxnet
 with autograd.record():
     y = x * x  
@@ -376,7 +376,7 @@ y.backward()
 x.grad  # Equals the gradient of y = sum(x * x)
 ```
 
-```{.python .input}
+```{.python .input #autograd-backward-for-non-scalar-variables}
 %%tab pytorch
 x.grad.zero_()
 y = x * x
@@ -384,14 +384,14 @@ y.backward(gradient=torch.ones(len(y)))  # Faster: y.sum().backward()
 x.grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-backward-for-non-scalar-variables}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = x * x
 t.gradient(y, x)  # Same as y = tf.reduce_sum(x * x)
 ```
 
-```{.python .input}
+```{.python .input #autograd-backward-for-non-scalar-variables}
 %%tab jax
 y = lambda x: x * x
 # grad is only defined for scalar output functions
@@ -423,7 +423,7 @@ will yield the result `u`,
 (not `3 * x * x` as you might have 
 expected since `z = x * x * x`).
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-1}
 %%tab mxnet
 with autograd.record():
     y = x * x
@@ -433,7 +433,7 @@ z.backward()
 x.grad == u
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-1}
 %%tab pytorch
 x.grad.zero_()
 y = x * x
@@ -444,7 +444,7 @@ z.sum().backward()
 x.grad == u
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-1}
 %%tab tensorflow
 # Set persistent=True to preserve the compute graph. 
 # This lets us run t.gradient more than once
@@ -457,7 +457,7 @@ x_grad = t.gradient(z, x)
 x_grad == u
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-1}
 %%tab jax
 import jax
 
@@ -476,25 +476,25 @@ the computational graph leading to `y`
 persists and thus we can calculate
 the gradient of `y` with respect to `x`.
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-2}
 %%tab mxnet
 y.backward()
 x.grad == 2 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-2}
 %%tab pytorch
 x.grad.zero_()
 y.sum().backward()
 x.grad == 2 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-2}
 %%tab tensorflow
 t.gradient(y, x) == 2 * x
 ```
 
-```{.python .input}
+```{.python .input #autograd-detaching-computation-2}
 %%tab jax
 grad(lambda x: y(x).sum())(x) == 2 * x
 ```
@@ -516,7 +516,7 @@ the number of iterations of the `while` loop
 and the evaluation of the `if` statement
 both depend on the value of the input `a`.
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab mxnet
 def f(a):
     b = a * 2
@@ -529,7 +529,7 @@ def f(a):
     return c
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab pytorch
 def f(a):
     b = a * 2
@@ -542,7 +542,7 @@ def f(a):
     return c
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab tensorflow
 def f(a):
     b = a * 2
@@ -555,7 +555,7 @@ def f(a):
     return c
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab jax
 def f(a):
     b = a * 2
@@ -577,7 +577,7 @@ on a specific input, we realize
 a specific computational graph
 and can subsequently run `backward`.
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab mxnet
 a = np.random.normal()
 a.attach_grad()
@@ -586,14 +586,14 @@ with autograd.record():
 d.backward()
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab pytorch
 a = torch.randn(size=(), requires_grad=True)
 d = f(a)
 d.backward()
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab tensorflow
 a = tf.Variable(tf.random.normal(shape=()))
 with tf.GradientTape() as t:
@@ -602,7 +602,7 @@ d_grad = t.gradient(d, a)
 d_grad
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab jax
 from jax import random
 a = random.normal(random.PRNGKey(1), ())
@@ -618,22 +618,22 @@ As such, `f(a) / a` is a vector of constant entries
 and, moreover, `f(a) / a` needs to match 
 the gradient of `f(a)` with respect to `a`.
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-3}
 %%tab mxnet
 a.grad == d / a
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-3}
 %%tab pytorch
 a.grad == d / a
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-3}
 %%tab tensorflow
 d_grad == d / a
 ```
 
-```{.python .input}
+```{.python .input #autograd-gradients-and-python-control-flow-3}
 %%tab jax
 d_grad == d / a
 ```

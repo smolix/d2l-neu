@@ -45,7 +45,7 @@ with the novel inclusion of multiplicative nodes.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -53,20 +53,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -250,7 +250,7 @@ We initialize weights following a Gaussian distribution
 with 0.01 standard deviation, 
 and we set the biases to 0.
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab pytorch
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -267,7 +267,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab mxnet
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -284,7 +284,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab tensorflow
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -302,7 +302,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab jax
 class LSTMScratch(d2l.Module):
     num_inputs: int
@@ -343,7 +343,7 @@ is scanned on its leading axis. The `scan` transformation ultimately
 returns the final state and the stacked outputs as expected.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab pytorch
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -371,7 +371,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab mxnet
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -399,7 +399,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab tensorflow
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -425,7 +425,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab jax
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -461,7 +461,7 @@ def forward(self, inputs, H_C=None):
 
 Let's train an LSTM model by instantiating the `RNNLMScratch` class from :numref:`sec_rnn-scratch`.
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -470,7 +470,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -480,7 +480,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -489,7 +489,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -508,7 +508,7 @@ The code is significantly faster as it uses
 compiled operators rather than Python
 for many details that we spelled out before.
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab mxnet
 class LSTM(d2l.RNN):
     def __init__(self, num_hiddens):
@@ -522,7 +522,7 @@ class LSTM(d2l.RNN):
         return self.rnn(inputs, H_C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab pytorch
 class LSTM(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -534,7 +534,7 @@ class LSTM(d2l.RNN):
         return self.rnn(inputs, H_C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab tensorflow
 class LSTM(d2l.RNN):
     def __init__(self, num_hiddens):
@@ -549,7 +549,7 @@ class LSTM(d2l.RNN):
         return tf.transpose(outputs, perm=[1, 0, 2]), H_C
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab jax
 class LSTM(d2l.RNN):
     num_hiddens: int
@@ -568,14 +568,14 @@ class LSTM(d2l.RNN):
         return outputs, H_C
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab pytorch
 lstm = LSTM(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab tensorflow
 lstm = LSTM(num_hiddens=32)
 with d2l.try_gpu():
@@ -583,31 +583,31 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab jax
 lstm = LSTM(num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab mxnet
 lstm = LSTM(num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```

@@ -41,7 +41,7 @@ there are an equal number of
 "positive" and "negative" labels,
 indicating different sentiment polarities.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -49,7 +49,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -57,7 +57,7 @@ from torch import nn
 import os
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -68,7 +68,7 @@ import numpy as np
 import os
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -81,7 +81,7 @@ import os
 First, download and extract this IMDb review dataset
 in the path `../data/aclImdb`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-reading-the-dataset-1}
 #@tab all
 #@save
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
@@ -92,7 +92,7 @@ data_dir = d2l.download_extract('aclImdb', 'aclImdb')
 
 Next, read the training and test datasets. Each example is a review and its label: 1 for "positive" and 0 for "negative".
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-reading-the-dataset-2}
 #@tab all
 #@save
 def read_imdb(data_dir, is_train):
@@ -120,7 +120,7 @@ Treating each word as a token
 and filtering out words that appear less than 5 times,
 we create a vocabulary out of the training dataset.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-1}
 #@tab all
 train_tokens = d2l.tokenize(train_data[0], token='word')
 vocab = d2l.Vocab(train_tokens, min_freq=5, reserved_tokens=['<pad>'])
@@ -130,7 +130,7 @@ After tokenization,
 let's plot the histogram of
 review lengths in tokens.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-2}
 #@tab all
 d2l.set_figsize()
 d2l.plt.xlabel('# tokens per review')
@@ -148,7 +148,7 @@ the preprocessing step
 for the machine translation dataset
 in :numref:`sec_machine_translation`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-3}
 #@tab all
 num_steps = 500  # sequence length
 train_features = d2l.tensor([d2l.truncate_pad(
@@ -161,7 +161,7 @@ print(train_features.shape)
 Now we can create data iterators.
 At each iteration, a minibatch of examples are returned.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-creating-data-iterators}
 #@tab mxnet
 train_iter = d2l.load_array((train_features, train_data[1]), 64)
 
@@ -171,7 +171,7 @@ for X, y in train_iter:
 print('# batches:', len(train_iter))
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-creating-data-iterators}
 #@tab pytorch
 train_iter = d2l.load_array((train_features, torch.tensor(train_data[1])), 64)
 
@@ -181,7 +181,7 @@ for X, y in train_iter:
 print('# batches:', len(train_iter))
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-creating-data-iterators}
 #@tab jax
 train_iter = d2l.load_array((train_features, jnp.array(train_data[1])), 64)
 
@@ -191,7 +191,7 @@ for X, y in train_iter:
 print('# batches:', len(train_iter))
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-creating-data-iterators}
 #@tab tensorflow
 train_iter = d2l.load_array((train_features, tf.constant(train_data[1])), 64)
 
@@ -206,7 +206,7 @@ print('# batches:', len(train_iter))
 Last, we wrap up the above steps into the `load_data_imdb` function.
 It returns training and test data iterators and the vocabulary of the IMDb review dataset.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-putting-it-all-together}
 #@tab mxnet
 #@save
 def load_data_imdb(batch_size, num_steps=500):
@@ -227,7 +227,7 @@ def load_data_imdb(batch_size, num_steps=500):
     return train_iter, test_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-putting-it-all-together}
 #@tab pytorch
 #@save
 def load_data_imdb(batch_size, num_steps=500):
@@ -250,7 +250,7 @@ def load_data_imdb(batch_size, num_steps=500):
     return train_iter, test_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-putting-it-all-together}
 #@tab jax
 #@save
 def load_data_imdb(batch_size, num_steps=500):
@@ -273,7 +273,7 @@ def load_data_imdb(batch_size, num_steps=500):
     return train_iter, test_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-and-dataset-putting-it-all-together}
 #@tab tensorflow
 #@save
 def load_data_imdb(batch_size, num_steps=500):

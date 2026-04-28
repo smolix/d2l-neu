@@ -39,13 +39,13 @@ We will implement the base class `mxnet.gluon.loss.Loss` and override the `forwa
 We will subclass `nn.Module` and implement the BPR loss in its `forward` method.
 :end_tab:
 
-```{.python .input  n=5}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-1  n=5}
 #@tab mxnet
 from mxnet import gluon, np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=5}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-1  n=5}
 #@tab pytorch
 import torch
 from torch import nn
@@ -53,7 +53,7 @@ from torch import nn
 
 The implementation of BPR loss is as follows.
 
-```{.python .input  n=2}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-2  n=2}
 #@tab mxnet
 #@save
 class BPRLoss(gluon.loss.Loss):
@@ -66,7 +66,7 @@ class BPRLoss(gluon.loss.Loss):
         return loss
 ```
 
-```{.python .input  n=2}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-2  n=2}
 #@tab pytorch
 #@save
 class BPRLoss(nn.Module):
@@ -90,7 +90,7 @@ $$
 
 where $m$ is the safety margin size. It aims to push negative items away from positive items. Similar to BPR, it aims to optimize for relevant distance between positive and negative samples instead of absolute outputs, making it well suited to recommender systems.
 
-```{.python .input  n=3}
+```{.python .input #ranking-hinge-loss-and-its-implementation  n=3}
 #@tab mxnet
 #@save
 class HingeLossbRec(gluon.loss.Loss):
@@ -104,7 +104,7 @@ class HingeLossbRec(gluon.loss.Loss):
         return loss
 ```
 
-```{.python .input  n=3}
+```{.python .input #ranking-hinge-loss-and-its-implementation  n=3}
 #@tab pytorch
 #@save
 class HingeLossbRec(nn.Module):

@@ -60,7 +60,7 @@ thousands of images with and without hot dogs.
 We will use the fine-tuned model to recognize 
 hot dogs from images.
 
-```{.python .input}
+```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -71,7 +71,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -81,7 +81,7 @@ import torchvision
 import os
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab jax
 %matplotlib inline
 import os
@@ -95,7 +95,7 @@ import numpy as np
 import tensorflow as tf  # only used for tf.data input pipeline
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab tensorflow
 %matplotlib inline
 import os
@@ -117,7 +117,7 @@ After unzipping the downloaded dataset,
 we obtain two folders `hotdog/train` and `hotdog/test`. Both folders have `hotdog` and `not-hotdog` subfolders, either of which contains images of
 the corresponding class.
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-1}
 #@tab all
 #@save
 d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
@@ -128,7 +128,7 @@ data_dir = d2l.download_extract('hotdog')
 
 We create two instances to read all the image files in the training and testing datasets, respectively.
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-2}
 #@tab mxnet
 train_imgs = gluon.data.vision.ImageFolderDataset(
     os.path.join(data_dir, 'train'))
@@ -136,13 +136,13 @@ test_imgs = gluon.data.vision.ImageFolderDataset(
     os.path.join(data_dir, 'test'))
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-2}
 #@tab pytorch
 train_imgs = torchvision.datasets.ImageFolder(os.path.join(data_dir, 'train'))
 test_imgs = torchvision.datasets.ImageFolder(os.path.join(data_dir, 'test'))
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-2}
 #@tab jax
 # Load images as (PIL.Image, label) lists for compatibility with show_images
 from PIL import Image as _PILImage
@@ -168,7 +168,7 @@ train_imgs = _load_image_folder(os.path.join(data_dir, 'train'))
 test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-2}
 #@tab tensorflow
 from PIL import Image as _PILImage
 import pathlib
@@ -195,7 +195,7 @@ test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
 
 The first 8 positive examples and the last 8 negative images are shown below. As you can see, [**the images vary in size and aspect ratio**].
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-3}
 #@tab all
 hotdogs = [train_imgs[i][0] for i in range(8)]
 not_hotdogs = [train_imgs[-i - 1][0] for i in range(8)]
@@ -214,7 +214,7 @@ the mean value of a channel is subtracted from each value of that channel and th
 
 [~~Data augmentations~~]
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab mxnet
 # Specify the means and standard deviations of the three RGB channels to
 # standardize each channel
@@ -234,7 +234,7 @@ test_augs = gluon.data.vision.transforms.Compose([
     normalize])
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab pytorch
 # Specify the means and standard deviations of the three RGB channels to
 # standardize each channel
@@ -254,7 +254,7 @@ test_augs = torchvision.transforms.Compose([
     normalize])
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab jax
 # Image preprocessing. We use `tf.image` ops so the pipeline can run
 # inside `tf.data.Dataset.map`. The ImageNet RGB mean/std normalization
@@ -278,7 +278,7 @@ def test_preprocess(x):
     return _normalize(x)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab tensorflow
 # Plain tf.image / tf.data preprocessing for ImageNet-style normalization
 # (NHWC). Wrapping these in a `keras.Sequential` and calling it inside
@@ -327,18 +327,18 @@ If this model is used for the first time,
 Internet connection is required for download.
 :end_tab:
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-1}
 #@tab mxnet
 pretrained_net = gluon.model_zoo.vision.resnet18_v2(pretrained=True)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-1}
 #@tab pytorch
 pretrained_net = torchvision.models.resnet18(
     weights=torchvision.models.ResNet18_Weights.DEFAULT)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-1}
 #@tab jax
 # Load a pretrained ResNet-18 (Flax) with ImageNet weights via flaxmodels.
 pretrained_net = fm.ResNet18(output='logits', pretrained='imagenet',
@@ -350,7 +350,7 @@ _dummy = jnp.zeros((1, IMG_SIZE, IMG_SIZE, 3), dtype=jnp.float32)
 pretrained_vars = pretrained_net.init(_init_key, _dummy, train=False)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-1}
 #@tab tensorflow
 # Load pretrained ResNet50 (full model with top) to inspect the output layer
 pretrained_net = keras.applications.ResNet50(weights='imagenet')
@@ -378,23 +378,23 @@ We will reuse the pretrained weights for transfer learning.
 The final layer of the source model is shown below.
 :end_tab:
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-2}
 #@tab mxnet
 pretrained_net.output
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-2}
 #@tab pytorch
 pretrained_net.fc
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-2}
 #@tab jax
 # The 1000-way ImageNet classifier is the final Dense layer of the network.
 pretrained_vars['params']['Dense_0']['kernel'].shape
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-2}
 #@tab tensorflow
 pretrained_net.layers[-1]
 ```
@@ -413,7 +413,7 @@ a small learning rate to *fine-tune* such pretrained parameters.
 In contrast, model parameters in the output layer are randomly initialized and generally require a larger learning rate to be learned from scratch.
 Letting the base learning rate be $\eta$, a learning rate of $10\eta$ will be used to iterate the model parameters in the output layer.
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-3}
 #@tab mxnet
 finetune_net = gluon.model_zoo.vision.resnet18_v2(classes=2)
 finetune_net.features = pretrained_net.features
@@ -423,7 +423,7 @@ finetune_net.output.initialize(init.Xavier())
 finetune_net.output.collect_params().setattr('lr_mult', 10)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-3}
 #@tab pytorch
 finetune_net = torchvision.models.resnet18(
     weights=torchvision.models.ResNet18_Weights.DEFAULT)
@@ -431,7 +431,7 @@ finetune_net.fc = nn.Linear(finetune_net.fc.in_features, 2)
 nn.init.xavier_uniform_(finetune_net.fc.weight);
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-3}
 #@tab jax
 # Pretrained ResNet-18 backbone + a fresh 2-way classification head.
 # The backbone returns the dictionary of intermediate activations; we use
@@ -456,7 +456,7 @@ finetune_net = FineTuneResNet18(num_classes=2)
 finetune_vars = finetune_net.init(jax.random.PRNGKey(1), _dummy, train=False)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-defining-and-initializing-the-model-3}
 #@tab tensorflow
 # Pretrained ResNet50 base (no top) + global average pool + fresh 2-class head
 finetune_net = keras.Sequential([
@@ -472,7 +472,7 @@ finetune_net = keras.Sequential([
 
 First, we define a training function `train_fine_tuning` that uses fine-tuning so it can be called multiple times.
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-1}
 #@tab mxnet
 def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5):
     train_iter = gluon.data.DataLoader(
@@ -489,7 +489,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5):
                    devices)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-1}
 #@tab pytorch
 # If `param_group=True`, the model parameters in the output layer will be
 # updated using a learning rate ten times greater
@@ -517,7 +517,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
                    devices)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-1}
 #@tab jax
 def _make_tf_dataset(img_dir, preprocess, batch_size, shuffle=False):
     """Create a tf.data.Dataset from an image folder directory."""
@@ -599,7 +599,7 @@ def train_fine_tuning(net, variables, learning_rate, batch_size=128,
     return {'params': params, 'batch_stats': batch_stats}
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-1}
 #@tab tensorflow
 def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
     """Create a tf.data.Dataset from an image folder using Keras pipelines."""
@@ -637,43 +637,43 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
 We [**set the base learning rate to a small value**]
 in order to *fine-tune* the model parameters obtained via pretraining. Based on the previous settings, we will train the output layer parameters of the target model from scratch using a learning rate ten times greater.
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab mxnet
 train_fine_tuning(finetune_net, 0.01)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab pytorch
 train_fine_tuning(finetune_net, 5e-5)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab jax
 finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 5e-5)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab tensorflow
 train_fine_tuning(finetune_net, 5e-5)
 ```
 
 [**For comparison,**] we define an identical model, but (**initialize all of its model parameters to random values**). Since the entire model needs to be trained from scratch, we can use a larger learning rate.
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab mxnet
 scratch_net = gluon.model_zoo.vision.resnet18_v2(classes=2)
 scratch_net.initialize(init=init.Xavier())
 train_fine_tuning(scratch_net, 0.1)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab pytorch
 scratch_net = torchvision.models.resnet18()
 scratch_net.fc = nn.Linear(scratch_net.fc.in_features, 2)
 train_fine_tuning(scratch_net, 5e-4, param_group=False)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab jax
 # Train from scratch: same architecture but with random weights.
 class ScratchResNet18(fnn.Module):
@@ -694,7 +694,7 @@ scratch_vars = train_fine_tuning(scratch_net, scratch_vars, 5e-4,
                                  param_group=False)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab tensorflow
 # Train from scratch: same architecture but with random (no-pretrain) weights.
 scratch_net = keras.Sequential([
@@ -724,18 +724,18 @@ because its initial parameter values are more effective.
 2. Further adjust hyperparameters of `finetune_net` and `scratch_net` in the comparative experiment. Do they still differ in accuracy?
 3. Set the parameters before the output layer of `finetune_net` to those of the source model and do *not* update them during training. How does the accuracy of the model change? You can use the following code.
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-1}
 #@tab mxnet
 finetune_net.features.collect_params().setattr('grad_req', 'null')
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-1}
 #@tab pytorch
 for param in finetune_net.parameters():
     param.requires_grad = False
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-1}
 #@tab jax
 # Freeze the pretrained ResNet-18 backbone; only the new `classifier` head
 # is updated by setting the optimizer learning rate of every other parameter
@@ -746,7 +746,7 @@ for param in finetune_net.parameters():
 #       labels)
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-1}
 #@tab tensorflow
 # Freeze the ResNet50 backbone (layer 0 of the Sequential); only head trains.
 finetune_net.layers[0].trainable = False
@@ -754,21 +754,21 @@ finetune_net.layers[0].trainable = False
 
 4. In fact, there is a "hotdog" class in the `ImageNet` dataset. Its corresponding weight parameter in the output layer can be obtained via the following code. How can we leverage this weight parameter?
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-2}
 #@tab mxnet
 weight = pretrained_net.output.weight
 hotdog_w = np.split(weight.data(), 1000, axis=0)[713]
 hotdog_w.shape
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-2}
 #@tab pytorch
 weight = pretrained_net.fc.weight
 hotdog_w = torch.split(weight.data, 1, dim=0)[934]
 hotdog_w.shape
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-2}
 #@tab jax
 # The pretrained classifier maps 512-dim features to 1000 ImageNet classes.
 weight = pretrained_vars['params']['Dense_0']['kernel']  # Shape: (512, 1000)
@@ -776,7 +776,7 @@ hotdog_w = weight[:, 934]
 hotdog_w.shape
 ```
 
-```{.python .input}
+```{.python .input #fine-tuning-exercises-2}
 #@tab tensorflow
 weight = pretrained_net.layers[-1].get_weights()[0]  # Shape: (2048, 1000)
 hotdog_w = weight[:, 934]

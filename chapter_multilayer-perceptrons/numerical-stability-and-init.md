@@ -28,7 +28,7 @@ and discuss some useful heuristics
 that you will find useful
 throughout your career in deep learning.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -36,21 +36,21 @@ from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -120,7 +120,7 @@ the idea of neurons that fire either *fully* or *not at all*
 Let's take a closer look at the sigmoid
 to see why it can cause vanishing gradients.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab mxnet
 x = np.arange(-8.0, 8.0, 0.1)
 x.attach_grad()
@@ -131,7 +131,7 @@ y.backward()
 d2l.plot(x, [y, x.grad], legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab pytorch
 x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
 y = torch.sigmoid(x)
@@ -141,7 +141,7 @@ d2l.plot(x.detach().numpy(), [y.detach().numpy(), x.grad.numpy()],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab tensorflow
 x = tf.Variable(tf.range(-8.0, 8.0, 0.1))
 with tf.GradientTape() as t:
@@ -150,7 +150,7 @@ d2l.plot(x.numpy(), [y.numpy(), t.gradient(y, x).numpy()],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab jax
 x = jnp.arange(-8.0, 8.0, 0.1)
 y = jax.nn.sigmoid(x)
@@ -188,7 +188,7 @@ When this happens because of the initialization
 of a deep network, we have no chance of getting
 a gradient descent optimizer to converge.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab mxnet
 M = np.random.normal(size=(4, 4))
 print('a single matrix', M)
@@ -197,7 +197,7 @@ for i in range(100):
 print('after multiplying 100 matrices', M)
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab pytorch
 M = torch.normal(0, 1, size=(4, 4))
 print('a single matrix \n',M)
@@ -206,7 +206,7 @@ for i in range(100):
 print('after multiplying 100 matrices\n', M)
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab tensorflow
 M = tf.random.normal((4, 4))
 print('a single matrix \n', M)
@@ -215,7 +215,7 @@ for i in range(100):
 print('after multiplying 100 matrices\n', M.numpy())
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab jax
 M = jax.random.normal(d2l.get_key(), (4, 4))
 print('a single matrix \n', M)

@@ -10,7 +10,7 @@ As we design ever deeper networks it becomes imperative to understand how adding
 Even more important is the ability to design networks where adding layers makes networks strictly more expressive rather than just different.
 To make some progress we need a bit of mathematics.
 
-```{.python .input}
+```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx, init
@@ -18,7 +18,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -26,13 +26,13 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -128,7 +128,7 @@ one of which is the identity mapping.
 ResNet has VGG's full $3\times 3$ convolutional layer design. The residual block has two $3\times 3$ convolutional layers with the same number of output channels. Each convolutional layer is followed by a batch normalization layer and a ReLU activation function. Then, we skip these two convolution operations and add the input directly before the final ReLU activation function.
 This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. Let's have a look at the code below.
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
 class Residual(nn.Block):  #@save
     """The Residual block of ResNet models."""
@@ -154,7 +154,7 @@ class Residual(nn.Block):  #@save
         return npx.relu(Y + X)
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-1}
 %%tab pytorch
 class Residual(nn.Module):  #@save
     """The Residual block of ResNet models."""
@@ -181,7 +181,7 @@ class Residual(nn.Module):  #@save
         return F.relu(Y)
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-1}
 %%tab tensorflow
 class Residual(tf.keras.Model):  #@save
     """The Residual block of ResNet models."""
@@ -208,7 +208,7 @@ class Residual(tf.keras.Model):  #@save
         return tf.keras.activations.relu(Y)
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-1}
 %%tab jax
 class Residual(nn.Module):  #@save
     """The Residual block of ResNet models."""
@@ -247,7 +247,7 @@ This code generates two types of networks: one where we add the input to the out
 
 Now let's look at [**a situation where the input and output are of the same shape**], where $1 \times 1$ convolution is not needed.
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-2}
 %%tab mxnet
 blk = Residual(3)
 blk.initialize()
@@ -255,14 +255,14 @@ X = d2l.randn(4, 3, 6, 6)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-2}
 %%tab pytorch
 blk = Residual(3)
 X = d2l.randn(4, 3, 6, 6)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-2}
 %%tab tensorflow
 blk = Residual(3)
 X = d2l.normal((4, 6, 6, 3))
@@ -270,7 +270,7 @@ Y = blk(X)
 Y.shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-2}
 %%tab jax
 blk = Residual(3)
 X = jax.random.normal(d2l.get_key(), (4, 6, 6, 3))
@@ -280,26 +280,26 @@ blk.init_with_output(d2l.get_key(), X)[0].shape
 We also have the option to [**halve the output height and width while increasing the number of output channels**].
 In this case we use $1 \times 1$ convolutions via `use_1x1conv=True`. This comes in handy at the beginning of each ResNet block to reduce the spatial dimensionality via `strides=2`.
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-3}
 %%tab pytorch
 blk = Residual(6, use_1x1conv=True, strides=2)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-3}
 %%tab mxnet
 blk = Residual(6, use_1x1conv=True, strides=2)
 blk.initialize()
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-3}
 %%tab tensorflow
 blk = Residual(6, use_1x1conv=True, strides=2)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-residual-blocks-3}
 %%tab jax
 blk = Residual(6, use_1x1conv=True, strides=(2, 2))
 blk.init_with_output(d2l.get_key(), X)[0].shape
@@ -309,7 +309,7 @@ blk.init_with_output(d2l.get_key(), X)[0].shape
 
 The first two layers of ResNet are the same as those of the GoogLeNet we described before: the $7\times 7$ convolutional layer with 64 output channels and a stride of 2 is followed by the $3\times 3$ max-pooling layer with a stride of 2. The difference is the batch normalization layer added after each convolutional layer in ResNet.
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-1}
 %%tab pytorch
 class ResNet(d2l.Classifier):
     def b1(self):
@@ -319,7 +319,7 @@ class ResNet(d2l.Classifier):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-1}
 %%tab mxnet
 class ResNet(d2l.Classifier):
     def b1(self):
@@ -330,7 +330,7 @@ class ResNet(d2l.Classifier):
         return net
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-1}
 %%tab tensorflow
 class ResNet(d2l.Classifier):
     def b1(self):
@@ -343,7 +343,7 @@ class ResNet(d2l.Classifier):
                                       padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-1}
 %%tab jax
 class ResNet(d2l.Classifier):
     arch: tuple
@@ -366,7 +366,7 @@ GoogLeNet uses four modules made up of Inception blocks.
 However, ResNet uses four modules made up of residual blocks, each of which uses several residual blocks with the same number of output channels.
 The number of channels in the first module is the same as the number of input channels. Since a max-pooling layer with a stride of 2 has already been used, it is not necessary to reduce the height and width. In the first residual block for each of the subsequent modules, the number of channels is doubled compared with that of the previous module, and the height and width are halved.
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-2}
 %%tab mxnet
 @d2l.add_to_class(ResNet)
 def block(self, num_residuals, num_channels, first_block=False):
@@ -379,7 +379,7 @@ def block(self, num_residuals, num_channels, first_block=False):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-2}
 %%tab pytorch
 @d2l.add_to_class(ResNet)
 def block(self, num_residuals, num_channels, first_block=False):
@@ -392,7 +392,7 @@ def block(self, num_residuals, num_channels, first_block=False):
     return nn.Sequential(*blk)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-2}
 %%tab tensorflow
 @d2l.add_to_class(ResNet)
 def block(self, num_residuals, num_channels, first_block=False):
@@ -405,7 +405,7 @@ def block(self, num_residuals, num_channels, first_block=False):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-2}
 %%tab jax
 @d2l.add_to_class(ResNet)
 def block(self, num_residuals, num_channels, first_block=False):
@@ -421,7 +421,7 @@ def block(self, num_residuals, num_channels, first_block=False):
 
 Then, we add all the modules to ResNet. Here, two residual blocks are used for each module. Lastly, just like GoogLeNet, we add a global average pooling layer, followed by the fully connected layer output.
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-3}
 %%tab pytorch
 @d2l.add_to_class(ResNet)
 def __init__(self, arch, lr=0.1, num_classes=10):
@@ -436,7 +436,7 @@ def __init__(self, arch, lr=0.1, num_classes=10):
     self.net.apply(d2l.init_cnn)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-3}
 %%tab mxnet
 @d2l.add_to_class(ResNet)
 def __init__(self, arch, lr=0.1, num_classes=10):
@@ -450,7 +450,7 @@ def __init__(self, arch, lr=0.1, num_classes=10):
     self.net.initialize(init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-3}
 %%tab tensorflow
 @d2l.add_to_class(ResNet)
 def __init__(self, arch, lr=0.1, num_classes=10):
@@ -464,7 +464,7 @@ def __init__(self, arch, lr=0.1, num_classes=10):
         tf.keras.layers.Dense(units=num_classes)]))
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-3}
 %%tab jax
 @d2l.add_to_class(ResNet)
 def create_net(self):
@@ -488,7 +488,7 @@ By configuring different numbers of channels and residual blocks in the module, 
 
 Before training ResNet, let's [**observe how the input shape changes across different modules in ResNet**]. As in all the previous architectures, the resolution decreases while the number of channels increases up until the point where a global average pooling layer aggregates all features.
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-4}
 %%tab pytorch, mxnet, tensorflow
 class ResNet18(ResNet):
     def __init__(self, lr=0.1, num_classes=10):
@@ -496,7 +496,7 @@ class ResNet18(ResNet):
                        lr, num_classes)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-4}
 %%tab jax
 class ResNet18(ResNet):
     arch: tuple = ((2, 64), (2, 128), (2, 256), (2, 512))
@@ -504,17 +504,17 @@ class ResNet18(ResNet):
     num_classes: int = 10
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-5}
 %%tab pytorch, mxnet
 ResNet18().layer_summary((1, 1, 96, 96))
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-5}
 %%tab tensorflow
 ResNet18().layer_summary((1, 96, 96, 1))
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnet-model-5}
 %%tab jax
 ResNet18(training=False).layer_summary((1, 96, 96, 1))
 ```
@@ -523,7 +523,7 @@ ResNet18(training=False).layer_summary((1, 96, 96, 1))
 
 We train ResNet on the Fashion-MNIST dataset, just like before. ResNet is quite a powerful and flexible architecture. The plot capturing training and validation loss illustrates a significant gap between both graphs, with the training loss being considerably lower. For a network of this flexibility, more training data would offer distinct benefit in closing the gap and improving accuracy.
 
-```{.python .input}
+```{.python .input #resnet-training}
 %%tab mxnet
 model = ResNet18(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -531,7 +531,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #resnet-training}
 %%tab pytorch
 model = ResNet18(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -540,7 +540,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #resnet-training}
 %%tab jax
 model = ResNet18(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -548,7 +548,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #resnet-training}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
@@ -581,7 +581,7 @@ The right-hand figure in :numref:`fig_resnext_block` provides a much more concis
 The following implementation of the `ResNeXtBlock` class takes as argument `groups` ($g$), with 
 `bot_channels` ($b$) intermediate (bottleneck) channels. Lastly, when we need to reduce the height and width of the representation, we add a stride of $2$ by setting `use_1x1conv=True, strides=2`.
 
-```{.python .input}
+```{.python .input #resnet-resnext-1}
 %%tab mxnet
 class ResNeXtBlock(nn.Block):  #@save
     """The ResNeXt block."""
@@ -614,7 +614,7 @@ class ResNeXtBlock(nn.Block):  #@save
         return npx.relu(Y + X)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-1}
 %%tab pytorch
 class ResNeXtBlock(nn.Module):  #@save
     """The ResNeXt block."""
@@ -646,7 +646,7 @@ class ResNeXtBlock(nn.Module):  #@save
         return F.relu(Y + X)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-1}
 %%tab tensorflow
 class ResNeXtBlock(tf.keras.Model):  #@save
     """The ResNeXt block."""
@@ -678,7 +678,7 @@ class ResNeXtBlock(tf.keras.Model):  #@save
         return tf.keras.activations.relu(Y + X)
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-1}
 %%tab jax
 class ResNeXtBlock(nn.Module):  #@save
     """The ResNeXt block."""
@@ -719,7 +719,7 @@ class ResNeXtBlock(nn.Module):  #@save
 
 Its use is entirely analogous to that of the `ResNetBlock` discussed previously. For instance, when using (`use_1x1conv=False, strides=1`), the input and output are of the same shape. Alternatively, setting `use_1x1conv=True, strides=2` halves the output height and width.
 
-```{.python .input}
+```{.python .input #resnet-resnext-2}
 %%tab mxnet
 blk = ResNeXtBlock(32, 16, 1)
 blk.initialize()
@@ -727,14 +727,14 @@ X = d2l.randn(4, 32, 96, 96)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-2}
 %%tab pytorch
 blk = ResNeXtBlock(32, 16, 1)
 X = d2l.randn(4, 32, 96, 96)
 blk(X).shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-2}
 %%tab tensorflow
 blk = ResNeXtBlock(32, 16, 1)
 X = d2l.normal((4, 96, 96, 32))
@@ -742,7 +742,7 @@ Y = blk(X)
 Y.shape
 ```
 
-```{.python .input}
+```{.python .input #resnet-resnext-2}
 %%tab jax
 blk = ResNeXtBlock(32, 16, 1)
 X = jnp.zeros((4, 96, 96, 32))

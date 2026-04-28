@@ -34,25 +34,25 @@ In this section, we cover the following:
 * Accessing parameters for debugging, diagnostics, and visualizations.
 * Sharing parameters across different model components.
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-1}
 %%tab mxnet
 from mxnet import init, np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-1}
 %%tab pytorch
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-1}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -62,7 +62,7 @@ from jax import numpy as jnp
 
 (**We start by focusing on an MLP with one hidden layer.**)
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-2}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(8, activation='relu'))
@@ -73,7 +73,7 @@ X = np.random.uniform(size=(2, 4))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-2}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(8),
                     nn.ReLU(),
@@ -83,7 +83,7 @@ X = torch.rand(size=(2, 4))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-2}
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(),
@@ -95,7 +95,7 @@ X = tf.random.uniform((2, 4))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-management-2}
 %%tab jax
 net = nn.Sequential([nn.Dense(8), nn.relu, nn.Dense(1)])
 
@@ -129,22 +129,22 @@ any layer's parameters through the keys of this dictionary.
 
 We can inspect the parameters of the second fully connected layer as follows.
 
-```{.python .input}
+```{.python .input #parameters-parameter-access}
 %%tab mxnet
 net[1].params
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-access}
 %%tab pytorch
 net[2].state_dict()
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-access}
 %%tab tensorflow
 net.layers[2].weights
 ```
 
-```{.python .input}
+```{.python .input #parameters-parameter-access}
 %%tab jax
 params['params']['layers_2']
 ```
@@ -167,22 +167,22 @@ The following code extracts the bias
 from the second neural network layer, which returns a parameter class instance, and
 further accesses that parameter's value.
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-1}
 %%tab mxnet
 type(net[1].bias), net[1].bias.data()
 ```
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-1}
 %%tab pytorch
 type(net[2].bias), net[2].bias.data
 ```
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-1}
 %%tab tensorflow
 type(net.layers[2].weights[1]), tf.convert_to_tensor(net.layers[2].weights[1])
 ```
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-1}
 %%tab jax
 bias = params['params']['layers_2']['bias']
 type(bias), bias
@@ -204,12 +204,12 @@ It allows the user to express their computation as a
 Python function, and use the `grad` transformation for the same purpose.
 :end_tab:
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-2}
 %%tab mxnet
 net[1].weight.grad()
 ```
 
-```{.python .input}
+```{.python .input #parameters-targeted-parameters-2}
 %%tab pytorch
 net[2].weight.grad == None
 ```
@@ -225,22 +225,22 @@ through the entire tree to extract
 each sub-module's parameters.
 Below we demonstrate accessing the parameters of all layers.
 
-```{.python .input}
+```{.python .input #parameters-all-parameters-at-once}
 %%tab mxnet
 net.collect_params()
 ```
 
-```{.python .input}
+```{.python .input #parameters-all-parameters-at-once}
 %%tab pytorch
 [(name, param.shape) for name, param in net.named_parameters()]
 ```
 
-```{.python .input}
+```{.python .input #parameters-all-parameters-at-once}
 %%tab tensorflow
 net.get_weights()
 ```
 
-```{.python .input}
+```{.python .input #parameters-all-parameters-at-once}
 %%tab jax
 jax.tree_util.tree_map(lambda x: x.shape, params)
 ```
@@ -255,7 +255,7 @@ to set those of another layer.
 Here we need to run the forward propagation
 `net(X)` before accessing the parameters.
 
-```{.python .input}
+```{.python .input #parameters-tied-parameters}
 %%tab mxnet
 net = nn.Sequential()
 # We need to give the shared layer a name so that we can refer to its
@@ -278,7 +278,7 @@ net[1].weight.data()[0, 0] = 100
 print(net[1].weight.data()[0] == net[2].weight.data()[0])
 ```
 
-```{.python .input}
+```{.python .input #parameters-tied-parameters}
 %%tab pytorch
 # We need to give the shared layer a name so that we can refer to its
 # parameters
@@ -296,7 +296,7 @@ net[2].weight.data[0, 0] = 100
 assert net[2].weight.data[0, 0] == net[4].weight.data[0, 0]
 ```
 
-```{.python .input}
+```{.python .input #parameters-tied-parameters}
 %%tab tensorflow
 # Keras keeps both references to the shared layer in net.layers,
 # but the shared layer's parameters are tied
@@ -314,7 +314,7 @@ net(X)
 print(net.layers[2].weights[0] is net.layers[3].weights[0])
 ```
 
-```{.python .input}
+```{.python .input #parameters-tied-parameters}
 %%tab jax
 # We need to give the shared layer a name so that we can refer to its
 # parameters

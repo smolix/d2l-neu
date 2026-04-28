@@ -48,7 +48,7 @@ HPO. Syne Tune is designed to be run with different execution back-ends, and the
 interested reader is invited to study its simple APIs in order to learn more about
 distributed HPO.
 
-```{.python .input}
+```{.python .input #rs-async-asynchronous-random-search}
 from d2l import torch as d2l
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -64,7 +64,7 @@ from syne_tune.experiments import load_experiment
 First, we have to define a new objective function such that it now returns the
 performance back to Syne Tune via the `report` callback.
 
-```{.python .input  n=34}
+```{.python .input #rs-async-objective-function  n=34}
 def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
     from d2l import torch as d2l    
     from syne_tune import Reporter
@@ -93,7 +93,7 @@ First, we define the number of workers that evaluate trials concurrently. We
 also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
-```{.python .input  n=37}
+```{.python .input #rs-async-asynchronous-scheduler-1  n=37}
 n_workers = 2  # Needs to be <= the number of available GPUs
 
 max_wallclock_time = 2 * 60  # 2 minutes
@@ -103,7 +103,7 @@ Next, we state which metric we want to optimize and whether we want to minimize 
 maximize this metric. Namely, `metric` needs to correspond to the argument name
 passed to the `report` callback.
 
-```{.python .input  n=38}
+```{.python .input #rs-async-asynchronous-scheduler-2  n=38}
 mode = "min"
 metric = "validation_error"
 ```
@@ -113,7 +113,7 @@ dictionary can also be used to pass constant attributes to the training script.
 We make use of this feature in order to pass `max_epochs`. Moreover, we specify
 the first configuration to be evaluated in `initial_config`.
 
-```{.python .input  n=39}
+```{.python .input #rs-async-asynchronous-scheduler-3  n=39}
 config_space = {
     "learning_rate": loguniform(1e-2, 1),
     "batch_size": randint(32, 256),
@@ -130,7 +130,7 @@ the distribution on a local machine where parallel jobs are executed as
 sub-processes. However, for large scale HPO, we could run this also on a cluster
 or cloud environment, where each trial consumes a full instance.
 
-```{.python .input  n=40}
+```{.python .input #rs-async-asynchronous-scheduler-4  n=40}
 trial_backend = PythonBackend(
     tune_function=hpo_objective_lenet_synetune,
     config_space=config_space,
@@ -140,7 +140,7 @@ trial_backend = PythonBackend(
 We can now create the scheduler for asynchronous random search, which is similar
 in behaviour to our `BasicScheduler` from :numref:`sec_api_hpo`.
 
-```{.python .input  n=41}
+```{.python .input #rs-async-asynchronous-scheduler-5  n=41}
 scheduler = RandomSearch(
     config_space,
     metric=metric,
@@ -153,7 +153,7 @@ Syne Tune also features a `Tuner`, where the main experiment loop and
 bookkeeping is centralized, and interactions between scheduler and back-end are
 mediated.
 
-```{.python .input  n=42}
+```{.python .input #rs-async-asynchronous-scheduler-6  n=42}
 stop_criterion = StoppingCriterion(max_wallclock_time=max_wallclock_time)
 
 tuner = Tuner(
@@ -168,7 +168,7 @@ tuner = Tuner(
 Let us run our distributed HPO experiment. According to our stopping criterion,
 it will run for a few minutes.
 
-```{.python .input  n=43}
+```{.python .input #rs-async-asynchronous-scheduler-7  n=43}
 tuner.run()
 ```
 
@@ -176,7 +176,7 @@ The logs of all evaluated hyperparameter configurations are stored for further
 analysis. At any time during the tuning job, we can easily get the results
 obtained so far and plot the incumbent trajectory.
 
-```{.python .input  n=46}
+```{.python .input #rs-async-asynchronous-scheduler-8  n=46}
 d2l.set_figsize()
 tuning_experiment = load_experiment(tuner.name)
 tuning_experiment.plot()
@@ -190,7 +190,7 @@ running concurrently as we have workers. Once a trial finishes, we immediately
 start the next trial, without waiting for the other trials to finish. Idle time
 of workers is reduced to a minimum with asynchronous scheduling.
 
-```{.python .input  n=45}
+```{.python .input #rs-async-visualize-the-asynchronous-optimization-process  n=45}
 d2l.set_figsize([6, 2.5])
 results = tuning_experiment.results
 

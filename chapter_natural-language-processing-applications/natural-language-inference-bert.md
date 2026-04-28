@@ -20,7 +20,7 @@ we will download a pretrained small version of BERT,
 then fine-tune it
 for natural language inference on the SNLI dataset.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab mxnet
 from d2l import mxnet as d2l
 import json
@@ -32,7 +32,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab pytorch
 from d2l import torch as d2l
 import json
@@ -42,7 +42,7 @@ from torch import nn
 import os
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -54,7 +54,7 @@ import json
 import os
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -77,7 +77,7 @@ we provide two versions of pretrained BERT:
 "bert.base" is about as big as the original BERT base model that requires a lot of computational resources to fine-tune,
 while "bert.small" is a small version to facilitate demonstration.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-1}
 #@tab mxnet
 d2l.DATA_HUB['bert.base'] = (d2l.DATA_URL + 'bert.base.zip',
                              '7b3820b35da691042e5d34c0971ac3edbd80d3f4')
@@ -85,7 +85,7 @@ d2l.DATA_HUB['bert.small'] = (d2l.DATA_URL + 'bert.small.zip',
                               'a4e718a47137ccd1809c9107ab4f5edd317bae2c')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-1}
 #@tab pytorch
 d2l.DATA_HUB['bert.base'] = (d2l.DATA_URL + 'bert.base.torch.zip',
                              '225d66f04cae318b841a13d32af3acc165f253ac')
@@ -93,7 +93,7 @@ d2l.DATA_HUB['bert.small'] = (d2l.DATA_URL + 'bert.small.torch.zip',
                               'c72329e68a732bef0452e4b96a1c341c8910f81f')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-1}
 #@tab jax
 d2l.DATA_HUB['bert.base'] = (d2l.DATA_URL + 'bert.base.torch.zip',
                              '225d66f04cae318b841a13d32af3acc165f253ac')
@@ -189,7 +189,7 @@ Either pretrained BERT model contains a "vocab.json" file that defines the vocab
 and a "pretrained.params" file of the pretrained parameters.
 We implement the following `load_pretrained_model` function to [**load pretrained BERT parameters**].
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
 #@tab mxnet
 def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
                           num_heads, num_blks, dropout, max_len, devices):
@@ -207,7 +207,7 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
     return bert, vocab
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
 #@tab pytorch
 def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
                           num_heads, num_blks, dropout, max_len, devices):
@@ -227,7 +227,7 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
     return bert, vocab
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
 #@tab jax
 def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
                           num_heads, num_blks, dropout, max_len, devices):
@@ -304,7 +304,7 @@ def _convert_torch_to_jax_bert(params, pt_state_dict):
     return new_params
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
 #@tab tensorflow
 d2l.DATA_HUB['bert.base'] = (d2l.DATA_URL + 'bert.base.torch.zip',
                              '225d66f04cae318b841a13d32af3acc165f253ac')
@@ -434,7 +434,7 @@ To facilitate demonstration on most machines,
 we will load and fine-tune the small version ("bert.small") of the pretrained BERT in this section.
 In the exercise, we will show how to fine-tune the much larger "bert.base" to significantly improve the testing accuracy.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-3}
 #@tab mxnet, pytorch
 devices = d2l.try_all_gpus()
 bert, vocab = load_pretrained_model(
@@ -442,7 +442,7 @@ bert, vocab = load_pretrained_model(
     num_blks=2, dropout=0.1, max_len=512, devices=devices)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-3}
 #@tab jax
 devices = d2l.try_all_gpus()
 bert, vocab, bert_params = load_pretrained_model(
@@ -450,7 +450,7 @@ bert, vocab, bert_params = load_pretrained_model(
     num_blks=2, dropout=0.1, max_len=512, devices=devices)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-loading-pretrained-bert-3}
 #@tab tensorflow
 devices = d2l.try_all_gpus()
 bert, vocab = load_pretrained_model(
@@ -474,7 +474,7 @@ To accelerate generation of the SNLI dataset
 for fine-tuning BERT,
 we use 4 worker processes to generate training or testing examples in parallel.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1}
 #@tab mxnet
 class SNLIBERTDataset(gluon.data.Dataset):
     def __init__(self, dataset, max_len, vocab=None):
@@ -528,7 +528,7 @@ class SNLIBERTDataset(gluon.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1}
 #@tab pytorch
 class SNLIBERTDataset(torch.utils.data.Dataset):
     def __init__(self, dataset, max_len, vocab=None):
@@ -582,7 +582,7 @@ class SNLIBERTDataset(torch.utils.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1}
 #@tab jax
 class SNLIBERTDataset:
     def __init__(self, dataset, max_len, vocab=None):
@@ -638,7 +638,7 @@ class SNLIBERTDataset:
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1}
 #@tab tensorflow
 class SNLIBERTDataset:
     def __init__(self, dataset, max_len, vocab=None):
@@ -698,7 +698,7 @@ by instantiating the `SNLIBERTDataset` class.
 Such examples will be read in minibatches during training and testing
 of natural language inference.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2}
 #@tab mxnet
 # Reduce `batch_size` if there is an out of memory error. In the original BERT
 # model, `max_len` = 512
@@ -712,7 +712,7 @@ test_iter = gluon.data.DataLoader(test_set, batch_size,
                                   num_workers=num_workers)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2}
 #@tab pytorch
 # Reduce `batch_size` if there is an out of memory error. In the original BERT
 # model, `max_len` = 512
@@ -726,7 +726,7 @@ test_iter = torch.utils.data.DataLoader(test_set, batch_size,
                                   num_workers=num_workers)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2}
 #@tab jax
 # Reduce `batch_size` if there is an out of memory error. In the original BERT
 # model, `max_len` = 512
@@ -742,7 +742,7 @@ test_iter = d2l.load_array(
      test_set.valid_lens, test_set.labels), batch_size, is_train=False)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2}
 #@tab tensorflow
 # Reduce `batch_size` if there is an out of memory error. In the original BERT
 # model, `max_len` = 512
@@ -775,7 +775,7 @@ which encodes the information of both the premise and the hypothesis,
 (**into three outputs of natural language inference**):
 entailment, contradiction, and neutral.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
 #@tab mxnet
 class BERTClassifier(nn.Block):
     def __init__(self, bert):
@@ -790,7 +790,7 @@ class BERTClassifier(nn.Block):
         return self.output(self.hidden(encoded_X[:, 0, :]))
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
 #@tab pytorch
 class BERTClassifier(nn.Module):
     def __init__(self, bert):
@@ -805,7 +805,7 @@ class BERTClassifier(nn.Module):
         return self.output(self.hidden(encoded_X[:, 0, :]))
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
 #@tab jax
 class BERTClassifier(nn.Module):
     bert: d2l.BERTModel
@@ -818,7 +818,7 @@ class BERTClassifier(nn.Module):
             jnp.tanh(self.bert.hidden(encoded_X[:, 0, :])))
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
 #@tab tensorflow
 class BERTClassifier(keras.Model):
     def __init__(self, bert):
@@ -841,18 +841,18 @@ In common implementations of BERT fine-tuning,
 only the parameters of the output layer of the additional MLP (`net.output`, or `net.output_layer` in the TensorFlow tab) will be learned from scratch.
 All the parameters of the pretrained BERT encoder (`net.encoder`) and the hidden layer of the additional MLP (`net.hidden`) will be fine-tuned.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab mxnet
 net = BERTClassifier(bert)
 net.output.initialize(ctx=devices)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab pytorch
 net = BERTClassifier(bert)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab jax
 net = BERTClassifier(bert)
 # Initialize the classifier with pretrained BERT parameters
@@ -869,7 +869,7 @@ new_params['params']['bert'] = bert_params['params']
 params = new_params
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab tensorflow
 net = BERTClassifier(bert)
 # Warm up the classifier with a dummy forward pass
@@ -900,7 +900,7 @@ We use this function to train and evaluate the model `net` using the training se
 Due to the limited computational resources, [**the training**] and testing accuracy
 can be further improved: we leave its discussions in the exercises.
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab mxnet
 lr, num_epochs = 1e-4, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
@@ -909,7 +909,7 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices,
                d2l.split_batch_multi_inputs)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab pytorch
 lr, num_epochs = 1e-4, 5
 trainer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -918,7 +918,7 @@ net(next(iter(train_iter))[0])
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab jax
 lr, num_epochs = 1e-4, 5
 optimizer = optax.adam(lr)
@@ -969,7 +969,7 @@ for epoch in range(num_epochs):
           f'test acc {n_correct / n_test:.4f}')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab tensorflow
 lr, num_epochs = 1e-4, 5
 # Wrap tf.data batches for Keras: each batch is

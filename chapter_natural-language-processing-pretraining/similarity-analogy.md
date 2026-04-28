@@ -19,7 +19,7 @@ from large corpora in a straightforward way,
 let's apply them
 in the word similarity and analogy tasks.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -28,7 +28,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -36,7 +36,7 @@ from torch import nn
 import os
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -44,7 +44,7 @@ from jax import numpy as jnp
 import os
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -59,7 +59,7 @@ The pretrained fastText embeddings are available in multiple languages.
 Here we consider one English version (300-dimensional "wiki.en") that can be downloaded from the
 [fastText website](https://fasttext.cc/).
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-1}
 #@tab all
 #@save
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
@@ -80,7 +80,7 @@ d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
 
 To load these pretrained GloVe and fastText embeddings, we define the following `TokenEmbedding` class.
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-2}
 #@tab pytorch, mxnet, jax
 #@save
 class TokenEmbedding:
@@ -118,7 +118,7 @@ class TokenEmbedding:
         return len(self.idx_to_token)
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-2}
 #@tab tensorflow
 #@save
 class TokenEmbedding:
@@ -159,21 +159,21 @@ When creating the `TokenEmbedding` instance,
 the specified embedding file has to be downloaded if it
 was not yet.
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-3}
 #@tab all
 glove_6b50d = TokenEmbedding('glove.6b.50d')
 ```
 
 Output the vocabulary size. The vocabulary contains 400000 words (tokens) and a special unknown token.
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-4}
 #@tab all
 len(glove_6b50d)
 ```
 
 We can get the index of a word in the vocabulary, and vice versa.
 
-```{.python .input}
+```{.python .input #similarity-analogy-loading-pretrained-word-vectors-5}
 #@tab all
 glove_6b50d.token_to_idx['beautiful'], glove_6b50d.idx_to_token[3367]
 ```
@@ -196,7 +196,7 @@ word vectors,
 we implement the following `knn`
 ($k$-nearest neighbors) function.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-1}
 #@tab mxnet
 def knn(W, x, k):
     # Add 1e-9 for numerical stability
@@ -206,7 +206,7 @@ def knn(W, x, k):
     return topk, [cos[int(i)] for i in topk]
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-1}
 #@tab pytorch
 def knn(W, x, k):
     # Add 1e-9 for numerical stability
@@ -217,7 +217,7 @@ def knn(W, x, k):
     return topk, vals
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-1}
 #@tab jax
 def knn(W, x, k):
     # Add 1e-9 for numerical stability
@@ -228,7 +228,7 @@ def knn(W, x, k):
     return topk, [cos[int(i)] for i in topk]
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-1}
 #@tab tensorflow
 def knn(W, x, k):
     # Add 1e-9 for numerical stability
@@ -244,7 +244,7 @@ search for similar words
 using the pretrained word vectors 
 from the `TokenEmbedding` instance `embed`.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-2}
 #@tab all
 def get_similar_tokens(query_token, k, embed):
     topk, cos = knn(embed.idx_to_vec, embed[[query_token]], k + 1)
@@ -260,7 +260,7 @@ let's find
 three most semantically similar words
 to word "chip".
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-3}
 #@tab all
 get_similar_tokens('chip', 3, glove_6b50d)
 ```
@@ -268,12 +268,12 @@ get_similar_tokens('chip', 3, glove_6b50d)
 Below outputs similar words
 to "baby" and "beautiful".
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-4}
 #@tab all
 get_similar_tokens('baby', 3, glove_6b50d)
 ```
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-similarity-5}
 #@tab all
 get_similar_tokens('beautiful', 3, glove_6b50d)
 ```
@@ -298,7 +298,7 @@ we will find the word
 whose vector is most similar
 to the result of $\textrm{vec}(c)+\textrm{vec}(b)-\textrm{vec}(a)$.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-analogy-1}
 #@tab all
 def get_analogy(token_a, token_b, token_c, embed):
     vecs = embed[[token_a, token_b, token_c]]
@@ -309,7 +309,7 @@ def get_analogy(token_a, token_b, token_c, embed):
 
 Let's verify the "male-female" analogy using the loaded word vectors.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-analogy-2}
 #@tab all
 get_analogy('man', 'woman', 'son', glove_6b50d)
 ```
@@ -320,7 +320,7 @@ Below completes a
 This demonstrates 
 semantics in the pretrained word vectors.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-analogy-3}
 #@tab all
 get_analogy('beijing', 'china', 'tokyo', glove_6b50d)
 ```
@@ -332,7 +332,7 @@ such as
 we can see that the pretrained word vectors
 may capture the syntactic information.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-analogy-4}
 #@tab all
 get_analogy('bad', 'worst', 'big', glove_6b50d)
 ```
@@ -342,7 +342,7 @@ of past tense in the pretrained word vectors,
 we can test the syntax using the
 "present tense-past tense" analogy: “do”:“did”::“go”:“went”.
 
-```{.python .input}
+```{.python .input #similarity-analogy-word-analogy-5}
 #@tab all
 get_analogy('do', 'did', 'go', glove_6b50d)
 ```

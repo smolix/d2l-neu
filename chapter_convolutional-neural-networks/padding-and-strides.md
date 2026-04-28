@@ -35,25 +35,25 @@ In other cases, we may want to reduce the dimensionality drastically,
 e.g., if we find the original input resolution to be unwieldy.
 *Strided convolutions* are a popular technique that can help in these instances.
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-and-stride}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-and-stride}
 %%tab pytorch
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-and-stride}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-and-stride}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -133,7 +133,7 @@ and (**apply 1 pixel of padding on all sides.**)
 Given an input with a height and width of 8,
 we find that the height and width of the output is also 8.
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-1}
 %%tab mxnet
 # We define a helper function to calculate convolutions. It initializes 
 # the convolutional layer weights and performs corresponding dimensionality 
@@ -152,7 +152,7 @@ X = np.random.uniform(size=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-1}
 %%tab pytorch
 # We define a helper function to calculate convolutions. It initializes the
 # convolutional layer weights and performs corresponding dimensionality
@@ -171,7 +171,7 @@ X = torch.rand(size=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-1}
 %%tab tensorflow
 # We define a helper function to calculate convolutions. It initializes
 # the convolutional layer weights and performs corresponding dimensionality
@@ -189,7 +189,7 @@ X = tf.random.uniform(shape=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-1}
 %%tab jax
 # We define a helper function to calculate convolutions. It initializes
 # the convolutional layer weights and performs corresponding dimensionality
@@ -211,7 +211,7 @@ When the height and width of the convolution kernel are different,
 we can make the output and input have the same height and width
 by [**setting different padding numbers for height and width.**]
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-2}
 %%tab mxnet
 # We use a convolution kernel with height 5 and width 3. The padding on
 # either side of the height and width are 2 and 1, respectively
@@ -219,7 +219,7 @@ conv2d = nn.Conv2D(1, kernel_size=(5, 3), padding=(2, 1))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-2}
 %%tab pytorch
 # We use a convolution kernel with height 5 and width 3. The padding on either
 # side of the height and width are 2 and 1, respectively
@@ -227,7 +227,7 @@ conv2d = nn.LazyConv2d(1, kernel_size=(5, 3), padding=(2, 1))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-2}
 %%tab tensorflow
 # We use a convolution kernel with height 5 and width 3. The padding on
 # either side of the height and width are 2 and 1, respectively
@@ -235,7 +235,7 @@ conv2d = tf.keras.layers.Conv2D(1, kernel_size=(5, 3), padding='same')
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-padding-2}
 %%tab jax
 # We use a convolution kernel with height 5 and width 3. The padding on
 # either side of the height and width are 2 and 1, respectively
@@ -288,25 +288,25 @@ then the output shape will be $(n_\textrm{h}/s_\textrm{h}) \times (n_\textrm{w}/
 Below, we [**set the strides on both the height and width to 2**],
 thus halving the input height and width.
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-1}
 %%tab mxnet
 conv2d = nn.Conv2D(1, kernel_size=3, padding=1, strides=2)
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-1}
 %%tab pytorch
 conv2d = nn.LazyConv2d(1, kernel_size=3, padding=1, stride=2)
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-1}
 %%tab tensorflow
 conv2d = tf.keras.layers.Conv2D(1, kernel_size=3, padding='same', strides=2)
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-1}
 %%tab jax
 conv2d = nn.Conv(1, kernel_size=(3, 3), padding=1, strides=2)
 comp_conv2d(conv2d, X).shape
@@ -314,19 +314,19 @@ comp_conv2d(conv2d, X).shape
 
 Let's look at (**a slightly more complicated example**).
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-2}
 %%tab mxnet
 conv2d = nn.Conv2D(1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-2}
 %%tab pytorch
 conv2d = nn.LazyConv2d(1, kernel_size=(3, 5), padding=(0, 1), stride=(3, 4))
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-2}
 %%tab tensorflow
 # tf.keras.Conv2D accepts only 'same'/'valid' for `padding`; we use a
 # ZeroPadding2D layer to apply padding=(0, 1) (matching the MX/PT/JAX
@@ -338,7 +338,7 @@ conv2d = tf.keras.Sequential([
 comp_conv2d(conv2d, X).shape
 ```
 
-```{.python .input}
+```{.python .input #padding-and-strides-stride-2}
 %%tab jax
 conv2d = nn.Conv(1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4))
 comp_conv2d(conv2d, X).shape

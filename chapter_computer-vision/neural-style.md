@@ -83,7 +83,7 @@ First, we read the content and style images.
 From their printed coordinate axes,
 we can tell that these images have different sizes.
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -97,7 +97,7 @@ content_img = image.imread('../img/rainier.jpg')
 d2l.plt.imshow(content_img.asnumpy());
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -110,7 +110,7 @@ content_img = d2l.Image.open('../img/rainier.jpg')
 d2l.plt.imshow(content_img);
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -127,7 +127,7 @@ content_img = Image.open('../img/rainier.jpg')
 d2l.plt.imshow(content_img);
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -141,25 +141,25 @@ content_img = Image.open('../img/rainier.jpg')
 d2l.plt.imshow(content_img);
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-2}
 #@tab mxnet
 style_img = image.imread('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img.asnumpy());
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-2}
 #@tab pytorch
 style_img = d2l.Image.open('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img);
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-2}
 #@tab jax
 style_img = Image.open('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img);
 ```
 
-```{.python .input}
+```{.python .input #neural-style-reading-the-content-and-style-images-2}
 #@tab tensorflow
 style_img = Image.open('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img);
@@ -174,7 +174,7 @@ The `postprocess` function restores the pixel values in the output image to thei
 Since the image printing function requires that each pixel has a floating point value from 0 to 1,
 we replace any value smaller than 0 or greater than 1 with 0 or 1, respectively.
 
-```{.python .input}
+```{.python .input #neural-style-preprocessing-and-postprocessing}
 #@tab mxnet
 rgb_mean = np.array([0.485, 0.456, 0.406])
 rgb_std = np.array([0.229, 0.224, 0.225])
@@ -189,7 +189,7 @@ def postprocess(img):
     return (img.transpose(1, 2, 0) * rgb_std + rgb_mean).clip(0, 1)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-preprocessing-and-postprocessing}
 #@tab pytorch
 rgb_mean = torch.tensor([0.485, 0.456, 0.406])
 rgb_std = torch.tensor([0.229, 0.224, 0.225])
@@ -207,7 +207,7 @@ def postprocess(img):
     return torchvision.transforms.ToPILImage()(img.permute(2, 0, 1))
 ```
 
-```{.python .input}
+```{.python .input #neural-style-preprocessing-and-postprocessing}
 #@tab jax
 rgb_mean = jnp.array([0.485, 0.456, 0.406])
 rgb_std = jnp.array([0.229, 0.224, 0.225])
@@ -227,7 +227,7 @@ def postprocess(img):
     return img
 ```
 
-```{.python .input}
+```{.python .input #neural-style-preprocessing-and-postprocessing}
 #@tab tensorflow
 # We keep the synthesized image in NCHW layout internally (matching PT/JAX
 # so the #@tab-all gram/tv_loss/compute_loss cells work unchanged).
@@ -254,25 +254,25 @@ def postprocess(img):
 
 We use the VGG-19 model pretrained on the ImageNet dataset to extract image features :cite:`Gatys.Ecker.Bethge.2016`.
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-1}
 #@tab mxnet
 pretrained_net = gluon.model_zoo.vision.vgg19(pretrained=True)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-1}
 #@tab pytorch
 pretrained_net = torchvision.models.vgg19(
     weights=torchvision.models.VGG19_Weights.DEFAULT)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-1}
 #@tab jax
 # Load pretrained VGG-19 via TensorFlow (JAX venv does not have torch)
 pretrained_net = tf.keras.applications.VGG19(
     weights='imagenet', include_top=False)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-1}
 #@tab tensorflow
 pretrained_net = keras.applications.VGG19(weights='imagenet', include_top=False)
 ```
@@ -288,7 +288,7 @@ the VGG network uses 5 convolutional blocks.
 In the experiment, we choose the last convolutional layer of the fourth convolutional block as the content layer, and the first convolutional layer of each convolutional block as the style layer.
 The indices of these layers can be obtained by printing the `pretrained_net` instance.
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-2}
 #@tab all
 style_layers, content_layers = [0, 5, 10, 19, 28], [25]
 ```
@@ -299,20 +299,20 @@ from the input layer to the content layer or style layer that is closest to the 
 Let's construct a new network instance `net`, which only retains all the VGG layers to be
 used for feature extraction.
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-3}
 #@tab mxnet
 net = nn.Sequential()
 for i in range(max(content_layers + style_layers) + 1):
     net.add(pretrained_net.features[i])
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-3}
 #@tab pytorch
 net = nn.Sequential(*[pretrained_net.features[i] for i in
                       range(max(content_layers + style_layers) + 1)])
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-3}
 #@tab jax
 # The `#@tab all` layer indices refer to the torchvision VGG-19 `features`
 # list (which interleaves Conv, ReLU, and MaxPool layers).
@@ -325,7 +325,7 @@ _vgg_layers = pretrained_net.layers
 net = _vgg_layers[1:max(content_layers + style_layers) + 1]
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-3}
 #@tab tensorflow
 # The #@tab-all indices match torchvision's VGG-19 `features` numbering.
 # Keras VGG-19 has a different layer order, so we remap.
@@ -346,7 +346,7 @@ Since we also need the outputs of intermediate layers,
 we need to perform layer-by-layer computation and keep
 the content and style layer outputs.
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-4}
 #@tab mxnet, pytorch
 def extract_features(X, content_layers, style_layers):
     contents = []
@@ -360,7 +360,7 @@ def extract_features(X, content_layers, style_layers):
     return contents, styles
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-4}
 #@tab jax
 def extract_features(X_tf, content_layers, style_layers):
     """Extract content and style features using TF VGG-19.
@@ -388,7 +388,7 @@ def _to_vgg_input(X_nchw):
     return tf.keras.applications.vgg19.preprocess_input(X_raw)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-4}
 #@tab tensorflow
 def _to_vgg_input(X_nchw):
     """Convert NCHW tensor (ImageNet-normalised) to VGG-19 NHWC input."""
@@ -422,7 +422,7 @@ is a set of model parameters to be updated
 for style transfer,
 we can only extract the content and style features of the synthesized image by calling the `extract_features` function during training.
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-5}
 #@tab mxnet
 def get_contents(image_shape, device):
     content_X = preprocess(content_img, image_shape).copyto(device)
@@ -435,7 +435,7 @@ def get_styles(image_shape, device):
     return style_X, styles_Y
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-5}
 #@tab pytorch
 def get_contents(image_shape, device):
     content_X = preprocess(content_img, image_shape).to(device)
@@ -448,7 +448,7 @@ def get_styles(image_shape, device):
     return style_X, styles_Y
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-5}
 #@tab jax
 def get_contents(image_shape):
     content_X = preprocess(content_img, image_shape)
@@ -464,7 +464,7 @@ def get_styles(image_shape):
     return style_X, styles_Y
 ```
 
-```{.python .input}
+```{.python .input #neural-style-extracting-features-5}
 #@tab tensorflow
 def get_contents(image_shape):
     content_X = preprocess(content_img, image_shape)
@@ -493,13 +493,13 @@ The two inputs of the squared loss function
 are both
 outputs of the content layer computed by the `extract_features` function.
 
-```{.python .input}
+```{.python .input #neural-style-content-loss}
 #@tab mxnet
 def content_loss(Y_hat, Y):
     return np.square(Y_hat - Y).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-content-loss}
 #@tab pytorch
 def content_loss(Y_hat, Y):
     # We detach the target content from the tree used to dynamically compute
@@ -508,13 +508,13 @@ def content_loss(Y_hat, Y):
     return torch.square(Y_hat - Y.detach()).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-content-loss}
 #@tab jax
 def content_loss(Y_hat, Y):
     return jnp.square(Y_hat - jax.lax.stop_gradient(Y)).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-content-loss}
 #@tab tensorflow
 def content_loss(Y_hat, Y):
     return tf.reduce_mean(tf.square(Y_hat - tf.stop_gradient(Y)))
@@ -549,7 +549,7 @@ by these values,
 the `gram` function below divides
 the Gram matrix by the number of its elements, i.e., $chw$.
 
-```{.python .input}
+```{.python .input #neural-style-style-loss-1}
 #@tab all
 def gram(X):
     num_channels, n = X.shape[1], d2l.size(X) // X.shape[1]
@@ -563,25 +563,25 @@ the style layer outputs for
 the synthesized image and the style image.
 It is assumed here that the Gram matrix `gram_Y` based on the style image has been precomputed.
 
-```{.python .input}
+```{.python .input #neural-style-style-loss-2}
 #@tab mxnet
 def style_loss(Y_hat, gram_Y):
     return np.square(gram(Y_hat) - gram_Y).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-style-loss-2}
 #@tab pytorch
 def style_loss(Y_hat, gram_Y):
     return torch.square(gram(Y_hat) - gram_Y.detach()).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-style-loss-2}
 #@tab jax
 def style_loss(Y_hat, gram_Y):
     return jnp.square(gram(Y_hat) - jax.lax.stop_gradient(gram_Y)).mean()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-style-loss-2}
 #@tab tensorflow
 def style_loss(Y_hat, gram_Y):
     return tf.reduce_mean(tf.square(gram(Y_hat) - tf.stop_gradient(gram_Y)))
@@ -601,7 +601,7 @@ $$\sum_{i, j} \left|x_{i, j} - x_{i+1, j}\right| + \left|x_{i, j} - x_{i, j+1}\r
 
 makes values of neighboring pixels on the synthesized image closer.
 
-```{.python .input}
+```{.python .input #neural-style-total-variation-loss}
 #@tab all
 def tv_loss(Y_hat):
     return 0.5 * (d2l.reduce_mean(
@@ -619,7 +619,7 @@ content retention,
 style transfer,
 and noise reduction on the synthesized image.
 
-```{.python .input}
+```{.python .input #neural-style-loss-function}
 #@tab all
 content_weight, style_weight, tv_weight = 1, 1e4, 10
 
@@ -642,7 +642,7 @@ the synthesized image is the only variable that needs to be updated during train
 Thus, we can define a simple model, `SynthesizedImage`, and treat the synthesized image as the model parameters.
 In this model, forward propagation just returns the model parameters.
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab mxnet
 class SynthesizedImage(nn.Block):
     def __init__(self, img_shape, **kwargs):
@@ -653,7 +653,7 @@ class SynthesizedImage(nn.Block):
         return self.weight.data()
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab pytorch
 class SynthesizedImage(nn.Module):
     def __init__(self, img_shape, **kwargs):
@@ -664,12 +664,12 @@ class SynthesizedImage(nn.Module):
         return self.weight
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab jax
 # In JAX, we optimize the synthesized image array directly (no Module needed)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab tensorflow
 # In TF, we optimize the synthesized image as a tf.Variable directly
 ```
@@ -678,7 +678,7 @@ Next, we define the `get_inits` function.
 This function creates a synthesized image model instance and initializes it to the image `X`.
 Gram matrices for the style image at various style layers, `styles_Y_gram`, are computed prior to training.
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-2}
 #@tab mxnet
 def get_inits(X, device, lr, styles_Y):
     gen_img = SynthesizedImage(X.shape)
@@ -689,7 +689,7 @@ def get_inits(X, device, lr, styles_Y):
     return gen_img(), styles_Y_gram, trainer
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-2}
 #@tab pytorch
 def get_inits(X, device, lr, styles_Y):
     gen_img = SynthesizedImage(X.shape).to(device)
@@ -699,7 +699,7 @@ def get_inits(X, device, lr, styles_Y):
     return gen_img(), styles_Y_gram, trainer
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-2}
 #@tab jax
 def get_inits(X, lr, styles_Y):
     # Initialize synthesized image to the content image
@@ -708,7 +708,7 @@ def get_inits(X, lr, styles_Y):
     return gen_img, styles_Y_gram
 ```
 
-```{.python .input}
+```{.python .input #neural-style-initializing-the-synthesized-image-2}
 #@tab tensorflow
 def get_inits(X, lr, styles_Y):
     # Initialize synthesized image to the content image (NCHW tf.Variable)
@@ -728,7 +728,7 @@ we continuously extract
 content features and style features of the synthesized image, and calculate the loss function.
 Below defines the training loop.
 
-```{.python .input}
+```{.python .input #neural-style-training-1}
 #@tab mxnet
 def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
     X, styles_Y_gram, trainer = get_inits(X, device, lr, styles_Y)
@@ -753,7 +753,7 @@ def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
     return X
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-1}
 #@tab pytorch
 def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
     X, styles_Y_gram, trainer = get_inits(X, device, lr, styles_Y)
@@ -778,7 +778,7 @@ def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
     return X
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-1}
 #@tab jax
 def _tf_gram(X):
     """Gram matrix for a (N,C,H,W) TF tensor."""
@@ -845,7 +845,7 @@ def train(X, contents_Y, styles_Y, lr, num_epochs, lr_decay_epoch):
     return jnp.array(X_tf.numpy())
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-1}
 #@tab tensorflow
 def train(X, contents_Y, styles_Y, lr, num_epochs, lr_decay_epoch):
     X, styles_Y_gram, trainer = get_inits(X, lr, styles_Y)
@@ -872,7 +872,7 @@ Now we [**start to train the model**].
 We rescale the height and width of the content and style images to 300 by 450 pixels.
 We use the content image to initialize the synthesized image.
 
-```{.python .input}
+```{.python .input #neural-style-training-2}
 #@tab mxnet
 device, image_shape = d2l.try_gpu(), (450, 300)
 net.collect_params().reset_ctx(device)
@@ -881,7 +881,7 @@ _, styles_Y = get_styles(image_shape, device)
 output = train(content_X, contents_Y, styles_Y, device, 0.9, 500, 50)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-2}
 #@tab pytorch
 device, image_shape = d2l.try_gpu(), (300, 450)  # PIL Image (h, w)
 net = net.to(device)
@@ -890,7 +890,7 @@ _, styles_Y = get_styles(image_shape, device)
 output = train(content_X, contents_Y, styles_Y, device, 0.3, 500, 50)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-2}
 #@tab jax
 image_shape = (300, 450)  # PIL Image (h, w)
 content_X, contents_Y = get_contents(image_shape)
@@ -898,7 +898,7 @@ _, styles_Y = get_styles(image_shape)
 output = train(content_X, contents_Y, styles_Y, 0.3, 500, 50)
 ```
 
-```{.python .input}
+```{.python .input #neural-style-training-2}
 #@tab tensorflow
 image_shape = (300, 450)  # (h, w)
 content_X, contents_Y = get_contents(image_shape)

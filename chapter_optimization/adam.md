@@ -40,7 +40,7 @@ Reviewing the design of Adam its inspiration is clear. Momentum and scale are cl
 
 Implementing Adam from scratch is not very daunting. For convenience we store the time step counter $t$ in the `hyperparams` dictionary. Beyond that all is straightforward.
 
-```{.python .input}
+```{.python .input #adam-implementation-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -63,7 +63,7 @@ def adam(params, states, hyperparams):
     hyperparams['t'] += 1
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -88,7 +88,7 @@ def adam(params, states, hyperparams):
     hyperparams['t'] += 1
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -112,7 +112,7 @@ def adam(params, grads, states, hyperparams):
                     / tf.math.sqrt(s_bias_corr) + eps)
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -141,7 +141,7 @@ def adam(params, grads, states, hyperparams):
 
 We are ready to use Adam to train the model. We use a learning rate of $\eta = 0.01$.
 
-```{.python .input}
+```{.python .input #adam-implementation-2}
 #@tab all
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(adam, init_adam_states(feature_dim),
@@ -150,24 +150,24 @@ d2l.train_ch11(adam, init_adam_states(feature_dim),
 
 A more concise implementation is straightforward since `adam` is one of the algorithms provided as part of the Gluon `trainer` optimization library. Hence we only need to pass configuration parameters for an implementation in Gluon.
 
-```{.python .input}
+```{.python .input #adam-implementation-3}
 #@tab mxnet
 d2l.train_concise_ch11('adam', {'learning_rate': 0.01}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-3}
 #@tab pytorch
 trainer = torch.optim.Adam
 d2l.train_concise_ch11(trainer, {'lr': 0.01}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-3}
 #@tab tensorflow
 trainer = tf.keras.optimizers.Adam
 d2l.train_concise_ch11(trainer, {'learning_rate': 0.01}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adam-implementation-3}
 #@tab jax
 import optax
 
@@ -187,7 +187,7 @@ $$\mathbf{s}_t \leftarrow \mathbf{s}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2 \odot 
 
 The authors furthermore advise to initialize the momentum on a larger initial batch rather than just initial pointwise estimate. We omit the details since they are not material to the discussion and since even without this convergence remains pretty good.
 
-```{.python .input}
+```{.python .input #adam-yogi}
 #@tab mxnet
 def yogi(params, states, hyperparams):
     beta1, beta2, eps = 0.9, 0.999, 1e-3
@@ -205,7 +205,7 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
                {'lr': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
-```{.python .input}
+```{.python .input #adam-yogi}
 #@tab pytorch
 def yogi(params, states, hyperparams):
     beta1, beta2, eps = 0.9, 0.999, 1e-3
@@ -226,7 +226,7 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
                {'lr': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
-```{.python .input}
+```{.python .input #adam-yogi}
 #@tab tensorflow
 def yogi(params, grads, states, hyperparams):
     beta1, beta2, eps = 0.9, 0.999, 1e-6
@@ -245,7 +245,7 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
                {'lr': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
-```{.python .input}
+```{.python .input #adam-yogi}
 #@tab jax
 def yogi(params, grads, states, hyperparams):
     beta1, beta2, eps = 0.9, 0.999, 1e-3

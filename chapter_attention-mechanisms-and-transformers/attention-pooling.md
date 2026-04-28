@@ -23,7 +23,7 @@ In the case of a (scalar) regression with observations $(\mathbf{x}_i, y_i)$ for
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-by-similarity}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, np, npx
@@ -32,7 +32,7 @@ npx.set_np()
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-by-similarity}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -43,7 +43,7 @@ import numpy as np
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-by-similarity}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -52,7 +52,7 @@ import numpy as np
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-by-similarity}
 %%tab jax
 from d2l import jax as d2l
 import jax
@@ -64,7 +64,7 @@ from flax import linen as nn
 
 All the kernels $\alpha(\mathbf{k}, \mathbf{q})$ defined in this section are *translation and rotation invariant*; that is, if we shift and rotate $\mathbf{k}$ and $\mathbf{q}$ in the same manner, the value of $\alpha$ remains unchanged. For simplicity we thus pick scalar arguments $k, q \in \mathbb{R}$ and pick the key $k = 0$ as the origin. This yields:
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-1}
 %%tab pytorch
 # Define some kernels
 def gaussian(x):
@@ -80,7 +80,7 @@ def triangular(x):
     return torch.max(1 - d2l.abs(x), torch.zeros_like(x))
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-1}
 %%tab tensorflow
 # Define some kernels
 def gaussian(x):
@@ -96,7 +96,7 @@ def triangular(x):
     return tf.maximum(1 - d2l.abs(x), 0)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-1}
 %%tab jax
 # Define some kernels
 def gaussian(x):
@@ -112,7 +112,7 @@ def triangular(x):
     return jnp.maximum(1 - d2l.abs(x), 0)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-1}
 %%tab mxnet
 # Define some kernels
 def gaussian(x):
@@ -128,7 +128,7 @@ def triangular(x):
     return np.maximum(1 - d2l.abs(x), 0)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-2}
 %%tab pytorch
 fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
 
@@ -142,7 +142,7 @@ for kernel, name, ax in zip(kernels, names, axes):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-2}
 %%tab tensorflow
 fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
 
@@ -156,7 +156,7 @@ for kernel, name, ax in zip(kernels, names, axes):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-2}
 %%tab jax
 fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
 
@@ -170,7 +170,7 @@ for kernel, name, ax in zip(kernels, names, axes):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-2}
 %%tab mxnet
 fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
 
@@ -192,7 +192,7 @@ $$y_i = 2\sin(x_i) + x_i + \epsilon,$$
 
 where $\epsilon$ is drawn from a normal distribution with zero mean and unit variance. We draw 40 training examples.
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-3}
 %%tab pytorch
 def f(x):
     return 2 * d2l.sin(x) + x
@@ -204,7 +204,7 @@ x_val = d2l.arange(0, 5, 0.1)
 y_val = f(x_val)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-3}
 %%tab tensorflow
 def f(x):
     return 2 * d2l.sin(x) + x
@@ -216,7 +216,7 @@ x_val = d2l.arange(0, 5, 0.1)
 y_val = f(x_val)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-3}
 %%tab jax
 def f(x):
     return 2 * d2l.sin(x) + x
@@ -228,7 +228,7 @@ x_val = d2l.arange(0, 5, 0.1)
 y_val = f(x_val)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-kernels-and-data-3}
 %%tab mxnet
 def f(x):
     return 2 * d2l.sin(x) + x
@@ -246,7 +246,7 @@ Now that we have data and kernels, all we need is a function that computes the k
 
 Recall attention pooling in :eqref:`eq_attention_pooling`. Let each validation feature be a query, and each training feature--label pair be a key--value pair. As a result, the  normalized relative kernel weights (`attention_w` below) are the *attention weights*.
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-1}
 %%tab pytorch
 def nadaraya_watson(x_train, y_train, x_val, kernel):
     dists = d2l.reshape(x_train, (-1, 1)) - d2l.reshape(x_val, (1, -1))
@@ -258,7 +258,7 @@ def nadaraya_watson(x_train, y_train, x_val, kernel):
     return y_hat, attention_w
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-1}
 %%tab tensorflow
 def nadaraya_watson(x_train, y_train, x_val, kernel):
     dists = d2l.reshape(x_train, (-1, 1)) - d2l.reshape(x_val, (1, -1))
@@ -270,7 +270,7 @@ def nadaraya_watson(x_train, y_train, x_val, kernel):
     return y_hat, attention_w
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-1}
 %%tab jax
 def nadaraya_watson(x_train, y_train, x_val, kernel):
     dists = d2l.reshape(x_train, (-1, 1)) - d2l.reshape(x_val, (1, -1))
@@ -282,7 +282,7 @@ def nadaraya_watson(x_train, y_train, x_val, kernel):
     return y_hat, attention_w
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-1}
 %%tab mxnet
 def nadaraya_watson(x_train, y_train, x_val, kernel):
     dists = d2l.reshape(x_train, (-1, 1)) - d2l.reshape(x_val, (1, -1))
@@ -296,7 +296,7 @@ def nadaraya_watson(x_train, y_train, x_val, kernel):
 
 Let's have a look at the kind of estimates that the different kernels produce.
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-2}
 %%tab pytorch
 def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
     fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
@@ -315,7 +315,7 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
         fig.colorbar(pcm, ax=axes, shrink=0.7)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-2}
 %%tab tensorflow
 def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
     fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
@@ -334,7 +334,7 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
         fig.colorbar(pcm, ax=axes, shrink=0.7)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-2}
 %%tab jax
 def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
     fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
@@ -353,7 +353,7 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
         fig.colorbar(pcm, ax=axes, shrink=0.7)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-2}
 %%tab mxnet
 def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
     fig, axes = d2l.plt.subplots(1, 4, sharey=True, figsize=(12, 3))
@@ -372,14 +372,14 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
         fig.colorbar(pcm, ax=axes, shrink=0.7)
 ```
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-3}
 %%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names)
 ```
 
 The first thing that stands out is that all three nontrivial kernels (Gaussian, Boxcar, and Triangular) produce fairly workable estimates that are not too far from the true function. Only the constant kernel that leads to the trivial estimate $f(x) = \frac{1}{n} \sum_i y_i$ produces a rather unrealistic result. Let's inspect the attention weighting a bit more closely:
 
-```{.python .input}
+```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-4}
 %%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 ```
@@ -391,7 +391,7 @@ The visualization clearly shows why the estimates for Gaussian, Boxcar, and Tria
 We could replace the Gaussian kernel with one of a different width. That is, we could use 
 $\alpha(\mathbf{q}, \mathbf{k}) = \exp\left(-\frac{1}{2 \sigma^2} \|\mathbf{q} - \mathbf{k}\|^2 \right)$ where $\sigma^2$ determines the width of the kernel. Let's see whether this affects the outcomes.
 
-```{.python .input}
+```{.python .input #attention-pooling-adapting-attention-pooling-1}
 %%tab all
 sigmas = (0.1, 0.2, 0.5, 1)
 names = ['Sigma ' + str(sigma) for sigma in sigmas]
@@ -405,7 +405,7 @@ plot(x_train, y_train, x_val, y_val, kernels, names)
 
 Clearly, the narrower the kernel, the less smooth the estimate. At the same time, it adapts better to the local variations. Let's look at the corresponding attention weights.
 
-```{.python .input}
+```{.python .input #attention-pooling-adapting-attention-pooling-2}
 %%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 ```

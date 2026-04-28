@@ -39,7 +39,7 @@ the choice of the architecture.
 ![This section feeds pretrained GloVe to a CNN-based architecture for sentiment analysis.](../img/nlp-map-sa-cnn.svg)
 :label:`fig_nlp-map-sa-cnn`
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, init, np, npx
@@ -50,7 +50,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -60,7 +60,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -74,7 +74,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -121,7 +121,7 @@ Given an input tensor `X`
 and a kernel tensor `K`,
 it returns the output tensor `Y`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-1}
 #@tab mxnet, pytorch
 def corr1d(X, K):
     w = K.shape[0]
@@ -131,7 +131,7 @@ def corr1d(X, K):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-1}
 #@tab jax
 def corr1d(X, K):
     w = K.shape[0]
@@ -141,7 +141,7 @@ def corr1d(X, K):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-1}
 #@tab tensorflow
 def corr1d(X, K):
     w = K.shape[0]
@@ -151,7 +151,7 @@ def corr1d(X, K):
 
 We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_conv1d` to validate the output of the above one-dimensional cross-correlation implementation.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-2}
 #@tab all
 X, K = d2l.tensor([0, 1, 2, 3, 4, 5, 6]), d2l.tensor([1, 2])
 corr1d(X, K)
@@ -174,7 +174,7 @@ to produce the one-dimensional output tensor.
 We can implement the one-dimensional cross-correlation operation for multiple input channels
 and validate the results in :numref:`fig_conv1d_channel`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-3}
 #@tab all
 def corr1d_multi_in(X, K):
     # First, iterate through the 0th dimension (channel dimension) of `X` and
@@ -297,7 +297,7 @@ we also use two embedding layers:
 one with trainable weights and the other
 with fixed weights.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab mxnet
 class TextCNN(nn.Block):
     def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
@@ -334,7 +334,7 @@ class TextCNN(nn.Block):
         return outputs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab pytorch
 class TextCNN(nn.Module):
     def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
@@ -372,7 +372,7 @@ class TextCNN(nn.Module):
         return outputs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab jax
 class TextCNN(nn.Module):
     vocab_size: int
@@ -409,7 +409,7 @@ class TextCNN(nn.Module):
         return outputs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab tensorflow
 class TextCNN(d2l.Classifier):
     def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
@@ -441,7 +441,7 @@ class TextCNN(d2l.Classifier):
 Let's create a textCNN instance.
 It has 3 convolutional layers with kernel widths of 3, 4, and 5, all with 100 output channels.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-2}
 #@tab mxnet
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
@@ -449,7 +449,7 @@ net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
 net.initialize(init.Xavier(), ctx=devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-2}
 #@tab pytorch
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
@@ -462,7 +462,7 @@ def init_weights(module):
 net.apply(init_weights);
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-2}
 #@tab jax
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
@@ -472,7 +472,7 @@ dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
 params = net.init(jax.random.PRNGKey(0), dummy_input, deterministic=True)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-defining-the-model-2}
 #@tab tensorflow
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
@@ -491,7 +491,7 @@ These token representations (embedding weights)
 will be trained in `embedding`
 and fixed in `constant_embedding`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}
 #@tab mxnet
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
@@ -500,7 +500,7 @@ net.constant_embedding.weight.set_data(embeds)
 net.constant_embedding.collect_params().setattr('grad_req', 'null')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}
 #@tab pytorch
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
@@ -509,7 +509,7 @@ net.constant_embedding.weight.data.copy_(embeds)
 net.constant_embedding.weight.requires_grad = False
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}
 #@tab jax
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
@@ -520,7 +520,7 @@ params['params']['constant_embedding']['embedding'] = jnp.array(embeds)
 params = flax.core.freeze(params)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}
 #@tab tensorflow
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
@@ -533,7 +533,7 @@ net.constant_embedding.trainable = False
 
 Now we can train the textCNN model for sentiment analysis.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab mxnet
 lr, num_epochs = 0.001, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
@@ -541,7 +541,7 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab pytorch
 lr, num_epochs = 0.001, 5
 trainer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -549,7 +549,7 @@ loss = nn.CrossEntropyLoss(reduction="none")
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab jax
 lr, num_epochs = 0.001, 5
 optimizer = optax.adam(lr)
@@ -591,7 +591,7 @@ for epoch in range(num_epochs):
           f'test acc {correct / total:.3f}')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab tensorflow
 lr, num_epochs = 0.001, 5
 net.compile(optimizer=keras.optimizers.Adam(lr),
@@ -602,12 +602,12 @@ net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
 
 Below we use the trained model to predict the sentiment for two simple sentences.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-2}
 #@tab mxnet, pytorch
 d2l.predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-2}
 #@tab jax
 tokens = jnp.array(vocab['this movie is so great'.split()])
 logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
@@ -615,17 +615,17 @@ logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
 'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-2}
 #@tab tensorflow
 d2l.predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-3}
 #@tab mxnet, pytorch
 d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-3}
 #@tab jax
 tokens = jnp.array(vocab['this movie is so bad'.split()])
 logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
@@ -633,7 +633,7 @@ logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
 'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-3}
 #@tab tensorflow
 d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 ```

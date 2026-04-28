@@ -45,26 +45,26 @@ where weights are derived according to the compatibility between a query $\mathb
 
 What is quite remarkable is that the actual "code" for executing on the set of keys and values, namely the query, can be quite concise, even though the space to operate on is significant. This is a desirable property for a network layer as it does not require too many parameters to learn. Just as convenient is the fact that attention can operate on arbitrarily large databases without the need to change the way the attention pooling operation is performed.
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=2}
+```{.python .input #queries-keys-values-queries-keys-and-values  n=2}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
@@ -76,7 +76,7 @@ One of the benefits of the attention mechanism is that it can be quite intuitive
 
 We thus define the `show_heatmaps` function. Note that it does not take a matrix (of attention weights) as its input but rather a tensor with four axes, allowing for an array of different queries and weights. Consequently the input `matrices` has the shape (number of rows for display, number of columns for display, number of queries, number of keys). This will come in handy later on when we want to visualize the workings that are to design Transformers.
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab pytorch
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -98,7 +98,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab tensorflow
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -120,7 +120,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab jax
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -142,7 +142,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab mxnet
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -167,7 +167,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
 As a quick sanity check let's visualize the identity matrix, representing a case 
 where the attention weight is $1$ only when the query and the key are the same.
 
-```{.python .input  n=20}
+```{.python .input #queries-keys-values-visualization-2  n=20}
 %%tab all
 attention_weights = d2l.reshape(d2l.eye(10), (1, 1, 10, 10))
 show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')

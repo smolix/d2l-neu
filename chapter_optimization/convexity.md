@@ -8,7 +8,7 @@ if the algorithm performs poorly even in the convex setting,
 typically we should not hope to see great results otherwise. 
 Furthermore, even though the optimization problems in deep learning are generally nonconvex, they often exhibit some properties of convex ones near local minima. This can lead to exciting new optimization variants such as :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`.
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -17,7 +17,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -26,7 +26,7 @@ from mpl_toolkits import mplot3d
 import torch
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -35,7 +35,7 @@ from mpl_toolkits import mplot3d
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -91,7 +91,7 @@ $$\lambda f(x) + (1-\lambda) f(x') \geq f(\lambda x + (1-\lambda) x').$$
 To illustrate this let's plot a few functions and check which ones satisfy the requirement.
 Below we define a few functions, both convex and nonconvex.
 
-```{.python .input}
+```{.python .input #convexity-convex-functions}
 #@tab all
 f = lambda x: 0.5 * x**2  # Convex
 g = lambda x: d2l.cos(np.pi * x)  # Nonconvex
@@ -171,7 +171,7 @@ Therefore, there does not exist $x' \in \mathcal{X}$ for which $f(x') < f(x^{\as
 
 For instance, the convex function $f(x) = (x-1)^2$ has a local minimum at $x=1$, which is also the global minimum.
 
-```{.python .input}
+```{.python .input #convexity-local-minima-are-global-minima}
 #@tab all
 f = lambda x: (x - 1) ** 2
 d2l.set_figsize()

@@ -8,7 +8,7 @@ At the level of machine learning we discuss in this book, we will not need a dee
 ## Geometric Interpretation
 Suppose that we have a function $f(x)$.  For simplicity, let's assume that $f(x)$ is non-negative (never takes a value less than zero).  What we want to try and understand is: what is the area contained between $f(x)$ and the $x$-axis?
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -26,7 +26,7 @@ d2l.plt.fill_between(x.tolist(), f.tolist())
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -43,7 +43,7 @@ d2l.plt.fill_between(x.tolist(), f.tolist())
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -60,7 +60,7 @@ d2l.plt.fill_between(x.numpy(), f.numpy())
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -81,7 +81,7 @@ d2l.plt.show()
 
 In most cases, this area will be infinite or undefined (consider the area under $f(x) = x^{2}$), so people will often talk about the area between a pair of ends, say $a$ and $b$.
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-2}
 #@tab mxnet
 x = np.arange(-2, 2, 0.01)
 f = np.exp(-x**2)
@@ -92,7 +92,7 @@ d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-2}
 #@tab pytorch
 x = torch.arange(-2, 2, 0.01)
 f = torch.exp(-x**2)
@@ -103,7 +103,7 @@ d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-2}
 #@tab tensorflow
 x = tf.range(-2, 2, 0.01)
 f = tf.exp(-x**2)
@@ -114,7 +114,7 @@ d2l.plt.fill_between(x.numpy()[50:250], f.numpy()[50:250])
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-2}
 #@tab jax
 x = jnp.arange(-2, 2, 0.01)
 f = jnp.exp(-x**2)
@@ -139,7 +139,7 @@ $$
 
 There is a traditional way to try and understand how we might try to approximate such integrals: we can imagine taking the region in-between $a$ and $b$ and chopping it into $N$ vertical slices.  If $N$ is large, we can approximate the area of each slice by a rectangle, and then add up the areas to get the total area under the curve.  Let's take a look at an example doing this in code.  We will see how to get the true value in a later section.
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-3}
 #@tab mxnet
 epsilon = 0.05
 a = 0
@@ -160,7 +160,7 @@ d2l.plt.show()
 f'approximation: {approx}, truth: {true}'
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-3}
 #@tab pytorch
 epsilon = 0.05
 a = 0
@@ -181,7 +181,7 @@ d2l.plt.show()
 f'approximation: {approx}, truth: {true}'
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-3}
 #@tab tensorflow
 epsilon = 0.05
 a = 0
@@ -202,7 +202,7 @@ d2l.plt.show()
 f'approximation: {approx}, truth: {true}'
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-geometric-interpretation-3}
 #@tab jax
 epsilon = 0.05
 a = 0
@@ -398,7 +398,7 @@ If this discussion sounds familiar, it is!  In :numref:`sec_geometry-linear-alge
 ## Multiple Integrals
 In some cases, we will need to work in higher dimensions.  For instance, suppose that we have a function of two variables, like $f(x, y)$ and we want to know the volume under $f$ when $x$ ranges over $[a, b]$ and $y$ ranges over $[c, d]$.
 
-```{.python .input}
+```{.python .input #integral-calculus-multiple-integrals}
 #@tab mxnet
 # Construct grid and compute function
 x, y = np.meshgrid(np.linspace(-2, 2, 101), np.linspace(-2, 2, 101),
@@ -419,7 +419,7 @@ ax.set_zlim(0, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-multiple-integrals}
 #@tab pytorch
 # Construct grid and compute function
 x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101),
@@ -440,7 +440,7 @@ ax.set_zlim(0, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-multiple-integrals}
 #@tab tensorflow
 # Construct grid and compute function
 x, y = tf.meshgrid(tf.linspace(-2., 2., 101), tf.linspace(-2., 2., 101))
@@ -460,7 +460,7 @@ ax.set_zlim(0, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #integral-calculus-multiple-integrals}
 #@tab jax
 # Construct grid and compute function
 x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101), jnp.linspace(-2, 2, 101),

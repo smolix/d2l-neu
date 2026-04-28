@@ -77,7 +77,7 @@ While this section only scratches the surface,
 we will provide the foundation
 that you need to begin building models.
 
-```{.python .input}
+```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -87,7 +87,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #probability-probability-and-statistics}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -96,7 +96,7 @@ import torch
 from torch.distributions.multinomial import Multinomial
 ```
 
-```{.python .input}
+```{.python .input #probability-probability-and-statistics}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -105,7 +105,7 @@ import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 ```
 
-```{.python .input}
+```{.python .input #probability-probability-and-statistics}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -211,7 +211,7 @@ is equal to $b-a$.
 Thus we can get out `0` and `1` with probability `0.5` each
 by testing whether the returned float number is greater than `0.5`:
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-1}
 %%tab all
 num_tosses = 100
 heads = sum([random.random() > 0.5 for _ in range(num_tosses)])
@@ -240,25 +240,25 @@ the number of occurrences of heads
 and the second component tells us
 the number of occurrences of tails.
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab mxnet
 fair_probs = [0.5, 0.5]
 multinomial(100, fair_probs)
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab pytorch
 fair_probs = torch.tensor([0.5, 0.5])
 Multinomial(100, fair_probs).sample()
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab tensorflow
 fair_probs = tf.ones(2) / 2
 tfd.Multinomial(100, fair_probs).sample()
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab jax
 fair_probs = [0.5, 0.5]
 # jax.random does not have multinomial distribution implemented
@@ -276,22 +276,22 @@ just like the probabilities
 that they are intended
 to estimate, sum to $1$.
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab mxnet
 multinomial(100, fair_probs) / 100
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab pytorch
 Multinomial(100, fair_probs).sample() / 100
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab tensorflow
 tfd.Multinomial(100, fair_probs).sample() / 100
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab jax
 np.random.multinomial(100, fair_probs) / 100
 ```
@@ -307,25 +307,25 @@ or if the possible deviation from $1/2$ was
 just an artifact of the small sample size?
 Let's see what happens when we simulate 10,000 tosses.
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab mxnet
 counts = multinomial(10000, fair_probs).astype(np.float32)
 counts / 10000
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab pytorch
 counts = Multinomial(10000, fair_probs).sample()
 counts / 10000
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab tensorflow
 counts = tfd.Multinomial(10000, fair_probs).sample()
 counts / 10000
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab jax
 counts = np.random.multinomial(10000, fair_probs).astype(np.float32)
 counts / 10000
@@ -346,7 +346,7 @@ Let's get some more intuition by studying
 how our estimate evolves as we grow
 the number of tosses from 1 to 10,000.
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab pytorch
 counts = Multinomial(1, fair_probs).sample((10000,))
 cum_counts = counts.cumsum(dim=0)
@@ -362,14 +362,14 @@ d2l.plt.gca().set_ylabel('Estimated probability')
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab mxnet
 counts = multinomial(1, fair_probs, size=10000)
 cum_counts = counts.astype(np.float32).cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab tensorflow
 counts = tfd.Multinomial(1, fair_probs).sample(10000)
 cum_counts = tf.cumsum(counts, axis=0)
@@ -377,14 +377,14 @@ estimates = cum_counts / tf.reduce_sum(cum_counts, axis=1, keepdims=True)
 estimates = estimates.numpy()
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab jax
 counts = np.random.multinomial(1, fair_probs, size=10000).astype(np.float32)
 cum_counts = counts.cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
 ```
 
-```{.python .input}
+```{.python .input #probability-a-simple-example-tossing-coins-6}
 %%tab mxnet, tensorflow, jax
 d2l.set_figsize((4.5, 3.5))
 d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))

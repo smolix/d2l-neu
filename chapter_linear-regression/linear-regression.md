@@ -30,7 +30,7 @@ The variables (age and area)
 upon which the predictions are based
 are called *features* (or *covariates*).
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -39,7 +39,7 @@ from mxnet import np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -49,7 +49,7 @@ import numpy as np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -59,7 +59,7 @@ import numpy as np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -433,7 +433,7 @@ containing all 1s.
 In the first method, we loop over the vectors with a Python for-loop.
 In the second, we rely on a single call to `+`.
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-1}
 %%tab all
 n = 10000
 a = d2l.ones(n)
@@ -444,7 +444,7 @@ Now we can benchmark the workloads.
 First, [**we add them, one coordinate at a time,
 using a for-loop.**]
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab mxnet, pytorch
 c = d2l.zeros(n)
 t = time.time()
@@ -453,7 +453,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab tensorflow
 c = tf.Variable(d2l.zeros(n))
 t = time.time()
@@ -462,7 +462,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab jax
 # JAX arrays are immutable, meaning that once created their contents
 # cannot be changed. For updating individual elements, JAX provides
@@ -476,7 +476,7 @@ f'{time.time() - t:.5f} sec'
 
 (**Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.**)
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-3}
 %%tab all
 t = time.time()
 d = a + b
@@ -520,28 +520,28 @@ $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (x - \m
 
 Below [**we define a function to compute the normal distribution**].
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab pytorch
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab tensorflow
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab jax
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * jnp.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab mxnet
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
@@ -550,7 +550,7 @@ def normal(x, mu, sigma):
 
 We can now (**visualize the normal distributions**).
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab mxnet
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -562,7 +562,7 @@ d2l.plot(x.asnumpy(), [normal(x, mu, sigma).asnumpy() for mu, sigma in params], 
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab pytorch
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -574,7 +574,7 @@ d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab tensorflow
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -586,7 +586,7 @@ d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab jax
 # Use NumPy again for visualization
 x = jnp.arange(-7, 7, 0.01)

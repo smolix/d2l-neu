@@ -26,7 +26,7 @@ the channel dimension at any output pixel
 holds the classification results
 for the input pixel at the same spatial position.
 
-```{.python .input}
+```{.python .input #fcn-fully-convolutional-networks}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -36,7 +36,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #fcn-fully-convolutional-networks}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -46,7 +46,7 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #fcn-fully-convolutional-networks}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -58,7 +58,7 @@ import numpy as np
 from PIL import Image
 ```
 
-```{.python .input}
+```{.python .input #fcn-fully-convolutional-networks}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -109,20 +109,20 @@ from PyTorch or load them via a library such as `flaxmodels`. The
 PyTorch and TensorFlow tabs use truly pretrained backbones.
 :end_tab:
 
-```{.python .input}
+```{.python .input #fcn-the-model-1}
 #@tab mxnet
 pretrained_net = gluon.model_zoo.vision.resnet18_v2(pretrained=True)
 pretrained_net.features[-3:], pretrained_net.output
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-1}
 #@tab pytorch
 pretrained_net = torchvision.models.resnet18(
     weights=torchvision.models.ResNet18_Weights.DEFAULT)
 list(pretrained_net.children())[-3:]
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-1}
 #@tab jax
 # Define ResNet building blocks for the feature extractor
 class ResNetBlock(nn.Module):
@@ -180,7 +180,7 @@ print('Feature extractor output shape:',
       pretrained_net.apply(variables, dummy).shape)
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-1}
 #@tab tensorflow
 # Use ResNet-50 pretrained on ImageNet as the backbone.
 # include_top=False removes the global avg pool and dense head.
@@ -196,25 +196,25 @@ except for the final global average pooling layer
 and the fully connected layer that are closest
 to the output.
 
-```{.python .input}
+```{.python .input #fcn-the-model-2}
 #@tab mxnet
 net = nn.HybridSequential()
 for layer in pretrained_net.features[:-2]:
     net.add(layer)
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-2}
 #@tab pytorch
 net = nn.Sequential(*list(pretrained_net.children())[:-2])
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-2}
 #@tab jax
 # The ResNetFeatures module already excludes global avg pool and FC.
 # We define the full FCN model below.
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-2}
 #@tab tensorflow
 # Build the FCN feature extractor: all layers up to (but not including)
 # the global average pooling and dense head — i.e., the full conv body.
@@ -226,25 +226,25 @@ Given an input with height and width of 320 and 480 respectively,
 the forward propagation of `net`
 reduces the input height and width to 1/32 of the original, namely 10 and 15.
 
-```{.python .input}
+```{.python .input #fcn-the-model-3}
 #@tab mxnet
 X = np.random.uniform(size=(1, 3, 320, 480))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-3}
 #@tab pytorch
 X = torch.rand(size=(1, 3, 320, 480))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-3}
 #@tab jax
 X = jnp.ones((1, 320, 480, 3))
 pretrained_net.apply(variables, X).shape
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-3}
 #@tab tensorflow
 X = tf.random.uniform(shape=(1, 320, 480, 3))
 net(X).shape
@@ -266,7 +266,7 @@ and the height and width of the kernel $2s$,
 the transposed convolution will increase
 the height and width of the input by $s$ times.
 
-```{.python .input}
+```{.python .input #fcn-the-model-4}
 #@tab mxnet
 num_classes = 21
 net.add(nn.Conv2D(num_classes, kernel_size=1),
@@ -274,7 +274,7 @@ net.add(nn.Conv2D(num_classes, kernel_size=1),
             num_classes, kernel_size=64, padding=16, strides=32))
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-4}
 #@tab pytorch
 num_classes = 21
 net.add_module('final_conv', nn.Conv2d(512, num_classes, kernel_size=1))
@@ -282,7 +282,7 @@ net.add_module('transpose_conv', nn.ConvTranspose2d(num_classes, num_classes,
                                     kernel_size=64, padding=16, stride=32))
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-4}
 #@tab jax
 num_classes = 21
 
@@ -307,7 +307,7 @@ print('FCN output shape:',
       net.apply(variables, jnp.ones((1, 320, 480, 3))).shape)
 ```
 
-```{.python .input}
+```{.python .input #fcn-the-model-4}
 #@tab tensorflow
 num_classes = 21
 # 1x1 conv to reduce channels to num_classes
@@ -360,7 +360,7 @@ with the kernel constructed by the following `bilinear_kernel` function.
 Due to space limitations, we only provide the implementation of the `bilinear_kernel` function below
 without discussions on its algorithm design.
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-1}
 #@tab mxnet
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     factor = (kernel_size + 1) // 2
@@ -377,7 +377,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return np.array(weight)
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-1}
 #@tab pytorch
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     factor = (kernel_size + 1) // 2
@@ -395,7 +395,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return weight
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-1}
 #@tab jax
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     factor = (kernel_size + 1) // 2
@@ -414,7 +414,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return jnp.array(weight)
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-1}
 #@tab tensorflow
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     factor = (kernel_size + 1) // 2
@@ -440,20 +440,20 @@ We construct a transposed convolutional layer that
 doubles the height and weight,
 and initialize its kernel with the `bilinear_kernel` function.
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
 #@tab mxnet
 conv_trans = nn.Conv2DTranspose(3, kernel_size=4, padding=1, strides=2)
 conv_trans.initialize(init.Constant(bilinear_kernel(3, 3, 4)))
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
 #@tab pytorch
 conv_trans = nn.ConvTranspose2d(3, 3, kernel_size=4, padding=1, stride=2,
                                 bias=False)
 conv_trans.weight.data.copy_(bilinear_kernel(3, 3, 4));
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
 #@tab jax
 class BilinearConvTranspose(nn.Module):
     """A transposed conv layer initialized with bilinear interpolation."""
@@ -480,7 +480,7 @@ ct_variables = {**ct_variables,
                                    'kernel': bilinear_w}}}
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
 #@tab tensorflow
 # Build a transposed conv layer with bilinear initialization to double H and W
 bilinear_w = bilinear_kernel(3, 3, 4)
@@ -493,7 +493,7 @@ _ = conv_trans(tf.zeros((1, 1, 1, 3)))
 
 Read the image `X` and assign the upsampling output to `Y`. In order to print the image, we need to adjust the position of the channel dimension.
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab mxnet
 img = image.imread('../img/catdog.jpg')
 X = np.expand_dims(img.astype('float32').transpose(2, 0, 1), axis=0) / 255
@@ -501,7 +501,7 @@ Y = conv_trans(X)
 out_img = Y[0].transpose(1, 2, 0)
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab pytorch
 img = torchvision.transforms.ToTensor()(d2l.Image.open('../img/catdog.jpg'))
 X = img.unsqueeze(0)
@@ -509,7 +509,7 @@ Y = conv_trans(X)
 out_img = Y[0].permute(1, 2, 0).detach()
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab jax
 img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
 X = jnp.expand_dims(jnp.array(img), axis=0)  # NHWC
@@ -517,7 +517,7 @@ Y = conv_trans.apply(ct_variables, X)
 out_img = np.array(Y[0])
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab tensorflow
 img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
 X = tf.expand_dims(tf.constant(img), axis=0)  # NHWC
@@ -529,7 +529,7 @@ As we can see, the transposed convolutional layer increases both the height and 
 Except for the different scales in coordinates,
 the image scaled up by bilinear interpolation and the original image printed in :numref:`sec_bbox` look the same.
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-4}
 #@tab mxnet
 d2l.set_figsize()
 print('input image shape:', img.shape)
@@ -538,7 +538,7 @@ print('output image shape:', out_img.shape)
 d2l.plt.imshow(out_img.asnumpy());
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-4}
 #@tab pytorch
 d2l.set_figsize()
 print('input image shape:', img.permute(1, 2, 0).shape)
@@ -547,7 +547,7 @@ print('output image shape:', out_img.shape)
 d2l.plt.imshow(out_img);
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-4}
 #@tab jax
 d2l.set_figsize()
 print('input image shape:', img.shape)
@@ -556,7 +556,7 @@ print('output image shape:', out_img.shape)
 d2l.plt.imshow(out_img);
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-4}
 #@tab tensorflow
 d2l.set_figsize()
 print('input image shape:', img.shape)
@@ -567,20 +567,20 @@ d2l.plt.imshow(np.clip(out_img, 0, 1));
 
 In a fully convolutional network, we [**initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization.**]
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
 #@tab mxnet
 W = bilinear_kernel(num_classes, num_classes, 64)
 net[-1].initialize(init.Constant(W))
 net[-2].initialize(init=init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
 #@tab pytorch
 W = bilinear_kernel(num_classes, num_classes, 64)
 net.transpose_conv.weight.data.copy_(W);
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
 #@tab jax
 # Initialize the FCN with bilinear weights for the transposed conv layer
 # and Xavier initialization for the 1x1 conv layer
@@ -599,7 +599,7 @@ def init_fcn_weights(rng):
 variables = init_fcn_weights(jax.random.PRNGKey(42))
 ```
 
-```{.python .input}
+```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
 #@tab tensorflow
 # Initialize the transpose conv kernel with bilinear upsampling weights.
 # The 1x1 conv was already initialized with Glorot (Xavier) uniform above.
@@ -619,7 +619,7 @@ as introduced in :numref:`sec_semantic_segmentation`.
 The output image shape of random cropping is
 specified as $320\times 480$: both the height and width are divisible by $32$.
 
-```{.python .input}
+```{.python .input #fcn-reading-the-dataset}
 #@tab all
 batch_size, crop_size = 32, (320, 480)
 train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
@@ -640,7 +640,7 @@ In addition, the accuracy is calculated
 based on correctness
 of the predicted class for all the pixels.
 
-```{.python .input}
+```{.python .input #fcn-training}
 #@tab mxnet
 num_epochs, lr, wd, devices = 5, 0.1, 1e-3, d2l.try_all_gpus()
 loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
@@ -650,7 +650,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd',
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #fcn-training}
 #@tab pytorch
 def loss(inputs, targets):
     return F.cross_entropy(inputs, targets, reduction='none').mean(1).mean(1)
@@ -660,7 +660,7 @@ trainer = torch.optim.SGD(net.parameters(), lr=lr, weight_decay=wd)
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #fcn-training}
 #@tab jax
 def loss_fn(params, batch_stats, X, Y):
     # X is NHWC, Y is NHW with integer class labels
@@ -696,7 +696,7 @@ for epoch in range(num_epochs):
 variables = {'params': params, 'batch_stats': batch_stats}
 ```
 
-```{.python .input}
+```{.python .input #fcn-training}
 #@tab tensorflow
 # Loss: SparseCategoricalCrossentropy over per-pixel logits (NHWC -> NHW).
 # Backbone weights are frozen to match the PT/JAX approach of fine-tuning only
@@ -719,7 +719,7 @@ fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)
 When predicting, we need to standardize the input image
 in each channel and transform the image into the four-dimensional input format required by the CNN.
 
-```{.python .input}
+```{.python .input #fcn-prediction-1}
 #@tab mxnet
 def predict(img):
     X = test_iter._dataset.normalize_image(img)
@@ -728,7 +728,7 @@ def predict(img):
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-1}
 #@tab pytorch
 def predict(img):
     X = test_iter.dataset.normalize_image(img).unsqueeze(0)
@@ -736,7 +736,7 @@ def predict(img):
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-1}
 #@tab jax
 def predict(img):
     rgb_mean = np.array([0.485, 0.456, 0.406])
@@ -747,7 +747,7 @@ def predict(img):
     return jnp.argmax(pred, axis=-1).reshape(pred.shape[1], pred.shape[2])
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-1}
 #@tab tensorflow
 def predict(img):
     rgb_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -760,7 +760,7 @@ def predict(img):
 
 To [**visualize the predicted class**] of each pixel, we map the predicted class back to its label color in the dataset.
 
-```{.python .input}
+```{.python .input #fcn-prediction-2}
 #@tab mxnet
 def label2image(pred):
     colormap = np.array(d2l.VOC_COLORMAP, ctx=devices[0], dtype='uint8')
@@ -768,7 +768,7 @@ def label2image(pred):
     return colormap[X, :]
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-2}
 #@tab pytorch
 def label2image(pred):
     colormap = torch.tensor(d2l.VOC_COLORMAP, device=devices[0])
@@ -776,7 +776,7 @@ def label2image(pred):
     return colormap[X, :]
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-2}
 #@tab jax
 def label2image(pred):
     colormap = jnp.array(d2l.VOC_COLORMAP, dtype=jnp.uint8)
@@ -784,7 +784,7 @@ def label2image(pred):
     return colormap[X, :]
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-2}
 #@tab tensorflow
 def label2image(pred):
     colormap = tf.constant(d2l.VOC_COLORMAP, dtype=tf.uint8)
@@ -818,7 +818,7 @@ print their cropped areas,
 prediction results,
 and ground-truth row by row.
 
-```{.python .input}
+```{.python .input #fcn-prediction-3}
 #@tab mxnet
 voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
 test_images, test_labels = d2l.read_voc_images(voc_dir, False)
@@ -831,7 +831,7 @@ for i in range(n):
 d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-3}
 #@tab pytorch
 voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
 test_images, test_labels = d2l.read_voc_images(voc_dir, False)
@@ -846,7 +846,7 @@ for i in range(n):
 d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-3}
 #@tab jax
 voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
 test_images, test_labels = d2l.read_voc_images(voc_dir, False)
@@ -860,7 +860,7 @@ for i in range(n):
 d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ```
 
-```{.python .input}
+```{.python .input #fcn-prediction-3}
 #@tab tensorflow
 voc_dir = d2l.download_extract('voc2012', 'VOCdevkit/VOC2012')
 test_images, test_labels = d2l.read_voc_images(voc_dir, False)

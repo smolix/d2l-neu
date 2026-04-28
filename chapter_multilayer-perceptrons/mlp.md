@@ -23,7 +23,7 @@ we can launch our exploration of deep neural networks,
 the comparatively rich class of models
 with which this book is primarily concerned.
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -31,21 +31,21 @@ from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -320,7 +320,7 @@ by setting the corresponding activations to 0.
 To gain some intuition, we can plot the function.
 As you can see, the activation function is piecewise linear.
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab mxnet
 x = np.arange(-8.0, 8.0, 0.1)
 x.attach_grad()
@@ -329,21 +329,21 @@ with autograd.record():
 d2l.plot(x, y, 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab pytorch
 x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
 y = torch.relu(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab tensorflow
 x = tf.Variable(tf.range(-8.0, 8.0, 0.1), dtype=tf.float32)
 y = tf.nn.relu(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab jax
 x = jnp.arange(-8.0, 8.0, 0.1)
 y = jax.nn.relu(x)
@@ -367,19 +367,19 @@ That conventional wisdom may apply here, or at least, the fact that
 we are not performing constrained optimization :cite:`Mangasarian.1965,Rockafellar.1970`.
 We plot the derivative of the ReLU function below.
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of relu', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab pytorch
 y.backward(torch.ones_like(x), retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of relu', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.relu(x)
@@ -387,7 +387,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of relu',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab jax
 grad_relu = vmap(grad(jax.nn.relu))
 d2l.plot(x, grad_relu(x), 'x', 'grad of relu', figsize=(5, 2.5))
@@ -455,26 +455,26 @@ Note that when the input is close to 0,
 the sigmoid function approaches
 a linear transformation.
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab mxnet
 with autograd.record():
     y = npx.sigmoid(x)
 d2l.plot(x, y, 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab pytorch
 y = torch.sigmoid(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab tensorflow
 y = tf.nn.sigmoid(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab jax
 y = jax.nn.sigmoid(x)
 d2l.plot(x, y, 'x', 'sigmoid(x)', figsize=(5, 2.5))
@@ -492,13 +492,13 @@ reaches a maximum of 0.25.
 As the input diverges from 0 in either direction,
 the derivative approaches 0.
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab pytorch
 # Clear out previous gradients
 x.grad.data.zero_()
@@ -506,7 +506,7 @@ y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.sigmoid(x)
@@ -514,7 +514,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of sigmoid',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab jax
 grad_sigmoid = vmap(grad(jax.nn.sigmoid))
 d2l.plot(x, grad_sigmoid(x), 'x', 'grad of sigmoid', figsize=(5, 2.5))
@@ -531,26 +531,26 @@ $$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$
 
 We plot the tanh function below. Note that as input nears 0, the tanh function approaches a linear transformation. Although the shape of the function is similar to that of the sigmoid function, the tanh function exhibits point symmetry about the origin of the coordinate system :cite:`Kalman.Kwasny.1992`.
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab mxnet
 with autograd.record():
     y = np.tanh(x)
 d2l.plot(x, y, 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab pytorch
 y = torch.tanh(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab tensorflow
 y = tf.nn.tanh(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab jax
 y = jax.nn.tanh(x)
 d2l.plot(x, y, 'x', 'tanh(x)', figsize=(5, 2.5))
@@ -567,13 +567,13 @@ And as we saw with the sigmoid function,
 as input moves away from 0 in either direction,
 the derivative of the tanh function approaches 0.
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab pytorch
 # Clear out previous gradients
 x.grad.data.zero_()
@@ -581,7 +581,7 @@ y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.tanh(x)
@@ -589,7 +589,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of tanh',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab jax
 grad_tanh = vmap(grad(jax.nn.tanh))
 d2l.plot(x, grad_tanh(x), 'x', 'grad of tanh', figsize=(5, 2.5))

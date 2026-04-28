@@ -28,7 +28,7 @@ we will introduce
 for reversing downsampling operations
 by the convolution.
 
-```{.python .input}
+```{.python .input #transposed-conv-transposed-convolution}
 #@tab mxnet
 from mxnet import np, npx, init
 from mxnet.gluon import nn
@@ -37,20 +37,20 @@ from d2l import mxnet as d2l
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-transposed-convolution}
 #@tab pytorch
 import torch
 from torch import nn
 from d2l import torch as d2l
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-transposed-convolution}
 #@tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-transposed-convolution}
 #@tab jax
 import jax
 from jax import numpy as jnp
@@ -101,7 +101,7 @@ how transposed convolution with a $2\times 2$ kernel is computed for a $2\times 
 
 We can (**implement this basic transposed convolution operation**) `trans_conv` for a input matrix `X` and a kernel matrix `K`.
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-1}
 #@tab mxnet, pytorch
 def trans_conv(X, K):
     h, w = K.shape
@@ -112,7 +112,7 @@ def trans_conv(X, K):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-1}
 #@tab tensorflow
 def trans_conv(X, K):
     h, w = K.shape
@@ -124,7 +124,7 @@ def trans_conv(X, K):
     return Y.value()
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-1}
 #@tab jax
 def trans_conv(X, K):
     h, w = K.shape
@@ -144,7 +144,7 @@ producing an output
 that is larger than the input.
 We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_trans_conv` to [**validate the output of the above implementation**] of the basic two-dimensional transposed convolution operation.
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-2}
 #@tab all
 X = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
@@ -156,7 +156,7 @@ when the input `X` and kernel `K` are both
 four-dimensional tensors,
 we can [**use high-level APIs to obtain the same results**].
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-3}
 #@tab mxnet
 X, K = X.reshape(1, 1, 2, 2), K.reshape(1, 1, 2, 2)
 tconv = nn.Conv2DTranspose(1, kernel_size=2)
@@ -164,7 +164,7 @@ tconv.initialize(init.Constant(K))
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-3}
 #@tab pytorch
 X, K = X.reshape(1, 1, 2, 2), K.reshape(1, 1, 2, 2)
 tconv = nn.ConvTranspose2d(1, 1, kernel_size=2, bias=False)
@@ -172,7 +172,7 @@ tconv.weight.data = K
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-basic-operation-3}
 #@tab jax
 X, K = X.reshape(1, 2, 2, 1), K.reshape(2, 2, 1, 1)
 tconv = nn.ConvTranspose(1, kernel_size=(2, 2), use_bias=False)
@@ -194,21 +194,21 @@ as 1,
 the first and last rows and columns
 will be removed from the transposed convolution output.
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab mxnet
 tconv = nn.Conv2DTranspose(1, kernel_size=2, padding=1)
 tconv.initialize(init.Constant(K))
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab pytorch
 tconv = nn.ConvTranspose2d(1, 1, kernel_size=2, padding=1, bias=False)
 tconv.weight.data = K
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab jax
 tconv = nn.ConvTranspose(1, kernel_size=(2, 2), padding='VALID', use_bias=False)
 params = tconv.init(jax.random.PRNGKey(0), X)
@@ -235,21 +235,21 @@ in :numref:`fig_trans_conv_stride2`.
 
 The following code snippet can validate the transposed convolution output for stride of 2 in :numref:`fig_trans_conv_stride2`.
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
 #@tab mxnet
 tconv = nn.Conv2DTranspose(1, kernel_size=2, strides=2)
 tconv.initialize(init.Constant(K))
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
 #@tab pytorch
 tconv = nn.ConvTranspose2d(1, 1, kernel_size=2, stride=2, bias=False)
 tconv.weight.data = K
 tconv(X)
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
 #@tab jax
 tconv = nn.ConvTranspose(1, kernel_size=(2, 2), strides=(2, 2), use_bias=False)
 params = tconv.init(jax.random.PRNGKey(0), X)
@@ -277,7 +277,7 @@ then $g(Y)$ will have the same shape as $\mathsf{X}$.
 This can be illustrated in the following example.
 Note that when the stride is greater than 1, multiple input shapes can map to the same output shape under convolution, so the shape match is not guaranteed in general. In such cases, an additional `output_padding` parameter (available in PyTorch's `ConvTranspose2d`) can be used to resolve the ambiguity.
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab mxnet
 X = np.random.uniform(size=(1, 10, 16, 16))
 conv = nn.Conv2D(20, kernel_size=5, padding=2, strides=3)
@@ -287,7 +287,7 @@ tconv.initialize()
 tconv(conv(X)).shape == X.shape
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab pytorch
 X = torch.rand(size=(1, 10, 16, 16))
 conv = nn.Conv2d(10, 20, kernel_size=5, padding=2, stride=3)
@@ -295,7 +295,7 @@ tconv = nn.ConvTranspose2d(20, 10, kernel_size=5, padding=2, stride=3)
 tconv(conv(X)).shape == X.shape
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab jax
 # JAX uses channels-last format: (batch, height, width, channels)
 X = jax.random.normal(jax.random.PRNGKey(0), (1, 16, 16, 10))
@@ -318,7 +318,7 @@ see how to implement convolutions
 using matrix multiplications.
 In the example below, we define a $3\times 3$ input `X` and a $2\times 2$ convolution kernel `K`, and then use the `corr2d` function to compute the convolution output `Y`.
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-1}
 #@tab all
 X = d2l.reshape(d2l.arange(9.0), (3, 3))
 K = d2l.tensor([[1.0, 2.0], [3.0, 4.0]])
@@ -333,7 +333,7 @@ The shape of the weight matrix is ($4$, $9$),
 where the non-zero elements come from
 the convolution kernel `K`.
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-2}
 #@tab mxnet, pytorch
 def kernel2matrix(K):
     k, W = d2l.zeros(5), d2l.zeros((4, 9))
@@ -345,7 +345,7 @@ W = kernel2matrix(K)
 W
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-2}
 #@tab tensorflow
 def kernel2matrix(K):
     k = tf.Variable(d2l.zeros(5))
@@ -362,7 +362,7 @@ W = kernel2matrix(K)
 W
 ```
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-2}
 #@tab jax
 def kernel2matrix(K):
     k = jnp.zeros(5)
@@ -384,7 +384,7 @@ After reshaping it, we can obtain the same result `Y`
 from the original convolution operation above:
 we just implemented convolutions using matrix multiplications.
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-3}
 #@tab all
 Y == d2l.reshape(d2l.matmul(W, d2l.reshape(X, (-1, 1))), (2, 2))
 ```
@@ -399,7 +399,7 @@ To implement this operation by multiplying matrices,
 we only need to transpose the weight matrix `W`
 with the new shape $(9, 4)$.
 
-```{.python .input}
+```{.python .input #transposed-conv-connection-to-matrix-transposition-4}
 #@tab all
 Z = trans_conv(Y, K)
 Z == d2l.reshape(d2l.matmul(d2l.transpose(W), d2l.reshape(Y, (-1, 1))), (3, 3))

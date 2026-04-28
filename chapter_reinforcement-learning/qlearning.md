@@ -73,7 +73,7 @@ This ability to not only collect new data but also collect the right kind of dat
 
 We now show how to implement Q-Learning on FrozenLake from [Gymnasium](https://gymnasium.farama.org/) (the maintained successor to OpenAI Gym). Note that this is the same setup as we consider in the :numref:`sec_valueiter` experiment.
 
-```{.python .input}
+```{.python .input #qlearning-implementation-of-q-learning-1}
 %%tab all
 
 %matplotlib inline
@@ -97,7 +97,7 @@ In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are
 
 We first implement $\epsilon$-greedy method as follows:
 
-```{.python .input}
+```{.python .input #qlearning-implementation-of-q-learning-2}
 %%tab all
 
 def e_greedy(env, Q, s, epsilon):
@@ -111,7 +111,7 @@ def e_greedy(env, Q, s, epsilon):
 
 We are now ready to implement Q-learning:
 
-```{.python .input}
+```{.python .input #qlearning-implementation-of-q-learning-3}
 %%tab all
 
 def q_learning(env_info, gamma, num_iters, alpha, epsilon):

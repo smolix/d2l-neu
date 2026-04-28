@@ -341,7 +341,7 @@ of these classes and functions in :numref:`sec_d2l`.
 The `d2l` package is lightweight and only requires
 the following dependencies:
 
-```{.python .input}
+```{.python .input #preface-code-1}
 #@tab all
 #@save
 import inspect
@@ -437,14 +437,14 @@ to update your code and runtime environment.
 Below we list dependencies in our JAX implementation.
 :end_tab:
 
-```{.python .input}
+```{.python .input #preface-code-2}
 #@tab mxnet
 #@save
 from mxnet import autograd, context, gluon, image, init, np, npx
 from mxnet.gluon import nn, rnn
 ```
 
-```{.python .input}
+```{.python .input #preface-code-2}
 #@tab pytorch
 #@save
 import numpy as np
@@ -457,14 +457,14 @@ from PIL import Image
 from scipy.spatial import distance_matrix
 ```
 
-```{.python .input}
+```{.python .input #preface-code-2}
 #@tab tensorflow
 #@save
 import numpy as np
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #preface-code-2}
 #@tab jax
 #@save
 from dataclasses import field

@@ -39,25 +39,25 @@ in subsequent sections,
 this section will convert this architecture
 into an interface that will be implemented later.
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet.gluon import nn
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab pytorch
 from d2l import torch as d2l
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -71,7 +71,7 @@ the encoder takes variable-length sequences as input `X`.
 The implementation will be provided
 by any model that inherits this base `Encoder` class.
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab mxnet
 class Encoder(nn.Block):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -83,7 +83,7 @@ class Encoder(nn.Block):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab pytorch
 class Encoder(nn.Module):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -95,7 +95,7 @@ class Encoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab tensorflow
 class Encoder(tf.keras.layers.Layer):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -107,7 +107,7 @@ class Encoder(tf.keras.layers.Layer):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab jax
 class Encoder(nn.Module):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -136,7 +136,7 @@ every time the decoder may map an input
 and the encoded state
 into an output token at the current time step.
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab mxnet
 class Decoder(nn.Block):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -151,7 +151,7 @@ class Decoder(nn.Block):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab pytorch
 class Decoder(nn.Module):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -166,7 +166,7 @@ class Decoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab tensorflow
 class Decoder(tf.keras.layers.Layer):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -181,7 +181,7 @@ class Decoder(tf.keras.layers.Layer):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab jax
 class Decoder(nn.Module):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -204,7 +204,7 @@ is used to produce the encoded state,
 and this state will be further used
 by the decoder as one of its inputs.
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab mxnet, pytorch
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
@@ -220,7 +220,7 @@ class EncoderDecoder(d2l.Classifier):  #@save
         return self.decoder(dec_X, dec_state)[0]
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab tensorflow
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
@@ -236,7 +236,7 @@ class EncoderDecoder(d2l.Classifier):  #@save
         return self.decoder(dec_X, dec_state, training=True)[0]
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab jax
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""

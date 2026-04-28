@@ -67,7 +67,7 @@ multi-class logistic regression model `SoftmaxRegression` from
 MNIST dataset. While other hyperparameters like batch size or number of epochs
 are also worth tuning, we focus on learning rate alone for simplicity.
 
-```{.python .input}
+```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab pytorch
 from d2l import torch as d2l
 import numpy as np
@@ -76,7 +76,7 @@ from torch import nn
 from scipy import stats
 ```
 
-```{.python .input}
+```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab tensorflow
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
@@ -86,7 +86,7 @@ import numpy as np
 from scipy import stats
 ```
 
-```{.python .input}
+```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab jax
 from d2l import jax as d2l
 import jax
@@ -133,7 +133,7 @@ objective function.
 
 We begin with a method for computing the validation error of a model.
 
-```{.python .input  n=8}
+```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
 %%tab pytorch
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
@@ -149,7 +149,7 @@ class HPOTrainer(d2l.Trainer):  #@save
         return 1 - accuracy / val_batch_idx
 ```
 
-```{.python .input  n=8}
+```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
 %%tab tensorflow
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
@@ -163,7 +163,7 @@ class HPOTrainer(d2l.Trainer):  #@save
         return 1 - accuracy / val_batch_idx
 ```
 
-```{.python .input  n=8}
+```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
 %%tab jax
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
@@ -182,7 +182,7 @@ We optimize validation error with respect to the hyperparameter configuration
 `config`, consisting of the `learning_rate`. For each evaluation, we train our
 model for `max_epochs` epochs, then compute and return its validation error:
 
-```{.python .input  n=5}
+```{.python .input #hyperopt-intro-the-objective-function-2  n=5}
 %%tab pytorch
 def hpo_objective_softmax_classification(config, max_epochs=8):
     learning_rate = config["learning_rate"]
@@ -193,7 +193,7 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
     return d2l.numpy(trainer.validation_error())
 ```
 
-```{.python .input  n=5}
+```{.python .input #hyperopt-intro-the-objective-function-2  n=5}
 %%tab tensorflow
 def hpo_objective_softmax_classification(config, max_epochs=8):
     learning_rate = config["learning_rate"]
@@ -216,7 +216,7 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
     return 1 - val_acc
 ```
 
-```{.python .input  n=5}
+```{.python .input #hyperopt-intro-the-objective-function-2  n=5}
 %%tab jax
 def hpo_objective_softmax_classification(config, max_epochs=8):
     learning_rate = config["learning_rate"]
@@ -235,7 +235,7 @@ feasible set $\mathbf{x} \in \mathcal{X}$ to optimize over, known as
 *configuration space* or *search space*. For our logistic regression example,
 we will use:
 
-```{.python .input  n=6}
+```{.python .input #hyperopt-intro-the-configuration-space  n=6}
 config_space = {"learning_rate": stats.loguniform(1e-4, 1)}
 ```
 
@@ -294,7 +294,7 @@ number of iterations) is exhausted, and to return the best observed
 configuration. All evaluations can be executed independently in parallel (see
 :numref:`sec_rs_async`), but here we use a sequential loop for simplicity.
 
-```{.python .input  n=7}
+```{.python .input #hyperopt-intro-random-search-1  n=7}
 errors, values = [], []
 num_iterations = 5
 
@@ -309,7 +309,7 @@ for i in range(num_iterations):
 
 The best learning rate is then simply the one with the lowest validation error.
 
-```{.python .input  n=7}
+```{.python .input #hyperopt-intro-random-search-2  n=7}
 best_idx = np.argmin(errors)
 print(f"optimal learning rate = {values[best_idx]}")
 ```

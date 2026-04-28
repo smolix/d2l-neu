@@ -34,26 +34,26 @@ and they can only be computed by looking at data at previous time steps.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
 import jax
@@ -161,21 +161,21 @@ we define matrices `X`, `W_xh`, `H`, and `W_hh`, whose shapes are (3, 1), (1, 4)
 Multiplying `X` by `W_xh`, and `H` by `W_hh`, and then adding these two products,
 we obtain a matrix of shape (3, 4).
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab mxnet, pytorch
 X, W_xh = d2l.randn(3, 1), d2l.randn(1, 4)
 H, W_hh = d2l.randn(3, 4), d2l.randn(4, 4)
 d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab tensorflow
 X, W_xh = d2l.normal((3, 1)), d2l.normal((1, 4))
 H, W_hh = d2l.normal((3, 4)), d2l.normal((4, 4))
 d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab jax
 X, W_xh = jax.random.normal(d2l.get_key(), (3, 1)), jax.random.normal(
                                                         d2l.get_key(), (1, 4))
@@ -196,7 +196,7 @@ Multiplying these two concatenated matrices,
 we obtain the same output matrix of shape (3, 4)
 as above.
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-2}
 %%tab all
 d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
 ```

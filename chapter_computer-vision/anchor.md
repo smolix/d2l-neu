@@ -19,7 +19,7 @@ based on anchor boxes in :numref:`sec_ssd`.
 First, let's modify the printing accuracy
 just for more concise outputs.
 
-```{.python .input}
+```{.python .input #anchor-anchor-boxes}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -29,7 +29,7 @@ np.set_printoptions(2)  # Simplify printing accuracy
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #anchor-anchor-boxes}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -38,7 +38,7 @@ import torch
 torch.set_printoptions(2)  # Simplify printing accuracy
 ```
 
-```{.python .input}
+```{.python .input #anchor-anchor-boxes}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -51,7 +51,7 @@ import numpy as np
 np.set_printoptions(2)  # Simplify printing accuracy
 ```
 
-```{.python .input}
+```{.python .input #anchor-anchor-boxes}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -87,7 +87,7 @@ That is to say, the number of anchor boxes centered on the same pixel is $n+m-1$
 
 The above method of generating anchor boxes is implemented in the following `multibox_prior` function. We specify the input image, a list of scales, and a list of aspect ratios, then this function will return all the anchor boxes.
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-1}
 #@tab mxnet
 #@save
 def multibox_prior(data, sizes, ratios):
@@ -128,7 +128,7 @@ def multibox_prior(data, sizes, ratios):
     return np.expand_dims(output, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-1}
 #@tab pytorch
 #@save
 def multibox_prior(data, sizes, ratios):
@@ -169,7 +169,7 @@ def multibox_prior(data, sizes, ratios):
     return output.unsqueeze(0)
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-1}
 #@tab jax
 #@save
 def multibox_prior(data, sizes, ratios):
@@ -210,7 +210,7 @@ def multibox_prior(data, sizes, ratios):
     return jnp.expand_dims(output, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-1}
 #@tab tensorflow
 #@save
 def multibox_prior(data, sizes, ratios):
@@ -254,7 +254,7 @@ def multibox_prior(data, sizes, ratios):
 We can see that [**the shape of the returned anchor box variable `Y`**] is
 (batch size, number of anchor boxes, 4).
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-2}
 #@tab mxnet
 img = image.imread('../img/catdog.jpg').asnumpy()
 h, w = img.shape[:2]
@@ -265,7 +265,7 @@ Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-2}
 #@tab pytorch
 img = d2l.plt.imread('../img/catdog.jpg')
 h, w = img.shape[:2]
@@ -276,7 +276,7 @@ Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-2}
 #@tab jax
 img = d2l.plt.imread('../img/catdog.jpg')
 h, w = img.shape[:2]
@@ -287,7 +287,7 @@ Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-2}
 #@tab tensorflow
 img = d2l.plt.imread('../img/catdog.jpg')
 h, w = img.shape[:2]
@@ -305,13 +305,13 @@ we [**access the first anchor box centered on (250, 250)**]. It has four element
 The coordinate values of both axes
 are divided by the width and height of the image, respectively.
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-3}
 #@tab pytorch, mxnet, jax
 boxes = Y.reshape(h, w, 5, 4)
 boxes[250, 250, 0, :]
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-3}
 #@tab tensorflow
 boxes = tf.reshape(Y, (h, w, 5, 4))
 boxes[250, 250, 0, :]
@@ -320,7 +320,7 @@ boxes[250, 250, 0, :]
 In order to [**show all the anchor boxes centered on one pixel in the image**],
 we define the following `show_bboxes` function to draw multiple bounding boxes on the image.
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-4}
 #@tab all
 #@save
 def show_bboxes(axes, bboxes, labels=None, colors=None):
@@ -354,7 +354,7 @@ Now, we can draw all the anchor boxes centered on (250, 250) in the image.
 As you can see, the blue anchor box with a scale of 0.75 and an aspect ratio of 1 well
 surrounds the dog in the image.
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-5}
 #@tab pytorch, mxnet, jax
 d2l.set_figsize()
 bbox_scale = d2l.tensor((w, h, w, h))
@@ -364,7 +364,7 @@ show_bboxes(fig.axes, boxes[250, 250, :, :] * bbox_scale,
              's=0.75, r=0.5'])
 ```
 
-```{.python .input}
+```{.python .input #anchor-generating-multiple-anchor-boxes-5}
 #@tab tensorflow
 d2l.set_figsize()
 bbox_scale = tf.constant((w, h, w, h), dtype=tf.float32)
@@ -399,7 +399,7 @@ Given two lists of anchor or bounding boxes,
 the following `box_iou` computes their pairwise IoU
 across these two lists.
 
-```{.python .input}
+```{.python .input #anchor-intersection-over-union-iou}
 #@tab mxnet
 #@save
 def box_iou(boxes1, boxes2):
@@ -421,7 +421,7 @@ def box_iou(boxes1, boxes2):
     return inter_areas / union_areas
 ```
 
-```{.python .input}
+```{.python .input #anchor-intersection-over-union-iou}
 #@tab pytorch
 #@save
 def box_iou(boxes1, boxes2):
@@ -443,7 +443,7 @@ def box_iou(boxes1, boxes2):
     return inter_areas / union_areas
 ```
 
-```{.python .input}
+```{.python .input #anchor-intersection-over-union-iou}
 #@tab jax
 #@save
 def box_iou(boxes1, boxes2):
@@ -465,7 +465,7 @@ def box_iou(boxes1, boxes2):
     return inter_areas / union_areas
 ```
 
-```{.python .input}
+```{.python .input #anchor-intersection-over-union-iou}
 #@tab tensorflow
 #@save
 def box_iou(boxes1, boxes2):
@@ -545,7 +545,7 @@ the remaining anchor boxes $A_1, A_3, A_4, A_6, A_8$ and determine whether to as
 
 This algorithm is implemented in the following `assign_anchor_to_bbox` function.
 
-```{.python .input}
+```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab mxnet
 #@save
 def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
@@ -574,7 +574,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     return anchors_bbox_map
 ```
 
-```{.python .input}
+```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab pytorch
 #@save
 def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
@@ -604,7 +604,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     return anchors_bbox_map
 ```
 
-```{.python .input}
+```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab jax
 #@save
 def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
@@ -635,7 +635,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     return anchors_bbox_map
 ```
 
-```{.python .input}
+```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab tensorflow
 #@save
 def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
@@ -702,7 +702,7 @@ $$\left( \frac{ \frac{x_b - x_a}{w_a} - \mu_x }{\sigma_x},
 where default values of the constants are $\mu_x = \mu_y = \mu_w = \mu_h = 0, \sigma_x=\sigma_y=0.1$, and $\sigma_w=\sigma_h=0.2$.
 This transformation is implemented below in the `offset_boxes` function.
 
-```{.python .input}
+```{.python .input #anchor-labeling-classes-and-offsets-1}
 #@tab all
 #@save
 def offset_boxes(anchors, assigned_bb, eps=1e-6):
@@ -722,7 +722,7 @@ We implement the following `multibox_target` function
 to [**label classes and offsets for anchor boxes**] (the `anchors` argument) using ground-truth bounding boxes (the `labels` argument).
 This function sets the background class to zero and increments the integer index of a new class by one.
 
-```{.python .input}
+```{.python .input #anchor-labeling-classes-and-offsets-2}
 #@tab mxnet
 #@save
 def multibox_target(anchors, labels):
@@ -759,7 +759,7 @@ def multibox_target(anchors, labels):
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
-```{.python .input}
+```{.python .input #anchor-labeling-classes-and-offsets-2}
 #@tab pytorch
 #@save
 def multibox_target(anchors, labels):
@@ -797,7 +797,7 @@ def multibox_target(anchors, labels):
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
-```{.python .input}
+```{.python .input #anchor-labeling-classes-and-offsets-2}
 #@tab jax
 #@save
 def multibox_target(anchors, labels):
@@ -828,7 +828,7 @@ def multibox_target(anchors, labels):
     return (bbox_offset, bbox_mask, class_labels)
 ```
 
-```{.python .input}
+```{.python .input #anchor-labeling-classes-and-offsets-2}
 #@tab tensorflow
 #@save
 def multibox_target(anchors, labels):
@@ -888,7 +888,7 @@ Then we [**plot these ground-truth bounding boxes
 and anchor boxes 
 in the image.**]
 
-```{.python .input}
+```{.python .input #anchor-an-example-1}
 #@tab all
 ground_truth = d2l.tensor([[0, 0.1, 0.08, 0.52, 0.92],
                          [1, 0.55, 0.2, 0.9, 0.88]])
@@ -910,25 +910,25 @@ the background, dog, and cat classes
 are 0, 1, and 2, respectively. 
 Below we add a dimension for examples of anchor boxes and ground-truth bounding boxes.
 
-```{.python .input}
+```{.python .input #anchor-an-example-2}
 #@tab mxnet
 labels = multibox_target(np.expand_dims(anchors, axis=0),
                          np.expand_dims(ground_truth, axis=0))
 ```
 
-```{.python .input}
+```{.python .input #anchor-an-example-2}
 #@tab pytorch
 labels = multibox_target(anchors.unsqueeze(dim=0),
                          ground_truth.unsqueeze(dim=0))
 ```
 
-```{.python .input}
+```{.python .input #anchor-an-example-2}
 #@tab jax
 labels = multibox_target(jnp.expand_dims(anchors, axis=0),
                          jnp.expand_dims(ground_truth, axis=0))
 ```
 
-```{.python .input}
+```{.python .input #anchor-an-example-2}
 #@tab tensorflow
 labels = multibox_target(tf.expand_dims(anchors, axis=0),
                          tf.expand_dims(ground_truth, axis=0))
@@ -957,7 +957,7 @@ the class of the ground-truth bounding box with the largest IoU is the cat and t
 for $A_3$,
 the class of the ground-truth bounding box with the largest IoU is the cat, but the value is below the threshold, so the class is labeled as background.
 
-```{.python .input}
+```{.python .input #anchor-an-example-3}
 #@tab all
 labels[2]
 ```
@@ -969,7 +969,7 @@ Since we do not care about background detection,
 offsets of this negative class should not affect the objective function.
 Through elementwise multiplications, zeros in the mask variable will filter out negative class offsets before calculating the objective function.
 
-```{.python .input}
+```{.python .input #anchor-an-example-4}
 #@tab all
 labels[1]
 ```
@@ -977,7 +977,7 @@ labels[1]
 The first returned item contains the four offset values labeled for each anchor box.
 Note that the offsets of negative-class anchor boxes are labeled as zeros.
 
-```{.python .input}
+```{.python .input #anchor-an-example-5}
 #@tab all
 labels[0]
 ```
@@ -995,7 +995,7 @@ that takes in anchors and
 offset predictions as inputs and [**applies inverse offset transformations to
 return the predicted bounding box coordinates**].
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-1}
 #@tab all
 #@save
 def offset_inverse(anchors, offset_preds):
@@ -1037,7 +1037,7 @@ Then we manipulate the sorted list $L$ in the following steps:
 
 [**The following `nms` function sorts confidence scores in descending order and returns their indices.**]
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
 #@tab mxnet
 #@save
 def nms(boxes, scores, iou_threshold):
@@ -1055,7 +1055,7 @@ def nms(boxes, scores, iou_threshold):
     return np.array(keep, dtype=np.int32, ctx=boxes.ctx)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
 #@tab pytorch
 #@save
 def nms(boxes, scores, iou_threshold):
@@ -1073,7 +1073,7 @@ def nms(boxes, scores, iou_threshold):
     return d2l.tensor(keep, device=boxes.device)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
 #@tab jax
 #@save
 def nms(boxes, scores, iou_threshold):
@@ -1100,7 +1100,7 @@ def nms(boxes, scores, iou_threshold):
     return jnp.array(keep, dtype=jnp.int32)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
 #@tab tensorflow
 #@save
 def nms(boxes, scores, iou_threshold):
@@ -1134,7 +1134,7 @@ Do not worry if you find the implementation
 a bit complicated: we will show how it works
 with a concrete example right after the implementation.
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-3}
 #@tab mxnet
 #@save
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
@@ -1170,7 +1170,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return d2l.stack(out)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-3}
 #@tab pytorch
 #@save
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
@@ -1206,7 +1206,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return d2l.stack(out)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-3}
 #@tab jax
 #@save
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
@@ -1243,7 +1243,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return jnp.stack(out)
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-3}
 #@tab tensorflow
 #@save
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
@@ -1294,7 +1294,7 @@ This means that the predicted bounding boxes are anchor boxes.
 For each class among the background, dog, and cat,
 we also define its predicted likelihood.
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-4}
 #@tab pytorch, mxnet, jax
 anchors = d2l.tensor([[0.1, 0.08, 0.52, 0.92], [0.08, 0.2, 0.56, 0.95],
                       [0.15, 0.3, 0.62, 0.91], [0.55, 0.2, 0.9, 0.88]])
@@ -1304,7 +1304,7 @@ cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood
                       [0.1, 0.2, 0.3, 0.9]])  # Predicted cat likelihood
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-4}
 #@tab tensorflow
 anchors = d2l.tensor([[0.1, 0.08, 0.52, 0.92], [0.08, 0.2, 0.56, 0.95],
                       [0.15, 0.3, 0.62, 0.91], [0.55, 0.2, 0.9, 0.88]])
@@ -1317,7 +1317,7 @@ cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood
 
 We can [**plot these predicted bounding boxes with their confidence on the image.**]
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-5}
 #@tab all
 fig = d2l.plt.imshow(img)
 show_bboxes(fig.axes, anchors * bbox_scale,
@@ -1339,7 +1339,7 @@ The second element is the confidence of the predicted bounding box.
 The remaining four elements are the $(x, y)$-axis coordinates of the upper-left corner and 
 the lower-right corner of the predicted bounding box, respectively (range is between 0 and 1).
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-6}
 #@tab mxnet
 output = multibox_detection(np.expand_dims(cls_probs, axis=0),
                             np.expand_dims(offset_preds, axis=0),
@@ -1348,7 +1348,7 @@ output = multibox_detection(np.expand_dims(cls_probs, axis=0),
 output
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-6}
 #@tab pytorch
 output = multibox_detection(cls_probs.unsqueeze(dim=0),
                             offset_preds.unsqueeze(dim=0),
@@ -1357,7 +1357,7 @@ output = multibox_detection(cls_probs.unsqueeze(dim=0),
 output
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-6}
 #@tab jax
 output = multibox_detection(jnp.expand_dims(cls_probs, axis=0),
                             jnp.expand_dims(offset_preds, axis=0),
@@ -1366,7 +1366,7 @@ output = multibox_detection(jnp.expand_dims(cls_probs, axis=0),
 output
 ```
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-6}
 #@tab tensorflow
 output = multibox_detection(tf.expand_dims(cls_probs, axis=0),
                             tf.expand_dims(offset_preds, axis=0),
@@ -1380,7 +1380,7 @@ of class -1,
 we can [**output the final predicted bounding box
 kept by non-maximum suppression**].
 
-```{.python .input}
+```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-7}
 #@tab all
 fig = d2l.plt.imshow(img)
 for i in d2l.numpy(output[0]):

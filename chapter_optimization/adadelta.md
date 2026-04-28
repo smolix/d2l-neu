@@ -39,7 +39,7 @@ and $\epsilon$ (a small value such as $10^{-5}$) is added to maintain numerical 
 
 Adadelta needs to maintain two state variables for each variable, $\mathbf{s}_t$ and $\Delta\mathbf{x}_t$. This yields the following implementation.
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -61,7 +61,7 @@ def adadelta(params, states, hyperparams):
         delta[:] = rho * delta + (1 - rho) * g * g
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -84,7 +84,7 @@ def adadelta(params, states, hyperparams):
         p.grad.data.zero_()
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -106,7 +106,7 @@ def adadelta(params, grads, states, hyperparams):
         delta[:].assign(rho * delta + (1 - rho) * g * g)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -131,7 +131,7 @@ def adadelta(params, grads, states, hyperparams):
 
 Choosing $\rho = 0.9$ amounts to a half-life time of 10 for each parameter update. This tends to work quite well. We get the following behavior.
 
-```{.python .input}
+```{.python .input #adadelta-implementation-2}
 #@tab all
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(adadelta, init_adadelta_states(feature_dim),
@@ -140,18 +140,18 @@ d2l.train_ch11(adadelta, init_adadelta_states(feature_dim),
 
 For a concise implementation we simply use the Adadelta algorithm from high-level APIs. This yields the following one-liner for a much more compact invocation.
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab mxnet
 d2l.train_concise_ch11('adadelta', {'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab pytorch
 trainer = torch.optim.Adadelta
 d2l.train_concise_ch11(trainer, {'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab tensorflow
 # adadelta is not converging at default learning rate
 # but it is converging at lr = 5.0
@@ -159,7 +159,7 @@ trainer = tf.keras.optimizers.Adadelta
 d2l.train_concise_ch11(trainer, {'learning_rate':5.0, 'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab jax
 import optax
 trainer = optax.adadelta

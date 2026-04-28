@@ -46,7 +46,7 @@ dramatically increase the complexity of our model.
 Thus we often need a more fine-grained tool
 for adjusting function complexity.
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -55,7 +55,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -63,14 +63,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -237,7 +237,7 @@ we can make the effects of overfitting pronounced,
 by increasing the dimensionality of our problem to $d = 200$
 and working with a small training set with only 20 examples.
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab pytorch
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -253,7 +253,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab tensorflow
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -269,7 +269,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab jax
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -286,7 +286,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab mxnet
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -315,7 +315,7 @@ to the original loss function.
 Perhaps the most convenient way of implementing this penalty
 is to square all terms in place and sum them.
 
-```{.python .input}
+```{.python .input #weight-decay-defining-ell-2-norm-penalty}
 %%tab all
 def l2_penalty(w):
     return d2l.reduce_sum(w**2) / 2
@@ -327,7 +327,7 @@ In the final model,
 the linear regression and the squared loss have not changed since :numref:`sec_linear_scratch`,
 so we will just define a subclass of `d2l.LinearRegressionScratch`. The only change here is that our loss now includes the penalty term.
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-1}
 %%tab pytorch, mxnet, tensorflow
 class WeightDecayScratch(d2l.LinearRegressionScratch):
     def __init__(self, num_inputs, lambd, lr, sigma=0.01):
@@ -339,7 +339,7 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
                 self.lambd * l2_penalty(self.w))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-1}
 %%tab jax
 class WeightDecayScratch(d2l.LinearRegressionScratch):
     lambd: int = 0
@@ -351,7 +351,7 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
 
 The following code fits our model on the training set with 20 examples and evaluates it on the validation set with 100 examples.
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab pytorch
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -363,7 +363,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab tensorflow
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -375,7 +375,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab jax
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -388,7 +388,7 @@ def train_scratch(lambd):
           float(l2_penalty(trainer.state.params['w'])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab mxnet
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -408,7 +408,7 @@ Note that we overfit badly,
 decreasing the training error but not the
 validation error---a textbook case of overfitting.
 
-```{.python .input}
+```{.python .input #weight-decay-training-without-regularization}
 %%tab all
 train_scratch(0)
 ```
@@ -421,7 +421,7 @@ but the validation error decreases.
 This is precisely the effect
 we expect from regularization.
 
-```{.python .input}
+```{.python .input #weight-decay-using-weight-decay}
 %%tab all
 train_scratch(3)
 ```
@@ -472,7 +472,7 @@ the weight decay hyperparameter `wd` and apply it to the layer's weights
 through the `kernel_regularizer` argument.
 :end_tab:
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab mxnet
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -487,7 +487,7 @@ class WeightDecay(d2l.LinearRegression):
                              {'learning_rate': self.lr, 'wd': self.wd})
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab pytorch
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -501,7 +501,7 @@ class WeightDecay(d2l.LinearRegression):
             {'params': self.net.bias}], lr=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab tensorflow
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -516,7 +516,7 @@ class WeightDecay(d2l.LinearRegression):
         return super().loss(y_hat, y) + tf.add_n(self.net.losses)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab jax
 class WeightDecay(d2l.LinearRegression):
     wd: float = 0
@@ -536,7 +536,7 @@ benefits that will become more
 pronounced as you address larger problems
 and this work becomes more routine.
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab pytorch
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -545,7 +545,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab tensorflow
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -554,7 +554,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab jax
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -563,7 +563,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b(trainer.state)[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab mxnet
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'

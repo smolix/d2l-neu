@@ -40,7 +40,7 @@ cost $c(\mathbf{x}, r)$ increases. Typically, $r$ represents the number of
 epochs for training the neural network, but it could also be the training
 subset size or the number of cross-validation folds.
 
-```{.python .input}
+```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab pytorch
 from d2l import torch as d2l
 import numpy as np
@@ -49,7 +49,7 @@ from collections import defaultdict
 d2l.set_figsize()
 ```
 
-```{.python .input}
+```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab tensorflow
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
@@ -60,7 +60,7 @@ from collections import defaultdict
 d2l.set_figsize()
 ```
 
-```{.python .input}
+```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab jax
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
@@ -115,7 +115,7 @@ resource $r_{\mathrm{max}}$ and $\eta$ as input. Inside our scheduler, we mainta
 queue of configurations that still need to be evaluated for the current rung
 $r_i$. We update the queue every time we jump to the next rung.
 
-```{.python .input  n=2}
+```{.python .input #sh-intro-successive-halving-1  n=2}
 %%tab pytorch, tensorflow, jax
 class SuccessiveHalvingScheduler(d2l.HPOScheduler):  #@save
     def __init__(self, searcher, eta, r_min, r_max, prefact=1):
@@ -146,7 +146,7 @@ surviving configurations on the highest resource level $r_{\mathrm{max}}$ and ou
 is empty, we start the entire process again with a new, randomly sampled set
 of configurations.
 
-```{.python .input  n=12}
+```{.python .input #sh-intro-successive-halving-2  n=12}
 %%tab pytorch, tensorflow, jax
 @d2l.add_to_class(SuccessiveHalvingScheduler)  #@save
 def suggest(self):
@@ -167,7 +167,7 @@ Afterwards we check if we have already collected all data points on the current 
 If so, we sort all configurations and push the top $\frac{1}{\eta}$
 configurations into the queue.
 
-```{.python .input  n=4}
+```{.python .input #sh-intro-successive-halving-3  n=4}
 %%tab pytorch, tensorflow, jax
 @d2l.add_to_class(SuccessiveHalvingScheduler)  #@save
 def update(self, config: dict, error: float, info=None):
@@ -202,7 +202,7 @@ def update(self, config: dict, error: float, info=None):
 Configurations are sorted based on their observed performance on the current
 rung.
 
-```{.python .input  n=4}
+```{.python .input #sh-intro-successive-halving-4  n=4}
 %%tab pytorch, tensorflow, jax
 
 @d2l.add_to_class(SuccessiveHalvingScheduler)  #@save
@@ -218,7 +218,7 @@ Let us see how successive halving is doing on our neural network example. We
 will use $r_{\mathrm{min}} = 2$, $\eta = 2$, $r_{\mathrm{max}} = 10$, so that rung levels are
 $2, 4, 8, 10$.
 
-```{.python .input  n=5}
+```{.python .input #sh-intro-successive-halving-5  n=5}
 min_number_of_epochs = 2
 max_number_of_epochs = 10
 eta = 2
@@ -236,7 +236,7 @@ initial_config = {
 
 We just replace the scheduler with our new `SuccessiveHalvingScheduler`.
 
-```{.python .input  n=14}
+```{.python .input #sh-intro-successive-halving-6  n=14}
 searcher = d2l.RandomSearcher(config_space, initial_config=initial_config)
 scheduler = SuccessiveHalvingScheduler(
     searcher=searcher,
@@ -256,7 +256,7 @@ Most of the configurations are stopped early and only the better performing
 configurations survive until $r_{\mathrm{max}}$. Compare this to vanilla random search,
 which would allocate $r_{\mathrm{max}}$ to every configuration.
 
-```{.python .input  n=19}
+```{.python .input #sh-intro-successive-halving-7  n=19}
 for rung_index, rung in scheduler.all_observed_error_at_rungs.items():
     errors = [xi[1] for xi in rung]
     d2l.plt.scatter([rung_index] * len(errors), errors)

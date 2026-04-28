@@ -32,7 +32,7 @@ the model aligns (or attends)
 only to parts of the input sequence
 that are deemed relevant to the current prediction. This is then used to update the current state before generating the next token. While quite innocuous in its description, this *Bahdanau attention mechanism* has arguably turned into one of the most influential ideas of the past decade in deep learning, giving rise to Transformers :cite:`Vaswani.Shazeer.Parmar.ea.2017` and many related new architectures.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import init, np, npx
@@ -40,20 +40,20 @@ from mxnet.gluon import rnn, nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -84,7 +84,7 @@ using attention is depicted in :numref:`fig_s2s_attention_details`. Note that la
 To implement the RNN encoder--decoder with attention,
 we only need to redefine the decoder (omitting the generated symbols from the attention function simplifies the design). Let's begin with [**the base interface for decoders with attention**] by defining the quite unsurprisingly named `AttentionDecoder` class.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-1}
 %%tab pytorch, mxnet, tensorflow
 class AttentionDecoder(d2l.Decoder):  #@save
     """The base attention-based decoder interface."""
@@ -96,7 +96,7 @@ class AttentionDecoder(d2l.Decoder):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-1}
 %%tab jax
 class AttentionDecoder(d2l.Decoder):  #@save
     """The base attention-based decoder interface.
@@ -119,7 +119,7 @@ and (iii) the valid length of the encoder, to exclude the padding tokens in atte
 At each decoding time step, the hidden state of the final layer of the decoder, obtained at the previous time step, is used as the query of the attention mechanism.
 Both the output of the attention mechanism and the input embedding are concatenated to serve as the input of the RNN decoder.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab mxnet
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -168,7 +168,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab pytorch
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -218,7 +218,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab tensorflow
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -272,7 +272,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab jax
 class Seq2SeqAttentionDecoder(nn.Module):
     vocab_size: int
@@ -332,7 +332,7 @@ In the following, we [**test the implemented
 decoder**] with attention
 using a minibatch of four sequences, each of which are seven time steps long.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab pytorch
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -347,7 +347,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab tensorflow
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -362,7 +362,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab jax
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -380,7 +380,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab mxnet
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -402,7 +402,7 @@ specify the hyperparameters, instantiate
 a regular encoder and a decoder with attention,
 and train this model for machine translation.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab pytorch
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -416,7 +416,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab tensorflow
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -431,7 +431,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab jax
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -445,7 +445,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab mxnet
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -463,7 +463,7 @@ After the model is trained,
 we use it to [**translate a few English sentences**]
 into French and compute their BLEU scores.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab pytorch
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -479,7 +479,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab tensorflow
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -495,7 +495,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab jax
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -511,7 +511,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab mxnet
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -535,7 +535,7 @@ It shows that at each decoding step,
 different parts of the input sequences
 are selectively aggregated in the attention pooling.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab pytorch
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -544,7 +544,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab tensorflow
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -553,7 +553,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab jax
 _, (dec_attention_weights, _) = model.predict_step(
     trainer.state.params, data.build([engs[-1]], [fras[-1]]),
@@ -563,7 +563,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab mxnet
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -572,7 +572,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab mxnet
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(
@@ -580,7 +580,7 @@ d2l.show_heatmaps(
     xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab pytorch
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(
@@ -588,14 +588,14 @@ d2l.show_heatmaps(
     xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab tensorflow
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(attention_weights[:, :, :, :len(engs[-1].split()) + 1],
                   xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab jax
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(attention_weights[:, :, :, :len(engs[-1].split()) + 1],

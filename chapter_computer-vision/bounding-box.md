@@ -33,7 +33,7 @@ several deep learning methods for object detection.
 We will begin with an introduction
 to *positions* (or *locations*) of objects.
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -42,21 +42,21 @@ from mxnet import image, npx, np
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -68,14 +68,14 @@ import numpy as np
 We will load the sample image to be used in this section. We can see that there is a dog on the left side of the image and a cat on the right.
 They are the two major objects in this image.
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-2}
 #@tab mxnet
 d2l.set_figsize()
 img = image.imread('../img/catdog.jpg').asnumpy()
 d2l.plt.imshow(img);
 ```
 
-```{.python .input}
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-2}
 #@tab pytorch, tensorflow, jax
 d2l.set_figsize()
 img = d2l.plt.imread('../img/catdog.jpg')
@@ -99,7 +99,7 @@ and `box_center_to_corner` vice versa.
 The input argument `boxes` should be a two-dimensional tensor of
 shape ($n$, 4), where $n$ is the number of bounding boxes.
 
-```{.python .input}
+```{.python .input #bounding-box-bounding-boxes-1}
 #@tab all
 #@save
 def box_corner_to_center(boxes):
@@ -130,7 +130,7 @@ The origin of the coordinates in the image
 is the upper-left corner of the image, and to the right and down are the
 positive directions of the $x$ and $y$ axes, respectively.
 
-```{.python .input}
+```{.python .input #bounding-box-bounding-boxes-2}
 #@tab all
 # Here `bbox` is the abbreviation for bounding box
 dog_bbox, cat_bbox = [60.0, 45.0, 378.0, 516.0], [400.0, 112.0, 655.0, 493.0]
@@ -139,7 +139,7 @@ dog_bbox, cat_bbox = [60.0, 45.0, 378.0, 516.0], [400.0, 112.0, 655.0, 493.0]
 We can verify the correctness of the two
 bounding box conversion functions by converting twice.
 
-```{.python .input}
+```{.python .input #bounding-box-bounding-boxes-3}
 #@tab all
 boxes = d2l.tensor((dog_bbox, cat_bbox))
 box_center_to_corner(box_corner_to_center(boxes)) == boxes
@@ -148,7 +148,7 @@ box_center_to_corner(box_corner_to_center(boxes)) == boxes
 Let's [**draw the bounding boxes in the image**] to check if they are accurate.
 Before drawing, we will define a helper function `bbox_to_rect`. It represents the bounding box in the bounding box format of the  `matplotlib` package.
 
-```{.python .input}
+```{.python .input #bounding-box-bounding-boxes-4}
 #@tab all
 #@save
 def bbox_to_rect(bbox, color):
@@ -164,7 +164,7 @@ def bbox_to_rect(bbox, color):
 After adding the bounding boxes on the image,
 we can see that the main outline of the two objects are basically inside the two boxes.
 
-```{.python .input}
+```{.python .input #bounding-box-bounding-boxes-5}
 #@tab all
 fig = d2l.plt.imshow(img)
 fig.axes.add_patch(bbox_to_rect(dog_bbox, 'blue'))

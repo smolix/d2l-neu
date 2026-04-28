@@ -72,7 +72,7 @@ is used
 to initiate the hidden state of the decoder
 only at the first decoding step.
 
-```{.python .input}
+```{.python .input #seq2seq-sequence-to-sequence-learning-for-machine-translation}
 %%tab mxnet
 import collections
 from d2l import mxnet as d2l
@@ -82,7 +82,7 @@ from mxnet.gluon import nn, rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-sequence-to-sequence-learning-for-machine-translation}
 %%tab pytorch
 import collections
 from d2l import torch as d2l
@@ -92,7 +92,7 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-sequence-to-sequence-learning-for-machine-translation}
 %%tab tensorflow
 import collections
 from d2l import tensorflow as d2l
@@ -100,7 +100,7 @@ import math
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-sequence-to-sequence-learning-for-machine-translation}
 %%tab jax
 import collections
 from d2l import jax as d2l
@@ -205,7 +205,7 @@ the embedding layer fetches the $i^{\textrm{th}}$ row
 to return its feature vector.
 Here we implement the encoder with a multilayer GRU.
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-1}
 %%tab mxnet
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
@@ -226,7 +226,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         return outputs, state
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-1}
 %%tab pytorch
 def init_seq2seq(module):  #@save
     """Initialize weights for sequence-to-sequence learning."""
@@ -238,7 +238,7 @@ def init_seq2seq(module):  #@save
                 nn.init.xavier_uniform_(module._parameters[param])
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-2}
 %%tab pytorch
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
@@ -259,7 +259,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         return outputs, state
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-2}
 %%tab tensorflow
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
@@ -279,7 +279,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         return outputs, state
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-2}
 %%tab jax
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
@@ -315,7 +315,7 @@ at all the time steps
 are a tensor of shape
 (number of time steps, batch size, number of hidden units).
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-3}
 %%tab pytorch
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
@@ -325,7 +325,7 @@ enc_outputs, enc_state = encoder(X)
 d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-3}
 %%tab tensorflow
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
@@ -335,7 +335,7 @@ enc_outputs, enc_state = encoder(X)
 d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-3}
 %%tab jax
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
@@ -346,7 +346,7 @@ X = d2l.zeros((batch_size, num_steps))
 d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-3}
 %%tab mxnet
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
@@ -361,23 +361,23 @@ the shape of the multilayer hidden states
 at the final time step is
 (number of hidden layers, batch size, number of hidden units).
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-4}
 %%tab pytorch
 d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-4}
 %%tab tensorflow
 d2l.check_len(enc_state, num_layers)
 d2l.check_shape(enc_state[0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-4}
 %%tab jax
 d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-4}
 %%tab mxnet
 d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
 ```
@@ -428,7 +428,7 @@ we use a fully connected layer
 to transform the hidden state 
 at the final layer of the RNN decoder.
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-1}
 %%tab mxnet
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
@@ -461,7 +461,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         return outputs, [enc_output, hidden_state]
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-1}
 %%tab pytorch
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
@@ -495,7 +495,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         return outputs, [enc_output, hidden_state]
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-1}
 %%tab tensorflow
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
@@ -527,7 +527,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         return outputs, [enc_output, hidden_state]
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-1}
 %%tab jax
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
@@ -569,7 +569,7 @@ below we instantiate it with the same hyperparameters from the aforementioned en
 As we can see, the output shape of the decoder becomes (batch size, number of time steps, vocabulary size),
 where the final dimension of the tensor stores the predicted token distribution.
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-2}
 %%tab pytorch
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder(X))
@@ -578,7 +578,7 @@ d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
 d2l.check_shape(state[1], (num_layers, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-2}
 %%tab tensorflow
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder(X))
@@ -588,7 +588,7 @@ d2l.check_len(state[1], num_layers)
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-2}
 %%tab jax
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder.init_with_output(d2l.get_key(), X)[0])
@@ -600,7 +600,7 @@ d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
 d2l.check_shape(state[1], (num_layers, batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-decoder-2}
 %%tab mxnet
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder(X))
@@ -622,7 +622,7 @@ are summarized in :numref:`fig_seq2seq_details`.
 
 Putting it all together in code yields the following:
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-decoder-for-sequence-to-sequence-learning}
 %%tab pytorch
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder--decoder for sequence to sequence learning."""
@@ -639,7 +639,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         return torch.optim.Adam(self.parameters(), lr=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-decoder-for-sequence-to-sequence-learning}
 %%tab tensorflow
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder--decoder for sequence to sequence learning."""
@@ -656,7 +656,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         return tf.keras.optimizers.Adam(learning_rate=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-decoder-for-sequence-to-sequence-learning}
 %%tab mxnet
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder--decoder for sequence to sequence learning."""
@@ -674,7 +674,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
                              {'learning_rate': self.lr})
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-encoder-decoder-for-sequence-to-sequence-learning}
 %%tab jax
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder--decoder for sequence to sequence learning."""
@@ -714,7 +714,7 @@ so that multiplication
 of any irrelevant prediction
 with zero equates to zero.
 
-```{.python .input}
+```{.python .input #seq2seq-loss-function-with-masking}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(Seq2Seq)
 def loss(self, Y_hat, Y):
@@ -723,7 +723,7 @@ def loss(self, Y_hat, Y):
     return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-loss-function-with-masking}
 %%tab jax
 @d2l.add_to_class(Seq2Seq)
 @partial(jax.jit, static_argnums=(0, 5))
@@ -744,7 +744,7 @@ def loss(self, params, X, Y, state, averaged=False):
 Now we can [**create and train an RNN encoder--decoder model**]
 for sequence-to-sequence learning on the machine translation dataset.
 
-```{.python .input}
+```{.python .input #seq2seq-training}
 %%tab pytorch
 data = d2l.MTFraEng(batch_size=128) 
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -758,7 +758,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-training}
 %%tab tensorflow
 data = d2l.MTFraEng(batch_size=128) 
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -773,7 +773,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-training}
 %%tab jax
 data = d2l.MTFraEng(batch_size=128) 
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -787,7 +787,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-training}
 %%tab mxnet
 data = d2l.MTFraEng(batch_size=128) 
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -826,7 +826,7 @@ In the next section, we will introduce
 more sophisticated strategies 
 based on beam search (:numref:`sec_beam-search`).
 
-```{.python .input}
+```{.python .input #seq2seq-prediction}
 %%tab pytorch
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
 def predict_step(self, batch, device, num_steps,
@@ -846,7 +846,7 @@ def predict_step(self, batch, device, num_steps,
     return d2l.concat(outputs[1:], 1), attention_weights
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-prediction}
 %%tab mxnet
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
 def predict_step(self, batch, device, num_steps,
@@ -865,7 +865,7 @@ def predict_step(self, batch, device, num_steps,
     return d2l.concat(outputs[1:], 1), attention_weights
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-prediction}
 %%tab tensorflow
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
 def predict_step(self, batch, device, num_steps,
@@ -883,7 +883,7 @@ def predict_step(self, batch, device, num_steps,
     return d2l.concat(outputs[1:], 1), attention_weights
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-prediction}
 %%tab jax
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
 def predict_step(self, params, batch, num_steps,
@@ -973,7 +973,7 @@ although $p_1 = p_2 = 1$, the penalty factor $\exp(1-6/2) \approx 0.14$ lowers t
 
 We [**implement the BLEU measure**] as follows.
 
-```{.python .input}
+```{.python .input #seq2seq-evaluation-of-predicted-sequences-1}
 %%tab all
 def bleu(pred_seq, label_seq, k):  #@save
     """Compute the BLEU."""
@@ -997,7 +997,7 @@ we use the trained RNN encoder--decoder
 to [**translate a few English sentences into French**]
 and compute the BLEU of the results.
 
-```{.python .input}
+```{.python .input #seq2seq-evaluation-of-predicted-sequences-2}
 %%tab pytorch
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -1013,7 +1013,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-evaluation-of-predicted-sequences-2}
 %%tab tensorflow
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -1029,7 +1029,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-evaluation-of-predicted-sequences-2}
 %%tab jax
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -1045,7 +1045,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #seq2seq-evaluation-of-predicted-sequences-2}
 %%tab mxnet
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']

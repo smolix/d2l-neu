@@ -23,27 +23,27 @@ channels is as old as CNNs themselves: for instance LeNet-5 :cite:`LeCun.Jackel.
 In this section, we will take a deeper look
 at convolution kernels with multiple input and multiple output channels.
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab jax
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -89,14 +89,14 @@ we can (**implement cross-correlation operations with multiple input channels**)
 Notice that all we are doing is performing a cross-correlation operation
 per channel and then adding up the results.
 
-```{.python .input}
+```{.python .input #channels-multiple-input-channels-1}
 %%tab mxnet, pytorch, jax
 def corr2d_multi_in(X, K):
     # Iterate through the 0th dimension (channel) of K first, then add them up
     return sum(d2l.corr2d(x, k) for x, k in zip(X, K))
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-channels-1}
 %%tab tensorflow
 def corr2d_multi_in(X, K):
     # Iterate through the 0th dimension (channel) of K first, then add them up
@@ -107,7 +107,7 @@ We can construct the input tensor `X` and the kernel tensor `K`
 corresponding to the values in :numref:`fig_conv_multi_in`
 to (**validate the output**) of the cross-correlation operation.
 
-```{.python .input}
+```{.python .input #channels-multiple-input-channels-2}
 %%tab all
 X = d2l.tensor([[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]],
                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]])
@@ -154,7 +154,7 @@ and takes input from all channels in the input tensor.
 We implement a cross-correlation function
 to [**calculate the output of multiple channels**] as shown below.
 
-```{.python .input}
+```{.python .input #channels-multiple-output-channels-1}
 %%tab all
 def corr2d_multi_in_out(X, K):
     # Iterate through the 0th dimension of K, and each time, perform
@@ -166,7 +166,7 @@ def corr2d_multi_in_out(X, K):
 We construct a trivial convolution kernel with three output channels
 by concatenating the kernel tensor for `K` with `K+1` and `K+2`.
 
-```{.python .input}
+```{.python .input #channels-multiple-output-channels-2}
 %%tab all
 K = d2l.stack((K, K + 1, K + 2), 0)
 K.shape
@@ -180,7 +180,7 @@ with the result of the previous input tensor `X`
 and the multi-input channel,
 single-output channel kernel.
 
-```{.python .input}
+```{.python .input #channels-multiple-output-channels-3}
 %%tab all
 corr2d_multi_in_out(X, K)
 ```
@@ -230,7 +230,7 @@ using a fully connected layer.
 The only thing is that we need to make some adjustments
 to the data shape before and after the matrix multiplication.
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-1}
 %%tab all
 def corr2d_multi_in_out_1x1(X, K):
     c_i, h, w = X.shape
@@ -246,7 +246,7 @@ When performing $1\times 1$ convolutions,
 the above function is equivalent to the previously implemented cross-correlation function `corr2d_multi_in_out`.
 Let's check this with some sample data.
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab mxnet, pytorch
 X = d2l.normal(0, 1, (3, 3, 3))
 K = d2l.normal(0, 1, (2, 3, 1, 1))
@@ -255,7 +255,7 @@ Y2 = corr2d_multi_in_out(X, K)
 assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
 ```
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab tensorflow
 X = d2l.normal((3, 3, 3), 0, 1)
 K = d2l.normal((2, 3, 1, 1), 0, 1)
@@ -264,7 +264,7 @@ Y2 = corr2d_multi_in_out(X, K)
 assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
 ```
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab jax
 X = jax.random.normal(d2l.get_key(), (3, 3, 3))
 K = jax.random.normal(d2l.get_key(), (2, 3, 1, 1))

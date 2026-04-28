@@ -39,7 +39,7 @@ for processing deposits in ATM machines.
 To this day, some ATMs still run the code
 that Yann LeCun and his colleague Leon Bottou wrote in the 1990s!
 
-```{.python .input}
+```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -47,20 +47,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -120,7 +120,7 @@ and chain together the appropriate layers,
 using Xavier initialization as
 introduced in :numref:`subsec_xavier`.
 
-```{.python .input}
+```{.python .input #lenet-1}
 %%tab pytorch
 def init_cnn(module):  #@save
     """Initialize weights for CNNs."""
@@ -128,7 +128,7 @@ def init_cnn(module):  #@save
         nn.init.xavier_uniform_(module.weight)
 ```
 
-```{.python .input}
+```{.python .input #lenet-2}
 %%tab pytorch
 class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
@@ -146,7 +146,7 @@ class LeNet(d2l.Classifier):  #@save
             nn.LazyLinear(num_classes))
 ```
 
-```{.python .input}
+```{.python .input #lenet-2}
 %%tab mxnet
 class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
@@ -166,7 +166,7 @@ class LeNet(d2l.Classifier):  #@save
         self.net.initialize(init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #lenet-2}
 %%tab tensorflow
 class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
@@ -186,7 +186,7 @@ class LeNet(d2l.Classifier):  #@save
             tf.keras.layers.Dense(num_classes)])
 ```
 
-```{.python .input}
+```{.python .input #lenet-2}
 %%tab jax
 class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
@@ -251,7 +251,7 @@ replacement for the `apply` method.
 ![Compressed notation for LeNet-5.](../img/lenet-vert.svg)
 :label:`img_lenet_vert`
 
-```{.python .input}
+```{.python .input #lenet-3}
 %%tab mxnet, pytorch
 @d2l.add_to_class(d2l.Classifier)  #@save
 def layer_summary(self, X_shape):
@@ -264,7 +264,7 @@ model = LeNet()
 model.layer_summary((1, 1, 28, 28))
 ```
 
-```{.python .input}
+```{.python .input #lenet-3}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Classifier)  #@save
 def layer_summary(self, X_shape):
@@ -277,7 +277,7 @@ model = LeNet()
 model.layer_summary((1, 28, 28, 1))
 ```
 
-```{.python .input}
+```{.python .input #lenet-3}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
 def layer_summary(self, X_shape, key=d2l.get_key()):
@@ -335,7 +335,7 @@ available devices.
 Just as with MLPs, our loss function is cross-entropy,
 and we minimize it via minibatch stochastic gradient descent.
 
-```{.python .input}
+```{.python .input #lenet-training}
 %%tab pytorch
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -344,7 +344,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lenet-training}
 %%tab mxnet
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -352,7 +352,7 @@ model = LeNet(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lenet-training}
 %%tab jax
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -360,7 +360,7 @@ model = LeNet(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lenet-training}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128)

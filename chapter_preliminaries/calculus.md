@@ -43,7 +43,7 @@ is to perform well on *previously unseen* data.
 That problem is called *generalization*
 and will be a key focus of other chapters.
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -52,7 +52,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -60,7 +60,7 @@ from matplotlib_inline import backend_inline
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -68,7 +68,7 @@ from matplotlib_inline import backend_inline
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -124,25 +124,25 @@ of $f(x)$ with respect to $x$.
 Let's develop some intuition with an example.
 (**Define $u = f(x) = 3x^2-4x$.**)
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab mxnet
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab pytorch
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab tensorflow
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab jax
 def f(x):
     return 3 * x ** 2 - 4 * x
@@ -154,7 +154,7 @@ While this experiment lacks
 the rigor of a mathematical proof,
 we can quickly see that indeed $f'(1) = 2$.
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-2}
 %%tab all
 for h in 10.0**np.arange(-1, -6, -1):
     print(f'h={h:.5f}, numerical limit={(f(1+h)-f(1))/h:.5f}')
@@ -204,7 +204,7 @@ so that we can invoke it later
 without repeating the code, 
 e.g., via `d2l.use_svg_display()`.
 
-```{.python .input}
+```{.python .input #calculus-visualization-utilities-1}
 %%tab all
 def use_svg_display():  #@save
     """Use the svg format to display a plot in Jupyter."""
@@ -215,7 +215,7 @@ Conveniently, we can set figure sizes with `set_figsize`.
 Since the import statement `from matplotlib import pyplot as plt` 
 was marked via `#@save` in the `d2l` package, we can call `d2l.plt`.
 
-```{.python .input}
+```{.python .input #calculus-visualization-utilities-2}
 %%tab all
 def set_figsize(figsize=(3.5, 2.5)):  #@save
     """Set the figure size for matplotlib."""
@@ -227,7 +227,7 @@ The `set_axes` function can associate axes
 with properties, including labels, ranges,
 and scales.
 
-```{.python .input}
+```{.python .input #calculus-visualization-utilities-3}
 %%tab all
 #@save
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
@@ -245,7 +245,7 @@ to overlay multiple curves.
 Much of the code here is just ensuring 
 that the sizes and shapes of inputs match.
 
-```{.python .input}
+```{.python .input #calculus-visualization-utilities-4}
 %%tab all
 #@save
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
@@ -277,7 +277,7 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
 Now we can [**plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$**],
 where the coefficient $2$ is the slope of the tangent line.
 
-```{.python .input}
+```{.python .input #calculus-visualization-utilities-5}
 %%tab all
 x = np.arange(0, 3, 0.1)
 plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'])

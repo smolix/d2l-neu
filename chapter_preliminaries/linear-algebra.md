@@ -69,8 +69,8 @@ For example, $x, y \in \{0, 1\}$
 indicates that $x$ and $y$ are variables
 that can only take values $0$ or $1$.
 
-(**Scalars are implemented as tensors
-that contain only one element.**)
+Scalars are implemented as tensors
+that contain only one element.
 Below, we assign two scalars
 and perform the familiar addition, multiplication,
 division, and exponentiation operations.
@@ -109,7 +109,7 @@ x + y, x * y, x / y, x**y
 
 ## Vectors
 
-For current purposes, [**you can think of a vector as a fixed-length array of scalars.**]
+For current purposes, you can think of a vector as a fixed-length array of scalars.
 As with their code counterparts,
 we call these scalars the *elements* of the vector
 (synonyms include *entries* and *components*).
@@ -173,7 +173,7 @@ $$\mathbf{x} =\begin{bmatrix}x_{1}  \\ \vdots  \\x_{n}\end{bmatrix}.$$
 Here $x_1, \ldots, x_n$ are elements of the vector.
 Later on, we will distinguish between such *column vectors*
 and *row vectors* whose elements are stacked horizontally.
-Recall that [**we access a tensor's elements via indexing.**]
+Recall that we access a tensor's elements via indexing.
 
 ```{.python .input #linear-algebra-vectors-2}
 x[2]
@@ -182,7 +182,7 @@ x[2]
 To indicate that a vector contains $n$ elements,
 we write $\mathbf{x} \in \mathbb{R}^n$.
 Formally, we call $n$ the *dimensionality* of the vector.
-[**In code, this corresponds to the tensor's length**],
+In code, this corresponds to the tensor's length,
 accessible via Python's built-in `len` function.
 
 ```{.python .input #linear-algebra-vectors-3}
@@ -191,7 +191,7 @@ len(x)
 
 We can also access the length via the `shape` attribute.
 The shape is a tuple that indicates a tensor's length along each axis.
-(**Tensors with just one axis have shapes with just one element.**)
+Tensors with just one axis have shapes with just one element.
 
 ```{.python .input #linear-algebra-vectors-4}
 x.shape
@@ -231,8 +231,8 @@ $$\mathbf{A}=\begin{bmatrix} a_{11} & a_{12} & \cdots & a_{1n} \\ a_{21} & a_{22
 
 In code, we represent a matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$
 by a $2^{\textrm{nd}}$-order tensor with shape ($m$, $n$).
-[**We can convert any appropriately sized $m \times n$ tensor
-into an $m \times n$ matrix**]
+We can convert any appropriately sized $m \times n$ tensor
+into an $m \times n$ matrix
 by passing the desired shape to `reshape`:
 
 ```{.python .input #linear-algebra-matrices-1}
@@ -278,7 +278,7 @@ $$
 \end{bmatrix}.
 $$
 
-In code, we can access any (**matrix's transpose**) as follows:
+In code, we can access any matrix's transpose as follows:
 
 ```{.python .input #linear-algebra-matrices-2}
 %%tab mxnet, pytorch, jax
@@ -290,9 +290,9 @@ A.T
 tf.transpose(A)
 ```
 
-[**Symmetric matrices are the subset of square matrices
+Symmetric matrices are the subset of square matrices
 that are equal to their own transposes:
-$\mathbf{A} = \mathbf{A}^\top$.**]
+$\mathbf{A} = \mathbf{A}^\top$.
 The following matrix is symmetric:
 
 ```{.python .input #linear-algebra-matrices-3}
@@ -330,9 +330,9 @@ and columns correspond to distinct attributes.
 While you can go far in your machine learning journey
 with only scalars, vectors, and matrices,
 eventually you may need to work with
-higher-order [**tensors**].
-Tensors (**give us a generic way of describing
-extensions to $n^{\textrm{th}}$-order arrays.**)
+higher-order tensors.
+Tensors give us a generic way of describing
+extensions to $n^{\textrm{th}}$-order arrays.
 We call software objects of the *tensor class* "tensors"
 precisely because they too can have arbitrary numbers of axes.
 While it may be confusing to use the word
@@ -417,8 +417,8 @@ B = A
 A, A + B
 ```
 
-The [**elementwise product of two matrices
-is called their *Hadamard product***] (denoted $\odot$).
+The elementwise product of two matrices
+is called their *Hadamard product* (denoted $\odot$).
 We can spell out the entries
 of the Hadamard product of two matrices
 $\mathbf{A}, \mathbf{B} \in \mathbb{R}^{m \times n}$:
@@ -439,7 +439,7 @@ $$
 A * B
 ```
 
-[**Adding or multiplying a scalar and a tensor**] produces a result
+Adding or multiplying a scalar and a tensor produces a result
 with the same shape as the original tensor.
 Here, each element of the tensor is added to (or multiplied by) the scalar.
 
@@ -474,7 +474,7 @@ a + X, (a * X).shape
 ## Reduction
 :label:`subsec_lin-alg-reduction`
 
-Often, we wish to calculate [**the sum of a tensor's elements.**]
+Often, we wish to calculate the sum of a tensor's elements.
 To express the sum of the elements in a vector $\mathbf{x}$ of length $n$,
 we write $\sum_{i=1}^n x_i$. There is a simple function for it:
 
@@ -502,7 +502,7 @@ x = jnp.arange(3, dtype=jnp.float32)
 x, x.sum()
 ```
 
-To express [**sums over the elements of tensors of arbitrary shape**],
+To express sums over the elements of tensors of arbitrary shape,
 we simply sum over all its axes.
 For example, the sum of the elements
 of an $m \times n$ matrix $\mathbf{A}$
@@ -521,8 +521,8 @@ A.shape, tf.reduce_sum(A)
 By default, invoking the sum function
 *reduces* a tensor along all of its axes,
 eventually producing a scalar.
-Our libraries also allow us to [**specify the axes
-along which the tensor should be reduced.**]
+Our libraries also allow us to specify the axes
+along which the tensor should be reduced.
 To sum over all elements along the rows (axis 0),
 we specify `axis=0` in `sum`.
 Since the input matrix reduces along axis 0
@@ -564,7 +564,7 @@ A.sum(axis=[0, 1]) == A.sum()  # Same as A.sum()
 tf.reduce_sum(A, axis=[0, 1]), tf.reduce_sum(A)  # Same as tf.reduce_sum(A)
 ```
 
-[**A related quantity is the *mean*, also called the *average*.**]
+A related quantity is the *mean*, also called the *average*.
 We calculate the mean by dividing the sum
 by the total number of elements.
 Because computing the mean is so common,
@@ -602,7 +602,7 @@ tf.reduce_mean(A, axis=0), tf.reduce_sum(A, axis=0) / A.shape[0]
 ## Non-Reduction Sum
 :label:`subsec_lin-alg-non-reduction`
 
-Sometimes it can be useful to [**keep the number of axes unchanged**]
+Sometimes it can be useful to keep the number of axes unchanged
 when invoking the function for calculating the sum or mean.
 This matters when we want to use the broadcast mechanism.
 
@@ -619,14 +619,14 @@ sum_A, sum_A.shape
 ```
 
 For instance, since `sum_A` keeps its two axes after summing each row,
-we can (**divide `A` by `sum_A` with broadcasting**)
+we can divide `A` by `sum_A` with broadcasting
 to create a matrix where each row sums up to $1$.
 
 ```{.python .input #linear-algebra-non-reduction-sum-2}
 A / sum_A
 ```
 
-If we want to calculate [**the cumulative sum of elements of `A` along some axis**],
+If we want to calculate the cumulative sum of elements of `A` along some axis,
 say `axis=0` (row by row), we can call the `cumsum` function.
 By design, this function does not reduce the input tensor along any axis.
 
@@ -652,7 +652,7 @@ their *dot product* $\mathbf{x}^\top \mathbf{y}$ (also known as *inner product*,
 is a sum over the products of the elements at the same position:
 $\mathbf{x}^\top \mathbf{y} = \sum_{i=1}^{d} x_i y_i$.
 
-[~~The *dot product* of two vectors is a sum over the products of the elements at the same position~~]
+
 
 ```{.python .input #linear-algebra-dot-products-1}
 %%tab mxnet
@@ -678,8 +678,8 @@ y = jnp.ones(3, dtype = jnp.float32)
 x, y, jnp.dot(x, y)
 ```
 
-Equivalently, (**we can calculate the dot product of two vectors
-by performing an elementwise multiplication followed by a sum:**)
+Equivalently, we can calculate the dot product of two vectors
+by performing an elementwise multiplication followed by a sum:
 
 ```{.python .input #linear-algebra-dot-products-2}
 %%tab mxnet
@@ -737,10 +737,10 @@ where each $\mathbf{a}^\top_{i} \in \mathbb{R}^n$
 is a row vector representing the $i^\textrm{th}$ row
 of the matrix $\mathbf{A}$.
 
-[**The matrix--vector product $\mathbf{A}\mathbf{x}$
+The matrix--vector product $\mathbf{A}\mathbf{x}$
 is simply a column vector of length $m$,
 whose $i^\textrm{th}$ element is the dot product
-$\mathbf{a}^\top_i \mathbf{x}$:**]
+$\mathbf{a}^\top_i \mathbf{x}$:
 
 $$
 \mathbf{A}\mathbf{x}
@@ -888,11 +888,11 @@ $$\mathbf{C} = \mathbf{AB} = \begin{bmatrix}
 \end{bmatrix}.
 $$
 
-[**We can think of the matrix--matrix multiplication $\mathbf{AB}$
+We can think of the matrix--matrix multiplication $\mathbf{AB}$
 as performing $m$ matrix--vector products
 or $m \times n$ dot products
 and stitching the results together
-to form an $n \times m$ matrix.**]
+to form an $n \times m$ matrix.
 In the following snippet,
 we perform matrix multiplication on `A` and `B`.
 Here, `A` is a matrix with two rows and three columns,
@@ -955,9 +955,9 @@ encode different notions of size.
 The Euclidean norm that we all learned in elementary school geometry
 when calculating the hypotenuse of a right triangle
 is the square root of the sum of squares of a vector's elements.
-Formally, this is called [**the $\ell_2$ *norm***] and expressed as
+Formally, this is called the $\ell_2$ *norm* and expressed as
 
-(**$$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}.$$**)
+$$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}.$$
 
 The method `norm` calculates the $\ell_2$ norm.
 
@@ -985,12 +985,12 @@ u = jnp.array([3.0, -4.0])
 jnp.linalg.norm(u)
 ```
 
-[**The $\ell_1$ norm**] is also common
+The $\ell_1$ norm is also common
 and the associated measure is called the Manhattan distance.
 By definition, the $\ell_1$ norm sums
 the absolute values of a vector's elements:
 
-(**$$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$**)
+$$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$
 
 Compared to the $\ell_2$ norm, it is less sensitive to outliers.
 To compute the $\ell_1$ norm,
@@ -1029,12 +1029,12 @@ For instance, we can ask by how much longer
 the matrix--vector product $\mathbf{X} \mathbf{v}$
 could be relative to $\mathbf{v}$.
 This line of thought leads to what is called the *spectral* norm.
-For now, we introduce [**the *Frobenius norm*,
-which is much easier to compute**] and defined as
+For now, we introduce the *Frobenius norm*,
+which is much easier to compute and defined as
 the square root of the sum of the squares
 of a matrix's elements:
 
-[**$$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$**]
+$$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$
 
 The Frobenius norm behaves as if it were
 an $\ell_2$ norm of a matrix-shaped vector.
@@ -1156,3 +1156,215 @@ To recap:
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17968)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@linear-algebra
+
+Scalars are implemented as tensors
+that contain only one element
+
+@linear-algebra-scalars
+
+:::
+
+::: {.slide}
+
+you can think of a vector as a fixed-length array of scalars
+
+@linear-algebra-vectors-1
+
+:::
+
+::: {.slide}
+
+we access a tensor's elements via indexing
+
+@linear-algebra-vectors-2
+
+:::
+
+::: {.slide}
+
+In code, this corresponds to the tensor's length
+
+@linear-algebra-vectors-3
+
+Tensors with just one axis have shapes with just one element
+
+@linear-algebra-vectors-4
+
+:::
+
+::: {.slide}
+
+We can convert any appropriately sized $m \times n$ tensor
+into an $m \times n$ matrix
+
+@linear-algebra-matrices-1
+
+matrix's transpose
+
+@linear-algebra-matrices-2
+
+:::
+
+::: {.slide}
+
+Symmetric matrices are the subset of square matrices
+that are equal to their own transposes:
+$\mathbf{A} = \mathbf{A}^\top$
+
+@linear-algebra-matrices-3
+
+:::
+
+::: {.slide}
+
+tensors give us a generic way of describing
+extensions to $n^{\textrm{th}}$-order arrays
+
+@linear-algebra-tensors
+
+@linear-algebra-basic-properties-of-tensor-arithmetic-1
+
+:::
+
+::: {.slide}
+
+elementwise product of two matrices
+is called their *Hadamard product*
+
+@linear-algebra-basic-properties-of-tensor-arithmetic-2
+
+:::
+
+::: {.slide}
+
+Adding or multiplying a scalar and a tensor
+
+@linear-algebra-basic-properties-of-tensor-arithmetic-3
+
+:::
+
+::: {.slide}
+
+the sum of a tensor's elements
+
+@linear-algebra-reduction-1
+
+:::
+
+::: {.slide}
+
+sums over the elements of tensors of arbitrary shape
+
+@linear-algebra-reduction-2
+
+:::
+
+::: {.slide}
+
+specify the axes
+along which the tensor should be reduced
+
+@linear-algebra-reduction-3
+
+@linear-algebra-reduction-4
+
+@linear-algebra-reduction-5
+
+:::
+
+::: {.slide}
+
+A related quantity is the *mean*, also called the *average*
+
+@linear-algebra-reduction-6
+
+@linear-algebra-reduction-7
+
+:::
+
+::: {.slide}
+
+keep the number of axes unchanged
+
+@linear-algebra-non-reduction-sum-1
+
+divide `A` by `sum_A` with broadcasting
+
+@linear-algebra-non-reduction-sum-2
+
+:::
+
+::: {.slide}
+
+the cumulative sum of elements of `A` along some axis
+
+@linear-algebra-non-reduction-sum-3
+
+:::
+
+::: {.slide}
+
+The *dot product* of two vectors is a sum over the products of the elements at the same position
+
+@linear-algebra-dot-products-1
+
+we can calculate the dot product of two vectors
+by performing an elementwise multiplication followed by a sum
+
+@linear-algebra-dot-products-2
+
+:::
+
+::: {.slide}
+
+The matrix--vector product $\mathbf{A}\mathbf{x}$
+is simply a column vector of length $m$,
+whose $i^\textrm{th}$ element is the dot product
+$\mathbf{a}^\top_i \mathbf{x}$
+
+@linear-algebra-matrix-vector-products
+
+:::
+
+::: {.slide}
+
+We can think of the matrix--matrix multiplication $\mathbf{AB}$
+as performing $m$ matrix--vector products
+or $m \times n$ dot products
+and stitching the results together
+to form an $n \times m$ matrix
+
+@linear-algebra-matrix-matrix-multiplication
+
+:::
+
+::: {.slide}
+
+the $\ell_2$ *norm* $$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}.$$
+
+@linear-algebra-norms-1
+
+:::
+
+::: {.slide}
+
+The $\ell_1$ norm $$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$
+
+@linear-algebra-norms-2
+
+:::
+
+::: {.slide}
+
+the *Frobenius norm*,
+which is much easier to compute $$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$
+
+@linear-algebra-norms-3
+
+:::

@@ -557,3 +557,27 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18032)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@vision-transformer-transformers-for-vision
+
+@vision-transformer-patch-embedding-1
+
+@vision-transformer-patch-embedding-2
+
+@vision-transformer-vision-transformer-encoder-1
+
+@vision-transformer-vision-transformer-encoder-2
+
+@vision-transformer-vision-transformer-encoder-3
+
+@vision-transformer-vision-transformer-encoder-4
+
+@vision-transformer-putting-it-all-together
+
+@vision-transformer-training
+
+:::

@@ -424,7 +424,7 @@ class AlexNet(d2l.Classifier):
         ])
 ```
 
-We [**construct a single-channel data example**] with both height and width of 224 (**to observe the output shape of each layer**). It matches the AlexNet architecture in :numref:`fig_alexnet`.
+We construct a single-channel data example with both height and width of 224 to observe the output shape of each layer. It matches the AlexNet architecture in :numref:`fig_alexnet`.
 
 ```{.python .input #alexnet-capacity-control-and-preprocessing-2  n=6}
 %%tab pytorch, mxnet
@@ -447,15 +447,15 @@ Although AlexNet was trained on ImageNet in :citet:`Krizhevsky.Sutskever.Hinton.
 we use Fashion-MNIST here
 since training an ImageNet model to convergence could take hours or days
 even on a modern GPU.
-One of the problems with applying AlexNet directly on [**Fashion-MNIST**]
-is that its (**images have lower resolution**) ($28 \times 28$ pixels)
-(**than ImageNet images.**)
-To make things work, (**we upsample them to $224 \times 224$**).
+One of the problems with applying AlexNet directly on Fashion-MNIST
+is that its images have lower resolution ($28 \times 28$ pixels)
+than ImageNet images.
+To make things work, we upsample them to $224 \times 224$.
 This is generally not a smart practice, as it simply increases the computational
 complexity without adding information. Nonetheless, we do it here to be faithful to the AlexNet architecture.
 We perform this resizing with the `resize` argument in the `d2l.FashionMNIST` constructor.
 
-Now, we can [**start training AlexNet.**]
+Now, we can start training AlexNet.
 Compared to LeNet in :numref:`sec_lenet`,
 the main change here is the use of a smaller learning rate
 and much slower training due to the deeper and wider network,
@@ -521,3 +521,29 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18001)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@alexnet-deep-convolutional-neural-networks-alexnet
+
+@alexnet-capacity-control-and-preprocessing-1
+
+:::
+
+::: {.slide}
+
+construct a single-channel data example to observe the output shape of each layer
+
+@alexnet-capacity-control-and-preprocessing-2
+
+:::
+
+::: {.slide}
+
+Fashion-MNIST images have lower resolution than ImageNet images. we upsample them to $224 \times 224$ start training AlexNet
+
+@alexnet-training
+
+:::

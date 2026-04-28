@@ -320,3 +320,21 @@ Sampling with replacement leads to an increased variance and decreased data effi
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1067)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sgd-stochastic-gradient-descent
+
+@sgd-stochastic-gradient-updates-1
+
+@sgd-stochastic-gradient-updates-2
+
+@sgd-stochastic-gradient-updates-3
+
+@sgd-dynamic-learning-rate-1
+
+@sgd-dynamic-learning-rate-2
+
+:::

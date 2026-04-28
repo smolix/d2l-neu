@@ -1004,3 +1004,27 @@ Indeed if we think of norms as being related to standard deviations, and correla
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1095)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@random-variables-from-discrete-to-continuous
+
+@random-variables-probability-density-functions
+
+@random-variables-standard-deviations-1
+
+@random-variables-standard-deviations-2
+
+@random-variables-standard-deviations-3
+
+@random-variables-means-and-variances-in-the-continuum-1
+
+@random-variables-means-and-variances-in-the-continuum-2
+
+@random-variables-covariance
+
+@random-variables-correlation
+
+:::

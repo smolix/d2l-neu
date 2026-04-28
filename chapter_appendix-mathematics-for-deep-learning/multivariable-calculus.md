@@ -944,3 +944,21 @@ It is reasonable to ask at this point, "Why can I not just write down matrix ver
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1091)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@multivariable-calculus-higher-dimensional-differentiation
+
+@multivariable-calculus-a-note-on-mathematical-optimization
+
+@multivariable-calculus-the-backpropagation-algorithm-1
+
+@multivariable-calculus-the-backpropagation-algorithm-2
+
+@multivariable-calculus-the-backpropagation-algorithm-3
+
+@multivariable-calculus-hessians
+
+:::

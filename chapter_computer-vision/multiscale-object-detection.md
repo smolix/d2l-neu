@@ -99,7 +99,7 @@ we can determine centers of uniformly sampled anchor boxes  on any image.
 
 
 The `display_anchors` function is defined below.
-[**We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center.**]
+We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center.
 Since the $(x, y)$-axis coordinate values
 in the anchor boxes (`anchors`) have been divided by the width and height of the feature map (`fmap`),
 these values are between 0 and 1,
@@ -168,8 +168,8 @@ def display_anchors(fmap_w, fmap_h, s):
                     anchors[0] * bbox_scale)
 ```
 
-First, let's [**consider
-detection of small objects**].
+First, let's consider
+detection of small objects.
 In order to make it easier to distinguish when displayed, the anchor boxes with different centers here do not overlap:
 the anchor box scale is set to 0.15
 and the height and width of the feature map are set to 4. We can see
@@ -179,14 +179,14 @@ that the centers of the anchor boxes in 4 rows and 4 columns on the image are un
 display_anchors(fmap_w=4, fmap_h=4, s=[0.15])
 ```
 
-We move on to [**reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects**]. When the scale is set to 0.4, 
+We move on to reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects. When the scale is set to 0.4, 
 some anchor boxes will overlap with each other.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-4}
 display_anchors(fmap_w=2, fmap_h=2, s=[0.4])
 ```
 
-Finally, we [**further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8**]. Now the center of the anchor box is the center of the image.
+Finally, we further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8. Now the center of the anchor box is the center of the image.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-5}
 display_anchors(fmap_w=1, fmap_h=1, s=[0.8])
@@ -289,3 +289,44 @@ in :numref:`sec_ssd`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1607)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@multiscale-object-detection-multiscale-anchor-boxes-1
+
+:::
+
+::: {.slide}
+
+We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center
+
+@multiscale-object-detection-multiscale-anchor-boxes-2
+
+:::
+
+::: {.slide}
+
+consider
+detection of small objects
+
+@multiscale-object-detection-multiscale-anchor-boxes-3
+
+:::
+
+::: {.slide}
+
+reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects
+
+@multiscale-object-detection-multiscale-anchor-boxes-4
+
+:::
+
+::: {.slide}
+
+further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8
+
+@multiscale-object-detection-multiscale-anchor-boxes-5
+
+:::

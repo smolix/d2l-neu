@@ -381,3 +381,15 @@ In the context of deep learning the main purpose of convex functions is to motiv
 
 
 [Discussions](https://discuss.d2l.ai/t/350)
+
+<!-- slides -->
+
+::: {.slide}
+
+@convexity
+
+@convexity-convex-functions
+
+@convexity-local-minima-are-global-minima
+
+:::

@@ -52,7 +52,7 @@ from flax import linen as nn
 from jax import numpy as jnp
 ```
 
-## [**Defining the Model**]
+## Defining the Model
 
 We define the following class
 using the RNN implemented
@@ -190,8 +190,8 @@ class RNNLM(d2l.RNNLMScratch):  #@save
 
 ## Training and Predicting
 
-Before training the model, let's [**make a prediction 
-with a model initialized with random weights.**]
+Before training the model, let's make a prediction 
+with a model initialized with random weights.
 Given that we have not trained the network, 
 it will generate nonsensical predictions.
 
@@ -219,7 +219,7 @@ model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 model.predict('it has', 20, data.vocab)
 ```
 
-Next, we [**train our model, leveraging the high-level API**].
+Next, we train our model, leveraging the high-level API.
 
 ```{.python .input #rnn-concise-training-and-predicting-2}
 %%tab pytorch
@@ -285,3 +285,40 @@ framework implementations are often highly optimized,
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18015)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rnn-concise-concise-implementation-of-recurrent-neural-networks
+
+:::
+
+::: {.slide}
+
+Defining the Model
+
+@rnn-concise-defining-the-model-1
+
+@rnn-concise-defining-the-model-2
+
+:::
+
+::: {.slide}
+
+make a prediction 
+with a model initialized with random weights
+
+@rnn-concise-training-and-predicting-1
+
+:::
+
+::: {.slide}
+
+train our model, leveraging the high-level API
+
+@rnn-concise-training-and-predicting-2
+
+@rnn-concise-training-and-predicting-3
+
+:::

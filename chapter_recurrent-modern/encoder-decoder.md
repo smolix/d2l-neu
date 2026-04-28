@@ -63,7 +63,7 @@ from d2l import jax as d2l
 from flax import linen as nn
 ```
 
-## (**Encoder**)
+## Encoder
 
 In the encoder interface,
 we just specify that
@@ -119,7 +119,7 @@ class Encoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-## [**Decoder**]
+## Decoder
 
 In the following decoder interface,
 we add an additional `init_state` method
@@ -196,7 +196,7 @@ class Decoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-## [**Putting the Encoder and Decoder Together**]
+## Putting the Encoder and Decoder Together
 
 In the forward propagation,
 the output of the encoder
@@ -290,3 +290,31 @@ to a variable-length sequence.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18021)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@encoder-decoder-the-encoder-decoder-architecture
+
+Encoder
+
+@encoder-decoder-encoder
+
+:::
+
+::: {.slide}
+
+Decoder
+
+@encoder-decoder-decoder
+
+:::
+
+::: {.slide}
+
+Putting the Encoder and Decoder Together
+
+@encoder-decoder-putting-the-encoder-and-decoder-together
+
+:::

@@ -106,7 +106,7 @@ import keras
 
 ### Reading the Dataset
 
-[**The hot dog dataset we use was taken from online images**].
+The hot dog dataset we use was taken from online images.
 This dataset consists of
 1400 positive-class images containing hot dogs,
 and as many negative-class images containing other foods.
@@ -192,7 +192,7 @@ train_imgs = _load_image_folder(os.path.join(data_dir, 'train'))
 test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
 ```
 
-The first 8 positive examples and the last 8 negative images are shown below. As you can see, [**the images vary in size and aspect ratio**].
+The first 8 positive examples and the last 8 negative images are shown below. As you can see, the images vary in size and aspect ratio.
 
 ```{.python .input #fine-tuning-reading-the-dataset-3}
 hotdogs = [train_imgs[i][0] for i in range(8)]
@@ -210,7 +210,7 @@ we *standardize* their values channel by channel.
 Concretely,
 the mean value of a channel is subtracted from each value of that channel and then the result is divided by the standard deviation of that channel.
 
-[~~Data augmentations~~]
+
 
 ```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab mxnet
@@ -305,7 +305,7 @@ def test_augs(x, training=False):
     return _normalize(x)
 ```
 
-### [**Defining and Initializing the Model**]
+### Defining and Initializing the Model
 
 :begin_tab:`mxnet,pytorch`
 We use ResNet-18, which was pretrained on the ImageNet dataset, as the source model. Here, we specify `pretrained=True` to automatically download the pretrained model parameters.
@@ -466,7 +466,7 @@ finetune_net = keras.Sequential([
 ])
 ```
 
-### [**Fine-Tuning the Model**]
+### Fine-Tuning the Model
 
 First, we define a training function `train_fine_tuning` that uses fine-tuning so it can be called multiple times.
 
@@ -632,7 +632,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
     return history
 ```
 
-We [**set the base learning rate to a small value**]
+We set the base learning rate to a small value
 in order to *fine-tune* the model parameters obtained via pretraining. Based on the previous settings, we will train the output layer parameters of the target model from scratch using a learning rate ten times greater.
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
@@ -655,7 +655,7 @@ finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 5e-5)
 train_fine_tuning(finetune_net, 5e-5)
 ```
 
-[**For comparison,**] we define an identical model, but (**initialize all of its model parameters to random values**). Since the entire model needs to be trained from scratch, we can use a larger learning rate.
+For comparison, we define an identical model, but initialize all of its model parameters to random values. Since the entire model needs to be trained from scratch, we can use a larger learning rate.
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab mxnet
@@ -796,3 +796,77 @@ hotdog_w.shape
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1439)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@fine-tuning-hot-dog-recognition
+
+:::
+
+::: {.slide}
+
+The hot dog dataset we use was taken from online images
+
+@fine-tuning-reading-the-dataset-1
+
+@fine-tuning-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+the images vary in size and aspect ratio
+
+@fine-tuning-reading-the-dataset-3
+
+:::
+
+::: {.slide}
+
+Data augmentations
+
+@fine-tuning-reading-the-dataset-4
+
+:::
+
+::: {.slide}
+
+Defining and Initializing the Model
+
+@fine-tuning-defining-and-initializing-the-model-1
+
+@fine-tuning-defining-and-initializing-the-model-2
+
+@fine-tuning-defining-and-initializing-the-model-3
+
+:::
+
+::: {.slide}
+
+Fine-Tuning the Model
+
+@fine-tuning-fine-tuning-the-model-1
+
+:::
+
+::: {.slide}
+
+set the base learning rate to a small value
+
+@fine-tuning-fine-tuning-the-model-2
+
+:::
+
+::: {.slide}
+
+For comparison, initialize all of its model parameters to random values
+
+@fine-tuning-fine-tuning-the-model-3
+
+@fine-tuning-exercises-1
+
+@fine-tuning-exercises-2
+
+:::

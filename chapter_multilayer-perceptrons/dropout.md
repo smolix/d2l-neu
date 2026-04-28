@@ -179,9 +179,9 @@ from the uniform distribution $U[0, 1]$.
 Then we can keep those nodes for which the corresponding
 sample is greater than $p$, dropping the rest.
 
-In the following code, we (**implement a `dropout_layer` function
+In the following code, we implement a `dropout_layer` function
 that drops out the elements in the tensor input `X`
-with probability `dropout`**),
+with probability `dropout`,
 rescaling the remainder as described above:
 dividing the survivors by `1.0-dropout`.
 
@@ -229,7 +229,7 @@ def dropout_layer(X, dropout, key=d2l.get_key()):
     return jnp.asarray(mask, dtype=jnp.float32) * X / (1.0 - dropout)
 ```
 
-We can [**test out the `dropout_layer` function on a few examples**].
+We can test out the `dropout_layer` function on a few examples.
 In the following lines of code,
 we pass our input `X` through the dropout operation,
 with probabilities 0, 0.5, and 1, respectively.
@@ -367,7 +367,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-### [**Training**]
+### Training
 
 The following is similar to the training of MLPs described previously.
 
@@ -380,7 +380,7 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 With high-level APIs, all we need to do is add a `Dropout` layer
 after each fully connected layer,
@@ -489,7 +489,7 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 ```
 
-Next, we [**train the model**].
+Next, we train the model.
 
 ```{.python .input #dropout-concise-implementation-3}
 model = DropoutMLP(**hparams)
@@ -529,3 +529,53 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17987)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@dropout
+
+implement a `dropout_layer` function
+that drops out the elements in the tensor input `X`
+with probability `dropout`
+
+@dropout-implementation-from-scratch-1
+
+:::
+
+::: {.slide}
+
+test out the `dropout_layer` function on a few examples
+
+@dropout-implementation-from-scratch-2
+
+@dropout-defining-the-model
+
+:::
+
+::: {.slide}
+
+Training
+
+@dropout-training
+
+:::
+
+::: {.slide}
+
+Concise Implementation
+
+@dropout-concise-implementation-1
+
+@dropout-concise-implementation-2
+
+:::
+
+::: {.slide}
+
+train the model
+
+@dropout-concise-implementation-3
+
+:::

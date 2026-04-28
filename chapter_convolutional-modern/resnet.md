@@ -88,7 +88,7 @@ build deep neural networks. For instance, residual blocks have been added to rec
 Note that residual networks are predated by highway networks :cite:`srivastava2015highway` that share some of the motivation, albeit without the elegant parametrization around the identity function.
 
 
-## (**Residual Blocks**)
+## Residual Blocks
 :label:`subsec_residual-blks`
 
 Let's focus on a local part of a neural network, as depicted in :numref:`fig_residual_block`. Denote the input by $\mathbf{x}$.
@@ -245,7 +245,7 @@ This code generates two types of networks: one where we add the input to the out
 ![ResNet block with and without $1 \times 1$ convolution, which transforms the input into the desired shape for the addition operation.](../img/resnet-block.svg)
 :label:`fig_resnet_block`
 
-Now let's look at [**a situation where the input and output are of the same shape**], where $1 \times 1$ convolution is not needed.
+Now let's look at a situation where the input and output are of the same shape, where $1 \times 1$ convolution is not needed.
 
 ```{.python .input #resnet-residual-blocks-2}
 %%tab mxnet
@@ -277,7 +277,7 @@ X = jax.random.normal(d2l.get_key(), (4, 6, 6, 3))
 blk.init_with_output(d2l.get_key(), X)[0].shape
 ```
 
-We also have the option to [**halve the output height and width while increasing the number of output channels**].
+We also have the option to halve the output height and width while increasing the number of output channels.
 In this case we use $1 \times 1$ convolutions via `use_1x1conv=True`. This comes in handy at the beginning of each ResNet block to reduce the spatial dimensionality via `strides=2`.
 
 ```{.python .input #resnet-residual-blocks-3}
@@ -305,7 +305,7 @@ blk = Residual(6, use_1x1conv=True, strides=(2, 2))
 blk.init_with_output(d2l.get_key(), X)[0].shape
 ```
 
-## [**ResNet Model**]
+## ResNet Model
 
 The first two layers of ResNet are the same as those of the GoogLeNet we described before: the $7\times 7$ convolutional layer with 64 output channels and a stride of 2 is followed by the $3\times 3$ max-pooling layer with a stride of 2. The difference is the batch normalization layer added after each convolutional layer in ResNet.
 
@@ -486,7 +486,7 @@ By configuring different numbers of channels and residual blocks in the module, 
 ![The ResNet-18 architecture.](../img/resnet18-90.svg)
 :label:`fig_resnet18`
 
-Before training ResNet, let's [**observe how the input shape changes across different modules in ResNet**]. As in all the previous architectures, the resolution decreases while the number of channels increases up until the point where a global average pooling layer aggregates all features.
+Before training ResNet, let's observe how the input shape changes across different modules in ResNet. As in all the previous architectures, the resolution decreases while the number of channels increases up until the point where a global average pooling layer aggregates all features.
 
 ```{.python .input #resnet-resnet-model-4}
 %%tab pytorch, mxnet, tensorflow
@@ -519,7 +519,7 @@ ResNet18().layer_summary((1, 96, 96, 1))
 ResNet18(training=False).layer_summary((1, 96, 96, 1))
 ```
 
-## [**Training**]
+## Training
 
 We train ResNet on the Fashion-MNIST dataset, just like before. ResNet is quite a powerful and flexible architecture. The plot capturing training and validation loss illustrates a significant gap between both graphs, with the training loss being considerably lower. For a network of this flexibility, more training data would offer distinct benefit in closing the gap and improving accuracy.
 
@@ -798,3 +798,65 @@ A common feature of the designs we have discussed so far is that the network des
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18006)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@resnet-residual-networks-resnet-and-resnext
+
+Residual Blocks
+
+@resnet-residual-blocks-1
+
+:::
+
+::: {.slide}
+
+a situation where the input and output are of the same shape
+
+@resnet-residual-blocks-2
+
+:::
+
+::: {.slide}
+
+halve the output height and width while increasing the number of output channels
+
+@resnet-residual-blocks-3
+
+:::
+
+::: {.slide}
+
+ResNet Model
+
+@resnet-resnet-model-1
+
+@resnet-resnet-model-2
+
+@resnet-resnet-model-3
+
+:::
+
+::: {.slide}
+
+observe how the input shape changes across different modules in ResNet
+
+@resnet-resnet-model-4
+
+@resnet-resnet-model-5
+
+:::
+
+::: {.slide}
+
+Training
+
+@resnet-training
+
+@resnet-resnext-1
+
+@resnet-resnext-2
+
+:::

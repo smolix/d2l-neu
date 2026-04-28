@@ -235,3 +235,31 @@ modifications.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12093)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rs-async-asynchronous-random-search
+
+@rs-async-objective-function
+
+@rs-async-asynchronous-scheduler-1
+
+@rs-async-asynchronous-scheduler-2
+
+@rs-async-asynchronous-scheduler-3
+
+@rs-async-asynchronous-scheduler-4
+
+@rs-async-asynchronous-scheduler-5
+
+@rs-async-asynchronous-scheduler-6
+
+@rs-async-asynchronous-scheduler-7
+
+@rs-async-asynchronous-scheduler-8
+
+@rs-async-visualize-the-asynchronous-optimization-process
+
+:::

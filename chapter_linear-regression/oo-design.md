@@ -709,3 +709,31 @@ this degree of modularity pays dividends throughout the book in terms of concise
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17974)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@oo-design-object-oriented-design-for-implementation
+
+@oo-design-utilities-1
+
+@oo-design-utilities-2
+
+@oo-design-utilities-3
+
+@oo-design-utilities-4
+
+@oo-design-utilities-5
+
+@oo-design-utilities-6
+
+@oo-design-utilities-7
+
+@oo-design-models
+
+@oo-design-data
+
+@oo-design-training
+
+:::

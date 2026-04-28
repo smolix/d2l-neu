@@ -150,7 +150,7 @@ Accuracy is computed as follows.
 First, if `y_hat` is a matrix,
 we assume that the second dimension stores prediction scores for each class.
 We use `argmax` to obtain the predicted class by the index for the largest entry in each row.
-Then we [**compare the predicted class with the ground truth `y` elementwise.**]
+Then we compare the predicted class with the ground truth `y` elementwise.
 Since the equality operator `==` is sensitive to data types,
 we convert `y_hat`'s data type to match that of `y`.
 The result is a tensor containing entries of 0 (false) and 1 (true).
@@ -229,3 +229,25 @@ Classification is a sufficiently common problem that it warrants its own conveni
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17981)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@classification-the-base-classification-model
+
+@classification-the-classifier-class-1
+
+@classification-the-classifier-class-2
+
+:::
+
+::: {.slide}
+
+compare the predicted class with the ground truth `y` elementwise
+
+@classification-accuracy-1
+
+@classification-accuracy-2
+
+:::

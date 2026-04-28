@@ -421,13 +421,13 @@ In the following we will stick to *prediction* whenever possible.
 
 When training our models, we typically want to process
 whole minibatches of examples simultaneously.
-Doing this efficiently requires that (**we**) (~~should~~)
-(**vectorize the calculations and leverage
+Doing this efficiently requires that we 
+vectorize the calculations and leverage
 fast linear algebra libraries
-rather than writing costly for-loops in Python.**)
+rather than writing costly for-loops in Python.
 
 To see why this matters so much,
-let's (**consider two methods for adding vectors.**)
+let's consider two methods for adding vectors.
 To start, we instantiate two 10,000-dimensional vectors
 containing all 1s.
 In the first method, we loop over the vectors with a Python for-loop.
@@ -440,8 +440,8 @@ b = d2l.ones(n)
 ```
 
 Now we can benchmark the workloads.
-First, [**we add them, one coordinate at a time,
-using a for-loop.**]
+First, we add them, one coordinate at a time,
+using a for-loop.
 
 ```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab mxnet, pytorch
@@ -473,7 +473,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-(**Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.**)
+Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.
 
 ```{.python .input #linear-regression-vectorization-for-speed-3}
 t = time.time()
@@ -516,7 +516,7 @@ is given as
 
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (x - \mu)^2\right).$$
 
-Below [**we define a function to compute the normal distribution**].
+Below we define a function to compute the normal distribution.
 
 ```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab pytorch
@@ -546,7 +546,7 @@ def normal(x, mu, sigma):
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-We can now (**visualize the normal distributions**).
+We can now visualize the normal distributions.
 
 ```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab mxnet
@@ -796,3 +796,42 @@ and ultimately, evaluation on previously unseen data.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/259)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@linear-regression
+
+we should vectorize the calculations and leverage
+fast linear algebra libraries
+rather than writing costly for-loops in Python. consider two methods for adding vectors
+
+@linear-regression-vectorization-for-speed-1
+
+:::
+
+::: {.slide}
+
+we add them, one coordinate at a time,
+using a for-loop
+
+@linear-regression-vectorization-for-speed-2
+
+Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum
+
+@linear-regression-vectorization-for-speed-3
+
+:::
+
+::: {.slide}
+
+we define a function to compute the normal distribution
+
+@linear-regression-the-normal-distribution-and-squared-loss-1
+
+visualize the normal distributions
+
+@linear-regression-the-normal-distribution-and-squared-loss-2
+
+:::

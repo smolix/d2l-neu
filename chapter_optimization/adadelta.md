@@ -194,3 +194,15 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1077)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@adadelta-implementation-1
+
+@adadelta-implementation-2
+
+@adadelta-implementation-3
+
+:::

@@ -70,7 +70,7 @@ import pandas as pd
 
 Throughout the book, we will train and test models
 on various downloaded datasets.
-Here, we (**implement two utility functions**)
+Here, we implement two utility functions
 for downloading and extracting zip or tar files.
 Again, we skip implementation details of
 such utility functions.
@@ -146,8 +146,8 @@ The "Data" tab on the competition tab
 in :numref:`fig_house_pricing`
 has links for downloading the data.
 
-To get started, we will [**read in and process the data
-using `pandas`**], which we introduced in :numref:`sec_pandas`.
+To get started, we will read in and process the data
+using `pandas`, which we introduced in :numref:`sec_pandas`.
 For convenience, we can download and cache
 the Kaggle housing dataset.
 If a file corresponding to this dataset already exists in the cache directory and its SHA-1 matches `sha1_hash`, our code will use the cached file to avoid clogging up your Internet with redundant downloads.
@@ -178,8 +178,8 @@ print(data.raw_val.shape)
 
 ## Data Preprocessing
 
-Let's [**take a look at the first four and final two features
-as well as the label (SalePrice)**] from the first four examples.
+Let's take a look at the first four and final two features
+as well as the label (SalePrice) from the first four examples.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
@@ -197,11 +197,11 @@ we will need to preprocess the data before we can start modeling.
 
 Let's start with the numerical features.
 First, we apply a heuristic,
-[**replacing all missing values
-by the corresponding feature's mean.**]
+replacing all missing values
+by the corresponding feature's mean.
 Then, to put all features on a common scale,
-we (***standardize* the data by
-rescaling features to zero mean and unit variance**):
+we *standardize* the data by
+rescaling features to zero mean and unit variance:
 
 $$x \leftarrow \frac{x - \mu}{\sigma},$$
 
@@ -218,9 +218,9 @@ which features will be relevant,
 we do not want to penalize coefficients
 assigned to one feature more than any other.
 
-[**Next we deal with discrete values.**]
+Next we deal with discrete values.
 These include features such as "MSZoning".
-(**We replace them by a one-hot encoding**)
+We replace them by a one-hot encoding
 in the same way that we earlier transformed
 multiclass labels into vectors (see :numref:`subsec_classification-problem`).
 For instance, "MSZoning" assumes the values "RL" and "RM".
@@ -273,8 +273,8 @@ To get started we will train a linear model with squared loss. Not surprisingly,
 With house prices, as with stock prices,
 we care about relative quantities
 more than absolute quantities.
-Thus [**we tend to care more about
-the relative error $\frac{y - \hat{y}}{y}$**]
+Thus we tend to care more about
+the relative error $\frac{y - \hat{y}}{y}$
 than about the absolute error $y - \hat{y}$.
 For instance, if our prediction is off by \$100,000
 when estimating the price of a house in rural Ohio,
@@ -285,8 +285,8 @@ in Los Altos Hills, California,
 this might represent a stunningly accurate prediction
 (there, the median house price exceeds \$4 million).
 
-(**One way to address this problem is to
-measure the discrepancy in the logarithm of the price estimates.**)
+One way to address this problem is to
+measure the discrepancy in the logarithm of the price estimates.
 In fact, this is also the official error measure
 used by the competition to evaluate the quality of submissions.
 After all, a small value $\delta$ for $|\log y - \log \hat{y}| \leq \delta$
@@ -311,7 +311,7 @@ def get_dataloader(self, train):
 
 ## $K$-Fold Cross-Validation
 
-You might recall that we introduced [**cross-validation**]
+You might recall that we introduced cross-validation
 in :numref:`subsec_generalization-model-selection`, where we discussed how to deal
 with model selection.
 We will put this to good use to select the model design
@@ -338,7 +338,7 @@ def k_fold_data(data, k):
     return rets
 ```
 
-[**The average validation error is returned**]
+The average validation error is returned
 when we train $K$ times in the $K$-fold cross-validation.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
@@ -373,7 +373,7 @@ def k_fold(trainer, data, k, lr):
     return models
 ```
 
-## [**Model Selection**]
+## Model Selection
 
 In this example, we pick an untuned set of hyperparameters
 and leave it up to the reader to improve the model.
@@ -402,7 +402,7 @@ Less overfitting might indicate that our data can support a more powerful model.
 Massive overfitting might suggest that we can gain
 by incorporating regularization techniques.
 
-##  [**Submitting Predictions on Kaggle**]
+##  Submitting Predictions on Kaggle
 
 Now that we know what a good choice of hyperparameters should be,
 we might 
@@ -510,3 +510,89 @@ we can use $K$-fold cross-validation .
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17988)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@kaggle-house-price-predicting-house-prices-on-kaggle
+
+implement two utility functions
+
+@kaggle-house-price-downloading-data
+
+:::
+
+::: {.slide}
+
+read in and process the data
+using `pandas`
+
+@kaggle-house-price-accessing-and-reading-the-dataset-1
+
+@kaggle-house-price-accessing-and-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+take a look at the first four and final two features
+as well as the label (SalePrice)
+
+@kaggle-house-price-data-preprocessing-1
+
+:::
+
+::: {.slide}
+
+replacing all missing values
+by the corresponding feature's mean. *standardize* the data by
+rescaling features to zero mean and unit variance Next we deal with discrete values. We replace them by a one-hot encoding
+
+@kaggle-house-price-data-preprocessing-2
+
+@kaggle-house-price-data-preprocessing-3
+
+:::
+
+::: {.slide}
+
+we tend to care more about
+the relative error $\frac{y - \hat{y}}{y}$ One way to address this problem is to
+measure the discrepancy in the logarithm of the price estimates
+
+@kaggle-house-price-error-measure
+
+:::
+
+::: {.slide}
+
+cross-validation
+
+@kaggle-house-price-k-fold-cross-validation-1
+
+:::
+
+::: {.slide}
+
+The average validation error is returned
+
+@kaggle-house-price-k-fold-cross-validation-2
+
+:::
+
+::: {.slide}
+
+Model Selection
+
+@kaggle-house-price-model-selection
+
+:::
+
+::: {.slide}
+
+Submitting Predictions on Kaggle
+
+@kaggle-house-price-submitting-predictions-on-kaggle
+
+:::

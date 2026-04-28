@@ -81,9 +81,9 @@ import optax
 
 ## Norms and Weight Decay
 
-(**Rather than directly manipulating the number of parameters,
+Rather than directly manipulating the number of parameters,
 *weight decay* operates by restricting the values 
-that the parameters can take.**)
+that the parameters can take.
 More commonly called $\ell_2$ regularization
 outside of deep learning circles
 when optimized by minibatch stochastic gradient descent,
@@ -223,10 +223,10 @@ still holds true.
 We can illustrate the benefits of weight decay 
 through a simple synthetic example.
 
-First, we [**generate some data as before**]:
+First, we generate some data as before:
 
-(**$$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
-\epsilon \sim \mathcal{N}(0, 0.01^2).$$**)
+$$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
+\epsilon \sim \mathcal{N}(0, 0.01^2).$$
 
 In this synthetic dataset, our label is given 
 by an underlying linear function of our inputs,
@@ -310,7 +310,7 @@ is our optimizer,
 we just need to add the squared $\ell_2$ penalty
 to the original loss function.
 
-### (**Defining $\ell_2$ Norm Penalty**)
+### Defining $\ell_2$ Norm Penalty
 
 Perhaps the most convenient way of implementing this penalty
 is to square all terms in place and sum them.
@@ -399,7 +399,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-### [**Training without Regularization**]
+### Training without Regularization
 
 We now run this code with `lambd = 0`,
 disabling weight decay.
@@ -411,7 +411,7 @@ validation error---a textbook case of overfitting.
 train_scratch(0)
 ```
 
-### [**Using Weight Decay**]
+### Using Weight Decay
 
 Below, we run with substantial weight decay.
 Note that the training error increases
@@ -423,7 +423,7 @@ we expect from regularization.
 train_scratch(3)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Because weight decay is ubiquitous
 in neural network optimization,
@@ -525,8 +525,8 @@ class WeightDecay(d2l.LinearRegression):
                            optax.sgd(self.lr))
 ```
 
-[**The plot looks similar to that when
-we implemented weight decay from scratch**].
+The plot looks similar to that when
+we implemented weight decay from scratch.
 However, this version runs faster
 and is easier to implement,
 benefits that will become more
@@ -613,3 +613,63 @@ Different sets of parameters can have different update behaviors within the same
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17979)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@weight-decay
+
+:::
+
+::: {.slide}
+
+Rather than directly manipulating the number of parameters,
+*weight decay* operates by restricting the values 
+that the parameters can take. generate some data as before $$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
+\epsilon \sim \mathcal{N}(0, 0.01^2).$$
+
+@weight-decay-high-dimensional-linear-regression
+
+Defining $\ell_2$ Norm Penalty
+
+@weight-decay-defining-ell-2-norm-penalty
+
+@weight-decay-defining-the-model-1
+
+@weight-decay-defining-the-model-2
+
+:::
+
+::: {.slide}
+
+Training without Regularization
+
+@weight-decay-training-without-regularization
+
+:::
+
+::: {.slide}
+
+Using Weight Decay
+
+@weight-decay-using-weight-decay
+
+:::
+
+::: {.slide}
+
+Concise Implementation
+
+@weight-decay-concise-implementation-1
+
+:::
+
+::: {.slide}
+
+The plot looks similar to that when
+we implemented weight decay from scratch
+
+@weight-decay-concise-implementation-2
+
+:::

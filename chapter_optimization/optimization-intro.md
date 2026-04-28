@@ -257,3 +257,23 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/489)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@optimization-intro-goal-of-optimization-1
+
+@optimization-intro-goal-of-optimization-2
+
+@optimization-intro-goal-of-optimization-3
+
+@optimization-intro-local-minima
+
+@optimization-intro-saddle-points-1
+
+@optimization-intro-saddle-points-2
+
+@optimization-intro-vanishing-gradients
+
+:::

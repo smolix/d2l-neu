@@ -39,8 +39,8 @@ distinguish them from semantic segmentation as follows.
 
 ## The Pascal VOC2012 Semantic Segmentation Dataset
 
-[**One of the most important semantic segmentation dataset
-is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/).**]
+One of the most important semantic segmentation dataset
+is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/).
 In the following,
 we will take a look at this dataset.
 
@@ -107,7 +107,7 @@ with the same size
 as its labeled input image.
 Besides,
 pixels with the same color in any label image belong to the same semantic class.
-The following defines the `read_voc_images` function to [**read all the input images and labels into the memory**].
+The following defines the `read_voc_images` function to read all the input images and labels into the memory.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3}
 #@tab mxnet
@@ -192,7 +192,7 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
-We [**draw the first five input images and their labels**].
+We draw the first five input images and their labels.
 In the label images, white and black represent borders and  background, respectively, while the other colors correspond to different classes.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4}
@@ -224,8 +224,8 @@ imgs = train_features[:n] + train_labels[:n]
 d2l.show_images(imgs, 2, n);
 ```
 
-Next, we [**enumerate
-the RGB color values and class names**]
+Next, we enumerate
+the RGB color values and class names
 for all the labels in this dataset.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5}
@@ -246,7 +246,7 @@ VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
 
 With the two constants defined above,
 we can conveniently
-[**find the class index for each pixel in a label**].
+find the class index for each pixel in a label.
 We define the `voc_colormap2label` function
 to build the mapping from the above RGB color values
 to class indices,
@@ -333,7 +333,7 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
-[**For example**], in the first example image,
+For example, in the first example image,
 the class index for the front part of the airplane is 1,
 while the background index is 0.
 
@@ -354,8 +354,8 @@ requires rescaling the predicted pixel classes
 back to the original shape of the input image.
 Such rescaling may be inaccurate,
 especially for segmented regions with different classes. To avoid this issue,
-we crop the image to a *fixed* shape instead of rescaling. Specifically, [**using random cropping from image augmentation, we crop the same area of
-the input image and the label**].
+we crop the image to a *fixed* shape instead of rescaling. Specifically, using random cropping from image augmentation, we crop the same area of
+the input image and the label.
 
 ```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-1}
 #@tab mxnet
@@ -443,7 +443,7 @@ for _ in range(n):
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
-### [**Custom Semantic Segmentation Dataset Class**]
+### Custom Semantic Segmentation Dataset Class
 
 We define a custom semantic segmentation dataset class `VOCSegDataset` by inheriting the `Dataset` class provided by high-level APIs.
 By implementing the `__getitem__` function,
@@ -597,7 +597,7 @@ class VOCSegDataset:
         return len(self.features)
 ```
 
-### [**Reading the Dataset**]
+### Reading the Dataset
 
 We use the custom `VOCSegDataset` class to
 create instances of the training set and test set, respectively.
@@ -664,7 +664,7 @@ print(X.shape)
 print(Y.shape)
 ```
 
-### [**Putting It All Together**]
+### Putting It All Together
 
 Finally, we define the following `load_data_voc` function
 to download and read the Pascal VOC2012 semantic segmentation dataset.
@@ -793,3 +793,94 @@ def load_data_voc(batch_size, crop_size):
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1480)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+One of the most important semantic segmentation dataset
+is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/)
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2
+
+:::
+
+::: {.slide}
+
+read all the input images and labels into the memory
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3
+
+:::
+
+::: {.slide}
+
+draw the first five input images and their labels
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
+
+:::
+
+::: {.slide}
+
+enumerate
+the RGB color values and class names
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5
+
+:::
+
+::: {.slide}
+
+find the class index for each pixel in a label
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6
+
+:::
+
+::: {.slide}
+
+For example
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7
+
+:::
+
+::: {.slide}
+
+using random cropping from image augmentation, we crop the same area of
+the input image and the label
+
+@semantic-segmentation-and-dataset-data-preprocessing-1
+
+@semantic-segmentation-and-dataset-data-preprocessing-2
+
+:::
+
+::: {.slide}
+
+Custom Semantic Segmentation Dataset Class
+
+@semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class
+
+:::
+
+::: {.slide}
+
+Reading the Dataset
+
+@semantic-segmentation-and-dataset-reading-the-dataset-1
+
+@semantic-segmentation-and-dataset-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+Putting It All Together
+
+@semantic-segmentation-and-dataset-putting-it-all-together
+
+:::

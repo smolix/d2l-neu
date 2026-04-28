@@ -583,3 +583,21 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1103)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@statistics-evaluating-and-comparing-estimators
+
+@statistics-evaluating-estimators-in-code-1
+
+@statistics-evaluating-estimators-in-code-2
+
+@statistics-evaluating-estimators-in-code-3
+
+@statistics-evaluating-estimators-in-code-4
+
+@statistics-a-gaussian-example
+
+:::

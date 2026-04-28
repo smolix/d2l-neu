@@ -53,7 +53,7 @@ import jax
 
 To know which functions and classes can be called in a module,
 we invoke the `dir` function. For instance, we can
-(**query all properties in the module for generating random numbers**):
+query all properties in the module for generating random numbers:
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
@@ -87,7 +87,7 @@ normal distribution (`normal`), and multinomial distribution (`multinomial`).
 
 For specific instructions on how to use a given function or class,
 we can invoke the  `help` function. As an example, let's
-[**explore the usage instructions for tensors' `ones` function**].
+explore the usage instructions for tensors' `ones` function.
 
 ```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab mxnet
@@ -112,7 +112,7 @@ help(jax.numpy.ones)
 From the documentation, we can see that the `ones` function 
 creates a new tensor with the specified shape 
 and sets all the elements to the value of 1. 
-Whenever possible, you should (**run a quick test**) 
+Whenever possible, you should run a quick test 
 to confirm your interpretation:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-2}
@@ -166,3 +166,27 @@ in addition to becoming a better scientist.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17972)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@lookup-api-documentation
+
+query all properties in the module for generating random numbers
+
+@lookup-api-functions-and-classes-in-a-module
+
+:::
+
+::: {.slide}
+
+explore the usage instructions for tensors' `ones` function
+
+@lookup-api-specific-functions-and-classes-1
+
+run a quick test
+
+@lookup-api-specific-functions-and-classes-2
+
+:::

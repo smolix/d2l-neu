@@ -639,3 +639,33 @@ get_similar_tokens('chip', 3, embed_v)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1335)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@word2vec-pretraining-pretraining-word2vec
+
+@word2vec-pretraining-embedding-layer-1
+
+@word2vec-pretraining-embedding-layer-2
+
+@word2vec-pretraining-defining-the-forward-propagation-1
+
+@word2vec-pretraining-defining-the-forward-propagation-2
+
+@word2vec-pretraining-binary-cross-entropy-loss-1
+
+@word2vec-pretraining-binary-cross-entropy-loss-2
+
+@word2vec-pretraining-binary-cross-entropy-loss-3
+
+@word2vec-pretraining-initializing-model-parameters
+
+@word2vec-pretraining-defining-the-training-loop-1
+
+@word2vec-pretraining-defining-the-training-loop-2
+
+@word2vec-pretraining-applying-word-embeddings
+
+:::

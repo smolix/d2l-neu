@@ -106,7 +106,7 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape
 ```
 
-## [**Built-in Initialization**]
+## Built-in Initialization
 
 Let's begin by calling on built-in initializers.
 The code below initializes all weight parameters
@@ -208,7 +208,7 @@ layer_0 = params['params']['layers_0']
 layer_0['kernel'][:, 0], layer_0['bias'][0]
 ```
 
-[**We can also apply different initializers for certain blocks.**]
+We can also apply different initializers for certain blocks.
 For example, below we initialize the first layer
 with the Xavier initializer
 and initialize the second layer
@@ -267,7 +267,7 @@ params = net.init(d2l.get_key(), X)
 params['params']['layers_0']['kernel'][:, 0], params['params']['layers_2']['kernel']
 ```
 
-### [**Custom Initialization**]
+### Custom Initialization
 
 Sometimes, the initialization methods we need
 are not provided by the deep learning framework.
@@ -420,3 +420,41 @@ Look up the online documentation for more built-in initializers.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17991)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@init-param-parameter-initialization-1
+
+@init-param-parameter-initialization-2
+
+:::
+
+::: {.slide}
+
+Built-in Initialization
+
+@init-param-built-in-initialization-1
+
+@init-param-built-in-initialization-2
+
+:::
+
+::: {.slide}
+
+We can also apply different initializers for certain blocks
+
+@init-param-built-in-initialization-3
+
+:::
+
+::: {.slide}
+
+Custom Initialization
+
+@init-param-custom-initialization-1
+
+@init-param-custom-initialization-2
+
+:::

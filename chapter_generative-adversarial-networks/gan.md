@@ -593,3 +593,29 @@ train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1082)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@gan-generative-adversarial-networks
+
+@gan-generate-some-real-data-1
+
+@gan-generate-some-real-data-2
+
+@gan-generate-some-real-data-3
+
+@gan-generator
+
+@gan-discriminator
+
+@gan-training-1
+
+@gan-training-2
+
+@gan-training-3
+
+@gan-training-4
+
+:::

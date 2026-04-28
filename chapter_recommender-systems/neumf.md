@@ -440,3 +440,27 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/403)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@neumf-the-neumf-model
+
+@neumf-model-implementation
+
+@neumf-customized-dataset-with-negative-sampling
+
+@neumf-evaluator-1
+
+@neumf-evaluator-2
+
+@neumf-training-and-evaluating-the-model-1
+
+@neumf-training-and-evaluating-the-model-2
+
+@neumf-training-and-evaluating-the-model-3
+
+@neumf-training-and-evaluating-the-model-4
+
+:::

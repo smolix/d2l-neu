@@ -80,7 +80,7 @@ since the expansion $\mathbf{x} \to \left[\mathbf{x}, f_1(\mathbf{x}),
 f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), \ldots \right]$ can be quite high-dimensional.
 
 
-## [**Dense Blocks**]
+## Dense Blocks
 
 DenseNet uses the modified "batch normalization, activation, and convolution"
 structure of ResNet (see the exercise in :numref:`sec_resnet`).
@@ -208,7 +208,7 @@ class DenseBlock(nn.Module):
 ```
 
 In the following example,
-we [**define a `DenseBlock` instance**] with two convolution blocks of 10 output channels.
+we define a `DenseBlock` instance with two convolution blocks of 10 output channels.
 When using an input with three channels, we will get an output with  $3 + 10 + 10=23$ channels. The number of convolution block channels controls the growth in the number of output channels relative to the number of input channels. This is also referred to as the *growth rate*.
 
 ```{.python .input #densenet-dense-blocks-3}
@@ -244,7 +244,7 @@ Y = blk.init_with_output(d2l.get_key(), X)[0]
 Y.shape
 ```
 
-## [**Transition Layers**]
+## Transition Layers
 
 Since each dense block will increase the number of channels, adding too many of them will lead to an excessively complex model. A *transition layer* is used to control the complexity of the model. It reduces the number of channels by using a $1\times 1$ convolution. Moreover, it halves the height and width via average pooling with a stride of 2.
 
@@ -299,7 +299,7 @@ class TransitionBlock(nn.Module):
         return X
 ```
 
-[**Apply a transition layer**] with 10 channels to the output of the dense block in the previous example.  This reduces the number of output channels to 10, and halves the height and width.
+Apply a transition layer with 10 channels to the output of the dense block in the previous example.  This reduces the number of output channels to 10, and halves the height and width.
 
 ```{.python .input #densenet-transition-layers-2}
 %%tab mxnet
@@ -326,7 +326,7 @@ blk = TransitionBlock(10)
 blk.init_with_output(d2l.get_key(), Y)[0].shape
 ```
 
-## [**DenseNet Model**]
+## DenseNet Model
 
 Next, we will construct a DenseNet model. DenseNet first uses the same single convolutional layer and max-pooling layer as in ResNet.
 
@@ -494,7 +494,7 @@ def create_net(self):
     return net
 ```
 
-## [**Training**]
+## Training
 
 Since we are using a deeper network here, in this section, we will reduce the input height and width from 224 to 96 to simplify the computation.
 
@@ -551,3 +551,63 @@ applying DenseNet may require more memory-efficient implementations that may inc
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18008)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@densenet-densely-connected-networks-densenet
+
+:::
+
+::: {.slide}
+
+Dense Blocks
+
+@densenet-dense-blocks-1
+
+@densenet-dense-blocks-2
+
+:::
+
+::: {.slide}
+
+define a `DenseBlock` instance
+
+@densenet-dense-blocks-3
+
+:::
+
+::: {.slide}
+
+Transition Layers
+
+@densenet-transition-layers-1
+
+:::
+
+::: {.slide}
+
+Apply a transition layer
+
+@densenet-transition-layers-2
+
+:::
+
+::: {.slide}
+
+DenseNet Model
+
+@densenet-densenet-model-1
+
+@densenet-densenet-model-2
+
+:::
+
+::: {.slide}
+
+Training
+
+@densenet-training
+
+:::

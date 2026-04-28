@@ -106,8 +106,8 @@ than the simple weighted average can be expressed.
 ## Implementation
 
 In our implementation,
-we [**choose the scaled dot product attention
-for each head**] of the multi-head attention.
+we choose the scaled dot product attention
+for each head of the multi-head attention.
 To avoid significant growth of computational cost and parametrization cost,
 we set $p_q = p_k = p_v = p_o / h$.
 Note that $h$ heads can be computed in parallel
@@ -276,7 +276,7 @@ class MultiHeadAttention(nn.Module):  #@save
         return self.W_o(output_concat), attention_weights
 ```
 
-To allow for [**parallel computation of multiple heads**],
+To allow for parallel computation of multiple heads,
 the above `MultiHeadAttention` class uses two transposition methods as defined below.
 Specifically,
 the `transpose_output` method reverses the operation
@@ -378,7 +378,7 @@ def transpose_output(self, X):
     return X.reshape((X.shape[0], X.shape[1], -1))
 ```
 
-Let's [**test our implemented**] `MultiHeadAttention` class
+Let's test our implemented `MultiHeadAttention` class
 using a toy example where keys and values are the same.
 As a result,
 the shape of the multi-head attention output
@@ -475,3 +475,38 @@ proper tensor manipulation is needed.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18029)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@multihead-attention-multi-head-attention
+
+:::
+
+::: {.slide}
+
+choose the scaled dot product attention
+for each head
+
+@multihead-attention-implementation-1
+
+:::
+
+::: {.slide}
+
+parallel computation of multiple heads
+
+@multihead-attention-implementation-2
+
+:::
+
+::: {.slide}
+
+test our implemented
+
+@multihead-attention-implementation-3
+
+@multihead-attention-implementation-4
+
+:::

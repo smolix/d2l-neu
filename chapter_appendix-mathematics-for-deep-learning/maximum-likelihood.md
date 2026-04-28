@@ -334,3 +334,13 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1097)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@maximum-likelihood-a-concrete-example
+
+@maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
+
+:::

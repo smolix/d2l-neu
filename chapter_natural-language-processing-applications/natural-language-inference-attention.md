@@ -798,3 +798,33 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1530)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@natural-language-inference-attention-the-model
+
+@natural-language-inference-attention-attending-1
+
+@natural-language-inference-attention-attending-2
+
+@natural-language-inference-attention-comparing
+
+@natural-language-inference-attention-aggregating
+
+@natural-language-inference-attention-putting-it-all-together
+
+@natural-language-inference-attention-reading-the-dataset
+
+@natural-language-inference-attention-creating-the-model
+
+@natural-language-inference-attention-training-and-evaluating-the-model-2-1
+
+@natural-language-inference-attention-training-and-evaluating-the-model-2-2
+
+@natural-language-inference-attention-using-the-model-1
+
+@natural-language-inference-attention-using-the-model-2
+
+:::

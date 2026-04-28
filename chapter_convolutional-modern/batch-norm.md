@@ -270,7 +270,7 @@ and then fix them at prediction time.
 Hence, batch normalization behaves differently during training than at test time.
 Recall that dropout also exhibits this characteristic.
 
-## (**Implementation from Scratch**)
+## Implementation from Scratch
 
 To see how batch normalization works in practice, we implement one from scratch below.
 
@@ -378,7 +378,7 @@ def batch_norm(X, deterministic, gamma, beta, moving_mean, moving_var, eps,
     return Y
 ```
 
-We can now [**create a proper `BatchNorm` layer.**]
+We can now create a proper `BatchNorm` layer.
 Our layer will maintain proper parameters
 for scale `gamma` and shift `beta`,
 both of which will be updated in the course of training.
@@ -554,7 +554,7 @@ class BatchNorm(nn.Module):
 
 We used `momentum` to govern the aggregation over past mean and variance estimates. This is somewhat of a misnomer as it has nothing whatsoever to do with the *momentum* term of optimization. Nonetheless, it is the commonly adopted name for this term and in deference to API naming convention we use the same variable name in our code.
 
-## [**LeNet with Batch Normalization**]
+## LeNet with Batch Normalization
 
 To see how to apply `BatchNorm` in context,
 below we apply it to a traditional LeNet model (:numref:`sec_lenet`).
@@ -672,7 +672,7 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), updates) if averaged else (fn(Y_hat, Y), updates)
 ```
 
-As before, we will [**train our network on the Fashion-MNIST dataset**].
+As before, we will train our network on the Fashion-MNIST dataset.
 This code is virtually identical to that when we first trained LeNet.
 
 ```{.python .input #batch-norm-lenet-with-batch-normalization-3}
@@ -709,8 +709,8 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-Let's [**have a look at the scale parameter `gamma`
-and the shift parameter `beta`**] learned
+Let's have a look at the scale parameter `gamma`
+and the shift parameter `beta` learned
 from the first batch normalization layer.
 
 ```{.python .input #batch-norm-lenet-with-batch-normalization-4}
@@ -735,7 +735,7 @@ trainer.state.params['net']['layers_1']['gamma'].reshape((-1,)), \
 trainer.state.params['net']['layers_1']['beta'].reshape((-1,))
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Compared with the `BatchNorm` class,
 which we just defined ourselves,
@@ -831,7 +831,7 @@ class BNLeNet(d2l.Classifier):
             nn.Dense(self.num_classes)])
 ```
 
-Below, we [**use the same hyperparameters to train our model.**]
+Below, we use the same hyperparameters to train our model.
 Note that as usual, the high-level API variant runs much faster
 because its code has been compiled to C++ or CUDA
 while our custom implementation must be interpreted by Python.
@@ -985,3 +985,66 @@ On a more practical note, there are a number of aspects worth remembering about 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18005)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@batch-norm-batch-normalization
+
+Implementation from Scratch
+
+@batch-norm-implementation-from-scratch-1
+
+:::
+
+::: {.slide}
+
+create a proper `BatchNorm` layer
+
+@batch-norm-implementation-from-scratch-2
+
+:::
+
+::: {.slide}
+
+LeNet with Batch Normalization
+
+@batch-norm-lenet-with-batch-normalization-1
+
+@batch-norm-lenet-with-batch-normalization-2
+
+:::
+
+::: {.slide}
+
+train our network on the Fashion-MNIST dataset
+
+@batch-norm-lenet-with-batch-normalization-3
+
+:::
+
+::: {.slide}
+
+have a look at the scale parameter `gamma`
+and the shift parameter `beta`
+
+@batch-norm-lenet-with-batch-normalization-4
+
+:::
+
+::: {.slide}
+
+Concise Implementation
+
+@batch-norm-concise-implementation-1
+
+:::
+
+::: {.slide}
+
+use the same hyperparameters to train our model
+
+@batch-norm-concise-implementation-2
+
+:::

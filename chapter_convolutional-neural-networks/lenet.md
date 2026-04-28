@@ -71,9 +71,9 @@ from types import FunctionType
 
 ## LeNet
 
-At a high level, (**LeNet (LeNet-5) consists of two parts:
+At a high level, LeNet (LeNet-5) consists of two parts:
 (i) a convolutional encoder consisting of two convolutional layers; and
-(ii) a dense block consisting of three fully connected layers**).
+(ii) a dense block consisting of three fully connected layers.
 The architecture is summarized in :numref:`img_lenet`.
 
 ![Data flow in LeNet. The input is a handwritten digit, the output is a probability over 10 possible outcomes.](../img/lenet.svg)
@@ -226,7 +226,7 @@ Let's see what happens inside the network. By passing a
 single-channel (black and white)
 $28 \times 28$ image through the network
 and printing the output shape at each layer,
-we can [**inspect the model**] to ensure
+we can inspect the model to ensure
 that its operations line up with
 what we expect from :numref:`img_lenet_vert`.
 :end_tab:
@@ -236,7 +236,7 @@ Let's see what happens inside the network. By passing a
 single-channel (black and white)
 $28 \times 28$ image through the network
 and printing the output shape at each layer,
-we can [**inspect the model**] to ensure
+we can inspect the model to ensure
 that its operations line up with
 what we expect from :numref:`img_lenet_vert`.
 Flax provides `nn.tabulate`, a nifty method to summarise the layers and
@@ -319,7 +319,7 @@ matches the number of classes.
 ## Training
 
 Now that we have implemented the model,
-let's [**run an experiment to see how the LeNet-5 model fares on Fashion-MNIST**].
+let's run an experiment to see how the LeNet-5 model fares on Fashion-MNIST.
 
 While CNNs have fewer parameters,
 they can still be more expensive to compute
@@ -405,3 +405,35 @@ A second difference is the relative ease with which we were able to implement Le
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18000)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@lenet-convolutional-neural-networks-lenet
+
+LeNet (LeNet-5) consists of two parts:
+(i) a convolutional encoder consisting of two convolutional layers; and
+(ii) a dense block consisting of three fully connected layers
+
+@lenet-1
+
+@lenet-2
+
+:::
+
+::: {.slide}
+
+inspect the model inspect the model
+
+@lenet-3
+
+:::
+
+::: {.slide}
+
+run an experiment to see how the LeNet-5 model fares on Fashion-MNIST
+
+@lenet-training
+
+:::

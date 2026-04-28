@@ -1389,3 +1389,43 @@ these helpers spell out lives inside `Trainer.fit_epoch` and the
 TensorFlow tabs additionally retain `evaluate_accuracy` because some of
 their earlier-chapter snippets call it directly; for PyTorch and JAX,
 use `Trainer.validation_step` (or its return value) instead.
+
+<!-- slides -->
+
+::: {.slide}
+
+@utils-utility-functions-and-classes-1
+
+@utils-utility-functions-and-classes-2
+
+@utils-utility-functions-and-classes-3
+
+@utils-utility-functions-and-classes-4
+
+@utils-utility-functions-and-classes-5
+
+@utils-utility-functions-and-classes-6
+
+@utils-utility-functions-and-classes-7
+
+@utils-utility-functions-and-classes-8
+
+@utils-utility-functions-and-classes-9
+
+@utils-utility-functions-and-classes-10
+
+@utils-utility-functions-and-classes-11
+
+@utils-utility-functions-and-classes-12
+
+@utils-utility-functions-and-classes-13
+
+@utils-utility-functions-and-classes-14
+
+@utils-utility-functions-and-classes-15
+
+@utils-utility-functions-and-classes-16
+
+@utils-utility-functions-and-classes-17
+
+:::

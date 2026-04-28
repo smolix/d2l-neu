@@ -74,7 +74,7 @@ from jax import numpy as jnp
 import os
 ```
 
-## [**Downloading and Preprocessing the Dataset**]
+## Downloading and Preprocessing the Dataset
 
 To begin, we download an English--French dataset
 that consists of [bilingual sentence pairs from the Tatoeba Project](http://www.manythings.org/anki/).
@@ -103,7 +103,7 @@ print(raw_text[:75])
 ```
 
 After downloading the dataset,
-we [**proceed with several preprocessing steps**]
+we proceed with several preprocessing steps
 for the raw text data.
 For instance, we replace non-breaking space with space,
 convert uppercase letters to lowercase ones,
@@ -126,7 +126,7 @@ text = data._preprocess(raw_text)
 print(text[:80])
 ```
 
-## [**Tokenization**]
+## Tokenization
 
 Unlike the character-level tokenization
 in :numref:`sec_language-model`,
@@ -169,7 +169,7 @@ src, tgt = data._tokenize(text)
 src[:6], tgt[:6]
 ```
 
-Let's [**plot the histogram of the number of tokens per text sequence.**]
+Let's plot the histogram of the number of tokens per text sequence.
 In this simple English--French dataset,
 most of the text sequences have fewer than 20 tokens.
 
@@ -196,10 +196,10 @@ show_list_len_pair_hist(['source', 'target'], '# tokens per sequence',
 :label:`subsec_loading-seq-fixed-len`
 
 Recall that in language modeling
-[**each example sequence**],
+each example sequence,
 either a segment of one sentence
 or a span over multiple sentences,
-(**had a fixed length.**)
+had a fixed length.
 This was specified by the `num_steps`
 (number of time steps or tokens) argument from :numref:`sec_language-model`.
 In machine translation, each example is
@@ -277,7 +277,7 @@ def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
             src_vocab, tgt_vocab)
 ```
 
-## [**Reading the Dataset**]
+## Reading the Dataset
 
 Finally, we define the `get_dataloader` method
 to return the data iterator.
@@ -289,7 +289,7 @@ def get_dataloader(self, train):
     return self.get_tensorloader(self.arrays, train, idx)
 ```
 
-Let's [**read the first minibatch from the English--French dataset.**]
+Let's read the first minibatch from the English--French dataset.
 
 ```{.python .input #machine-translation-and-dataset-reading-the-dataset-2  n=11}
 data = MTFraEng(batch_size=3)
@@ -345,3 +345,81 @@ In natural language processing, *machine translation* refers to the task of auto
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18020)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@machine-translation-and-dataset-machine-translation-and-the-dataset
+
+:::
+
+::: {.slide}
+
+Downloading and Preprocessing the Dataset
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2
+
+:::
+
+::: {.slide}
+
+proceed with several preprocessing steps
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4
+
+:::
+
+::: {.slide}
+
+Tokenization
+
+@machine-translation-and-dataset-tokenization-1
+
+@machine-translation-and-dataset-tokenization-2
+
+:::
+
+::: {.slide}
+
+plot the histogram of the number of tokens per text sequence
+
+@machine-translation-and-dataset-tokenization-3
+
+@machine-translation-and-dataset-tokenization-4
+
+:::
+
+::: {.slide}
+
+each example sequence had a fixed length
+
+@machine-translation-and-dataset-loading-sequences-of-fixed-length-1
+
+@machine-translation-and-dataset-loading-sequences-of-fixed-length-2
+
+:::
+
+::: {.slide}
+
+Reading the Dataset
+
+@machine-translation-and-dataset-reading-the-dataset-1
+
+:::
+
+::: {.slide}
+
+read the first minibatch from the English--French dataset
+
+@machine-translation-and-dataset-reading-the-dataset-2
+
+@machine-translation-and-dataset-reading-the-dataset-3
+
+@machine-translation-and-dataset-reading-the-dataset-4
+
+:::

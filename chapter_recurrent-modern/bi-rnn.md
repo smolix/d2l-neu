@@ -235,3 +235,17 @@ In bidirectional RNNs, the hidden state for each time step is simultaneously det
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18019)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@bi-rnn-bidirectional-recurrent-neural-networks
+
+@bi-rnn-implementation-from-scratch-1
+
+@bi-rnn-implementation-from-scratch-2
+
+@bi-rnn-concise-implementation
+
+:::

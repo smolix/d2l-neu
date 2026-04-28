@@ -305,3 +305,25 @@ multi-fidelity HPO algorithm.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12094)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sh-intro-multi-fidelity-hyperparameter-optimization
+
+@sh-intro-successive-halving-1
+
+@sh-intro-successive-halving-2
+
+@sh-intro-successive-halving-3
+
+@sh-intro-successive-halving-4
+
+@sh-intro-successive-halving-5
+
+@sh-intro-successive-halving-6
+
+@sh-intro-successive-halving-7
+
+:::

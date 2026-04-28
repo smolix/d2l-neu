@@ -49,7 +49,7 @@ are more accurately described as cross-correlations.
 Based on our descriptions of convolutional layers in :numref:`sec_why-conv`,
 in such a layer, an input tensor
 and a kernel tensor are combined
-to produce an output tensor through a (**cross-correlation operation.**)
+to produce an output tensor through a cross-correlation operation.
 
 Let's ignore channels for now and see how this works
 with two-dimensional data and hidden representations.
@@ -159,7 +159,7 @@ def corr2d(X, K):  #@save
 
 We can construct the input tensor `X` and the kernel tensor `K`
 from :numref:`fig_correlation`
-to [**validate the output of the above implementation**]
+to validate the output of the above implementation
 of the two-dimensional cross-correlation operation.
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-2}
@@ -178,7 +178,7 @@ When training models based on convolutional layers,
 we typically initialize the kernels randomly,
 just as we would with a fully connected layer.
 
-We are now ready to [**implement a two-dimensional convolutional layer**]
+We are now ready to implement a two-dimensional convolutional layer
 based on the `corr2d` function defined above.
 In the `__init__` constructor method,
 we declare `weight` and `bias` as the two model parameters.
@@ -251,8 +251,8 @@ convolution kernel simply as an $h \times w$ convolutional layer.
 
 ## Object Edge Detection in Images
 
-Let's take a moment to parse [**a simple application of a convolutional layer:
-detecting the edge of an object in an image**]
+Let's take a moment to parse a simple application of a convolutional layer:
+detecting the edge of an object in an image
 by finding the location of the pixel change.
 First, we construct an "image" of $6\times 8$ pixels.
 The middle four columns are black ($0$) and the rest are white ($1$).
@@ -290,8 +290,8 @@ K = d2l.tensor([[1.0, -1.0]])
 
 We are ready to perform the cross-correlation operation
 with arguments `X` (our input) and `K` (our kernel).
-As you can see, [**we detect $1$ for the edge from white to black
-and $-1$ for the edge from black to white.**]
+As you can see, we detect $1$ for the edge from white to black
+and $-1$ for the edge from black to white.
 All other outputs take value $0$.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-3}
@@ -300,7 +300,7 @@ Y
 ```
 
 We can now apply the kernel to the transposed image.
-As expected, it vanishes. [**The kernel `K` only detects vertical edges.**]
+As expected, it vanishes. The kernel `K` only detects vertical edges.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-4}
 corr2d(d2l.transpose(X), K)
@@ -315,7 +315,7 @@ and consider successive layers of convolutions,
 it might be impossible to specify
 precisely what each filter should be doing manually.
 
-Now let's see whether we can [**learn the kernel that generated `Y` from `X`**]
+Now let's see whether we can learn the kernel that generated `Y` from `X`
 by looking at the input--output pairs only.
 We first construct a convolutional layer
 and initialize its kernel as a random tensor.
@@ -431,7 +431,7 @@ for i in range(10):
         print(f'epoch {i + 1}, loss {l:.3f}')
 ```
 
-Note that the error has dropped to a small value after 10 iterations. Now we will [**take a look at the kernel tensor we learned.**]
+Note that the error has dropped to a small value after 10 iterations. Now we will take a look at the kernel tensor we learned.
 
 ```{.python .input #conv-layer-learning-a-kernel-2}
 %%tab mxnet
@@ -590,3 +590,75 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17996)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@conv-layer-convolutions-for-images
+
+cross-correlation operation
+
+@conv-layer-the-cross-correlation-operation-1
+
+:::
+
+::: {.slide}
+
+validate the output of the above implementation
+
+@conv-layer-the-cross-correlation-operation-2
+
+:::
+
+::: {.slide}
+
+implement a two-dimensional convolutional layer
+
+@conv-layer-convolutional-layers
+
+:::
+
+::: {.slide}
+
+a simple application of a convolutional layer:
+detecting the edge of an object in an image
+
+@conv-layer-object-edge-detection-in-images-1
+
+@conv-layer-object-edge-detection-in-images-2
+
+:::
+
+::: {.slide}
+
+we detect $1$ for the edge from white to black
+and $-1$ for the edge from black to white
+
+@conv-layer-object-edge-detection-in-images-3
+
+:::
+
+::: {.slide}
+
+The kernel `K` only detects vertical edges
+
+@conv-layer-object-edge-detection-in-images-4
+
+:::
+
+::: {.slide}
+
+learn the kernel that generated `Y` from `X`
+
+@conv-layer-learning-a-kernel-1
+
+:::
+
+::: {.slide}
+
+take a look at the kernel tensor we learned
+
+@conv-layer-learning-a-kernel-2
+
+:::

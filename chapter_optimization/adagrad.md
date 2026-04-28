@@ -258,3 +258,21 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1073)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@adagrad-the-algorithm-1
+
+@adagrad-the-algorithm-2
+
+@adagrad-the-algorithm-3
+
+@adagrad-implementation-from-scratch-1
+
+@adagrad-implementation-from-scratch-2
+
+@adagrad-concise-implementation
+
+:::

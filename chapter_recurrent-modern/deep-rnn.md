@@ -328,8 +328,8 @@ We pick the same number of inputs and outputs
 as we have distinct tokens, i.e., `vocab_size`.
 The number of hidden units is still 32.
 The only difference is that we now 
-(**select a nontrivial number of hidden layers 
-by specifying the value of `num_layers`.**)
+select a nontrivial number of hidden layers 
+by specifying the value of `num_layers`.
 
 ```{.python .input #deep-rnn-concise-implementation-2}
 %%tab mxnet
@@ -412,3 +412,26 @@ to ensure proper convergence.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18018)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@deep-rnn-deep-recurrent-neural-networks
+
+@deep-rnn-implementation-from-scratch-1
+
+@deep-rnn-implementation-from-scratch-2
+
+@deep-rnn-implementation-from-scratch-3
+
+@deep-rnn-concise-implementation-1
+
+select a nontrivial number of hidden layers 
+by specifying the value of `num_layers`
+
+@deep-rnn-concise-implementation-2
+
+@deep-rnn-concise-implementation-3
+
+:::

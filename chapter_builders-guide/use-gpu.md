@@ -26,7 +26,7 @@ Then, download the [NVIDIA driver and CUDA](https://developer.nvidia.com/cuda-do
 and follow the prompts to set the appropriate path.
 Once these preparations are complete,
 the `nvidia-smi` command can be used
-to (**view the graphics card information**).
+to view the graphics card information.
 
 :begin_tab:`mxnet`
 You might have noticed that a MXNet tensor
@@ -111,7 +111,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## [**Computing Devices**]
+## Computing Devices
 
 We can specify devices, such as CPUs and GPUs,
 for storage and calculation.
@@ -193,7 +193,7 @@ def gpu(i=0):  #@save
 cpu(), gpu(), gpu(1)
 ```
 
-We can (**query the number of available GPUs.**)
+We can query the number of available GPUs.
 
 ```{.python .input #use-gpu-computing-devices-2}
 %%tab pytorch
@@ -232,8 +232,8 @@ def num_gpus():  #@save
 num_gpus()
 ```
 
-Now we [**define two convenient functions that allow us
-to run code even if the requested GPUs do not exist.**]
+Now we define two convenient functions that allow us
+to run code even if the requested GPUs do not exist.
 
 ```{.python .input #use-gpu-computing-devices-3}
 def try_gpu(i=0):  #@save
@@ -253,18 +253,18 @@ try_gpu(), try_gpu(10), try_all_gpus()
 
 :begin_tab:`pytorch`
 By default, tensors are created on the CPU.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
 :begin_tab:`mxnet`
 By default, tensors are created on the CPU.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
 By default, tensors are created on the GPU/TPU if they are available,
 else CPU is used if not available.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
 ```{.python .input #use-gpu-tensors-and-gpus}
@@ -302,7 +302,7 @@ or even how to decide where to perform the computation.
 
 ### Storage on the GPU
 
-There are several ways to [**store a tensor on the GPU.**]
+There are several ways to store a tensor on the GPU.
 For example, we can specify a storage device when creating a tensor.
 Next, we create the tensor variable `X` on the first `gpu`.
 The tensor created on a GPU only consumes the memory of this GPU.
@@ -335,7 +335,7 @@ X = jax.device_put(jnp.ones((2, 3)), try_gpu())
 X
 ```
 
-Assuming that you have at least two GPUs, the following code will (**create a random tensor, `Y`, on the second GPU.**)
+Assuming that you have at least two GPUs, the following code will create a random tensor, `Y`, on the second GPU.
 
 ```{.python .input #use-gpu-storage-on-the-gpu-2}
 %%tab mxnet
@@ -365,8 +365,8 @@ Y
 
 ### Copying
 
-[**If we want to compute `X + Y`,
-we need to decide where to perform this operation.**]
+If we want to compute `X + Y`,
+we need to decide where to perform this operation.
 For instance, as shown in :numref:`fig_copyto`,
 we can transfer `X` to the second GPU
 and perform the operation there.
@@ -409,7 +409,7 @@ print(X)
 print(Z)
 ```
 
-Now that [**the data (both `Z` and `Y`) are on the same GPU, we can add them up.**]
+Now that the data (both `Z` and `Y`) are on the same GPU, we can add them up.
 
 ```{.python .input #use-gpu-copying-2}
 Y + Z
@@ -506,7 +506,7 @@ Even worse, it is now subject to the dreaded global interpreter lock
 that makes everything wait for Python to complete.
 
 
-## [**Neural Networks and GPUs**]
+## Neural Networks and GPUs
 
 Similarly, a neural network model can specify devices.
 The following code puts the model parameters on the GPU.
@@ -557,7 +557,7 @@ net(X)
 net.apply(params, x)
 ```
 
-Let's (**confirm that the model parameters are stored on the same GPU.**)
+Let's confirm that the model parameters are stored on the same GPU.
 
 ```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab mxnet
@@ -736,3 +736,91 @@ You can lose significant performance by moving data without care.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17995)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+view the graphics card information
+
+@use-gpu-gpus
+
+:::
+
+::: {.slide}
+
+Computing Devices
+
+@use-gpu-computing-devices-1
+
+query the number of available GPUs
+
+@use-gpu-computing-devices-2
+
+:::
+
+::: {.slide}
+
+define two convenient functions that allow us
+to run code even if the requested GPUs do not exist
+
+@use-gpu-computing-devices-3
+
+:::
+
+::: {.slide}
+
+query the device where the tensor is located. query the device where the tensor is located. query the device where the tensor is located
+
+@use-gpu-tensors-and-gpus
+
+:::
+
+::: {.slide}
+
+store a tensor on the GPU
+
+@use-gpu-storage-on-the-gpu-1
+
+create a random tensor, `Y`, on the second GPU
+
+@use-gpu-storage-on-the-gpu-2
+
+:::
+
+::: {.slide}
+
+If we want to compute `X + Y`,
+we need to decide where to perform this operation
+
+@use-gpu-copying-1
+
+:::
+
+::: {.slide}
+
+the data (both `Z` and `Y`) are on the same GPU, we can add them up
+
+@use-gpu-copying-2
+
+@use-gpu-copying-3
+
+:::
+
+::: {.slide}
+
+Neural Networks and GPUs
+
+@use-gpu-neural-networks-and-gpus-1
+
+@use-gpu-neural-networks-and-gpus-2
+
+confirm that the model parameters are stored on the same GPU
+
+@use-gpu-neural-networks-and-gpus-3
+
+@use-gpu-neural-networks-and-gpus-4
+
+@use-gpu-neural-networks-and-gpus-5
+
+:::

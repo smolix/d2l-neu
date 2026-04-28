@@ -60,7 +60,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## (**NiN Blocks**)
+## NiN Blocks
 
 Recall :numref:`subsec_1x1`. In it we said that the inputs and outputs of convolutional layers
 consist of four-dimensional tensors with axes
@@ -123,7 +123,7 @@ def nin_block(out_channels, kernel_size, strides, padding):
         nn.Conv(out_channels, kernel_size=(1, 1)), nn.relu])
 ```
 
-## [**NiN Model**]
+## NiN Model
 
 NiN uses the same initial convolution sizes as AlexNet (it was proposed shortly thereafter).
 The kernel sizes are $11\times 11$, $5\times 5$, and $3\times 3$, respectively,
@@ -226,7 +226,7 @@ class NiN(d2l.Classifier):
         return optax.chain(optax.clip_by_global_norm(1.0), optax.sgd(self.lr))
 ```
 
-We create a data example to see [**the output shape of each block**].
+We create a data example to see the output shape of each block.
 
 ```{.python .input #nin-nin-model-2}
 %%tab mxnet, pytorch
@@ -243,7 +243,7 @@ NiN().layer_summary((1, 224, 224, 1))
 NiN(training=False).layer_summary((1, 224, 224, 1))
 ```
 
-## [**Training**]
+## Training
 
 As before we use Fashion-MNIST to train the model using the same 
 optimizer that we used for AlexNet and VGG.
@@ -312,3 +312,39 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18003)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@nin-network-in-network-nin
+
+NiN Blocks
+
+@nin-nin-blocks
+
+:::
+
+::: {.slide}
+
+NiN Model
+
+@nin-nin-model-1
+
+:::
+
+::: {.slide}
+
+the output shape of each block
+
+@nin-nin-model-2
+
+:::
+
+::: {.slide}
+
+Training
+
+@nin-training
+
+:::

@@ -221,3 +221,17 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/401)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@autorec-model
+
+@autorec-implementing-the-model
+
+@autorec-reimplementing-the-evaluator
+
+@autorec-training-and-evaluating-the-model
+
+:::

@@ -16,7 +16,9 @@
 #   make -j4 notebooks         Generate (not execute) all notebooks in parallel
 #
 # NOT parallel-safe (GPU contention):
-#   run-notebooks-*, slides-*  Run one framework at a time
+#   run-notebooks-*           Run one framework at a time
+# Parallel-safe (CPU-only, after slide refactor):
+#   slides-*                   make -j4 slides works
 #
 # GPU workers per framework: 2 per GPU (8 total on 4 GPUs)
 #
@@ -235,7 +237,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) \
+		--render --workers 8 \
 		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
@@ -244,6 +246,7 @@ slides-%: _slides/%/.built
 	@echo "Slides for $* in _slides/$*/"
 	@echo "Log: $(LOGDIR)/slides-$*-$(TS).log"
 
+# CPU-only after the slide refactor — parallel-safe across frameworks.
 slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Aggregate targets ─────────────────────────────────────

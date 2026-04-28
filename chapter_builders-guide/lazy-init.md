@@ -279,3 +279,21 @@ We can pass data through the model to make the framework finally initialize para
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17992)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@lazy-init-lazy-initialization-1
+
+@lazy-init-lazy-initialization-2
+
+@lazy-init-lazy-initialization-3
+
+@lazy-init-lazy-initialization-4
+
+@lazy-init-lazy-initialization-5
+
+@lazy-init-lazy-initialization-6
+
+:::

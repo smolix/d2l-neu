@@ -56,7 +56,7 @@ The large model ($\textrm{BERT}_{\textrm{LARGE}}$) uses 24 layers
 with 1024 hidden units and 16 self-attention heads.
 Notably, the former has 110 million parameters while the latter has 340 million parameters.
 For demonstration with ease,
-we define [**a small BERT, using 2 layers, 128 hidden units, and 2 self-attention heads**].
+we define a small BERT, using 2 layers, 128 hidden units, and 2 self-attention heads.
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-1}
 #@tab mxnet
@@ -91,7 +91,7 @@ net = d2l.BERTModel(len(vocab), num_hiddens=128,
 Before defining the training loop,
 we define a helper function `_get_batch_loss_bert`.
 Given the shard of training examples,
-this function [**computes the loss for both the masked language modeling and next sentence prediction tasks**].
+this function computes the loss for both the masked language modeling and next sentence prediction tasks.
 Note that the final loss of BERT pretraining
 is just the sum of both the masked language modeling loss
 and the next sentence prediction loss.
@@ -202,7 +202,7 @@ def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
 
 Invoking the two aforementioned helper functions,
 the following `train_bert` function
-defines the procedure to [**pretrain BERT (`net`) on the WikiText-2 (`train_iter`) dataset**].
+defines the procedure to pretrain BERT (`net`) on the WikiText-2 (`train_iter`) dataset.
 Training BERT can take very long.
 Instead of specifying the number of epochs for training
 as in the `train_ch13` function (see :numref:`sec_image_augmentation`),
@@ -405,7 +405,7 @@ devices = d2l.try_all_gpus()
 train_bert(train_iter, net, len(vocab), devices, 50)
 ```
 
-## [**Representing Text with BERT**]
+## Representing Text with BERT
 
 After pretraining BERT,
 we can use it to represent single text, text pairs, or any token in them.
@@ -460,7 +460,7 @@ def get_bert_encoding(net, tokens_a, tokens_b=None):
     return encoded_X
 ```
 
-[**Consider the sentence "a crane is flying".**]
+Consider the sentence "a crane is flying".
 Recall the input representation of BERT as discussed in :numref:`subsec_bert_input_rep`.
 After inserting special tokens “&lt;cls&gt;” (used for classification)
 and “&lt;sep&gt;” (used for separation),
@@ -500,8 +500,8 @@ encoded_text_crane = encoded_text[:, 2, :]
 encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
 ```
 
-[**Now consider a sentence pair
-"a crane driver came" and "he just left".**]
+Now consider a sentence pair
+"a crane driver came" and "he just left".
 Similarly, `encoded_pair[:, 0, :]` is the encoded result of the entire sentence pair from the pretrained BERT.
 Note that the first three elements of the polysemy token "crane" are different from those when the context is different.
 This supports that BERT representations are context-sensitive.
@@ -569,3 +569,64 @@ for downstream natural language processing applications.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1497)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@bert-pretraining-pretraining-bert-1
+
+@bert-pretraining-pretraining-bert-2
+
+:::
+
+::: {.slide}
+
+a small BERT, using 2 layers, 128 hidden units, and 2 self-attention heads
+
+@bert-pretraining-pretraining-bert-2-1
+
+:::
+
+::: {.slide}
+
+computes the loss for both the masked language modeling and next sentence prediction tasks
+
+@bert-pretraining-pretraining-bert-2-2
+
+:::
+
+::: {.slide}
+
+pretrain BERT (`net`) on the WikiText-2 (`train_iter`) dataset
+
+@bert-pretraining-pretraining-bert-2-3
+
+@bert-pretraining-pretraining-bert-2-4
+
+:::
+
+::: {.slide}
+
+Representing Text with BERT
+
+@bert-pretraining-representing-text-with-bert-1
+
+:::
+
+::: {.slide}
+
+Consider the sentence "a crane is flying"
+
+@bert-pretraining-representing-text-with-bert-2
+
+:::
+
+::: {.slide}
+
+Now consider a sentence pair
+"a crane driver came" and "he just left"
+
+@bert-pretraining-representing-text-with-bert-3
+
+:::

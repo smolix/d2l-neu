@@ -170,3 +170,17 @@ As can be seen, all the 34 fields are categorical features. Each value represent
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/405)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@ctr-feature-rich-recommender-systems
+
+@ctr-an-online-advertising-dataset
+
+@ctr-dataset-wrapper-1
+
+@ctr-dataset-wrapper-2
+
+:::

@@ -59,7 +59,7 @@ from flax import linen as nn
 import jax
 ```
 
-## (**VGG Blocks**)
+## VGG Blocks
 :label:`subsec_vgg-blocks`
 
 The basic building block of CNNs
@@ -138,7 +138,7 @@ def vgg_block(num_convs, out_channels):
     return nn.Sequential(layers)
 ```
 
-## [**VGG Network**]
+## VGG Network
 :label:`subsec_vgg-network`
 
 Like AlexNet and LeNet, 
@@ -276,10 +276,10 @@ different speed--accuracy trade-off when introducing a new architecture.
 
 ## Training
 
-[**Since VGG-11 is computationally more demanding than AlexNet
-we construct a network with a smaller number of channels.**]
+Since VGG-11 is computationally more demanding than AlexNet
+we construct a network with a smaller number of channels.
 This is more than sufficient for training on Fashion-MNIST.
-The [**model training**] process is similar to that of AlexNet in :numref:`sec_alexnet`. 
+The model training process is similar to that of AlexNet in :numref:`sec_alexnet`. 
 Again observe the close match between validation and training loss, 
 suggesting only a small amount of overfitting.
 
@@ -349,3 +349,34 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18002)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@vgg-networks-using-blocks-vgg
+
+VGG Blocks
+
+@vgg-vgg-blocks
+
+:::
+
+::: {.slide}
+
+VGG Network
+
+@vgg-vgg-network-1
+
+@vgg-vgg-network-2
+
+:::
+
+::: {.slide}
+
+Since VGG-11 is computationally more demanding than AlexNet
+we construct a network with a smaller number of channels. model training
+
+@vgg-training
+
+:::

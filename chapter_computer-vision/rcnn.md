@@ -409,3 +409,15 @@ in subsequent sections of this chapter.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1409)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rcnn-fast-r-cnn-1
+
+@rcnn-fast-r-cnn-2
+
+@rcnn-fast-r-cnn-3
+
+:::

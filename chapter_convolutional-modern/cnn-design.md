@@ -396,3 +396,22 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 [Discussions](https://discuss.d2l.ai/t/18009)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+
+@cnn-design-designing-convolutional-network-architectures
+
+@cnn-design-the-anynet-design-space-1
+
+@cnn-design-the-anynet-design-space-2
+
+@cnn-design-the-anynet-design-space-3
+
+@cnn-design-regnet-1
+
+@cnn-design-regnet-2
+
+@cnn-design-training
+
+:::

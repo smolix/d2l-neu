@@ -68,7 +68,7 @@ a *ground truth* linear function,
 corrupting them via additive noise $\boldsymbol{\epsilon}$, 
 drawn independently and identically for each example:
 
-(**$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$**)
+$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
 
 For convenience we assume that $\boldsymbol{\epsilon}$ is drawn 
 from a normal distribution with mean $\mu= 0$ 
@@ -144,7 +144,7 @@ Later, we can check our estimated parameters against these *ground truth* values
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
-[**Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar.**] Let's have a look at the first entry.
+Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar. Let's have a look at the first entry.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 print('features:', data.X[0],'\nlabel:', data.y[0])
@@ -156,10 +156,10 @@ Training machine learning models often requires multiple passes over a dataset,
 grabbing one minibatch of examples at a time. 
 This data is then used to update the model. 
 To illustrate how this works, we 
-[**implement the `get_dataloader` method,**] 
+implement the `get_dataloader` method, 
 registering it in the `SyntheticRegressionData` class via `add_to_class` (introduced in :numref:`oo-design-utilities`).
-It (**takes a batch size, a matrix of features,
-and a vector of labels, and generates minibatches of size `batch_size`.**)
+It takes a batch size, a matrix of features,
+and a vector of labels, and generates minibatches of size `batch_size`.
 As such, each minibatch consists of a tuple of features and labels. 
 Note that we need to be mindful of whether we're in training or validation mode: 
 in the former, we will want to read the data in random order, 
@@ -259,7 +259,7 @@ Next let's try to implement the same method using built-in iterators.
 ## Concise Implementation of the Data Loader
 
 Rather than writing our own iterator,
-we can [**call the existing API in a framework to load data.**]
+we can call the existing API in a framework to load data.
 As before, we need a dataset with features `X` and labels `y`. 
 Beyond that, we set `batch_size` in the built-in data loader 
 and let it take care of shuffling examples  efficiently.
@@ -391,3 +391,50 @@ We will put this to good use in the next section.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17975)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@synthetic-regression-data
+
+$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
+
+@synthetic-regression-data-generating-the-dataset-1
+
+@synthetic-regression-data-generating-the-dataset-2
+
+:::
+
+::: {.slide}
+
+Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar
+
+@synthetic-regression-data-generating-the-dataset-3
+
+:::
+
+::: {.slide}
+
+implement the `get_dataloader` method, takes a batch size, a matrix of features,
+and a vector of labels, and generates minibatches of size `batch_size`
+
+@synthetic-regression-data-reading-the-dataset-1
+
+@synthetic-regression-data-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+call the existing API in a framework to load data
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-1
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-3
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-4
+
+:::

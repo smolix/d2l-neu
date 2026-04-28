@@ -172,3 +172,13 @@ The main idea behind the Value Iteration algorithm is to use the principle of dy
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12005)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@value-iter-implementation-of-value-iteration-1
+
+@value-iter-implementation-of-value-iteration-2
+
+:::

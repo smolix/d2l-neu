@@ -300,7 +300,7 @@ We will touch upon more rigorous arguments in subsequent chapters.
 Activation functions are differentiable operators for transforming
 pre-activation signals to outputs, introducing nonlinearity into the network.
 Because activation functions are fundamental to deep learning,
-(**let's briefly survey some common ones**).
+let's briefly survey some common ones.
 
 ### ReLU Function
 
@@ -308,7 +308,7 @@ The most popular choice,
 due to both simplicity of implementation and
 its good performance on a variety of predictive tasks,
 is the *rectified linear unit* (*ReLU*) :cite:`Nair.Hinton.2010`.
-[**ReLU provides a very simple nonlinear transformation**].
+ReLU provides a very simple nonlinear transformation.
 Given an element $x$, the function is defined
 as the maximum of that element and $0$:
 
@@ -411,9 +411,9 @@ $$\operatorname{pReLU}(x) = \max(0, x) + \alpha \min(0, x).$$
 
 ### Sigmoid Function
 
-[**The *sigmoid function* transforms those inputs**]
+The *sigmoid function* transforms those inputs
 whose values lie in the domain $\mathbb{R}$,
-(**to outputs that lie on the interval (0, 1).**)
+to outputs that lie on the interval (0, 1).
 For that reason, the sigmoid is
 often called a *squashing function*:
 it squashes any input in the range (-inf, inf)
@@ -523,9 +523,9 @@ d2l.plot(x, grad_sigmoid(x), 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ### Tanh Function
 :label:`subsec_tanh`
 
-Like the sigmoid function, [**the tanh (hyperbolic tangent)
-function also squashes its inputs**],
-transforming them into elements on the interval (**between $-1$ and $1$**):
+Like the sigmoid function, the tanh (hyperbolic tangent)
+function also squashes its inputs,
+transforming them into elements on the interval between $-1$ and $1$:
 
 $$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$
 
@@ -655,3 +655,42 @@ in many cases.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17984)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@mlp-multilayer-perceptrons
+
+:::
+
+::: {.slide}
+
+let's briefly survey some common ones ReLU provides a very simple nonlinear transformation
+
+@mlp-relu-function-1
+
+@mlp-relu-function-2
+
+:::
+
+::: {.slide}
+
+The *sigmoid function* transforms those inputs to outputs that lie on the interval (0, 1)
+
+@mlp-sigmoid-function-1
+
+@mlp-sigmoid-function-2
+
+:::
+
+::: {.slide}
+
+the tanh (hyperbolic tangent)
+function also squashes its inputs between $-1$ and $1$
+
+@mlp-tanh-function-1
+
+@mlp-tanh-function-2
+
+:::

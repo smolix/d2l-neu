@@ -145,7 +145,7 @@ and positional encoding in :numref:`subsec_positional-encoding`.
 In the following, we will implement
 the rest of the Transformer model.
 
-## [**Positionwise Feed-Forward Networks**]
+## Positionwise Feed-Forward Networks
 :label:`subsec_positionwise-ffn`
 
 The positionwise feed-forward network transforms
@@ -218,8 +218,8 @@ class PositionWiseFFN(nn.Module):  #@save
 ```
 
 The following example
-shows that [**the innermost dimension
-of a tensor changes**] to
+shows that the innermost dimension
+of a tensor changes to
 the number of outputs in
 the positionwise feed-forward network.
 Since the same MLP transforms
@@ -280,8 +280,8 @@ tasks, where the inputs are often
 variable-length sequences.
 
 The following code snippet
-[**compares the normalization across different dimensions
-by layer normalization and batch normalization**].
+compares the normalization across different dimensions
+by layer normalization and batch normalization.
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-1}
 %%tab mxnet
@@ -324,7 +324,7 @@ print('layer norm:', ln.init_with_output(d2l.get_key(), X)[0],
 ```
 
 Now we can implement the `AddNorm` class
-[**using a residual connection followed by layer normalization**].
+using a residual connection followed by layer normalization.
 Dropout is also applied for regularization.
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-2}
@@ -384,7 +384,7 @@ class AddNorm(nn.Module):  #@save
 
 The residual connection requires that
 the two inputs are of the same shape
-so that [**the output tensor also has the same shape after the addition operation**].
+so that the output tensor also has the same shape after the addition operation.
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-3}
 %%tab mxnet
@@ -425,7 +425,7 @@ d2l.check_shape(output, shape)
 With all the essential components to assemble
 the Transformer encoder,
 let's start by
-implementing [**a single layer within the encoder**].
+implementing a single layer within the encoder.
 The following `TransformerEncoderBlock` class
 contains two sublayers: multi-head self-attention and positionwise feed-forward networks,
 where a residual connection followed by layer normalization is employed
@@ -512,8 +512,8 @@ class TransformerEncoderBlock(nn.Module):  #@save
 ```
 
 As we can see,
-[**no layer in the Transformer encoder
-changes the shape of its input.**]
+no layer in the Transformer encoder
+changes the shape of its input.
 
 ```{.python .input #transformer-encoder-2}
 %%tab mxnet
@@ -552,7 +552,7 @@ encoder_blk = TransformerEncoderBlock(24, 48, 8, 0.5)
 d2l.check_shape(output, X.shape)
 ```
 
-In the following [**Transformer encoder**] implementation,
+In the following Transformer encoder implementation,
 we stack `num_blks` instances of the above `TransformerEncoderBlock` classes.
 Since we use the fixed positional encoding
 whose values are always between $-1$ and $1$,
@@ -683,7 +683,7 @@ class TransformerEncoder(d2l.Encoder):  #@save
         return X
 ```
 
-Below we specify hyperparameters to [**create a two-layer Transformer encoder**].
+Below we specify hyperparameters to create a two-layer Transformer encoder.
 The shape of the Transformer encoder output
 is (batch size, number of time steps, `num_hiddens`).
 
@@ -719,8 +719,8 @@ d2l.check_shape(encoder.init_with_output(d2l.get_key(),
 ## Decoder
 
 As shown in :numref:`fig_transformer`,
-[**the Transformer decoder
-is composed of multiple identical layers**].
+the Transformer decoder
+is composed of multiple identical layers.
 Each layer is implemented in the following
 `TransformerDecoderBlock` class,
 which contains three sublayers:
@@ -956,8 +956,8 @@ class TransformerDecoderBlock(nn.Module):
 
 To support compatible dimensions for the scaled dot product operations
 in the encoder--decoder attention and the additions in the residual connections,
-[**the feature dimension (`num_hiddens`) of the decoder is
-the same as that of the encoder.**]
+the feature dimension (`num_hiddens`) of the decoder is
+the same as that of the encoder.
 
 ```{.python .input #transformer-decoder-2}
 %%tab mxnet
@@ -994,7 +994,7 @@ d2l.check_shape(decoder_blk.init_with_output(d2l.get_key(), X, state)[0][0],
                 X.shape)
 ```
 
-Now we [**construct the entire Transformer decoder**]
+Now we construct the entire Transformer decoder
 composed of `num_blks` instances of `TransformerDecoderBlock`.
 In the end,
 a fully connected layer computes the prediction
@@ -1174,7 +1174,7 @@ class TransformerDecoder(nn.Module):
         return self.dense(X), state
 ```
 
-## [**Training**]
+## Training
 
 Let's instantiate an encoder--decoder model
 by following the Transformer architecture.
@@ -1258,7 +1258,7 @@ trainer.fit(model, data)
 
 After training,
 we use the Transformer model
-to [**translate a few English sentences**] into French and compute their BLEU scores.
+to translate a few English sentences into French and compute their BLEU scores.
 
 ```{.python .input #transformer-training-2}
 %%tab pytorch
@@ -1324,7 +1324,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-Let's [**visualize the Transformer attention weights**] when translating the final English sentence into French.
+Let's visualize the Transformer attention weights when translating the final English sentence into French.
 The shape of the encoder self-attention weights
 is (number of encoder layers, number of attention heads, `num_steps` or number of queries, `num_steps` or number of key-value pairs).
 
@@ -1377,8 +1377,8 @@ d2l.show_heatmaps(
     figsize=(7, 3.5))
 ```
 
-[**To visualize the decoder self-attention weights and the encoder--decoder attention weights,
-we need more data manipulations.**]
+To visualize the decoder self-attention weights and the encoder--decoder attention weights,
+we need more data manipulations.
 For example,
 we fill the masked attention weights with zero.
 Note that
@@ -1461,8 +1461,8 @@ d2l.show_heatmaps(
 
 Similar to the case in the encoder self-attention,
 via the specified valid length of the input sequence,
-[**no query from the output sequence
-attends to those padding tokens from the input sequence.**]
+no query from the output sequence
+attends to those padding tokens from the input sequence.
 
 ```{.python .input #transformer-training-8}
 d2l.show_heatmaps(
@@ -1516,3 +1516,159 @@ transforms the representation at all the sequence positions using the same MLP.
 [Discussions](https://discuss.d2l.ai/t/18031)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+
+@transformer-the-transformer-architecture
+
+:::
+
+::: {.slide}
+
+Positionwise Feed-Forward Networks
+
+@transformer-positionwise-feed-forward-networks-1
+
+:::
+
+::: {.slide}
+
+the innermost dimension
+of a tensor changes
+
+@transformer-positionwise-feed-forward-networks-2
+
+:::
+
+::: {.slide}
+
+compares the normalization across different dimensions
+by layer normalization and batch normalization
+
+@transformer-residual-connection-and-layer-normalization-1
+
+:::
+
+::: {.slide}
+
+using a residual connection followed by layer normalization
+
+@transformer-residual-connection-and-layer-normalization-2
+
+:::
+
+::: {.slide}
+
+the output tensor also has the same shape after the addition operation
+
+@transformer-residual-connection-and-layer-normalization-3
+
+:::
+
+::: {.slide}
+
+a single layer within the encoder
+
+@transformer-encoder-1
+
+:::
+
+::: {.slide}
+
+no layer in the Transformer encoder
+changes the shape of its input
+
+@transformer-encoder-2
+
+:::
+
+::: {.slide}
+
+Transformer encoder
+
+@transformer-encoder-3
+
+:::
+
+::: {.slide}
+
+create a two-layer Transformer encoder
+
+@transformer-encoder-4
+
+:::
+
+::: {.slide}
+
+the Transformer decoder
+is composed of multiple identical layers
+
+@transformer-decoder-1
+
+:::
+
+::: {.slide}
+
+the feature dimension (`num_hiddens`) of the decoder is
+the same as that of the encoder
+
+@transformer-decoder-2
+
+:::
+
+::: {.slide}
+
+construct the entire Transformer decoder
+
+@transformer-decoder-3
+
+:::
+
+::: {.slide}
+
+Training
+
+@transformer-training-1
+
+:::
+
+::: {.slide}
+
+translate a few English sentences
+
+@transformer-training-2
+
+:::
+
+::: {.slide}
+
+visualize the Transformer attention weights
+
+@transformer-training-3
+
+@transformer-training-4
+
+:::
+
+::: {.slide}
+
+To visualize the decoder self-attention weights and the encoder--decoder attention weights,
+we need more data manipulations
+
+@transformer-training-5
+
+@transformer-training-6
+
+@transformer-training-7
+
+:::
+
+::: {.slide}
+
+no query from the output sequence
+attends to those padding tokens from the input sequence
+
+@transformer-training-8
+
+:::

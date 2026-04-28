@@ -1115,3 +1115,23 @@ interval centered on the expectation.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17971)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@probability-probability-and-statistics
+
+@probability-a-simple-example-tossing-coins-1
+
+@probability-a-simple-example-tossing-coins-2
+
+@probability-a-simple-example-tossing-coins-3
+
+@probability-a-simple-example-tossing-coins-4
+
+@probability-a-simple-example-tossing-coins-5
+
+@probability-a-simple-example-tossing-coins-6
+
+:::

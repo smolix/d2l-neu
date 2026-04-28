@@ -170,7 +170,7 @@ In summary, GRUs have the following two distinguishing features:
 
 To gain a better understanding of the GRU model, let's implement it from scratch.
 
-### (**Initializing Model Parameters**)
+### Initializing Model Parameters
 
 The first step is to initialize the model parameters.
 We draw the weights from a Gaussian distribution
@@ -251,7 +251,7 @@ class GRUScratch(d2l.Module):
 
 ### Defining the Model
 
-Now we are ready to [**define the GRU forward computation**].
+Now we are ready to define the GRU forward computation.
 Its structure is the same as that of the basic RNN cell, 
 except that the update equations are more complex.
 
@@ -346,7 +346,7 @@ def forward(self, inputs, H=None):
 
 ### Training
 
-[**Training**] a language model on *The Time Machine* dataset
+Training a language model on *The Time Machine* dataset
 works in exactly the same manner as in :numref:`sec_rnn-scratch`.
 
 ```{.python .input #gru-training}
@@ -386,7 +386,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 In high-level APIs, we can directly instantiate a GRU model.
 This encapsulates all the configuration detail that we made explicit above.
@@ -519,3 +519,43 @@ They can also skip subsequences by turning on the update gate.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18017)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@gru-gated-recurrent-units-gru
+
+Initializing Model Parameters
+
+@gru-initializing-model-parameters
+
+:::
+
+::: {.slide}
+
+define the GRU forward computation
+
+@gru-defining-the-model
+
+:::
+
+::: {.slide}
+
+Training
+
+@gru-training
+
+:::
+
+::: {.slide}
+
+Concise Implementation
+
+@gru-concise-implementation-1
+
+@gru-concise-implementation-2
+
+@gru-concise-implementation-3
+
+:::

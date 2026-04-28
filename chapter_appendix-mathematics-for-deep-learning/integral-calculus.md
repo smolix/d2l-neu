@@ -626,3 +626,17 @@ We will meet this integral again when we study continuous random variables in :n
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1093)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@integral-calculus-geometric-interpretation-1
+
+@integral-calculus-geometric-interpretation-2
+
+@integral-calculus-geometric-interpretation-3
+
+@integral-calculus-multiple-integrals
+
+:::

@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # The Image Classification Dataset
 :label:`sec_fashion_mnist`
 
-(~~The MNIST dataset is one of the widely used dataset for image classification, while it is too simple as a benchmark dataset. We will use the similar, but more complex Fashion-MNIST dataset ~~)
+
 
 One widely used dataset for image classification is the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998` of handwritten digits. At the time of its release in the 1990s it posed a formidable challenge to most machine learning algorithms, consisting of 60,000 images of $28 \times 28$ pixel resolution (plus a test dataset of 10,000 images). To put things into perspective, back in 1995, a Sun SPARCStation 5 with a whopping 64MB of RAM and a blistering 5 MFLOPs was considered state-of-the-art equipment for machine learning at AT&T Bell Laboratories. Achieving high accuracy on digit recognition was a key component in automating letter sorting for the USPS in the 1990s. Deep networks such as LeNet-5 :cite:`LeCun.Jackel.Bottou.ea.1995`, support vector machines with invariances :cite:`Scholkopf.Burges.Vapnik.1996`, and tangent distance classifiers :cite:`Simard.LeCun.Denker.ea.1998` all could reach error rates below 1%. 
 
@@ -68,7 +68,7 @@ d2l.use_svg_display()
 
 ## Loading the Dataset
 
-Since the Fashion-MNIST dataset is so useful, all major frameworks provide preprocessed versions of it. We can [**download and read it into memory using built-in framework utilities.**]
+Since the Fashion-MNIST dataset is so useful, all major frameworks provide preprocessed versions of it. We can download and read it into memory using built-in framework utilities.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-1}
 %%tab mxnet
@@ -135,7 +135,7 @@ By convention we store an image as a $c \times h \times w$ tensor, where $c$ is 
 data.train[0][0].shape
 ```
 
-[~~Two utility functions to visualize the dataset~~]
+
 
 The categories of Fashion-MNIST have human-understandable names. 
 The following convenience method converts between numeric labels and their names.
@@ -154,7 +154,7 @@ def text_labels(self, indices):
 To make our life easier when reading from the training and test sets,
 we use the built-in data iterator rather than creating one from scratch.
 Recall that at each iteration, a data iterator
-[**reads a minibatch of data with size `batch_size`.**]
+reads a minibatch of data with size `batch_size`.
 We also randomly shuffle the examples for the training data iterator.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
@@ -239,7 +239,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
 ```
 
 Let's put it to good use. In general, it is a good idea to visualize and inspect data that you are training on. 
-Humans are very good at spotting oddities and because of that, visualization serves as an additional safeguard against mistakes and errors in the design of experiments. Here are [**the images and their corresponding labels**] (in text)
+Humans are very good at spotting oddities and because of that, visualization serves as an additional safeguard against mistakes and errors in the design of experiments. Here are the images and their corresponding labels (in text)
 for the first few examples in the training dataset.
 
 ```{.python .input #image-classification-dataset-visualization-2}
@@ -321,3 +321,55 @@ Lastly, data iterators are a key component for efficient performance. For instan
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17980)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+The MNIST dataset is one of the widely used dataset for image classification, while it is too simple as a benchmark dataset. We will use the similar, but more complex Fashion-MNIST dataset
+
+@image-classification-dataset-the-image-classification-dataset
+
+:::
+
+::: {.slide}
+
+download and read it into memory using built-in framework utilities
+
+@image-classification-dataset-loading-the-dataset-1
+
+@image-classification-dataset-loading-the-dataset-2
+
+@image-classification-dataset-loading-the-dataset-3
+
+:::
+
+::: {.slide}
+
+Two utility functions to visualize the dataset
+
+@image-classification-dataset-loading-the-dataset-4
+
+:::
+
+::: {.slide}
+
+reads a minibatch of data with size `batch_size`
+
+@image-classification-dataset-reading-a-minibatch-1
+
+@image-classification-dataset-reading-a-minibatch-2
+
+@image-classification-dataset-reading-a-minibatch-3
+
+@image-classification-dataset-visualization-1
+
+:::
+
+::: {.slide}
+
+the images and their corresponding labels
+
+@image-classification-dataset-visualization-2
+
+:::

@@ -65,7 +65,7 @@ import multiprocessing
 import os
 ```
 
-## [**Loading Pretrained BERT**]
+## Loading Pretrained BERT
 
 We have explained how to pretrain BERT on the WikiText-2 dataset in
 :numref:`sec_bert-dataset` and :numref:`sec_bert-pretraining`
@@ -187,7 +187,7 @@ def _load_torch_state_dict(path):
 
 Either pretrained BERT model contains a "vocab.json" file that defines the vocabulary set
 and a "pretrained.params" file of the pretrained parameters.
-We implement the following `load_pretrained_model` function to [**load pretrained BERT parameters**].
+We implement the following `load_pretrained_model` function to load pretrained BERT parameters.
 
 ```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
 #@tab mxnet
@@ -458,7 +458,7 @@ bert, vocab = load_pretrained_model(
     num_blks=2, dropout=0.1, max_len=512, devices=devices)
 ```
 
-## [**The Dataset for Fine-Tuning BERT**]
+## The Dataset for Fine-Tuning BERT
 
 For the downstream task natural language inference on the SNLI dataset,
 we define a customized dataset class `SNLIBERTDataset`.
@@ -693,7 +693,7 @@ class SNLIBERTDataset:
 ```
 
 After downloading the SNLI dataset,
-we [**generate training and testing examples**]
+we generate training and testing examples
 by instantiating the `SNLIBERTDataset` class.
 Such examples will be read in minibatches during training and testing
 of natural language inference.
@@ -769,10 +769,10 @@ requires only an extra MLP consisting of two fully connected layers
 (see `self.hidden` and `self.output`---named `self.output_layer` in the
 TensorFlow tab to avoid clashing with Keras's reserved `output` property---in
 the following `BERTClassifier` class).
-[**This MLP transforms the
-BERT representation of the special “&lt;cls&gt;” token**],
+This MLP transforms the
+BERT representation of the special “&lt;cls&gt;” token,
 which encodes the information of both the premise and the hypothesis,
-(**into three outputs of natural language inference**):
+into three outputs of natural language inference:
 entailment, contradiction, and neutral.
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
@@ -897,7 +897,7 @@ To allow parameters with stale gradients,
 the flag `ignore_stale_grad=True` is set in the `step` function of `d2l.train_batch_ch13`.
 We use this function to train and evaluate the model `net` using the training set
 (`train_iter`) and the testing set (`test_iter`) of SNLI.
-Due to the limited computational resources, [**the training**] and testing accuracy
+Due to the limited computational resources, the training and testing accuracy
 can be further improved: we leave its discussions in the exercises.
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
@@ -1013,3 +1013,64 @@ net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1526)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@natural-language-inference-bert-natural-language-inference-fine-tuning-bert
+
+:::
+
+::: {.slide}
+
+Loading Pretrained BERT
+
+@natural-language-inference-bert-loading-pretrained-bert-1
+
+:::
+
+::: {.slide}
+
+load pretrained BERT parameters
+
+@natural-language-inference-bert-loading-pretrained-bert-2
+
+@natural-language-inference-bert-loading-pretrained-bert-3
+
+:::
+
+::: {.slide}
+
+The Dataset for Fine-Tuning BERT
+
+@natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1
+
+:::
+
+::: {.slide}
+
+generate training and testing examples
+
+@natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2
+
+:::
+
+::: {.slide}
+
+This MLP transforms the
+BERT representation of the special “&lt;cls&gt;” token into three outputs of natural language inference
+
+@natural-language-inference-bert-fine-tuning-bert-1
+
+@natural-language-inference-bert-fine-tuning-bert-2
+
+:::
+
+::: {.slide}
+
+the training
+
+@natural-language-inference-bert-fine-tuning-bert-3
+
+:::

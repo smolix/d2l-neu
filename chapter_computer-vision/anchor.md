@@ -67,7 +67,7 @@ Suppose that the input image has a height of $h$ and width of $w$.
 We generate anchor boxes with different shapes centered on each pixel of the image.
 Let the *scale* be $s\in (0, 1]$ and
 the *aspect ratio* (ratio of width to height) is $r > 0$. 
-Then [**the width and height of the anchor box are $ws\sqrt{r}$ and $hs/\sqrt{r}$, respectively.**]
+Then the width and height of the anchor box are $ws\sqrt{r}$ and $hs/\sqrt{r}$, respectively.
 Note that when the center position is given, an anchor box with known width and height is determined.
 
 To generate multiple anchor boxes with different shapes,
@@ -78,10 +78,10 @@ When using all the combinations of these scales and aspect ratios with each pixe
 the input image will have a total of $whnm$ anchor boxes. Although these anchor boxes may cover all the
 ground-truth bounding boxes, the computational complexity is easily too high.
 In practice,
-we can only (**consider those combinations
-containing**) $s_1$ or $r_1$:
+we can only consider those combinations
+containing $s_1$ or $r_1$:
 
-(**$$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$**)
+$$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$
 
 That is to say, the number of anchor boxes centered on the same pixel is $n+m-1$. For the entire input image, we will generate a total of $wh(n+m-1)$ anchor boxes.
 
@@ -251,7 +251,7 @@ def multibox_prior(data, sizes, ratios):
     return tf.expand_dims(output, axis=0)
 ```
 
-We can see that [**the shape of the returned anchor box variable `Y`**] is
+We can see that the shape of the returned anchor box variable `Y` is
 (batch size, number of anchor boxes, 4).
 
 ```{.python .input #anchor-generating-multiple-anchor-boxes-2}
@@ -301,7 +301,7 @@ Y.shape
 After changing the shape of the anchor box variable `Y` to (image height, image width, number of anchor boxes centered on the same pixel, 4),
 we can obtain all the anchor boxes centered on a specified pixel position.
 In the following,
-we [**access the first anchor box centered on (250, 250)**]. It has four elements: the $(x, y)$-axis coordinates at the upper-left corner and the $(x, y)$-axis coordinates at the lower-right corner of the anchor box.
+we access the first anchor box centered on (250, 250). It has four elements: the $(x, y)$-axis coordinates at the upper-left corner and the $(x, y)$-axis coordinates at the lower-right corner of the anchor box.
 The coordinate values of both axes
 are divided by the width and height of the image, respectively.
 
@@ -317,7 +317,7 @@ boxes = tf.reshape(Y, (h, w, 5, 4))
 boxes[250, 250, 0, :]
 ```
 
-In order to [**show all the anchor boxes centered on one pixel in the image**],
+In order to show all the anchor boxes centered on one pixel in the image,
 we define the following `show_bboxes` function to draw multiple bounding boxes on the image.
 
 ```{.python .input #anchor-generating-multiple-anchor-boxes-4}
@@ -373,7 +373,7 @@ show_bboxes(fig.axes, boxes[250, 250, :, :] * bbox_scale,
              's=0.75, r=0.5'])
 ```
 
-## [**Intersection over Union (IoU)**]
+## Intersection over Union (IoU)
 
 We just mentioned that an anchor box "well" surrounds the dog in the image.
 If the ground-truth bounding box of the object is known, how can "well" here be quantified?
@@ -519,7 +519,7 @@ In the following,
 we describe an algorithm for assigning
 closest ground-truth bounding boxes to anchor boxes. 
 
-### [**Assigning Ground-Truth Bounding Boxes to Anchor Boxes**]
+### Assigning Ground-Truth Bounding Boxes to Anchor Boxes
 
 Given an image,
 suppose that the anchor boxes are $A_1, A_2, \ldots, A_{n_a}$ and the ground-truth bounding boxes are $B_1, B_2, \ldots, B_{n_b}$, where $n_a \geq n_b$.
@@ -688,7 +688,7 @@ that may lead to
 more uniformly distributed offsets
 that are easier to fit.
 Here we describe a common transformation.
-[**Given the central coordinates of $A$ and $B$ as $(x_a, y_a)$ and $(x_b, y_b)$, 
+Given the central coordinates of $A$ and $B$ as $(x_a, y_a)$ and $(x_b, y_b)$, 
 their widths as $w_a$ and $w_b$, 
 and their heights as $h_a$ and $h_b$, respectively. 
 We may label the offset of $A$ as
@@ -697,7 +697,7 @@ $$\left( \frac{ \frac{x_b - x_a}{w_a} - \mu_x }{\sigma_x},
 \frac{ \frac{y_b - y_a}{h_a} - \mu_y }{\sigma_y},
 \frac{ \log \frac{w_b}{w_a} - \mu_w }{\sigma_w},
 \frac{ \log \frac{h_b}{h_a} - \mu_h }{\sigma_h}\right),$$
-**]
+
 where default values of the constants are $\mu_x = \mu_y = \mu_w = \mu_h = 0, \sigma_x=\sigma_y=0.1$, and $\sigma_w=\sigma_h=0.2$.
 This transformation is implemented below in the `offset_boxes` function.
 
@@ -717,7 +717,7 @@ If an anchor box is not assigned a ground-truth bounding box, we just label the 
 Anchor boxes whose classes are background are often referred to as *negative* anchor boxes,
 and the rest are called *positive* anchor boxes.
 We implement the following `multibox_target` function
-to [**label classes and offsets for anchor boxes**] (the `anchors` argument) using ground-truth bounding boxes (the `labels` argument).
+to label classes and offsets for anchor boxes (the `anchors` argument) using ground-truth bounding boxes (the `labels` argument).
 This function sets the background class to zero and increments the integer index of a new class by one.
 
 ```{.python .input #anchor-labeling-classes-and-offsets-2}
@@ -882,9 +882,9 @@ We also construct five anchor boxes to be labeled
 using the coordinates of
 the upper-left corner and the lower-right corner:
 $A_0, \ldots, A_4$ (the index starts from 0).
-Then we [**plot these ground-truth bounding boxes 
+Then we plot these ground-truth bounding boxes 
 and anchor boxes 
-in the image.**]
+in the image.
 
 ```{.python .input #anchor-an-example-1}
 ground_truth = d2l.tensor([[0, 0.1, 0.08, 0.52, 0.92],
@@ -899,9 +899,9 @@ show_bboxes(fig.axes, anchors * bbox_scale, ['0', '1', '2', '3', '4']);
 ```
 
 Using the `multibox_target` function defined above,
-we can [**label classes and offsets
+we can label classes and offsets
 of these anchor boxes based on
-the ground-truth bounding boxes**] for the dog and cat.
+the ground-truth bounding boxes for the dog and cat.
 In this example, indices of
 the background, dog, and cat classes
 are 0, 1, and 2, respectively. 
@@ -986,8 +986,8 @@ is thus obtained according to
 an anchor box with its predicted offset.
 Below we implement the `offset_inverse` function
 that takes in anchors and
-offset predictions as inputs and [**applies inverse offset transformations to
-return the predicted bounding box coordinates**].
+offset predictions as inputs and applies inverse offset transformations to
+return the predicted bounding box coordinates.
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-1}
 #@save
@@ -1028,7 +1028,7 @@ Then we manipulate the sorted list $L$ in the following steps:
 1. Repeat the above process until all the predicted bounding boxes in $L$ have been used as a basis. At this time, the IoU of any pair of predicted bounding boxes in $L$ is below the threshold $\epsilon$; thus, no pair is too similar with each other. 
 1. Output all the predicted bounding boxes in the list $L$.
 
-[**The following `nms` function sorts confidence scores in descending order and returns their indices.**]
+The following `nms` function sorts confidence scores in descending order and returns their indices.
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
 #@tab mxnet
@@ -1121,8 +1121,8 @@ def nms(boxes, scores, iou_threshold):
 ```
 
 We define the following `multibox_detection`
-to [**apply non-maximum suppression
-to predicting bounding boxes**].
+to apply non-maximum suppression
+to predicting bounding boxes.
 Do not worry if you find the implementation
 a bit complicated: we will show how it works
 with a concrete example right after the implementation.
@@ -1279,8 +1279,8 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
     return tf.stack(out)
 ```
 
-Now let's [**apply the above implementations
-to a concrete example with four anchor boxes**].
+Now let's apply the above implementations
+to a concrete example with four anchor boxes.
 For simplicity, we assume that the
 predicted offsets are all zeros.
 This means that the predicted bounding boxes are anchor boxes. 
@@ -1308,7 +1308,7 @@ cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood
                       [0.1, 0.2, 0.3, 0.9]])  # Predicted cat likelihood
 ```
 
-We can [**plot these predicted bounding boxes with their confidence on the image.**]
+We can plot these predicted bounding boxes with their confidence on the image.
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-5}
 fig = d2l.plt.imshow(img)
@@ -1322,7 +1322,7 @@ where the threshold is set to 0.5.
 Note that we add
 a dimension for examples in the tensor input.
 
-We can see that [**the shape of the returned result**] is
+We can see that the shape of the returned result is
 (batch size, number of anchor boxes, 6).
 The six elements in the innermost dimension
 gives the output information for the same predicted bounding box.
@@ -1369,8 +1369,8 @@ output
 
 After removing those predicted bounding boxes
 of class -1, 
-we can [**output the final predicted bounding box
-kept by non-maximum suppression**].
+we can output the final predicted bounding box
+kept by non-maximum suppression.
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-7}
 fig = d2l.plt.imshow(img)
@@ -1418,3 +1418,172 @@ in the final output.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1603)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@anchor-anchor-boxes
+
+:::
+
+::: {.slide}
+
+the width and height of the anchor box are $ws\sqrt{r}$ and $hs/\sqrt{r}$, respectively. consider those combinations
+containing $$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$
+
+@anchor-generating-multiple-anchor-boxes-1
+
+:::
+
+::: {.slide}
+
+the shape of the returned anchor box variable `Y`
+
+@anchor-generating-multiple-anchor-boxes-2
+
+:::
+
+::: {.slide}
+
+access the first anchor box centered on (250, 250)
+
+@anchor-generating-multiple-anchor-boxes-3
+
+:::
+
+::: {.slide}
+
+show all the anchor boxes centered on one pixel in the image
+
+@anchor-generating-multiple-anchor-boxes-4
+
+@anchor-generating-multiple-anchor-boxes-5
+
+:::
+
+::: {.slide}
+
+Intersection over Union (IoU)
+
+@anchor-intersection-over-union-iou
+
+:::
+
+::: {.slide}
+
+Assigning Ground-Truth Bounding Boxes to Anchor Boxes
+
+@anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes
+
+:::
+
+::: {.slide}
+
+Given the central coordinates of $A$ and $B$ as $(x_a, y_a)$ and $(x_b, y_b)$, 
+their widths as $w_a$ and $w_b$, 
+and their heights as $h_a$ and $h_b$, respectively. 
+We may label the offset of $A$ as
+
+$$\left( \frac{ \frac{x_b - x_a}{w_a} - \mu_x }{\sigma_x},
+\frac{ \frac{y_b - y_a}{h_a} - \mu_y }{\sigma_y},
+\frac{ \log \frac{w_b}{w_a} - \mu_w }{\sigma_w},
+\frac{ \log \frac{h_b}{h_a} - \mu_h }{\sigma_h}\right),$$
+
+@anchor-labeling-classes-and-offsets-1
+
+:::
+
+::: {.slide}
+
+label classes and offsets for anchor boxes
+
+@anchor-labeling-classes-and-offsets-2
+
+:::
+
+::: {.slide}
+
+plot these ground-truth bounding boxes 
+and anchor boxes 
+in the image
+
+@anchor-an-example-1
+
+:::
+
+::: {.slide}
+
+label classes and offsets
+of these anchor boxes based on
+the ground-truth bounding boxes
+
+@anchor-an-example-2
+
+@anchor-an-example-3
+
+@anchor-an-example-4
+
+@anchor-an-example-5
+
+:::
+
+::: {.slide}
+
+applies inverse offset transformations to
+return the predicted bounding box coordinates
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-1
+
+:::
+
+::: {.slide}
+
+The following `nms` function sorts confidence scores in descending order and returns their indices
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-2
+
+:::
+
+::: {.slide}
+
+apply non-maximum suppression
+to predicting bounding boxes
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-3
+
+:::
+
+::: {.slide}
+
+apply the above implementations
+to a concrete example with four anchor boxes
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-4
+
+:::
+
+::: {.slide}
+
+plot these predicted bounding boxes with their confidence on the image
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
+
+:::
+
+::: {.slide}
+
+the shape of the returned result
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-6
+
+:::
+
+::: {.slide}
+
+output the final predicted bounding box
+kept by non-maximum suppression
+
+@anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
+
+:::

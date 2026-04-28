@@ -487,3 +487,33 @@ This is quite different from what we saw previously. All print statements, as de
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/2492)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@hybridize-compilers-and-interpreters
+
+@hybridize-symbolic-programming
+
+@hybridize-hybridizing-the-sequential-class-1
+
+@hybridize-hybridizing-the-sequential-class-2
+
+@hybridize-acceleration-by-hybridization-1
+
+@hybridize-acceleration-by-hybridization-2
+
+@hybridize-serialization-1
+
+@hybridize-serialization-2
+
+@hybridize-serialization-3
+
+@hybridize-serialization-4
+
+@hybridize-serialization-5
+
+@hybridize-serialization-6
+
+:::

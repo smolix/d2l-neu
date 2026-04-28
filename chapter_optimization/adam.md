@@ -295,3 +295,17 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1079)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@adam-implementation-1
+
+@adam-implementation-2
+
+@adam-implementation-3
+
+@adam-yogi
+
+:::

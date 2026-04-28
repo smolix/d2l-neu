@@ -60,7 +60,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-(**We start by focusing on an MLP with one hidden layer.**)
+We start by focusing on an MLP with one hidden layer.
 
 ```{.python .input #parameters-parameter-management-2}
 %%tab mxnet
@@ -104,7 +104,7 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape
 ```
 
-## [**Parameter Access**]
+## Parameter Access
 :label:`subsec_param-access`
 
 Let's start with how to access parameters
@@ -155,7 +155,7 @@ corresponding to that layer's
 weights and biases, respectively.
 
 
-### [**Targeted Parameters**]
+### Targeted Parameters
 
 Note that each parameter is represented
 as an instance of the parameter class.
@@ -214,7 +214,7 @@ net[1].weight.grad()
 net[2].weight.grad == None
 ```
 
-### [**All Parameters at Once**]
+### All Parameters at Once
 
 When we need to perform operations on all parameters,
 accessing them one-by-one can grow tedious.
@@ -245,7 +245,7 @@ net.get_weights()
 jax.tree_util.tree_map(lambda x: x.shape, params)
 ```
 
-## [**Tied Parameters**]
+## Tied Parameters
 
 Often, we want to share parameters across multiple layers.
 Let's see how to do this elegantly.
@@ -374,3 +374,49 @@ We have several ways of accessing and tying model parameters.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17990)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@parameters-parameter-management-1
+
+We start by focusing on an MLP with one hidden layer
+
+@parameters-parameter-management-2
+
+:::
+
+::: {.slide}
+
+Parameter Access
+
+@parameters-parameter-access
+
+:::
+
+::: {.slide}
+
+Targeted Parameters
+
+@parameters-targeted-parameters-1
+
+@parameters-targeted-parameters-2
+
+:::
+
+::: {.slide}
+
+All Parameters at Once
+
+@parameters-all-parameters-at-once
+
+:::
+
+::: {.slide}
+
+Tied Parameters
+
+@parameters-tied-parameters
+
+:::

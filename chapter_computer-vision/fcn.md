@@ -90,7 +90,7 @@ for the input pixel at the same spatial position.
 ![Fully convolutional network.](../img/fcn.svg)
 :label:`fig_fcn`
 
-Below, we [**use a ResNet-18 model pretrained on the ImageNet dataset to extract image features**]
+Below, we use a ResNet-18 model pretrained on the ImageNet dataset to extract image features
 and denote the model instance as `pretrained_net`.
 The last few layers of this model
 include a global average pooling layer
@@ -190,7 +190,7 @@ pretrained_net = keras.applications.ResNet50(
 pretrained_net.layers[-3:]
 ```
 
-Next, we [**create the fully convolutional network instance `net`**].
+Next, we create the fully convolutional network instance `net`.
 It copies all the pretrained layers in the ResNet-18
 except for the final global average pooling layer
 and the fully connected layer that are closest
@@ -250,8 +250,8 @@ X = tf.random.uniform(shape=(1, 320, 480, 3))
 net(X).shape
 ```
 
-Next, we [**use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset.**]
-Finally, we need to (**increase the height and width of the feature maps by 32 times**) to change them back to the height and width of the input image. 
+Next, we use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset.
+Finally, we need to increase the height and width of the feature maps by 32 times to change them back to the height and width of the input image. 
 Recall how to calculate 
 the output shape of a convolutional layer in :numref:`sec_padding`. 
 Since $(320-64+16\times2+32)/32=10$ and $(480-64+16\times2+32)/32=15$, we construct a transposed convolutional layer with stride of $32$, 
@@ -326,7 +326,7 @@ fcn_net = keras.Model(inputs=inputs, outputs=x)
 print('FCN output shape:', fcn_net(tf.random.uniform((1, 320, 480, 3))).shape)
 ```
 
-## [**Initializing Transposed Convolutional Layers**]
+## Initializing Transposed Convolutional Layers
 
 
 We already know that
@@ -434,7 +434,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return weight
 ```
 
-Let's [**experiment with upsampling of bilinear interpolation**] 
+Let's experiment with upsampling of bilinear interpolation 
 that is implemented by a transposed convolutional layer. 
 We construct a transposed convolutional layer that 
 doubles the height and weight,
@@ -565,7 +565,7 @@ print('output image shape:', out_img.shape)
 d2l.plt.imshow(np.clip(out_img, 0, 1));
 ```
 
-In a fully convolutional network, we [**initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization.**]
+In a fully convolutional network, we initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization.
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
 #@tab mxnet
@@ -611,7 +611,7 @@ for layer in fcn_net.layers:
         break
 ```
 
-## [**Reading the Dataset**]
+## Reading the Dataset
 
 We read
 the semantic segmentation dataset
@@ -624,7 +624,7 @@ batch_size, crop_size = 32, (320, 480)
 train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
 ```
 
-## [**Training**]
+## Training
 
 
 Now we can train our constructed
@@ -712,7 +712,7 @@ fcn_net.compile(
 fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)
 ```
 
-## [**Prediction**]
+## Prediction
 
 
 When predicting, we need to standardize the input image
@@ -757,7 +757,7 @@ def predict(img):
     return tf.reshape(tf.argmax(pred, axis=-1), pred.shape[1:3])
 ```
 
-To [**visualize the predicted class**] of each pixel, we map the predicted class back to its label color in the dataset.
+To visualize the predicted class of each pixel, we map the predicted class back to its label color in the dataset.
 
 ```{.python .input #fcn-prediction-2}
 #@tab mxnet
@@ -901,3 +901,99 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1582)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@fcn-fully-convolutional-networks
+
+:::
+
+::: {.slide}
+
+use a ResNet-18 model pretrained on the ImageNet dataset to extract image features
+
+@fcn-the-model-1
+
+:::
+
+::: {.slide}
+
+create the fully convolutional network instance `net`
+
+@fcn-the-model-2
+
+@fcn-the-model-3
+
+:::
+
+::: {.slide}
+
+use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset. increase the height and width of the feature maps by 32 times
+
+@fcn-the-model-4
+
+:::
+
+::: {.slide}
+
+Initializing Transposed Convolutional Layers
+
+@fcn-initializing-transposed-convolutional-layers-1
+
+:::
+
+::: {.slide}
+
+experiment with upsampling of bilinear interpolation
+
+@fcn-initializing-transposed-convolutional-layers-2
+
+@fcn-initializing-transposed-convolutional-layers-3
+
+@fcn-initializing-transposed-convolutional-layers-4
+
+:::
+
+::: {.slide}
+
+initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization
+
+@fcn-initializing-transposed-convolutional-layers-5
+
+:::
+
+::: {.slide}
+
+Reading the Dataset
+
+@fcn-reading-the-dataset
+
+:::
+
+::: {.slide}
+
+Training
+
+@fcn-training
+
+:::
+
+::: {.slide}
+
+Prediction
+
+@fcn-prediction-1
+
+:::
+
+::: {.slide}
+
+visualize the predicted class
+
+@fcn-prediction-2
+
+@fcn-prediction-3
+
+:::

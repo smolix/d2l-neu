@@ -237,3 +237,27 @@ print(segment_BPE(tokens, symbols))
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/4587)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@subword-embedding-byte-pair-encoding-1
+
+@subword-embedding-byte-pair-encoding-2
+
+@subword-embedding-byte-pair-encoding-3
+
+@subword-embedding-byte-pair-encoding-4
+
+@subword-embedding-byte-pair-encoding-5
+
+@subword-embedding-byte-pair-encoding-6
+
+@subword-embedding-byte-pair-encoding-7
+
+@subword-embedding-byte-pair-encoding-8
+
+@subword-embedding-byte-pair-encoding-9
+
+:::

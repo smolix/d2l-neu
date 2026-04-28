@@ -122,8 +122,8 @@ That is to say, using the $2\times 2$ max-pooling layer,
 we can still detect if the pattern recognized by the convolutional layer
 moves no more than one element in height or width.
 
-In the code below, we (**implement the forward propagation
-of the pooling layer**) in the `pool2d` function.
+In the code below, we implement the forward propagation
+of the pooling layer in the `pool2d` function.
 This function is similar to the `corr2d` function
 in :numref:`sec_conv_layer`.
 However, no kernel is needed, computing the output
@@ -174,20 +174,20 @@ def pool2d(X, pool_size, mode='max'):
     return Y
 ```
 
-We can construct the input tensor `X` in :numref:`fig_pooling` to [**validate the output of the two-dimensional max-pooling layer**].
+We can construct the input tensor `X` in :numref:`fig_pooling` to validate the output of the two-dimensional max-pooling layer.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-2}
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 pool2d(X, (2, 2))
 ```
 
-Also, we can experiment with (**the average pooling layer**).
+Also, we can experiment with the average pooling layer.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-3}
 pool2d(X, (2, 2), 'avg')
 ```
 
-## [**Padding and Stride**]
+## Padding and Stride
 
 As with convolutional layers, pooling layers
 change the output shape.
@@ -215,7 +215,7 @@ X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 4, 4, 1))
 X
 ```
 
-Since pooling aggregates information from an area, (**deep learning frameworks default to matching pooling window sizes and stride.**) For instance, if we use a pooling window of shape `(3, 3)`
+Since pooling aggregates information from an area, deep learning frameworks default to matching pooling window sizes and stride. For instance, if we use a pooling window of shape `(3, 3)`
 we get a stride shape of `(3, 3)` by default.
 
 ```{.python .input #pooling-padding-and-stride-2}
@@ -245,7 +245,7 @@ pool2d(X)
 nn.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 ```
 
-Needless to say, [**the stride and padding can be manually specified**] to override framework defaults if required.
+Needless to say, the stride and padding can be manually specified to override framework defaults if required.
 
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab mxnet
@@ -308,7 +308,7 @@ nn.max_pool(X_padded, window_shape=(2, 3), strides=(2, 3), padding='VALID')
 ## Multiple Channels
 
 When processing multi-channel input data,
-[**the pooling layer pools each input channel separately**],
+the pooling layer pools each input channel separately,
 rather than summing the inputs up over channels
 as in a convolutional layer.
 This means that the number of output channels for the pooling layer
@@ -407,3 +407,59 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 [Discussions](https://discuss.d2l.ai/t/17999)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+
+@pooling
+
+implement the forward propagation
+of the pooling layer
+
+@pooling-maximum-pooling-and-average-pooling-1
+
+:::
+
+::: {.slide}
+
+validate the output of the two-dimensional max-pooling layer
+
+@pooling-maximum-pooling-and-average-pooling-2
+
+the average pooling layer
+
+@pooling-maximum-pooling-and-average-pooling-3
+
+:::
+
+::: {.slide}
+
+Padding and Stride
+
+@pooling-padding-and-stride-1
+
+deep learning frameworks default to matching pooling window sizes and stride
+
+@pooling-padding-and-stride-2
+
+:::
+
+::: {.slide}
+
+the stride and padding can be manually specified
+
+@pooling-padding-and-stride-3
+
+@pooling-padding-and-stride-4
+
+:::
+
+::: {.slide}
+
+the pooling layer pools each input channel separately
+
+@pooling-multiple-channels-1
+
+@pooling-multiple-channels-2
+
+:::

@@ -86,9 +86,9 @@ to *increase* or *decrease* each parameter
 by an infinitesimally small amount.
 Formally, for functions $f: \mathbb{R} \rightarrow \mathbb{R}$,
 that map from scalars to scalars,
-[**the *derivative* of $f$ at a point $x$ is defined as**]
+the *derivative* of $f$ at a point $x$ is defined as
 
-(**$$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$**)
+$$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$
 :eqlabel:`eq_derivative`
 
 This term on the right hand side is called a *limit* 
@@ -122,7 +122,7 @@ $f'(x)$
 as the *instantaneous* rate of change 
 of $f(x)$ with respect to $x$.
 Let's develop some intuition with an example.
-(**Define $u = f(x) = 3x^2-4x$.**)
+Define $u = f(x) = 3x^2-4x$.
 
 ```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab mxnet
@@ -148,8 +148,8 @@ def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-[**Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$**] (**approaches $2$
-as $h$ approaches $0$.**)
+Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$ approaches $2$
+as $h$ approaches $0$.
 While this experiment lacks 
 the rigor of a mathematical proof,
 we can quickly see that indeed $f'(1) = 2$.
@@ -191,7 +191,7 @@ at a particular location.
 
 ## Visualization Utilities
 
-[**We can visualize the slopes of functions using the `matplotlib` library**].
+We can visualize the slopes of functions using the `matplotlib` library.
 We need to define a few functions. 
 As its name indicates, `use_svg_display` 
 tells `matplotlib` to output graphics 
@@ -269,7 +269,7 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
     set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
 ```
 
-Now we can [**plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$**],
+Now we can plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$,
 where the coefficient $2$ is the slope of the tangent line.
 
 ```{.python .input #calculus-visualization-utilities-5}
@@ -447,3 +447,50 @@ throughout this book will require calculating the gradient.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17969)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@calculus
+
+:::
+
+::: {.slide}
+
+the *derivative* of $f$ at a point $x$ is defined as $$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$ Define $u = f(x) = 3x^2-4x$
+
+@calculus-derivatives-and-differentiation-1
+
+:::
+
+::: {.slide}
+
+Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$ approaches $2$
+as $h$ approaches $0$
+
+@calculus-derivatives-and-differentiation-2
+
+:::
+
+::: {.slide}
+
+We can visualize the slopes of functions using the `matplotlib` library
+
+@calculus-visualization-utilities-1
+
+@calculus-visualization-utilities-2
+
+@calculus-visualization-utilities-3
+
+@calculus-visualization-utilities-4
+
+:::
+
+::: {.slide}
+
+plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$
+
+@calculus-visualization-utilities-5
+
+:::

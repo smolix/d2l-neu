@@ -82,7 +82,7 @@ using attention is depicted in :numref:`fig_s2s_attention_details`. Note that la
 ## Defining the Decoder with Attention
 
 To implement the RNN encoder--decoder with attention,
-we only need to redefine the decoder (omitting the generated symbols from the attention function simplifies the design). Let's begin with [**the base interface for decoders with attention**] by defining the quite unsurprisingly named `AttentionDecoder` class.
+we only need to redefine the decoder (omitting the generated symbols from the attention function simplifies the design). Let's begin with the base interface for decoders with attention by defining the quite unsurprisingly named `AttentionDecoder` class.
 
 ```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-1}
 %%tab pytorch, mxnet, tensorflow
@@ -110,7 +110,7 @@ class AttentionDecoder(d2l.Decoder):  #@save
         raise NotImplementedError
 ```
 
-We need to [**implement the RNN decoder**]
+We need to implement the RNN decoder
 in the `Seq2SeqAttentionDecoder` class.
 The state of the decoder is initialized with
 (i) the hidden states of the last layer of the encoder at all time steps, used as keys and values for attention;
@@ -328,8 +328,8 @@ class Seq2SeqAttentionDecoder(nn.Module):
                                             enc_valid_lens]
 ```
 
-In the following, we [**test the implemented
-decoder**] with attention
+In the following, we test the implemented
+decoder with attention
 using a minibatch of four sequences, each of which are seven time steps long.
 
 ```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
@@ -395,7 +395,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-## [**Training**]
+## Training
 
 Now that we specified the new decoder we can proceed analogously to :numref:`sec_seq2seq_training`:
 specify the hyperparameters, instantiate
@@ -460,7 +460,7 @@ trainer.fit(model, data)
 ```
 
 After the model is trained,
-we use it to [**translate a few English sentences**]
+we use it to translate a few English sentences
 into French and compute their BLEU scores.
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -527,7 +527,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-Let's [**visualize the attention weights**]
+Let's visualize the attention weights
 when translating the last English sentence.
 We see that each query assigns non-uniform weights
 over key--value pairs.
@@ -629,3 +629,61 @@ In the RNN encoder--decoder, the Bahdanau attention mechanism treats the decoder
 [Discussions](https://discuss.d2l.ai/t/18028)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+
+@bahdanau-attention-the-bahdanau-attention-mechanism
+
+:::
+
+::: {.slide}
+
+the base interface for decoders with attention
+
+@bahdanau-attention-defining-the-decoder-with-attention-1
+
+:::
+
+::: {.slide}
+
+implement the RNN decoder
+
+@bahdanau-attention-defining-the-decoder-with-attention-2
+
+:::
+
+::: {.slide}
+
+test the implemented
+decoder
+
+@bahdanau-attention-defining-the-decoder-with-attention-3
+
+:::
+
+::: {.slide}
+
+Training
+
+@bahdanau-attention-training-1
+
+:::
+
+::: {.slide}
+
+translate a few English sentences
+
+@bahdanau-attention-training-2
+
+:::
+
+::: {.slide}
+
+visualize the attention weights
+
+@bahdanau-attention-training-3
+
+@bahdanau-attention-training-4
+
+:::

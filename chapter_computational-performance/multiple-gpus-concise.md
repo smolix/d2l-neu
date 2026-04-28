@@ -40,7 +40,7 @@ import tensorflow as tf
 import keras
 ```
 
-## [**A Toy Network**]
+## A Toy Network
 
 Let's use a slightly more meaningful network than LeNet from :numref:`sec_multi_gpu` that is still sufficiently easy and quick to train.
 We pick a ResNet-18 variant :cite:`He.Zhang.Ren.ea.2016`. Since the input images are tiny we modify it slightly. In particular, the difference from :numref:`sec_resnet` is that we use a smaller convolution kernel, stride, and padding at the beginning.
@@ -252,7 +252,7 @@ weight.data(devices[0])[0], weight.data(devices[1])[0]
 ```
 
 :begin_tab:`mxnet`
-Next, let's replace the code to [**evaluate the accuracy**] by one that works (**in parallel across multiple devices**). This serves as a replacement of the `evaluate_accuracy_gpu` function from :numref:`sec_lenet`. The main difference is that we split a minibatch before invoking the network. All else is essentially identical.
+Next, let's replace the code to evaluate the accuracy by one that works in parallel across multiple devices. This serves as a replacement of the `evaluate_accuracy_gpu` function from :numref:`sec_lenet`. The main difference is that we split a minibatch before invoking the network. All else is essentially identical.
 :end_tab:
 
 ```{.python .input #multiple-gpus-concise-network-initialization-4}
@@ -274,7 +274,7 @@ def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
     return metric[0] / metric[1]
 ```
 
-## [**Training**]
+## Training
 
 As before, the training code needs to perform several basic functions for efficient parallelism:
 
@@ -460,7 +460,7 @@ def train(num_gpus, batch_size, lr):
           f'on {str([g.name for g in gpus])}')
 ```
 
-Let's see how this works in practice. As a warm-up we [**train the network on a single GPU.**]
+Let's see how this works in practice. As a warm-up we train the network on a single GPU.
 
 ```{.python .input #multiple-gpus-concise-training-2}
 #@tab mxnet
@@ -482,7 +482,7 @@ train(num_devices=1, batch_size=256, lr=0.1)
 train(num_gpus=1, batch_size=256, lr=0.1)
 ```
 
-Next we [**use 2 GPUs for training**]. Compared with LeNet
+Next we use 2 GPUs for training. Compared with LeNet
 evaluated in :numref:`sec_multi_gpu`,
 the model for ResNet-18 is considerably more complex. This is where parallelization shows its advantage. The time for computation is meaningfully larger than the time for synchronizing parameters. This improves scalability since the overhead for parallelization is less relevant.
 
@@ -569,3 +569,57 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1403)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@multiple-gpus-concise-concise-implementation-for-multiple-gpus
+
+:::
+
+::: {.slide}
+
+A Toy Network
+
+@multiple-gpus-concise-a-toy-network
+
+@multiple-gpus-concise-network-initialization-1
+
+@multiple-gpus-concise-network-initialization-2
+
+@multiple-gpus-concise-network-initialization-3
+
+:::
+
+::: {.slide}
+
+evaluate the accuracy in parallel across multiple devices
+
+@multiple-gpus-concise-network-initialization-4
+
+:::
+
+::: {.slide}
+
+Training
+
+@multiple-gpus-concise-training-1
+
+:::
+
+::: {.slide}
+
+train the network on a single GPU
+
+@multiple-gpus-concise-training-2
+
+:::
+
+::: {.slide}
+
+use 2 GPUs for training
+
+@multiple-gpus-concise-training-3
+
+:::

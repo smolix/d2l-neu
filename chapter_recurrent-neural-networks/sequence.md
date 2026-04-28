@@ -392,11 +392,11 @@ Before we focus our attention on text data,
 let's first try this out with some
 continuous-valued synthetic data.
 
-(**Here, our 1000 synthetic data will follow
+Here, our 1000 synthetic data will follow
 the trigonometric `sin` function,
 applied to 0.01 times the time step.
 To make the problem a little more interesting,
-we corrupt each sample with additive noise.**)
+we corrupt each sample with additive noise.
 From this sequence we extract training examples,
 each consisting of features and a label.
 
@@ -446,9 +446,9 @@ d2l.plot(data.time, data.x, 'time', 'x', xlim=[1, 1000], figsize=(6, 3))
 To begin, we try a model that acts as if
 the data satisfied a $\tau^{\textrm{th}}$-order Markov condition,
 and thus predicts $x_t$ using only the past $\tau$ observations.
-[**Thus for each time step we have an example
+Thus for each time step we have an example
 with label $y  = x_t$ and features
-$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$.**]
+$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$.
 The astute reader might have noticed that
 this results in $1000-\tau$ examples,
 since we lack sufficient history for $y_1, \ldots, y_\tau$.
@@ -456,7 +456,7 @@ While we could pad the first $\tau$ sequences with zeros,
 to keep things simple, we drop them for now.
 The resulting dataset contains $T - \tau$ examples,
 where each input to the model has sequence length $\tau$.
-We (**create a data iterator on the first 600 examples**),
+We create a data iterator on the first 600 examples,
 covering a period of the sin function.
 
 ```{.python .input #sequence-training-3}
@@ -479,8 +479,8 @@ trainer.fit(model, data)
 
 ## Prediction
 
-[**To evaluate our model, we first check
-how well it performs at one-step-ahead prediction**].
+To evaluate our model, we first check
+how well it performs at one-step-ahead prediction.
 
 ```{.python .input #sequence-prediction-1}
 %%tab pytorch, mxnet, tensorflow
@@ -588,7 +588,7 @@ accuracy declines rapidly.
 We will discuss methods for improving this
 throughout this chapter and beyond.
 
-Let's [**take a closer look at the difficulties in $k$-step-ahead predictions**]
+Let's take a closer look at the difficulties in $k$-step-ahead predictions
 by computing predictions on the entire sequence for $k = 1, 4, 16, 64$.
 
 ```{.python .input #sequence-prediction-4}
@@ -681,3 +681,56 @@ often dramatically.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18010)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sequence-working-with-sequences
+
+Here, our 1000 synthetic data will follow
+the trigonometric `sin` function,
+applied to 0.01 times the time step.
+To make the problem a little more interesting,
+we corrupt each sample with additive noise
+
+@sequence-training-1
+
+@sequence-training-2
+
+:::
+
+::: {.slide}
+
+Thus for each time step we have an example
+with label $y  = x_t$ and features
+$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$. create a data iterator on the first 600 examples
+
+@sequence-training-3
+
+@sequence-training-4
+
+:::
+
+::: {.slide}
+
+To evaluate our model, we first check
+how well it performs at one-step-ahead prediction
+
+@sequence-prediction-1
+
+@sequence-prediction-2
+
+@sequence-prediction-3
+
+:::
+
+::: {.slide}
+
+take a closer look at the difficulties in $k$-step-ahead predictions
+
+@sequence-prediction-4
+
+@sequence-prediction-5
+
+:::

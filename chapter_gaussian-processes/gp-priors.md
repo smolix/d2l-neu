@@ -173,3 +173,15 @@ Gaussian processes are a relatively general model class, containing many example
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12116)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@gp-priors-gaussian-process-priors
+
+@gp-priors-a-simple-gaussian-process
+
+@gp-priors-the-radial-basis-function-rbf-kernel
+
+:::

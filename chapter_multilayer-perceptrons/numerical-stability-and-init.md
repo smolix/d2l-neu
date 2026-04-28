@@ -105,7 +105,7 @@ rendering learning impossible as parameters
 hardly move on each update.
 
 
-### (**Vanishing Gradients**)
+### Vanishing Gradients
 
 One frequent culprit causing the vanishing gradient problem
 is the choice of the activation function $\sigma$
@@ -159,8 +159,8 @@ d2l.plot(x, [y, grad_sigmoid(x)],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-As you can see, (**the sigmoid's gradient vanishes
-both when its inputs are large and when they are small**).
+As you can see, the sigmoid's gradient vanishes
+both when its inputs are large and when they are small.
 Moreover, when backpropagating through many layers,
 unless we are in the Goldilocks zone, where
 the inputs to many of the sigmoids are close to zero,
@@ -174,7 +174,7 @@ Consequently, ReLUs, which are more stable
 have emerged as the default choice for practitioners.
 
 
-### [**Exploding Gradients**]
+### Exploding Gradients
 
 The opposite problem, when gradients explode,
 can be similarly vexing.
@@ -423,3 +423,24 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17986)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@numerical-stability-and-init-numerical-stability-and-initialization
+
+Vanishing Gradients
+
+@numerical-stability-and-init-vanishing-gradients
+
+:::
+
+::: {.slide}
+
+the sigmoid's gradient vanishes
+both when its inputs are large and when they are small Exploding Gradients
+
+@numerical-stability-and-init-exploding-gradients
+
+:::

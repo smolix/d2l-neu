@@ -123,8 +123,8 @@ import jax
 from jax import numpy as jnp
 ```
 
-[**To begin, we revisit the code
-that we used to implement MLPs**]
+To begin, we revisit the code
+that we used to implement MLPs
 (:numref:`sec_mlp`).
 The following code generates a network
 with one fully connected hidden layer
@@ -200,7 +200,7 @@ the `Block` class's `__call__` method.
 In this example, we constructed
 our model by instantiating an `nn.Sequential`, with layers in the order
 that they should be executed passed as arguments.
-In short, (**`nn.Sequential` defines a special kind of `Module`**),
+In short, `nn.Sequential` defines a special kind of `Module`,
 the class that presents a module in PyTorch.
 It maintains an ordered list of constituent `Module`s.
 Note that each of the two fully connected layers is an instance of the `Linear` class
@@ -232,7 +232,7 @@ a slick Python trick achieved via
 the module class's `__call__` method.
 :end_tab:
 
-## [**A Custom Module**]
+## A Custom Module
 
 Perhaps the easiest way to develop intuition
 about how a module works
@@ -334,9 +334,9 @@ and training them on different data.
 Naturally, we would expect them
 to represent two different learned models.
 
-We [**instantiate the MLP's layers**]
+We instantiate the MLP's layers
 in the constructor
-(**and subsequently invoke these layers**)
+and subsequently invoke these layers
 on each call to the forward propagation method.
 Note a few key details.
 First, our customized `__init__` method
@@ -389,7 +389,7 @@ such as when addressing
 convolutional neural networks.
 
 
-## [**The Sequential Module**]
+## The Sequential Module
 :label:`subsec_model-construction-sequential`
 
 We can now take a closer look
@@ -525,7 +525,7 @@ for the `Sequential` class
 (as described in :numref:`sec_mlp`).
 
 
-## [**Executing Code in the Forward Propagation Method**]
+## Executing Code in the Forward Propagation Method
 
 The `Sequential` class makes model construction easy,
 allowing us to assemble new architectures
@@ -707,8 +707,8 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X)
 ```
 
-We can [**mix and match various
-ways of assembling modules together.**]
+We can mix and match various
+ways of assembling modules together.
 In the following example, we nest modules
 in some creative ways.
 
@@ -816,3 +816,65 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17989)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@model-construction-layers-and-modules-1
+
+:::
+
+::: {.slide}
+
+To begin, we revisit the code
+that we used to implement MLPs
+
+@model-construction-layers-and-modules-2
+
+:::
+
+::: {.slide}
+
+`nn.Sequential` defines a special kind of `Module` A Custom Module
+
+@model-construction-a-custom-module-1
+
+:::
+
+::: {.slide}
+
+instantiate the MLP's layers and subsequently invoke these layers
+
+@model-construction-a-custom-module-2
+
+:::
+
+::: {.slide}
+
+The Sequential Module
+
+@model-construction-the-sequential-module-1
+
+@model-construction-the-sequential-module-2
+
+:::
+
+::: {.slide}
+
+Executing Code in the Forward Propagation Method
+
+@model-construction-executing-code-in-the-forward-propagation-method-1
+
+@model-construction-executing-code-in-the-forward-propagation-method-2
+
+:::
+
+::: {.slide}
+
+mix and match various
+ways of assembling modules together
+
+@model-construction-executing-code-in-the-forward-propagation-method-3
+
+:::

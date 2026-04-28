@@ -397,3 +397,19 @@ operations (`nn.Embedding`, `nn.Conv2d`, BPR / margin loss) that port
 straightforwardly to either framework — see the PyTorch sources as a
 reference implementation.
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@seqrec-model-architectures
+
+@seqrec-model-implementation
+
+@seqrec-sequential-dataset-with-negative-sampling
+
+@seqrec-load-the-movielens-100k-dataset
+
+@seqrec-train-the-model
+
+:::

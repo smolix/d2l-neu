@@ -52,8 +52,8 @@ by other components of MXNet.
 :end_tab:
 
 :begin_tab:`pytorch`
-(**To start, we import the PyTorch library.
-Note that the package name is `torch`.**)
+To start, we import the PyTorch library.
+Note that the package name is `torch`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -84,7 +84,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-[**A tensor represents a (possibly multidimensional) array of numerical values.**]
+A tensor represents a (possibly multidimensional) array of numerical values.
 In the one-dimensional case, i.e., when only one axis is needed for the data,
 a tensor is called a *vector*.
 With two axes, a tensor is called a *matrix*.
@@ -196,7 +196,7 @@ x.numel()
 tf.size(x)
 ```
 
-(**We can access a tensor's *shape***) 
+We can access a tensor's *shape* 
 (the length along each axis)
 by inspecting its `shape` attribute.
 Because we are dealing with a vector here,
@@ -207,8 +207,8 @@ and is identical to the size.
 x.shape
 ```
 
-We can [**change the shape of a tensor
-without altering its size or values**],
+We can change the shape of a tensor
+without altering its size or values,
 by invoking `reshape`.
 For example, we can transform 
 our vector `x` whose shape is (12,) 
@@ -246,7 +246,7 @@ we could have equivalently called `x.reshape(-1, 4)` or `x.reshape(3, -1)`.
 
 Practitioners often need to work with tensors
 initialized to contain all 0s or 1s.
-[**We can construct a tensor with all elements set to 0**] (~~or one~~)
+We can construct a tensor with all elements set to 0 
 and a shape of (2, 3, 4) via the `zeros` function.
 
 ```{.python .input #ndarray-getting-started-6}
@@ -293,7 +293,7 @@ jnp.ones((2, 3, 4))
 ```
 
 We often wish to 
-[**sample each element randomly (and independently)**] 
+sample each element randomly (and independently) 
 from a given probability distribution.
 For example, the parameters of neural networks
 are often initialized randomly.
@@ -326,7 +326,7 @@ jax.random.normal(jax.random.PRNGKey(0), (3, 4))
 ```
 
 Finally, we can construct tensors by
-[**supplying the exact values for each element**]
+supplying the exact values for each element
 via (possibly nested) Python list(s)
 containing numerical literals.
 Here, we construct a matrix with a list of lists,
@@ -369,15 +369,15 @@ Finally, when only one index (or slice)
 is specified for a $k^\textrm{th}$-order tensor,
 it is applied along axis 0.
 Thus, in the following code,
-[**`[-1]` selects the last row and `[1:3]`
-selects the second and third rows**].
+`[-1]` selects the last row and `[1:3]`
+selects the second and third rows.
 
 ```{.python .input #ndarray-indexing-and-slicing-1}
 X[-1], X[1:3]
 ```
 
 :begin_tab:`mxnet, pytorch`
-Beyond reading them, (**we can also *write* elements of a matrix by specifying indices.**)
+Beyond reading them, we can also *write* elements of a matrix by specifying indices.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -412,9 +412,9 @@ X_new_1 = X.at[1, 2].set(17)
 X_new_1
 ```
 
-If we want [**to assign multiple elements the same value,
+If we want to assign multiple elements the same value,
 we apply the indexing on the left-hand side 
-of the assignment operation.**]
+of the assignment operation.
 For instance, `[:2, :]` accesses 
 the first and second rows,
 where `:` takes all the elements along axis 1 (column).
@@ -543,7 +543,7 @@ such as dot products and matrix multiplications.
 We will elaborate on these
 in :numref:`sec_linear-algebra`.
 
-We can also [***concatenate* multiple tensors,**]
+We can also *concatenate* multiple tensors,
 stacking them end-to-end to form a larger one.
 We just need to provide a list of tensors
 and tell the system along which axis to concatenate.
@@ -584,7 +584,7 @@ jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
 ```
 
 Sometimes, we want to 
-[**construct a binary tensor via *logical statements*.**]
+construct a binary tensor via *logical statements*.
 Take `X == Y` as an example.
 For each position `i, j`, if `X[i, j]` and `Y[i, j]` are equal, 
 then the corresponding entry in the result takes value `1`,
@@ -594,7 +594,7 @@ otherwise it takes value `0`.
 X == Y
 ```
 
-[**Summing all the elements in the tensor**] yields a tensor with only one element.
+Summing all the elements in the tensor yields a tensor with only one element.
 
 ```{.python .input #ndarray-operations-5}
 %%tab mxnet, pytorch, jax
@@ -614,8 +614,8 @@ elementwise binary operations
 on two tensors of the same shape. 
 Under certain conditions,
 even when shapes differ, 
-we can still [**perform elementwise binary operations
-by invoking the *broadcasting mechanism*.**]
+we can still perform elementwise binary operations
+by invoking the *broadcasting mechanism*.
 Broadcasting works according to 
 the following two-step procedure:
 (i) expand one or both arrays
@@ -667,8 +667,8 @@ a + b
 
 ## Saving Memory
 
-[**Running operations can cause new memory to be
-allocated to host results.**]
+Running operations can cause new memory to be
+allocated to host results.
 For example, if we write `Y = X + Y`,
 we dereference the tensor that `Y` used to point to
 and instead point `Y` at the newly allocated memory.
@@ -702,7 +702,7 @@ lest we spring a memory leak
 or inadvertently refer to stale parameters.
 
 :begin_tab:`mxnet, pytorch`
-Fortunately, (**performing in-place operations**) is easy.
+Fortunately, performing in-place operations is easy.
 We can assign the result of an operation
 to a previously allocated array `Y`
 by using slice notation: `Y[:] = <expression>`.
@@ -753,9 +753,9 @@ print('id(Z):', id(Z))
 ```
 
 :begin_tab:`mxnet, pytorch`
-[**If the value of `X` is not reused in subsequent computations,
+If the value of `X` is not reused in subsequent computations,
 we can also use `X[:] = X + Y` or `X += Y`
-to reduce the memory overhead of the operation.**]
+to reduce the memory overhead of the operation.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -798,7 +798,7 @@ computation(X, Y)
 ## Conversion to Other Python Objects
 
 :begin_tab:`mxnet, tensorflow`
-[**Converting to a NumPy tensor (`ndarray`)**], or vice versa, is easy.
+Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The converted result does not share memory.
 This minor inconvenience is actually quite important:
 when you perform operations on the CPU or on GPUs,
@@ -809,7 +809,7 @@ with the same chunk of memory.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**Converting to a NumPy tensor (`ndarray`)**], or vice versa, is easy.
+Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The torch tensor and NumPy array 
 will share their underlying memory, 
 and changing one through an in-place operation 
@@ -844,7 +844,7 @@ B = jax.device_put(A)
 type(A), type(B)
 ```
 
-To (**convert a size-1 tensor to a Python scalar**),
+To convert a size-1 tensor to a Python scalar,
 we can invoke the `item` function or Python's built-in functions.
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-2}
@@ -897,3 +897,160 @@ Tensors provide a variety of functionalities including construction routines; in
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17966)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+To start, we import the PyTorch library.
+Note that the package name is `torch`
+
+@ndarray-getting-started-1
+
+:::
+
+::: {.slide}
+
+A tensor represents a (possibly multidimensional) array of numerical values
+
+@ndarray-getting-started-2
+
+@ndarray-getting-started-3
+
+We can access a tensor's *shape*
+
+@ndarray-getting-started-4
+
+:::
+
+::: {.slide}
+
+change the shape of a tensor
+without altering its size or values
+
+@ndarray-getting-started-5
+
+:::
+
+::: {.slide}
+
+We can construct a tensor with all elements set to 0 or one
+
+@ndarray-getting-started-6
+
+@ndarray-getting-started-7
+
+:::
+
+::: {.slide}
+
+sample each element randomly (and independently)
+
+@ndarray-getting-started-8
+
+:::
+
+::: {.slide}
+
+supplying the exact values for each element
+
+@ndarray-getting-started-9
+
+:::
+
+::: {.slide}
+
+`[-1]` selects the last row and `[1:3]`
+selects the second and third rows
+
+@ndarray-indexing-and-slicing-1
+
+we can also *write* elements of a matrix by specifying indices
+
+@ndarray-indexing-and-slicing-2
+
+:::
+
+::: {.slide}
+
+to assign multiple elements the same value,
+we apply the indexing on the left-hand side 
+of the assignment operation
+
+@ndarray-indexing-and-slicing-3
+
+@ndarray-operations-1
+
+@ndarray-operations-2
+
+:::
+
+::: {.slide}
+
+*concatenate* multiple tensors
+
+@ndarray-operations-3
+
+:::
+
+::: {.slide}
+
+construct a binary tensor via *logical statements*
+
+@ndarray-operations-4
+
+:::
+
+::: {.slide}
+
+Summing all the elements in the tensor
+
+@ndarray-operations-5
+
+:::
+
+::: {.slide}
+
+perform elementwise binary operations
+by invoking the *broadcasting mechanism*
+
+@ndarray-broadcasting-1
+
+@ndarray-broadcasting-2
+
+:::
+
+::: {.slide}
+
+Running operations can cause new memory to be
+allocated to host results
+
+@ndarray-saving-memory-1
+
+performing in-place operations
+
+@ndarray-saving-memory-2
+
+:::
+
+::: {.slide}
+
+If the value of `X` is not reused in subsequent computations,
+we can also use `X[:] = X + Y` or `X += Y`
+to reduce the memory overhead of the operation
+
+@ndarray-saving-memory-3
+
+:::
+
+::: {.slide}
+
+Converting to a NumPy tensor (`ndarray`) Converting to a NumPy tensor (`ndarray`)
+
+@ndarray-conversion-to-other-python-objects-1
+
+convert a size-1 tensor to a Python scalar
+
+@ndarray-conversion-to-other-python-objects-2
+
+:::

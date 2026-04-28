@@ -116,28 +116,28 @@ def apply(img, aug, num_rows=2, num_cols=4, scale=1.5):
 ### Flipping and Cropping
 
 :begin_tab:`mxnet`
-[**Flipping the image left and right**] usually does not change the category of the object. 
+Flipping the image left and right usually does not change the category of the object. 
 This is one of the earliest and most widely used methods of image augmentation.
 Next, we use the `transforms` module to create the `RandomFlipLeftRight` instance, which flips
 an image left and right with a 50% chance.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**Flipping the image left and right**] usually does not change the category of the object. 
+Flipping the image left and right usually does not change the category of the object. 
 This is one of the earliest and most widely used methods of image augmentation.
 Next, we use the `transforms` module to create the `RandomHorizontalFlip` instance, which flips
 an image left and right with a 50% chance.
 :end_tab:
 
 :begin_tab:`jax`
-[**Flipping the image left and right**] usually does not change the category of the object. 
+Flipping the image left and right usually does not change the category of the object. 
 This is one of the earliest and most widely used methods of image augmentation.
 Next, we define a `RandomHorizontalFlip` function using `tf.image`, which flips
 an image left and right with a 50% chance. We convert between PIL images and TensorFlow tensors as needed.
 :end_tab:
 
 :begin_tab:`tensorflow`
-[**Flipping the image left and right**] usually does not change the category of the object. 
+Flipping the image left and right usually does not change the category of the object. 
 This is one of the earliest and most widely used methods of image augmentation.
 Next, we define a `RandomHorizontalFlip` function using `tf.image`, which flips
 an image left and right with a 50% chance. We convert between PIL images and TensorFlow tensors as needed.
@@ -178,25 +178,25 @@ apply(img, RandomHorizontalFlip())
 ```
 
 :begin_tab:`mxnet`
-[**Flipping up and down**] is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
+Flipping up and down is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
 Next, we create a `RandomFlipTopBottom` instance to flip
 an image up and down with a 50% chance.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**Flipping up and down**] is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
+Flipping up and down is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
 Next, we create a `RandomVerticalFlip` instance to flip
 an image up and down with a 50% chance.
 :end_tab:
 
 :begin_tab:`jax`
-[**Flipping up and down**] is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
+Flipping up and down is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
 Next, we create a `RandomVerticalFlip` function to flip
 an image up and down with a 50% chance.
 :end_tab:
 
 :begin_tab:`tensorflow`
-[**Flipping up and down**] is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
+Flipping up and down is not as common as flipping left and right. But at least for this example image, flipping up and down does not hinder recognition.
 Next, we create a `RandomVerticalFlip` function to flip
 an image up and down with a 50% chance.
 :end_tab:
@@ -239,7 +239,7 @@ In the example image we used, the cat is in the middle of the image, but this ma
 In :numref:`sec_pooling`, we explained that the pooling layer can reduce the sensitivity of a convolutional layer to the target position.
 In addition, we can also randomly crop the image to make objects appear in different positions in the image at different scales, which can also reduce the sensitivity of a model to the target position.
 
-In the code below, we [**randomly crop**] an area with an area of $10\% \sim 100\%$ of the original area each time, and the ratio of width to height of this area is randomly selected from $0.5 \sim 2$. Then, the width and height of the region are both scaled to 200 pixels. 
+In the code below, we randomly crop an area with an area of $10\% \sim 100\%$ of the original area each time, and the ratio of width to height of this area is randomly selected from $0.5 \sim 2$. Then, the width and height of the region are both scaled to 200 pixels. 
 Unless otherwise specified, the random number between $a$ and $b$ in this section refers to a continuous value obtained by random and uniform sampling from the interval $[a, b]$.
 
 ```{.python .input #image-augmentation-flipping-and-cropping-3}
@@ -316,7 +316,7 @@ apply(img, shape_aug)
 
 ### Changing Colors
 
-Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we [**randomly change the brightness**] of the image to a value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
+Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we randomly change the brightness of the image to a value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
 
 ```{.python .input #image-augmentation-changing-colors-1}
 #@tab mxnet
@@ -355,7 +355,7 @@ def RandomBrightness(max_delta):
 apply(img, RandomBrightness(0.5))
 ```
 
-Similarly, we can [**randomly change the hue**] of the image.
+Similarly, we can randomly change the hue of the image.
 
 ```{.python .input #image-augmentation-changing-colors-2}
 #@tab mxnet
@@ -394,7 +394,7 @@ def RandomHue(max_delta):
 apply(img, RandomHue(0.5))
 ```
 
-We can also create a `RandomColorJitter` instance and set how to [**randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time**].
+We can also create a `RandomColorJitter` instance and set how to randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time.
 
 ```{.python .input #image-augmentation-changing-colors-3}
 #@tab mxnet
@@ -460,7 +460,7 @@ apply(img, color_aug)
 
 ### Combining Multiple Image Augmentation Methods
 
-In practice, we will [**combine multiple image augmentation methods**]. 
+In practice, we will combine multiple image augmentation methods. 
 For example,
 we can combine the different image augmentation methods defined above and apply them to each image via a `Compose` instance.
 
@@ -504,7 +504,7 @@ augs = Compose([RandomHorizontalFlip(), color_aug, shape_aug])
 apply(img, augs)
 ```
 
-## [**Training with Image Augmentation**]
+## Training with Image Augmentation
 
 Let's train a model with image augmentation.
 Here we use the CIFAR-10 dataset instead of the Fashion-MNIST dataset that we used before. 
@@ -539,7 +539,7 @@ d2l.show_images([Image.fromarray(train_images[i]) for i in range(32)],
 ```
 
 In order to obtain definitive results during prediction, we usually only apply image augmentation to training examples, and do not use image augmentation with random operations during prediction. 
-[**Here we only use the simplest random left-right flipping method**]. In addition, we use a `ToTensor` instance to convert a minibatch of images into the format required by the deep learning framework, i.e., 
+Here we only use the simplest random left-right flipping method. In addition, we use a `ToTensor` instance to convert a minibatch of images into the format required by the deep learning framework, i.e., 
 32-bit floating point numbers between 0 and 1 with the shape of (batch size, number of channels, height, width).
 
 ```{.python .input #image-augmentation-training-with-image-augmentation-2}
@@ -597,8 +597,8 @@ a detailed introduction to `DataLoader`, please refer to :numref:`sec_fashion_mn
 :end_tab:
 
 :begin_tab:`pytorch`
-Next, we [**define an auxiliary function to facilitate reading the image and
-applying image augmentation**]. 
+Next, we define an auxiliary function to facilitate reading the image and
+applying image augmentation. 
 The `transform` argument provided by PyTorch's
 dataset applies augmentation to transform the images.
 For
@@ -606,8 +606,8 @@ a detailed introduction to `DataLoader`, please refer to :numref:`sec_fashion_mn
 :end_tab:
 
 :begin_tab:`jax`
-Next, we [**define an auxiliary function to facilitate reading the image and
-applying image augmentation**]. 
+Next, we define an auxiliary function to facilitate reading the image and
+applying image augmentation. 
 We use `tf.keras.datasets` to load CIFAR-10 and `tf.data.Dataset` for batching,
 then convert each batch to NumPy arrays via `tfds.as_numpy()` for use with JAX.
 For
@@ -615,8 +615,8 @@ a detailed introduction to data loading, please refer to :numref:`sec_fashion_mn
 :end_tab:
 
 :begin_tab:`tensorflow`
-Next, we [**define an auxiliary function to facilitate reading the image and
-applying image augmentation**].
+Next, we define an auxiliary function to facilitate reading the image and
+applying image augmentation.
 We use `keras.datasets` to load CIFAR-10 and `tf.data.Dataset` for batching
 and preprocessing.
 For
@@ -684,7 +684,7 @@ CIFAR-10 dataset.
 Recall the introduction to
 multi-GPU training in :numref:`sec_multi_gpu_concise`.
 In the following,
-[**we define a function to train and evaluate the model using multiple GPUs**].
+we define a function to train and evaluate the model using multiple GPUs.
 
 ```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab mxnet
@@ -914,7 +914,7 @@ def train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs):
     print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec')
 ```
 
-Now we can [**define the `train_with_data_aug` function to train the model with image augmentation**].
+Now we can define the `train_with_data_aug` function to train the model with image augmentation.
 This function gets all available GPUs, 
 uses Adam as the optimization algorithm,
 applies image augmentation to the training dataset,
@@ -1035,7 +1035,7 @@ def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
 net = get_net_tf()
 ```
 
-Let's [**train the model**] using image augmentation based on random left-right flipping.
+Let's train the model using image augmentation based on random left-right flipping.
 
 ```{.python .input #image-augmentation-multi-gpu-training-4}
 train_with_data_aug(train_augs, test_augs, net)
@@ -1069,3 +1069,124 @@ train_with_data_aug(train_augs, test_augs, net)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1404)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@image-augmentation
+
+@image-augmentation-common-image-augmentation-methods-1
+
+@image-augmentation-common-image-augmentation-methods-2
+
+:::
+
+::: {.slide}
+
+Flipping the image left and right Flipping the image left and right Flipping the image left and right Flipping the image left and right
+
+@image-augmentation-flipping-and-cropping-1
+
+:::
+
+::: {.slide}
+
+Flipping up and down Flipping up and down Flipping up and down Flipping up and down
+
+@image-augmentation-flipping-and-cropping-2
+
+:::
+
+::: {.slide}
+
+randomly crop
+
+@image-augmentation-flipping-and-cropping-3
+
+:::
+
+::: {.slide}
+
+randomly change the brightness
+
+@image-augmentation-changing-colors-1
+
+:::
+
+::: {.slide}
+
+randomly change the hue
+
+@image-augmentation-changing-colors-2
+
+:::
+
+::: {.slide}
+
+randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time
+
+@image-augmentation-changing-colors-3
+
+:::
+
+::: {.slide}
+
+combine multiple image augmentation methods
+
+@image-augmentation-combining-multiple-image-augmentation-methods
+
+:::
+
+::: {.slide}
+
+Training with Image Augmentation
+
+@image-augmentation-training-with-image-augmentation-1
+
+:::
+
+::: {.slide}
+
+Here we only use the simplest random left-right flipping method
+
+@image-augmentation-training-with-image-augmentation-2
+
+:::
+
+::: {.slide}
+
+define an auxiliary function to facilitate reading the image and
+applying image augmentation define an auxiliary function to facilitate reading the image and
+applying image augmentation define an auxiliary function to facilitate reading the image and
+applying image augmentation
+
+@image-augmentation-training-with-image-augmentation-3
+
+:::
+
+::: {.slide}
+
+we define a function to train and evaluate the model using multiple GPUs
+
+@image-augmentation-multi-gpu-training-1
+
+@image-augmentation-multi-gpu-training-2
+
+:::
+
+::: {.slide}
+
+define the `train_with_data_aug` function to train the model with image augmentation
+
+@image-augmentation-multi-gpu-training-3
+
+:::
+
+::: {.slide}
+
+train the model
+
+@image-augmentation-multi-gpu-training-4
+
+:::

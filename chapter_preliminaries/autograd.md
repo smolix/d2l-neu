@@ -68,9 +68,9 @@ from jax import numpy as jnp
 ## A Simple Function
 
 Let's assume that we are interested
-in (**differentiating the function
+in differentiating the function
 $y = 2\mathbf{x}^{\top}\mathbf{x}$
-with respect to the column vector $\mathbf{x}$.**)
+with respect to the column vector $\mathbf{x}$.
 To start, we assign `x` an initial value.
 
 ```{.python .input #autograd-a-simple-function-1}
@@ -98,9 +98,9 @@ x
 ```
 
 :begin_tab:`mxnet, pytorch, tensorflow`
-[**Before we calculate the gradient
+Before we calculate the gradient
 of $y$ with respect to $\mathbf{x}$,
-we need a place to store it.**]
+we need a place to store it.
 In general, we avoid allocating new memory
 every time we take a derivative 
 because deep learning requires 
@@ -135,7 +135,7 @@ x.grad  # The gradient is None by default
 x = tf.Variable(x)
 ```
 
-(**We now calculate our function of `x` and assign the result to `y`.**)
+We now calculate our function of `x` and assign the result to `y`.
 
 ```{.python .input #autograd-a-simple-function-3}
 %%tab mxnet
@@ -167,30 +167,30 @@ y(x)
 ```
 
 :begin_tab:`mxnet`
-[**We can now take the gradient of `y`
-with respect to `x`**] by calling 
+We can now take the gradient of `y`
+with respect to `x` by calling 
 its `backward` method.
 Next, we can access the gradient 
 via `x`'s `grad` attribute.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**We can now take the gradient of `y`
-with respect to `x`**] by calling 
+We can now take the gradient of `y`
+with respect to `x` by calling 
 its `backward` method.
 Next, we can access the gradient 
 via `x`'s `grad` attribute.
 :end_tab:
 
 :begin_tab:`tensorflow`
-[**We can now calculate the gradient of `y`
-with respect to `x`**] by calling 
+We can now calculate the gradient of `y`
+with respect to `x` by calling 
 the `gradient` method.
 :end_tab:
 
 :begin_tab:`jax`
-[**We can now take the gradient of `y`
-with respect to `x`**] by passing through the
+We can now take the gradient of `y`
+with respect to `x` by passing through the
 `grad` transform.
 :end_tab:
 
@@ -221,8 +221,8 @@ x_grad = grad(y)(x)
 x_grad
 ```
 
-(**We already know that the gradient of the function $y = 2\mathbf{x}^{\top}\mathbf{x}$
-with respect to $\mathbf{x}$ should be $4\mathbf{x}$.**)
+We already know that the gradient of the function $y = 2\mathbf{x}^{\top}\mathbf{x}$
+with respect to $\mathbf{x}$ should be $4\mathbf{x}$.
 We can now verify that the automatic gradient computation
 and the expected result are identical.
 
@@ -247,17 +247,17 @@ x_grad == 4 * x
 ```
 
 :begin_tab:`mxnet`
-[**Now let's calculate 
+Now let's calculate 
 another function of `x`
-and take its gradient.**] 
+and take its gradient. 
 Note that MXNet resets the gradient buffer 
 whenever we record a new gradient. 
 :end_tab:
 
 :begin_tab:`pytorch`
-[**Now let's calculate 
+Now let's calculate 
 another function of `x`
-and take its gradient.**]
+and take its gradient.
 Note that PyTorch does not automatically 
 reset the gradient buffer 
 when we record a new gradient. 
@@ -271,9 +271,9 @@ we can call `x.grad.zero_()` as follows:
 :end_tab:
 
 :begin_tab:`tensorflow`
-[**Now let's calculate 
+Now let's calculate 
 another function of `x`
-and take its gradient.**]
+and take its gradient.
 Note that TensorFlow resets the gradient buffer 
 whenever we record a new gradient. 
 :end_tab:
@@ -330,8 +330,8 @@ For example, we often have a vector
 representing the value of our loss function
 calculated separately for each example among
 a *batch* of training examples.
-Here, we just want to (**sum up the gradients
-computed individually for each example**).
+Here, we just want to sum up the gradients
+computed individually for each example.
 
 :begin_tab:`mxnet`
 MXNet handles this problem by reducing all tensors to scalars 
@@ -400,8 +400,8 @@ grad(lambda x: y(x).sum())(x)
 
 ## Detaching Computation
 
-Sometimes, we wish to [**move some calculations
-outside of the recorded computational graph.**]
+Sometimes, we wish to move some calculations
+outside of the recorded computational graph.
 For example, say that we use the input 
 to create some auxiliary intermediate terms 
 for which we do not want to compute a gradient. 
@@ -507,10 +507,10 @@ Programming offers us a lot more freedom in how we compute results.
 For instance, we can make them depend on auxiliary variables 
 or condition choices on intermediate results. 
 One benefit of using automatic differentiation
-is that [**even if**] building the computational graph of 
-(**a function required passing through a maze of Python control flow**)
+is that even if building the computational graph of 
+a function required passing through a maze of Python control flow
 (e.g., conditionals, loops, and arbitrary function calls),
-(**we can still calculate the gradient of the resulting variable.**)
+we can still calculate the gradient of the resulting variable.
 To illustrate this, consider the following code snippet where 
 the number of iterations of the `while` loop
 and the evaluation of the `if` statement
@@ -699,3 +699,90 @@ For now, try to remember these basics:
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17970)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@autograd-automatic-differentiation
+
+differentiating the function
+$y = 2\mathbf{x}^{\top}\mathbf{x}$
+with respect to the column vector $\mathbf{x}$
+
+@autograd-a-simple-function-1
+
+:::
+
+::: {.slide}
+
+Before we calculate the gradient
+of $y$ with respect to $\mathbf{x}$,
+we need a place to store it
+
+@autograd-a-simple-function-2
+
+We now calculate our function of `x` and assign the result to `y`
+
+@autograd-a-simple-function-3
+
+:::
+
+::: {.slide}
+
+We can now take the gradient of `y`
+with respect to `x` We can now take the gradient of `y`
+with respect to `x` We can now calculate the gradient of `y`
+with respect to `x` We can now take the gradient of `y`
+with respect to `x`
+
+@autograd-a-simple-function-4
+
+We already know that the gradient of the function $y = 2\mathbf{x}^{\top}\mathbf{x}$
+with respect to $\mathbf{x}$ should be $4\mathbf{x}$
+
+@autograd-a-simple-function-5
+
+:::
+
+::: {.slide}
+
+Now let's calculate 
+another function of `x`
+and take its gradient. Now let's calculate 
+another function of `x`
+and take its gradient. Now let's calculate 
+another function of `x`
+and take its gradient
+
+@autograd-a-simple-function-6
+
+sum up the gradients
+computed individually for each example
+
+@autograd-backward-for-non-scalar-variables
+
+:::
+
+::: {.slide}
+
+move some calculations
+outside of the recorded computational graph
+
+@autograd-detaching-computation-1
+
+@autograd-detaching-computation-2
+
+:::
+
+::: {.slide}
+
+even if a function required passing through a maze of Python control flow we can still calculate the gradient of the resulting variable
+
+@autograd-gradients-and-python-control-flow-1
+
+@autograd-gradients-and-python-control-flow-2
+
+@autograd-gradients-and-python-control-flow-3
+
+:::

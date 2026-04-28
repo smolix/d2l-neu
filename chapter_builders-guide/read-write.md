@@ -50,7 +50,7 @@ from jax import numpy as jnp
 import os
 ```
 
-## (**Loading and Saving Tensors**)
+## Loading and Saving Tensors
 
 For individual tensors, we can directly
 invoke the `load` and `save` functions
@@ -108,7 +108,7 @@ x2 = jnp.load('x-file.npy', allow_pickle=True)
 x2
 ```
 
-We can [**store a list of tensors and read them back into memory.**]
+We can store a list of tensors and read them back into memory.
 
 ```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab mxnet
@@ -142,8 +142,8 @@ x2, y2 = jnp.load('xy-files.npy', allow_pickle=True)
 (x2, y2)
 ```
 
-We can even [**write and read a dictionary that maps
-from strings to tensors.**]
+We can even write and read a dictionary that maps
+from strings to tensors.
 This is convenient when we want
 to read or write all the weights in a model.
 
@@ -179,7 +179,7 @@ mydict2 = jnp.load('mydict.npy', allow_pickle=True)
 mydict2
 ```
 
-## [**Loading and Saving Model Parameters**]
+## Loading and Saving Model Parameters
 
 Saving individual weight vectors (or other tensors) is useful,
 but it gets very tedious if we want to save
@@ -197,7 +197,7 @@ hence they cannot be serialized as naturally.
 Thus, in order to reinstate a model, we need
 to generate the architecture in code
 and then load the parameters from disk.
-(**Let's start with our familiar MLP.**)
+Let's start with our familiar MLP.
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab mxnet
@@ -266,7 +266,7 @@ X = jax.random.normal(d2l.get_key(), (2, 20))
 Y, params = net.init_with_output(d2l.get_key(), X)
 ```
 
-Next, we [**store the parameters of the model as a file**] with the name "mlp.params".
+Next, we store the parameters of the model as a file with the name "mlp.params".
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab mxnet
@@ -292,7 +292,7 @@ checkpoints.save_checkpoint(os.path.abspath('ckpt_dir'), params, step=1,
 To recover the model, we instantiate a clone
 of the original MLP model.
 Instead of randomly initializing the model parameters,
-we [**read the parameters stored in the file directly**].
+we read the parameters stored in the file directly.
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab mxnet
@@ -364,3 +364,60 @@ Saving the architecture has to be done in code rather than in parameters.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17994)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@read-write-file-i-o
+
+Loading and Saving Tensors
+
+@read-write-loading-and-saving-tensors-1
+
+@read-write-loading-and-saving-tensors-2
+
+:::
+
+::: {.slide}
+
+store a list of tensors and read them back into memory
+
+@read-write-loading-and-saving-tensors-3
+
+:::
+
+::: {.slide}
+
+write and read a dictionary that maps
+from strings to tensors
+
+@read-write-loading-and-saving-tensors-4
+
+:::
+
+::: {.slide}
+
+Loading and Saving Model Parameters Let's start with our familiar MLP
+
+@read-write-loading-and-saving-model-parameters-1
+
+:::
+
+::: {.slide}
+
+store the parameters of the model as a file
+
+@read-write-loading-and-saving-model-parameters-2
+
+:::
+
+::: {.slide}
+
+read the parameters stored in the file directly
+
+@read-write-loading-and-saving-model-parameters-3
+
+@read-write-loading-and-saving-model-parameters-4
+
+:::

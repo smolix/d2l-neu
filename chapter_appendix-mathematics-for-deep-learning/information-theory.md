@@ -826,3 +826,33 @@ loss
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1105)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@information-theory-self-information
+
+@information-theory-definition
+
+@information-theory-joint-entropy
+
+@information-theory-conditional-entropy
+
+@information-theory-mutual-information-2
+
+@information-theory-definition-2
+
+@information-theory-example-1
+
+@information-theory-example-2
+
+@information-theory-example-3
+
+@information-theory-formal-definition-1
+
+@information-theory-formal-definition-2
+
+@information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification
+
+:::

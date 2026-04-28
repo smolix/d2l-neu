@@ -16,7 +16,7 @@ we will apply the knowledge we learned
 in previous sections
 to practice the Kaggle competition of
 CIFAR-10 image classification.
-(**The web address of the competition is https://www.kaggle.com/c/cifar-10**)
+The web address of the competition is https://www.kaggle.com/c/cifar-10
 
 :numref:`fig_kaggle_cifar10` shows the information on the competition's webpage.
 In order to submit the results,
@@ -114,8 +114,8 @@ After unzipping the downloaded file in `../data`, and unzipping `train.7z` and `
 
 where the `train` and `test` directories contain the training and testing images, respectively, `trainLabels.csv` provides labels for the training images, and `sample_submission.csv` is a sample submission file.
 
-To make it easier to get started, [**we provide a small-scale sample of the dataset that
-contains the first 1000 training images and 5 random testing images.**]
+To make it easier to get started, we provide a small-scale sample of the dataset that
+contains the first 1000 training images and 5 random testing images.
 To use the full dataset of the Kaggle competition, you need to set the following `demo` variable to `False`.
 
 ```{.python .input #kaggle-cifar10-downloading-the-dataset}
@@ -133,7 +133,7 @@ else:
     data_dir = '../data/cifar-10/'
 ```
 
-### [**Organizing the Dataset**]
+### Organizing the Dataset
 
 We need to organize datasets to facilitate model training and testing.
 Let's first read the labels from the csv file.
@@ -155,7 +155,7 @@ print('# training examples:', len(labels))
 print('# classes:', len(set(labels.values())))
 ```
 
-Next, we define the `reorg_train_valid` function to [**split the validation set out of the original training set.**]
+Next, we define the `reorg_train_valid` function to split the validation set out of the original training set.
 The argument `valid_ratio` in this function is the ratio of the number of examples in the validation set to the number of examples in the original training set.
 More concretely,
 let $n$ be the number of images of the class with the least examples, and $r$ be the ratio.
@@ -197,7 +197,7 @@ def reorg_train_valid(data_dir, labels, valid_ratio):
     return n_valid_per_label
 ```
 
-The `reorg_test` function below [**organizes the testing set for data loading during prediction.**]
+The `reorg_test` function below organizes the testing set for data loading during prediction.
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-3}
 #@save
@@ -209,8 +209,8 @@ def reorg_test(data_dir):
                               'unknown'))
 ```
 
-Finally, we use a function to [**invoke**]
-the `read_csv_labels`, `reorg_train_valid`, and `reorg_test` (**functions defined above.**)
+Finally, we use a function to invoke
+the `read_csv_labels`, `reorg_train_valid`, and `reorg_test` functions defined above.
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-4}
 def reorg_cifar10_data(data_dir, valid_ratio):
@@ -231,7 +231,7 @@ valid_ratio = 0.1
 reorg_cifar10_data(data_dir, valid_ratio)
 ```
 
-## [**Image Augmentation**]
+## Image Augmentation
 
 We use image augmentation to address overfitting.
 For example, images can be flipped horizontally at random during training.
@@ -350,7 +350,7 @@ transform_test = torchvision.transforms.Compose([
 
 ## Reading the Dataset
 
-Next, we [**read the organized dataset consisting of raw image files**]. Each example includes an image and a label.
+Next, we read the organized dataset consisting of raw image files. Each example includes an image and a label.
 
 ```{.python .input #kaggle-cifar10-reading-the-dataset-1}
 #@tab mxnet
@@ -412,7 +412,7 @@ test_ds = _load_image_folder_tf(
 ```
 
 During training,
-we need to [**specify all the image augmentation operations defined above**].
+we need to specify all the image augmentation operations defined above.
 When the validation set
 is used for model evaluation during hyperparameter tuning,
 no randomness from image augmentation should be introduced.
@@ -481,7 +481,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-## Defining the [**Model**]
+## Defining the Model
 
 :begin_tab:`mxnet`
 Here, we build the residual blocks based on the `HybridBlock` class, which is
@@ -669,7 +669,7 @@ loss = keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
 ```
 
-## Defining the [**Training Function**]
+## Defining the Training Function
 
 We will select models and tune hyperparameters according to the model's performance on the validation set.
 In the following, we define the model training function `train`.
@@ -889,7 +889,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return net
 ```
 
-## [**Training and Validating the Model**]
+## Training and Validating the Model
 
 Now, we can train and validate the model.
 All the following hyperparameters can be tuned.
@@ -933,7 +933,7 @@ net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
             lr_decay)
 ```
 
-## [**Classifying the Testing Set**] and Submitting Results on Kaggle
+## Classifying the Testing Set and Submitting Results on Kaggle
 
 After obtaining a promising model with hyperparameters,
 we use all the labeled data (including the validation set) to retrain the model and classify the testing set.
@@ -1059,3 +1059,118 @@ is similar to that in :numref:`sec_kaggle_house`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1479)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+The web address of the competition is https://www.kaggle.com/c/cifar-10
+
+@kaggle-cifar10-image-classification-cifar-10-on-kaggle
+
+:::
+
+::: {.slide}
+
+we provide a small-scale sample of the dataset that
+contains the first 1000 training images and 5 random testing images
+
+@kaggle-cifar10-downloading-the-dataset
+
+:::
+
+::: {.slide}
+
+Organizing the Dataset
+
+@kaggle-cifar10-organizing-the-dataset-1
+
+:::
+
+::: {.slide}
+
+split the validation set out of the original training set
+
+@kaggle-cifar10-organizing-the-dataset-2
+
+:::
+
+::: {.slide}
+
+organizes the testing set for data loading during prediction
+
+@kaggle-cifar10-organizing-the-dataset-3
+
+:::
+
+::: {.slide}
+
+invoke functions defined above
+
+@kaggle-cifar10-organizing-the-dataset-4
+
+@kaggle-cifar10-organizing-the-dataset-5
+
+:::
+
+::: {.slide}
+
+Image Augmentation
+
+@kaggle-cifar10-image-augmentation-1
+
+@kaggle-cifar10-image-augmentation-2
+
+:::
+
+::: {.slide}
+
+read the organized dataset consisting of raw image files
+
+@kaggle-cifar10-reading-the-dataset-1
+
+:::
+
+::: {.slide}
+
+specify all the image augmentation operations defined above
+
+@kaggle-cifar10-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+Model
+
+@kaggle-cifar10-defining-the-model-1
+
+@kaggle-cifar10-defining-the-model-2
+
+@kaggle-cifar10-defining-the-model-3
+
+:::
+
+::: {.slide}
+
+Training Function
+
+@kaggle-cifar10-defining-the-training-function
+
+:::
+
+::: {.slide}
+
+Training and Validating the Model
+
+@kaggle-cifar10-training-and-validating-the-model
+
+:::
+
+::: {.slide}
+
+Classifying the Testing Set
+
+@kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
+
+:::

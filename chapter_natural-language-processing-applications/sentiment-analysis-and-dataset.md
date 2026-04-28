@@ -320,3 +320,25 @@ into a fixed-length text category.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1387)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset
+
+@sentiment-analysis-and-dataset-reading-the-dataset-1
+
+@sentiment-analysis-and-dataset-reading-the-dataset-2
+
+@sentiment-analysis-and-dataset-preprocessing-the-dataset-1
+
+@sentiment-analysis-and-dataset-preprocessing-the-dataset-2
+
+@sentiment-analysis-and-dataset-preprocessing-the-dataset-3
+
+@sentiment-analysis-and-dataset-creating-data-iterators
+
+@sentiment-analysis-and-dataset-putting-it-all-together
+
+:::

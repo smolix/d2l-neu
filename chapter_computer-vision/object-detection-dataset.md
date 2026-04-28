@@ -3,7 +3,7 @@
 
 There is no small dataset such as MNIST and Fashion-MNIST in the field of object detection.
 In order to quickly demonstrate object detection models,
-[**we collected and labeled a small dataset**].
+we collected and labeled a small dataset.
 First, we took photos of free bananas from our office
 and generated
 1000 banana images with different rotations and sizes.
@@ -12,7 +12,7 @@ at a random position on some background image.
 In the end, we labeled bounding boxes for those bananas on the images.
 
 
-## [**Downloading the Dataset**]
+## Downloading the Dataset
 
 The banana detection dataset with all the image and
 csv label files can be downloaded directly from the Internet.
@@ -72,7 +72,7 @@ d2l.DATA_HUB['banana-detection'] = (
 
 ## Reading the Dataset
 
-We are going to [**read the banana detection dataset**] in the `read_data_bananas`
+We are going to read the banana detection dataset in the `read_data_bananas`
 function below.
 The dataset includes a csv file for
 object class labels and
@@ -174,7 +174,7 @@ def read_data_bananas(is_train=True):
 
 By using the `read_data_bananas` function to read images and labels,
 the following `BananasDataset` class
-will allow us to [**create a customized `Dataset` instance**]
+will allow us to create a customized `Dataset` instance
 for loading the banana detection dataset.
 
 ```{.python .input #object-detection-dataset-reading-the-dataset-2}
@@ -247,8 +247,8 @@ class BananasDataset:
 ```
 
 Finally, we define
-the `load_data_bananas` function to [**return two
-data iterator instances for both the training and test sets.**]
+the `load_data_bananas` function to return two
+data iterator instances for both the training and test sets.
 For the test dataset,
 there is no need to read it in random order.
 
@@ -316,8 +316,8 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-Let's [**read a minibatch and print the shapes of
-both images and labels**] in this minibatch.
+Let's read a minibatch and print the shapes of
+both images and labels in this minibatch.
 The shape of the image minibatch,
 (batch size, number of channels, height, width),
 looks familiar:
@@ -355,7 +355,7 @@ batch = next(iter(train_iter))
 batch[0].shape, batch[1].shape
 ```
 
-## [**Demonstration**]
+## Demonstration
 
 Let's demonstrate ten images with their labeled ground-truth bounding boxes.
 We can see that the rotations, sizes, and positions of bananas vary across all these images.
@@ -421,3 +421,57 @@ for ax, label in zip(axes, batch[1][:10]):
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1608)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+we collected and labeled a small dataset Downloading the Dataset
+
+@object-detection-dataset-downloading-the-dataset-1
+
+@object-detection-dataset-downloading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+read the banana detection dataset
+
+@object-detection-dataset-reading-the-dataset-1
+
+:::
+
+::: {.slide}
+
+create a customized `Dataset` instance
+
+@object-detection-dataset-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+return two
+data iterator instances for both the training and test sets
+
+@object-detection-dataset-reading-the-dataset-3
+
+:::
+
+::: {.slide}
+
+read a minibatch and print the shapes of
+both images and labels
+
+@object-detection-dataset-reading-the-dataset-4
+
+:::
+
+::: {.slide}
+
+Demonstration
+
+@object-detection-dataset-demonstration
+
+:::

@@ -665,3 +665,29 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1425)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks
+
+@sentiment-analysis-cnn-one-dimensional-convolutions-1
+
+@sentiment-analysis-cnn-one-dimensional-convolutions-2
+
+@sentiment-analysis-cnn-one-dimensional-convolutions-3
+
+@sentiment-analysis-cnn-defining-the-model-1
+
+@sentiment-analysis-cnn-defining-the-model-2
+
+@sentiment-analysis-cnn-loading-pretrained-word-vectors
+
+@sentiment-analysis-cnn-training-and-evaluating-the-model-1
+
+@sentiment-analysis-cnn-training-and-evaluating-the-model-2
+
+@sentiment-analysis-cnn-training-and-evaluating-the-model-3
+
+:::

@@ -633,3 +633,13 @@ including prose, figures, mathematics, and code, all in one place.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17963)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@preface-code-1
+
+@preface-code-2
+
+:::

@@ -397,3 +397,31 @@ algorithms, and potential pitfalls one needs to be aware of.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12092)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@hyperopt-api-hyperparameter-optimization-api
+
+@hyperopt-api-searcher-1
+
+@hyperopt-api-searcher-2
+
+@hyperopt-api-scheduler-1
+
+@hyperopt-api-scheduler-2
+
+@hyperopt-api-tuner
+
+@hyperopt-api-bookkeeping-the-performance-of-hpo-algorithms
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
+
+:::

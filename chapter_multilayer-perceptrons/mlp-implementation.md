@@ -51,8 +51,8 @@ As before we will disregard the spatial structure
 among the pixels for now,
 so we can think of this as a classification dataset
 with 784 input features and 10 classes.
-To begin, we will [**implement an MLP
-with one hidden layer and 256 hidden units.**]
+To begin, we will implement an MLP
+with one hidden layer and 256 hidden units.
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
 Typically, we choose the layer widths to be divisible by larger powers of 2.
@@ -147,7 +147,7 @@ class MLPScratch(d2l.Classifier):
 ### Model
 
 To make sure we know how everything works,
-we will [**implement the ReLU activation**] ourselves
+we will implement the ReLU activation ourselves
 rather than invoking the built-in `relu` function directly.
 
 ```{.python .input #mlp-implementation-model-1}
@@ -178,7 +178,7 @@ def relu(X):
 Since we are disregarding spatial structure,
 we `reshape` each two-dimensional image into
 a flat vector of length  `num_inputs`.
-Finally, we (**implement our model**)
+Finally, we implement our model
 with just a few lines of code. Since we use the framework built-in autograd this is all that it takes.
 
 ```{.python .input #mlp-implementation-model-2}
@@ -191,8 +191,8 @@ def forward(self, X):
 
 ### Training
 
-Fortunately, [**the training loop for MLPs
-is exactly the same as for softmax regression.**] We define the model, data, and trainer, then finally invoke the `fit` method on model and data.
+Fortunately, the training loop for MLPs
+is exactly the same as for softmax regression. We define the model, data, and trainer, then finally invoke the `fit` method on model and data.
 
 ```{.python .input #mlp-implementation-training}
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
@@ -212,7 +212,7 @@ of softmax regression
 (:numref:`sec_softmax_concise`),
 the only difference is that we add
 *two* fully connected layers where we previously added only *one*.
-The first is [**the hidden layer**],
+The first is the hidden layer,
 the second is the output layer.
 
 ```{.python .input #mlp-implementation-model-2-2}
@@ -285,7 +285,7 @@ We will further discuss how the `Sequential` class works in :numref:`subsec_mode
 
 ### Training
 
-[**The training loop**] is exactly the same
+The training loop is exactly the same
 as when we implemented softmax regression.
 This modularity enables us to separate
 matters concerning the model architecture
@@ -335,3 +335,57 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17985)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@mlp-implementation-implementation-of-multilayer-perceptrons
+
+:::
+
+::: {.slide}
+
+implement an MLP
+with one hidden layer and 256 hidden units
+
+@mlp-implementation-initializing-model-parameters
+
+:::
+
+::: {.slide}
+
+implement the ReLU activation
+
+@mlp-implementation-model-1
+
+implement our model
+
+@mlp-implementation-model-2
+
+:::
+
+::: {.slide}
+
+the training loop for MLPs
+is exactly the same as for softmax regression
+
+@mlp-implementation-training
+
+:::
+
+::: {.slide}
+
+the hidden layer
+
+@mlp-implementation-model-2-2
+
+:::
+
+::: {.slide}
+
+The training loop
+
+@mlp-implementation-training-2
+
+:::

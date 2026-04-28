@@ -241,7 +241,7 @@ Now let's implement an LSTM from scratch.
 As in the experiments in :numref:`sec_rnn-scratch`,
 we first load *The Time Machine* dataset.
 
-### [**Initializing Model Parameters**]
+### Initializing Model Parameters
 
 Next, we need to define and initialize the model parameters. 
 As previously, the hyperparameter `num_hiddens` 
@@ -325,13 +325,13 @@ class LSTMScratch(d2l.Module):
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-[**The actual model**] is defined as described above,
+The actual model is defined as described above,
 consisting of three gates and an input node. 
 Note that only the hidden state is passed to the output layer.
 :end_tab:
 
 :begin_tab:`jax`
-[**The actual model**] is defined as described above,
+The actual model is defined as described above,
 consisting of three gates and an input node. 
 Note that only the hidden state is passed to the output layer.
 A long for-loop in the `forward` method will result in an extremely long
@@ -457,7 +457,7 @@ def forward(self, inputs, H_C=None):
     return outputs, carry
 ```
 
-### [**Training**] and Prediction
+### Training and Prediction
 
 Let's train an LSTM model by instantiating the `RNNLMScratch` class from :numref:`sec_rnn-scratch`.
 
@@ -498,7 +498,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Using high-level APIs,
 we can directly instantiate an LSTM model.
@@ -661,3 +661,47 @@ LSTMs can alleviate vanishing and exploding gradients.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18016)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@lstm-long-short-term-memory-lstm
+
+:::
+
+::: {.slide}
+
+Initializing Model Parameters
+
+@lstm-initializing-model-parameters-1
+
+:::
+
+::: {.slide}
+
+The actual model The actual model
+
+@lstm-initializing-model-parameters-2
+
+:::
+
+::: {.slide}
+
+Training
+
+@lstm-training-and-prediction
+
+:::
+
+::: {.slide}
+
+Concise Implementation
+
+@lstm-concise-implementation-1
+
+@lstm-concise-implementation-2
+
+@lstm-concise-implementation-3
+
+:::

@@ -91,8 +91,8 @@ The bounding box is rectangular, which is determined by the $x$ and $y$ coordina
 Another commonly used bounding box representation is the $(x, y)$-axis
 coordinates of the bounding box center, and the width and height of the box.
 
-[**Here we define functions to convert between**] these (**two
-representations**):
+Here we define functions to convert between these two
+representations:
 `box_corner_to_center` converts from the two-corner
 representation to the center-width-height representation,
 and `box_center_to_corner` vice versa.
@@ -123,7 +123,7 @@ def box_center_to_corner(boxes):
     return boxes
 ```
 
-We will [**define the bounding boxes of the dog and the cat in the image**] based
+We will define the bounding boxes of the dog and the cat in the image based
 on the coordinate information.
 The origin of the coordinates in the image
 is the upper-left corner of the image, and to the right and down are the
@@ -142,7 +142,7 @@ boxes = d2l.tensor((dog_bbox, cat_bbox))
 box_center_to_corner(box_corner_to_center(boxes)) == boxes
 ```
 
-Let's [**draw the bounding boxes in the image**] to check if they are accurate.
+Let's draw the bounding boxes in the image to check if they are accurate.
 Before drawing, we will define a helper function `bbox_to_rect`. It represents the bounding box in the bounding box format of the  `matplotlib` package.
 
 ```{.python .input #bounding-box-bounding-boxes-4}
@@ -188,3 +188,42 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1527)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@bounding-box-object-detection-and-bounding-boxes-1
+
+@bounding-box-object-detection-and-bounding-boxes-2
+
+:::
+
+::: {.slide}
+
+Here we define functions to convert between two
+representations
+
+@bounding-box-bounding-boxes-1
+
+:::
+
+::: {.slide}
+
+define the bounding boxes of the dog and the cat in the image
+
+@bounding-box-bounding-boxes-2
+
+@bounding-box-bounding-boxes-3
+
+:::
+
+::: {.slide}
+
+draw the bounding boxes in the image
+
+@bounding-box-bounding-boxes-4
+
+@bounding-box-bounding-boxes-5
+
+:::

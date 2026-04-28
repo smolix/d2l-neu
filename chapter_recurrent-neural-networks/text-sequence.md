@@ -69,7 +69,7 @@ involve significantly larger datasets,
 this is sufficient to demonstrate
 the preprocessing pipeline.
 The following `_download` method
-(**reads the raw text into a string**).
+reads the raw text into a string.
 
 ```{.python .input #text-sequence-reading-the-dataset-1  n=5}
 class TimeMachine(d2l.DataModule): #@save
@@ -129,11 +129,11 @@ These tokens are still strings.
 However, the inputs to our models
 must ultimately consist
 of numerical inputs.
-[**Next, we introduce a class
+Next, we introduce a class
 for constructing *vocabularies*,
 i.e., objects that associate
 each distinct token value
-with a unique index.**]
+with a unique index.
 First, we determine the set of unique tokens in our training *corpus*.
 We then assign a numerical index to each unique token.
 Rare vocabulary elements are often dropped for convenience.
@@ -177,7 +177,7 @@ class Vocab:  #@save
         return self.token_to_idx['<unk>']
 ```
 
-We now [**construct a vocabulary**] for our dataset,
+We now construct a vocabulary for our dataset,
 converting the sequence of strings
 into a list of numerical indices.
 Note that we have not lost any information
@@ -194,8 +194,8 @@ print('words:', vocab.to_tokens(indices))
 ## Putting It All Together
 
 Using the above classes and methods,
-we [**package everything into the following
-`build` method of the `TimeMachine` class**],
+we package everything into the following
+`build` method of the `TimeMachine` class,
 which returns `corpus`, a list of token indices, and `vocab`,
 the vocabulary of *The Time Machine* corpus.
 The modifications we did here are:
@@ -231,7 +231,7 @@ vocab = Vocab(words)
 vocab.token_freqs[:10]
 ```
 
-Note that (**the ten most frequent words**)
+Note that the ten most frequent words
 are not all that descriptive.
 You might even imagine that
 we might see a very similar list
@@ -241,7 +241,7 @@ pronouns like "i" and "my",
 and prepositions like "of", "to", and "in"
 occur often because they serve common syntactic roles.
 Such words that are common but not particularly descriptive
-are often called (***stop words***) and,
+are often called *stop words* and,
 in previous generations of text classifiers
 based on so-called bag-of-words representations,
 they were most often filtered out.
@@ -256,7 +256,7 @@ The $10^{\textrm{th}}$ most frequent word
 is less than $1/5$ as common as the most popular.
 Word frequency tends to follow a power law distribution
 (specifically the Zipfian) as we go down the ranks.
-To get a better idea, we [**plot the figure of the word frequency**].
+To get a better idea, we plot the figure of the word frequency.
 
 ```{.python .input #text-sequence-exploratory-language-statistics-2  n=12}
 freqs = [freq for token, freq in vocab.token_freqs]
@@ -281,7 +281,7 @@ where $\alpha$ is the exponent that characterizes
 the distribution and $c$ is a constant.
 This should already give us pause for thought if we want
 to model words by counting statistics.
-After all, we will significantly overestimate the frequency of the tail, also known as the infrequent words. But [**what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams)**], and beyond?
+After all, we will significantly overestimate the frequency of the tail, also known as the infrequent words. But what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams), and beyond?
 Let's see whether the bigram frequency behaves in the same manner as the single word (unigram) frequency.
 
 ```{.python .input #text-sequence-exploratory-language-statistics-3  n=13}
@@ -299,7 +299,7 @@ trigram_vocab = Vocab(trigram_tokens)
 trigram_vocab.token_freqs[:10]
 ```
 
-Now, let's [**visualize the token frequency**] among these three models: unigrams, bigrams, and trigrams.
+Now, let's visualize the token frequency among these three models: unigrams, bigrams, and trigrams.
 
 ```{.python .input #text-sequence-exploratory-language-statistics-5  n=15}
 bigram_freqs = [freq for token, freq in bigram_vocab.token_freqs]
@@ -353,3 +353,76 @@ In practice, the frequency of words tends to follow Zipf's law. This is true not
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18011)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@text-sequence-converting-raw-text-into-sequence-data
+
+reads the raw text into a string
+
+@text-sequence-reading-the-dataset-1
+
+@text-sequence-reading-the-dataset-2
+
+@text-sequence-tokenization
+
+:::
+
+::: {.slide}
+
+Next, we introduce a class
+for constructing *vocabularies*,
+i.e., objects that associate
+each distinct token value
+with a unique index
+
+@text-sequence-vocabulary-1
+
+:::
+
+::: {.slide}
+
+construct a vocabulary
+
+@text-sequence-vocabulary-2
+
+:::
+
+::: {.slide}
+
+package everything into the following
+`build` method of the `TimeMachine` class
+
+@text-sequence-putting-it-all-together
+
+@text-sequence-exploratory-language-statistics-1
+
+:::
+
+::: {.slide}
+
+the ten most frequent words *stop words* plot the figure of the word frequency
+
+@text-sequence-exploratory-language-statistics-2
+
+:::
+
+::: {.slide}
+
+what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams)
+
+@text-sequence-exploratory-language-statistics-3
+
+@text-sequence-exploratory-language-statistics-4
+
+:::
+
+::: {.slide}
+
+visualize the token frequency
+
+@text-sequence-exploratory-language-statistics-5
+
+:::

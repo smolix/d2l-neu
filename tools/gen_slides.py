@@ -1,296 +1,419 @@
 #!/usr/bin/env python3
 """Generate per-framework Reveal.js slides from d2l-en source.
 
-The d2l source uses marker pairs to annotate what goes into slides:
-  [**text**]  → included in slides, starts a NEW slide
-  (**text**)  → included in slides, continues current slide
-  [~~text~~]  → included in slides (slide-only), starts a NEW slide
-  (~~text~~)  → included in slides (slide-only), continues current slide
-  unmarked    → NOT included in slides (book-only)
+The d2l source uses `::: {.slide}` fenced divs to define slides.
+Each slide div contains text and `@<id>` (or `@<id>@<fw>`) placeholders
+that reference code cells by their stable `#<id>` attributes.
 
-Code cells are included as-is. Level-1 headings are always included.
+  ::: {.slide title="Why vectorize?" layout="2col"}
+  A naïve Python loop pays interpreter overhead per element:
+
+  @vec-loop
+
+  . . .
+
+  A vectorized call hands the work to a C kernel:
+
+  @vec-add
+  :::
+
+The slide builder:
+  - Indexes code cells in the source by `#<id>` (per-framework variants
+    differ via `#@tab`).
+  - Resolves `@<id>` to the deck's framework variant (or `@<id>@<fw>`
+    to a specific variant).
+  - Strips `@d2l.add_to_class(...)` decorators from emitted code; slides
+    do not add to the library.
+  - Strips `#@save` markers and `%%tab` lines.
+  - Flattens `tab.selected()` branches for the deck's framework.
+
+The output `.qmd` has `eval: false` — outputs are injected post-build
+by `tools/inject_outputs.py slides`.
+
+Rendering is CPU-only (no GPU env vars, no kernel cleanup) and parallel
+across frameworks (`make -j4 slides`) and within a framework (thread
+pool of 8 quarto-render subprocesses).
 
 Usage:
-    python tools/gen_slides.py <source_dir> <output_dir> [--frameworks pytorch jax]
+    python tools/gen_slides.py <source_dir> <output_dir> [--render]
+        [--frameworks pytorch jax] [--workers 8]
 """
 
+import argparse
 import os
-import queue
 import re
 import subprocess
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import (
     FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING,
     extract_tab, is_boilerplate, is_python_block,
-    translate_directives,
+    extract_cell_id, translate_directives,
 )
 from build_lib import flatten_tab_branches
-from runtime_env import (
-    GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS, setup_framework_env,
-    MAX_CPUS_PER_GPU_WORKER, MAX_CPUS_PER_CPU_WORKER,
-    make_cpu_affinity_fn, worker_cpu_set, kill_stale_kernels,
-    file_uses_gpu,
-)
-
-TRANSIENT_ERRORS = (
-    "Kernel didn't respond",
-    "Address already in use",
-    "Kernel died before replying to kernel_info",
-    "KernelDied",
-)
-
-
-def _is_transient(stderr):
-    return stderr and any(msg in stderr for msg in TRANSIENT_ERRORS)
 
 
 # ──────────────────────────────────────────────────────────
-# Slide marker extraction
+# Source parsing
 # ──────────────────────────────────────────────────────────
 
-# The four marker pairs
-PAIRS = (('[**', '**]'), ('(**', '**)'), ('[~~', '~~]'), ('(~~', '~~)'))
+class SourceCell:
+    """One Python code fence in source, indexed by cell_id+framework."""
+    __slots__ = ('cell_id', 'tab', 'lines')
+    def __init__(self, cell_id, tab, lines):
+        self.cell_id, self.tab, self.lines = cell_id, tab, lines
 
 
-def extract_slide_text(text):
-    """Extract slide-marked text from a markdown block.
+_FENCE_OPEN_RE = re.compile(r'^```(.*)$')
+_FENCE_CLOSE_RE = re.compile(r'^```\s*$')
+_SLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.slide(?:\s+([^}]*))?\}\s*$')
+_SUBSLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.subslide(?:\s+([^}]*))?\}\s*$')
+_DIV_OPEN_RE = re.compile(r'^:{3,}\s*\{')
+_DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
+_PLACEHOLDER_RE = re.compile(r'^@([a-z][a-z0-9-]*)(?:@(\w+))?\s*$')
 
-    Returns list of (text, new_slide) tuples. new_slide is True if the
-    marker starts with '[' (new slide) vs '(' (continue).
+# Match @d2l.add_to_class(...) decorator on its own line.
+_ADD_TO_CLASS_RE = re.compile(r'^@d2l\.add_to_class\([^)]*\)\s*$')
+
+
+def index_source_cells(text):
+    """Walk source, return a dict: cell_id → list[SourceCell].
+
+    Each list contains one entry per framework variant. A cell with
+    `#@tab pytorch` produces a SourceCell with tab='pytorch' (not 'all').
+    Untagged cells get tab='all' from extract_tab.
+
+    Boilerplate cells and non-Python fences are ignored.
     """
-    matches = []
-    for open_mark, close_mark in PAIRS:
-        start = 0
-        while True:
-            s = text.find(open_mark, start)
-            if s == -1:
-                break
-            e = text.find(close_mark, s + len(open_mark))
-            if e == -1:
-                break
-            inner = text[s + len(open_mark):e]
-            new_slide = open_mark.startswith('[')
-            matches.append((s, inner.strip(), new_slide))
-            start = e + len(close_mark)
+    lines = text.split('\n')
+    cells = {}
+    in_fence = False
+    info = ''
+    body = []
+    for line in lines:
+        if not in_fence:
+            m = _FENCE_OPEN_RE.match(line)
+            if m and not line.startswith('````'):
+                info = m.group(1).strip()
+                body = []
+                in_fence = True
+        else:
+            if _FENCE_CLOSE_RE.match(line):
+                if is_python_block(info) and not is_boilerplate(body):
+                    cid = extract_cell_id(info)
+                    if cid:
+                        tab, cleaned = extract_tab(list(body))
+                        cells.setdefault(cid, []).append(
+                            SourceCell(cid, tab, cleaned))
+                in_fence = False
+            else:
+                body.append(line)
+    return cells
 
-    matches.sort(key=lambda x: x[0])
-    return [(inner, ns) for _, inner, ns in matches]
 
+def select_variant(variants, framework, forced_fw=None):
+    """Pick the SourceCell for the deck's framework.
 
-def extract_heading(text):
-    """Extract level-1 heading from a markdown block, if any."""
-    for line in text.split('\n'):
-        line = line.strip()
-        if line.startswith('# ') and not line.startswith('## '):
-            # Strip label
-            heading = re.sub(r'\s*\{#[^}]+\}', '', line)
-            return heading
+    Resolution order:
+      1. If forced_fw is set: a variant whose tab includes forced_fw.
+      2. A variant whose tab includes the deck's framework.
+      3. A variant tagged 'all'.
+    Returns None if no match.
+    """
+    target = forced_fw or framework
+    for v in variants:
+        if v.tab == 'all':
+            continue
+        tabs = [t.strip() for t in v.tab.split(',')]
+        if target in tabs:
+            return v
+    if forced_fw:
+        return None  # explicit @<id>@<fw> doesn't fall back to 'all'
+    for v in variants:
+        if v.tab == 'all':
+            return v
     return None
 
 
-# ──────────────────────────────────────────────────────────
-# Prose tab filtering for slides (single framework)
-# ──────────────────────────────────────────────────────────
+def clean_cell_lines(lines, framework):
+    """Apply slide-emit cleanup to a code cell's source lines.
 
-def filter_prose_tabs(text, framework):
-    """Keep only the target framework's prose tab content."""
-    tab_pattern = re.compile(
-        r':begin_tab:`([^`]+)`\s*\n(.*?)\n?:end_tab:', re.DOTALL)
-
-    result = []
-    last_end = 0
-    for m in tab_pattern.finditer(text):
-        result.append(text[last_end:m.start()])
-        fw_key = m.group(1)
-        content = m.group(2).strip()
-        fws = [f.strip() for f in fw_key.split(',')]
-        if framework in fws:
-            result.append(content)
-        last_end = m.end()
-    result.append(text[last_end:])
-    return ''.join(result)
+    - Drop `@d2l.add_to_class(...)` decorators (slides never extend the library)
+    - Strip `#@save` markers
+    - Drop residual `%%tab` lines
+    - Flatten `tab.selected()` branches for the deck framework
+    """
+    out = []
+    for line in lines:
+        if _ADD_TO_CLASS_RE.match(line.strip()):
+            continue
+        if re.match(r'^%%tab\s+', line):
+            continue
+        line = re.sub(r'\s*#@save\b', '', line)
+        out.append(line)
+    code = '\n'.join(out)
+    code = flatten_tab_branches(code, framework)
+    return code
 
 
 # ──────────────────────────────────────────────────────────
-# Slide generation from source .md
+# Slide div parsing
 # ──────────────────────────────────────────────────────────
+
+class Slide:
+    __slots__ = ('attrs', 'body', 'subslides')
+    def __init__(self, attrs):
+        self.attrs = attrs           # parsed key=value dict
+        self.body = []               # list of lines
+        self.subslides = []          # list[Slide]
+
+
+def _parse_attrs(attr_str):
+    """Parse `title="…" layout=foo transition="bar"` style attribute string."""
+    if not attr_str:
+        return {}
+    attrs = {}
+    # Handle quoted values: key="…"
+    for m in re.finditer(r'(\w[\w-]*)\s*=\s*"([^"]*)"', attr_str):
+        attrs[m.group(1)] = m.group(2)
+    # Handle unquoted: key=value
+    for m in re.finditer(r'(\w[\w-]*)\s*=\s*([^\s"}]+)', attr_str):
+        if m.group(1) not in attrs:
+            attrs[m.group(1)] = m.group(2)
+    return attrs
+
+
+def parse_slide_blocks(text):
+    """Return list[Slide]. Skips content outside slide divs.
+
+    Handles nested `::: {.subslide}` divs by collecting them on the
+    enclosing slide's `subslides` list (rendered as vertical sub-slides).
+    Other nested divs (e.g. `::: {.fragment}`) pass through verbatim
+    in the body.
+    """
+    lines = text.split('\n')
+    slides = []
+    i = 0
+    while i < len(lines):
+        m = _SLIDE_OPEN_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        slide = Slide(_parse_attrs(m.group(1) or ''))
+        i += 1
+        depth = 1  # depth of fenced divs we entered
+        while i < len(lines):
+            line = lines[i]
+            sub = _SUBSLIDE_OPEN_RE.match(line)
+            slide_open_inner = _SLIDE_OPEN_RE.match(line)
+            other_open = (not sub and not slide_open_inner
+                          and _DIV_OPEN_RE.match(line))
+            close = _DIV_CLOSE_RE.match(line)
+            if sub and depth == 1:
+                # Subslide nested directly inside this slide
+                ss = Slide(_parse_attrs(sub.group(1) or ''))
+                i += 1
+                ss_depth = 1
+                while i < len(lines):
+                    inner = lines[i]
+                    if _DIV_OPEN_RE.match(inner):
+                        ss_depth += 1
+                    elif _DIV_CLOSE_RE.match(inner):
+                        ss_depth -= 1
+                        if ss_depth == 0:
+                            i += 1
+                            break
+                    ss.body.append(inner)
+                    i += 1
+                slide.subslides.append(ss)
+                continue
+            if slide_open_inner or other_open:
+                depth += 1
+                slide.body.append(line)
+            elif close:
+                depth -= 1
+                if depth == 0:
+                    i += 1
+                    break
+                slide.body.append(line)
+            else:
+                slide.body.append(line)
+            i += 1
+        slides.append(slide)
+    return slides
+
 
 def has_framework_code(src_path, framework):
-    """Check if a source .md has code cells for this framework.
-
-    A file with only '#@tab all' blocks is framework-agnostic and included
-    for every framework. But if it has framework-specific tabs (e.g.,
-    pytorch, mxnet) and none match the target framework, skip it — the
-    import/setup cells won't be present, causing NameErrors.
-    """
+    """Same semantics as before: skip files with no fw-applicable code."""
     text = Path(src_path).read_text(encoding='utf-8')
     tabs_found = set()
     for m in re.finditer(r'^#@tab\s+(.+)$', text, re.MULTILINE):
         for t in m.group(1).split(','):
             tabs_found.add(t.strip())
+    for m in re.finditer(r'^%%tab\s+(.+)$', text, re.MULTILINE):
+        for t in m.group(1).split(','):
+            tabs_found.add(t.strip())
     if not tabs_found:
-        return True  # no tabs at all
+        return True  # no tabs anywhere — applies to all frameworks
     fw_specific = tabs_found - {'all'}
     if not fw_specific:
-        return True  # only '#@tab all' blocks
+        return True
     return framework in fw_specific
 
 
-def generate_slides_qmd(src_path, framework):
-    """Generate a Reveal.js .qmd slide deck from a d2l source .md file.
+# ──────────────────────────────────────────────────────────
+# Slide qmd emission
+# ──────────────────────────────────────────────────────────
 
-    Returns the .qmd content string, or None if no slide markers found
-    or if the framework has no code implementation in this file.
+def _emit_attrs(attrs):
+    """Build Quarto-style attribute string for a slide heading."""
+    parts = []
+    if 'transition' in attrs:
+        parts.append(f'data-transition="{attrs["transition"]}"')
+    if 'layout' in attrs:
+        parts.append(f'.slide-{attrs["layout"]}')
+    for k, v in attrs.items():
+        if k.startswith('data-background'):
+            parts.append(f'{k}="{v}"')
+    return parts
+
+
+def _resolve_body(body_lines, source_cells, framework, slide_path,
+                  warnings):
+    """Replace `@<id>` and `@<id>@<fw>` placeholder lines with code fences.
+
+    Other lines pass through verbatim. Returns a list of output lines.
+    """
+    out = []
+    for line in body_lines:
+        m = _PLACEHOLDER_RE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        cid, forced_fw = m.group(1), m.group(2)
+        variants = source_cells.get(cid)
+        if not variants:
+            warnings.append(f'{slide_path}: unknown @{cid}')
+            out.append(line)
+            continue
+        cell = select_variant(variants, framework, forced_fw)
+        if cell is None:
+            warnings.append(
+                f'{slide_path}: @{cid}'
+                + (f'@{forced_fw}' if forced_fw else '')
+                + f' has no variant for {framework}')
+            continue
+        code = clean_cell_lines(cell.lines, framework)
+        if not code.strip():
+            continue
+        out.append('```{python}')
+        out.append(f'#| label: {cid}')
+        out.append(code)
+        out.append('```')
+    return out
+
+
+def _emit_slide(slide, source_cells, framework, slide_path, warnings,
+                is_first):
+    """Emit one slide as Quarto reveal.js markdown.
+
+    The deck has the file H1 as its title (emitted by the caller). The
+    first slide's content follows the H1 directly. Subsequent slides
+    are separated by `---` (no title) or by `## <title>` if the slide
+    has an explicit `title=` attribute.
+    """
+    out = []
+    title = slide.attrs.get('title')
+    extras = _emit_attrs(slide.attrs)
+    attr_str = (' {' + ' '.join(extras) + '}') if extras else ''
+    if title:
+        # Emit `## Title` separator. (Implicitly starts a new slide.)
+        out.append('')
+        out.append(f'## {title}{attr_str}')
+        out.append('')
+    elif not is_first:
+        # Plain horizontal-rule slide separator
+        if extras:
+            out.append('')
+            out.append(f'## {{{" ".join(extras)}}}')
+            out.append('')
+        else:
+            out.append('')
+            out.append('---')
+            out.append('')
+    out.extend(_resolve_body(slide.body, source_cells, framework,
+                              slide_path, warnings))
+    # Subslides (vertical sub-slides under the current slide)
+    for ss in slide.subslides:
+        out.append('')
+        ss_title = ss.attrs.get('title', '')
+        ss_extras = _emit_attrs(ss.attrs)
+        ss_attr = (' {' + ' '.join(ss_extras) + '}') if ss_extras else ''
+        out.append(f'### {ss_title}{ss_attr}'.rstrip())
+        out.append('')
+        out.extend(_resolve_body(ss.body, source_cells, framework,
+                                  slide_path, warnings))
+    return out
+
+
+def generate_slides_qmd(src_path, framework, warnings):
+    """Generate a Reveal.js .qmd slide deck from a source .md file.
+
+    Returns the .qmd content string, or None if the file has no slide
+    divs or has no framework-applicable code.
     """
     if not has_framework_code(src_path, framework):
         return None
 
     text = Path(src_path).read_text(encoding='utf-8')
-
-    # Filter prose tabs
-    text = filter_prose_tabs(text, framework)
-
-    # Parse into code/markdown blocks
-    lines = text.split('\n')
-    blocks = []  # list of ('md', text) or ('code', text, tab)
-    md_lines = []
-    i = 0
-
-    while i < len(lines):
-        line = lines[i]
-        m = re.match(r'^```(.*)$', line)
-        if m and not line.startswith('````'):
-            if md_lines:
-                blocks.append(('md', '\n'.join(md_lines)))
-                md_lines = []
-            info = m.group(1).strip()
-            code_lines = []
-            i += 1
-            while i < len(lines) and not re.match(r'^```\s*$', lines[i]):
-                code_lines.append(lines[i])
-                i += 1
-            i += 1
-
-            if info == 'toc':
-                continue
-            if is_python_block(info):
-                if is_boilerplate(code_lines):
-                    continue
-                tab, cleaned = extract_tab(code_lines)
-                # Filter by framework
-                if tab is not None and tab != 'all':
-                    tabs = [t.strip() for t in tab.split(',')]
-                    if framework not in tabs:
-                        continue
-                # Strip #@save markers and %%tab lines that leaked through
-                cleaned = [re.sub(r'\s*#@save\b', '', l) for l in cleaned]
-                cleaned = [l for l in cleaned if not re.match(r'^%%tab\s+', l)]
-                code_str = '\n'.join(cleaned)
-                # Flatten tab.selected() branches
-                code_str = flatten_tab_branches(code_str, framework)
-                blocks.append(('code', code_str, 'python'))
-            else:
-                blocks.append(('code', '\n'.join(code_lines), info or ''))
-        else:
-            md_lines.append(line)
-            i += 1
-
-    if md_lines:
-        blocks.append(('md', '\n'.join(md_lines)))
-
-    # Extract slide content from markdown blocks
-    slides = []  # list of slide parts: ('text', str) or ('code', str, lang)
-    has_slide_markers = False
-    title = None
-
-    for block in blocks:
-        if block[0] == 'md':
-            md_text = block[1]
-
-            # Always grab the title
-            h = extract_heading(md_text)
-            if h and title is None:
-                title = h
-
-            # Extract slide-marked text from this markdown block.
-            # All marked text in one block is joined into a single slide entry.
-            # If ANY marker uses [, it starts a new slide.
-            marked = extract_slide_text(md_text)
-            if marked:
-                has_slide_markers = True
-                texts = []
-                new_slide = False
-                for text, ns in marked:
-                    if ns:
-                        new_slide = True
-                    texts.append(text)
-
-                combined = ' '.join(texts)
-                combined = combined.rstrip(',. \n:')
-                if combined:
-                    if new_slide:
-                        slides.append(('break',))
-                    slides.append(('text', combined))
-
-        elif block[0] == 'code':
-            code = block[1]
-            lang = block[2]
-            if code.strip():
-                slides.append(('code', code, lang))
-
-    if not has_slide_markers:
+    slides = parse_slide_blocks(text)
+    if not slides:
         return None
 
-    # Build the .qmd slide deck
+    source_cells = index_source_cells(text)
+
+    # File-level title from H1
+    file_title = None
+    for line in text.split('\n'):
+        s = line.strip()
+        if s.startswith('# ') and not s.startswith('## '):
+            file_title = re.sub(r'\s*\{#[^}]+\}', '', s[2:]).strip()
+            break
+
     out = []
     out.append('---')
     out.append('format:')
     out.append('  revealjs:')
-    out.append('    theme: simple')
+    out.append('    theme: [simple, ../../../_d2l-slides.scss]')
     out.append('    slide-number: true')
     out.append('    chalkboard: true')
     out.append('    scrollable: true')
     out.append('    code-line-numbers: false')
     out.append('execute:')
     out.append('  echo: true')
-    out.append('  eval: true')
+    out.append('  eval: false')
     out.append('---')
     out.append('')
 
-    if title:
-        # Apply directive translation to the title
-        clean_title = translate_directives(title)
-        out.append(clean_title)
+    if file_title:
+        out.append(f'# {translate_directives(file_title)}')
         out.append('')
 
-    in_slide = False
-    for part in slides:
-        if part[0] == 'break':
-            out.append('')
-            out.append('---')
-            out.append('')
-            in_slide = True
-        elif part[0] == 'text':
-            text = translate_directives(part[1])
-            out.append(text)
-            out.append('')
-        elif part[0] == 'code':
-            code = part[1]
-            lang = part[2]
-            if lang == 'python':
-                out.append(f'```{{python}}')
-            else:
-                out.append(f'```{lang}')
-            out.append(code)
-            out.append('```')
-            out.append('')
+    for i, slide in enumerate(slides):
+        emitted = _emit_slide(slide, source_cells, framework,
+                              str(src_path), warnings,
+                              is_first=(i == 0))
+        out.extend(emitted)
+        out.append('')
 
-    return '\n'.join(out)
+    # Translate directives in prose (cross-refs, citations, etc.)
+    qmd = '\n'.join(out)
+    return qmd
 
 
 # ──────────────────────────────────────────────────────────
@@ -303,225 +426,130 @@ def main():
     parser.add_argument('source', type=Path, help='Source d2l-en directory')
     parser.add_argument('output', type=Path, help='Output directory')
     parser.add_argument('--frameworks', nargs='*',
-                        default=['pytorch', 'tensorflow', 'jax', 'mxnet'],
-                        help='Frameworks to generate')
+                        default=list(FRAMEWORKS),
+                        help='Frameworks to generate (default: all)')
     parser.add_argument('--render', action='store_true',
                         help='Also render slides to HTML')
-    parser.add_argument('--parallel', type=int, default=None,
-                        help='Number of GPU workers (default: num-gpus)')
-    parser.add_argument('--num-gpus', type=int, default=4,
-                        help='Number of GPUs for parallel rendering')
-    parser.add_argument('--timeout', type=int, default=3600,
+    parser.add_argument('--workers', type=int, default=8,
+                        help='Number of CPU workers for parallel rendering')
+    parser.add_argument('--timeout', type=int, default=300,
                         help='Per-slide render timeout in seconds')
     parser.add_argument('--files', nargs='*', default=None,
-                        help='Only render slides matching these paths relative to _slides/<fw>/ '
-                             '(e.g. chapter_foo/bar.qmd or chapter_foo/bar)')
-    parser.add_argument('--filter', nargs='*', default=None,
-                        help='Deprecated alias for --files')
+                        help='Only process these source paths '
+                             '(e.g. chapter_foo/bar.md)')
     args = parser.parse_args()
 
     src = args.source
+    file_filter = set(args.files) if args.files else None
     files = list(CHAPTER_NUMBERING.keys())
 
+    warnings = []
     for fw in args.frameworks:
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} slides ===')
 
         generated = 0
-        rendered = 0
         for rel in files:
+            if file_filter and rel not in file_filter:
+                continue
             src_file = src / rel
             if not src_file.exists():
                 continue
 
-            content = generate_slides_qmd(src_file, fw)
+            content = generate_slides_qmd(src_file, fw, warnings)
             if content is None:
-                continue  # no slide markers in this file
+                continue
 
             dst_file = fw_dir / rel.replace('.md', '.qmd')
             dst_file.parent.mkdir(parents=True, exist_ok=True)
             dst_file.write_text(content, encoding='utf-8')
             generated += 1
 
-        if args.render:
-            # Create img symlink (like gen_notebooks.py does)
+        if args.render and generated:
+            # img / data symlinks (unchanged from previous behavior)
             img_link = fw_dir / 'img'
             if not img_link.exists():
-                img_target = Path('../../img')
-                img_link.symlink_to(img_target)
-
-            # Create data symlink
+                img_link.symlink_to(Path('../../img'))
             data_link = fw_dir / 'data'
             if not data_link.exists():
                 data_dir = Path.cwd() / 'data'
                 data_dir.mkdir(exist_ok=True)
                 data_link.symlink_to(data_dir)
 
+            # Place a minimal _quarto.yml in _slides/ so Quarto doesn't
+            # walk up into the book project context.
+            slides_root_yml = args.output / '_quarto.yml'
+            if not slides_root_yml.exists():
+                slides_root_yml.write_text('project:\n  type: default\n',
+                                            encoding='utf-8')
+
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
-            file_filter = args.files or args.filter
-            if file_filter:
-                filter_stems = {f.replace('.qmd', '').replace('.md', '').replace('.ipynb', '')
-                                for f in file_filter}
-                qmd_files = [q for q in qmd_files
-                             if str(q.relative_to(fw_dir)).replace('.qmd', '')
-                             in filter_stems]
-            venv_root = Path(f'.venv-{fw}').absolute()
-            venv_python = venv_root / 'bin' / 'python'
+            print(f'  Rendering {len(qmd_files)} deck(s) on '
+                  f'{args.workers} CPU worker(s)')
 
-            setup_framework_env(fw, venv_root=venv_root)
+            # Quarto needs nbformat (Python) to parse code chunks even
+            # with eval: false. Use any framework's venv that exists.
             base_env = {**os.environ}
-            if venv_python.exists():
-                base_env['QUARTO_PYTHON'] = str(venv_python)
-
-            # Classify slides by resource needs
-            multi_gpu_stems = {
-                s.replace('.ipynb', '') for s in MULTI_GPU_NOTEBOOKS}
-
-            slides_root = args.output
-
-            def needs_gpu(qmd):
-                return file_uses_gpu(qmd, slides_root)
-
-            def is_multi_gpu(qmd):
-                rel = str(qmd.relative_to(fw_dir)).replace('.qmd', '')
-                return rel in multi_gpu_stems
-
-            multi_gpu_slides = [q for q in qmd_files if is_multi_gpu(q)]
-            gpu_slides = [q for q in qmd_files
-                          if needs_gpu(q) and not is_multi_gpu(q)]
-            cpu_slides = [q for q in qmd_files
-                          if not needs_gpu(q) and not is_multi_gpu(q)]
-            total = len(gpu_slides) + len(cpu_slides) + len(multi_gpu_slides)
-            print(f'  {len(gpu_slides)} GPU slides, '
-                  f'{len(cpu_slides)} CPU-only slides, '
-                  f'{len(multi_gpu_slides)} multi-GPU slides')
-
-            gpu_workers = args.parallel if args.parallel else args.num_gpus
-            cpu_workers = args.num_gpus
-            workers_per_gpu = max(1, gpu_workers // args.num_gpus)
-            gpu_q = queue.Queue()
-            for g in range(args.num_gpus):
-                for _ in range(workers_per_gpu):
-                    gpu_q.put(str(g))
-
-            _print_lock = threading.Lock()
-            _idx = [0]
+            for candidate in (Path(f'.venv-{fw}'), Path('.venv-pytorch'),
+                              Path('.venv-jax'), Path('.venv-mxnet'),
+                              Path('.venv-tensorflow')):
+                py = candidate.absolute() / 'bin' / 'python'
+                if py.exists():
+                    base_env['QUARTO_PYTHON'] = str(py)
+                    break
 
             error_dir = fw_dir.parent / 'errors' / fw
             error_dir.mkdir(parents=True, exist_ok=True)
+            print_lock = threading.Lock()
+            counter = [0]
+            total = len(qmd_files)
 
-            def render_one(qmd, cuda_devices=None, cpu_affinity=None):
-                with _print_lock:
-                    _idx[0] += 1
-                    idx = _idx[0]
-                    rel = str(qmd.relative_to(fw_dir))
-                    if cuda_devices is None or cuda_devices == '':
-                        gpu_tag = '[CPU]'
-                    else:
-                        gpu_tag = f'[GPU {cuda_devices}]'
-                    print(f'  [{idx}/{total}] START {gpu_tag} {rel}',
-                          flush=True)
-                env = {**base_env}
-                if cuda_devices is not None:
-                    env['CUDA_VISIBLE_DEVICES'] = cuda_devices
-                    if cuda_devices == '':
-                        from runtime_env import CPU_ONLY_ENV
-                        env.update(CPU_ONLY_ENV)
-                def _try_render():
-                    t0 = time.time()
-                    try:
-                        result = subprocess.run(
-                            ['quarto', 'render', str(qmd), '--to', 'revealjs'],
-                            capture_output=True, text=True,
-                            timeout=args.timeout, env=env,
-                            preexec_fn=make_cpu_affinity_fn(cpu_affinity))
-                        elapsed = time.time() - t0
-                        stderr = (result.stderr or result.stdout).strip()
-                        ok = result.returncode == 0
-                    except subprocess.TimeoutExpired:
-                        elapsed = time.time() - t0
-                        stderr = f"TIMEOUT (>{args.timeout}s)"
-                        ok = False
-                    return ok, elapsed, stderr
-
-                ok, elapsed, stderr = _try_render()
-                if not ok and _is_transient(stderr):
-                    with _print_lock:
-                        print(f'  [{idx}/{total}] RETRY (transient failure) {rel}',
-                              flush=True)
-                    time.sleep(2)
-                    ok, elapsed, stderr = _try_render()
-
-                status = 'OK' if ok else 'FAIL'
-                with _print_lock:
-                    print(f'  [{idx}/{total}] {status} ({elapsed:.1f}s) {rel}',
-                          flush=True)
-                    if not ok:
-                        lines = (stderr or 'unknown').splitlines()
-                        short = '\n'.join(lines[-25:])
-                        print(f'    -- error --\n{short}\n    -- end --',
-                              flush=True)
-                        log_path = error_dir / (rel.replace('.qmd', '.log'))
-                        log_path.parent.mkdir(parents=True, exist_ok=True)
-                        log_path.write_text(stderr or '')
-
-                return (qmd, ok, stderr if not ok else None)
-
-            total_workers = gpu_workers + cpu_workers
-            _cpu_worker_id = [0]
-            _cpu_id_lock = threading.Lock()
-
-            def render_gpu(qmd):
-                gpu = gpu_q.get()
+            def render_one(qmd):
+                with print_lock:
+                    counter[0] += 1
+                    idx = counter[0]
+                    rel_q = str(qmd.relative_to(fw_dir))
+                    print(f'  [{idx}/{total}] {rel_q}', flush=True)
+                t0 = time.time()
                 try:
-                    cpus = worker_cpu_set(
-                        int(gpu), total_workers, MAX_CPUS_PER_GPU_WORKER)
-                    return render_one(qmd, cuda_devices=gpu,
-                                      cpu_affinity=cpus)
-                finally:
-                    gpu_q.put(gpu)
+                    result = subprocess.run(
+                        ['quarto', 'render', str(qmd), '--to', 'revealjs'],
+                        capture_output=True, text=True,
+                        timeout=args.timeout, env=base_env)
+                    ok = result.returncode == 0
+                    stderr = (result.stderr or result.stdout).strip()
+                except subprocess.TimeoutExpired:
+                    ok = False
+                    stderr = f'TIMEOUT (>{args.timeout}s)'
+                elapsed = time.time() - t0
+                if not ok:
+                    log_path = error_dir / qmd.relative_to(fw_dir).with_suffix('.log')
+                    log_path.parent.mkdir(parents=True, exist_ok=True)
+                    log_path.write_text(stderr or '')
+                    with print_lock:
+                        print(f'  FAIL ({elapsed:.1f}s) {qmd.relative_to(fw_dir)}',
+                              flush=True)
+                        for ln in (stderr or 'unknown').splitlines()[-15:]:
+                            print(f'    {ln}', flush=True)
+                return qmd, ok, stderr if not ok else None
 
-            def render_cpu(qmd):
-                with _cpu_id_lock:
-                    wid = gpu_workers + _cpu_worker_id[0]
-                    _cpu_worker_id[0] = (
-                        (_cpu_worker_id[0] + 1) % cpu_workers)
-                cpus = worker_cpu_set(
-                    wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
-                return render_one(qmd, cuda_devices='', cpu_affinity=cpus)
-
-            from concurrent.futures import ThreadPoolExecutor
-            results = []
-            with ThreadPoolExecutor(max_workers=gpu_workers) as gpu_exec, \
-                 ThreadPoolExecutor(max_workers=cpu_workers) as cpu_exec:
-                gpu_futs = [gpu_exec.submit(render_gpu, q) for q in gpu_slides]
-                cpu_futs = [cpu_exec.submit(render_cpu, q) for q in cpu_slides]
-                for f in gpu_futs + cpu_futs:
-                    results.append(f.result())
-
-            # Multi-GPU slides run serially with all GPUs visible
-            if multi_gpu_slides:
-                all_gpus = ','.join(str(g) for g in range(args.num_gpus))
-                for qmd in multi_gpu_slides:
-                    results.append(render_one(qmd, cuda_devices=all_gpus))
-
-            rendered = sum(1 for _, ok, _ in results if ok)
+            with ThreadPoolExecutor(max_workers=args.workers) as pool:
+                results = list(pool.map(render_one, qmd_files))
             failures = [(q, err) for q, ok, err in results if not ok]
-            if failures:
-                print(f'  {len(failures)} slide(s) failed to render')
+            print(f'  Rendered {len(results) - len(failures)} / {len(results)} '
+                  f'({len(failures)} failed)')
 
-            n = kill_stale_kernels(venv_root)
-            if n:
-                print(f'  Killed {n} stale ipykernel process(es)')
+        print(f'  Generated {generated} slide deck(s)')
 
-        print(f'  Generated {generated} slide decks')
-        if args.render:
-            print(f'  Rendered {rendered} to HTML')
+    if warnings:
+        print(f'\n{len(warnings)} placeholder warning(s):')
+        for w in warnings[:30]:
+            print(f'  {w}')
+        if len(warnings) > 30:
+            print(f'  ... and {len(warnings) - 30} more')
 
     print(f'\nDone. Slides in {args.output}/')
 
-
-import argparse
 
 if __name__ == '__main__':
     main()

@@ -499,3 +499,31 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1424)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks
+
+@sentiment-analysis-rnn-representing-single-text-with-rnns-1
+
+@sentiment-analysis-rnn-representing-single-text-with-rnns-2
+
+@sentiment-analysis-rnn-representing-single-text-with-rnns-3
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-1
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-2
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-3
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-1
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-2
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-3
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-4
+
+:::

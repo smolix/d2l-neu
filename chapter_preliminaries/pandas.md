@@ -27,7 +27,7 @@ In them, each line corresponds to one record
 and consists of several (comma-separated) fields, e.g.,
 "Albert Einstein,March 14 1879,Ulm,Federal polytechnic school,field of gravitational physics".
 To demonstrate how to load CSV files with `pandas`, 
-we (**create a CSV file below**) `../data/house_tiny.csv`. 
+we create a CSV file below `../data/house_tiny.csv`. 
 This file represents a dataset of homes,
 where each row corresponds to a distinct home
 and the columns correspond to the number of rooms (`NumRooms`),
@@ -85,8 +85,8 @@ either those rows or those columns
 that contain missing values. 
 
 Here are some common imputation heuristics.
-[**For categorical input fields, 
-we can treat `NaN` as a category.**]
+For categorical input fields, 
+we can treat `NaN` as a category.
 Since the `RoofType` column takes values `Slate` and `NaN`,
 `pandas` can convert this column 
 into two columns `RoofType_Slate` and `RoofType_nan`.
@@ -102,8 +102,8 @@ print(inputs)
 
 For missing numerical values, 
 one common heuristic is to 
-[**replace the `NaN` entries with 
-the mean value of the corresponding column**].
+replace the `NaN` entries with 
+the mean value of the corresponding column.
 
 ```{.python .input #pandas-data-preparation-2}
 inputs = inputs.fillna(inputs.mean())
@@ -112,8 +112,8 @@ print(inputs)
 
 ## Conversion to the Tensor Format
 
-Now that [**all the entries in `inputs` and `targets` are numerical,
-we can load them into a tensor**] (recall :numref:`sec_ndarray`).
+Now that all the entries in `inputs` and `targets` are numerical,
+we can load them into a tensor (recall :numref:`sec_ndarray`).
 
 ```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab mxnet
@@ -209,3 +209,42 @@ the type of problems you may need to address.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17967)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+create a CSV file below
+
+@pandas-reading-the-dataset-1
+
+@pandas-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+For categorical input fields, 
+we can treat `NaN` as a category
+
+@pandas-data-preparation-1
+
+:::
+
+::: {.slide}
+
+replace the `NaN` entries with 
+the mean value of the corresponding column
+
+@pandas-data-preparation-2
+
+:::
+
+::: {.slide}
+
+all the entries in `inputs` and `targets` are numerical,
+we can load them into a tensor
+
+@pandas-conversion-to-the-tensor-format
+
+:::

@@ -476,3 +476,23 @@ If we synchronize after *every* op (the `.numpy()` barrier loop), the total cost
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/2564)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@async-computation-asynchronous-computation
+
+@async-computation-asynchrony-via-backend-1
+
+@async-computation-asynchrony-via-backend-2
+
+@async-computation-asynchrony-via-backend-3
+
+@async-computation-barriers-and-blockers-1
+
+@async-computation-barriers-and-blockers-2
+
+@async-computation-improving-computation
+
+:::

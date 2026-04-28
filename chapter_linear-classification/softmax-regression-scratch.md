@@ -51,8 +51,8 @@ For a refresher, recall the operation of the sum operator
 along specific dimensions in a tensor,
 as discussed in :numref:`subsec_lin-alg-reduction`
 and :numref:`subsec_lin-alg-non-reduction`.
-[**Given a matrix `X` we can sum over all elements (by default) or only
-over elements in the same axis.**]
+Given a matrix `X` we can sum over all elements (by default) or only
+over elements in the same axis.
 The `axis` variable lets us compute row and column sums:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-1}
@@ -66,9 +66,9 @@ Computing the softmax requires three steps:
 (iii) division of each row by its normalization constant,
 ensuring that the result sums to 1:
 
-(**
+
 $$\mathrm{softmax}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
-**)
+
 
 The (logarithm of the) denominator
 is called the (log) *partition function*.
@@ -83,9 +83,9 @@ def softmax(X):
     return X_exp / partition  # The broadcasting mechanism is applied here
 ```
 
-For any input `X`, [**we turn each element
+For any input `X`, we turn each element
 into a nonnegative number.
-Each row sums up to 1,**]
+Each row sums up to 1,
 as is required for a probability. Caution: the code above is *not* robust against very large or very small arguments. While it is sufficient to illustrate what is happening, you should *not* use this code verbatim for any serious purpose. Deep learning frameworks have such protections built in and we will be using the built-in softmax going forward.
 
 ```{.python .input #softmax-regression-scratch-the-softmax-3}
@@ -112,14 +112,14 @@ X_prob, d2l.reduce_sum(X_prob, 1)
 ## The Model
 
 We now have everything that we need
-to implement [**the softmax regression model.**]
+to implement the softmax regression model.
 As in our linear regression example,
 each instance will be represented
 by a fixed-length vector.
 Since the raw data here consists
 of $28 \times 28$ pixel images,
-[**we flatten each image,
-treating them as vectors of length 784.**]
+we flatten each image,
+treating them as vectors of length 784.
 In later chapters, we will introduce
 convolutional neural networks,
 which exploit the spatial structure
@@ -129,8 +129,8 @@ in a more satisfying way.
 In softmax regression,
 the number of outputs from our network
 should be equal to the number of classes.
-(**Since our dataset has 10 classes,
-our network has an output dimension of 10.**)
+Since our dataset has 10 classes,
+our network has an output dimension of 10.
 Consequently, our weights constitute a $784 \times 10$ matrix
 plus a $1 \times 10$ row vector for the biases.
 As with linear regression,
@@ -222,10 +222,10 @@ For efficiency we avoid Python for-loops and use indexing instead.
 In particular, the one-hot encoding in $\mathbf{y}$
 allows us to select the matching terms in $\hat{\mathbf{y}}$.
 
-To see this in action we [**create sample data `y_hat`
-with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`.**]
+To see this in action we create sample data `y_hat`
+with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`.
 The correct labels are $0$ and $2$ respectively (i.e., the first and third class).
-[**Using `y` as the indices of the probabilities in `y_hat`,**]
+Using `y` as the indices of the probabilities in `y_hat`,
 we can pick out terms efficiently.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
@@ -243,11 +243,11 @@ tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-Now we can (**implement the cross-entropy loss function**) by averaging over the logarithms of the selected probabilities.
+Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
 :end_tab:
 
 :begin_tab:`jax`
-Now we can (**implement the cross-entropy loss function**) by averaging over the logarithms of the selected probabilities.
+Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
 
 Note that to make use of `jax.jit` to speed up JAX implementations, and
 to make sure `loss` is a pure function, the `cross_entropy` function is re-defined
@@ -297,7 +297,7 @@ def loss(self, params, X, y, state):
 
 ## Training
 
-We reuse the `fit` method defined in :numref:`sec_linear_scratch` to [**train the model with 10 epochs.**]
+We reuse the `fit` method defined in :numref:`sec_linear_scratch` to train the model with 10 epochs.
 Note that the number of epochs (`max_epochs`),
 the minibatch size (`batch_size`),
 and learning rate (`lr`)
@@ -327,7 +327,7 @@ trainer.fit(model, data)
 ## Prediction
 
 Now that training is complete,
-our model is ready to [**classify some images.**]
+our model is ready to classify some images.
 
 ```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab pytorch
@@ -415,3 +415,79 @@ much more efficiently.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17982)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@softmax-regression-scratch-softmax-regression-implementation-from-scratch
+
+:::
+
+::: {.slide}
+
+Given a matrix `X` we can sum over all elements (by default) or only
+over elements in the same axis
+
+@softmax-regression-scratch-the-softmax-1
+
+$$\mathrm{softmax}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
+
+@softmax-regression-scratch-the-softmax-2
+
+:::
+
+::: {.slide}
+
+we turn each element
+into a nonnegative number.
+Each row sums up to 1
+
+@softmax-regression-scratch-the-softmax-3
+
+:::
+
+::: {.slide}
+
+the softmax regression model. we flatten each image,
+treating them as vectors of length 784. Since our dataset has 10 classes,
+our network has an output dimension of 10
+
+@softmax-regression-scratch-the-model-1
+
+@softmax-regression-scratch-the-model-2
+
+:::
+
+::: {.slide}
+
+create sample data `y_hat`
+with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`. Using `y` as the indices of the probabilities in `y_hat`
+
+@softmax-regression-scratch-the-cross-entropy-loss-1
+
+implement the cross-entropy loss function implement the cross-entropy loss function
+
+@softmax-regression-scratch-the-cross-entropy-loss-2
+
+@softmax-regression-scratch-the-cross-entropy-loss-3
+
+:::
+
+::: {.slide}
+
+train the model with 10 epochs
+
+@softmax-regression-scratch-training
+
+:::
+
+::: {.slide}
+
+classify some images
+
+@softmax-regression-scratch-prediction-1
+
+@softmax-regression-scratch-prediction-2
+
+:::

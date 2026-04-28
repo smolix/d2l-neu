@@ -189,3 +189,15 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/407)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@deepfm-model-architectures
+
+@deepfm-implementation-of-deepfm
+
+@deepfm-training-and-evaluating-the-model
+
+:::

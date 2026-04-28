@@ -187,8 +187,8 @@ We will want to keep the conventional softmax function handy
 in case we ever want to evaluate the output probabilities by our model.
 But instead of passing softmax probabilities into our new loss function,
 we just
-[**pass the logits and compute the softmax and its log
-all at once inside the cross-entropy loss function,**]
+pass the logits and compute the softmax and its log
+all at once inside the cross-entropy loss function,
 which does smart things like the ["LogSumExp trick"](https://en.wikipedia.org/wiki/LogSumExp).
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
@@ -288,3 +288,24 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17983)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@softmax-regression-concise-concise-implementation-of-softmax-regression
+
+@softmax-regression-concise-defining-the-model
+
+:::
+
+::: {.slide}
+
+pass the logits and compute the softmax and its log
+all at once inside the cross-entropy loss function
+
+@softmax-regression-concise-softmax-revisited
+
+@softmax-regression-concise-training
+
+:::

@@ -225,3 +225,23 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1075)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rmsprop-the-algorithm-1
+
+@rmsprop-the-algorithm-2
+
+@rmsprop-implementation-from-scratch-1
+
+@rmsprop-implementation-from-scratch-2
+
+@rmsprop-implementation-from-scratch-3
+
+@rmsprop-implementation-from-scratch-4
+
+@rmsprop-concise-implementation
+
+:::

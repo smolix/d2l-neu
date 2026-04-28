@@ -48,7 +48,7 @@ import jax
 import math
 ```
 
-## [**Dot Product Attention**]
+## Dot Product Attention
 
 
 Let's review the attention function (without exponentiation) from the Gaussian kernel for a moment:
@@ -76,7 +76,7 @@ As it turns out, all popular attention mechanisms use the softmax, hence we will
 We need a few functions to make the attention mechanism efficient to deploy. This includes tools for dealing with strings of variable lengths (common for natural language processing) and tools for efficient evaluation on minibatches (batch matrix multiplication). 
 
 
-### [**Masked Softmax Operation**]
+### Masked Softmax Operation
 
 One of the most popular applications of the attention mechanism is to sequence models. Hence we need to be able to deal with sequences of different lengths. In some cases, such sequences may end up in the same minibatch, necessitating padding with dummy tokens for shorter sequences (see :numref:`sec_machine_translation` for an example). These special tokens do not carry meaning. For instance, assume that we have the following three sentences:
 
@@ -188,7 +188,7 @@ def masked_softmax(X, valid_lens):  #@save
         return nn.softmax(X.reshape(shape), axis=-1)
 ```
 
-To [**illustrate how this function works**],
+To illustrate how this function works,
 consider a minibatch of two examples of size $2 \times 4$,
 where their valid lengths are $2$ and $3$, respectively. 
 As a result of the masked softmax operation,
@@ -282,7 +282,7 @@ K = d2l.ones((2, 4, 6))
 d2l.check_shape(jax.lax.batch_matmul(Q, K), (2, 3, 6))
 ```
 
-## [**Scaled Dot Product Attention**]
+## Scaled Dot Product Attention
 
 Let's return to the dot product attention introduced in :eqref:`eq_dot_product_attention`. 
 In general, it requires that both the query and the key
@@ -386,7 +386,7 @@ class DotProductAttention(nn.Module):  #@save
         return dropout_layer(attention_weights)@values, attention_weights
 ```
 
-To [**illustrate how the `DotProductAttention` class works**],
+To illustrate how the `DotProductAttention` class works,
 we use the same keys, values, and valid lengths from the earlier toy example for additive attention. For the purpose of our example we assume that we have a minibatch size of $2$, a total of $10$ keys and values, and that the dimensionality of the values is $4$. Lastly, we assume that the valid length per observation is $2$ and $6$ respectively. Given that, we expect the output to be a $2 \times 1 \times 4$ tensor, i.e., one row per example of the minibatch.
 
 ```{.python .input #attention-scoring-functions-scaled-dot-product-attention-2}
@@ -452,7 +452,7 @@ d2l.show_heatmaps(d2l.reshape(attention_weights, (1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
 ```
 
-## [**Additive Attention**]
+## Additive Attention
 :label:`subsec_additive-attention`
 
 When queries $\mathbf{q}$ and keys $\mathbf{k}$ are vectors of different dimension,
@@ -592,7 +592,7 @@ class AdditiveAttention(nn.Module):  #@save
         return dropout_layer(attention_weights)@values, attention_weights
 ```
 
-Let's [**see how `AdditiveAttention` works**]. In our toy example we pick queries, keys and values of size 
+Let's see how `AdditiveAttention` works. In our toy example we pick queries, keys and values of size 
 $(2, 1, 20)$, $(2, 10, 2)$ and $(2, 10, 4)$, respectively. This is identical to our choice for `DotProductAttention`, except that now the queries are $20$-dimensional. Likewise, we pick $(2, 6)$ as the valid lengths for the sequences in the minibatch.
 
 ```{.python .input #attention-scoring-functions-additive-attention-2}
@@ -672,3 +672,67 @@ we can use the additive attention scoring function instead. Optimizing these lay
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18027)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@attention-scoring-functions
+
+:::
+
+::: {.slide}
+
+Dot Product Attention Masked Softmax Operation
+
+@attention-scoring-functions-masked-softmax-operation-1
+
+:::
+
+::: {.slide}
+
+illustrate how this function works
+
+@attention-scoring-functions-masked-softmax-operation-2
+
+@attention-scoring-functions-masked-softmax-operation-3
+
+@attention-scoring-functions-batch-matrix-multiplication
+
+:::
+
+::: {.slide}
+
+Scaled Dot Product Attention
+
+@attention-scoring-functions-scaled-dot-product-attention-1
+
+:::
+
+::: {.slide}
+
+illustrate how the `DotProductAttention` class works
+
+@attention-scoring-functions-scaled-dot-product-attention-2
+
+@attention-scoring-functions-scaled-dot-product-attention-3
+
+:::
+
+::: {.slide}
+
+Additive Attention
+
+@attention-scoring-functions-additive-attention-1
+
+:::
+
+::: {.slide}
+
+see how `AdditiveAttention` works
+
+@attention-scoring-functions-additive-attention-2
+
+@attention-scoring-functions-additive-attention-3
+
+:::

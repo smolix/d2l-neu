@@ -388,3 +388,35 @@ This algorithm converges rapidly (for an analysis and proof see e.g., :citet:`Bo
 1. Apply the algorithm above to a number of objective functions (convex or not). What happens if you rotate coordinates by $45$ degrees?
 
 [Discussions](https://discuss.d2l.ai/t/351)
+
+<!-- slides -->
+
+::: {.slide}
+
+@gd-one-dimensional-gradient-descent-1
+
+@gd-one-dimensional-gradient-descent-2
+
+@gd-one-dimensional-gradient-descent-3
+
+@gd-one-dimensional-gradient-descent-4
+
+@gd-learning-rate-1
+
+@gd-learning-rate-2
+
+@gd-local-minima
+
+@gd-multivariate-gradient-descent-1
+
+@gd-multivariate-gradient-descent-2
+
+@gd-multivariate-gradient-descent-3
+
+@gd-newton-s-method-1
+
+@gd-newton-s-method-2
+
+@gd-newton-s-method-3
+
+:::

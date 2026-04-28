@@ -58,7 +58,7 @@ from jax import numpy as jnp
 import jax
 ```
 
-## [**Self-Attention**]
+## Self-Attention
 
 Given a sequence of input tokens
 $\mathbf{x}_1, \ldots, \mathbf{x}_n$ where any $\mathbf{x}_i \in \mathbb{R}^d$ ($1 \leq i \leq n$),
@@ -213,7 +213,7 @@ makes self-attention prohibitively slow for very long sequences.
 
 
 
-## [**Positional Encoding**]
+## Positional Encoding
 :label:`subsec_positional-encoding`
 
 
@@ -344,8 +344,8 @@ class PositionalEncoding(nn.Module):  #@save
 ```
 
 In the positional embedding matrix $\mathbf{P}$,
-[**rows correspond to positions within a sequence
-and columns represent different positional encoding dimensions**].
+rows correspond to positions within a sequence
+and columns represent different positional encoding dimensions.
 In the example below,
 we can see that
 the $6^{\textrm{th}}$ and the $7^{\textrm{th}}$
@@ -405,7 +405,7 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
 
 To see how the monotonically decreased frequency
 along the encoding dimension relates to absolute positional information,
-let's print out [**the binary representations**] of $0, 1, \ldots, 7$.
+let's print out the binary representations of $0, 1, \ldots, 7$.
 As we can see, the lowest bit, the second-lowest bit, 
 and the third-lowest bit alternate on every number, 
 every two numbers, and every four numbers, respectively.
@@ -418,8 +418,8 @@ for i in range(8):
 In binary representations, a higher bit 
 has a lower frequency than a lower bit.
 Similarly, as demonstrated in the heat map below,
-[**the positional encoding decreases
-frequencies along the encoding dimension**]
+the positional encoding decreases
+frequencies along the encoding dimension
 by using trigonometric functions.
 Since the outputs are float numbers,
 such continuous representations
@@ -522,3 +522,55 @@ by adding positional encoding to the input representations.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18030)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@self-attention-and-positional-encoding
+
+:::
+
+::: {.slide}
+
+Self-Attention
+
+@self-attention-and-positional-encoding-self-attention-1
+
+@self-attention-and-positional-encoding-self-attention-2
+
+:::
+
+::: {.slide}
+
+Positional Encoding
+
+@self-attention-and-positional-encoding-positional-encoding-1
+
+:::
+
+::: {.slide}
+
+rows correspond to positions within a sequence
+and columns represent different positional encoding dimensions
+
+@self-attention-and-positional-encoding-positional-encoding-2
+
+:::
+
+::: {.slide}
+
+the binary representations
+
+@self-attention-and-positional-encoding-absolute-positional-information-1
+
+:::
+
+::: {.slide}
+
+the positional encoding decreases
+frequencies along the encoding dimension
+
+@self-attention-and-positional-encoding-absolute-positional-information-2
+
+:::

@@ -162,3 +162,15 @@ Q-learning is one of the most fundamental reinforcement-learning algorithms. It 
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12103)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@qlearning-implementation-of-q-learning-1
+
+@qlearning-implementation-of-q-learning-2
+
+@qlearning-implementation-of-q-learning-3
+
+:::

@@ -48,7 +48,7 @@ To study this problem, we will begin by investigating a popular natural language
 
 ## The Stanford Natural Language Inference (SNLI) Dataset
 
-[**Stanford Natural Language Inference (SNLI) Corpus**] is a collection of over 500000 labeled English sentence pairs :cite:`Bowman.Angeli.Potts.ea.2015`.
+Stanford Natural Language Inference (SNLI) Corpus is a collection of over 500000 labeled English sentence pairs :cite:`Bowman.Angeli.Potts.ea.2015`.
 We download and store the extracted SNLI dataset in the path `../data/snli_1.0`.
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
@@ -119,7 +119,7 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
-### [**Reading the Dataset**]
+### Reading the Dataset
 
 The original SNLI dataset contains much richer information than what we really need in our experiments. Thus, we define a function `read_snli` to only extract part of the dataset, then return lists of premises, hypotheses, and their labels.
 
@@ -145,7 +145,7 @@ def read_snli(data_dir, is_train):
     return premises, hypotheses, labels
 ```
 
-Now let's [**print the first 3 pairs**] of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
+Now let's print the first 3 pairs of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
 
 ```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-2}
 train_data = read_snli(data_dir, is_train=True)
@@ -158,7 +158,7 @@ for x0, x1, y in zip(train_data[0][:3], train_data[1][:3], train_data[2][:3]):
 The training set has about 550000 pairs,
 and the testing set has about 10000 pairs.
 The following shows that 
-the three [**labels "entailment", "contradiction", and "neutral" are balanced**] in 
+the three labels "entailment", "contradiction", and "neutral" are balanced in 
 both the training set and the testing set.
 
 ```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-3}
@@ -167,7 +167,7 @@ for data in [train_data, test_data]:
     print([[row for row in data[2]].count(i) for i in range(3)])
 ```
 
-### [**Defining a Class for Loading the Dataset**]
+### Defining a Class for Loading the Dataset
 
 Below we define a class for loading the SNLI dataset by inheriting from the `Dataset` class in Gluon. The argument `num_steps` in the class constructor specifies the length of a text sequence so that each minibatch of sequences will have the same shape. 
 In other words,
@@ -298,7 +298,7 @@ class SNLIDataset:
         return len(self.premises)
 ```
 
-### [**Putting It All Together**]
+### Putting It All Together
 
 Now we can invoke the `read_snli` function and the `SNLIDataset` class to download the SNLI dataset and return `DataLoader` instances for both training and testing sets, together with the vocabulary of the training set.
 It is noteworthy that we must use the vocabulary constructed from the training set
@@ -449,3 +449,57 @@ for premises, hypotheses, labels in train_iter:
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1388)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+Stanford Natural Language Inference (SNLI) Corpus
+
+@natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset
+
+:::
+
+::: {.slide}
+
+Reading the Dataset
+
+@natural-language-inference-and-dataset-reading-the-dataset-1
+
+:::
+
+::: {.slide}
+
+print the first 3 pairs
+
+@natural-language-inference-and-dataset-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+labels "entailment", "contradiction", and "neutral" are balanced
+
+@natural-language-inference-and-dataset-reading-the-dataset-3
+
+:::
+
+::: {.slide}
+
+Defining a Class for Loading the Dataset
+
+@natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset
+
+:::
+
+::: {.slide}
+
+Putting It All Together
+
+@natural-language-inference-and-dataset-putting-it-all-together-1
+
+@natural-language-inference-and-dataset-putting-it-all-together-2
+
+@natural-language-inference-and-dataset-putting-it-all-together-3
+
+:::

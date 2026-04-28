@@ -284,3 +284,21 @@ scores
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/400)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@mf-the-matrix-factorization-model
+
+@mf-model-implementation
+
+@mf-evaluation-measures
+
+@mf-training-and-evaluating-the-model-1
+
+@mf-training-and-evaluating-the-model-2
+
+@mf-training-and-evaluating-the-model-3
+
+:::

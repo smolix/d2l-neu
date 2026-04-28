@@ -2,7 +2,7 @@
 
 In this section, we will practice
 the dog breed identification problem on
-Kaggle. (**The web address of this competition is https://www.kaggle.com/c/dog-breed-identification**)
+Kaggle. The web address of this competition is https://www.kaggle.com/c/dog-breed-identification
 
 In this competition,
 120 different breeds of dogs will be recognized.
@@ -83,7 +83,7 @@ After unzipping the downloaded file in `../data`, you will find the entire datas
 You may have noticed that the above structure is
 similar to that of the CIFAR-10 competition in :numref:`sec_kaggle_cifar10`, where folders `train/` and `test/` contain training and testing dog images, respectively, and `labels.csv` contains
 the labels for the training images.
-Similarly, to make it easier to get started, [**we provide a small sample of the dataset**] mentioned above: `train_valid_test_tiny.zip`.
+Similarly, to make it easier to get started, we provide a small sample of the dataset mentioned above: `train_valid_test_tiny.zip`.
 If you are going to use the full dataset for the Kaggle competition, you need to change the `demo` variable below to `False`.
 
 ```{.python .input #kaggle-dog-downloading-the-dataset}
@@ -100,7 +100,7 @@ else:
     data_dir = os.path.join('..', 'data', 'dog-breed-identification')
 ```
 
-### [**Organizing the Dataset**]
+### Organizing the Dataset
 
 We can organize the dataset similarly to what we did in :numref:`sec_kaggle_cifar10`, namely splitting out
 a validation set from the original training set, and moving images into subfolders grouped by labels.
@@ -120,7 +120,7 @@ valid_ratio = 0.1
 reorg_dog_data(data_dir, valid_ratio)
 ```
 
-## [**Image Augmentation**]
+## Image Augmentation
 
 Recall that this dog breed dataset
 is a subset of the ImageNet dataset,
@@ -266,7 +266,7 @@ def transform_test_fn(image, label):
     return image, label
 ```
 
-## [**Reading the Dataset**]
+## Reading the Dataset
 
 As in :numref:`sec_kaggle_cifar10`,
 we can read the organized dataset
@@ -395,7 +395,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-## [**Fine-Tuning a Pretrained Model**]
+## Fine-Tuning a Pretrained Model
 
 Again,
 the dataset for this competition is a subset of the ImageNet dataset.
@@ -508,7 +508,7 @@ def get_net():
     return finetune_net
 ```
 
-Before [**calculating the loss**],
+Before calculating the loss,
 we first obtain the input of the pretrained model's output layer, i.e., the extracted feature.
 Then we use this feature as input for our small custom output network to calculate the loss.
 
@@ -611,7 +611,7 @@ def evaluate_loss(data_iter, net):
     return l_sum / n
 ```
 
-## Defining [**the Training Function**]
+## Defining the Training Function
 
 We will select the model and tune hyperparameters according to the model's performance on the validation set. The model training function `train` only
 iterates parameters of the small custom output network.
@@ -827,7 +827,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return net
 ```
 
-## [**Training and Validating the Model**]
+## Training and Validating the Model
 
 Now we can train and validate the model.
 The following hyperparameters are all tunable.
@@ -868,7 +868,7 @@ net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
             lr_decay)
 ```
 
-## [**Classifying the Testing Set**] and Submitting Results on Kaggle
+## Classifying the Testing Set and Submitting Results on Kaggle
 
 
 Similar to the final step in :numref:`sec_kaggle_cifar10`,
@@ -995,3 +995,89 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1481)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+The web address of this competition is https://www.kaggle.com/c/dog-breed-identification
+
+@kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle
+
+:::
+
+::: {.slide}
+
+we provide a small sample of the dataset
+
+@kaggle-dog-downloading-the-dataset
+
+:::
+
+::: {.slide}
+
+Organizing the Dataset
+
+@kaggle-dog-organizing-the-dataset
+
+:::
+
+::: {.slide}
+
+Image Augmentation
+
+@kaggle-dog-image-augmentation-1
+
+@kaggle-dog-image-augmentation-2
+
+:::
+
+::: {.slide}
+
+Reading the Dataset
+
+@kaggle-dog-reading-the-dataset-1
+
+@kaggle-dog-reading-the-dataset-2
+
+:::
+
+::: {.slide}
+
+Fine-Tuning a Pretrained Model
+
+@kaggle-dog-fine-tuning-a-pretrained-model-1
+
+:::
+
+::: {.slide}
+
+calculating the loss
+
+@kaggle-dog-fine-tuning-a-pretrained-model-2
+
+:::
+
+::: {.slide}
+
+the Training Function
+
+@kaggle-dog-defining-the-training-function
+
+:::
+
+::: {.slide}
+
+Training and Validating the Model
+
+@kaggle-dog-training-and-validating-the-model
+
+:::
+
+::: {.slide}
+
+Classifying the Testing Set
+
+@kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
+
+:::

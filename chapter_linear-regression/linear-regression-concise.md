@@ -33,9 +33,9 @@ and (ii) automatic differentiation for calculating gradients.
 In practice, because data iterators, loss functions, optimizers,
 and neural network layers
 are so common, modern libraries implement these components for us as well.
-In this section, (**we will show you how to implement
-the linear regression model**) from :numref:`sec_linear_scratch`
-(**concisely by using high-level APIs**) of deep learning frameworks.
+In this section, we will show you how to implement
+the linear regression model from :numref:`sec_linear_scratch`
+concisely by using high-level APIs of deep learning frameworks.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -86,7 +86,7 @@ but you would be a lousy web developer
 if you spent a month reinventing the wheel.
 
 For standard operations,
-we can [**use a framework's predefined layers,**]
+we can use a framework's predefined layers,
 which allow us to focus
 on the layers used to construct the model
 rather than worrying about their implementation.
@@ -215,7 +215,7 @@ we use `mean`to average the loss across over the minibatch.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`).**]
+The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`).
 By default, `MSELoss` returns the average loss over examples.
 It is faster (and easier to use) than implementing our own.
 :end_tab:
@@ -283,7 +283,7 @@ Minibatch SGD is a standard tool
 for optimizing neural networks
 and thus PyTorch supports it alongside a number of
 variations on this algorithm in the `optim` module.
-When we (**instantiate an `SGD` instance,**)
+When we instantiate an `SGD` instance,
 we specify the parameters to optimize over,
 obtainable from our model via `self.parameters()`,
 and the learning rate (`self.lr`)
@@ -337,8 +337,8 @@ Once we start working with much more complex models,
 the advantages of the high-level API will grow considerably.
 
 Now that we have all the basic pieces in place,
-[**the training loop itself is the same
-as the one we implemented from scratch.**]
+the training loop itself is the same
+as the one we implemented from scratch.
 So we just call the `fit` method (introduced in :numref:`oo-design-training`),
 which relies on the implementation of the `fit_epoch` method
 in :numref:`sec_linear_scratch`,
@@ -352,9 +352,9 @@ trainer.fit(model, data)
 ```
 
 Below, we
-[**compare the model parameters learned
+compare the model parameters learned
 by training on finite data
-and the actual parameters**]
+and the actual parameters
 that generated our dataset.
 To access parameters,
 we access the weights and bias
@@ -488,3 +488,57 @@ Dimensionality and storage for networks are automatically inferred
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17977)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+we will show you how to implement
+the linear regression model concisely by using high-level APIs
+
+@linear-regression-concise-concise-implementation-of-linear-regression
+
+:::
+
+::: {.slide}
+
+use a framework's predefined layers
+
+@linear-regression-concise-defining-the-model-1
+
+@linear-regression-concise-defining-the-model-2
+
+:::
+
+::: {.slide}
+
+The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`)
+
+@linear-regression-concise-defining-the-loss-function
+
+instantiate an `SGD` instance
+
+@linear-regression-concise-defining-the-optimization-algorithm
+
+:::
+
+::: {.slide}
+
+the training loop itself is the same
+as the one we implemented from scratch
+
+@linear-regression-concise-training-1
+
+:::
+
+::: {.slide}
+
+compare the model parameters learned
+by training on finite data
+and the actual parameters
+
+@linear-regression-concise-training-2
+
+@linear-regression-concise-training-3
+
+:::

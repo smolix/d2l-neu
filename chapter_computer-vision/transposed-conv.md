@@ -99,7 +99,7 @@ how transposed convolution with a $2\times 2$ kernel is computed for a $2\times 
 :label:`fig_trans_conv`
 
 
-We can (**implement this basic transposed convolution operation**) `trans_conv` for a input matrix `X` and a kernel matrix `K`.
+We can implement this basic transposed convolution operation `trans_conv` for a input matrix `X` and a kernel matrix `K`.
 
 ```{.python .input #transposed-conv-basic-operation-1}
 #@tab mxnet, pytorch
@@ -142,7 +142,7 @@ the transposed convolution
 via the kernel, thereby
 producing an output
 that is larger than the input.
-We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_trans_conv` to [**validate the output of the above implementation**] of the basic two-dimensional transposed convolution operation.
+We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_trans_conv` to validate the output of the above implementation of the basic two-dimensional transposed convolution operation.
 
 ```{.python .input #transposed-conv-basic-operation-2}
 X = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
@@ -153,7 +153,7 @@ trans_conv(X, K)
 Alternatively,
 when the input `X` and kernel `K` are both
 four-dimensional tensors,
-we can [**use high-level APIs to obtain the same results**].
+we can use high-level APIs to obtain the same results.
 
 ```{.python .input #transposed-conv-basic-operation-3}
 #@tab mxnet
@@ -180,7 +180,7 @@ params = {**params, 'params': {'kernel': K}}
 tconv.apply(params, X)
 ```
 
-## [**Padding, Strides, and Multiple Channels**]
+## Padding, Strides, and Multiple Channels
 
 Different from in the regular convolution
 where padding is applied to input,
@@ -306,7 +306,7 @@ params_tconv = tconv.init(jax.random.PRNGKey(2), Y)
 tconv.apply(params_tconv, Y).shape == X.shape
 ```
 
-## [**Connection to Matrix Transposition**]
+## Connection to Matrix Transposition
 :label:`subsec-connection-to-mat-transposition`
 
 The transposed convolution is named after
@@ -450,3 +450,57 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1450)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@transposed-conv-transposed-convolution
+
+implement this basic transposed convolution operation
+
+@transposed-conv-basic-operation-1
+
+:::
+
+::: {.slide}
+
+validate the output of the above implementation
+
+@transposed-conv-basic-operation-2
+
+:::
+
+::: {.slide}
+
+use high-level APIs to obtain the same results
+
+@transposed-conv-basic-operation-3
+
+:::
+
+::: {.slide}
+
+Padding, Strides, and Multiple Channels
+
+@transposed-conv-padding-strides-and-multiple-channels-1
+
+@transposed-conv-padding-strides-and-multiple-channels-2
+
+@transposed-conv-padding-strides-and-multiple-channels-3
+
+:::
+
+::: {.slide}
+
+Connection to Matrix Transposition
+
+@transposed-conv-connection-to-matrix-transposition-1
+
+@transposed-conv-connection-to-matrix-transposition-2
+
+@transposed-conv-connection-to-matrix-transposition-3
+
+@transposed-conv-connection-to-matrix-transposition-4
+
+:::

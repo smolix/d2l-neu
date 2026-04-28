@@ -605,3 +605,23 @@ Taylor series have two primary applications:
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1089)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@single-variable-calculus-differential-calculus-1
+
+@single-variable-calculus-differential-calculus-2
+
+@single-variable-calculus-differential-calculus-3
+
+@single-variable-calculus-differential-calculus-4
+
+@single-variable-calculus-linear-approximation
+
+@single-variable-calculus-higher-order-derivatives
+
+@single-variable-calculus-taylor-series
+
+:::

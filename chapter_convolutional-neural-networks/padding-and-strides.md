@@ -129,7 +129,7 @@ with the window centered on `X[i, j]`.
 
 In the following example, we create a two-dimensional convolutional layer
 with a height and width of 3
-and (**apply 1 pixel of padding on all sides.**)
+and apply 1 pixel of padding on all sides.
 Given an input with a height and width of 8,
 we find that the height and width of the output is also 8.
 
@@ -209,7 +209,7 @@ comp_conv2d(conv2d, X).shape
 
 When the height and width of the convolution kernel are different,
 we can make the output and input have the same height and width
-by [**setting different padding numbers for height and width.**]
+by setting different padding numbers for height and width.
 
 ```{.python .input #padding-and-strides-padding-2}
 %%tab mxnet
@@ -285,7 +285,7 @@ Going a step further, if the input height and width
 are divisible by the strides on the height and width,
 then the output shape will be $(n_\textrm{h}/s_\textrm{h}) \times (n_\textrm{w}/s_\textrm{w})$.
 
-Below, we [**set the strides on both the height and width to 2**],
+Below, we set the strides on both the height and width to 2,
 thus halving the input height and width.
 
 ```{.python .input #padding-and-strides-stride-1}
@@ -312,7 +312,7 @@ conv2d = nn.Conv(1, kernel_size=(3, 3), padding=1, strides=2)
 comp_conv2d(conv2d, X).shape
 ```
 
-Let's look at (**a slightly more complicated example**).
+Let's look at a slightly more complicated example.
 
 ```{.python .input #padding-and-strides-stride-2}
 %%tab mxnet
@@ -378,3 +378,35 @@ So far all padding that we discussed simply extended images with zeros. This has
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17997)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@padding-and-strides-padding-and-stride
+
+apply 1 pixel of padding on all sides
+
+@padding-and-strides-padding-1
+
+:::
+
+::: {.slide}
+
+setting different padding numbers for height and width
+
+@padding-and-strides-padding-2
+
+:::
+
+::: {.slide}
+
+set the strides on both the height and width to 2
+
+@padding-and-strides-stride-1
+
+a slightly more complicated example
+
+@padding-and-strides-stride-2
+
+:::

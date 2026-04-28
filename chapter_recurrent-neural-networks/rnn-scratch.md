@@ -118,10 +118,10 @@ class RNNScratch(nn.Module):  #@save
         self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens,))
 ```
 
-[**The `forward` method below defines how to compute 
+The `forward` method below defines how to compute 
 the output and hidden state at any time step,
 given the current input and the state of the model
-at the previous time step.**]
+at the previous time step.
 Note that the RNN model loops through 
 the outermost dimension of `inputs`,
 updating the hidden state 
@@ -364,7 +364,7 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.plot('ppl', d2l.exp(l), train=False)
 ```
 
-### [**One-Hot Encoding**]
+### One-Hot Encoding
 
 Recall that each token is represented 
 by a numerical index indicating the
@@ -415,12 +415,12 @@ tf.one_hot(tf.constant([0, 2]), 5)
 jax.nn.one_hot(jnp.array([0, 2]), 5)
 ```
 
-(**The minibatches that we sample at each iteration
+The minibatches that we sample at each iteration
 will take the shape (batch size, number of time steps).
 Once representing each input as a one-hot vector,
 we can think of each minibatch as a three-dimensional tensor, 
 where the length along the third axis 
-is given by the vocabulary size (`len(vocab)`).**)
+is given by the vocabulary size (`len(vocab)`).
 We often transpose the input so that we will obtain an output 
 of shape (number of time steps, batch size, vocabulary size).
 This will allow us to loop more conveniently through the outermost dimension
@@ -478,8 +478,8 @@ def forward(self, X, state=None):
     return self.output_layer(rnn_outputs)
 ```
 
-Let's [**check whether the forward computation
-produces outputs with the correct shape.**]
+Let's check whether the forward computation
+produces outputs with the correct shape.
 
 ```{.python .input #rnn-scratch-transforming-rnn-outputs-2}
 %%tab pytorch, mxnet, tensorflow
@@ -497,7 +497,7 @@ outputs, _ = model.init_with_output(d2l.get_key(),
 check_shape(outputs, (batch_size, num_steps, num_inputs))
 ```
 
-## [**Gradient Clipping**]
+## Gradient Clipping
 
 
 While you are already used to thinking of neural networks
@@ -597,7 +597,7 @@ A popular alternative is to adopt a *gradient clipping* heuristic
 projecting the gradients $\mathbf{g}$ onto a ball 
 of some given radius $\theta$ as follows:
 
-(**$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$**)
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
 
 This ensures that the gradient norm never exceeds $\theta$ 
 and that the updated gradient is entirely aligned 
@@ -737,9 +737,9 @@ had written so far (the prefix),
 and then generate a likely continuation.
 
 
-[**The following `predict` method
+The following `predict` method
 generates a continuation, one character at a time,
-after ingesting a user-provided `prefix`**].
+after ingesting a user-provided `prefix`.
 When looping through the characters in `prefix`,
 we keep passing the hidden state
 to the next time step 
@@ -887,3 +887,80 @@ During training, gradient clipping can mitigate the problem of exploding gradien
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18014)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rnn-scratch-recurrent-neural-network-implementation-from-scratch
+
+@rnn-scratch-rnn-model-1
+
+:::
+
+::: {.slide}
+
+The `forward` method below defines how to compute 
+the output and hidden state at any time step,
+given the current input and the state of the model
+at the previous time step
+
+@rnn-scratch-rnn-model-2
+
+@rnn-scratch-rnn-model-3
+
+@rnn-scratch-rnn-model-4
+
+@rnn-scratch-rnn-based-language-model
+
+:::
+
+::: {.slide}
+
+One-Hot Encoding
+
+@rnn-scratch-one-hot-encoding-1
+
+The minibatches that we sample at each iteration
+will take the shape (batch size, number of time steps).
+Once representing each input as a one-hot vector,
+we can think of each minibatch as a three-dimensional tensor, 
+where the length along the third axis 
+is given by the vocabulary size (`len(vocab)`)
+
+@rnn-scratch-one-hot-encoding-2
+
+@rnn-scratch-transforming-rnn-outputs-1
+
+:::
+
+::: {.slide}
+
+check whether the forward computation
+produces outputs with the correct shape
+
+@rnn-scratch-transforming-rnn-outputs-2
+
+:::
+
+::: {.slide}
+
+Gradient Clipping $$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
+
+@rnn-scratch-gradient-clipping
+
+@rnn-scratch-training
+
+:::
+
+::: {.slide}
+
+The following `predict` method
+generates a continuation, one character at a time,
+after ingesting a user-provided `prefix`
+
+@rnn-scratch-decoding-1
+
+@rnn-scratch-decoding-2
+
+:::

@@ -50,7 +50,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## (**Layers without Parameters**)
+## Layers without Parameters
 
 To start, we construct a custom layer
 that does not have any parameters of its own.
@@ -65,7 +65,7 @@ from the base layer class and implement the forward propagation function.
 %%tab mxnet
 class CenteredLayer(nn.Block):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__kwargs)
 
     def forward(self, X):
         return X - X.mean()
@@ -105,8 +105,8 @@ layer = CenteredLayer()
 layer(d2l.tensor([1.0, 2, 3, 4, 5]))
 ```
 
-We can now [**incorporate our layer as a component
-in constructing more complex models.**]
+We can now incorporate our layer as a component
+in constructing more complex models.
 
 ```{.python .input #custom-layer-layers-without-parameters-3}
 %%tab mxnet
@@ -161,7 +161,7 @@ Y, _ = net.init_with_output(d2l.get_key(), jax.random.uniform(d2l.get_key(),
 Y.mean()
 ```
 
-## [**Layers with Parameters**]
+## Layers with Parameters
 
 Now that we know how to define simple layers,
 let's move on to defining layers with parameters
@@ -279,7 +279,7 @@ params = dense.init(d2l.get_key(), jnp.zeros((3, 5)))
 params
 ```
 
-We can [**directly carry out forward propagation calculations using custom layers.**]
+We can directly carry out forward propagation calculations using custom layers.
 
 ```{.python .input #custom-layer-layers-with-parameters-3}
 %%tab mxnet
@@ -303,7 +303,7 @@ dense.apply(params, jax.random.uniform(d2l.get_key(),
                                        (2, 5)))
 ```
 
-We can also (**construct models using custom layers.**)
+We can also (**construct models using custom layers.
 Once we have that we can use it just like the built-in fully connected layer.
 
 ```{.python .input #custom-layer-layers-with-parameters-4}
@@ -363,3 +363,50 @@ Layers can have local parameters, which can be created through built-in function
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17993)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@custom-layer-custom-layers
+
+Layers without Parameters
+
+@custom-layer-layers-without-parameters-1
+
+@custom-layer-layers-without-parameters-2
+
+:::
+
+::: {.slide}
+
+incorporate our layer as a component
+in constructing more complex models
+
+@custom-layer-layers-without-parameters-3
+
+@custom-layer-layers-without-parameters-4
+
+:::
+
+::: {.slide}
+
+Layers with Parameters
+
+@custom-layer-layers-with-parameters-1
+
+@custom-layer-layers-with-parameters-2
+
+:::
+
+::: {.slide}
+
+directly carry out forward propagation calculations using custom layers
+
+@custom-layer-layers-with-parameters-3
+
+construct models using custom layers
+
+@custom-layer-layers-with-parameters-4
+
+:::

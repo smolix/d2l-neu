@@ -191,7 +191,7 @@ In this case, a hidden state depends on the subsequence before and after the tim
 which encodes the information of the entire sequence.
 
 
-Now let's [**implement the RNN encoder**].
+Now let's implement the RNN encoder.
 Note that we use an *embedding layer*
 to obtain the feature vector for each token in the input sequence.
 The weight of an embedding layer is a matrix,
@@ -304,7 +304,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
 ```
 
 Let's use a concrete example
-to [**illustrate the above encoder implementation.**]
+to illustrate the above encoder implementation.
 Below, we instantiate a two-layer GRU encoder
 whose number of hidden units is 16.
 Given a minibatch of sequence inputs `X`
@@ -382,7 +382,7 @@ d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
 d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
 ```
 
-## [**Decoder**]
+## Decoder
 :label:`sec_seq2seq_decoder`
 
 Given a target output sequence $y_1, y_2, \ldots, y_{T'}$
@@ -564,7 +564,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         return outputs, [enc_output, hidden_state]
 ```
 
-To [**illustrate the implemented decoder**],
+To illustrate the implemented decoder,
 below we instantiate it with the same hyperparameters from the aforementioned encoder.
 As we can see, the output shape of the decoder becomes (batch size, number of time steps, vocabulary size),
 where the final dimension of the tensor stores the predicted token distribution.
@@ -709,7 +709,7 @@ in minibatches of the same shape.
 However, prediction of padding tokens
 should be excluded from loss calculations.
 To this end, we can 
-[**mask irrelevant entries with zero values**]
+mask irrelevant entries with zero values
 so that multiplication 
 of any irrelevant prediction
 with zero equates to zero.
@@ -738,10 +738,10 @@ def loss(self, params, X, Y, state, averaged=False):
     return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask), {}
 ```
 
-## [**Training**]
+## Training
 :label:`sec_seq2seq_training`
 
-Now we can [**create and train an RNN encoder--decoder model**]
+Now we can create and train an RNN encoder--decoder model
 for sequence-to-sequence learning on the machine translation dataset.
 
 ```{.python .input #seq2seq-training}
@@ -801,7 +801,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-## [**Prediction**]
+## Prediction
 
 To predict the output sequence
 at each step, 
@@ -971,7 +971,7 @@ For example, when $k=2$,
 given the target sequence $A$, $B$, $C$, $D$, $E$, $F$ and the predicted sequence $A$, $B$,
 although $p_1 = p_2 = 1$, the penalty factor $\exp(1-6/2) \approx 0.14$ lowers the BLEU.
 
-We [**implement the BLEU measure**] as follows.
+We implement the BLEU measure as follows.
 
 ```{.python .input #seq2seq-evaluation-of-predicted-sequences-1}
 def bleu(pred_seq, label_seq, k):  #@save
@@ -993,7 +993,7 @@ def bleu(pred_seq, label_seq, k):  #@save
 
 In the end,
 we use the trained RNN encoder--decoder
-to [**translate a few English sentences into French**]
+to translate a few English sentences into French
 and compute the BLEU of the results.
 
 ```{.python .input #seq2seq-evaluation-of-predicted-sequences-2}
@@ -1095,3 +1095,88 @@ BLEU is a popular measure that matches $n$-grams between the predicted sequence 
 [Discussions](https://discuss.d2l.ai/t/18022)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+
+@seq2seq-sequence-to-sequence-learning-for-machine-translation
+
+:::
+
+::: {.slide}
+
+implement the RNN encoder
+
+@seq2seq-encoder-1
+
+@seq2seq-encoder-2
+
+:::
+
+::: {.slide}
+
+illustrate the above encoder implementation
+
+@seq2seq-encoder-3
+
+@seq2seq-encoder-4
+
+:::
+
+::: {.slide}
+
+Decoder
+
+@seq2seq-decoder-1
+
+:::
+
+::: {.slide}
+
+illustrate the implemented decoder
+
+@seq2seq-decoder-2
+
+@seq2seq-encoder-decoder-for-sequence-to-sequence-learning
+
+:::
+
+::: {.slide}
+
+mask irrelevant entries with zero values
+
+@seq2seq-loss-function-with-masking
+
+:::
+
+::: {.slide}
+
+Training create and train an RNN encoder--decoder model
+
+@seq2seq-training
+
+:::
+
+::: {.slide}
+
+Prediction
+
+@seq2seq-prediction
+
+:::
+
+::: {.slide}
+
+implement the BLEU measure
+
+@seq2seq-evaluation-of-predicted-sequences-1
+
+:::
+
+::: {.slide}
+
+translate a few English sentences into French
+
+@seq2seq-evaluation-of-predicted-sequences-2
+
+:::

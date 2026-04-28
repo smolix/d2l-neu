@@ -202,3 +202,15 @@ by which a neural network can select elements from a set and to construct an ass
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18024)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@queries-keys-values-queries-keys-and-values
+
+@queries-keys-values-visualization-1
+
+@queries-keys-values-visualization-2
+
+:::

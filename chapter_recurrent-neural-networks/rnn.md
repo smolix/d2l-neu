@@ -258,3 +258,15 @@ The hidden state of an RNN can capture historical information of the sequence up
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18013)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@rnn-recurrent-neural-networks
+
+@rnn-recurrent-neural-networks-with-hidden-states-1
+
+@rnn-recurrent-neural-networks-with-hidden-states-2
+
+:::

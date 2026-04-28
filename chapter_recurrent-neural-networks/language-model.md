@@ -226,7 +226,7 @@ Before introducing the model,
 let's assume that it
 processes a minibatch of sequences with predefined length
 at a time.
-Now the question is how to [**read minibatches of input sequences and target sequences at random**].
+Now the question is how to read minibatches of input sequences and target sequences at random.
 
 
 Suppose that the dataset takes the form of a sequence of $T$ token indices in `corpus`.
@@ -337,3 +337,23 @@ large language models form the basis of state-of-the-art systems across diverse 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18012)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@language-model-language-models
+
+:::
+
+::: {.slide}
+
+read minibatches of input sequences and target sequences at random
+
+@language-model-partitioning-sequences-1
+
+@language-model-partitioning-sequences-2
+
+@language-model-partitioning-sequences-3
+
+:::

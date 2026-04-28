@@ -46,7 +46,7 @@ from jax import numpy as jnp
 import jax
 ```
 
-## (**Inception Blocks**)
+## Inception Blocks
 
 The basic convolutional block in GoogLeNet is called an *Inception block*,
 stemming from the meme "we need to go deeper" from the movie *Inception*.
@@ -188,7 +188,7 @@ At the same time, we can allocate different amounts of parameters
 for different filters.
 
 
-## [**GoogLeNet Model**]
+## GoogLeNet Model
 
 As shown in :numref:`fig_inception_full`, GoogLeNet uses a stack of a total of 9 inception blocks, arranged into three groups with max-pooling in between,
 and global average pooling in its head to generate its estimates.
@@ -521,8 +521,8 @@ fact that at the time when GoogLeNet was introduced, automatic tools for network
 were not yet available. For instance, by now we take it for granted that a competent deep learning framework is capable of inferring dimensionalities of input tensors automatically. At the time, many such configurations had to be specified explicitly by the experimenter, thus often slowing down active experimentation. Moreover, the tools needed for automatic exploration were still in flux and initial experiments largely amounted to costly brute-force exploration, genetic algorithms, and similar strategies. 
 
 For now the only modification we will carry out is to
-[**reduce the input height and width from 224 to 96
-to have a reasonable training time on Fashion-MNIST.**]
+reduce the input height and width from 224 to 96
+to have a reasonable training time on Fashion-MNIST.
 This simplifies the computation. Let's have a look at the
 changes in the shape of the output between the various modules.
 
@@ -536,7 +536,7 @@ model = GoogleNet().layer_summary((1, 1, 96, 96))
 model = GoogleNet().layer_summary((1, 96, 96, 1))
 ```
 
-## [**Training**]
+## Training
 
 As before, we train our model using the Fashion-MNIST dataset.
  We transform it to $96 \times 96$ pixel resolution
@@ -612,3 +612,50 @@ Over the following sections we will encounter a number of design choices (e.g., 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18004)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@googlenet-multi-branch-networks-googlenet
+
+Inception Blocks
+
+@googlenet-inception-blocks
+
+:::
+
+::: {.slide}
+
+GoogLeNet Model
+
+@googlenet-googlenet-model-1
+
+@googlenet-googlenet-model-2
+
+@googlenet-googlenet-model-3
+
+@googlenet-googlenet-model-4
+
+@googlenet-googlenet-model-5
+
+@googlenet-googlenet-model-6
+
+:::
+
+::: {.slide}
+
+reduce the input height and width from 224 to 96
+to have a reasonable training time on Fashion-MNIST
+
+@googlenet-googlenet-model-7
+
+:::
+
+::: {.slide}
+
+Training
+
+@googlenet-training
+
+:::

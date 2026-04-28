@@ -281,3 +281,23 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/399)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@movielens-getting-the-data-1
+
+@movielens-getting-the-data-2
+
+@movielens-statistics-of-the-dataset-1
+
+@movielens-statistics-of-the-dataset-2
+
+@movielens-splitting-the-dataset
+
+@movielens-loading-the-data-1
+
+@movielens-loading-the-data-2
+
+:::

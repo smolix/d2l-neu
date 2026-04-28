@@ -373,3 +373,21 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12090)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@hyperopt-intro-the-optimization-problem
+
+@hyperopt-intro-the-objective-function-1
+
+@hyperopt-intro-the-objective-function-2
+
+@hyperopt-intro-the-configuration-space
+
+@hyperopt-intro-random-search-1
+
+@hyperopt-intro-random-search-2
+
+:::

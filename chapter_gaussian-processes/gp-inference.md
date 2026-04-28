@@ -360,3 +360,35 @@ Try seeing if you can find these local optima: initialize with very large length
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12117)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@gp-inference-posterior-inference-for-regression
+
+@gp-inference-worked-example-from-scratch-1
+
+@gp-inference-worked-example-from-scratch-2
+
+@gp-inference-worked-example-from-scratch-3
+
+@gp-inference-worked-example-from-scratch-4
+
+@gp-inference-worked-example-from-scratch-5
+
+@gp-inference-worked-example-from-scratch-6
+
+@gp-inference-worked-example-from-scratch-7
+
+@gp-inference-making-life-easy-with-gpytorch-1
+
+@gp-inference-making-life-easy-with-gpytorch-2
+
+@gp-inference-making-life-easy-with-gpytorch-3
+
+@gp-inference-making-life-easy-with-gpytorch-4
+
+@gp-inference-making-life-easy-with-gpytorch-5
+
+:::

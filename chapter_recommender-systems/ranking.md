@@ -136,3 +136,15 @@ These two losses are interchangeable for personalized ranking in recommendation.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/402)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@ranking-bayesian-personalized-ranking-loss-and-its-implementation-1
+
+@ranking-bayesian-personalized-ranking-loss-and-its-implementation-2
+
+@ranking-hinge-loss-and-its-implementation
+
+:::

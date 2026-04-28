@@ -10,11 +10,11 @@ We are now ready to work through
 a fully functioning implementation 
 of linear regression. 
 In this section, 
-(**we will implement the entire method from scratch,
+we will implement the entire method from scratch,
 including (i) the model; (ii) the loss function;
 (iii) a minibatch stochastic gradient descent optimizer;
 and (iv) the training function 
-that stitches all of these pieces together.**)
+that stitches all of these pieces together.
 Finally, we will run our synthetic data generator
 from :numref:`sec_synthetic-regression-data`
 and apply our model
@@ -66,8 +66,8 @@ import optax
 
 ## Defining the Model
 
-[**Before we can begin optimizing our model's parameters**] by minibatch SGD,
-(**we need to have some parameters in the first place.**)
+Before we can begin optimizing our model's parameters by minibatch SGD,
+we need to have some parameters in the first place.
 In the following we initialize weights by drawing
 random numbers from a normal distribution with mean 0
 and a standard deviation of 0.01. 
@@ -129,8 +129,8 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b = self.param('b', nn.initializers.zeros, (1))
 ```
 
-Next we must [**define our model,
-relating its input and parameters to its output.**]
+Next we must define our model,
+relating its input and parameters to its output.
 Using the same notation as :eqref:`eq_linreg-y-vec`
 for our linear model we simply take the matrix--vector product
 of the input features $\mathbf{X}$ 
@@ -153,9 +153,9 @@ def forward(self, X):
 
 ## Defining the Loss Function
 
-Since [**updating our model requires taking
-the gradient of our loss function,**]
-we ought to (**define the loss function first.**)
+Since updating our model requires taking
+the gradient of our loss function,
+we ought to define the loss function first.
 Here we use the squared loss function
 in :eqref:`eq_mse`.
 In the implementation, we need to transform the true value `y`
@@ -340,7 +340,7 @@ def configure_optimizers(self):
 
 Now that we have all of the parts in place
 (parameters, loss function, model, and optimizer),
-we are ready to [**implement the main training loop.**]
+we are ready to implement the main training loop.
 It is crucial that you understand this code fully
 since you will employ similar training loops
 for every other deep learning model
@@ -604,9 +604,9 @@ trainer.fit(model, data)
 
 Because we synthesized the dataset ourselves,
 we know precisely what the true parameters are.
-Thus, we can [**evaluate our success in training
+Thus, we can evaluate our success in training
 by comparing the true parameters
-with those that we learned**] through our training loop.
+with those that we learned through our training loop.
 Indeed they turn out to be very close to each other.
 
 ```{.python .input #linear-regression-scratch-training-4  n=21}
@@ -710,3 +710,69 @@ and *more efficiently* (using our GPUs to their full potential).
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17976)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+we will implement the entire method from scratch,
+including (i) the model; (ii) the loss function;
+(iii) a minibatch stochastic gradient descent optimizer;
+and (iv) the training function 
+that stitches all of these pieces together
+
+@linear-regression-scratch-linear-regression-implementation-from-scratch
+
+:::
+
+::: {.slide}
+
+Before we can begin optimizing our model's parameters we need to have some parameters in the first place
+
+@linear-regression-scratch-defining-the-model-1
+
+:::
+
+::: {.slide}
+
+define our model,
+relating its input and parameters to its output
+
+@linear-regression-scratch-defining-the-model-2
+
+:::
+
+::: {.slide}
+
+updating our model requires taking
+the gradient of our loss function, define the loss function first
+
+@linear-regression-scratch-defining-the-loss-function
+
+@linear-regression-scratch-defining-the-optimization-algorithm-1
+
+@linear-regression-scratch-defining-the-optimization-algorithm-2
+
+:::
+
+::: {.slide}
+
+implement the main training loop
+
+@linear-regression-scratch-training-1
+
+@linear-regression-scratch-training-2
+
+@linear-regression-scratch-training-3
+
+:::
+
+::: {.slide}
+
+evaluate our success in training
+by comparing the true parameters
+with those that we learned
+
+@linear-regression-scratch-training-4
+
+:::

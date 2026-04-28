@@ -662,3 +662,35 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1081)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@lr-scheduler-toy-problem-1
+
+@lr-scheduler-toy-problem-2
+
+@lr-scheduler-schedulers-1
+
+@lr-scheduler-schedulers-2
+
+@lr-scheduler-schedulers-3
+
+@lr-scheduler-schedulers-4
+
+@lr-scheduler-factor-scheduler
+
+@lr-scheduler-multi-factor-scheduler-1
+
+@lr-scheduler-multi-factor-scheduler-2
+
+@lr-scheduler-cosine-scheduler-1
+
+@lr-scheduler-cosine-scheduler-2
+
+@lr-scheduler-warmup-1
+
+@lr-scheduler-warmup-2
+
+:::

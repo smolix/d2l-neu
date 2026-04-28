@@ -1163,3 +1163,33 @@ $$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1085)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@geometry-linear-algebraic-ops-geometry-of-vectors
+
+@geometry-linear-algebraic-ops-dot-products-and-angles
+
+@geometry-linear-algebraic-ops-hyperplanes-1
+
+@geometry-linear-algebraic-ops-hyperplanes-2
+
+@geometry-linear-algebraic-ops-hyperplanes-3
+
+@geometry-linear-algebraic-ops-hyperplanes-4
+
+@geometry-linear-algebraic-ops-invertibility
+
+@geometry-linear-algebraic-ops-determinant
+
+@geometry-linear-algebraic-ops-expressing-in-code-1
+
+@geometry-linear-algebraic-ops-expressing-in-code-2
+
+@geometry-linear-algebraic-ops-expressing-in-code-3
+
+@geometry-linear-algebraic-ops-expressing-in-code-4
+
+:::

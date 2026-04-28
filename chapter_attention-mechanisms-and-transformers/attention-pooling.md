@@ -60,7 +60,7 @@ from jax import numpy as jnp
 from flax import linen as nn
 ```
 
-## [**Kernels and Data**]
+## Kernels and Data
 
 All the kernels $\alpha(\mathbf{k}, \mathbf{q})$ defined in this section are *translation and rotation invariant*; that is, if we shift and rotate $\mathbf{k}$ and $\mathbf{q}$ in the same manner, the value of $\alpha$ remains unchanged. For simplicity we thus pick scalar arguments $k, q \in \mathbb{R}$ and pick the key $k = 0$ as the origin. This yields:
 
@@ -240,7 +240,7 @@ x_val = d2l.arange(0, 5, 0.1)
 y_val = f(x_val)
 ```
 
-## [**Attention Pooling via Nadaraya--Watson Regression**]
+## Attention Pooling via Nadaraya--Watson Regression
 
 Now that we have data and kernels, all we need is a function that computes the kernel regression estimates. Note that we also want to obtain the relative kernel weights in order to perform some minor diagnostics. Hence we first compute the kernel between all training features (covariates) `x_train` and all validation features `x_val`. This yields a matrix, which we subsequently normalize. When multiplied with the training labels `y_train` we obtain the estimates.
 
@@ -384,7 +384,7 @@ plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 
 The visualization clearly shows why the estimates for Gaussian, Boxcar, and Triangular are very similar: after all, they are derived from very similar attention weights, despite the different functional form of the kernel. This raises the question as to whether this is always the case. 
 
-## [**Adapting Attention Pooling**]
+## Adapting Attention Pooling
 
 We could replace the Gaussian kernel with one of a different width. That is, we could use 
 $\alpha(\mathbf{q}, \mathbf{k}) = \exp\left(-\frac{1}{2 \sigma^2} \|\mathbf{q} - \mathbf{k}\|^2 \right)$ where $\sigma^2$ determines the width of the kernel. Let's see whether this affects the outcomes.
@@ -441,3 +441,47 @@ The attention weight is assigned according to the similarity (or distance) betwe
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18026)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@attention-pooling-attention-pooling-by-similarity
+
+:::
+
+::: {.slide}
+
+Kernels and Data
+
+@attention-pooling-kernels-and-data-1
+
+@attention-pooling-kernels-and-data-2
+
+@attention-pooling-kernels-and-data-3
+
+:::
+
+::: {.slide}
+
+Attention Pooling via Nadaraya--Watson Regression
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-1
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-2
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-3
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-4
+
+:::
+
+::: {.slide}
+
+Adapting Attention Pooling
+
+@attention-pooling-adapting-attention-pooling-1
+
+@attention-pooling-adapting-attention-pooling-2
+
+:::

@@ -376,3 +376,33 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1071)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@momentum-an-ill-conditioned-problem-1
+
+@momentum-an-ill-conditioned-problem-2
+
+@momentum-the-momentum-method-1
+
+@momentum-the-momentum-method-2
+
+@momentum-effective-sample-weight
+
+@momentum-implementation-from-scratch-1
+
+@momentum-implementation-from-scratch-2
+
+@momentum-implementation-from-scratch-3
+
+@momentum-implementation-from-scratch-4
+
+@momentum-implementation-from-scratch-5
+
+@momentum-concise-implementation
+
+@momentum-scalar-functions
+
+:::

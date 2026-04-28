@@ -235,3 +235,25 @@ than the loss of the suboptimal decision making.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12101)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@sh-async-asynchronous-successive-halving
+
+@sh-async-objective-function-1
+
+@sh-async-objective-function-2
+
+@sh-async-asynchronous-scheduler-1
+
+@sh-async-asynchronous-scheduler-2
+
+@sh-async-asynchronous-scheduler-3
+
+@sh-async-asynchronous-scheduler-4
+
+@sh-async-visualize-the-optimization-process
+
+:::

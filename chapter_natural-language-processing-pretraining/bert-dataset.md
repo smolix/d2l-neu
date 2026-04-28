@@ -58,7 +58,7 @@ import os
 import random
 ```
 
-In [**the WikiText-2 dataset**],
+In the WikiText-2 dataset,
 each line represents a paragraph where
 space is inserted between any punctuation and its preceding token.
 Paragraphs with at least two sentences are retained.
@@ -92,7 +92,7 @@ These helper functions will be invoked later
 when transforming the raw text corpus
 into the dataset of the ideal format to pretrain BERT.
 
-### [**Generating the Next Sentence Prediction Task**]
+### Generating the Next Sentence Prediction Task
 
 According to descriptions of :numref:`subsec_nsp`,
 the `_get_next_sentence` function generates a training example
@@ -130,7 +130,7 @@ def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
     return nsp_data_from_paragraph
 ```
 
-### [**Generating the Masked Language Modeling Task**]
+### Generating the Masked Language Modeling Task
 :label:`subsec_prepare_mlm_data`
 
 In order to generate training examples
@@ -212,7 +212,7 @@ def _get_mlm_data_from_tokens(tokens, vocab):
 Now we are almost ready to customize a `Dataset` class for pretraining BERT.
 Before that, 
 we still need to define a helper function `_pad_bert_inputs`
-to [**append the special “&lt;pad&gt;” tokens to the inputs.**]
+to append the special “&lt;pad&gt;” tokens to the inputs.
 Its argument `examples` contain the outputs from the helper functions `_get_nsp_data_from_paragraph` and `_get_mlm_data_from_tokens` for the two pretraining tasks.
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
@@ -339,7 +339,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
 Putting the helper functions for
 generating training examples of the two pretraining tasks,
 and the helper function for padding inputs together,
-we customize the following `_WikiTextDataset` class as [**the WikiText-2 dataset for pretraining BERT**].
+we customize the following `_WikiTextDataset` class as the WikiText-2 dataset for pretraining BERT.
 By implementing the `__getitem__ `function,
 we can arbitrarily access the pretraining (masked language modeling and next sentence prediction) examples 
 generated from a pair of sentences from the WikiText-2 corpus.
@@ -501,8 +501,8 @@ class _WikiTextDataset:
 ```
 
 By using the `_read_wiki` function and the `_WikiTextDataset` class,
-we define the following `load_data_wiki` to [**download the WikiText-2 dataset
-and generate pretraining examples**] from it.
+we define the following `load_data_wiki` to download the WikiText-2 dataset
+and generate pretraining examples from it.
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab mxnet
@@ -578,7 +578,7 @@ def load_data_wiki(batch_size, max_len):
 ```
 
 Setting the batch size to 512 and the maximum length of a BERT input sequence to be 64,
-we [**print out the shapes of a minibatch of BERT pretraining examples**].
+we print out the shapes of a minibatch of BERT pretraining examples.
 Note that in each BERT input sequence,
 $10$ ($64 \times 0.15$) positions are predicted for the masked language modeling task.
 
@@ -628,3 +628,74 @@ len(vocab)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1496)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@bert-dataset-the-dataset-for-pretraining-bert-1
+
+:::
+
+::: {.slide}
+
+the WikiText-2 dataset
+
+@bert-dataset-the-dataset-for-pretraining-bert-2
+
+:::
+
+::: {.slide}
+
+Generating the Next Sentence Prediction Task
+
+@bert-dataset-generating-the-next-sentence-prediction-task-1
+
+@bert-dataset-generating-the-next-sentence-prediction-task-2
+
+:::
+
+::: {.slide}
+
+Generating the Masked Language Modeling Task
+
+@bert-dataset-generating-the-masked-language-modeling-task-1
+
+@bert-dataset-generating-the-masked-language-modeling-task-2
+
+:::
+
+::: {.slide}
+
+append the special “&lt;pad&gt;” tokens to the inputs
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-1
+
+:::
+
+::: {.slide}
+
+the WikiText-2 dataset for pretraining BERT
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-2
+
+:::
+
+::: {.slide}
+
+download the WikiText-2 dataset
+and generate pretraining examples
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-3
+
+:::
+
+::: {.slide}
+
+print out the shapes of a minibatch of BERT pretraining examples
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-4
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-5
+
+:::

@@ -79,7 +79,7 @@ the class and bounding box prediction.
 
 
 
-### [**Class Prediction Layer**]
+### Class Prediction Layer
 
 Let the number of object classes be $q$.
 Then anchor boxes have $q+1$ classes,
@@ -185,7 +185,7 @@ def cls_predictor(num_anchors, num_classes):
                                kernel_size=3, padding='same')
 ```
 
-### (**Bounding Box Prediction Layer**)
+### Bounding Box Prediction Layer
 
 The design of the bounding box prediction layer is similar to that of the class prediction layer.
 The only difference lies in the number of outputs for each anchor box:
@@ -215,7 +215,7 @@ def bbox_predictor(num_anchors):
     return keras.layers.Conv2D(num_anchors * 4, kernel_size=3, padding='same')
 ```
 
-### [**Concatenating Predictions for Multiple Scales**]
+### Concatenating Predictions for Multiple Scales
 
 As we mentioned, single-shot multibox detection
 uses multiscale feature maps to generate anchor boxes and predict their classes and offsets.
@@ -353,7 +353,7 @@ we can still concatenate these two prediction outputs at two different scales fo
 concat_preds([Y1, Y2]).shape
 ```
 
-### [**Downsampling Block**]
+### Downsampling Block
 
 In order to detect objects at multiple scales,
 we define the following downsampling block `down_sample_blk` that
@@ -450,7 +450,7 @@ forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(num_channels=10)).shape
 forward(tf.zeros((2, 20, 20, 3)), down_sample_blk(10)).shape
 ```
 
-### [**Base Network Block**]
+### Base Network Block
 
 The base network block is used to extract features from input images.
 For simplicity,
@@ -509,9 +509,9 @@ forward(tf.zeros((2, 256, 256, 3)), base_net()).shape
 ### The Complete Model
 
 
-[**The complete
+The complete
 single shot multibox detection model
-consists of five blocks.**]
+consists of five blocks.
 The feature maps produced by each block
 are used for both
 (i) generating anchor boxes
@@ -579,7 +579,7 @@ def get_blk(i):
         return down_sample_blk(128)
 ```
 
-Now we [**define the forward propagation**]
+Now we define the forward propagation
 for each block.
 Different from
 in image classification tasks,
@@ -673,7 +673,7 @@ Then their larger scale values
 are given by
 $\sqrt{0.2 \times 0.37} = 0.272$, $\sqrt{0.37 \times 0.54} = 0.447$, and so on.
 
-[~~Hyperparameters for each block~~]
+
 
 ```{.python .input #ssd-the-complete-model-3}
 sizes = [[0.2, 0.272], [0.37, 0.447], [0.54, 0.619], [0.71, 0.79],
@@ -682,13 +682,13 @@ ratios = [[1, 2, 0.5]] * 5
 num_anchors = len(sizes[0]) + len(ratios[0]) - 1
 ```
 
-Now we can [**define the complete model**] `TinySSD` as follows.
+Now we can define the complete model `TinySSD` as follows.
 
 ```{.python .input #ssd-the-complete-model-4}
 #@tab mxnet
 class TinySSD(nn.Block):
     def __init__(self, num_classes, **kwargs):
-        super(TinySSD, self).__init__(**kwargs)
+        super(TinySSD, self).__init__kwargs)
         self.num_classes = num_classes
         for i in range(5):
             # Equivalent to the assignment statement `self.blk_i = get_blk(i)`
@@ -849,8 +849,8 @@ class TinySSD(keras.Model):
                 'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
 ```
 
-We [**create a model instance
-and use it to perform forward propagation**]
+We create a model instance
+and use it to perform forward propagation
 on a minibatch of $256 \times 256$ images `X`.
 
 As shown earlier in this section,
@@ -921,8 +921,8 @@ for object detection.
 ### Reading the Dataset and Initializing the Model
 
 To begin with,
-let's [**read
-the banana detection dataset**]
+let's read
+the banana detection dataset
 described in :numref:`sec_object-detection-dataset`.
 
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-1}
@@ -932,7 +932,7 @@ train_iter, _ = d2l.load_data_bananas(batch_size)
 
 There is only one class in the banana detection dataset. After defining the model,
 we need to (**initialize its parameters and define
-the optimization algorithm**).
+the optimization algorithm.
 
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab mxnet
@@ -966,7 +966,7 @@ net.compile(optimizer=keras.optimizers.SGD(learning_rate=0.2,
                                            weight_decay=5e-4))
 ```
 
-### [**Defining Loss and Evaluation Functions**]
+### Defining Loss and Evaluation Functions
 
 Object detection has two types of losses.
 The first loss concerns classes of anchor boxes:
@@ -1106,7 +1106,7 @@ def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
         tf.abs((bbox_labels - bbox_preds) * bbox_masks)))
 ```
 
-### [**Training the Model**]
+### Training the Model
 
 When training the model,
 we need to generate multiscale anchor boxes (`anchors`)
@@ -1311,7 +1311,7 @@ print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
 print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec')
 ```
 
-## [**Prediction**]
+## Prediction
 
 During prediction,
 the goal is to detect all the objects of interest
@@ -1414,9 +1414,9 @@ def predict(X):
 output = predict(X)
 ```
 
-Finally, we [**display
+Finally, we display
 all the predicted bounding boxes with
-confidence 0.9 or above**]
+confidence 0.9 or above
 as output.
 
 ```{.python .input #ssd-prediction-3}
@@ -1661,3 +1661,146 @@ d2l.plt.legend();
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1604)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+Class Prediction Layer
+
+@ssd-class-prediction-layer
+
+Bounding Box Prediction Layer
+
+@ssd-bounding-box-prediction-layer
+
+:::
+
+::: {.slide}
+
+Concatenating Predictions for Multiple Scales
+
+@ssd-concatenating-predictions-for-multiple-scales-1
+
+@ssd-concatenating-predictions-for-multiple-scales-2
+
+@ssd-concatenating-predictions-for-multiple-scales-3
+
+:::
+
+::: {.slide}
+
+Downsampling Block
+
+@ssd-downsampling-block-1
+
+@ssd-downsampling-block-2
+
+:::
+
+::: {.slide}
+
+Base Network Block
+
+@ssd-base-network-block
+
+:::
+
+::: {.slide}
+
+The complete
+single shot multibox detection model
+consists of five blocks
+
+@ssd-the-complete-model-1
+
+:::
+
+::: {.slide}
+
+define the forward propagation
+
+@ssd-the-complete-model-2
+
+:::
+
+::: {.slide}
+
+Hyperparameters for each block
+
+@ssd-the-complete-model-3
+
+:::
+
+::: {.slide}
+
+define the complete model
+
+@ssd-the-complete-model-4
+
+:::
+
+::: {.slide}
+
+create a model instance
+and use it to perform forward propagation
+
+@ssd-the-complete-model-5
+
+:::
+
+::: {.slide}
+
+read
+the banana detection dataset
+
+@ssd-reading-the-dataset-and-initializing-the-model-1
+
+initialize its parameters and define
+the optimization algorithm
+
+@ssd-reading-the-dataset-and-initializing-the-model-2
+
+:::
+
+::: {.slide}
+
+Defining Loss and Evaluation Functions
+
+@ssd-defining-loss-and-evaluation-functions-1
+
+@ssd-defining-loss-and-evaluation-functions-2
+
+:::
+
+::: {.slide}
+
+Training the Model
+
+@ssd-training-the-model
+
+:::
+
+::: {.slide}
+
+Prediction
+
+@ssd-prediction-1
+
+@ssd-prediction-2
+
+:::
+
+::: {.slide}
+
+display
+all the predicted bounding boxes with
+confidence 0.9 or above
+
+@ssd-prediction-3
+
+@ssd-exercises-1
+
+@ssd-exercises-2
+
+:::

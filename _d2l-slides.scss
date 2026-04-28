@@ -1,0 +1,73 @@
+/*-- scss:defaults --*/
+
+$presentation-font-size-root: 32px !default;
+$code-block-font-size: 0.8em !default;
+$code-block-padding: 0.4em 0.6em !default;
+
+/*-- scss:rules --*/
+
+// Slide content sizing — keep code visible on a typical projector while
+// allowing long output to scroll rather than overflow.
+.reveal pre.sourceCode code {
+  font-size: 0.8em;
+  line-height: 1.25;
+}
+
+.reveal .cell-output {
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.reveal .cell-output-display img,
+.reveal .cell-output-display svg {
+  max-height: 60vh;
+  max-width: 100%;
+}
+
+// Two-column layout: prose on left, code/figure on right.
+.reveal .slide.slide-2col > section,
+.reveal section.slide-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+
+  pre, .cell {
+    margin: 0;
+  }
+
+  img, svg {
+    max-height: 70vh;
+    max-width: 50vw;
+  }
+}
+
+// Centered figure with caption.
+.reveal section.slide-figure {
+  text-align: center;
+
+  img, svg {
+    max-height: 80vh;
+    max-width: 100%;
+  }
+
+  .quarto-figure-caption,
+  figcaption {
+    font-size: 0.7em;
+    margin-top: 0.5rem;
+  }
+}
+
+// Code-dominant slides: smaller code, capped output area.
+.reveal section.slide-code {
+  pre.sourceCode code {
+    font-size: 0.7em;
+    line-height: 1.2;
+  }
+
+  .cell-output {
+    max-height: 30vh;
+    overflow: auto;
+    font-size: 0.75em;
+  }
+}

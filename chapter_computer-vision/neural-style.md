@@ -77,7 +77,7 @@ In the following,
 we will explain the technical details of style transfer via a concrete experiment.
 
 
-## [**Reading the Content and Style Images**]
+## Reading the Content and Style Images
 
 First, we read the content and style images.
 From their printed coordinate axes,
@@ -165,7 +165,7 @@ style_img = Image.open('../img/autumn-oak.jpg')
 d2l.plt.imshow(style_img);
 ```
 
-## [**Preprocessing and Postprocessing**]
+## Preprocessing and Postprocessing
 
 Below, we define two functions for preprocessing and postprocessing images.
 The `preprocess` function standardizes
@@ -250,7 +250,7 @@ def postprocess(img):
     return img
 ```
 
-## [**Extracting Features**]
+## Extracting Features
 
 We use the VGG-19 model pretrained on the ImageNet dataset to extract image features :cite:`Gatys.Ecker.Bethge.2016`.
 
@@ -476,7 +476,7 @@ def get_styles(image_shape):
     return style_X, styles_Y
 ```
 
-## [**Defining the Loss Function**]
+## Defining the Loss Function
 
 Now we will describe the loss function for style transfer. The loss function consists of
 the content loss, style loss, and total variation loss.
@@ -609,7 +609,7 @@ def tv_loss(Y_hat):
 
 ### Loss Function
 
-[**The loss function of style transfer is the weighted sum of content loss, style loss, and total variation loss**].
+The loss function of style transfer is the weighted sum of content loss, style loss, and total variation loss.
 By adjusting these weight hyperparameters,
 we can balance among
 content retention,
@@ -631,7 +631,7 @@ def compute_loss(X, contents_Y_hat, styles_Y_hat, contents_Y, styles_Y_gram):
     return contents_l, styles_l, tv_l, l
 ```
 
-## [**Initializing the Synthesized Image**]
+## Initializing the Synthesized Image
 
 In style transfer,
 the synthesized image is the only variable that needs to be updated during training.
@@ -716,7 +716,7 @@ def get_inits(X, lr, styles_Y):
     return gen_img, styles_Y_gram, trainer
 ```
 
-## [**Training**]
+## Training
 
 
 When training the model for style transfer,
@@ -864,7 +864,7 @@ def train(X, contents_Y, styles_Y, lr, num_epochs, lr_decay_epoch):
     return X
 ```
 
-Now we [**start to train the model**].
+Now we start to train the model.
 We rescale the height and width of the content and style images to 300 by 450 pixels.
 We use the content image to initialize the synthesized image.
 
@@ -943,3 +943,87 @@ Some of these blocks even have the subtle texture of brush strokes.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1476)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+Reading the Content and Style Images
+
+@neural-style-reading-the-content-and-style-images-1
+
+@neural-style-reading-the-content-and-style-images-2
+
+:::
+
+::: {.slide}
+
+Preprocessing and Postprocessing
+
+@neural-style-preprocessing-and-postprocessing
+
+:::
+
+::: {.slide}
+
+Extracting Features
+
+@neural-style-extracting-features-1
+
+@neural-style-extracting-features-2
+
+@neural-style-extracting-features-3
+
+@neural-style-extracting-features-4
+
+@neural-style-extracting-features-5
+
+:::
+
+::: {.slide}
+
+Defining the Loss Function
+
+@neural-style-content-loss
+
+@neural-style-style-loss-1
+
+@neural-style-style-loss-2
+
+@neural-style-total-variation-loss
+
+:::
+
+::: {.slide}
+
+The loss function of style transfer is the weighted sum of content loss, style loss, and total variation loss
+
+@neural-style-loss-function
+
+:::
+
+::: {.slide}
+
+Initializing the Synthesized Image
+
+@neural-style-initializing-the-synthesized-image-1
+
+@neural-style-initializing-the-synthesized-image-2
+
+:::
+
+::: {.slide}
+
+Training
+
+@neural-style-training-1
+
+:::
+
+::: {.slide}
+
+start to train the model
+
+@neural-style-training-2
+
+:::

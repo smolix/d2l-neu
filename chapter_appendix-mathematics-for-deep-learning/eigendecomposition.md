@@ -786,3 +786,25 @@ $$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1087)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@eigendecomposition-an-example
+
+@eigendecomposition-gershgorin-circle-theorem
+
+@eigendecomposition-eigenvectors-as-long-term-behavior
+
+@eigendecomposition-behavior-on-random-data-1
+
+@eigendecomposition-behavior-on-random-data-2
+
+@eigendecomposition-relating-back-to-eigenvectors
+
+@eigendecomposition-fixing-the-normalization-1
+
+@eigendecomposition-fixing-the-normalization-2
+
+:::

@@ -174,3 +174,17 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/406)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@fm-an-efficient-optimization-criterion
+
+@fm-model-implementation
+
+@fm-load-the-advertising-dataset
+
+@fm-train-the-model
+
+:::

@@ -359,3 +359,21 @@ We conclude with an illustration of the computational graph and its dependencies
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1681)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+
+@auto-parallelism-automatic-parallelism
+
+@auto-parallelism-parallel-computation-on-gpus-1
+
+@auto-parallelism-parallel-computation-on-gpus-2
+
+@auto-parallelism-parallel-computation-on-gpus-3
+
+@auto-parallelism-parallel-computation-and-communication-1
+
+@auto-parallelism-parallel-computation-and-communication-2
+
+:::

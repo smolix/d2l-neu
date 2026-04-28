@@ -300,7 +300,9 @@ def patch_ipynb_ids(ipynb_path: Path, framework: str):
 
 def convert_file_notebook(src_path, framework):
     """Convert a d2l .md file to a single-framework .qmd for notebooks."""
+    from d2l_preprocess import strip_slide_divs
     text = Path(src_path).read_text(encoding='utf-8')
+    text = strip_slide_divs(text)
 
     # Convert prose tabs: keep only target framework
     text = convert_prose_tabs_single(text, framework)

@@ -155,7 +155,9 @@ def _add_equation_numbers(output, src_path):
 
 def convert_file_pdf(src_path, framework, chapter_number=None):
     """Convert a d2l .md file to single-framework .qmd for PDF."""
+    from d2l_preprocess import strip_slide_divs
     text = Path(src_path).read_text(encoding='utf-8')
+    text = strip_slide_divs(text)
 
     # Localize external images and filter prose tabs
     text = localize_external_images(text)

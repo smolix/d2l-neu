@@ -121,6 +121,20 @@ def clean_save_markers(lines):
     return [re.sub(r'\s*#@save\b', '', line) for line in lines]
 
 
+_SLIDES_BLOCK_RE = re.compile(
+    r'(?ms)^<!--\s*slides\s*-->\s*\n.*\Z')
+
+
+def strip_slide_divs(text):
+    """Strip the trailing `<!-- slides -->` section from a source .md.
+
+    Slide divs (`::: {.slide}` etc.) live below this marker and are
+    consumed by `gen_slides.py`. The HTML book / PDF / per-fw notebook
+    renders should not see them.
+    """
+    return _SLIDES_BLOCK_RE.sub('', text)
+
+
 def parse_blocks(text):
     """Parse d2l markdown text into a list of blocks."""
     src_lines = text.split('\n')
@@ -697,6 +711,10 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
             the logical chapter.
     """
     text = Path(src_path).read_text(encoding='utf-8')
+
+    # Step 0: Strip the trailing `<!-- slides -->` block (and slide divs
+    # below it). The book renderer should not see slide-only content.
+    text = strip_slide_divs(text)
 
     # Step 1: Convert prose tabs on raw text BEFORE block parsing
     text = convert_prose_tabs(text, primary)

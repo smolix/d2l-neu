@@ -101,7 +101,6 @@ import numpy as np
 ```
 
 ```{.python .input #adagrad-the-algorithm-2}
-#@tab all
 def adagrad_2d(x1, x2, s1, s2):
     eps = 1e-6
     g1, g2 = 0.2 * x1, 4 * x2
@@ -121,7 +120,6 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
 As we increase the learning rate to $2$ we see much better behavior. This already indicates that the decrease in learning rate might be rather aggressive, even in the noise-free case and we need to ensure that parameters converge appropriately.
 
 ```{.python .input #adagrad-the-algorithm-3}
-#@tab all
 eta = 2
 d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
 ```
@@ -194,7 +192,6 @@ Compared to the experiment in :numref:`sec_minibatch_sgd` we use a
 larger learning rate to train the model.
 
 ```{.python .input #adagrad-implementation-from-scratch-2}
-#@tab all
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
                {'lr': 0.1}, data_iter, feature_dim);

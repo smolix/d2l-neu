@@ -175,7 +175,6 @@ as input, then returns tokens of the BERT input sequence
 and their corresponding segment IDs.
 
 ```{.python .input #bert-input-representation-1}
-#@tab all
 #@save
 def get_tokens_and_segments(tokens_a, tokens_b=None):
     """Get tokens of the BERT input sequence and their segment IDs."""

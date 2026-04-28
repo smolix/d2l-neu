@@ -101,7 +101,6 @@ class CenteredLayer(nn.Module):
 Let's verify that our layer works as intended by feeding some data through it.
 
 ```{.python .input #custom-layer-layers-without-parameters-2}
-%%tab all
 layer = CenteredLayer()
 layer(d2l.tensor([1.0, 2, 3, 4, 5]))
 ```

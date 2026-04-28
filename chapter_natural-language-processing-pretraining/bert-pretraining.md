@@ -43,7 +43,6 @@ The batch size is 512 and the maximum length of a BERT input sequence is 64.
 Note that in the original BERT model, the maximum length is 512.
 
 ```{.python .input #bert-pretraining-pretraining-bert-2}
-#@tab all
 batch_size, max_len = 512, 64
 train_iter, vocab = d2l.load_data_wiki(batch_size, max_len)
 ```

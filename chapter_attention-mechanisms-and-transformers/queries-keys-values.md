@@ -168,7 +168,6 @@ As a quick sanity check let's visualize the identity matrix, representing a case
 where the attention weight is $1$ only when the query and the key are the same.
 
 ```{.python .input #queries-keys-values-visualization-2  n=20}
-%%tab all
 attention_weights = d2l.reshape(d2l.eye(10), (1, 1, 10, 10))
 show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')
 ```

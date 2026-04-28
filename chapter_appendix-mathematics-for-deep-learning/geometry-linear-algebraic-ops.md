@@ -19,7 +19,6 @@ as either points or directions in space.
 Fundamentally, a vector is a list of numbers such as the Python list below.
 
 ```{.python .input #geometry-linear-algebraic-ops-geometry-of-vectors}
-#@tab all
 v = [1, 7, 0, 1]
 ```
 

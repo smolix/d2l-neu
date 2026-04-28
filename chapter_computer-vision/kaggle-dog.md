@@ -87,7 +87,6 @@ Similarly, to make it easier to get started, [**we provide a small sample of the
 If you are going to use the full dataset for the Kaggle competition, you need to change the `demo` variable below to `False`.
 
 ```{.python .input #kaggle-dog-downloading-the-dataset}
-#@tab all
 #@save
 d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
                             '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
@@ -110,7 +109,6 @@ The `reorg_dog_data` function below reads
 the training data labels, splits out the validation set, and organizes the training set.
 
 ```{.python .input #kaggle-dog-organizing-the-dataset}
-#@tab all
 def reorg_dog_data(data_dir, valid_ratio):
     labels = d2l.read_csv_labels(os.path.join(data_dir, 'labels.csv'))
     d2l.reorg_train_valid(data_dir, labels, valid_ratio)

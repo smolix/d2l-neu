@@ -67,7 +67,6 @@ We leave discussions of more complex sentence splitting techniques in the exerci
 at the end of this section.
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-2}
-#@tab all
 #@save
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
@@ -100,7 +99,6 @@ the `_get_next_sentence` function generates a training example
 for the binary classification task.
 
 ```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-1}
-#@tab all
 #@save
 def _get_next_sentence(sentence, next_sentence, paragraphs):
     if random.random() < 0.5:
@@ -118,7 +116,6 @@ Here `paragraph` is a list of sentences, where each sentence is a list of tokens
 The argument `max_len` specifies the maximum length of a BERT input sequence during pretraining.
 
 ```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-2}
-#@tab all
 #@save
 def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
     nsp_data_from_paragraph = []
@@ -151,7 +148,6 @@ In the end, the function returns the input tokens after possible replacement,
 the token indices where predictions take place and labels for these predictions.
 
 ```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-1}
-#@tab all
 #@save
 def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
                         vocab):
@@ -190,7 +186,6 @@ the token indices where predictions take place,
 and label indices for these predictions.
 
 ```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-2}
-#@tab all
 #@save
 def _get_mlm_data_from_tokens(tokens, vocab):
     candidate_pred_positions = []
@@ -588,7 +583,6 @@ Note that in each BERT input sequence,
 $10$ ($64 \times 0.15$) positions are predicted for the masked language modeling task.
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-4}
-#@tab all
 batch_size, max_len = 512, 64
 train_iter, vocab = load_data_wiki(batch_size, max_len)
 
@@ -605,7 +599,6 @@ Even after filtering out infrequent tokens,
 it is still over twice larger than that of the PTB dataset.
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-5}
-#@tab all
 len(vocab)
 ```
 

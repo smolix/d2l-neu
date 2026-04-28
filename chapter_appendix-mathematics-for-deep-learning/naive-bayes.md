@@ -134,7 +134,6 @@ image.shape, label
 Our example, stored here in the variable `image`, corresponds to an image with a height and width of $28$ pixels.
 
 ```{.python .input #naive-bayes-optical-character-recognition-3}
-#@tab all
 image.shape, image.dtype
 ```
 
@@ -192,7 +191,6 @@ images.shape, labels.shape
 Let's visualize these examples.
 
 ```{.python .input #naive-bayes-optical-character-recognition-6}
-#@tab all
 d2l.show_images(images, 2, 9);
 ```
 

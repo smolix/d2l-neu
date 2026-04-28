@@ -79,7 +79,6 @@ Suppose that we have only a finite amount of training data.
 As a result, here `g` is less smooth than `f`.
 
 ```{.python .input #optimization-intro-goal-of-optimization-2}
-#@tab all
 def f(x):
     return x * d2l.cos(np.pi * x)
 
@@ -90,7 +89,6 @@ def g(x):
 The graph below illustrates that the minimum of the empirical risk on a training dataset may be at a different location from the minimum of the risk (generalization error).
 
 ```{.python .input #optimization-intro-goal-of-optimization-3}
-#@tab all
 def annotate(text, xy, xytext):  #@save
     d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
                            arrowprops=dict(arrowstyle='->'))
@@ -134,7 +132,6 @@ $$f(x) = x \cdot \textrm{cos}(\pi x) \textrm{ for } -1.0 \leq x \leq 2.0,$$
 we can approximate the local minimum and global minimum of this function.
 
 ```{.python .input #optimization-intro-local-minima}
-#@tab all
 x = d2l.arange(-1.0, 2.0, 0.01)
 d2l.plot(x, [f(x), ], 'x', 'f(x)')
 annotate('local minimum', (-0.3, -0.25), (-0.77, -1.0))
@@ -153,7 +150,6 @@ Besides local minima, saddle points are another reason for gradients to vanish. 
 Consider the function $f(x) = x^3$. Its first and second derivative vanish for $x=0$. Optimization might stall at this point, even though it is not a minimum.
 
 ```{.python .input #optimization-intro-saddle-points-1}
-#@tab all
 x = d2l.arange(-2.0, 2.0, 0.01)
 d2l.plot(x, [x**3], 'x', 'f(x)')
 annotate('saddle point', (0, -0.2), (-0.52, -5.0))
@@ -217,7 +213,6 @@ More specifically, $f'(x) = 1 - \tanh^2(x)$ and thus $f'(4) = 0.0013$.
 Consequently, optimization will get stuck for a long time before we make progress. This turns out to be one of the reasons that training deep learning models was quite tricky prior to the introduction of the ReLU activation function.
 
 ```{.python .input #optimization-intro-vanishing-gradients}
-#@tab all
 x = d2l.arange(-2.0, 5.0, 0.01)
 d2l.plot(x, [d2l.tanh(x)], 'x', 'f(x)')
 annotate('vanishing gradient', (4, 1), (2, 0.0))

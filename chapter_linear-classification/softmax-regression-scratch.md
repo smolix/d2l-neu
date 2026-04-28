@@ -56,7 +56,6 @@ over elements in the same axis.**]
 The `axis` variable lets us compute row and column sums:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-1}
-%%tab all
 X = d2l.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 d2l.reduce_sum(X, 0, keepdims=True), d2l.reduce_sum(X, 1, keepdims=True)
 ```
@@ -78,7 +77,6 @@ to sum over all possible states in a thermodynamic ensemble.
 The implementation is straightforward:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-2}
-%%tab all
 def softmax(X):
     X_exp = d2l.exp(X)
     partition = d2l.reduce_sum(X_exp, 1, keepdims=True)
@@ -202,7 +200,6 @@ into a vector using `reshape`
 before passing the data through our model.
 
 ```{.python .input #softmax-regression-scratch-the-model-2}
-%%tab all
 @d2l.add_to_class(SoftmaxRegressionScratch)
 def forward(self, X):
     X = d2l.reshape(X, (-1, self.W.shape[0]))
@@ -321,7 +318,6 @@ reporting validation loss and validation accuracy
 on this split.
 
 ```{.python .input #softmax-regression-scratch-training}
-%%tab all
 data = d2l.FashionMNIST(batch_size=256)
 model = SoftmaxRegressionScratch(num_inputs=784, num_outputs=10, lr=0.1)
 trainer = d2l.Trainer(max_epochs=10)
@@ -368,7 +364,6 @@ with the predictions from the model
 (second line of text output).
 
 ```{.python .input #softmax-regression-scratch-prediction-2}
-%%tab all
 wrong = d2l.astype(preds, y.dtype) != y
 X, y, preds = X[wrong], y[wrong], preds[wrong]
 labels = [a+'\n'+b for a, b in zip(

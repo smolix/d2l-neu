@@ -86,7 +86,6 @@ We need a few utilities to simplify object-oriented programming in Jupyter noteb
 utility function allows us to register functions as methods in a class *after* the class has been created. In fact, we can do so *even after* we have created instances of the class! It allows us to split the implementation of a class into multiple code blocks.
 
 ```{.python .input #oo-design-utilities-1}
-%%tab all
 def add_to_class(Class):  #@save
     """Register functions as methods in created class."""
     def wrapper(obj):
@@ -98,7 +97,6 @@ def add_to_class(Class):  #@save
 Let's have a quick look at how to use it. We plan to implement a class `A` with a method `do`. Instead of having code for both `A` and `do` in the same code block, we can first declare the class `A` and create an instance `a`.
 
 ```{.python .input #oo-design-utilities-2}
-%%tab all
 class A:
     def __init__(self):
         self.b = 1
@@ -109,7 +107,6 @@ a = A()
 Next we define the method `do` as we normally would, but not in class `A`'s scope. Instead, we decorate this method by `add_to_class` with class `A` as its argument. In doing so, the method is able to access the member variables of `A` just as we would expect had it been included as part of `A`'s definition. Let's see what happens when we invoke it for the instance `a`.
 
 ```{.python .input #oo-design-utilities-3}
-%%tab all
 @add_to_class(A)
 def do(self):
     print('Class attribute "b" is', self.b)
@@ -120,7 +117,6 @@ a.do()
 The second one is a utility class that saves all arguments in a class's `__init__` method as class attributes. This allows us to extend constructor call signatures implicitly without additional code.
 
 ```{.python .input #oo-design-utilities-4}
-%%tab all
 class HyperParameters:  #@save
     """The base class of hyperparameters."""
     def save_hyperparameters(self, ignore=[]):
@@ -130,7 +126,6 @@ class HyperParameters:  #@save
 We defer its implementation into :numref:`sec_utils`. To use it, we define our class that inherits from `HyperParameters` and calls `save_hyperparameters` in the `__init__` method.
 
 ```{.python .input #oo-design-utilities-5}
-%%tab all
 # Call the fully implemented HyperParameters class saved in d2l
 class B(d2l.HyperParameters):
     def __init__(self, a, b, c):
@@ -146,7 +141,6 @@ The final utility allows us to plot experiment progress interactively while it i
 The `draw` method plots a point `(x, y)` in the figure, with `label` specified in the legend. The optional `every_n` smooths the line by only showing $1/n$ points in the figure. Their values are averaged from the $n$ neighbor points in the original figure.
 
 ```{.python .input #oo-design-utilities-6}
-%%tab all
 class ProgressBoard(d2l.HyperParameters):  #@save
     """The board that plots data points in animation."""
     def __init__(self, xlabel=None, ylabel=None, xlim=None,
@@ -162,7 +156,6 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 In the following example, we draw `sin` and `cos` with a different smoothness. If you run this code block, you will see the lines grow in animation.
 
 ```{.python .input #oo-design-utilities-7}
-%%tab all
 board = d2l.ProgressBoard('x')
 for x in np.arange(0, 10, 0.1):
     board.draw(x, np.sin(x), 'sin', every_n=2)

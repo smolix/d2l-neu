@@ -176,7 +176,6 @@ and the height and width of the feature map are set to 4. We can see
 that the centers of the anchor boxes in 4 rows and 4 columns on the image are uniformly distributed.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-3}
-#@tab all
 display_anchors(fmap_w=4, fmap_h=4, s=[0.15])
 ```
 
@@ -184,14 +183,12 @@ We move on to [**reduce the height and width of the feature map by half and use 
 some anchor boxes will overlap with each other.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-4}
-#@tab all
 display_anchors(fmap_w=2, fmap_h=2, s=[0.4])
 ```
 
 Finally, we [**further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8**]. Now the center of the anchor box is the center of the image.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-5}
-#@tab all
 display_anchors(fmap_w=1, fmap_h=1, s=[0.8])
 ```
 

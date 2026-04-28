@@ -439,7 +439,6 @@ class Data(d2l.DataModule):
 ```
 
 ```{.python .input #sequence-training-2}
-%%tab all
 data = Data()
 d2l.plot(data.time, data.x, 'time', 'x', xlim=[1, 1000], figsize=(6, 3))
 ```
@@ -461,7 +460,6 @@ We (**create a data iterator on the first 600 examples**),
 covering a period of the sin function.
 
 ```{.python .input #sequence-training-3}
-%%tab all
 @d2l.add_to_class(Data)
 def get_dataloader(self, train):
     features = [self.x[i : self.T-self.tau+i] for i in range(self.tau)]
@@ -474,7 +472,6 @@ def get_dataloader(self, train):
 In this example our model will be a standard linear regression.
 
 ```{.python .input #sequence-training-4}
-%%tab all
 model = d2l.LinearRegression(lr=0.01)
 trainer = d2l.Trainer(max_epochs=5)
 trainer.fit(model, data)
@@ -564,7 +561,6 @@ for i in range(data.num_train + data.tau, data.T):
 ```
 
 ```{.python .input #sequence-prediction-3}
-%%tab all
 d2l.plot([data.time[data.tau:], data.time[data.num_train+data.tau:]],
          [onestep_preds, multistep_preds[data.num_train+data.tau:]], 'time',
          'x', legend=['1-step preds', 'multistep preds'], figsize=(6, 3))
@@ -623,7 +619,6 @@ def k_step_pred(k):
 ```
 
 ```{.python .input #sequence-prediction-5}
-%%tab all
 steps = (1, 4, 16, 64)
 preds = k_step_pred(steps[-1])
 d2l.plot(data.time[data.tau+steps[-1]-1:],

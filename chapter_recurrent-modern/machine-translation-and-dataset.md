@@ -86,7 +86,6 @@ can be just one sentence,
 or a paragraph of multiple sentences.
 
 ```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1  n=5}
-%%tab all
 class MTFraEng(d2l.DataModule):  #@save
     """The English-French dataset."""
     def _download(self):
@@ -98,7 +97,6 @@ class MTFraEng(d2l.DataModule):  #@save
 ```
 
 ```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2}
-%%tab all
 data = MTFraEng() 
 raw_text = data._download()
 print(raw_text[:75])
@@ -112,7 +110,6 @@ convert uppercase letters to lowercase ones,
 and insert space between words and punctuation marks.
 
 ```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3  n=6}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def _preprocess(self, text):
     # Replace non-breaking space with space
@@ -125,7 +122,6 @@ def _preprocess(self, text):
 ```
 
 ```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4}
-%%tab all
 text = data._preprocess(raw_text)
 print(text[:80])
 ```
@@ -155,7 +151,6 @@ $i^\textrm{th}$ text sequence in the source language (English here)
 and `tgt[i]` is that in the target language (French here).
 
 ```{.python .input #machine-translation-and-dataset-tokenization-1  n=7}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def _tokenize(self, text, max_examples=None):
     src, tgt = [], []
@@ -170,7 +165,6 @@ def _tokenize(self, text, max_examples=None):
 ```
 
 ```{.python .input #machine-translation-and-dataset-tokenization-2}
-%%tab all
 src, tgt = data._tokenize(text)
 src[:6], tgt[:6]
 ```
@@ -180,7 +174,6 @@ In this simple English--French dataset,
 most of the text sequences have fewer than 20 tokens.
 
 ```{.python .input #machine-translation-and-dataset-tokenization-3  n=8}
-%%tab all
 #@save
 def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
     """Plot the histogram for list length pairs."""
@@ -195,7 +188,6 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
 ```
 
 ```{.python .input #machine-translation-and-dataset-tokenization-4}
-%%tab all
 show_list_len_pair_hist(['source', 'target'], '# tokens per sequence',
                         'count', src, tgt);
 ```
@@ -254,7 +246,6 @@ will be used as the first input token
 for predicting the target sequence (:numref:`fig_seq2seq_predict`).
 
 ```{.python .input #machine-translation-and-dataset-loading-sequences-of-fixed-length-1  n=9}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
     super(MTFraEng, self).__init__()
@@ -264,7 +255,6 @@ def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
 ```
 
 ```{.python .input #machine-translation-and-dataset-loading-sequences-of-fixed-length-2}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
     def _build_array(sentences, vocab, is_tgt=False):
@@ -293,7 +283,6 @@ Finally, we define the `get_dataloader` method
 to return the data iterator.
 
 ```{.python .input #machine-translation-and-dataset-reading-the-dataset-1  n=10}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def get_dataloader(self, train):
     idx = slice(0, self.num_train) if train else slice(self.num_train, None)
@@ -303,7 +292,6 @@ def get_dataloader(self, train):
 Let's [**read the first minibatch from the English--French dataset.**]
 
 ```{.python .input #machine-translation-and-dataset-reading-the-dataset-2  n=11}
-%%tab all
 data = MTFraEng(batch_size=3)
 src, tgt, src_valid_len, label = next(iter(data.train_dataloader()))
 print('source:', d2l.astype(src, d2l.int32))
@@ -317,7 +305,6 @@ processed by the above `_build_arrays` method
 (in the string format).
 
 ```{.python .input #machine-translation-and-dataset-reading-the-dataset-3  n=12}
-%%tab all
 @d2l.add_to_class(MTFraEng)  #@save
 def build(self, src_sentences, tgt_sentences):
     raw_text = '\n'.join([src + '\t' + tgt for src, tgt in zip(
@@ -328,7 +315,6 @@ def build(self, src_sentences, tgt_sentences):
 ```
 
 ```{.python .input #machine-translation-and-dataset-reading-the-dataset-4  n=13}
-%%tab all
 src, tgt, _,  _ = data.build(['hi .'], ['salut .'])
 print('source:', data.src_vocab.to_tokens(d2l.astype(src[0], d2l.int32)))
 print('target:', data.tgt_vocab.to_tokens(d2l.astype(tgt[0], d2l.int32)))

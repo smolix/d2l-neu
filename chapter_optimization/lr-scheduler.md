@@ -347,7 +347,6 @@ print(f'learning rate is now {opt_state.hyperparams["learning_rate"]:.2f}')
 More generally we want to define a scheduler. When invoked with the number of updates it returns the appropriate value of the learning rate. Let's define a simple one that sets the learning rate to $\eta = \eta_0 (t + 1)^{-\frac{1}{2}}$.
 
 ```{.python .input #lr-scheduler-schedulers-2}
-#@tab all
 class SquareRootScheduler:
     def __init__(self, lr=0.1):
         self.lr = lr
@@ -359,7 +358,6 @@ class SquareRootScheduler:
 Let's plot its behavior over a range of values.
 
 ```{.python .input #lr-scheduler-schedulers-3}
-#@tab all
 scheduler = SquareRootScheduler(lr=0.1)
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
@@ -403,7 +401,6 @@ While we cannot possibly cover the entire variety of learning rate schedulers, w
 One alternative to a polynomial decay would be a multiplicative one, that is $\eta_{t+1} \leftarrow \eta_t \cdot \alpha$ for $\alpha \in (0, 1)$. To prevent the learning rate from decaying beyond a reasonable lower bound the update equation is often modified to $\eta_{t+1} \leftarrow \mathop{\mathrm{max}}(\eta_{\mathrm{min}}, \eta_t \cdot \alpha)$.
 
 ```{.python .input #lr-scheduler-factor-scheduler}
-#@tab all
 class FactorScheduler:
     def __init__(self, factor=1, stop_factor_lr=1e-7, base_lr=0.1):
         self.factor = factor

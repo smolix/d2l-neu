@@ -141,14 +141,12 @@ Below, we set the true parameters to $\mathbf{w} = [2, -3.4]^\top$ and $b = 4.2$
 Later, we can check our estimated parameters against these *ground truth* values.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-2}
-%%tab all
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
 [**Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar.**] Let's have a look at the first entry.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
-%%tab all
 print('features:', data.X[0],'\nlabel:', data.y[0])
 ```
 
@@ -233,7 +231,6 @@ data. Each minibatch of features provides us with both its size and the dimensio
 Likewise, our minibatch of labels will have a matching shape given by `batch_size`.
 
 ```{.python .input #synthetic-regression-data-reading-the-dataset-2}
-%%tab all
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
 ```
@@ -324,7 +321,6 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
 ```
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-2}
-%%tab all
 @d2l.add_to_class(SyntheticRegressionData)  #@save
 def get_dataloader(self, train):
     i = slice(0, self.num_train) if train else slice(self.num_train, None)
@@ -334,7 +330,6 @@ def get_dataloader(self, train):
 The new data loader behaves just like the previous one, except that it is more efficient and has some added functionality.
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-3  n=4}
-%%tab all
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
 ```
@@ -345,7 +340,6 @@ so we can query its length,
 i.e., the number of batches.
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-4}
-%%tab all
 len(data.train_dataloader())
 ```
 

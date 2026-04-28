@@ -65,7 +65,6 @@ import numpy as np
 ```
 
 ```{.python .input #gd-one-dimensional-gradient-descent-2}
-#@tab all
 def f(x):  # Objective function
     return x ** 2
 
@@ -76,7 +75,6 @@ def f_grad(x):  # Gradient (derivative) of the objective function
 Next, we use $x=10$ as the initial value and assume $\eta=0.2$. Using gradient descent to iterate $x$ for 10 times we can see that, eventually, the value of $x$ approaches the optimal solution.
 
 ```{.python .input #gd-one-dimensional-gradient-descent-3}
-#@tab all
 def gd(eta, f_grad):
     x = 10.0
     results = [x]
@@ -92,7 +90,6 @@ results = gd(0.2, f_grad)
 The progress of optimizing over $x$ can be plotted as follows.
 
 ```{.python .input #gd-one-dimensional-gradient-descent-4}
-#@tab all
 def show_trace(results, f):
     n = max(abs(min(results)), abs(max(results)))
     f_line = d2l.arange(-n, n, 0.01)
@@ -109,14 +106,12 @@ show_trace(results, f)
 The learning rate $\eta$ can be set by the algorithm designer. If we use a learning rate that is too small, it will cause $x$ to update very slowly, requiring more iterations to get a better solution. To show what happens in such a case, consider the progress in the same optimization problem for $\eta = 0.05$. As we can see, even after 10 steps we are still very far from the optimal solution.
 
 ```{.python .input #gd-learning-rate-1}
-#@tab all
 show_trace(gd(0.05, f_grad), f)
 ```
 
 Conversely, if we use an excessively high learning rate, $\left|\eta f'(x)\right|$ might be too large for the first-order Taylor expansion formula. That is, the term $\mathcal{O}(\eta^2 f'^2(x))$ in :eqref:`gd-taylor-2` might become significant. In this case, we cannot guarantee that the iteration of $x$ will be able to lower the value of $f(x)$. For example, when we set the learning rate to $\eta=1.1$, $x$ overshoots the optimal solution $x=0$ and gradually diverges.
 
 ```{.python .input #gd-learning-rate-2}
-#@tab all
 show_trace(gd(1.1, f_grad), f)
 ```
 
@@ -125,7 +120,6 @@ show_trace(gd(1.1, f_grad), f)
 To illustrate what happens for nonconvex functions consider the case of $f(x) = x \cdot \cos(cx)$ for some constant $c$. This function has infinitely many local minima. Depending on our choice of the learning rate and depending on how well conditioned the problem is, we may end up with one of many solutions. The example below illustrates how an (unrealistically) high learning rate will lead to a poor local minimum.
 
 ```{.python .input #gd-local-minima}
-#@tab all
 c = d2l.tensor(0.15 * np.pi)
 
 def f(x):  # Objective function
@@ -157,7 +151,6 @@ To see how the algorithm behaves in practice let's construct an objective functi
 To begin with, we need two more helper functions. The first uses an update function and applies it 20 times to the initial value. The second helper visualizes the trajectory of $\mathbf{x}$.
 
 ```{.python .input #gd-multivariate-gradient-descent-1}
-#@tab all
 def train_2d(trainer, steps=20, f_grad=None):  #@save
     """Optimize a 2D objective function with a customized trainer."""
     # `s1` and `s2` are internal state variables that will be used in Momentum, adagrad, RMSProp
@@ -229,7 +222,6 @@ def show_trace_2d(f, results):  #@save
 Next, we observe the trajectory of the optimization variable $\mathbf{x}$ for learning rate $\eta = 0.1$. We can see that after 20 steps the value of $\mathbf{x}$ approaches its minimum at $[0, 0]$. Progress is fairly well-behaved albeit rather slow.
 
 ```{.python .input #gd-multivariate-gradient-descent-3}
-#@tab all
 def f_2d(x1, x2):  # Objective function
     return x1 ** 2 + 2 * x2 ** 2
 
@@ -277,7 +269,6 @@ the global minimum at $x=0$ is reached
 after a few iterations.
 
 ```{.python .input #gd-newton-s-method-1}
-#@tab all
 c = d2l.tensor(0.5)
 
 def f(x):  # Objective function
@@ -306,7 +297,6 @@ That is a fatal flaw of the algorithm.
 Let's see what happens in practice.
 
 ```{.python .input #gd-newton-s-method-2}
-#@tab all
 c = d2l.tensor(0.15 * np.pi)
 
 def f(x):  # Objective function
@@ -325,7 +315,6 @@ This went spectacularly wrong. How can we fix it? One way would be to "fix" the 
 Let's see how this works with a slightly smaller learning rate, say $\eta = 0.5$. As we can see, we have quite an efficient algorithm.
 
 ```{.python .input #gd-newton-s-method-3}
-#@tab all
 show_trace(newton(0.5), f)
 ```
 

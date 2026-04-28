@@ -100,7 +100,6 @@ The input argument `boxes` should be a two-dimensional tensor of
 shape ($n$, 4), where $n$ is the number of bounding boxes.
 
 ```{.python .input #bounding-box-bounding-boxes-1}
-#@tab all
 #@save
 def box_corner_to_center(boxes):
     """Convert from (upper-left, lower-right) to (center, width, height)."""
@@ -131,7 +130,6 @@ is the upper-left corner of the image, and to the right and down are the
 positive directions of the $x$ and $y$ axes, respectively.
 
 ```{.python .input #bounding-box-bounding-boxes-2}
-#@tab all
 # Here `bbox` is the abbreviation for bounding box
 dog_bbox, cat_bbox = [60.0, 45.0, 378.0, 516.0], [400.0, 112.0, 655.0, 493.0]
 ```
@@ -140,7 +138,6 @@ We can verify the correctness of the two
 bounding box conversion functions by converting twice.
 
 ```{.python .input #bounding-box-bounding-boxes-3}
-#@tab all
 boxes = d2l.tensor((dog_bbox, cat_bbox))
 box_center_to_corner(box_corner_to_center(boxes)) == boxes
 ```
@@ -149,7 +146,6 @@ Let's [**draw the bounding boxes in the image**] to check if they are accurate.
 Before drawing, we will define a helper function `bbox_to_rect`. It represents the bounding box in the bounding box format of the  `matplotlib` package.
 
 ```{.python .input #bounding-box-bounding-boxes-4}
-#@tab all
 #@save
 def bbox_to_rect(bbox, color):
     """Convert bounding box to matplotlib format."""
@@ -165,7 +161,6 @@ After adding the bounding boxes on the image,
 we can see that the main outline of the two objects are basically inside the two boxes.
 
 ```{.python .input #bounding-box-bounding-boxes-5}
-#@tab all
 fig = d2l.plt.imshow(img)
 fig.axes.add_patch(bbox_to_rect(dog_bbox, 'blue'))
 fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));

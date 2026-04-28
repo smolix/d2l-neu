@@ -292,7 +292,6 @@ theta_est
 Let's validate the trade-off equation by calculating the summation of the squared bias and the variance of our estimator. First, calculate the MSE of our estimator.
 
 ```{.python .input #statistics-evaluating-estimators-in-code-3}
-#@tab all
 mse(samples, theta_true)
 ```
 

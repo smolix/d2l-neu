@@ -221,7 +221,6 @@ to ensure that the dimensionality
 of the hidden state remains unchanged.
 
 ```{.python .input #rnn-scratch-rnn-model-4}
-%%tab all
 def check_len(a, n):  #@save
     """Check the length of a list."""
     assert len(a) == n, f'list\'s length {len(a)} != expected length {n}'
@@ -467,7 +466,6 @@ The language model uses a fully connected output layer
 to transform RNN outputs into token predictions at each time step.
 
 ```{.python .input #rnn-scratch-transforming-rnn-outputs-1}
-%%tab all
 @d2l.add_to_class(RNNLMScratch)  #@save
 def output_layer(self, rnn_outputs):
     outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]

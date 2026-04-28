@@ -124,7 +124,6 @@ data_dir = d2l.download_extract('SNLI')
 The original SNLI dataset contains much richer information than what we really need in our experiments. Thus, we define a function `read_snli` to only extract part of the dataset, then return lists of premises, hypotheses, and their labels.
 
 ```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-1}
-#@tab all
 #@save
 def read_snli(data_dir, is_train):
     """Read the SNLI dataset into premises, hypotheses, and labels."""
@@ -149,7 +148,6 @@ def read_snli(data_dir, is_train):
 Now let's [**print the first 3 pairs**] of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
 
 ```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-2}
-#@tab all
 train_data = read_snli(data_dir, is_train=True)
 for x0, x1, y in zip(train_data[0][:3], train_data[1][:3], train_data[2][:3]):
     print('premise:', x0)
@@ -164,7 +162,6 @@ the three [**labels "entailment", "contradiction", and "neutral" are balanced**]
 both the training set and the testing set.
 
 ```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-3}
-#@tab all
 test_data = read_snli(data_dir, is_train=False)
 for data in [train_data, test_data]:
     print([[row for row in data[2]].count(i) for i in range(3)])
@@ -390,7 +387,6 @@ and invoke the `load_data_snli` function to get the data iterators and vocabular
 Then we print the vocabulary size.
 
 ```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-2}
-#@tab all
 train_iter, test_iter, vocab = load_data_snli(128, 50)
 len(vocab)
 ```

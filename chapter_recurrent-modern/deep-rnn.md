@@ -171,7 +171,6 @@ simply performs forward computation
 layer by layer.
 
 ```{.python .input #deep-rnn-implementation-from-scratch-2}
-%%tab all
 @d2l.add_to_class(StackedRNNScratch)
 def forward(self, inputs, Hs=None):
     outputs = inputs

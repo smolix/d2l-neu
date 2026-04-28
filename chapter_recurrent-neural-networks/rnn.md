@@ -197,7 +197,6 @@ we obtain the same output matrix of shape (3, 4)
 as above.
 
 ```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-2}
-%%tab all
 d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
 ```
 

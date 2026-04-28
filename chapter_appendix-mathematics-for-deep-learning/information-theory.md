@@ -584,7 +584,6 @@ q2 = jnp.sort(q2)
 Since $q_1$ and $q_2$ are symmetric with respect to the y-axis (i.e., $x=0$), we expect a similar value of KL divergence between $D_{\textrm{KL}}(p\|q_1)$ and $D_{\textrm{KL}}(p\|q_2)$. As you can see below, there is only a less than 3% off between $D_{\textrm{KL}}(p\|q_1)$ and $D_{\textrm{KL}}(p\|q_2)$.
 
 ```{.python .input #information-theory-example-2}
-#@tab all
 kl_pq1 = kl_divergence(p, q1)
 kl_pq2 = kl_divergence(p, q2)
 similar_percentage = abs(kl_pq1 - kl_pq2) / ((kl_pq1 + kl_pq2) / 2) * 100
@@ -595,7 +594,6 @@ kl_pq1, kl_pq2, similar_percentage
 In contrast, you may find that $D_{\textrm{KL}}(q_2 \|p)$ and $D_{\textrm{KL}}(p \| q_2)$ are off a lot, with around 40% off as shown below.
 
 ```{.python .input #information-theory-example-3}
-#@tab all
 kl_q2p = kl_divergence(q2, p)
 differ_percentage = abs(kl_q2p - kl_pq2) / ((kl_q2p + kl_pq2) / 2) * 100
 

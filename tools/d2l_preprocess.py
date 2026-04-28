@@ -60,17 +60,21 @@ class TocBlock:
 
 def extract_tab(lines):
     """Extract tab marker from first line(s) of code.
-    Returns (tab_string, cleaned_lines).
+
+    Returns (tab_string, cleaned_lines). Untagged Python cells default
+    to 'all' (was None in the legacy convention) — every Python cell
+    has a tab value after this call. Non-Python blocks bypass this
+    function and keep tab=None.
     """
     if not lines:
-        return None, lines
+        return 'all', lines
 
     # Skip leading blank lines
     start = 0
     while start < len(lines) and lines[start].strip() == '':
         start += 1
     if start >= len(lines):
-        return None, lines
+        return 'all', lines
 
     first = lines[start]
 
@@ -84,7 +88,7 @@ def extract_tab(lines):
     if m:
         return m.group(1).strip(), lines[start + 1:]
 
-    return None, lines
+    return 'all', lines
 
 
 def is_boilerplate(lines):

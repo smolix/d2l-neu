@@ -152,7 +152,6 @@ def corr1d(X, K):
 We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_conv1d` to validate the output of the above one-dimensional cross-correlation implementation.
 
 ```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-2}
-#@tab all
 X, K = d2l.tensor([0, 1, 2, 3, 4, 5, 6]), d2l.tensor([1, 2])
 corr1d(X, K)
 ```
@@ -175,7 +174,6 @@ We can implement the one-dimensional cross-correlation operation for multiple in
 and validate the results in :numref:`fig_conv1d_channel`.
 
 ```{.python .input #sentiment-analysis-cnn-one-dimensional-convolutions-3}
-#@tab all
 def corr1d_multi_in(X, K):
     # First, iterate through the 0th dimension (channel dimension) of `X` and
     # `K`. Then, add them together

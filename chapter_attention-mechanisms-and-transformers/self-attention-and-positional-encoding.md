@@ -411,7 +411,6 @@ and the third-lowest bit alternate on every number,
 every two numbers, and every four numbers, respectively.
 
 ```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-1}
-%%tab all
 for i in range(8):
     print(f'{i} in binary is {i:>03b}')
 ```

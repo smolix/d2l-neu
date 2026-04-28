@@ -64,7 +64,6 @@ from PIL import Image
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-2}
-#@tab all
 #@save
 d2l.DATA_HUB['banana-detection'] = (
     d2l.DATA_URL + 'banana-detection.zip',
@@ -350,7 +349,6 @@ since there is only one bounding box on each image,
 we have $m=1$.
 
 ```{.python .input #object-detection-dataset-reading-the-dataset-4}
-#@tab all
 batch_size, edge_size = 32, 256
 train_iter, _ = load_data_bananas(batch_size)
 batch = next(iter(train_iter))

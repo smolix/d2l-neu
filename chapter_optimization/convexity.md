@@ -92,7 +92,6 @@ To illustrate this let's plot a few functions and check which ones satisfy the r
 Below we define a few functions, both convex and nonconvex.
 
 ```{.python .input #convexity-convex-functions}
-#@tab all
 f = lambda x: 0.5 * x**2  # Convex
 g = lambda x: d2l.cos(np.pi * x)  # Nonconvex
 h = lambda x: d2l.exp(0.5 * x)  # Convex
@@ -172,7 +171,6 @@ Therefore, there does not exist $x' \in \mathcal{X}$ for which $f(x') < f(x^{\as
 For instance, the convex function $f(x) = (x-1)^2$ has a local minimum at $x=1$, which is also the global minimum.
 
 ```{.python .input #convexity-local-minima-are-global-minima}
-#@tab all
 f = lambda x: (x - 1) ** 2
 d2l.set_figsize()
 d2l.plot([x, segment], [f(x), f(segment)], 'x', 'f(x)')

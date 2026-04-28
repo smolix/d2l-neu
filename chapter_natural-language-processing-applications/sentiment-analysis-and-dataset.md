@@ -82,7 +82,6 @@ First, download and extract this IMDb review dataset
 in the path `../data/aclImdb`.
 
 ```{.python .input #sentiment-analysis-and-dataset-reading-the-dataset-1}
-#@tab all
 #@save
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
                           '01ada507287d82875905620988597833ad4e0903')
@@ -93,7 +92,6 @@ data_dir = d2l.download_extract('aclImdb', 'aclImdb')
 Next, read the training and test datasets. Each example is a review and its label: 1 for "positive" and 0 for "negative".
 
 ```{.python .input #sentiment-analysis-and-dataset-reading-the-dataset-2}
-#@tab all
 #@save
 def read_imdb(data_dir, is_train):
     """Read the IMDb review dataset text sequences and labels."""
@@ -121,7 +119,6 @@ and filtering out words that appear less than 5 times,
 we create a vocabulary out of the training dataset.
 
 ```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-1}
-#@tab all
 train_tokens = d2l.tokenize(train_data[0], token='word')
 vocab = d2l.Vocab(train_tokens, min_freq=5, reserved_tokens=['<pad>'])
 ```
@@ -131,7 +128,6 @@ let's plot the histogram of
 review lengths in tokens.
 
 ```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-2}
-#@tab all
 d2l.set_figsize()
 d2l.plt.xlabel('# tokens per review')
 d2l.plt.ylabel('count')
@@ -149,7 +145,6 @@ for the machine translation dataset
 in :numref:`sec_machine_translation`.
 
 ```{.python .input #sentiment-analysis-and-dataset-preprocessing-the-dataset-3}
-#@tab all
 num_steps = 500  # sequence length
 train_features = d2l.tensor([d2l.truncate_pad(
     vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])

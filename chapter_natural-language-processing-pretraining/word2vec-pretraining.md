@@ -328,7 +328,6 @@ two normalized losses
 that are averaged over non-masked predictions.
 
 ```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-3}
-#@tab all
 def sigmd(x):
     return -math.log(1 / (1 + math.exp(-x)))
 

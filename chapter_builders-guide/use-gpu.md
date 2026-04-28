@@ -236,7 +236,6 @@ Now we [**define two convenient functions that allow us
 to run code even if the requested GPUs do not exist.**]
 
 ```{.python .input #use-gpu-computing-devices-3}
-%%tab all
 def try_gpu(i=0):  #@save
     """Return gpu(i) if exists, otherwise return cpu()."""
     if num_gpus() >= i + 1:
@@ -413,7 +412,6 @@ print(Z)
 Now that [**the data (both `Z` and `Y`) are on the same GPU, we can add them up.**]
 
 ```{.python .input #use-gpu-copying-2}
-%%tab all
 Y + Z
 ```
 

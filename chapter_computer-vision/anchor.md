@@ -321,7 +321,6 @@ In order to [**show all the anchor boxes centered on one pixel in the image**],
 we define the following `show_bboxes` function to draw multiple bounding boxes on the image.
 
 ```{.python .input #anchor-generating-multiple-anchor-boxes-4}
-#@tab all
 #@save
 def show_bboxes(axes, bboxes, labels=None, colors=None):
     """Show bounding boxes."""
@@ -703,7 +702,6 @@ where default values of the constants are $\mu_x = \mu_y = \mu_w = \mu_h = 0, \s
 This transformation is implemented below in the `offset_boxes` function.
 
 ```{.python .input #anchor-labeling-classes-and-offsets-1}
-#@tab all
 #@save
 def offset_boxes(anchors, assigned_bb, eps=1e-6):
     """Transform for anchor box offsets."""
@@ -889,7 +887,6 @@ and anchor boxes
 in the image.**]
 
 ```{.python .input #anchor-an-example-1}
-#@tab all
 ground_truth = d2l.tensor([[0, 0.1, 0.08, 0.52, 0.92],
                          [1, 0.55, 0.2, 0.9, 0.88]])
 anchors = d2l.tensor([[0, 0.1, 0.2, 0.3], [0.15, 0.2, 0.4, 0.4],
@@ -958,7 +955,6 @@ for $A_3$,
 the class of the ground-truth bounding box with the largest IoU is the cat, but the value is below the threshold, so the class is labeled as background.
 
 ```{.python .input #anchor-an-example-3}
-#@tab all
 labels[2]
 ```
 
@@ -970,7 +966,6 @@ offsets of this negative class should not affect the objective function.
 Through elementwise multiplications, zeros in the mask variable will filter out negative class offsets before calculating the objective function.
 
 ```{.python .input #anchor-an-example-4}
-#@tab all
 labels[1]
 ```
 
@@ -978,7 +973,6 @@ The first returned item contains the four offset values labeled for each anchor 
 Note that the offsets of negative-class anchor boxes are labeled as zeros.
 
 ```{.python .input #anchor-an-example-5}
-#@tab all
 labels[0]
 ```
 
@@ -996,7 +990,6 @@ offset predictions as inputs and [**applies inverse offset transformations to
 return the predicted bounding box coordinates**].
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-1}
-#@tab all
 #@save
 def offset_inverse(anchors, offset_preds):
     """Predict bounding boxes based on anchor boxes with predicted offsets."""
@@ -1318,7 +1311,6 @@ cls_probs = d2l.tensor([[0] * 4,  # Predicted background likelihood
 We can [**plot these predicted bounding boxes with their confidence on the image.**]
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-5}
-#@tab all
 fig = d2l.plt.imshow(img)
 show_bboxes(fig.axes, anchors * bbox_scale,
             ['dog=0.9', 'dog=0.8', 'dog=0.7', 'cat=0.9'])
@@ -1381,7 +1373,6 @@ we can [**output the final predicted bounding box
 kept by non-maximum suppression**].
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-7}
-#@tab all
 fig = d2l.plt.imshow(img)
 for i in d2l.numpy(output[0]):
     if i[0] == -1:

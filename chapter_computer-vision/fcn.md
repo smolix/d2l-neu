@@ -620,7 +620,6 @@ The output image shape of random cropping is
 specified as $320\times 480$: both the height and width are divisible by $32$.
 
 ```{.python .input #fcn-reading-the-dataset}
-#@tab all
 batch_size, crop_size = 32, (320, 480)
 train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
 ```

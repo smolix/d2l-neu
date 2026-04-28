@@ -353,7 +353,6 @@ $$
 If we write this out into code this becomes a fairly manageable expression.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
-#@tab all
 # Compute the value of the function from inputs to outputs
 w, x, y, z = -1, 0, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
@@ -397,7 +396,6 @@ $$
 and then keeping track of how $f$ changes when we change *any* node in the entire network.  Let's implement it.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
-#@tab all
 # Compute the value of the function from inputs to outputs
 w, x, y, z = -1, 0, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2

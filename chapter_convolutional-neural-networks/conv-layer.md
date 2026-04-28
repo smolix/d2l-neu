@@ -163,7 +163,6 @@ to [**validate the output of the above implementation**]
 of the two-dimensional cross-correlation operation.
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-2}
-%%tab all
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 corr2d(X, K)
@@ -286,7 +285,6 @@ the output is 0. Otherwise, the output is nonzero.
 Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction. After all, for a function $f(i,j)$ its derivative $-\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j) - f(i,j+\epsilon)}{\epsilon}$. Let's see how this works in practice.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
-%%tab all
 K = d2l.tensor([[1.0, -1.0]])
 ```
 
@@ -297,7 +295,6 @@ and $-1$ for the edge from black to white.**]
 All other outputs take value $0$.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-3}
-%%tab all
 Y = corr2d(X, K)
 Y
 ```
@@ -306,7 +303,6 @@ We can now apply the kernel to the transposed image.
 As expected, it vanishes. [**The kernel `K` only detects vertical edges.**]
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-4}
-%%tab all
 corr2d(d2l.transpose(X), K)
 ```
 

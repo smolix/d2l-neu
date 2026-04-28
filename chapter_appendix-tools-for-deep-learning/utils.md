@@ -52,7 +52,6 @@ import jax
 Hyperparameters.
 
 ```{.python .input #utils-utility-functions-and-classes-2}
-%%tab all
 @d2l.add_to_class(d2l.HyperParameters)  #@save
 def save_hyperparameters(self, ignore=[]):
     """Save function arguments into class attributes."""
@@ -67,7 +66,6 @@ def save_hyperparameters(self, ignore=[]):
 Progress bar.
 
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
-%%tab all
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
 def draw(self, x, y, label, every_n=1):
     Point = collections.namedtuple('Point', ['x', 'y'])
@@ -761,7 +759,6 @@ def evaluate_accuracy(net, data_iter):  #@save
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-10}
-%%tab all
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     """Plot a list of images."""
     figsize = (num_cols * scale, num_rows * scale)
@@ -868,7 +865,6 @@ def accuracy(y_hat, y):  #@save
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-12}
-%%tab all
 
 import os
 import requests

@@ -1443,7 +1443,6 @@ dec_self_attention_weights, dec_inter_attention_weights = \
 ```
 
 ```{.python .input #transformer-training-6}
-%%tab all
 d2l.check_shape(dec_self_attention_weights,
                 (num_blks, num_heads, data.num_steps, data.num_steps))
 d2l.check_shape(dec_inter_attention_weights,
@@ -1454,7 +1453,6 @@ Because of the autoregressive property of the decoder self-attention,
 no query attends to key--value pairs after the query position.
 
 ```{.python .input #transformer-training-7}
-%%tab all
 d2l.show_heatmaps(
     dec_self_attention_weights[:, :, :, :],
     xlabel='Key positions', ylabel='Query positions',
@@ -1467,7 +1465,6 @@ via the specified valid length of the input sequence,
 attends to those padding tokens from the input sequence.**]
 
 ```{.python .input #transformer-training-8}
-%%tab all
 d2l.show_heatmaps(
     dec_inter_attention_weights, xlabel='Key positions',
     ylabel='Query positions', titles=['Head %d' % i for i in range(1, 5)],

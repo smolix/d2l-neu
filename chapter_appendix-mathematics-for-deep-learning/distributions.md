@@ -62,7 +62,6 @@ $$F(x) = \begin{cases} 0 & x < 0, \\ 1-p & 0 \le x < 1, \\ 1 & x >= 1 . \end{cas
 The probability mass function is plotted below.
 
 ```{.python .input #distributions-bernoulli-1}
-#@tab all
 p = 0.3
 
 d2l.set_figsize()
@@ -158,7 +157,6 @@ $$F(x) = \begin{cases} 0 & x < 1, \\ \frac{k}{n} & k \le x < k+1 \textrm{ with }
 Let's first plot the probability mass function.
 
 ```{.python .input #distributions-discrete-uniform-1}
-#@tab all
 n = 5
 
 d2l.plt.stem([i+1 for i in range(n)], n*[1 / n])

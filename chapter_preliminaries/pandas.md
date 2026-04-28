@@ -34,7 +34,6 @@ and the columns correspond to the number of rooms (`NumRooms`),
 the roof type (`RoofType`), and the price (`Price`).
 
 ```{.python .input #pandas-reading-the-dataset-1}
-%%tab all
 import os
 
 os.makedirs(os.path.join('..', 'data'), exist_ok=True)
@@ -50,7 +49,6 @@ NA,NA,140000''')
 Now let's import `pandas` and load the dataset with `read_csv`.
 
 ```{.python .input #pandas-reading-the-dataset-2}
-%%tab all
 import pandas as pd
 
 data = pd.read_csv(data_file)
@@ -97,7 +95,6 @@ of `RoofType_Slate` and `RoofType_nan` to 1 and 0, respectively.
 The converse holds for a row with a missing `RoofType` value.
 
 ```{.python .input #pandas-data-preparation-1}
-%%tab all
 inputs, targets = data.iloc[:, 0:2], data.iloc[:, 2]
 inputs = pd.get_dummies(inputs, dummy_na=True)
 print(inputs)
@@ -109,7 +106,6 @@ one common heuristic is to
 the mean value of the corresponding column**].
 
 ```{.python .input #pandas-data-preparation-2}
-%%tab all
 inputs = inputs.fillna(inputs.mean())
 print(inputs)
 ```

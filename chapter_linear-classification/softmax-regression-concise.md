@@ -246,7 +246,6 @@ def loss(self, params, X, Y, state, averaged=True):
 Next we train our model. We use Fashion-MNIST images, flattened to 784-dimensional feature vectors.
 
 ```{.python .input #softmax-regression-concise-training}
-%%tab all
 data = d2l.FashionMNIST(batch_size=256)
 model = SoftmaxRegression(num_outputs=10, lr=0.1)
 trainer = d2l.Trainer(max_epochs=10)

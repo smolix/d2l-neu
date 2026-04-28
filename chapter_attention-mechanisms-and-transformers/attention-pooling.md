@@ -373,14 +373,12 @@ def plot(x_train, y_train, x_val, y_val, kernels, names, attention=False):
 ```
 
 ```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-3}
-%%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names)
 ```
 
 The first thing that stands out is that all three nontrivial kernels (Gaussian, Boxcar, and Triangular) produce fairly workable estimates that are not too far from the true function. Only the constant kernel that leads to the trivial estimate $f(x) = \frac{1}{n} \sum_i y_i$ produces a rather unrealistic result. Let's inspect the attention weighting a bit more closely:
 
 ```{.python .input #attention-pooling-attention-pooling-via-nadaraya-watson-regression-4}
-%%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 ```
 
@@ -392,7 +390,6 @@ We could replace the Gaussian kernel with one of a different width. That is, we 
 $\alpha(\mathbf{q}, \mathbf{k}) = \exp\left(-\frac{1}{2 \sigma^2} \|\mathbf{q} - \mathbf{k}\|^2 \right)$ where $\sigma^2$ determines the width of the kernel. Let's see whether this affects the outcomes.
 
 ```{.python .input #attention-pooling-adapting-attention-pooling-1}
-%%tab all
 sigmas = (0.1, 0.2, 0.5, 1)
 names = ['Sigma ' + str(sigma) for sigma in sigmas]
 
@@ -406,7 +403,6 @@ plot(x_train, y_train, x_val, y_val, kernels, names)
 Clearly, the narrower the kernel, the less smooth the estimate. At the same time, it adapts better to the local variations. Let's look at the corresponding attention weights.
 
 ```{.python .input #attention-pooling-adapting-attention-pooling-2}
-%%tab all
 plot(x_train, y_train, x_val, y_val, kernels, names, attention=True)
 ```
 

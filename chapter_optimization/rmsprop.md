@@ -62,7 +62,6 @@ import numpy as np
 ```
 
 ```{.python .input #rmsprop-the-algorithm-2}
-#@tab all
 d2l.set_figsize()
 gammas = [0.95, 0.9, 0.8, 0.7]
 for gamma in gammas:
@@ -76,7 +75,6 @@ d2l.plt.xlabel('time');
 As before we use the quadratic function $f(\mathbf{x})=0.1x_1^2+2x_2^2$ to observe the trajectory of RMSProp. Recall that in :numref:`sec_adagrad`, when we used Adagrad with a learning rate of 0.4, the variables moved only very slowly in the later stages of the algorithm since the learning rate decreased too quickly. Since $\eta$ is controlled separately this does not happen with RMSProp.
 
 ```{.python .input #rmsprop-implementation-from-scratch-1}
-#@tab all
 def rmsprop_2d(x1, x2, s1, s2):
     g1, g2, eps = 0.2 * x1, 4 * x2, 1e-6
     s1 = gamma * s1 + (1 - gamma) * g1 ** 2
@@ -161,7 +159,6 @@ def rmsprop(params, grads, states, hyperparams):
 We set the initial learning rate to 0.01 and the weighting term $\gamma$ to 0.9. That is, $\mathbf{s}$ aggregates on average over the past $1/(1-\gamma) = 10$ observations of the square gradient.
 
 ```{.python .input #rmsprop-implementation-from-scratch-4}
-#@tab all
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(rmsprop, init_rmsprop_states(feature_dim),
                {'lr': 0.01, 'gamma': 0.9}, data_iter, feature_dim);

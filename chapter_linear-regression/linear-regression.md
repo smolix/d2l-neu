@@ -434,7 +434,6 @@ In the first method, we loop over the vectors with a Python for-loop.
 In the second, we rely on a single call to `+`.
 
 ```{.python .input #linear-regression-vectorization-for-speed-1}
-%%tab all
 n = 10000
 a = d2l.ones(n)
 b = d2l.ones(n)
@@ -477,7 +476,6 @@ f'{time.time() - t:.5f} sec'
 (**Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.**)
 
 ```{.python .input #linear-regression-vectorization-for-speed-3}
-%%tab all
 t = time.time()
 d = a + b
 f'{time.time() - t:.5f} sec'

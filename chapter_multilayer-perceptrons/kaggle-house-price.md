@@ -76,7 +76,6 @@ Again, we skip implementation details of
 such utility functions.
 
 ```{.python .input #kaggle-house-price-downloading-data  n=2}
-%%tab all
 def download(url, folder, sha1_hash=None):
     """Download a file to folder and return the local filepath."""
 
@@ -154,7 +153,6 @@ the Kaggle housing dataset.
 If a file corresponding to this dataset already exists in the cache directory and its SHA-1 matches `sha1_hash`, our code will use the cached file to avoid clogging up your Internet with redundant downloads.
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
-%%tab all
 class KaggleHouse(d2l.DataModule):
     def __init__(self, batch_size, train=None, val=None):
         super().__init__()
@@ -173,7 +171,6 @@ The training dataset includes 1460 examples,
 contains 1459 examples and 80 features.
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
-%%tab all
 data = KaggleHouse(batch_size=64)
 print(data.raw_train.shape)
 print(data.raw_val.shape)
@@ -185,7 +182,6 @@ Let's [**take a look at the first four and final two features
 as well as the label (SalePrice)**] from the first four examples.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
-%%tab all
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
@@ -237,7 +233,6 @@ then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
-%%tab all
 @d2l.add_to_class(KaggleHouse)
 def preprocess(self):
     # Remove the ID and label columns
@@ -267,7 +262,6 @@ You can see that this conversion increases
 the number of features from 79 to 331 (excluding ID and label columns).
 
 ```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
-%%tab all
 data.preprocess()
 data.train.shape
 ```
@@ -302,7 +296,6 @@ This leads to the following root-mean-squared-error between the logarithm of the
 $$\sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i -\log \hat{y}_i\right)^2}.$$
 
 ```{.python .input #kaggle-house-price-error-measure  n=60}
-%%tab all
 @d2l.add_to_class(KaggleHouse)
 def get_dataloader(self, train):
     label = 'SalePrice'
@@ -335,7 +328,6 @@ But this added complexity might obfuscate our code unnecessarily
 so we can safely omit it here owing to the simplicity of our problem.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
-%%tab all
 def k_fold_data(data, k):
     rets = []
     fold_size = data.train.shape[0] // k
@@ -396,7 +388,6 @@ we might find that our validation
 performance is no longer representative of the true error.
 
 ```{.python .input #kaggle-house-price-model-selection}
-%%tab all
 trainer = d2l.Trainer(max_epochs=10)
 models = k_fold(trainer, data, k=5, lr=0.01)
 ```

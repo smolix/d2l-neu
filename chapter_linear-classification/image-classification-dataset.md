@@ -132,7 +132,6 @@ The images are grayscale and upscaled to $32 \times 32$ pixels in resolution abo
 By convention we store an image as a $c \times h \times w$ tensor, where $c$ is the number of color channels, $h$ is the height and $w$ is the width.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-3}
-%%tab all
 data.train[0][0].shape
 ```
 
@@ -142,7 +141,6 @@ The categories of Fashion-MNIST have human-understandable names.
 The following convenience method converts between numeric labels and their names.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-4}
-%%tab all
 @d2l.add_to_class(FashionMNIST)  #@save
 def text_labels(self, indices):
     """Return text labels."""
@@ -215,7 +213,6 @@ def get_dataloader(self, train):
 To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-2}
-%%tab all
 X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
@@ -223,7 +220,6 @@ print(X.shape, X.dtype, y.shape, y.dtype)
 Let's look at the time it takes to read the images. Even though it is a built-in loader, it is not blazingly fast. Nonetheless, this is sufficient since processing images with a deep network takes quite a bit longer. Hence it is good enough that training a network will not be I/O constrained.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
-%%tab all
 tic = time.time()
 for X, y in data.train_dataloader():
     continue
@@ -237,7 +233,6 @@ Skipping implementation details, we just show the interface below: we only need 
 for such utility functions.
 
 ```{.python .input #image-classification-dataset-visualization-1}
-%%tab all
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     """Plot a list of images."""
     raise NotImplementedError

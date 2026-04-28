@@ -177,7 +177,6 @@ def pool2d(X, pool_size, mode='max'):
 We can construct the input tensor `X` in :numref:`fig_pooling` to [**validate the output of the two-dimensional max-pooling layer**].
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-2}
-%%tab all
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 pool2d(X, (2, 2))
 ```
@@ -185,7 +184,6 @@ pool2d(X, (2, 2))
 Also, we can experiment with (**the average pooling layer**).
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-3}
-%%tab all
 pool2d(X, (2, 2), 'avg')
 ```
 

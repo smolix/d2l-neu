@@ -342,7 +342,6 @@ The `d2l` package is lightweight and only requires
 the following dependencies:
 
 ```{.python .input #preface-code-1}
-#@tab all
 #@save
 import inspect
 import collections

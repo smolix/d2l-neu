@@ -372,7 +372,6 @@ class DropoutMLPScratch(d2l.Classifier):
 The following is similar to the training of MLPs described previously.
 
 ```{.python .input #dropout-training}
-%%tab all
 hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
@@ -493,7 +492,6 @@ def loss(self, params, X, Y, state, averaged=True):
 Next, we [**train the model**].
 
 ```{.python .input #dropout-concise-implementation-3}
-%%tab all
 model = DropoutMLP(**hparams)
 trainer.fit(model, data)
 ```

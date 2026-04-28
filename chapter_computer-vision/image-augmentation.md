@@ -108,7 +108,6 @@ d2l.plt.imshow(img);
 Most image augmentation methods have a certain degree of randomness. To make it easier for us to observe the effect of image augmentation, next we define an auxiliary function `apply`. This function runs the image augmentation method `aug` multiple times on the input image `img` and shows all the results.
 
 ```{.python .input #image-augmentation-common-image-augmentation-methods-2}
-#@tab all
 def apply(img, aug, num_rows=2, num_cols=4, scale=1.5):
     Y = [aug(img) for _ in range(num_rows * num_cols)]
     d2l.show_images(Y, num_rows, num_cols, scale=scale)
@@ -1039,7 +1038,6 @@ net = get_net_tf()
 Let's [**train the model**] using image augmentation based on random left-right flipping.
 
 ```{.python .input #image-augmentation-multi-gpu-training-4}
-#@tab all
 train_with_data_aug(train_augs, test_augs, net)
 ```
 

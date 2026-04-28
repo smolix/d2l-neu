@@ -128,7 +128,6 @@ print(f'The covariance matrix is\n{jnp.matmul(A.T, A)}')
 ```
 
 ```{.python .input #gan-generate-some-real-data-3}
-#@tab all
 batch_size = 8
 data_iter = d2l.load_array((data,), batch_size)
 ```
@@ -568,7 +567,6 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
 Now we specify the hyperparameters to fit the Gaussian distribution.
 
 ```{.python .input #gan-training-4}
-#@tab all
 lr_D, lr_G, latent_dim, num_epochs = 0.05, 0.005, 2, 20
 train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
       latent_dim, d2l.numpy(data[:100]))

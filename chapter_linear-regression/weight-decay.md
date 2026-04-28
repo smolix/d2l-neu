@@ -316,7 +316,6 @@ Perhaps the most convenient way of implementing this penalty
 is to square all terms in place and sum them.
 
 ```{.python .input #weight-decay-defining-ell-2-norm-penalty}
-%%tab all
 def l2_penalty(w):
     return d2l.reduce_sum(w**2) / 2
 ```
@@ -409,7 +408,6 @@ decreasing the training error but not the
 validation error---a textbook case of overfitting.
 
 ```{.python .input #weight-decay-training-without-regularization}
-%%tab all
 train_scratch(0)
 ```
 
@@ -422,7 +420,6 @@ This is precisely the effect
 we expect from regularization.
 
 ```{.python .input #weight-decay-using-weight-decay}
-%%tab all
 train_scratch(3)
 ```
 

@@ -145,7 +145,6 @@ that is larger than the input.
 We can construct the input tensor `X` and the kernel tensor `K` from :numref:`fig_trans_conv` to [**validate the output of the above implementation**] of the basic two-dimensional transposed convolution operation.
 
 ```{.python .input #transposed-conv-basic-operation-2}
-#@tab all
 X = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 trans_conv(X, K)
@@ -319,7 +318,6 @@ using matrix multiplications.
 In the example below, we define a $3\times 3$ input `X` and a $2\times 2$ convolution kernel `K`, and then use the `corr2d` function to compute the convolution output `Y`.
 
 ```{.python .input #transposed-conv-connection-to-matrix-transposition-1}
-#@tab all
 X = d2l.reshape(d2l.arange(9.0), (3, 3))
 K = d2l.tensor([[1.0, 2.0], [3.0, 4.0]])
 Y = d2l.corr2d(X, K)
@@ -385,7 +383,6 @@ from the original convolution operation above:
 we just implemented convolutions using matrix multiplications.
 
 ```{.python .input #transposed-conv-connection-to-matrix-transposition-3}
-#@tab all
 Y == d2l.reshape(d2l.matmul(W, d2l.reshape(X, (-1, 1))), (2, 2))
 ```
 
@@ -400,7 +397,6 @@ we only need to transpose the weight matrix `W`
 with the new shape $(9, 4)$.
 
 ```{.python .input #transposed-conv-connection-to-matrix-transposition-4}
-#@tab all
 Z = trans_conv(Y, K)
 Z == d2l.reshape(d2l.matmul(d2l.transpose(W), d2l.reshape(Y, (-1, 1))), (3, 3))
 ```

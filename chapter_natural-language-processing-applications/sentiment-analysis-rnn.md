@@ -240,7 +240,6 @@ class BiRNN(d2l.Classifier):
 Let's construct a bidirectional RNN with two hidden layers to represent single text for sentiment analysis.
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-2}
-#@tab all
 embed_size, num_hiddens, num_layers, devices = 100, 100, 2, d2l.try_all_gpus()
 net = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
 ```
@@ -281,7 +280,6 @@ net(dummy_input)
 Below we load the pretrained 100-dimensional (needs to be consistent with `embed_size`) GloVe embeddings for tokens in the vocabulary.
 
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-1}
-#@tab all
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 ```
 
@@ -289,7 +287,6 @@ Print the shape of the vectors
 for all the tokens in the vocabulary.
 
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-2}
-#@tab all
 embeds = glove_embedding[vocab.idx_to_token]
 embeds.shape
 ```

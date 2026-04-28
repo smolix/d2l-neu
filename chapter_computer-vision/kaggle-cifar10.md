@@ -119,7 +119,6 @@ contains the first 1000 training images and 5 random testing images.**]
 To use the full dataset of the Kaggle competition, you need to set the following `demo` variable to `False`.
 
 ```{.python .input #kaggle-cifar10-downloading-the-dataset}
-#@tab all
 #@save
 d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
                                 '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
@@ -142,7 +141,6 @@ The following function returns a dictionary that maps
 the non-extension part of the filename to its label.
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-1}
-#@tab all
 #@save
 def read_csv_labels(fname):
     """Read `fname` to return a filename to label dictionary."""
@@ -169,7 +167,6 @@ while the other 5000 images will be split out
 as validation set in the path `train_valid_test/valid`. After organizing the dataset, images of the same class will be placed under the same folder.
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-2}
-#@tab all
 #@save
 def copyfile(filename, target_dir):
     """Copy a file into a target directory."""
@@ -203,7 +200,6 @@ def reorg_train_valid(data_dir, labels, valid_ratio):
 The `reorg_test` function below [**organizes the testing set for data loading during prediction.**]
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-3}
-#@tab all
 #@save
 def reorg_test(data_dir):
     """Organize the testing set for data loading during prediction."""
@@ -217,7 +213,6 @@ Finally, we use a function to [**invoke**]
 the `read_csv_labels`, `reorg_train_valid`, and `reorg_test` (**functions defined above.**)
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-4}
-#@tab all
 def reorg_cifar10_data(data_dir, valid_ratio):
     labels = read_csv_labels(os.path.join(data_dir, 'trainLabels.csv'))
     reorg_train_valid(data_dir, labels, valid_ratio)
@@ -231,7 +226,6 @@ the complete dataset of the Kaggle competition,
 We split out 10% of the training examples as the validation set for tuning hyperparameters.
 
 ```{.python .input #kaggle-cifar10-organizing-the-dataset-5}
-#@tab all
 batch_size = 32 if demo else 128
 valid_ratio = 0.1
 reorg_cifar10_data(data_dir, valid_ratio)

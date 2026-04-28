@@ -345,7 +345,6 @@ in :numref:`sec_linear_scratch`,
 to train our model.
 
 ```{.python .input #linear-regression-concise-training-1}
-%%tab all
 model = LinearRegression(lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=3)

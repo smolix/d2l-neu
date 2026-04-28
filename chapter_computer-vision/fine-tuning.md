@@ -118,7 +118,6 @@ we obtain two folders `hotdog/train` and `hotdog/test`. Both folders have `hotdo
 the corresponding class.
 
 ```{.python .input #fine-tuning-reading-the-dataset-1}
-#@tab all
 #@save
 d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
                          'fba480ffa8aa7e0febbb511d181409f899b9baa5')
@@ -196,7 +195,6 @@ test_imgs = _load_image_folder(os.path.join(data_dir, 'test'))
 The first 8 positive examples and the last 8 negative images are shown below. As you can see, [**the images vary in size and aspect ratio**].
 
 ```{.python .input #fine-tuning-reading-the-dataset-3}
-#@tab all
 hotdogs = [train_imgs[i][0] for i in range(8)]
 not_hotdogs = [train_imgs[-i - 1][0] for i in range(8)]
 d2l.show_images(hotdogs + not_hotdogs, 2, 8, scale=1.4);

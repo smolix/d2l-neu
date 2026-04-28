@@ -542,7 +542,6 @@ We begin by reading the dataset.
 We download and read the SNLI dataset using the function defined in :numref:`sec_natural-language-inference-and-dataset`. The batch size and sequence length are set to $256$ and $50$, respectively.
 
 ```{.python .input #natural-language-inference-attention-reading-the-dataset}
-#@tab all
 batch_size, num_steps = 256, 50
 train_iter, test_iter, vocab = d2l.load_data_snli(batch_size, num_steps)
 ```

@@ -150,7 +150,6 @@ $$
 This is already enough to start to play around with in code.  For instance, suppose that we know that $L(x) = x^{2} + 1701(x-4)^3$, then we can see how large this value is at the point $x = 4$ as follows.
 
 ```{.python .input #single-variable-calculus-differential-calculus-4}
-#@tab all
 # Define our function
 def L(x):
     return x**2 + 1701*(x-4)**3

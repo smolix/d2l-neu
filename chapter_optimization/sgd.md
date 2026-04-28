@@ -73,7 +73,6 @@ This means that, on average, the stochastic gradient is a good estimate of the g
 Now, we will compare it with gradient descent by adding random noise with a mean of 0 and a variance of 1 to the gradient to simulate a stochastic gradient descent.
 
 ```{.python .input #sgd-stochastic-gradient-updates-1}
-#@tab all
 def f(x1, x2):  # Objective function
     return x1 ** 2 + 2 * x2 ** 2
 
@@ -126,7 +125,6 @@ def sgd(x1, x2, s1, s2, f_grad):
 ```
 
 ```{.python .input #sgd-stochastic-gradient-updates-3}
-#@tab all
 def constant_lr():
     return 1
 
@@ -156,7 +154,6 @@ In the first *piecewise constant* scenario we decrease the learning rate, e.g., 
 Let's see what the exponential decay looks like in practice.
 
 ```{.python .input #sgd-dynamic-learning-rate-1}
-#@tab all
 def exponential_lr():
     # Global variable that is defined outside this function and updated inside
     global t
@@ -171,7 +168,6 @@ d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=1000, f_grad=f_grad))
 As expected, the variance in the parameters is significantly reduced. However, this comes at the expense of failing to converge to the optimal solution $\mathbf{x} = (0, 0)$. Even after 1000 iteration steps we are still very far away from the optimal solution. Indeed, the algorithm fails to converge at all. On the other hand, if we use a polynomial decay where the learning rate decays with the inverse square root of the number of steps, convergence gets better after only 50 steps.
 
 ```{.python .input #sgd-dynamic-learning-rate-2}
-#@tab all
 def polynomial_lr():
     # Global variable that is defined outside this function and updated inside
     global t

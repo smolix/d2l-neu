@@ -4,7 +4,6 @@
 So far, this book has focused on imperative programming, which makes use of statements such as `print`, `+`, and `if` to change a program's state. Consider the following example of a simple imperative program.
 
 ```{.python .input #hybridize-compilers-and-interpreters}
-#@tab all
 def add(a, b):
     return a + b
 
@@ -37,7 +36,6 @@ Second, a compiler might optimize and rewrite the above code into `print((1 + 2)
 To get a better idea, consider the following simulation of imperative programming (it is Python after all) below.
 
 ```{.python .input #hybridize-symbolic-programming}
-#@tab all
 def add_():
     return '''
 def add(a, b):
@@ -244,7 +242,6 @@ In JAX, `jax.jit` is the natural way to compile computations. Simply wrapping a 
 To demonstrate the performance improvement gained by compilation we compare the time needed to evaluate `net(x)` before and after hybridization. Let's define a class to measure this time first. It will come handy throughout the chapter as we set out to measure (and improve) performance.
 
 ```{.python .input #hybridize-acceleration-by-hybridization-1}
-#@tab all
 #@save
 class Benchmark:
     """For measuring running time."""

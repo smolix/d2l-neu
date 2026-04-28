@@ -263,7 +263,6 @@ is $\mathbf x_{t+1}$ with length $n$.
 :numref:`fig_lang_model_data` shows an example of obtaining five pairs of input sequences and target sequences with $n=5$ and $d=2$.
 
 ```{.python .input #language-model-partitioning-sequences-1  n=5}
-%%tab all
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000):
     super(d2l.TimeMachine, self).__init__()
@@ -283,7 +282,6 @@ The argument `batch_size` specifies the number of subsequence examples in each m
 and `num_steps` is the subsequence length in tokens.
 
 ```{.python .input #language-model-partitioning-sequences-2  n=6}
-%%tab all
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def get_dataloader(self, train):
     idx = slice(0, self.num_train) if train else slice(
@@ -298,7 +296,6 @@ by shifting the input sequences
 by one token.
 
 ```{.python .input #language-model-partitioning-sequences-3  n=7}
-%%tab all
 data = d2l.TimeMachine(batch_size=2, num_steps=10)
 for X, Y in data.train_dataloader():
     print('X:', X, '\nY:', Y)

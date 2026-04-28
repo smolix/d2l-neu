@@ -157,7 +157,6 @@ are updated separately,
 while outputs of these two RNNs are concatenated.
 
 ```{.python .input #bi-rnn-implementation-from-scratch-2}
-%%tab all
 @d2l.add_to_class(BiRNNScratch)
 def forward(self, inputs, Hs=None):
     f_H, b_H = Hs if Hs is not None else (None, None)

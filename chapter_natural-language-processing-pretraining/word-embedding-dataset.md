@@ -72,7 +72,6 @@ represents a sentence of words that are separated by spaces.
 Here we treat each word as a token.
 
 ```{.python .input #word-embedding-dataset-reading-the-dataset-1}
-#@tab all
 #@save
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -99,7 +98,6 @@ Note that the original dataset
 also contains "&lt;unk&gt;" tokens that represent rare (unknown) words.
 
 ```{.python .input #word-embedding-dataset-reading-the-dataset-2}
-#@tab all
 vocab = d2l.Vocab(sentences, min_freq=10)
 f'vocab size: {len(vocab)}'
 ```
@@ -145,7 +143,6 @@ and the higher the relative frequency of the word,
 the greater the probability of being discarded.
 
 ```{.python .input #word-embedding-dataset-subsampling-1}
-#@tab all
 #@save
 def subsample(sentences, vocab):
     """Subsample high-frequency words."""
@@ -177,7 +174,6 @@ by dropping high-frequency words,
 which will lead to training speedup.
 
 ```{.python .input #word-embedding-dataset-subsampling-2}
-#@tab all
 d2l.show_list_len_pair_hist(['origin', 'subsampled'], '# tokens per sentence',
                             'count', sentences, subsampled);
 ```
@@ -185,7 +181,6 @@ d2l.show_list_len_pair_hist(['origin', 'subsampled'], '# tokens per sentence',
 For individual tokens, the sampling rate of the high-frequency word "the" is less than 1/20.
 
 ```{.python .input #word-embedding-dataset-subsampling-3}
-#@tab all
 def compare_counts(token):
     return (f'# of "{token}": '
             f'before={sum([l.count(token) for l in sentences])}, '
@@ -198,14 +193,12 @@ In contrast,
 low-frequency words "join" are completely kept.
 
 ```{.python .input #word-embedding-dataset-subsampling-4}
-#@tab all
 compare_counts('join')
 ```
 
 After subsampling, we map tokens to their indices for the corpus.
 
 ```{.python .input #word-embedding-dataset-subsampling-5}
-#@tab all
 corpus = [vocab[line] for line in subsampled]
 corpus[:3]
 ```
@@ -227,7 +220,6 @@ context window size
 are its context words.
 
 ```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-1}
-#@tab all
 #@save
 def get_centers_and_contexts(corpus, max_window_size):
     """Return center words and context words in skip-gram."""
@@ -253,7 +245,6 @@ Let the maximum context window size be 2
 and print all the center words and their context words.
 
 ```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-2}
-#@tab all
 tiny_dataset = [list(range(7)), list(range(7, 10))]
 print('dataset', tiny_dataset)
 for center, context in zip(*get_centers_and_contexts(tiny_dataset, 2)):
@@ -265,7 +256,6 @@ we set the maximum context window size to 5.
 The following extracts all the center words and their context words in the dataset.
 
 ```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-3}
-#@tab all
 all_centers, all_contexts = get_centers_and_contexts(corpus, 5)
 f'# center-context pairs: {sum([len(contexts) for contexts in all_contexts])}'
 ```
@@ -280,7 +270,6 @@ where the (possibly unnormalized) sampling distribution is passed
 via the argument `sampling_weights`.
 
 ```{.python .input #word-embedding-dataset-negative-sampling-1}
-#@tab all
 #@save
 class RandomGenerator:
     """Randomly draw among {1, ..., n} according to n sampling weights."""
@@ -341,7 +330,6 @@ raised to
 the power of 0.75 :cite:`Mikolov.Sutskever.Chen.ea.2013`.
 
 ```{.python .input #word-embedding-dataset-negative-sampling-3}
-#@tab all
 #@save
 def get_negatives(all_contexts, vocab, counter, K):
     """Return noise words in negative sampling."""
@@ -416,7 +404,6 @@ during training,
 such as including the mask variable.
 
 ```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-1}
-#@tab all
 #@save
 def batchify(data):
     """Return a minibatch of examples for skip-gram with negative sampling."""
@@ -435,7 +422,6 @@ def batchify(data):
 Let's test this function using a minibatch of two examples.
 
 ```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-2}
-#@tab all
 x_1 = (1, [2, 2], [3, 3, 3, 3])
 x_2 = (1, [2, 2, 2], [3, 3])
 batch = batchify((x_1, x_2))
@@ -457,7 +443,6 @@ per batch. The helper `_pad_ptb` below does the one-time padding and is
 what `load_data_ptb` actually calls.
 
 ```{.python .input #word-embedding-dataset-putting-it-all-together-1}
-#@tab all
 #@save
 def _pad_ptb(all_centers, all_contexts, all_negatives):
     """Pre-pad all skip-gram examples to the global max length.
@@ -595,7 +580,6 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
 Let's print the first minibatch of the data iterator.
 
 ```{.python .input #word-embedding-dataset-putting-it-all-together-3}
-#@tab all
 data_iter, vocab = load_data_ptb(512, 5, 5)
 for batch in data_iter:
     for name, data in zip(names, batch):

@@ -89,7 +89,6 @@ so it may take a while to download the file.
 The extracted dataset is located at `../data/VOCdevkit/VOC2012`.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2}
-#@tab all
 #@save
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
@@ -230,7 +229,6 @@ the RGB color values and class names**]
 for all the labels in this dataset.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5}
-#@tab all
 #@save
 VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
                 [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
@@ -340,7 +338,6 @@ the class index for the front part of the airplane is 1,
 while the background index is 0.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7}
-#@tab all
 y = voc_label_indices(train_labels[0], voc_colormap2label())
 y[105:115, 130:140], VOC_CLASSES[1]
 ```
@@ -610,7 +607,6 @@ Below we can view the number of examples
 that are retained in the training set and test set.
 
 ```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-1}
-#@tab all
 crop_size = (320, 480)
 voc_train = VOCSegDataset(True, crop_size, voc_dir)
 voc_test = VOCSegDataset(False, crop_size, voc_dir)

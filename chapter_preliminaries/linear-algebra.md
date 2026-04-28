@@ -176,7 +176,6 @@ and *row vectors* whose elements are stacked horizontally.
 Recall that [**we access a tensor's elements via indexing.**]
 
 ```{.python .input #linear-algebra-vectors-2}
-%%tab all
 x[2]
 ```
 
@@ -187,7 +186,6 @@ Formally, we call $n$ the *dimensionality* of the vector.
 accessible via Python's built-in `len` function.
 
 ```{.python .input #linear-algebra-vectors-3}
-%%tab all
 len(x)
 ```
 
@@ -196,7 +194,6 @@ The shape is a tuple that indicates a tensor's length along each axis.
 (**Tensors with just one axis have shapes with just one element.**)
 
 ```{.python .input #linear-algebra-vectors-4}
-%%tab all
 x.shape
 ```
 
@@ -439,7 +436,6 @@ $$
 $$
 
 ```{.python .input #linear-algebra-basic-properties-of-tensor-arithmetic-2}
-%%tab all
 A * B
 ```
 
@@ -627,7 +623,6 @@ we can (**divide `A` by `sum_A` with broadcasting**)
 to create a matrix where each row sums up to $1$.
 
 ```{.python .input #linear-algebra-non-reduction-sum-2}
-%%tab all
 A / sum_A
 ```
 

@@ -204,7 +204,6 @@ the `shape` contains just a single element
 and is identical to the size.
 
 ```{.python .input #ndarray-getting-started-4}
-%%tab all
 x.shape
 ```
 
@@ -374,7 +373,6 @@ Thus, in the following code,
 selects the second and third rows**].
 
 ```{.python .input #ndarray-indexing-and-slicing-1}
-%%tab all
 X[-1], X[1:3]
 ```
 
@@ -593,7 +591,6 @@ then the corresponding entry in the result takes value `1`,
 otherwise it takes value `0`.
 
 ```{.python .input #ndarray-operations-4}
-%%tab all
 X == Y
 ```
 
@@ -665,7 +662,6 @@ and matrix `b` along the rows
 before adding them elementwise.
 
 ```{.python .input #ndarray-broadcasting-2}
-%%tab all
 a + b
 ```
 
@@ -686,7 +682,6 @@ allocating new memory for the result
 and then points `Y` to this new location in memory.
 
 ```{.python .input #ndarray-saving-memory-1}
-%%tab all
 before = id(Y)
 Y = Y + X
 id(Y) == before

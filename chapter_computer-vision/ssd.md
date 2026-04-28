@@ -350,7 +350,6 @@ in channels, heights, and widths,
 we can still concatenate these two prediction outputs at two different scales for the same minibatch.
 
 ```{.python .input #ssd-concatenating-predictions-for-multiple-scales-3}
-#@tab all
 concat_preds([Y1, Y2]).shape
 ```
 
@@ -677,7 +676,6 @@ $\sqrt{0.2 \times 0.37} = 0.272$, $\sqrt{0.37 \times 0.54} = 0.447$, and so on.
 [~~Hyperparameters for each block~~]
 
 ```{.python .input #ssd-the-complete-model-3}
-#@tab all
 sizes = [[0.2, 0.272], [0.37, 0.447], [0.54, 0.619], [0.71, 0.79],
          [0.88, 0.961]]
 ratios = [[1, 2, 0.5]] * 5
@@ -928,7 +926,6 @@ the banana detection dataset**]
 described in :numref:`sec_object-detection-dataset`.
 
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-1}
-#@tab all
 batch_size = 32
 train_iter, _ = d2l.load_data_bananas(batch_size)
 ```

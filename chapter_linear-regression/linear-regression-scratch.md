@@ -146,7 +146,6 @@ is registered in the `LinearRegressionScratch` class
 via `add_to_class` (introduced in :numref:`oo-design-utilities`).
 
 ```{.python .input #linear-regression-scratch-defining-the-model-2  n=8}
-%%tab all
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def forward(self, X):
     return d2l.matmul(X, self.w) + self.b
@@ -425,7 +424,6 @@ pytree, which covers the hand-rolled `SGD` we will define below.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-training-1  n=15}
-%%tab all    
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
     return batch
@@ -598,7 +596,6 @@ We elide these details for now but will revise them
 later.
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
-%%tab all
 model = LinearRegressionScratch(2, lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=3)

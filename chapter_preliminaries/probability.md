@@ -212,7 +212,6 @@ Thus we can get out `0` and `1` with probability `0.5` each
 by testing whether the returned float number is greater than `0.5`:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-1}
-%%tab all
 num_tosses = 100
 heads = sum([random.random() > 0.5 for _ in range(num_tosses)])
 tails = num_tosses - heads

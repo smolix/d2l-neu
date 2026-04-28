@@ -182,7 +182,6 @@ Finally, we (**implement our model**)
 with just a few lines of code. Since we use the framework built-in autograd this is all that it takes.
 
 ```{.python .input #mlp-implementation-model-2}
-%%tab all
 @d2l.add_to_class(MLPScratch)
 def forward(self, X):
     X = d2l.reshape(X, (-1, self.num_inputs))
@@ -196,7 +195,6 @@ Fortunately, [**the training loop for MLPs
 is exactly the same as for softmax regression.**] We define the model, data, and trainer, then finally invoke the `fit` method on model and data.
 
 ```{.python .input #mlp-implementation-training}
-%%tab all
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
 data = d2l.FashionMNIST(batch_size=256)
 trainer = d2l.Trainer(max_epochs=10)
@@ -294,7 +292,6 @@ matters concerning the model architecture
 from orthogonal considerations.
 
 ```{.python .input #mlp-implementation-training-2}
-%%tab all
 model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
 trainer.fit(model, data)
 ```

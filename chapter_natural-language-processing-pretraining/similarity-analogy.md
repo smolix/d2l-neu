@@ -60,7 +60,6 @@ Here we consider one English version (300-dimensional "wiki.en") that can be dow
 [fastText website](https://fasttext.cc/).
 
 ```{.python .input #similarity-analogy-loading-pretrained-word-vectors-1}
-#@tab all
 #@save
 d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
                                 '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
@@ -160,21 +159,18 @@ the specified embedding file has to be downloaded if it
 was not yet.
 
 ```{.python .input #similarity-analogy-loading-pretrained-word-vectors-3}
-#@tab all
 glove_6b50d = TokenEmbedding('glove.6b.50d')
 ```
 
 Output the vocabulary size. The vocabulary contains 400000 words (tokens) and a special unknown token.
 
 ```{.python .input #similarity-analogy-loading-pretrained-word-vectors-4}
-#@tab all
 len(glove_6b50d)
 ```
 
 We can get the index of a word in the vocabulary, and vice versa.
 
 ```{.python .input #similarity-analogy-loading-pretrained-word-vectors-5}
-#@tab all
 glove_6b50d.token_to_idx['beautiful'], glove_6b50d.idx_to_token[3367]
 ```
 
@@ -245,7 +241,6 @@ using the pretrained word vectors
 from the `TokenEmbedding` instance `embed`.
 
 ```{.python .input #similarity-analogy-word-similarity-2}
-#@tab all
 def get_similar_tokens(query_token, k, embed):
     topk, cos = knn(embed.idx_to_vec, embed[[query_token]], k + 1)
     for i, c in zip(topk[1:], cos[1:]):  # Exclude the input word
@@ -261,7 +256,6 @@ three most semantically similar words
 to word "chip".
 
 ```{.python .input #similarity-analogy-word-similarity-3}
-#@tab all
 get_similar_tokens('chip', 3, glove_6b50d)
 ```
 
@@ -269,12 +263,10 @@ Below outputs similar words
 to "baby" and "beautiful".
 
 ```{.python .input #similarity-analogy-word-similarity-4}
-#@tab all
 get_similar_tokens('baby', 3, glove_6b50d)
 ```
 
 ```{.python .input #similarity-analogy-word-similarity-5}
-#@tab all
 get_similar_tokens('beautiful', 3, glove_6b50d)
 ```
 
@@ -299,7 +291,6 @@ whose vector is most similar
 to the result of $\textrm{vec}(c)+\textrm{vec}(b)-\textrm{vec}(a)$.
 
 ```{.python .input #similarity-analogy-word-analogy-1}
-#@tab all
 def get_analogy(token_a, token_b, token_c, embed):
     vecs = embed[[token_a, token_b, token_c]]
     x = vecs[1] - vecs[0] + vecs[2]
@@ -310,7 +301,6 @@ def get_analogy(token_a, token_b, token_c, embed):
 Let's verify the "male-female" analogy using the loaded word vectors.
 
 ```{.python .input #similarity-analogy-word-analogy-2}
-#@tab all
 get_analogy('man', 'woman', 'son', glove_6b50d)
 ```
 
@@ -321,7 +311,6 @@ This demonstrates
 semantics in the pretrained word vectors.
 
 ```{.python .input #similarity-analogy-word-analogy-3}
-#@tab all
 get_analogy('beijing', 'china', 'tokyo', glove_6b50d)
 ```
 
@@ -333,7 +322,6 @@ we can see that the pretrained word vectors
 may capture the syntactic information.
 
 ```{.python .input #similarity-analogy-word-analogy-4}
-#@tab all
 get_analogy('bad', 'worst', 'big', glove_6b50d)
 ```
 
@@ -343,7 +331,6 @@ we can test the syntax using the
 "present tense-past tense" analogy: “do”:“did”::“go”:“went”.
 
 ```{.python .input #similarity-analogy-word-analogy-5}
-#@tab all
 get_analogy('do', 'did', 'go', glove_6b50d)
 ```
 

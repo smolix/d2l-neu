@@ -289,7 +289,6 @@ In the experiment, we choose the last convolutional layer of the fourth convolut
 The indices of these layers can be obtained by printing the `pretrained_net` instance.
 
 ```{.python .input #neural-style-extracting-features-2}
-#@tab all
 style_layers, content_layers = [0, 5, 10, 19, 28], [25]
 ```
 
@@ -550,7 +549,6 @@ the `gram` function below divides
 the Gram matrix by the number of its elements, i.e., $chw$.
 
 ```{.python .input #neural-style-style-loss-1}
-#@tab all
 def gram(X):
     num_channels, n = X.shape[1], d2l.size(X) // X.shape[1]
     X = d2l.reshape(X, (num_channels, n))
@@ -602,7 +600,6 @@ $$\sum_{i, j} \left|x_{i, j} - x_{i+1, j}\right| + \left|x_{i, j} - x_{i, j+1}\r
 makes values of neighboring pixels on the synthesized image closer.
 
 ```{.python .input #neural-style-total-variation-loss}
-#@tab all
 def tv_loss(Y_hat):
     return 0.5 * (d2l.reduce_mean(
         d2l.abs(Y_hat[:, :, 1:, :] - Y_hat[:, :, :-1, :])) +
@@ -620,7 +617,6 @@ style transfer,
 and noise reduction on the synthesized image.
 
 ```{.python .input #neural-style-loss-function}
-#@tab all
 content_weight, style_weight, tv_weight = 1, 1e4, 10
 
 def compute_loss(X, contents_Y_hat, styles_Y_hat, contents_Y, styles_Y_gram):

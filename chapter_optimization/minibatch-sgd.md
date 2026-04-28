@@ -94,7 +94,6 @@ C = jnp.array(np.random.normal(0, 1, (256, 256)))
 Since we will benchmark the running time frequently in the rest of the book, let's define a timer.
 
 ```{.python .input #minibatch-sgd-vectorization-and-caches-2}
-#@tab all
 class Timer:  #@save
     """Record multiple running times."""
     def __init__(self):
@@ -581,7 +580,6 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
 Let's see how optimization proceeds for batch gradient descent. This can be achieved by setting the minibatch size to 1500 (i.e., to the total number of examples). As a result the model parameters are updated only once per epoch. There is little progress. In fact, after 6 steps progress stalls.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
-#@tab all
 def train_sgd(lr, batch_size, num_epochs=2):
     data_iter, feature_dim = get_data_ch11(batch_size)
     return train_ch11(
@@ -593,28 +591,24 @@ gd_res = train_sgd(1, 1500, 10)
 When the batch size equals 1, we use stochastic gradient descent for optimization. For simplicity of implementation we picked a constant (albeit small) learning rate. In stochastic gradient descent, the model parameters are updated whenever an example is processed. In our case this amounts to 1500 updates per epoch. As we can see, the decline in the value of the objective function slows down after one epoch. Although both the procedures processed 1500 examples within one epoch, stochastic gradient descent consumes more time than gradient descent in our experiment. This is because stochastic gradient descent updated the parameters more frequently and since it is less efficient to process single observations one at a time.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-4}
-#@tab all
 sgd_res = train_sgd(0.005, 1)
 ```
 
 Finally, when the batch size equals 100, we use minibatch stochastic gradient descent for optimization. The time required per epoch is shorter than the time needed for stochastic gradient descent and the time for batch gradient descent.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-5}
-#@tab all
 mini1_res = train_sgd(.4, 100)
 ```
 
 Reducing the batch size to 10, the time for each epoch increases because the workload for each batch is less efficient to execute.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-6}
-#@tab all
 mini2_res = train_sgd(.05, 10)
 ```
 
 Now we can compare the time vs. loss for the previous four experiments. As can be seen, although stochastic gradient descent converges faster than GD in terms of number of examples processed, it uses more time to reach the same loss than GD because computing the gradient example by example is not as efficient. Minibatch stochastic gradient descent is able to trade-off convergence speed and computation efficiency. A minibatch size of 10 is more efficient than stochastic gradient descent; a minibatch size of 100 even outperforms GD in terms of runtime.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-7}
-#@tab all
 d2l.set_figsize([6, 3])
 d2l.plot(*list(map(list, zip(gd_res, sgd_res, mini1_res, mini2_res))),
          'time (sec)', 'loss', xlim=[1e-2, 10],

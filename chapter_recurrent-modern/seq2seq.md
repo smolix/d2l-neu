@@ -974,7 +974,6 @@ although $p_1 = p_2 = 1$, the penalty factor $\exp(1-6/2) \approx 0.14$ lowers t
 We [**implement the BLEU measure**] as follows.
 
 ```{.python .input #seq2seq-evaluation-of-predicted-sequences-1}
-%%tab all
 def bleu(pred_seq, label_seq, k):  #@save
     """Compute the BLEU."""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')

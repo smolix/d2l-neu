@@ -108,7 +108,6 @@ corresponding to the values in :numref:`fig_conv_multi_in`
 to (**validate the output**) of the cross-correlation operation.
 
 ```{.python .input #channels-multiple-input-channels-2}
-%%tab all
 X = d2l.tensor([[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]],
                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]])
 K = d2l.tensor([[[0.0, 1.0], [2.0, 3.0]], [[1.0, 2.0], [3.0, 4.0]]])
@@ -155,7 +154,6 @@ We implement a cross-correlation function
 to [**calculate the output of multiple channels**] as shown below.
 
 ```{.python .input #channels-multiple-output-channels-1}
-%%tab all
 def corr2d_multi_in_out(X, K):
     # Iterate through the 0th dimension of K, and each time, perform
     # cross-correlation operations with input X. All of the results are
@@ -167,7 +165,6 @@ We construct a trivial convolution kernel with three output channels
 by concatenating the kernel tensor for `K` with `K+1` and `K+2`.
 
 ```{.python .input #channels-multiple-output-channels-2}
-%%tab all
 K = d2l.stack((K, K + 1, K + 2), 0)
 K.shape
 ```
@@ -181,7 +178,6 @@ and the multi-input channel,
 single-output channel kernel.
 
 ```{.python .input #channels-multiple-output-channels-3}
-%%tab all
 corr2d_multi_in_out(X, K)
 ```
 
@@ -231,7 +227,6 @@ The only thing is that we need to make some adjustments
 to the data shape before and after the matrix multiplication.
 
 ```{.python .input #channels-1-times-1-convolutional-layer-1}
-%%tab all
 def corr2d_multi_in_out_1x1(X, K):
     c_i, h, w = X.shape
     c_o = K.shape[0]

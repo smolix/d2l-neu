@@ -239,14 +239,58 @@ def emit_slide(slide):
 
 
 def strip_inline_markers(text):
-    """Remove inline slide markers from prose."""
-    # Order matters: book-visible markers leave inner text behind;
-    # slide-only markers remove the entire match.
-    text = re.sub(r'\[\*\*(.*?)\*\*\]', r'\1', text, flags=re.DOTALL)
-    text = re.sub(r'\(\*\*(.*?)\*\*\)', r'\1', text, flags=re.DOTALL)
-    text = re.sub(r'\[~~.*?~~\]', '', text, flags=re.DOTALL)
-    text = re.sub(r'\(~~.*?~~\)', '', text, flags=re.DOTALL)
-    return text
+    """Remove inline slide markers from prose, NOT from code fences.
+
+    The naive form
+
+      re.sub(r'\\(\\*\\*(.*?)\\*\\*\\)', r'\\1', text, flags=re.DOTALL)
+
+    pairs a code-side `(**` (e.g., inside `super().__init__(**kwargs)`)
+    with the next legitimate marker's `**)` somewhere downstream and
+    consumes both, corrupting Python and orphaning marker prose. Walk
+    the text segment by segment and apply the regex only to non-fenced
+    spans.
+    """
+    out = []
+    in_fence = False
+    for line in text.split('\n'):
+        if not in_fence and re.match(r'^```', line) and not line.startswith('````'):
+            in_fence = True
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            if re.match(r'^```\s*$', line):
+                in_fence = False
+            continue
+        # Outside a code fence: strip markers from this line.
+        # Markers may span multiple prose lines; we apply per-line first
+        # and then a second pass on the joined prose for multi-line
+        # markers (the [** ... **] in d2l never crosses fences in
+        # practice).
+        out.append(line)
+    joined = '\n'.join(out)
+
+    # Replace markers in non-fence spans only.
+    fence_re = re.compile(r'(?ms)^```.*?^```\s*$')
+    parts = []
+    cursor = 0
+    for m in fence_re.finditer(joined):
+        prose = joined[cursor:m.start()]
+        prose = re.sub(r'\[\*\*(.*?)\*\*\]', r'\1', prose, flags=re.DOTALL)
+        prose = re.sub(r'\(\*\*(.*?)\*\*\)', r'\1', prose, flags=re.DOTALL)
+        prose = re.sub(r'\[~~.*?~~\]', '', prose, flags=re.DOTALL)
+        prose = re.sub(r'\(~~.*?~~\)', '', prose, flags=re.DOTALL)
+        parts.append(prose)
+        parts.append(m.group(0))
+        cursor = m.end()
+    tail = joined[cursor:]
+    tail = re.sub(r'\[\*\*(.*?)\*\*\]', r'\1', tail, flags=re.DOTALL)
+    tail = re.sub(r'\(\*\*(.*?)\*\*\)', r'\1', tail, flags=re.DOTALL)
+    tail = re.sub(r'\[~~.*?~~\]', '', tail, flags=re.DOTALL)
+    tail = re.sub(r'\(~~.*?~~\)', '', tail, flags=re.DOTALL)
+    parts.append(tail)
+    return ''.join(parts)
 
 
 SLIDES_MARKER = '<!-- slides -->'

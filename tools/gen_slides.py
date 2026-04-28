@@ -493,6 +493,16 @@ def main():
                                str(img_outputs_dir))
 
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
+            # Honor the --files filter at render time too, so a one-shot
+            # rebuild of a single deck doesn't re-render every existing
+            # .qmd in the framework directory.
+            if file_filter:
+                stems = {Path(f).with_suffix('').as_posix()
+                         for f in file_filter}
+                qmd_files = [
+                    q for q in qmd_files
+                    if q.relative_to(fw_dir).with_suffix('').as_posix()
+                       in stems]
             print(f'  Rendering {len(qmd_files)} deck(s) on '
                   f'{args.workers} CPU worker(s)')
 
@@ -523,7 +533,10 @@ def main():
                     'Error opening book citations',
                     'crossrefIndexForOutputFile',
                     'NotFound:',
-                    'Kernel didn',
+                    'Kernel didn',           # "didn't respond"
+                    'Kernel died',           # "died before replying"
+                    'Address already in use',
+                    'KernelDied',
                 ))
 
             def _try_render(qmd):

@@ -1278,12 +1278,16 @@ To collapse only one or some axes, pass `axis=`:
 
 @linear-algebra-reduction-4
 
-. . .
+`axis=0` collapses rows (output rank drops by one along that axis),
+`axis=1` collapses columns.
+:::
 
-`axis=[0,1]` sums over both — same as the all-axis default for
-a rank-2 tensor:
+::: {.slide title="Reducing all axes"}
+A list of axes reduces over each:
 
 @linear-algebra-reduction-5
+
+`axis=[0,1]` is identical to the default `sum()` for a rank-2 tensor.
 :::
 
 ::: {.slide title="Mean"}

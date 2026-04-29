@@ -409,31 +409,59 @@ A second difference is the relative ease with which we were able to implement Le
 <!-- slides -->
 
 ::: {.slide}
+**LeNet-5** (LeCun, 1989, productionized 1998) was the first CNN
+that worked at scale — bank check digit recognition. Its
+two-block recipe is still the template for every modern ConvNet:
+
+1. **Convolutional encoder** — alternating conv + pooling layers,
+   shrinking spatially while expanding the channel dimension.
+2. **Dense head** — flatten and run through a small MLP to map
+   features to class scores.
+
+We'll train it on Fashion-MNIST. ~99% accuracy on MNIST in 1998;
+~88% on the harder Fashion-MNIST today.
+:::
+
+::: {.slide title="The model"}
+Two conv blocks (`5×5` kernel, sigmoid, 2×2 average-pool) followed
+by three fully-connected layers down to 10 classes:
 
 @lenet-convolutional-neural-networks-lenet
 
-LeNet (LeNet-5) consists of two parts:
-(i) a convolutional encoder consisting of two convolutional layers; and
-(ii) a dense block consisting of three fully connected layers
-
 @lenet-1
 
-@lenet-2
+. . .
 
+@lenet-2
 :::
 
-::: {.slide}
-
-inspect the model inspect the model
+::: {.slide title="Shape inspection"}
+Walk a dummy 1×1×28×28 input through the model and print each
+layer's output shape:
 
 @lenet-3
 
+Useful for **debugging architectures** — match the expected
+spatial / channel dimensions before training.
 :::
 
-::: {.slide}
-
-run an experiment to see how the LeNet-5 model fares on Fashion-MNIST
+::: {.slide title="Training"}
+Same `Trainer` you've used since linear regression — only the
+model class changes:
 
 @lenet-training
 
+Visibly better than the dense MLP from the previous chapter on
+the same data — convolutional inductive bias pays off.
+:::
+
+::: {.slide title="Recap"}
+- LeNet-5 = **conv encoder + dense head**, the architectural
+  blueprint every later ConvNet (AlexNet, VGG, ResNet, …) refines.
+- Each conv block: kernel + activation + downsampling.
+- Spatial dimensions shrink, channels grow — the standard
+  "feature pyramid" pattern.
+- Modernizations: ReLU instead of sigmoid, max-pool instead of
+  avg-pool, much deeper, BatchNorm, residual connections — all
+  coming up.
 :::

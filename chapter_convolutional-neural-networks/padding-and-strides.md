@@ -382,31 +382,54 @@ So far all padding that we discussed simply extended images with zeros. This has
 <!-- slides -->
 
 ::: {.slide}
+A vanilla `n×n` convolution with a `k×k` kernel produces an
+`(n−k+1)×(n−k+1)` output — every conv shrinks the spatial map.
+Two knobs control that shrink:
+
+- **Padding** — add zeros around the input → larger output. Use
+  `padding = (k−1)/2` to keep `H, W` constant ("SAME" padding).
+- **Stride** — step the kernel by more than 1 → smaller output.
+  Standard for downsampling.
+
+Output formula:
+$$\text{out} = \left\lfloor \frac{n + 2p - k}{s} \right\rfloor + 1.$$
+:::
+
+::: {.slide title="Padding"}
+8×8 input, 3×3 kernel, **1 pixel of zero-padding** on every side.
+The output is **the same size** as the input:
 
 @padding-and-strides-padding-and-stride
 
-apply 1 pixel of padding on all sides
-
 @padding-and-strides-padding-1
 
-:::
+. . .
 
-::: {.slide}
-
-setting different padding numbers for height and width
+Asymmetric kernels need asymmetric padding. A 5×3 kernel with
+`(2, 1)` padding still preserves spatial size:
 
 @padding-and-strides-padding-2
-
 :::
 
-::: {.slide}
-
-set the strides on both the height and width to 2
+::: {.slide title="Stride"}
+A 3×3 conv with `padding=1` (size-preserving) but `stride=2` —
+the output spatial dimensions are **halved**:
 
 @padding-and-strides-stride-1
 
-a slightly more complicated example
+. . .
+
+Mixed kernel and stride along H vs W:
 
 @padding-and-strides-stride-2
+:::
 
+::: {.slide title="Recap"}
+- **Padding** controls how much the input is "extended" — common
+  choice is `(k−1)/2` to keep `H, W` constant.
+- **Stride** controls the step size — `stride=2` halves the
+  spatial dims, the standard downsampling primitive.
+- Output formula:
+  $\bigl\lfloor (n + 2p - k)/s \bigr\rfloor + 1$.
+- Both can differ between height and width.
 :::

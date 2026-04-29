@@ -410,56 +410,79 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 <!-- slides -->
 
 ::: {.slide}
+**Pooling** is the standard ConvNet downsampler.
+
+- Slide a window over the feature map; output is the **max**
+  (or mean) of the window.
+- **No learnable parameters** — pure shape-reducing op.
+- Provides modest **translation invariance** (a 1-pixel shift of
+  the input rarely changes a max-pool output).
+
+Two flavors: **max-pool** (the default in modern nets) and
+**average-pool** (smoother; common at the *very* end for global
+pooling).
+:::
+
+::: {.slide title="Max- and avg-pooling, by hand"}
+The pool window slides like a conv kernel — but takes
+`max(window)` (or `mean(window)`) instead of a dot product:
 
 @pooling
 
-implement the forward propagation
-of the pooling layer
-
 @pooling-maximum-pooling-and-average-pooling-1
-
 :::
 
-::: {.slide}
-
-validate the output of the two-dimensional max-pooling layer
+::: {.slide title="Smoke test"}
+Same 3×3 input, 2×2 pool window — max and avg differ on this
+ramp:
 
 @pooling-maximum-pooling-and-average-pooling-2
 
-the average pooling layer
+. . .
 
 @pooling-maximum-pooling-and-average-pooling-3
-
 :::
 
-::: {.slide}
-
-Padding and Stride
+::: {.slide title="Padding and stride"}
+The framework's `MaxPool2d` defaults to **matching stride to
+window size** (non-overlapping pools) — different from `Conv2d`,
+which defaults to stride 1:
 
 @pooling-padding-and-stride-1
 
-deep learning frameworks default to matching pooling window sizes and stride
-
 @pooling-padding-and-stride-2
 
-:::
+. . .
 
-::: {.slide}
-
-the stride and padding can be manually specified
+You can specify stride and padding explicitly:
 
 @pooling-padding-and-stride-3
 
-@pooling-padding-and-stride-4
+. . .
 
+Asymmetric pools work too:
+
+@pooling-padding-and-stride-4
 :::
 
-::: {.slide}
-
-the pooling layer pools each input channel separately
+::: {.slide title="Multiple channels"}
+Pooling is **per-channel** — there's no cross-channel mixing
+(unlike conv). A `c × h × w` input gives a `c × h' × w'` output:
 
 @pooling-multiple-channels-1
 
-@pooling-multiple-channels-2
+. . .
 
+@pooling-multiple-channels-2
+:::
+
+::: {.slide title="Recap"}
+- Pooling = window slide → max (or avg). No learnable parameters.
+- Use a `s = 2` window to halve spatial dimensions; modern nets
+  often use **strided convolutions** instead, but pooling is
+  cheaper.
+- Pooling is **per-channel** — keeps channels independent.
+- Avg-pool over the entire feature map at the end ("global
+  average pooling") replaces the final fully-connected stack in
+  many modern architectures.
 :::

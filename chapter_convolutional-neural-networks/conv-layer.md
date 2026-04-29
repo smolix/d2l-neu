@@ -594,71 +594,92 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 <!-- slides -->
 
 ::: {.slide}
+A convolutional layer is a small **kernel** slid over an image,
+producing a feature map. Two properties make convs the workhorse
+of image models:
+
+- **Translation invariance** — the same filter applied everywhere.
+- **Locality** — outputs depend only on a small neighborhood.
+
+Far fewer parameters than a fully-connected layer on the same
+input, and inductive bias well matched to natural images.
+
+(Frameworks call this *convolution* but the math is actually
+**cross-correlation** — same up to a kernel flip we ignore.)
+:::
+
+::: {.slide title="Cross-correlation, by hand"}
+The 2-D cross-correlation: slide kernel `K` over input `X`,
+multiply-and-sum at each position:
+
+$$Y[i,j] = \sum_{a,b} X[i+a, j+b]\, K[a, b].$$
 
 @conv-layer-convolutions-for-images
 
-cross-correlation operation
-
 @conv-layer-the-cross-correlation-operation-1
-
 :::
 
-::: {.slide}
-
-validate the output of the above implementation
+::: {.slide title="Smoke test"}
+Textbook example — 3×3 input with a 2×2 kernel gives a 2×2 output:
 
 @conv-layer-the-cross-correlation-operation-2
-
 :::
 
-::: {.slide}
-
-implement a two-dimensional convolutional layer
+::: {.slide title="Wrapping it as a layer"}
+A `Conv2D` `Module` — kernel + bias as learnable parameters,
+forward calls our `corr2d`:
 
 @conv-layer-convolutional-layers
-
 :::
 
-::: {.slide}
-
-a simple application of a convolutional layer:
-detecting the edge of an object in an image
+::: {.slide title="Application: edge detection"}
+Construct an image with a vertical white-to-black edge:
 
 @conv-layer-object-edge-detection-in-images-1
 
-@conv-layer-object-edge-detection-in-images-2
+. . .
 
+A 1×2 horizontal-difference kernel:
+
+@conv-layer-object-edge-detection-in-images-2
 :::
 
-::: {.slide}
-
-we detect $1$ for the edge from white to black
-and $-1$ for the edge from black to white
+::: {.slide title="It detects the edges"}
+$+1$ at each white→black transition, $-1$ at each black→white:
 
 @conv-layer-object-edge-detection-in-images-3
 
-:::
+. . .
 
-::: {.slide}
-
-The kernel `K` only detects vertical edges
+Transpose the input (now a horizontal edge) — the **same** kernel
+finds nothing:
 
 @conv-layer-object-edge-detection-in-images-4
 
+Filters are **direction-sensitive**. Real ConvNets learn many
+filters in parallel.
 :::
 
-::: {.slide}
-
-learn the kernel that generated `Y` from `X`
+::: {.slide title="Learning the kernel"}
+Don't hand-design — **train**. Initialize randomly, descend on
+squared error between predicted and true `Y`:
 
 @conv-layer-learning-a-kernel-1
 
-:::
+. . .
 
-::: {.slide}
-
-take a look at the kernel tensor we learned
+The learned kernel matches the hand-designed `[1, -1]` (up to
+sign) — exactly what we'd hope:
 
 @conv-layer-learning-a-kernel-2
+:::
 
+::: {.slide title="Recap"}
+- A conv layer = a small **kernel** swept across the input.
+- Inductive biases: translation invariance + locality, leading to
+  far fewer parameters than fully-connected layers.
+- Hand-designed kernels detect specific patterns (edges, blobs);
+  trained kernels discover whatever patterns the loss demands.
+- Real ConvNets stack many such filters per layer and many layers
+  deep.
 :::

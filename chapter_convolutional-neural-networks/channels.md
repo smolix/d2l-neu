@@ -318,37 +318,78 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 <!-- slides -->
 
 ::: {.slide}
+Real images have **channels** (RGB, depth, …); intermediate
+feature maps have many more (32, 64, 256, …). Three additions to
+plain 2-D convolution:
+
+- **Multiple input channels** — each input channel gets its own
+  2-D kernel; results are summed.
+- **Multiple output channels** — stack `c_o` separate filters,
+  each producing one output channel.
+- **$1 \times 1$ convolutions** — purely cross-channel mixing,
+  no spatial structure.
+
+A `c_o × c_i × k_h × k_w` kernel sums to one feature map per
+output channel.
+:::
+
+::: {.slide title="Multiple input channels"}
+Sum over per-channel 2-D cross-correlations:
 
 @channels-multiple-input-and-multiple-output-channels
 
-implement cross-correlation operations with multiple input channels
-
 @channels-multiple-input-channels-1
 
-validate the output
+. . .
+
+Two input channels, one output channel:
 
 @channels-multiple-input-channels-2
-
 :::
 
-::: {.slide}
-
-calculate the output of multiple channels
+::: {.slide title="Multiple output channels"}
+Stack `c_o` filters and run them in parallel — output has shape
+`(c_o, h_out, w_out)`:
 
 @channels-multiple-output-channels-1
 
+. . .
+
+Build a 3-output-channel kernel by stacking three `c_i × k × k`
+filters:
+
 @channels-multiple-output-channels-2
 
-@channels-multiple-output-channels-3
+. . .
 
+@channels-multiple-output-channels-3
 :::
 
-::: {.slide}
-
-$1 \times 1$ convolution
+::: {.slide title="1×1 convolutions"}
+A `1×1` kernel has no spatial reach — it just **mixes channels**
+position-by-position. Equivalent to a per-pixel fully-connected
+layer:
 
 @channels-1-times-1-convolutional-layer-1
 
+. . .
+
+Sanity-check: `1×1` cross-correlation matches an `(c_o, c_i)`
+matrix multiplication of the channel vector at each spatial
+location:
+
 @channels-1-times-1-convolutional-layer-2
 
+Fundamental building block of GoogLeNet, ResNet bottlenecks,
+Squeeze-and-Excitation, etc.
+:::
+
+::: {.slide title="Recap"}
+- Multi-channel input: per-channel 2-D conv, then **sum**.
+- Multi-channel output: **stack** independent filters along a new
+  axis.
+- A conv layer's parameters: $c_o \times c_i \times k_h \times k_w$
+  weights plus $c_o$ biases.
+- $1 \times 1$ convs are **channel-mixing** operations — equivalent
+  to a per-pixel MLP.
 :::

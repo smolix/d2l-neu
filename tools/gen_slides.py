@@ -395,6 +395,12 @@ def generate_slides_qmd(src_path, framework, warnings):
     out.append('    scrollable: true')
     out.append('    code-line-numbers: false')
     out.append('    include-after-body: ../../../_d2l-slides-overlay.html')
+    # KaTeX renders math with bundled fonts (reliable for `\mathcal`,
+    # `\mathbb`, etc.); MathJax 2.7 — Quarto's default for revealjs —
+    # ships the math output via dynamic font requests that occasionally
+    # render as boxes when the caligraphic / blackboard-bold fonts
+    # don't load on time.
+    out.append('    html-math-method: katex')
     out.append('execute:')
     out.append('  echo: true')
     out.append('  eval: false')

@@ -492,53 +492,71 @@ Dimensionality and storage for networks are automatically inferred
 <!-- slides -->
 
 ::: {.slide}
+The same model, same data, same training — using the framework's
+high-level layers and built-in losses:
 
-we will show you how to implement
-the linear regression model concisely by using high-level APIs
+- **Model:** one `LazyLinear` (or equivalent) instead of hand-rolled
+  `w`, `b`.
+- **Loss:** built-in `MSELoss` (no factor of ½).
+- **Optimizer:** built-in `SGD`.
+
+End result: ~5 lines of model code instead of 30. Same convergence
+on synthetic data.
+:::
+
+::: {.slide title="The model"}
+Wrap a single linear layer with the right output dimension. The
+"lazy" variant defers the input-dim shape until the first forward:
 
 @linear-regression-concise-concise-implementation-of-linear-regression
 
-:::
-
-::: {.slide}
-
-use a framework's predefined layers
-
 @linear-regression-concise-defining-the-model-1
 
-@linear-regression-concise-defining-the-model-2
+. . .
 
+Hook the layer into our `Module` interface (`forward`,
+`configure_optimizers`):
+
+@linear-regression-concise-defining-the-model-2
 :::
 
-::: {.slide}
-
-The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`)
+::: {.slide title="Loss and optimizer"}
+Built-in MSE — note it omits the $1/2$ factor we used by hand:
 
 @linear-regression-concise-defining-the-loss-function
 
-instantiate an `SGD` instance
+. . .
+
+Same SGD, instantiated with one call:
 
 @linear-regression-concise-defining-the-optimization-algorithm
-
 :::
 
-::: {.slide}
-
-the training loop itself is the same
-as the one we implemented from scratch
+::: {.slide title="Train"}
+Identical loop — the `Trainer` doesn't care that the model is now
+a thin wrapper around a built-in layer:
 
 @linear-regression-concise-training-1
-
 :::
 
-::: {.slide}
-
-compare the model parameters learned
-by training on finite data
-and the actual parameters
+::: {.slide title="Compare with ground truth"}
+Pull weights and bias back out of the layer:
 
 @linear-regression-concise-training-2
 
+. . .
+
 @linear-regression-concise-training-3
 
+Errors are tiny — same recovery as the from-scratch version, less
+glue code.
+:::
+
+::: {.slide title="Recap"}
+- **From scratch** taught us what was happening; **concise** is
+  what we'll actually use.
+- The high-level layers / losses / optimizers compose with the
+  same `Module` / `Trainer` scaffold.
+- Same minibatch loop, same convergence; one-line layer instead
+  of hand-rolled parameters.
 :::

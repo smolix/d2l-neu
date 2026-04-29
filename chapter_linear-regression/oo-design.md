@@ -713,27 +713,87 @@ this degree of modularity pays dividends throughout the book in terms of concise
 <!-- slides -->
 
 ::: {.slide}
+Three recurring abstractions appear in every model we'll build:
 
-@oo-design-object-oriented-design-for-implementation
+- **`Module`** — the model: parameters, `forward`, `loss`,
+  optimizer.
+- **`DataModule`** — the data: train and val loaders.
+- **`Trainer`** — the loop that fits a `Module` to a `DataModule`.
+
+This chapter builds the scaffolding once. The rest of the book
+just **subclasses** these three.
+:::
+
+::: {.slide title="The `add_to_class` trick"}
+Long class definitions don't fit one slide / one cell. Define the
+class **shell first**, then attach methods incrementally:
 
 @oo-design-utilities-1
+
+. . .
 
 @oo-design-utilities-2
 
 @oo-design-utilities-3
 
+The decorator just rebinds `func` onto `Class` — Python's class
+namespace is mutable.
+:::
+
+::: {.slide title="`HyperParameters`"}
+Almost every class wants `self.lr = lr`, `self.batch_size = …`
+boilerplate in `__init__`. The `HyperParameters` mixin auto-saves
+constructor args as attributes:
+
 @oo-design-utilities-4
 
 @oo-design-utilities-5
 
+One call (`save_hyperparameters()`) and every constructor arg is
+ready as `self.<name>`.
+:::
+
+::: {.slide title="`ProgressBoard`"}
+A live training-loss plot — call `draw(x, y, label)` from the
+training loop and the curve appears point-by-point:
+
 @oo-design-utilities-6
+
+. . .
 
 @oo-design-utilities-7
 
+(The full implementation lives in `d2l`. We just need the API.)
+:::
+
+::: {.slide title="`Module`: models"}
+A `Module` knows how to **forward**, compute its **loss**, and
+hand back its **optimizer**. Every model we'll write is a subclass:
+
 @oo-design-models
+:::
+
+::: {.slide title="`DataModule`: data"}
+A `DataModule` knows how to give back a **train** and a **val**
+dataloader, and a small `get_dataloader(train: bool)` hook
+subclasses override:
 
 @oo-design-data
+:::
+
+::: {.slide title="`Trainer`: the loop"}
+A `Trainer` ties them together: it owns the loop over epochs,
+drives `model.training_step` / `validation_step`, and updates the
+progress board:
 
 @oo-design-training
+:::
 
+::: {.slide title="Recap"}
+- **Three classes** (`Module`, `DataModule`, `Trainer`) form the
+  scaffold for every model in the book.
+- `add_to_class` lets us define a class once and add methods
+  later — friendly to slide-sized cells.
+- `HyperParameters` removes the constructor-boilerplate noise.
+- `ProgressBoard` gives us live loss curves with one call.
 :::

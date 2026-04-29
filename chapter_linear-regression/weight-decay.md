@@ -617,59 +617,93 @@ Different sets of parameters can have different update behaviors within the same
 <!-- slides -->
 
 ::: {.slide}
+The simplest **regularization** technique in the book:
+
+$$L_{\text{reg}}(\mathbf{w}, b) =
+  L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2.$$
+
+- Add a penalty proportional to the squared $\ell_2$ norm of the
+  weights.
+- The optimizer sees an extra $-\lambda\mathbf{w}$ in the gradient
+  → weights *decay* toward zero each step.
+- One hyperparameter $\lambda$ (`wd` in code) controls how much.
+
+Why? An overparameterized model fit to a tiny dataset will memorize
+the noise. Restricting **how big** the weights can grow keeps the
+fit tame.
 
 @weight-decay
-
 :::
 
-::: {.slide}
+::: {.slide title="A regression that overfits"}
+Generate a tiny dataset (20 train, 100 val) where the truth has
+**200 inputs** but only a small total signal:
 
-Rather than directly manipulating the number of parameters,
-*weight decay* operates by restricting the values 
-that the parameters can take. generate some data as before $$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
-\epsilon \sim \mathcal{N}(0, 0.01^2).$$
+$$y = 0.05 + \sum_{i=1}^{200} 0.01\,x_i + \epsilon,
+  \quad \epsilon \sim \mathcal{N}(0, 0.01^2).$$
+
+Far more parameters than data — perfect overfitting setup:
 
 @weight-decay-high-dimensional-linear-regression
+:::
 
-Defining $\ell_2$ Norm Penalty
+::: {.slide title="The penalty + the model"}
+The penalty itself is one line:
 
 @weight-decay-defining-ell-2-norm-penalty
 
+. . .
+
+Subclass the from-scratch linear regression to add the penalty
+into the loss:
+
 @weight-decay-defining-the-model-1
 
-@weight-decay-defining-the-model-2
+. . .
 
+@weight-decay-defining-the-model-2
 :::
 
-::: {.slide}
-
-Training without Regularization
+::: {.slide title="Without regularization → overfit"}
+$\lambda = 0$: the model fits the 20 training examples almost
+perfectly while validation loss explodes:
 
 @weight-decay-training-without-regularization
-
 :::
 
-::: {.slide}
-
-Using Weight Decay
+::: {.slide title="With weight decay → controlled"}
+$\lambda = 3$: training loss is *higher*, but validation loss is
+much lower. Generalization wins:
 
 @weight-decay-using-weight-decay
 
+The training-vs-validation gap is the regularization payoff.
 :::
 
-::: {.slide}
-
-Concise Implementation
+::: {.slide title="The framework version"}
+Most optimizers accept a `weight_decay` argument that adds the
+$\lambda \mathbf{w}$ gradient term automatically — same idea, no
+manual penalty code:
 
 @weight-decay-concise-implementation-1
 
-:::
-
-::: {.slide}
-
-The plot looks similar to that when
-we implemented weight decay from scratch
+. . .
 
 @weight-decay-concise-implementation-2
 
+(Note: framework `weight_decay` typically applies to **all**
+parameters; if you don't want bias decay, exclude it explicitly
+via parameter groups.)
+:::
+
+::: {.slide title="Recap"}
+- $\ell_2$-regularized loss = original loss + $\frac{\lambda}{2}
+  \|\mathbf{w}\|_2^2$.
+- Per-step effect: an extra $-\lambda \mathbf{w}$ in the
+  gradient — weights are pulled toward zero each update.
+- Hyperparameter $\lambda$ ("`wd`" in code) trades training
+  fit for generalization. Tune it on a validation set.
+- Frameworks expose this as the optimizer's `weight_decay=` arg.
+- The same idea generalizes — $\ell_1$ (sparsity), elastic net,
+  dropout, etc. — but $\ell_2$ is the default first try.
 :::

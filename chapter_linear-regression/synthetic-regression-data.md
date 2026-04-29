@@ -395,46 +395,86 @@ We will put this to good use in the next section.
 <!-- slides -->
 
 ::: {.slide}
+Before we train a model we need **data**. For pedagogy, we'll
+synthesize it — known weights, known noise, and a guaranteed
+correct answer to compare against:
+
+$$\mathbf{y} = \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon},
+  \quad \boldsymbol{\epsilon} \sim \mathcal{N}(0, \sigma^2 I).$$
+
+This chapter:
+
+- Subclass `DataModule` to generate the synthetic batch.
+- Roll a hand-written minibatch sampler (to see how it works).
+- Swap in the framework's built-in dataloader (the version we'll
+  actually use).
+:::
+
+::: {.slide title="Generating the dataset"}
+A `DataModule` subclass that draws features and computes labels
+in `__init__`:
 
 @synthetic-regression-data
 
-$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
-
 @synthetic-regression-data-generating-the-dataset-1
 
-@synthetic-regression-data-generating-the-dataset-2
+. . .
 
+Instantiate with the true `w = [2, -3.4]`, `b = 4.2`:
+
+@synthetic-regression-data-generating-the-dataset-2
 :::
 
-::: {.slide}
-
-Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar
+::: {.slide title="Inspecting one example"}
+Each row of `features` is a vector in $\mathbb{R}^2$; the
+corresponding `label` is a scalar:
 
 @synthetic-regression-data-generating-the-dataset-3
-
 :::
 
-::: {.slide}
-
-implement the `get_dataloader` method, takes a batch size, a matrix of features,
-and a vector of labels, and generates minibatches of size `batch_size`
+::: {.slide title="A handwritten dataloader"}
+`get_dataloader` shuffles indices, then yields minibatches of
+size `batch_size`:
 
 @synthetic-regression-data-reading-the-dataset-1
 
+. . .
+
 @synthetic-regression-data-reading-the-dataset-2
 
+Educational, but slow — Python loops over indices, no
+prefetching, no parallelism.
 :::
 
-::: {.slide}
-
-call the existing API in a framework to load data
+::: {.slide title="The framework dataloader"}
+For real work, wrap features and labels in the framework's
+built-in dataset / dataloader (workers, prefetch, GPU pinning):
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 
+. . .
+
 @synthetic-regression-data-concise-implementation-of-the-data-loader-2
+:::
+
+::: {.slide title="Same minibatch interface"}
+Identical iteration protocol from the caller's POV:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-3
 
-@synthetic-regression-data-concise-implementation-of-the-data-loader-4
+. . .
 
+`len(dl)` reports the number of batches per epoch — convenient
+for progress bars:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-4
+:::
+
+::: {.slide title="Recap"}
+- Synthetic data → ground-truth `w`, `b` you can compare against
+  later.
+- `DataModule` subclasses encapsulate "where do batches come
+  from?" once, reusable across models.
+- Hand-rolled iterator vs. framework dataloader — same protocol;
+  framework version wins on speed and ergonomics.
 :::

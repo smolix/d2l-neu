@@ -714,65 +714,94 @@ and *more efficiently* (using our GPUs to their full potential).
 <!-- slides -->
 
 ::: {.slide}
+End-to-end linear regression with **nothing** but tensor ops:
 
-we will implement the entire method from scratch,
-including (i) the model; (ii) the loss function;
-(iii) a minibatch stochastic gradient descent optimizer;
-and (iv) the training function 
-that stitches all of these pieces together
+1. **Model** — a `Module` with `w` and `b` parameters and a
+   `forward`.
+2. **Loss** — squared error.
+3. **Optimizer** — minibatch SGD, written by hand.
+4. **Training loop** — the `Trainer`'s `fit_epoch`, also from
+   scratch.
+
+The next chapter does the same with `nn.LazyLinear` + `MSELoss` +
+`SGD` in two lines. This one shows what those two lines hide.
+:::
+
+::: {.slide title="Parameters"}
+Initialize `w` randomly (small Gaussian), `b` at zero:
 
 @linear-regression-scratch-linear-regression-implementation-from-scratch
 
-:::
-
-::: {.slide}
-
-Before we can begin optimizing our model's parameters we need to have some parameters in the first place
-
 @linear-regression-scratch-defining-the-model-1
 
+`requires_grad=True` (or the framework equivalent) so autograd
+tracks them.
 :::
 
-::: {.slide}
-
-define our model,
-relating its input and parameters to its output
+::: {.slide title="Forward pass"}
+The model is one matrix-vector product plus a bias —
+$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$:
 
 @linear-regression-scratch-defining-the-model-2
-
 :::
 
-::: {.slide}
+::: {.slide title="Loss"}
+Squared error per example, averaged across the batch:
 
-updating our model requires taking
-the gradient of our loss function, define the loss function first
+$$\ell(\hat{y}, y) = \tfrac{1}{2}(\hat{y} - y)^2.$$
 
 @linear-regression-scratch-defining-the-loss-function
+:::
+
+::: {.slide title="Optimizer: minibatch SGD"}
+The update rule
+$\theta \leftarrow \theta - \eta \nabla_\theta L$
+written out by hand:
 
 @linear-regression-scratch-defining-the-optimization-algorithm-1
 
-@linear-regression-scratch-defining-the-optimization-algorithm-2
+. . .
 
+The model class wires it up in `configure_optimizers`:
+
+@linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
-::: {.slide}
-
-implement the main training loop
+::: {.slide title="Training step"}
+What happens once per minibatch — forward, loss, backward, step:
 
 @linear-regression-scratch-training-1
+:::
+
+::: {.slide title="The whole epoch"}
+The `Trainer` walks the train and val loaders once per epoch,
+calling the steps:
 
 @linear-regression-scratch-training-2
 
-@linear-regression-scratch-training-3
+. . .
 
+Run training on the synthetic dataset:
+
+@linear-regression-scratch-training-3
 :::
 
-::: {.slide}
-
-evaluate our success in training
-by comparing the true parameters
-with those that we learned
+::: {.slide title="Did it learn the right thing?"}
+We **know** the true `w` and `b` — compare with the learned
+values:
 
 @linear-regression-scratch-training-4
 
+Tiny differences come from finite training data + noise; tighter
+than that requires either more data or a better optimizer.
+:::
+
+::: {.slide title="Recap"}
+- A `Module` for linear regression boils down to `__init__`,
+  `forward`, `loss`, `configure_optimizers`.
+- A hand-rolled SGD is ~10 lines.
+- The `Trainer.fit_epoch` glue is what pytorch / tensorflow /
+  jax / mxnet's training APIs hide.
+- Synthetic data lets us check that the optimizer recovered the
+  ground-truth parameters.
 :::

@@ -800,38 +800,110 @@ and ultimately, evaluation on previously unseen data.
 <!-- slides -->
 
 ::: {.slide}
+The simplest predictive model: a **linear function** of the inputs
+plus a bias.
+
+$$\hat{y} = \mathbf{w}^\top \mathbf{x} + b.$$
+
+- Fit `w` and `b` to minimize **squared error** on training data.
+- Has a **closed-form solution** for problems where it scales,
+  but the *iterative* recipe (gradient descent on minibatches)
+  generalizes to everything that follows.
+- Connects neatly to the **Gaussian noise model** —
+  squared loss = negative log-likelihood under
+  $\mathcal{N}(0, \sigma^2)$.
+
+@!linear-regression-the-normal-distribution-and-squared-loss-2
+:::
+
+::: {.slide title="The model and the loss"}
+For one example $\mathbf{x}^{(i)} \in \mathbb{R}^d$ and target
+$y^{(i)} \in \mathbb{R}$, the model predicts
+
+$$\hat{y}^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b.$$
+
+Squared loss on the training set of $n$ examples:
+
+$$L(\mathbf{w}, b)
+  = \frac{1}{n} \sum_{i=1}^{n}
+    \tfrac{1}{2}\left(\hat{y}^{(i)} - y^{(i)}\right)^2.$$
+
+Convex in $(\mathbf{w}, b)$ — every local minimum is global.
+:::
+
+::: {.slide title="Two ways to fit"}
+**Closed form** (when it fits in memory):
+
+$$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
+
+Doesn't generalize beyond linear models.
+
+. . .
+
+**Minibatch SGD** (the recipe we'll keep using):
+
+$$\mathbf{w} \leftarrow \mathbf{w} -
+  \frac{\eta}{|\mathcal{B}|}
+    \sum_{i \in \mathcal{B}} \nabla_\mathbf{w}\,\ell^{(i)}(\mathbf{w}, b).$$
+
+- Sample minibatch $\mathcal{B}$.
+- Compute gradient of the average loss on it.
+- Step in the negative-gradient direction.
+:::
+
+::: {.slide title="Vectorization for speed"}
+Same operation, two implementations. Set up two 10 000-element
+vectors:
 
 @linear-regression
 
-we should vectorize the calculations and leverage
-fast linear algebra libraries
-rather than writing costly for-loops in Python. consider two methods for adding vectors
-
 @linear-regression-vectorization-for-speed-1
-
 :::
 
-::: {.slide}
-
-we add them, one coordinate at a time,
-using a for-loop
+::: {.slide title="Loop vs. vectorized add"}
+Adding element-by-element in a Python loop:
 
 @linear-regression-vectorization-for-speed-2
 
-Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum
+. . .
+
+The same answer in one library call:
 
 @linear-regression-vectorization-for-speed-3
 
+Roughly **3 orders of magnitude faster** on this size — Python's
+interpreter overhead is the killer; the C kernel barely breaks a
+sweat.
 :::
 
-::: {.slide}
+::: {.slide title="Why squared loss?"}
+Assume each label is the linear prediction plus Gaussian noise:
 
-we define a function to compute the normal distribution
+$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
+  \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
+
+Then minimizing **squared error** is exactly maximizing the
+**Gaussian log-likelihood** of the observed labels.
 
 @linear-regression-the-normal-distribution-and-squared-loss-1
+:::
 
-visualize the normal distributions
+::: {.slide title="Visualizing the connection"}
+Plot a few normal densities — different means and variances:
 
 @linear-regression-the-normal-distribution-and-squared-loss-2
 
+Squared loss assumes the **errors** look like one of these bells
+centered at the model's prediction.
+:::
+
+::: {.slide title="Recap"}
+- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
+- **Loss:** mean squared error — convex, single global optimum.
+- **Optimizer:** minibatch SGD steps in the gradient direction;
+  closed form exists but doesn't generalize.
+- **Vectorize** every inner loop — orders of magnitude faster
+  than Python iteration.
+- Squared loss is the **MLE** under Gaussian noise — sets the
+  template for matching loss functions to noise models.
 :::

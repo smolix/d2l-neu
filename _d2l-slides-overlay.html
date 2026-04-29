@@ -1,0 +1,14 @@
+<!--
+  Floating logo / "back to index" affordance, injected into every
+  slide deck via Quarto's `include-after-body`. CSS lives in
+  `_d2l-slides.scss` (.d2l-logo).
+
+  The link target `../../index.html` resolves to `_slides/index.html`
+  (the slide-deck landing page) from any per-fw / per-chapter deck.
+  The image source `../img/d2l-logo.png` resolves through the
+  per-fw symlink `_slides/<fw>/img → ../../img`.
+-->
+<a class="d2l-logo" href="../../index.html"
+   title="Back to slide index (Esc / B)">
+  <img src="../img/d2l-logo.png" alt="d2l">
+</a>

@@ -394,6 +394,7 @@ def generate_slides_qmd(src_path, framework, warnings):
     out.append('    chalkboard: true')
     out.append('    scrollable: true')
     out.append('    code-line-numbers: false')
+    out.append('    include-after-body: ../../../_d2l-slides-overlay.html')
     out.append('execute:')
     out.append('  echo: true')
     out.append('  eval: false')

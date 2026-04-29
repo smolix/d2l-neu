@@ -206,11 +206,65 @@ by which a neural network can select elements from a set and to construct an ass
 <!-- slides -->
 
 ::: {.slide}
+The seq2seq encoder squashes the entire source into one
+fixed-size vector — no matter the sentence length. That works
+for short sentences and breaks for long ones.
+
+A better idea: borrow from databases. A database is a set of
+$(\text{key}, \text{value})$ pairs; a query retrieves the
+matching value. Attention is the differentiable, soft version
+of that lookup:
+
+$$\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^{m} \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i,$$
+
+where the weights $\alpha$ depend on the compatibility between
+$\mathbf{q}$ and each key. Sharp $\alpha$ acts like a database
+lookup; uniform $\alpha$ acts like average pooling. Everything
+in between — that's "attention".
+
+![Attention pooling: linear combination over values, weights from query–key compatibility.](../img/qkv.svg){width=60%}
 
 @queries-keys-values-queries-keys-and-values
+:::
+
+::: {.slide title="Softmax-normalized weights"}
+Most often we want $\alpha$ to be a convex combination — non-
+negative and sum to one. Pick *any* scoring function $a(\mathbf{q}, \mathbf{k})$
+and softmax it:
+
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
+
+Differentiable, gradient never vanishes, available in every
+framework. The rest of the chapter is about choices for $a$
+and what to put in $\mathbf{q}, \mathbf{k}, \mathbf{v}$.
+:::
+
+::: {.slide title="show_heatmaps"}
+Visualizing attention weights as a (queries × keys) heatmap
+is the standard diagnostic. We'll need it in every section
+ahead, so package it now:
 
 @queries-keys-values-visualization-1
+:::
+
+::: {.slide title="Sanity check"}
+Identity attention — each query picks the matching key:
 
 @queries-keys-values-visualization-2
 
+. . .
+
+@!queries-keys-values-visualization-2
+:::
+
+::: {.slide title="Recap"}
+- Attention = soft, differentiable database lookup.
+- $\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_i \alpha_i \mathbf{v}_i$
+  with weights derived from compatibility $a(\mathbf{q}, \mathbf{k}_i)$.
+- Softmax of any scoring function $\Rightarrow$ valid convex
+  weights; that's what every modern attention mechanism uses.
+- Operates on arbitrary-size databases — no fixed input width
+  required.
+- Sharp/uniform/single-hot weights recover lookup, average
+  pooling, and database query as limit cases.
 :::

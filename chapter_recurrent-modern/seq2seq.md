@@ -1115,6 +1115,8 @@ The bottleneck — squeezing the entire source into one fixed
 vector — motivates attention in the next chapter. But the
 plain seq2seq is the foundation everything else builds on.
 
+![Seq2seq with an RNN encoder and an RNN decoder. `<eos>` ends the sequence; `<bos>` starts decoding.](../img/seq2seq.svg){width=78%}
+
 @seq2seq-sequence-to-sequence-learning-for-machine-translation
 :::
 
@@ -1175,6 +1177,8 @@ logits and a state of shape (num_layers, batch, num_hiddens):
 ::: {.slide title="Putting it together"}
 Subclass `EncoderDecoder`, add the optimizer:
 
+![Layers of the RNN encoder–decoder: embedding → encoder GRU → decoder GRU (with broadcast context) → dense.](../img/seq2seq-details.svg){width=72%}
+
 @seq2seq-encoder-decoder-for-sequence-to-sequence-learning
 :::
 
@@ -1196,6 +1200,8 @@ gradient clip 1, 30 epochs:
 Run the encoder once, then loop: feed the previous prediction
 back, take `argmax` over the vocab. Stop after `num_steps` (or
 when `<eos>` appears — handled by the caller).
+
+![Predicting token by token: feed the previous prediction back, stop on `<eos>`.](../img/seq2seq-predict.svg){width=78%}
 
 @seq2seq-prediction
 :::

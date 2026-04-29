@@ -479,34 +479,69 @@ proper tensor manipulation is needed.
 <!-- slides -->
 
 ::: {.slide}
+A single attention head computes one weighted average over
+values — one notion of "relevance". But a sentence has many
+parallel relations to capture: subject-verb agreement, syntax
+chunks, coreference, topical similarity. Stacking depth
+helps, but doesn't let the same layer attend in different
+ways simultaneously.
+
+**Multi-head attention** runs $h$ independent attention
+mechanisms in parallel, each with its own learned linear
+projections of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$. Each head
+ends up specializing — different ranges, different syntactic
+patterns. Concatenate the head outputs, project once more,
+and you have the layer's output:
+
+$$\mathbf{h}_i = f(\mathbf{W}_i^{(q)}\mathbf{q}, \mathbf{W}_i^{(k)}\mathbf{k}, \mathbf{W}_i^{(v)}\mathbf{v}), \quad
+\text{MHA} = \mathbf{W}_o\,[\mathbf{h}_1; \ldots; \mathbf{h}_h].$$
+
+Modern Transformers go big here: 8, 16, even 96 heads in
+large LLMs.
+
+![Multi-head attention: $h$ projections in parallel, concatenated and linearly transformed.](../img/multi-head-attention.svg){width=65%}
 
 @multihead-attention-multi-head-attention
-
 :::
 
-::: {.slide}
-
-choose the scaled dot product attention
-for each head
+::: {.slide title="Per-head dimension trick"}
+To keep cost flat as $h$ grows, set $p_q = p_k = p_v = p_o/h$.
+The $h$ heads then have the same total compute as a single-
+head attention with hidden size $p_o$. Implementation: do
+*one* big $\mathbf{W}_q$ producing $p_o$-dim outputs, then
+reshape into $h$ heads.
 
 @multihead-attention-implementation-1
-
 :::
 
-::: {.slide}
-
-parallel computation of multiple heads
+::: {.slide title="Reshape trick for parallel heads"}
+Reshape `(batch, len, num_hiddens)` →
+`(batch, len, num_heads, dim/heads)` →
+`(batch * num_heads, len, dim/heads)` so the attention layer
+sees all heads as just more batch entries. `transpose_output`
+reverses it after the attention layer:
 
 @multihead-attention-implementation-2
-
 :::
 
-::: {.slide}
-
-test our implemented
+::: {.slide title="Shape check"}
+5 heads × 100 hidden, batch 2, 4 queries, 6 key-value pairs.
+Output shape matches input shape:
 
 @multihead-attention-implementation-3
 
-@multihead-attention-implementation-4
+. . .
 
+@multihead-attention-implementation-4
+:::
+
+::: {.slide title="Recap"}
+- $h$ heads, each its own learned $\mathbf{W}_q, \mathbf{W}_k,
+  \mathbf{W}_v$, run in parallel; concat then project.
+- Set per-head dim to `num_hiddens / num_heads` so total
+  compute stays the same as a single-head layer.
+- Reshape `(B, L, D) → (B*h, L, D/h)` to run all heads as one
+  batched matmul — no Python loop.
+- The block of choice for Transformers; multiple heads let one
+  layer learn many simultaneous notions of relevance.
 :::

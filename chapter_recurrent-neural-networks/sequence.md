@@ -695,6 +695,8 @@ Three concepts to set up the rest of the chapter:
 - **Multi-step prediction** — feeding predictions back as inputs
   causes errors to compound rapidly.
 
+![A latent autoregressive model.](../img/sequence-model.svg){width=55%}
+
 We'll demo on a noisy sine wave and see why "predict the next
 value" is much easier than "predict the next 64 values."
 :::

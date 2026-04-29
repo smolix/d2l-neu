@@ -632,58 +632,93 @@ In the RNN encoder--decoder, the Bahdanau attention mechanism treats the decoder
 <!-- slides -->
 
 ::: {.slide}
+Plain seq2seq jams the entire source into one fixed vector.
+For long sentences, that's a bottleneck — early tokens get
+forgotten by the time the encoder finishes.
+
+Bahdanau, Cho, and Bengio (2015) fix this: instead of one
+context vector, *let the decoder query the encoder at every
+step*. At decoding step $t'$, the decoder uses its previous
+hidden state $\mathbf{s}_{t'-1}$ as a query, the encoder's
+per-step outputs $\mathbf{h}_1, \ldots, \mathbf{h}_T$ as keys
+and values, and computes a fresh context vector:
+
+$$\mathbf{c}_{t'} = \sum_{t=1}^{T} \alpha(\mathbf{s}_{t'-1}, \mathbf{h}_t)\, \mathbf{h}_t.$$
+
+So *which* source tokens to read becomes part of the model.
+This is the original "soft alignment" mechanism — and the
+template for every Transformer.
+
+![Plain seq2seq: a single state vector is the only bridge between encoder and decoder.](../img/seq2seq-state.svg){width=72%}
+
+![With attention: the decoder queries the encoder's per-step outputs at every decoding step.](../img/seq2seq-details-attention.svg){width=72%}
 
 @bahdanau-attention-the-bahdanau-attention-mechanism
-
 :::
 
-::: {.slide}
-
-the base interface for decoders with attention
+::: {.slide title="AttentionDecoder interface"}
+Just adds an `attention_weights` property so we can pull
+weights out for visualization:
 
 @bahdanau-attention-defining-the-decoder-with-attention-1
-
 :::
 
-::: {.slide}
-
-implement the RNN decoder
+::: {.slide title="Seq2SeqAttentionDecoder"}
+Per step: take the previous decoder hidden state, run
+additive attention against the encoder outputs (masked by
+source `valid_len`), concat the resulting context with the
+embedded input, run one GRU step, project to vocab.
 
 @bahdanau-attention-defining-the-decoder-with-attention-2
-
 :::
 
-::: {.slide}
-
-test the implemented
-decoder
+::: {.slide title="Decoder shape check"}
+Same harness as plain seq2seq — same logit shape, plus a
+new attention-weight tensor of shape (num_steps, batch,
+src_steps):
 
 @bahdanau-attention-defining-the-decoder-with-attention-3
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training"}
+Same hyperparameters as plain seq2seq (embed/hidden 256,
+2 layers, dropout 0.2, Adam 0.005, 30 epochs). Gives the
+model attention; everything else stays the same:
 
 @bahdanau-attention-training-1
-
 :::
 
-::: {.slide}
-
-translate a few English sentences
+::: {.slide title="Translate four sentences"}
+Compare BLEU vs. plain seq2seq — attention typically helps
+more on longer/harder sentences:
 
 @bahdanau-attention-training-2
-
 :::
 
-::: {.slide}
-
-visualize the attention weights
+::: {.slide title="Attention heatmap"}
+Pull attention weights from the predict step and plot them
+— rows are decoder steps, columns are source tokens. The
+diagonal-ish band is the model learning soft alignment:
 
 @bahdanau-attention-training-3
 
+. . .
+
 @bahdanau-attention-training-4
 
+. . .
+
+@!bahdanau-attention-training-4
+:::
+
+::: {.slide title="Recap"}
+- Bahdanau attention replaces the seq2seq bottleneck: at
+  each decoder step, attend over *all* encoder outputs.
+- Decoder hidden state = query, encoder outputs = keys and
+  values. Additive scoring; masked softmax with source
+  `valid_len`.
+- Visualizing weights = soft alignment between source and
+  target tokens.
+- This is the conceptual ancestor of the Transformer's
+  cross-attention.
 :::

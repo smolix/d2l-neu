@@ -539,7 +539,7 @@ language tasks at noticeably lower compute.
 @gru-gated-recurrent-units-gru
 :::
 
-::: {.slide title="Two gates, one update equation"}
+::: {.slide title="Reset and update gates"}
 The gates are sigmoid heads of $X_t$ and $H_{t-1}$:
 
 $$
@@ -547,17 +547,20 @@ $$
 \mathbf{Z}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xz} + \mathbf{H}_{t-1} \mathbf{W}_{hz} + \mathbf{b}_z).
 $$
 
-. . .
+![Computing the reset and update gates.](../img/gru-1.svg){width=72%}
+:::
 
-Candidate hidden state — like a vanilla RNN cell, but the
-previous hidden state is filtered by $\mathbf{R}_t$ before it
-enters the recurrence:
+::: {.slide title="Candidate hidden state"}
+Like a vanilla RNN cell, but $\mathbf{H}_{t-1}$ is filtered by
+$\mathbf{R}_t$ before entering the recurrence:
 
 $$\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xh} + (\mathbf{R}_t \odot \mathbf{H}_{t-1}) \mathbf{W}_{hh} + \mathbf{b}_h).$$
 
-. . .
+![Computing the candidate hidden state $\tilde{\mathbf{H}}_t$.](../img/gru-2.svg){width=72%}
+:::
 
-Final hidden state — convex combination ruled by
+::: {.slide title="Final hidden state"}
+Convex combination of old state and candidate, ruled by
 $\mathbf{Z}_t$:
 
 $$\mathbf{H}_t = \mathbf{Z}_t \odot \mathbf{H}_{t-1} + (1 - \mathbf{Z}_t) \odot \tilde{\mathbf{H}}_t.$$
@@ -565,6 +568,8 @@ $$\mathbf{H}_t = \mathbf{Z}_t \odot \mathbf{H}_{t-1} + (1 - \mathbf{Z}_t) \odot 
 $\mathbf{Z}_t \to 1$: skip this step. $\mathbf{Z}_t \to 0$:
 fully replace with the candidate. $\mathbf{R}_t \to 1$ recovers
 a vanilla RNN.
+
+![Computing the hidden state $\mathbf{H}_t$.](../img/gru-3.svg){width=72%}
 :::
 
 ::: {.slide title="From scratch: parameters"}

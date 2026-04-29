@@ -526,51 +526,124 @@ by adding positional encoding to the input representations.
 <!-- slides -->
 
 ::: {.slide}
+Bahdanau attention links *two* sequences (decoder steps to
+encoder steps). What if we use the same trick *within* a
+single sequence — let every token query every other token?
+That's *self-attention*: queries, keys, and values all come
+from the same input.
+
+The output for each token is a weighted average of *all*
+tokens, with weights determined by query-key compatibility.
+This is the elementary block of every Transformer encoder
+and decoder layer.
 
 @self-attention-and-positional-encoding
-
 :::
 
-::: {.slide}
-
-Self-Attention
+::: {.slide title="Self-attention as MultiHead(X, X, X)"}
+Reuse multi-head attention with the same input fed three
+times. Output shape matches input shape — same sequence
+length, same hidden size:
 
 @self-attention-and-positional-encoding-self-attention-1
 
-@self-attention-and-positional-encoding-self-attention-2
+. . .
 
+Shape check:
+
+@self-attention-and-positional-encoding-self-attention-2
 :::
 
-::: {.slide}
+::: {.slide title="CNN vs. RNN vs. self-attention"}
+Three ways to map a length-$n$ sequence to another length-$n$
+sequence with $d$-dim tokens:
 
-Positional Encoding
+| | Compute | Sequential ops | Max path |
+|--|--|--|--|
+| CNN ($k$-wide) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
+| RNN | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
+| Self-attention | $\mathcal{O}(n^2 d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+
+Self-attention wins on parallelism *and* on path length —
+every token reaches every other in one hop. The price is
+$n^2$ scaling, the bottleneck for long-context models.
+
+![CNN, RNN, self-attention. Path length: $\mathcal{O}(n/k)$, $\mathcal{O}(n)$, $\mathcal{O}(1)$.](../img/cnn-rnn-self-attention.svg){width=82%}
+:::
+
+::: {.slide title="Why we need positional encoding"}
+Self-attention is permutation-equivariant: shuffle the input
+tokens, and the outputs shuffle the same way. The model has
+*no idea* about word order.
+
+Solution: inject position information into each token's
+representation. Vaswani et al. use fixed sine/cosine
+encodings:
+
+$$p_{i,2j} = \sin\!\left(\frac{i}{10000^{2j/d}}\right),\quad p_{i,2j+1} = \cos\!\left(\frac{i}{10000^{2j/d}}\right).$$
+
+Different frequencies along the embedding dimension; same
+position $i$ across all dims gives a unique fingerprint.
+:::
+
+::: {.slide title="PositionalEncoding class"}
+Precompute $\mathbf{P}$ once for `max_len` positions, slice
+to actual length at forward time, add to inputs:
 
 @self-attention-and-positional-encoding-positional-encoding-1
-
 :::
 
-::: {.slide}
-
-rows correspond to positions within a sequence
-and columns represent different positional encoding dimensions
+::: {.slide title="Frequency along the dimension"}
+Plot four columns of $\mathbf{P}$. Lower-index columns
+oscillate fast; higher columns oscillate slow:
 
 @self-attention-and-positional-encoding-positional-encoding-2
 
+. . .
+
+@!self-attention-and-positional-encoding-positional-encoding-2
 :::
 
-::: {.slide}
-
-the binary representations
+::: {.slide title="Position as continuous binary"}
+Compare with binary representations of small integers — same
+"low bits flip fast, high bits flip slow" pattern, but in
+continuous values:
 
 @self-attention-and-positional-encoding-absolute-positional-information-1
-
 :::
 
-::: {.slide}
-
-the positional encoding decreases
-frequencies along the encoding dimension
+::: {.slide title="The full positional matrix"}
+Heatmap reveals the multi-frequency structure. Each row is a
+unique fingerprint for a position:
 
 @self-attention-and-positional-encoding-absolute-positional-information-2
 
+. . .
+
+@!self-attention-and-positional-encoding-absolute-positional-information-2
+:::
+
+::: {.slide title="Why sin/cos: relative positions"}
+For any fixed offset $\delta$, the encoding at position
+$i + \delta$ is a *linear function* of the encoding at
+position $i$:
+
+$$\begin{bmatrix} p_{i+\delta, 2j} \\ p_{i+\delta, 2j+1} \end{bmatrix} =
+\begin{bmatrix} \cos(\delta\omega_j) & \sin(\delta\omega_j) \\ -\sin(\delta\omega_j) & \cos(\delta\omega_j) \end{bmatrix}
+\begin{bmatrix} p_{i, 2j} \\ p_{i, 2j+1} \end{bmatrix}.$$
+
+The rotation depends on $\delta$ but not on $i$. So the
+network can learn to "shift attention by 5 tokens" with one
+linear transformation — relative positions come for free.
+:::
+
+::: {.slide title="Recap"}
+- Self-attention = multi-head attention with $\mathbf{Q} = \mathbf{K} = \mathbf{V} = \mathbf{X}$.
+- Output sequence length = input sequence length.
+- Compared to RNNs: same complexity per step but $\mathcal{O}(1)$
+  path length and full parallelism. Cost: $\mathcal{O}(n^2 d)$.
+- Self-attention is permutation-equivariant; need positional
+  encoding to know token order.
+- Sin/cos encoding gives unique absolute positions and lets
+  the model express relative offsets as linear maps.
 :::

@@ -431,6 +431,8 @@ $$\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)} \mathbf{W}_{xh}^{(l)} + \math
 
 Typical sizes: width 64–2048, depth 1–8.
 
+![Architecture of a deep RNN: layer $l$ at time $t$ depends on layer $l$ at time $t{-}1$ *and* layer $l{-}1$ at time $t$.](../img/deep-rnn.svg){width=70%}
+
 @deep-rnn-deep-recurrent-neural-networks
 :::
 

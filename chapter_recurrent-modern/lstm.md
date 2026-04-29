@@ -684,6 +684,13 @@ until Transformers took over around 2017.
 @lstm-long-short-term-memory-lstm
 :::
 
+::: {.slide title="The three gates"}
+Three sigmoid heads sharing the same shape — $X_t$ and $H_{t-1}$
+in, gating values in $(0, 1)$ out:
+
+![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=75%}
+:::
+
 ::: {.slide title="Three gates and an input node"}
 Each gate is a sigmoid head sharing the same shape — $X_t$ and
 $H_{t-1}$ in, a value in $(0, 1)$ per hidden unit out:
@@ -705,6 +712,8 @@ $$\tilde{\mathbf{C}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \
 
 Same algebra four times — only the activation and what each
 output controls differ.
+
+![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=75%}
 :::
 
 ::: {.slide title="Memory cell update and hidden state"}
@@ -717,15 +726,15 @@ If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$, the cell
 holds its value unchanged across arbitrary horizons. That's the
 constant error carousel that fixes vanishing gradients.
 
+![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=72%}
+
 . . .
 
 The hidden state is the gated, squashed cell:
 
 $$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
 
-The cell can carry information for many steps without
-broadcasting it; the output gate decides when the network
-finally reads it.
+![Computing the hidden state $\mathbf{H}_t$ from $\mathbf{C}_t$ and the output gate.](../img/lstm-3.svg){width=72%}
 :::
 
 ::: {.slide title="From scratch: parameters"}

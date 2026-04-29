@@ -255,6 +255,8 @@ Use case: encoding (POS tagging, NER, BERT-style pretraining).
 *Not* a language model — you'd be cheating, peeking at the
 target.
 
+![Architecture of a bidirectional RNN: forward + backward, hidden states concatenated.](../img/birnn.svg){width=70%}
+
 @bi-rnn-bidirectional-recurrent-neural-networks
 :::
 

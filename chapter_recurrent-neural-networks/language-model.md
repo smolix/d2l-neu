@@ -349,6 +349,8 @@ $$P(x_1, x_2, \dots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 That decomposition is the heart of every modern LM — predict the
 next token given everything before it.
 
+![Five (input, target) pairs from a length-5 partition: targets are inputs shifted by one.](../img/lang-model-data.svg){width=70%}
+
 This chapter sets up:
 
 - **n-gram models** with Laplace smoothing — the classical

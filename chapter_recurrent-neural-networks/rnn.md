@@ -278,6 +278,8 @@ $$\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
 
 The recurrence is what makes RNNs **stateful** and gives them
 unbounded effective context (in principle).
+
+![An RNN with a hidden state.](../img/rnn.svg){width=55%}
 :::
 
 ::: {.slide title="Setup"}
@@ -307,6 +309,8 @@ implementations actually do.
   softmax gives $P(x_{t+1} \mid x_{\le t})$.
 - Loss = **cross-entropy** with the next-token target — exactly
   the LM training signal from the previous chapter.
+
+![Character-level RNN LM. Input "machin", target "achine" — same RNN, target shifted by one.](../img/rnn-train.svg){width=70%}
 
 The next two sections build this end-to-end (from scratch +
 concise).

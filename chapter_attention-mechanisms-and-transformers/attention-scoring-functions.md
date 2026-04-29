@@ -676,63 +676,124 @@ we can use the additive attention scoring function instead. Optimizing these lay
 <!-- slides -->
 
 ::: {.slide}
+Attention pooling needs a *scoring function* $a(\mathbf{q}, \mathbf{k})$
+that softmax turns into weights:
+
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp\, a(\mathbf{q}, \mathbf{k}_i)}{\sum_j \exp\, a(\mathbf{q}, \mathbf{k}_j)}.$$
+
+Two scorings dominate practice:
+
+- **Scaled dot product** — $a = \mathbf{q}^\top \mathbf{k}/\sqrt{d}$.
+  Cheap, no extra parameters, requires query and key to share
+  a dimension. The Transformer choice.
+- **Additive (Bahdanau)** — a tiny MLP over $[\mathbf{q}; \mathbf{k}]$.
+  Slightly more expressive, learns the metric, lets $\mathbf{q}$
+  and $\mathbf{k}$ have different shapes.
+
+Both feed into the same softmax + value-pooling pipeline.
+
+![Output = weighted sum of values; weights = softmax of scoring function $a$.](../img/attention-output.svg){width=62%}
 
 @attention-scoring-functions
-
 :::
 
-::: {.slide}
+::: {.slide title="Why scaled dot product"}
+A Gaussian kernel expands to
+$\mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2$.
+Softmax kills the query-only term; layer-norm bounds the
+key-norm term — only $\mathbf{q}^\top \mathbf{k}_i$ remains.
 
-Dot Product Attention Masked Softmax Operation
+For $d$-dim i.i.d. unit-variance entries, $\mathbf{q}^\top \mathbf{k}$
+has variance $d$. Without scaling, softmax saturates as $d$
+grows and gradients vanish. Scale by $1/\sqrt d$ to keep the
+variance at 1:
+
+$$a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+:::
+
+::: {.slide title="Masked softmax"}
+Padded sequences in a minibatch — we don't want `<pad>` keys
+to receive attention mass. Set their pre-softmax scores to a
+large negative number so $\exp$ flushes them to zero:
 
 @attention-scoring-functions-masked-softmax-operation-1
-
 :::
 
-::: {.slide}
-
-illustrate how this function works
+::: {.slide title="Masked softmax in action"}
+Random scores; specify a valid length per row:
 
 @attention-scoring-functions-masked-softmax-operation-2
 
+. . .
+
+Per-row mask vectors work too:
+
 @attention-scoring-functions-masked-softmax-operation-3
+:::
+
+::: {.slide title="Batched matmul"}
+Attention runs in batches; weights × values is a batched
+matmul. `bmm` does the right thing — confirm shapes:
 
 @attention-scoring-functions-batch-matrix-multiplication
-
 :::
 
-::: {.slide}
-
-Scaled Dot Product Attention
+::: {.slide title="DotProductAttention class"}
+Stateless layer — no parameters, just $\mathbf{Q}\mathbf{K}^\top/\sqrt d$,
+masked softmax, then weighted sum of values:
 
 @attention-scoring-functions-scaled-dot-product-attention-1
-
 :::
 
-::: {.slide}
-
-illustrate how the `DotProductAttention` class works
+::: {.slide title="DotProduct demo"}
+2 queries, 10 keys/values, valid lengths (2, 6) — only the
+first 2 / first 6 keys per batch get nonzero weight:
 
 @attention-scoring-functions-scaled-dot-product-attention-2
 
+. . .
+
+Visualize the resulting attention matrix:
+
 @attention-scoring-functions-scaled-dot-product-attention-3
 
+. . .
+
+@!attention-scoring-functions-scaled-dot-product-attention-3
 :::
 
-::: {.slide}
-
-Additive Attention
+::: {.slide title="AdditiveAttention class"}
+$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q\mathbf{q} + \mathbf{W}_k\mathbf{k})$.
+Learnable $\mathbf{W}_q, \mathbf{W}_k, \mathbf{w}_v$. Lets queries
+and keys live in different feature spaces.
 
 @attention-scoring-functions-additive-attention-1
-
 :::
 
-::: {.slide}
-
-see how `AdditiveAttention` works
+::: {.slide title="Additive demo"}
+Same shapes as before, with mismatched query/key dims allowed:
 
 @attention-scoring-functions-additive-attention-2
 
+. . .
+
+Visualize:
+
 @attention-scoring-functions-additive-attention-3
 
+. . .
+
+@!attention-scoring-functions-additive-attention-3
+:::
+
+::: {.slide title="Recap"}
+- Scoring function $a$ + softmax $\Rightarrow$ attention
+  weights; pool values with those weights.
+- Scaled dot product is the default — cheap, parameter-free,
+  scales by $1/\sqrt d$ to control softmax saturation.
+- Additive attention is more flexible (separate $\mathbf{q}$/
+  $\mathbf{k}$ shapes, learned metric) but slower and less
+  used at modern scale.
+- Masked softmax is the workhorse for handling padded
+  sequences in batched inference.
 :::

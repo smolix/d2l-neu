@@ -308,6 +308,8 @@ This deck specifies the abstract interface; the next two
 sections implement it (RNN seq2seq, then beam search at
 decode time).
 
+![The encoder–decoder architecture: a state in between handles arbitrary in/out lengths.](../img/encoder-decoder.svg){width=65%}
+
 @encoder-decoder-the-encoder-decoder-architecture
 :::
 

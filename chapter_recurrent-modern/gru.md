@@ -523,39 +523,95 @@ They can also skip subsequences by turning on the update gate.
 <!-- slides -->
 
 ::: {.slide}
+LSTMs work, but they're heavy: three gates, an input node, a
+separate cell state. Cho et al. (2014) asked whether the gating
+idea could be kept while collapsing the bookkeeping.
+
+The result is the *gated recurrent unit*: two gates, no separate
+cell state, a single hidden state. Often matches LSTM quality on
+language tasks at noticeably lower compute.
+
+- **Reset gate** $\mathbf{R}_t$ — how much of the past to mix
+  into the candidate hidden state.
+- **Update gate** $\mathbf{Z}_t$ — convex blend between the old
+  hidden state and the new candidate.
 
 @gru-gated-recurrent-units-gru
+:::
 
-Initializing Model Parameters
+::: {.slide title="Two gates, one update equation"}
+The gates are sigmoid heads of $X_t$ and $H_{t-1}$:
+
+$$
+\mathbf{R}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xr} + \mathbf{H}_{t-1} \mathbf{W}_{hr} + \mathbf{b}_r),\quad
+\mathbf{Z}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xz} + \mathbf{H}_{t-1} \mathbf{W}_{hz} + \mathbf{b}_z).
+$$
+
+. . .
+
+Candidate hidden state — like a vanilla RNN cell, but the
+previous hidden state is filtered by $\mathbf{R}_t$ before it
+enters the recurrence:
+
+$$\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xh} + (\mathbf{R}_t \odot \mathbf{H}_{t-1}) \mathbf{W}_{hh} + \mathbf{b}_h).$$
+
+. . .
+
+Final hidden state — convex combination ruled by
+$\mathbf{Z}_t$:
+
+$$\mathbf{H}_t = \mathbf{Z}_t \odot \mathbf{H}_{t-1} + (1 - \mathbf{Z}_t) \odot \tilde{\mathbf{H}}_t.$$
+
+$\mathbf{Z}_t \to 1$: skip this step. $\mathbf{Z}_t \to 0$:
+fully replace with the candidate. $\mathbf{R}_t \to 1$ recovers
+a vanilla RNN.
+:::
+
+::: {.slide title="From scratch: parameters"}
+Nine matrices and three biases, grouped by gate:
 
 @gru-initializing-model-parameters
-
 :::
 
-::: {.slide}
-
-define the GRU forward computation
+::: {.slide title="Forward pass"}
+One step computes $\mathbf{Z}_t$, $\mathbf{R}_t$, the
+candidate, and the convex blend — five matmuls per time step
+versus eight in an LSTM.
 
 @gru-defining-the-model
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training"}
+Same `RNNLMScratch` head, same `Trainer`. Often converges to
+the same perplexity as the LSTM with fewer parameters.
 
 @gru-training
-
 :::
 
-::: {.slide}
-
-Concise Implementation
+::: {.slide title="Concise: nn.GRU"}
+Library cell drops into the same RNN scaffold:
 
 @gru-concise-implementation-1
 
+. . .
+
+Train it:
+
 @gru-concise-implementation-2
 
-@gru-concise-implementation-3
+. . .
 
+Decode:
+
+@gru-concise-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- GRU = LSTM with one gate fewer and no separate cell state.
+- Reset gate gates the *past* before the recurrence; update
+  gate convex-blends old vs. new.
+- Recovers vanilla RNN ($\mathbf{R}_t = 1$, $\mathbf{Z}_t = 0$)
+  and identity ($\mathbf{Z}_t = 1$) as limit cases.
+- Roughly 25 % fewer parameters than LSTM at the same width;
+  comparable perplexity on most LM tasks.
 :::

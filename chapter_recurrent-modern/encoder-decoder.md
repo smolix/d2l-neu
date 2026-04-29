@@ -294,27 +294,56 @@ to a variable-length sequence.
 <!-- slides -->
 
 ::: {.slide}
+Translation, summarization, dialogue — variable-length input
+mapped to variable-length output, no positional alignment
+between the two. The standard pattern:
+
+- An **encoder** reads the source sequence and compresses it
+  into a state.
+- A **decoder** reads that state plus the target tokens seen
+  so far, and predicts the next target token.
+
+The decoder is a *conditional* language model: $P(y_t \mid y_{<t}, \text{enc}(x))$.
+This deck specifies the abstract interface; the next two
+sections implement it (RNN seq2seq, then beam search at
+decode time).
 
 @encoder-decoder-the-encoder-decoder-architecture
+:::
 
-Encoder
+::: {.slide title="Encoder interface"}
+One method: read a variable-length input. The downstream
+implementation chooses the architecture (RNN now, Transformer
+later):
 
 @encoder-decoder-encoder
-
 :::
 
-::: {.slide}
-
-Decoder
+::: {.slide title="Decoder interface"}
+Two methods. `init_state` packs the encoder output into a
+state object the decoder consumes; `forward` takes the next
+input token plus the state and returns logits + updated state:
 
 @encoder-decoder-decoder
-
 :::
 
-::: {.slide}
-
-Putting the Encoder and Decoder Together
+::: {.slide title="Wiring them together"}
+`EncoderDecoder` runs the encoder once on the source, hands
+its output to `init_state`, then drives the decoder with the
+target tokens (teacher forcing during training):
 
 @encoder-decoder-putting-the-encoder-and-decoder-together
+:::
 
+::: {.slide title="Recap"}
+- Encoder–decoder splits seq2seq into two pieces with a
+  state in between — fixed shape inside, variable lengths
+  outside.
+- The decoder is just a conditional language model: same
+  $P(y_t \mid y_{<t}, \cdot)$ factorization, with the encoder
+  output as extra context.
+- Concrete implementations only override the encoder, the
+  decoder, and how the encoder output becomes a state.
+- Same scaffold will host RNN seq2seq, attention, and
+  Transformers in the chapters ahead.
 :::

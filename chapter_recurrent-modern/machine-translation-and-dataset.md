@@ -349,77 +349,114 @@ In natural language processing, *machine translation* refers to the task of auto
 <!-- slides -->
 
 ::: {.slide}
+Language modeling predicts one sequence. Translation maps
+*between* sequences — different lengths, different word orders.
+This unaligned source-to-target structure is the
+*sequence-to-sequence* (seq2seq) setting that drives the rest
+of this chapter and most of the attention chapter.
+
+This deck builds the data plumbing for English→French:
+
+- download a parallel corpus from Tatoeba,
+- normalize and word-tokenize both sides,
+- build separate source / target vocabularies,
+- pad and truncate to fixed length, with `<bos>` / `<eos>` /
+  `<pad>` / `<unk>` special tokens.
 
 @machine-translation-and-dataset-machine-translation-and-the-dataset
-
 :::
 
-::: {.slide}
-
-Downloading and Preprocessing the Dataset
+::: {.slide title="Downloading the Tatoeba corpus"}
+Tab-separated bilingual sentence pairs — one English, one
+French per line:
 
 @machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1
 
-@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2
+. . .
 
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2
 :::
 
-::: {.slide}
-
-proceed with several preprocessing steps
+::: {.slide title="Preprocessing"}
+Lower-case, replace non-breaking spaces, insert a space before
+punctuation so `,.!?` become their own tokens:
 
 @machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3
 
-@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4
+. . .
 
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4
 :::
 
-::: {.slide}
-
-Tokenization
+::: {.slide title="Word-level tokenization"}
+Word tokens (modern systems use BPE / WordPiece). Append
+`<eos>` so the model knows when to stop generating.
 
 @machine-translation-and-dataset-tokenization-1
 
-@machine-translation-and-dataset-tokenization-2
+. . .
 
+Two parallel lists: `src[i]` and `tgt[i]` are the i-th English
+sentence and its French translation:
+
+@machine-translation-and-dataset-tokenization-2
 :::
 
-::: {.slide}
-
-plot the histogram of the number of tokens per text sequence
+::: {.slide title="Length distribution"}
+Most sentences are short — under 20 tokens. That justifies a
+small fixed `num_steps` and pad/truncate strategy.
 
 @machine-translation-and-dataset-tokenization-3
 
-@machine-translation-and-dataset-tokenization-4
+. . .
 
+@!machine-translation-and-dataset-tokenization-4
 :::
 
-::: {.slide}
-
-each example sequence had a fixed length
+::: {.slide title="Padding to fixed length"}
+Truncate long sequences, pad short ones with `<pad>`. Track
+`valid_len` (real tokens, no padding) — the model needs it to
+mask attention/loss later. Target sequences get a `<bos>`
+prefix; the label is the target shifted by one.
 
 @machine-translation-and-dataset-loading-sequences-of-fixed-length-1
 
-@machine-translation-and-dataset-loading-sequences-of-fixed-length-2
+. . .
 
+@machine-translation-and-dataset-loading-sequences-of-fixed-length-2
 :::
 
-::: {.slide}
-
-Reading the Dataset
+::: {.slide title="Dataloader"}
+Standard split — first `num_train` examples for training, the
+rest for validation:
 
 @machine-translation-and-dataset-reading-the-dataset-1
-
 :::
 
-::: {.slide}
-
-read the first minibatch from the English--French dataset
+::: {.slide title="A minibatch end to end"}
+Source IDs, decoder input (target shifted right with `<bos>`),
+valid length, label (target shifted left):
 
 @machine-translation-and-dataset-reading-the-dataset-2
 
+. . .
+
+Convert IDs back to tokens for inspection:
+
 @machine-translation-and-dataset-reading-the-dataset-3
 
-@machine-translation-and-dataset-reading-the-dataset-4
+. . .
 
+@machine-translation-and-dataset-reading-the-dataset-4
+:::
+
+::: {.slide title="Recap"}
+- Translation = pairs of unaligned sequences (different
+  lengths, possibly different word orders).
+- Word-level tokenization → much larger vocab than character;
+  treat rare tokens as `<unk>` to keep it manageable.
+- Pad/truncate to fixed `num_steps` for batching; record
+  `valid_len` to mask later.
+- Decoder input is target with `<bos>` prefix; label is target
+  shifted left by one — that's teacher forcing setup.
 :::

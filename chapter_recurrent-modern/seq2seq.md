@@ -1098,85 +1098,133 @@ BLEU is a popular measure that matches $n$-grams between the predicted sequence 
 <!-- slides -->
 
 ::: {.slide}
+Two RNNs glued together (Sutskever et al., 2014; Cho et al.,
+2014):
+
+- The **encoder** RNN reads English, returning a final hidden
+  state — a fixed-size context vector summarizing the source.
+- The **decoder** RNN, conditioned on that context, generates
+  French token by token until it emits `<eos>`.
+
+The decoder is just a conditional language model. Training
+uses *teacher forcing*: feed the real French tokens in,
+predict shifted tokens out. At inference, feed the model's
+own previous prediction.
+
+The bottleneck — squeezing the entire source into one fixed
+vector — motivates attention in the next chapter. But the
+plain seq2seq is the foundation everything else builds on.
 
 @seq2seq-sequence-to-sequence-learning-for-machine-translation
-
 :::
 
-::: {.slide}
+::: {.slide title="Teacher forcing"}
+Decoder input: `<bos>`, "Ils", "regardent", ".".
+Decoder label: "Ils", "regardent", ".", `<eos>`.
 
-implement the RNN encoder
+The MTFraEng pipeline already produces this shifted pair.
+Same self-supervised setup as a language model — only now the
+encoder output is concatenated as extra context.
+
+. . .
+
+Alternative — *scheduled sampling*: occasionally feed the
+prediction back. More realistic at inference but harder to
+optimize.
+:::
+
+::: {.slide title="Encoder: embed + GRU"}
+Embedding layer for input tokens, then a multilayer GRU.
+Output: per-step hidden states (top layer) and final state
+(all layers):
 
 @seq2seq-encoder-1
 
-@seq2seq-encoder-2
+. . .
 
+@seq2seq-encoder-2
 :::
 
-::: {.slide}
-
-illustrate the above encoder implementation
+::: {.slide title="Encoder shape check"}
+Two-layer GRU, hidden 16, batch 4, seq length 9. Confirm
+shapes:
 
 @seq2seq-encoder-3
 
-@seq2seq-encoder-4
+. . .
 
+@seq2seq-encoder-4
 :::
 
-::: {.slide}
-
-Decoder
+::: {.slide title="Decoder: context-conditioned RNN"}
+Embed the previous target token, **concatenate the encoder's
+final hidden state** at every decoder time step (context
+broadcast across the sequence), run a GRU, and project to
+vocab logits:
 
 @seq2seq-decoder-1
-
 :::
 
-::: {.slide}
-
-illustrate the implemented decoder
+::: {.slide title="Decoder shape check"}
+End-to-end forward pass produces (batch, num_steps, vocab)
+logits and a state of shape (num_layers, batch, num_hiddens):
 
 @seq2seq-decoder-2
+:::
+
+::: {.slide title="Putting it together"}
+Subclass `EncoderDecoder`, add the optimizer:
 
 @seq2seq-encoder-decoder-for-sequence-to-sequence-learning
-
 :::
 
-::: {.slide}
-
-mask irrelevant entries with zero values
+::: {.slide title="Masked loss"}
+`<pad>` predictions shouldn't contribute to the loss. Build a
+mask `Y != tgt_pad` and average only over real tokens:
 
 @seq2seq-loss-function-with-masking
-
 :::
 
-::: {.slide}
-
-Training create and train an RNN encoder--decoder model
+::: {.slide title="Training"}
+2-layer GRU, embed/hidden 256, dropout 0.2, Adam lr=0.005,
+gradient clip 1, 30 epochs:
 
 @seq2seq-training
-
 :::
 
-::: {.slide}
-
-Prediction
+::: {.slide title="Greedy prediction"}
+Run the encoder once, then loop: feed the previous prediction
+back, take `argmax` over the vocab. Stop after `num_steps` (or
+when `<eos>` appears — handled by the caller).
 
 @seq2seq-prediction
-
 :::
 
-::: {.slide}
+::: {.slide title="BLEU score"}
+Compare prediction $n$-grams against reference. Geometric
+mean of $n$-gram precisions, with a brevity penalty so the
+model can't game it by emitting "the the".
 
-implement the BLEU measure
+$$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right) \prod_{n=1}^k p_n^{1/2^n}.$$
 
 @seq2seq-evaluation-of-predicted-sequences-1
-
 :::
 
-::: {.slide}
-
-translate a few English sentences into French
+::: {.slide title="Translate four sentences"}
+Run the model on a handful of English sentences and score
+each:
 
 @seq2seq-evaluation-of-predicted-sequences-2
+:::
 
+::: {.slide title="Recap"}
+- Seq2seq = encoder RNN + decoder RNN, joined by a
+  fixed-size context vector.
+- Teacher forcing during training; greedy / beam search at
+  inference.
+- Masked cross-entropy excludes `<pad>` from the loss.
+- BLEU is the standard MT metric: $n$-gram precision with a
+  brevity penalty.
+- Single-vector context is a bottleneck — attention (next
+  chapter) replaces it with one vector per source position.
 :::

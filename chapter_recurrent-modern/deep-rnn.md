@@ -416,22 +416,72 @@ to ensure proper convergence.
 <!-- slides -->
 
 ::: {.slide}
+A single RNN layer is already deep *in time*: information from
+step 1 passes through $T$ recurrent applications to reach step
+$T$. But within a single time step, input-to-output is just
+one nonlinearity — that's shallow.
+
+Stacking RNN layers fixes that. Each layer sees the previous
+layer's hidden states as its input sequence; the topmost layer
+feeds the readout. Same depth-of-representation idea as MLPs
+and deep CNNs, applied along the *layer* axis instead of the
+*time* axis.
+
+$$\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)} \mathbf{W}_{xh}^{(l)} + \mathbf{H}_{t-1}^{(l)} \mathbf{W}_{hh}^{(l)} + \mathbf{b}_h^{(l)}).$$
+
+Typical sizes: width 64–2048, depth 1–8.
 
 @deep-rnn-deep-recurrent-neural-networks
+:::
+
+::: {.slide title="Stacking from scratch"}
+A `StackedRNNScratch` is just a list of `RNNScratch` cells —
+each layer's input width is `num_hiddens` (except the bottom
+layer, which sees raw inputs):
 
 @deep-rnn-implementation-from-scratch-1
 
+. . .
+
+The forward pass walks the layers, feeding each layer's
+output sequence into the next:
+
 @deep-rnn-implementation-from-scratch-2
+:::
+
+::: {.slide title="Training the stacked RNN"}
+Two-layer stack on *The Time Machine*. Lower learning rate
+(`lr=2`) — deeper recurrents are harder to optimize:
 
 @deep-rnn-implementation-from-scratch-3
+:::
+
+::: {.slide title="Concise: multilayer GRU"}
+`nn.GRU(..., num_layers=L, dropout=p)` collapses the stack
+into one library call — and adds dropout between layers,
+which is the standard regularizer for stacked RNNs:
 
 @deep-rnn-concise-implementation-1
+:::
 
-select a nontrivial number of hidden layers 
-by specifying the value of `num_layers`
+::: {.slide title="Training and decoding"}
+Two-layer GRU LM, same `Trainer`:
 
 @deep-rnn-concise-implementation-2
 
-@deep-rnn-concise-implementation-3
+. . .
 
+Decode from a prefix:
+
+@deep-rnn-concise-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- Deep RNNs stack $L$ recurrent layers; layer $l$'s input is
+  layer $l{-}1$'s output sequence.
+- Same idea applies to vanilla RNN, LSTM, or GRU cells.
+- Use lower learning rate and (usually) inter-layer dropout —
+  vertical depth makes optimization noticeably trickier.
+- `nn.GRU(..., num_layers=L, dropout=p)` is the production
+  one-liner.
 :::

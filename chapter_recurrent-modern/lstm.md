@@ -665,43 +665,119 @@ LSTMs can alleviate vanishing and exploding gradients.
 <!-- slides -->
 
 ::: {.slide}
+Vanilla RNNs hit a ceiling: gradients vanish across long
+sequences, so the model can't carry information from token 1 to
+token 100. LSTMs (Hochreiter & Schmidhuber, 1997) fix this by
+giving each unit a *memory cell* with a self-loop of weight 1
+and three learned gates that decide when to write, erase, and
+read.
+
+- **Forget gate** $\mathbf{F}_t$ — keep old memory or wipe it.
+- **Input gate** $\mathbf{I}_t$ — let new content in or block it.
+- **Output gate** $\mathbf{O}_t$ — expose the memory to the next
+  layer or hide it.
+
+For two decades these were *the* sequence models — the workhorse
+behind speech recognition, translation, and language modeling
+until Transformers took over around 2017.
 
 @lstm-long-short-term-memory-lstm
-
 :::
 
-::: {.slide}
+::: {.slide title="Three gates and an input node"}
+Each gate is a sigmoid head sharing the same shape — $X_t$ and
+$H_{t-1}$ in, a value in $(0, 1)$ per hidden unit out:
 
-Initializing Model Parameters
+$$
+\mathbf{I}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),\quad
+\mathbf{F}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xf} + \mathbf{H}_{t-1} \mathbf{W}_{hf} + \mathbf{b}_f),
+$$
+$$
+\mathbf{O}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xo} + \mathbf{H}_{t-1} \mathbf{W}_{ho} + \mathbf{b}_o).
+$$
+
+. . .
+
+A fourth head — the *input node* — uses $\tanh$ and proposes
+content to write into memory:
+
+$$\tilde{\mathbf{C}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \mathbf{W}_{hc} + \mathbf{b}_c).$$
+
+Same algebra four times — only the activation and what each
+output controls differ.
+:::
+
+::: {.slide title="Memory cell update and hidden state"}
+The memory cell mixes the previous state with the new
+proposal, gated elementwise:
+
+$$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$
+
+If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$, the cell
+holds its value unchanged across arbitrary horizons. That's the
+constant error carousel that fixes vanishing gradients.
+
+. . .
+
+The hidden state is the gated, squashed cell:
+
+$$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
+
+The cell can carry information for many steps without
+broadcasting it; the output gate decides when the network
+finally reads it.
+:::
+
+::: {.slide title="From scratch: parameters"}
+Twelve weight matrices and four biases — the same `triple()`
+factory four times, one per gate/node:
 
 @lstm-initializing-model-parameters-1
-
 :::
 
-::: {.slide}
-
-The actual model The actual model
+::: {.slide title="Forward pass"}
+Walk the sequence; at each step compute the four gate/node
+heads, update $\mathbf{C}$, then $\mathbf{H}$. Carry both states
+forward.
 
 @lstm-initializing-model-parameters-2
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training the from-scratch LSTM"}
+Same `RNNLMScratch` head, same `Trainer`, same gradient
+clipping — only the cell changed. Higher learning rate
+(`lr=4`) is fine because gates keep activations bounded.
 
 @lstm-training-and-prediction
-
 :::
 
-::: {.slide}
-
-Concise Implementation
+::: {.slide title="Concise: nn.LSTM"}
+Library cell + cuDNN kernels — usually 5–10× faster than the
+loop in Python:
 
 @lstm-concise-implementation-1
 
+. . .
+
+Drop into the same LM scaffold and train:
+
 @lstm-concise-implementation-2
+:::
+
+::: {.slide title="Decoding"}
+Predict from a prefix:
 
 @lstm-concise-implementation-3
+:::
 
+::: {.slide title="Recap"}
+- LSTM = vanilla RNN cell replaced by a memory cell with three
+  multiplicative gates.
+- The cell update $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$
+  is what fixes vanishing gradients.
+- Only $\mathbf{H}_t$ leaves the cell; $\mathbf{C}_t$ is internal.
+- Reuse the from-scratch LM scaffold; `nn.LSTM` is the cuDNN
+  drop-in for production.
+- Dominant sequence model 2011–2017; many ideas (gating,
+  residual paths) carried into Transformers.
 :::

@@ -239,13 +239,67 @@ In bidirectional RNNs, the hidden state for each time step is simultaneously det
 <!-- slides -->
 
 ::: {.slide}
+For language modeling we condition only on the past, so a
+left-to-right RNN is fine. But many tasks need both sides:
+
+- I am `___`. → "happy"
+- I am `___` hungry. → "very" / "not"
+- I am `___` hungry, and I can eat half a pig. → "very" only
+
+Right-context flips the answer. Bidirectional RNNs (Schuster &
+Paliwal, 1997) handle this by running two RNNs — one forward,
+one backward — and concatenating their hidden states at each
+step.
+
+Use case: encoding (POS tagging, NER, BERT-style pretraining).
+*Not* a language model — you'd be cheating, peeking at the
+target.
 
 @bi-rnn-bidirectional-recurrent-neural-networks
+:::
+
+::: {.slide title="Forward and backward states"}
+Two RNNs with separate parameters; each step has both a
+forward and a backward hidden state:
+
+$$
+\overrightarrow{\mathbf{H}}_t = \phi(\mathbf{X}_t \mathbf{W}_{xh}^{(f)} + \overrightarrow{\mathbf{H}}_{t-1} \mathbf{W}_{hh}^{(f)} + \mathbf{b}_h^{(f)}),
+$$
+$$
+\overleftarrow{\mathbf{H}}_t = \phi(\mathbf{X}_t \mathbf{W}_{xh}^{(b)} + \overleftarrow{\mathbf{H}}_{t+1} \mathbf{W}_{hh}^{(b)} + \mathbf{b}_h^{(b)}).
+$$
+
+Concatenate to form the layer output:
+$\mathbf{H}_t = [\overrightarrow{\mathbf{H}}_t, \overleftarrow{\mathbf{H}}_t] \in \mathbb{R}^{n \times 2h}$.
+The output layer reads from $2h$ features.
+:::
+
+::: {.slide title="From scratch"}
+Two `RNNScratch` cells, output dim doubled:
 
 @bi-rnn-implementation-from-scratch-1
 
+. . .
+
+Run the backward cell on the reversed input, then concatenate
+forward and backward outputs at each time step:
+
 @bi-rnn-implementation-from-scratch-2
+:::
+
+::: {.slide title="Concise: bidirectional=True"}
+PyTorch / MXNet / TF expose this as a one-flag toggle on the
+library cell:
 
 @bi-rnn-concise-implementation
+:::
 
+::: {.slide title="Recap"}
+- Bidirectional RNN = forward + backward RNN, hidden states
+  concatenated → output dim is $2h$.
+- Use for *encoding* tasks where both sides are available
+  (POS tagging, NER, masked-LM pretraining); never for
+  next-token language modeling.
+- Roughly 2× compute and 2× parameters vs. a unidirectional RNN.
+- One flag in modern frameworks: `bidirectional=True`.
 :::

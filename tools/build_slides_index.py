@@ -225,10 +225,8 @@ main {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0;
   border-radius: 3px;
-  text-decoration: none;
-  color: var(--text);
   background: var(--surface);
   border: 1px solid transparent;
   transition: background 0.1s, border-color 0.1s;
@@ -240,9 +238,24 @@ main {
 }
 
 .deck.unavailable {
+  background: transparent;
+}
+
+.deck-main {
+  flex-grow: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+  color: var(--text);
+  border-radius: 3px;
+}
+.deck-main:hover { color: var(--blue-darker); }
+
+.deck.unavailable .deck-main {
   color: var(--text-muted);
   pointer-events: none;
-  background: transparent;
 }
 
 .deck.unavailable .deck-title {
@@ -266,6 +279,8 @@ main {
   gap: 0.2rem;
   font-family: 'Source Sans 3', system-ui, sans-serif;
   font-size: 0.7rem;
+  padding: 0.55rem 0.75rem 0.55rem 0;
+  flex-shrink: 0;
 }
 
 .fw-badges .badge {
@@ -276,11 +291,21 @@ main {
   color: var(--blue-dark);
   font-weight: 500;
   letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, transform 0.1s;
+  outline-offset: 1px;
+}
+.fw-badges a.badge:hover {
+  background: var(--blue-dark);
+  color: white;
+  transform: translateY(-1px);
 }
 
 .fw-badges .badge.absent {
   background: #f0f0f0;
   color: #bbb;
+  cursor: default;
 }
 
 footer {
@@ -315,11 +340,11 @@ footer {
 
 <main>
   <section class="intro">
-    <p><strong>Reveal.js slide decks for every chapter.</strong>
-    Pick a framework above; deck links update instantly.</p>
-    <p>Decks render the same code shown in the book, with cached
-    notebook outputs injected. Use <kbd>→</kbd>/<kbd>←</kbd> to
-    navigate, <kbd>?</kbd> for help, <kbd>S</kbd> for speaker notes.</p>
+    <p><kbd>→</kbd>/<kbd>←</kbd> to navigate slides,
+       <kbd>?</kbd> for help, <kbd>S</kbd> for speaker notes.
+       Click a row to open in the selected framework, or click a
+       badge (PT&nbsp;/&nbsp;TF&nbsp;/&nbsp;JAX&nbsp;/&nbsp;MX) to
+       open that framework's variant.</p>
   </section>
 
   __CONTENT__
@@ -345,12 +370,13 @@ function restore() {
 function applyFramework(fw) {
   document.querySelectorAll('.deck').forEach(deck => {
     const fws = deck.dataset.fws.split(',');
+    const main = deck.querySelector('.deck-main');
     if (fws.includes(fw)) {
       deck.classList.remove('unavailable');
-      deck.href = `${fw}/${deck.dataset.dir}/${deck.dataset.stem}.html`;
+      main.href = `${fw}/${deck.dataset.dir}/${deck.dataset.stem}.html`;
     } else {
       deck.classList.add('unavailable');
-      deck.removeAttribute('href');
+      main.removeAttribute('href');
     }
   });
   document.querySelectorAll('.fw-badges .badge').forEach(b => {
@@ -372,29 +398,41 @@ fwSelect.addEventListener('change', e => applyFramework(e.target.value));
 
 def render_html(idx: dict) -> str:
     parts = []
+    short_names = {'pytorch': 'PT', 'tensorflow': 'TF',
+                    'jax': 'JAX', 'mxnet': 'MX'}
     for chap in idx['chapters']:
-        parts.append(f'  <section class="chapter">')
+        parts.append('  <section class="chapter">')
         parts.append(f'    <h2>{html_escape(chap["title"])}</h2>')
         parts.append('    <ul class="deck-list">')
         for i, deck in enumerate(chap['decks'], start=1):
             fws_attr = ','.join(deck['frameworks'])
+            stem = deck['stem']
+            chap_dir = chap['dir']
             badges = []
             for fw in FRAMEWORKS:
-                short = {'pytorch': 'PT', 'tensorflow': 'TF',
-                         'jax': 'JAX', 'mxnet': 'MX'}[fw]
-                cls = 'badge' if fw in deck['frameworks'] else 'badge absent'
+                short = short_names[fw]
                 title = FRAMEWORK_DISPLAY.get(fw, fw)
-                badges.append(
-                    f'<span class="{cls}" data-fw="{fw}" '
-                    f'title="{title}">{short}</span>')
+                if fw in deck['frameworks']:
+                    href = f'{fw}/{chap_dir}/{stem}.html'
+                    badges.append(
+                        f'<a class="badge" data-fw="{fw}" '
+                        f'href="{href}" title="Open {title} variant">'
+                        f'{short}</a>')
+                else:
+                    badges.append(
+                        f'<span class="badge absent" data-fw="{fw}" '
+                        f'title="No {title} deck for this section">'
+                        f'{short}</span>')
             parts.append(
-                f'      <li><a class="deck" '
-                f'data-dir="{chap["dir"]}" '
-                f'data-stem="{deck["stem"]}" '
-                f'data-fws="{fws_attr}" '
-                f'href="#"><span class="deck-num">{i}.</span>'
+                f'      <li class="deck" '
+                f'data-dir="{chap_dir}" data-stem="{stem}" '
+                f'data-fws="{fws_attr}">'
+                f'<a class="deck-main" href="#">'
+                f'<span class="deck-num">{i}.</span>'
                 f'<span class="deck-title">{html_escape(deck["title"])}</span>'
-                f'<span class="fw-badges">{"".join(badges)}</span></a></li>')
+                f'</a>'
+                f'<span class="fw-badges">{"".join(badges)}</span>'
+                f'</li>')
         parts.append('    </ul>')
         parts.append('  </section>')
     return '\n'.join(parts)

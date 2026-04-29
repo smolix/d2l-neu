@@ -594,92 +594,146 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 <!-- slides -->
 
 ::: {.slide}
-A convolutional layer is a small **kernel** slid over an image,
-producing a feature map. Two properties make convs the workhorse
-of image models:
+A fully-connected layer on a 1-megapixel RGB image needs
+roughly **3 million** weights *per output unit*. That's wildly
+wasteful — pixel correlations are local, and the same edge
+detector should work in the top-left corner and the
+bottom-right corner.
 
-- **Translation invariance** — the same filter applied everywhere.
-- **Locality** — outputs depend only on a small neighborhood.
+A **convolutional layer** trades that profligacy for two
+strong inductive biases:
 
-Far fewer parameters than a fully-connected layer on the same
-input, and inductive bias well matched to natural images.
+- **Translation invariance** — slide one small filter
+  everywhere; same parameters at every spatial location.
+- **Locality** — each output depends only on a small
+  neighborhood of input pixels.
 
-(Frameworks call this *convolution* but the math is actually
-**cross-correlation** — same up to a kernel flip we ignore.)
+Result: thousands of parameters instead of millions, and
+exactly the right prior for natural images. (The math is
+technically *cross-correlation*; deep learning calls it
+convolution because the difference — a kernel flip — is
+absorbed by training.)
 :::
 
-::: {.slide title="Cross-correlation, by hand"}
-The 2-D cross-correlation: slide kernel `K` over input `X`,
-multiply-and-sum at each position:
+::: {.slide title="2-D cross-correlation"}
+Slide a small kernel $\mathbf{K}$ over the input $\mathbf{X}$.
+At each position, multiply elementwise and sum:
 
-$$Y[i,j] = \sum_{a,b} X[i+a, j+b]\, K[a, b].$$
+$$Y[i, j] = \sum_{a, b} X[i+a, j+b]\, K[a, b].$$
+
+![Cross-correlation: 3×3 input × 2×2 kernel → 2×2 output. Shaded element: $0{\cdot}0 + 1{\cdot}1 + 3{\cdot}2 + 4{\cdot}3 = 19$.](../img/correlation.svg){width=78%}
+
+The output is smaller than the input by $k - 1$ in each
+direction — same shrinking we'll undo with padding next
+section.
+:::
+
+::: {.slide title="Implementing it"}
+Two nested loops over output positions. Each cell is a
+slice multiplied elementwise with the kernel and summed:
 
 @conv-layer-convolutions-for-images
 
-@conv-layer-the-cross-correlation-operation-1
-:::
+. . .
 
-::: {.slide title="Smoke test"}
-Textbook example — 3×3 input with a 2×2 kernel gives a 2×2 output:
+@conv-layer-the-cross-correlation-operation-1
+
+. . .
+
+Verify against the figure — 3×3 input × 2×2 kernel →
+2×2 output with the worked-out values:
 
 @conv-layer-the-cross-correlation-operation-2
 :::
 
-::: {.slide title="Wrapping it as a layer"}
-A `Conv2D` `Module` — kernel + bias as learnable parameters,
-forward calls our `corr2d`:
+::: {.slide title="A conv layer is corr2d + bias"}
+Wrap the operator as a learnable `Module`. Two parameters:
+the kernel weights and a scalar bias:
 
 @conv-layer-convolutional-layers
+
+These are the only learnable parameters of a single-channel
+conv layer. A 3×3 conv has *nine* weights regardless of
+input size — that's the parameter savings the inductive
+bias buys us.
 :::
 
-::: {.slide title="Application: edge detection"}
-Construct an image with a vertical white-to-black edge:
+::: {.slide title="What kernels actually do: edge detection"}
+Build an image with a vertical edge in the middle: 1s on
+the outsides, 0s in the middle four columns:
 
 @conv-layer-object-edge-detection-in-images-1
 
 . . .
 
-A 1×2 horizontal-difference kernel:
+A 1×2 horizontal-difference kernel — discrete first
+derivative across $x$:
+
+$$\mathbf{K} = [\,1, \, -1\,] \;\Rightarrow\; (\mathbf{K} * \mathbf{X})[i, j] = X[i, j] - X[i, j+1].$$
 
 @conv-layer-object-edge-detection-in-images-2
 :::
 
-::: {.slide title="It detects the edges"}
-$+1$ at each white→black transition, $-1$ at each black→white:
+::: {.slide title="The output is the edge map"}
+Cross-correlate the image with the difference kernel: $+1$
+at each white→black transition, $-1$ at each black→white,
+zero everywhere else:
 
 @conv-layer-object-edge-detection-in-images-3
 
 . . .
 
-Transpose the input (now a horizontal edge) — the **same** kernel
-finds nothing:
+Transpose the image so the edge is now horizontal — the
+**same** kernel detects nothing:
 
 @conv-layer-object-edge-detection-in-images-4
 
-Filters are **direction-sensitive**. Real ConvNets learn many
-filters in parallel.
+Filters are **direction-sensitive**. Real ConvNets stack
+many filters per layer to cover all directions / patterns.
 :::
 
 ::: {.slide title="Learning the kernel"}
-Don't hand-design — **train**. Initialize randomly, descend on
-squared error between predicted and true `Y`:
+We don't *have* to design kernels by hand. Random init,
+SGD on squared error against ground truth $\mathbf{Y}$:
 
 @conv-layer-learning-a-kernel-1
 
 . . .
 
-The learned kernel matches the hand-designed `[1, -1]` (up to
-sign) — exactly what we'd hope:
+After 10 steps the loss is near zero, and the learned
+kernel is essentially $[1, -1]$:
 
 @conv-layer-learning-a-kernel-2
+
+The rest of the chapter is built on this idea — let
+gradient descent discover what filters the data needs.
+:::
+
+::: {.slide title="Receptive field: stacking deepens reach"}
+The **receptive field** of an output cell = the set of
+input positions that can affect it.
+
+- A 2×2 kernel: receptive field = 2×2 pixels.
+- Two stacked 2×2 layers: an output cell sees a 3×3 input
+  region.
+- Stacking $L$ layers of 3×3 convs: receptive field
+  $\approx (2L + 1) \times (2L + 1)$.
+
+Local kernels + depth = global reach without the
+parameter cost of large kernels.
+
+![Hubel & Wiesel-style filters in the visual cortex. Trained CNN filters look strikingly similar.](../img/field-visual.png){width=72%}
 :::
 
 ::: {.slide title="Recap"}
-- A conv layer = a small **kernel** swept across the input.
-- Inductive biases: translation invariance + locality, leading to
-  far fewer parameters than fully-connected layers.
-- Hand-designed kernels detect specific patterns (edges, blobs);
-  trained kernels discover whatever patterns the loss demands.
-- Real ConvNets stack many such filters per layer and many layers
-  deep.
+- Conv layer = small kernel slid across input + bias.
+- Inductive biases: translation invariance + locality →
+  *orders of magnitude* fewer parameters than fully
+  connected.
+- Hand-designed kernels can detect edges, blobs, blurs;
+  trained kernels discover whatever the loss demands.
+- Receptive fields *grow with depth* — a deep stack of
+  small kernels covers a large input region.
+- Filters look biologically plausible: the same shapes
+  visual cortex neurons respond to.
 :::

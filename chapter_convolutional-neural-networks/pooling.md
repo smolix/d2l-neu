@@ -410,31 +410,49 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 <!-- slides -->
 
 ::: {.slide}
-**Pooling** is the standard ConvNet downsampler.
+Two real problems with raw conv stacks:
 
-- Slide a window over the feature map; output is the **max**
-  (or mean) of the window.
-- **No learnable parameters** — pure shape-reducing op.
-- Provides modest **translation invariance** (a 1-pixel shift of
-  the input rarely changes a max-pool output).
+- We want the *final layer* to answer "is there a cat
+  anywhere in the image?" — so we need a way to aggregate
+  spatial information.
+- An edge detector applied to the same image shifted by
+  one pixel produces a one-pixel-shifted output. Real
+  objects don't sit at exact pixel positions; we want
+  outputs that tolerate small spatial perturbations.
 
-Two flavors: **max-pool** (the default in modern nets) and
-**average-pool** (smoother; common at the *very* end for global
-pooling).
+**Pooling** does both. Slide a window over the feature
+map and replace the window with a *single summary value*
+(max, or mean). No parameters, just summarization.
+
+A 2×2 pool with stride 2 halves spatial resolution and
+makes the output invariant to ±1 pixel shifts.
 :::
 
-::: {.slide title="Max- and avg-pooling, by hand"}
-The pool window slides like a conv kernel — but takes
-`max(window)` (or `mean(window)`) instead of a dot product:
+::: {.slide title="Max-pooling at a glance"}
+Same sliding-window pattern as a convolution, but the
+operation is `max` instead of multiply-and-sum:
+
+![2×2 max-pool: each output = max of a 2×2 input window. $\max(0, 1, 3, 4) = 4$.](../img/pooling.svg){width=78%}
+
+Average pooling replaces `max` with `mean`. Max is the
+default in modern nets — it's more selective ("did the
+feature fire *somewhere* in this region?") and better
+preserves sharp activations.
+:::
+
+::: {.slide title="Implementation"}
+A few lines — no kernel, just a reduction over each
+window. Two modes for the demo: max and avg:
 
 @pooling
 
-@pooling-maximum-pooling-and-average-pooling-1
-:::
+. . .
 
-::: {.slide title="Smoke test"}
-Same 3×3 input, 2×2 pool window — max and avg differ on this
-ramp:
+@pooling-maximum-pooling-and-average-pooling-1
+
+. . .
+
+Verify against the figure (max gives 4, 5, 7, 8):
 
 @pooling-maximum-pooling-and-average-pooling-2
 
@@ -443,31 +461,54 @@ ramp:
 @pooling-maximum-pooling-and-average-pooling-3
 :::
 
-::: {.slide title="Padding and stride"}
-The framework's `MaxPool2d` defaults to **matching stride to
-window size** (non-overlapping pools) — different from `Conv2d`,
-which defaults to stride 1:
+::: {.slide title="Why max gives translation invariance"}
+Suppose a 2×2 max-pool window receives `[0, 1, 3, 4]` —
+output 4. Shift the input by one pixel; the same window
+might now contain `[1, 0, 4, 0]` — output is still 4.
+
+A small shift moves *which* element fires, but not
+whether *some* element in the window fires. As long as
+the relevant feature stays inside the window, the
+output is unchanged. This is the canonical pre-deep-net
+argument for pooling.
+
+Modern alternative: a *strided* convolution does the
+same downsampling and learns its own "pool" function.
+Both are widely used.
+:::
+
+::: {.slide title="Padding and stride for pooling"}
+Same knobs as conv, but different *defaults*: a
+framework `MaxPool2d` matches stride to window size
+(non-overlapping pools) — we want to *reduce*
+resolution, not preserve it.
 
 @pooling-padding-and-stride-1
+
+. . .
 
 @pooling-padding-and-stride-2
 
 . . .
 
-You can specify stride and padding explicitly:
+Override explicitly when you want overlapping pools:
 
 @pooling-padding-and-stride-3
 
 . . .
 
-Asymmetric pools work too:
+Or asymmetric pools per axis:
 
 @pooling-padding-and-stride-4
 :::
 
-::: {.slide title="Multiple channels"}
-Pooling is **per-channel** — there's no cross-channel mixing
-(unlike conv). A `c × h × w` input gives a `c × h' × w'` output:
+::: {.slide title="Multi-channel pooling"}
+Convs *combine* channels (input channels feed every
+output channel). Pooling does **not**:
+
+- Each input channel is pooled independently.
+- Output channel count = input channel count.
+- Pooling has no notion of channel mixing.
 
 @pooling-multiple-channels-1
 
@@ -476,13 +517,28 @@ Pooling is **per-channel** — there's no cross-channel mixing
 @pooling-multiple-channels-2
 :::
 
+::: {.slide title="Where pooling sits in modern architectures"}
+- **Classic CNNs** (LeNet, AlexNet, VGG): pool every
+  few conv layers to halve spatial dims; final stack is
+  fully connected.
+- **ResNet / modern**: pool less often — strided convs
+  (`stride=2`) handle most downsampling. One initial
+  max-pool, then strided convs.
+- **Global average pooling**: at the very end, average
+  the entire feature map per channel. Replaces the
+  fully-connected stack with a tiny linear classifier;
+  drastically cuts parameters. Default in ResNet, ViT
+  classification head, etc.
+:::
+
 ::: {.slide title="Recap"}
-- Pooling = window slide → max (or avg). No learnable parameters.
-- Use a `s = 2` window to halve spatial dimensions; modern nets
-  often use **strided convolutions** instead, but pooling is
-  cheaper.
-- Pooling is **per-channel** — keeps channels independent.
-- Avg-pool over the entire feature map at the end ("global
-  average pooling") replaces the final fully-connected stack in
-  many modern architectures.
+- Pooling = window-slide reduction (max or mean), no
+  learnable parameters.
+- 2×2 max-pool with stride 2 is the classic spatial
+  downsampler.
+- Provides small translation invariance — output
+  unchanged under sub-window shifts.
+- Per-channel — no channel mixing.
+- Modern nets mix pooling with strided convs and end
+  with global average pool.
 :::

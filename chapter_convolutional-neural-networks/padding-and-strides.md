@@ -382,54 +382,153 @@ So far all padding that we discussed simply extended images with zeros. This has
 <!-- slides -->
 
 ::: {.slide}
-A vanilla `n×n` convolution with a `k×k` kernel produces an
-`(n−k+1)×(n−k+1)` output — every conv shrinks the spatial map.
-Two knobs control that shrink:
+A plain convolution always **shrinks** its input. With an
+$n \times n$ image and a $k \times k$ kernel:
 
-- **Padding** — add zeros around the input → larger output. Use
-  `padding = (k−1)/2` to keep `H, W` constant ("SAME" padding).
-- **Stride** — step the kernel by more than 1 → smaller output.
-  Standard for downsampling.
+$$n \times n \;\longrightarrow\; (n - k + 1) \times (n - k + 1).$$
 
-Output formula:
-$$\text{out} = \left\lfloor \frac{n + 2p - k}{s} \right\rfloor + 1.$$
+Every layer chops $k - 1$ pixels off both height and width.
+Stack ten 5×5 layers on a 240×240 image:
+
+$$240 \to 236 \to 232 \to \ldots \to 200.$$
+
+We've sliced 30% of the *area* off — and crucially, *all* of it
+from the boundary. We need ways to control this.
+
+Two knobs: **padding** (fight the shrink, or even grow) and
+**stride** (lean into the shrink, on purpose).
 :::
 
-::: {.slide title="Padding"}
-8×8 input, 3×3 kernel, **1 pixel of zero-padding** on every side.
-The output is **the same size** as the input:
+::: {.slide title="The boundary problem"}
+Even before stacking, single convs use boundary pixels much
+less than central ones. Each pixel only contributes when the
+kernel window covers it — interior pixels appear in many
+windows, corner pixels in just one:
 
-@padding-and-strides-padding-and-stride
+![Pixel utilization: 1×1, 2×2, and 3×3 kernels. Larger kernels make the boundary problem worse.](../img/conv-reuse.svg){width=88%}
 
-@padding-and-strides-padding-1
+Information at the edges is systematically underweighted.
+Padding fixes both the shrinking *and* the underweighting.
+:::
+
+::: {.slide title="Padding: add zeros around the input"}
+Add a "frame" of zero-valued pixels around the input. The
+kernel can now slide further, including positions where its
+window hangs off the original image:
+
+![3×3 input padded to 5×5; 2×2 kernel gives a 4×4 output. The shaded element is $0{\cdot}0 + 0{\cdot}1 + 0{\cdot}2 + 0{\cdot}3 = 0$.](../img/conv-pad.svg){width=78%}
 
 . . .
 
-Asymmetric kernels need asymmetric padding. A 5×3 kernel with
-`(2, 1)` padding still preserves spatial size:
+With $p_h$ rows and $p_w$ columns of padding total:
+
+$$(n_h - k_h + p_h + 1) \times (n_w - k_w + p_w + 1).$$
+
+To **preserve shape**: pick $p_h = k_h - 1$, $p_w = k_w - 1$.
+:::
+
+::: {.slide title="Why kernels are usually odd"}
+For odd $k$, $(k-1)/2$ is an integer — we can pad
+**symmetrically**, the same on both sides, and the output
+position $(i, j)$ corresponds to a window **centered** on
+input $(i, j)$. Clean to reason about.
+
+- **Standard sizes**: 1, 3, 5, 7.
+- "**SAME** padding" = $p = (k-1)/2$ → output shape = input shape.
+- Even $k$ forces a left/right asymmetry — pad floor on one
+  side, ceil on the other.
+
+That's why every modern CNN you see uses 3×3 kernels with
+padding 1, or 5×5 with padding 2, or 7×7 with padding 3.
+:::
+
+::: {.slide title="Padding in code"}
+Define a helper to wrap input/output reshaping, then ask the
+basic question: 8×8 input, 3×3 kernel, padding=1 — what's
+the output shape?
+
+@padding-and-strides-padding-and-stride
+
+. . .
+
+@padding-and-strides-padding-1
+
+Same shape — the padded conv is "shape-preserving". With an
+asymmetric kernel, mirror the asymmetry in the padding:
 
 @padding-and-strides-padding-2
 :::
 
-::: {.slide title="Stride"}
-A 3×3 conv with `padding=1` (size-preserving) but `stride=2` —
-the output spatial dimensions are **halved**:
+::: {.slide title="Stride: skipping positions on purpose"}
+The opposite problem: sometimes the input is huge and we
+*want* to shrink fast. Move the kernel by $s > 1$ at each step
+— skipping intermediate positions:
+
+![Cross-correlation with vertical stride 3 and horizontal stride 2. The kernel jumps three rows down and two columns right.](../img/conv-stride.svg){width=78%}
+
+Computational benefit: $s\times$ fewer positions to evaluate
+in each direction, so $s_h s_w \times$ fewer operations.
+Statistical benefit: aggressive downsampling forces the
+network to summarize.
+:::
+
+::: {.slide title="Stride formula"}
+With strides $s_h$ vertically and $s_w$ horizontally:
+
+$$\Big\lfloor \frac{n_h - k_h + p_h + s_h}{s_h} \Big\rfloor \times
+  \Big\lfloor \frac{n_w - k_w + p_w + s_w}{s_w} \Big\rfloor.$$
+
+Two helpful special cases:
+
+- **SAME-padded** ($p = k - 1$): output is
+  $\lfloor (n + s - 1)/s \rfloor$.
+- **SAME + $s$ divides $n$**: output is exactly $n / s$.
+
+So the standard "halve the resolution" recipe — kernel 3,
+padding 1, stride 2 — turns $n \times n$ into $\lceil n/2 \rceil \times \lceil n/2 \rceil$.
+:::
+
+::: {.slide title="Stride in code"}
+Halving an 8×8 input:
 
 @padding-and-strides-stride-1
 
 . . .
 
-Mixed kernel and stride along H vs W:
+A more aggressive (and asymmetric) version — kernel 3×5,
+padding 0×1, stride 3×4:
 
 @padding-and-strides-stride-2
+
+The output formula above predicts the shape; the code just
+confirms it.
+:::
+
+::: {.slide title="Three patterns to remember"}
+Most production CNNs are built from these three:
+
+| | kernel | padding | stride | output |
+|---|---|---|---|---|
+| **Preserve** | 3 | 1 | 1 | $n \times n$ |
+| **Halve** | 3 | 1 | 2 | $n/2 \times n/2$ |
+| **Patchify** | $k$ | 0 | $k$ | $n/k \times n/k$ |
+
+- *Preserve*: ResNet-style "feature mixing without changing
+  resolution".
+- *Halve*: every "downsample" layer in classic CNN
+  architectures.
+- *Patchify*: ViT's first layer turns a 224×224 image into a
+  14×14 grid of 16×16 patches in one shot.
 :::
 
 ::: {.slide title="Recap"}
-- **Padding** controls how much the input is "extended" — common
-  choice is `(k−1)/2` to keep `H, W` constant.
-- **Stride** controls the step size — `stride=2` halves the
-  spatial dims, the standard downsampling primitive.
-- Output formula:
-  $\bigl\lfloor (n + 2p - k)/s \bigr\rfloor + 1$.
-- Both can differ between height and width.
+- Vanilla conv shrinks: $n \to n - k + 1$. Cumulative
+  shrinkage destroys boundary information.
+- **Padding $p$** grows the input — pick $p = k - 1$ to
+  preserve shape ("SAME"). Odd kernels make this symmetric.
+- **Stride $s$** skips positions — $s = 2$ is the standard
+  downsampler; large $s$ patchifies.
+- One formula covers both:
+  $$\text{out} = \Big\lfloor \frac{n - k + p}{s} \Big\rfloor + 1.$$
+- Pad and stride per-axis; height and width are independent.
 :::

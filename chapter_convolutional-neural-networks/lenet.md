@@ -409,24 +409,64 @@ A second difference is the relative ease with which we were able to implement Le
 <!-- slides -->
 
 ::: {.slide}
-**LeNet-5** (LeCun, 1989, productionized 1998) was the first CNN
-that worked at scale — bank check digit recognition. Its
-two-block recipe is still the template for every modern ConvNet:
+We have all the pieces — convs, padding, channels, pooling.
+Time to assemble a complete CNN.
 
-1. **Convolutional encoder** — alternating conv + pooling layers,
-   shrinking spatially while expanding the channel dimension.
-2. **Dense head** — flatten and run through a small MLP to map
-   features to class scores.
+**LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
+was the first CNN that worked at production scale: digit
+recognition for U.S. bank check processing. Some ATMs
+*still* run derivatives of the original C++ in 2026.
 
-We'll train it on Fashion-MNIST. ~99% accuracy on MNIST in 1998;
-~88% on the harder Fashion-MNIST today.
+It also defined the architectural template every later
+CNN refines:
+
+- **Convolutional encoder** — alternating conv + pool
+  layers; spatial dims shrink, channel dims grow.
+- **Dense head** — flatten, then a small MLP mapping
+  features to class scores.
+
+This deck implements LeNet, traces shapes through it, and
+trains on Fashion-MNIST.
 :::
 
-::: {.slide title="The model"}
-Two conv blocks (`5×5` kernel, sigmoid, 2×2 average-pool) followed
-by three fully-connected layers down to 10 classes:
+::: {.slide title="LeNet-5 architecture"}
+Two conv→sigmoid→avgpool blocks followed by three fully
+connected layers, ending in 10 class logits:
+
+![LeNet-5 data flow on a 28×28 handwritten digit. Spatial dims shrink; channels grow.](../img/lenet.svg){width=88%}
+
+- Conv1: 1→6 channels, 5×5 kernel, padding 2 (so 28→28)
+- AvgPool: stride 2 → 14×14
+- Conv2: 6→16 channels, 5×5, no padding → 10×10
+- AvgPool: stride 2 → 5×5
+- Flatten → 16·5·5 = 400 features → 120 → 84 → 10
+:::
+
+::: {.slide title="Compressed view"}
+The same network drawn vertically — the version you'll
+recognize from any deep learning textbook:
+
+![Compact LeNet-5 schematic.](../img/lenet-vert.svg){width=42%}
+
+Two takeaways from this picture:
+
+- **Pyramid shape** — spatial halves at each pool, channels
+  roughly double. Same shape every successor architecture
+  preserves.
+- **The bottleneck** is the flatten — `400 × 120 = 48000`
+  weights from the conv block to the first dense layer.
+  This is why modern CNNs replace the dense stack with
+  *global average pooling* — much cheaper.
+:::
+
+::: {.slide title="Implementation"}
+Almost mechanical translation from the figure to a
+`Sequential`. Xavier init keeps the sigmoid layers from
+saturating early in training:
 
 @lenet-convolutional-neural-networks-lenet
+
+. . .
 
 @lenet-1
 
@@ -435,33 +475,58 @@ by three fully-connected layers down to 10 classes:
 @lenet-2
 :::
 
-::: {.slide title="Shape inspection"}
-Walk a dummy 1×1×28×28 input through the model and print each
-layer's output shape:
+::: {.slide title="Tracing shapes through the network"}
+Critical debugging tool: walk a dummy `(1, 1, 28, 28)`
+input through the layers and print the shape after each.
+Match this against the figure to verify the architecture
+is wired correctly:
 
 @lenet-3
 
-Useful for **debugging architectures** — match the expected
-spatial / channel dimensions before training.
+Confirms 28→28→14→10→5→flatten→120→84→10 — exactly the
+pyramid in the diagram.
 :::
 
-::: {.slide title="Training"}
-Same `Trainer` you've used since linear regression — only the
-model class changes:
+::: {.slide title="Training on Fashion-MNIST"}
+Cross-entropy loss + SGD + 10 epochs. Same `Trainer` API
+as every previous chapter — only the model changes:
 
 @lenet-training
 
-Visibly better than the dense MLP from the previous chapter on
-the same data — convolutional inductive bias pays off.
+. . .
+
+@!lenet-training
+
+LeNet's convolutional inductive bias clearly beats the
+dense MLP from the previous chapter on the same data —
+even with 1990s components (sigmoid, average pooling).
+:::
+
+::: {.slide title="What 30 years of progress changed"}
+LeNet's 1998 architecture vs. modern best practice:
+
+| LeNet (1998) | Modern (2020s) |
+|---|---|
+| sigmoid activation | ReLU / GELU |
+| average pooling | max pool / strided conv |
+| no normalization | BatchNorm / LayerNorm |
+| Xavier init | He init |
+| 5 layers, ~60k params | 50+ layers, millions of params |
+| dense head | global average pool + 1 linear |
+
+Each substitution is the subject of a section in the next
+chapter (Modern CNNs). The skeleton — *conv encoder + head*
+— is unchanged.
 :::
 
 ::: {.slide title="Recap"}
-- LeNet-5 = **conv encoder + dense head**, the architectural
-  blueprint every later ConvNet (AlexNet, VGG, ResNet, …) refines.
-- Each conv block: kernel + activation + downsampling.
-- Spatial dimensions shrink, channels grow — the standard
-  "feature pyramid" pattern.
-- Modernizations: ReLU instead of sigmoid, max-pool instead of
-  avg-pool, much deeper, BatchNorm, residual connections — all
-  coming up.
+- LeNet-5 = first CNN that worked at production scale.
+- Architectural template: conv encoder (spatial ↓, channels ↑)
+  → flatten → dense head.
+- Same template scales up to ResNet, EfficientNet, ViT —
+  the modern variants change *components*, not the shape.
+- Beats MLPs on the same data — convolutional inductive bias
+  is a real win.
+- The next chapter swaps every component for its modern
+  equivalent and goes much deeper.
 :::

@@ -318,45 +318,75 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 <!-- slides -->
 
 ::: {.slide}
-Real images have **channels** (RGB, depth, …); intermediate
-feature maps have many more (32, 64, 256, …). Three additions to
-plain 2-D convolution:
+So far we've worked with single-channel "images". Real ones
+aren't:
 
-- **Multiple input channels** — each input channel gets its own
-  2-D kernel; results are summed.
-- **Multiple output channels** — stack `c_o` separate filters,
-  each producing one output channel.
-- **$1 \times 1$ convolutions** — purely cross-channel mixing,
-  no spatial structure.
+- A natural image has **3 input channels** (R, G, B).
+- A modern CNN feature map has **64 to 2048 channels** at
+  the deepest layer.
 
-A `c_o × c_i × k_h × k_w` kernel sums to one feature map per
-output channel.
+The number of channels is one of the *most important*
+choices in CNN design. As you go deeper, you typically
+trade spatial resolution for channel depth — the network
+keeps the same total information capacity, but represents
+*kinds* of features instead of *places*.
+
+This deck covers three things:
+
+- **Multiple input channels** — kernels grow a 3rd axis.
+- **Multiple output channels** — stack many filters in
+  parallel.
+- **$1 \times 1$ convolutions** — pure channel mixing, the
+  workhorse of modern CNNs.
 :::
 
-::: {.slide title="Multiple input channels"}
-Sum over per-channel 2-D cross-correlations:
+::: {.slide title="Multi-input-channel convolution"}
+With $c_i$ input channels, the kernel becomes
+$c_i \times k_h \times k_w$ — a 2D filter *per input channel*.
+The output is the sum of per-channel cross-correlations:
 
+$$Y = \sum_{c=1}^{c_i} X_c * K_c.$$
+
+![Two input channels: per-channel cross-correlation, then sum. $(1{\cdot}1 + 2{\cdot}2 + 4{\cdot}3 + 5{\cdot}4) + (0{\cdot}0 + 1{\cdot}1 + 3{\cdot}2 + 4{\cdot}3) = 56$.](../img/conv-multi-in.svg){width=82%}
+:::
+
+::: {.slide title="In code: it's just a sum"}
 @channels-multiple-input-and-multiple-output-channels
+
+. . .
 
 @channels-multiple-input-channels-1
 
 . . .
 
-Two input channels, one output channel:
+Verify against the figure — same numbers:
 
 @channels-multiple-input-channels-2
 :::
 
-::: {.slide title="Multiple output channels"}
-Stack `c_o` filters and run them in parallel — output has shape
-`(c_o, h_out, w_out)`:
+::: {.slide title="Multi-output-channel convolution"}
+Each output channel comes from its *own* set of input-channel
+filters. Stack $c_o$ such filter sets to get a 4-D kernel
+of shape $c_o \times c_i \times k_h \times k_w$:
+
+$$\mathbf{Y}_j = \sum_{c=1}^{c_i} \mathbf{X}_c * \mathbf{K}_{j, c} \quad\text{for}\quad j = 1, \ldots, c_o.$$
+
+Intuition: each of the $c_o$ output channels is a *different
+combination* of inputs, learned to detect a different feature.
+The network discovers an entire "feature dictionary" per
+layer.
+:::
+
+::: {.slide title="Implementation"}
+Apply the multi-input-channel function $c_o$ times and stack
+the results along a new leading axis:
 
 @channels-multiple-output-channels-1
 
 . . .
 
-Build a 3-output-channel kernel by stacking three `c_i × k × k`
-filters:
+Build a 3-output-channel kernel by stacking three offset
+copies:
 
 @channels-multiple-output-channels-2
 
@@ -365,31 +395,87 @@ filters:
 @channels-multiple-output-channels-3
 :::
 
-::: {.slide title="1×1 convolutions"}
-A `1×1` kernel has no spatial reach — it just **mixes channels**
-position-by-position. Equivalent to a per-pixel fully-connected
-layer:
+::: {.slide title="Parameter count"}
+A conv layer with $c_o$ outputs, $c_i$ inputs, and a
+$k_h \times k_w$ kernel has
+
+$$c_o \cdot c_i \cdot k_h \cdot k_w \;+\; c_o$$
+
+learnable parameters. Standard sizes:
+
+- 3 → 64 channels, 3×3 kernel: 1.7k weights.
+- 256 → 256 channels, 3×3 kernel: 590k weights.
+- 512 → 2048 channels, 3×3 kernel: 9.4M weights.
+
+Channel count drives parameter count *quadratically*. That's
+why deeper layers in CNNs widen, but not too much.
+:::
+
+::: {.slide title="The 1×1 convolution"}
+A 1×1 kernel has *no* spatial structure — it doesn't look at
+neighbors. So why use it?
+
+Because it acts as a **per-pixel fully connected layer
+across channels**. At every spatial position, it computes a
+linear combination of the $c_i$ input channels into the
+$c_o$ output channels:
+
+![1×1 conv: 3 input channels × 2 output channels. Each output pixel = a 2×3 matrix-vector product on the input channel vector at that position.](../img/conv-1x1.svg){width=82%}
+:::
+
+::: {.slide title="1×1 conv as matmul"}
+At each pixel, the 1×1 conv applies the same $c_o \times c_i$
+matrix to the input channel vector. Reshape the spatial axes
+out and it's a single matrix multiply:
 
 @channels-1-times-1-convolutional-layer-1
 
 . . .
 
-Sanity-check: `1×1` cross-correlation matches an `(c_o, c_i)`
-matrix multiplication of the channel vector at each spatial
-location:
-
 @channels-1-times-1-convolutional-layer-2
+:::
 
-Fundamental building block of GoogLeNet, ResNet bottlenecks,
-Squeeze-and-Excitation, etc.
+::: {.slide title="Why 1×1 convs everywhere"}
+Modern architectures use them constantly:
+
+- **Bottlenecks** (ResNet) — squeeze channels with 1×1,
+  do expensive 3×3 in the smaller space, expand back with
+  1×1. Cuts compute by $\sim 4×$ for the same expressive
+  power.
+- **Pointwise convs** (MobileNet) — depthwise 3×3 +
+  pointwise 1×1 splits a regular conv into two cheaper
+  pieces.
+- **Squeeze-and-Excitation, attention heads** — wherever
+  you need cheap channel mixing without changing
+  resolution.
+:::
+
+::: {.slide title="Cost of channel depth"}
+A $h \times w$ image with $k \times k$ kernel and
+$c_i \to c_o$ channels takes
+
+$$\mathcal{O}(h \cdot w \cdot k^2 \cdot c_i \cdot c_o)$$
+
+operations. For a 256×256 image, 5×5 kernel, 128→128
+channels: ~53 *billion* multiply-adds. That's per layer;
+multiply by depth.
+
+This is why
+- Convs benefit massively from GPU/TPU acceleration.
+- Channel reduction tricks (1×1 bottlenecks, depthwise
+  separable, group conv, ResNeXt) get serious attention
+  in efficiency-driven architectures.
 :::
 
 ::: {.slide title="Recap"}
-- Multi-channel input: per-channel 2-D conv, then **sum**.
-- Multi-channel output: **stack** independent filters along a new
-  axis.
-- A conv layer's parameters: $c_o \times c_i \times k_h \times k_w$
-  weights plus $c_o$ biases.
-- $1 \times 1$ convs are **channel-mixing** operations — equivalent
-  to a per-pixel MLP.
+- Multi-input-channel: per-channel kernel, results summed
+  across input channels.
+- Multi-output-channel: stack independent filter banks; one
+  output channel per filter set.
+- Total weights: $c_o c_i k_h k_w + c_o$.
+- $1\times 1$ convs = per-pixel fully connected layer
+  across channels; the workhorse of modern CNN
+  architecture (bottlenecks, pointwise convs).
+- Compute scales linearly with $c_i \cdot c_o$ — the
+  dominant cost in deep CNNs.
 :::

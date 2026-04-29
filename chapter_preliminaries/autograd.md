@@ -715,15 +715,16 @@ differentiation** engine that:
 This chapter teaches the API; the rest of the book leans on it.
 :::
 
-::: {.slide title="Setup"}
-@autograd-automatic-differentiation
-
+::: {.slide title="A worked example"}
 We'll differentiate
 
 $$y = 2\,\mathbf{x}^\top \mathbf{x}$$
 
-with respect to the column vector $\mathbf{x}$. Analytic gradient:
-$\nabla_\mathbf{x} y = 4\mathbf{x}$.
+with respect to the column vector $\mathbf{x}$. The analytic
+gradient is $\nabla_\mathbf{x} y = 4\mathbf{x}$ — a useful
+sanity-check target.
+
+@autograd-automatic-differentiation
 
 @autograd-a-simple-function-1
 :::

@@ -1135,14 +1135,14 @@ $P = 0.5$:
 @!probability-a-simple-example-tossing-coins-6
 :::
 
-::: {.slide title="Setup"}
-The standard d2l prelude plus a multinomial distribution for
-sampling:
+::: {.slide title="A fair coin, 100 tosses"}
+The standard d2l prelude (plus a multinomial distribution we'll
+use shortly):
 
 @probability-probability-and-statistics
-:::
 
-::: {.slide title="A fair coin, 100 tosses"}
+. . .
+
 We can simulate coin flips with `random.random()`:
 
 @probability-a-simple-example-tossing-coins-1

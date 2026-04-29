@@ -1337,46 +1337,41 @@ Two equivalent ways to compute it:
 @linear-algebra-dot-products-2
 :::
 
-::: {.slide title="Matrix–vector product"}
-$\mathbf{A}\mathbf{x}$ is a length-$m$ vector whose $i^\text{th}$
-element is $\mathbf{a}_i^\top \mathbf{x}$ — one dot product per
-row of `A`:
+::: {.slide title="Matrix products"}
+$\mathbf{A}\mathbf{x}$ is a length-$m$ vector — one dot product
+per row of `A`. The most ubiquitous operation in deep learning:
+a fully-connected layer's forward pass.
 
 @linear-algebra-matrix-vector-products
 
-The most ubiquitous operation in deep learning: a single
-fully-connected layer's forward pass.
-:::
+. . .
 
-::: {.slide title="Matrix–matrix product"}
-$\mathbf{AB}$: $m$ matrix-vector products stitched into a matrix.
-Equivalently $m \cdot n$ dot products of rows × columns:
+$\mathbf{AB}$ is $m$ matrix-vector products stitched into a matrix
+(equivalently, $m \cdot n$ row-by-column dot products):
 
 @linear-algebra-matrix-matrix-multiplication
 :::
 
-::: {.slide title="$\\ell_2$ norm"}
-$$\|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}$$
-
-The "Euclidean length" — the most common norm in optimization:
-
-@linear-algebra-norms-1
-:::
-
-::: {.slide title="$\\ell_1$ norm"}
-$$\|\mathbf{x}\|_1 = \sum_{i=1}^n |x_i|$$
-
-Less sensitive to outliers than $\ell_2$; promotes sparsity in
+::: {.slide title="Norms"}
+The **$\ell_2$** norm — Euclidean length, the workhorse of
 optimization:
 
+$$\|\mathbf{x}\|_2 = \sqrt{\sum_i x_i^2}.\qquad
+  \|\mathbf{x}\|_1 = \sum_i |x_i|.\qquad
+  \|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}.$$
+
+@linear-algebra-norms-1
+
+. . .
+
+**$\ell_1$** is less sensitive to outliers and promotes sparsity:
+
 @linear-algebra-norms-2
-:::
 
-::: {.slide title="Frobenius norm"}
-For matrices, the **Frobenius norm** is just the $\ell_2$ norm of
-the flattened matrix:
+. . .
 
-$$\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$
+For matrices, **Frobenius** is the $\ell_2$ of the flattened
+matrix:
 
 @linear-algebra-norms-3
 :::

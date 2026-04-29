@@ -946,34 +946,27 @@ A 12-element vector becomes a $3\times 4$ matrix. No data is copied;
 only the **stride metadata** changes.
 :::
 
-::: {.slide title="Constants"}
-Need a tensor of all zeros or all ones? The shape is a tuple — any
-rank, any size:
+::: {.slide title="Filled and random tensors"}
+Constant fills take a shape tuple — any rank, any size:
 
 @ndarray-getting-started-6
 
-`ones(...)`, `full(shape, value)`, and `eye(n)` (identity matrix)
-follow the same pattern. The framework also has `empty` (uninitialized,
-fastest) and `zeros_like(x)` / `ones_like(x)` to match an existing
-tensor's shape.
-:::
+. . .
 
-::: {.slide title="Random initialization"}
-Most neural-network weights start out **random**. `randn` draws
-from a standard normal $\mathcal{N}(0, 1)$:
+For weight initialization, `randn` draws from $\mathcal{N}(0, 1)$
+(elements sampled independently):
 
 @ndarray-getting-started-8
 
-Each element is sampled **independently** — no correlations.
+`ones`, `full(shape, value)`, `eye(n)`, `empty` (uninitialized,
+fastest), and `*_like(x)` round out the family.
 :::
 
-::: {.slide title="From a Python list"}
-For exact control, pass a (nested) list literal:
+::: {.slide title="Tensors from Python lists"}
+For exact control, pass a (nested) list literal — same row-major
+convention as NumPy:
 
 @ndarray-getting-started-9
-
-The outer dim is rows, the inner is columns. Same convention as
-NumPy.
 :::
 
 ::: {.slide title="Reading"}
@@ -1020,19 +1013,17 @@ all run elementwise:
 @ndarray-operations-3
 :::
 
-::: {.slide title="Logical operations"}
+::: {.slide title="Comparisons and reductions"}
 Comparison operators broadcast and return a **boolean tensor** of
-the same shape:
+the same shape — useful for masking entries that satisfy a
+condition:
 
 @ndarray-operations-4
 
-Useful for masking — selecting or zeroing entries that satisfy a
-condition.
-:::
+. . .
 
-::: {.slide title="Reductions"}
-`sum`, `mean`, `max`, … collapse one or more axes. Without a `dim`
-argument, the entire tensor is reduced to a scalar:
+`sum`, `mean`, `max`, … collapse one or more axes. Without a
+`dim=` argument the whole tensor reduces to a scalar:
 
 @ndarray-operations-5
 :::

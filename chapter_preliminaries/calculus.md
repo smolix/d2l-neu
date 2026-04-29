@@ -466,19 +466,14 @@ The tangent's slope **is** the derivative.
 @!calculus-visualization-utilities-5
 :::
 
-::: {.slide title="Setup"}
-We'll need plotting and a tiny numerics shim for visualizing
-slopes:
-
-@calculus
-:::
-
 ::: {.slide title="Derivatives, by definition"}
 The derivative of $f$ at $x$ is
 $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
 
 Take a concrete example, $u = f(x) = 3x^2 - 4x$ (analytic
 derivative: $f'(x) = 6x - 4$, so $f'(1) = 2$):
+
+@calculus
 
 @calculus-derivatives-and-differentiation-1
 :::

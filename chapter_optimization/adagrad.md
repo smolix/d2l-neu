@@ -262,17 +262,81 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
 <!-- slides -->
 
 ::: {.slide}
+What if different parameters need different learning rates?
+A rare feature gets one update per million steps; a common
+one gets updated every step. Sharing $\eta$ across them
+forces a compromise — too small for the rare features,
+too large for the common ones.
+
+**Adagrad** (Duchi, Hazan, Singer 2011) gives each
+parameter its own adaptive learning rate, scaled by the
+*square root of all past squared gradients*:
+
+$$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,\quad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t.$$
+
+Coordinates that have seen large gradients get smaller
+effective steps; rarely-updated coordinates keep larger
+ones. Originally a NLP / sparse-feature trick; the seed of
+all modern adaptive optimizers (RMSProp, Adam, …).
+:::
+
+::: {.slide title="Setup and demo"}
+Same anisotropic quadratic. Adagrad self-adapts the step
+sizes per coordinate:
 
 @adagrad-the-algorithm-1
 
+. . .
+
+@!adagrad-the-algorithm-1
+
+. . .
+
+Bigger learning rate is now safe — the $\sqrt{\mathbf{s}_t}$
+divisor handles the dynamic range:
+
 @adagrad-the-algorithm-2
 
+. . .
+
+@!adagrad-the-algorithm-2
+
+. . .
+
 @adagrad-the-algorithm-3
+:::
+
+::: {.slide title="From-scratch Adagrad"}
+Carry one accumulator $\mathbf{s}$ per parameter. Add
+$\epsilon$ to avoid division by zero on the first step:
 
 @adagrad-implementation-from-scratch-1
 
+. . .
+
 @adagrad-implementation-from-scratch-2
 
+. . .
+
+@!adagrad-implementation-from-scratch-2
+:::
+
+::: {.slide title="Concise: framework Adagrad"}
 @adagrad-concise-implementation
 
+. . .
+
+@!adagrad-concise-implementation
+:::
+
+::: {.slide title="Recap"}
+- Per-parameter learning rate, scaled by $1/\sqrt{\sum_t g_t^2}$.
+- Wins on **sparse features** — frequent ones cool down,
+  rare ones keep moving.
+- Failure mode: $\mathbf{s}_t$ accumulates forever, so the
+  effective $\eta$ decays to zero — bad for non-convex
+  problems where you keep needing updates. RMSProp fixes
+  this by using an exponentially decaying $\mathbf{s}_t$
+  instead.
 :::

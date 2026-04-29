@@ -229,19 +229,87 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 <!-- slides -->
 
 ::: {.slide}
+Adagrad's accumulator $\mathbf{s}_t = \sum_{\tau \le t} \mathbf{g}_\tau^2$
+grows without bound. After enough steps, the effective
+learning rate $\eta / \sqrt{\mathbf{s}_t}$ collapses to zero
+— useful in convex / sparse problems but disastrous in deep
+non-convex training where the model never stops needing
+updates.
+
+**RMSProp** (Hinton, 2012) replaces Adagrad's running sum
+with an exponentially weighted average:
+
+$$\mathbf{s}_t = \gamma \mathbf{s}_{t-1} + (1-\gamma) \mathbf{g}_t^2,\quad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t.$$
+
+The accumulator now has a finite memory ($\sim 1/(1-\gamma)$
+steps, typically $\gamma = 0.9$ → ~10 steps). Effective
+learning rate stops decaying; old gradient magnitudes are
+forgotten.
+:::
+
+::: {.slide title="Decay coefficients"}
+Visualize $\gamma^t$ for several $\gamma$ — choosing
+$\gamma$ is choosing an effective time horizon:
 
 @rmsprop-the-algorithm-1
 
+. . .
+
+@!rmsprop-the-algorithm-1
+
+. . .
+
+Demo on the anisotropic quadratic:
+
 @rmsprop-the-algorithm-2
+
+. . .
+
+@!rmsprop-the-algorithm-2
+:::
+
+::: {.slide title="From-scratch RMSProp"}
+Same skeleton as Adagrad, but the accumulator update is now
+an EMA. One extra hyperparameter ($\gamma$):
 
 @rmsprop-implementation-from-scratch-1
 
+. . .
+
 @rmsprop-implementation-from-scratch-2
+
+. . .
 
 @rmsprop-implementation-from-scratch-3
 
+. . .
+
+@!rmsprop-implementation-from-scratch-3
+
+. . .
+
 @rmsprop-implementation-from-scratch-4
 
+. . .
+
+@!rmsprop-implementation-from-scratch-4
+:::
+
+::: {.slide title="Concise: framework RMSProp"}
 @rmsprop-concise-implementation
 
+. . .
+
+@!rmsprop-concise-implementation
+:::
+
+::: {.slide title="Recap"}
+- RMSProp = Adagrad with the accumulator replaced by an
+  EMA: $\mathbf{s}_t = \gamma \mathbf{s}_{t-1} + (1-\gamma) \mathbf{g}_t^2$.
+- Standard $\gamma = 0.9$ → ~10-step effective window.
+- Effective learning rate doesn't collapse, so usable in
+  deep non-convex training.
+- Adam = RMSProp + momentum on the gradient (with bias
+  correction). Coming up.
 :::

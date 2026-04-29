@@ -198,11 +198,54 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 <!-- slides -->
 
 ::: {.slide}
+**Adadelta** (Zeiler, 2012) takes the RMSProp idea further:
+not only adapt the per-parameter step magnitudes, but
+remove the global learning rate entirely.
+
+Two EMAs are kept — one over squared gradients, one over
+squared *updates*:
+
+$$\mathbf{s}_t = \rho \mathbf{s}_{t-1} + (1-\rho) \mathbf{g}_t^2,$$
+
+$$\mathbf{g}'_t = \frac{\sqrt{\Delta\mathbf{x}_{t-1} + \epsilon}}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t,$$
+
+$$\Delta\mathbf{x}_t = \rho \Delta\mathbf{x}_{t-1} + (1-\rho)\, \mathbf{g}'^2_t,\quad
+\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \mathbf{g}'_t.$$
+
+The ratio in $\mathbf{g}'_t$ is dimensionally consistent — a
+"unitless" step size — so no separate $\eta$ is needed (in
+principle). In practice frameworks still expose a learning
+rate hyperparameter for fine-tuning.
+:::
+
+::: {.slide title="From-scratch implementation"}
+Two state buffers per parameter (`s` and `delta`):
 
 @adadelta-implementation-1
+:::
 
+::: {.slide title="Training the airfoil model"}
 @adadelta-implementation-2
 
+. . .
+
+@!adadelta-implementation-2
+:::
+
+::: {.slide title="Concise: framework Adadelta"}
 @adadelta-implementation-3
 
+. . .
+
+@!adadelta-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- Two EMAs: squared gradients $\mathbf{s}_t$ and squared
+  updates $\Delta\mathbf{x}_t$.
+- Per-parameter step is the ratio $\sqrt{\Delta\mathbf{x}_{t-1}}/\sqrt{\mathbf{s}_t}$,
+  dimensionally consistent — drops the explicit learning
+  rate.
+- Less popular today than Adam, but a good case study in
+  scale-invariant optimization design.
 :::

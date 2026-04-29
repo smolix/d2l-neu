@@ -832,37 +832,143 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 <!-- slides -->
 
 ::: {.slide}
+GD: $\mathcal{O}(n)$ per step but uses the entire dataset
+optimally; SGD: $\mathcal{O}(1)$ per step but noisy and
+single-example-at-a-time.
 
+The compromise everyone uses: **minibatch SGD** — sample a
+batch of $b$ examples, average their gradients:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \frac{\eta}{b} \sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}).$$
+
+Two reasons it wins:
+
+- **Variance reduction** — averaging $b$ noisy gradients
+  reduces variance by $b$.
+- **Hardware efficiency** — modern GPUs do batched matmul
+  $b\times$ faster than a Python loop over $b$ single
+  examples. Vectorization and cache reuse are the *real*
+  reason for batching, not just statistics.
+
+This deck quantifies the speedup, then trains a real
+model with various batch sizes.
+:::
+
+::: {.slide title="Setup"}
 @minibatch-sgd-vectorization-and-caches-1
 
+. . .
+
 @minibatch-sgd-vectorization-and-caches-2
+:::
+
+::: {.slide title="Three loops, three speeds"}
+Compute $\mathbf{A} = \mathbf{B}\mathbf{C}$ on $256 \times 256$
+matrices in three increasingly vectorized ways:
 
 @minibatch-sgd-vectorization-and-caches-3
 
+. . .
+
 @minibatch-sgd-vectorization-and-caches-4
+
+. . .
 
 @minibatch-sgd-vectorization-and-caches-5
 
+Element-wise → column-wise → matrix-wise: typically two
+orders of magnitude difference. The cache and SIMD do the
+work; the loop is overhead.
+:::
+
+::: {.slide title="The minibatch sweet spot"}
+- $b = 1$: high gradient variance, GPU mostly idle.
+- $b = n$: full GD — best variance, slowest progress.
+- $b = 32 \ldots 1024$: enough work to fill the GPU,
+  variance reduced by $\sqrt{b}$.
+
+In practice, batch size is constrained more by memory and
+parallelism than by statistics. Modern training: 256 to
+65k+ on accelerators.
+
 @minibatch-sgd-minibatches
+:::
+
+::: {.slide title="Airfoil dataset"}
+Real regression dataset for the experiments — 1503 examples,
+5 features, 1 target:
 
 @minibatch-sgd-reading-the-dataset
+:::
+
+::: {.slide title="From-scratch SGD trainer"}
+Tiny linear regression model + manual SGD step. Returns
+loss-vs-time curves so we can compare batch sizes:
 
 @minibatch-sgd-implementation-from-scratch-1
 
+. . .
+
 @minibatch-sgd-implementation-from-scratch-2
 
+. . .
+
 @minibatch-sgd-implementation-from-scratch-3
+:::
+
+::: {.slide title="Comparing batch sizes"}
+$b = 1500$ (full batch), $b = 1$ (pure SGD), $b = 100$,
+$b = 10$ — same model, same total epochs:
 
 @minibatch-sgd-implementation-from-scratch-4
 
+. . .
+
+@!minibatch-sgd-implementation-from-scratch-4
+
+. . .
+
 @minibatch-sgd-implementation-from-scratch-5
 
+. . .
+
+@!minibatch-sgd-implementation-from-scratch-5
+:::
+
+::: {.slide title="Wall-clock view"}
 @minibatch-sgd-implementation-from-scratch-6
+
+. . .
+
+@!minibatch-sgd-implementation-from-scratch-6
+
+. . .
 
 @minibatch-sgd-implementation-from-scratch-7
 
+. . .
+
+@!minibatch-sgd-implementation-from-scratch-7
+:::
+
+::: {.slide title="Concise: framework optimizer"}
+Same experiment using the framework's built-in SGD
+optimizer — fewer lines, same numbers:
+
 @minibatch-sgd-concise-implementation-1
 
-@minibatch-sgd-concise-implementation-2
+. . .
 
+@minibatch-sgd-concise-implementation-2
+:::
+
+::: {.slide title="Recap"}
+- Minibatch SGD interpolates between GD and pure SGD.
+- Vectorization and cache reuse make $b > 1$ vastly cheaper
+  per example — that's why everyone uses minibatches even
+  setting statistics aside.
+- Variance scales as $1/b$; convergence rate has a
+  $\sqrt{b}$ effective step size advantage over single-example.
+- Choose $b$ to fill the accelerator, not to optimize the
+  bias/variance tradeoff theoretically.
 :::

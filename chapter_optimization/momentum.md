@@ -380,29 +380,148 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 <!-- slides -->
 
 ::: {.slide}
+SGD on ill-conditioned problems is dreadful. If the loss
+landscape has a steep narrow valley, gradients zigzag
+across the walls instead of moving along the valley floor.
+Lower the learning rate to stop overshooting, and progress
+along the valley grinds to a halt.
+
+**Momentum** fixes this by keeping a running average of
+past gradients — a velocity vector $\mathbf{v}_t$:
+
+$$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t,\quad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
+
+Components that *consistently* point in one direction
+accumulate; components that flip sign cancel. The result:
+faster progress along the valley, less zigzag.
+
+Momentum coefficient $\beta \in [0, 1)$, typically
+$\beta = 0.9$. The "effective" averaging window is
+$1/(1-\beta)$ steps.
+:::
+
+::: {.slide title="The ill-conditioned problem"}
+Anisotropic quadratic $f(x_1, x_2) = 0.1 x_1^2 + 2 x_2^2$
+— gradient in $x_2$ is 20× larger than in $x_1$:
 
 @momentum-an-ill-conditioned-problem-1
 
+. . .
+
+@!momentum-an-ill-conditioned-problem-1
+
+. . .
+
+A larger $\eta$ diverges in $x_2$ before making progress
+in $x_1$:
+
 @momentum-an-ill-conditioned-problem-2
+
+. . .
+
+@!momentum-an-ill-conditioned-problem-2
+:::
+
+::: {.slide title="Momentum on the same problem"}
+Same $\eta$, add $\beta = 0.5$ momentum. Trajectory now
+sails straight down the valley:
 
 @momentum-the-momentum-method-1
 
+. . .
+
+@!momentum-the-momentum-method-1
+
+. . .
+
+Bigger $\beta$ — even straighter, but overshoot risk
+grows:
+
 @momentum-the-momentum-method-2
+
+. . .
+
+@!momentum-the-momentum-method-2
+:::
+
+::: {.slide title="Effective sample weight"}
+The series $\mathbf{v}_t = \sum_{i=0}^{t} \beta^i \mathbf{g}_{t-i}$
+is an exponentially weighted moving average. Effective
+horizon: $1/(1-\beta)$ steps. $\beta = 0.9$ → ~10 steps;
+$\beta = 0.99$ → ~100 steps.
 
 @momentum-effective-sample-weight
 
+. . .
+
+@!momentum-effective-sample-weight
+:::
+
+::: {.slide title="From-scratch implementation"}
+Carry a velocity buffer per parameter. Standard PyTorch /
+SGD-with-momentum convention:
+
 @momentum-implementation-from-scratch-1
 
+. . .
+
 @momentum-implementation-from-scratch-2
+:::
+
+::: {.slide title="Training: $\beta$ sweep"}
+Same airfoil regression, $\beta \in \{0, 0.5, 0.9\}$:
 
 @momentum-implementation-from-scratch-3
 
+. . .
+
+@!momentum-implementation-from-scratch-3
+
+. . .
+
 @momentum-implementation-from-scratch-4
+
+. . .
+
+@!momentum-implementation-from-scratch-4
+
+. . .
 
 @momentum-implementation-from-scratch-5
 
+. . .
+
+@!momentum-implementation-from-scratch-5
+:::
+
+::: {.slide title="Concise: framework SGD with momentum"}
+Most frameworks take `momentum=0.9` as a one-line argument:
+
 @momentum-concise-implementation
+:::
+
+::: {.slide title="Theory: scalar quadratic"}
+For $f(x) = \tfrac{1}{2} \lambda x^2$, the momentum
+recurrence is a 2D linear system. Eigenvalues of the
+update matrix dictate convergence — momentum effectively
+reduces the *condition number* the optimizer sees:
 
 @momentum-scalar-functions
 
+. . .
+
+@!momentum-scalar-functions
+:::
+
+::: {.slide title="Recap"}
+- $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$,
+  $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t$.
+- Smooths zigzag from ill-conditioning; effective averaging
+  window $1/(1-\beta)$.
+- $\beta = 0.9$ is the practical default; $\beta = 0.99$ for
+  very noisy gradients.
+- Standard SGD-with-momentum is the workhorse of computer
+  vision; Adam (coming up) generalizes the idea with
+  per-parameter scaling.
 :::

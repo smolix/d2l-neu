@@ -299,13 +299,75 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 <!-- slides -->
 
 ::: {.slide}
+**Adam** (Kingma & Ba, 2014) combines the two best ideas of
+the chapter:
+
+- *Momentum* — first moment EMA $\mathbf{v}_t = \beta_1 \mathbf{v}_{t-1} + (1-\beta_1)\mathbf{g}_t$.
+- *RMSProp-style scaling* — second moment EMA
+  $\mathbf{s}_t = \beta_2 \mathbf{s}_{t-1} + (1-\beta_2)\mathbf{g}_t^2$.
+
+Plus *bias correction* to compensate for the $\mathbf{0}$
+initialization:
+
+$$\hat{\mathbf{v}}_t = \mathbf{v}_t / (1-\beta_1^t),\quad
+\hat{\mathbf{s}}_t = \mathbf{s}_t / (1-\beta_2^t).$$
+
+Update:
+
+$$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon} \odot \hat{\mathbf{v}}_t.$$
+
+Defaults that just work most of the time: $\beta_1 = 0.9$,
+$\beta_2 = 0.999$, $\epsilon = 10^{-8}$. The default for
+deep learning since ~2015. Variants (AdamW, RAdam, NAdam,
+Lion) iterate on the basic recipe.
+:::
+
+::: {.slide title="From-scratch Adam"}
+Two state buffers per parameter ($v$, $s$); track the step
+counter for bias correction:
 
 @adam-implementation-1
+:::
 
+::: {.slide title="Training"}
 @adam-implementation-2
 
+. . .
+
+@!adam-implementation-2
+:::
+
+::: {.slide title="Concise: framework Adam"}
 @adam-implementation-3
+
+. . .
+
+@!adam-implementation-3
+:::
+
+::: {.slide title="Yogi: a robustness fix"}
+Adam's $\mathbf{s}_t$ EMA can grow *or shrink* per step.
+Yogi (Zaheer et al., 2018) replaces the mixing with a
+sign-aware update so $\mathbf{s}_t$ only grows under large
+gradients — more stable for sparse / heavy-tailed gradient
+distributions:
+
+$$\mathbf{s}_t = \mathbf{s}_{t-1} - (1-\beta_2)\, \text{sign}(\mathbf{s}_{t-1} - \mathbf{g}_t^2) \odot \mathbf{g}_t^2.$$
 
 @adam-yogi
 
+. . .
+
+@!adam-yogi
+:::
+
+::: {.slide title="Recap"}
+- Adam = momentum + RMSProp + bias correction. The
+  default for transformers / language models.
+- Defaults $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$
+  rarely need tuning.
+- Failure modes: instability with rare-but-large gradients
+  (Yogi addresses this); generalization gap vs. SGD on
+  certain vision tasks (motivated AdamW + decoupled weight
+  decay).
 :::

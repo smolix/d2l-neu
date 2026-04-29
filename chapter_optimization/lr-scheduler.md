@@ -666,31 +666,148 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 <!-- slides -->
 
 ::: {.slide}
+The optimizer matters; the **learning rate schedule** often
+matters more. With a constant $\eta$ you trade off
+fast-but-unstable vs. slow-but-converged. A good schedule
+gets both: aggressive early, careful late.
+
+Issues to manage:
+
+- Initial $\eta$ — too large diverges, too small wastes time.
+- Decay over training — a final fine-tuning phase needs
+  smaller $\eta$ for the noise to settle.
+- Optimizer-specific instability — Transformers and
+  fine-grained adaptive optimizers can blow up in the first
+  few hundred steps without warmup.
+
+Common schedules:
+
+- **Step / multi-step decay** — drop $\eta$ by 10× at
+  preset epochs.
+- **Cosine annealing** — smooth decay following a half
+  cosine; popular in vision and Transformers.
+- **Warmup** — linearly grow $\eta$ for the first
+  ~$T_w$ steps, then decay. Standard for Transformers.
+:::
+
+::: {.slide title="Toy training loop"}
+LeNet on Fashion-MNIST as the experimental harness:
 
 @lr-scheduler-toy-problem-1
 
+. . .
+
 @lr-scheduler-toy-problem-2
 
+. . .
+
+@!lr-scheduler-toy-problem-2
+:::
+
+::: {.slide title="Constant-LR baselines"}
 @lr-scheduler-schedulers-1
+
+. . .
 
 @lr-scheduler-schedulers-2
 
+. . .
+
+@!lr-scheduler-schedulers-2
+
+. . .
+
 @lr-scheduler-schedulers-3
+
+. . .
 
 @lr-scheduler-schedulers-4
 
+. . .
+
+@!lr-scheduler-schedulers-4
+:::
+
+::: {.slide title="Polynomial / factor decay"}
+$\eta_t = \eta_0 \cdot (1 + \beta t)^{-\alpha}$ — gradual
+decay. The ML classic before step decay took over:
+
 @lr-scheduler-factor-scheduler
+
+. . .
+
+@!lr-scheduler-factor-scheduler
+:::
+
+::: {.slide title="Multi-step decay"}
+Drop $\eta$ by a fixed factor at preset epochs (e.g. 30, 60,
+90). Standard for ImageNet ResNet training:
 
 @lr-scheduler-multi-factor-scheduler-1
 
+. . .
+
+@!lr-scheduler-multi-factor-scheduler-1
+
+. . .
+
 @lr-scheduler-multi-factor-scheduler-2
+
+. . .
+
+@!lr-scheduler-multi-factor-scheduler-2
+:::
+
+::: {.slide title="Cosine annealing"}
+$\eta_t = \eta_{\min} + \tfrac{1}{2}(\eta_{\max} - \eta_{\min})(1 + \cos(\pi t / T))$.
+Smooth decay over $T$ steps; small $\eta$ at the end yields
+clean fine-tuning. Often paired with warmup and warm
+restarts:
 
 @lr-scheduler-cosine-scheduler-1
 
+. . .
+
+@!lr-scheduler-cosine-scheduler-1
+
+. . .
+
 @lr-scheduler-cosine-scheduler-2
+
+. . .
+
+@!lr-scheduler-cosine-scheduler-2
+:::
+
+::: {.slide title="Warmup"}
+Adam-trained Transformers diverge if $\eta$ starts at the
+target value — preconditioner $\hat{\mathbf{s}}_t$ hasn't
+stabilized yet. Linear warmup from 0 to $\eta_0$ over the
+first ~1k steps fixes it:
 
 @lr-scheduler-warmup-1
 
+. . .
+
+@!lr-scheduler-warmup-1
+
+. . .
+
 @lr-scheduler-warmup-2
 
+. . .
+
+@!lr-scheduler-warmup-2
+:::
+
+::: {.slide title="Recap"}
+- Schedule beats fixed $\eta$ — aggressive early, gentle
+  late.
+- **Multi-step** is the vision standard; **cosine** is
+  smoother and often slightly better with the same budget.
+- **Warmup** is mandatory for Transformer / large-Adam
+  training: prevents early divergence as the second-moment
+  EMA stabilizes.
+- "Cosine + warmup" is the modern default. Most LLM
+  training does exactly this.
 :::

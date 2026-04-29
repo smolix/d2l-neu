@@ -193,11 +193,49 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 <!-- slides -->
 
 ::: {.slide}
+**DeepFM** (Guo et al., 2017) — combine a factorization
+machine and a deep MLP, sharing the embedding table.
+
+- **FM branch** — linear + pairwise bilinear interactions
+  (same as the previous deck).
+- **Deep branch** — concat all field embeddings, feed to
+  an MLP. Captures *high-order* nonlinear interactions
+  that the bilinear FM misses.
+
+Final prediction: $\sigma(\hat y_{FM} + \hat y_{Deep})$.
+End-to-end training. Has been a workhorse of industry CTR
+systems since ~2017 — Wide & Deep with the FM
+substitution.
+:::
+
+::: {.slide title="Architecture"}
+Shared embeddings feed both the FM head and the deep MLP
+head:
 
 @deepfm-model-architectures
+:::
 
+::: {.slide title="Implementation"}
 @deepfm-implementation-of-deepfm
+:::
+
+::: {.slide title="Training"}
+Same CTR pipeline as the FM deck — only the model
+changes:
 
 @deepfm-training-and-evaluating-the-model
 
+. . .
+
+@!deepfm-training-and-evaluating-the-model
+:::
+
+::: {.slide title="Recap"}
+- DeepFM = FM (low-order) + deep MLP (high-order),
+  sharing the same embedding table.
+- Same input format as FM; one extra branch.
+- Family of "two-tower" CTR models: Wide & Deep,
+  DeepFM, xDeepFM, AutoInt, DLRM. All variations on the
+  same idea: explicit interaction term + nonlinear
+  feature mixer + sigmoid head.
 :::

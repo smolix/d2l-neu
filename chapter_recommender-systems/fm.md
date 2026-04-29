@@ -178,13 +178,59 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 <!-- slides -->
 
 ::: {.slide}
+**Factorization Machines** (Rendle, 2010) — generalize MF
+to *arbitrary* feature pairs, not just (user, item).
+Predict from a sparse feature vector $\mathbf{x}$ via:
 
+$$\hat y(\mathbf{x}) = w_0 + \sum_i w_i x_i + \sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j.$$
+
+- Linear term — like logistic regression.
+- Pairwise term — every pair of features contributes a
+  bilinear interaction, with each feature represented by
+  a $k$-dim latent vector $\mathbf{v}_i$ (just like an
+  embedding).
+
+The crucial trick: the pairwise sum can be computed in
+$\mathcal{O}(kn)$ instead of $\mathcal{O}(n^2)$ via:
+
+$$\sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j = \tfrac{1}{2} \sum_f \big[ (\sum_i v_{i,f} x_i)^2 - \sum_i v_{i,f}^2 x_i^2 \big].$$
+
+Powerful for **CTR prediction** on sparse one-hot ad
+features. Generalizes MF (with two features = user +
+item) and recovers logistic regression as a special case.
+:::
+
+::: {.slide title="Efficient optimization"}
 @fm-an-efficient-optimization-criterion
+:::
 
+::: {.slide title="Model implementation"}
 @fm-model-implementation
+:::
+
+::: {.slide title="CTR (advertising) dataset"}
+Standard sparse-features benchmark — many one-hot
+categorical fields per row:
 
 @fm-load-the-advertising-dataset
+:::
+
+::: {.slide title="Training"}
+Binary cross-entropy + Adam:
 
 @fm-train-the-model
 
+. . .
+
+@!fm-train-the-model
+:::
+
+::: {.slide title="Recap"}
+- FMs = linear model + bilinear feature interactions, all
+  feature pairs share latent factor structure.
+- Closed-form $\mathcal{O}(kn)$ pairwise computation
+  makes FMs practical on sparse features with millions of
+  fields.
+- Generalizes MF; foundation for DeepFM (next deck) and
+  many production CTR models.
 :::

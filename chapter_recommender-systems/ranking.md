@@ -140,11 +140,54 @@ These two losses are interchangeable for personalized ranking in recommendation.
 <!-- slides -->
 
 ::: {.slide}
+Most real-world recommender data is **implicit** —
+clicks, watches, purchases. There are no explicit ratings,
+and the unobserved (user, item) pairs are a *mix* of
+"didn't like it" and "haven't seen it yet". MSE on a 0/1
+target is wrong.
+
+Better framing: **personalized ranking** — given an
+observed positive (user, $i$), the model should rank $i$
+*above* random unobserved items.
+
+Two pairwise losses for this:
+
+- **BPR** (Bayesian Personalized Ranking, Rendle et al.
+  2009) — log-sigmoid of score margin:
+  $-\log \sigma(\hat r_{ui} - \hat r_{uj})$ for sampled
+  negatives $j$.
+- **Hinge** — max-margin variant:
+  $\max(0, m - (\hat r_{ui} - \hat r_{uj}))$.
+
+Both turn implicit feedback into pairwise comparisons; the
+model learns to put positives above negatives.
+:::
+
+::: {.slide title="BPR loss"}
+Sampled negatives $j$ per positive $(u, i)$; loss is
+log-sigmoid of the score margin:
 
 @ranking-bayesian-personalized-ranking-loss-and-its-implementation-1
 
+. . .
+
 @ranking-bayesian-personalized-ranking-loss-and-its-implementation-2
+:::
+
+::: {.slide title="Hinge loss"}
+Hard-margin alternative — equivalent to a max-margin
+classifier over score differences:
 
 @ranking-hinge-loss-and-its-implementation
+:::
 
+::: {.slide title="Recap"}
+- Personalized ranking turns implicit feedback into a
+  pairwise comparison task.
+- BPR: log-sigmoid of the (positive - negative) score
+  margin. Soft, differentiable, the most-used choice.
+- Hinge: hard margin; sometimes better with very
+  imbalanced data.
+- Negative sampling is the implementation hammer that
+  makes either loss tractable on large item catalogs.
 :::

@@ -401,15 +401,66 @@ reference implementation.
 <!-- slides -->
 
 ::: {.slide}
+Matrix factorization treats user history as a *bag* —
+order doesn't matter. But sessions reveal short-term
+intent that bags miss: someone who just watched two
+sci-fi movies probably wants a third, regardless of their
+all-time average preferences.
+
+**Caser** (Tang & Wang, 2018) — convolutional sequence
+recommender. Build a user's recent interactions into a
+$L \times d$ matrix (last $L$ items × embedding dim);
+apply *horizontal* convolutions (capture sequential
+patterns) and *vertical* convolutions (capture pointwise
+patterns); combine with a per-user latent vector to
+predict the next item.
+
+A bridge between session-based RNN models and
+collaborative filtering. Combines a "what you've been
+doing recently" signal with a "who you are" signal.
+:::
+
+::: {.slide title="Architecture"}
+Two parallel CNN branches over the recent-items matrix —
+horizontal filters scan multi-item sequences, vertical
+filters mix item embeddings:
 
 @seqrec-model-architectures
+:::
+
+::: {.slide title="Implementation"}
+Embedding tables + parallel conv branches + per-user MF
+component → final score:
 
 @seqrec-model-implementation
+:::
+
+::: {.slide title="Sequential dataset"}
+Each example: (user, last-L items, target item, negative
+target). Per-user sliding windows over their interaction
+sequence:
 
 @seqrec-sequential-dataset-with-negative-sampling
+:::
 
+::: {.slide title="Loading + training"}
 @seqrec-load-the-movielens-100k-dataset
+
+. . .
 
 @seqrec-train-the-model
 
+. . .
+
+@!seqrec-train-the-model
+:::
+
+::: {.slide title="Recap"}
+- Sequence-aware recommenders use *order* of recent
+  interactions, not just frequencies.
+- Caser: CNN over last-L items + per-user MF component +
+  BPR loss.
+- Modern descendants: SASRec (self-attention), BERT4Rec
+  (BERT-style masked-item prediction). Same idea, more
+  expressive sequence modeling.
 :::

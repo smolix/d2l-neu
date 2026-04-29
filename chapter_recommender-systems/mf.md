@@ -288,17 +288,69 @@ scores
 <!-- slides -->
 
 ::: {.slide}
+**Matrix factorization** — the recommender baseline that
+everything else competes against. Treat the rating matrix
+$\mathbf{R} \in \mathbb{R}^{m \times n}$ (users × items)
+as a low-rank product:
+
+$$\mathbf{R} \approx \mathbf{P}\mathbf{Q}^\top,\quad \mathbf{P} \in \mathbb{R}^{m \times k},\; \mathbf{Q} \in \mathbb{R}^{n \times k}.$$
+
+User $u$ gets a $k$-dim latent vector $\mathbf{p}_u$;
+item $i$ gets $\mathbf{q}_i$. Predicted rating is the dot
+product, plus bias terms:
+
+$$\hat r_{ui} = \mathbf{p}_u^\top \mathbf{q}_i + b_u + b_i.$$
+
+Famously won the Netflix Prize era (Koren et al., 2009).
+Still a strong baseline; deep models add capacity on top.
+:::
+
+::: {.slide title="The model"}
+Two embedding tables + per-user / per-item bias:
 
 @mf-the-matrix-factorization-model
 
+. . .
+
 @mf-model-implementation
+:::
+
+::: {.slide title="Evaluation: RMSE"}
+Standard rating-prediction metric:
+
+$$\text{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|} \sum_{(u,i) \in \mathcal{T}} (r_{ui} - \hat r_{ui})^2}.$$
 
 @mf-evaluation-measures
+:::
+
+::: {.slide title="Training"}
+Adam on MSE loss with $\ell_2$ weight decay (regularizes the
+embedding magnitudes — important for unobserved (u, i)
+pairs):
 
 @mf-training-and-evaluating-the-model-1
 
+. . .
+
 @mf-training-and-evaluating-the-model-2
+
+. . .
 
 @mf-training-and-evaluating-the-model-3
 
+. . .
+
+@!mf-training-and-evaluating-the-model-3
+:::
+
+::: {.slide title="Recap"}
+- Matrix factorization = low-rank approximation of the
+  user × item rating matrix.
+- $\hat r_{ui} = \mathbf{p}_u^\top \mathbf{q}_i + b_u + b_i$,
+  trained with MSE + weight decay.
+- The dot product is the *only* nonlinearity (bilinear);
+  neural collaborative filtering replaces it with an MLP.
+- Cold start (new user or item) breaks all
+  embedding-based methods — feature-rich CTR models
+  (later in the chapter) handle this.
 :::

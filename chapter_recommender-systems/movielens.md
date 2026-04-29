@@ -285,19 +285,70 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 <!-- slides -->
 
 ::: {.slide}
+**MovieLens** — the canonical recommender systems
+benchmark. 100k version: 943 users, 1682 movies, 100k
+explicit ratings on a 1–5 scale. Sparse: only ~6% of
+the user×item matrix is filled.
 
+This deck loads MovieLens-100k and sets up:
+
+- **Random split** — for rating prediction (matrix
+  factorization style).
+- **Sequence split** — for sequential recommendation
+  (later in the chapter).
+
+Output: minibatches of `(user, item, rating)` triples. The
+following decks build matrix factorization, AutoRec, and
+neural collaborative filtering on top.
+:::
+
+::: {.slide title="Downloading"}
 @movielens-getting-the-data-1
 
+. . .
+
 @movielens-getting-the-data-2
+:::
+
+::: {.slide title="Dataset statistics"}
+Sparsity calculation, rating distribution histogram —
+the two most informative diagnostics for a recommender
+dataset:
 
 @movielens-statistics-of-the-dataset-1
 
+. . .
+
 @movielens-statistics-of-the-dataset-2
 
-@movielens-splitting-the-dataset
+. . .
 
+@!movielens-statistics-of-the-dataset-2
+:::
+
+::: {.slide title="Train / test split"}
+Two splits to support different evaluation protocols:
+
+- *Random* — split rows uniformly. For rating prediction.
+- *Seq-aware* — hold out the *last* interaction per user.
+  Closer to "predict what they rate next".
+
+@movielens-splitting-the-dataset
+:::
+
+::: {.slide title="DataLoader"}
 @movielens-loading-the-data-1
 
-@movielens-loading-the-data-2
+. . .
 
+@movielens-loading-the-data-2
+:::
+
+::: {.slide title="Recap"}
+- MovieLens-100k: small, well-understood ratings dataset
+  — ideal for teaching, too small for SOTA claims.
+- Sparsity (~94% missing) is the central challenge for
+  every method in this chapter.
+- Output format: `(user, item, rating)` minibatches +
+  framework-native loaders.
 :::

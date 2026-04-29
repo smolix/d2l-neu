@@ -225,13 +225,58 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 <!-- slides -->
 
 ::: {.slide}
+**AutoRec** (Sedhain et al., 2015) — recasts collaborative
+filtering as autoencoder reconstruction.
+
+The input is a *partially observed* rating vector for one
+user (1 row of the rating matrix, length = #items, with
+zeros for unobserved entries). The autoencoder reconstructs
+it. Loss is computed only at the *observed* positions —
+unobserved entries are ignored.
+
+$$\mathcal{L} = \sum_{(u,i) \in \Omega} (r_{ui} - h(\mathbf{r}_u; \theta)_i)^2 + \lambda \|\theta\|^2.$$
+
+Adds the nonlinearity that pure MF lacks. Two variants:
+**user-based** (input = ratings the user gave) and
+**item-based** (input = ratings the item received). The
+deck implements user-based.
+:::
+
+::: {.slide title="The model"}
+Encoder: linear → activation → bottleneck. Decoder: linear
+→ ratings. Train as an autoencoder over the user vectors:
 
 @autorec-model
 
+. . .
+
 @autorec-implementing-the-model
+:::
+
+::: {.slide title="Evaluator with masking"}
+RMSE only over observed positions (mask out the zeros):
 
 @autorec-reimplementing-the-evaluator
+:::
+
+::: {.slide title="Training"}
+Standard SGD; the masked loss is the trick that turns
+autoencoder loss into a recommender:
 
 @autorec-training-and-evaluating-the-model
 
+. . .
+
+@!autorec-training-and-evaluating-the-model
+:::
+
+::: {.slide title="Recap"}
+- AutoRec = rating-vector autoencoder with masked loss.
+- One nonlinearity bridge between matrix factorization and
+  full neural CF.
+- User-based or item-based; item-based usually performs
+  slightly better on MovieLens.
+- Dense neural-CF models (NeuMF, next deck) build on the
+  same idea with explicit user/item embeddings instead of
+  raw rating vectors.
 :::

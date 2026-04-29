@@ -444,23 +444,90 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 <!-- slides -->
 
 ::: {.slide}
+**NeuMF** (He et al., 2017) — neural collaborative
+filtering with implicit feedback. Two parallel pathways
+fed into one prediction:
+
+- **GMF** (Generalized Matrix Factorization) — element-wise
+  product of user and item embeddings. The "linear" pathway.
+- **MLP** — concat of user and item embeddings, fed through
+  a fully connected MLP. The "nonlinear" pathway.
+
+Concatenate the two pathway outputs and project to a
+scalar score. Train with BPR loss + sampled negatives.
+
+This deck pulls together: NeuMF model + a custom dataset
+with negative sampling + leave-one-out ranking evaluator
+(Hit@10, NDCG@10) — the recommender-systems evaluation
+classic.
+:::
+
+::: {.slide title="Model architecture"}
+Two embedding tables per side (one for GMF, one for MLP);
+elementwise product on one side, concat→MLP on the other;
+final concat → linear → sigmoid score:
 
 @neumf-the-neumf-model
 
+. . .
+
 @neumf-model-implementation
+:::
+
+::: {.slide title="Implicit-feedback dataset"}
+Each training instance: a (user, positive item) plus
+sampled negatives. The dataset class handles negative
+sampling on the fly:
 
 @neumf-customized-dataset-with-negative-sampling
+:::
+
+::: {.slide title="Hit@k and NDCG@k"}
+Standard ranking metrics:
+
+- **Hit@k** — does the held-out positive land in the top
+  k recommendations?
+- **NDCG@k** — discounted gain weighted by position; gives
+  full credit for top-1, log-discounted for lower ranks.
 
 @neumf-evaluator-1
 
+. . .
+
 @neumf-evaluator-2
+:::
+
+::: {.slide title="Training loop"}
+BPR loss + Adam. Evaluate on held-out positives + 99
+random negatives per user (a standard convention to keep
+evaluation cheap):
 
 @neumf-training-and-evaluating-the-model-1
 
+. . .
+
 @neumf-training-and-evaluating-the-model-2
+
+. . .
 
 @neumf-training-and-evaluating-the-model-3
 
+. . .
+
 @neumf-training-and-evaluating-the-model-4
 
+. . .
+
+@!neumf-training-and-evaluating-the-model-4
+:::
+
+::: {.slide title="Recap"}
+- NeuMF = GMF (elementwise product) + MLP (concat) →
+  fused score.
+- Implicit-feedback training with BPR + negative sampling.
+- Hit@k / NDCG@k are the right metrics; RMSE doesn't
+  apply to implicit settings.
+- A standard reference for "how to combine MF and an MLP";
+  many later models (DeepFM, AutoInt) elaborate on the
+  same dual-pathway pattern.
 :::

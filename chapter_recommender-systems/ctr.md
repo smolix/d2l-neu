@@ -174,13 +174,47 @@ As can be seen, all the 34 fields are categorical features. Each value represent
 <!-- slides -->
 
 ::: {.slide}
+Pure (user, item) collaborative filtering breaks for cold
+start — new users and new items have no history. Real
+recommenders integrate **side features**: item attributes,
+user profiles, time, device, query context, …
+
+This deck sets up the **online advertising CTR
+prediction** problem: predict click probability from a
+sparse vector of categorical features. Feature-rich
+recommendation in its purest form. The next two decks
+(FM and DeepFM) train models on this loader.
 
 @ctr-feature-rich-recommender-systems
+:::
+
+::: {.slide title="The advertising dataset"}
+Tab-separated; each row has many one-hot categorical
+fields plus a binary click label. Sparsity is extreme —
+think "1 of 10000 in each field":
 
 @ctr-an-online-advertising-dataset
+:::
+
+::: {.slide title="Dataset wrapper"}
+Build per-field vocabularies, encode each row as a sparse
+feature index vector, yield (features, label) pairs:
 
 @ctr-dataset-wrapper-1
 
-@ctr-dataset-wrapper-2
+. . .
 
+@ctr-dataset-wrapper-2
+:::
+
+::: {.slide title="Recap"}
+- CTR prediction = binary classification on sparse
+  categorical features.
+- Side features handle cold start; pure collaborative
+  filtering can't.
+- Output of this deck: indexed-categorical mini-batches
+  the FM / DeepFM decks consume.
+- Real-world systems extend this with continuous
+  features, multi-task heads, and embedding tables on
+  the order of billions of entries.
 :::

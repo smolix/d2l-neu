@@ -324,21 +324,58 @@ into a fixed-length text category.
 <!-- slides -->
 
 ::: {.slide}
+**Sentiment analysis** — predict positive/negative from a
+movie review. Classic text-classification benchmark; the
+hello-world for applying deep learning to NLP.
+
+This chapter uses **IMDb**: 25k positive + 25k negative
+movie reviews, balanced. The next two decks build an RNN
+and a CNN classifier on top of this pipeline; the deck
+after fine-tunes BERT on it.
+
+This deck is just the data plumbing.
 
 @sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset
+:::
+
+::: {.slide title="Reading IMDb"}
+Each review is a separate text file. Walk the directory,
+one folder per label:
 
 @sentiment-analysis-and-dataset-reading-the-dataset-1
 
+. . .
+
 @sentiment-analysis-and-dataset-reading-the-dataset-2
+:::
+
+::: {.slide title="Preprocessing"}
+Tokenize words, build a vocabulary with frequency cutoff,
+truncate or pad each review to a fixed length:
 
 @sentiment-analysis-and-dataset-preprocessing-the-dataset-1
 
+. . .
+
 @sentiment-analysis-and-dataset-preprocessing-the-dataset-2
 
-@sentiment-analysis-and-dataset-preprocessing-the-dataset-3
+. . .
 
+@sentiment-analysis-and-dataset-preprocessing-the-dataset-3
+:::
+
+::: {.slide title="Data loaders"}
 @sentiment-analysis-and-dataset-creating-data-iterators
 
-@sentiment-analysis-and-dataset-putting-it-all-together
+. . .
 
+@sentiment-analysis-and-dataset-putting-it-all-together
+:::
+
+::: {.slide title="Recap"}
+- IMDb: 25k+25k movie reviews, binary sentiment.
+- Standard preprocessing: tokenize, build vocab,
+  truncate/pad, batch.
+- Output: `(token_ids, label)` minibatches, ready for
+  the RNN, CNN, and BERT classifiers in the next decks.
 :::

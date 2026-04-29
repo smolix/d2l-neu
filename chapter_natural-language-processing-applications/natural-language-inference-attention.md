@@ -802,29 +802,94 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 <!-- slides -->
 
 ::: {.slide}
+**Decomposable Attention** (Parikh et al., 2016) — a small,
+fast model for NLI that beat much more complex
+recurrence-based architectures on SNLI in 2016.
+
+Three steps:
+
+- **Attend** — soft-align each premise word to a weighted
+  combination of hypothesis words (and vice versa). Uses
+  the chapter's standard scaled-dot-product attention.
+- **Compare** — for each (premise word, aligned
+  hypothesis context), feed both to an MLP.
+- **Aggregate** — sum the comparison vectors over each
+  sentence, concat, feed to a final classifier.
+
+No recurrence, no convolution. Pure attention + MLPs.
+
+![Pipeline: GloVe → attend → compare → aggregate → 3-way classifier.](../img/nlp-map-nli-attention.svg){width=68%}
+
+![NLI with attention: align premise/hypothesis tokens, then compare and aggregate.](../img/nli-attention.svg){width=72%}
 
 @natural-language-inference-attention-the-model
+:::
+
+::: {.slide title="Step 1: Attend"}
+Compute alignment weights between every premise word and
+every hypothesis word. Use them to build aligned context
+vectors:
 
 @natural-language-inference-attention-attending-1
 
+. . .
+
 @natural-language-inference-attention-attending-2
+:::
+
+::: {.slide title="Step 2: Compare"}
+For each premise word $a_i$, run an MLP on
+$[a_i, \beta_i]$ where $\beta_i$ is the soft-aligned
+hypothesis context. Same for hypothesis words:
 
 @natural-language-inference-attention-comparing
+:::
+
+::: {.slide title="Step 3: Aggregate"}
+Sum the per-token compared vectors → concat the two
+sentence summaries → final MLP → 3-way logits:
 
 @natural-language-inference-attention-aggregating
+:::
 
+::: {.slide title="Putting it together"}
 @natural-language-inference-attention-putting-it-all-together
+:::
 
+::: {.slide title="Loading data + model"}
 @natural-language-inference-attention-reading-the-dataset
 
-@natural-language-inference-attention-creating-the-model
+. . .
 
+@natural-language-inference-attention-creating-the-model
+:::
+
+::: {.slide title="Training"}
 @natural-language-inference-attention-training-and-evaluating-the-model-2-1
+
+. . .
 
 @natural-language-inference-attention-training-and-evaluating-the-model-2-2
 
+. . .
+
+@!natural-language-inference-attention-training-and-evaluating-the-model-2-2
+:::
+
+::: {.slide title="Predict"}
 @natural-language-inference-attention-using-the-model-1
 
-@natural-language-inference-attention-using-the-model-2
+. . .
 
+@natural-language-inference-attention-using-the-model-2
+:::
+
+::: {.slide title="Recap"}
+- Decomposable Attention does NLI in three small MLP
+  stages: attend, compare, aggregate.
+- No recurrence — completely parallelizable; trains
+  fast even before GPU acceleration was abundant.
+- A precursor to the cross-attention machinery that BERT
+  (next deck) does end-to-end inside one Transformer
+  encoder.
 :::

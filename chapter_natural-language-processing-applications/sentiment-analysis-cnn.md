@@ -669,25 +669,96 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 <!-- slides -->
 
 ::: {.slide}
+**textCNN** (Kim, 2014) — a 1D conv net for text. Same
+classification task as the RNN deck; different architecture.
+
+Why CNNs on text? Each filter is a learned $n$-gram
+detector. Run several filter widths in parallel (3, 4, 5
+words) for multi-scale coverage. Max-over-time pool
+collapses position; concat → linear → softmax. Fast,
+strong, parallelizable.
+
+![Pipeline: GloVe → 1D conv filters of varying widths → max-pool → classifier.](../img/nlp-map-sa-cnn.svg){width=68%}
 
 @sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks
+:::
+
+::: {.slide title="1D convolution"}
+Sliding kernel over a 1D sequence. Output element =
+elementwise multiply + sum of an $n$-token window:
+
+![1D conv: kernel $(1, 2)$ slides over input; first output is $0 \cdot 1 + 1 \cdot 2 = 2$.](../img/conv1d.svg){width=58%}
 
 @sentiment-analysis-cnn-one-dimensional-convolutions-1
+:::
+
+::: {.slide title="Multi-channel 1D conv"}
+Embedding dim = input channels. Kernel has the same
+channel count; output is single-channel (or multi if you
+have multiple kernels):
+
+![3-channel 1D conv.](../img/conv1d-channel.svg){width=58%}
 
 @sentiment-analysis-cnn-one-dimensional-convolutions-2
 
+. . .
+
+Equivalent to a 2D conv with kernel height = input height:
+
+![Equivalent 2D-conv view.](../img/conv1d-2d.svg){width=58%}
+
 @sentiment-analysis-cnn-one-dimensional-convolutions-3
+:::
+
+::: {.slide title="Max-over-time pooling"}
+Take the max over the *time* axis for each filter.
+Resulting feature is independent of where in the sequence
+the n-gram appeared. One scalar per filter, regardless of
+sentence length:
+
+![Max-over-time = max along the sequence axis.](../img/textcnn.svg){width=72%}
+:::
+
+::: {.slide title="textCNN model"}
+Embedding (frozen GloVe + a fine-tunable copy) → parallel
+1D convs at widths 3, 4, 5 → max-over-time → concat →
+dropout → linear:
 
 @sentiment-analysis-cnn-defining-the-model-1
 
+. . .
+
 @sentiment-analysis-cnn-defining-the-model-2
+:::
 
+::: {.slide title="Loading pretrained GloVe"}
 @sentiment-analysis-cnn-loading-pretrained-word-vectors
+:::
 
+::: {.slide title="Training"}
 @sentiment-analysis-cnn-training-and-evaluating-the-model-1
+
+. . .
 
 @sentiment-analysis-cnn-training-and-evaluating-the-model-2
 
-@sentiment-analysis-cnn-training-and-evaluating-the-model-3
+. . .
 
+@!sentiment-analysis-cnn-training-and-evaluating-the-model-2
+
+. . .
+
+@sentiment-analysis-cnn-training-and-evaluating-the-model-3
+:::
+
+::: {.slide title="Recap"}
+- textCNN = parallel 1D convs over word embeddings + max
+  pooling + linear head.
+- Each filter learns an $n$-gram detector; different
+  widths give multi-scale coverage.
+- Comparable accuracy to BiLSTM on IMDb at a fraction of
+  the training time and zero recurrence.
+- The shape (parallel filter widths, pooled features) is
+  the template for many text-classification CNNs that
+  followed.
 :::

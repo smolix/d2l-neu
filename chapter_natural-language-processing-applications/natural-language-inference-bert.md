@@ -1017,60 +1017,79 @@ net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
 <!-- slides -->
 
 ::: {.slide}
+The pretrained BERT can do NLI off the shelf, near
+state-of-the-art, with one trick: feed `<cls> premise
+<sep> hypothesis <sep>` and stick a 3-way classifier on
+the `<cls>` token. That's it.
+
+This is **the** illustration of why BERT mattered:
+arbitrary sentence-pair classification reduces to a few
+lines of fine-tuning code on top of a pretrained encoder.
+
+![Pipeline: BERT encoder + small MLP head on `<cls>`.](../img/nlp-map-nli-bert.svg){width=68%}
 
 @natural-language-inference-bert-natural-language-inference-fine-tuning-bert
-
 :::
 
-::: {.slide}
-
-Loading Pretrained BERT
+::: {.slide title="Loading pretrained BERT"}
+We use a small pretrained BERT (the one we trained
+ourselves in the previous chapter, or a downloaded
+checkpoint):
 
 @natural-language-inference-bert-loading-pretrained-bert-1
 
-:::
-
-::: {.slide}
-
-load pretrained BERT parameters
+. . .
 
 @natural-language-inference-bert-loading-pretrained-bert-2
 
-@natural-language-inference-bert-loading-pretrained-bert-3
+. . .
 
+@natural-language-inference-bert-loading-pretrained-bert-3
 :::
 
-::: {.slide}
-
-The Dataset for Fine-Tuning BERT
+::: {.slide title="Encoding sentence pairs"}
+Tokenize each (premise, hypothesis) pair into BERT input
+format: `<cls> + premise + <sep> + hypothesis + <sep>` with
+segment IDs distinguishing the two halves:
 
 @natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1
 
-:::
-
-::: {.slide}
-
-generate training and testing examples
+. . .
 
 @natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2
-
 :::
 
-::: {.slide}
-
-This MLP transforms the
-BERT representation of the special “&lt;cls&gt;” token into three outputs of natural language inference
+::: {.slide title="Classifier head"}
+Tiny MLP on the `<cls>` representation — 3 outputs
+(entailment, contradiction, neutral). Encoder weights are
+fine-tuned end-to-end:
 
 @natural-language-inference-bert-fine-tuning-bert-1
 
-@natural-language-inference-bert-fine-tuning-bert-2
+. . .
 
+@natural-language-inference-bert-fine-tuning-bert-2
 :::
 
-::: {.slide}
-
-the training
+::: {.slide title="Fine-tuning"}
+Standard cross-entropy + Adam, low learning rate (e.g.
+2e-5). Few epochs are enough — the model already knows
+language; we're just teaching it the specific task:
 
 @natural-language-inference-bert-fine-tuning-bert-3
 
+. . .
+
+@!natural-language-inference-bert-fine-tuning-bert-3
+:::
+
+::: {.slide title="Recap"}
+- Sentence-pair classification = encode `<cls> A <sep> B
+  <sep>`, classify the `<cls>` representation.
+- Same recipe handles NLI, paraphrase, semantic similarity,
+  and many more.
+- Fine-tuning hyperparameters: batch 32, lr ~2e-5, 2-4
+  epochs. Short, cheap, and reproducible.
+- The end of the pre-2018 NLI architecture wars: BERT made
+  per-task model design largely obsolete.
 :::

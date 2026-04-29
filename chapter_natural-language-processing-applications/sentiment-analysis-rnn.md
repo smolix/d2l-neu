@@ -503,27 +503,75 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 <!-- slides -->
 
 ::: {.slide}
+First IMDb classifier: pretrained word vectors → bidirectional
+LSTM → linear head. Standard pre-Transformer text
+classification recipe.
+
+![Pipeline: GloVe embeddings → BiLSTM → output classifier.](../img/nlp-map-sa-rnn.svg){width=68%}
+
+The recurrent encoder reads the review left-to-right and
+right-to-left; concatenated final hidden states feed a
+binary classifier. GloVe gives a strong initialization on
+top of which the LSTM specializes for sentiment.
 
 @sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks
+:::
 
+::: {.slide title="BiRNN classifier"}
 @sentiment-analysis-rnn-representing-single-text-with-rnns-1
+
+. . .
 
 @sentiment-analysis-rnn-representing-single-text-with-rnns-2
 
+. . .
+
 @sentiment-analysis-rnn-representing-single-text-with-rnns-3
+:::
+
+::: {.slide title="Loading pretrained GloVe"}
+Use 100-dim GloVe vectors trained on Wikipedia + Gigaword.
+Initialize the embedding layer from them; freeze or
+fine-tune (we fine-tune):
 
 @sentiment-analysis-rnn-loading-pretrained-word-vectors-1
 
+. . .
+
 @sentiment-analysis-rnn-loading-pretrained-word-vectors-2
 
+. . .
+
 @sentiment-analysis-rnn-loading-pretrained-word-vectors-3
+:::
+
+::: {.slide title="Training"}
+Standard cross-entropy + Adam:
 
 @sentiment-analysis-rnn-training-and-evaluating-the-model-1
 
+. . .
+
 @sentiment-analysis-rnn-training-and-evaluating-the-model-2
 
+. . .
+
+@!sentiment-analysis-rnn-training-and-evaluating-the-model-2
+:::
+
+::: {.slide title="Predict on new reviews"}
 @sentiment-analysis-rnn-training-and-evaluating-the-model-3
 
-@sentiment-analysis-rnn-training-and-evaluating-the-model-4
+. . .
 
+@sentiment-analysis-rnn-training-and-evaluating-the-model-4
+:::
+
+::: {.slide title="Recap"}
+- BiLSTM-on-GloVe: a strong pre-Transformer baseline for
+  text classification.
+- Pretrained embeddings carry general-purpose word
+  semantics; LSTM specializes for sentiment.
+- Easily beaten today by fine-tuned BERT, but a clean
+  template for sequence-to-label tasks more broadly.
 :::

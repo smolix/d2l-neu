@@ -453,53 +453,66 @@ for premises, hypotheses, labels in train_iter:
 <!-- slides -->
 
 ::: {.slide}
+**Natural Language Inference (NLI)** — given a *premise*
+sentence and a *hypothesis* sentence, decide whether the
+hypothesis is
 
-Stanford Natural Language Inference (SNLI) Corpus
+- **entailed** by the premise,
+- **contradicted** by it, or
+- **neutral** (independent).
 
-@natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset
+A 3-way sentence-pair classification benchmark. Pre-BERT
+NLI was a hard task that drove a lot of attention-based
+research; BERT then crushed it and made NLI a standard
+fine-tuning probe.
 
+This deck loads **SNLI** (Stanford NLI), 570k labeled
+sentence pairs. Output: `(premise_ids, hypothesis_ids,
+label)` minibatches.
 :::
 
-::: {.slide}
+::: {.slide title="Setup"}
+@natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset
+:::
 
-Reading the Dataset
+::: {.slide title="Reading SNLI"}
+TSV format: gold_label \t premise \t hypothesis \t ...
+Skip the `-` (no consensus) labels:
 
 @natural-language-inference-and-dataset-reading-the-dataset-1
 
-:::
-
-::: {.slide}
-
-print the first 3 pairs
+. . .
 
 @natural-language-inference-and-dataset-reading-the-dataset-2
 
-:::
-
-::: {.slide}
-
-labels "entailment", "contradiction", and "neutral" are balanced
+. . .
 
 @natural-language-inference-and-dataset-reading-the-dataset-3
-
 :::
 
-::: {.slide}
-
-Defining a Class for Loading the Dataset
+::: {.slide title="Custom Dataset"}
+Two parallel sequence inputs, one label per pair:
 
 @natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset
-
 :::
 
-::: {.slide}
-
-Putting It All Together
-
+::: {.slide title="Loader factory"}
 @natural-language-inference-and-dataset-putting-it-all-together-1
+
+. . .
 
 @natural-language-inference-and-dataset-putting-it-all-together-2
 
-@natural-language-inference-and-dataset-putting-it-all-together-3
+. . .
 
+@natural-language-inference-and-dataset-putting-it-all-together-3
+:::
+
+::: {.slide title="Recap"}
+- NLI = 3-way premise/hypothesis classification
+  (entailment, contradiction, neutral).
+- SNLI is the standard corpus; 550k+ labeled pairs.
+- Output: aligned premise/hypothesis token ID pairs +
+  label, ready for the attention model (next deck) and
+  BERT fine-tuning (deck after).
 :::

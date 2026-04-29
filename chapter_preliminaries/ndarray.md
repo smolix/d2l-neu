@@ -914,8 +914,7 @@ In this section: how to **create**, **reshape**, **index**,
 :::
 
 ::: {.slide title="Getting Started"}
-We need exactly one import. The package is named `torch`
-(historical baggage from the Lua-Torch lineage):
+A single import wires up the framework's tensor library:
 
 @ndarray-getting-started-1
 
@@ -1075,8 +1074,8 @@ ergonomic forms are `X[:] = X + Y` or `X += Y`:
 :::
 
 ::: {.slide title="NumPy round-trip"}
-Pytorch tensors and NumPy arrays often **share storage** — converting
-both ways is cheap:
+Tensors and NumPy `ndarray`s convert cheaply — most frameworks
+share storage with NumPy when possible:
 
 @ndarray-conversion-to-other-python-objects-1
 

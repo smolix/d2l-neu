@@ -169,24 +169,49 @@ in addition to becoming a better scientist.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Looking things up"}
+Every framework has thousands of functions and classes. You
+won't memorize them — you'll **look them up**.
+
+Two Python builtins do most of the work:
+
+- `dir(module)` — what's in here?
+- `help(thing)` (or `?thing` in Jupyter) — how do I use it?
+
+Plus the official docs: pytorch.org, jax.dev, tensorflow.org,
+mxnet.apache.org.
+:::
+
+::: {.slide title="`dir`: discovering the API"}
+Standard import:
 
 @lookup-api-documentation
 
-query all properties in the module for generating random numbers
+. . .
+
+`dir(...)` lists every public name in a module — handy for
+finding the function you half-remember:
 
 @lookup-api-functions-and-classes-in-a-module
-
 :::
 
-::: {.slide}
-
-explore the usage instructions for tensors' `ones` function
+::: {.slide title="`help`: usage details"}
+Once you have the name, `help(...)` prints the docstring with
+arguments, defaults, and a usage example:
 
 @lookup-api-specific-functions-and-classes-1
 
-run a quick test
+. . .
+
+Then run a one-liner to confirm the call:
 
 @lookup-api-specific-functions-and-classes-2
+:::
 
+::: {.slide title="Recap"}
+- `dir(module)` — list contents.
+- `help(symbol)` (or `symbol?` in Jupyter) — show the docstring.
+- Notebook autocomplete (`Tab`) is your fastest discovery tool.
+- For prose-heavy explanations, deep links into the framework's
+  official documentation beat the inline help.
 :::

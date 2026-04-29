@@ -1118,20 +1118,79 @@ interval centered on the expectation.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why probability?"}
+Most of machine learning is **inference under uncertainty**:
+
+- Models output **distributions** over labels, not labels.
+- Losses are negative log-likelihoods.
+- Generalization, regularization, and Bayesian methods all rest
+  on probability.
+
+This chapter is the warm-up: distributions, expectations,
+the law of large numbers — through one running example, **coin
+tosses**.
+:::
+
+::: {.slide title="Setup"}
+The standard d2l prelude plus a multinomial distribution for
+sampling:
 
 @probability-probability-and-statistics
+:::
+
+::: {.slide title="A fair coin, 100 tosses"}
+We can simulate coin flips with `random.random()`:
 
 @probability-a-simple-example-tossing-coins-1
 
+The split is **near** 50/50 but not exactly — sampling has
+variance.
+:::
+
+::: {.slide title="Sampling from a distribution"}
+A cleaner abstraction: a `Multinomial` over the categories
+`{heads, tails}` with probabilities `[0.5, 0.5]`. One call returns
+the count vector for 100 tosses:
+
 @probability-a-simple-example-tossing-coins-2
 
+. . .
+
+Divide by the trial count to get **empirical frequencies** —
+estimates of $P(\text{heads})$ and $P(\text{tails})$:
+
 @probability-a-simple-example-tossing-coins-3
+:::
+
+::: {.slide title="More tosses, tighter estimate"}
+With 10 000 tosses, the empirical frequencies sit much closer to
+$0.5$:
 
 @probability-a-simple-example-tossing-coins-4
+
+This is the **law of large numbers**: as $n \to \infty$ the
+empirical mean converges to the true mean.
+:::
+
+::: {.slide title="Convergence in pictures"}
+Plot the running estimate of $P(\text{heads})$ and
+$P(\text{tails})$ vs. sample count — the curves zigzag toward
+$0.5$:
 
 @probability-a-simple-example-tossing-coins-5
 
 @probability-a-simple-example-tossing-coins-6
 
+The variance of the estimate shrinks like $1/\sqrt{n}$ — doubling
+accuracy means **quadrupling** the sample budget.
+:::
+
+::: {.slide title="Recap"}
+- A probability distribution assigns mass to events.
+- **Sampling** + **counting** = empirical frequencies.
+- The law of large numbers connects the two: estimates converge
+  to the true probabilities at rate $O(1/\sqrt{n})$.
+- The rest of the chapter formalizes random variables,
+  expectations, and joint / conditional / marginal distributions
+  — the vocabulary for everything that follows.
 :::

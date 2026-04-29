@@ -702,87 +702,112 @@ For now, try to remember these basics:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why autograd?"}
+Hand-deriving gradients for a 100-million-parameter network is a
+non-starter. Every modern framework ships an **automatic
+differentiation** engine that:
 
-@autograd-automatic-differentiation
+- Records each operation onto a computational graph.
+- Walks the graph in **reverse** to apply the chain rule.
+- Returns the gradient with respect to *every* input you asked
+  about — typically the model parameters.
 
-differentiating the function
-$y = 2\mathbf{x}^{\top}\mathbf{x}$
-with respect to the column vector $\mathbf{x}$
-
-@autograd-a-simple-function-1
-
+This chapter teaches the API; the rest of the book leans on it.
 :::
 
-::: {.slide}
+::: {.slide title="Setup"}
+@autograd-automatic-differentiation
 
-Before we calculate the gradient
-of $y$ with respect to $\mathbf{x}$,
-we need a place to store it
+We'll differentiate
+
+$$y = 2\,\mathbf{x}^\top \mathbf{x}$$
+
+with respect to the column vector $\mathbf{x}$. Analytic gradient:
+$\nabla_\mathbf{x} y = 4\mathbf{x}$.
+
+@autograd-a-simple-function-1
+:::
+
+::: {.slide title="Tracking gradients"}
+We tell the framework to track operations on `x` and reserve a
+slot for its gradient:
 
 @autograd-a-simple-function-2
 
-We now calculate our function of `x` and assign the result to `y`
+. . .
+
+Then run the forward pass — `y` is built from `x`, so the engine
+records the dependency:
 
 @autograd-a-simple-function-3
-
 :::
 
-::: {.slide}
-
-We can now take the gradient of `y`
-with respect to `x` We can now take the gradient of `y`
-with respect to `x` We can now calculate the gradient of `y`
-with respect to `x` We can now take the gradient of `y`
-with respect to `x`
+::: {.slide title="Backward pass"}
+A single call walks the recorded graph backwards:
 
 @autograd-a-simple-function-4
 
-We already know that the gradient of the function $y = 2\mathbf{x}^{\top}\mathbf{x}$
-with respect to $\mathbf{x}$ should be $4\mathbf{x}$
+. . .
+
+The result lands in `x.grad`. Compare with the analytic answer,
+$4\mathbf{x}$:
 
 @autograd-a-simple-function-5
-
 :::
 
-::: {.slide}
-
-Now let's calculate 
-another function of `x`
-and take its gradient. Now let's calculate 
-another function of `x`
-and take its gradient. Now let's calculate 
-another function of `x`
-and take its gradient
+::: {.slide title="Resetting & re-using"}
+Gradients **accumulate** by default — call `.zero_()` (or its
+equivalent) before computing a fresh gradient:
 
 @autograd-a-simple-function-6
 
-sum up the gradients
-computed individually for each example
+. . .
+
+For non-scalar `y`, the engine sums up gradients computed for each
+output element (or you supply weights):
 
 @autograd-backward-for-non-scalar-variables
-
 :::
 
-::: {.slide}
-
-move some calculations
-outside of the recorded computational graph
+::: {.slide title="Detaching from the graph"}
+Sometimes we want a value treated as a **constant** in the
+backward pass — e.g., the auxiliary `u` below should not propagate
+gradients into `x`:
 
 @autograd-detaching-computation-1
 
-@autograd-detaching-computation-2
+. . .
 
+After `detach()` (or `stop_gradient` / `lax.stop_gradient`), the
+gradient flows around the detached tensor, not through it:
+
+@autograd-detaching-computation-2
 :::
 
-::: {.slide}
-
-even if a function required passing through a maze of Python control flow we can still calculate the gradient of the resulting variable
+::: {.slide title="Gradients through control flow"}
+Autograd doesn't care about Python `if`s and `while`s — it just
+records whichever ops actually executed:
 
 @autograd-gradients-and-python-control-flow-1
 
+. . .
+
 @autograd-gradients-and-python-control-flow-2
 
-@autograd-gradients-and-python-control-flow-3
+. . .
 
+The gradient is correct even though the path through the function
+is data-dependent:
+
+@autograd-gradients-and-python-control-flow-3
+:::
+
+::: {.slide title="Recap"}
+- Mark inputs as needing gradients.
+- Run the forward pass — the engine records ops.
+- `backward()` (or `grad()`) walks the graph in reverse via the
+  chain rule.
+- Gradients accumulate; reset between iterations.
+- `detach` / `stop_gradient` to break the graph.
+- Works through arbitrary Python control flow.
 :::

@@ -450,47 +450,83 @@ throughout this book will require calculating the gradient.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why calculus?"}
+Training a neural net = **minimizing a loss**. Calculus tells us
+which way to step:
+
+- The **derivative** measures the slope — how fast the loss
+  changes when we nudge a parameter.
+- For multi-parameter models, the gradient $\nabla_\theta L$ is
+  the vector of partial derivatives.
+- Optimizers follow $-\nabla_\theta L$ downhill.
+
+This chapter covers the math; the next (autograd) covers how
+the framework computes it for you.
+:::
+
+::: {.slide title="Setup"}
+We'll need plotting and a tiny numerics shim for visualizing
+slopes:
 
 @calculus
-
 :::
 
-::: {.slide}
+::: {.slide title="Derivatives, by definition"}
+The derivative of $f$ at $x$ is
+$$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
 
-the *derivative* of $f$ at a point $x$ is defined as $$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$ Define $u = f(x) = 3x^2-4x$
+Take a concrete example, $u = f(x) = 3x^2 - 4x$ (analytic
+derivative: $f'(x) = 6x - 4$, so $f'(1) = 2$):
 
 @calculus-derivatives-and-differentiation-1
-
 :::
 
-::: {.slide}
-
-Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$ approaches $2$
-as $h$ approaches $0$
+::: {.slide title="Verifying numerically"}
+At $x = 1$, the difference quotient
+$\frac{f(x+h) - f(x)}{h}$ should approach $f'(1) = 2$ as $h \to 0$:
 
 @calculus-derivatives-and-differentiation-2
 
+. . .
+
+It does — but small `h` runs into floating-point cancellation,
+which is exactly the problem **autograd** sidesteps in the next
+chapter.
 :::
 
-::: {.slide}
-
-We can visualize the slopes of functions using the `matplotlib` library
+::: {.slide title="Plot helpers"}
+A handful of matplotlib helpers, used throughout the book:
 
 @calculus-visualization-utilities-1
 
+. . .
+
 @calculus-visualization-utilities-2
+
+. . .
 
 @calculus-visualization-utilities-3
 
-@calculus-visualization-utilities-4
+. . .
 
+@calculus-visualization-utilities-4
 :::
 
-::: {.slide}
-
-plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$
+::: {.slide title="Function and tangent line"}
+Plot $u = f(x)$ alongside its tangent at $x=1$, $y = 2x - 3$:
 
 @calculus-visualization-utilities-5
 
+The tangent's slope **is** $f'(1) = 2$ — derivatives are slopes,
+made geometric.
+:::
+
+::: {.slide title="Recap"}
+- Derivative = limit of the difference quotient.
+- Multi-variable functions have **partial derivatives**, one per
+  input; the gradient bundles them into a vector.
+- The **chain rule** lets you differentiate compositions —
+  the engine inside backprop.
+- We won't compute derivatives by hand for long: the next chapter
+  shows how autograd handles it automatically.
 :::

@@ -212,39 +212,67 @@ the type of problems you may need to address.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="From CSV to tensor in 4 steps"}
+Real datasets rarely arrive as tensors. The usual path:
 
-create a CSV file below
+1. **Read** raw rows (CSV, JSON, Parquet, …) → a `DataFrame`.
+2. **Preprocess** — fill missing values, encode categoricals.
+3. **Split** into inputs and targets.
+4. **Convert** the numeric columns into a tensor.
+
+This whole chapter walks through that pipeline on a tiny toy
+dataset.
+:::
+
+::: {.slide title="Reading the data"}
+First, dump a CSV to disk so we have something to load:
 
 @pandas-reading-the-dataset-1
 
-@pandas-reading-the-dataset-2
+. . .
 
+`pandas` reads CSVs into a `DataFrame`. Note the `NaN`s — pandas's
+sentinel for missing values:
+
+@pandas-reading-the-dataset-2
 :::
 
-::: {.slide}
-
-For categorical input fields, 
-we can treat `NaN` as a category
+::: {.slide title="Splitting inputs and targets"}
+Conventionally the **last column** is the target (`y`); the rest
+are inputs (`X`). `iloc` slices by integer position:
 
 @pandas-data-preparation-1
 
+Categorical columns with missing values often benefit from
+treating `NaN` as its own category — `pd.get_dummies` does that
+when `dummy_na=True`.
 :::
 
-::: {.slide}
-
-replace the `NaN` entries with 
-the mean value of the corresponding column
+::: {.slide title="Imputing missing numbers"}
+For numeric columns, the simplest fill is the column **mean**:
 
 @pandas-data-preparation-2
 
+This is **mean imputation** — fast and assumption-free, but biases
+the variance downward. More principled fills (median, KNN,
+model-based) live in `sklearn.impute`.
 :::
 
-::: {.slide}
-
-all the entries in `inputs` and `targets` are numerical,
-we can load them into a tensor
+::: {.slide title="Conversion to a tensor"}
+Once every entry is numeric, hand the DataFrame's `.to_numpy()`
+view to the framework's tensor constructor:
 
 @pandas-conversion-to-the-tensor-format
 
+From here on we live in tensor-land — gradients, GPUs, the works.
+:::
+
+::: {.slide title="Recap"}
+- `pd.read_csv` → DataFrame.
+- `iloc[:, …]` to slice columns into inputs and targets.
+- `fillna(mean)` for numeric; `get_dummies(dummy_na=True)` for
+  categorical.
+- `.to_numpy()` then `tensor(...)` to leave pandas.
+- For anything beyond toy CSVs, reach for `sklearn.preprocessing`
+  and `sklearn.impute`.
 :::

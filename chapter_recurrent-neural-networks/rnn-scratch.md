@@ -891,76 +891,119 @@ During training, gradient clipping can mitigate the problem of exploding gradien
 <!-- slides -->
 
 ::: {.slide}
+A character-level language model on *The Time Machine*, with
+nothing but tensor ops:
+
+1. **RNN cell** — the recurrence
+   $\mathbf{h}_t = \tanh(\mathbf{W}_{xh} \mathbf{x}_t +
+   \mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{b})$.
+2. **Language model wrapper** — one-hot encode tokens, project
+   hidden states to vocab logits.
+3. **Gradient clipping** — keep BPTT gradients bounded.
+4. **Training** + **decoding** to generate continuations.
+
+Char-level keeps the vocab tiny (~30 tokens) so we can fit
+embedding-free models in a notebook.
+:::
+
+::: {.slide title="The RNN cell"}
+Parameters: $\mathbf{W}_{xh}, \mathbf{W}_{hh}, \mathbf{b}$.
+Initialize randomly, scaled to keep activations sensible:
 
 @rnn-scratch-recurrent-neural-network-implementation-from-scratch
 
 @rnn-scratch-rnn-model-1
-
 :::
 
-::: {.slide}
-
-The `forward` method below defines how to compute 
-the output and hidden state at any time step,
-given the current input and the state of the model
-at the previous time step
+::: {.slide title="Forward, unrolled"}
+Walk a length-T input one step at a time, carrying the hidden
+state forward:
 
 @rnn-scratch-rnn-model-2
 
+. . .
+
 @rnn-scratch-rnn-model-3
 
+. . .
+
+Sanity check on output shapes:
+
 @rnn-scratch-rnn-model-4
-
-@rnn-scratch-rnn-based-language-model
-
 :::
 
-::: {.slide}
+::: {.slide title="Wrapping as a language model"}
+Add a vocab-sized output projection on top of the RNN's hidden
+states. This is the LM wrapper we'll train:
 
-One-Hot Encoding
+@rnn-scratch-rnn-based-language-model
+:::
+
+::: {.slide title="Inputs as one-hot vectors"}
+Tokens come in as integer ids; the RNN expects vectors. One-hot
+encoding is the simplest input embedding:
 
 @rnn-scratch-one-hot-encoding-1
 
-The minibatches that we sample at each iteration
-will take the shape (batch size, number of time steps).
-Once representing each input as a one-hot vector,
-we can think of each minibatch as a three-dimensional tensor, 
-where the length along the third axis 
-is given by the vocabulary size (`len(vocab)`)
+. . .
+
+A `(batch, num_steps)` minibatch of token ids becomes a
+`(batch, num_steps, vocab)` one-hot tensor:
 
 @rnn-scratch-one-hot-encoding-2
+:::
+
+::: {.slide title="Output projection"}
+Gather hidden states across all time steps and project through
+the head:
 
 @rnn-scratch-transforming-rnn-outputs-1
 
-:::
+. . .
 
-::: {.slide}
-
-check whether the forward computation
-produces outputs with the correct shape
+Smoke test — input shape `(batch, num_steps)`, output shape
+`(batch, num_steps, vocab)`:
 
 @rnn-scratch-transforming-rnn-outputs-2
-
 :::
 
-::: {.slide}
+::: {.slide title="Gradient clipping"}
+The recurrence multiplies the gradient by $\mathbf{W}_{hh}$
+once per time step — a single explosion-prone factor. **Clip**
+before each step so its norm stays bounded:
 
-Gradient Clipping $$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
+$$\mathbf{g} \leftarrow \min\!\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}.$$
 
 @rnn-scratch-gradient-clipping
-
-@rnn-scratch-training
-
 :::
 
-::: {.slide}
+::: {.slide title="Training"}
+~32 character window, batch 1024, ~30 epochs. Gradient clipping
+keeps the loss from going NaN:
 
-The following `predict` method
-generates a continuation, one character at a time,
-after ingesting a user-provided `prefix`
+@rnn-scratch-training
+:::
+
+::: {.slide title="Decoding (text generation)"}
+Feed in a prompt, then sample the model's predictions for the
+next character at each step:
 
 @rnn-scratch-decoding-1
 
+. . .
+
 @rnn-scratch-decoding-2
 
+Output is recognizably English-shaped — but at this size the model
+hasn't learned much beyond character-level statistics.
+:::
+
+::: {.slide title="Recap"}
+- Char-level RNN LM: hand-rolled cell + one-hot input + linear
+  head + cross-entropy.
+- **Gradient clipping** is mandatory for stable RNN training.
+- Training is **truncated BPTT** — backprop only through
+  `num_steps` of unrolled history per batch.
+- The same scaffold takes any cell (LSTM, GRU) — only the
+  recurrence changes. Coming next.
 :::

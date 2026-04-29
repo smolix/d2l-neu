@@ -262,11 +262,63 @@ The hidden state of an RNN can capture historical information of the sequence up
 <!-- slides -->
 
 ::: {.slide}
+A **recurrent neural network** carries a **hidden state**
+$\mathbf{h}_t$ across time steps — a summary of all input seen so
+far. The recurrence:
 
+$$\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
+                     \mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{b}).$$
+
+- Same weights at every step → constant parameter count regardless
+  of sequence length.
+- $\mathbf{h}_t$ is a learned summary of the input prefix
+  $(x_1, \ldots, x_t)$ — no fixed-size context window like
+  n-grams.
+- Output: project $\mathbf{h}_t$ to vocab logits, predict $x_{t+1}$.
+
+The recurrence is what makes RNNs **stateful** and gives them
+unbounded effective context (in principle).
+:::
+
+::: {.slide title="Setup"}
 @rnn-recurrent-neural-networks
+:::
+
+::: {.slide title="The recurrence in code"}
+The naive form: two matrix multiplies, summed:
 
 @rnn-recurrent-neural-networks-with-hidden-states-1
 
+. . .
+
+Equivalently — concatenate input and hidden, multiply by the
+concatenated weight matrix — same result, one matmul:
+
 @rnn-recurrent-neural-networks-with-hidden-states-2
 
+The "concat then multiply" form is what most framework `RNN`
+implementations actually do.
+:::
+
+::: {.slide title="As a language model"}
+- **Embedding** maps the input token id → a vector $\mathbf{x}_t$.
+- **RNN** updates the hidden state $\mathbf{h}_t$.
+- **Linear head** projects $\mathbf{h}_t$ to vocab-size logits;
+  softmax gives $P(x_{t+1} \mid x_{\le t})$.
+- Loss = **cross-entropy** with the next-token target — exactly
+  the LM training signal from the previous chapter.
+
+The next two sections build this end-to-end (from scratch +
+concise).
+:::
+
+::: {.slide title="Recap"}
+- RNN: $\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
+  \mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{b})$.
+- Same parameters at every time step; hidden state carries
+  arbitrarily long context (in theory).
+- Trains by backprop **through time** — gradients flow from
+  $\mathbf{h}_T$ back to every earlier hidden state.
+- Vanilla RNNs suffer from vanishing/exploding gradients on long
+  sequences — fixed by **LSTM** and **GRU** in the next chapter.
 :::

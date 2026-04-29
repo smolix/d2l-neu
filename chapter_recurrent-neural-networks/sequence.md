@@ -685,52 +685,75 @@ often dramatically.
 <!-- slides -->
 
 ::: {.slide}
+Sequences are everywhere — text, speech, time-series, video.
+Three concepts to set up the rest of the chapter:
+
+- **Autoregressive models** — predict $x_t$ given $(x_{t-\tau},
+  \ldots, x_{t-1})$ for some window $\tau$. Reduces sequence
+  modeling to regression.
+- **Markov assumption** — only the last $\tau$ steps matter.
+- **Multi-step prediction** — feeding predictions back as inputs
+  causes errors to compound rapidly.
+
+We'll demo on a noisy sine wave and see why "predict the next
+value" is much easier than "predict the next 64 values."
+:::
+
+::: {.slide title="Generating data"}
+A noisy sine wave, 1000 time steps:
 
 @sequence-working-with-sequences
-
-Here, our 1000 synthetic data will follow
-the trigonometric `sin` function,
-applied to 0.01 times the time step.
-To make the problem a little more interesting,
-we corrupt each sample with additive noise
 
 @sequence-training-1
 
 @sequence-training-2
-
 :::
 
-::: {.slide}
-
-Thus for each time step we have an example
-with label $y  = x_t$ and features
-$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$. create a data iterator on the first 600 examples
+::: {.slide title="Autoregressive features"}
+Each example is the next value $x_t$ given the last $\tau$:
+$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$. Train a linear
+regressor on the first 600 windows:
 
 @sequence-training-3
 
-@sequence-training-4
+. . .
 
+@sequence-training-4
 :::
 
-::: {.slide}
-
-To evaluate our model, we first check
-how well it performs at one-step-ahead prediction
+::: {.slide title="One-step prediction"}
+Predict $\hat{x}_t$ from the **true** previous $\tau$ values.
+Looks great:
 
 @sequence-prediction-1
+
+. . .
 
 @sequence-prediction-2
 
 @sequence-prediction-3
-
 :::
 
-::: {.slide}
-
-take a closer look at the difficulties in $k$-step-ahead predictions
+::: {.slide title="Multi-step prediction"}
+But forecasting more than one step requires feeding **predicted**
+values back as inputs — errors compound:
 
 @sequence-prediction-4
 
+. . .
+
 @sequence-prediction-5
 
+The 1- and 4-step curves track the truth; 16- and 64-step
+predictions decay to noise. **Long-horizon forecasting is hard.**
+:::
+
+::: {.slide title="Recap"}
+- Autoregressive: predict $x_t$ given a window of past values.
+- Markov assumption: only the last $\tau$ matter.
+- One-step prediction is easy; **multi-step compounds errors**
+  exponentially.
+- Specialized recurrent / attention architectures (RNN, LSTM,
+  Transformer) are the rest of the chapter's response to this
+  fundamental difficulty.
 :::

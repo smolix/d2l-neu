@@ -289,36 +289,60 @@ framework implementations are often highly optimized,
 <!-- slides -->
 
 ::: {.slide}
+The same character-level LM, using the framework's built-in
+`nn.RNN`. The cell + unroll + projection from scratch boil down
+to a few lines:
+
+- `nn.RNN(input_size, hidden_size)` handles the recurrence,
+  including hardware-accelerated cuDNN kernels on GPU.
+- Reuse the `RNNLMScratch` head — it doesn't care whether the
+  cell is hand-rolled.
+- Same `Trainer`, same gradient clipping, same data.
+
+End result: faster training, ~5× fewer lines of code, identical
+mathematics.
+:::
+
+::: {.slide title="The model"}
+Built-in `RNN` cell + handing off the rest of the LM scaffold to
+the from-scratch base class:
 
 @rnn-concise-concise-implementation-of-recurrent-neural-networks
 
-:::
-
-::: {.slide}
-
-Defining the Model
-
 @rnn-concise-defining-the-model-1
 
-@rnn-concise-defining-the-model-2
+. . .
 
+@rnn-concise-defining-the-model-2
 :::
 
-::: {.slide}
-
-make a prediction 
-with a model initialized with random weights
+::: {.slide title="Sanity check"}
+Untrained model still runs — predictions are random characters,
+but shapes line up:
 
 @rnn-concise-training-and-predicting-1
-
 :::
 
-::: {.slide}
-
-train our model, leveraging the high-level API
+::: {.slide title="Training and decoding"}
+Same `Trainer`, with `gradient_clip_val=1` on the optimizer:
 
 @rnn-concise-training-and-predicting-2
 
+. . .
+
 @rnn-concise-training-and-predicting-3
 
+Output looks like simple English-shaped text — same character-
+level statistics the from-scratch version learned, in much less
+training time.
+:::
+
+::: {.slide title="Recap"}
+- `nn.RNN` is the cell + unroll + (with cuDNN) GPU kernels in
+  one stock layer.
+- Reuse the from-scratch LM wrapper — only the cell changes.
+- Same scaffold accepts `nn.LSTM`, `nn.GRU`, etc. — drop-in
+  replacements with better long-range gradient behavior.
+- The framework version trains noticeably faster than the
+  from-scratch version on the same hardware.
 :::

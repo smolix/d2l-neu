@@ -357,72 +357,102 @@ In practice, the frequency of words tends to follow Zipf's law. This is true not
 <!-- slides -->
 
 ::: {.slide}
+Text isn't tensors out of the box. The pipeline:
 
+1. **Read** the raw string.
+2. **Tokenize** — split into characters, words, or subwords.
+3. **Build a vocabulary** — map each token to an integer index.
+4. **Index** the corpus → a sequence of ints.
+
+Running example: H. G. Wells's *The Time Machine* (32 k tokens) —
+small enough to index in a notebook, big enough to train a
+language model on. The other half of the chapter looks at the
+**statistics** of natural-language text: long-tail word
+distributions, stop words, bigrams.
+:::
+
+::: {.slide title="Read & tokenize"}
 @text-sequence-converting-raw-text-into-sequence-data
-
-reads the raw text into a string
 
 @text-sequence-reading-the-dataset-1
 
+. . .
+
 @text-sequence-reading-the-dataset-2
 
-@text-sequence-tokenization
+. . .
 
+Word-level tokenization splits on whitespace; character-level
+keeps individual characters:
+
+@text-sequence-tokenization
 :::
 
-::: {.slide}
-
-Next, we introduce a class
-for constructing *vocabularies*,
-i.e., objects that associate
-each distinct token value
-with a unique index
+::: {.slide title="Vocabulary"}
+A `Vocab` class maps tokens ↔ integer indices, with reserved
+slots for `<unk>` (rare/OOV tokens) and a few specials:
 
 @text-sequence-vocabulary-1
-
 :::
 
-::: {.slide}
-
-construct a vocabulary
+::: {.slide title="Building the vocab"}
+Pass the tokenized corpus and (optionally) a min-frequency
+threshold to drop very rare tokens:
 
 @text-sequence-vocabulary-2
-
 :::
 
-::: {.slide}
-
-package everything into the following
-`build` method of the `TimeMachine` class
+::: {.slide title="One-stop dataloading"}
+Wrap the whole pipeline in a `TimeMachine.build()` so models
+just call `data.build(...)` to get tensors:
 
 @text-sequence-putting-it-all-together
+:::
+
+::: {.slide title="Word-frequency statistics"}
+Tokenize, count, sort:
 
 @text-sequence-exploratory-language-statistics-1
 
-:::
+. . .
 
-::: {.slide}
-
-the ten most frequent words *stop words* plot the figure of the word frequency
+The most common tokens are **function words** ("the", "of",
+"and", …) — the so-called *stop words*. Plotting frequency rank
+gives the famous **Zipf law** straight line on log-log axes:
 
 @text-sequence-exploratory-language-statistics-2
-
 :::
 
-::: {.slide}
-
-what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams)
+::: {.slide title="Bigrams and trigrams"}
+N-gram statistics give a richer view. Consecutive token pairs
+and triples:
 
 @text-sequence-exploratory-language-statistics-3
 
-@text-sequence-exploratory-language-statistics-4
+. . .
 
+@text-sequence-exploratory-language-statistics-4
 :::
 
-::: {.slide}
-
-visualize the token frequency
+::: {.slide title="Zipf at every n"}
+Plot unigram, bigram, and trigram frequencies on log-log axes —
+all three follow Zipf-like power laws, with steeper slopes (and
+sparser high-frequency regimes) for higher n:
 
 @text-sequence-exploratory-language-statistics-5
 
+This **long-tail sparsity** is exactly why neural language
+models — which embed each token into a continuous space — work so
+much better than n-gram count tables.
+:::
+
+::: {.slide title="Recap"}
+- Pipeline: **read → tokenize → build vocab → index** = corpus
+  as `LongTensor`.
+- Word vs character tokenization is a tradeoff between
+  vocabulary size and sequence length; subword (BPE) is the
+  modern default.
+- Natural-language frequencies are **Zipfian** at every n —
+  long-tail sparsity makes neural models a much better fit than
+  count-based ones.
 :::

@@ -75,7 +75,15 @@ _SLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.slide(?:\s+([^}]*))?\}\s*$')
 _SUBSLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.subslide(?:\s+([^}]*))?\}\s*$')
 _DIV_OPEN_RE = re.compile(r'^:{3,}\s*\{')
 _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
-_PLACEHOLDER_RE = re.compile(r'^@([a-z][a-z0-9-]*)(?:@(\w+))?\s*$')
+# Placeholder forms (each on its own line):
+#   @cell-id              → render code + injected output
+#   @cell-id@pytorch      → force a specific framework variant
+#   @!cell-id             → output-only (echo: false) — useful on
+#                           cover/teaser slides where the figure
+#                           matters but the code doesn't
+#   @!cell-id@pytorch     → output-only with framework override
+_PLACEHOLDER_RE = re.compile(
+    r'^@(?P<echo>!)?(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?\s*$')
 
 # Match @d2l.add_to_class(...) decorator on its own line.
 _ADD_TO_CLASS_RE = re.compile(r'^@d2l\.add_to_class\([^)]*\)\s*$')
@@ -295,7 +303,9 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
         if not m:
             out.append(line)
             continue
-        cid, forced_fw = m.group(1), m.group(2)
+        cid = m.group('id')
+        forced_fw = m.group('fw')
+        echo_off = bool(m.group('echo'))
         variants = source_cells.get(cid)
         if not variants:
             warnings.append(f'{slide_path}: unknown @{cid}')
@@ -313,6 +323,8 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
             continue
         out.append('```{python}')
         out.append(f'#| label: {cid}')
+        if echo_off:
+            out.append('#| echo: false')
         out.append(code)
         out.append('```')
     return out

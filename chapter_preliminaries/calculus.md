@@ -450,7 +450,7 @@ throughout this book will require calculating the gradient.
 
 <!-- slides -->
 
-::: {.slide title="Why calculus?"}
+::: {.slide}
 Training a neural net = **minimizing a loss**. Calculus tells us
 which way to step:
 
@@ -460,8 +460,10 @@ which way to step:
   the vector of partial derivatives.
 - Optimizers follow $-\nabla_\theta L$ downhill.
 
-This chapter covers the math; the next (autograd) covers how
-the framework computes it for you.
+The geometric picture: a function and its tangent line at a point.
+The tangent's slope **is** the derivative.
+
+@!calculus-visualization-utilities-5
 :::
 
 ::: {.slide title="Setup"}
@@ -494,31 +496,15 @@ which is exactly the problem **autograd** sidesteps in the next
 chapter.
 :::
 
-::: {.slide title="Plot helpers"}
-A handful of matplotlib helpers, used throughout the book:
-
-@calculus-visualization-utilities-1
-
-. . .
-
-@calculus-visualization-utilities-2
-
-. . .
-
-@calculus-visualization-utilities-3
-
-. . .
-
-@calculus-visualization-utilities-4
-:::
-
 ::: {.slide title="Function and tangent line"}
 Plot $u = f(x)$ alongside its tangent at $x=1$, $y = 2x - 3$:
 
 @calculus-visualization-utilities-5
 
 The tangent's slope **is** $f'(1) = 2$ — derivatives are slopes,
-made geometric.
+made geometric. (The d2l package wraps a few matplotlib helpers
+— `set_figsize`, `plot`, `set_axes` — used throughout the book.
+See the source if you're curious.)
 :::
 
 ::: {.slide title="Recap"}

@@ -1159,7 +1159,7 @@ To recap:
 
 <!-- slides -->
 
-::: {.slide title="What we'll cover"}
+::: {.slide}
 The minimum linear-algebra vocabulary every chapter that follows
 assumes:
 

@@ -169,7 +169,7 @@ in addition to becoming a better scientist.
 
 <!-- slides -->
 
-::: {.slide title="Looking things up"}
+::: {.slide}
 Every framework has thousands of functions and classes. You
 won't memorize them — you'll **look them up**.
 

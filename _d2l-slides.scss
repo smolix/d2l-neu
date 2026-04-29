@@ -168,6 +168,11 @@ $code-block-padding:     0.55em 0.8em;
   border-left: 3px solid $ink-4;
   font-size: 0.55em;
   margin: 0;
+  // Long single-line outputs (e.g. `print(dir(module))`) overflow
+  // the slide horizontally otherwise. Wrap them. Source-code blocks
+  // (`pre.sourceCode`) keep their default whitespace handling.
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .reveal .cell-output-display {

@@ -1118,7 +1118,7 @@ interval centered on the expectation.
 
 <!-- slides -->
 
-::: {.slide title="Why probability?"}
+::: {.slide}
 Most of machine learning is **inference under uncertainty**:
 
 - Models output **distributions** over labels, not labels.
@@ -1126,9 +1126,13 @@ Most of machine learning is **inference under uncertainty**:
 - Generalization, regularization, and Bayesian methods all rest
   on probability.
 
-This chapter is the warm-up: distributions, expectations,
-the law of large numbers — through one running example, **coin
-tosses**.
+The chapter's running example: **tossing a fair coin**. As the
+sample count grows, empirical frequencies converge to the true
+$P = 0.5$:
+
+@!probability-a-simple-example-tossing-coins-5
+
+@!probability-a-simple-example-tossing-coins-6
 :::
 
 ::: {.slide title="Setup"}

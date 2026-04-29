@@ -702,7 +702,7 @@ For now, try to remember these basics:
 
 <!-- slides -->
 
-::: {.slide title="Why autograd?"}
+::: {.slide}
 Hand-deriving gradients for a 100-million-parameter network is a
 non-starter. Every modern framework ships an **automatic
 differentiation** engine that:
@@ -785,19 +785,26 @@ gradient flows around the detached tensor, not through it:
 :::
 
 ::: {.slide title="Gradients through control flow"}
-Autograd doesn't care about Python `if`s and `while`s — it just
-records whichever ops actually executed:
+Autograd doesn't care about Python `if`s and `while`s — it
+records whichever ops actually executed. Here's a function whose
+behavior depends on its input:
 
 @autograd-gradients-and-python-control-flow-1
 
-. . .
+The number of `while` iterations and the branch taken both depend
+on the value of `a`.
+:::
+
+::: {.slide title="…it just works"}
+Run the function on a random scalar and ask for the gradient:
 
 @autograd-gradients-and-python-control-flow-2
 
 . . .
 
 The gradient is correct even though the path through the function
-is data-dependent:
+is data-dependent. Here `f(a)` ends up linear in `a` along
+whichever branch ran, so $f'(a) = f(a) / a$:
 
 @autograd-gradients-and-python-control-flow-3
 :::

@@ -900,7 +900,7 @@ Tensors provide a variety of functionalities including construction routines; in
 
 <!-- slides -->
 
-::: {.slide title="What's a tensor?"}
+::: {.slide}
 A **tensor** is an *n*-dimensional array of numbers — the
 fundamental data structure for everything that follows in this book.
 
@@ -947,14 +947,15 @@ only the **stride metadata** changes.
 :::
 
 ::: {.slide title="Constants"}
-Need a tensor of all zeros or all ones? The shape is a tuple — it
-can be any rank.
+Need a tensor of all zeros or all ones? The shape is a tuple — any
+rank, any size:
 
 @ndarray-getting-started-6
 
-. . .
-
-@ndarray-getting-started-7
+`ones(...)`, `full(shape, value)`, and `eye(n)` (identity matrix)
+follow the same pattern. The framework also has `empty` (uninitialized,
+fastest) and `zeros_like(x)` / `ones_like(x)` to match an existing
+tensor's shape.
 :::
 
 ::: {.slide title="Random initialization"}

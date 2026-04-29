@@ -277,39 +277,32 @@ $code-block-padding:     0.55em 0.8em;
 // ── Floating logo / "back to index" ──────────────────────
 .d2l-logo {
   position: fixed;
-  top: 14px;
-  right: 18px;
+  top: 16px;
+  right: 22px;
   z-index: 100;
   display: block;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(4px);
-  border: 1px solid $line;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: background 0.15s, border-color 0.15s,
-              box-shadow 0.15s, transform 0.15s;
-  border-bottom: 1px solid $line;  // override .reveal a underline rule
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transition: opacity 0.15s, transform 0.15s;
+  opacity: 0.85;
 }
 .d2l-logo:hover {
-  background: white;
-  border-color: $blue-light;
-  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.18);
+  opacity: 1;
   transform: translateY(-1px);
 }
-.d2l-logo:focus { outline: 2px solid $blue; outline-offset: 2px; }
+.d2l-logo:focus { outline: 2px solid $blue; outline-offset: 4px; }
 .d2l-logo img {
   display: block;
-  height: 28px;
+  height: 56px;
   width: auto;
-  opacity: 0.95;
 }
+
+// Defeat reveal's `a { border-bottom }` rule for the logo link
 .reveal .d2l-logo,
-.reveal .d2l-logo:visited {
-  // Don't pick up reveal's link styles
-  border-bottom: 1px solid $line;
-}
-.reveal .d2l-logo:hover { border-bottom-color: $blue-light; }
+.reveal .d2l-logo:visited,
+.reveal .d2l-logo:hover { border-bottom: none; }
 
 @media print {
   .d2l-logo { display: none; }

@@ -900,157 +900,201 @@ Tensors provide a variety of functionalities including construction routines; in
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="What's a tensor?"}
+A **tensor** is an *n*-dimensional array of numbers — the
+fundamental data structure for everything that follows in this book.
 
-To start, we import the PyTorch library.
-Note that the package name is `torch`
+- Like a NumPy `ndarray`, but **GPU-accelerated** and
+  **differentiable**.
+- 1-D tensor → vector, 2-D → matrix, *n*-D → general tensor.
+- All four frameworks expose nearly identical tensor APIs.
+
+In this section: how to **create**, **reshape**, **index**,
+**operate on**, and **share memory with** tensors.
+:::
+
+::: {.slide title="Getting Started"}
+We need exactly one import. The package is named `torch`
+(historical baggage from the Lua-Torch lineage):
 
 @ndarray-getting-started-1
 
-:::
+. . .
 
-::: {.slide}
-
-A tensor represents a (possibly multidimensional) array of numerical values
+A 1-D tensor of `n` evenly spaced floats — our running example:
 
 @ndarray-getting-started-2
+:::
+
+::: {.slide title="Shape and size"}
+Two attributes you'll reach for constantly:
+
+- `.numel()` — the total number of elements
+- `.shape` — the size along each axis (a tuple)
 
 @ndarray-getting-started-3
 
-We can access a tensor's *shape*
-
 @ndarray-getting-started-4
-
 :::
 
-::: {.slide}
-
-change the shape of a tensor
-without altering its size or values
+::: {.slide title="Reshaping"}
+`reshape` rearranges the same elements into a different shape — the
+total `numel` is preserved.
 
 @ndarray-getting-started-5
 
+A 12-element vector becomes a $3\times 4$ matrix. No data is copied;
+only the **stride metadata** changes.
 :::
 
-::: {.slide}
-
-We can construct a tensor with all elements set to 0 or one
+::: {.slide title="Constants"}
+Need a tensor of all zeros or all ones? The shape is a tuple — it
+can be any rank.
 
 @ndarray-getting-started-6
 
-@ndarray-getting-started-7
+. . .
 
+@ndarray-getting-started-7
 :::
 
-::: {.slide}
-
-sample each element randomly (and independently)
+::: {.slide title="Random initialization"}
+Most neural-network weights start out **random**. `randn` draws
+from a standard normal $\mathcal{N}(0, 1)$:
 
 @ndarray-getting-started-8
 
+Each element is sampled **independently** — no correlations.
 :::
 
-::: {.slide}
-
-supplying the exact values for each element
+::: {.slide title="From a Python list"}
+For exact control, pass a (nested) list literal:
 
 @ndarray-getting-started-9
 
+The outer dim is rows, the inner is columns. Same convention as
+NumPy.
 :::
 
-::: {.slide}
+::: {.slide title="Reading"}
+Standard NumPy-style indexing:
 
-`[-1]` selects the last row and `[1:3]`
-selects the second and third rows
+- `X[-1]` — the **last row**
+- `X[1:3]` — rows **1 and 2** (3 is exclusive)
 
 @ndarray-indexing-and-slicing-1
+:::
 
-we can also *write* elements of a matrix by specifying indices
+::: {.slide title="Writing"}
+Assignment works the same way:
 
 @ndarray-indexing-and-slicing-2
 
-:::
+. . .
 
-::: {.slide}
-
-to assign multiple elements the same value,
-we apply the indexing on the left-hand side 
-of the assignment operation
+A slice on the **left** sets multiple elements at once:
 
 @ndarray-indexing-and-slicing-3
+:::
+
+::: {.slide title="Elementwise"}
+Most common math is applied **elementwise** — same shape in,
+same shape out.
 
 @ndarray-operations-1
 
-@ndarray-operations-2
+. . .
 
+The arithmetic operators are overloaded — `+`, `-`, `*`, `/`, `**`
+all run elementwise:
+
+@ndarray-operations-2
 :::
 
-::: {.slide}
+::: {.slide title="Concatenation"}
+`cat` glues tensors along an existing axis. Pick the axis with `dim`:
 
-*concatenate* multiple tensors
+- `dim=0` → stack rows (more rows out)
+- `dim=1` → stack columns (wider matrix out)
 
 @ndarray-operations-3
-
 :::
 
-::: {.slide}
-
-construct a binary tensor via *logical statements*
+::: {.slide title="Logical operations"}
+Comparison operators broadcast and return a **boolean tensor** of
+the same shape:
 
 @ndarray-operations-4
 
+Useful for masking — selecting or zeroing entries that satisfy a
+condition.
 :::
 
-::: {.slide}
-
-Summing all the elements in the tensor
+::: {.slide title="Reductions"}
+`sum`, `mean`, `max`, … collapse one or more axes. Without a `dim`
+argument, the entire tensor is reduced to a scalar:
 
 @ndarray-operations-5
-
 :::
 
-::: {.slide}
+::: {.slide title="Broadcasting" layout="2col"}
+When tensors of different shapes meet, the smaller one is
+**virtually expanded** along missing dimensions — no data copy.
 
-perform elementwise binary operations
-by invoking the *broadcasting mechanism*
+The rule: dimensions of size 1 stretch; everything else must match.
 
 @ndarray-broadcasting-1
 
+. . .
+
 @ndarray-broadcasting-2
 
+A $3\times 1$ + $1\times 2$ becomes a $3\times 2$ matrix.
 :::
 
-::: {.slide}
-
-Running operations can cause new memory to be
-allocated to host results
+::: {.slide title="The hidden cost of `Y = Y + X`"}
+Every assignment of an arithmetic expression **allocates a new
+tensor**. Matters a lot when `Y` is gigabytes:
 
 @ndarray-saving-memory-1
 
-performing in-place operations
+`id(Y) == before` is `False`: `Y` now points at a brand-new buffer.
+:::
+
+::: {.slide title="In-place operations"}
+Pre-allocate the output and write into it with `Z[:] = ...`:
 
 @ndarray-saving-memory-2
 
-:::
+. . .
 
-::: {.slide}
-
-If the value of `X` is not reused in subsequent computations,
-we can also use `X[:] = X + Y` or `X += Y`
-to reduce the memory overhead of the operation
+If the original value of `X` isn't needed afterward, the most
+ergonomic forms are `X[:] = X + Y` or `X += Y`:
 
 @ndarray-saving-memory-3
-
 :::
 
-::: {.slide}
-
-Converting to a NumPy tensor (`ndarray`) Converting to a NumPy tensor (`ndarray`)
+::: {.slide title="NumPy round-trip"}
+Pytorch tensors and NumPy arrays often **share storage** — converting
+both ways is cheap:
 
 @ndarray-conversion-to-other-python-objects-1
 
-convert a size-1 tensor to a Python scalar
+. . .
+
+A size-1 tensor unwraps to a Python scalar with `.item()`,
+`float(x)`, or `int(x)`:
 
 @ndarray-conversion-to-other-python-objects-2
+:::
 
+::: {.slide title="Recap"}
+- `arange / zeros / ones / randn / tensor(list)` — create.
+- `.shape`, `.numel()`, `reshape` — inspect / reorganize.
+- `[i, j]`, `[a:b, c:d]` — read and write slices.
+- `+ - * / **`, `cat`, `==`, `sum` — element-wise ops, joins,
+  comparisons, reductions.
+- **Broadcasting** stretches mismatched shapes; **in-place** ops
+  avoid copying for large tensors.
+- `.numpy()` / `.item()` — leave the tensor world.
 :::

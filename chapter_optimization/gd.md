@@ -392,31 +392,150 @@ This algorithm converges rapidly (for an analysis and proof see e.g., :citet:`Bo
 <!-- slides -->
 
 ::: {.slide}
+Plain gradient descent is rarely used in deep learning —
+SGD and its descendants do the work — but every issue
+those algorithms encounter shows up here first, in cleaner
+form. Learning-rate sensitivity, divergence, local minima,
+poor conditioning, second-order corrections (Newton): all
+of it.
+
+The rule:
+
+$$x \leftarrow x - \eta \nabla f(x).$$
+
+The first-order Taylor expansion shows that for small enough
+$\eta > 0$,
+
+$$f(x - \eta f'(x)) \approx f(x) - \eta f'(x)^2 \le f(x).$$
+
+— moving along $-\nabla f$ decreases $f$, locally. The art is
+picking $\eta$.
+:::
+
+::: {.slide title="1D demo: $f(x) = x^2$"}
+Setup and define $f$, $f'$:
 
 @gd-one-dimensional-gradient-descent-1
 
+. . .
+
 @gd-one-dimensional-gradient-descent-2
+:::
+
+::: {.slide title="GD iteration"}
+Start at $x = 10$, $\eta = 0.2$, 10 steps. Converges to 0:
 
 @gd-one-dimensional-gradient-descent-3
 
+. . .
+
 @gd-one-dimensional-gradient-descent-4
+
+. . .
+
+@!gd-one-dimensional-gradient-descent-4
+:::
+
+::: {.slide title="Learning rate too small"}
+$\eta = 0.05$: takes forever to converge:
 
 @gd-learning-rate-1
 
+. . .
+
+@!gd-learning-rate-1
+:::
+
+::: {.slide title="Learning rate too big"}
+$\eta = 1.1$: the $\mathcal{O}(\eta^2 f'^2)$ Taylor remainder
+dominates and the iterates diverge:
+
 @gd-learning-rate-2
+
+. . .
+
+@!gd-learning-rate-2
+:::
+
+::: {.slide title="Non-convex: trapped in a local min"}
+$f(x) = x \cos(cx)$ has infinitely many local minima. Even
+with a moderately large learning rate, GD ends up in
+whichever basin it falls into:
 
 @gd-local-minima
 
+. . .
+
+@!gd-local-minima
+:::
+
+::: {.slide title="Multivariate GD"}
+Same rule on vectors:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
+
+Demo on $f(x_1, x_2) = x_1^2 + 2 x_2^2$ — anisotropic,
+$x_2$ direction is steeper:
+
 @gd-multivariate-gradient-descent-1
+
+. . .
 
 @gd-multivariate-gradient-descent-2
 
+. . .
+
 @gd-multivariate-gradient-descent-3
+
+. . .
+
+@!gd-multivariate-gradient-descent-3
+:::
+
+::: {.slide title="Newton's method: second-order"}
+Use the Hessian to set the step size automatically. From
+the second-order Taylor expansion:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f(\mathbf{x})]^{-1} \nabla f(\mathbf{x}).$$
+
+For $f(x) = (\cosh(cx))^2$, one Newton step finds the
+minimum:
 
 @gd-newton-s-method-1
 
+. . .
+
+@!gd-newton-s-method-1
+:::
+
+::: {.slide title="Newton fails on non-convex"}
+$f(x) = x \cos(cx)$: Newton happily steps to a *maximum* if
+that's where the second-order model points. Without
+positive-definite Hessian (i.e. local convexity), Newton
+breaks:
+
 @gd-newton-s-method-2
+
+. . .
+
+@!gd-newton-s-method-2
+
+. . .
 
 @gd-newton-s-method-3
 
+. . .
+
+@!gd-newton-s-method-3
+:::
+
+::: {.slide title="Recap"}
+- GD update: $x \leftarrow x - \eta \nabla f(x)$.
+- Learning rate too small → slow; too large → diverge.
+- Local minima trap plain GD on non-convex objectives.
+- Newton uses the Hessian as a preconditioner — fast on
+  well-conditioned convex problems, unsafe elsewhere.
+- For deep learning, the Hessian is too big to invert; we
+  build cheap *adaptive* preconditioners instead — Adagrad,
+  RMSProp, Adam, all coming up.
 :::

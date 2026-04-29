@@ -261,19 +261,102 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 <!-- slides -->
 
 ::: {.slide}
+Deep learning models are trained by minimizing a loss
+function — but **optimization** and **deep learning** are
+not the same problem. Optimization minimizes the *training*
+loss; deep learning cares about the *generalization* loss.
+
+Three challenges that make this hard:
+
+- **Local minima** — gradient descent stalls at points
+  that aren't globally best.
+- **Saddle points** — zero gradient, neither min nor max.
+  In high-dimensional problems they're far more common
+  than local minima.
+- **Vanishing gradients** — flat regions where progress
+  becomes essentially zero, e.g. $\tanh$ near the
+  saturation regions.
+
+This chapter walks through GD, SGD, and the modern
+adaptive optimizers (momentum, Adagrad, RMSProp, Adadelta,
+Adam) plus learning-rate schedules.
+:::
+
+::: {.slide title="Empirical risk vs. risk"}
+Setup the modules and define a smooth risk `f` and a
+noisier empirical risk `g` (training loss):
 
 @optimization-intro-goal-of-optimization-1
 
+. . .
+
 @optimization-intro-goal-of-optimization-2
+
+. . .
+
+The minimum of empirical risk on the training set is at a
+*different* location from the minimum of the population
+risk. Optimizing one doesn't optimize the other:
 
 @optimization-intro-goal-of-optimization-3
 
+. . .
+
+@!optimization-intro-goal-of-optimization-3
+:::
+
+::: {.slide title="Local minima"}
+$f(x) = x \cos(\pi x)$ has multiple basins. Gradient descent
+stalls at the first one it falls into; only noise (e.g., SGD
+minibatch variance) can knock it out:
+
 @optimization-intro-local-minima
+
+. . .
+
+@!optimization-intro-local-minima
+:::
+
+::: {.slide title="Saddle points"}
+1D — $f(x) = x^3$ has $f'(0) = 0$ but it's not a min:
 
 @optimization-intro-saddle-points-1
 
+. . .
+
+In high dim, with a Hessian of mixed signs, you get the
+classic saddle shape. *Most* zero-gradient points in deep
+learning are saddles, not minima — random Hessian
+eigenvalues are unlikely to all share a sign:
+
 @optimization-intro-saddle-points-2
+
+. . .
+
+@!optimization-intro-saddle-points-2
+:::
+
+::: {.slide title="Vanishing gradients"}
+$f(x) = \tanh(x)$ at $x = 4$: $f'(4) \approx 0.0013$.
+Gradient descent makes essentially no progress here. ReLU
+fixed this for activation functions; layer norm and residual
+connections fix it across deep networks.
 
 @optimization-intro-vanishing-gradients
 
+. . .
+
+@!optimization-intro-vanishing-gradients
+:::
+
+::: {.slide title="Recap"}
+- Minimizing training loss ≠ minimizing test loss; that
+  gap is what generalization is about.
+- High-dim non-convex landscapes have many local minima
+  and many more saddle points; vanishing gradients add a
+  third stall mode.
+- The good news: you don't need *the* global optimum —
+  approximate solutions found by SGD-class methods work
+  well in practice. The rest of the chapter is the
+  algorithmic toolkit.
 :::

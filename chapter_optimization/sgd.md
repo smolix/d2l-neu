@@ -324,17 +324,89 @@ Sampling with replacement leads to an increased variance and decreased data effi
 <!-- slides -->
 
 ::: {.slide}
+The deep-learning loss is an *average*:
+
+$$f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^{n} f_i(\mathbf{x}).$$
+
+A full gradient $\nabla f$ costs $\mathcal{O}(n)$ per step.
+On a million-example dataset, that's a million forward
+passes per parameter update.
+
+**Stochastic gradient descent** picks a random example $i$
+and steps with $\nabla f_i$ — $\mathcal{O}(1)$ per step,
+unbiased estimator of the true gradient
+($\mathbb{E}_i \nabla f_i = \nabla f$). Update:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}).$$
+
+The price: noisy gradients. The noise blurs the descent
+trajectory but also helps escape narrow local minima — a
+double-edged property that this whole chapter unpacks.
 
 @sgd-stochastic-gradient-descent
+:::
+
+::: {.slide title="Simulating SGD"}
+We don't actually need a dataset. Take the same anisotropic
+$f(x_1, x_2) = x_1^2 + 2x_2^2$ from the GD section, add
+$\mathcal{N}(0, 1)$ noise to each gradient component, and
+watch how the trajectory differs:
 
 @sgd-stochastic-gradient-updates-1
 
+. . .
+
 @sgd-stochastic-gradient-updates-2
+:::
+
+::: {.slide title="SGD trajectory"}
+With constant learning rate, SGD oscillates around the
+minimum forever — the variance of the noise sets a floor
+on how close it gets:
 
 @sgd-stochastic-gradient-updates-3
 
+. . .
+
+@!sgd-stochastic-gradient-updates-3
+:::
+
+::: {.slide title="Why decaying learning rate"}
+The fix: decay $\eta$ over time. Common schedules:
+
+- **Inverse**: $\eta_t = \eta_0 / (1 + \beta t)$
+- **Polynomial**: $\eta_t = \eta_0 (1 + \beta t)^{-\alpha}$,
+  $\alpha \in (0.5, 1)$
+- **Exponential**: $\eta_t = \eta_0 \cdot \alpha^t$,
+  $0 < \alpha < 1$
+- **Piecewise constant**: drop by 10× every $K$ epochs
+
+Constant learning rate ⇒ $\mathcal{O}(\eta)$ noise floor;
+decaying schedule ⇒ converges to the minimum.
+
 @sgd-dynamic-learning-rate-1
+:::
+
+::: {.slide title="Decay schedule comparison"}
+Run the same SGD with an exponential decay schedule —
+trajectory tightens around the minimum as $\eta_t \to 0$:
 
 @sgd-dynamic-learning-rate-2
 
+. . .
+
+@!sgd-dynamic-learning-rate-2
+:::
+
+::: {.slide title="Recap"}
+- SGD: $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x})$
+  with random $i$. Unbiased; $\mathcal{O}(1)$/step instead of
+  $\mathcal{O}(n)$.
+- Constant $\eta$: bounces around the minimum forever.
+- Decay schedules ($1/t$, polynomial, exponential, step)
+  give convergence in expectation; the right schedule
+  depends on the problem.
+- Noise is sometimes a feature: knocks parameters out of
+  narrow local basins. Minibatch SGD (next) tames the
+  variance with a bit of averaging.
 :::

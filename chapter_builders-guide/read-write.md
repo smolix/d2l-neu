@@ -368,39 +368,54 @@ Saving the architecture has to be done in code rather than in parameters.
 <!-- slides -->
 
 ::: {.slide}
-Two persistence problems we'll keep hitting:
+Two real problems training pipelines hit constantly:
 
-- **Checkpoint** the model mid-training (so a crash doesn't cost
-  you a day of compute).
-- **Save the trained model** for inference / sharing.
+- **Crash recovery** — a 12-hour training run dies in hour
+  9. Did we just lose 9 hours of compute?
+- **Deployment** — model trains on a research box; needs to
+  serve from a production cluster, possibly in a different
+  language or runtime.
 
-Two APIs solve both: `save` / `load` for tensors, and
-`state_dict()` for the model parameter dictionary. Architecture
-itself is **not** saved — recreate it in code, then load weights
-into the fresh instance.
+Both reduce to "save the parameters, recreate the model
+elsewhere". The crucial split:
+
+```
+   architecture  ──>  Python code  (committed to git)
+   parameters    ──>  on-disk file (the .pt / .ckpt / .safetensors)
+```
+
+You save the **state**, not the *class*. To resurrect: import
+the same class, instantiate, then `load_state_dict`. This
+section covers both halves of the workflow.
 :::
 
-::: {.slide title="Saving a tensor"}
+::: {.slide title="Saving and loading raw tensors"}
+First the building block: `torch.save` / `torch.load` work
+on any tensor, list of tensors, or dict thereof:
+
 @read-write-file-i-o
+
+. . .
 
 @read-write-loading-and-saving-tensors-1
 
 . . .
 
-`load` reads it back into memory. Use `weights_only=True` to
-sandbox-load arbitrary `.pt` files (since 2024 a hardening default):
-
 @read-write-loading-and-saving-tensors-2
+
+`weights_only=True` is the default since 2024 — pickle in
+PyTorch checkpoints can execute arbitrary code, so this
+sandboxes loading.
 :::
 
-::: {.slide title="Lists and dicts of tensors"}
-A list of tensors saves and loads as a single file:
+::: {.slide title="Containers of tensors"}
+Lists and dicts work the same — perfect for grouping
+related tensors together (e.g. weights of one block, plus
+its running statistics):
 
 @read-write-loading-and-saving-tensors-3
 
 . . .
-
-Same for dicts — useful for human-readable parameter buckets:
 
 @read-write-loading-and-saving-tensors-4
 :::
@@ -409,33 +424,65 @@ Same for dicts — useful for human-readable parameter buckets:
 @read-write-loading-and-saving-model-parameters-1
 :::
 
-::: {.slide title="`state_dict`"}
-Every `Module` exposes its parameters as an ordered dict. Save the
-dict, not the module — the architecture is in your **code**, not
-the file:
+::: {.slide title="state_dict() — the canonical interface"}
+Every `Module` exposes a `state_dict()` — an ordered dict
+mapping parameter *paths* to tensor values:
+
+```
+{
+  'hidden.weight':  Tensor (256, 20),
+  'hidden.bias':    Tensor (256,),
+  'output.weight':  Tensor (10, 256),
+  'output.bias':    Tensor (10,),
+}
+```
+
+The keys come from the module tree (`self.hidden` → `hidden`).
+Save this dict, not the module:
 
 @read-write-loading-and-saving-model-parameters-2
 :::
 
-::: {.slide title="Loading into a fresh instance"}
-Build a fresh model with the same architecture, then call
-`load_state_dict`:
+::: {.slide title="Loading: instantiate, then load"}
+Build a fresh model with the same Python class, then call
+`load_state_dict`. The dict's keys must match the new
+model's parameter paths:
 
 @read-write-loading-and-saving-model-parameters-3
 
 . . .
 
-Sanity check — same architecture + same weights = same outputs:
+Sanity check — same architecture + same weights produces
+bit-identical outputs:
 
 @read-write-loading-and-saving-model-parameters-4
 :::
 
+::: {.slide title="Best practices and gotchas"}
+- **Always save `state_dict`, not the module object.**
+  Saving the module pickles the Python class; if you
+  refactor, your old checkpoints stop loading.
+- **Keep the model class in your code repo.** The file is
+  useless without the matching architecture definition.
+- **Strict vs non-strict load**: `load_state_dict(d, strict=False)`
+  ignores missing/extra keys. Useful for partial loading
+  (e.g. swapping the head of a pretrained model).
+- **Modern alternative: safetensors** — same shape as
+  state_dict but without pickle, so no arbitrary-code-exec
+  risk. The HuggingFace standard.
+- **For full checkpoints**, save more than just weights:
+  `{'model': net.state_dict(), 'optimizer': opt.state_dict(),
+  'epoch': epoch, 'rng_state': torch.get_rng_state()}`.
+:::
+
 ::: {.slide title="Recap"}
-- `save` / `load` for arbitrary tensors / lists / dicts.
-- `state_dict()` exports the model's parameter dict; reload with
-  `load_state_dict`.
-- The **architecture** is recreated in Python; the **file** holds
-  weights only.
-- Always sanity-check that the reloaded model gives the same
-  output on a known input.
+- Save the **state**, recreate the **architecture** in code.
+- `torch.save` / `torch.load` for tensors and dicts;
+  `state_dict()` / `load_state_dict()` for modules.
+- Always sanity-check by running a known input through
+  before-and-after-load and comparing.
+- Production: HuggingFace `safetensors` for the no-pickle
+  story.
+- Full checkpoint: save model + optimizer + epoch + RNG
+  state, in one dict.
 :::

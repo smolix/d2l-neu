@@ -820,85 +820,128 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 <!-- slides -->
 
 ::: {.slide}
-Real models are made of **layers**, **blocks of layers**, and
-**custom logic**. The framework's `Module` (or `nn.Module` /
-`flax.linen.Module` / etc.) is the unifying abstraction:
+Modern networks aren't a flat stack of layers. ResNet-152
+has 152 conv layers, but they're organized into a handful
+of *repeating patterns*. Transformers stack 12, 24, 96
+identical *blocks*. Writing those one layer at a time
+would be miserable.
 
-- A **layer** is a `Module` (`Linear`, `ReLU`, `Conv2d`, …).
-- A **block** is a `Module` that holds other `Module`s.
-- A **whole model** is a `Module` that holds blocks.
+Frameworks introduce the **module** abstraction (called
+`nn.Module` in PyTorch, `flax.linen.Module` in JAX, etc.)
+to handle the recursion. A module can be:
 
-This chapter shows how to roll your own — `Sequential`, named
-sub-blocks, custom forward pass with arbitrary Python.
+- a single layer (`Linear`, `ReLU`, `Conv2d`),
+- a *block* that holds several layers,
+- the *whole model* that holds the blocks.
+
+All three are the same Python class. They compose
+recursively — that's the point.
+
+![Layers compose into modules; modules compose into models.](../img/blocks.svg){width=72%}
 :::
 
-::: {.slide title="Layers as Modules"}
-A Sequential MLP — three pre-built layers + glue:
+::: {.slide title="What every module must do"}
+The framework asks five things of every module:
+
+1. Take input via `forward(x)`.
+2. Return output (possibly a different shape).
+3. Compute gradients of output w.r.t. input (autograd
+   does this for free).
+4. Store and expose its parameters.
+5. Initialize them (or accept user init).
+
+Subclassing `nn.Module` and writing `__init__` + `forward`
+gets all of this. The base class supplies the bookkeeping —
+`parameters()`, `.to(device)`, `state_dict()`, recursive
+visitation of children — automatically.
+:::
+
+::: {.slide title="The simple way: nn.Sequential"}
+For a linear chain of layers, `nn.Sequential` does
+everything. Construct, call, done:
 
 @model-construction-layers-and-modules-1
 
+. . .
+
 @model-construction-layers-and-modules-2
+
+`Sequential` *is* a module. Internally it stores its
+children in a list and the `forward` walks them in order.
+"List of layers, run them in sequence" — that's all.
 :::
 
-::: {.slide title="A custom Module"}
-The same MLP, hand-rolled. Subclass `nn.Module`, register layers
-in `__init__`, define `forward`:
+::: {.slide title="Hand-rolled MLP module"}
+`Sequential` is good when the topology is a chain. For
+anything else, define your own subclass. The pattern: name
+sub-modules in `__init__`, write `forward` to use them:
 
 @model-construction-a-custom-module-1
 
-. . .
+The two attributes `self.hidden` and `self.out` aren't
+ordinary fields — assigning a `Module` to a `Module`
+attribute *registers* it as a child. From this moment on:
 
-@model-construction-a-custom-module-2
+- `net.parameters()` includes both layers' weights/biases.
+- `net.to('cuda')` moves both to GPU.
+- `net.state_dict()` gives a flat dict of every parameter.
 
-What `Sequential` hides: parameter registration, the call
-protocol, and a `forward` that walks layers in order.
+Total user code: ~6 lines.
 :::
 
-::: {.slide title="Rolling our own Sequential"}
-A 10-line clone of `nn.Sequential`. The only trick is using a
-plain dict to register children so each becomes a tracked
-sub-module:
+::: {.slide title="Building a Sequential ourselves"}
+What does `nn.Sequential` actually do? Almost nothing — its
+implementation in 4 lines:
 
 @model-construction-the-sequential-module-1
 
 . . .
 
+Plug it in and the API is identical to the framework's:
+
 @model-construction-the-sequential-module-2
 
-Identical interface to the framework version.
+The "magic" is just using `add_module()` so children get
+registered, then a `for` loop in `forward`.
 :::
 
-::: {.slide title="Arbitrary Python in `forward`"}
-`forward` is just Python — you can run loops, control flow, and
-ops with **non-trainable** constants:
+::: {.slide title="`forward` is just Python"}
+This is the **superpower** of the module abstraction:
+`forward` is normal Python. Use loops, conditionals,
+random tensors, anything you'd write in numpy:
 
 @model-construction-executing-code-in-the-forward-propagation-method-1
 
-. . .
+The `while` loop, the fixed `rand_weight`, even reusing
+`self.linear` *twice* (parameter sharing!) all work, and
+all flow gradients correctly:
 
 @model-construction-executing-code-in-the-forward-propagation-method-2
-
-The `while` loop and the random-but-fixed weight matrix are still
-fully autograd-compatible.
 :::
 
-::: {.slide title="Composition"}
-Modules **nest**. A custom block can hold a `Sequential` which
-holds layers which hold parameters — to arbitrary depth:
+::: {.slide title="Composition: modules all the way down"}
+Modules nest to any depth. A `NestMLP` holds a
+`Sequential`; a top-level `Sequential` holds a `NestMLP` +
+a `Linear` + a `FixedHiddenMLP`:
 
 @model-construction-executing-code-in-the-forward-propagation-method-3
 
-The framework walks the tree to register all parameters and to
-move them to a device when you call `.to(device)`.
+The framework recursively walks this tree to find every
+parameter. Every modern architecture is built this way:
+ResNet = blocks of ResBlocks of conv+BN+ReLU. Transformer
+= blocks of attention+FFN. Same recursion every time.
 :::
 
 ::: {.slide title="Recap"}
-- `Module` is the universal building block: layer / block / model
-  all the same type.
-- Three ways to compose: `Sequential` for linear chains, a custom
-  subclass for arbitrary forward logic, and **nesting** to mix.
-- Children registered in `__init__` are picked up automatically by
-  `parameters()`, `.to(device)`, `state_dict()`, etc.
-- `forward` is regular Python — loops, conditionals, fixed
-  constants are all fine.
+- A **module** is one Python class that represents a
+  layer, a block, *or* a whole model.
+- Children assigned to attributes are auto-registered for
+  parameter tracking, device placement, serialization.
+- `Sequential` is a 4-line module that runs children in
+  order; for arbitrary topologies, subclass and write
+  `forward`.
+- `forward` is plain Python — control flow, parameter
+  sharing, fixed buffers all welcome.
+- Modules compose recursively; that recursion is what
+  lets ResNet-152 be 50 lines instead of 5000.
 :::

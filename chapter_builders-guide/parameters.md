@@ -378,73 +378,121 @@ We have several ways of accessing and tying model parameters.
 <!-- slides -->
 
 ::: {.slide}
-Once a model is built, you'll want to **inspect, share, and
-manipulate** its parameters:
+Training is just one thing you do with parameters. There's
+also:
 
-- Read individual tensors (`weight`, `bias`).
-- Iterate over **everything** (for saving, applying weight decay,
-  custom optimizers).
-- **Tie** parameters across layers (encoder/decoder sharing,
-  weight tying in language models).
+- **Inspection** — debugging a network, sanity-checking
+  initialization, looking at learned features.
+- **Iteration** — every optimizer needs all parameters;
+  weight decay needs them; checkpointing needs them.
+- **Sharing** ("tying") — encoder/decoder weights in
+  autoencoders, input/output embeddings in language
+  models.
 
-This chapter is the API tour.
+This deck is the API tour. The mental model: a module is a
+**tree**, parameters live at the leaves, and the framework
+gives you both leaf access and recursive traversal.
+:::
+
+::: {.slide title="The parameter tree"}
+A nested module is just a tree. Each module is a node;
+each parameter is a leaf:
+
+```
+net  (Sequential)
+├─ 0: Linear      ├─ weight  (8, 4)
+│                 └─ bias    (8,)
+├─ 1: ReLU         (no params)
+└─ 2: Linear      ├─ weight  (1, 8)
+                  └─ bias    (1,)
+```
+
+Two access patterns:
+
+- **By path**: `net[2].weight` — direct.
+- **By traversal**: walk the tree, yield every leaf.
+
+Frameworks give you both, plus serialization built on the
+same traversal.
 :::
 
 ::: {.slide title="A toy model"}
-A two-layer MLP — small enough to look at every parameter:
-
 @parameters-parameter-management-1
+
+. . .
 
 @parameters-parameter-management-2
 :::
 
-::: {.slide title="Bulk access: `state_dict`"}
-`state_dict()` returns an ordered mapping of names → tensors —
-the canonical "what does this layer hold?" view:
+::: {.slide title="Direct access"}
+Index into a `Sequential` like a list; each layer exposes
+its parameters as attributes:
 
 @parameters-parameter-access
+
+Two parameters per `Linear` layer — weight matrix and bias
+vector. The output object is a `Parameter` (PyTorch) or
+similar wrapper that carries the tensor + gradient + extra
+metadata.
 :::
 
-::: {.slide title="Per-tensor access"}
-Layers expose `weight` and `bias` directly. The `.data` field
-unwraps the parameter to a plain tensor for inspection:
+::: {.slide title="Tensor inside the parameter"}
+`.data` (PyTorch) unwraps the parameter to a plain tensor
+for inspection:
 
 @parameters-targeted-parameters-1
 
 . . .
 
-`.grad` holds the gradient buffer — `None` until you've called
-`backward()`:
+`.grad` is the gradient buffer — populated by `backward()`,
+otherwise `None`. Useful for custom optimizers or
+diagnosing dead neurons:
 
 @parameters-targeted-parameters-2
 :::
 
-::: {.slide title="Iterating all parameters"}
-`named_parameters()` walks the **whole tree** of nested modules:
+::: {.slide title="Recursive traversal"}
+For everything-at-once, use `named_parameters()`. It walks
+the whole tree and yields `(name, param)` pairs at the
+leaves — names use dotted paths through the nesting:
 
 @parameters-all-parameters-at-once
 
-This is what `optim.SGD(net.parameters(), …)` consumes; same
-iteration powers checkpoint save/load.
+This is the iterator `optim.SGD(net.parameters(), …)`
+consumes. It's also what gets pickled when you save a
+checkpoint with `state_dict()`. Walk-tree-once, use
+many ways.
 :::
 
-::: {.slide title="Tied parameters"}
-Sometimes you want layers to **share weights** — encoder/decoder
-in autoencoders, input/output embedding tying in language models:
+::: {.slide title="Parameter tying"}
+Reuse the *same* module instance at multiple positions in
+your architecture, and the framework treats them as one
+parameter set — same memory, gradients accumulate across
+uses.
+
+Common cases:
+
+- **Tied embeddings**: input embedding and output softmax
+  projection in a language model share weights — saves
+  $|V| \cdot d$ parameters.
+- **Autoencoders**: decoder uses transposed encoder
+  weights.
+- **Recurrent layers**: same kernel applied at every time
+  step (the original tying mechanism).
 
 @parameters-tied-parameters
 
-Reuse the **same module instance** twice in the architecture and
-the framework treats it as one parameter — gradients accumulate
-across both uses.
+Modify `net[2].weight` and `net[4].weight` reflects the
+same change — they *are* the same tensor, not just equal.
 :::
 
 ::: {.slide title="Recap"}
-- `state_dict()` for the bulk view, `layer.weight` / `layer.bias`
-  for individual tensors, `.grad` for the gradient buffer.
-- `named_parameters()` walks every leaf parameter in a nested
-  model — use it for optimizers, weight decay scheduling,
-  printing.
-- **Tying** parameters = reuse the same module instance — one
-  buffer, gradients accumulate.
+- A module is a tree; parameters live at the leaves.
+- Direct access: `net[i].weight`, `.bias`, `.grad`.
+- Recursive traversal: `named_parameters()` /
+  `state_dict()` walks the whole tree.
+- Same iterator powers optimizers, weight decay,
+  checkpointing.
+- Tied parameters = reuse the same module instance —
+  gradients accumulate; one buffer in memory.
 :::

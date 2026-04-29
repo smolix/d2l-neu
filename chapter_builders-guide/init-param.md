@@ -424,65 +424,133 @@ Look up the online documentation for more built-in initializers.
 <!-- slides -->
 
 ::: {.slide}
-Frameworks ship with reasonable initializers (Kaiming for
-PyTorch, Glorot for TensorFlow, …) — this chapter shows how to
-**override** them when you want to:
+Initialization isn't cosmetic — it determines whether a deep
+network trains *at all*.
 
-- A **built-in initializer** (Normal, Xavier, constant) applied
-  to every layer.
-- **Different** initializers for different sub-blocks.
-- **Hand-written** initialization for special cases.
+Set every weight to zero: every neuron in a layer computes
+the same thing, gets the same gradient, never differentiates
+("symmetry breaking" fails). Set them too large: activations
+blow up. Too small: activations vanish through the layers and
+gradients with them.
 
-The pattern is universal: walk the module tree, apply a function
-to each leaf.
+The fix is principled: choose the scale so signal variance
+stays roughly constant from layer to layer. **Xavier** for
+sigmoid/tanh, **Kaiming/He** for ReLU. Frameworks default to
+one of these for every standard layer.
+
+This deck shows the math and the API for overriding it.
 :::
 
-::: {.slide title="A toy net"}
+::: {.slide title="Why scale matters"}
+Consider $y = Wx$ with $W \in \mathbb{R}^{n_{\text{out}} \times n_{\text{in}}}$
+and i.i.d. zero-mean $x_i$ with variance $\sigma_x^2$. If
+weights are zero-mean variance $\sigma_w^2$:
+
+$$\text{Var}(y_i) = n_{\text{in}} \cdot \sigma_w^2 \cdot \sigma_x^2.$$
+
+Stack $L$ such layers and signal variance scales by
+$(n_{\text{in}} \sigma_w^2)^L$. To keep it stable across depth:
+
+- **Xavier (Glorot 2010)** — set
+  $\sigma_w^2 = \frac{2}{n_{\text{in}} + n_{\text{out}}}$.
+  Balances forward variance and backward gradient variance.
+  Designed for $\tanh$ / sigmoid.
+- **Kaiming/He (2015)** — set
+  $\sigma_w^2 = \frac{2}{n_{\text{in}}}$.
+  Compensates for ReLU killing half the signal. Default for
+  modern CNNs / Transformers.
+
+Bias usually starts at 0.
+:::
+
+::: {.slide title="The framework defaults"}
+Each framework picks one of these by default:
+
+| Framework | Default for `Linear`/`Dense` |
+|---|---|
+| PyTorch | Kaiming-uniform on weight; uniform $\pm 1/\sqrt{\text{fan-in}}$ on bias |
+| Flax (JAX) | LeCun-normal (~Kaiming for $\tanh$) |
+| Keras (TF) | Glorot-uniform |
+| MXNet | Uniform $\pm 0.07$ (legacy; you should override) |
+
+Bottom line: every modern framework picks something
+fan-in/fan-out aware. You can usually leave it alone.
+Override when you need a non-standard scheme.
+:::
+
+::: {.slide title="Setup"}
 @init-param-parameter-initialization-1
+
+. . .
 
 @init-param-parameter-initialization-2
 :::
 
-::: {.slide title="Built-in initializers"}
-`net.apply(fn)` walks every submodule, calling `fn(module)`.
-A small Gaussian for `weight`, zero for `bias`:
+::: {.slide title="The universal pattern: net.apply(fn)"}
+Override the default by walking the module tree and applying
+an initializer to each leaf module. PyTorch: `net.apply(fn)`
+calls `fn(module)` recursively for every submodule:
 
 @init-param-built-in-initialization-1
 
 . . .
 
-Constants work the same way (rarely useful in practice — kills
-symmetry-breaking — but illustrative):
+Constants are an anti-pattern (kills symmetry-breaking) but
+illustrate the API:
 
 @init-param-built-in-initialization-2
 :::
 
-::: {.slide title="Per-block initialization"}
-Different sub-blocks can take different initializers — Xavier for
-the first layer, constant for the second:
+::: {.slide title="Different scheme per layer"}
+Dispatch on layer type or layer index — Xavier for the first
+linear, constant 42 for the second:
 
 @init-param-built-in-initialization-3
+
+The pattern: take a `(name, module)` tuple, decide what to do.
+Same machinery used for freezing layers (`requires_grad =
+False`), discriminative learning rates, and BERT-style "warm
+up the head, not the backbone".
 :::
 
 ::: {.slide title="Custom initialization"}
-For unusual schemes, write your own. Here we sample from a heavy-
-tailed distribution and zero out small values:
+For non-standard schemes, write the init function yourself.
+Here a heavy-tailed sample with thresholding:
+
+$$w \sim U(-10, 10),\quad w \leftarrow w \cdot \mathbb{1}_{|w| \ge 5}.$$
 
 @init-param-custom-initialization-1
 
 . . .
 
-You can also poke at parameters directly — useful for
-post-hoc tweaks (loading, surgery, fine-tuning):
+For one-off surgery — loading specific weights, replacing a
+single layer's tensor — assign to `.data` directly:
 
 @init-param-custom-initialization-2
 :::
 
+::: {.slide title="When to override defaults"}
+Most of the time, don't. Cases where you should:
+
+- **Loading pretrained weights** — `load_state_dict` is the
+  ultimate "initialization" override.
+- **Custom layers** — you wrote a new layer with a different
+  variance budget, e.g. small-residual init that puts
+  ResBlocks at near-identity.
+- **Reproducibility / ablations** — comparing init schemes
+  systematically.
+- **Architecture-specific tricks** — e.g. zero-init the last
+  BN $\gamma$ in each ResNet block (FixUp / Skip-init).
+:::
+
 ::: {.slide title="Recap"}
-- `net.apply(init_fn)` is the universal pattern: walk every
-  submodule, dispatch on type, set `weight` / `bias`.
-- Frameworks default to a sensible scheme (Kaiming / Glorot) for
-  every standard layer — usually fine.
-- Override per-block when you need to; surgical direct access
-  (`layer.weight.data[…] = …`) for one-offs.
+- Init scale matters: set it so signal variance stays roughly
+  constant across depth.
+- **Xavier**: $\frac{2}{n_{in}+n_{out}}$ for $\tanh$/sigmoid.
+- **Kaiming/He**: $\frac{2}{n_{in}}$ for ReLU.
+- Framework defaults are sane; override via
+  `net.apply(init_fn)` and write per-type rules in the
+  function.
+- Direct `layer.weight.data[...] = ...` for one-off tensor
+  surgery.
 :::

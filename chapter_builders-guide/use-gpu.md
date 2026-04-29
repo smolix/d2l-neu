@@ -740,76 +740,95 @@ You can lose significant performance by moving data without care.
 <!-- slides -->
 
 ::: {.slide}
-GPUs are why deep learning works at modern scale. Two ground rules:
+GPUs are the reason modern deep learning works at scale. A
+single 4090 does ~80 TFLOPs of FP16 — about a thousand times
+faster than a CPU on the matmul-heavy ops convolutions and
+attention need.
 
-- **Tensors live on a device.** A tensor on the GPU and a tensor
-  on the CPU **cannot** be combined directly — copy one to the
-  other first.
-- **Model parameters live on a device.** Move the model to the
-  GPU **before** the first forward pass; the optimizer follows.
+The cost: every tensor and every parameter has a **device**.
+Mix devices in one operation and you crash:
 
-This chapter shows the API and the gotchas.
+```
+RuntimeError: Expected all tensors to be on the same device,
+but found at least two devices, cuda:0 and cpu!
+```
+
+The two rules of GPU programming with deep learning frameworks:
+
+- **Tensors live on a device.** Cross-device operations
+  require an explicit copy.
+- **Model parameters live on a device.** Move the model to
+  the GPU *before* training; the optimizer's state follows.
+
+Plus an unwritten third rule: cross-device copies are *slow*.
+Avoid them in the inner loop.
+
+![Add tensors from different devices: implicit copies are forbidden, you must copy explicitly.](../img/copyto.svg){width=72%}
 :::
 
-::: {.slide title="What's available?"}
-`nvidia-smi` from a notebook lists installed GPUs:
-
+::: {.slide title="What hardware do we have?"}
 @use-gpu-gpus
 
 . . .
 
-The framework's own probes — number of GPUs, current device:
-
 @use-gpu-computing-devices-1
+
+. . .
 
 @use-gpu-computing-devices-2
 :::
 
-::: {.slide title="Convenience helpers"}
-`try_gpu(i)` returns GPU `i` if it exists, else CPU. Lets the same
-code run on a workstation **and** a GPU box:
+::: {.slide title="Portable device handle"}
+`try_gpu(i)` returns GPU $i$ if it exists, else CPU. Same
+code runs on a laptop, a workstation, or a multi-GPU box —
+the device object swaps but the code stays the same:
 
 @use-gpu-computing-devices-3
 :::
 
-::: {.slide title="Tensors and devices"}
-Every tensor knows its device:
+::: {.slide title="Tensors carry a device"}
+Every tensor has a `.device` attribute:
 
 @use-gpu-tensors-and-gpus
 
 . . .
 
-Specify a device at creation time:
+Create directly on a device — avoids an unnecessary CPU →
+GPU copy:
 
 @use-gpu-storage-on-the-gpu-1
+
+. . .
 
 @use-gpu-storage-on-the-gpu-2
 :::
 
-::: {.slide title="Copying between devices"}
-Operations on tensors from **different** devices fail. Move one
-explicitly with `.cuda(i)` (or `.to(device)`):
+::: {.slide title="Cross-device math: copy, then operate"}
+Tensors on different devices can't be combined directly.
+The fix: explicit copy with `.cuda(i)` or `.to(device)`:
 
 @use-gpu-copying-1
 
 . . .
 
-Now both on GPU 1, the addition runs:
-
 @use-gpu-copying-2
 
 . . .
 
-`.cuda(i)` on a tensor already on GPU `i` is a **no-op** — no
-copy:
+`.cuda(i)` on a tensor already on GPU $i$ is a **no-op** —
+the framework checks first:
 
 @use-gpu-copying-3
 
-(Cross-device copies are slow; minimize them in the inner loop.)
+Why this matters: a `.to(device)` in your training inner
+loop adds a cudaMemcpy round trip that can dwarf the actual
+computation. Copy at the boundary; keep everything inside
+the loop on one device.
 :::
 
-::: {.slide title="Neural networks on the GPU"}
-Build the model, then move it:
+::: {.slide title="Models on the GPU"}
+The model is a tree of `Parameter` tensors. Move them all
+in one shot with `.to(device)`:
 
 @use-gpu-neural-networks-and-gpus-1
 
@@ -817,28 +836,58 @@ Build the model, then move it:
 
 @use-gpu-neural-networks-and-gpus-2
 
-Parameters are now stored on the GPU; subsequent forward passes
-expect input tensors on the same device:
+. . .
+
+After this, every input batch must also be on `device`
+before the forward pass:
 
 @use-gpu-neural-networks-and-gpus-3
 :::
 
-::: {.slide title="Hooking the Trainer to a GPU"}
-A small `Trainer` patch puts both the model and each batch on the
-right device:
+::: {.slide title="Where to put the device move"}
+The training-loop sweet spot:
+
+```
+device = try_gpu(0)
+model = MyModel().to(device)         # once, before training
+opt = SGD(model.parameters(), …)     # picks up device
+
+for batch in loader:
+    X, y = batch[0].to(device), batch[1].to(device)
+    # ... forward, loss, backward, step ...
+```
+
+The `Trainer` baseline does exactly this — patch
+`prepare_batch` to call `.to(device)` and `prepare_model` to
+move parameters once:
 
 @use-gpu-neural-networks-and-gpus-5
+:::
 
-Same training loop, just one extra `.to(device)` step.
+::: {.slide title="Common mistakes"}
+- **Forgetting one tensor.** Every tensor in the forward
+  pass has to be on the same device. Custom buffers are
+  the usual culprit — use `register_buffer` so they move
+  with `.to(device)`.
+- **Creating tensors with `torch.zeros((10,))` mid-forward**
+  defaults to CPU. Use `torch.zeros((10,), device=x.device)`
+  to follow the input.
+- **Optimizer set up before move.** Construct the optimizer
+  *after* `.to(device)` — otherwise its state lives on the
+  wrong side.
+- **`.numpy()` mid-loop forces a sync to CPU.** The
+  asynchronous CUDA stream stalls. Defer all conversions
+  to the end of the epoch.
 :::
 
 ::: {.slide title="Recap"}
-- Tensors and parameters carry a **device**; cross-device ops
-  require an explicit copy.
-- Move the model to the GPU **before** training, not during —
-  saves a deluge of `.to(device)` calls.
-- `try_gpu(i)` keeps code portable between CPU and multi-GPU
-  machines.
-- Cross-device copies are expensive — keep batches and parameters
-  on the same device for the inner loop.
+- Tensors and parameters carry a **device**; cross-device
+  operations require an explicit copy.
+- Move the model to the GPU **once**, before training; the
+  optimizer follows its parameters.
+- `try_gpu(i)` keeps code portable across hardware.
+- Cross-device copies are expensive — keep the inner loop
+  device-clean.
+- Use `register_buffer` so non-trainable state moves
+  alongside parameters.
 :::

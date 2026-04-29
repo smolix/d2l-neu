@@ -283,58 +283,102 @@ We can pass data through the model to make the framework finally initialize para
 <!-- slides -->
 
 ::: {.slide}
-A nuisance most frameworks now hide: telling each `Linear`
-layer how many **input** features it has, when those depend on
-the previous layer's **output**.
+You may have noticed something weird: we've been writing
+`nn.LazyLinear(256)` — saying *only* the output size, never
+the input size. How does the framework know the weight shape?
 
-**Lazy initialization** defers parameter creation until the first
-forward pass — at which point the framework has seen real data
-and knows the input shape. You declare:
+**Lazy initialization**: the framework defers parameter
+allocation until the first forward pass. At that point it
+has seen real data, so the input shape is known, and shapes
+propagate down the network.
 
-```python
-nn.LazyLinear(256)   # only num_outputs!
+```
+declare layer  -->  shapes UNKNOWN, no params yet
+       │
+       │  nn.LazyLinear(256)
+       ▼
+declare model  -->  same — placeholders
+       │
+       │  net = Sequential(...)
+       ▼
+forward(X)     -->  X.shape known → infer first layer
+       │              first layer output → second layer input
+       │              ... cascade through the model
+       ▼
+parameters allocated, model usable, optimizer can see them
 ```
 
-…and the in-features are inferred on the first call.
+In old frameworks you wrote `nn.Linear(in_features=20, out_features=256)`.
+Now you write `nn.LazyLinear(256)`. Less arithmetic, fewer
+bugs when you change architectures.
 :::
 
-::: {.slide title="An uninitialized model"}
-Build a Sequential of lazy layers:
+::: {.slide title="Why this matters more than it seems"}
+Hand-counting input dims is painful in real architectures:
 
+- A CNN's flattened feature map depends on the input image
+  size *and* every previous layer's stride/padding.
+- Adding a layer in the middle changes every following
+  layer's `in_features`.
+- Variable-length sequences (RNNs, Transformers) make
+  shapes data-dependent.
+
+Pre-lazy code was full of $16 \cdot 5 \cdot 5 = 400$
+"compute the flatten size by hand" comments. Lazy init
+removes that bookkeeping — declare *outputs*, let *inputs*
+come from data.
+:::
+
+::: {.slide title="Setup"}
 @lazy-init-lazy-initialization-1
-
-@lazy-init-lazy-initialization-2
 
 . . .
 
-The weight tensor is **not yet allocated**:
-
-@lazy-init-lazy-initialization-3
+@lazy-init-lazy-initialization-2
 :::
 
-::: {.slide title="One forward pass materializes parameters"}
-Push a real batch through — the framework now knows the shapes
-and creates the weight buffers:
+::: {.slide title="Before forward: no parameters yet"}
+Inspect the first layer's weight: it's a placeholder, not
+an allocated tensor:
+
+@lazy-init-lazy-initialization-3
+
+The framework has registered the *intent* to create a
+weight, but can't allocate one until it sees the input
+shape.
+:::
+
+::: {.slide title="One forward pass materializes everything"}
+Pass any tensor through. Now the framework knows
+`X.shape == (2, 20)` → first layer is `Linear(20, 256)` →
+second layer's input is 256 → second is `Linear(256, 10)`:
 
 @lazy-init-lazy-initialization-5
 
-After this, every layer has concrete `weight` and `bias` you can
-inspect, save, or initialize.
+After this, every layer has concrete `weight` and `bias`
+you can inspect, save, optimize.
 :::
 
-::: {.slide title="Hooking lazy init into the d2l scaffold"}
-Add a small `apply_init` to `d2l.Module` so a custom initializer
-runs on the first forward — same convenience the framework's
-default init uses:
+::: {.slide title="Tying lazy init to a custom initializer"}
+The trick combines naturally with custom init: do the
+forward to materialize, *then* run your initializer:
 
 @lazy-init-lazy-initialization-6
+
+This is what `d2l.Module.apply_init(...)` does behind the
+scenes. The same pattern works for loading pretrained
+weights, swapping random init for a curated one, etc.
 :::
 
 ::: {.slide title="Recap"}
-- **Lazy** layers defer parameter allocation until they see data.
-- Avoid hand-counting `in_features` in deep architectures.
-- All standard inspection / saving APIs work after one forward
-  pass; before that, parameters are placeholders.
-- Custom initializers fit naturally as a one-time hook on the
-  first forward.
+- Lazy init: declare layer outputs, let inputs come from
+  data.
+- Parameter buffers are allocated on the *first* forward
+  pass after seeing the input shape.
+- Saves you from hand-computing `in_features` for every
+  layer in deep / variable-shape architectures.
+- Combine with custom initialization by doing one dummy
+  forward, then `apply_init`.
+- Limitations: can't `optim.SGD(net.parameters())` until
+  parameters exist — pass data once first.
 :::

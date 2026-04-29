@@ -367,36 +367,48 @@ Layers can have local parameters, which can be created through built-in function
 <!-- slides -->
 
 ::: {.slide}
-The framework's built-in layers cover most needs — but
-occasionally you'll want a layer it **doesn't** have. Two cases:
+PyTorch's `torch.nn` has 100+ layer classes. Most networks
+you write will use them and nothing else.
 
-- **No parameters** — pure transforms (centering, normalizing,
-  custom slicing). One `forward`, done.
-- **With parameters** — your own `Linear`, custom kernels, etc.
-  Register tensors with `nn.Parameter` so they're tracked by the
-  optimizer.
+But occasionally — a new architecture, a custom loss
+combination, an unusual normalization — you want a layer
+the framework doesn't ship. The good news: writing one is
+trivial. Same `nn.Module` API as everywhere else.
 
-Either way it's a `Module` subclass and composes with everything
-else.
+Two flavors to cover:
+
+- **No parameters** — pure transforms (mean-centering, custom
+  slicing, gating). Just override `forward`.
+- **With parameters** — your own `Linear`, factorized weight
+  matrix, etc. Register tensors with `nn.Parameter` so the
+  optimizer can find them.
+
+In both cases the result composes naturally with built-in
+layers — `Sequential`, `parameters()`, `to(device)`,
+checkpointing all just work.
 :::
 
-::: {.slide title="Layer without parameters"}
-Centers each input by subtracting its mean. Stateless — no
-parameters to register:
+::: {.slide title="Stateless layer: a centering operator"}
+Subtract the row-wise mean from each input. Nothing to
+learn — pure transform:
 
 @custom-layer-custom-layers
+
+. . .
 
 @custom-layer-layers-without-parameters-1
 
 . . .
 
-Use it standalone:
+Standalone use:
 
 @custom-layer-layers-without-parameters-2
+
+The output mean is (numerically) zero — by construction.
 :::
 
-::: {.slide title="Composing with built-in layers"}
-A custom layer drops into `Sequential` like any built-in:
+::: {.slide title="Composes with built-ins"}
+Drop the custom layer into a `Sequential` like any other:
 
 @custom-layer-layers-without-parameters-3
 
@@ -404,13 +416,14 @@ A custom layer drops into `Sequential` like any built-in:
 
 @custom-layer-layers-without-parameters-4
 
-The mean of every output row is now (close to) zero by
-construction.
+The framework can't tell `CenteredLayer` apart from
+`Linear` or `ReLU` — they're all just `nn.Module`s.
 :::
 
-::: {.slide title="Layer with parameters"}
-Hand-roll a fully-connected layer. The trick is wrapping each
-weight tensor in `nn.Parameter` so it gets registered:
+::: {.slide title="Stateful layer: hand-rolled Linear"}
+Implement a fully-connected layer from scratch. The
+*one* important step: wrap learnable tensors in
+`nn.Parameter` so they're auto-registered for training:
 
 @custom-layer-layers-with-parameters-1
 
@@ -418,30 +431,54 @@ weight tensor in `nn.Parameter` so it gets registered:
 
 @custom-layer-layers-with-parameters-2
 
-`MyDense(5, 3)` now exposes 5×3 + 3 trainable params, picked up
-by `parameters()` automatically.
+After this, `linear = MyLinear(5, 3)` has:
+
+- `linear.weight` (5, 3) and `linear.bias` (3,) tracked
+  parameters.
+- `linear.parameters()` yields both.
+- `optim.SGD(linear.parameters(), …)` updates them.
+- `state_dict()` saves them.
+- `linear.to('cuda')` moves them.
+
+All for free, just by declaring `nn.Parameter` in
+`__init__`.
 :::
 
 ::: {.slide title="Test drive"}
-Forward pass on a random batch:
-
 @custom-layer-layers-with-parameters-3
 
 . . .
 
-Stack two of them — `Sequential` doesn't care which layers are
-hand-rolled vs built-in:
+Stack two `MyLinear`s — same `Sequential` plumbing as
+built-in layers:
 
 @custom-layer-layers-with-parameters-4
 :::
 
+::: {.slide title="When to write a custom layer"}
+Real-world cases that justify a custom layer:
+
+- **Novel architectural blocks** — gated linear units,
+  factorized weight matrices, low-rank parameterizations
+  (LoRA).
+- **Custom normalization** — group norm with non-standard
+  groups, layer-norm variants.
+- **Tied/shared weights with structure** — embedding +
+  output projection sharing in language models.
+- **Frozen "buffers"** — running statistics in BatchNorm,
+  position-specific masks. Use `register_buffer` for
+  non-trainable tensors that should still travel with
+  the module (saved, moved to GPU, etc.).
+:::
+
 ::: {.slide title="Recap"}
-- A custom layer is a `nn.Module` subclass with `forward()`.
-- Stateless layers: just compute. Stateful layers: wrap weight
-  tensors in `nn.Parameter`.
-- Custom layers compose with built-in ones — same
-  `parameters()`, `state_dict()`, `to(device)` plumbing applies.
-- Useful whenever the standard layer zoo doesn't cover the
-  forward pass you actually need (custom losses, attention
-  variants, weight tying, …).
+- Custom layer = `nn.Module` subclass with a `forward`.
+- Stateless: just override `forward`. Stateful: wrap
+  learnable tensors in `nn.Parameter`.
+- Use `register_buffer` for non-trainable state that
+  should still travel with the module.
+- Composes with built-in layers exactly the same as a
+  built-in. No special handling.
+- The escape hatch when the standard layer zoo doesn't
+  cover what you actually need.
 :::

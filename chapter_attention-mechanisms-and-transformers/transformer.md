@@ -1519,156 +1519,179 @@ transforms the representation at all the sequence positions using the same MLP.
 <!-- slides -->
 
 ::: {.slide}
+2017's *Attention is All You Need* paper threw out RNNs
+entirely and built sequence models from self-attention,
+positionwise MLPs, residuals, and layer norm. The result —
+the **Transformer** — is now the architecture for language,
+vision, speech, and beyond.
+
+This deck builds it bottom-up:
+
+- positionwise feed-forward network,
+- residual connection + layer norm ("Add & Norm"),
+- encoder block, encoder stack,
+- decoder block (with masked self-attention + cross-attention),
+- training and attention visualization on the En→Fr task.
 
 @transformer-the-transformer-architecture
-
 :::
 
-::: {.slide}
+::: {.slide title="The architecture"}
+Encoder: $N$ identical blocks, each = self-attention →
+Add & Norm → FFN → Add & Norm. Decoder: same, with a
+*masked* self-attention and an encoder-decoder
+cross-attention sublayer wedged in. Inputs go through
+embedding + positional encoding before the first block.
 
-Positionwise Feed-Forward Networks
+![The Transformer architecture.](../img/transformer.svg){width=42%}
+:::
+
+::: {.slide title="Positionwise FFN"}
+A two-layer MLP applied independently at every sequence
+position — same weights everywhere. Lets each position
+process its attention output through a nonlinear feature
+mixer:
 
 @transformer-positionwise-feed-forward-networks-1
 
-:::
+. . .
 
-::: {.slide}
-
-the innermost dimension
-of a tensor changes
+Shape check: rank-3 input, only the last dim changes:
 
 @transformer-positionwise-feed-forward-networks-2
-
 :::
 
-::: {.slide}
-
-compares the normalization across different dimensions
-by layer normalization and batch normalization
+::: {.slide title="LayerNorm vs BatchNorm"}
+BatchNorm normalizes across the batch — fragile with
+variable-length sequences and small batches. LayerNorm
+normalizes across the *feature* dimension of one example —
+batch-size and length independent. That's why NLP picked it.
 
 @transformer-residual-connection-and-layer-normalization-1
-
 :::
 
-::: {.slide}
-
-using a residual connection followed by layer normalization
+::: {.slide title="AddNorm"}
+The repeating motif: residual connection (`X + sublayer(X)`),
+dropout, then LayerNorm. Both inputs must have the same shape:
 
 @transformer-residual-connection-and-layer-normalization-2
 
-:::
-
-::: {.slide}
-
-the output tensor also has the same shape after the addition operation
+. . .
 
 @transformer-residual-connection-and-layer-normalization-3
-
 :::
 
-::: {.slide}
-
-a single layer within the encoder
+::: {.slide title="Encoder block"}
+One block = MultiHead self-attention → AddNorm → FFN →
+AddNorm. Shape in = shape out, so blocks stack without any
+projection in between:
 
 @transformer-encoder-1
 
-:::
+. . .
 
-::: {.slide}
-
-no layer in the Transformer encoder
-changes the shape of its input
+Shape check:
 
 @transformer-encoder-2
-
 :::
 
-::: {.slide}
-
-Transformer encoder
+::: {.slide title="Encoder stack"}
+Embed tokens, scale by $\sqrt{d}$ to balance against the
+positional encoding, add positions, then run $N$ blocks.
+Save attention weights per block for later visualization:
 
 @transformer-encoder-3
 
-:::
-
-::: {.slide}
-
-create a two-layer Transformer encoder
+. . .
 
 @transformer-encoder-4
-
 :::
 
-::: {.slide}
-
-the Transformer decoder
-is composed of multiple identical layers
+::: {.slide title="Decoder block"}
+Three sublayers, each wrapped in AddNorm:
+**(1) masked self-attention** — at training time, every
+position must only see positions $\le t$, otherwise the
+model peeks at the answer. **(2) cross-attention** —
+queries from the decoder, keys/values from the encoder
+output. **(3) FFN**.
 
 @transformer-decoder-1
-
 :::
 
-::: {.slide}
-
-the feature dimension (`num_hiddens`) of the decoder is
-the same as that of the encoder
-
+::: {.slide title="Decoder shape check"}
 @transformer-decoder-2
-
 :::
 
-::: {.slide}
-
-construct the entire Transformer decoder
-
+::: {.slide title="Decoder stack"}
 @transformer-decoder-3
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training: tiny config"}
+Same MTFraEng dataset as the seq2seq chapter. 2 layers, 256
+hidden, 4 heads, dropout 0.2. Adam lr=0.001, gradient clip 1,
+30 epochs:
 
 @transformer-training-1
-
 :::
 
-::: {.slide}
-
-translate a few English sentences
-
+::: {.slide title="Translate four sentences"}
 @transformer-training-2
-
 :::
 
-::: {.slide}
-
-visualize the Transformer attention weights
+::: {.slide title="Encoder self-attention"}
+Pull the encoder's stored attention weights, reshape into
+(layers × heads × queries × keys), heatmap them. Different
+heads attend to different patterns:
 
 @transformer-training-3
 
+. . .
+
 @transformer-training-4
 
+. . .
+
+@!transformer-training-4
 :::
 
-::: {.slide}
-
-To visualize the decoder self-attention weights and the encoder--decoder attention weights,
-we need more data manipulations
+::: {.slide title="Decoder attention weights"}
+The decoder has *two* attention sublayers per block —
+masked self-attention and encoder-decoder cross-attention.
+Pull both for visualization:
 
 @transformer-training-5
 
+. . .
+
 @transformer-training-6
 
-@transformer-training-7
+. . .
 
+@transformer-training-7
 :::
 
-::: {.slide}
-
-no query from the output sequence
-attends to those padding tokens from the input sequence
+::: {.slide title="Cross-attention masking"}
+Cross-attention from decoder queries to encoder keys: notice
+zero weight on source padding tokens. Masking with `valid_lens`
+during attention is what enforces this:
 
 @transformer-training-8
 
+. . .
+
+@!transformer-training-8
+:::
+
+::: {.slide title="Recap"}
+- Transformer = encoder of $N$ identical blocks (self-attn +
+  FFN, each with Add & Norm), decoder of $N$ identical blocks
+  (masked self-attn + cross-attn + FFN).
+- LayerNorm beats BatchNorm for variable-length sequences.
+- Positionwise FFN is just an MLP applied per position; it
+  gives the model nonlinear feature mixing on top of the
+  linear-in-values attention.
+- Cross-attention is the seq2seq glue: decoder queries
+  encoder outputs at every layer.
+- Same architecture scales: 6 layers (original) → 96+ layers
+  (frontier LLMs), same code.
 :::

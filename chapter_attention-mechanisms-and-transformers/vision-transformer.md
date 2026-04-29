@@ -561,23 +561,87 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 <!-- slides -->
 
 ::: {.slide}
+The Transformer started as a translation model. Could it
+also do *vision*? CNNs ruled image recognition for years —
+translation invariance, locality, weight sharing all baked
+in. Self-attention has none of that. But it scales.
+
+Vision Transformers (Dosovitskiy et al., 2021) take the
+plunge: chop the image into 16×16 patches, treat each patch
+as a "token", run a pure Transformer encoder. With enough
+data (300M images) they outperform ResNets by a large
+margin. With smaller datasets, they still need CNN-style
+inductive biases or heavy regularization.
+
+![Vision Transformer: patchify → embed + `<cls>` → $n$ encoder blocks → classify from `<cls>` representation.](../img/vit.svg){width=82%}
 
 @vision-transformer-transformers-for-vision
+:::
+
+::: {.slide title="Patch embedding"}
+"Split into patches, then linearly project" = a single
+strided convolution with `kernel_size = stride = patch_size`.
+For a 96×96 image with 16×16 patches, this gives a sequence
+of 36 patch tokens, each a `num_hiddens`-dim vector:
 
 @vision-transformer-patch-embedding-1
+:::
 
+::: {.slide title="Patch embedding shape check"}
 @vision-transformer-patch-embedding-2
+:::
+
+::: {.slide title="ViT MLP block"}
+Two changes vs the original Transformer FFN:
+
+- **GELU** instead of ReLU — smoother, slightly better in
+  practice for Transformers.
+- **Dropout** after both linear layers, not just the output.
 
 @vision-transformer-vision-transformer-encoder-1
+:::
+
+::: {.slide title="ViT block: pre-norm"}
+Original Transformer post-norm: `LN(X + sublayer(X))`.
+ViT pre-norm: `X + sublayer(LN(X))`. Pre-norm trains more
+stably and tolerates much deeper stacks — the standard
+choice in modern Transformers (LLaMA, GPT, etc.).
 
 @vision-transformer-vision-transformer-encoder-2
+:::
 
+::: {.slide title="JAX/TF variants and shape check"}
 @vision-transformer-vision-transformer-encoder-3
 
+. . .
+
 @vision-transformer-vision-transformer-encoder-4
+:::
+
+::: {.slide title="Putting it together"}
+Patch embed → prepend learnable `<cls>` token → add
+*learnable* positional embeddings (not fixed sin/cos) →
+dropout → $N$ ViT blocks → take `<cls>` representation →
+LayerNorm → linear head:
 
 @vision-transformer-putting-it-all-together
+:::
+
+::: {.slide title="Training on Fashion-MNIST"}
+Tiny config (2 blocks, 512 hidden, 8 heads). On a small
+dataset, this won't beat a ResNet — Transformers need scale:
 
 @vision-transformer-training
+:::
 
+::: {.slide title="Recap"}
+- ViT = patchify image → standard Transformer encoder →
+  classify from `<cls>` token representation.
+- Patches replace tokens; positional embeddings are learned
+  (not sin/cos) since 2D positions don't need closed-form
+  encoding.
+- Pre-norm beats post-norm at scale; GELU beats ReLU in MLPs.
+- ViTs lose to ResNets on small data — they lack locality
+  and translation invariance — but win at large scale (300M+
+  images). Swin Transformers and DeiT bridge the gap.
 :::

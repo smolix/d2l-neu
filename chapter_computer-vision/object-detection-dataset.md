@@ -425,53 +425,66 @@ for ax, label in zip(axes, batch[1][:10]):
 <!-- slides -->
 
 ::: {.slide}
+The classic detection benchmarks (PASCAL VOC, COCO) are
+big — too big for a teaching demo. Instead this section
+uses the **banana detection dataset**: 1000 images, one
+banana per image, fixed size, three random parameters
+(position, scale, rotation).
 
-we collected and labeled a small dataset Downloading the Dataset
+The point isn't to push detection accuracy; it's to walk
+through the data plumbing every detector needs:
 
+- Read images and per-image lists of $(class, x_1, y_1, x_2, y_2)$.
+- Pad the per-image label list to a fixed length so it
+  fits in a tensor.
+- Yield `(images, labels)` minibatches. Labels have shape
+  `(batch, max_objects, 5)`.
+:::
+
+::: {.slide title="Download"}
 @object-detection-dataset-downloading-the-dataset-1
 
-@object-detection-dataset-downloading-the-dataset-2
+. . .
 
+@object-detection-dataset-downloading-the-dataset-2
 :::
 
-::: {.slide}
-
-read the banana detection dataset
+::: {.slide title="Reading the dataset"}
+Read all images, parse the CSV-style annotation file,
+return aligned arrays of images and label tensors:
 
 @object-detection-dataset-reading-the-dataset-1
-
 :::
 
-::: {.slide}
-
-create a customized `Dataset` instance
+::: {.slide title="Custom Dataset class"}
+Wrap the loader in a framework-native `Dataset` so we get
+a standard DataLoader:
 
 @object-detection-dataset-reading-the-dataset-2
-
 :::
 
-::: {.slide}
-
-return two
-data iterator instances for both the training and test sets
-
+::: {.slide title="Train + val loaders"}
 @object-detection-dataset-reading-the-dataset-3
 
-:::
-
-::: {.slide}
-
-read a minibatch and print the shapes of
-both images and labels
+. . .
 
 @object-detection-dataset-reading-the-dataset-4
-
 :::
 
-::: {.slide}
-
-Demonstration
-
+::: {.slide title="A batch with annotations"}
 @object-detection-dataset-demonstration
 
+. . .
+
+@!object-detection-dataset-demonstration
+:::
+
+::: {.slide title="Recap"}
+- Detection minibatch = images + per-image variable-length
+  list of $(class, x_1, y_1, x_2, y_2)$.
+- Standard fix: pad each list to a fixed `max_objects`
+  with $-1$ class for ignore.
+- Plumbing learned here is reused by SSD; real datasets
+  (COCO, OpenImages) just have more classes and more
+  objects per image.
 :::

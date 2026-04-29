@@ -293,40 +293,76 @@ in :numref:`sec_ssd`.
 <!-- slides -->
 
 ::: {.slide}
+A single feature map can't detect objects at all scales —
+small objects are tiny on the deep feature maps, large
+objects don't fit in the receptive field of the early
+ones. The fix: generate anchors on **multiple feature
+maps**, each tuned to a different size range.
 
-@multiscale-object-detection-multiscale-anchor-boxes-1
+The recipe — used by SSD and FPN:
 
+- Early feature map (high resolution) → small anchors for
+  small objects.
+- Middle feature map → medium anchors.
+- Deep feature map (low resolution, large receptive
+  field) → large anchors.
+
+Each feature map gets its own classification + regression
+heads. Predictions from all maps are concatenated, then
+NMS prunes the result.
 :::
 
-::: {.slide}
+::: {.slide title="Setup"}
+@multiscale-object-detection-multiscale-anchor-boxes-1
+:::
 
-We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center
+::: {.slide title="Anchors on a feature map"}
+Tile each pixel of the feature map with $n + m - 1$
+anchors. The pixel positions back-project to image coords:
 
 @multiscale-object-detection-multiscale-anchor-boxes-2
-
 :::
 
-::: {.slide}
-
-consider
-detection of small objects
+::: {.slide title="Small objects on a fine map"}
+$4 \times 4$ feature map, small anchor scale → dense
+coverage of small image regions:
 
 @multiscale-object-detection-multiscale-anchor-boxes-3
 
+. . .
+
+@!multiscale-object-detection-multiscale-anchor-boxes-3
 :::
 
-::: {.slide}
-
-reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects
+::: {.slide title="Medium objects on a coarser map"}
+$2 \times 2$ feature map, larger anchor scale — fewer
+anchors, each covering more area:
 
 @multiscale-object-detection-multiscale-anchor-boxes-4
 
+. . .
+
+@!multiscale-object-detection-multiscale-anchor-boxes-4
 :::
 
-::: {.slide}
-
-further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8
+::: {.slide title="Large objects on the coarsest map"}
+$1 \times 1$ feature map, anchor scale 0.8 — the whole
+image as a single anchor, with several aspect ratios:
 
 @multiscale-object-detection-multiscale-anchor-boxes-5
 
+. . .
+
+@!multiscale-object-detection-multiscale-anchor-boxes-5
+:::
+
+::: {.slide title="Recap"}
+- Multiscale = anchors generated on several feature maps
+  at different resolutions.
+- Each feature map handles its own size range; total
+  anchor count grows linearly with #scales.
+- The basis of SSD's pyramid; FPN improves on this with
+  top-down feature merging.
+- Modern detectors (RetinaNet, FCOS, DETR) all rely on
+  some multiscale prior.
 :::

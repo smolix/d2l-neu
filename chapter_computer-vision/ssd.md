@@ -1665,142 +1665,161 @@ d2l.plt.legend();
 <!-- slides -->
 
 ::: {.slide}
+**Single Shot MultiBox Detector** (Liu et al., 2016) is the
+prototype single-stage detector. One forward pass produces
+class scores and box offsets for every anchor at every
+scale; NMS keeps the survivors.
 
-Class Prediction Layer
+The architecture: a CNN trunk, then a *pyramid* of feature
+maps at decreasing resolutions. Each level has its own pair
+of 1×1-style heads — one for class scores, one for box
+offsets. Predictions from all levels are concatenated.
+
+![SSD = base network + several multiscale feature blocks; each block has its own anchor predictor.](../img/ssd.svg){width=68%}
+:::
+
+::: {.slide title="Class and box prediction heads"}
+For a feature map with $a$ anchors per pixel and $q$
+classes, the class head is a 3×3 conv with $a(q+1)$ output
+channels; the box head outputs $4a$:
 
 @ssd-class-prediction-layer
 
-Bounding Box Prediction Layer
+. . .
 
 @ssd-bounding-box-prediction-layer
-
 :::
 
-::: {.slide}
-
-Concatenating Predictions for Multiple Scales
+::: {.slide title="Concatenating across scales"}
+Each level produces predictions of a different shape;
+flatten and concat them so the loss can run on a single
+tensor:
 
 @ssd-concatenating-predictions-for-multiple-scales-1
 
+. . .
+
 @ssd-concatenating-predictions-for-multiple-scales-2
 
-@ssd-concatenating-predictions-for-multiple-scales-3
+. . .
 
+@ssd-concatenating-predictions-for-multiple-scales-3
 :::
 
-::: {.slide}
-
-Downsampling Block
+::: {.slide title="Downsampling block"}
+Halves the feature map resolution between scales — two
+3×3 conv-BN-ReLU layers + 2×2 max pool:
 
 @ssd-downsampling-block-1
 
-@ssd-downsampling-block-2
+. . .
 
+@ssd-downsampling-block-2
 :::
 
-::: {.slide}
-
-Base Network Block
+::: {.slide title="Base network"}
+A small CNN that takes the input image down to the first
+useful resolution:
 
 @ssd-base-network-block
-
 :::
 
-::: {.slide}
-
-The complete
-single shot multibox detection model
-consists of five blocks
+::: {.slide title="Five-block pyramid"}
+Stack base network + a few downsampling blocks. Each level
+exposes its feature map for anchor prediction:
 
 @ssd-the-complete-model-1
 
-:::
-
-::: {.slide}
-
-define the forward propagation
+. . .
 
 @ssd-the-complete-model-2
-
 :::
 
-::: {.slide}
-
-Hyperparameters for each block
+::: {.slide title="Per-level scales"}
+Bigger anchor scales at deeper levels (small feature map →
+large receptive field → large anchors):
 
 @ssd-the-complete-model-3
 
-:::
-
-::: {.slide}
-
-define the complete model
+. . .
 
 @ssd-the-complete-model-4
 
-:::
-
-::: {.slide}
-
-create a model instance
-and use it to perform forward propagation
+. . .
 
 @ssd-the-complete-model-5
-
 :::
 
-::: {.slide}
-
-read
-the banana detection dataset
-
+::: {.slide title="Loading data + init"}
 @ssd-reading-the-dataset-and-initializing-the-model-1
 
-initialize its parameters and define
-the optimization algorithm
+. . .
 
 @ssd-reading-the-dataset-and-initializing-the-model-2
-
 :::
 
-::: {.slide}
+::: {.slide title="Multi-task loss"}
+Two loss terms:
 
-Defining Loss and Evaluation Functions
+- **Classification** — cross-entropy over class scores.
+- **Localization** — $L_1$ on box offsets, computed only
+  on positive anchors (ignore the rest).
 
 @ssd-defining-loss-and-evaluation-functions-1
 
-@ssd-defining-loss-and-evaluation-functions-2
+. . .
 
+@ssd-defining-loss-and-evaluation-functions-2
 :::
 
-::: {.slide}
-
-Training the Model
+::: {.slide title="Training"}
+Standard SGD loop, two evaluation metrics (class accuracy,
+box mean abs error):
 
 @ssd-training-the-model
 
+. . .
+
+@!ssd-training-the-model
 :::
 
-::: {.slide}
-
-Prediction
+::: {.slide title="Inference"}
+Forward pass → anchors + class scores + offsets → invert
+offsets → NMS → keep boxes above a confidence threshold:
 
 @ssd-prediction-1
 
-@ssd-prediction-2
+. . .
 
+@ssd-prediction-2
 :::
 
-::: {.slide}
-
-display
-all the predicted bounding boxes with
-confidence 0.9 or above
+::: {.slide title="Detect bananas"}
+Visualize all predictions with confidence ≥ 0.9:
 
 @ssd-prediction-3
 
+. . .
+
+@!ssd-prediction-3
+
+. . .
+
 @ssd-exercises-1
 
-@ssd-exercises-2
+. . .
 
+@ssd-exercises-2
+:::
+
+::: {.slide title="Recap"}
+- SSD = base CNN + multiscale feature pyramid +
+  per-level class & offset heads.
+- One forward pass → all anchor predictions; NMS at the
+  end. No region proposal step.
+- Loss = class cross-entropy + offset $L_1$, only on
+  positive anchors.
+- The architectural blueprint for YOLO, RetinaNet,
+  EfficientDet — single-stage detectors all share this
+  shape.
 :::

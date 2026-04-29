@@ -413,11 +413,85 @@ in subsequent sections of this chapter.
 <!-- slides -->
 
 ::: {.slide}
+SSD does it all in one forward pass. The **R-CNN family**
+takes a different approach: first propose regions of
+interest, then classify and refine each one. Slower per
+image but historically more accurate and easier to extend
+(masks, keypoints).
+
+The lineage:
+
+- **R-CNN** (2014) — selective search + per-region CNN.
+- **Fast R-CNN** (2015) — one CNN forward, RoI pooling per
+  region. ~100× speedup.
+- **Faster R-CNN** (2016) — learn the region proposal too.
+- **Mask R-CNN** (2017) — adds a per-RoI segmentation head.
+:::
+
+::: {.slide title="R-CNN"}
+For each of ~2k selective-search proposals, warp to fixed
+size, run a CNN, classify with an SVM, regress a refined
+box. Conceptually clear, computationally horrible — 2k
+forward passes per image:
+
+![R-CNN: per-proposal forward passes.](../img/r-cnn.svg){width=72%}
+:::
+
+::: {.slide title="Fast R-CNN"}
+One forward pass on the whole image. Proposals come from
+the same selective search, but they index into the *shared*
+feature map via **RoI pooling**, which crops and resizes a
+variable rectangle to a fixed-size feature:
+
+![Fast R-CNN: shared backbone + RoI pooling per proposal.](../img/fast-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="RoI pooling"}
+Variable rectangle in feature space → fixed grid (e.g.
+$2 \times 2$). Each output cell is the max over its
+sub-region of the rectangle. Differentiable, fast,
+batchable:
+
+![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
 
 @rcnn-fast-r-cnn-1
 
+. . .
+
 @rcnn-fast-r-cnn-2
 
-@rcnn-fast-r-cnn-3
+. . .
 
+@rcnn-fast-r-cnn-3
+:::
+
+::: {.slide title="Faster R-CNN"}
+Replace selective search with a learnable **Region Proposal
+Network**. The RPN is a small CNN head sharing the same
+backbone — it proposes anchors that the second-stage head
+classifies and refines. End-to-end trainable:
+
+![Faster R-CNN: RPN replaces selective search; one network does both stages.](../img/faster-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="Mask R-CNN"}
+Add a third per-RoI head — a small FCN that produces a
+binary mask. Switching from RoI pool to **RoI align**
+(no quantization rounding) was crucial for getting masks
+sharp enough to be useful:
+
+![Mask R-CNN: Faster R-CNN + per-RoI mask FCN.](../img/mask-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="Recap"}
+- Two-stage detectors: propose regions, then classify and
+  refine each one.
+- Fast R-CNN's contribution: shared backbone + RoI
+  pooling, $\sim$100× faster than R-CNN.
+- Faster R-CNN's contribution: learn the proposal too —
+  end-to-end trainable.
+- Mask R-CNN's contribution: per-RoI mask head + RoI
+  align — instance segmentation as a small extension.
+- Single-stage (SSD) wins on speed; two-stage often wins
+  on accuracy. Both are dominant production patterns.
 :::

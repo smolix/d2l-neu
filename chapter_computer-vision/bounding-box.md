@@ -192,38 +192,76 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 <!-- slides -->
 
 ::: {.slide}
+Image classification answers "what's in the image". **Object
+detection** answers "what's in the image *and where*" —
+locate one or more objects and return both class labels and
+bounding boxes.
+
+A **bounding box** is a rectangle. Two equivalent
+parameterizations:
+
+- **Corner**: $(x_1, y_1, x_2, y_2)$ — top-left and
+  bottom-right.
+- **Center**: $(c_x, c_y, w, h)$ — center plus width and
+  height.
+
+Models predict one or the other; we need conversion
+helpers. This deck sets up the basic plumbing; later
+sections build SSD and R-CNN on top.
 
 @bounding-box-object-detection-and-bounding-boxes-1
 
+. . .
+
 @bounding-box-object-detection-and-bounding-boxes-2
 
+. . .
+
+@!bounding-box-object-detection-and-bounding-boxes-2
 :::
 
-::: {.slide}
-
-Here we define functions to convert between two
-representations
+::: {.slide title="Box format conversion"}
+`box_corner_to_center` and `box_center_to_corner` —
+inverses of each other. Useful because some loss functions
+prefer center coords and some IoU code prefers corner
+coords:
 
 @bounding-box-bounding-boxes-1
-
 :::
 
-::: {.slide}
-
-define the bounding boxes of the dog and the cat in the image
+::: {.slide title="Annotating an image"}
+Label dog and cat with hand-picked boxes; verify the
+conversion is round-trip exact:
 
 @bounding-box-bounding-boxes-2
 
-@bounding-box-bounding-boxes-3
+. . .
 
+@bounding-box-bounding-boxes-3
 :::
 
-::: {.slide}
-
-draw the bounding boxes in the image
+::: {.slide title="Drawing boxes"}
+A small helper to render a list of `(x1, y1, x2, y2)` boxes
+on a matplotlib axis. We'll reuse it everywhere in this
+chapter:
 
 @bounding-box-bounding-boxes-4
 
+. . .
+
 @bounding-box-bounding-boxes-5
 
+. . .
+
+@!bounding-box-bounding-boxes-5
+:::
+
+::: {.slide title="Recap"}
+- Bounding box: a rectangle pinning down where an object is.
+- Two parameterizations — corner and center; conversion
+  is a 4-line affine.
+- Detection ground truth = (class, box) per object.
+- Drawing helpers established here are reused by anchor
+  generation, NMS visualization, and SSD demo throughout
+  this chapter.
 :::

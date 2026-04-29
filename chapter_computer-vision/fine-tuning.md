@@ -800,73 +800,113 @@ hotdog_w.shape
 <!-- slides -->
 
 ::: {.slide}
+You'll rarely train a vision model from scratch. **Transfer
+learning** — start from weights pretrained on a big dataset
+(ImageNet) and adapt them to your small one — is the
+default recipe and usually beats from-scratch training by
+a huge margin.
+
+The standard transfer-learning workflow:
+
+1. Take a pretrained network (ResNet, ViT, etc.).
+2. Replace the output layer with a head matching your task.
+3. Optionally freeze early layers; train the rest.
+4. Use a small learning rate on the pretrained part, a
+   larger one on the new head.
+
+![Fine-tuning: source-task pretrained backbone + new task-specific head.](../img/finetune.svg){width=72%}
 
 @fine-tuning-hot-dog-recognition
-
 :::
 
-::: {.slide}
-
-The hot dog dataset we use was taken from online images
+::: {.slide title="The hot-dog dataset"}
+A tiny binary classification dataset (hot dog / not hot
+dog) — too small to train a CNN from scratch, perfect for
+transfer learning:
 
 @fine-tuning-reading-the-dataset-1
 
+. . .
+
 @fine-tuning-reading-the-dataset-2
 
-:::
-
-::: {.slide}
-
-the images vary in size and aspect ratio
+. . .
 
 @fine-tuning-reading-the-dataset-3
 
+. . .
+
+@!fine-tuning-reading-the-dataset-3
 :::
 
-::: {.slide}
-
-Data augmentations
+::: {.slide title="Augmentation pipelines"}
+Standard ImageNet recipe — random resized crop + flip for
+training, center crop for eval. Match the normalization
+that the pretrained model expects:
 
 @fine-tuning-reading-the-dataset-4
-
 :::
 
-::: {.slide}
-
-Defining and Initializing the Model
+::: {.slide title="Loading a pretrained ResNet"}
+Take a pretrained ResNet-18, swap the 1000-way ImageNet
+classifier for a 2-way "hot dog" head:
 
 @fine-tuning-defining-and-initializing-the-model-1
 
+. . .
+
 @fine-tuning-defining-and-initializing-the-model-2
 
-@fine-tuning-defining-and-initializing-the-model-3
+. . .
 
+@fine-tuning-defining-and-initializing-the-model-3
 :::
 
-::: {.slide}
-
-Fine-Tuning the Model
+::: {.slide title="Fine-tuning training"}
+Discriminative learning rates: 10× higher LR on the new
+head than on the pretrained backbone. The backbone already
+knows useful features; the head doesn't yet:
 
 @fine-tuning-fine-tuning-the-model-1
 
-:::
-
-::: {.slide}
-
-set the base learning rate to a small value
+. . .
 
 @fine-tuning-fine-tuning-the-model-2
 
+. . .
+
+@!fine-tuning-fine-tuning-the-model-2
 :::
 
-::: {.slide}
-
-For comparison, initialize all of its model parameters to random values
+::: {.slide title="From-scratch baseline"}
+Same architecture, no pretraining. Much worse on this
+small dataset — illustrates why transfer learning is the
+default:
 
 @fine-tuning-fine-tuning-the-model-3
 
+. . .
+
+@!fine-tuning-fine-tuning-the-model-3
+
+. . .
+
 @fine-tuning-exercises-1
 
-@fine-tuning-exercises-2
+. . .
 
+@fine-tuning-exercises-2
+:::
+
+::: {.slide title="Recap"}
+- Transfer learning: pretrained backbone + new head;
+  almost always beats from-scratch on small / medium
+  datasets.
+- Use small LR on the backbone (10×–100× smaller than the
+  head LR) — pretrained features need only nudges.
+- Match input preprocessing (mean/std normalization, input
+  size) to what the pretrained model expects.
+- Modern variants: feature-extractor mode (freeze
+  everything but head), full fine-tune (everything trains),
+  parameter-efficient methods (LoRA, adapters).
 :::

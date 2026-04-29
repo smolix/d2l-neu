@@ -1073,120 +1073,153 @@ train_with_data_aug(train_augs, test_augs, net)
 <!-- slides -->
 
 ::: {.slide}
+The two ingredients that made AlexNet work were a deep
+network and a large dataset. **Image augmentation** lets you
+multiply the dataset's effective size for free: apply
+small, label-preserving perturbations on the fly during
+training (flips, crops, color jitter). Each example is
+seen many times but never the *exact* same way.
+
+Two effects:
+
+- More data = less overfitting.
+- The model learns invariance to the perturbations you
+  apply (flip, brightness, etc.).
+
+Modern training pipelines also use random erasing, mixup,
+cutmix, RandAugment — all the same idea, more aggressive.
+:::
+
+::: {.slide title="Setup"}
+Load a sample image and a helper to display a grid of
+augmented samples:
 
 @image-augmentation
 
+. . .
+
 @image-augmentation-common-image-augmentation-methods-1
 
-@image-augmentation-common-image-augmentation-methods-2
+. . .
 
+@image-augmentation-common-image-augmentation-methods-2
 :::
 
-::: {.slide}
-
-Flipping the image left and right Flipping the image left and right Flipping the image left and right Flipping the image left and right
+::: {.slide title="Flips and crops"}
+Random horizontal flip — the cheapest, most-used
+augmentation:
 
 @image-augmentation-flipping-and-cropping-1
 
-:::
+. . .
 
-::: {.slide}
+@!image-augmentation-flipping-and-cropping-1
 
-Flipping up and down Flipping up and down Flipping up and down Flipping up and down
+. . .
+
+Vertical flip — used selectively (faces? probably not):
 
 @image-augmentation-flipping-and-cropping-2
 
+. . .
+
+@!image-augmentation-flipping-and-cropping-2
 :::
 
-::: {.slide}
-
-randomly crop
+::: {.slide title="Random resized crop"}
+Crop a random rectangle, resize back to the input size.
+The single most effective augmentation in vision: scale
+invariance and translation invariance in one trick:
 
 @image-augmentation-flipping-and-cropping-3
 
+. . .
+
+@!image-augmentation-flipping-and-cropping-3
 :::
 
-::: {.slide}
-
-randomly change the brightness
-
+::: {.slide title="Color jitter — brightness"}
 @image-augmentation-changing-colors-1
 
+. . .
+
+@!image-augmentation-changing-colors-1
 :::
 
-::: {.slide}
-
-randomly change the hue
-
+::: {.slide title="Color jitter — hue"}
 @image-augmentation-changing-colors-2
 
+. . .
+
+@!image-augmentation-changing-colors-2
 :::
 
-::: {.slide}
-
-randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time
+::: {.slide title="Combined color jitter"}
+Brightness, contrast, saturation, hue — all at once. Tame
+the magnitudes; large jitters destroy semantic content:
 
 @image-augmentation-changing-colors-3
 
+. . .
+
+@!image-augmentation-changing-colors-3
 :::
 
-::: {.slide}
-
-combine multiple image augmentation methods
+::: {.slide title="Composing augmentations"}
+`Compose([flip, crop, color, ToTensor])` — a pipeline of
+transforms applied in order. Standard recipe:
 
 @image-augmentation-combining-multiple-image-augmentation-methods
 
+. . .
+
+@!image-augmentation-combining-multiple-image-augmentation-methods
 :::
 
-::: {.slide}
-
-Training with Image Augmentation
+::: {.slide title="Training with augmentation"}
+Train CIFAR-10 ResNet18 with and without augmentation. Same
+model, same hyperparameters — augmentation just transforms
+the data loader output:
 
 @image-augmentation-training-with-image-augmentation-1
 
-:::
-
-::: {.slide}
-
-Here we only use the simplest random left-right flipping method
+. . .
 
 @image-augmentation-training-with-image-augmentation-2
 
-:::
-
-::: {.slide}
-
-define an auxiliary function to facilitate reading the image and
-applying image augmentation define an auxiliary function to facilitate reading the image and
-applying image augmentation define an auxiliary function to facilitate reading the image and
-applying image augmentation
+. . .
 
 @image-augmentation-training-with-image-augmentation-3
-
 :::
 
-::: {.slide}
-
-we define a function to train and evaluate the model using multiple GPUs
-
+::: {.slide title="Multi-GPU training helper"}
 @image-augmentation-multi-gpu-training-1
+
+. . .
 
 @image-augmentation-multi-gpu-training-2
 
-:::
-
-::: {.slide}
-
-define the `train_with_data_aug` function to train the model with image augmentation
+. . .
 
 @image-augmentation-multi-gpu-training-3
-
 :::
 
-::: {.slide}
-
-train the model
-
+::: {.slide title="Train it"}
 @image-augmentation-multi-gpu-training-4
 
+. . .
+
+@!image-augmentation-multi-gpu-training-4
+:::
+
+::: {.slide title="Recap"}
+- Augmentation = label-preserving random perturbations
+  applied each epoch — effectively multiplies the dataset
+  size.
+- Standard recipe: random horizontal flip + random
+  resized crop + light color jitter.
+- Modern aggressive variants (RandAugment, mixup, cutmix,
+  AutoAugment) push accuracy further with the same data.
+- Apply only at training time; eval uses center crop and
+  no jitter.
 :::

@@ -1422,168 +1422,190 @@ in the final output.
 <!-- slides -->
 
 ::: {.slide}
+A detector can't predict an arbitrary box from raw pixels —
+the search space is too large. The anchor-box framework
+restricts the prediction to *offsets* from a fixed grid of
+candidate boxes:
+
+1. Tile the image with **anchor boxes** at every pixel,
+   in many shapes and sizes (densely sampled hypotheses).
+2. For each anchor, predict its **class** and a small box
+   **offset**.
+3. After the network runs, **non-maximum suppression**
+   prunes overlapping high-confidence predictions.
+
+This is the core of single-shot detectors (SSD, YOLO,
+RetinaNet) and the region proposal network in Faster R-CNN.
 
 @anchor-anchor-boxes
-
 :::
 
-::: {.slide}
+::: {.slide title="Generating anchors"}
+At each pixel center, generate boxes for $n$ scales and
+$m$ aspect ratios — but only those involving the smallest
+scale or smallest ratio, giving $n + m - 1$ boxes per
+pixel (not $nm$):
 
-the width and height of the anchor box are $ws\sqrt{r}$ and $hs/\sqrt{r}$, respectively. consider those combinations
-containing $$(s_1, r_1), (s_1, r_2), \ldots, (s_1, r_m), (s_2, r_1), (s_3, r_1), \ldots, (s_n, r_1).$$
+$$\text{anchor width} = w s\sqrt{r}, \quad \text{anchor height} = h s / \sqrt{r}.$$
 
 @anchor-generating-multiple-anchor-boxes-1
-
 :::
 
-::: {.slide}
-
-the shape of the returned anchor box variable `Y`
+::: {.slide title="Anchor tensor shape"}
+For a $h \times w$ feature map, total anchors = $hw(n+m-1)$.
+Stored as a tensor of shape `(1, num_anchors, 4)`:
 
 @anchor-generating-multiple-anchor-boxes-2
 
-:::
-
-::: {.slide}
-
-access the first anchor box centered on (250, 250)
+. . .
 
 @anchor-generating-multiple-anchor-boxes-3
 
+. . .
+
+@!anchor-generating-multiple-anchor-boxes-3
 :::
 
-::: {.slide}
-
-show all the anchor boxes centered on one pixel in the image
+::: {.slide title="Anchors at one pixel"}
+Visualize the $n + m - 1$ anchors centered at a single
+pixel — different scales and ratios:
 
 @anchor-generating-multiple-anchor-boxes-4
 
+. . .
+
 @anchor-generating-multiple-anchor-boxes-5
 
+. . .
+
+@!anchor-generating-multiple-anchor-boxes-5
 :::
 
-::: {.slide}
+::: {.slide title="Intersection over Union"}
+We need a similarity measure between two boxes to know
+which anchor matches which ground truth.
 
-Intersection over Union (IoU)
+$$\text{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|}.$$
+
+![IoU = intersection area / union area.](../img/iou.svg){width=42%}
 
 @anchor-intersection-over-union-iou
-
 :::
 
-::: {.slide}
+::: {.slide title="Matching anchors to ground truth"}
+For each anchor box, decide which ground-truth box (if any)
+it should learn to predict. Common rule: greedy assignment
+by highest IoU, with a threshold (e.g. 0.5) for "positive"
+matches:
 
-Assigning Ground-Truth Bounding Boxes to Anchor Boxes
+![Anchor → GT assignment by IoU.](../img/anchor-label.svg){width=58%}
 
 @anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes
-
 :::
 
-::: {.slide}
+::: {.slide title="Labels and offsets"}
+A matched anchor learns:
 
-Given the central coordinates of $A$ and $B$ as $(x_a, y_a)$ and $(x_b, y_b)$, 
-their widths as $w_a$ and $w_b$, 
-and their heights as $h_a$ and $h_b$, respectively. 
-We may label the offset of $A$ as
+- **Class** = the ground-truth class.
+- **Offset** = the parameterized residual between anchor
+  and ground truth, normalized by per-component mean/std:
 
-$$\left( \frac{ \frac{x_b - x_a}{w_a} - \mu_x }{\sigma_x},
-\frac{ \frac{y_b - y_a}{h_a} - \mu_y }{\sigma_y},
-\frac{ \log \frac{w_b}{w_a} - \mu_w }{\sigma_w},
-\frac{ \log \frac{h_b}{h_a} - \mu_h }{\sigma_h}\right),$$
+$$\Big(\frac{(x_b{-}x_a)/w_a - \mu_x}{\sigma_x},\; \frac{(y_b{-}y_a)/h_a - \mu_y}{\sigma_y},\; \frac{\log(w_b/w_a) - \mu_w}{\sigma_w},\; \frac{\log(h_b/h_a) - \mu_h}{\sigma_h}\Big).$$
+
+The log-scale on width/height keeps gradients stable for
+both small and large boxes.
 
 @anchor-labeling-classes-and-offsets-1
-
 :::
 
-::: {.slide}
-
-label classes and offsets for anchor boxes
-
+::: {.slide title="Labeling implementation"}
 @anchor-labeling-classes-and-offsets-2
-
 :::
 
-::: {.slide}
-
-plot these ground-truth bounding boxes 
-and anchor boxes 
-in the image
+::: {.slide title="Worked example"}
+Hand-pick ground truth (dog, cat) and a few anchors; plot
+them:
 
 @anchor-an-example-1
 
-:::
+. . .
 
-::: {.slide}
+@!anchor-an-example-1
 
-label classes and offsets
-of these anchor boxes based on
-the ground-truth bounding boxes
+. . .
+
+Run the labeler:
 
 @anchor-an-example-2
 
+. . .
+
 @anchor-an-example-3
+
+. . .
 
 @anchor-an-example-4
 
-@anchor-an-example-5
+. . .
 
+@anchor-an-example-5
 :::
 
-::: {.slide}
-
-applies inverse offset transformations to
-return the predicted bounding box coordinates
+::: {.slide title="Inverse: offset → predicted box"}
+At inference, the network spits out class scores and offset
+deltas; invert the offset to recover predicted boxes:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-1
-
 :::
 
-::: {.slide}
-
-The following `nms` function sorts confidence scores in descending order and returns their indices
+::: {.slide title="Non-maximum suppression (NMS)"}
+A single object generates many high-confidence anchors.
+NMS keeps the highest-scoring one and suppresses any with
+$\text{IoU} > \tau$ to it:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-2
 
-:::
-
-::: {.slide}
-
-apply non-maximum suppression
-to predicting bounding boxes
+. . .
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-3
-
 :::
 
-::: {.slide}
-
-apply the above implementations
-to a concrete example with four anchor boxes
+::: {.slide title="NMS demo"}
+Four overlapping predictions; NMS picks the top-scoring
+one and suppresses the rest:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-4
 
-:::
-
-::: {.slide}
-
-plot these predicted bounding boxes with their confidence on the image
+. . .
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
 
+. . .
+
+@!anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
 :::
 
-::: {.slide}
-
-the shape of the returned result
-
+::: {.slide title="End-to-end output"}
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-6
 
-:::
-
-::: {.slide}
-
-output the final predicted bounding box
-kept by non-maximum suppression
+. . .
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
 
+. . .
+
+@!anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
+:::
+
+::: {.slide title="Recap"}
+- Anchor boxes = densely tiled candidate rectangles; the
+  network predicts class + offset per anchor.
+- IoU drives ground-truth assignment.
+- Offset parameterization (center delta normalized by
+  width, log-scale for size) is what makes regression
+  stable.
+- NMS at inference time prunes redundant high-scoring
+  predictions to one box per object.
+- This whole pipeline is the substrate for SSD (next deck)
+  and the RPN inside Faster R-CNN.
 :::

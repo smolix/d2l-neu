@@ -364,31 +364,102 @@ Try seeing if you can find these local optima: initialize with very large length
 <!-- slides -->
 
 ::: {.slide}
+GP regression has a closed-form posterior. Given training
+data $(\mathbf{X}, \mathbf{y})$ and noise $\sigma_n^2$,
+the posterior at a new test point $\mathbf{x}_*$ is
+Gaussian with:
 
+$$\mu(\mathbf{x}_*) = \mathbf{k}_*^\top (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{y},$$
+$$\sigma^2(\mathbf{x}_*) = k(\mathbf{x}_*, \mathbf{x}_*) - \mathbf{k}_*^\top (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{k}_*.$$
+
+Mean = best linear unbiased estimate. Variance =
+calibrated uncertainty. Both fall out of multivariate-
+Gaussian conditioning.
+
+Hyperparameters (length-scale, noise, signal variance)
+are learned by maximizing the **log marginal
+likelihood** — Bayesian Occam's razor in closed form.
+:::
+
+::: {.slide title="The posterior equations"}
 @gp-inference-posterior-inference-for-regression
+:::
+
+::: {.slide title="From-scratch GP regression"}
+Build $\mathbf{K}$ from the kernel; solve the linear
+system; predict mean and variance everywhere:
 
 @gp-inference-worked-example-from-scratch-1
 
+. . .
+
 @gp-inference-worked-example-from-scratch-2
 
+. . .
+
 @gp-inference-worked-example-from-scratch-3
+:::
+
+::: {.slide title="Visualizing predictions"}
+Mean prediction + 2σ shaded band — uncertainty grows
+between training points and at the edges of the data:
 
 @gp-inference-worked-example-from-scratch-4
 
+. . .
+
+@!gp-inference-worked-example-from-scratch-4
+
+. . .
+
 @gp-inference-worked-example-from-scratch-5
+
+. . .
 
 @gp-inference-worked-example-from-scratch-6
 
+. . .
+
 @gp-inference-worked-example-from-scratch-7
+:::
+
+::: {.slide title="Production GPs with GPyTorch"}
+Same model, library implementation. Handles batched
+inference, GPU, and the linear-algebra tricks
+(KISS-GP, conjugate gradients) that make GPs scale
+beyond the naive $\mathcal{O}(n^3)$ limit:
 
 @gp-inference-making-life-easy-with-gpytorch-1
 
+. . .
+
 @gp-inference-making-life-easy-with-gpytorch-2
+
+. . .
 
 @gp-inference-making-life-easy-with-gpytorch-3
 
+. . .
+
 @gp-inference-making-life-easy-with-gpytorch-4
+
+. . .
 
 @gp-inference-making-life-easy-with-gpytorch-5
 
+. . .
+
+@!gp-inference-making-life-easy-with-gpytorch-5
+:::
+
+::: {.slide title="Recap"}
+- GP regression posterior is closed-form Gaussian; mean +
+  variance fall out of conjugate updates.
+- Hyperparameters fit by maximizing the log marginal
+  likelihood — automatic capacity control.
+- Naive cost is $\mathcal{O}(n^3)$ from the matrix
+  inverse. Modern scalable GPs (variational, KISS-GP,
+  inducing points) push this to ~$\mathcal{O}(n)$.
+- Workhorse for Bayesian optimization, active learning,
+  and uncertainty-aware regression.
 :::

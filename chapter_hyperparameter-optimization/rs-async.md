@@ -239,27 +239,87 @@ modifications.
 <!-- slides -->
 
 ::: {.slide}
+Random search is *embarrassingly parallel* — each trial
+is independent. With $K$ machines, you'd hope for $K \times$
+speedup. But synchronous parallelism wastes time on
+stragglers: every batch of $K$ trials waits for the
+slowest one.
 
+**Asynchronous random search** keeps every worker busy:
+when one finishes, immediately give it a new config.
+Total wall-clock time scales much better.
+
+![Sync vs async parallel HPO: async avoids idle workers when trials finish at different times.](../img/distributed_scheduling.svg){width=72%}
+
+This deck wires up an async scheduler around the API
+abstraction from the previous deck.
+:::
+
+::: {.slide title="Setup"}
 @rs-async-asynchronous-random-search
+:::
+
+::: {.slide title="Objective with simulated wall time"}
+A toy objective whose runtime depends on the
+hyperparameters — exposes the straggler problem clearly:
 
 @rs-async-objective-function
+:::
+
+::: {.slide title="Async scheduler"}
+Maintain a worker pool; on each tick, dispatch new trials
+to free workers; collect completed trial results
+asynchronously:
 
 @rs-async-asynchronous-scheduler-1
 
+. . .
+
 @rs-async-asynchronous-scheduler-2
+
+. . .
 
 @rs-async-asynchronous-scheduler-3
 
-@rs-async-asynchronous-scheduler-4
+. . .
 
+@rs-async-asynchronous-scheduler-4
+:::
+
+::: {.slide title="Wiring up the loop"}
 @rs-async-asynchronous-scheduler-5
+
+. . .
 
 @rs-async-asynchronous-scheduler-6
 
+. . .
+
 @rs-async-asynchronous-scheduler-7
 
+. . .
+
 @rs-async-asynchronous-scheduler-8
+:::
+
+::: {.slide title="Wall-clock advantage"}
+Plot best-seen-vs-time for sync vs async. Async always
+makes progress; sync sits idle while waiting for
+stragglers:
 
 @rs-async-visualize-the-asynchronous-optimization-process
 
+. . .
+
+@!rs-async-visualize-the-asynchronous-optimization-process
+:::
+
+::: {.slide title="Recap"}
+- Async random search ≈ sync random search statistically,
+  but much better wall-clock-wise.
+- The skeleton (worker pool, dispatch on availability)
+  generalizes to *any* HPO algorithm — not just random
+  search.
+- Production HPO libraries (SyneTune, Ray Tune) make
+  async the default.
 :::

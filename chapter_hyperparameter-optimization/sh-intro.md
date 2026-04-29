@@ -309,21 +309,88 @@ multi-fidelity HPO algorithm.
 <!-- slides -->
 
 ::: {.slide}
+Random search wastes most of its compute on bad configs —
+training each one to convergence to find out. But you
+often *know after a few epochs* that a config is hopeless:
+the training loss curve barely moves.
 
+**Multi-fidelity HPO** uses cheap, low-fidelity
+evaluations (few epochs, small subset of data) to *prune*
+bad configs early, spending the saved compute on the
+promising ones.
+
+![Learning curves of random configs: most diverge fast; a few rise to the top.](../img/samples_lc.svg){width=68%}
+
+The classic algorithm: **successive halving**. Run $N$
+configs for a small budget; keep the top $1/\eta$, run for
+$\eta\times$ longer; repeat.
+
+![Successive halving: prune bad configs at every rung, double the budget for survivors.](../img/sh.svg){width=72%}
+:::
+
+::: {.slide title="Setup"}
 @sh-intro-multi-fidelity-hyperparameter-optimization
+:::
+
+::: {.slide title="Successive halving — algorithm"}
+Discretize budget into rungs $r_1 < r_2 < \ldots$. At
+rung $i$:
+
+1. Train all surviving configs to budget $r_i$ epochs.
+2. Sort by validation error.
+3. Keep the top $1/\eta$. Discard the rest.
+
+Continue to the next rung with $\eta \times$ the budget,
+$1/\eta$ the number of configs. Total compute roughly
+constant per rung.
 
 @sh-intro-successive-halving-1
 
+. . .
+
 @sh-intro-successive-halving-2
+
+. . .
 
 @sh-intro-successive-halving-3
 
-@sh-intro-successive-halving-4
+. . .
 
+@sh-intro-successive-halving-4
+:::
+
+::: {.slide title="Running it"}
 @sh-intro-successive-halving-5
+
+. . .
 
 @sh-intro-successive-halving-6
 
+. . .
+
+@!sh-intro-successive-halving-6
+:::
+
+::: {.slide title="Comparing to random search"}
+Successive halving uses the *same total compute* as
+random search but allocates much more of it to the good
+configs — better best-seen score after a fixed
+wall-clock budget:
+
 @sh-intro-successive-halving-7
 
+. . .
+
+@!sh-intro-successive-halving-7
+:::
+
+::: {.slide title="Recap"}
+- Successive halving = aggressive early stopping based on
+  partial-training scores.
+- Hyperparameter $\eta$ (typical: 3 or 4) controls how
+  aggressive the halving is.
+- Total budget per rung stays constant; survivors get
+  exponentially more compute.
+- The asynchronous variant (ASHA, next deck) generalizes
+  this to parallel workers without idle time.
 :::

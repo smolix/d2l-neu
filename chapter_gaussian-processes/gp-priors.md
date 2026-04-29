@@ -177,11 +177,63 @@ Gaussian processes are a relatively general model class, containing many example
 <!-- slides -->
 
 ::: {.slide}
+**Gaussian processes** = a probability distribution over
+*functions*. Pick any finite set of input points
+$\{x_1, \ldots, x_n\}$; the values $\{f(x_1), \ldots,
+f(x_n)\}$ are jointly Gaussian:
 
+$$f(\mathbf{x}) \sim \mathcal{GP}(m(\mathbf{x}), k(\mathbf{x}, \mathbf{x}')).$$
+
+Specified by a **mean function** $m$ (often 0) and a
+**covariance kernel** $k$. Sampling from a GP at finitely
+many points = sampling from a multivariate Gaussian whose
+covariance matrix is filled in by $k$.
+
+GPs are nonparametric — model capacity grows with the
+data. Closed-form Bayesian regression for free; principled
+uncertainty everywhere. The substrate of Bayesian
+optimization, active learning, and uncertainty
+quantification.
+:::
+
+::: {.slide title="Setup"}
 @gp-priors-gaussian-process-priors
+:::
+
+::: {.slide title="Sampling from a simple GP"}
+Pick a kernel, evaluate it at a grid → covariance matrix
+→ multivariate normal sample. Each sample is a smooth
+function:
 
 @gp-priors-a-simple-gaussian-process
 
+. . .
+
+@!gp-priors-a-simple-gaussian-process
+:::
+
+::: {.slide title="The RBF kernel"}
+$$k(x, x') = \sigma^2 \exp\!\left(-\frac{(x - x')^2}{2 \ell^2}\right).$$
+
+Two hyperparameters: amplitude $\sigma$ and length-scale
+$\ell$. Long $\ell$ → smooth functions; short $\ell$ →
+wiggly functions. Most-used kernel for general-purpose
+regression:
+
 @gp-priors-the-radial-basis-function-rbf-kernel
 
+. . .
+
+@!gp-priors-the-radial-basis-function-rbf-kernel
+:::
+
+::: {.slide title="Recap"}
+- GP = distribution over functions defined by mean +
+  kernel.
+- Finite-dim marginal = multivariate Gaussian; that's
+  what makes GPs tractable.
+- Kernel design = function-class design (smoothness,
+  periodicity, ARD, deep kernels, …).
+- Posterior inference (next deck) is closed-form
+  Gaussian arithmetic.
 :::

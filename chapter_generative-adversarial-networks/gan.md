@@ -597,25 +597,95 @@ train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
 <!-- slides -->
 
 ::: {.slide}
+**Generative Adversarial Networks** (Goodfellow et al.,
+2014) — train a generator $G$ and a discriminator $D$ in
+a minimax game:
+
+$$\min_G \max_D \; \mathbb{E}_{x \sim p_{\text{data}}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))].$$
+
+- $D$ tries to distinguish real samples from fake.
+- $G$ tries to produce samples that fool $D$.
+
+At equilibrium, $G$'s distribution matches the data
+distribution. No likelihood, no MCMC — just two networks
+playing against each other.
+
+![GAN: noise → generator → samples; discriminator vs real data.](../img/gan.svg){width=68%}
+
+This deck demos a tiny GAN on a 2D Gaussian. The next
+deck (DCGAN) generates real images.
+:::
+
+::: {.slide title="Setup + real data"}
+2D Gaussian-distributed "real" data — easy to visualize:
 
 @gan-generative-adversarial-networks
 
+. . .
+
 @gan-generate-some-real-data-1
+
+. . .
 
 @gan-generate-some-real-data-2
 
+. . .
+
 @gan-generate-some-real-data-3
 
+. . .
+
+@!gan-generate-some-real-data-3
+:::
+
+::: {.slide title="Generator"}
+Tiny MLP: latent $z$ → 2D output. Maps the prior
+distribution to (hopefully) the data distribution:
+
 @gan-generator
+:::
+
+::: {.slide title="Discriminator"}
+Tiny MLP, sigmoid output: 2D point → P(real). Standard
+binary classifier:
 
 @gan-discriminator
+:::
+
+::: {.slide title="Adversarial training step"}
+For each batch:
+1. Sample fake $G(z)$, real $x$. Update $D$ on
+   $\log D(x) + \log(1 - D(G(z)))$.
+2. Sample fresh fakes; update $G$ on $\log D(G(z))$
+   (the "non-saturating" form — gives stronger gradients
+   early in training).
 
 @gan-training-1
 
+. . .
+
 @gan-training-2
+
+. . .
 
 @gan-training-3
 
+. . .
+
 @gan-training-4
 
+. . .
+
+@!gan-training-4
+:::
+
+::: {.slide title="Recap"}
+- GAN = generator + discriminator playing a minimax
+  game.
+- Equilibrium: $G$'s distribution = data distribution,
+  $D$'s output is 1/2 everywhere.
+- Notoriously tricky to train: mode collapse, vanishing
+  gradients early on, training instability.
+- Modern variants (WGAN, WGAN-GP, StyleGAN, BigGAN) fix
+  pieces of this; the core minimax idea stays.
 :::

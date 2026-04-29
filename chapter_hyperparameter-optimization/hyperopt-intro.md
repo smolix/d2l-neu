@@ -377,17 +377,76 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 <!-- slides -->
 
 ::: {.slide}
+Hyperparameters are the knobs you tune *outside* of
+gradient descent: learning rate, batch size, number of
+layers, dropout rate. There are usually 5–20 of them, and
+the validation loss is non-convex, noisy, and expensive to
+evaluate (one full training run per setting).
+
+**Hyperparameter optimization** (HPO) automates the
+tuning. The simplest member of the family — and the one
+this deck implements — is **random search**: sample
+configurations from a prior, evaluate, keep the best.
+
+![Standard ML workflow: train multiple models with different hyperparameters; pick the best.](../img/ml_workflow.svg){width=72%}
+
+Surprisingly, random search beats grid search and most
+hand-tuning. Smarter algorithms (Bayesian optimization,
+multi-fidelity / Hyperband) come in the next decks.
+:::
+
+::: {.slide title="Formalizing HPO"}
+Find $\mathbf{x}^* = \arg\min_{\mathbf{x} \in \mathcal{X}} f(\mathbf{x})$
+where $f$ is the validation error after training with
+hyperparameters $\mathbf{x}$, and $\mathcal{X}$ is the
+**configuration space** — a structured product of
+discrete and continuous ranges.
 
 @hyperopt-intro-the-optimization-problem
+:::
+
+::: {.slide title="Objective: train + evaluate"}
+The "function" we're optimizing is "train a model with
+this config, return validation error". Wrap that into a
+clean callable:
 
 @hyperopt-intro-the-objective-function-1
 
+. . .
+
 @hyperopt-intro-the-objective-function-2
+:::
+
+::: {.slide title="Configuration space"}
+A structured space — log-uniform for learning rate
+(spans orders of magnitude), uniform integer for layer
+counts, categorical for activations:
 
 @hyperopt-intro-the-configuration-space
+:::
+
+::: {.slide title="Random search"}
+Iterate: draw random config, evaluate, log. Keep the best
+seen so far. Brutally simple, surprisingly effective:
 
 @hyperopt-intro-random-search-1
 
+. . .
+
 @hyperopt-intro-random-search-2
 
+. . .
+
+@!hyperopt-intro-random-search-2
+:::
+
+::: {.slide title="Recap"}
+- HPO = optimize a noisy, expensive black-box function
+  over a structured config space.
+- Random search ≫ grid search at modest budget — Bergstra
+  & Bengio 2012 settled this empirically.
+- Random search is also the natural baseline every fancy
+  HPO algorithm has to beat.
+- Coming up: API abstraction, asynchronous parallel
+  search, multi-fidelity (Hyperband, ASHA).
 :::

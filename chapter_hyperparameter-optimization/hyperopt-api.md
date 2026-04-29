@@ -401,27 +401,89 @@ algorithms, and potential pitfalls one needs to be aware of.
 <!-- slides -->
 
 ::: {.slide}
+HPO algorithms have a common structure. The next two decks
+will swap out pieces (parallel scheduling, multi-fidelity).
+This deck factors out the common skeleton:
+
+- **Searcher** — proposes the next configuration. Random,
+  Bayesian, evolutionary, …
+- **Scheduler** — decides which trials to run, when to
+  stop them, how to allocate compute. Async, Hyperband,
+  ASHA, …
+- **Tuner** — runs the loop: ask searcher, ask scheduler,
+  evaluate, log.
+
+Same shape every modern HPO library uses (Optuna,
+SyneTune, Vizier, Ray Tune).
 
 @hyperopt-api-hyperparameter-optimization-api
+:::
 
+::: {.slide title="Searcher base class"}
 @hyperopt-api-searcher-1
 
-@hyperopt-api-searcher-2
+. . .
 
+A concrete `RandomSearcher`:
+
+@hyperopt-api-searcher-2
+:::
+
+::: {.slide title="Scheduler base class"}
 @hyperopt-api-scheduler-1
 
+. . .
+
+Concrete sequential / FIFO scheduler:
+
 @hyperopt-api-scheduler-2
+:::
+
+::: {.slide title="Tuner"}
+Combines searcher + scheduler + objective into a single
+loop:
 
 @hyperopt-api-tuner
+:::
+
+::: {.slide title="Bookkeeping"}
+Track wall-clock time and best-seen objective so we can
+plot any-time performance later:
 
 @hyperopt-api-bookkeeping-the-performance-of-hpo-algorithms
+:::
+
+::: {.slide title="Tuning a CNN"}
+Run the abstraction on a real model — a small CNN on
+Fashion-MNIST. Search over learning rate, batch size, and
+network width:
 
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1
 
+. . .
+
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2
+
+. . .
 
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
 
+. . .
+
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
 
+. . .
+
+@!hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
+:::
+
+::: {.slide title="Recap"}
+- HPO library skeleton: searcher + scheduler + tuner.
+- The next decks plug in:
+  - **Async random search** — parallel workers without
+    waiting.
+  - **Successive halving / ASHA** — early-stopping bad
+    trials based on partial training curves.
+- Compare algorithms on **any-time performance** plots:
+  best-seen-vs-wall-clock-time, not just final accuracy.
 :::

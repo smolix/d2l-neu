@@ -239,21 +239,72 @@ than the loss of the suboptimal decision making.
 <!-- slides -->
 
 ::: {.slide}
+Synchronous successive halving has a problem: at each
+rung, you wait for *all* surviving configs to finish
+before promoting. With multiple workers, fast configs
+finish first and idle waiting for stragglers.
 
+![Synchronous SH: workers idle while waiting for slow trials at the rung boundary.](../img/sync_sh.svg){width=72%}
+
+**ASHA** (Asynchronous Successive Halving) fixes this:
+promote configs to the next rung the moment they qualify,
+without waiting for the rest of the cohort. Workers
+always have something to do.
+
+![ASHA: free worker, qualified config, instant promotion.](../img/asha.svg){width=72%}
+
+State-of-the-art-grade HPO performance, with one
+parallelism mechanism that handles both early stopping
+and parallel dispatch.
+:::
+
+::: {.slide title="Objective with epochs as budget"}
 @sh-async-asynchronous-successive-halving
+
+. . .
 
 @sh-async-objective-function-1
 
+. . .
+
 @sh-async-objective-function-2
+:::
+
+::: {.slide title="ASHA scheduler"}
+Per-rung "halving books": each book holds the configs
+that have completed up to budget $r_i$. When a worker
+frees up, look across all rungs for any config that
+qualifies for promotion (top $1/\eta$ at its rung); if
+none, sample a fresh config:
 
 @sh-async-asynchronous-scheduler-1
 
+. . .
+
 @sh-async-asynchronous-scheduler-2
+
+. . .
 
 @sh-async-asynchronous-scheduler-3
 
-@sh-async-asynchronous-scheduler-4
+. . .
 
+@sh-async-asynchronous-scheduler-4
+:::
+
+::: {.slide title="Running ASHA"}
 @sh-async-visualize-the-optimization-process
 
+. . .
+
+@!sh-async-visualize-the-optimization-process
+:::
+
+::: {.slide title="Recap"}
+- ASHA = SH with no rung-boundary wait — promote
+  qualified configs as soon as they qualify.
+- Workers are always busy; throughput scales much closer
+  to linearly with the number of workers.
+- Practical default for large-scale HPO. SyneTune /
+  Ray Tune both ship ASHA out of the box.
 :::

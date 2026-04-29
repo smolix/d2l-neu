@@ -1022,37 +1022,118 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 <!-- slides -->
 
 ::: {.slide}
+**DCGAN** (Radford, Metz, Chintala 2015) — the recipe that
+made image GANs work in practice. Architectural rules
+that became standard:
+
+- All-convolutional generator (transposed convs to
+  upsample, no fully connected layers).
+- All-convolutional discriminator (strided convs to
+  downsample).
+- Batch normalization in both networks.
+- ReLU in generator (Tanh on output), LeakyReLU in
+  discriminator.
+- Adam optimizer, learning rate 0.0002, $\beta_1 = 0.5$.
+
+These choices transformed GANs from "interesting but
+unstable" to a workable image-generation tool.
+
+This deck trains a DCGAN to generate Pokémon sprites.
+:::
+
+::: {.slide title="Pokémon dataset"}
+Small image dataset — perfect size for a teaching demo of
+DCGAN. Resize to 64×64, normalize to $[-1, 1]$ (matches
+generator's `tanh` output range):
 
 @dcgan-deep-convolutional-generative-adversarial-networks
 
+. . .
+
 @dcgan-the-pokemon-dataset-1
+
+. . .
 
 @dcgan-the-pokemon-dataset-2
 
+. . .
+
 @dcgan-the-pokemon-dataset-3
+:::
+
+::: {.slide title="Generator block"}
+TransposedConv → BatchNorm → ReLU. Stack five of these to
+upsample $1 \times 1$ noise to $64 \times 64$ pixels:
 
 @dcgan-the-generator-1
 
+. . .
+
 @dcgan-the-generator-2
 
+. . .
+
 @dcgan-the-generator-3
+:::
+
+::: {.slide title="Generator architecture"}
+Five generator blocks; final layer projects to 3 channels
+with `tanh`:
 
 @dcgan-the-generator-4
 
+. . .
+
 @dcgan-the-generator-5
+:::
+
+::: {.slide title="Discriminator block"}
+Conv → BatchNorm → LeakyReLU. Mirrored architecture:
+five blocks downsampling $64 \times 64$ to $1 \times 1$:
 
 @dcgan-discriminator-1
 
+. . .
+
 @dcgan-discriminator-2
 
-@dcgan-discriminator-3
+. . .
 
+@dcgan-discriminator-3
+:::
+
+::: {.slide title="Discriminator architecture"}
 @dcgan-discriminator-4
 
+. . .
+
 @dcgan-discriminator-5
+:::
+
+::: {.slide title="Training"}
+Same minimax loss as basic GAN; per-step alternation of
+$D$ then $G$ updates with the DCGAN-recommended Adam
+hyperparameters:
 
 @dcgan-training-1
 
+. . .
+
 @dcgan-training-2
 
+. . .
+
+@!dcgan-training-2
+:::
+
+::: {.slide title="Recap"}
+- DCGAN = standard architectural recipe for image GANs:
+  all-conv generator/discriminator, BatchNorm,
+  Tanh/LeakyReLU.
+- Adam(0.0002, $\beta_1=0.5$) is the magic LR/momentum
+  combo that stabilized training in 2015.
+- Modern image generators (StyleGAN, BigGAN, diffusion
+  models) supersede DCGAN; the architectural lessons
+  (all-conv, normalization, careful activation choice)
+  carry over.
 :::

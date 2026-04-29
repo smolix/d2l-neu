@@ -166,11 +166,56 @@ Q-learning is one of the most fundamental reinforcement-learning algorithms. It 
 <!-- slides -->
 
 ::: {.slide}
+Value iteration needs the full MDP. Real RL has only
+*samples* from the environment. **Q-learning**
+(Watkins, 1989) replaces the Bellman backup with a
+sampled, off-policy update:
+
+$$Q(s, a) \leftarrow Q(s, a) + \alpha\Big[r + \gamma \max_{a'} Q(s', a') - Q(s, a)\Big].$$
+
+Three pieces to make this work:
+
+- **Exploration** (ε-greedy) — pick a random action with
+  probability ε so all $(s, a)$ get sampled.
+- **Self-correction** — over-estimates of bad actions get
+  driven down as you keep visiting them.
+- **Off-policy** — the bootstrap uses $\max_{a'}$
+  regardless of which action the agent actually took
+  next, so the learned $Q$ approximates the *optimal*
+  policy, not the behavior policy.
+:::
+
+::: {.slide title="Frozen Lake setup"}
+Same gridworld as the value-iter deck — easy to see the
+algorithm converge to the same answer the model-based
+DP got, but without knowing $P$ in advance:
 
 @qlearning-implementation-of-q-learning-1
+:::
+
+::: {.slide title="Q-learning training loop"}
+Sample episodes; each step applies the Q update with the
+observed transition; track returns over training:
 
 @qlearning-implementation-of-q-learning-2
 
+. . .
+
 @qlearning-implementation-of-q-learning-3
 
+. . .
+
+@!qlearning-implementation-of-q-learning-3
+:::
+
+::: {.slide title="Recap"}
+- Q-learning = sampled, model-free version of value
+  iteration.
+- Uses ε-greedy exploration + off-policy bootstrap.
+- Converges (with proper schedules) to the optimal Q
+  function, even without knowing the dynamics.
+- DQN (deep Q-learning, Mnih et al. 2015) replaces the
+  table with a neural network — same update, learnable
+  representation, plus a few tricks (replay buffer,
+  target network) for stability.
 :::

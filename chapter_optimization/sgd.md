@@ -365,10 +365,6 @@ minimum forever — the variance of the noise sets a floor
 on how close it gets:
 
 @sgd-stochastic-gradient-updates-3
-
-. . .
-
-@!sgd-stochastic-gradient-updates-3
 :::
 
 ::: {.slide title="Why decaying learning rate"}
@@ -392,10 +388,6 @@ Run the same SGD with an exponential decay schedule —
 trajectory tightens around the minimum as $\eta_t \to 0$:
 
 @sgd-dynamic-learning-rate-2
-
-. . .
-
-@!sgd-dynamic-learning-rate-2
 :::
 
 ::: {.slide title="Recap"}

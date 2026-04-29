@@ -1648,10 +1648,6 @@ heads attend to different patterns:
 . . .
 
 @transformer-training-4
-
-. . .
-
-@!transformer-training-4
 :::
 
 ::: {.slide title="Decoder attention weights"}
@@ -1676,10 +1672,6 @@ zero weight on source padding tokens. Masking with `valid_lens`
 during attention is what enforces this:
 
 @transformer-training-8
-
-. . .
-
-@!transformer-training-8
 :::
 
 ::: {.slide title="Recap"}

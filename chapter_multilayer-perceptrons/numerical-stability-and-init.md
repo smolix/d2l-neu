@@ -473,10 +473,6 @@ ways this product can misbehave:
 
 @numerical-stability-and-init-vanishing-gradients
 
-. . .
-
-@!numerical-stability-and-init-vanishing-gradients
-
 The sigmoid's derivative peaks at $\sigma'(0) = 0.25$ and
 collapses to zero at the tails. In a 10-layer stack:
 

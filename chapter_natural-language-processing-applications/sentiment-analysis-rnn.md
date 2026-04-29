@@ -553,10 +553,6 @@ Standard cross-entropy + Adam:
 . . .
 
 @sentiment-analysis-rnn-training-and-evaluating-the-model-2
-
-. . .
-
-@!sentiment-analysis-rnn-training-and-evaluating-the-model-2
 :::
 
 ::: {.slide title="Predict on new reviews"}

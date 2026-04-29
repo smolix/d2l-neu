@@ -224,10 +224,6 @@ Same CTR pipeline as the FM deck — only the model
 changes:
 
 @deepfm-training-and-evaluating-the-model
-
-. . .
-
-@!deepfm-training-and-evaluating-the-model
 :::
 
 ::: {.slide title="Recap"}

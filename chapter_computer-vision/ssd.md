@@ -1777,10 +1777,6 @@ Standard SGD loop, two evaluation metrics (class accuracy,
 box mean abs error):
 
 @ssd-training-the-model
-
-. . .
-
-@!ssd-training-the-model
 :::
 
 ::: {.slide title="Inference"}
@@ -1798,10 +1794,6 @@ offsets → NMS → keep boxes above a confidence threshold:
 Visualize all predictions with confidence ≥ 0.9:
 
 @ssd-prediction-3
-
-. . .
-
-@!ssd-prediction-3
 
 . . .
 

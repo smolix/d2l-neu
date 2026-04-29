@@ -264,6 +264,9 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         data = out.get('data', {})
 
         # Image output
+        # Empty alt text — non-empty alt is rendered as a visible
+        # caption by Pandoc's implicit_figures extension. We don't
+        # want every notebook plot to display its cell-id underneath.
         if 'image/png' in data:
             img_idx += 1
             fname = f'{cell_id}-{img_idx}.png'
@@ -272,7 +275,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             fpath.write_bytes(base64.b64decode(data['image/png']))
             rel = os.path.relpath(fpath, qmd_parent)
             parts.append(
-                f'::: {{.cell-output-display}}\n![{cell_id}]({rel})\n:::')
+                f'::: {{.cell-output-display}}\n![]({rel})\n:::')
             continue
 
         if 'image/svg+xml' in data:
@@ -286,7 +289,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             fpath.write_text(svg, encoding='utf-8')
             rel = os.path.relpath(fpath, qmd_parent)
             parts.append(
-                f'::: {{.cell-output-display}}\n![{cell_id}]({rel})\n:::')
+                f'::: {{.cell-output-display}}\n![]({rel})\n:::')
             continue
 
         # Text output

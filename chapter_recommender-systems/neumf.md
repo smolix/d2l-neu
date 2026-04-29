@@ -515,10 +515,6 @@ evaluation cheap):
 . . .
 
 @neumf-training-and-evaluating-the-model-4
-
-. . .
-
-@!neumf-training-and-evaluating-the-model-4
 :::
 
 ::: {.slide title="Recap"}

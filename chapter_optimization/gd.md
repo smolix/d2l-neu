@@ -430,20 +430,12 @@ Start at $x = 10$, $\eta = 0.2$, 10 steps. Converges to 0:
 . . .
 
 @gd-one-dimensional-gradient-descent-4
-
-. . .
-
-@!gd-one-dimensional-gradient-descent-4
 :::
 
 ::: {.slide title="Learning rate too small"}
 $\eta = 0.05$: takes forever to converge:
 
 @gd-learning-rate-1
-
-. . .
-
-@!gd-learning-rate-1
 :::
 
 ::: {.slide title="Learning rate too big"}
@@ -451,10 +443,6 @@ $\eta = 1.1$: the $\mathcal{O}(\eta^2 f'^2)$ Taylor remainder
 dominates and the iterates diverge:
 
 @gd-learning-rate-2
-
-. . .
-
-@!gd-learning-rate-2
 :::
 
 ::: {.slide title="Non-convex: trapped in a local min"}
@@ -463,10 +451,6 @@ with a moderately large learning rate, GD ends up in
 whichever basin it falls into:
 
 @gd-local-minima
-
-. . .
-
-@!gd-local-minima
 :::
 
 ::: {.slide title="Multivariate GD"}
@@ -486,10 +470,6 @@ $x_2$ direction is steeper:
 . . .
 
 @gd-multivariate-gradient-descent-3
-
-. . .
-
-@!gd-multivariate-gradient-descent-3
 :::
 
 ::: {.slide title="Newton's method: second-order"}
@@ -502,10 +482,6 @@ For $f(x) = (\cosh(cx))^2$, one Newton step finds the
 minimum:
 
 @gd-newton-s-method-1
-
-. . .
-
-@!gd-newton-s-method-1
 :::
 
 ::: {.slide title="Newton fails on non-convex"}
@@ -518,15 +494,7 @@ breaks:
 
 . . .
 
-@!gd-newton-s-method-2
-
-. . .
-
 @gd-newton-s-method-3
-
-. . .
-
-@!gd-newton-s-method-3
 :::
 
 ::: {.slide title="Recap"}

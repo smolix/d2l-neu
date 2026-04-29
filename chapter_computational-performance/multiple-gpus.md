@@ -901,10 +901,6 @@ Forward + backward on each replica → all_reduce gradients
 
 ::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-training-3
-
-. . .
-
-@!multiple-gpus-training-3
 :::
 
 ::: {.slide title="Two GPUs"}
@@ -912,10 +908,6 @@ Per-epoch time roughly halves; per-step iteration count
 drops because each GPU sees half the minibatch:
 
 @multiple-gpus-training-4
-
-. . .
-
-@!multiple-gpus-training-4
 :::
 
 ::: {.slide title="Recap"}

@@ -756,10 +756,6 @@ first 2 / first 6 keys per batch get nonzero weight:
 Visualize the resulting attention matrix:
 
 @attention-scoring-functions-scaled-dot-product-attention-3
-
-. . .
-
-@!attention-scoring-functions-scaled-dot-product-attention-3
 :::
 
 ::: {.slide title="AdditiveAttention class"}
@@ -780,10 +776,6 @@ Same shapes as before, with mismatched query/key dims allowed:
 Visualize:
 
 @attention-scoring-functions-additive-attention-3
-
-. . .
-
-@!attention-scoring-functions-additive-attention-3
 :::
 
 ::: {.slide title="Recap"}

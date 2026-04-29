@@ -964,10 +964,6 @@ starting point that fine-tunes from there:
 
 . . .
 
-@!fcn-initializing-transposed-convolutional-layers-3
-
-. . .
-
 @fcn-initializing-transposed-convolutional-layers-4
 
 . . .
@@ -985,10 +981,6 @@ backbone, train only the new head — gets reasonable
 results in a few epochs:
 
 @fcn-training
-
-. . .
-
-@!fcn-training
 :::
 
 ::: {.slide title="Predict"}
@@ -1004,10 +996,6 @@ dimension, map class indices back to RGB:
 . . .
 
 @fcn-prediction-3
-
-. . .
-
-@!fcn-prediction-3
 :::
 
 ::: {.slide title="Recap"}

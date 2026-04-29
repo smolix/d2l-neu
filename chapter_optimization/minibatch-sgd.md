@@ -924,15 +924,7 @@ $b = 10$ — same model, same total epochs:
 
 . . .
 
-@!minibatch-sgd-implementation-from-scratch-4
-
-. . .
-
 @minibatch-sgd-implementation-from-scratch-5
-
-. . .
-
-@!minibatch-sgd-implementation-from-scratch-5
 :::
 
 ::: {.slide title="Wall-clock view"}
@@ -940,15 +932,7 @@ $b = 10$ — same model, same total epochs:
 
 . . .
 
-@!minibatch-sgd-implementation-from-scratch-6
-
-. . .
-
 @minibatch-sgd-implementation-from-scratch-7
-
-. . .
-
-@!minibatch-sgd-implementation-from-scratch-7
 :::
 
 ::: {.slide title="Concise: framework optimizer"}

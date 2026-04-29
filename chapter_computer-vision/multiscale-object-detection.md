@@ -328,10 +328,6 @@ $4 \times 4$ feature map, small anchor scale → dense
 coverage of small image regions:
 
 @multiscale-object-detection-multiscale-anchor-boxes-3
-
-. . .
-
-@!multiscale-object-detection-multiscale-anchor-boxes-3
 :::
 
 ::: {.slide title="Medium objects on a coarser map"}
@@ -339,10 +335,6 @@ $2 \times 2$ feature map, larger anchor scale — fewer
 anchors, each covering more area:
 
 @multiscale-object-detection-multiscale-anchor-boxes-4
-
-. . .
-
-@!multiscale-object-detection-multiscale-anchor-boxes-4
 :::
 
 ::: {.slide title="Large objects on the coarsest map"}
@@ -350,10 +342,6 @@ $1 \times 1$ feature map, anchor scale 0.8 — the whole
 image as a single anchor, with several aspect ratios:
 
 @multiscale-object-detection-multiscale-anchor-boxes-5
-
-. . .
-
-@!multiscale-object-detection-multiscale-anchor-boxes-5
 :::
 
 ::: {.slide title="Recap"}

@@ -493,10 +493,6 @@ as every previous chapter — only the model changes:
 
 @lenet-training
 
-. . .
-
-@!lenet-training
-
 LeNet's convolutional inductive bias clearly beats the
 dense MLP from the previous chapter on the same data —
 even with 1990s components (sigmoid, average pooling).

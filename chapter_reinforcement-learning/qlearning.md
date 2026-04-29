@@ -202,10 +202,6 @@ observed transition; track returns over training:
 . . .
 
 @qlearning-implementation-of-q-learning-3
-
-. . .
-
-@!qlearning-implementation-of-q-learning-3
 :::
 
 ::: {.slide title="Recap"}

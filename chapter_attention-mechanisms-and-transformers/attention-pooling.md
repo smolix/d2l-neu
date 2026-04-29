@@ -445,43 +445,92 @@ The attention weight is assigned according to the similarity (or distance) betwe
 <!-- slides -->
 
 ::: {.slide}
+A 1964 statistics paper hides a baby attention mechanism.
+The Nadaraya–Watson estimator computes
+
+$$\hat f(\mathbf{q}) = \sum_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}\, \mathbf{v}_i,$$
+
+with a similarity kernel $\alpha$ playing the role of attention
+weights, the training inputs $\mathbf{x}_i$ as keys, and labels
+$y_i$ as values. No training, just a closed-form regressor —
+and it's exactly attention pooling with hand-picked
+$\alpha$.
+
+This deck uses N–W to *visualize* what attention does, and to
+motivate why we'd want to *learn* $\alpha$ instead of fixing
+it.
 
 @attention-pooling-attention-pooling-by-similarity
-
 :::
 
-::: {.slide}
-
-Kernels and Data
+::: {.slide title="Four kernels"}
+Gaussian, boxcar, constant, triangular — all heuristic
+choices for $\alpha$:
 
 @attention-pooling-kernels-and-data-1
 
+. . .
+
+Plot them on $[-2.5, 2.5]$:
+
 @attention-pooling-kernels-and-data-2
+:::
+
+::: {.slide title="Synthetic data"}
+$y = 2\sin(x) + x + \epsilon$ on $[0, 5]$, 40 noisy training
+points, dense validation grid:
 
 @attention-pooling-kernels-and-data-3
-
 :::
 
-::: {.slide}
-
-Attention Pooling via Nadaraya--Watson Regression
+::: {.slide title="Nadaraya–Watson in 6 lines"}
+Pairwise distances → kernel → normalize columns → multiply by
+labels. The normalized kernel matrix *is* the attention
+weight matrix:
 
 @attention-pooling-attention-pooling-via-nadaraya-watson-regression-1
-
-@attention-pooling-attention-pooling-via-nadaraya-watson-regression-2
-
-@attention-pooling-attention-pooling-via-nadaraya-watson-regression-3
-
-@attention-pooling-attention-pooling-via-nadaraya-watson-regression-4
-
 :::
 
-::: {.slide}
+::: {.slide title="Plotting helper"}
+Side-by-side panel for the four kernels — either fitted
+curve or attention heatmap, depending on the flag:
 
-Adapting Attention Pooling
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-2
+:::
+
+::: {.slide title="Estimates by kernel"}
+Gaussian, boxcar, triangular — all track the truth. Constant
+collapses to the dataset mean.
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-3
+:::
+
+::: {.slide title="Attention weights by kernel"}
+Heatmap view explains the agreement: the three working
+kernels produce near-identical attention patterns despite
+very different shapes:
+
+@attention-pooling-attention-pooling-via-nadaraya-watson-regression-4
+:::
+
+::: {.slide title="Bandwidth matters"}
+Same Gaussian, four widths. Narrower → less smooth, more
+local — the bias/variance trade-off shows up directly in the
+attention sharpness:
 
 @attention-pooling-adapting-attention-pooling-1
+:::
 
+::: {.slide title="Heatmaps for varying width"}
 @attention-pooling-adapting-attention-pooling-2
+:::
 
+::: {.slide title="Recap"}
+- Nadaraya–Watson regression = attention pooling with a
+  hand-picked similarity kernel.
+- Functional form of the kernel barely matters; bandwidth
+  matters a lot.
+- The kernel is *not learned*; it's chosen by the modeler.
+  That's the limitation that motivates learned attention with
+  trainable queries and keys — coming up next.
 :::

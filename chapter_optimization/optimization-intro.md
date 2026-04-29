@@ -299,10 +299,6 @@ The minimum of empirical risk on the training set is at a
 risk. Optimizing one doesn't optimize the other:
 
 @optimization-intro-goal-of-optimization-3
-
-. . .
-
-@!optimization-intro-goal-of-optimization-3
 :::
 
 ::: {.slide title="Local minima"}
@@ -311,10 +307,6 @@ stalls at the first one it falls into; only noise (e.g., SGD
 minibatch variance) can knock it out:
 
 @optimization-intro-local-minima
-
-. . .
-
-@!optimization-intro-local-minima
 :::
 
 ::: {.slide title="Saddle points"}
@@ -330,10 +322,6 @@ learning are saddles, not minima — random Hessian
 eigenvalues are unlikely to all share a sign:
 
 @optimization-intro-saddle-points-2
-
-. . .
-
-@!optimization-intro-saddle-points-2
 :::
 
 ::: {.slide title="Vanishing gradients"}
@@ -343,10 +331,6 @@ fixed this for activation functions; layer norm and residual
 connections fix it across deep networks.
 
 @optimization-intro-vanishing-gradients
-
-. . .
-
-@!optimization-intro-vanishing-gradients
 :::
 
 ::: {.slide title="Recap"}

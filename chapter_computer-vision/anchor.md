@@ -1460,10 +1460,6 @@ Stored as a tensor of shape `(1, num_anchors, 4)`:
 . . .
 
 @anchor-generating-multiple-anchor-boxes-3
-
-. . .
-
-@!anchor-generating-multiple-anchor-boxes-3
 :::
 
 ::: {.slide title="Anchors at one pixel"}
@@ -1475,10 +1471,6 @@ pixel — different scales and ratios:
 . . .
 
 @anchor-generating-multiple-anchor-boxes-5
-
-. . .
-
-@!anchor-generating-multiple-anchor-boxes-5
 :::
 
 ::: {.slide title="Intersection over Union"}
@@ -1530,10 +1522,6 @@ them:
 
 . . .
 
-@!anchor-an-example-1
-
-. . .
-
 Run the labeler:
 
 @anchor-an-example-2
@@ -1579,10 +1567,6 @@ one and suppresses the rest:
 . . .
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
-
-. . .
-
-@!anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
 :::
 
 ::: {.slide title="End-to-end output"}
@@ -1591,10 +1575,6 @@ one and suppresses the rest:
 . . .
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
-
-. . .
-
-@!anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
 :::
 
 ::: {.slide title="Recap"}

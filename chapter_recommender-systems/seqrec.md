@@ -449,10 +449,6 @@ sequence:
 . . .
 
 @seqrec-train-the-model
-
-. . .
-
-@!seqrec-train-the-model
 :::
 
 ::: {.slide title="Recap"}

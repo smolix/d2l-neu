@@ -320,10 +320,6 @@ dataset:
 . . .
 
 @movielens-statistics-of-the-dataset-2
-
-. . .
-
-@!movielens-statistics-of-the-dataset-2
 :::
 
 ::: {.slide title="Train / test split"}

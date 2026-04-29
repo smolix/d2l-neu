@@ -424,10 +424,6 @@ class changed:
 
 @mlp-implementation-training
 
-. . .
-
-@!mlp-implementation-training
-
 About 1–2 percentage points better than plain softmax
 regression on the same data. A nonlinearity earns its keep.
 :::
@@ -448,10 +444,6 @@ removes the bookkeeping.
 
 ::: {.slide title="Same training, same accuracy"}
 @mlp-implementation-training-2
-
-. . .
-
-@!mlp-implementation-training-2
 
 Identical convergence behavior. Built-in `Linear` and
 `ReLU` give you exactly what the from-scratch version

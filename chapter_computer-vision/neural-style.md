@@ -971,10 +971,6 @@ pixels.
 . . .
 
 @neural-style-reading-the-content-and-style-images-2
-
-. . .
-
-@!neural-style-reading-the-content-and-style-images-2
 :::
 
 ::: {.slide title="Preprocessing"}
@@ -1065,10 +1061,6 @@ iterations you have your stylized image:
 . . .
 
 @neural-style-training-2
-
-. . .
-
-@!neural-style-training-2
 :::
 
 ::: {.slide title="Recap"}

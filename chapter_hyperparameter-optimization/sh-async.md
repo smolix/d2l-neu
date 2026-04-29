@@ -294,10 +294,6 @@ none, sample a fresh config:
 
 ::: {.slide title="Running ASHA"}
 @sh-async-visualize-the-optimization-process
-
-. . .
-
-@!sh-async-visualize-the-optimization-process
 :::
 
 ::: {.slide title="Recap"}

@@ -471,10 +471,6 @@ network width:
 . . .
 
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
-
-. . .
-
-@!hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
 :::
 
 ::: {.slide title="Recap"}

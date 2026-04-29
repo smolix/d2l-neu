@@ -598,10 +598,6 @@ Plot four columns of $\mathbf{P}$. Lower-index columns
 oscillate fast; higher columns oscillate slow:
 
 @self-attention-and-positional-encoding-positional-encoding-2
-
-. . .
-
-@!self-attention-and-positional-encoding-positional-encoding-2
 :::
 
 ::: {.slide title="Position as continuous binary"}
@@ -617,10 +613,6 @@ Heatmap reveals the multi-frequency structure. Each row is a
 unique fingerprint for a position:
 
 @self-attention-and-positional-encoding-absolute-positional-information-2
-
-. . .
-
-@!self-attention-and-positional-encoding-absolute-positional-information-2
 :::
 
 ::: {.slide title="Why sin/cos: relative positions"}

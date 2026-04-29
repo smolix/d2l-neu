@@ -1113,17 +1113,9 @@ augmentation:
 
 . . .
 
-@!image-augmentation-flipping-and-cropping-1
-
-. . .
-
 Vertical flip — used selectively (faces? probably not):
 
 @image-augmentation-flipping-and-cropping-2
-
-. . .
-
-@!image-augmentation-flipping-and-cropping-2
 :::
 
 ::: {.slide title="Random resized crop"}
@@ -1132,26 +1124,14 @@ The single most effective augmentation in vision: scale
 invariance and translation invariance in one trick:
 
 @image-augmentation-flipping-and-cropping-3
-
-. . .
-
-@!image-augmentation-flipping-and-cropping-3
 :::
 
 ::: {.slide title="Color jitter — brightness"}
 @image-augmentation-changing-colors-1
-
-. . .
-
-@!image-augmentation-changing-colors-1
 :::
 
 ::: {.slide title="Color jitter — hue"}
 @image-augmentation-changing-colors-2
-
-. . .
-
-@!image-augmentation-changing-colors-2
 :::
 
 ::: {.slide title="Combined color jitter"}
@@ -1159,10 +1139,6 @@ Brightness, contrast, saturation, hue — all at once. Tame
 the magnitudes; large jitters destroy semantic content:
 
 @image-augmentation-changing-colors-3
-
-. . .
-
-@!image-augmentation-changing-colors-3
 :::
 
 ::: {.slide title="Composing augmentations"}
@@ -1170,10 +1146,6 @@ the magnitudes; large jitters destroy semantic content:
 transforms applied in order. Standard recipe:
 
 @image-augmentation-combining-multiple-image-augmentation-methods
-
-. . .
-
-@!image-augmentation-combining-multiple-image-augmentation-methods
 :::
 
 ::: {.slide title="Training with augmentation"}
@@ -1206,10 +1178,6 @@ the data loader output:
 
 ::: {.slide title="Train it"}
 @image-augmentation-multi-gpu-training-4
-
-. . .
-
-@!image-augmentation-multi-gpu-training-4
 :::
 
 ::: {.slide title="Recap"}

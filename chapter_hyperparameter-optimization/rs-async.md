@@ -308,10 +308,6 @@ makes progress; sync sits idle while waiting for
 stragglers:
 
 @rs-async-visualize-the-asynchronous-optimization-process
-
-. . .
-
-@!rs-async-visualize-the-asynchronous-optimization-process
 :::
 
 ::: {.slide title="Recap"}

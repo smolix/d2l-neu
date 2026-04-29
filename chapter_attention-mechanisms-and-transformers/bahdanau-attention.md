@@ -705,10 +705,6 @@ diagonal-ish band is the model learning soft alignment:
 . . .
 
 @bahdanau-attention-training-4
-
-. . .
-
-@!bahdanau-attention-training-4
 :::
 
 ::: {.slide title="Recap"}

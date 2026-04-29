@@ -251,10 +251,6 @@ ahead, so package it now:
 Identity attention — each query picks the matching key:
 
 @queries-keys-values-visualization-2
-
-. . .
-
-@!queries-keys-values-visualization-2
 :::
 
 ::: {.slide title="Recap"}

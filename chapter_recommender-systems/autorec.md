@@ -264,10 +264,6 @@ Standard SGD; the masked loss is the trick that turns
 autoencoder loss into a recommender:
 
 @autorec-training-and-evaluating-the-model
-
-. . .
-
-@!autorec-training-and-evaluating-the-model
 :::
 
 ::: {.slide title="Recap"}

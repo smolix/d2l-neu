@@ -1057,10 +1057,6 @@ Backbone (frozen or with low LR) + new 120-way head:
 
 ::: {.slide title="Train"}
 @kaggle-dog-training-and-validating-the-model
-
-. . .
-
-@!kaggle-dog-training-and-validating-the-model
 :::
 
 ::: {.slide title="Submit predictions"}

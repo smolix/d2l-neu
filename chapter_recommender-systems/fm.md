@@ -219,10 +219,6 @@ categorical fields per row:
 Binary cross-entropy + Adam:
 
 @fm-train-the-model
-
-. . .
-
-@!fm-train-the-model
 :::
 
 ::: {.slide title="Recap"}

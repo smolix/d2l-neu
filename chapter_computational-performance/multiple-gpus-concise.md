@@ -628,18 +628,10 @@ behind the scenes:
 
 ::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-concise-training-2
-
-. . .
-
-@!multiple-gpus-concise-training-2
 :::
 
 ::: {.slide title="Two GPUs"}
 @multiple-gpus-concise-training-3
-
-. . .
-
-@!multiple-gpus-concise-training-3
 :::
 
 ::: {.slide title="Recap"}

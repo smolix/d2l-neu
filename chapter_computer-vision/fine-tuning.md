@@ -833,10 +833,6 @@ transfer learning:
 . . .
 
 @fine-tuning-reading-the-dataset-3
-
-. . .
-
-@!fine-tuning-reading-the-dataset-3
 :::
 
 ::: {.slide title="Augmentation pipelines"}
@@ -872,10 +868,6 @@ knows useful features; the head doesn't yet:
 . . .
 
 @fine-tuning-fine-tuning-the-model-2
-
-. . .
-
-@!fine-tuning-fine-tuning-the-model-2
 :::
 
 ::: {.slide title="From-scratch baseline"}
@@ -884,10 +876,6 @@ small dataset — illustrates why transfer learning is the
 default:
 
 @fine-tuning-fine-tuning-the-model-3
-
-. . .
-
-@!fine-tuning-fine-tuning-the-model-3
 
 . . .
 

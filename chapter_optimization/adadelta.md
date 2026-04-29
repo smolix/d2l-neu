@@ -226,18 +226,10 @@ Two state buffers per parameter (`s` and `delta`):
 
 ::: {.slide title="Training the airfoil model"}
 @adadelta-implementation-2
-
-. . .
-
-@!adadelta-implementation-2
 :::
 
 ::: {.slide title="Concise: framework Adadelta"}
 @adadelta-implementation-3
-
-. . .
-
-@!adadelta-implementation-3
 :::
 
 ::: {.slide title="Recap"}

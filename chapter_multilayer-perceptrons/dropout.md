@@ -641,10 +641,6 @@ Two hidden layers (256 each), dropout 0.5 between them:
 
 @dropout-training
 
-. . .
-
-@!dropout-training
-
 Validation accuracy is better than the plain MLP from the
 previous deck — the gap between train and test loss
 shrinks visibly. Dropout shines when capacity exceeds the

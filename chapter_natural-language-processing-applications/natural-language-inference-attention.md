@@ -870,10 +870,6 @@ sentence summaries → final MLP → 3-way logits:
 . . .
 
 @natural-language-inference-attention-training-and-evaluating-the-model-2-2
-
-. . .
-
-@!natural-language-inference-attention-training-and-evaluating-the-model-2-2
 :::
 
 ::: {.slide title="Predict"}

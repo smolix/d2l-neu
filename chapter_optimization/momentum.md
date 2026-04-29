@@ -409,18 +409,10 @@ Anisotropic quadratic $f(x_1, x_2) = 0.1 x_1^2 + 2 x_2^2$
 
 . . .
 
-@!momentum-an-ill-conditioned-problem-1
-
-. . .
-
 A larger $\eta$ diverges in $x_2$ before making progress
 in $x_1$:
 
 @momentum-an-ill-conditioned-problem-2
-
-. . .
-
-@!momentum-an-ill-conditioned-problem-2
 :::
 
 ::: {.slide title="Momentum on the same problem"}
@@ -431,18 +423,10 @@ sails straight down the valley:
 
 . . .
 
-@!momentum-the-momentum-method-1
-
-. . .
-
 Bigger $\beta$ — even straighter, but overshoot risk
 grows:
 
 @momentum-the-momentum-method-2
-
-. . .
-
-@!momentum-the-momentum-method-2
 :::
 
 ::: {.slide title="Effective sample weight"}
@@ -452,10 +436,6 @@ horizon: $1/(1-\beta)$ steps. $\beta = 0.9$ → ~10 steps;
 $\beta = 0.99$ → ~100 steps.
 
 @momentum-effective-sample-weight
-
-. . .
-
-@!momentum-effective-sample-weight
 :::
 
 ::: {.slide title="From-scratch implementation"}
@@ -476,23 +456,11 @@ Same airfoil regression, $\beta \in \{0, 0.5, 0.9\}$:
 
 . . .
 
-@!momentum-implementation-from-scratch-3
-
-. . .
-
 @momentum-implementation-from-scratch-4
 
 . . .
 
-@!momentum-implementation-from-scratch-4
-
-. . .
-
 @momentum-implementation-from-scratch-5
-
-. . .
-
-@!momentum-implementation-from-scratch-5
 :::
 
 ::: {.slide title="Concise: framework SGD with momentum"}
@@ -508,10 +476,6 @@ update matrix dictate convergence — momentum effectively
 reduces the *condition number* the optimizer sees:
 
 @momentum-scalar-functions
-
-. . .
-
-@!momentum-scalar-functions
 :::
 
 ::: {.slide title="Recap"}

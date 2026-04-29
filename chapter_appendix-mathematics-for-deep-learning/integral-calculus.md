@@ -648,10 +648,6 @@ the integral. Riemann sums in pictures:
 
 . . .
 
-@!integral-calculus-geometric-interpretation-1
-
-. . .
-
 @integral-calculus-geometric-interpretation-2
 
 . . .
@@ -664,10 +660,6 @@ $\iint f(x, y)\, dA$ — total under a 2D surface; iterated
 integration treats one axis at a time:
 
 @integral-calculus-multiple-integrals
-
-. . .
-
-@!integral-calculus-multiple-integrals
 :::
 
 ::: {.slide title="Recap"}

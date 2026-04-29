@@ -1077,10 +1077,6 @@ Standard cross-entropy + Adam, low learning rate (e.g.
 language; we're just teaching it the specific task:
 
 @natural-language-inference-bert-fine-tuning-bert-3
-
-. . .
-
-@!natural-language-inference-bert-fine-tuning-bert-3
 :::
 
 ::: {.slide title="Recap"}

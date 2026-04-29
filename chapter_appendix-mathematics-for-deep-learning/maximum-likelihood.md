@@ -364,10 +364,6 @@ Sums of logs are easier than products: floating point
 behaves; gradients have closed forms; SGD works on the NLL.
 
 @maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
-
-. . .
-
-@!maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
 :::
 
 ::: {.slide title="Recap"}

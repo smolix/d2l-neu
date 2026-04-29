@@ -289,18 +289,10 @@ sizes per coordinate:
 
 . . .
 
-@!adagrad-the-algorithm-1
-
-. . .
-
 Bigger learning rate is now safe — the $\sqrt{\mathbf{s}_t}$
 divisor handles the dynamic range:
 
 @adagrad-the-algorithm-2
-
-. . .
-
-@!adagrad-the-algorithm-2
 
 . . .
 
@@ -316,18 +308,10 @@ $\epsilon$ to avoid division by zero on the first step:
 . . .
 
 @adagrad-implementation-from-scratch-2
-
-. . .
-
-@!adagrad-implementation-from-scratch-2
 :::
 
 ::: {.slide title="Concise: framework Adagrad"}
 @adagrad-concise-implementation
-
-. . .
-
-@!adagrad-concise-implementation
 :::
 
 ::: {.slide title="Recap"}

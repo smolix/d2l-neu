@@ -418,10 +418,6 @@ $$\lambda f(x) + (1-\lambda) f(x') \;\geq\; f(\lambda x + (1-\lambda) x').$$
 The chord lies above the function:
 
 @convexity-convex-functions
-
-. . .
-
-@!convexity-convex-functions
 :::
 
 ::: {.slide title="Convex set algebra"}
@@ -444,10 +440,6 @@ then a point $\lambda x^* + (1-\lambda)x'$ near $x^*$ has
 $f(\cdot) < f(x^*)$ — contradicting "local minimum".
 
 @convexity-local-minima-are-global-minima
-
-. . .
-
-@!convexity-local-minima-are-global-minima
 :::
 
 ::: {.slide title="Other useful properties"}

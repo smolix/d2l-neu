@@ -613,10 +613,6 @@ hundred steps is enough to see both losses drop:
 . . .
 
 @bert-pretraining-pretraining-bert-2-4
-
-. . .
-
-@!bert-pretraining-pretraining-bert-2-4
 :::
 
 ::: {.slide title="Using the trained encoder"}

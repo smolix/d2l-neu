@@ -633,10 +633,6 @@ line is the tangent, its slope is $f'(x)$:
 . . .
 
 @single-variable-calculus-differential-calculus-2
-
-. . .
-
-@!single-variable-calculus-differential-calculus-2
 :::
 
 ::: {.slide title="Zooming further"}
@@ -644,15 +640,7 @@ line is the tangent, its slope is $f'(x)$:
 
 . . .
 
-@!single-variable-calculus-differential-calculus-3
-
-. . .
-
 @single-variable-calculus-differential-calculus-4
-
-. . .
-
-@!single-variable-calculus-differential-calculus-4
 :::
 
 ::: {.slide title="Linear approximation"}
@@ -661,10 +649,6 @@ first-order Taylor term. Valid for small $\epsilon$;
 foundation of GD analysis:
 
 @single-variable-calculus-linear-approximation
-
-. . .
-
-@!single-variable-calculus-linear-approximation
 :::
 
 ::: {.slide title="Higher-order derivatives"}
@@ -676,10 +660,6 @@ $f(x + \epsilon) = \sum_{k=0}^\infty \frac{f^{(k)}(x)}{k!} \epsilon^k$.
 Truncating gives polynomial approximations of any order:
 
 @single-variable-calculus-taylor-series
-
-. . .
-
-@!single-variable-calculus-taylor-series
 :::
 
 ::: {.slide title="Recap"}

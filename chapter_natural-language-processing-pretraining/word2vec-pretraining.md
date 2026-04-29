@@ -715,10 +715,6 @@ data loading dominates:
 . . .
 
 @word2vec-pretraining-defining-the-training-loop-2
-
-. . .
-
-@!word2vec-pretraining-defining-the-training-loop-2
 :::
 
 ::: {.slide title="Using the embeddings"}

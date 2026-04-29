@@ -365,10 +365,6 @@ constant per rung.
 . . .
 
 @sh-intro-successive-halving-6
-
-. . .
-
-@!sh-intro-successive-halving-6
 :::
 
 ::: {.slide title="Comparing to random search"}
@@ -378,10 +374,6 @@ configs — better best-seen score after a fixed
 wall-clock budget:
 
 @sh-intro-successive-halving-7
-
-. . .
-
-@!sh-intro-successive-halving-7
 :::
 
 ::: {.slide title="Recap"}

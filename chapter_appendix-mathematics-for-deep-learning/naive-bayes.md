@@ -656,10 +656,6 @@ binarized pixels.
 
 . . .
 
-@!naive-bayes-optical-character-recognition-2
-
-. . .
-
 @naive-bayes-optical-character-recognition-3
 :::
 
@@ -712,10 +708,6 @@ underflow:
 . . .
 
 @naive-bayes-training-8
-
-. . .
-
-@!naive-bayes-training-8
 :::
 
 ::: {.slide title="Recap"}

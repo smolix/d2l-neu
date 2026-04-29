@@ -214,10 +214,6 @@ sections build SSD and R-CNN on top.
 . . .
 
 @bounding-box-object-detection-and-bounding-boxes-2
-
-. . .
-
-@!bounding-box-object-detection-and-bounding-boxes-2
 :::
 
 ::: {.slide title="Box format conversion"}
@@ -250,10 +246,6 @@ chapter:
 . . .
 
 @bounding-box-bounding-boxes-5
-
-. . .
-
-@!bounding-box-bounding-boxes-5
 :::
 
 ::: {.slide title="Recap"}

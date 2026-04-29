@@ -331,18 +331,10 @@ counter for bias correction:
 
 ::: {.slide title="Training"}
 @adam-implementation-2
-
-. . .
-
-@!adam-implementation-2
 :::
 
 ::: {.slide title="Concise: framework Adam"}
 @adam-implementation-3
-
-. . .
-
-@!adam-implementation-3
 :::
 
 ::: {.slide title="Yogi: a robustness fix"}
@@ -355,10 +347,6 @@ distributions:
 $$\mathbf{s}_t = \mathbf{s}_{t-1} - (1-\beta_2)\, \text{sign}(\mathbf{s}_{t-1} - \mathbf{g}_t^2) \odot \mathbf{g}_t^2.$$
 
 @adam-yogi
-
-. . .
-
-@!adam-yogi
 :::
 
 ::: {.slide title="Recap"}

@@ -434,10 +434,6 @@ seen so far. Brutally simple, surprisingly effective:
 . . .
 
 @hyperopt-intro-random-search-2
-
-. . .
-
-@!hyperopt-intro-random-search-2
 :::
 
 ::: {.slide title="Recap"}

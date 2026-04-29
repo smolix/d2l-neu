@@ -1151,20 +1151,12 @@ classic vision recipe:
 
 ::: {.slide title="Train"}
 @kaggle-cifar10-training-and-validating-the-model
-
-. . .
-
-@!kaggle-cifar10-training-and-validating-the-model
 :::
 
 ::: {.slide title="Submit predictions"}
 Run on the test set, write a Kaggle-format CSV:
 
 @kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
-
-. . .
-
-@!kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
 :::
 
 ::: {.slide title="Recap"}

@@ -206,10 +206,6 @@ Pick a kernel, evaluate it at a grid → covariance matrix
 function:
 
 @gp-priors-a-simple-gaussian-process
-
-. . .
-
-@!gp-priors-a-simple-gaussian-process
 :::
 
 ::: {.slide title="The RBF kernel"}
@@ -221,10 +217,6 @@ wiggly functions. Most-used kernel for general-purpose
 regression:
 
 @gp-priors-the-radial-basis-function-rbf-kernel
-
-. . .
-
-@!gp-priors-the-radial-basis-function-rbf-kernel
 :::
 
 ::: {.slide title="Recap"}

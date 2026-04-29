@@ -1120,10 +1120,6 @@ hyperparameters:
 . . .
 
 @dcgan-training-2
-
-. . .
-
-@!dcgan-training-2
 :::
 
 ::: {.slide title="Recap"}

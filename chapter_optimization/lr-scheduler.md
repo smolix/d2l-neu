@@ -698,10 +698,6 @@ LeNet on Fashion-MNIST as the experimental harness:
 . . .
 
 @lr-scheduler-toy-problem-2
-
-. . .
-
-@!lr-scheduler-toy-problem-2
 :::
 
 ::: {.slide title="Constant-LR baselines"}
@@ -713,19 +709,11 @@ LeNet on Fashion-MNIST as the experimental harness:
 
 . . .
 
-@!lr-scheduler-schedulers-2
-
-. . .
-
 @lr-scheduler-schedulers-3
 
 . . .
 
 @lr-scheduler-schedulers-4
-
-. . .
-
-@!lr-scheduler-schedulers-4
 :::
 
 ::: {.slide title="Polynomial / factor decay"}
@@ -733,10 +721,6 @@ $\eta_t = \eta_0 \cdot (1 + \beta t)^{-\alpha}$ — gradual
 decay. The ML classic before step decay took over:
 
 @lr-scheduler-factor-scheduler
-
-. . .
-
-@!lr-scheduler-factor-scheduler
 :::
 
 ::: {.slide title="Multi-step decay"}
@@ -747,15 +731,7 @@ Drop $\eta$ by a fixed factor at preset epochs (e.g. 30, 60,
 
 . . .
 
-@!lr-scheduler-multi-factor-scheduler-1
-
-. . .
-
 @lr-scheduler-multi-factor-scheduler-2
-
-. . .
-
-@!lr-scheduler-multi-factor-scheduler-2
 :::
 
 ::: {.slide title="Cosine annealing"}
@@ -768,15 +744,7 @@ restarts:
 
 . . .
 
-@!lr-scheduler-cosine-scheduler-1
-
-. . .
-
 @lr-scheduler-cosine-scheduler-2
-
-. . .
-
-@!lr-scheduler-cosine-scheduler-2
 :::
 
 ::: {.slide title="Warmup"}
@@ -789,15 +757,7 @@ first ~1k steps fixes it:
 
 . . .
 
-@!lr-scheduler-warmup-1
-
-. . .
-
 @lr-scheduler-warmup-2
-
-. . .
-
-@!lr-scheduler-warmup-2
 :::
 
 ::: {.slide title="Recap"}

@@ -740,10 +740,6 @@ $$\mathrm{ReLU}(x) = \max(0, x).$$
 
 @mlp-relu-function-1
 
-. . .
-
-@!mlp-relu-function-1
-
 Three reasons it dominates:
 
 - **Doesn't saturate on the right** — gradient is exactly
@@ -761,10 +757,6 @@ $$\mathrm{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
 @mlp-relu-function-2
 
-. . .
-
-@!mlp-relu-function-2
-
 The "dead ReLU" problem: a unit whose pre-activation is
 always negative gets zero gradient and never updates.
 LeakyReLU and PReLU
@@ -776,10 +768,6 @@ small slope on the left to keep gradient flowing.
 $$\sigma(x) = \frac{1}{1 + e^{-x}}.$$
 
 @mlp-sigmoid-function-1
-
-. . .
-
-@!mlp-sigmoid-function-1
 
 The original neural net activation (1960s–2000s). Today
 mostly used for:
@@ -797,10 +785,6 @@ $$\sigma'(x) = \sigma(x)(1 - \sigma(x)).$$
 
 @mlp-sigmoid-function-2
 
-. . .
-
-@!mlp-sigmoid-function-2
-
 Maximum gradient is $\sigma'(0) = 0.25$. Worse, $\sigma'$
 **vanishes** for $|x| \gtrsim 5$.
 
@@ -816,19 +800,11 @@ $$\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1.$$
 
 @mlp-tanh-function-1
 
-. . .
-
-@!mlp-tanh-function-1
-
 Range $(-1, 1)$ — **zero-centered**, which mildly helps
 optimization compared to sigmoid. Still saturates at the
 tails:
 
 @mlp-tanh-function-2
-
-. . .
-
-@!mlp-tanh-function-2
 
 The default in RNNs (LSTM cell update, GRU candidate hidden
 state) where bounded activations are useful.

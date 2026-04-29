@@ -632,10 +632,6 @@ deck (DCGAN) generates real images.
 . . .
 
 @gan-generate-some-real-data-3
-
-. . .
-
-@!gan-generate-some-real-data-3
 :::
 
 ::: {.slide title="Generator"}
@@ -673,10 +669,6 @@ For each batch:
 . . .
 
 @gan-training-4
-
-. . .
-
-@!gan-training-4
 :::
 
 ::: {.slide title="Recap"}

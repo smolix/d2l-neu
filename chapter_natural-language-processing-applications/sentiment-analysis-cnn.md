@@ -744,10 +744,6 @@ dropout → linear:
 
 . . .
 
-@!sentiment-analysis-cnn-training-and-evaluating-the-model-2
-
-. . .
-
 @sentiment-analysis-cnn-training-and-evaluating-the-model-3
 :::
 

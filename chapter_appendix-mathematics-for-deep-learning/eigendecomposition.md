@@ -819,10 +819,6 @@ $a_{ii}$ with radius $\sum_{j \ne i} |a_{ij}|$. Useful for
 stability arguments:
 
 @eigendecomposition-gershgorin-circle-theorem
-
-. . .
-
-@!eigendecomposition-gershgorin-circle-theorem
 :::
 
 ::: {.slide title="Eigenvectors govern long-run behavior"}
@@ -839,10 +835,6 @@ grows like $\lambda_1^t$:
 . . .
 
 @eigendecomposition-behavior-on-random-data-2
-
-. . .
-
-@!eigendecomposition-behavior-on-random-data-2
 :::
 
 ::: {.slide title="Relating back"}
@@ -855,10 +847,6 @@ grows like $\lambda_1^t$:
 . . .
 
 @eigendecomposition-fixing-the-normalization-2
-
-. . .
-
-@!eigendecomposition-fixing-the-normalization-2
 :::
 
 ::: {.slide title="Recap"}

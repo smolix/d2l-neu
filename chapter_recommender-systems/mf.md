@@ -337,10 +337,6 @@ pairs):
 . . .
 
 @mf-training-and-evaluating-the-model-3
-
-. . .
-
-@!mf-training-and-evaluating-the-model-3
 :::
 
 ::: {.slide title="Recap"}

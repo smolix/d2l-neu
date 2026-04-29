@@ -623,10 +623,6 @@ estimates → empirical mean and spread:
 . . .
 
 @statistics-evaluating-estimators-in-code-4
-
-. . .
-
-@!statistics-evaluating-estimators-in-code-4
 :::
 
 ::: {.slide title="A Gaussian example"}
@@ -634,10 +630,6 @@ Sample mean for $\mathcal{N}(\mu, \sigma^2)$: unbiased,
 variance $\sigma^2/n$. Concretely visualize this:
 
 @statistics-a-gaussian-example
-
-. . .
-
-@!statistics-a-gaussian-example
 :::
 
 ::: {.slide title="Recap"}

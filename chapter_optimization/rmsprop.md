@@ -256,17 +256,9 @@ $\gamma$ is choosing an effective time horizon:
 
 . . .
 
-@!rmsprop-the-algorithm-1
-
-. . .
-
 Demo on the anisotropic quadratic:
 
 @rmsprop-the-algorithm-2
-
-. . .
-
-@!rmsprop-the-algorithm-2
 :::
 
 ::: {.slide title="From-scratch RMSProp"}
@@ -285,23 +277,11 @@ an EMA. One extra hyperparameter ($\gamma$):
 
 . . .
 
-@!rmsprop-implementation-from-scratch-3
-
-. . .
-
 @rmsprop-implementation-from-scratch-4
-
-. . .
-
-@!rmsprop-implementation-from-scratch-4
 :::
 
 ::: {.slide title="Concise: framework RMSProp"}
 @rmsprop-concise-implementation
-
-. . .
-
-@!rmsprop-concise-implementation
 :::
 
 ::: {.slide title="Recap"}

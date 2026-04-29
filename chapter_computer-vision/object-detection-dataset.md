@@ -473,10 +473,6 @@ a standard DataLoader:
 
 ::: {.slide title="A batch with annotations"}
 @object-detection-dataset-demonstration
-
-. . .
-
-@!object-detection-dataset-demonstration
 :::
 
 ::: {.slide title="Recap"}

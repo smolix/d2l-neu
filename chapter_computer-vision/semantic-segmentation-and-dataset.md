@@ -833,10 +833,6 @@ tensor:
 . . .
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
-
-. . .
-
-@!semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
 :::
 
 ::: {.slide title="Color → class index"}
@@ -865,10 +861,6 @@ random window:
 . . .
 
 @semantic-segmentation-and-dataset-data-preprocessing-2
-
-. . .
-
-@!semantic-segmentation-and-dataset-data-preprocessing-2
 :::
 
 ::: {.slide title="Custom Dataset class"}

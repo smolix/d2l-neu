@@ -650,10 +650,6 @@ fold 5:  [train][ train ][ train ][ train ][  val  ]
 ::: {.slide title="Model selection"}
 @kaggle-house-price-model-selection
 
-. . .
-
-@!kaggle-house-price-model-selection
-
 In practice you'd grid- or random-search over learning
 rate, hidden size, weight decay, dropout. Same loop,
 different hyperparameters. Pick the config with the lowest

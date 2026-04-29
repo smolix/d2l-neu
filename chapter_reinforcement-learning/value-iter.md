@@ -207,10 +207,6 @@ extract $\pi(s) = \arg\max_a [r + \gamma P V]$:
 . . .
 
 @value-iter-implementation-of-value-iteration-2
-
-. . .
-
-@!value-iter-implementation-of-value-iteration-2
 :::
 
 ::: {.slide title="Recap"}

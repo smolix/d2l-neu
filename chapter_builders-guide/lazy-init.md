@@ -283,17 +283,58 @@ We can pass data through the model to make the framework finally initialize para
 <!-- slides -->
 
 ::: {.slide}
+A nuisance most frameworks now hide: telling each `Linear`
+layer how many **input** features it has, when those depend on
+the previous layer's **output**.
+
+**Lazy initialization** defers parameter creation until the first
+forward pass — at which point the framework has seen real data
+and knows the input shape. You declare:
+
+```python
+nn.LazyLinear(256)   # only num_outputs!
+```
+
+…and the in-features are inferred on the first call.
+:::
+
+::: {.slide title="An uninitialized model"}
+Build a Sequential of lazy layers:
 
 @lazy-init-lazy-initialization-1
 
 @lazy-init-lazy-initialization-2
 
-@lazy-init-lazy-initialization-3
+. . .
 
-@lazy-init-lazy-initialization-4
+The weight tensor is **not yet allocated**:
+
+@lazy-init-lazy-initialization-3
+:::
+
+::: {.slide title="One forward pass materializes parameters"}
+Push a real batch through — the framework now knows the shapes
+and creates the weight buffers:
 
 @lazy-init-lazy-initialization-5
 
-@lazy-init-lazy-initialization-6
+After this, every layer has concrete `weight` and `bias` you can
+inspect, save, or initialize.
+:::
 
+::: {.slide title="Hooking lazy init into the d2l scaffold"}
+Add a small `apply_init` to `d2l.Module` so a custom initializer
+runs on the first forward — same convenience the framework's
+default init uses:
+
+@lazy-init-lazy-initialization-6
+:::
+
+::: {.slide title="Recap"}
+- **Lazy** layers defer parameter allocation until they see data.
+- Avoid hand-counting `in_features` in deep architectures.
+- All standard inspection / saving APIs work after one forward
+  pass; before that, parameters are placeholders.
+- Custom initializers fit naturally as a one-time hook on the
+  first forward.
 :::

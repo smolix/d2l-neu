@@ -740,87 +740,105 @@ You can lose significant performance by moving data without care.
 <!-- slides -->
 
 ::: {.slide}
+GPUs are why deep learning works at modern scale. Two ground rules:
 
-view the graphics card information
+- **Tensors live on a device.** A tensor on the GPU and a tensor
+  on the CPU **cannot** be combined directly — copy one to the
+  other first.
+- **Model parameters live on a device.** Move the model to the
+  GPU **before** the first forward pass; the optimizer follows.
+
+This chapter shows the API and the gotchas.
+:::
+
+::: {.slide title="What's available?"}
+`nvidia-smi` from a notebook lists installed GPUs:
 
 @use-gpu-gpus
 
-:::
+. . .
 
-::: {.slide}
-
-Computing Devices
+The framework's own probes — number of GPUs, current device:
 
 @use-gpu-computing-devices-1
 
-query the number of available GPUs
-
 @use-gpu-computing-devices-2
-
 :::
 
-::: {.slide}
-
-define two convenient functions that allow us
-to run code even if the requested GPUs do not exist
+::: {.slide title="Convenience helpers"}
+`try_gpu(i)` returns GPU `i` if it exists, else CPU. Lets the same
+code run on a workstation **and** a GPU box:
 
 @use-gpu-computing-devices-3
-
 :::
 
-::: {.slide}
-
-query the device where the tensor is located. query the device where the tensor is located. query the device where the tensor is located
+::: {.slide title="Tensors and devices"}
+Every tensor knows its device:
 
 @use-gpu-tensors-and-gpus
 
-:::
+. . .
 
-::: {.slide}
-
-store a tensor on the GPU
+Specify a device at creation time:
 
 @use-gpu-storage-on-the-gpu-1
 
-create a random tensor, `Y`, on the second GPU
-
 @use-gpu-storage-on-the-gpu-2
-
 :::
 
-::: {.slide}
-
-If we want to compute `X + Y`,
-we need to decide where to perform this operation
+::: {.slide title="Copying between devices"}
+Operations on tensors from **different** devices fail. Move one
+explicitly with `.cuda(i)` (or `.to(device)`):
 
 @use-gpu-copying-1
 
-:::
+. . .
 
-::: {.slide}
-
-the data (both `Z` and `Y`) are on the same GPU, we can add them up
+Now both on GPU 1, the addition runs:
 
 @use-gpu-copying-2
 
+. . .
+
+`.cuda(i)` on a tensor already on GPU `i` is a **no-op** — no
+copy:
+
 @use-gpu-copying-3
 
+(Cross-device copies are slow; minimize them in the inner loop.)
 :::
 
-::: {.slide}
-
-Neural Networks and GPUs
+::: {.slide title="Neural networks on the GPU"}
+Build the model, then move it:
 
 @use-gpu-neural-networks-and-gpus-1
 
+. . .
+
 @use-gpu-neural-networks-and-gpus-2
 
-confirm that the model parameters are stored on the same GPU
+Parameters are now stored on the GPU; subsequent forward passes
+expect input tensors on the same device:
 
 @use-gpu-neural-networks-and-gpus-3
+:::
 
-@use-gpu-neural-networks-and-gpus-4
+::: {.slide title="Hooking the Trainer to a GPU"}
+A small `Trainer` patch puts both the model and each batch on the
+right device:
 
 @use-gpu-neural-networks-and-gpus-5
 
+Same training loop, just one extra `.to(device)` step.
+:::
+
+::: {.slide title="Recap"}
+- Tensors and parameters carry a **device**; cross-device ops
+  require an explicit copy.
+- Move the model to the GPU **before** training, not during —
+  saves a deluge of `.to(device)` calls.
+- `try_gpu(i)` keeps code portable between CPU and multi-GPU
+  machines.
+- Cross-device copies are expensive — keep batches and parameters
+  on the same device for the inner loop.
 :::

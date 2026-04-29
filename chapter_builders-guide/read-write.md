@@ -368,56 +368,74 @@ Saving the architecture has to be done in code rather than in parameters.
 <!-- slides -->
 
 ::: {.slide}
+Two persistence problems we'll keep hitting:
 
+- **Checkpoint** the model mid-training (so a crash doesn't cost
+  you a day of compute).
+- **Save the trained model** for inference / sharing.
+
+Two APIs solve both: `save` / `load` for tensors, and
+`state_dict()` for the model parameter dictionary. Architecture
+itself is **not** saved — recreate it in code, then load weights
+into the fresh instance.
+:::
+
+::: {.slide title="Saving a tensor"}
 @read-write-file-i-o
-
-Loading and Saving Tensors
 
 @read-write-loading-and-saving-tensors-1
 
-@read-write-loading-and-saving-tensors-2
+. . .
 
+`load` reads it back into memory. Use `weights_only=True` to
+sandbox-load arbitrary `.pt` files (since 2024 a hardening default):
+
+@read-write-loading-and-saving-tensors-2
 :::
 
-::: {.slide}
-
-store a list of tensors and read them back into memory
+::: {.slide title="Lists and dicts of tensors"}
+A list of tensors saves and loads as a single file:
 
 @read-write-loading-and-saving-tensors-3
 
-:::
+. . .
 
-::: {.slide}
-
-write and read a dictionary that maps
-from strings to tensors
+Same for dicts — useful for human-readable parameter buckets:
 
 @read-write-loading-and-saving-tensors-4
-
 :::
 
-::: {.slide}
-
-Loading and Saving Model Parameters Let's start with our familiar MLP
-
+::: {.slide title="A model to save"}
 @read-write-loading-and-saving-model-parameters-1
-
 :::
 
-::: {.slide}
-
-store the parameters of the model as a file
+::: {.slide title="`state_dict`"}
+Every `Module` exposes its parameters as an ordered dict. Save the
+dict, not the module — the architecture is in your **code**, not
+the file:
 
 @read-write-loading-and-saving-model-parameters-2
-
 :::
 
-::: {.slide}
-
-read the parameters stored in the file directly
+::: {.slide title="Loading into a fresh instance"}
+Build a fresh model with the same architecture, then call
+`load_state_dict`:
 
 @read-write-loading-and-saving-model-parameters-3
 
-@read-write-loading-and-saving-model-parameters-4
+. . .
 
+Sanity check — same architecture + same weights = same outputs:
+
+@read-write-loading-and-saving-model-parameters-4
+:::
+
+::: {.slide title="Recap"}
+- `save` / `load` for arbitrary tensors / lists / dicts.
+- `state_dict()` exports the model's parameter dict; reload with
+  `load_state_dict`.
+- The **architecture** is recreated in Python; the **file** holds
+  weights only.
+- Always sanity-check that the reloaded model gives the same
+  output on a known input.
 :::

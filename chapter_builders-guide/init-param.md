@@ -424,37 +424,65 @@ Look up the online documentation for more built-in initializers.
 <!-- slides -->
 
 ::: {.slide}
+Frameworks ship with reasonable initializers (Kaiming for
+PyTorch, Glorot for TensorFlow, …) — this chapter shows how to
+**override** them when you want to:
 
+- A **built-in initializer** (Normal, Xavier, constant) applied
+  to every layer.
+- **Different** initializers for different sub-blocks.
+- **Hand-written** initialization for special cases.
+
+The pattern is universal: walk the module tree, apply a function
+to each leaf.
+:::
+
+::: {.slide title="A toy net"}
 @init-param-parameter-initialization-1
 
 @init-param-parameter-initialization-2
-
 :::
 
-::: {.slide}
-
-Built-in Initialization
+::: {.slide title="Built-in initializers"}
+`net.apply(fn)` walks every submodule, calling `fn(module)`.
+A small Gaussian for `weight`, zero for `bias`:
 
 @init-param-built-in-initialization-1
 
-@init-param-built-in-initialization-2
+. . .
 
+Constants work the same way (rarely useful in practice — kills
+symmetry-breaking — but illustrative):
+
+@init-param-built-in-initialization-2
 :::
 
-::: {.slide}
-
-We can also apply different initializers for certain blocks
+::: {.slide title="Per-block initialization"}
+Different sub-blocks can take different initializers — Xavier for
+the first layer, constant for the second:
 
 @init-param-built-in-initialization-3
-
 :::
 
-::: {.slide}
-
-Custom Initialization
+::: {.slide title="Custom initialization"}
+For unusual schemes, write your own. Here we sample from a heavy-
+tailed distribution and zero out small values:
 
 @init-param-custom-initialization-1
 
-@init-param-custom-initialization-2
+. . .
 
+You can also poke at parameters directly — useful for
+post-hoc tweaks (loading, surgery, fine-tuning):
+
+@init-param-custom-initialization-2
+:::
+
+::: {.slide title="Recap"}
+- `net.apply(init_fn)` is the universal pattern: walk every
+  submodule, dispatch on type, set `weight` / `bias`.
+- Frameworks default to a sensible scheme (Kaiming / Glorot) for
+  every standard layer — usually fine.
+- Override per-block when you need to; surgical direct access
+  (`layer.weight.data[…] = …`) for one-offs.
 :::

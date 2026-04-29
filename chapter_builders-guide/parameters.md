@@ -378,45 +378,73 @@ We have several ways of accessing and tying model parameters.
 <!-- slides -->
 
 ::: {.slide}
+Once a model is built, you'll want to **inspect, share, and
+manipulate** its parameters:
+
+- Read individual tensors (`weight`, `bias`).
+- Iterate over **everything** (for saving, applying weight decay,
+  custom optimizers).
+- **Tie** parameters across layers (encoder/decoder sharing,
+  weight tying in language models).
+
+This chapter is the API tour.
+:::
+
+::: {.slide title="A toy model"}
+A two-layer MLP — small enough to look at every parameter:
 
 @parameters-parameter-management-1
 
-We start by focusing on an MLP with one hidden layer
-
 @parameters-parameter-management-2
-
 :::
 
-::: {.slide}
-
-Parameter Access
+::: {.slide title="Bulk access: `state_dict`"}
+`state_dict()` returns an ordered mapping of names → tensors —
+the canonical "what does this layer hold?" view:
 
 @parameters-parameter-access
-
 :::
 
-::: {.slide}
-
-Targeted Parameters
+::: {.slide title="Per-tensor access"}
+Layers expose `weight` and `bias` directly. The `.data` field
+unwraps the parameter to a plain tensor for inspection:
 
 @parameters-targeted-parameters-1
 
-@parameters-targeted-parameters-2
+. . .
 
+`.grad` holds the gradient buffer — `None` until you've called
+`backward()`:
+
+@parameters-targeted-parameters-2
 :::
 
-::: {.slide}
-
-All Parameters at Once
+::: {.slide title="Iterating all parameters"}
+`named_parameters()` walks the **whole tree** of nested modules:
 
 @parameters-all-parameters-at-once
 
+This is what `optim.SGD(net.parameters(), …)` consumes; same
+iteration powers checkpoint save/load.
 :::
 
-::: {.slide}
-
-Tied Parameters
+::: {.slide title="Tied parameters"}
+Sometimes you want layers to **share weights** — encoder/decoder
+in autoencoders, input/output embedding tying in language models:
 
 @parameters-tied-parameters
 
+Reuse the **same module instance** twice in the architecture and
+the framework treats it as one parameter — gradients accumulate
+across both uses.
+:::
+
+::: {.slide title="Recap"}
+- `state_dict()` for the bulk view, `layer.weight` / `layer.bias`
+  for individual tensors, `.grad` for the gradient buffer.
+- `named_parameters()` walks every leaf parameter in a nested
+  model — use it for optimizers, weight decay scheduling,
+  printing.
+- **Tying** parameters = reuse the same module instance — one
+  buffer, gradients accumulate.
 :::

@@ -820,61 +820,85 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 <!-- slides -->
 
 ::: {.slide}
+Real models are made of **layers**, **blocks of layers**, and
+**custom logic**. The framework's `Module` (or `nn.Module` /
+`flax.linen.Module` / etc.) is the unifying abstraction:
+
+- A **layer** is a `Module` (`Linear`, `ReLU`, `Conv2d`, …).
+- A **block** is a `Module` that holds other `Module`s.
+- A **whole model** is a `Module` that holds blocks.
+
+This chapter shows how to roll your own — `Sequential`, named
+sub-blocks, custom forward pass with arbitrary Python.
+:::
+
+::: {.slide title="Layers as Modules"}
+A Sequential MLP — three pre-built layers + glue:
 
 @model-construction-layers-and-modules-1
 
-:::
-
-::: {.slide}
-
-To begin, we revisit the code
-that we used to implement MLPs
-
 @model-construction-layers-and-modules-2
-
 :::
 
-::: {.slide}
-
-`nn.Sequential` defines a special kind of `Module` A Custom Module
+::: {.slide title="A custom Module"}
+The same MLP, hand-rolled. Subclass `nn.Module`, register layers
+in `__init__`, define `forward`:
 
 @model-construction-a-custom-module-1
 
-:::
-
-::: {.slide}
-
-instantiate the MLP's layers and subsequently invoke these layers
+. . .
 
 @model-construction-a-custom-module-2
 
+What `Sequential` hides: parameter registration, the call
+protocol, and a `forward` that walks layers in order.
 :::
 
-::: {.slide}
-
-The Sequential Module
+::: {.slide title="Rolling our own Sequential"}
+A 10-line clone of `nn.Sequential`. The only trick is using a
+plain dict to register children so each becomes a tracked
+sub-module:
 
 @model-construction-the-sequential-module-1
 
+. . .
+
 @model-construction-the-sequential-module-2
 
+Identical interface to the framework version.
 :::
 
-::: {.slide}
-
-Executing Code in the Forward Propagation Method
+::: {.slide title="Arbitrary Python in `forward`"}
+`forward` is just Python — you can run loops, control flow, and
+ops with **non-trainable** constants:
 
 @model-construction-executing-code-in-the-forward-propagation-method-1
 
+. . .
+
 @model-construction-executing-code-in-the-forward-propagation-method-2
 
+The `while` loop and the random-but-fixed weight matrix are still
+fully autograd-compatible.
 :::
 
-::: {.slide}
-
-mix and match various
-ways of assembling modules together
+::: {.slide title="Composition"}
+Modules **nest**. A custom block can hold a `Sequential` which
+holds layers which hold parameters — to arbitrary depth:
 
 @model-construction-executing-code-in-the-forward-propagation-method-3
 
+The framework walks the tree to register all parameters and to
+move them to a device when you call `.to(device)`.
+:::
+
+::: {.slide title="Recap"}
+- `Module` is the universal building block: layer / block / model
+  all the same type.
+- Three ways to compose: `Sequential` for linear chains, a custom
+  subclass for arbitrary forward logic, and **nesting** to mix.
+- Children registered in `__init__` are picked up automatically by
+  `parameters()`, `.to(device)`, `state_dict()`, etc.
+- `forward` is regular Python — loops, conditionals, fixed
+  constants are all fine.
 :::

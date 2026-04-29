@@ -367,46 +367,81 @@ Layers can have local parameters, which can be created through built-in function
 <!-- slides -->
 
 ::: {.slide}
+The framework's built-in layers cover most needs — but
+occasionally you'll want a layer it **doesn't** have. Two cases:
+
+- **No parameters** — pure transforms (centering, normalizing,
+  custom slicing). One `forward`, done.
+- **With parameters** — your own `Linear`, custom kernels, etc.
+  Register tensors with `nn.Parameter` so they're tracked by the
+  optimizer.
+
+Either way it's a `Module` subclass and composes with everything
+else.
+:::
+
+::: {.slide title="Layer without parameters"}
+Centers each input by subtracting its mean. Stateless — no
+parameters to register:
 
 @custom-layer-custom-layers
 
-Layers without Parameters
-
 @custom-layer-layers-without-parameters-1
 
-@custom-layer-layers-without-parameters-2
+. . .
 
+Use it standalone:
+
+@custom-layer-layers-without-parameters-2
 :::
 
-::: {.slide}
-
-incorporate our layer as a component
-in constructing more complex models
+::: {.slide title="Composing with built-in layers"}
+A custom layer drops into `Sequential` like any built-in:
 
 @custom-layer-layers-without-parameters-3
 
+. . .
+
 @custom-layer-layers-without-parameters-4
 
+The mean of every output row is now (close to) zero by
+construction.
 :::
 
-::: {.slide}
-
-Layers with Parameters
+::: {.slide title="Layer with parameters"}
+Hand-roll a fully-connected layer. The trick is wrapping each
+weight tensor in `nn.Parameter` so it gets registered:
 
 @custom-layer-layers-with-parameters-1
 
+. . .
+
 @custom-layer-layers-with-parameters-2
 
+`MyDense(5, 3)` now exposes 5×3 + 3 trainable params, picked up
+by `parameters()` automatically.
 :::
 
-::: {.slide}
-
-directly carry out forward propagation calculations using custom layers
+::: {.slide title="Test drive"}
+Forward pass on a random batch:
 
 @custom-layer-layers-with-parameters-3
 
-construct models using custom layers
+. . .
+
+Stack two of them — `Sequential` doesn't care which layers are
+hand-rolled vs built-in:
 
 @custom-layer-layers-with-parameters-4
+:::
 
+::: {.slide title="Recap"}
+- A custom layer is a `nn.Module` subclass with `forward()`.
+- Stateless layers: just compute. Stateful layers: wrap weight
+  tensors in `nn.Parameter`.
+- Custom layers compose with built-in ones — same
+  `parameters()`, `state_dict()`, `to(device)` plumbing applies.
+- Useful whenever the standard layer zoo doesn't cover the
+  forward pass you actually need (custom losses, attention
+  variants, weight tying, …).
 :::

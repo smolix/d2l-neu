@@ -619,43 +619,130 @@ for batch in data_iter:
 <!-- slides -->
 
 ::: {.slide}
+This deck builds the data pipeline for word2vec-style
+embedding training. Three classical tricks make
+skip-gram tractable on a large corpus:
 
+- **Subsampling** — drop frequent words ("the", "a") with
+  probability rising with their frequency. Stop them from
+  dominating training.
+- **Center / context window** — each token contributes a
+  few (center, context) pairs.
+- **Negative sampling** — instead of softmax over all
+  $|V|$ words, train a binary classifier with $K$ random
+  "negative" words per positive pair. Reduces $\mathcal{O}(|V|)$
+  per step to $\mathcal{O}(K)$.
+
+Output: minibatches of `(center, context+, context-)` ready
+for the next deck's skip-gram model.
+:::
+
+::: {.slide title="Setup"}
 @word-embedding-dataset-the-dataset-for-pretraining-word-embeddings
+:::
+
+::: {.slide title="PTB corpus"}
+Standard small-corpus NLP benchmark. Stream as a list of
+sentences, each a list of tokens:
 
 @word-embedding-dataset-reading-the-dataset-1
 
+. . .
+
 @word-embedding-dataset-reading-the-dataset-2
+:::
+
+::: {.slide title="Subsampling frequent words"}
+Drop word $w$ with probability
+$1 - \sqrt{t / f(w)}$, where $f(w)$ is its corpus
+frequency. Common words get aggressively dropped, rare
+ones almost never:
 
 @word-embedding-dataset-subsampling-1
 
+. . .
+
 @word-embedding-dataset-subsampling-2
+:::
+
+::: {.slide title="Subsampling effect"}
+Compare counts before / after — frequent words shrink,
+rare words mostly survive:
 
 @word-embedding-dataset-subsampling-3
 
+. . .
+
 @word-embedding-dataset-subsampling-4
 
+. . .
+
 @word-embedding-dataset-subsampling-5
+:::
+
+::: {.slide title="Center + context windows"}
+For each center token, sample a window size up to
+`max_window_size` and take the surrounding tokens as
+context:
 
 @word-embedding-dataset-extracting-center-words-and-context-words-1
 
+. . .
+
 @word-embedding-dataset-extracting-center-words-and-context-words-2
 
+. . .
+
 @word-embedding-dataset-extracting-center-words-and-context-words-3
+:::
+
+::: {.slide title="Negative sampling"}
+Sample $K$ negative context words per positive pair from
+$P(w) \propto f(w)^{0.75}$ — the empirical-frequency
+distribution dampened by an exponent (the original
+word2vec choice):
 
 @word-embedding-dataset-negative-sampling-1
 
+. . .
+
 @word-embedding-dataset-negative-sampling-2
 
+. . .
+
 @word-embedding-dataset-negative-sampling-3
+:::
+
+::: {.slide title="Padding into minibatches"}
+Different centers have different numbers of context +
+negative tokens. Pad to the batch max, store a mask so
+loss only counts real positions:
 
 @word-embedding-dataset-loading-training-examples-in-minibatches-1
 
-@word-embedding-dataset-loading-training-examples-in-minibatches-2
+. . .
 
+@word-embedding-dataset-loading-training-examples-in-minibatches-2
+:::
+
+::: {.slide title="Reusable loader"}
 @word-embedding-dataset-putting-it-all-together-1
+
+. . .
 
 @word-embedding-dataset-putting-it-all-together-2
 
-@word-embedding-dataset-putting-it-all-together-3
+. . .
 
+@word-embedding-dataset-putting-it-all-together-3
+:::
+
+::: {.slide title="Recap"}
+- Subsample frequent words, sample dynamic-size context
+  windows, draw $K$ negatives per pair.
+- Pad to batch-max with a binary mask — same trick as
+  variable-length sequence batching elsewhere.
+- This loader feeds the skip-gram model in the next deck;
+  same pattern still used by fastText / GloVe-style
+  pretraining.
 :::

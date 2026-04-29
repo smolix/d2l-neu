@@ -241,23 +241,80 @@ print(segment_BPE(tokens, symbols))
 <!-- slides -->
 
 ::: {.slide}
+Word-level embeddings have a problem: morphologically
+related words ("happy", "happily", "happiness") get
+*independent* vectors. Rare or out-of-vocabulary words
+get nothing.
+
+Two responses:
+
+- **fastText** (Bojanowski et al., 2017) — represent each
+  word as a sum of n-gram embeddings. Generalizes to
+  unseen words via shared subword vectors.
+- **Byte pair encoding (BPE)** — learn a vocabulary of
+  variable-length subword units from the training data.
+  Frequent words become single tokens; rare words split
+  into morpheme-like pieces. The default in modern
+  Transformers (GPT, BERT-WordPiece, T5).
+
+This deck implements BPE in pure Python.
+:::
+
+::: {.slide title="BPE: greedy merging"}
+Start with a character-level vocabulary. Repeatedly: count
+adjacent symbol pairs, merge the most common one into a
+new token. Stop after $k$ merges (sets the final
+vocabulary size).
 
 @subword-embedding-byte-pair-encoding-1
 
+. . .
+
 @subword-embedding-byte-pair-encoding-2
 
-@subword-embedding-byte-pair-encoding-3
+. . .
 
+@subword-embedding-byte-pair-encoding-3
+:::
+
+::: {.slide title="Building the merge list"}
 @subword-embedding-byte-pair-encoding-4
+
+. . .
 
 @subword-embedding-byte-pair-encoding-5
 
+. . .
+
 @subword-embedding-byte-pair-encoding-6
+:::
+
+::: {.slide title="Tokenizing new text"}
+After learning, segment a new word by greedily applying
+the merge rules in order. Out-of-vocabulary words still
+work — they're broken into in-vocabulary subwords:
 
 @subword-embedding-byte-pair-encoding-7
 
+. . .
+
 @subword-embedding-byte-pair-encoding-8
 
-@subword-embedding-byte-pair-encoding-9
+. . .
 
+@subword-embedding-byte-pair-encoding-9
+:::
+
+::: {.slide title="Recap"}
+- Subword tokenization sits between character-level
+  (universal but long sequences) and word-level (compact
+  but OOV-prone).
+- BPE greedily merges the most frequent symbol pair each
+  iteration.
+- Modern variants: WordPiece (BERT) — uses likelihood
+  instead of frequency; SentencePiece (T5, LLaMA) —
+  language-agnostic, handles whitespace as a regular
+  symbol.
+- Every modern LM tokenizer is a subword tokenizer of
+  some flavor.
 :::

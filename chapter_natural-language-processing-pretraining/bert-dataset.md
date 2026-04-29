@@ -632,70 +632,90 @@ len(vocab)
 <!-- slides -->
 
 ::: {.slide}
+The previous deck specified BERT's *model*. This one
+specifies the *data*: how to turn raw text into the
+(masked tokens, NSP label, segment IDs, valid lengths)
+tuples that the pretraining loop expects.
+
+We use **WikiText-2** — a small, readable Wikipedia
+subset. Real BERT was pretrained on BookCorpus + English
+Wikipedia (~3.3B tokens); the recipe is identical, just
+scaled up.
 
 @bert-dataset-the-dataset-for-pretraining-bert-1
 
-:::
-
-::: {.slide}
-
-the WikiText-2 dataset
+. . .
 
 @bert-dataset-the-dataset-for-pretraining-bert-2
-
 :::
 
-::: {.slide}
-
-Generating the Next Sentence Prediction Task
+::: {.slide title="Generating NSP examples"}
+For each sentence, with probability 0.5 pair it with the
+*next* sentence (`is_next=1`); otherwise pair with a
+*random* sentence (`is_next=0`):
 
 @bert-dataset-generating-the-next-sentence-prediction-task-1
 
-@bert-dataset-generating-the-next-sentence-prediction-task-2
+. . .
 
+@bert-dataset-generating-the-next-sentence-prediction-task-2
 :::
 
-::: {.slide}
-
-Generating the Masked Language Modeling Task
+::: {.slide title="Generating Masked LM labels"}
+Pick 15% of token positions. For those:
+- 80%: replace with `<mask>`.
+- 10%: replace with a random token.
+- 10%: leave the original (so the model can't tell which
+  position was selected for prediction).
 
 @bert-dataset-generating-the-masked-language-modeling-task-1
 
-@bert-dataset-generating-the-masked-language-modeling-task-2
+. . .
 
+@bert-dataset-generating-the-masked-language-modeling-task-2
 :::
 
-::: {.slide}
-
-append the special “&lt;pad&gt;” tokens to the inputs
+::: {.slide title="Padding"}
+Pad to the batch max length; track `valid_lens` for
+attention masking; pad MLM labels with zero so the loss
+ignores them:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-1
-
 :::
 
-::: {.slide}
-
-the WikiText-2 dataset for pretraining BERT
+::: {.slide title="Custom Dataset class"}
+Wraps the per-example generators into a `__getitem__`
+interface — the standard PyTorch / framework idiom:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-2
-
 :::
 
-::: {.slide}
-
-download the WikiText-2 dataset
-and generate pretraining examples
+::: {.slide title="Loader factory"}
+Download corpus → tokenize → generate NSP + MLM pairs →
+DataLoader:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-3
-
 :::
 
-::: {.slide}
-
-print out the shapes of a minibatch of BERT pretraining examples
+::: {.slide title="Inspect a minibatch"}
+Verify shapes: `tokens`, `segments`, `valid_lens`,
+`pred_positions`, `mlm_weights`, `mlm_labels`,
+`nsp_labels`:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-4
 
-@bert-dataset-transforming-text-into-the-pretraining-dataset-5
+. . .
 
+@bert-dataset-transforming-text-into-the-pretraining-dataset-5
+:::
+
+::: {.slide title="Recap"}
+- A BERT minibatch carries seven tensors: tokens,
+  segments, valid_lens, masked positions, MLM weights,
+  MLM labels, NSP label.
+- 15% MLM masking with the 80/10/10 split is the original
+  recipe; modern variants (RoBERTa) drop NSP, increase
+  masking, and dynamic-mask each epoch.
+- Pretraining BERT for real takes 16+ TPU/GPU-days; the
+  WikiText-2 demo is small enough to play with.
 :::

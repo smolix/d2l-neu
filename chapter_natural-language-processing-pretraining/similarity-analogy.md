@@ -364,37 +364,101 @@ get_analogy('do', 'did', 'go', glove_6b50d)
 <!-- slides -->
 
 ::: {.slide}
+What does a trained word embedding actually capture? Two
+classical probes:
 
+- **Similarity** — cosine distance between word vectors.
+  Words used in similar contexts should be close.
+- **Analogy** — vector arithmetic: $\mathbf{v}_\text{king} - \mathbf{v}_\text{man} + \mathbf{v}_\text{woman}$
+  should land near $\mathbf{v}_\text{queen}$. The famous
+  word2vec result.
+
+This deck loads pretrained GloVe vectors (300-dim, trained
+on a 6B-token Wikipedia corpus) and exercises both
+properties.
+:::
+
+::: {.slide title="Setup"}
 @similarity-analogy-word-similarity-and-analogy
+:::
+
+::: {.slide title="Loading GloVe"}
+GloVe ships as text — `<word> <300 floats>` per line. Parse
+into a vocab + a tensor of vectors:
 
 @similarity-analogy-loading-pretrained-word-vectors-1
 
+. . .
+
 @similarity-analogy-loading-pretrained-word-vectors-2
+
+. . .
 
 @similarity-analogy-loading-pretrained-word-vectors-3
 
+. . .
+
 @similarity-analogy-loading-pretrained-word-vectors-4
 
+. . .
+
 @similarity-analogy-loading-pretrained-word-vectors-5
+:::
+
+::: {.slide title="Word similarity"}
+$k$ nearest neighbors by cosine distance. Try several
+seed words — synonyms, related concepts, named entities:
 
 @similarity-analogy-word-similarity-1
 
+. . .
+
 @similarity-analogy-word-similarity-2
+
+. . .
 
 @similarity-analogy-word-similarity-3
 
+. . .
+
 @similarity-analogy-word-similarity-4
 
+. . .
+
 @similarity-analogy-word-similarity-5
+:::
+
+::: {.slide title="Word analogy"}
+$\mathbf{v}_b - \mathbf{v}_a + \mathbf{v}_c \approx \mathbf{v}_d$ —
+classic A:B :: C:D analogies. Lookup the nearest neighbor
+of the query vector to read out $D$:
 
 @similarity-analogy-word-analogy-1
 
+. . .
+
 @similarity-analogy-word-analogy-2
+
+. . .
 
 @similarity-analogy-word-analogy-3
 
+. . .
+
 @similarity-analogy-word-analogy-4
 
-@similarity-analogy-word-analogy-5
+. . .
 
+@similarity-analogy-word-analogy-5
+:::
+
+::: {.slide title="Recap"}
+- Trained word vectors capture meaningful structure even
+  without explicit supervision: similarity, syntax,
+  semantics.
+- Vector arithmetic for analogies works *partially* — easy
+  cases yes, harder ones often pick a typo or near-miss.
+- Static embeddings (one vector per word) are the
+  pre-2018 paradigm; contextual embeddings (BERT next
+  deck) replace them in modern NLP.
 :::

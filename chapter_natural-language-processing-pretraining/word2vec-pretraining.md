@@ -643,29 +643,99 @@ get_similar_tokens('chip', 3, embed_v)
 <!-- slides -->
 
 ::: {.slide}
+The skip-gram model with negative sampling, Mikolov et al.
+2013. Each word has *two* embedding vectors:
 
+- $\mathbf{v}_w$ — its embedding *as a center word*.
+- $\mathbf{u}_w$ — its embedding *as a context word*.
+
+Per minibatch, for each (center, context+) pair plus $K$
+sampled negatives:
+
+$$\mathcal{L} = -\log \sigma(\mathbf{u}_{c+}^\top \mathbf{v}_w) - \sum_{c-} \log \sigma(-\mathbf{u}_{c-}^\top \mathbf{v}_w).$$
+
+Binary classification — distinguish real (center, context)
+pairs from negatives. Cheap, embarrassingly parallel,
+trains fast on a CPU. After convergence, $\mathbf{v}_w$
+(or $\mathbf{u}_w$, or their sum) is the word embedding.
+:::
+
+::: {.slide title="Setup"}
 @word2vec-pretraining-pretraining-word2vec
+:::
+
+::: {.slide title="Embedding layers"}
+Two `nn.Embedding`s — one for center words, one for
+context. Same vocab, same dimension, separate weights:
 
 @word2vec-pretraining-embedding-layer-1
 
+. . .
+
 @word2vec-pretraining-embedding-layer-2
+:::
+
+::: {.slide title="Forward pass"}
+Look up center embeddings and context embeddings, batched
+matmul gives the dot products that go into the binary
+cross-entropy loss:
 
 @word2vec-pretraining-defining-the-forward-propagation-1
 
+. . .
+
 @word2vec-pretraining-defining-the-forward-propagation-2
+:::
+
+::: {.slide title="Masked binary cross-entropy"}
+Pad mask kicks the loss for invalid positions to zero so
+batching with variable-length context lists works:
 
 @word2vec-pretraining-binary-cross-entropy-loss-1
 
+. . .
+
 @word2vec-pretraining-binary-cross-entropy-loss-2
 
-@word2vec-pretraining-binary-cross-entropy-loss-3
+. . .
 
+@word2vec-pretraining-binary-cross-entropy-loss-3
+:::
+
+::: {.slide title="Init"}
 @word2vec-pretraining-initializing-model-parameters
+:::
+
+::: {.slide title="Training loop"}
+Standard SGD; CPU is fine because the model is tiny and
+data loading dominates:
 
 @word2vec-pretraining-defining-the-training-loop-1
 
+. . .
+
 @word2vec-pretraining-defining-the-training-loop-2
 
-@word2vec-pretraining-applying-word-embeddings
+. . .
 
+@!word2vec-pretraining-defining-the-training-loop-2
+:::
+
+::: {.slide title="Using the embeddings"}
+Look up similar words by cosine similarity. Trained
+embeddings cluster semantically related terms:
+
+@word2vec-pretraining-applying-word-embeddings
+:::
+
+::: {.slide title="Recap"}
+- Skip-gram + neg sampling = train two embeddings per
+  word with binary cross-entropy on (center, context)
+  pairs.
+- Cheap, parallelizable, no softmax over the vocab.
+- Output: dense word vectors with semantic structure
+  ($\mathbf{v}_\text{king} - \mathbf{v}_\text{man} + \mathbf{v}_\text{woman} \approx \mathbf{v}_\text{queen}$).
+- Outdated as a state-of-the-art (BERT/contextual
+  embeddings dominate) but still useful as input to
+  small classifiers and as a teaching example.
 :::

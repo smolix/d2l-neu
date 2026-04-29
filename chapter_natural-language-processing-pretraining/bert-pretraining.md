@@ -573,60 +573,81 @@ for downstream natural language processing applications.
 <!-- slides -->
 
 ::: {.slide}
+With the model (last deck) and the data (deck before
+that), we can finally pretrain a small BERT end-to-end.
+This deck does it on a tiny scale: 2 layers, 128 hidden
+dim, 2 heads. The recipe scales to BERT-Base (12 layers,
+768 dim, 12 heads) and BERT-Large by just changing the
+config.
+:::
 
+::: {.slide title="Setup + tiny BERT"}
 @bert-pretraining-pretraining-bert-1
+
+. . .
 
 @bert-pretraining-pretraining-bert-2
 
-:::
-
-::: {.slide}
-
-a small BERT, using 2 layers, 128 hidden units, and 2 self-attention heads
+. . .
 
 @bert-pretraining-pretraining-bert-2-1
-
 :::
 
-::: {.slide}
+::: {.slide title="Combined loss"}
+Two heads, one combined loss:
 
-computes the loss for both the masked language modeling and next sentence prediction tasks
+$$\mathcal{L} = \mathcal{L}_\text{MLM} + \mathcal{L}_\text{NSP}.$$
+
+MLM cross-entropy averaged over masked positions; NSP
+binary cross-entropy on the `<cls>` head:
 
 @bert-pretraining-pretraining-bert-2-2
-
 :::
 
-::: {.slide}
-
-pretrain BERT (`net`) on the WikiText-2 (`train_iter`) dataset
+::: {.slide title="Training loop"}
+Standard SGD with warmup; on this tiny corpus a few
+hundred steps is enough to see both losses drop:
 
 @bert-pretraining-pretraining-bert-2-3
 
+. . .
+
 @bert-pretraining-pretraining-bert-2-4
 
+. . .
+
+@!bert-pretraining-pretraining-bert-2-4
 :::
 
-::: {.slide}
-
-Representing Text with BERT
+::: {.slide title="Using the trained encoder"}
+After pretraining, the encoder is the *useful* part —
+turn token sequences into contextual representations:
 
 @bert-pretraining-representing-text-with-bert-1
-
 :::
 
-::: {.slide}
-
-Consider the sentence "a crane is flying"
+::: {.slide title="Single sentence"}
+"a crane is flying" → 6 hidden vectors (one per token,
+including `<cls>` and `<sep>`). Each is *contextual* — the
+representation of "crane" depends on its neighbors:
 
 @bert-pretraining-representing-text-with-bert-2
-
 :::
 
-::: {.slide}
-
-Now consider a sentence pair
-"a crane driver came" and "he just left"
+::: {.slide title="Sentence pair"}
+"a crane driver came" / "he just left". Same encoder,
+two-segment input — segment IDs distinguish the two halves
+inside the same sequence:
 
 @bert-pretraining-representing-text-with-bert-3
+:::
 
+::: {.slide title="Recap"}
+- BERT pretraining is just two losses (MLM + NSP)
+  optimized end-to-end on the encoder + heads.
+- Output of pretraining: a *contextual* token encoder.
+- For downstream tasks: load encoder weights, attach a
+  small head, fine-tune. The next chapter does exactly
+  this for sentiment classification, NLI, and SQuAD-style
+  QA.
 :::

@@ -962,77 +962,111 @@ class BERTModel(keras.Model):
 <!-- slides -->
 
 ::: {.slide}
+**BERT** (Devlin et al., 2018) — bidirectional Transformer
+encoder pretrained on a giant corpus, then fine-tuned to
+arbitrary downstream NLP tasks. Started the NLP "transfer
+learning everywhere" era; everything from sentiment
+classification to question answering became a fine-tuning
+job.
+
+Compared to predecessors:
+
+- **ELMo** (LSTM, contextual but task-specific architecture).
+- **GPT** (Transformer, unidirectional — only sees left
+  context).
+- **BERT** (Transformer, *bidirectional* via masked LM,
+  task-agnostic).
+
+![ELMo (LSTM) vs GPT (left-to-right Transformer) vs BERT (bidirectional Transformer).](../img/elmo-gpt-bert.svg){width=78%}
 
 @bert-bert-combining-the-best-of-both-worlds
-
 :::
 
-::: {.slide}
+::: {.slide title="Input representation"}
+A BERT input sequence packs in a lot:
 
-Input Representation
+- `<cls>` + tokens of segment A + `<sep>` + tokens of
+  segment B + `<sep>`.
+- Three additive embeddings: token, segment (A vs B),
+  position.
+
+![Token + segment + position embeddings, all summed.](../img/bert-input.svg){width=72%}
 
 @bert-input-representation-1
-
 :::
 
-::: {.slide}
-
-`BERTEncoder` class
+::: {.slide title="BERTEncoder"}
+A standard Transformer encoder stack on the summed
+embeddings. The pretrained model exposes one hidden
+vector per input position:
 
 @bert-input-representation-2
-
 :::
 
-::: {.slide}
-
-inference of `BERTEncoder`
-
+::: {.slide title="Encoder shape check"}
 @bert-input-representation-3
 
-@bert-input-representation-4
+. . .
 
+@bert-input-representation-4
 :::
 
-::: {.slide}
-
-Masked Language Modeling
+::: {.slide title="Pretraining task 1: Masked LM"}
+Randomly mask 15% of input tokens (replace with `<mask>`
+80% of the time, a random token 10%, leave unchanged
+10%). Train the encoder to predict the originals. Forces
+the model to use *both* left and right context.
 
 @bert-masked-language-modeling-1
-
 :::
 
-::: {.slide}
-
-the forward inference of `MaskLM`
+::: {.slide title="MaskLM forward"}
+Gather hidden states at the masked positions; project
+through an MLP head to vocab logits:
 
 @bert-masked-language-modeling-2
 
-@bert-masked-language-modeling-3
+. . .
 
+@bert-masked-language-modeling-3
 :::
 
-::: {.slide}
-
-Next Sentence Prediction
+::: {.slide title="Pretraining task 2: Next Sentence Prediction"}
+Auxiliary binary task: given two segments, are they
+consecutive in the corpus? Trains the `<cls>` token's
+representation to capture sentence-pair relationships
+(useful for QA, NLI):
 
 @bert-next-sentence-prediction-1
-
 :::
 
-::: {.slide}
-
-the forward inference of an `NextSentencePred`
+::: {.slide title="NSP head"}
+2-way classifier on the `<cls>` representation:
 
 @bert-next-sentence-prediction-2
 
-@bert-next-sentence-prediction-3
+. . .
 
+@bert-next-sentence-prediction-3
 :::
 
-::: {.slide}
-
-Putting It All Together
+::: {.slide title="Putting it together"}
+Encoder + MaskLM head + NSP head, sharing the same
+backbone. Pretrain end-to-end on (masked tokens, NSP
+label) tuples; fine-tune downstream by replacing the
+heads:
 
 @bert-putting-it-all-together
+:::
 
+::: {.slide title="Recap"}
+- BERT = bidirectional Transformer encoder, pretrained
+  with masked LM + next-sentence prediction.
+- Three additive embeddings (token, segment, position) —
+  the "BERT input" recipe.
+- Pretrain once on a huge corpus, fine-tune the head on
+  any classification / tagging / QA task.
+- Successors: RoBERTa (drop NSP, more data), ELECTRA
+  (replaced-token detection), DeBERTa (disentangled
+  attention). All variations on the same template.
 :::

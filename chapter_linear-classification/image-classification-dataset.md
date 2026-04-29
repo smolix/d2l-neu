@@ -325,51 +325,85 @@ Lastly, data iterators are a key component for efficient performance. For instan
 <!-- slides -->
 
 ::: {.slide}
+**Fashion-MNIST** is the workhorse dataset for the rest of this
+chapter:
 
-The MNIST dataset is one of the widely used dataset for image classification, while it is too simple as a benchmark dataset. We will use the similar, but more complex Fashion-MNIST dataset
+- 10 classes (T-shirt / trouser / pullover / …) of 28×28 grayscale
+  images; 60 k train, 10 k test.
+- Drop-in replacement for MNIST — same shape, same API, harder.
+- We'll wrap it in a `DataModule` so every classifier we build can
+  reuse the same loaders.
+
+@!image-classification-dataset-visualization-2
+:::
+
+::: {.slide title="Loading"}
+Imports and the `FashionMNIST` `DataModule` shell:
 
 @image-classification-dataset-the-image-classification-dataset
 
-:::
-
-::: {.slide}
-
-download and read it into memory using built-in framework utilities
-
 @image-classification-dataset-loading-the-dataset-1
 
+. . .
+
+Instantiate (resizing to 32×32 to match later ConvNet inputs):
+
 @image-classification-dataset-loading-the-dataset-2
+:::
+
+::: {.slide title="What does one example look like?"}
+Each train item is a `(C, H, W)` image tensor + an integer label:
 
 @image-classification-dataset-loading-the-dataset-3
 
+A 1×32×32 grayscale image — single channel, after the resize.
 :::
 
-::: {.slide}
-
-Two utility functions to visualize the dataset
+::: {.slide title="Human-readable labels"}
+The dataset stores labels as integers 0–9. A small helper turns
+each label into its English name (T-shirt, Trouser, Pullover, …):
 
 @image-classification-dataset-loading-the-dataset-4
-
 :::
 
-::: {.slide}
-
-reads a minibatch of data with size `batch_size`
+::: {.slide title="Minibatches"}
+Wrap the framework dataloader so train and val each yield batches
+in the same shape:
 
 @image-classification-dataset-reading-a-minibatch-1
 
+. . .
+
 @image-classification-dataset-reading-a-minibatch-2
 
+A batch of 64 32×32 grayscale images plus 64 integer labels.
+:::
+
+::: {.slide title="Throughput sanity check"}
+Time one full epoch through the loader. Slow loading bottlenecks
+training as much as the model itself:
+
 @image-classification-dataset-reading-a-minibatch-3
+:::
+
+::: {.slide title="Visualization helpers"}
+A grid plotter we'll reuse for spot-checks:
 
 @image-classification-dataset-visualization-1
 
-:::
+. . .
 
-::: {.slide}
-
-the images and their corresponding labels
+Bound to the dataset as a method that pulls one batch and labels
+each tile with the class name:
 
 @image-classification-dataset-visualization-2
+:::
 
+::: {.slide title="Recap"}
+- Fashion-MNIST: 10 classes, 28×28 grayscale, harder than MNIST.
+- A `DataModule` subclass owns the framework's
+  `train` / `val_dataloader`, label decoding, and a `visualize`
+  helper.
+- Always sanity-check throughput — slow I/O caps training speed.
+- Same data API drives every model in this chapter.
 :::

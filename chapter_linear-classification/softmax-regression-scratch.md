@@ -419,75 +419,103 @@ much more efficiently.
 <!-- slides -->
 
 ::: {.slide}
+The same recipe as linear regression, with two new pieces:
+
+1. **Softmax** turns logits into a probability distribution.
+2. **Cross-entropy** is the loss for distributions.
+
+Wired into the same `Module` / `Trainer` scaffold from the
+regression chapter — `Classifier` adds accuracy reporting and we
+inherit the rest.
+:::
+
+::: {.slide title="Sums along an axis"}
+Quick reminder before defining softmax — sum along chosen axes:
 
 @softmax-regression-scratch-softmax-regression-implementation-from-scratch
 
+@softmax-regression-scratch-the-softmax-1
 :::
 
-::: {.slide}
+::: {.slide title="Softmax"}
+$$\mathrm{softmax}(\mathbf{X})_{ij}
+  = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
 
-Given a matrix `X` we can sum over all elements (by default) or only
-over elements in the same axis
-
-@softmax-regression-scratch-the-softmax-1
-
-$$\mathrm{softmax}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
+Three steps: exponentiate, sum across the class axis, divide.
 
 @softmax-regression-scratch-the-softmax-2
 
-:::
+. . .
 
-::: {.slide}
-
-we turn each element
-into a nonnegative number.
-Each row sums up to 1
+Result: every row is non-negative and **sums to 1** — a valid
+probability distribution over classes:
 
 @softmax-regression-scratch-the-softmax-3
-
 :::
 
-::: {.slide}
-
-the softmax regression model. we flatten each image,
-treating them as vectors of length 784. Since our dataset has 10 classes,
-our network has an output dimension of 10
+::: {.slide title="The model"}
+Flatten each 32×32 image into a 1024-vector, hit one linear layer
+that outputs 10 logits — one per class:
 
 @softmax-regression-scratch-the-model-1
 
-@softmax-regression-scratch-the-model-2
+. . .
 
+The forward pass = flatten → linear → softmax:
+
+@softmax-regression-scratch-the-model-2
 :::
 
-::: {.slide}
+::: {.slide title="Cross-entropy loss"}
+For label `y` (an integer class), the loss on one example is just
 
-create sample data `y_hat`
-with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`. Using `y` as the indices of the probabilities in `y_hat`
+$$\ell = -\log \hat{y}_{y}$$
+
+— the negative log of the *predicted probability of the correct
+class*. Here are two examples with 3 classes:
 
 @softmax-regression-scratch-the-cross-entropy-loss-1
+:::
 
-implement the cross-entropy loss function implement the cross-entropy loss function
+::: {.slide title="Implementing it"}
+One line — fancy indexing pulls out `y_hat[i, y[i]]` for each
+example, then negative log:
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
 
-@softmax-regression-scratch-the-cross-entropy-loss-3
+. . .
 
+@softmax-regression-scratch-the-cross-entropy-loss-3
 :::
 
-::: {.slide}
-
-train the model with 10 epochs
+::: {.slide title="Train"}
+10 epochs on Fashion-MNIST. The base `Classifier` already handles
+the validation loop and accuracy reporting:
 
 @softmax-regression-scratch-training
-
 :::
 
-::: {.slide}
-
-classify some images
+::: {.slide title="Predicting"}
+Pull a fresh validation batch and look at predicted vs. true
+classes:
 
 @softmax-regression-scratch-prediction-1
 
+. . .
+
+Tile the misclassified images, captioned with `predicted / true`:
+
 @softmax-regression-scratch-prediction-2
 
+Linear models cap out around ~83% on Fashion-MNIST — easy classes
+right, ambiguous shirt-vs-pullover wrong.
+:::
+
+::: {.slide title="Recap"}
+- **Softmax** = exp + row-sum normalization → probabilities.
+- **Cross-entropy** = $-\log p_\text{correct}$, the standard
+  classification loss.
+- A 10-output linear layer + softmax + CE loss is *the* baseline
+  classifier — anything fancier (MLPs, CNNs) just replaces the
+  forward pass.
 :::

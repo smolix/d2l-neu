@@ -292,20 +292,50 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 <!-- slides -->
 
 ::: {.slide}
+Same model, same data — using the framework's built-in primitives:
+
+- One linear layer instead of hand-rolled `W` and `b`.
+- Built-in `cross_entropy` that fuses softmax + log + NLL with
+  numerical-stability tricks (the LogSumExp trick).
+- Same `Trainer`, same convergence, much less code.
+:::
+
+::: {.slide title="The model"}
+Imports + a one-line linear layer wrapped in our `Classifier`
+scaffold:
 
 @softmax-regression-concise-concise-implementation-of-softmax-regression
 
 @softmax-regression-concise-defining-the-model
-
 :::
 
-::: {.slide}
-
-pass the logits and compute the softmax and its log
-all at once inside the cross-entropy loss function
+::: {.slide title="Softmax + cross-entropy, fused"}
+Computing softmax then `log` then NLL separately blows up
+numerically when logits are large (`exp(50)` overflows). The
+framework's `cross_entropy` takes raw **logits** and computes the
+loss directly via the LogSumExp trick — equivalent math, stable
+arithmetic:
 
 @softmax-regression-concise-softmax-revisited
 
+The model output skips the explicit softmax — the loss handles
+both pieces.
+:::
+
+::: {.slide title="Train"}
+Same Fashion-MNIST data, same 10 epochs, same `Trainer`:
+
 @softmax-regression-concise-training
 
+Identical accuracy curve to the from-scratch version. Built-in
+loss = cleaner code + better numerics.
+:::
+
+::: {.slide title="Recap"}
+- **From-scratch** taught us softmax and cross-entropy; **concise**
+  is what we actually use.
+- Built-in `cross_entropy(logits, y)` ≡ `softmax → log → NLL`
+  with the LogSumExp stability trick baked in.
+- The forward pass should output **logits**, not softmax
+  probabilities — the loss does the rest.
 :::

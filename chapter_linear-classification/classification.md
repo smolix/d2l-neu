@@ -233,21 +233,46 @@ Classification is a sufficiently common problem that it warrants its own conveni
 <!-- slides -->
 
 ::: {.slide}
+A small `Classifier` base class that every classification model
+in the book inherits from. Same role as `d2l.Module` for
+regression — but with classification-specific defaults:
 
+- A **validation step** that reports loss **and** accuracy.
+- An **accuracy** helper that compares the argmax of the predicted
+  scores to the true labels.
+
+Subclasses just supply `forward` (and a custom `loss` if not
+plain cross-entropy).
+:::
+
+::: {.slide title="The `Classifier` class"}
 @classification-the-base-classification-model
 
 @classification-the-classifier-class-1
 
-@classification-the-classifier-class-2
+. . .
 
+A default `configure_optimizers` on `Module` so subclasses don't
+have to write it:
+
+@classification-the-classifier-class-2
 :::
 
-::: {.slide}
-
-compare the predicted class with the ground truth `y` elementwise
+::: {.slide title="Accuracy"}
+Take the **argmax** along the class axis, compare with the true
+label element-wise, and average. The result is the fraction of
+correctly-classified examples in the batch:
 
 @classification-accuracy-1
 
-@classification-accuracy-2
+The validation step then reports both the loss (lower is better)
+and accuracy (higher is better) every epoch.
+:::
 
+::: {.slide title="Recap"}
+- `Classifier(d2l.Module)` adds **accuracy reporting** to the
+  base scaffold from the regression chapter.
+- One line for accuracy: `argmax → ==y → mean`.
+- The same training loop now drives every classification model
+  we'll build through the rest of the book.
 :::

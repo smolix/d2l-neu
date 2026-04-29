@@ -363,17 +363,65 @@ We conclude with an illustration of the computational graph and its dependencies
 <!-- slides -->
 
 ::: {.slide}
+Once the framework runs asynchronously and tracks
+dependencies, two kinds of parallelism happen *for free*:
+
+- **Independent ops on different devices** — if op A
+  doesn't depend on op B, the scheduler can run them in
+  parallel on GPU 0 and GPU 1.
+- **Computation overlapped with communication** — while
+  the GPUs reduce gradients across the network, the next
+  layer's forward pass can start running.
+
+![Two-layer MLP scheduled across CPU and 2 GPUs — independent branches run in parallel.](../img/twogpu.svg){width=58%}
+
+You don't write any threads. The dependency tracker does
+it for you. This deck quantifies the speedup.
 
 @auto-parallelism-automatic-parallelism
+:::
+
+::: {.slide title="Two GPUs, two independent jobs"}
+Run the same matmul on GPU 0 and GPU 1 separately, then
+run both at the same time:
 
 @auto-parallelism-parallel-computation-on-gpus-1
 
+. . .
+
 @auto-parallelism-parallel-computation-on-gpus-2
+
+. . .
 
 @auto-parallelism-parallel-computation-on-gpus-3
 
+Concurrent run is roughly the time of one GPU — the
+scheduler used both in parallel.
+:::
+
+::: {.slide title="Computation + communication"}
+Compute on GPU 0 and copy the result to GPU 1 — sequential
+vs overlapped:
+
 @auto-parallelism-parallel-computation-and-communication-1
+
+. . .
 
 @auto-parallelism-parallel-computation-and-communication-2
 
+Overlapping shaves real time. Same idea scales to
+multi-GPU training: fuse `all_reduce` with the next layer's
+forward.
+:::
+
+::: {.slide title="Recap"}
+- Async backend + dependency tracker = automatic
+  parallelism across devices.
+- Independent ops run in parallel; communication overlaps
+  with computation.
+- No explicit thread management — write straight-line code,
+  the scheduler finds the parallelism.
+- Frameworks like NCCL, Horovod, DeepSpeed take this
+  further with explicit pipeline / sharded
+  parallelism for very large models.
 :::

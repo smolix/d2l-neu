@@ -816,79 +816,115 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 <!-- slides -->
 
 ::: {.slide}
+A single GPU can train ResNet on ImageNet — slowly. Modern
+training of large models requires *many* GPUs. Three ways
+to split the work:
+
+- **Network partitioning** — different layers on different
+  GPUs. Hard to balance; rarely used alone today.
+- **Layerwise partitioning** — split each layer's
+  parameters across GPUs (model parallelism). Used in
+  giant models where weights don't fit on one GPU.
+- **Data parallelism** — replicate the full model on every
+  GPU; each GPU processes a different chunk of the
+  minibatch; gradients are averaged across GPUs.
+
+Data parallelism is the default for everyday training.
+
+![Strategies: original, network partitioning, layerwise partitioning, data parallelism.](../img/splitting.svg){width=72%}
+:::
+
+::: {.slide title="Data parallelism"}
+Each GPU computes a forward + backward pass on its slice
+of the minibatch. After the backward pass, gradients are
+averaged across GPUs (`all_reduce`). Optimizer step then
+runs identically on every GPU, keeping replicas in sync.
+
+![Data-parallel SGD on 2 GPUs: split data, compute gradients independently, all-reduce, then update.](../img/data-parallel.svg){width=72%}
 
 @multiple-gpus-data-parallelism
-
 :::
 
-::: {.slide}
-
-A Toy Network
+::: {.slide title="Toy network"}
+Tiny LeNet for the demo — small enough to fit on each GPU
+many times over:
 
 @multiple-gpus-a-toy-network
-
 :::
 
-::: {.slide}
-
-distribute a list of parameters to multiple devices
+::: {.slide title="Distribute parameters"}
+Replicate the parameter list onto each device:
 
 @multiple-gpus-data-synchronization-1
 
-@multiple-gpus-data-synchronization-2
+. . .
 
+@multiple-gpus-data-synchronization-2
 :::
 
-::: {.slide}
-
-`allreduce` function adds up all vectors and broadcasts the result back to all GPUs
+::: {.slide title="all_reduce"}
+Sum vectors across GPUs and broadcast the result back —
+the gradient-averaging primitive of data-parallel SGD.
+NCCL implements this efficiently in production:
 
 @multiple-gpus-data-synchronization-3
 
+. . .
+
 @multiple-gpus-data-synchronization-4
 
-@multiple-gpus-data-synchronization-5
+. . .
 
+@multiple-gpus-data-synchronization-5
 :::
 
-::: {.slide}
-
-distribute a minibatch evenly across multiple GPUs
+::: {.slide title="Distribute the minibatch"}
+Split a tensor evenly across devices:
 
 @multiple-gpus-distributing-data-1
 
-@multiple-gpus-distributing-data-2
+. . .
 
+@multiple-gpus-distributing-data-2
 :::
 
-::: {.slide}
-
-multi-GPU training on a single minibatch
+::: {.slide title="One step of multi-GPU training"}
+Forward + backward on each replica → all_reduce gradients
+→ update parameters identically:
 
 @multiple-gpus-training-1
 
-:::
-
-::: {.slide}
-
-the training function
+. . .
 
 @multiple-gpus-training-2
-
 :::
 
-::: {.slide}
-
-on a single GPU
-
+::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-training-3
 
+. . .
+
+@!multiple-gpus-training-3
 :::
 
-::: {.slide}
-
-increasing the number of GPUs to 2
+::: {.slide title="Two GPUs"}
+Per-epoch time roughly halves; per-step iteration count
+drops because each GPU sees half the minibatch:
 
 @multiple-gpus-training-4
 
+. . .
+
+@!multiple-gpus-training-4
+:::
+
+::: {.slide title="Recap"}
+- Data parallelism is the default: replicate model, split
+  minibatch, all-reduce gradients, identical optimizer
+  step on every GPU.
+- `all_reduce` is the workhorse — implemented as a ring
+  reduction in NCCL; bandwidth-optimal for $k$ GPUs.
+- Model parallelism is for *huge* models that don't fit
+  on a single GPU; tensor / pipeline parallelism are
+  modern variants.
 :::

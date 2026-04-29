@@ -491,29 +491,93 @@ This is quite different from what we saw previously. All print statements, as de
 <!-- slides -->
 
 ::: {.slide}
+PyTorch / MXNet imperative — *eager* execution. Every line
+of Python issues a kernel and waits. Easy to debug, but
+costs you Python-loop overhead and prevents whole-graph
+optimization.
+
+The fix: trace or script the model into a *graph*, then let
+the framework JIT-compile it (TorchScript, MXNet Hybridize,
+TF `@tf.function`, JAX `jit`). Result: 10–100× less Python
+overhead, plus operator fusion and memory-layout
+optimization.
+
+![Imperative execution: each line dispatches a separate kernel.](../img/computegraph.svg){width=58%}
 
 @hybridize-compilers-and-interpreters
+:::
+
+::: {.slide title="Imperative vs symbolic"}
+Imperative: Python-controlled, easy to print/debug,
+expensive per op. Symbolic: graph captured, compiled once,
+runs as fused kernels. Modern frameworks let you switch
+between modes:
 
 @hybridize-symbolic-programming
+:::
+
+::: {.slide title="Hybridizing a Sequential model"}
+Build the same MLP as a regular module, then opt into
+graph mode (PyTorch: `torch.jit.script`; MXNet:
+`HybridSequential.hybridize()`; TF: `@tf.function`):
 
 @hybridize-hybridizing-the-sequential-class-1
 
+. . .
+
 @hybridize-hybridizing-the-sequential-class-2
+:::
+
+::: {.slide title="Speedup"}
+Wall-clock benchmark, eager vs hybridized. The exact ratio
+depends on model size and op count, but the win is usually
+substantial:
 
 @hybridize-acceleration-by-hybridization-1
 
+. . .
+
 @hybridize-acceleration-by-hybridization-2
+:::
+
+::: {.slide title="Serialization"}
+A graph is portable: save it once, load and run from C++,
+mobile, or another language without Python in the loop.
+Models in production almost always ship the graph form:
 
 @hybridize-serialization-1
 
+. . .
+
 @hybridize-serialization-2
 
+. . .
+
 @hybridize-serialization-3
+:::
+
+::: {.slide title="Inspecting the graph"}
+The compiled module exposes its computation graph for
+inspection (or further optimization):
 
 @hybridize-serialization-4
 
+. . .
+
 @hybridize-serialization-5
 
-@hybridize-serialization-6
+. . .
 
+@hybridize-serialization-6
+:::
+
+::: {.slide title="Recap"}
+- Eager Python is great for development; graph form is
+  faster for production.
+- Hybridization = trace or script imperative code into a
+  static graph, then JIT-compile.
+- Wins: kernel fusion, no Python overhead, deployable to
+  C++ / mobile.
+- Costs: control flow that depends on tensor values is
+  harder to capture; debugging is less interactive.
 :::

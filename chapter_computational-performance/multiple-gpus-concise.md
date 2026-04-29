@@ -573,53 +573,81 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 <!-- slides -->
 
 ::: {.slide}
+The previous section did data-parallel training the hard
+way — manual `all_reduce`, manual replica management. In
+practice, every framework wraps it in a one-liner:
+
+- PyTorch: `nn.DataParallel(net)` (multi-GPU on one host) or
+  `nn.parallel.DistributedDataParallel` (multi-host).
+- MXNet: `gluon.Trainer(..., kvstore='device')`.
+- TensorFlow: `tf.distribute.MirroredStrategy()`.
+
+Same numerical result; orders of magnitude less boilerplate;
+NCCL all-reduce under the hood.
 
 @multiple-gpus-concise-concise-implementation-for-multiple-gpus
-
 :::
 
-::: {.slide}
-
-A Toy Network
+::: {.slide title="A bigger model"}
+We use a small ResNet for these experiments — the speedup
+from data parallelism only matters once the per-GPU
+compute is non-trivial:
 
 @multiple-gpus-concise-a-toy-network
+:::
+
+::: {.slide title="Multi-GPU initialization"}
+Wrap the model in the framework's data-parallel container.
+Parameters are replicated to each GPU automatically:
 
 @multiple-gpus-concise-network-initialization-1
 
+. . .
+
 @multiple-gpus-concise-network-initialization-2
 
-@multiple-gpus-concise-network-initialization-3
+. . .
 
+@multiple-gpus-concise-network-initialization-3
 :::
 
-::: {.slide}
-
-evaluate the accuracy in parallel across multiple devices
+::: {.slide title="Parallel evaluation"}
+The wrapper also handles inference — splits the input
+minibatch across replicas, gathers outputs:
 
 @multiple-gpus-concise-network-initialization-4
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training loop"}
+Identical to single-GPU: forward, backward, step. The
+data-parallel wrapper does the gradient averaging
+behind the scenes:
 
 @multiple-gpus-concise-training-1
-
 :::
 
-::: {.slide}
-
-train the network on a single GPU
-
+::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-concise-training-2
 
+. . .
+
+@!multiple-gpus-concise-training-2
 :::
 
-::: {.slide}
-
-use 2 GPUs for training
-
+::: {.slide title="Two GPUs"}
 @multiple-gpus-concise-training-3
 
+. . .
+
+@!multiple-gpus-concise-training-3
+:::
+
+::: {.slide title="Recap"}
+- Framework wrappers (`DataParallel`, `MirroredStrategy`)
+  reduce data-parallel SGD to one line of setup.
+- Same numerical recipe as the from-scratch version:
+  replicate, split, all-reduce, identical step.
+- For multi-host distributed training, use
+  `DistributedDataParallel` / `MultiWorkerMirroredStrategy`
+  — same idea, NCCL/Gloo across the network.
 :::

@@ -999,85 +999,81 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 <!-- slides -->
 
 ::: {.slide}
+A second Kaggle capstone: ImageNet Dogs (120 fine-grained
+breeds). The big difference from CIFAR-10: this is a
+*subset* of ImageNet, so a pretrained ResNet already knows
+*almost everything* about these classes. Fine-tuning is
+the right play.
 
-The web address of this competition is https://www.kaggle.com/c/dog-breed-identification
+![Kaggle "Dog Breed Identification" page.](../img/kaggle-dog.jpg){width=72%}
 
 @kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle
-
 :::
 
-::: {.slide}
-
-we provide a small sample of the dataset
-
+::: {.slide title="Downloading"}
 @kaggle-dog-downloading-the-dataset
-
 :::
 
-::: {.slide}
-
-Organizing the Dataset
+::: {.slide title="Organizing the dataset"}
+Same idea as CIFAR-10 — reshuffle the Kaggle layout into
+`train/<class>/img.jpg` for the standard ImageFolder loader:
 
 @kaggle-dog-organizing-the-dataset
-
 :::
 
-::: {.slide}
-
-Image Augmentation
+::: {.slide title="Augmentation"}
+ImageNet-scale augmentation: random resized crop, random
+horizontal flip, color jitter, mean/std normalization with
+*the same statistics* the pretrained backbone expects:
 
 @kaggle-dog-image-augmentation-1
 
-@kaggle-dog-image-augmentation-2
+. . .
 
+@kaggle-dog-image-augmentation-2
 :::
 
-::: {.slide}
-
-Reading the Dataset
-
+::: {.slide title="DataLoaders"}
 @kaggle-dog-reading-the-dataset-1
 
-@kaggle-dog-reading-the-dataset-2
+. . .
 
+@kaggle-dog-reading-the-dataset-2
 :::
 
-::: {.slide}
-
-Fine-Tuning a Pretrained Model
+::: {.slide title="Fine-tuning a pretrained ResNet-34"}
+Backbone (frozen or with low LR) + new 120-way head:
 
 @kaggle-dog-fine-tuning-a-pretrained-model-1
 
-:::
-
-::: {.slide}
-
-calculating the loss
+. . .
 
 @kaggle-dog-fine-tuning-a-pretrained-model-2
-
 :::
 
-::: {.slide}
-
-the Training Function
-
+::: {.slide title="Training function"}
 @kaggle-dog-defining-the-training-function
-
 :::
 
-::: {.slide}
-
-Training and Validating the Model
-
+::: {.slide title="Train"}
 @kaggle-dog-training-and-validating-the-model
 
+. . .
+
+@!kaggle-dog-training-and-validating-the-model
 :::
 
-::: {.slide}
-
-Classifying the Testing Set
-
+::: {.slide title="Submit predictions"}
 @kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
 
+::: {.slide title="Recap"}
+- ImageNet Dogs ⊂ ImageNet → fine-tuning a pretrained
+  CNN crushes from-scratch training.
+- Standard recipe: pretrained backbone, new 120-way head,
+  ImageNet-scale augmentation, ImageNet normalization.
+- Same shape as the CIFAR-10 deck; only the dataset and
+  the choice "train from scratch vs fine-tune" differ.
+- The general lesson: when your task is close to the
+  pretraining domain, transfer learning beats everything.
 :::

@@ -947,83 +947,138 @@ Some of these blocks even have the subtle texture of brush strokes.
 <!-- slides -->
 
 ::: {.slide}
+**Neural style transfer** (Gatys, Ecker, Bethge 2015): take
+the *content* of one image and the *style* of another and
+synthesize a new image that combines them. No new model
+training — just iterative optimization of pixel values
+against a loss defined over a frozen pretrained CNN.
 
-Reading the Content and Style Images
+![Style transfer takes content + style images and produces a synthesized one.](../img/style-transfer.svg){width=72%}
 
+The key insight: in a pretrained ImageNet CNN, *deeper*
+layer activations capture *content*, while *Gram matrices*
+of activations across feature channels capture *style*
+(textures, brush strokes, color palette). Define a loss
+that matches both, optimize over the synthesized image's
+pixels.
+
+![Style transfer pipeline: forward pass extracts content + style features; backprop into pixels.](../img/neural-style.svg){width=72%}
+:::
+
+::: {.slide title="Loading content and style"}
 @neural-style-reading-the-content-and-style-images-1
+
+. . .
 
 @neural-style-reading-the-content-and-style-images-2
 
+. . .
+
+@!neural-style-reading-the-content-and-style-images-2
 :::
 
-::: {.slide}
-
-Preprocessing and Postprocessing
+::: {.slide title="Preprocessing"}
+ImageNet mean/std normalization in, inverse on the way out:
 
 @neural-style-preprocessing-and-postprocessing
-
 :::
 
-::: {.slide}
-
-Extracting Features
+::: {.slide title="Pretrained VGG-19 feature extractor"}
+Style is a multi-scale phenomenon — match it across
+several VGG-19 layers (Conv1_1, 2_1, 3_1, 4_1, 5_1).
+Content is matched at one deeper layer (Conv4_2):
 
 @neural-style-extracting-features-1
 
+. . .
+
 @neural-style-extracting-features-2
+
+. . .
 
 @neural-style-extracting-features-3
 
+. . .
+
 @neural-style-extracting-features-4
 
-@neural-style-extracting-features-5
+. . .
 
+@neural-style-extracting-features-5
 :::
 
-::: {.slide}
-
-Defining the Loss Function
+::: {.slide title="Three loss terms"}
+**Content loss** — squared error between content and
+synthesized features at the content layer:
 
 @neural-style-content-loss
 
+. . .
+
+**Style loss** — squared error between *Gram matrices*
+of features at each style layer. Gram matrix
+$G = F F^\top$ captures pairwise channel correlations,
+discarding spatial location:
+
 @neural-style-style-loss-1
+
+. . .
 
 @neural-style-style-loss-2
 
-@neural-style-total-variation-loss
+. . .
 
+**Total variation loss** — penalizes high-frequency noise,
+keeps the synthesized image smooth:
+
+@neural-style-total-variation-loss
 :::
 
-::: {.slide}
+::: {.slide title="Combined loss"}
+$$\mathcal{L} = \alpha\, \mathcal{L}_\text{content} + \beta\, \mathcal{L}_\text{style} + \gamma\, \mathcal{L}_\text{tv}.$$
 
-The loss function of style transfer is the weighted sum of content loss, style loss, and total variation loss
+The relative weights determine the visual style — high
+$\beta$ pushes towards painterly, low $\beta$ keeps
+photorealism.
 
 @neural-style-loss-function
-
 :::
 
-::: {.slide}
-
-Initializing the Synthesized Image
+::: {.slide title="Initializing the synthesized image"}
+Start from the content image (or noise — converges slower
+but works). The synthesized image *is* the optimization
+variable; the network parameters are frozen:
 
 @neural-style-initializing-the-synthesized-image-1
 
-@neural-style-initializing-the-synthesized-image-2
+. . .
 
+@neural-style-initializing-the-synthesized-image-2
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Optimization"}
+Adam (or LBFGS) over the pixels. After a few hundred
+iterations you have your stylized image:
 
 @neural-style-training-1
 
-:::
-
-::: {.slide}
-
-start to train the model
+. . .
 
 @neural-style-training-2
 
+. . .
+
+@!neural-style-training-2
+:::
+
+::: {.slide title="Recap"}
+- Style transfer = optimize pixels to minimize a content
+  loss + a Gram-matrix style loss + TV smoothness loss.
+- The CNN is *frozen*; we backprop into the image, not
+  the weights.
+- Multi-layer style matching is what gives the recognizable
+  texture-on-content look.
+- Modern variants: feedforward style nets (one pass per
+  image), AdaIN, neural style with diffusion models —
+  same idea, faster inference.
 :::

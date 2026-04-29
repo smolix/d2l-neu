@@ -454,53 +454,100 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 <!-- slides -->
 
 ::: {.slide}
+A standard convolution + pooling stack reduces spatial
+resolution. For dense prediction (semantic segmentation,
+generative models, super-resolution) we need to go the
+*other* way — upsample features back to image resolution.
 
+The standard tool: **transposed convolution**, also called
+"deconvolution" (a misnomer — it's not a true inverse).
+Each input element broadcasts a *full kernel* into the
+output, contributions from neighbors get summed:
+
+![A $2 \times 2$ transposed convolution: each input element scatters its kernel into the output.](../img/trans_conv.svg){width=68%}
+
+Output shape grows: with stride 1, kernel $k$, no padding,
+$n_{\text{out}} = n_{\text{in}} + k - 1$. With stride $s$,
+multiplied accordingly.
+:::
+
+::: {.slide title="From-scratch implementation"}
 @transposed-conv-transposed-convolution
 
-implement this basic transposed convolution operation
+. . .
 
 @transposed-conv-basic-operation-1
-
 :::
 
-::: {.slide}
-
-validate the output of the above implementation
-
+::: {.slide title="Verify on a small example"}
 @transposed-conv-basic-operation-2
 
-:::
+. . .
 
-::: {.slide}
-
-use high-level APIs to obtain the same results
+Same result via the framework op (PyTorch
+`ConvTranspose2d`, etc.):
 
 @transposed-conv-basic-operation-3
-
 :::
 
-::: {.slide}
+::: {.slide title="Padding, stride, channels"}
+Padding here *removes* output rows/columns instead of
+adding them — it's the inverse interpretation.
 
-Padding, Strides, and Multiple Channels
+Stride > 1 inserts zeros *between* input elements before
+the scatter — that's how transposed conv upsamples:
+
+![Stride-2 transposed conv: each input element's kernel is placed at twice-spaced positions, then summed.](../img/trans_conv_stride2.svg){width=68%}
 
 @transposed-conv-padding-strides-and-multiple-channels-1
 
+. . .
+
 @transposed-conv-padding-strides-and-multiple-channels-2
 
-@transposed-conv-padding-strides-and-multiple-channels-3
+. . .
 
+Multi-channel works as expected: input channels reduce-add
+through the kernel, output channels stack in parallel:
+
+@transposed-conv-padding-strides-and-multiple-channels-3
 :::
 
-::: {.slide}
+::: {.slide title="Connection to matrix transposition"}
+A standard convolution can be written as a sparse matrix
+multiplication $\mathbf{y} = \mathbf{K}\mathbf{x}$ where
+$\mathbf{K}$ encodes the kernel + stride + padding.
 
-Connection to Matrix Transposition
+A transposed convolution multiplies by the *transpose*:
+$\mathbf{x}' = \mathbf{K}^\top \mathbf{y}$. That's where the
+name comes from. Same algebra, no learning required to
+follow:
 
 @transposed-conv-connection-to-matrix-transposition-1
 
+. . .
+
 @transposed-conv-connection-to-matrix-transposition-2
+
+. . .
 
 @transposed-conv-connection-to-matrix-transposition-3
 
-@transposed-conv-connection-to-matrix-transposition-4
+. . .
 
+@transposed-conv-connection-to-matrix-transposition-4
+:::
+
+::: {.slide title="Recap"}
+- Transposed conv = upsampling op; each input element
+  scatters a full kernel into the output and overlapping
+  contributions sum.
+- Stride > 1 inserts zeros between inputs → upsamples by
+  $s$.
+- Mathematically the *transpose* of a normal convolution's
+  matrix form (hence the name).
+- Workhorse for FCN, U-Net, GAN generators, VAE decoders.
+- Modern alternative: bilinear upsample + 3×3 conv —
+  avoids checkerboard artifacts that transposed conv can
+  produce.
 :::

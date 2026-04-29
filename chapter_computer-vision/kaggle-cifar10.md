@@ -1063,114 +1063,118 @@ is similar to that in :numref:`sec_kaggle_house`.
 <!-- slides -->
 
 ::: {.slide}
+A capstone deck: assemble everything from the chapter
+(augmentation, fine-tuning, modern CNN architectures) and
+take a Kaggle competition. CIFAR-10 has been done to death,
+but it's the right size for a teaching example — small
+enough to fit in memory, big enough that augmentation and
+ensembling matter.
 
-The web address of the competition is https://www.kaggle.com/c/cifar-10
+![Kaggle CIFAR-10 competition page.](../img/kaggle-cifar10.png){width=72%}
 
 @kaggle-cifar10-image-classification-cifar-10-on-kaggle
-
 :::
 
-::: {.slide}
-
-we provide a small-scale sample of the dataset that
-contains the first 1000 training images and 5 random testing images
+::: {.slide title="Downloading"}
+Tiny demo subset for the book; swap in the full dataset
+for the actual competition:
 
 @kaggle-cifar10-downloading-the-dataset
-
 :::
 
-::: {.slide}
-
-Organizing the Dataset
+::: {.slide title="Organizing the dataset"}
+Kaggle ships everything in one folder; standard
+torchvision-style training expects `train/<class>/img.png`.
+Build that layout from the labels.csv:
 
 @kaggle-cifar10-organizing-the-dataset-1
 
-:::
-
-::: {.slide}
-
-split the validation set out of the original training set
+. . .
 
 @kaggle-cifar10-organizing-the-dataset-2
 
-:::
-
-::: {.slide}
-
-organizes the testing set for data loading during prediction
+. . .
 
 @kaggle-cifar10-organizing-the-dataset-3
-
 :::
 
-::: {.slide}
-
-invoke functions defined above
-
+::: {.slide title="Run the reorg"}
 @kaggle-cifar10-organizing-the-dataset-4
 
-@kaggle-cifar10-organizing-the-dataset-5
+. . .
 
+@kaggle-cifar10-organizing-the-dataset-5
 :::
 
-::: {.slide}
-
-Image Augmentation
+::: {.slide title="Augmentation pipelines"}
+Standard recipe — random crop, flip, normalize for train;
+just normalize for eval:
 
 @kaggle-cifar10-image-augmentation-1
 
-@kaggle-cifar10-image-augmentation-2
+. . .
 
+@kaggle-cifar10-image-augmentation-2
 :::
 
-::: {.slide}
-
-read the organized dataset consisting of raw image files
+::: {.slide title="DataLoaders"}
+Folder-based dataset + the augmentation pipelines:
 
 @kaggle-cifar10-reading-the-dataset-1
 
-:::
-
-::: {.slide}
-
-specify all the image augmentation operations defined above
+. . .
 
 @kaggle-cifar10-reading-the-dataset-2
-
 :::
 
-::: {.slide}
-
-Model
+::: {.slide title="ResNet-18 model"}
+Standard ResNet-18 with 10-way head. No transfer learning
+this time — train from scratch on CIFAR-10:
 
 @kaggle-cifar10-defining-the-model-1
 
+. . .
+
 @kaggle-cifar10-defining-the-model-2
 
-@kaggle-cifar10-defining-the-model-3
+. . .
 
+@kaggle-cifar10-defining-the-model-3
 :::
 
-::: {.slide}
-
-Training Function
+::: {.slide title="Training function"}
+SGD with momentum + weight decay + LR step decay. The
+classic vision recipe:
 
 @kaggle-cifar10-defining-the-training-function
-
 :::
 
-::: {.slide}
-
-Training and Validating the Model
-
+::: {.slide title="Train"}
 @kaggle-cifar10-training-and-validating-the-model
 
+. . .
+
+@!kaggle-cifar10-training-and-validating-the-model
 :::
 
-::: {.slide}
-
-Classifying the Testing Set
+::: {.slide title="Submit predictions"}
+Run on the test set, write a Kaggle-format CSV:
 
 @kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
 
+. . .
+
+@!kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
+
+::: {.slide title="Recap"}
+- Real competition setup: download → reorganize files →
+  augment → train → predict → submit.
+- Augmentation matters more than model tweaks at the
+  CIFAR-10 scale.
+- ResNet-18 from scratch + standard recipe is a strong
+  baseline; the chapter techniques (mixup, cutmix, cosine
+  schedule, longer training) push it higher.
+- This pipeline scales to ImageNet — only the model size
+  and training time change.
 :::

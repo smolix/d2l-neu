@@ -905,95 +905,118 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 <!-- slides -->
 
 ::: {.slide}
+A **fully convolutional network** (Long, Shelhamer, Darrell
+2015) is the simplest path to per-pixel prediction:
+
+1. Start with a pretrained classification CNN (ResNet).
+2. Strip the global average pool + final dense layer.
+3. Replace with a 1×1 conv that maps to `num_classes`.
+4. Upsample the resulting low-resolution prediction back
+   to input resolution using transposed convolution.
+
+The whole network has no fully connected layers — it works
+on any input size, and outputs a class-score map at input
+resolution.
+
+![FCN: pretrained CNN body + 1×1 conv to class scores + transposed conv to upsample.](../img/fcn.svg){width=72%}
 
 @fcn-fully-convolutional-networks
-
 :::
 
-::: {.slide}
-
-use a ResNet-18 model pretrained on the ImageNet dataset to extract image features
+::: {.slide title="Pretrained backbone"}
+ResNet-18 pretrained on ImageNet. Drop the head (avg pool +
+dense); keep the conv body that produces a $\frac{H}{32} \times \frac{W}{32}$
+feature map:
 
 @fcn-the-model-1
-
 :::
 
-::: {.slide}
-
-create the fully convolutional network instance `net`
-
+::: {.slide title="Building the FCN"}
 @fcn-the-model-2
 
-@fcn-the-model-3
+. . .
 
+@fcn-the-model-3
 :::
 
-::: {.slide}
-
-use a $1\times 1$ convolutional layer to transform the number of output channels into the number of classes (21) of the Pascal VOC2012 dataset. increase the height and width of the feature maps by 32 times
+::: {.slide title="The class & upsampling head"}
+$1 \times 1$ conv: `num_features` → `num_classes` (21 for
+VOC). Then a transposed conv that upsamples by 32× to
+recover input resolution:
 
 @fcn-the-model-4
-
 :::
 
-::: {.slide}
-
-Initializing Transposed Convolutional Layers
+::: {.slide title="Bilinear init for transposed conv"}
+A randomly initialized 32× upsampler is hard to train.
+Initialize it as bilinear interpolation — a sensible
+starting point that fine-tunes from there:
 
 @fcn-initializing-transposed-convolutional-layers-1
 
-:::
-
-::: {.slide}
-
-experiment with upsampling of bilinear interpolation
+. . .
 
 @fcn-initializing-transposed-convolutional-layers-2
 
+. . .
+
 @fcn-initializing-transposed-convolutional-layers-3
+
+. . .
+
+@!fcn-initializing-transposed-convolutional-layers-3
+
+. . .
 
 @fcn-initializing-transposed-convolutional-layers-4
 
-:::
-
-::: {.slide}
-
-initialize the transposed convolutional layer with upsampling of bilinear interpolation. For the $1\times 1$ convolutional layer, we use Xavier initialization
+. . .
 
 @fcn-initializing-transposed-convolutional-layers-5
-
 :::
 
-::: {.slide}
-
-Reading the Dataset
-
+::: {.slide title="Loading data"}
 @fcn-reading-the-dataset
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training"}
+Pixel-level cross-entropy. Common trick: freeze the
+backbone, train only the new head — gets reasonable
+results in a few epochs:
 
 @fcn-training
 
+. . .
+
+@!fcn-training
 :::
 
-::: {.slide}
-
-Prediction
+::: {.slide title="Predict"}
+Run the network on test images, take argmax over the class
+dimension, map class indices back to RGB:
 
 @fcn-prediction-1
 
-:::
-
-::: {.slide}
-
-visualize the predicted class
+. . .
 
 @fcn-prediction-2
 
+. . .
+
 @fcn-prediction-3
 
+. . .
+
+@!fcn-prediction-3
+:::
+
+::: {.slide title="Recap"}
+- FCN = pretrained classification CNN + 1×1 conv +
+  transposed conv upsampler.
+- All-conv → input size doesn't matter.
+- Bilinear-initialized transposed conv is the workable
+  starting point; fine-tunes from there.
+- The blueprint behind U-Net (skip connections fix the
+  blur), DeepLab (dilated convs avoid the heavy upsampling),
+  and modern segmentation networks.
 :::

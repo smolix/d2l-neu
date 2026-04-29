@@ -797,90 +797,106 @@ def load_data_voc(batch_size, crop_size):
 <!-- slides -->
 
 ::: {.slide}
+**Semantic segmentation** assigns a class label to *every
+pixel*, not just to the image as a whole. Output shape =
+input shape; output channels = number of classes.
 
-One of the most important semantic segmentation dataset
-is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/)
+Two related tasks to keep distinct:
 
-@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1
+- **Image segmentation** — group pixels by similarity (no
+  semantic labels). Pure clustering.
+- **Instance segmentation** — like semantic, but separate
+  instances of the same class get different labels (Mask
+  R-CNN).
 
-@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2
+![Semantic segmentation: pixel-level labels for dog, cat, background.](../img/segmentation.svg){width=70%}
 
+This deck sets up the **PASCAL VOC 2012** dataset and the
+data plumbing for FCN training (next deck).
 :::
 
-::: {.slide}
+::: {.slide title="Downloading VOC 2012"}
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1
 
-read all the input images and labels into the memory
+. . .
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2
+:::
+
+::: {.slide title="Reading images and labels"}
+Inputs are RGB images; labels are RGB images too — the
+class is encoded in the *color*, not in a 1-channel id
+tensor:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3
 
-:::
-
-::: {.slide}
-
-draw the first five input images and their labels
+. . .
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
 
+. . .
+
+@!semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
 :::
 
-::: {.slide}
-
-enumerate
-the RGB color values and class names
+::: {.slide title="Color → class index"}
+Build a lookup table from the 21 RGB triplets to class
+indices 0–20:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5
 
-:::
-
-::: {.slide}
-
-find the class index for each pixel in a label
+. . .
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6
 
-:::
-
-::: {.slide}
-
-For example
+. . .
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7
-
 :::
 
-::: {.slide}
-
-using random cropping from image augmentation, we crop the same area of
-the input image and the label
+::: {.slide title="Crop, not resize"}
+Standard image preprocessing resizes — but resizing the
+*label* would interpolate class IDs, which is meaningless.
+Use random *crop* on both image and label, with the same
+random window:
 
 @semantic-segmentation-and-dataset-data-preprocessing-1
 
+. . .
+
 @semantic-segmentation-and-dataset-data-preprocessing-2
 
+. . .
+
+@!semantic-segmentation-and-dataset-data-preprocessing-2
 :::
 
-::: {.slide}
-
-Custom Semantic Segmentation Dataset Class
+::: {.slide title="Custom Dataset class"}
+Drops images smaller than the crop size; converts
+RGB labels to class-index tensors during `__getitem__`:
 
 @semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class
-
 :::
 
-::: {.slide}
-
-Reading the Dataset
-
+::: {.slide title="Train + val loaders"}
 @semantic-segmentation-and-dataset-reading-the-dataset-1
 
-@semantic-segmentation-and-dataset-reading-the-dataset-2
+. . .
 
+@semantic-segmentation-and-dataset-reading-the-dataset-2
 :::
 
-::: {.slide}
-
-Putting It All Together
-
+::: {.slide title="Reusable loader factory"}
 @semantic-segmentation-and-dataset-putting-it-all-together
+:::
 
+::: {.slide title="Recap"}
+- Semantic segmentation = per-pixel classification; output
+  shape matches input shape.
+- VOC labels encode classes as RGB triplets; build a
+  lookup table to convert.
+- Resize is wrong for label maps; use random crop with the
+  same window for image and label.
+- Output of this deck: a clean `(image, label)` loader the
+  next deck (FCN) trains on.
 :::

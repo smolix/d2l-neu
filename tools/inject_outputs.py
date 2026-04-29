@@ -64,15 +64,26 @@ class QmdCell:
 
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
 
+# Suffix that gen_slides.py's `_dedupe_labels` adds to repeated cell
+# labels in a single deck (e.g. `foo-fig2`, `foo-fig3`). Strip when
+# looking up the canonical cell ID in the executed notebook.
+_FIG_SUFFIX_RE = re.compile(r'-fig\d+$')
+
 
 def _extract_cell_id(code_lines):
-    """If first non-blank line is `#| label: <id>`, return the id."""
+    """If first non-blank line is `#| label: <id>`, return the id.
+
+    The `-fig{N}` dedup suffix added by gen_slides.py is stripped so
+    the canonical cell ID is used for notebook-output lookup.
+    """
     for ln in code_lines:
         s = ln.strip()
         if not s:
             continue
         m = _LABEL_LINE_RE.match(s)
-        return m.group(1) if m else None
+        if not m:
+            return None
+        return _FIG_SUFFIX_RE.sub('', m.group(1))
     return None
 
 

@@ -430,9 +430,31 @@ def generate_slides_qmd(src_path, framework, warnings):
         out.extend(emitted)
         out.append('')
 
-    # Translate directives in prose (cross-refs, citations, etc.)
     qmd = '\n'.join(out)
+    # Cell labels must be unique per Quarto. When the same cell ID
+    # appears in multiple placeholders (typically `@!id` on the cover
+    # plus `@id` on a content slide), append `-fig{N}` to repeats so
+    # quarto render accepts them. inject_outputs.py strips the
+    # `-fig{N}` suffix when looking up the cell in the executed
+    # notebook.
+    qmd = _dedupe_labels(qmd)
     return qmd
+
+
+_LABEL_RE = re.compile(r'^(\s*#\|\s*label:\s*)([a-z][a-z0-9-]*)(\s*)$',
+                        re.MULTILINE)
+
+
+def _dedupe_labels(text: str) -> str:
+    """Suffix repeated `#| label: <id>` lines with `-fig{N}`."""
+    seen = {}
+    def sub(m):
+        prefix, label, suffix = m.group(1), m.group(2), m.group(3)
+        seen[label] = seen.get(label, 0) + 1
+        if seen[label] == 1:
+            return m.group(0)
+        return f'{prefix}{label}-fig{seen[label]}{suffix}'
+    return _LABEL_RE.sub(sub, text)
 
 
 # ──────────────────────────────────────────────────────────

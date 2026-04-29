@@ -659,38 +659,89 @@ in many cases.
 <!-- slides -->
 
 ::: {.slide}
+A linear model is, well, **linear**. The XOR problem and just
+about every interesting input–output relationship is **not**.
+The fix:
+
+- **Stack** layers — affine then nonlinearity, then affine again.
+- The nonlinearity (the **activation function**) is what makes
+  the stack expressive; without it the whole network collapses
+  back to a single affine map.
+- One hidden layer with enough units is already a **universal
+  approximator** — depth then makes it efficient.
+:::
+
+::: {.slide title="From linear to nonlinear"}
+A two-layer MLP:
+
+$$\mathbf{H} = \sigma(\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}),\quad
+  \mathbf{O} = \mathbf{H} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
+
+- $\sigma$ is an **element-wise** nonlinearity (ReLU / sigmoid /
+  tanh).
+- Without $\sigma$, the composition is just another affine map
+  $\mathbf{X} \mathbf{W}_\text{eff} + \mathbf{b}_\text{eff}$ — no
+  added expressiveness.
+- The choice of $\sigma$ matters far less than the *presence* of
+  any reasonable nonlinearity.
+:::
+
+::: {.slide title="ReLU"}
+$$\mathrm{ReLU}(x) = \max(0, x).$$
+
+The default first choice — fast, sparse activations, gradients
+that don't saturate on the right half:
 
 @mlp-multilayer-perceptrons
 
-:::
-
-::: {.slide}
-
-let's briefly survey some common ones ReLU provides a very simple nonlinear transformation
-
 @mlp-relu-function-1
 
-@mlp-relu-function-2
+. . .
 
+Its derivative is the **step function** — 0 below zero, 1 above:
+
+@mlp-relu-function-2
 :::
 
-::: {.slide}
+::: {.slide title="Sigmoid"}
+$$\sigma(x) = \frac{1}{1 + e^{-x}}.$$
 
-The *sigmoid function* transforms those inputs to outputs that lie on the interval (0, 1)
+Squashes inputs into $(0, 1)$. Historically the standard
+activation; today mostly relegated to gating layers (LSTM,
+attention):
 
 @mlp-sigmoid-function-1
 
-@mlp-sigmoid-function-2
+. . .
 
+The **derivative saturates** for large $|x|$ — the source of the
+classic vanishing-gradient problem in deep nets:
+
+@mlp-sigmoid-function-2
 :::
 
-::: {.slide}
+::: {.slide title="Tanh"}
+$$\tanh(x) = \frac{1 - e^{-2x}}{1 + e^{-2x}}.$$
 
-the tanh (hyperbolic tangent)
-function also squashes its inputs between $-1$ and $1$
+A re-scaled sigmoid into $(-1, 1)$, zero-centered. Often a
+better default than sigmoid in pre-ReLU nets:
 
 @mlp-tanh-function-1
 
-@mlp-tanh-function-2
+. . .
 
+Same saturation issue at the tails:
+
+@mlp-tanh-function-2
+:::
+
+::: {.slide title="Recap"}
+- **MLP** = stack of affine layers separated by nonlinearities.
+- The nonlinearity is essential — without it the stack is just
+  another linear map.
+- **ReLU** is the default activation; sigmoid/tanh saturate and
+  hurt deep-net gradients.
+- One sufficiently wide hidden layer is a universal approximator;
+  in practice depth gets you the same expressiveness with far
+  fewer parameters.
 :::

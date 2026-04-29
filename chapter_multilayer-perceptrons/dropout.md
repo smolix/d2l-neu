@@ -533,49 +533,73 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 <!-- slides -->
 
 ::: {.slide}
+**Dropout** is the simplest, most effective regularizer for MLPs:
+
+- Each forward pass, **randomly zero out** a fraction $p$ of
+  hidden activations.
+- Surviving activations are scaled by $1/(1-p)$ to keep the
+  expected value the same.
+- At test time dropout is **off** — full network in use.
+
+Why it works: the network can't rely on any single feature
+co-adaptation; it learns more robust, distributed representations.
+:::
+
+::: {.slide title="The dropout layer"}
+A few lines of math:
+
+$$h' = \begin{cases} 0 & \text{with prob.~} p \\ h / (1-p) & \text{otherwise.} \end{cases}$$
 
 @dropout
 
-implement a `dropout_layer` function
-that drops out the elements in the tensor input `X`
-with probability `dropout`
-
 @dropout-implementation-from-scratch-1
-
 :::
 
-::: {.slide}
-
-test out the `dropout_layer` function on a few examples
+::: {.slide title="Smoke test"}
+Run `dropout_layer` with $p = 0$, $0.5$, $1.0$ on a 2×8 input:
 
 @dropout-implementation-from-scratch-2
 
-@dropout-defining-the-model
-
+$p = 0$ → identity. $p = 0.5$ → roughly half the entries zero,
+others doubled. $p = 1.0$ → all zeros.
 :::
 
-::: {.slide}
+::: {.slide title="MLP with dropout"}
+Apply dropout **after** each hidden activation. Different rates per
+layer are common — more aggressive higher up:
 
-Training
+@dropout-defining-the-model
+:::
+
+::: {.slide title="Train"}
+Two hidden layers with dropout 0.5 on layer 1, 0.5 on layer 2:
 
 @dropout-training
 
+Validation accuracy improves over a plain MLP — dropout shines on
+overparameterized models trained on modest data.
 :::
 
-::: {.slide}
-
-Concise Implementation
+::: {.slide title="The framework version"}
+`Dropout(p)` is a stock layer; the framework also handles the
+**train vs. eval mode** switch automatically:
 
 @dropout-concise-implementation-1
 
-@dropout-concise-implementation-2
-
-:::
-
-::: {.slide}
-
-train the model
+. . .
 
 @dropout-concise-implementation-3
 
+Same model, same convergence, ~3 lines instead of the hand-rolled
+version.
+:::
+
+::: {.slide title="Recap"}
+- **Dropout** = randomly zero hidden activations during training,
+  rescale by $1/(1-p)$.
+- Off at test time — the full network is what gets evaluated.
+- Cheap, ubiquitous, hyperparameter-light. Typical rates: 0.2–0.5
+  in MLPs, lower in ConvNets.
+- One of the few "free lunches" in regularization — combines well
+  with L2, batch norm, etc.
 :::

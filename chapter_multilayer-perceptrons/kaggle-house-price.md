@@ -514,85 +514,113 @@ we can use $K$-fold cross-validation .
 <!-- slides -->
 
 ::: {.slide}
+First **real** dataset of the book — Kaggle's *House Prices*
+competition. Skills it exercises:
+
+- **Heterogeneous features** — numerical + categorical, with
+  missing values.
+- **Standardization** and **one-hot encoding** to get everything
+  into a tensor.
+- A loss adapted to the task — **relative error in log-space**
+  (regression on prices).
+- **K-fold cross-validation** for hyperparameter selection on
+  small data.
+
+The model itself is just an MLP — the chapter is mostly about
+the pipeline around it.
+:::
+
+::: {.slide title="Downloading data"}
+A small `download` helper (cached, hash-checked) we'll keep
+reusing throughout the book:
 
 @kaggle-house-price-predicting-house-prices-on-kaggle
 
-implement two utility functions
-
 @kaggle-house-price-downloading-data
-
 :::
 
-::: {.slide}
-
-read in and process the data
-using `pandas`
+::: {.slide title="Reading the data"}
+Wrap train and test CSVs in a `KaggleHouse(d2l.DataModule)`:
 
 @kaggle-house-price-accessing-and-reading-the-dataset-1
 
-@kaggle-house-price-accessing-and-reading-the-dataset-2
+. . .
 
+@kaggle-house-price-accessing-and-reading-the-dataset-2
 :::
 
-::: {.slide}
-
-take a look at the first four and final two features
-as well as the label (SalePrice)
+::: {.slide title="A peek at the rows"}
+Mixed numeric and categorical columns; final column is the target
+`SalePrice`:
 
 @kaggle-house-price-data-preprocessing-1
-
 :::
 
-::: {.slide}
+::: {.slide title="Preprocessing"}
+Three transforms on the union of train + test (so the
+distributions match):
 
-replacing all missing values
-by the corresponding feature's mean. *standardize* the data by
-rescaling features to zero mean and unit variance Next we deal with discrete values. We replace them by a one-hot encoding
+1. Replace missing **numeric** values with the column mean.
+2. **Standardize** numeric columns to zero mean / unit variance.
+3. **One-hot encode** discrete columns (treating `NaN` as its
+   own category).
 
 @kaggle-house-price-data-preprocessing-2
 
-@kaggle-house-price-data-preprocessing-3
+. . .
 
+@kaggle-house-price-data-preprocessing-3
 :::
 
-::: {.slide}
+::: {.slide title="Choosing a loss"}
+Absolute price error is misleading — being off by \$10 k matters
+more on a \$70 k house than a \$700 k mansion. Optimize the
+**logarithm** of the price instead, so the loss is symmetric in
+relative error:
 
-we tend to care more about
-the relative error $\frac{y - \hat{y}}{y}$ One way to address this problem is to
-measure the discrepancy in the logarithm of the price estimates
+$$\sqrt{\frac{1}{n}\sum_{i=1}^n
+  \big(\log y_i - \log \hat y_i\big)^2}.$$
 
 @kaggle-house-price-error-measure
-
 :::
 
-::: {.slide}
-
-cross-validation
+::: {.slide title="K-fold cross-validation"}
+With ~1500 training examples, a single train/val split is noisy.
+Average over $K$ folds — train $K$ times, holding one fold out
+each time:
 
 @kaggle-house-price-k-fold-cross-validation-1
 
-:::
+. . .
 
-::: {.slide}
-
-The average validation error is returned
+The average val error across folds is the model-selection
+criterion:
 
 @kaggle-house-price-k-fold-cross-validation-2
-
 :::
 
-::: {.slide}
-
-Model Selection
+::: {.slide title="Model selection"}
+Try one configuration ($K=5$ folds, 10 epochs):
 
 @kaggle-house-price-model-selection
 
+In practice you'd grid-search learning rate, hidden size, weight
+decay, and dropout — same loop, different hparams.
 :::
 
-::: {.slide}
-
-Submitting Predictions on Kaggle
+::: {.slide title="Submitting predictions"}
+Refit on the **full** training set, predict the test set, write
+a CSV in the Kaggle-required format:
 
 @kaggle-house-price-submitting-predictions-on-kaggle
+:::
 
+::: {.slide title="Recap"}
+- Real-world ML = **mostly the pipeline**, not the model.
+- Mean-imputation + standardization + one-hot encoding turns a
+  messy DataFrame into a tensor.
+- The right **loss** matches what you actually care about — log
+  prices, not raw prices.
+- **K-fold CV** is the workhorse for hparam choice on small data.
+- Refit on the full training set before predicting the test set.
 :::

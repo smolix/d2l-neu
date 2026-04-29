@@ -339,53 +339,71 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 <!-- slides -->
 
 ::: {.slide}
+A 1-hidden-layer MLP on Fashion-MNIST. Two implementations:
+
+- **From scratch** — manage `W₁, b₁, W₂, b₂` by hand; write your
+  own ReLU.
+- **Concise** — stack `Flatten → Linear → ReLU → Linear` and let
+  the framework handle weights.
+
+Same data, same loss, same `Trainer` — the only thing that
+changes is the model class.
+:::
+
+::: {.slide title="Parameters from scratch"}
+One hidden layer with 256 units. Sample from a small Gaussian
+for `W`, zero for `b`:
 
 @mlp-implementation-implementation-of-multilayer-perceptrons
 
-:::
-
-::: {.slide}
-
-implement an MLP
-with one hidden layer and 256 hidden units
-
 @mlp-implementation-initializing-model-parameters
-
 :::
 
-::: {.slide}
-
-implement the ReLU activation
+::: {.slide title="Forward pass"}
+Hand-rolled ReLU + the explicit two-layer composition:
 
 @mlp-implementation-model-1
 
-implement our model
+. . .
 
 @mlp-implementation-model-2
 
+Note the **flatten** before the first matrix multiply — image
+pixels are unrolled into a 784-vector.
 :::
 
-::: {.slide}
-
-the training loop for MLPs
-is exactly the same as for softmax regression
+::: {.slide title="Train"}
+Same `Trainer`, same Fashion-MNIST loaders. The only thing that
+moved is the model class:
 
 @mlp-implementation-training
 
+≈ 1–2 percentage points better than the linear softmax baseline.
 :::
 
-::: {.slide}
-
-the hidden layer
+::: {.slide title="The concise version"}
+Stack the layers via the framework's container — no hand-rolled
+parameters, no manual ReLU:
 
 @mlp-implementation-model-2-2
 
+`LazyLinear(num_hiddens) → ReLU() → LazyLinear(num_outputs)` is
+the entire architecture.
 :::
 
-::: {.slide}
-
-The training loop
-
+::: {.slide title="Same training, same accuracy"}
 @mlp-implementation-training-2
 
+Identical convergence — built-in layers add no magic, just
+remove boilerplate.
+:::
+
+::: {.slide title="Recap"}
+- An MLP is just a softmax classifier with one or more **hidden
+  layers** + activations between them.
+- From-scratch: 4 parameter tensors, hand-rolled ReLU, explicit
+  matmuls.
+- Concise: `Sequential(Flatten, Linear, ReLU, Linear)`.
+- Same `Classifier` scaffold, same training loop — that's the
+  point of the abstractions.
 :::

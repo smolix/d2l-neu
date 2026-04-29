@@ -427,20 +427,65 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 <!-- slides -->
 
 ::: {.slide}
+A deep network's gradient is a **product** of per-layer
+Jacobians. Two failure modes:
+
+- **Vanishing** — Jacobians that consistently shrink (e.g.
+  saturated sigmoids) drive the gradient to zero. Earlier layers
+  stop learning.
+- **Exploding** — Jacobians that consistently grow blow the
+  gradient up; loss goes NaN.
+
+Two complementary fixes:
+
+1. **Activations** that don't saturate (ReLU and friends).
+2. **Initialization** scaled to keep activations and gradients
+   roughly unit-variance through the depth (Xavier, Kaiming).
+:::
+
+::: {.slide title="Vanishing gradients: sigmoid"}
+The sigmoid's derivative peaks at $1/4$ and **decays to zero**
+out at the tails:
 
 @numerical-stability-and-init-numerical-stability-and-initialization
 
-Vanishing Gradients
-
 @numerical-stability-and-init-vanishing-gradients
 
+In a deep stack of sigmoids, `$\le 1/4$ × $\le 1/4$ × …` annihilates
+the upstream gradient quickly. ReLU's derivative is **0 or 1** —
+no shrinkage where it fires.
 :::
 
-::: {.slide}
-
-the sigmoid's gradient vanishes
-both when its inputs are large and when they are small Exploding Gradients
+::: {.slide title="Exploding gradients: random products"}
+Multiplying many random Gaussian matrices makes entries grow
+exponentially with depth:
 
 @numerical-stability-and-init-exploding-gradients
 
+The cure: scale the **initial weights** so that
+$\operatorname{Var}(\text{output}) = \operatorname{Var}(\text{input})$
+at each layer.
+:::
+
+::: {.slide title="Xavier / Kaiming init"}
+For a linear layer with $n_\text{in}$ inputs and $n_\text{out}$
+outputs:
+
+- **Xavier (Glorot):** $\operatorname{Var}(W) = \dfrac{2}{n_\text{in} + n_\text{out}}$ — preserves variance for tanh / sigmoid.
+- **Kaiming (He):** $\operatorname{Var}(W) = \dfrac{2}{n_\text{in}}$ — corrects for ReLU's "kills half the activations" effect.
+
+Frameworks default to one of these. Bias is initialized to zero.
+
+Combined with non-saturating activations, the two fix the
+vast majority of pre-training NaNs and dead-neuron problems.
+:::
+
+::: {.slide title="Recap"}
+- Deep nets multiply per-layer Jacobians — products misbehave at
+  both ends.
+- Use **non-saturating activations** (ReLU) and **variance-
+  preserving init** (Xavier / Kaiming).
+- Modern building blocks (BatchNorm, residual connections, LayerNorm)
+  stack on top of this baseline to keep gradients well-conditioned
+  even at hundreds of layers.
 :::

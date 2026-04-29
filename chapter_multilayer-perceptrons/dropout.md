@@ -533,73 +533,170 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 <!-- slides -->
 
 ::: {.slide}
-**Dropout** is the simplest, most effective regularizer for MLPs:
+A 256-unit MLP has more parameters than Fashion-MNIST has
+training points. With enough capacity, the network can
+**memorize** the training set — train loss → 0, test loss
+goes the wrong way.
 
-- Each forward pass, **randomly zero out** a fraction $p$ of
-  hidden activations.
-- Surviving activations are scaled by $1/(1-p)$ to keep the
-  expected value the same.
-- At test time dropout is **off** — full network in use.
+We need **regularization** — anything that biases the
+network toward simpler functions. The best-known modern
+trick is **dropout** (Srivastava, Hinton et al. 2014):
 
-Why it works: the network can't rely on any single feature
-co-adaptation; it learns more robust, distributed representations.
+> *On every forward pass during training, randomly set
+> each hidden unit to zero with probability $p$.*
+
+Counterintuitive — actively damaging the network mid-
+training — but it works. Standard component of MLP and
+Transformer training.
+
+Two arguments for why:
+
+- **Noise injection** = smoothness regularization
+  (Bishop 1995). Forcing the network to be robust to
+  hidden-unit dropout = forcing it to be a smoother
+  function of its inputs.
+- **Anti-co-adaptation**: each unit can't trust any
+  *specific* upstream unit to be there, so it has to
+  pick up signal from a broader, redundant set of
+  features.
 :::
 
-::: {.slide title="The dropout layer"}
-A few lines of math:
+::: {.slide title="What dropout looks like"}
+On every minibatch we randomly zero a fraction of hidden
+units; the network on this iteration is a *thinned*
+subnetwork. Across iterations we sample many subnetworks:
 
-$$h' = \begin{cases} 0 & \text{with prob.~} p \\ h / (1-p) & \text{otherwise.} \end{cases}$$
+![Two of the five hidden units zeroed by a single dropout draw. Each iteration samples a different subset.](../img/dropout2.svg){width=82%}
 
+At test time dropout is **off** — we use the full
+network. Effectively we average exponentially many
+thinned subnetworks (a kind of cheap ensemble).
+:::
+
+::: {.slide title="The arithmetic: keep the expectation"}
+Per hidden unit $h$, replace with
+
+$$h' = \begin{cases}
+0 & \text{with probability } p, \\
+\dfrac{h}{1 - p} & \text{otherwise.}
+\end{cases}$$
+
+The **rescaling** $1/(1-p)$ is what makes
+$\mathbb{E}[h'] = h$. Without it, expected activations
+shrink by $(1-p)$ during training but recover their full
+scale at test time → train/test mismatch.
+
+This is "inverted dropout"; the version every modern
+framework uses.
+:::
+
+::: {.slide title="Setup"}
 @dropout
+:::
+
+::: {.slide title="Implementing it"}
+Sample a Bernoulli mask, multiply, rescale:
 
 @dropout-implementation-from-scratch-1
-:::
 
-::: {.slide title="Smoke test"}
-Run `dropout_layer` with $p = 0$, $0.5$, $1.0$ on a 2×8 input:
+. . .
+
+Quick check on a 2×8 input:
 
 @dropout-implementation-from-scratch-2
 
-$p = 0$ → identity. $p = 0.5$ → roughly half the entries zero,
-others doubled. $p = 1.0$ → all zeros.
+- $p = 0$ → identity (no dropout).
+- $p = 0.5$ → about half the entries zero, the rest
+  doubled.
+- $p = 1.0$ → all zeros (degenerate).
+:::
+
+::: {.slide title="Where to put dropout"}
+Apply dropout **after** the activation function and
+**before** the next linear layer. Common pattern:
+
+```
+Linear → ReLU → Dropout(p₁) → Linear → ReLU → Dropout(p₂) → Linear
+```
+
+Convention: a *little* dropout on early layers, *more*
+later. Why? Early layers learn low-level features (edges,
+textures) that the network needs reliably; later layers
+do the high-level task-specific composition where
+overfitting is more likely.
+
+Typical values:
+
+- MLPs / Transformers: 0.1–0.5.
+- CNNs: 0–0.2 (BatchNorm largely supplants dropout).
+- Just before the classifier head: 0.5 is standard.
 :::
 
 ::: {.slide title="MLP with dropout"}
-Apply dropout **after** each hidden activation. Different rates per
-layer are common — more aggressive higher up:
-
 @dropout-defining-the-model
 :::
 
-::: {.slide title="Train"}
-Two hidden layers with dropout 0.5 on layer 1, 0.5 on layer 2:
+::: {.slide title="Training"}
+Two hidden layers (256 each), dropout 0.5 between them:
 
 @dropout-training
 
-Validation accuracy improves over a plain MLP — dropout shines on
-overparameterized models trained on modest data.
+. . .
+
+@!dropout-training
+
+Validation accuracy is better than the plain MLP from the
+previous deck — the gap between train and test loss
+shrinks visibly. Dropout shines when capacity exceeds the
+data.
 :::
 
-::: {.slide title="The framework version"}
-`Dropout(p)` is a stock layer; the framework also handles the
-**train vs. eval mode** switch automatically:
+::: {.slide title="Framework version"}
+`nn.Dropout(p)` is a stock layer. It also handles the
+**train vs. eval mode** switch — call `model.eval()` and
+dropout becomes a no-op:
 
 @dropout-concise-implementation-1
 
 . . .
 
 @dropout-concise-implementation-3
+:::
 
-Same model, same convergence, ~3 lines instead of the hand-rolled
-version.
+::: {.slide title="Why dropout works (the modern view)"}
+Several complementary explanations, none individually
+complete:
+
+- **Bayesian model averaging**: training samples a
+  different thinned network each step; averaging $\sim 2^n$
+  subnetworks at test time approximates an ensemble.
+- **Stochastic regularization**: equivalent to adding
+  Gaussian noise to activations, which Bishop showed is
+  Tikhonov ($\ell_2$) regularization on the *function*.
+- **Anti-co-adaptation**: forces redundant feature
+  representations.
+- **Variance bound**: dropout layers cap the
+  variance the network can put into any single direction
+  in feature space.
+
+Modern deep nets often replace it with BatchNorm /
+LayerNorm, which provides similar regularization "for
+free". But dropout is alive and well in Transformers
+(typical rate 0.1) and as a final-classifier-head
+regularizer everywhere.
 :::
 
 ::: {.slide title="Recap"}
-- **Dropout** = randomly zero hidden activations during training,
-  rescale by $1/(1-p)$.
-- Off at test time — the full network is what gets evaluated.
-- Cheap, ubiquitous, hyperparameter-light. Typical rates: 0.2–0.5
-  in MLPs, lower in ConvNets.
-- One of the few "free lunches" in regularization — combines well
-  with L2, batch norm, etc.
+- **Dropout**: zero each hidden unit with prob $p$
+  during training; rescale survivors by $1/(1-p)$ to
+  preserve expectations.
+- **Off at test time** — full network in use.
+- Place after activation, before next linear layer; rates
+  0.1–0.5 typical.
+- Equivalent to (a) injecting noise = smoothness
+  regularization, and (b) ensembling exponentially many
+  thinned subnetworks.
+- One of the cheapest, most reliable regularizers —
+  combines well with weight decay, layer norm, and
+  data augmentation.
 :::

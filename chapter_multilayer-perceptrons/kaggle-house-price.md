@@ -514,27 +514,50 @@ we can use $K$-fold cross-validation .
 <!-- slides -->
 
 ::: {.slide}
-First **real** dataset of the book — Kaggle's *House Prices*
-competition. Skills it exercises:
+A capstone for the chapter: take an MLP, plus everything we
+just learned about regularization and stability, to a real
+**Kaggle competition** — *House Prices: Advanced Regression
+Techniques*.
 
-- **Heterogeneous features** — numerical + categorical, with
-  missing values.
-- **Standardization** and **one-hot encoding** to get everything
-  into a tensor.
-- A loss adapted to the task — **relative error in log-space**
-  (regression on prices).
-- **K-fold cross-validation** for hyperparameter selection on
-  small data.
+What's different from Fashion-MNIST:
 
-The model itself is just an MLP — the chapter is mostly about
-the pipeline around it.
+- **1460 training examples**, 1459 test — small data.
+- **80 features** mixing numeric (`LotArea`, `YearBuilt`)
+  and categorical (`Neighborhood`, `RoofStyle`) — needs
+  *preprocessing*.
+- **Missing values** in dozens of columns.
+- **Targets vary by 10×** ($65k to $755k) — wrong loss
+  function will weight expensive houses much more.
+
+The MLP itself is 5 lines. The real work is the
+**pipeline** around it — and that's the lesson of this
+deck. Most production ML is plumbing.
 :::
 
-::: {.slide title="Downloading data"}
-A small `download` helper (cached, hash-checked) we'll keep
-reusing throughout the book:
+::: {.slide title="Kaggle in 30 seconds"}
+Kaggle hosts open ML competitions. You download train and
+test CSVs, train locally, upload predictions, get scored
+on a held-out portion of the test set:
+
+![Kaggle competition page.](../img/kaggle.png){width=68%}
+
+The *House Prices* page:
+
+![The competition's data tab — download and inspect.](../img/house-pricing.png){width=68%}
+
+Real-world ML practice: the data isn't preprocessed for
+you, the leaderboard tells you instantly if you're better
+than baseline, and the public/private split keeps people
+honest about overfitting.
+:::
+
+::: {.slide title="Setup and data download"}
+A reusable hash-checked download helper we'll keep using
+throughout the book:
 
 @kaggle-house-price-predicting-house-prices-on-kaggle
+
+. . .
 
 @kaggle-house-price-downloading-data
 :::
@@ -549,78 +572,133 @@ Wrap train and test CSVs in a `KaggleHouse(d2l.DataModule)`:
 @kaggle-house-price-accessing-and-reading-the-dataset-2
 :::
 
-::: {.slide title="A peek at the rows"}
-Mixed numeric and categorical columns; final column is the target
-`SalePrice`:
-
+::: {.slide title="What the rows look like"}
 @kaggle-house-price-data-preprocessing-1
+
+Mixed numeric and categorical columns; lots of missing
+values; final column is the target `SalePrice`. Models eat
+tensors, not DataFrames — preprocessing is mandatory.
 :::
 
-::: {.slide title="Preprocessing"}
-Three transforms on the union of train + test (so the
-distributions match):
+::: {.slide title="Three preprocessing transforms"}
+Apply on **train + test together** so train statistics
+match what we'll see at test time:
 
-1. Replace missing **numeric** values with the column mean.
-2. **Standardize** numeric columns to zero mean / unit variance.
-3. **One-hot encode** discrete columns (treating `NaN` as its
-   own category).
+1. **Numeric NaN → mean**. Most simple imputation choice;
+   median or zero are alternatives.
+2. **Standardize** numeric columns to mean 0, std 1.
+   Tabular features have wildly different scales
+   (rooms: 1–10, area: 100–60000); standardization makes
+   the optimization well-conditioned.
+3. **One-hot encode** categorical columns. `NaN` becomes
+   its own category — missing-as-a-signal.
 
 @kaggle-house-price-data-preprocessing-2
 
 . . .
 
 @kaggle-house-price-data-preprocessing-3
+
+After preprocessing: ~330 columns of well-scaled floats.
 :::
 
-::: {.slide title="Choosing a loss"}
-Absolute price error is misleading — being off by \$10 k matters
-more on a \$70 k house than a \$700 k mansion. Optimize the
-**logarithm** of the price instead, so the loss is symmetric in
-relative error:
+::: {.slide title="Choosing the right loss"}
+Plain squared error penalizes a $10k mistake on a $70k
+house the same as on a $700k house — but the *relative*
+error tells the more honest story. Predict the
+**logarithm** of the price:
 
-$$\sqrt{\frac{1}{n}\sum_{i=1}^n
-  \big(\log y_i - \log \hat y_i\big)^2}.$$
+$$\text{RMSLE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \big(\log y_i - \log \hat y_i\big)^2}.$$
+
+This is also the official Kaggle metric for this
+competition. Two equivalent perspectives:
+
+- Train on $\log y$ and use plain RMSE.
+- Train on $y$ and use a log-loss.
+
+Either way, mistakes are measured **as percentages**, not
+dollars.
 
 @kaggle-house-price-error-measure
 :::
 
 ::: {.slide title="K-fold cross-validation"}
-With ~1500 training examples, a single train/val split is noisy.
-Average over $K$ folds — train $K$ times, holding one fold out
-each time:
+With ~1500 training examples, a single 80/20 split is
+noisy — different splits give different validation
+scores by ±0.02 RMSLE.
+
+**K-fold CV**: split the training set into $K$ folds, train
+$K$ times holding each fold out as validation, average the
+scores. Costs $K\times$ more compute, but gives a stable
+estimate of generalization error:
+
+```
+fold 1:  [ val ][ train ][ train ][ train ][ train ]
+fold 2:  [train][  val  ][ train ][ train ][ train ]
+fold 3:  [train][ train ][  val  ][ train ][ train ]
+fold 4:  [train][ train ][ train ][  val  ][ train ]
+fold 5:  [train][ train ][ train ][ train ][  val  ]
+```
 
 @kaggle-house-price-k-fold-cross-validation-1
 
 . . .
 
-The average val error across folds is the model-selection
-criterion:
-
 @kaggle-house-price-k-fold-cross-validation-2
 :::
 
 ::: {.slide title="Model selection"}
-Try one configuration ($K=5$ folds, 10 epochs):
-
 @kaggle-house-price-model-selection
 
-In practice you'd grid-search learning rate, hidden size, weight
-decay, and dropout — same loop, different hparams.
+. . .
+
+@!kaggle-house-price-model-selection
+
+In practice you'd grid- or random-search over learning
+rate, hidden size, weight decay, dropout. Same loop,
+different hyperparameters. Pick the config with the lowest
+**average** val score.
 :::
 
 ::: {.slide title="Submitting predictions"}
-Refit on the **full** training set, predict the test set, write
-a CSV in the Kaggle-required format:
+Final step: re-fit on **all** training data (no
+validation hold-out), predict the test set, write the
+Kaggle-format CSV:
 
 @kaggle-house-price-submitting-predictions-on-kaggle
+
+![Upload the CSV; Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=72%}
+:::
+
+::: {.slide title="The general competition recipe"}
+Same shape works for almost any tabular ML competition:
+
+1. **Download** train + test data.
+2. **Preprocess** — impute, scale, encode. Use
+   *combined* statistics so train and test match.
+3. **Choose the right loss** — match the metric the
+   competition is scored on.
+4. **K-fold CV** to estimate generalization error and
+   compare hyperparameters.
+5. **Refit on all training data** with the best
+   hyperparameters.
+6. **Submit** predictions in the format the host
+   requires.
+
+Beyond MLPs: gradient-boosted trees (XGBoost / LightGBM)
+typically win tabular competitions; neural networks shine
+on images, text, audio. The pipeline is the same.
 :::
 
 ::: {.slide title="Recap"}
-- Real-world ML = **mostly the pipeline**, not the model.
-- Mean-imputation + standardization + one-hot encoding turns a
-  messy DataFrame into a tensor.
-- The right **loss** matches what you actually care about — log
-  prices, not raw prices.
-- **K-fold CV** is the workhorse for hparam choice on small data.
-- Refit on the full training set before predicting the test set.
+- Real-world ML is mostly **pipeline**, not model
+  architecture.
+- Heterogeneous tabular data → impute, standardize,
+  one-hot encode.
+- Match the loss to the metric — log-RMSE for prices, not
+  squared error.
+- K-fold CV for stable generalization estimates on small
+  data.
+- Refit on full data before final predictions.
+- The MLP is a few lines; everything around it is the lesson.
 :::

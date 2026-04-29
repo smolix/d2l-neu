@@ -339,71 +339,154 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 <!-- slides -->
 
 ::: {.slide}
-A 1-hidden-layer MLP on Fashion-MNIST. Two implementations:
+The previous deck argued that we *need* hidden layers and
+nonlinearity. This deck builds one and trains it.
 
-- **From scratch** — manage `W₁, b₁, W₂, b₂` by hand; write your
-  own ReLU.
-- **Concise** — stack `Flatten → Linear → ReLU → Linear` and let
-  the framework handle weights.
+Same task as the softmax-regression chapter:
+**Fashion-MNIST**, 10 classes of clothing, 28×28 grayscale.
+This time the model is
 
-Same data, same loss, same `Trainer` — the only thing that
-changes is the model class.
+```
+input (784)  →  Linear  →  ReLU  →  Linear  →  output (10)
+                ─ hidden = 256 units ─
+```
+
+Two implementations of the *same* model:
+
+- **From scratch** — allocate `W₁, b₁, W₂, b₂` by hand,
+  write our own ReLU, do the matmuls explicitly.
+- **Concise** — `nn.Sequential(Flatten, Linear, ReLU,
+  Linear)` and let the framework handle weights.
+
+Same training loop, same accuracy. The two versions clarify
+what the framework abstraction is actually buying you.
+:::
+
+::: {.slide title="Why one hidden layer of 256 is reasonable"}
+For Fashion-MNIST (784 inputs → 10 outputs):
+
+- **256 hidden units** = roughly 200k parameters. Big
+  enough to memorize the training set in principle, small
+  enough to actually train fast.
+- **Powers of 2** for layer widths are a habit, not magic —
+  matmul kernels are tuned for them; nothing breaks if you
+  use 250 instead.
+- **Single hidden layer** because Fashion-MNIST is easy. A
+  proper deep net wouldn't help much without convolutions
+  (next chapter).
+
+These are *hyperparameters* — not learned. We set them by
+hand, train, and see what works.
+:::
+
+::: {.slide title="Setup"}
+@mlp-implementation-implementation-of-multilayer-perceptrons
 :::
 
 ::: {.slide title="Parameters from scratch"}
-One hidden layer with 256 units. Sample from a small Gaussian
-for `W`, zero for `b`:
+Two weight matrices, two bias vectors. Init: small Gaussian
+$\mathcal{N}(0, \sigma^2)$ for weights, zero for biases.
 
-@mlp-implementation-implementation-of-multilayer-perceptrons
+$$\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256},\quad
+  \mathbf{b}^{(1)} \in \mathbb{R}^{256},$$
+$$\mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10},\quad
+  \mathbf{b}^{(2)} \in \mathbb{R}^{10}.$$
+
+Total: $784 \cdot 256 + 256 + 256 \cdot 10 + 10 = 203\,530$
+parameters.
 
 @mlp-implementation-initializing-model-parameters
 :::
 
-::: {.slide title="Forward pass"}
-Hand-rolled ReLU + the explicit two-layer composition:
+::: {.slide title="ReLU and forward pass"}
+First, our own ReLU — just `max(X, 0)` elementwise:
 
 @mlp-implementation-model-1
 
 . . .
 
-@mlp-implementation-model-2
+Then the forward pass:
 
-Note the **flatten** before the first matrix multiply — image
-pixels are unrolled into a 784-vector.
+$$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),\quad
+  \mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
+
+Image pixels are flattened to a 784-vector first — we're
+ignoring spatial structure. (CNNs in the next chapter
+fix this.)
+
+@mlp-implementation-model-2
 :::
 
-::: {.slide title="Train"}
-Same `Trainer`, same Fashion-MNIST loaders. The only thing that
-moved is the model class:
+::: {.slide title="Training"}
+Same `Trainer`, same Fashion-MNIST loaders, same
+cross-entropy loss as softmax regression. *Only* the model
+class changed:
 
 @mlp-implementation-training
 
-≈ 1–2 percentage points better than the linear softmax baseline.
+. . .
+
+@!mlp-implementation-training
+
+About 1–2 percentage points better than plain softmax
+regression on the same data. A nonlinearity earns its keep.
 :::
 
 ::: {.slide title="The concise version"}
-Stack the layers via the framework's container — no hand-rolled
-parameters, no manual ReLU:
+Stack the same architecture using the framework's container.
+Lazy linear layers infer input shapes; `ReLU` is built in:
 
 @mlp-implementation-model-2-2
 
-`LazyLinear(num_hiddens) → ReLU() → LazyLinear(num_outputs)` is
-the entire architecture.
+That's the whole architecture: 6 layers in a `Sequential`
+(`Flatten` + 2 `Linear` + 1 `ReLU` + glue), zero hand-rolled
+parameter management.
+
+Both versions produce the *same* model. The framework just
+removes the bookkeeping.
 :::
 
 ::: {.slide title="Same training, same accuracy"}
 @mlp-implementation-training-2
 
-Identical convergence — built-in layers add no magic, just
-remove boilerplate.
+. . .
+
+@!mlp-implementation-training-2
+
+Identical convergence behavior. Built-in `Linear` and
+`ReLU` give you exactly what the from-scratch version
+computes — one of them is just easier to read and harder
+to bug.
+:::
+
+::: {.slide title="What's left to learn"}
+We have a working MLP — but several real questions are open:
+
+- **Initialization** (`numerical-stability-and-init`): how
+  to pick $\sigma$ so activations don't explode or vanish
+  through depth.
+- **Generalization** (`generalization-deep`): why does the
+  model do well on data it hasn't seen?
+- **Regularization** (`dropout`, weight decay): how to
+  prevent the network from just memorizing the training
+  set.
+- **Backprop** (`backprop`): how the framework computes
+  gradients efficiently for a stack of arbitrary layers.
+
+Each is the topic of one of the next decks.
 :::
 
 ::: {.slide title="Recap"}
-- An MLP is just a softmax classifier with one or more **hidden
-  layers** + activations between them.
-- From-scratch: 4 parameter tensors, hand-rolled ReLU, explicit
-  matmuls.
-- Concise: `Sequential(Flatten, Linear, ReLU, Linear)`.
-- Same `Classifier` scaffold, same training loop — that's the
-  point of the abstractions.
+- An MLP is a softmax classifier with one or more
+  **hidden layers + nonlinearity** between affine
+  transforms.
+- From scratch: 4 parameter tensors, hand-rolled ReLU,
+  explicit matmuls. Useful to understand; tedious to ship.
+- Concise: `Sequential(Flatten, Linear, ReLU, Linear)` —
+  same model, less bookkeeping.
+- Hyperparameters (depth, width, learning rate) live
+  outside the model class; the same training loop works
+  for any of them.
+- Beats softmax regression on Fashion-MNIST by a small
+  but real margin — first taste of "depth helps".
 :::

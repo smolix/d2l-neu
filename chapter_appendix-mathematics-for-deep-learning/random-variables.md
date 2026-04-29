@@ -1008,23 +1008,63 @@ Indeed if we think of norms as being related to standard deviations, and correla
 <!-- slides -->
 
 ::: {.slide}
+Continuous random variables and their summaries:
 
+- **PDF** $p(x)$ — probability density; $P(X \in A) = \int_A p$.
+- **Mean** $\mu = \mathbb{E}[X] = \int x\, p(x)\, dx$.
+- **Variance** $\sigma^2 = \mathbb{E}[(X-\mu)^2]$ —
+  spread.
+- **Covariance** $\text{Cov}(X, Y)$ — joint variation.
+- **Correlation** $\rho$ — covariance normalized to
+  $[-1, 1]$.
+
+These are the building blocks of every probabilistic
+analysis in the book.
+:::
+
+::: {.slide title="From discrete to continuous"}
 @random-variables-from-discrete-to-continuous
+:::
 
+::: {.slide title="PDFs"}
 @random-variables-probability-density-functions
+:::
 
+::: {.slide title="Standard deviation in code"}
 @random-variables-standard-deviations-1
+
+. . .
 
 @random-variables-standard-deviations-2
 
-@random-variables-standard-deviations-3
+. . .
 
+@random-variables-standard-deviations-3
+:::
+
+::: {.slide title="Continuous mean and variance"}
 @random-variables-means-and-variances-in-the-continuum-1
 
-@random-variables-means-and-variances-in-the-continuum-2
+. . .
 
+@random-variables-means-and-variances-in-the-continuum-2
+:::
+
+::: {.slide title="Covariance and correlation"}
 @random-variables-covariance
 
-@random-variables-correlation
+. . .
 
+@random-variables-correlation
+:::
+
+::: {.slide title="Recap"}
+- PDF integrates to 1; the integral over an interval is
+  the probability of falling in it.
+- $\mathbb{E}, \text{Var}$ are integrals weighted by the
+  PDF.
+- Correlation = covariance / product of std devs;
+  measures linear relationship strength.
+- Foundation for cross-entropy, KL divergence,
+  expectations through stochastic gradients, ...
 :::

@@ -1167,29 +1167,88 @@ $$
 <!-- slides -->
 
 ::: {.slide}
+The geometric intuitions behind the linear algebra used
+throughout the book. Two viewpoints on a vector $\mathbf{v}$:
 
+- A *position* — a point in space.
+- A *direction* — an arrow from the origin.
+
+Most of deep learning works in the second view. From it
+we get dot products (similarity), angles, projections,
+hyperplanes (decision boundaries), and determinants
+(volume changes).
+:::
+
+::: {.slide title="Vectors as geometry"}
 @geometry-linear-algebraic-ops-geometry-of-vectors
+:::
+
+::: {.slide title="Dot products and angles"}
+$\mathbf{u}^\top \mathbf{v} = \|\mathbf{u}\| \|\mathbf{v}\| \cos\theta$.
+Cosine similarity = normalized dot product. The metric
+behind kernel methods, attention, and contrastive
+learning:
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
+:::
+
+::: {.slide title="Hyperplanes as classifiers"}
+A hyperplane is the set $\{\mathbf{x} : \mathbf{w}^\top \mathbf{x} = b\}$.
+Linear classifiers split space with one — sign of the dot
+product gives the prediction. Most of deep learning is
+"learn good features so a hyperplane works":
 
 @geometry-linear-algebraic-ops-hyperplanes-1
 
+. . .
+
 @geometry-linear-algebraic-ops-hyperplanes-2
+
+. . .
 
 @geometry-linear-algebraic-ops-hyperplanes-3
 
+. . .
+
 @geometry-linear-algebraic-ops-hyperplanes-4
+:::
+
+::: {.slide title="Invertibility and determinant"}
+Square matrices are invertible iff they don't collapse
+volumes. The determinant measures the signed volume scale
+factor:
 
 @geometry-linear-algebraic-ops-invertibility
 
+. . .
+
 @geometry-linear-algebraic-ops-determinant
+:::
+
+::: {.slide title="In code"}
+Translate all of this into NumPy / PyTorch:
 
 @geometry-linear-algebraic-ops-expressing-in-code-1
 
+. . .
+
 @geometry-linear-algebraic-ops-expressing-in-code-2
+
+. . .
 
 @geometry-linear-algebraic-ops-expressing-in-code-3
 
-@geometry-linear-algebraic-ops-expressing-in-code-4
+. . .
 
+@geometry-linear-algebraic-ops-expressing-in-code-4
+:::
+
+::: {.slide title="Recap"}
+- Vectors as directions; dot products = cosine
+  similarity; matrices = linear maps; determinant =
+  volume scale.
+- Hyperplanes are the decision-boundary primitive of every
+  linear classifier and every linear layer.
+- These geometric pictures keep being useful all the way
+  up to attention and high-dim embeddings.
 :::

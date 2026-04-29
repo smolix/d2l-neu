@@ -790,21 +790,83 @@ $$
 <!-- slides -->
 
 ::: {.slide}
+A square matrix $\mathbf{A}$ has **eigenvalue** $\lambda$
+and **eigenvector** $\mathbf{v}$ when
 
+$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
+
+Geometrically: $\mathbf{A}$ stretches $\mathbf{v}$ by
+$\lambda$ but doesn't rotate it. If $\mathbf{A}$ is
+diagonalizable: $\mathbf{A} = \mathbf{V}\mathbf{\Lambda}\mathbf{V}^{-1}$
+— a basis change in which the action is just stretching
+along axes.
+
+Why we care: matrix powers $\mathbf{A}^t$ are governed by
+$\lambda^t$. Repeated application of $\mathbf{A}$ aligns
+arbitrary inputs with the dominant eigenvector. That's the
+heart of vanishing/exploding gradients in RNNs, of
+PageRank, and of every iterative solver.
+:::
+
+::: {.slide title="A concrete example"}
 @eigendecomposition-an-example
+:::
+
+::: {.slide title="Gershgorin circles"}
+Cheap eigenvalue bounds without computing them:
+eigenvalues lie in the union of disks centered at
+$a_{ii}$ with radius $\sum_{j \ne i} |a_{ij}|$. Useful for
+stability arguments:
 
 @eigendecomposition-gershgorin-circle-theorem
 
+. . .
+
+@!eigendecomposition-gershgorin-circle-theorem
+:::
+
+::: {.slide title="Eigenvectors govern long-run behavior"}
+Power iteration: keep multiplying by $\mathbf{A}$. The
+direction converges to the leading eigenvector; the norm
+grows like $\lambda_1^t$:
+
 @eigendecomposition-eigenvectors-as-long-term-behavior
+
+. . .
 
 @eigendecomposition-behavior-on-random-data-1
 
+. . .
+
 @eigendecomposition-behavior-on-random-data-2
 
+. . .
+
+@!eigendecomposition-behavior-on-random-data-2
+:::
+
+::: {.slide title="Relating back"}
 @eigendecomposition-relating-back-to-eigenvectors
+
+. . .
 
 @eigendecomposition-fixing-the-normalization-1
 
+. . .
+
 @eigendecomposition-fixing-the-normalization-2
 
+. . .
+
+@!eigendecomposition-fixing-the-normalization-2
+:::
+
+::: {.slide title="Recap"}
+- $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$: $\mathbf{A}$
+  acts as scaling along the eigenvector axes.
+- Largest $|\lambda|$ controls long-run iterated dynamics.
+- Symmetric matrices have orthonormal eigenvectors and
+  real eigenvalues — the basis for PCA.
+- Vanishing/exploding RNN gradients = "iterated map" with
+  bad spectral radius.
 :::

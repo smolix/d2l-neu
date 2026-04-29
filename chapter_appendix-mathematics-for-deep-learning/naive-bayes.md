@@ -628,35 +628,102 @@ Modern deep networks achieve error rates of less than $0.01$. The relatively poo
 <!-- slides -->
 
 ::: {.slide}
+**Naive Bayes** — the simplest probabilistic classifier.
+Apply Bayes' rule:
 
+$$P(y \mid \mathbf{x}) \propto P(y) \prod_i P(x_i \mid y).$$
+
+The "naive" part is the assumption that features are
+**conditionally independent** given the class. Wrong in
+general — pixels of an image are obviously correlated —
+but the model is fast, requires little data, and is a
+useful starting point.
+
+This deck applies it to MNIST digit classification with
+binarized pixels.
+:::
+
+::: {.slide title="Setup + binary MNIST"}
 @naive-bayes
+:::
 
+::: {.slide title="Looking at the data"}
 @naive-bayes-optical-character-recognition-1
+
+. . .
 
 @naive-bayes-optical-character-recognition-2
 
+. . .
+
+@!naive-bayes-optical-character-recognition-2
+
+. . .
+
 @naive-bayes-optical-character-recognition-3
+:::
+
+::: {.slide title="Per-class pixel statistics"}
+For each class $y$ and pixel $i$, estimate
+$P(x_i = 1 \mid y)$ from the training set. With Laplace
+smoothing to avoid zeros:
 
 @naive-bayes-optical-character-recognition-4
 
+. . .
+
 @naive-bayes-optical-character-recognition-5
 
-@naive-bayes-optical-character-recognition-6
+. . .
 
+@naive-bayes-optical-character-recognition-6
+:::
+
+::: {.slide title="Training: just count"}
 @naive-bayes-training-1
+
+. . .
 
 @naive-bayes-training-2
 
+. . .
+
 @naive-bayes-training-3
 
+. . .
+
 @naive-bayes-training-4
+:::
+
+::: {.slide title="Predicting in log-space"}
+Sums of logs instead of products of probabilities — avoids
+underflow:
 
 @naive-bayes-training-5
 
-@naive-bayes-training-6
+. . .
 
+@naive-bayes-training-6
+:::
+
+::: {.slide title="Evaluating"}
 @naive-bayes-training-7
+
+. . .
 
 @naive-bayes-training-8
 
+. . .
+
+@!naive-bayes-training-8
+:::
+
+::: {.slide title="Recap"}
+- Bayes rule + conditional independence = naive Bayes.
+- Training is one pass over the data — count and
+  smooth.
+- Surprisingly competitive baseline for text
+  classification (sparse features, large vocab).
+- Bad on images (independence is too wrong) — but a
+  great teaching example for Bayesian classification.
 :::

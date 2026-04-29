@@ -830,29 +830,96 @@ loss
 <!-- slides -->
 
 ::: {.slide}
+Information theory (Shannon, 1948) gives the right
+language for many things in deep learning:
 
+- **Self-information** $I(x) = -\log p(x)$ — surprise of
+  observing $x$.
+- **Entropy** $H(X) = -\mathbb{E}[\log p(X)]$ — expected
+  surprise of a distribution.
+- **Cross-entropy** $H(p, q) = -\mathbb{E}_{p}[\log q]$ —
+  what we minimize during classification.
+- **KL divergence** $D_{KL}(p \| q) = H(p, q) - H(p)$ —
+  "extra bits" needed to encode $p$ using $q$.
+- **Mutual information** — how much knowing $X$ reduces
+  uncertainty about $Y$.
+
+Cross-entropy loss = KL between true and predicted
+distributions, up to a constant.
+:::
+
+::: {.slide title="Self-information"}
 @information-theory-self-information
+:::
+
+::: {.slide title="Entropy"}
+$H(X) = -\sum_x p(x) \log p(x)$. Maximum at uniform
+distribution; zero at point masses:
 
 @information-theory-definition
+:::
+
+::: {.slide title="Joint and conditional entropy"}
+$H(X, Y)$, $H(X \mid Y)$ — and the chain rule
+$H(X, Y) = H(X) + H(Y \mid X)$:
 
 @information-theory-joint-entropy
 
+. . .
+
 @information-theory-conditional-entropy
+:::
+
+::: {.slide title="Mutual information"}
+$I(X; Y) = H(X) - H(X \mid Y) = H(X) + H(Y) - H(X, Y)$ —
+how much $X$ and $Y$ share. Symmetric, non-negative, zero
+iff independent:
 
 @information-theory-mutual-information-2
+:::
+
+::: {.slide title="KL divergence"}
+$D_{KL}(p \| q) = \sum_x p(x) \log \frac{p(x)}{q(x)} \ge 0$.
+Asymmetric (not a metric); zero iff $p = q$:
 
 @information-theory-definition-2
+:::
 
+::: {.slide title="Examples"}
 @information-theory-example-1
+
+. . .
 
 @information-theory-example-2
 
-@information-theory-example-3
+. . .
 
+@information-theory-example-3
+:::
+
+::: {.slide title="Formal definitions"}
 @information-theory-formal-definition-1
 
+. . .
+
 @information-theory-formal-definition-2
+:::
+
+::: {.slide title="Cross-entropy in classification"}
+Multi-class classification: data distribution = one-hot
+on the true class; model = softmax. Cross-entropy =
+NLL of the true class:
+
+$$\mathcal{L} = -\sum_i \log q(y_i \mid x_i).$$
 
 @information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification
+:::
 
+::: {.slide title="Recap"}
+- Entropy: expected surprise; KL: extra bits;
+  cross-entropy: KL + entropy.
+- Most DL classification = minimizing cross-entropy =
+  minimizing KL to the empirical distribution.
+- Mutual information appears in InfoNCE / contrastive
+  learning, the IB principle, and many others.
 :::

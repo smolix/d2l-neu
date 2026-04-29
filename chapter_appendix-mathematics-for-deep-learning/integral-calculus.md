@@ -630,13 +630,53 @@ We will meet this integral again when we study continuous random variables in :n
 <!-- slides -->
 
 ::: {.slide}
+Differentiation gives slopes; integration gives totals.
+
+$$\int_a^b f(x)\, dx = \text{signed area under } f \text{ on } [a, b].$$
+
+We need integrals to define probabilities ($\int p(x) dx = 1$),
+expectations ($\mathbb{E}[X] = \int x\, p(x)\, dx$), and
+multivariate generalizations everywhere a continuous random
+variable shows up.
+:::
+
+::: {.slide title="Geometric interpretation"}
+Approximate the area by rectangles; refine; the limit is
+the integral. Riemann sums in pictures:
 
 @integral-calculus-geometric-interpretation-1
 
+. . .
+
+@!integral-calculus-geometric-interpretation-1
+
+. . .
+
 @integral-calculus-geometric-interpretation-2
 
+. . .
+
 @integral-calculus-geometric-interpretation-3
+:::
+
+::: {.slide title="Multiple integrals"}
+$\iint f(x, y)\, dA$ — total under a 2D surface; iterated
+integration treats one axis at a time:
 
 @integral-calculus-multiple-integrals
 
+. . .
+
+@!integral-calculus-multiple-integrals
+:::
+
+::: {.slide title="Recap"}
+- Integral = signed area / volume; defined as a limit of
+  Riemann sums.
+- Fundamental theorem of calculus: integral is the
+  inverse of differentiation.
+- Multiple integrals integrate over higher-dimensional
+  regions.
+- Foundation of probability: $\int_{\mathcal{X}} p = 1$
+  defines a density; expectation is an integral.
 :::

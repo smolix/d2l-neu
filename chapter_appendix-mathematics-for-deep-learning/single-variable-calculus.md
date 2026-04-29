@@ -609,19 +609,84 @@ Taylor series have two primary applications:
 <!-- slides -->
 
 ::: {.slide}
+The single-variable calculus toolkit underlying gradient
+descent. The derivative
+
+$$f'(x) = \lim_{\epsilon \to 0} \frac{f(x+\epsilon) - f(x)}{\epsilon}$$
+
+is the *local linear approximation* of $f$ at $x$. The
+gradient-descent update $x \leftarrow x - \eta f'(x)$ uses
+exactly this approximation: take a small step opposite the
+slope.
+
+This deck visualizes derivatives, linear approximation, and
+Taylor expansion — the local quadratic and beyond.
+:::
+
+::: {.slide title="Derivative as slope of zoom"}
+Plot a function on a normal scale, then zoom in. Smooth
+functions look more and more like a straight line — that
+line is the tangent, its slope is $f'(x)$:
 
 @single-variable-calculus-differential-calculus-1
 
+. . .
+
 @single-variable-calculus-differential-calculus-2
 
+. . .
+
+@!single-variable-calculus-differential-calculus-2
+:::
+
+::: {.slide title="Zooming further"}
 @single-variable-calculus-differential-calculus-3
+
+. . .
+
+@!single-variable-calculus-differential-calculus-3
+
+. . .
 
 @single-variable-calculus-differential-calculus-4
 
+. . .
+
+@!single-variable-calculus-differential-calculus-4
+:::
+
+::: {.slide title="Linear approximation"}
+$f(x + \epsilon) \approx f(x) + \epsilon f'(x)$ — the
+first-order Taylor term. Valid for small $\epsilon$;
+foundation of GD analysis:
+
 @single-variable-calculus-linear-approximation
 
+. . .
+
+@!single-variable-calculus-linear-approximation
+:::
+
+::: {.slide title="Higher-order derivatives"}
 @single-variable-calculus-higher-order-derivatives
+:::
+
+::: {.slide title="Taylor series"}
+$f(x + \epsilon) = \sum_{k=0}^\infty \frac{f^{(k)}(x)}{k!} \epsilon^k$.
+Truncating gives polynomial approximations of any order:
 
 @single-variable-calculus-taylor-series
 
+. . .
+
+@!single-variable-calculus-taylor-series
+:::
+
+::: {.slide title="Recap"}
+- Derivative = slope of the tangent line; second
+  derivative = curvature.
+- Linear (1st-order) Taylor → gradient descent.
+- Quadratic (2nd-order) Taylor → Newton's method.
+- All of training boils down to repeatedly applying these
+  approximations on a noisy loss landscape.
 :::

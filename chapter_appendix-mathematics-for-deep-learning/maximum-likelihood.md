@@ -338,9 +338,45 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 <!-- slides -->
 
 ::: {.slide}
+**Maximum likelihood**: pick the parameters that make the
+observed data most probable.
 
+$$\hat\theta = \arg\max_\theta \prod_i p(x_i \mid \theta)
+            = \arg\min_\theta -\sum_i \log p(x_i \mid \theta).$$
+
+The negative log-likelihood form is what every
+classification and regression loss in the book actually
+optimizes:
+
+- Cross-entropy = NLL of a categorical $p(y \mid x)$.
+- MSE = NLL of a Gaussian $p(y \mid x)$ with fixed variance.
+- BPR / softmax-with-temperature etc. — all NLLs.
+
+So "minimize the loss" is "do MLE" in fancy clothes.
+:::
+
+::: {.slide title="A concrete example"}
 @maximum-likelihood-a-concrete-example
+:::
+
+::: {.slide title="Numerical optimization (NLL)"}
+Sums of logs are easier than products: floating point
+behaves; gradients have closed forms; SGD works on the NLL.
 
 @maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
 
+. . .
+
+@!maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
+:::
+
+::: {.slide title="Recap"}
+- MLE: maximize $\sum_i \log p(x_i \mid \theta)$;
+  equivalently, minimize NLL.
+- Connects optimization (the chapter's main topic) to
+  probability (this chapter's main topic).
+- Most "losses" in DL are NLLs of suitable conditional
+  distributions.
+- MLE is consistent and asymptotically efficient for
+  well-specified models.
 :::

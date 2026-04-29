@@ -587,17 +587,65 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 <!-- slides -->
 
 ::: {.slide}
+A primer on the language of estimators that ML borrows
+heavily from:
 
+- **Estimator** — a procedure that takes data and outputs
+  a guess (e.g. sample mean, MLE).
+- **Bias** — $\mathbb{E}[\hat\theta] - \theta$. Systematic
+  error.
+- **Variance** — $\text{Var}(\hat\theta)$. Noise across
+  datasets.
+- **MSE = bias$^2$ + variance** — the basic decomposition
+  that explains overfitting and why regularization helps.
+
+This deck makes the bias-variance tradeoff concrete.
+:::
+
+::: {.slide title="Evaluating estimators"}
 @statistics-evaluating-and-comparing-estimators
+:::
+
+::: {.slide title="Empirical bias / variance"}
+Simulate a sampling distribution: many datasets → many
+estimates → empirical mean and spread:
 
 @statistics-evaluating-estimators-in-code-1
 
+. . .
+
 @statistics-evaluating-estimators-in-code-2
+
+. . .
 
 @statistics-evaluating-estimators-in-code-3
 
+. . .
+
 @statistics-evaluating-estimators-in-code-4
+
+. . .
+
+@!statistics-evaluating-estimators-in-code-4
+:::
+
+::: {.slide title="A Gaussian example"}
+Sample mean for $\mathcal{N}(\mu, \sigma^2)$: unbiased,
+variance $\sigma^2/n$. Concretely visualize this:
 
 @statistics-a-gaussian-example
 
+. . .
+
+@!statistics-a-gaussian-example
+:::
+
+::: {.slide title="Recap"}
+- Estimator quality = bias + variance.
+- Sample mean is BLUE for $\mu$ — best linear unbiased
+  estimator under iid Gaussian noise.
+- Regularization trades a bit of bias for a lot of
+  variance reduction.
+- Same trade-off shows up everywhere: dropout, weight
+  decay, ensembling.
 :::

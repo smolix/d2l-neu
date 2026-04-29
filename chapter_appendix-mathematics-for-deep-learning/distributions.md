@@ -1015,45 +1015,126 @@ powerful family of distributions encountered frequently in machine learning.
 <!-- slides -->
 
 ::: {.slide}
+A reference tour of the distributions used throughout the
+book — what they look like, when they apply, and how to
+sample / evaluate them in code.
 
+- **Bernoulli** — single coin flip; binary classification
+  conditional.
+- **Discrete uniform** — equiprobable categories.
+- **Continuous uniform** — random initialization, dropout
+  masks (in expectation).
+- **Binomial** — count of successes in $n$ Bernoullis.
+- **Poisson** — rare events count; CTR distributions,
+  click counts.
+- **Gaussian** — by far the most-used; CLT, regression
+  noise model, default prior.
+:::
+
+::: {.slide title="Setup"}
 @distributions
+:::
+
+::: {.slide title="Bernoulli"}
+$P(X=1) = p$, $P(X=0) = 1-p$. Mean $p$, variance $p(1-p)$:
 
 @distributions-bernoulli-1
 
+. . .
+
 @distributions-bernoulli-2
 
+. . .
+
 @distributions-bernoulli-3
+:::
+
+::: {.slide title="Discrete uniform"}
+Equally likely categories. Maximum entropy on a finite set
+with no prior knowledge:
 
 @distributions-discrete-uniform-1
 
+. . .
+
 @distributions-discrete-uniform-2
 
+. . .
+
 @distributions-discrete-uniform-3
+:::
+
+::: {.slide title="Continuous uniform"}
+Density $\frac{1}{b-a}$ on $[a, b]$. Source of pseudo-random
+samples for Monte Carlo and dropout:
 
 @distributions-continuous-uniform-1
 
+. . .
+
 @distributions-continuous-uniform-2
 
+. . .
+
 @distributions-continuous-uniform-3
+:::
+
+::: {.slide title="Binomial"}
+Sum of $n$ iid Bernoullis. Bell-shaped for large $n$
+(Gaussian limit):
 
 @distributions-binomial-1
 
+. . .
+
 @distributions-binomial-2
 
+. . .
+
 @distributions-binomial-3
+:::
+
+::: {.slide title="Poisson"}
+Rare events: $P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}$.
+Approximates binomial with $n$ large, $p$ small,
+$np \to \lambda$:
 
 @distributions-poisson-1
 
+. . .
+
 @distributions-poisson-2
 
+. . .
+
 @distributions-poisson-3
+:::
+
+::: {.slide title="Gaussian"}
+$\mathcal{N}(\mu, \sigma^2)$ — bell curve. CLT makes it
+the limit of many small contributions; that's why it's
+everywhere:
 
 @distributions-gaussian-1
 
+. . .
+
 @distributions-gaussian-2
+
+. . .
 
 @distributions-gaussian-3
 
-@distributions-gaussian-4
+. . .
 
+@distributions-gaussian-4
+:::
+
+::: {.slide title="Recap"}
+- A small toolkit covers most needs: Bernoulli, uniform
+  (discrete/continuous), binomial, Poisson, Gaussian.
+- CLT makes the Gaussian central — sums of many small
+  effects look Gaussian.
+- Each distribution has a closed-form NLL → standard
+  loss in DL.
 :::

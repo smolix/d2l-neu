@@ -1393,39 +1393,88 @@ use `Trainer.validation_step` (or its return value) instead.
 <!-- slides -->
 
 ::: {.slide}
+The `d2l` package collects shared utility classes and
+functions reused across the book — `Trainer`, `Module`,
+`DataModule`, `Classifier`, plotting helpers, etc.
 
+This page is the canonical listing of those helpers. Most
+chapters subclass and extend them rather than reimplement
+from scratch.
+:::
+
+::: {.slide title="Core base classes"}
 @utils-utility-functions-and-classes-1
+
+. . .
 
 @utils-utility-functions-and-classes-2
 
-@utils-utility-functions-and-classes-3
+. . .
 
+@utils-utility-functions-and-classes-3
+:::
+
+::: {.slide title="Plotting and progress"}
 @utils-utility-functions-and-classes-4
+
+. . .
 
 @utils-utility-functions-and-classes-5
 
-@utils-utility-functions-and-classes-6
+. . .
 
+@utils-utility-functions-and-classes-6
+:::
+
+::: {.slide title="Training loop primitives"}
 @utils-utility-functions-and-classes-7
+
+. . .
 
 @utils-utility-functions-and-classes-8
 
-@utils-utility-functions-and-classes-9
+. . .
 
+@utils-utility-functions-and-classes-9
+:::
+
+::: {.slide title="Data loading helpers"}
 @utils-utility-functions-and-classes-10
+
+. . .
 
 @utils-utility-functions-and-classes-11
 
-@utils-utility-functions-and-classes-12
+. . .
 
+@utils-utility-functions-and-classes-12
+:::
+
+::: {.slide title="Misc helpers"}
 @utils-utility-functions-and-classes-13
+
+. . .
 
 @utils-utility-functions-and-classes-14
 
-@utils-utility-functions-and-classes-15
+. . .
 
+@utils-utility-functions-and-classes-15
+:::
+
+::: {.slide title="More misc"}
 @utils-utility-functions-and-classes-16
 
-@utils-utility-functions-and-classes-17
+. . .
 
+@utils-utility-functions-and-classes-17
+:::
+
+::: {.slide title="Recap"}
+- The `d2l` library provides reusable training, plotting,
+  and data primitives so chapter code can focus on the
+  ideas, not boilerplate.
+- All examples in the book work with the same
+  `Trainer.fit(model, data)` shape, regardless of
+  framework or chapter topic.
 :::

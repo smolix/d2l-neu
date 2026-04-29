@@ -948,17 +948,61 @@ It is reasonable to ask at this point, "Why can I not just write down matrix ver
 <!-- slides -->
 
 ::: {.slide}
+Generalize differentiation to many inputs. The **gradient**
 
+$$\nabla f(\mathbf{x}) = [\partial f/\partial x_1, \ldots, \partial f/\partial x_d]^\top$$
+
+points in the direction of steepest ascent; $-\nabla f$
+is the descent direction. Local quadratic structure is
+captured by the **Hessian** $\nabla^2 f$, the matrix of
+second partials.
+
+The deck also covers the **chain rule** in vector form,
+and connects it to **backpropagation** — backprop is just
+reverse-mode application of the multivariate chain rule.
+:::
+
+::: {.slide title="Higher-dimensional differentiation"}
 @multivariable-calculus-higher-dimensional-differentiation
+:::
+
+::: {.slide title="Optimization in many dimensions"}
+GD: $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$.
+Newton: $\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f]^{-1} \nabla f$.
+The latter is exact for quadratics, expensive in high dim:
 
 @multivariable-calculus-a-note-on-mathematical-optimization
+:::
+
+::: {.slide title="Chain rule and backprop"}
+Reverse-mode auto-diff = walk the chain rule from outputs
+to inputs, accumulating partial derivatives:
 
 @multivariable-calculus-the-backpropagation-algorithm-1
 
+. . .
+
 @multivariable-calculus-the-backpropagation-algorithm-2
 
+. . .
+
 @multivariable-calculus-the-backpropagation-algorithm-3
+:::
+
+::: {.slide title="Hessians"}
+Curvature in many dimensions. PSD Hessian = local minimum,
+mixed signs = saddle, NSD = maximum:
 
 @multivariable-calculus-hessians
+:::
 
+::: {.slide title="Recap"}
+- Gradient: direction of steepest ascent.
+- Hessian: local curvature matrix; eigenvalues classify
+  stationary points.
+- Backprop = reverse-mode chain rule, $\mathcal{O}(\text{model size})$
+  per parameter.
+- Same calculus everywhere: GD, Newton, conjugate gradient,
+  Adam — they're all approximations to the local Taylor
+  expansion of the loss.
 :::

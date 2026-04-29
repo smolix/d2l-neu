@@ -555,59 +555,77 @@ applying DenseNet may require more memory-efficient implementations that may inc
 <!-- slides -->
 
 ::: {.slide}
+**DenseNet** (Huang et al., 2017) takes the residual idea one
+step further: instead of *adding* skip connections,
+**concatenate** them.
+
+Inside a "dense block", every layer's input is the
+**concatenation** of *all preceding layers'* outputs:
+
+$$\mathbf{x}_\ell = f_\ell\bigl([\mathbf{x}_0, \mathbf{x}_1, \dots, \mathbf{x}_{\ell-1}]\bigr).$$
+
+Pros: maximum **feature reuse**, fewer parameters than ResNet
+for similar accuracy. Con: memory grows linearly with depth
+within a block — handled by **transition layers** (1×1 conv +
+pooling) that reset channel counts between blocks.
+:::
+
+::: {.slide title="Conv block + dense block"}
+A small conv block (BN → ReLU → 3×3 conv) is the unit; a
+DenseBlock stacks several of them and concatenates outputs as
+it goes:
 
 @densenet-densely-connected-networks-densenet
 
-:::
-
-::: {.slide}
-
-Dense Blocks
-
 @densenet-dense-blocks-1
 
-@densenet-dense-blocks-2
+. . .
 
+@densenet-dense-blocks-2
 :::
 
-::: {.slide}
-
-define a `DenseBlock` instance
+::: {.slide title="Channel growth"}
+A `DenseBlock(num_convs=2, num_channels=10)` on a 3-channel
+input grows channels by `num_convs * num_channels` per block:
 
 @densenet-dense-blocks-3
-
 :::
 
-::: {.slide}
-
-Transition Layers
+::: {.slide title="Transition layer"}
+Stops the channel explosion between dense blocks: 1×1 conv
+halves channels, 2×2 avg-pool halves spatial dims:
 
 @densenet-transition-layers-1
 
-:::
-
-::: {.slide}
-
-Apply a transition layer
+. . .
 
 @densenet-transition-layers-2
-
 :::
 
-::: {.slide}
-
-DenseNet Model
+::: {.slide title="The DenseNet model"}
+A standard "stem → dense block → transition → dense block →
+transition → … → global avg-pool → linear" pipeline:
 
 @densenet-densenet-model-1
 
 @densenet-densenet-model-2
-
 :::
 
-::: {.slide}
-
-Training
-
+::: {.slide title="Training"}
 @densenet-training
 
+DenseNet hits competitive ImageNet accuracy with **far fewer
+parameters** than equivalent ResNets — the concatenation reuse
+genuinely helps.
+:::
+
+::: {.slide title="Recap"}
+- ResNet **adds** skip connections; DenseNet **concatenates**
+  them.
+- Inside a dense block, layer $\ell$ sees *all* of layers
+  $0, …, \ell-1$ — maximum feature reuse.
+- **Transition layers** between dense blocks rein in the
+  channel-count explosion via 1×1 conv + pool.
+- Same parameter count → typically better accuracy than ResNet;
+  same accuracy → fewer parameters.
 :::

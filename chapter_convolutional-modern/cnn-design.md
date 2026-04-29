@@ -399,19 +399,70 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 <!-- slides -->
 
 ::: {.slide}
+We've seen a sequence of hand-designed architectures (LeNet,
+AlexNet, VGG, GoogLeNet, ResNet, DenseNet) — each one a
+**hypothesis** about what makes nets work. Can we design
+networks more **systematically**?
+
+**RegNet** (Radosavovic et al., 2020) does exactly that:
+
+- Define a parametric **design space** (`AnyNet`) — same overall
+  template, lots of free hyperparameters.
+- **Sample many** networks, train each briefly, look at how
+  accuracy correlates with hyperparameter choices.
+- Constrain the design space based on what works → land on a
+  family of models that beat hand-designed ones.
+
+The result: simple closed-form rules ("set channels with a linear
+function of depth," etc.) outperform years of expert tuning.
+:::
+
+::: {.slide title="The AnyNet design space"}
+Stem (low-level conv) → 4 stages of residual blocks → head
+(global pool + linear). Each stage's depth, width, group count
+are free parameters:
 
 @cnn-design-designing-convolutional-network-architectures
 
 @cnn-design-the-anynet-design-space-1
 
+. . .
+
 @cnn-design-the-anynet-design-space-2
 
+. . .
+
 @cnn-design-the-anynet-design-space-3
+:::
+
+::: {.slide title="A RegNetX-3.2GF instance"}
+The paper's empirical findings collapse to: **width grows
+linearly with stage**, depth stays roughly constant, ResNeXt-style
+groups. A scaled-down version for Fashion-MNIST:
 
 @cnn-design-regnet-1
 
-@cnn-design-regnet-2
+. . .
 
+@cnn-design-regnet-2
+:::
+
+::: {.slide title="Training"}
 @cnn-design-training
 
+The architecture is competitive with hand-designed ResNets at
+similar parameter counts — and the **discovery process** scales
+trivially with compute.
+:::
+
+::: {.slide title="Recap"}
+- Modern architecture design = **search over a parametric
+  design space**, not heroic engineering.
+- AnyNet specifies the template (stem / 4 stages / head); the
+  empirical search picks widths, depths, and groups.
+- Resulting networks (RegNet) match or beat hand-designed
+  rivals with simpler, more interpretable rules.
+- Sets the stage for **NAS** (neural architecture search) and
+  the modern philosophy: pick the design space carefully, then
+  let compute find the best instance.
 :::

@@ -989,62 +989,79 @@ On a more practical note, there are a number of aspects worth remembering about 
 <!-- slides -->
 
 ::: {.slide}
+**Batch Normalization** (Ioffe & Szegedy, 2015) is the
+single-biggest stability win in modern deep learning.
+
+The idea: at each layer, **normalize** activations within the
+minibatch to zero mean / unit variance, then **rescale** with
+learned $\gamma$ and $\beta$:
+
+$$\text{BN}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x} - \hat\mu_\mathcal{B}}{\sqrt{\hat\sigma_\mathcal{B}^2 + \epsilon}} + \beta.$$
+
+- Lets you train **much deeper** nets — gradients stay
+  well-conditioned through the depth.
+- Allows **higher learning rates** and is mildly regularizing.
+- At **test time** uses running estimates of mean / variance
+  (since there's no minibatch).
+:::
+
+::: {.slide title="From scratch"}
+Compute per-channel mean and variance over the minibatch (and
+spatial dims, for conv); normalize, then scale + shift:
 
 @batch-norm-batch-normalization
 
-Implementation from Scratch
-
 @batch-norm-implementation-from-scratch-1
-
 :::
 
-::: {.slide}
-
-create a proper `BatchNorm` layer
+::: {.slide title="Wrapping as a `Module`"}
+Buffers for `moving_mean` / `moving_var` (updated only during
+training); learnable `gamma` / `beta` parameters:
 
 @batch-norm-implementation-from-scratch-2
-
 :::
 
-::: {.slide}
-
-LeNet with Batch Normalization
+::: {.slide title="LeNet + BatchNorm"}
+Drop a `BatchNorm` layer between each conv/linear and its
+activation:
 
 @batch-norm-lenet-with-batch-normalization-1
-
-@batch-norm-lenet-with-batch-normalization-2
-
 :::
 
-::: {.slide}
-
-train our network on the Fashion-MNIST dataset
+::: {.slide title="Train"}
+Trains noticeably **faster** than vanilla LeNet — same accuracy in
+fewer epochs:
 
 @batch-norm-lenet-with-batch-normalization-3
 
-:::
+. . .
 
-::: {.slide}
-
-have a look at the scale parameter `gamma`
-and the shift parameter `beta`
+After training, `gamma` and `beta` are non-trivial — the layer
+**learned** the scale/shift it wants:
 
 @batch-norm-lenet-with-batch-normalization-4
-
 :::
 
-::: {.slide}
-
-Concise Implementation
+::: {.slide title="The framework version"}
+`nn.BatchNorm2d` for conv layers, `nn.BatchNorm1d` for linear
+layers — same idea, much faster, handles the eval/training mode
+switch automatically:
 
 @batch-norm-concise-implementation-1
 
-:::
-
-::: {.slide}
-
-use the same hyperparameters to train our model
+. . .
 
 @batch-norm-concise-implementation-2
+:::
 
+::: {.slide title="Recap"}
+- BatchNorm normalizes activations to zero mean / unit variance
+  within each minibatch, then **rescales** with learned $\gamma,
+  \beta$.
+- Track running statistics during training; **use them** at
+  inference (no minibatch at test time).
+- Enables much **deeper networks**, **higher LRs**, faster
+  convergence; mildly regularizing.
+- Spawned a family — **LayerNorm** (per-example, used in
+  Transformers), **GroupNorm**, **InstanceNorm**.
 :::

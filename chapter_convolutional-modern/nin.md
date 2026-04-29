@@ -316,35 +316,57 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 <!-- slides -->
 
 ::: {.slide}
+**Network-in-Network** (Lin et al., 2014) introduces two ideas
+the rest of the field eats happily:
+
+- **1×1 convolutions** as a lightweight "MLP per pixel" — adds
+  nonlinearity and channel mixing without spatial cost.
+- **Global average pooling** replaces the giant fully-connected
+  classifier head — one parameter-light pool, *huge* parameter
+  reduction.
+
+Result: a network with **no fully-connected layers at all**.
+Less prone to overfitting, faster, and the per-channel feature
+maps are interpretable as class-specific responses.
+:::
+
+::: {.slide title="The NiN block"}
+A regular conv followed by **two 1×1 convs** (with ReLU between)
+— the "MLP within a conv layer":
 
 @nin-network-in-network-nin
 
-NiN Blocks
-
 @nin-nin-blocks
-
 :::
 
-::: {.slide}
-
-NiN Model
+::: {.slide title="The NiN model"}
+Four NiN blocks at growing channel counts (96, 256, 384,
+**num_classes**), with max-pool downsampling between, then
+**global average pooling** + flatten → done. **No FC layers.**
 
 @nin-nin-model-1
-
 :::
 
-::: {.slide}
-
-the output shape of each block
+::: {.slide title="Shape inspection"}
+Walk a `1×1×224×224` input through; spatial dims shrink, channels
+grow until the final block produces `num_classes` channels:
 
 @nin-nin-model-2
-
 :::
 
-::: {.slide}
-
-Training
+::: {.slide title="Training"}
+Same `Trainer`, slightly higher learning rate than the FC nets
+(no dense layer to overfit on small batches):
 
 @nin-training
+:::
 
+::: {.slide title="Recap"}
+- NiN puts an **MLP inside each conv block** via two 1×1 convs.
+- **Global average pooling** as the classifier head — one number
+  per class per feature map, no FC layers needed.
+- The 1×1 conv as channel-mixer becomes a foundational primitive
+  in all later architectures.
+- Despite never winning a major benchmark, NiN's ideas are in
+  every ConvNet that came after.
 :::

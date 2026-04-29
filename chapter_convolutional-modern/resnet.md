@@ -802,61 +802,93 @@ A common feature of the designs we have discussed so far is that the network des
 <!-- slides -->
 
 ::: {.slide}
+**ResNet** (He et al., 2015) is the architecture that finally made
+**very deep** networks trainable. Two ideas:
+
+- **Residual connection:** every block computes
+  $\mathbf{y} = f(\mathbf{x}) + \mathbf{x}$ — the function only
+  needs to learn the *residual* relative to identity.
+- Identity is always representable. Adding more layers can't
+  *hurt* (in principle), so going from 18 → 152 layers genuinely
+  improves accuracy.
+
+Practical knock-on effects: gradients flow through the skip
+connections at full strength → deep nets train as easily as
+shallow ones. **ResNet-50** is still the default backbone for
+much of vision research.
+:::
+
+::: {.slide title="Residual block"}
+A 2-conv block with a skip-add. The optional 1×1 conv on the
+skip path matches channel/stride changes:
 
 @resnet-residual-networks-resnet-and-resnext
 
-Residual Blocks
-
 @resnet-residual-blocks-1
-
 :::
 
-::: {.slide}
-
-a situation where the input and output are of the same shape
+::: {.slide title="Block variants"}
+Same shape in, same shape out:
 
 @resnet-residual-blocks-2
 
-:::
+. . .
 
-::: {.slide}
-
-halve the output height and width while increasing the number of output channels
+Halve spatial dims and double channels (transition between stages):
 
 @resnet-residual-blocks-3
-
 :::
 
-::: {.slide}
-
-ResNet Model
+::: {.slide title="The ResNet model"}
+Stages of N residual blocks, with downsampling at the start of
+each stage. The first stage's first block is special (matches the
+stem's channel count):
 
 @resnet-resnet-model-1
 
+. . .
+
 @resnet-resnet-model-2
 
-@resnet-resnet-model-3
+. . .
 
+@resnet-resnet-model-3
 :::
 
-::: {.slide}
-
-observe how the input shape changes across different modules in ResNet
+::: {.slide title="ResNet-18"}
+Four stages × 2 residual blocks each = "ResNet-18" (counting two
+convs per block + the stem + the head). Same template defines
+ResNet-34/50/101/152:
 
 @resnet-resnet-model-4
 
 @resnet-resnet-model-5
-
 :::
 
-::: {.slide}
-
-Training
-
+::: {.slide title="Training"}
 @resnet-training
+:::
+
+::: {.slide title="ResNeXt: width via cardinality"}
+A cleaner variant: each block has **multiple parallel paths**
+(cardinality $C$) instead of one wide one — same parameter
+budget, better accuracy:
 
 @resnet-resnext-1
 
-@resnet-resnext-2
+. . .
 
+@resnet-resnext-2
+:::
+
+::: {.slide title="Recap"}
+- Residual connection: $\mathbf{y} = f(\mathbf{x}) + \mathbf{x}$
+  — guarantees identity is always representable.
+- Trains networks **arbitrarily deep** (152, 1000+) without
+  optimization pathologies.
+- The "residual block" + "stage" template is universal — used in
+  vision (ResNet, ResNeXt, DenseNet), language (Transformers, all
+  use residual + LayerNorm), and beyond.
+- ResNet-50 is the default ImageNet backbone for transfer
+  learning even a decade later.
 :::

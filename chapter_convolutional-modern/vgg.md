@@ -353,30 +353,62 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 <!-- slides -->
 
 ::: {.slide}
+**VGG** (Simonyan & Zisserman, 2014) is AlexNet's idea taken
+seriously: just stack more layers, but make them **regular**.
+
+The contribution wasn't a clever architecture — it was a **design
+principle**:
+
+- A "VGG block" = $n$ × `(3×3 conv, ReLU)` + `2×2 max-pool`.
+- A whole network = a sequence of such blocks at growing channel
+  counts.
+- All convs are **3×3 with stride 1** — easier to reason about,
+  surprisingly competitive with hand-designed kernels.
+
+Two stacked 3×3 convs cover the same receptive field as a 5×5,
+with fewer parameters and one more nonlinearity in between.
+:::
+
+::: {.slide title="The VGG block"}
+A reusable subunit: `n_convs` consecutive `Conv-ReLU` pairs at
+`out_channels`, followed by a `2×2 MaxPool`:
 
 @vgg-networks-using-blocks-vgg
 
-VGG Blocks
-
 @vgg-vgg-blocks
-
 :::
 
-::: {.slide}
-
-VGG Network
+::: {.slide title="The VGG network"}
+A whole VGG-11 (the smallest variant) is just five blocks at
+growing channel counts (`64, 128, 256, 512, 512`) plus a 3-layer
+dense head:
 
 @vgg-vgg-network-1
 
+. . .
+
 @vgg-vgg-network-2
 
+The "named architecture" is just a tuple of `(n_convs, channels)`
+pairs — passing a different tuple gives you VGG-13/16/19.
 :::
 
-::: {.slide}
-
-Since VGG-11 is computationally more demanding than AlexNet
-we construct a network with a smaller number of channels. model training
+::: {.slide title="Training (a thin VGG)"}
+Full VGG-11 is heavy for a notebook. Train a thinned version
+(channels 16/32/64/128/128) on Fashion-MNIST as a smoke test:
 
 @vgg-training
 
+Validates the **block-at-scale** design principle without
+melting your GPU.
+:::
+
+::: {.slide title="Recap"}
+- VGG = "stack identical, regular blocks." A block is $n$ × 3×3
+  conv + ReLU + maxpool.
+- Two 3×3 convs ≈ one 5×5 receptive field, with fewer params and
+  more nonlinearity.
+- The architecture-as-a-tuple-of-blocks pattern (`((1, 64), (1,
+  128), (2, 256), …)`) is everywhere — VGG, ResNet, EfficientNet,
+  ConvNeXt all use it.
 :::

@@ -525,25 +525,55 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 <!-- slides -->
 
 ::: {.slide}
+**AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what made
+deep learning *the* approach to vision. It won ImageNet by a huge
+margin. The key changes over LeNet:
+
+- **Bigger** — 8 layers, 60 M parameters, much larger filters in
+  the first layer (11×11), deeper feature stack.
+- **ReLU** activations (no more saturating sigmoids).
+- **Dropout** in the dense head for regularization.
+- **GPUs**, **lots of data** (1.2 M ImageNet images), and
+  **augmentation** — the "missing ingredients" the chapter names.
+
+The architecture itself is straightforward — what changed was
+the *scale*.
+:::
+
+::: {.slide title="The architecture"}
+Five conv layers (11×11 → 5×5 → three 3×3) + max-pool, then three
+fully-connected layers down to 1000 classes:
 
 @alexnet-deep-convolutional-neural-networks-alexnet
 
 @alexnet-capacity-control-and-preprocessing-1
-
 :::
 
-::: {.slide}
-
-construct a single-channel data example to observe the output shape of each layer
+::: {.slide title="Shape inspection"}
+Walk a single 1×1×224×224 image through and print each block's
+output shape — the feature pyramid going from `224×224×1` down to
+`6×6×256`:
 
 @alexnet-capacity-control-and-preprocessing-2
-
 :::
 
-::: {.slide}
-
-Fashion-MNIST images have lower resolution than ImageNet images. we upsample them to $224 \times 224$ start training AlexNet
+::: {.slide title="Training on Fashion-MNIST"}
+For demonstration, upsample the 28×28 Fashion-MNIST images to the
+224×224 input AlexNet expects, then train at lr=0.01:
 
 @alexnet-training
 
+Trains slowly even on a GPU — AlexNet has ~10× the parameters of
+LeNet. The architecture's lasting contribution: it proved that
+**bigger is better** when paired with enough data and compute.
+:::
+
+::: {.slide title="Recap"}
+- AlexNet = LeNet's recipe at **8× the depth**, **massive
+  parameter count**, **ReLU**, **Dropout**, **GPU training**, on
+  **ImageNet**.
+- Validates the "deeper, bigger, more data" formula that drives
+  the field for the next decade.
+- The next handful of architectures (VGG, GoogLeNet, ResNet) are
+  systematic refinements of this template.
 :::

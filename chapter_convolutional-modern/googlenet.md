@@ -616,46 +616,80 @@ Over the following sections we will encounter a number of design choices (e.g., 
 <!-- slides -->
 
 ::: {.slide}
+**GoogLeNet** (Szegedy et al., 2014) — winner of ImageNet 2014 —
+introduces a different design axis: **width**, not just depth.
+
+Each layer is an **Inception block** that runs **multiple
+filter sizes in parallel** (1×1, 3×3, 5×5, plus pool) and
+**concatenates** their outputs. The network can choose, layer by
+layer, which scale of filter is most useful.
+
+Heavy use of **1×1 convs** as bottleneck reductions keeps the
+parameter count manageable despite the multi-branch design.
+:::
+
+::: {.slide title="Inception block"}
+Four parallel branches, each producing a feature map at the same
+spatial size, concatenated along the channel axis:
+
+- **Branch 1:** 1×1 conv (small filter only)
+- **Branch 2:** 1×1 conv → 3×3 conv (with bottleneck)
+- **Branch 3:** 1×1 conv → 5×5 conv (with bottleneck)
+- **Branch 4:** 3×3 max-pool → 1×1 conv
 
 @googlenet-multi-branch-networks-googlenet
 
-Inception Blocks
-
 @googlenet-inception-blocks
-
 :::
 
-::: {.slide}
-
-GoogLeNet Model
+::: {.slide title="GoogLeNet stages"}
+Five sequential "stages" — each a small stack of conv + pool +
+inception modules — built up methodically:
 
 @googlenet-googlenet-model-1
 
+. . .
+
 @googlenet-googlenet-model-2
 
-@googlenet-googlenet-model-3
+. . .
 
+@googlenet-googlenet-model-3
+:::
+
+::: {.slide title="More stages"}
 @googlenet-googlenet-model-4
+
+. . .
 
 @googlenet-googlenet-model-5
 
-@googlenet-googlenet-model-6
+. . .
 
+@googlenet-googlenet-model-6
 :::
 
-::: {.slide}
-
-reduce the input height and width from 224 to 96
-to have a reasonable training time on Fashion-MNIST
+::: {.slide title="Shape inspection"}
+For Fashion-MNIST we shrink the input to 96×96 to keep training
+time reasonable; layer summary on the smaller input:
 
 @googlenet-googlenet-model-7
-
 :::
 
-::: {.slide}
-
-Training
-
+::: {.slide title="Training"}
 @googlenet-training
 
+The original GoogLeNet has 22 weighted layers (~7M params) — far
+fewer than VGG (~138M) — yet better ImageNet accuracy.
+:::
+
+::: {.slide title="Recap"}
+- **Inception block** = multi-branch, multi-scale, concatenated.
+  The network learns which filter size matters per layer.
+- **1×1 bottlenecks** keep parameter count low.
+- The "go wider, not just deeper" lesson informs every modern
+  attention/feature-pyramid design.
+- GoogLeNet's descendants (Inception-v3/v4, Xception) refined the
+  block; the underlying **multi-branch + bottleneck** template
+  endures.
 :::

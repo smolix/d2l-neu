@@ -409,13 +409,11 @@ A second difference is the relative ease with which we were able to implement Le
 <!-- slides -->
 
 ::: {.slide}
-We have all the pieces — convs, padding, channels, pooling.
-Time to assemble a complete CNN.
-
 **LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
-was the first CNN that worked at production scale: digit
-recognition for U.S. bank check processing. Some ATMs
-*still* run derivatives of the original C++ in 2026.
+was the first convolutional neural network that worked at
+production scale — recognizing handwritten digits on U.S.
+bank checks. Some ATMs *still* run derivatives of the
+original C++ today.
 
 It also defined the architectural template every later
 CNN refines:
@@ -425,8 +423,10 @@ CNN refines:
 - **Dense head** — flatten, then a small MLP mapping
   features to class scores.
 
-This deck implements LeNet, traces shapes through it, and
-trains on Fashion-MNIST.
+ResNet, EfficientNet, ViT, modern image backbones — all
+keep the same skeleton and swap components. This deck
+implements LeNet, traces shapes through it, and trains
+the result on Fashion-MNIST.
 :::
 
 ::: {.slide title="LeNet-5 architecture"}

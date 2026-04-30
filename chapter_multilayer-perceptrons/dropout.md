@@ -533,30 +533,33 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 <!-- slides -->
 
 ::: {.slide}
-A 256-unit MLP has more parameters than Fashion-MNIST has
-training points. With enough capacity, the network can
-**memorize** the training set — train loss → 0, test loss
-goes the wrong way.
+**Dropout** (Srivastava, Hinton et al., 2014) is the
+simplest and most widely used regularizer for neural
+networks:
 
-We need **regularization** — anything that biases the
-network toward simpler functions. The best-known modern
-trick is **dropout** (Srivastava, Hinton et al. 2014):
+> *During training, set each hidden unit to zero
+> independently with probability* $p$. *Rescale the
+> survivors by* $1/(1-p)$. *Turn it off at test time.*
 
-> *On every forward pass during training, randomly set
-> each hidden unit to zero with probability $p$.*
+Counterintuitive — we actively damage the network
+mid-training — but the trick is rock-solid. It still
+ships in modern Transformers (~10% rate is standard).
 
-Counterintuitive — actively damaging the network mid-
-training — but it works. Standard component of MLP and
-Transformer training.
+**Why we need it.** Big modern networks are
+*overparameterized* — more weights than training
+examples. Without a regularizer, gradient descent will
+happily memorize the training set and the model
+generalizes badly to anything new. Dropout is one of the
+cheapest, most reliable ways to fight that.
 
-Two arguments for why:
+**Why it works** — two complementary explanations:
 
 - **Noise injection** = smoothness regularization
   (Bishop 1995). Forcing the network to be robust to
   hidden-unit dropout = forcing it to be a smoother
   function of its inputs.
-- **Anti-co-adaptation**: each unit can't trust any
-  *specific* upstream unit to be there, so it has to
+- **Anti-co-adaptation**: each unit can't rely on any
+  *specific* upstream unit being present, so it has to
   pick up signal from a broader, redundant set of
   features.
 :::

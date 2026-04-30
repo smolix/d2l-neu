@@ -514,24 +514,26 @@ we can use $K$-fold cross-validation .
 <!-- slides -->
 
 ::: {.slide}
-A capstone for the chapter: take an MLP, plus everything we
-just learned about regularization and stability, to a real
-**Kaggle competition** — *House Prices: Advanced Regression
-Techniques*.
+**House Prices: Advanced Regression Techniques** is one of
+Kaggle's most popular tabular competitions: predict the
+sale price of houses in Ames, Iowa from 80 numeric and
+categorical features. We'll use it as a small but
+realistic end-to-end ML exercise.
 
-What's different from Fashion-MNIST:
+What makes it interesting:
 
 - **1460 training examples**, 1459 test — small data.
 - **80 features** mixing numeric (`LotArea`, `YearBuilt`)
   and categorical (`Neighborhood`, `RoofStyle`) — needs
   *preprocessing*.
 - **Missing values** in dozens of columns.
-- **Targets vary by 10×** ($65k to $755k) — wrong loss
-  function will weight expensive houses much more.
+- **Targets vary 10×** ($65k to $755k) — the wrong loss
+  function will overweight expensive houses.
 
 The MLP itself is 5 lines. The real work is the
-**pipeline** around it — and that's the lesson of this
-deck. Most production ML is plumbing.
+**pipeline** around it — preprocessing, the right loss,
+cross-validation, submission. Most production ML is
+plumbing, and that's the lesson of this deck.
 :::
 
 ::: {.slide title="Kaggle in 30 seconds"}

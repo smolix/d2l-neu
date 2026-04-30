@@ -339,27 +339,32 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 <!-- slides -->
 
 ::: {.slide}
-The previous deck argued that we *need* hidden layers and
-nonlinearity. This deck builds one and trains it.
+This deck takes the simplest **multilayer perceptron** —
+two affine layers with a ReLU between them — and trains
+it end-to-end on the Fashion-MNIST clothing-image dataset
+(28×28 grayscale, 10 classes).
 
-Same task as the softmax-regression chapter:
-**Fashion-MNIST**, 10 classes of clothing, 28×28 grayscale.
-This time the model is
+The architecture:
 
 ```
-input (784)  →  Linear  →  ReLU  →  Linear  →  output (10)
-                ─ hidden = 256 units ─
+  X (batch, 784)
+       │ Linear  784 → 256
+       │ ReLU
+       │ Linear  256 → 10
+       ▼
+  logits (batch, 10)
 ```
 
-Two implementations of the *same* model:
+We'll build it twice:
 
 - **From scratch** — allocate `W₁, b₁, W₂, b₂` by hand,
   write our own ReLU, do the matmuls explicitly.
 - **Concise** — `nn.Sequential(Flatten, Linear, ReLU,
   Linear)` and let the framework handle weights.
 
-Same training loop, same accuracy. The two versions clarify
-what the framework abstraction is actually buying you.
+Same training loop, same accuracy. Doing it both ways
+makes it concrete what the framework abstraction is
+actually buying you.
 :::
 
 ::: {.slide title="Why one hidden layer of 256 is reasonable"}

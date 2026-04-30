@@ -283,14 +283,17 @@ We can pass data through the model to make the framework finally initialize para
 <!-- slides -->
 
 ::: {.slide}
-You may have noticed something weird: we've been writing
-`nn.LazyLinear(256)` — saying *only* the output size, never
-the input size. How does the framework know the weight shape?
+**Lazy initialization** lets you declare a layer's *output*
+size without specifying its *input* size:
 
-**Lazy initialization**: the framework defers parameter
-allocation until the first forward pass. At that point it
-has seen real data, so the input shape is known, and shapes
-propagate down the network.
+```python
+nn.LazyLinear(256)   # only num_outputs!
+```
+
+The framework defers actually allocating the weight tensor
+until the first forward pass — at which point it has seen
+real data and can infer the shapes from the upstream
+output:
 
 ```
 declare layer  -->  shapes UNKNOWN, no params yet
@@ -308,9 +311,10 @@ forward(X)     -->  X.shape known → infer first layer
 parameters allocated, model usable, optimizer can see them
 ```
 
-In old frameworks you wrote `nn.Linear(in_features=20, out_features=256)`.
-Now you write `nn.LazyLinear(256)`. Less arithmetic, fewer
-bugs when you change architectures.
+Why bother? In old frameworks you had to write
+`nn.Linear(in_features=20, out_features=256)`. Now you
+write `nn.LazyLinear(256)` — less arithmetic, fewer bugs
+when you change the architecture.
 :::
 
 ::: {.slide title="Why this matters more than it seems"}

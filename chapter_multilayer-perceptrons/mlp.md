@@ -659,10 +659,14 @@ in many cases.
 <!-- slides -->
 
 ::: {.slide}
-Softmax regression draws a *single hyperplane* per class.
-That works when the classes are linearly separable.
+A **multilayer perceptron** (MLP) is a stack of
+fully-connected layers separated by elementwise
+nonlinearities. It's the simplest deep neural network and
+the foundation everything else in this book builds on.
 
-The problem: most real classification rules aren't linear.
+Why we need it: a linear classifier draws one hyperplane
+per class — fine when classes are linearly separable, no
+good for the things we actually want to model.
 
 - **Body temperature → health risk** is U-shaped (both
   hypothermia and fever are bad). Not even *monotonic*.
@@ -671,13 +675,10 @@ The problem: most real classification rules aren't linear.
 - **XOR**: the canonical small example a linear model
   *provably cannot solve*.
 
-We need a class of models that can curve, fold, and twist
-the decision surface — and ideally one that *learns* the
-right transformation from data.
-
-The fix everyone uses: stack many linear layers with a
-**nonlinearity** between them. That's the **multilayer
-perceptron** — the simplest deep neural network.
+The fix is simple in retrospect: alternate linear layers
+with a **nonlinearity** between them. The linear layers
+let the network mix features; the nonlinearity lets the
+composition curve, fold, and twist the decision surface.
 :::
 
 ::: {.slide title="Architecture"}

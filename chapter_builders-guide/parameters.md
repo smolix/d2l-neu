@@ -378,20 +378,23 @@ We have several ways of accessing and tying model parameters.
 <!-- slides -->
 
 ::: {.slide}
-Training is just one thing you do with parameters. There's
-also:
+A neural network is a tree of **parameters** — the weight
+matrices and bias vectors that gradient descent updates.
+Training is one thing you do with them; this deck covers
+all the others.
 
-- **Inspection** — debugging a network, sanity-checking
-  initialization, looking at learned features.
-- **Iteration** — every optimizer needs all parameters;
-  weight decay needs them; checkpointing needs them.
-- **Sharing** ("tying") — encoder/decoder weights in
-  autoencoders, input/output embeddings in language
-  models.
+- **Inspection** — debug a network, sanity-check
+  initialization, look at learned features.
+- **Iteration** — every optimizer needs to walk every
+  parameter; weight decay needs them; checkpointing needs
+  them.
+- **Sharing** ("tying") — make two layers refer to the
+  *same* tensor: encoder/decoder weights in autoencoders,
+  input/output embeddings in language models.
 
-This deck is the API tour. The mental model: a module is a
-**tree**, parameters live at the leaves, and the framework
-gives you both leaf access and recursive traversal.
+The mental model behind the API: a module is a **tree**,
+parameters live at the leaves, and the framework gives you
+both leaf-by-name access and recursive traversal.
 :::
 
 ::: {.slide title="The parameter tree"}

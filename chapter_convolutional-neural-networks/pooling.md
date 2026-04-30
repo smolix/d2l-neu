@@ -410,22 +410,24 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 <!-- slides -->
 
 ::: {.slide}
-Two real problems with raw conv stacks:
+**Pooling** is a parameter-free downsampling operation:
+slide a window over a feature map and replace the window
+with a single summary value (the max, or the mean).
 
-- We want the *final layer* to answer "is there a cat
-  anywhere in the image?" — so we need a way to aggregate
-  spatial information.
-- An edge detector applied to the same image shifted by
-  one pixel produces a one-pixel-shifted output. Real
-  objects don't sit at exact pixel positions; we want
-  outputs that tolerate small spatial perturbations.
+It shows up in every CNN for two reasons:
 
-**Pooling** does both. Slide a window over the feature
-map and replace the window with a *single summary value*
-(max, or mean). No parameters, just summarization.
+- **Spatial aggregation.** A classifier head wants to
+  answer "is there a cat *anywhere* in the image?" — we
+  need a way to summarize over spatial locations as the
+  network goes deeper.
+- **Translation invariance.** A 1-pixel shift of the
+  input usually doesn't change the max of a small
+  window. Outputs become robust to small spatial
+  perturbations — useful because real objects don't sit
+  on exact pixel grids.
 
-A 2×2 pool with stride 2 halves spatial resolution and
-makes the output invariant to ±1 pixel shifts.
+A 2×2 pool with stride 2 halves the spatial resolution
+and is the canonical example.
 :::
 
 ::: {.slide title="Max-pooling at a glance"}

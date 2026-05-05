@@ -1120,9 +1120,9 @@ everywhere:
 . . .
 
 @distributions-gaussian-2
+:::
 
-. . .
-
+::: {.slide title="Gaussian (cont.)"}
 @distributions-gaussian-3
 
 . . .

@@ -891,19 +891,19 @@ During training, gradient clipping can mitigate the problem of exploding gradien
 <!-- slides -->
 
 ::: {.slide}
-A character-level language model on *The Time Machine*, with
-nothing but tensor ops:
+A character-level language model on *The Time Machine*,
+with nothing but tensor ops. Four pieces:
 
 1. **RNN cell** — the recurrence
    $\mathbf{h}_t = \tanh(\mathbf{W}_{xh} \mathbf{x}_t +
    \mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{b})$.
-2. **Language model wrapper** — one-hot encode tokens, project
-   hidden states to vocab logits.
+2. **LM wrapper** — one-hot tokens, project hidden states
+   to vocab logits.
 3. **Gradient clipping** — keep BPTT gradients bounded.
-4. **Training** + **decoding** to generate continuations.
+4. **Training + decoding** to generate continuations.
 
-Char-level keeps the vocab tiny (~30 tokens) so we can fit
-embedding-free models in a notebook.
+Char-level keeps the vocab tiny (~30 tokens) — embedding-
+free models that fit in a notebook.
 :::
 
 ::: {.slide title="The RNN cell"}

@@ -261,25 +261,18 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 <!-- slides -->
 
 ::: {.slide}
-Deep learning models are trained by minimizing a loss
-function — but **optimization** and **deep learning** are
-not the same problem. Optimization minimizes the *training*
-loss; deep learning cares about the *generalization* loss.
+**Optimization** and **deep learning** are not the same
+problem. Optimization minimizes the *training* loss; deep
+learning cares about the *generalization* loss.
 
-Three challenges that make this hard:
+Three things make optimization hard:
 
-- **Local minima** — gradient descent stalls at points
-  that aren't globally best.
+- **Local minima** — GD stalls at points that aren't
+  globally best.
 - **Saddle points** — zero gradient, neither min nor max.
-  In high-dimensional problems they're far more common
-  than local minima.
-- **Vanishing gradients** — flat regions where progress
-  becomes essentially zero, e.g. $\tanh$ near the
-  saturation regions.
-
-This chapter walks through GD, SGD, and the modern
-adaptive optimizers (momentum, Adagrad, RMSProp, Adadelta,
-Adam) plus learning-rate schedules.
+  In high dim they're *far* more common than minima.
+- **Vanishing gradients** — flat regions where progress is
+  essentially zero (e.g. $\tanh$ saturation).
 :::
 
 ::: {.slide title="Empirical risk vs. risk"}

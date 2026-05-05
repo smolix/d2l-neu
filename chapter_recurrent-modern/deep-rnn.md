@@ -416,23 +416,24 @@ to ensure proper convergence.
 <!-- slides -->
 
 ::: {.slide}
-A single RNN layer is already deep *in time*: information from
-step 1 passes through $T$ recurrent applications to reach step
-$T$. But within a single time step, input-to-output is just
-one nonlinearity — that's shallow.
+A single RNN layer is already deep *in time* — but within
+one time step, input-to-output is just one nonlinearity.
 
-Stacking RNN layers fixes that. Each layer sees the previous
-layer's hidden states as its input sequence; the topmost layer
-feeds the readout. Same depth-of-representation idea as MLPs
-and deep CNNs, applied along the *layer* axis instead of the
-*time* axis.
+Stacking RNN layers makes the model deep along the *layer*
+axis too. Each layer sees the previous layer's hidden
+states as its input sequence; topmost layer feeds the
+readout.
 
 $$\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)} \mathbf{W}_{xh}^{(l)} + \mathbf{H}_{t-1}^{(l)} \mathbf{W}_{hh}^{(l)} + \mathbf{b}_h^{(l)}).$$
 
 Typical sizes: width 64–2048, depth 1–8.
+:::
 
-![Architecture of a deep RNN: layer $l$ at time $t$ depends on layer $l$ at time $t{-}1$ *and* layer $l{-}1$ at time $t$.](../img/deep-rnn.svg){width=70%}
+::: {.slide title="Architecture"}
+![Layer $l$ at time $t$ depends on layer $l$ at time $t{-}1$ *and* layer $l{-}1$ at time $t$.](../img/deep-rnn.svg){width=78%}
+:::
 
+::: {.slide title="Setup"}
 @deep-rnn-deep-recurrent-neural-networks
 :::
 

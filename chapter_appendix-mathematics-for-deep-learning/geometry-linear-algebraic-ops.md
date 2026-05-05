@@ -1193,7 +1193,8 @@ learning:
 :::
 
 ::: {.slide title="Hyperplanes as classifiers"}
-A hyperplane is the set $\{\mathbf{x} : \mathbf{w}^\top \mathbf{x} = b\}$.
+A hyperplane is the set
+$\{\mathbf{x} : \mathbf{w}^\top \mathbf{x} = b\}$.
 Linear classifiers split space with one — sign of the dot
 product gives the prediction. Most of deep learning is
 "learn good features so a hyperplane works":
@@ -1203,9 +1204,9 @@ product gives the prediction. Most of deep learning is
 . . .
 
 @geometry-linear-algebraic-ops-hyperplanes-2
+:::
 
-. . .
-
+::: {.slide title="Hyperplanes (cont.)"}
 @geometry-linear-algebraic-ops-hyperplanes-3
 
 . . .
@@ -1233,9 +1234,9 @@ Translate all of this into NumPy / PyTorch:
 . . .
 
 @geometry-linear-algebraic-ops-expressing-in-code-2
+:::
 
-. . .
-
+::: {.slide title="In code (cont.)"}
 @geometry-linear-algebraic-ops-expressing-in-code-3
 
 . . .

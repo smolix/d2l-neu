@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
-"""Generate `_slides/index.html` — a landing page for the slide decks.
+"""Build slide-deck integration artifacts:
 
-Walks `_slides/<fw>/chapter_*/*.html` for each framework, builds a
-chapter-grouped list of decks with framework variants, and writes a
-self-contained HTML page styled to match the book theme. A framework
-selector at the top toggles all links to point at the chosen
-framework's deck.
+  * `_slides/index.html`        — landing page listing every deck, with a
+                                  navbar matching the book's. Linked from
+                                  the book navbar (`Slides`).
+  * `_slides/manifest.json`     — `{"chapter_X/file": ["pytorch", "jax"], ...}`
+                                  so external consumers can introspect which
+                                  decks exist.
+  * `_d2l-slides-data.html`     — `<script>window.D2L_SLIDES_MANIFEST=…;</script>`
+                                  included into every book page via the
+                                  `include-after-body:` Quarto hook so the
+                                  right-sidebar TOC slides-button knows which
+                                  framework variants exist for the page.
+
+Walks `_slides/<fw>/chapter_*/*.html` for each framework. If `_slides/` is
+missing or empty, emits a stub data file with an empty manifest so the
+book still builds cleanly without slides present.
 
 Usage:
     python tools/build_slides_index.py [--slides-dir _slides]
                                        [--source .]
+                                       [--data-file _d2l-slides-data.html]
 """
 
 import argparse
@@ -38,36 +49,26 @@ def extract_h1(md_path: Path) -> str:
     return md_path.stem.replace('-', ' ').title()
 
 
-def chapter_label(rel: str, numbering) -> str:
-    """e.g. 'chapter_linear-regression' → '3 Linear Regression'."""
-    nums = numbering
-    label = rel.replace('chapter_', '').replace('-', ' ').title()
-    if nums is None:
-        return label
-    return f'{".".join(str(n) for n in nums)} {label}'
-
-
 def build_index(slides_dir: Path, source: Path):
-    # Group source files by chapter dir, in CHAPTER_NUMBERING order.
     chapters = {}
     chapter_order = []
     chapter_titles = {}
-    for rel, nums in CHAPTER_NUMBERING.items():
+    manifest = {}
+
+    for rel, _ in CHAPTER_NUMBERING.items():
         rel_path = Path(rel)
         chap = rel_path.parent.name
         if chap not in chapters:
             chapters[chap] = []
             chapter_order.append(chap)
-            # Use the chapter's index.md H1 if present, else humanize the dir
             idx_md = source / chap / 'index.md'
             if idx_md.exists():
                 chapter_titles[chap] = extract_h1(idx_md)
             else:
-                chapter_titles[chap] = chap.replace('chapter_', '').replace('-', ' ').title()
-        # Skip the index entry itself in the per-section list
+                chapter_titles[chap] = (chap.replace('chapter_', '')
+                                            .replace('-', ' ').title())
         if rel_path.stem == 'index':
             continue
-        # Determine which frameworks have this deck
         stem = rel_path.stem
         available = []
         for fw in FRAMEWORKS:
@@ -82,34 +83,36 @@ def build_index(slides_dir: Path, source: Path):
             'title': title,
             'frameworks': available,
         })
+        manifest[f'{chap}/{stem}'] = available
 
-    # Drop chapters that have no decks (e.g. preface)
     chapter_order = [c for c in chapter_order if chapters[c]]
 
     return {
         'chapters': [
-            {
-                'dir': chap,
-                'title': chapter_titles[chap],
-                'decks': chapters[chap],
-            }
+            {'dir': chap,
+             'title': chapter_titles[chap],
+             'decks': chapters[chap]}
             for chap in chapter_order
         ],
-    }
+    }, manifest
 
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+# ──────────────────────────────────────────────────────────
+# Landing page
+# ──────────────────────────────────────────────────────────
+
+LANDING_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dive into Deep Learning — Slides</title>
+<title>Slides — Dive into Deep Learning</title>
 <style>
 :root {
   --blue: #2196F3;
   --blue-dark: #1976D2;
+  --blue-darker: #0D47A1;
   --blue-light: #BBDEFB;
-  --orange: #FF5722;
   --bg: #fafbfc;
   --surface: #ffffff;
   --border: #e0e0e0;
@@ -128,50 +131,86 @@ body {
   line-height: 1.5;
 }
 
-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* Navbar — matches the book's Quarto navbar (cosmo + custom blue). */
+.d2l-navbar {
   background: var(--blue);
   color: white;
-  padding: 0.75rem 1.25rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-wrap: wrap;
+  min-height: 3.5rem;
 }
 
-header h1 {
-  margin: 0;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 500;
-  flex-grow: 1;
-}
-
-header h1 .subtitle {
-  font-weight: 300;
-  opacity: 0.85;
-}
-
-.fw-picker {
-  display: flex;
+.d2l-navbar-brand {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin: 0 auto;
 }
-
-.fw-picker label {
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.fw-picker select {
-  font: inherit;
+.d2l-navbar-brand:hover { color: white; opacity: 0.92; }
+.d2l-navbar-brand .navbar-subtitle {
+  font-weight: 300;
+  opacity: 0.85;
   font-size: 0.95rem;
-  padding: 0.3rem 0.6rem;
-  border: none;
+}
+
+.d2l-navbar-nav {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+}
+
+.d2l-navbar-nav a {
+  color: white;
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.92;
+}
+.d2l-navbar-nav a:hover {
+  background: rgba(255,255,255,0.15);
+  opacity: 1;
+}
+
+.d2l-navbar-nav a.active {
+  background: rgba(255,255,255,0.18);
+  font-weight: 500;
+  opacity: 1;
+}
+
+/* Sub-bar holding the framework picker */
+.d2l-subbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-size: 0.9rem;
+  gap: 0.5rem;
+  color: var(--text-dim);
+}
+
+.d2l-subbar select {
+  font: inherit;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
   border-radius: 3px;
   background: white;
   color: var(--text);
@@ -180,36 +219,41 @@ header h1 .subtitle {
 
 main {
   max-width: 950px;
-  margin: 2rem auto;
+  margin: 1.75rem auto;
   padding: 0 1.5rem;
 }
 
 .intro {
   background: var(--surface);
   border-left: 4px solid var(--blue);
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.25rem;
   margin-bottom: 2rem;
   border-radius: 0 4px 4px 0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  font-size: 0.95rem;
 }
-
-.intro p { margin: 0.5rem 0; color: var(--text-dim); }
+.intro p { margin: 0.4rem 0; color: var(--text-dim); }
 .intro p:first-child { margin-top: 0; }
 .intro p:last-child { margin-bottom: 0; }
-
 .intro a { color: var(--blue-dark); }
-
-.chapter {
-  margin-bottom: 2.25rem;
+.intro kbd {
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  font-family: Inconsolata, monospace;
+  font-size: 0.85em;
 }
+
+.chapter { margin-bottom: 2.25rem; }
 
 .chapter h2 {
   font-family: 'Source Sans 3', system-ui, sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--blue-dark);
-  margin: 0 0 0.75rem 0;
-  padding-bottom: 0.4rem;
+  margin: 0 0 0.5rem 0;
+  padding-bottom: 0.35rem;
   border-bottom: 2px solid var(--blue-light);
 }
 
@@ -218,46 +262,39 @@ main {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .deck {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  padding: 0;
   border-radius: 3px;
   background: var(--surface);
   border: 1px solid transparent;
   transition: background 0.1s, border-color 0.1s;
 }
-
 .deck:hover {
   background: white;
   border-color: var(--blue-light);
 }
-
-.deck.unavailable {
-  background: transparent;
-}
+.deck.unavailable { background: transparent; }
 
 .deck-main {
   flex-grow: 1;
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   text-decoration: none;
   color: var(--text);
   border-radius: 3px;
 }
 .deck-main:hover { color: var(--blue-darker); }
-
 .deck.unavailable .deck-main {
   color: var(--text-muted);
   pointer-events: none;
 }
-
 .deck.unavailable .deck-title {
   text-decoration: line-through;
   text-decoration-color: var(--text-muted);
@@ -271,7 +308,6 @@ main {
   min-width: 2.5rem;
   flex-shrink: 0;
 }
-
 .deck-title { flex-grow: 1; }
 
 .fw-badges {
@@ -279,10 +315,9 @@ main {
   gap: 0.2rem;
   font-family: 'Source Sans 3', system-ui, sans-serif;
   font-size: 0.7rem;
-  padding: 0.55rem 0.75rem 0.55rem 0;
+  padding: 0.5rem 0.75rem 0.5rem 0;
   flex-shrink: 0;
 }
-
 .fw-badges .badge {
   display: inline-block;
   padding: 0.1rem 0.45rem;
@@ -301,7 +336,6 @@ main {
   color: white;
   transform: translateY(-1px);
 }
-
 .fw-badges .badge.absent {
   background: #f0f0f0;
   color: #bbb;
@@ -317,26 +351,39 @@ footer {
 }
 
 @media (max-width: 720px) {
-  header { gap: 0.75rem; }
-  header h1 { font-size: 1.05rem; flex-basis: 100%; }
+  .d2l-navbar { gap: 0.5rem; }
+  .d2l-navbar-brand { margin: 0; flex-grow: 1; }
+  .d2l-navbar-nav { width: 100%; justify-content: center; flex-wrap: wrap; }
   main { padding: 0 1rem; }
-  .deck { padding: 0.6rem; }
+  .deck-main { padding: 0.55rem 0.6rem; }
 }
 </style>
 </head>
 <body>
-<header>
-  <h1>Dive into Deep Learning <span class="subtitle">— Slides</span></h1>
-  <div class="fw-picker">
-    <label for="fw">Framework:</label>
-    <select id="fw">
-      <option value="pytorch">PyTorch</option>
-      <option value="tensorflow">TensorFlow</option>
-      <option value="jax">JAX</option>
-      <option value="mxnet">MXNet</option>
-    </select>
-  </div>
-</header>
+<nav class="d2l-navbar">
+  <a class="d2l-navbar-brand" href="../index.html">
+    <span>Dive into Deep Learning</span>
+    <span class="navbar-subtitle">— Slides</span>
+  </a>
+  <ul class="d2l-navbar-nav">
+    <li><a href="../index.html">Book</a></li>
+    <li><a href="./index.html" class="active">Slides</a></li>
+    <li><a href="https://courses.d2l.ai">Courses</a></li>
+    <li><a href="https://github.com/d2l-ai/d2l-en" title="GitHub">GitHub</a></li>
+    <li><a href="https://discuss.d2l.ai">Discuss</a></li>
+    <li><a href="https://d2l.ai/d2l-en.pdf">PDF</a></li>
+  </ul>
+</nav>
+
+<div class="d2l-subbar">
+  <label for="fw">Framework:</label>
+  <select id="fw">
+    <option value="pytorch">PyTorch</option>
+    <option value="tensorflow">TensorFlow</option>
+    <option value="jax">JAX</option>
+    <option value="mxnet">MXNet</option>
+  </select>
+</div>
 
 <main>
   <section class="intro">
@@ -352,7 +399,6 @@ footer {
 
 <footer>
   Generated from <code>_slides/&lt;fw&gt;/</code>.
-  Source on the <code>slides</code> branch.
 </footer>
 
 <script>
@@ -361,10 +407,22 @@ const DATA = __DATA__;
 const fwSelect = document.getElementById('fw');
 
 function persist(fw) {
-  try { localStorage.setItem('d2l-slides-fw', fw); } catch (_) {}
+  try {
+    const data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
+    const display = {pytorch:'PyTorch', tensorflow:'TensorFlow', jax:'JAX', mxnet:'MXNet'}[fw];
+    if (display) {
+      data['framework'] = display;
+      localStorage.setItem('quarto-persistent-tabsets-data', JSON.stringify(data));
+    }
+  } catch (_) {}
 }
+
 function restore() {
-  try { return localStorage.getItem('d2l-slides-fw'); } catch (_) { return null; }
+  try {
+    const data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
+    const display = data['framework'];
+    return {PyTorch:'pytorch', TensorFlow:'tensorflow', JAX:'jax', MXNet:'mxnet'}[display] || null;
+  } catch (_) { return null; }
 }
 
 function applyFramework(fw) {
@@ -399,7 +457,7 @@ fwSelect.addEventListener('change', e => applyFramework(e.target.value));
 def render_html(idx: dict) -> str:
     parts = []
     short_names = {'pytorch': 'PT', 'tensorflow': 'TF',
-                    'jax': 'JAX', 'mxnet': 'MX'}
+                   'jax': 'JAX', 'mxnet': 'MX'}
     for chap in idx['chapters']:
         parts.append('  <section class="chapter">')
         parts.append(f'    <h2>{html_escape(chap["title"])}</h2>')
@@ -445,18 +503,57 @@ def html_escape(s: str) -> str:
              .replace('"', '&quot;'))
 
 
+def write_data_include(data_file: Path, manifest: dict):
+    """Write `_d2l-slides-data.html` for Quarto's `include-after-body`.
+
+    Defines `window.D2L_SLIDES_MANIFEST` so the in-book TOC slides
+    button can determine which framework variants exist for the
+    page being viewed.
+    """
+    payload = json.dumps(manifest, ensure_ascii=False, separators=(',', ':'))
+    content = (
+        '<script>\n'
+        '// Auto-generated by tools/build_slides_index.py — do not edit.\n'
+        f'window.D2L_SLIDES_MANIFEST = {payload};\n'
+        '</script>\n'
+    )
+    data_file.write_text(content, encoding='utf-8')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--slides-dir', type=Path, default=Path('_slides'))
     parser.add_argument('--source', type=Path, default=Path('.'))
+    parser.add_argument('--data-file', type=Path,
+                        default=Path('_d2l-slides-data.html'),
+                        help='Where to write the JS manifest include')
     args = parser.parse_args()
 
-    idx = build_index(args.slides_dir, args.source)
+    if args.slides_dir.exists():
+        idx, manifest = build_index(args.slides_dir, args.source)
+    else:
+        idx, manifest = {'chapters': []}, {}
+
+    # Always emit the data include — even if empty — so the book can
+    # build cleanly without slides being present.
+    write_data_include(args.data_file, manifest)
+    n_pages = len(manifest)
+    print(f'wrote {args.data_file} — {n_pages} pages have slides')
+
+    if not idx['chapters']:
+        print(f'no decks under {args.slides_dir}; skipped landing page')
+        return
+
     body = render_html(idx)
-    html = (HTML_TEMPLATE
+    html = (LANDING_TEMPLATE
             .replace('__CONTENT__', body)
             .replace('__DATA__', json.dumps(idx, ensure_ascii=False)))
     out = args.slides_dir / 'index.html'
+    # Also emit a manifest.json next to the landing page for any
+    # external consumer (e.g. CI sanity checks, tooling).
+    (args.slides_dir / 'manifest.json').write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + '\n',
+        encoding='utf-8')
     out.write_text(html, encoding='utf-8')
     n_decks = sum(len(c['decks']) for c in idx['chapters'])
     print(f'wrote {out} — {len(idx["chapters"])} chapters, {n_decks} decks')

@@ -658,7 +658,9 @@ def emit_qmd(blocks, primary='pytorch'):
                 if primary in (block.tab or ''):
                     parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
                 else:
-                    parts.append(f'\n```python\n{id_prefix}{code}\n```\n')
+                    # Display-only: no label (Quarto would render `#| label:`
+                    # as a literal comment in non-executed code blocks).
+                    parts.append(f'\n```python\n{code}\n```\n')
 
         elif isinstance(block, CodeTabSet):
             parts.append('\n::: {.panel-tabset group="framework"}\n')
@@ -668,17 +670,19 @@ def emit_qmd(blocks, primary='pytorch'):
                 if fw in block.tabs:
                     display = FRAMEWORK_DISPLAY.get(fw, fw)
                     code = '\n'.join(block.tabs[fw])
-                    cid = block.ids.get(fw)
-                    id_prefix = f'#| label: {cid}\n' if cid else ''
 
                     if fw == primary:
+                        cid = block.ids.get(fw)
+                        id_prefix = f'#| label: {cid}\n' if cid else ''
                         parts.append(
                             f'\n## {display}\n\n'
                             f'```{{python}}\n{id_prefix}{code}\n```\n')
                     else:
+                        # Display-only: omit `#| label:` so it doesn't render
+                        # as a Python comment.
                         parts.append(
                             f'\n## {display}\n\n'
-                            f'```python\n{id_prefix}{code}\n```\n')
+                            f'```python\n{code}\n```\n')
 
             parts.append('\n:::\n')
 

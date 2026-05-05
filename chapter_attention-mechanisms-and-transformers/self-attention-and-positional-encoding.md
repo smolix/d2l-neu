@@ -555,8 +555,8 @@ Shape check:
 :::
 
 ::: {.slide title="CNN vs. RNN vs. self-attention"}
-Three ways to map a length-$n$ sequence to another length-$n$
-sequence with $d$-dim tokens:
+Three ways to map a length-$n$ sequence to another
+length-$n$ sequence with $d$-dim tokens:
 
 | | Compute | Sequential ops | Max path |
 |--|--|--|--|
@@ -564,11 +564,13 @@ sequence with $d$-dim tokens:
 | RNN | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
 | Self-attention | $\mathcal{O}(n^2 d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
-Self-attention wins on parallelism *and* on path length —
+Self-attention wins on parallelism *and* path length —
 every token reaches every other in one hop. The price is
-$n^2$ scaling, the bottleneck for long-context models.
+$n^2$ scaling.
+:::
 
-![CNN, RNN, self-attention. Path length: $\mathcal{O}(n/k)$, $\mathcal{O}(n)$, $\mathcal{O}(1)$.](../img/cnn-rnn-self-attention.svg){width=82%}
+::: {.slide title="One picture"}
+![CNN, RNN, self-attention. Path lengths: $\mathcal{O}(n/k)$, $\mathcal{O}(n)$, $\mathcal{O}(1)$.](../img/cnn-rnn-self-attention.svg){width=88%}
 :::
 
 ::: {.slide title="Why we need positional encoding"}

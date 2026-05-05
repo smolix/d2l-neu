@@ -427,36 +427,33 @@ Look up the online documentation for more built-in initializers.
 Initialization isn't cosmetic — it determines whether a deep
 network trains *at all*.
 
-Set every weight to zero: every neuron in a layer computes
-the same thing, gets the same gradient, never differentiates
-("symmetry breaking" fails). Set them too large: activations
-blow up. Too small: activations vanish through the layers and
-gradients with them.
+- Zero weights → every neuron in a layer computes the same
+  thing, gets the same gradient ("symmetry breaking" fails).
+- Too large → activations blow up.
+- Too small → activations and gradients vanish through depth.
 
-The fix is principled: choose the scale so signal variance
-stays roughly constant from layer to layer. **Xavier** for
-sigmoid/tanh, **Kaiming/He** for ReLU. Frameworks default to
-one of these for every standard layer.
-
-This deck shows the math and the API for overriding it.
+The fix: choose the scale so signal variance stays roughly
+constant from layer to layer.
 :::
 
 ::: {.slide title="Why scale matters"}
-Consider $y = Wx$ with $W \in \mathbb{R}^{n_{\text{out}} \times n_{\text{in}}}$
-and i.i.d. zero-mean $x_i$ with variance $\sigma_x^2$. If
-weights are zero-mean variance $\sigma_w^2$:
+Consider $y = Wx$ with i.i.d. zero-mean $x_i$, variance
+$\sigma_x^2$, and weights with variance $\sigma_w^2$:
 
 $$\text{Var}(y_i) = n_{\text{in}} \cdot \sigma_w^2 \cdot \sigma_x^2.$$
 
-Stack $L$ such layers and signal variance scales by
-$(n_{\text{in}} \sigma_w^2)^L$. To keep it stable across depth:
+Stack $L$ layers and the signal variance scales by
+$(n_{\text{in}} \sigma_w^2)^L$ — keep it stable by picking
+$\sigma_w^2 \approx 1/n_{\text{in}}$.
+:::
 
-- **Xavier (Glorot 2010)** — set
-  $\sigma_w^2 = \frac{2}{n_{\text{in}} + n_{\text{out}}}$.
-  Balances forward variance and backward gradient variance.
+::: {.slide title="Xavier and Kaiming"}
+- **Xavier (Glorot 2010)** —
+  $\sigma_w^2 = \dfrac{2}{n_{\text{in}} + n_{\text{out}}}$.
+  Balances forward variance with backward gradient variance.
   Designed for $\tanh$ / sigmoid.
-- **Kaiming/He (2015)** — set
-  $\sigma_w^2 = \frac{2}{n_{\text{in}}}$.
+- **Kaiming/He (2015)** —
+  $\sigma_w^2 = \dfrac{2}{n_{\text{in}}}$.
   Compensates for ReLU killing half the signal. Default for
   modern CNNs / Transformers.
 

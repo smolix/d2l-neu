@@ -800,22 +800,23 @@ hotdog_w.shape
 <!-- slides -->
 
 ::: {.slide}
-You'll rarely train a vision model from scratch. **Transfer
-learning** — start from weights pretrained on a big dataset
-(ImageNet) and adapt them to your small one — is the
-default recipe and usually beats from-scratch training by
-a huge margin.
+You'll rarely train a vision model from scratch.
+**Transfer learning** — start from weights pretrained on a
+big dataset (ImageNet) and adapt to your small one — is
+the default recipe.
 
-The standard transfer-learning workflow:
+![Fine-tuning: pretrained backbone + new task-specific head.](../img/finetune.svg){width=82%}
+:::
 
+::: {.slide title="The standard recipe"}
 1. Take a pretrained network (ResNet, ViT, etc.).
-2. Replace the output layer with a head matching your task.
+2. Replace the output layer with a head for your task.
 3. Optionally freeze early layers; train the rest.
-4. Use a small learning rate on the pretrained part, a
-   larger one on the new head.
+4. Small LR on the pretrained part, larger LR on the new
+   head.
+:::
 
-![Fine-tuning: source-task pretrained backbone + new task-specific head.](../img/finetune.svg){width=72%}
-
+::: {.slide title="Setup"}
 @fine-tuning-hot-dog-recognition
 :::
 

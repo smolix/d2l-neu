@@ -686,18 +686,19 @@ often dramatically.
 
 ::: {.slide}
 Sequences are everywhere — text, speech, time-series, video.
-Three concepts to set up the rest of the chapter:
+Three concepts set up the rest of the chapter:
 
-- **Autoregressive models** — predict $x_t$ given $(x_{t-\tau},
-  \ldots, x_{t-1})$ for some window $\tau$. Reduces sequence
-  modeling to regression.
+- **Autoregressive** — predict $x_t$ given $(x_{t-\tau},
+  \ldots, x_{t-1})$. Reduces sequence modeling to regression.
 - **Markov assumption** — only the last $\tau$ steps matter.
-- **Multi-step prediction** — feeding predictions back as inputs
-  causes errors to compound rapidly.
+- **Multi-step prediction** — feeding predictions back as
+  inputs makes errors compound rapidly.
+:::
 
-![A latent autoregressive model.](../img/sequence-model.svg){width=55%}
+::: {.slide title="A latent autoregressive model"}
+![](../img/sequence-model.svg){width=70%}
 
-We'll demo on a noisy sine wave and see why "predict the next
+This deck demos on a noisy sine wave: "predict the next
 value" is much easier than "predict the next 64 values."
 :::
 

@@ -632,27 +632,28 @@ In the RNN encoder--decoder, the Bahdanau attention mechanism treats the decoder
 <!-- slides -->
 
 ::: {.slide}
-Plain seq2seq jams the entire source into one fixed vector.
-For long sentences, that's a bottleneck — early tokens get
-forgotten by the time the encoder finishes.
+Plain seq2seq jams the entire source into one fixed vector
+— a bottleneck. Early tokens get forgotten by the time the
+encoder finishes.
 
-Bahdanau, Cho, and Bengio (2015) fix this: instead of one
-context vector, *let the decoder query the encoder at every
-step*. At decoding step $t'$, the decoder uses its previous
-hidden state $\mathbf{s}_{t'-1}$ as a query, the encoder's
-per-step outputs $\mathbf{h}_1, \ldots, \mathbf{h}_T$ as keys
-and values, and computes a fresh context vector:
+Bahdanau, Cho & Bengio (2015): instead of one context
+vector, let the decoder *query* the encoder at every step.
 
 $$\mathbf{c}_{t'} = \sum_{t=1}^{T} \alpha(\mathbf{s}_{t'-1}, \mathbf{h}_t)\, \mathbf{h}_t.$$
 
-So *which* source tokens to read becomes part of the model.
-This is the original "soft alignment" mechanism — and the
-template for every Transformer.
+The original "soft alignment" mechanism — template for
+every Transformer.
+:::
 
-![Plain seq2seq: a single state vector is the only bridge between encoder and decoder.](../img/seq2seq-state.svg){width=72%}
+::: {.slide title="Without attention"}
+![Plain seq2seq: a single state vector is the only bridge between encoder and decoder.](../img/seq2seq-state.svg){width=82%}
+:::
 
-![With attention: the decoder queries the encoder's per-step outputs at every decoding step.](../img/seq2seq-details-attention.svg){width=72%}
+::: {.slide title="With attention"}
+![Decoder queries the encoder's per-step outputs at every decoding step.](../img/seq2seq-details-attention.svg){width=82%}
+:::
 
+::: {.slide title="Setup"}
 @bahdanau-attention-the-bahdanau-attention-mechanism
 :::
 

@@ -411,23 +411,19 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 
 ::: {.slide}
 **Pooling** is a parameter-free downsampling operation:
-slide a window over a feature map and replace the window
-with a single summary value (the max, or the mean).
+slide a window, replace it with a single summary value
+(max or mean).
 
-It shows up in every CNN for two reasons:
+Two reasons it's everywhere:
 
-- **Spatial aggregation.** A classifier head wants to
-  answer "is there a cat *anywhere* in the image?" — we
-  need a way to summarize over spatial locations as the
-  network goes deeper.
-- **Translation invariance.** A 1-pixel shift of the
-  input usually doesn't change the max of a small
-  window. Outputs become robust to small spatial
-  perturbations — useful because real objects don't sit
-  on exact pixel grids.
+- **Spatial aggregation** — summarize over locations to
+  answer "is there a cat *anywhere* in the image?".
+- **Translation invariance** — a 1-pixel shift doesn't
+  usually change the max of a small window. Robust to
+  small spatial perturbations.
 
-A 2×2 pool with stride 2 halves the spatial resolution
-and is the canonical example.
+2×2 pool with stride 2 — halves resolution, the canonical
+example.
 :::
 
 ::: {.slide title="Max-pooling at a glance"}
@@ -444,17 +440,17 @@ preserves sharp activations.
 
 ::: {.slide title="Implementation"}
 A few lines — no kernel, just a reduction over each
-window. Two modes for the demo: max and avg:
+window. Two modes: max and avg.
 
 @pooling
 
 . . .
 
 @pooling-maximum-pooling-and-average-pooling-1
+:::
 
-. . .
-
-Verify against the figure (max gives 4, 5, 7, 8):
+::: {.slide title="Verify against the figure"}
+Max gives 4, 5, 7, 8 — matches the diagram:
 
 @pooling-maximum-pooling-and-average-pooling-2
 
@@ -464,19 +460,16 @@ Verify against the figure (max gives 4, 5, 7, 8):
 :::
 
 ::: {.slide title="Why max gives translation invariance"}
-Suppose a 2×2 max-pool window receives `[0, 1, 3, 4]` —
-output 4. Shift the input by one pixel; the same window
-might now contain `[1, 0, 4, 0]` — output is still 4.
+A 2×2 max-pool window on `[0, 1, 3, 4]` returns 4. Shift
+the input by a pixel; window now sees `[1, 0, 4, 0]` —
+still 4.
 
-A small shift moves *which* element fires, but not
-whether *some* element in the window fires. As long as
-the relevant feature stays inside the window, the
-output is unchanged. This is the canonical pre-deep-net
-argument for pooling.
+A small shift moves *which* element fires, not *whether*
+some element in the window fires. As long as the feature
+stays inside the window, the output is unchanged.
 
-Modern alternative: a *strided* convolution does the
-same downsampling and learns its own "pool" function.
-Both are widely used.
+Modern alternative: a *strided convolution* does the same
+downsampling but learns its own "pool" function.
 :::
 
 ::: {.slide title="Padding and stride for pooling"}
@@ -490,10 +483,10 @@ resolution, not preserve it.
 . . .
 
 @pooling-padding-and-stride-2
+:::
 
-. . .
-
-Override explicitly when you want overlapping pools:
+::: {.slide title="Overlapping and asymmetric pools"}
+Override the defaults when you want overlapping pools:
 
 @pooling-padding-and-stride-3
 

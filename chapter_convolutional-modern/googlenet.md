@@ -629,13 +629,17 @@ parameter count manageable despite the multi-branch design.
 :::
 
 ::: {.slide title="Inception block"}
-Four parallel branches, each producing a feature map at the same
-spatial size, concatenated along the channel axis:
+Four parallel branches at the same spatial size,
+concatenated along the channel axis:
 
-- **Branch 1:** 1×1 conv (small filter only)
-- **Branch 2:** 1×1 conv → 3×3 conv (with bottleneck)
-- **Branch 3:** 1×1 conv → 5×5 conv (with bottleneck)
-- **Branch 4:** 3×3 max-pool → 1×1 conv
+![Inception: four parallel branches, channel-concatenated.](../img/inception.svg){width=82%}
+:::
+
+::: {.slide title="The four branches"}
+- **1:** 1×1 conv (small filter only)
+- **2:** 1×1 conv → 3×3 conv (with bottleneck)
+- **3:** 1×1 conv → 5×5 conv (with bottleneck)
+- **4:** 3×3 max-pool → 1×1 conv
 
 @googlenet-multi-branch-networks-googlenet
 

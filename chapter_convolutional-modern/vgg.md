@@ -353,20 +353,24 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 <!-- slides -->
 
 ::: {.slide}
-**VGG** (Simonyan & Zisserman, 2014) is AlexNet's idea taken
-seriously: just stack more layers, but make them **regular**.
+**VGG** (Simonyan & Zisserman, 2014) is AlexNet taken
+seriously: stack more layers, but make them **regular**.
 
-The contribution wasn't a clever architecture — it was a **design
-principle**:
+The contribution wasn't a clever architecture — it was a
+**design principle**: regular blocks of `3×3 conv + ReLU`,
+ending in a `2×2 max-pool`. Whole network = a sequence of
+such blocks at growing channel counts.
 
-- A "VGG block" = $n$ × `(3×3 conv, ReLU)` + `2×2 max-pool`.
-- A whole network = a sequence of such blocks at growing channel
-  counts.
-- All convs are **3×3 with stride 1** — easier to reason about,
+![From AlexNet's hand-tuned layers to VGG's repeated 3×3 blocks.](../img/vgg.svg){width=72%}
+:::
+
+::: {.slide title="Why 3×3 convs only"}
+- Two stacked 3×3 convs cover the same receptive field as
+  one 5×5 — fewer parameters, one extra nonlinearity.
+- All convs are stride 1 — easier to reason about,
   surprisingly competitive with hand-designed kernels.
-
-Two stacked 3×3 convs cover the same receptive field as a 5×5,
-with fewer parameters and one more nonlinearity in between.
+- The architecture becomes a tuple of `(n_convs, channels)`
+  pairs; pass a different tuple for VGG-13/16/19.
 :::
 
 ::: {.slide title="The VGG block"}

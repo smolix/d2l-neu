@@ -1519,31 +1519,34 @@ transforms the representation at all the sequence positions using the same MLP.
 <!-- slides -->
 
 ::: {.slide}
-2017's *Attention is All You Need* paper threw out RNNs
-entirely and built sequence models from self-attention,
-positionwise MLPs, residuals, and layer norm. The result —
-the **Transformer** — is now the architecture for language,
-vision, speech, and beyond.
+2017's *Attention is All You Need* threw out RNNs entirely
+and built sequence models from self-attention,
+positionwise MLPs, residuals, and layer norm.
 
-This deck builds it bottom-up:
+The **Transformer** is now the architecture for language,
+vision, speech, and beyond. Same code, 6 layers (original)
+to 96+ layers (frontier LLMs).
+:::
+
+::: {.slide title="What this deck builds"}
+Bottom-up assembly:
 
 - positionwise feed-forward network,
 - residual connection + layer norm ("Add & Norm"),
 - encoder block, encoder stack,
-- decoder block (with masked self-attention + cross-attention),
-- training and attention visualization on the En→Fr task.
+- decoder block (masked self-attention + cross-attention),
+- training and attention visualization on En→Fr.
 
 @transformer-the-transformer-architecture
 :::
 
 ::: {.slide title="The architecture"}
-Encoder: $N$ identical blocks, each = self-attention →
-Add & Norm → FFN → Add & Norm. Decoder: same, with a
-*masked* self-attention and an encoder-decoder
-cross-attention sublayer wedged in. Inputs go through
-embedding + positional encoding before the first block.
+![The Transformer architecture.](../img/transformer.svg){width=46%}
 
-![The Transformer architecture.](../img/transformer.svg){width=42%}
+Encoder: $N$ identical blocks (self-attention → Add & Norm
+→ FFN → Add & Norm). Decoder: same, plus *masked*
+self-attention and encoder-decoder cross-attention.
+Embedding + positional encoding before the first block.
 :::
 
 ::: {.slide title="Positionwise FFN"}
@@ -1609,11 +1612,12 @@ Save attention weights per block for later visualization:
 
 ::: {.slide title="Decoder block"}
 Three sublayers, each wrapped in AddNorm:
-**(1) masked self-attention** — at training time, every
-position must only see positions $\le t$, otherwise the
-model peeks at the answer. **(2) cross-attention** —
-queries from the decoder, keys/values from the encoder
-output. **(3) FFN**.
+
+1. **Masked self-attention** — every position only sees
+   positions $\le t$ (no peeking at the answer).
+2. **Cross-attention** — queries from the decoder,
+   keys/values from the encoder output.
+3. **FFN**.
 
 @transformer-decoder-1
 :::

@@ -276,9 +276,9 @@ asynchronously:
 . . .
 
 @rs-async-asynchronous-scheduler-2
+:::
 
-. . .
-
+::: {.slide title="Scheduler (cont.)"}
 @rs-async-asynchronous-scheduler-3
 
 . . .
@@ -292,9 +292,9 @@ asynchronously:
 . . .
 
 @rs-async-asynchronous-scheduler-6
+:::
 
-. . .
-
+::: {.slide title="Loop (cont.)"}
 @rs-async-asynchronous-scheduler-7
 
 . . .

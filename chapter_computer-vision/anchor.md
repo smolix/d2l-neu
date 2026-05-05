@@ -1422,21 +1422,21 @@ in the final output.
 <!-- slides -->
 
 ::: {.slide}
-A detector can't predict an arbitrary box from raw pixels —
-the search space is too large. The anchor-box framework
-restricts the prediction to *offsets* from a fixed grid of
-candidate boxes:
+A detector can't predict an arbitrary box from raw pixels
+— the search space is too large. **Anchor boxes** restrict
+prediction to *offsets* from a fixed grid of candidates.
 
-1. Tile the image with **anchor boxes** at every pixel,
-   in many shapes and sizes (densely sampled hypotheses).
-2. For each anchor, predict its **class** and a small box
-   **offset**.
-3. After the network runs, **non-maximum suppression**
+1. Tile the image with anchors at every pixel, in many
+   shapes and sizes.
+2. For each anchor, predict **class** and box **offset**.
+3. After the forward pass, **non-maximum suppression**
    prunes overlapping high-confidence predictions.
 
-This is the core of single-shot detectors (SSD, YOLO,
-RetinaNet) and the region proposal network in Faster R-CNN.
+Core of SSD, YOLO, RetinaNet, and the region proposal
+network in Faster R-CNN.
+:::
 
+::: {.slide title="Setup"}
 @anchor-anchor-boxes
 :::
 
@@ -1529,9 +1529,9 @@ Run the labeler:
 . . .
 
 @anchor-an-example-3
+:::
 
-. . .
-
+::: {.slide title="Worked example (cont.)"}
 @anchor-an-example-4
 
 . . .

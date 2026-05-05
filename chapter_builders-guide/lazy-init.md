@@ -290,11 +290,16 @@ size without specifying its *input* size:
 nn.LazyLinear(256)   # only num_outputs!
 ```
 
-The framework defers actually allocating the weight tensor
-until the first forward pass — at which point it has seen
-real data and can infer the shapes from the upstream
-output:
+The framework defers allocating the weight tensor until the
+first forward pass — when it has seen real data and can
+infer shapes from the upstream output.
 
+In old frameworks: `nn.Linear(in_features=20, out_features=256)`.
+Now: `nn.LazyLinear(256)` — less arithmetic, fewer bugs when
+you change the architecture.
+:::
+
+::: {.slide title="The cascade"}
 ```
 declare layer  -->  shapes UNKNOWN, no params yet
        │
@@ -310,11 +315,6 @@ forward(X)     -->  X.shape known → infer first layer
        ▼
 parameters allocated, model usable, optimizer can see them
 ```
-
-Why bother? In old frameworks you had to write
-`nn.Linear(in_features=20, out_features=256)`. Now you
-write `nn.LazyLinear(256)` — less arithmetic, fewer bugs
-when you change the architecture.
 :::
 
 ::: {.slide title="Why this matters more than it seems"}

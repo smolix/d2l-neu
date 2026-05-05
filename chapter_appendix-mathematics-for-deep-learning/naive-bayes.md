@@ -681,9 +681,9 @@ smoothing to avoid zeros:
 . . .
 
 @naive-bayes-training-2
+:::
 
-. . .
-
+::: {.slide title="Training (cont.)"}
 @naive-bayes-training-3
 
 . . .

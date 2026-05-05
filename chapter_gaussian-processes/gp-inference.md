@@ -409,9 +409,9 @@ between training points and at the edges of the data:
 . . .
 
 @gp-inference-worked-example-from-scratch-5
+:::
 
-. . .
-
+::: {.slide title="Predictions (cont.)"}
 @gp-inference-worked-example-from-scratch-6
 
 . . .
@@ -434,9 +434,9 @@ beyond the naive $\mathcal{O}(n^3)$ limit:
 . . .
 
 @gp-inference-making-life-easy-with-gpytorch-3
+:::
 
-. . .
-
+::: {.slide title="GPyTorch (cont.)"}
 @gp-inference-making-life-easy-with-gpytorch-4
 
 . . .

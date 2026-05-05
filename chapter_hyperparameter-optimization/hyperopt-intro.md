@@ -377,22 +377,21 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 <!-- slides -->
 
 ::: {.slide}
-Hyperparameters are the knobs you tune *outside* of
-gradient descent: learning rate, batch size, number of
-layers, dropout rate. There are usually 5–20 of them, and
-the validation loss is non-convex, noisy, and expensive to
-evaluate (one full training run per setting).
+Hyperparameters are the knobs you tune *outside* gradient
+descent: learning rate, batch size, depth, dropout rate.
+Usually 5–20 of them; the validation loss is non-convex,
+noisy, and expensive — one full training run per setting.
 
 **Hyperparameter optimization** (HPO) automates the
-tuning. The simplest member of the family — and the one
-this deck implements — is **random search**: sample
+tuning. Simplest variant: **random search** — sample
 configurations from a prior, evaluate, keep the best.
+:::
 
-![Standard ML workflow: train multiple models with different hyperparameters; pick the best.](../img/ml_workflow.svg){width=72%}
+::: {.slide title="The HPO workflow"}
+![Train multiple models with different hyperparameters; pick the best.](../img/ml_workflow.svg){width=82%}
 
-Surprisingly, random search beats grid search and most
-hand-tuning. Smarter algorithms (Bayesian optimization,
-multi-fidelity / Hyperband) come in the next decks.
+Random search beats grid search and most hand-tuning.
+Smarter algorithms (Bayesian opt, Hyperband) come next.
 :::
 
 ::: {.slide title="Formalizing HPO"}

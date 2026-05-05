@@ -410,53 +410,44 @@ A second difference is the relative ease with which we were able to implement Le
 
 ::: {.slide}
 **LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
-was the first convolutional neural network that worked at
-production scale — recognizing handwritten digits on U.S.
-bank checks. Some ATMs *still* run derivatives of the
-original C++ today.
+was the first convolutional neural network at production
+scale — handwritten digits on U.S. bank checks. Some ATMs
+*still* run derivatives of the original C++ today.
 
-It also defined the architectural template every later
-CNN refines:
-
-- **Convolutional encoder** — alternating conv + pool
-  layers; spatial dims shrink, channel dims grow.
-- **Dense head** — flatten, then a small MLP mapping
-  features to class scores.
-
-ResNet, EfficientNet, ViT, modern image backbones — all
-keep the same skeleton and swap components. This deck
-implements LeNet, traces shapes through it, and trains
-the result on Fashion-MNIST.
+It defined the architectural template every later CNN
+refines: a **convolutional encoder** (spatial dims shrink,
+channels grow) feeding a **dense head**. ResNet,
+EfficientNet, ViT — same skeleton, different components.
 :::
 
 ::: {.slide title="LeNet-5 architecture"}
-Two conv→sigmoid→avgpool blocks followed by three fully
-connected layers, ending in 10 class logits:
+![LeNet-5 data flow on a 28×28 handwritten digit. Spatial dims shrink; channels grow.](../img/lenet.svg){width=92%}
+:::
 
-![LeNet-5 data flow on a 28×28 handwritten digit. Spatial dims shrink; channels grow.](../img/lenet.svg){width=88%}
-
-- Conv1: 1→6 channels, 5×5 kernel, padding 2 (so 28→28)
+::: {.slide title="Layer-by-layer"}
+- Conv1: 1→6 channels, 5×5 kernel, padding 2 (28→28)
 - AvgPool: stride 2 → 14×14
 - Conv2: 6→16 channels, 5×5, no padding → 10×10
 - AvgPool: stride 2 → 5×5
-- Flatten → 16·5·5 = 400 features → 120 → 84 → 10
+- Flatten → 16·5·5 = 400 → 120 → 84 → 10
+
+Two conv→sigmoid→avgpool blocks, three FC layers, 10 logits.
 :::
 
 ::: {.slide title="Compressed view"}
-The same network drawn vertically — the version you'll
-recognize from any deep learning textbook:
+Same network, vertical schematic — the textbook version:
 
-![Compact LeNet-5 schematic.](../img/lenet-vert.svg){width=42%}
+![Compact LeNet-5 schematic.](../img/lenet-vert.svg){width=44%}
+:::
 
-Two takeaways from this picture:
-
-- **Pyramid shape** — spatial halves at each pool, channels
-  roughly double. Same shape every successor architecture
-  preserves.
-- **The bottleneck** is the flatten — `400 × 120 = 48000`
-  weights from the conv block to the first dense layer.
-  This is why modern CNNs replace the dense stack with
-  *global average pooling* — much cheaper.
+::: {.slide title="Two takeaways"}
+- **Pyramid shape** — spatial halves at each pool;
+  channels roughly double. Every successor architecture
+  preserves this.
+- **The bottleneck is the flatten** — `400 × 120 = 48000`
+  weights from conv block to first dense layer. Modern
+  CNNs replace the dense stack with *global average
+  pooling* — much cheaper.
 :::
 
 ::: {.slide title="Implementation"}

@@ -282,9 +282,9 @@ none, sample a fresh config:
 . . .
 
 @sh-async-asynchronous-scheduler-2
+:::
 
-. . .
-
+::: {.slide title="ASHA scheduler (cont.)"}
 @sh-async-asynchronous-scheduler-3
 
 . . .

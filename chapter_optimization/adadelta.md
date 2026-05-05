@@ -198,24 +198,27 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 <!-- slides -->
 
 ::: {.slide}
-**Adadelta** (Zeiler, 2012) takes the RMSProp idea further:
-not only adapt the per-parameter step magnitudes, but
-remove the global learning rate entirely.
+**Adadelta** (Zeiler, 2012) takes RMSProp further: adapt
+per-parameter step magnitudes *and* remove the global
+learning rate entirely.
 
-Two EMAs are kept — one over squared gradients, one over
-squared *updates*:
+Keeps two EMAs — one over squared gradients, one over
+squared *updates*. The ratio of their square roots is
+dimensionally consistent — a "unitless" step size, so no
+separate $\eta$ needed (in principle).
+:::
 
+::: {.slide title="The update rule"}
 $$\mathbf{s}_t = \rho \mathbf{s}_{t-1} + (1-\rho) \mathbf{g}_t^2,$$
 
 $$\mathbf{g}'_t = \frac{\sqrt{\Delta\mathbf{x}_{t-1} + \epsilon}}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t,$$
 
-$$\Delta\mathbf{x}_t = \rho \Delta\mathbf{x}_{t-1} + (1-\rho)\, \mathbf{g}'^2_t,\quad
-\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \mathbf{g}'_t.$$
+$$\Delta\mathbf{x}_t = \rho \Delta\mathbf{x}_{t-1} + (1-\rho)\, \mathbf{g}'^2_t,$$
 
-The ratio in $\mathbf{g}'_t$ is dimensionally consistent — a
-"unitless" step size — so no separate $\eta$ is needed (in
-principle). In practice frameworks still expose a learning
-rate hyperparameter for fine-tuning.
+$$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \mathbf{g}'_t.$$
+
+In practice frameworks still expose a learning-rate hyper
+for fine-tuning.
 :::
 
 ::: {.slide title="From-scratch implementation"}

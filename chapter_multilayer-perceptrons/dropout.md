@@ -543,25 +543,22 @@ networks:
 
 Counterintuitive — we actively damage the network
 mid-training — but the trick is rock-solid. It still
-ships in modern Transformers (~10% rate is standard).
+ships in modern Transformers (~10% rate standard).
+:::
 
-**Why we need it.** Big modern networks are
-*overparameterized* — more weights than training
-examples. Without a regularizer, gradient descent will
-happily memorize the training set and the model
-generalizes badly to anything new. Dropout is one of the
-cheapest, most reliable ways to fight that.
+::: {.slide title="Why we need it"}
+Modern networks are **overparameterized** — more weights
+than training examples. Without a regularizer, gradient
+descent happily memorizes the training set.
 
-**Why it works** — two complementary explanations:
+Two complementary reasons dropout helps:
 
 - **Noise injection** = smoothness regularization
-  (Bishop 1995). Forcing the network to be robust to
-  hidden-unit dropout = forcing it to be a smoother
-  function of its inputs.
-- **Anti-co-adaptation**: each unit can't rely on any
-  *specific* upstream unit being present, so it has to
-  pick up signal from a broader, redundant set of
-  features.
+  (Bishop 1995). Robustness to hidden-unit dropout forces
+  the network to be a smoother function of its inputs.
+- **Anti-co-adaptation**: a unit can't rely on any
+  *specific* upstream unit being present, so it picks up
+  signal from a broader, redundant set of features.
 :::
 
 ::: {.slide title="What dropout looks like"}
@@ -615,18 +612,15 @@ Quick check on a 2×8 input:
 :::
 
 ::: {.slide title="Where to put dropout"}
-Apply dropout **after** the activation function and
-**before** the next linear layer. Common pattern:
+After the activation, before the next linear layer:
 
 ```
 Linear → ReLU → Dropout(p₁) → Linear → ReLU → Dropout(p₂) → Linear
 ```
 
-Convention: a *little* dropout on early layers, *more*
-later. Why? Early layers learn low-level features (edges,
-textures) that the network needs reliably; later layers
-do the high-level task-specific composition where
-overfitting is more likely.
+Convention: *less* on early layers (low-level features
+need to be reliable), *more* later (high-level features
+overfit).
 
 Typical values:
 
@@ -663,26 +657,30 @@ dropout becomes a no-op:
 :::
 
 ::: {.slide title="Why dropout works (the modern view)"}
-Several complementary explanations, none individually
-complete:
+Several complementary explanations, none complete on its own:
 
-- **Bayesian model averaging**: training samples a
-  different thinned network each step; averaging $\sim 2^n$
-  subnetworks at test time approximates an ensemble.
-- **Stochastic regularization**: equivalent to adding
-  Gaussian noise to activations, which Bishop showed is
-  Tikhonov ($\ell_2$) regularization on the *function*.
-- **Anti-co-adaptation**: forces redundant feature
-  representations.
-- **Variance bound**: dropout layers cap the
-  variance the network can put into any single direction
-  in feature space.
+- **Bayesian model averaging** — training samples a
+  different thinned network each step; testing averages
+  $\sim 2^n$ subnetworks → cheap ensemble.
+- **Stochastic regularization** — equivalent to adding
+  Gaussian noise; Bishop showed this is Tikhonov
+  ($\ell_2$) regularization *on the function*.
+- **Anti-co-adaptation** — forces redundant features.
+- **Variance bound** — caps the variance the network puts
+  into any one direction in feature space.
+:::
 
-Modern deep nets often replace it with BatchNorm /
-LayerNorm, which provides similar regularization "for
-free". But dropout is alive and well in Transformers
-(typical rate 0.1) and as a final-classifier-head
-regularizer everywhere.
+::: {.slide title="Dropout in 2026"}
+Modern deep nets often replace dropout with **BatchNorm
+/ LayerNorm**, which provides similar regularization
+"for free".
+
+But dropout remains alive and well:
+
+- **Transformers** — rate 0.1 by default in attention and
+  FFN sublayers.
+- **Final classifier heads** — 0.5 right before the
+  output projection is still a standard recipe.
 :::
 
 ::: {.slide title="Recap"}

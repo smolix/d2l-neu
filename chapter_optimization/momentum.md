@@ -380,25 +380,25 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 <!-- slides -->
 
 ::: {.slide}
-SGD on ill-conditioned problems is dreadful. If the loss
-landscape has a steep narrow valley, gradients zigzag
-across the walls instead of moving along the valley floor.
-Lower the learning rate to stop overshooting, and progress
-along the valley grinds to a halt.
+SGD on ill-conditioned problems is dreadful. In a steep
+narrow valley, gradients zigzag across the walls instead
+of moving along the floor. Drop $\eta$ to stop
+overshooting → progress along the valley dies.
+:::
 
-**Momentum** fixes this by keeping a running average of
-past gradients — a velocity vector $\mathbf{v}_t$:
+::: {.slide title="Momentum"}
+Keep a running average of past gradients — a velocity
+$\mathbf{v}_t$:
 
 $$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t,\quad
 \mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
 
-Components that *consistently* point in one direction
-accumulate; components that flip sign cancel. The result:
-faster progress along the valley, less zigzag.
+Components that *consistently* point one way accumulate;
+components that flip sign cancel. Faster progress along
+the valley, less zigzag.
 
-Momentum coefficient $\beta \in [0, 1)$, typically
-$\beta = 0.9$. The "effective" averaging window is
-$1/(1-\beta)$ steps.
+$\beta \in [0, 1)$, typically $0.9$. Effective averaging
+window: $1/(1-\beta)$ steps.
 :::
 
 ::: {.slide title="The ill-conditioned problem"}

@@ -230,22 +230,22 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 
 ::: {.slide}
 Adagrad's accumulator $\mathbf{s}_t = \sum_{\tau \le t} \mathbf{g}_\tau^2$
-grows without bound. After enough steps, the effective
-learning rate $\eta / \sqrt{\mathbf{s}_t}$ collapses to zero
-— useful in convex / sparse problems but disastrous in deep
-non-convex training where the model never stops needing
-updates.
+grows without bound. The effective learning rate
+$\eta / \sqrt{\mathbf{s}_t}$ collapses to zero — fine for
+convex / sparse problems, disastrous for deep non-convex
+training where the model never stops needing updates.
+:::
 
-**RMSProp** (Hinton, 2012) replaces Adagrad's running sum
-with an exponentially weighted average:
+::: {.slide title="RMSProp"}
+**RMSProp** (Hinton, 2012) replaces the running sum with
+an exponentially weighted average:
 
 $$\mathbf{s}_t = \gamma \mathbf{s}_{t-1} + (1-\gamma) \mathbf{g}_t^2,\quad
 \mathbf{x}_t = \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t.$$
 
-The accumulator now has a finite memory ($\sim 1/(1-\gamma)$
-steps, typically $\gamma = 0.9$ → ~10 steps). Effective
-learning rate stops decaying; old gradient magnitudes are
-forgotten.
+Finite memory: $\sim 1/(1-\gamma)$ steps, typically
+$\gamma = 0.9$ → ~10 steps. Effective LR stops decaying;
+old gradient magnitudes are forgotten.
 :::
 
 ::: {.slide title="Decay coefficients"}

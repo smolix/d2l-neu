@@ -318,26 +318,18 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 <!-- slides -->
 
 ::: {.slide}
-A real image has **channels**: an RGB photo has 3, a
-modern CNN's deep feature map has hundreds (64 → 2048 is
-typical). This deck extends the basic 2-D convolution to
-handle multi-channel inputs and outputs — and introduces
-the $1{\times}1$ convolution, a workhorse of modern CNN
-architecture.
+Real images have **channels**: RGB has 3, a modern CNN's
+deep feature map has hundreds (64 → 2048 is typical).
 
-Channel count is one of the *most important* choices in
-CNN design. As you go deeper in a network, you typically
-trade spatial resolution for channel depth — the network
-keeps the same total information capacity, but represents
-*kinds* of features instead of *places*.
+Going deeper, networks trade spatial resolution for
+channel depth — same information capacity, but
+representing *kinds* of features instead of *places*.
 
-What we'll cover:
+This deck:
 
 - **Multiple input channels** — kernels grow a 3rd axis.
-- **Multiple output channels** — stack many filters in
-  parallel.
-- **$1 \times 1$ convolutions** — pure channel mixing, no
-  spatial structure.
+- **Multiple output channels** — stack many filters.
+- **$1 \times 1$ convolutions** — pure channel mixing.
 :::
 
 ::: {.slide title="Multi-input-channel convolution"}

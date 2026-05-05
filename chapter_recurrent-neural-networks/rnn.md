@@ -263,23 +263,19 @@ The hidden state of an RNN can capture historical information of the sequence up
 
 ::: {.slide}
 A **recurrent neural network** carries a **hidden state**
-$\mathbf{h}_t$ across time steps — a summary of all input seen so
-far. The recurrence:
+$\mathbf{h}_t$ across time steps — a learned summary of
+all input seen so far:
 
 $$\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
                      \mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{b}).$$
 
-- Same weights at every step → constant parameter count regardless
-  of sequence length.
-- $\mathbf{h}_t$ is a learned summary of the input prefix
-  $(x_1, \ldots, x_t)$ — no fixed-size context window like
-  n-grams.
-- Output: project $\mathbf{h}_t$ to vocab logits, predict $x_{t+1}$.
+Same weights at every step → constant parameter count
+regardless of sequence length. Unbounded effective
+context (in principle), no fixed-size window like n-grams.
+:::
 
-The recurrence is what makes RNNs **stateful** and gives them
-unbounded effective context (in principle).
-
-![An RNN with a hidden state.](../img/rnn.svg){width=55%}
+::: {.slide title="Stateful by design"}
+![An RNN with a hidden state.](../img/rnn.svg){width=70%}
 :::
 
 ::: {.slide title="Setup"}
@@ -303,14 +299,15 @@ implementations actually do.
 :::
 
 ::: {.slide title="As a language model"}
-- **Embedding** maps the input token id → a vector $\mathbf{x}_t$.
+- **Embedding** maps token id → vector $\mathbf{x}_t$.
 - **RNN** updates the hidden state $\mathbf{h}_t$.
-- **Linear head** projects $\mathbf{h}_t$ to vocab-size logits;
-  softmax gives $P(x_{t+1} \mid x_{\le t})$.
-- Loss = **cross-entropy** with the next-token target — exactly
-  the LM training signal from the previous chapter.
+- **Linear head** projects $\mathbf{h}_t$ to vocab logits;
+  softmax → $P(x_{t+1} \mid x_{\le t})$.
+- Loss = **cross-entropy** with the next-token target.
+:::
 
-![Character-level RNN LM. Input "machin", target "achine" — same RNN, target shifted by one.](../img/rnn-train.svg){width=70%}
+::: {.slide title="Character LM training"}
+![Input "machin", target "achine" — same RNN, target shifted by one.](../img/rnn-train.svg){width=80%}
 
 The next two sections build this end-to-end (from scratch +
 concise).

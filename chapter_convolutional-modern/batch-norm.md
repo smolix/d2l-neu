@@ -992,17 +992,21 @@ On a more practical note, there are a number of aspects worth remembering about 
 **Batch Normalization** (Ioffe & Szegedy, 2015) is the
 single-biggest stability win in modern deep learning.
 
-The idea: at each layer, **normalize** activations within the
-minibatch to zero mean / unit variance, then **rescale** with
-learned $\gamma$ and $\beta$:
+At each layer, **normalize** activations within the
+minibatch to zero mean / unit variance, then **rescale**
+with learned $\gamma$ and $\beta$:
 
 $$\text{BN}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x} - \hat\mu_\mathcal{B}}{\sqrt{\hat\sigma_\mathcal{B}^2 + \epsilon}} + \beta.$$
+:::
 
+::: {.slide title="Why it works"}
 - Lets you train **much deeper** nets — gradients stay
   well-conditioned through the depth.
-- Allows **higher learning rates** and is mildly regularizing.
-- At **test time** uses running estimates of mean / variance
-  (since there's no minibatch).
+- Allows **higher learning rates**; mildly regularizing.
+- **Test time** uses running estimates of mean / variance
+  (no minibatch then).
+- Spawned a family — **LayerNorm** (per-example, used in
+  Transformers), **GroupNorm**, **InstanceNorm**.
 :::
 
 ::: {.slide title="From scratch"}

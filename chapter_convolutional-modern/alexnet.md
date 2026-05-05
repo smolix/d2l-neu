@@ -525,24 +525,28 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 <!-- slides -->
 
 ::: {.slide}
-**AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what made
-deep learning *the* approach to vision. It won ImageNet by a huge
-margin. The key changes over LeNet:
+**AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what
+made deep learning *the* approach to vision. Won ImageNet
+by a huge margin and started the modern era.
 
-- **Bigger** — 8 layers, 60 M parameters, much larger filters in
-  the first layer (11×11), deeper feature stack.
-- **ReLU** activations (no more saturating sigmoids).
-- **Dropout** in the dense head for regularization.
-- **GPUs**, **lots of data** (1.2 M ImageNet images), and
-  **augmentation** — the "missing ingredients" the chapter names.
-
-The architecture itself is straightforward — what changed was
-the *scale*.
+![AlexNet alongside the LeNet from a decade earlier.](../img/alexnet.svg){width=70%}
 :::
 
-::: {.slide title="The architecture"}
-Five conv layers (11×11 → 5×5 → three 3×3) + max-pool, then three
-fully-connected layers down to 1000 classes:
+::: {.slide title="What changed from LeNet"}
+- **Bigger** — 8 layers, 60 M parameters, larger first-layer
+  filters (11×11), deeper feature stack.
+- **ReLU** activations (no more saturating sigmoids).
+- **Dropout** in the dense head for regularization.
+- **GPUs**, **ImageNet** (1.2 M images), and
+  **augmentation** — the missing ingredients.
+
+The architecture itself is straightforward; what changed
+was the *scale*.
+:::
+
+::: {.slide title="The architecture in code"}
+Five conv layers (11×11 → 5×5 → three 3×3) + max-pool,
+then three FC layers down to 1000 classes:
 
 @alexnet-deep-convolutional-neural-networks-alexnet
 

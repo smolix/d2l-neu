@@ -555,19 +555,22 @@ applying DenseNet may require more memory-efficient implementations that may inc
 <!-- slides -->
 
 ::: {.slide}
-**DenseNet** (Huang et al., 2017) takes the residual idea one
-step further: instead of *adding* skip connections,
+**DenseNet** (Huang et al., 2017) takes the residual idea
+one step further: instead of *adding* skip connections,
 **concatenate** them.
-
-Inside a "dense block", every layer's input is the
-**concatenation** of *all preceding layers'* outputs:
 
 $$\mathbf{x}_\ell = f_\ell\bigl([\mathbf{x}_0, \mathbf{x}_1, \dots, \mathbf{x}_{\ell-1}]\bigr).$$
 
-Pros: maximum **feature reuse**, fewer parameters than ResNet
-for similar accuracy. Con: memory grows linearly with depth
-within a block — handled by **transition layers** (1×1 conv +
-pooling) that reset channel counts between blocks.
+Every layer in a dense block sees the concatenation of
+*all* preceding outputs.
+:::
+
+::: {.slide title="Dense block + transition"}
+![Dense block grows channels by concatenation; transition layers (1×1 conv + pool) reset channels between blocks.](../img/densenet-block.svg){width=82%}
+
+Pros: maximum **feature reuse**, fewer parameters than
+ResNet for similar accuracy. Cons: memory grows linearly
+with depth within a block — handled by transitions.
 :::
 
 ::: {.slide title="Conv block + dense block"}

@@ -595,24 +595,20 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 
 ::: {.slide}
 A fully-connected layer on a 1-megapixel RGB image needs
-roughly **3 million** weights *per output unit*. That's wildly
-wasteful — pixel correlations are local, and the same edge
-detector should work in the top-left corner and the
-bottom-right corner.
+roughly **3 million** weights *per output unit* — wildly
+wasteful, since pixel correlations are local and the same
+edge detector should work everywhere.
 
-A **convolutional layer** trades that profligacy for two
-strong inductive biases:
+A **convolutional layer** swaps this for two strong
+inductive biases:
 
-- **Translation invariance** — slide one small filter
-  everywhere; same parameters at every spatial location.
+- **Translation invariance** — one small filter, slid
+  everywhere with shared parameters.
 - **Locality** — each output depends only on a small
   neighborhood of input pixels.
 
-Result: thousands of parameters instead of millions, and
-exactly the right prior for natural images. (The math is
-technically *cross-correlation*; deep learning calls it
-convolution because the difference — a kernel flip — is
-absorbed by training.)
+Thousands of parameters instead of millions, with exactly
+the right prior for natural images.
 :::
 
 ::: {.slide title="2-D cross-correlation"}
@@ -714,15 +710,15 @@ The **receptive field** of an output cell = the set of
 input positions that can affect it.
 
 - A 2×2 kernel: receptive field = 2×2 pixels.
-- Two stacked 2×2 layers: an output cell sees a 3×3 input
-  region.
-- Stacking $L$ layers of 3×3 convs: receptive field
-  $\approx (2L + 1) \times (2L + 1)$.
+- Two stacked 2×2 layers: each output cell sees 3×3 input.
+- Stack $L$ layers of 3×3: $\approx (2L + 1) \times (2L + 1)$.
 
 Local kernels + depth = global reach without the
 parameter cost of large kernels.
+:::
 
-![Hubel & Wiesel-style filters in the visual cortex. Trained CNN filters look strikingly similar.](../img/field-visual.png){width=72%}
+::: {.slide title="Trained filters look biological"}
+![Hubel & Wiesel-style filters in the visual cortex. Trained CNN filters look strikingly similar.](../img/field-visual.png){width=82%}
 :::
 
 ::: {.slide title="Recap"}

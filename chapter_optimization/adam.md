@@ -299,15 +299,21 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 <!-- slides -->
 
 ::: {.slide}
-**Adam** (Kingma & Ba, 2014) combines the two best ideas of
-the chapter:
+**Adam** (Kingma & Ba, 2014) combines the two best ideas
+of the chapter:
 
-- *Momentum* — first moment EMA $\mathbf{v}_t = \beta_1 \mathbf{v}_{t-1} + (1-\beta_1)\mathbf{g}_t$.
-- *RMSProp-style scaling* — second moment EMA
+- *Momentum* — first moment EMA
+  $\mathbf{v}_t = \beta_1 \mathbf{v}_{t-1} + (1-\beta_1)\mathbf{g}_t$.
+- *RMSProp scaling* — second moment EMA
   $\mathbf{s}_t = \beta_2 \mathbf{s}_{t-1} + (1-\beta_2)\mathbf{g}_t^2$.
 
-Plus *bias correction* to compensate for the $\mathbf{0}$
-initialization:
+The default optimizer for deep learning since ~2015.
+Variants (AdamW, RAdam, NAdam, Lion) iterate on the recipe.
+:::
+
+::: {.slide title="Bias correction + update"}
+The EMAs are initialized at zero, so they're biased toward
+zero early on. Correct it:
 
 $$\hat{\mathbf{v}}_t = \mathbf{v}_t / (1-\beta_1^t),\quad
 \hat{\mathbf{s}}_t = \mathbf{s}_t / (1-\beta_2^t).$$
@@ -316,10 +322,8 @@ Update:
 
 $$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon} \odot \hat{\mathbf{v}}_t.$$
 
-Defaults that just work most of the time: $\beta_1 = 0.9$,
-$\beta_2 = 0.999$, $\epsilon = 10^{-8}$. The default for
-deep learning since ~2015. Variants (AdamW, RAdam, NAdam,
-Lion) iterate on the basic recipe.
+Defaults that just work most of the time:
+$\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$.
 :::
 
 ::: {.slide title="From-scratch Adam"}

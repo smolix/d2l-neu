@@ -173,6 +173,16 @@ def loss(self, y_hat, y):
     return d2l.reduce_mean(l)
 ```
 
+:begin_tab:`jax`
+JAX/Flax models are stateless — parameters are not stored on
+the module. The loss takes the parameter pytree `params` plus
+the model state explicitly and runs the forward pass via
+`state.apply_fn`, returning the loss for `jax.grad` to
+differentiate. The other frameworks can take the already-
+computed `y_hat` directly because the model carries its
+parameters internally.
+:end_tab:
+
 ```{.python .input #linear-regression-scratch-defining-the-loss-function  n=10}
 %%tab jax
 @d2l.add_to_class(LinearRegressionScratch)  #@save

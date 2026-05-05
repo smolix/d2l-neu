@@ -676,24 +676,26 @@ we can use the additive attention scoring function instead. Optimizing these lay
 <!-- slides -->
 
 ::: {.slide}
-Attention pooling needs a *scoring function* $a(\mathbf{q}, \mathbf{k})$
-that softmax turns into weights:
+Attention pooling needs a *scoring function*
+$a(\mathbf{q}, \mathbf{k})$ that softmax turns into weights:
 
 $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp\, a(\mathbf{q}, \mathbf{k}_i)}{\sum_j \exp\, a(\mathbf{q}, \mathbf{k}_j)}.$$
 
-Two scorings dominate practice:
+![Output = weighted sum of values; weights = softmax of scoring function $a$.](../img/attention-output.svg){width=70%}
+:::
 
+::: {.slide title="Two scorings dominate practice"}
 - **Scaled dot product** — $a = \mathbf{q}^\top \mathbf{k}/\sqrt{d}$.
-  Cheap, no extra parameters, requires query and key to share
-  a dimension. The Transformer choice.
-- **Additive (Bahdanau)** — a tiny MLP over $[\mathbf{q}; \mathbf{k}]$.
-  Slightly more expressive, learns the metric, lets $\mathbf{q}$
-  and $\mathbf{k}$ have different shapes.
+  Cheap, parameter-free; query and key share a dimension.
+  The Transformer choice.
+- **Additive (Bahdanau)** — a tiny MLP over
+  $[\mathbf{q}; \mathbf{k}]$. More expressive, learns the
+  metric, allows different $\mathbf{q}$/$\mathbf{k}$ shapes.
 
 Both feed into the same softmax + value-pooling pipeline.
+:::
 
-![Output = weighted sum of values; weights = softmax of scoring function $a$.](../img/attention-output.svg){width=62%}
-
+::: {.slide title="Setup"}
 @attention-scoring-functions
 :::
 

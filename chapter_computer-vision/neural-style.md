@@ -947,22 +947,26 @@ Some of these blocks even have the subtle texture of brush strokes.
 <!-- slides -->
 
 ::: {.slide}
-**Neural style transfer** (Gatys, Ecker, Bethge 2015): take
-the *content* of one image and the *style* of another and
-synthesize a new image that combines them. No new model
-training — just iterative optimization of pixel values
-against a loss defined over a frozen pretrained CNN.
+**Neural style transfer** (Gatys, Ecker, Bethge 2015):
+combine the *content* of one image with the *style* of
+another. No model training — just iterative optimization
+of pixel values against a loss defined over a frozen
+pretrained CNN.
 
-![Style transfer takes content + style images and produces a synthesized one.](../img/style-transfer.svg){width=72%}
+![Content + style → synthesized image.](../img/style-transfer.svg){width=82%}
+:::
 
-The key insight: in a pretrained ImageNet CNN, *deeper*
-layer activations capture *content*, while *Gram matrices*
-of activations across feature channels capture *style*
-(textures, brush strokes, color palette). Define a loss
-that matches both, optimize over the synthesized image's
-pixels.
+::: {.slide title="The key insight"}
+In a pretrained ImageNet CNN:
 
-![Style transfer pipeline: forward pass extracts content + style features; backprop into pixels.](../img/neural-style.svg){width=72%}
+- **Deeper layer activations** capture *content*.
+- **Gram matrices of activations** capture *style*
+  (textures, brush strokes, color palette).
+
+Define a loss matching both; optimize over the synthesized
+image's pixels.
+
+![Pipeline: forward pass extracts content + style features; backprop into pixels.](../img/neural-style.svg){width=82%}
 :::
 
 ::: {.slide title="Loading content and style"}
@@ -993,9 +997,9 @@ Content is matched at one deeper layer (Conv4_2):
 . . .
 
 @neural-style-extracting-features-3
+:::
 
-. . .
-
+::: {.slide title="Feature extractor (cont.)"}
 @neural-style-extracting-features-4
 
 . . .
@@ -1003,29 +1007,28 @@ Content is matched at one deeper layer (Conv4_2):
 @neural-style-extracting-features-5
 :::
 
-::: {.slide title="Three loss terms"}
-**Content loss** — squared error between content and
-synthesized features at the content layer:
+::: {.slide title="Content loss"}
+Squared error between content and synthesized features at
+the content layer:
 
 @neural-style-content-loss
+:::
 
-. . .
-
-**Style loss** — squared error between *Gram matrices*
-of features at each style layer. Gram matrix
-$G = F F^\top$ captures pairwise channel correlations,
-discarding spatial location:
+::: {.slide title="Style loss"}
+Squared error between *Gram matrices* of features at each
+style layer. Gram matrix $G = F F^\top$ captures pairwise
+channel correlations, discarding spatial location:
 
 @neural-style-style-loss-1
 
 . . .
 
 @neural-style-style-loss-2
+:::
 
-. . .
-
-**Total variation loss** — penalizes high-frequency noise,
-keeps the synthesized image smooth:
+::: {.slide title="Total variation loss"}
+Penalizes high-frequency noise; keeps the synthesized
+image smooth:
 
 @neural-style-total-variation-loss
 :::

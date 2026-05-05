@@ -294,22 +294,24 @@ to a variable-length sequence.
 <!-- slides -->
 
 ::: {.slide}
-Translation, summarization, dialogue — variable-length input
-mapped to variable-length output, no positional alignment
-between the two. The standard pattern:
+Translation, summarization, dialogue — variable-length
+input mapped to variable-length output, no positional
+alignment between the two.
 
-- An **encoder** reads the source sequence and compresses it
+- **Encoder** reads the source sequence, compresses it
   into a state.
-- A **decoder** reads that state plus the target tokens seen
-  so far, and predicts the next target token.
+- **Decoder** reads that state plus target tokens so far,
+  predicts the next target token.
 
-The decoder is a *conditional* language model: $P(y_t \mid y_{<t}, \text{enc}(x))$.
-This deck specifies the abstract interface; the next two
-sections implement it (RNN seq2seq, then beam search at
-decode time).
+The decoder is a *conditional* language model:
+$P(y_t \mid y_{<t}, \text{enc}(x))$.
+:::
 
-![The encoder–decoder architecture: a state in between handles arbitrary in/out lengths.](../img/encoder-decoder.svg){width=65%}
+::: {.slide title="The architecture"}
+![Encoder–decoder: a state in between handles arbitrary in/out lengths.](../img/encoder-decoder.svg){width=78%}
+:::
 
+::: {.slide title="Setup"}
 @encoder-decoder-the-encoder-decoder-architecture
 :::
 

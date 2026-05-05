@@ -832,26 +832,23 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 <!-- slides -->
 
 ::: {.slide}
-GD: $\mathcal{O}(n)$ per step but uses the entire dataset
-optimally; SGD: $\mathcal{O}(1)$ per step but noisy and
-single-example-at-a-time.
+GD: $\mathcal{O}(n)$ per step, optimal use of data.
+SGD: $\mathcal{O}(1)$ per step, noisy and one-at-a-time.
 
 The compromise everyone uses: **minibatch SGD** — sample a
 batch of $b$ examples, average their gradients:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \frac{\eta}{b} \sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}).$$
+:::
 
-Two reasons it wins:
-
+::: {.slide title="Why minibatches win"}
 - **Variance reduction** — averaging $b$ noisy gradients
-  reduces variance by $b$.
-- **Hardware efficiency** — modern GPUs do batched matmul
-  $b\times$ faster than a Python loop over $b$ single
-  examples. Vectorization and cache reuse are the *real*
-  reason for batching, not just statistics.
+  cuts variance by $b$.
+- **Hardware efficiency** — GPUs do a batched matmul
+  $b\times$ faster than a loop over $b$ single examples.
 
-This deck quantifies the speedup, then trains a real
-model with various batch sizes.
+Vectorization and cache reuse are the *real* reason for
+batching, not just statistics.
 :::
 
 ::: {.slide title="Setup"}

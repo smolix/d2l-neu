@@ -458,21 +458,31 @@ bit-identical outputs:
 @read-write-loading-and-saving-model-parameters-4
 :::
 
-::: {.slide title="Best practices and gotchas"}
-- **Always save `state_dict`, not the module object.**
-  Saving the module pickles the Python class; if you
-  refactor, your old checkpoints stop loading.
+::: {.slide title="Best practices"}
+- **Save `state_dict`, not the module object.** Pickling
+  the module ties the file to today's Python class; refactor
+  and old checkpoints break.
 - **Keep the model class in your code repo.** The file is
   useless without the matching architecture definition.
-- **Strict vs non-strict load**: `load_state_dict(d, strict=False)`
-  ignores missing/extra keys. Useful for partial loading
-  (e.g. swapping the head of a pretrained model).
-- **Modern alternative: safetensors** — same shape as
-  state_dict but without pickle, so no arbitrary-code-exec
-  risk. The HuggingFace standard.
-- **For full checkpoints**, save more than just weights:
-  `{'model': net.state_dict(), 'optimizer': opt.state_dict(),
-  'epoch': epoch, 'rng_state': torch.get_rng_state()}`.
+- **Strict vs non-strict**: `load_state_dict(d, strict=False)`
+  ignores missing/extra keys — useful for partial loading
+  (e.g. swapping a pretrained head).
+:::
+
+::: {.slide title="Beyond `state_dict`"}
+- **safetensors** — same shape as `state_dict` but without
+  pickle, so no arbitrary-code-exec risk. HuggingFace
+  standard, used by every modern library.
+- **Full checkpoint** — save more than weights:
+
+  ```python
+  {'model':     net.state_dict(),
+   'optimizer': opt.state_dict(),
+   'epoch':     epoch,
+   'rng_state': torch.get_rng_state()}
+  ```
+
+  Lets you resume training bit-exactly after a crash.
 :::
 
 ::: {.slide title="Recap"}

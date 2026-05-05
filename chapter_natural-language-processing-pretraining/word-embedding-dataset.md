@@ -619,19 +619,15 @@ for batch in data_iter:
 <!-- slides -->
 
 ::: {.slide}
-This deck builds the data pipeline for word2vec-style
-embedding training. Three classical tricks make
-skip-gram tractable on a large corpus:
+Data pipeline for word2vec. Three classical tricks make
+skip-gram tractable on large corpora:
 
 - **Subsampling** — drop frequent words ("the", "a") with
-  probability rising with their frequency. Stop them from
-  dominating training.
+  probability rising with their frequency.
 - **Center / context window** — each token contributes a
   few (center, context) pairs.
-- **Negative sampling** — instead of softmax over all
-  $|V|$ words, train a binary classifier with $K$ random
-  "negative" words per positive pair. Reduces $\mathcal{O}(|V|)$
-  per step to $\mathcal{O}(K)$.
+- **Negative sampling** — train a binary classifier with
+  $K$ random negatives per positive; $\mathcal{O}(|V|) \to \mathcal{O}(K)$.
 
 Output: minibatches of `(center, context+, context-)` ready
 for the next deck's skip-gram model.

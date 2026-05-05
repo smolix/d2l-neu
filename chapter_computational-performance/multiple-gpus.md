@@ -817,21 +817,22 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 
 ::: {.slide}
 A single GPU can train ResNet on ImageNet — slowly. Modern
-training of large models requires *many* GPUs. Three ways
-to split the work:
+large models need *many* GPUs. Three ways to split work:
 
 - **Network partitioning** — different layers on different
   GPUs. Hard to balance; rarely used alone today.
 - **Layerwise partitioning** — split each layer's
-  parameters across GPUs (model parallelism). Used in
-  giant models where weights don't fit on one GPU.
-- **Data parallelism** — replicate the full model on every
-  GPU; each GPU processes a different chunk of the
-  minibatch; gradients are averaged across GPUs.
+  parameters across GPUs (model parallelism). For giant
+  models whose weights don't fit on one GPU.
+- **Data parallelism** — replicate the model on every GPU;
+  each processes a different minibatch chunk; gradients
+  averaged across GPUs.
 
 Data parallelism is the default for everyday training.
+:::
 
-![Strategies: original, network partitioning, layerwise partitioning, data parallelism.](../img/splitting.svg){width=72%}
+::: {.slide title="Strategies side by side"}
+![Original, network partitioning, layerwise partitioning, data parallelism.](../img/splitting.svg){width=86%}
 :::
 
 ::: {.slide title="Data parallelism"}

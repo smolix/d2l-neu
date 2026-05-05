@@ -609,8 +609,10 @@ $$\min_G \max_D \; \mathbb{E}_{x \sim p_{\text{data}}} [\log D(x)] + \mathbb{E}_
 At equilibrium, $G$'s distribution matches the data
 distribution. No likelihood, no MCMC — just two networks
 playing against each other.
+:::
 
-![GAN: noise → generator → samples; discriminator vs real data.](../img/gan.svg){width=68%}
+::: {.slide title="The GAN architecture"}
+![Noise → generator → samples; discriminator vs real data.](../img/gan.svg){width=82%}
 
 This deck demos a tiny GAN on a 2D Gaussian. The next
 deck (DCGAN) generates real images.
@@ -650,6 +652,7 @@ binary classifier:
 
 ::: {.slide title="Adversarial training step"}
 For each batch:
+
 1. Sample fake $G(z)$, real $x$. Update $D$ on
    $\log D(x) + \log(1 - D(G(z)))$.
 2. Sample fresh fakes; update $G$ on $\log D(G(z))$
@@ -661,9 +664,9 @@ For each batch:
 . . .
 
 @gan-training-2
+:::
 
-. . .
-
+::: {.slide title="Training loop and run"}
 @gan-training-3
 
 . . .

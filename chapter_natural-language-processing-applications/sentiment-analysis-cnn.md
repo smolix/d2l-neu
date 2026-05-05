@@ -669,17 +669,21 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 <!-- slides -->
 
 ::: {.slide}
-**textCNN** (Kim, 2014) — a 1D conv net for text. Same
-classification task as the RNN deck; different architecture.
+**textCNN** (Kim, 2014) — a 1D conv net for sentiment.
+Different architecture, same task as the RNN deck.
 
 Why CNNs on text? Each filter is a learned $n$-gram
 detector. Run several filter widths in parallel (3, 4, 5
 words) for multi-scale coverage. Max-over-time pool
 collapses position; concat → linear → softmax. Fast,
 strong, parallelizable.
+:::
 
-![Pipeline: GloVe → 1D conv filters of varying widths → max-pool → classifier.](../img/nlp-map-sa-cnn.svg){width=68%}
+::: {.slide title="Pipeline"}
+![GloVe → 1D conv filters of varying widths → max-pool → classifier.](../img/nlp-map-sa-cnn.svg){width=82%}
+:::
 
+::: {.slide title="Setup"}
 @sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks
 :::
 
@@ -695,17 +699,17 @@ elementwise multiply + sum of an $n$-token window:
 ::: {.slide title="Multi-channel 1D conv"}
 Embedding dim = input channels. Kernel has the same
 channel count; output is single-channel (or multi if you
-have multiple kernels):
+have multiple kernels).
 
-![3-channel 1D conv.](../img/conv1d-channel.svg){width=58%}
+![3-channel 1D conv.](../img/conv1d-channel.svg){width=72%}
 
 @sentiment-analysis-cnn-one-dimensional-convolutions-2
+:::
 
-. . .
-
+::: {.slide title="Equivalent 2D-conv view"}
 Equivalent to a 2D conv with kernel height = input height:
 
-![Equivalent 2D-conv view.](../img/conv1d-2d.svg){width=58%}
+![](../img/conv1d-2d.svg){width=72%}
 
 @sentiment-analysis-cnn-one-dimensional-convolutions-3
 :::

@@ -371,19 +371,21 @@ language model on. The other half of the chapter looks at the
 distributions, stop words, bigrams.
 :::
 
-::: {.slide title="Read & tokenize"}
+::: {.slide title="Read"}
 @text-sequence-converting-raw-text-into-sequence-data
+
+. . .
 
 @text-sequence-reading-the-dataset-1
 
 . . .
 
 @text-sequence-reading-the-dataset-2
+:::
 
-. . .
-
-Word-level tokenization splits on whitespace; character-level
-keeps individual characters:
+::: {.slide title="Tokenize"}
+Word-level splits on whitespace; character-level keeps
+individual characters:
 
 @text-sequence-tokenization
 :::

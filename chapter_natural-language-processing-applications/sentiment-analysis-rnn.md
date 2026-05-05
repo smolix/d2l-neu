@@ -503,17 +503,21 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 <!-- slides -->
 
 ::: {.slide}
-First IMDb classifier: pretrained word vectors → bidirectional
-LSTM → linear head. Standard pre-Transformer text
-classification recipe.
+Sentiment classification on IMDb: pretrained word vectors
+→ bidirectional LSTM → linear head. Standard
+pre-Transformer text-classification recipe.
 
-![Pipeline: GloVe embeddings → BiLSTM → output classifier.](../img/nlp-map-sa-rnn.svg){width=68%}
-
-The recurrent encoder reads the review left-to-right and
+The encoder reads the review left-to-right and
 right-to-left; concatenated final hidden states feed a
-binary classifier. GloVe gives a strong initialization on
-top of which the LSTM specializes for sentiment.
+binary classifier. GloVe gives a strong initialization
+that the LSTM then specializes for sentiment.
+:::
 
+::: {.slide title="Pipeline"}
+![GloVe embeddings → BiLSTM → output classifier.](../img/nlp-map-sa-rnn.svg){width=82%}
+:::
+
+::: {.slide title="Setup"}
 @sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks
 :::
 

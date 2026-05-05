@@ -1073,21 +1073,19 @@ train_with_data_aug(train_augs, test_augs, net)
 <!-- slides -->
 
 ::: {.slide}
-The two ingredients that made AlexNet work were a deep
-network and a large dataset. **Image augmentation** lets you
-multiply the dataset's effective size for free: apply
-small, label-preserving perturbations on the fly during
-training (flips, crops, color jitter). Each example is
-seen many times but never the *exact* same way.
+**Image augmentation** multiplies the dataset's effective
+size for free: apply small, label-preserving perturbations
+on the fly during training (flips, crops, color jitter).
+Each example is seen many times but never the *exact* same
+way.
 
 Two effects:
 
 - More data = less overfitting.
-- The model learns invariance to the perturbations you
-  apply (flip, brightness, etc.).
+- The model learns invariance to whatever you apply.
 
-Modern training pipelines also use random erasing, mixup,
-cutmix, RandAugment — all the same idea, more aggressive.
+Modern pipelines: random erasing, mixup, cutmix,
+RandAugment — same idea, more aggressive.
 :::
 
 ::: {.slide title="Setup"}

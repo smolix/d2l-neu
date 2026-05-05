@@ -661,24 +661,26 @@ in many cases.
 ::: {.slide}
 A **multilayer perceptron** (MLP) is a stack of
 fully-connected layers separated by elementwise
-nonlinearities. It's the simplest deep neural network and
-the foundation everything else in this book builds on.
+nonlinearities. The simplest deep network — and the
+foundation everything else in this book builds on.
 
-Why we need it: a linear classifier draws one hyperplane
-per class — fine when classes are linearly separable, no
-good for the things we actually want to model.
+A linear classifier draws one hyperplane per class.
+That's not enough for most things we want to model:
 
-- **Body temperature → health risk** is U-shaped (both
-  hypothermia and fever are bad). Not even *monotonic*.
-- **Cat vs dog from pixels**: the meaning of pixel
+- **Body temperature → health risk** — U-shaped, not
+  even monotonic.
+- **Cat vs dog from pixels** — the meaning of pixel
   $(13, 17)$ depends on its neighbors.
-- **XOR**: the canonical small example a linear model
-  *provably cannot solve*.
+- **XOR** — the canonical small problem a linear model
+  *provably* cannot solve.
+:::
 
-The fix is simple in retrospect: alternate linear layers
-with a **nonlinearity** between them. The linear layers
-let the network mix features; the nonlinearity lets the
+::: {.slide title="The fix: alternate linear and nonlinear"}
+Stack linear layers with a **nonlinearity** between them.
+The linear layers mix features; the nonlinearity lets the
 composition curve, fold, and twist the decision surface.
+
+That's it. Two ingredients, deep architectures from there.
 :::
 
 ::: {.slide title="Architecture"}
@@ -732,12 +734,12 @@ trades width for parameter efficiency — the modern reason
 deep nets work.
 :::
 
+::: {.slide title="Setup"}
+@mlp-multilayer-perceptrons
+:::
+
 ::: {.slide title="ReLU — the modern default"}
 $$\mathrm{ReLU}(x) = \max(0, x).$$
-
-@mlp-multilayer-perceptrons
-
-. . .
 
 @mlp-relu-function-1
 
@@ -757,12 +759,16 @@ inputs, 1 for positive:
 $$\mathrm{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
 @mlp-relu-function-2
+:::
 
-The "dead ReLU" problem: a unit whose pre-activation is
-always negative gets zero gradient and never updates.
-LeakyReLU and PReLU
-($\max(0, x) + \alpha\min(0, x)$) trade simplicity for a
-small slope on the left to keep gradient flowing.
+::: {.slide title="Dead ReLU"}
+A unit whose pre-activation is always negative gets zero
+gradient and never updates again — a permanently silent
+neuron.
+
+The fix: **LeakyReLU / PReLU** —
+$\max(0, x) + \alpha\min(0, x)$, with a small slope on the
+left to keep gradient flowing.
 :::
 
 ::: {.slide title="Sigmoid — squashes to (0, 1)"}
@@ -802,13 +808,16 @@ $$\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1.$$
 @mlp-tanh-function-1
 
 Range $(-1, 1)$ — **zero-centered**, which mildly helps
-optimization compared to sigmoid. Still saturates at the
-tails:
+optimization. Default in RNNs (LSTM cell update, GRU
+candidate hidden state) where bounded activations are
+useful.
+:::
+
+::: {.slide title="Tanh's derivative"}
+Still saturates at both tails — same vanishing-gradient
+issue as sigmoid:
 
 @mlp-tanh-function-2
-
-The default in RNNs (LSTM cell update, GRU candidate hidden
-state) where bounded activations are useful.
 :::
 
 ::: {.slide title="Cheat sheet"}

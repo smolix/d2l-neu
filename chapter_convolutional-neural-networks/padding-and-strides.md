@@ -387,16 +387,13 @@ $n \times n$ image and a $k \times k$ kernel:
 
 $$n \times n \;\longrightarrow\; (n - k + 1) \times (n - k + 1).$$
 
-Every layer chops $k - 1$ pixels off both height and width.
 Stack ten 5×5 layers on a 240×240 image:
 
 $$240 \to 236 \to 232 \to \ldots \to 200.$$
 
-We've sliced 30% of the *area* off — and crucially, *all* of it
-from the boundary. We need ways to control this.
-
-Two knobs: **padding** (fight the shrink, or even grow) and
-**stride** (lean into the shrink, on purpose).
+30% of the area gone — *all* of it from the boundary. Two
+knobs to control this: **padding** (fight the shrink) and
+**stride** (lean into it, on purpose).
 :::
 
 ::: {.slide title="The boundary problem"}
@@ -513,12 +510,9 @@ Most production CNNs are built from these three:
 | **Halve** | 3 | 1 | 2 | $n/2 \times n/2$ |
 | **Patchify** | $k$ | 0 | $k$ | $n/k \times n/k$ |
 
-- *Preserve*: ResNet-style "feature mixing without changing
-  resolution".
-- *Halve*: every "downsample" layer in classic CNN
-  architectures.
-- *Patchify*: ViT's first layer turns a 224×224 image into a
-  14×14 grid of 16×16 patches in one shot.
+*Preserve*: ResNet feature mixing. *Halve*: standard
+downsample layer. *Patchify*: ViT turns 224×224 into a
+14×14 grid of 16×16 patches in one shot.
 :::
 
 ::: {.slide title="Recap"}

@@ -263,22 +263,22 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
 
 ::: {.slide}
 What if different parameters need different learning rates?
-A rare feature gets one update per million steps; a common
-one gets updated every step. Sharing $\eta$ across them
-forces a compromise — too small for the rare features,
-too large for the common ones.
+A rare feature gets updated once per million steps; a
+common one every step. Sharing $\eta$ forces a compromise —
+too small for the rare, too large for the common.
+:::
 
+::: {.slide title="Adagrad"}
 **Adagrad** (Duchi, Hazan, Singer 2011) gives each
-parameter its own adaptive learning rate, scaled by the
-*square root of all past squared gradients*:
+parameter its own learning rate, scaled by the square root
+of all past squared gradients:
 
 $$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,\quad
 \mathbf{x}_t = \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t.$$
 
-Coordinates that have seen large gradients get smaller
-effective steps; rarely-updated coordinates keep larger
-ones. Originally a NLP / sparse-feature trick; the seed of
-all modern adaptive optimizers (RMSProp, Adam, …).
+Coordinates with large gradients shrink their effective
+step; rarely-updated coordinates keep theirs. The seed of
+every modern adaptive optimizer.
 :::
 
 ::: {.slide title="Setup and demo"}

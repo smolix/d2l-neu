@@ -1017,17 +1017,21 @@ net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
 <!-- slides -->
 
 ::: {.slide}
-The pretrained BERT can do NLI off the shelf, near
-state-of-the-art, with one trick: feed `<cls> premise
-<sep> hypothesis <sep>` and stick a 3-way classifier on
-the `<cls>` token. That's it.
+Pretrained BERT does NLI off the shelf, near
+state-of-the-art, with one trick: feed
+`<cls> premise <sep> hypothesis <sep>` and stick a 3-way
+classifier on the `<cls>` token.
 
-This is **the** illustration of why BERT mattered:
-arbitrary sentence-pair classification reduces to a few
-lines of fine-tuning code on top of a pretrained encoder.
+The illustration of why BERT mattered: arbitrary
+sentence-pair classification reduces to a few lines of
+fine-tuning on a pretrained encoder.
+:::
 
-![Pipeline: BERT encoder + small MLP head on `<cls>`.](../img/nlp-map-nli-bert.svg){width=68%}
+::: {.slide title="Pipeline"}
+![BERT encoder + small MLP head on `<cls>`.](../img/nlp-map-nli-bert.svg){width=82%}
+:::
 
+::: {.slide title="Setup"}
 @natural-language-inference-bert-natural-language-inference-fine-tuning-bert
 :::
 

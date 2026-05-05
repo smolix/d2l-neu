@@ -395,9 +395,9 @@ into a vocab + a tensor of vectors:
 . . .
 
 @similarity-analogy-loading-pretrained-word-vectors-3
+:::
 
-. . .
-
+::: {.slide title="Loading GloVe (cont.)"}
 @similarity-analogy-loading-pretrained-word-vectors-4
 
 . . .
@@ -406,8 +406,8 @@ into a vocab + a tensor of vectors:
 :::
 
 ::: {.slide title="Word similarity"}
-$k$ nearest neighbors by cosine distance. Try several
-seed words — synonyms, related concepts, named entities:
+$k$ nearest neighbors by cosine distance. Try seed words:
+synonyms, related concepts, named entities.
 
 @similarity-analogy-word-similarity-1
 
@@ -418,9 +418,9 @@ seed words — synonyms, related concepts, named entities:
 . . .
 
 @similarity-analogy-word-similarity-3
+:::
 
-. . .
-
+::: {.slide title="Word similarity (more)"}
 @similarity-analogy-word-similarity-4
 
 . . .
@@ -430,17 +430,17 @@ seed words — synonyms, related concepts, named entities:
 
 ::: {.slide title="Word analogy"}
 $\mathbf{v}_b - \mathbf{v}_a + \mathbf{v}_c \approx \mathbf{v}_d$ —
-classic A:B :: C:D analogies. Lookup the nearest neighbor
-of the query vector to read out $D$:
+classic A:B :: C:D analogies. Look up the nearest neighbor
+of the query vector to read out $D$.
 
 @similarity-analogy-word-analogy-1
 
 . . .
 
 @similarity-analogy-word-analogy-2
+:::
 
-. . .
-
+::: {.slide title="More analogies"}
 @similarity-analogy-word-analogy-3
 
 . . .

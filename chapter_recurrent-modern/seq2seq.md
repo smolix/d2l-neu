@@ -226,6 +226,17 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         return outputs, state
 ```
 
+:begin_tab:`pytorch`
+PyTorch's `nn.Linear` and `nn.GRU` use Kaiming-style defaults
+out of the box; the seq2seq paper uses Xavier. We define a
+small helper that applies Xavier-uniform to both layer types
+(GRU's recurrent weights are stored in a flat list, hence the
+loop) and call it via `module.apply(init_seq2seq)` after
+construction. MXNet uses `init.Xavier()` directly; Flax/Keras
+take a kernel initializer at layer-construction time, so they
+don't need this helper.
+:end_tab:
+
 ```{.python .input #seq2seq-encoder-1}
 %%tab pytorch
 def init_seq2seq(module):  #@save
@@ -1098,25 +1109,26 @@ BLEU is a popular measure that matches $n$-grams between the predicted sequence 
 <!-- slides -->
 
 ::: {.slide}
-Two RNNs glued together (Sutskever et al., 2014; Cho et al.,
-2014):
+Two RNNs glued together (Sutskever et al., 2014;
+Cho et al., 2014):
 
-- The **encoder** RNN reads English, returning a final hidden
-  state — a fixed-size context vector summarizing the source.
-- The **decoder** RNN, conditioned on that context, generates
-  French token by token until it emits `<eos>`.
+- **Encoder** RNN reads English, returns a final hidden
+  state — a fixed-size context vector summarizing the
+  source.
+- **Decoder** RNN, conditioned on that context, generates
+  French token by token until `<eos>`.
 
-The decoder is just a conditional language model. Training
-uses *teacher forcing*: feed the real French tokens in,
-predict shifted tokens out. At inference, feed the model's
-own previous prediction.
+The decoder is just a conditional language model.
+:::
 
-The bottleneck — squeezing the entire source into one fixed
-vector — motivates attention in the next chapter. But the
-plain seq2seq is the foundation everything else builds on.
+::: {.slide title="The architecture"}
+![Seq2seq with RNN encoder and decoder. `<eos>` ends the sequence; `<bos>` starts decoding.](../img/seq2seq.svg){width=84%}
 
-![Seq2seq with an RNN encoder and an RNN decoder. `<eos>` ends the sequence; `<bos>` starts decoding.](../img/seq2seq.svg){width=78%}
+The single-vector context is a bottleneck — motivates
+attention in the next chapter.
+:::
 
+::: {.slide title="Setup"}
 @seq2seq-sequence-to-sequence-learning-for-machine-translation
 :::
 

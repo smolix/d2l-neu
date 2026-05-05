@@ -1051,9 +1051,9 @@ generator's `tanh` output range):
 . . .
 
 @dcgan-the-pokemon-dataset-1
+:::
 
-. . .
-
+::: {.slide title="Inspecting samples"}
 @dcgan-the-pokemon-dataset-2
 
 . . .

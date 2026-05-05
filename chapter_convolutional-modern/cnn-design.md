@@ -399,22 +399,24 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 <!-- slides -->
 
 ::: {.slide}
-We've seen a sequence of hand-designed architectures (LeNet,
-AlexNet, VGG, GoogLeNet, ResNet, DenseNet) — each one a
-**hypothesis** about what makes nets work. Can we design
-networks more **systematically**?
+We've seen a sequence of hand-designed architectures
+(LeNet → AlexNet → VGG → GoogLeNet → ResNet → DenseNet) —
+each a **hypothesis** about what makes nets work.
 
-**RegNet** (Radosavovic et al., 2020) does exactly that:
+Can we design networks more **systematically**?
+:::
 
-- Define a parametric **design space** (`AnyNet`) — same overall
-  template, lots of free hyperparameters.
-- **Sample many** networks, train each briefly, look at how
+::: {.slide title="RegNet — design space search"}
+**RegNet** (Radosavovic et al., 2020):
+
+- Define a parametric **design space** (`AnyNet`) — same
+  template, free hyperparameters.
+- **Sample many** networks, train each briefly, see how
   accuracy correlates with hyperparameter choices.
-- Constrain the design space based on what works → land on a
-  family of models that beat hand-designed ones.
+- Constrain the design space based on what works.
 
-The result: simple closed-form rules ("set channels with a linear
-function of depth," etc.) outperform years of expert tuning.
+Simple closed-form rules ("width grows linearly with stage")
+outperform years of expert tuning.
 :::
 
 ::: {.slide title="The AnyNet design space"}

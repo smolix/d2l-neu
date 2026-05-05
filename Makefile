@@ -39,8 +39,10 @@ FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 NB_FILES      ?= $(FILES)
 
-# Source files — the ultimate upstream for everything
-SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md)
+# Source files — the ultimate upstream for everything.
+# Includes top-level index.md (landing page), which d2l_preprocess.py
+# converts to index.qmd alongside the chapter files.
+SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md) $(SOURCE)/index.md
 TOOLS   := $(wildcard tools/*.py)
 
 # Logging: each recipe logs to logs/<target>-YYYYMMDD-HHMMSS.log
@@ -132,7 +134,7 @@ html: _book/index.html
 	python3 tools/gen_api_doc.py
 	@touch $@
 
-# Stage 2+3+4: inject (optional) + quarto render + fix numbering
+# Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
 _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building HTML book ==="
@@ -141,8 +143,18 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			echo "Injecting notebook outputs..."; \
 			python3 tools/inject_outputs.py html; \
 		fi; \
+		echo "Building slides manifest (TOC button + landing page)..."; \
+		python3 tools/build_slides_index.py; \
 		quarto render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
+		if [ -d _slides ] && [ -f _slides/index.html ]; then \
+			echo "Integrating _slides/ → _book/slides/ ..."; \
+			rm -rf _book/slides; \
+			mkdir -p _book/slides; \
+			rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
+				--exclude='.gitignore' --exclude='errors/' \
+				_slides/ _book/slides/; \
+		fi; \
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
 # ── Notebooks (generate) ──────────────────────────────────
@@ -282,14 +294,19 @@ all-quick: html pdfs notebooks slides lib
 
 # ── Clean ──────────────────────────────────────────────────
 
+# `clean` preserves expensive state: ./data/ (downloaded datasets),
+# logs/, and .upload-manifest-*.txt (sha256 manifest of the last R2
+# upload — losing it forces a full re-upload). Use `veryclean` to wipe
+# those too.
 clean:
 	rm -rf _book _pdf _notebooks _slides
-	rm -f img/*.pdf .preprocess.stamp d2l/.built
+	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
 	rm -f $(wildcard _pdf/*/.generated)
 	rm -f $(wildcard _slides/*/.built)
-	@echo "Cleaned build artifacts (kept ./data/ and $(LOGDIR)/)"
+	@echo "Cleaned build artifacts (kept ./data/, $(LOGDIR)/, and .upload-manifest-*.txt)"
 
 veryclean: clean
 	rm -rf data $(LOGDIR)
-	@echo "Also deleted ./data/ and $(LOGDIR)/"
+	rm -f .upload-manifest-*.txt
+	@echo "Also deleted ./data/, $(LOGDIR)/, and .upload-manifest-*.txt"

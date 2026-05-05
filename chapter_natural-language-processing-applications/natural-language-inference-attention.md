@@ -802,26 +802,23 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 <!-- slides -->
 
 ::: {.slide}
-**Decomposable Attention** (Parikh et al., 2016) — a small,
-fast model for NLI that beat much more complex
-recurrence-based architectures on SNLI in 2016.
+**Decomposable Attention** (Parikh et al., 2016) — a
+small, fast NLI model that beat much more complex
+recurrence-based architectures on SNLI in 2016. No
+recurrence, no convolution — pure attention + MLPs.
 
-Three steps:
+Three steps: **Attend** → **Compare** → **Aggregate**.
+:::
 
-- **Attend** — soft-align each premise word to a weighted
-  combination of hypothesis words (and vice versa). Uses
-  the chapter's standard scaled-dot-product attention.
-- **Compare** — for each (premise word, aligned
-  hypothesis context), feed both to an MLP.
-- **Aggregate** — sum the comparison vectors over each
-  sentence, concat, feed to a final classifier.
+::: {.slide title="Pipeline"}
+![GloVe → attend → compare → aggregate → 3-way classifier.](../img/nlp-map-nli-attention.svg){width=82%}
+:::
 
-No recurrence, no convolution. Pure attention + MLPs.
+::: {.slide title="The decomposable attention model"}
+![Align premise/hypothesis tokens, then compare and aggregate.](../img/nli-attention.svg){width=82%}
+:::
 
-![Pipeline: GloVe → attend → compare → aggregate → 3-way classifier.](../img/nlp-map-nli-attention.svg){width=68%}
-
-![NLI with attention: align premise/hypothesis tokens, then compare and aggregate.](../img/nli-attention.svg){width=72%}
-
+::: {.slide title="Setup"}
 @natural-language-inference-attention-the-model
 :::
 

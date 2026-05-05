@@ -964,21 +964,20 @@ class BERTModel(keras.Model):
 ::: {.slide}
 **BERT** (Devlin et al., 2018) — bidirectional Transformer
 encoder pretrained on a giant corpus, then fine-tuned to
-arbitrary downstream NLP tasks. Started the NLP "transfer
-learning everywhere" era; everything from sentiment
-classification to question answering became a fine-tuning
-job.
+arbitrary downstream NLP tasks. Started the "pretrain +
+fine-tune" era for NLP.
+:::
 
-Compared to predecessors:
+::: {.slide title="Lineage"}
+- **ELMo** — LSTM, contextual but task-specific architecture.
+- **GPT** — Transformer, unidirectional (left context only).
+- **BERT** — Transformer, *bidirectional* via masked LM,
+  task-agnostic.
 
-- **ELMo** (LSTM, contextual but task-specific architecture).
-- **GPT** (Transformer, unidirectional — only sees left
-  context).
-- **BERT** (Transformer, *bidirectional* via masked LM,
-  task-agnostic).
+![ELMo vs GPT vs BERT.](../img/elmo-gpt-bert.svg){width=82%}
+:::
 
-![ELMo (LSTM) vs GPT (left-to-right Transformer) vs BERT (bidirectional Transformer).](../img/elmo-gpt-bert.svg){width=78%}
-
+::: {.slide title="Setup"}
 @bert-bert-combining-the-best-of-both-worlds
 :::
 

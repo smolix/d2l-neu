@@ -392,24 +392,19 @@ This algorithm converges rapidly (for an analysis and proof see e.g., :citet:`Bo
 <!-- slides -->
 
 ::: {.slide}
-Plain gradient descent is rarely used in deep learning —
-SGD and its descendants do the work — but every issue
-those algorithms encounter shows up here first, in cleaner
-form. Learning-rate sensitivity, divergence, local minima,
-poor conditioning, second-order corrections (Newton): all
-of it.
+Plain gradient descent isn't what trains deep nets — SGD
+and its descendants do — but every issue those methods
+hit shows up here first, in cleaner form: LR sensitivity,
+divergence, local minima, poor conditioning, second-order
+corrections.
 
 The rule:
 
 $$x \leftarrow x - \eta \nabla f(x).$$
 
-The first-order Taylor expansion shows that for small enough
-$\eta > 0$,
-
-$$f(x - \eta f'(x)) \approx f(x) - \eta f'(x)^2 \le f(x).$$
-
-— moving along $-\nabla f$ decreases $f$, locally. The art is
-picking $\eta$.
+A first-order Taylor expansion shows that for small enough
+$\eta$, this decreases $f$ locally. The art is picking
+$\eta$.
 :::
 
 ::: {.slide title="1D demo: $f(x) = x^2$"}
@@ -459,16 +454,16 @@ Same rule on vectors:
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
 
 Demo on $f(x_1, x_2) = x_1^2 + 2 x_2^2$ — anisotropic,
-$x_2$ direction is steeper:
+$x_2$ direction is steeper.
 
 @gd-multivariate-gradient-descent-1
 
 . . .
 
 @gd-multivariate-gradient-descent-2
+:::
 
-. . .
-
+::: {.slide title="Run it"}
 @gd-multivariate-gradient-descent-3
 :::
 

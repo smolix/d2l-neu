@@ -666,75 +666,71 @@ LSTMs can alleviate vanishing and exploding gradients.
 
 ::: {.slide}
 Vanilla RNNs hit a ceiling: gradients vanish across long
-sequences, so the model can't carry information from token 1 to
-token 100. LSTMs (Hochreiter & Schmidhuber, 1997) fix this by
-giving each unit a *memory cell* with a self-loop of weight 1
-and three learned gates that decide when to write, erase, and
-read.
+sequences. **LSTMs** (Hochreiter & Schmidhuber, 1997) fix
+this by giving each unit a *memory cell* with a self-loop
+of weight 1 and three learned gates.
 
-- **Forget gate** $\mathbf{F}_t$ — keep old memory or wipe it.
-- **Input gate** $\mathbf{I}_t$ — let new content in or block it.
-- **Output gate** $\mathbf{O}_t$ — expose the memory to the next
-  layer or hide it.
+- **Forget gate** $\mathbf{F}_t$ — keep or wipe memory.
+- **Input gate** $\mathbf{I}_t$ — let new content in.
+- **Output gate** $\mathbf{O}_t$ — expose or hide memory.
 
-For two decades these were *the* sequence models — the workhorse
-behind speech recognition, translation, and language modeling
-until Transformers took over around 2017.
+For two decades, *the* sequence model — speech, translation,
+language modeling — until Transformers took over (2017).
+:::
 
+::: {.slide title="Setup"}
 @lstm-long-short-term-memory-lstm
 :::
 
 ::: {.slide title="The three gates"}
-Three sigmoid heads sharing the same shape — $X_t$ and $H_{t-1}$
+Three sigmoid heads — $\mathbf{X}_t$ and $\mathbf{H}_{t-1}$
 in, gating values in $(0, 1)$ out:
 
-![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=75%}
-:::
-
-::: {.slide title="Three gates and an input node"}
-Each gate is a sigmoid head sharing the same shape — $X_t$ and
-$H_{t-1}$ in, a value in $(0, 1)$ per hidden unit out:
-
 $$
-\mathbf{I}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),\quad
+\mathbf{I}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),
+$$
+$$
 \mathbf{F}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xf} + \mathbf{H}_{t-1} \mathbf{W}_{hf} + \mathbf{b}_f),
 $$
 $$
 \mathbf{O}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xo} + \mathbf{H}_{t-1} \mathbf{W}_{ho} + \mathbf{b}_o).
 $$
 
-. . .
+![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=78%}
+:::
 
-A fourth head — the *input node* — uses $\tanh$ and proposes
-content to write into memory:
+::: {.slide title="Plus an input node"}
+A fourth head — the *input node* — uses $\tanh$ and
+proposes content to write into memory:
 
 $$\tilde{\mathbf{C}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \mathbf{W}_{hc} + \mathbf{b}_c).$$
 
-Same algebra four times — only the activation and what each
-output controls differ.
+Same algebra four times — only the activation and what
+each output controls differ.
 
-![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=75%}
+![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=78%}
 :::
 
-::: {.slide title="Memory cell update and hidden state"}
-The memory cell mixes the previous state with the new
-proposal, gated elementwise:
+::: {.slide title="Memory cell update"}
+Mix the previous cell with the new proposal, gated
+elementwise:
 
 $$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$
 
-If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$, the cell
-holds its value unchanged across arbitrary horizons. That's the
-constant error carousel that fixes vanishing gradients.
+If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$,
+the cell holds its value unchanged across arbitrary
+horizons. That's the **constant error carousel** that
+fixes vanishing gradients.
 
-![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=72%}
+![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=78%}
+:::
 
-. . .
-
-The hidden state is the gated, squashed cell:
+::: {.slide title="Hidden state"}
+Gated, squashed cell:
 
 $$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
 
-![Computing the hidden state $\mathbf{H}_t$ from $\mathbf{C}_t$ and the output gate.](../img/lstm-3.svg){width=72%}
+![Computing $\mathbf{H}_t$ from $\mathbf{C}_t$ and the output gate.](../img/lstm-3.svg){width=78%}
 :::
 
 ::: {.slide title="From scratch: parameters"}

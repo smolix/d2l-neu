@@ -479,28 +479,25 @@ proper tensor manipulation is needed.
 <!-- slides -->
 
 ::: {.slide}
-A single attention head computes one weighted average over
-values — one notion of "relevance". But a sentence has many
-parallel relations to capture: subject-verb agreement, syntax
-chunks, coreference, topical similarity. Stacking depth
-helps, but doesn't let the same layer attend in different
-ways simultaneously.
+A single attention head computes one weighted average —
+one notion of "relevance". But a sentence has many
+parallel relations: subject-verb agreement, syntax,
+coreference, topical similarity.
 
 **Multi-head attention** runs $h$ independent attention
 mechanisms in parallel, each with its own learned linear
-projections of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$. Each head
-ends up specializing — different ranges, different syntactic
-patterns. Concatenate the head outputs, project once more,
-and you have the layer's output:
+projections of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$.
+Modern Transformers use 8, 16, even 96 heads.
+:::
 
-$$\mathbf{h}_i = f(\mathbf{W}_i^{(q)}\mathbf{q}, \mathbf{W}_i^{(k)}\mathbf{k}, \mathbf{W}_i^{(v)}\mathbf{v}), \quad
-\text{MHA} = \mathbf{W}_o\,[\mathbf{h}_1; \ldots; \mathbf{h}_h].$$
+::: {.slide title="The architecture"}
+$$\mathbf{h}_i = f(\mathbf{W}_i^{(q)}\mathbf{q}, \mathbf{W}_i^{(k)}\mathbf{k}, \mathbf{W}_i^{(v)}\mathbf{v}),$$
+$$\text{MHA} = \mathbf{W}_o\,[\mathbf{h}_1; \ldots; \mathbf{h}_h].$$
 
-Modern Transformers go big here: 8, 16, even 96 heads in
-large LLMs.
+![$h$ projections in parallel, concatenated and linearly transformed.](../img/multi-head-attention.svg){width=72%}
+:::
 
-![Multi-head attention: $h$ projections in parallel, concatenated and linearly transformed.](../img/multi-head-attention.svg){width=65%}
-
+::: {.slide title="Setup"}
 @multihead-attention-multi-head-attention
 :::
 

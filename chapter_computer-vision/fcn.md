@@ -905,21 +905,23 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 <!-- slides -->
 
 ::: {.slide}
-A **fully convolutional network** (Long, Shelhamer, Darrell
-2015) is the simplest path to per-pixel prediction:
+A **fully convolutional network** (Long, Shelhamer,
+Darrell 2015) is the simplest path to per-pixel prediction:
 
 1. Start with a pretrained classification CNN (ResNet).
 2. Strip the global average pool + final dense layer.
-3. Replace with a 1×1 conv that maps to `num_classes`.
-4. Upsample the resulting low-resolution prediction back
-   to input resolution using transposed convolution.
+3. Replace with a 1×1 conv mapping to `num_classes`.
+4. Upsample back to input resolution via transposed conv.
 
-The whole network has no fully connected layers — it works
-on any input size, and outputs a class-score map at input
-resolution.
+No FC layers anywhere — works on any input size, outputs a
+class-score map at input resolution.
+:::
 
-![FCN: pretrained CNN body + 1×1 conv to class scores + transposed conv to upsample.](../img/fcn.svg){width=72%}
+::: {.slide title="Architecture"}
+![FCN: pretrained CNN body + 1×1 conv → class scores → transposed conv to upsample.](../img/fcn.svg){width=82%}
+:::
 
+::: {.slide title="Setup"}
 @fcn-fully-convolutional-networks
 :::
 
@@ -961,9 +963,9 @@ starting point that fine-tunes from there:
 . . .
 
 @fcn-initializing-transposed-convolutional-layers-3
+:::
 
-. . .
-
+::: {.slide title="Bilinear init (cont.)"}
 @fcn-initializing-transposed-convolutional-layers-4
 
 . . .

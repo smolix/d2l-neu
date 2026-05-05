@@ -507,9 +507,9 @@ immediately and the GPU runs in the background:
 . . .
 
 @async-computation-asynchrony-via-backend-1
+:::
 
-. . .
-
+::: {.slide title="Asynchrony (cont.)"}
 @async-computation-asynchrony-via-backend-2
 
 . . .
@@ -522,9 +522,11 @@ The backend tracks dependencies between queued ops; ops
 without dependencies can run in parallel on different
 streams:
 
-![Backend tracks dependencies between graph nodes.](../img/asyncgraph.svg){width=58%}
+![Backend tracks dependencies between graph nodes.](../img/asyncgraph.svg){width=72%}
+:::
 
-![Frontend (Python) and backend (C++/CUDA) interaction.](../img/threading.svg){width=58%}
+::: {.slide title="Frontend ↔ backend"}
+![Python frontend hands ops to a C++/CUDA backend; CUDA stream runs them asynchronously.](../img/threading.svg){width=72%}
 :::
 
 ::: {.slide title="Barriers"}

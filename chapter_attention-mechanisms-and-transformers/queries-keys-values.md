@@ -207,23 +207,24 @@ by which a neural network can select elements from a set and to construct an ass
 
 ::: {.slide}
 The seq2seq encoder squashes the entire source into one
-fixed-size vector — no matter the sentence length. That works
-for short sentences and breaks for long ones.
+fixed-size vector — no matter the sentence length. Works
+for short sentences, breaks for long ones.
+:::
 
-A better idea: borrow from databases. A database is a set of
-$(\text{key}, \text{value})$ pairs; a query retrieves the
-matching value. Attention is the differentiable, soft version
-of that lookup:
+::: {.slide title="Attention as soft database lookup"}
+A database is a set of $(\text{key}, \text{value})$ pairs;
+a query retrieves the matching value. Attention is the
+*differentiable, soft* version:
 
-$$\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^{m} \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i,$$
+$$\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^{m} \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i.$$
 
-where the weights $\alpha$ depend on the compatibility between
-$\mathbf{q}$ and each key. Sharp $\alpha$ acts like a database
-lookup; uniform $\alpha$ acts like average pooling. Everything
-in between — that's "attention".
+Sharp $\alpha$ → database lookup; uniform $\alpha$ →
+average pooling. Everything in between is attention.
 
-![Attention pooling: linear combination over values, weights from query–key compatibility.](../img/qkv.svg){width=60%}
+![Attention pooling: linear combination of values, weights from query–key compatibility.](../img/qkv.svg){width=68%}
+:::
 
+::: {.slide title="Setup"}
 @queries-keys-values-queries-keys-and-values
 :::
 

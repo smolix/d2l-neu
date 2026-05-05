@@ -617,21 +617,23 @@ Different sets of parameters can have different update behaviors within the same
 <!-- slides -->
 
 ::: {.slide}
-The simplest **regularization** technique in the book:
+The simplest **regularization** technique in the book —
+add a penalty on the squared norm of the weights:
 
 $$L_{\text{reg}}(\mathbf{w}, b) =
   L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2.$$
 
-- Add a penalty proportional to the squared $\ell_2$ norm of the
-  weights.
-- The optimizer sees an extra $-\lambda\mathbf{w}$ in the gradient
-  → weights *decay* toward zero each step.
-- One hyperparameter $\lambda$ (`wd` in code) controls how much.
+The optimizer sees an extra $-\lambda\mathbf{w}$ in the
+gradient → weights *decay* toward zero each step. One
+hyperparameter $\lambda$ (`wd` in code) controls how
+much.
 
-Why? An overparameterized model fit to a tiny dataset will memorize
-the noise. Restricting **how big** the weights can grow keeps the
-fit tame.
+Why? An overparameterized model fit to a tiny dataset
+memorizes the noise. Capping how big the weights can grow
+keeps the fit tame.
+:::
 
+::: {.slide title="Setup"}
 @weight-decay
 :::
 

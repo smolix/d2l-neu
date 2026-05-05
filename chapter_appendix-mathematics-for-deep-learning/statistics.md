@@ -615,9 +615,9 @@ estimates → empirical mean and spread:
 . . .
 
 @statistics-evaluating-estimators-in-code-2
+:::
 
-. . .
-
+::: {.slide title="Empirical bias / variance (cont.)"}
 @statistics-evaluating-estimators-in-code-3
 
 . . .

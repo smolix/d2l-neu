@@ -329,20 +329,23 @@ The deep-learning loss is an *average*:
 $$f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^{n} f_i(\mathbf{x}).$$
 
 A full gradient $\nabla f$ costs $\mathcal{O}(n)$ per step.
-On a million-example dataset, that's a million forward
-passes per parameter update.
+A million-example dataset → a million forward passes per
+parameter update. Untenable.
+:::
 
-**Stochastic gradient descent** picks a random example $i$
-and steps with $\nabla f_i$ — $\mathcal{O}(1)$ per step,
-unbiased estimator of the true gradient
-($\mathbb{E}_i \nabla f_i = \nabla f$). Update:
+::: {.slide title="Stochastic gradient descent"}
+Pick a random example $i$ and step with $\nabla f_i$ —
+$\mathcal{O}(1)$ per step, unbiased estimator
+($\mathbb{E}_i \nabla f_i = \nabla f$):
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}).$$
 
-The price: noisy gradients. The noise blurs the descent
-trajectory but also helps escape narrow local minima — a
-double-edged property that this whole chapter unpacks.
+The price: noisy gradients. They blur the trajectory, but
+also help escape narrow local minima — a double-edged
+property this chapter unpacks.
+:::
 
+::: {.slide title="Setup"}
 @sgd-stochastic-gradient-descent
 :::
 
@@ -368,7 +371,10 @@ on how close it gets:
 :::
 
 ::: {.slide title="Why decaying learning rate"}
-The fix: decay $\eta$ over time. Common schedules:
+Constant $\eta$ → $\mathcal{O}(\eta)$ noise floor.
+Decay $\eta$ over time → converges to the minimum.
+
+Common schedules:
 
 - **Inverse**: $\eta_t = \eta_0 / (1 + \beta t)$
 - **Polynomial**: $\eta_t = \eta_0 (1 + \beta t)^{-\alpha}$,
@@ -376,10 +382,9 @@ The fix: decay $\eta$ over time. Common schedules:
 - **Exponential**: $\eta_t = \eta_0 \cdot \alpha^t$,
   $0 < \alpha < 1$
 - **Piecewise constant**: drop by 10× every $K$ epochs
+:::
 
-Constant learning rate ⇒ $\mathcal{O}(\eta)$ noise floor;
-decaying schedule ⇒ converges to the minimum.
-
+::: {.slide title="A decay schedule in code"}
 @sgd-dynamic-learning-rate-1
 :::
 

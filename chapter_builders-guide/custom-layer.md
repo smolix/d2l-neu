@@ -367,25 +367,19 @@ Layers can have local parameters, which can be created through built-in function
 <!-- slides -->
 
 ::: {.slide}
-PyTorch's `torch.nn` has 100+ layer classes. Most networks
-you write will use them and nothing else.
+`torch.nn` ships 100+ layers, but occasionally — a new
+architecture, an unusual normalization, a custom block —
+you need one the framework doesn't have.
 
-But occasionally — a new architecture, a custom loss
-combination, an unusual normalization — you want a layer
-the framework doesn't ship. The good news: writing one is
-trivial. Same `nn.Module` API as everywhere else.
+Writing one is trivial: subclass `nn.Module`, override
+`forward`. Two flavors:
 
-Two flavors to cover:
+- **Stateless** — pure transforms. Just override `forward`.
+- **Stateful** — your own `Linear`, low-rank weight, etc.
+  Wrap learnable tensors in `nn.Parameter`.
 
-- **No parameters** — pure transforms (mean-centering, custom
-  slicing, gating). Just override `forward`.
-- **With parameters** — your own `Linear`, factorized weight
-  matrix, etc. Register tensors with `nn.Parameter` so the
-  optimizer can find them.
-
-In both cases the result composes naturally with built-in
-layers — `Sequential`, `parameters()`, `to(device)`,
-checkpointing all just work.
+The custom layer composes with built-ins automatically —
+`Sequential`, `parameters()`, `to(device)`, checkpointing.
 :::
 
 ::: {.slide title="Stateless layer: a centering operator"}
@@ -430,15 +424,14 @@ Implement a fully-connected layer from scratch. The
 . . .
 
 @custom-layer-layers-with-parameters-2
+:::
 
-After this, `linear = MyLinear(5, 3)` has:
+::: {.slide title="What `nn.Parameter` buys you"}
+After `linear = MyLinear(5, 3)`:
 
-- `linear.weight` (5, 3) and `linear.bias` (3,) tracked
-  parameters.
-- `linear.parameters()` yields both.
-- `optim.SGD(linear.parameters(), …)` updates them.
-- `state_dict()` saves them.
-- `linear.to('cuda')` moves them.
+- `linear.weight` and `linear.bias` are tracked parameters.
+- `linear.parameters()` yields both — feed to the optimizer.
+- `state_dict()` saves them; `linear.to('cuda')` moves them.
 
 All for free, just by declaring `nn.Parameter` in
 `__init__`.

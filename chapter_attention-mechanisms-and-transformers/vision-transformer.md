@@ -562,19 +562,20 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 
 ::: {.slide}
 The Transformer started as a translation model. Could it
-also do *vision*? CNNs ruled image recognition for years —
-translation invariance, locality, weight sharing all baked
-in. Self-attention has none of that. But it scales.
+also do *vision*?
 
-Vision Transformers (Dosovitskiy et al., 2021) take the
-plunge: chop the image into 16×16 patches, treat each patch
-as a "token", run a pure Transformer encoder. With enough
-data (300M images) they outperform ResNets by a large
-margin. With smaller datasets, they still need CNN-style
-inductive biases or heavy regularization.
+**Vision Transformer** (Dosovitskiy et al., 2021): chop the
+image into 16×16 patches, treat each patch as a token, run
+a pure Transformer encoder. With enough data (300M images)
+they outperform ResNets — at smaller scale they still need
+CNN-style biases or heavy regularization.
+:::
 
-![Vision Transformer: patchify → embed + `<cls>` → $n$ encoder blocks → classify from `<cls>` representation.](../img/vit.svg){width=82%}
+::: {.slide title="Architecture"}
+![Patchify → embed + `<cls>` → $n$ encoder blocks → classify from `<cls>` representation.](../img/vit.svg){width=88%}
+:::
 
+::: {.slide title="Setup"}
 @vision-transformer-transformers-for-vision
 :::
 

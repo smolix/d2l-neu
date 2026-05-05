@@ -666,22 +666,21 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 <!-- slides -->
 
 ::: {.slide}
-The optimizer matters; the **learning rate schedule** often
-matters more. With a constant $\eta$ you trade off
+The optimizer matters; the **learning rate schedule**
+often matters more. With a constant $\eta$ you trade off
 fast-but-unstable vs. slow-but-converged. A good schedule
 gets both: aggressive early, careful late.
+:::
 
-Issues to manage:
-
+::: {.slide title="What a schedule manages"}
 - Initial $\eta$ — too large diverges, too small wastes time.
-- Decay over training — a final fine-tuning phase needs
-  smaller $\eta$ for the noise to settle.
-- Optimizer-specific instability — Transformers and
-  fine-grained adaptive optimizers can blow up in the first
-  few hundred steps without warmup.
+- Decay over training — final fine-tuning needs small $\eta$
+  for noise to settle.
+- Early instability — Transformers and adaptive optimizers
+  can blow up in the first few hundred steps without warmup.
+:::
 
-Common schedules:
-
+::: {.slide title="Common schedules"}
 - **Step / multi-step decay** — drop $\eta$ by 10× at
   preset epochs.
 - **Cosine annealing** — smooth decay following a half
@@ -706,9 +705,9 @@ LeNet on Fashion-MNIST as the experimental harness:
 . . .
 
 @lr-scheduler-schedulers-2
+:::
 
-. . .
-
+::: {.slide title="Constant-LR baselines (cont.)"}
 @lr-scheduler-schedulers-3
 
 . . .

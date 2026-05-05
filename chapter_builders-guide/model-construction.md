@@ -820,24 +820,20 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 <!-- slides -->
 
 ::: {.slide}
-Modern networks aren't a flat stack of layers. ResNet-152
-has 152 conv layers, but they're organized into a handful
-of *repeating patterns*. Transformers stack 12, 24, 96
-identical *blocks*. Writing those one layer at a time
-would be miserable.
+Modern networks aren't flat stacks. ResNet-152 has 152
+conv layers, organized into a handful of *repeating
+patterns*. Transformers stack 12, 24, 96 identical
+*blocks*. Writing them one layer at a time would be
+miserable.
 
-Frameworks introduce the **module** abstraction (called
-`nn.Module` in PyTorch, `flax.linen.Module` in JAX, etc.)
-to handle the recursion. A module can be:
+The **module** abstraction (`nn.Module` in PyTorch,
+`flax.linen.Module` in JAX) handles the recursion. A
+module can be a single layer, a block of layers, or the
+whole model — all three are the same Python class.
+:::
 
-- a single layer (`Linear`, `ReLU`, `Conv2d`),
-- a *block* that holds several layers,
-- the *whole model* that holds the blocks.
-
-All three are the same Python class. They compose
-recursively — that's the point.
-
-![Layers compose into modules; modules compose into models.](../img/blocks.svg){width=72%}
+::: {.slide title="Modules compose recursively"}
+![Layers compose into modules; modules compose into models.](../img/blocks.svg){width=88%}
 :::
 
 ::: {.slide title="What every module must do"}
@@ -850,10 +846,8 @@ The framework asks five things of every module:
 4. Store and expose its parameters.
 5. Initialize them (or accept user init).
 
-Subclassing `nn.Module` and writing `__init__` + `forward`
-gets all of this. The base class supplies the bookkeeping —
-`parameters()`, `.to(device)`, `state_dict()`, recursive
-visitation of children — automatically.
+Subclass `nn.Module`, write `__init__` + `forward`, and the
+base class supplies the bookkeeping automatically.
 :::
 
 ::: {.slide title="The simple way: nn.Sequential"}

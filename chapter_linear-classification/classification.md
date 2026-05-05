@@ -167,6 +167,17 @@ def accuracy(self, Y_hat, Y, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
+:begin_tab:`jax`
+The JAX `accuracy` differs from the imperative version in a
+few places. It takes `params` and `state` instead of a
+precomputed `Y_hat` (Flax modules are stateless, so the
+forward pass needs both), reaches into `state.batch_stats` to
+support models with BatchNorm (a no-op for models without it),
+and is decorated with `@jax.jit` for compiled execution. The
+arithmetic that follows the forward pass is identical to the
+other frameworks.
+:end_tab:
+
 ```{.python .input #classification-accuracy-1  n=9}
 %%tab jax
 @d2l.add_to_class(Classifier)  #@save
@@ -181,6 +192,17 @@ def accuracy(self, params, X, Y, state, averaged=True):
     compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
     return d2l.reduce_mean(compare) if averaged else compare
 ```
+
+:begin_tab:`mxnet`
+MXNet's `gluon.Block.collect_params` only finds parameters declared
+through Gluon's `Parameter` machinery — it misses bare `np.ndarray`
+attributes that the from-scratch implementations in this book use.
+We extend `d2l.Module` with a fallback `get_scratch_params` that
+walks attributes recursively, and a `parameters` method that returns
+Gluon's params when present and the scratch params otherwise. The
+other frameworks don't need this — PyTorch's `nn.Module`, TensorFlow
+Keras, and JAX/Flax all expose parameters uniformly.
+:end_tab:
 
 ```{.python .input #classification-accuracy-2  n=10}
 %%tab mxnet

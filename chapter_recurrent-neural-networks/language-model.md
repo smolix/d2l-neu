@@ -341,23 +341,24 @@ large language models form the basis of state-of-the-art systems across diverse 
 <!-- slides -->
 
 ::: {.slide}
-A **language model** assigns a probability to a sequence of
-tokens:
+A **language model** assigns a probability to a sequence
+of tokens:
 
 $$P(x_1, x_2, \dots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 
-That decomposition is the heart of every modern LM — predict the
-next token given everything before it.
+That decomposition is the heart of every modern LM —
+predict the next token given everything before it.
+:::
 
-![Five (input, target) pairs from a length-5 partition: targets are inputs shifted by one.](../img/lang-model-data.svg){width=70%}
+::: {.slide title="Training data: shifted targets"}
+![Five (input, target) pairs from a length-5 partition: targets are inputs shifted by one.](../img/lang-model-data.svg){width=78%}
+:::
 
-This chapter sets up:
-
+::: {.slide title="What this deck sets up"}
 - **n-gram models** with Laplace smoothing — the classical
   baseline.
 - **Perplexity** $= 2^{H}$ — the standard quality metric.
-- **Partitioning** the corpus into training minibatches the
-  model can consume.
+- **Partitioning** the corpus into training minibatches.
 :::
 
 ::: {.slide title="Setup"}

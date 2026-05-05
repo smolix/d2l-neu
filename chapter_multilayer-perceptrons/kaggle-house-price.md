@@ -514,43 +514,38 @@ we can use $K$-fold cross-validation .
 <!-- slides -->
 
 ::: {.slide}
-**House Prices: Advanced Regression Techniques** is one of
-Kaggle's most popular tabular competitions: predict the
-sale price of houses in Ames, Iowa from 80 numeric and
-categorical features. We'll use it as a small but
-realistic end-to-end ML exercise.
+**House Prices: Advanced Regression Techniques** —
+predict sale prices of Ames, Iowa houses from 80 numeric
+and categorical features. A small but realistic end-to-end
+ML exercise.
 
 What makes it interesting:
 
-- **1460 training examples**, 1459 test — small data.
-- **80 features** mixing numeric (`LotArea`, `YearBuilt`)
-  and categorical (`Neighborhood`, `RoofStyle`) — needs
-  *preprocessing*.
+- **1460 train / 1459 test** — small data.
+- **80 mixed features** — needs preprocessing.
 - **Missing values** in dozens of columns.
-- **Targets vary 10×** ($65k to $755k) — the wrong loss
-  function will overweight expensive houses.
+- **Targets vary 10×** ($65k–$755k) — wrong loss
+  overweights expensive houses.
 
-The MLP itself is 5 lines. The real work is the
-**pipeline** around it — preprocessing, the right loss,
-cross-validation, submission. Most production ML is
-plumbing, and that's the lesson of this deck.
+The MLP is 5 lines. The lesson is the **pipeline** around
+it — preprocessing, the right loss, CV, submission.
 :::
 
 ::: {.slide title="Kaggle in 30 seconds"}
-Kaggle hosts open ML competitions. You download train and
-test CSVs, train locally, upload predictions, get scored
-on a held-out portion of the test set:
+Kaggle hosts open ML competitions. Download train + test
+CSVs, train locally, upload predictions, get scored on a
+held-out portion of the test set.
 
-![Kaggle competition page.](../img/kaggle.png){width=68%}
+![Kaggle competition page.](../img/kaggle.png){width=80%}
+:::
 
-The *House Prices* page:
+::: {.slide title="The House Prices page"}
+![The competition's data tab — download and inspect.](../img/house-pricing.png){width=82%}
 
-![The competition's data tab — download and inspect.](../img/house-pricing.png){width=68%}
-
-Real-world ML practice: the data isn't preprocessed for
-you, the leaderboard tells you instantly if you're better
-than baseline, and the public/private split keeps people
-honest about overfitting.
+Real-world ML practice: data isn't preprocessed for you,
+the leaderboard tells you instantly if you're better than
+baseline, and the public/private split keeps people honest
+about overfitting.
 :::
 
 ::: {.slide title="Setup and data download"}
@@ -586,15 +581,16 @@ tensors, not DataFrames — preprocessing is mandatory.
 Apply on **train + test together** so train statistics
 match what we'll see at test time:
 
-1. **Numeric NaN → mean**. Most simple imputation choice;
-   median or zero are alternatives.
-2. **Standardize** numeric columns to mean 0, std 1.
-   Tabular features have wildly different scales
-   (rooms: 1–10, area: 100–60000); standardization makes
-   the optimization well-conditioned.
+1. **Numeric NaN → mean.** Simple imputation; median or
+   zero are alternatives.
+2. **Standardize** numeric columns to mean 0, std 1 —
+   makes optimization well-conditioned across wildly
+   different scales.
 3. **One-hot encode** categorical columns. `NaN` becomes
    its own category — missing-as-a-signal.
+:::
 
+::: {.slide title="The transforms in code"}
 @kaggle-house-price-data-preprocessing-2
 
 . . .
@@ -606,33 +602,23 @@ After preprocessing: ~330 columns of well-scaled floats.
 
 ::: {.slide title="Choosing the right loss"}
 Plain squared error penalizes a $10k mistake on a $70k
-house the same as on a $700k house — but the *relative*
-error tells the more honest story. Predict the
-**logarithm** of the price:
+house the same as on a $700k house. The *relative* error
+is more honest — predict the **logarithm** of the price:
 
 $$\text{RMSLE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \big(\log y_i - \log \hat y_i\big)^2}.$$
 
-This is also the official Kaggle metric for this
-competition. Two equivalent perspectives:
+The official Kaggle metric for this competition. Mistakes
+are measured **as percentages**, not dollars.
+:::
 
-- Train on $\log y$ and use plain RMSE.
-- Train on $y$ and use a log-loss.
-
-Either way, mistakes are measured **as percentages**, not
-dollars.
-
+::: {.slide title="Loss in code"}
 @kaggle-house-price-error-measure
 :::
 
 ::: {.slide title="K-fold cross-validation"}
 With ~1500 training examples, a single 80/20 split is
-noisy — different splits give different validation
-scores by ±0.02 RMSLE.
-
-**K-fold CV**: split the training set into $K$ folds, train
-$K$ times holding each fold out as validation, average the
-scores. Costs $K\times$ more compute, but gives a stable
-estimate of generalization error:
+noisy. **K-fold CV**: split into $K$ folds, train $K$
+times holding each fold out, average the scores.
 
 ```
 fold 1:  [ val ][ train ][ train ][ train ][ train ]
@@ -642,6 +628,11 @@ fold 4:  [train][ train ][ train ][  val  ][ train ]
 fold 5:  [train][ train ][ train ][ train ][  val  ]
 ```
 
+Costs $K\times$ more compute; gives a stable estimate of
+generalization error.
+:::
+
+::: {.slide title="K-fold in code"}
 @kaggle-house-price-k-fold-cross-validation-1
 
 . . .
@@ -665,26 +656,20 @@ Kaggle-format CSV:
 
 @kaggle-house-price-submitting-predictions-on-kaggle
 
-![Upload the CSV; Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=72%}
+![Upload the CSV; Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=84%}
 :::
 
 ::: {.slide title="The general competition recipe"}
 Same shape works for almost any tabular ML competition:
 
 1. **Download** train + test data.
-2. **Preprocess** — impute, scale, encode. Use
-   *combined* statistics so train and test match.
-3. **Choose the right loss** — match the metric the
-   competition is scored on.
-4. **K-fold CV** to estimate generalization error and
-   compare hyperparameters.
-5. **Refit on all training data** with the best
-   hyperparameters.
-6. **Submit** predictions in the format the host
-   requires.
+2. **Preprocess** — impute, scale, encode (combined stats).
+3. **Choose the right loss** — match the scoring metric.
+4. **K-fold CV** for generalization estimate + HP search.
+5. **Refit on all training data** with the best HPs.
+6. **Submit** predictions in the host's format.
 
-Beyond MLPs: gradient-boosted trees (XGBoost / LightGBM)
-typically win tabular competitions; neural networks shine
+GBDTs (XGBoost / LightGBM) usually win tabular; nets shine
 on images, text, audio. The pipeline is the same.
 :::
 

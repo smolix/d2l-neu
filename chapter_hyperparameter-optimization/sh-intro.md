@@ -343,15 +343,17 @@ rung $i$:
 Continue to the next rung with $\eta \times$ the budget,
 $1/\eta$ the number of configs. Total compute roughly
 constant per rung.
+:::
 
+::: {.slide title="Implementation"}
 @sh-intro-successive-halving-1
 
 . . .
 
 @sh-intro-successive-halving-2
+:::
 
-. . .
-
+::: {.slide title="Implementation (cont.)"}
 @sh-intro-successive-halving-3
 
 . . .

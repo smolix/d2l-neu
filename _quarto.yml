@@ -14,6 +14,8 @@ book:
     background: "#2196F3"
     search: true
     right:
+      - text: Slides
+        href: slides/index.html
       - text: Courses
         href: https://courses.d2l.ai
       - text: GitHub
@@ -268,7 +270,9 @@ format:
     code-overflow: wrap
     toc: true
     css: _d2l-style.css
-    include-after-body: _d2l-tabs.html
+    include-after-body:
+      - _d2l-slides-data.html
+      - _d2l-tabs.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

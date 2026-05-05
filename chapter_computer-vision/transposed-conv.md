@@ -519,18 +519,17 @@ multiplication $\mathbf{y} = \mathbf{K}\mathbf{x}$ where
 $\mathbf{K}$ encodes the kernel + stride + padding.
 
 A transposed convolution multiplies by the *transpose*:
-$\mathbf{x}' = \mathbf{K}^\top \mathbf{y}$. That's where the
-name comes from. Same algebra, no learning required to
-follow:
+$\mathbf{x}' = \mathbf{K}^\top \mathbf{y}$. That's where
+the name comes from.
 
 @transposed-conv-connection-to-matrix-transposition-1
 
 . . .
 
 @transposed-conv-connection-to-matrix-transposition-2
+:::
 
-. . .
-
+::: {.slide title="Matrix view (cont.)"}
 @transposed-conv-connection-to-matrix-transposition-3
 
 . . .

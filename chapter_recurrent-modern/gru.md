@@ -523,19 +523,20 @@ They can also skip subsequences by turning on the update gate.
 <!-- slides -->
 
 ::: {.slide}
-LSTMs work, but they're heavy: three gates, an input node, a
-separate cell state. Cho et al. (2014) asked whether the gating
-idea could be kept while collapsing the bookkeeping.
+LSTMs work, but they're heavy: three gates, an input node,
+a separate cell state. Cho et al. (2014) asked whether the
+gating idea could be kept while collapsing the bookkeeping.
 
-The result is the *gated recurrent unit*: two gates, no separate
-cell state, a single hidden state. Often matches LSTM quality on
-language tasks at noticeably lower compute.
+**GRU** = two gates, no separate cell state, a single
+hidden state. Often matches LSTM quality at lower compute.
 
-- **Reset gate** $\mathbf{R}_t$ — how much of the past to mix
-  into the candidate hidden state.
-- **Update gate** $\mathbf{Z}_t$ — convex blend between the old
-  hidden state and the new candidate.
+- **Reset gate** $\mathbf{R}_t$ — how much of the past to
+  mix into the candidate hidden state.
+- **Update gate** $\mathbf{Z}_t$ — convex blend between
+  old hidden state and new candidate.
+:::
 
+::: {.slide title="Setup"}
 @gru-gated-recurrent-units-gru
 :::
 

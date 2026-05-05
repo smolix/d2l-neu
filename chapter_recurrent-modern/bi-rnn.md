@@ -239,24 +239,26 @@ In bidirectional RNNs, the hidden state for each time step is simultaneously det
 <!-- slides -->
 
 ::: {.slide}
-For language modeling we condition only on the past, so a
-left-to-right RNN is fine. But many tasks need both sides:
+LM conditions only on the past, so a left-to-right RNN is
+fine. But many tasks need both sides:
 
 - I am `___`. → "happy"
 - I am `___` hungry. → "very" / "not"
 - I am `___` hungry, and I can eat half a pig. → "very" only
 
-Right-context flips the answer. Bidirectional RNNs (Schuster &
-Paliwal, 1997) handle this by running two RNNs — one forward,
-one backward — and concatenating their hidden states at each
-step.
+Right-context flips the answer. **Bidirectional RNNs**
+(Schuster & Paliwal, 1997) run two RNNs — one forward, one
+backward — and concatenate their hidden states at each step.
+:::
 
-Use case: encoding (POS tagging, NER, BERT-style pretraining).
-*Not* a language model — you'd be cheating, peeking at the
-target.
+::: {.slide title="The architecture"}
+![Forward + backward, hidden states concatenated.](../img/birnn.svg){width=78%}
 
-![Architecture of a bidirectional RNN: forward + backward, hidden states concatenated.](../img/birnn.svg){width=70%}
+Use case: encoding tasks (POS tagging, NER, BERT-style
+pretraining). *Not* an LM — you'd be peeking at the target.
+:::
 
+::: {.slide title="Setup"}
 @bi-rnn-bidirectional-recurrent-neural-networks
 :::
 

@@ -746,24 +746,23 @@ faster than a CPU on the matmul-heavy ops convolutions and
 attention need.
 
 The cost: every tensor and every parameter has a **device**.
-Mix devices in one operation and you crash:
+Mix devices in one operation and you crash.
 
+![Add tensors from different devices: implicit copies are forbidden, you must copy explicitly.](../img/copyto.svg){width=86%}
+:::
+
+::: {.slide title="The two-and-a-half rules"}
 ```
 RuntimeError: Expected all tensors to be on the same device,
 but found at least two devices, cuda:0 and cpu!
 ```
 
-The two rules of GPU programming with deep learning frameworks:
-
 - **Tensors live on a device.** Cross-device operations
   require an explicit copy.
 - **Model parameters live on a device.** Move the model to
   the GPU *before* training; the optimizer's state follows.
-
-Plus an unwritten third rule: cross-device copies are *slow*.
-Avoid them in the inner loop.
-
-![Add tensors from different devices: implicit copies are forbidden, you must copy explicitly.](../img/copyto.svg){width=72%}
+- **Cross-device copies are slow.** Avoid them in the inner
+  loop — copy at the boundary, keep the loop on one device.
 :::
 
 ::: {.slide title="What hardware do we have?"}

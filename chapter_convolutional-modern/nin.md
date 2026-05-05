@@ -316,18 +316,15 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 <!-- slides -->
 
 ::: {.slide}
-**Network-in-Network** (Lin et al., 2014) introduces two ideas
-the rest of the field eats happily:
+**Network-in-Network** (Lin et al., 2014) introduces two
+ideas the rest of the field happily adopts:
 
-- **1×1 convolutions** as a lightweight "MLP per pixel" — adds
-  nonlinearity and channel mixing without spatial cost.
-- **Global average pooling** replaces the giant fully-connected
-  classifier head — one parameter-light pool, *huge* parameter
-  reduction.
+- **1×1 convolutions** as a lightweight "MLP per pixel" —
+  adds nonlinearity and channel mixing without spatial cost.
+- **Global average pooling** replaces the giant FC
+  classifier head — huge parameter reduction.
 
-Result: a network with **no fully-connected layers at all**.
-Less prone to overfitting, faster, and the per-channel feature
-maps are interpretable as class-specific responses.
+![NiN: regular conv followed by two 1×1 convs; ends in global average pool.](../img/nin.svg){width=72%}
 :::
 
 ::: {.slide title="The NiN block"}

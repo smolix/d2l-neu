@@ -110,7 +110,7 @@ we will dive into the pretraining of BERT.
 When natural language processing applications are explained in :numref:`chap_nlp_app`,
 we will illustrate fine-tuning of BERT for downstream applications.
 
-```{.python .input}
+```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
@@ -119,14 +119,14 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -136,7 +136,7 @@ import optax
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -144,7 +144,7 @@ from tensorflow import keras
 import numpy as np
 ```
 
-## [**Input Representation**]
+## Input Representation
 :label:`subsec_bert_input_rep`
 
 In natural language processing,
@@ -174,8 +174,7 @@ The following `get_tokens_and_segments` takes either one sentence or two sentenc
 as input, then returns tokens of the BERT input sequence
 and their corresponding segment IDs.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-input-representation-1}
 #@save
 def get_tokens_and_segments(tokens_a, tokens_b=None):
     """Get tokens of the BERT input sequence and their segment IDs."""
@@ -201,12 +200,12 @@ of the token embeddings, segment embeddings, and positional embeddings.
 of the token embeddings, segment embeddings, and positional embeddings.](../img/bert-input.svg)
 :label:`fig_bert-input`
 
-The following [**`BERTEncoder` class**] is similar to the `TransformerEncoder` class
+The following `BERTEncoder` class is similar to the `TransformerEncoder` class
 as implemented in :numref:`sec_transformer`.
 Different from `TransformerEncoder`, `BERTEncoder` uses
 segment embeddings and learnable positional embeddings.
 
-```{.python .input}
+```{.python .input #bert-input-representation-2}
 #@tab mxnet
 #@save
 class BERTEncoder(nn.Block):
@@ -235,7 +234,7 @@ class BERTEncoder(nn.Block):
         return X
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-2}
 #@tab pytorch
 #@save
 class BERTEncoder(nn.Module):
@@ -264,7 +263,7 @@ class BERTEncoder(nn.Module):
         return X
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-2}
 #@tab jax
 #@save
 class BERTEncoder(nn.Module):
@@ -299,7 +298,7 @@ class BERTEncoder(nn.Module):
         return X
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-2}
 #@tab tensorflow
 #@save
 class BERTEncoder(keras.layers.Layer):
@@ -333,10 +332,10 @@ class BERTEncoder(keras.layers.Layer):
 ```
 
 Suppose that the vocabulary size is 10000.
-To demonstrate forward [**inference of `BERTEncoder`**],
+To demonstrate forward inference of `BERTEncoder`,
 let's create an instance of it and initialize its parameters.
 
-```{.python .input}
+```{.python .input #bert-input-representation-3}
 #@tab mxnet
 vocab_size, num_hiddens, ffn_num_hiddens, num_heads = 10000, 768, 1024, 4
 num_blks, dropout = 2, 0.2
@@ -345,7 +344,7 @@ encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
 encoder.initialize()
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-3}
 #@tab pytorch
 vocab_size, num_hiddens, ffn_num_hiddens, num_heads = 10000, 768, 1024, 4
 ffn_num_input, num_blks, dropout = 768, 2, 0.2
@@ -353,7 +352,7 @@ encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
                       num_blks, dropout)
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-3}
 #@tab jax
 vocab_size, num_hiddens, ffn_num_hiddens, num_heads = 10000, 768, 1024, 4
 ffn_num_input, num_blks, dropout = 768, 2, 0.2
@@ -364,7 +363,7 @@ segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
 params = encoder.init(jax.random.PRNGKey(0), tokens, segments, None)
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-3}
 #@tab tensorflow
 vocab_size, num_hiddens, ffn_num_hiddens, num_heads = 10000, 768, 1024, 4
 num_blks, dropout = 2, 0.2
@@ -380,7 +379,7 @@ whose length is predefined by the hyperparameter `num_hiddens`.
 This hyperparameter is usually referred to as the *hidden size*
 (number of hidden units) of the Transformer encoder.
 
-```{.python .input}
+```{.python .input #bert-input-representation-4}
 #@tab mxnet
 tokens = np.random.randint(0, vocab_size, (2, 8))
 segments = np.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
@@ -388,7 +387,7 @@ encoded_X = encoder(tokens, segments, None)
 encoded_X.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-4}
 #@tab pytorch
 tokens = torch.randint(0, vocab_size, (2, 8))
 segments = torch.tensor([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
@@ -396,7 +395,7 @@ encoded_X = encoder(tokens, segments, None)
 encoded_X.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-4}
 #@tab jax
 tokens = jax.random.randint(jax.random.PRNGKey(0), (2, 8), 0, vocab_size)
 segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
@@ -404,7 +403,7 @@ encoded_X = encoder.apply(params, tokens, segments, None)
 encoded_X.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-input-representation-4}
 #@tab tensorflow
 tokens = tf.random.uniform(shape=(2, 8), minval=0, maxval=vocab_size,
                            dtype=tf.int32)
@@ -424,7 +423,7 @@ for pretraining BERT.
 The pretraining is composed of the following two tasks:
 masked language modeling and next sentence prediction.
 
-### [**Masked Language Modeling**]
+### Masked Language Modeling
 :label:`subsec_mlm`
 
 As illustrated in :numref:`sec_language-model`,
@@ -458,7 +457,7 @@ In forward inference, it takes two inputs:
 the encoded result of `BERTEncoder` and the token positions for prediction.
 The output is the prediction results at these positions.
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-1}
 #@tab mxnet
 #@save
 class MaskLM(nn.Block):
@@ -485,7 +484,7 @@ class MaskLM(nn.Block):
         return mlm_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-1}
 #@tab pytorch
 #@save
 class MaskLM(nn.Module):
@@ -511,7 +510,7 @@ class MaskLM(nn.Module):
         return mlm_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-1}
 #@tab jax
 #@save
 class MaskLM(nn.Module):
@@ -537,7 +536,7 @@ class MaskLM(nn.Module):
         return mlm_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-1}
 #@tab tensorflow
 #@save
 class MaskLM(keras.layers.Layer):
@@ -564,7 +563,7 @@ class MaskLM(keras.layers.Layer):
         return mlm_Y_hat
 ```
 
-To demonstrate [**the forward inference of `MaskLM`**],
+To demonstrate the forward inference of `MaskLM`,
 we create its instance `mlm` and initialize it.
 Recall that `encoded_X` from the forward inference of `BERTEncoder`
 represents 2 BERT input sequences.
@@ -573,7 +572,7 @@ The forward inference of `mlm` returns prediction results `mlm_Y_hat`
 at all the masked positions `mlm_positions` of `encoded_X`.
 For each prediction, the size of the result is equal to the vocabulary size.
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-2}
 #@tab mxnet
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm.initialize()
@@ -582,7 +581,7 @@ mlm_Y_hat = mlm(encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-2}
 #@tab pytorch
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm_positions = torch.tensor([[1, 5, 2], [6, 1, 5]])
@@ -590,7 +589,7 @@ mlm_Y_hat = mlm(encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-2}
 #@tab jax
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm_positions = jnp.array([[1, 5, 2], [6, 1, 5]])
@@ -599,7 +598,7 @@ mlm_Y_hat = mlm.apply(mlm_params, encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-2}
 #@tab tensorflow
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm_positions = tf.constant([[1, 5, 2], [6, 1, 5]])
@@ -610,7 +609,7 @@ mlm_Y_hat.shape
 With the ground truth labels `mlm_Y` of the predicted tokens `mlm_Y_hat` under masks,
 we can calculate the cross-entropy loss of the masked language model task in BERT pretraining.
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-3}
 #@tab mxnet
 mlm_Y = np.array([[7, 8, 9], [10, 20, 30]])
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -618,7 +617,7 @@ mlm_l = loss(mlm_Y_hat.reshape((-1, vocab_size)), mlm_Y.reshape(-1))
 mlm_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-3}
 #@tab pytorch
 mlm_Y = torch.tensor([[7, 8, 9], [10, 20, 30]])
 loss = nn.CrossEntropyLoss(reduction='none')
@@ -626,7 +625,7 @@ mlm_l = loss(mlm_Y_hat.reshape((-1, vocab_size)), mlm_Y.reshape(-1))
 mlm_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-3}
 #@tab jax
 mlm_Y = jnp.array([[7, 8, 9], [10, 20, 30]])
 mlm_l = optax.softmax_cross_entropy_with_integer_labels(
@@ -634,7 +633,7 @@ mlm_l = optax.softmax_cross_entropy_with_integer_labels(
 mlm_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-masked-language-modeling-3}
 #@tab tensorflow
 mlm_Y = tf.constant([[7, 8, 9], [10, 20, 30]])
 loss = keras.losses.SparseCategoricalCrossentropy(
@@ -644,7 +643,7 @@ mlm_l = loss(tf.reshape(mlm_Y, [-1]),
 mlm_l.shape
 ```
 
-### [**Next Sentence Prediction**]
+### Next Sentence Prediction
 :label:`subsec_nsp`
 
 Although masked language modeling is able to encode bidirectional context
@@ -665,7 +664,7 @@ encodes both the two sentences from the input.
 Hence, the output layer (`self.output`) of the MLP classifier takes `X` as input,
 where `X` is the output of the MLP hidden layer whose input is the encoded “&lt;cls&gt;” token.
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-1}
 #@tab mxnet
 #@save
 class NextSentencePred(nn.Block):
@@ -679,7 +678,7 @@ class NextSentencePred(nn.Block):
         return self.output(X)
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-1}
 #@tab pytorch
 #@save
 class NextSentencePred(nn.Module):
@@ -693,7 +692,7 @@ class NextSentencePred(nn.Module):
         return self.output(X)
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-1}
 #@tab jax
 #@save
 class NextSentencePred(nn.Module):
@@ -704,7 +703,7 @@ class NextSentencePred(nn.Module):
         return nn.Dense(2)(X)
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-1}
 #@tab tensorflow
 #@save
 class NextSentencePred(keras.layers.Layer):
@@ -720,10 +719,10 @@ class NextSentencePred(keras.layers.Layer):
         return self.dense(X)
 ```
 
-We can see that [**the forward inference of an `NextSentencePred`**] instance
+We can see that the forward inference of an `NextSentencePred` instance
 returns binary predictions for each BERT input sequence.
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-2}
 #@tab mxnet
 # Use the `<cls>` token (index 0) as input to NSP
 nsp = NextSentencePred()
@@ -732,7 +731,7 @@ nsp_Y_hat = nsp(encoded_X[:, 0, :])
 nsp_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-2}
 #@tab pytorch
 # Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
@@ -741,7 +740,7 @@ nsp_Y_hat = nsp(encoded_X[:, 0, :])
 nsp_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-2}
 #@tab jax
 # Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
@@ -752,7 +751,7 @@ nsp_Y_hat = nsp.apply(nsp_params, cls_X)
 nsp_Y_hat.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-2}
 #@tab tensorflow
 # Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
@@ -763,28 +762,28 @@ nsp_Y_hat.shape
 
 The cross-entropy loss of the 2 binary classifications can also be computed.
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-3}
 #@tab mxnet
 nsp_y = np.array([0, 1])
 nsp_l = loss(nsp_Y_hat, nsp_y)
 nsp_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-3}
 #@tab pytorch
 nsp_y = torch.tensor([0, 1])
 nsp_l = loss(nsp_Y_hat, nsp_y)
 nsp_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-3}
 #@tab jax
 nsp_y = jnp.array([0, 1])
 nsp_l = optax.softmax_cross_entropy_with_integer_labels(nsp_Y_hat, nsp_y)
 nsp_l.shape
 ```
 
-```{.python .input}
+```{.python .input #bert-next-sentence-prediction-3}
 #@tab tensorflow
 nsp_y = tf.constant([0, 1])
 nsp_l = loss(nsp_y, nsp_Y_hat)
@@ -799,7 +798,7 @@ These two text corpora are huge:
 they have 800 million words and 2.5 billion words, respectively.
 
 
-## [**Putting It All Together**]
+## Putting It All Together
 
 When pretraining BERT, the final loss function is a linear combination of
 both the loss functions for masked language modeling and next sentence prediction.
@@ -809,7 +808,7 @@ The forward inference returns the encoded BERT representations `encoded_X`,
 predictions of masked language modeling `mlm_Y_hat`,
 and next sentence predictions `nsp_Y_hat`.
 
-```{.python .input}
+```{.python .input #bert-putting-it-all-together}
 #@tab mxnet
 #@save
 class BERTModel(nn.Block):
@@ -835,7 +834,7 @@ class BERTModel(nn.Block):
         return encoded_X, mlm_Y_hat, nsp_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-putting-it-all-together}
 #@tab pytorch
 #@save
 class BERTModel(nn.Module):
@@ -863,7 +862,7 @@ class BERTModel(nn.Module):
         return encoded_X, mlm_Y_hat, nsp_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-putting-it-all-together}
 #@tab jax
 #@save
 class BERTModel(nn.Module):
@@ -900,7 +899,7 @@ class BERTModel(nn.Module):
         return encoded_X, mlm_Y_hat, nsp_Y_hat
 ```
 
-```{.python .input}
+```{.python .input #bert-putting-it-all-together}
 #@tab tensorflow
 #@save
 class BERTModel(keras.Model):
@@ -959,3 +958,114 @@ class BERTModel(keras.Model):
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1490)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**BERT** (Devlin et al., 2018) — bidirectional Transformer
+encoder pretrained on a giant corpus, then fine-tuned to
+arbitrary downstream NLP tasks. Started the "pretrain +
+fine-tune" era for NLP.
+:::
+
+::: {.slide title="Lineage"}
+- **ELMo** — LSTM, contextual but task-specific architecture.
+- **GPT** — Transformer, unidirectional (left context only).
+- **BERT** — Transformer, *bidirectional* via masked LM,
+  task-agnostic.
+
+![ELMo vs GPT vs BERT.](../img/elmo-gpt-bert.svg){width=82%}
+:::
+
+::: {.slide title="Setup"}
+@bert-bert-combining-the-best-of-both-worlds
+:::
+
+::: {.slide title="Input representation"}
+A BERT input sequence packs in a lot:
+
+- `<cls>` + tokens of segment A + `<sep>` + tokens of
+  segment B + `<sep>`.
+- Three additive embeddings: token, segment (A vs B),
+  position.
+
+![Token + segment + position embeddings, all summed.](../img/bert-input.svg){width=72%}
+
+@bert-input-representation-1
+:::
+
+::: {.slide title="BERTEncoder"}
+A standard Transformer encoder stack on the summed
+embeddings. The pretrained model exposes one hidden
+vector per input position:
+
+@bert-input-representation-2
+:::
+
+::: {.slide title="Encoder shape check"}
+@bert-input-representation-3
+
+. . .
+
+@bert-input-representation-4
+:::
+
+::: {.slide title="Pretraining task 1: Masked LM"}
+Randomly mask 15% of input tokens (replace with `<mask>`
+80% of the time, a random token 10%, leave unchanged
+10%). Train the encoder to predict the originals. Forces
+the model to use *both* left and right context.
+
+@bert-masked-language-modeling-1
+:::
+
+::: {.slide title="MaskLM forward"}
+Gather hidden states at the masked positions; project
+through an MLP head to vocab logits:
+
+@bert-masked-language-modeling-2
+
+. . .
+
+@bert-masked-language-modeling-3
+:::
+
+::: {.slide title="Pretraining task 2: Next Sentence Prediction"}
+Auxiliary binary task: given two segments, are they
+consecutive in the corpus? Trains the `<cls>` token's
+representation to capture sentence-pair relationships
+(useful for QA, NLI):
+
+@bert-next-sentence-prediction-1
+:::
+
+::: {.slide title="NSP head"}
+2-way classifier on the `<cls>` representation:
+
+@bert-next-sentence-prediction-2
+
+. . .
+
+@bert-next-sentence-prediction-3
+:::
+
+::: {.slide title="Putting it together"}
+Encoder + MaskLM head + NSP head, sharing the same
+backbone. Pretrain end-to-end on (masked tokens, NSP
+label) tuples; fine-tune downstream by replacing the
+heads:
+
+@bert-putting-it-all-together
+:::
+
+::: {.slide title="Recap"}
+- BERT = bidirectional Transformer encoder, pretrained
+  with masked LM + next-sentence prediction.
+- Three additive embeddings (token, segment, position) —
+  the "BERT input" recipe.
+- Pretrain once on a huge corpus, fine-tune the head on
+  any classification / tagging / QA task.
+- Successors: RoBERTa (drop NSP, more data), ELECTRA
+  (replaced-token detection), DeBERTa (disentangled
+  attention). All variations on the same template.
+:::

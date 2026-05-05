@@ -2,7 +2,7 @@
 
 In this section, we will practice
 the dog breed identification problem on
-Kaggle. (**The web address of this competition is https://www.kaggle.com/c/dog-breed-identification**)
+Kaggle. The web address of this competition is https://www.kaggle.com/c/dog-breed-identification
 
 In this competition,
 120 different breeds of dogs will be recognized.
@@ -19,7 +19,7 @@ to submit your results.
 :width:`400px`
 :label:`fig_kaggle_dog`
 
-```{.python .input}
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, npx
@@ -29,7 +29,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -38,7 +38,7 @@ from torch import nn
 import os
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -50,7 +50,7 @@ import tensorflow as tf
 import os
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -83,11 +83,10 @@ After unzipping the downloaded file in `../data`, you will find the entire datas
 You may have noticed that the above structure is
 similar to that of the CIFAR-10 competition in :numref:`sec_kaggle_cifar10`, where folders `train/` and `test/` contain training and testing dog images, respectively, and `labels.csv` contains
 the labels for the training images.
-Similarly, to make it easier to get started, [**we provide a small sample of the dataset**] mentioned above: `train_valid_test_tiny.zip`.
+Similarly, to make it easier to get started, we provide a small sample of the dataset mentioned above: `train_valid_test_tiny.zip`.
 If you are going to use the full dataset for the Kaggle competition, you need to change the `demo` variable below to `False`.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-dog-downloading-the-dataset}
 #@save
 d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
                             '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
@@ -101,7 +100,7 @@ else:
     data_dir = os.path.join('..', 'data', 'dog-breed-identification')
 ```
 
-### [**Organizing the Dataset**]
+### Organizing the Dataset
 
 We can organize the dataset similarly to what we did in :numref:`sec_kaggle_cifar10`, namely splitting out
 a validation set from the original training set, and moving images into subfolders grouped by labels.
@@ -109,8 +108,7 @@ a validation set from the original training set, and moving images into subfolde
 The `reorg_dog_data` function below reads
 the training data labels, splits out the validation set, and organizes the training set.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-dog-organizing-the-dataset}
 def reorg_dog_data(data_dir, valid_ratio):
     labels = d2l.read_csv_labels(os.path.join(data_dir, 'labels.csv'))
     d2l.reorg_train_valid(data_dir, labels, valid_ratio)
@@ -122,7 +120,7 @@ valid_ratio = 0.1
 reorg_dog_data(data_dir, valid_ratio)
 ```
 
-## [**Image Augmentation**]
+## Image Augmentation
 
 Recall that this dog breed dataset
 is a subset of the ImageNet dataset,
@@ -133,7 +131,7 @@ The following
 lists a few image augmentation operations
 that might be useful for relatively larger images.
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab mxnet
 transform_train = gluon.data.vision.transforms.Compose([
     # Randomly crop the image to obtain an image with an area of 0.08 to 1 of
@@ -154,7 +152,7 @@ transform_train = gluon.data.vision.transforms.Compose([
                                            [0.229, 0.224, 0.225])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab pytorch
 transform_train = torchvision.transforms.Compose([
     # Randomly crop the image to obtain an image with an area of 0.08 to 1 of
@@ -174,7 +172,7 @@ transform_train = torchvision.transforms.Compose([
                                      [0.229, 0.224, 0.225])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab jax
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -195,7 +193,7 @@ def transform_train_fn(image, label):
     return image, label
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab tensorflow
 IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
 IMAGENET_STD = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
@@ -220,7 +218,7 @@ During prediction,
 we only use image preprocessing operations
 without randomness.
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-2}
 #@tab mxnet
 transform_test = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.Resize(256),
@@ -231,7 +229,7 @@ transform_test = gluon.data.vision.transforms.Compose([
                                            [0.229, 0.224, 0.225])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-2}
 #@tab pytorch
 transform_test = torchvision.transforms.Compose([
     torchvision.transforms.Resize(256),
@@ -242,7 +240,7 @@ transform_test = torchvision.transforms.Compose([
                                      [0.229, 0.224, 0.225])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-2}
 #@tab jax
 def transform_test_fn(image, label):
     """Test preprocessing: resize, center crop, normalize."""
@@ -255,7 +253,7 @@ def transform_test_fn(image, label):
     return image, label
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-image-augmentation-2}
 #@tab tensorflow
 def transform_test_fn(image, label):
     """Test preprocessing: resize, center crop, normalize."""
@@ -268,13 +266,13 @@ def transform_test_fn(image, label):
     return image, label
 ```
 
-## [**Reading the Dataset**]
+## Reading the Dataset
 
 As in :numref:`sec_kaggle_cifar10`,
 we can read the organized dataset
 consisting of raw image files.
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-1}
 #@tab mxnet
 train_ds, valid_ds, train_valid_ds, test_ds = [
     gluon.data.vision.ImageFolderDataset(
@@ -282,7 +280,7 @@ train_ds, valid_ds, train_valid_ds, test_ds = [
     for folder in ('train', 'valid', 'train_valid', 'test')]
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-1}
 #@tab pytorch
 train_ds, train_valid_ds = [torchvision.datasets.ImageFolder(
     os.path.join(data_dir, 'train_valid_test', folder),
@@ -293,7 +291,7 @@ valid_ds, test_ds = [torchvision.datasets.ImageFolder(
     transform=transform_test) for folder in ['valid', 'test']]
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-1}
 #@tab jax
 def _load_image_folder_tf(folder_path):
     """Load images from a class-subfolder directory into a tf.data.Dataset."""
@@ -312,7 +310,7 @@ test_ds = _load_image_folder_tf(
     os.path.join(data_dir, 'train_valid_test', 'test'))
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-1}
 #@tab tensorflow
 def _load_image_folder_tf(folder_path):
     """Load images from a class-subfolder directory into a tf.data.Dataset."""
@@ -335,7 +333,7 @@ Below we create data iterator instances
 the same way
 as in :numref:`sec_kaggle_cifar10`.
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-2}
 #@tab mxnet
 train_iter, train_valid_iter = [gluon.data.DataLoader(
     dataset.transform_first(transform_train), batch_size, shuffle=True,
@@ -350,7 +348,7 @@ test_iter = gluon.data.DataLoader(
     last_batch='keep')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-2}
 #@tab pytorch
 train_iter, train_valid_iter = [torch.utils.data.DataLoader(
     dataset, batch_size, shuffle=True, drop_last=True)
@@ -363,7 +361,7 @@ test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
                                         drop_last=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-2}
 #@tab jax
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
@@ -380,7 +378,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-reading-the-dataset-2}
 #@tab tensorflow
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
@@ -397,7 +395,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-## [**Fine-Tuning a Pretrained Model**]
+## Fine-Tuning a Pretrained Model
 
 Again,
 the dataset for this competition is a subset of the ImageNet dataset.
@@ -433,7 +431,7 @@ In fact,
 this is also consistent with the standardization operation
 by the pretrained model on ImageNet.
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab mxnet
 def get_net(devices):
     finetune_net = gluon.model_zoo.vision.resnet34_v2(pretrained=True)
@@ -449,7 +447,7 @@ def get_net(devices):
     return finetune_net
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab pytorch
 def get_net(devices):
     finetune_net = nn.Sequential()
@@ -467,7 +465,7 @@ def get_net(devices):
     return finetune_net
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab jax
 # Use a pretrained TF ResNet50 to extract features,
 # then train a small Flax output network on top
@@ -492,7 +490,7 @@ def get_net():
     return _resnet_for_features, output_net
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab tensorflow
 def get_net():
     # Load pretrained ResNet50, freeze backbone, add custom head
@@ -510,11 +508,11 @@ def get_net():
     return finetune_net
 ```
 
-Before [**calculating the loss**],
+Before calculating the loss,
 we first obtain the input of the pretrained model's output layer, i.e., the extracted feature.
 Then we use this feature as input for our small custom output network to calculate the loss.
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-2}
 #@tab mxnet
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -531,7 +529,7 @@ def evaluate_loss(data_iter, net, devices):
     return l_sum / n
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-2}
 #@tab pytorch
 loss = nn.CrossEntropyLoss(reduction='none')
 
@@ -546,7 +544,7 @@ def evaluate_loss(data_iter, net, devices):
     return l_sum / n
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-2}
 #@tab jax
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
@@ -598,7 +596,7 @@ def evaluate_loss(data_iter, features_net, output_net, variables):
     return l_sum / n
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-2}
 #@tab tensorflow
 loss = keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
@@ -613,12 +611,12 @@ def evaluate_loss(data_iter, net):
     return l_sum / n
 ```
 
-## Defining [**the Training Function**]
+## Defining the Training Function
 
 We will select the model and tune hyperparameters according to the model's performance on the validation set. The model training function `train` only
 iterates parameters of the small custom output network.
 
-```{.python .input}
+```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab mxnet
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           lr_decay):
@@ -662,7 +660,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           f' examples/sec on {str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab pytorch
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           lr_decay):
@@ -704,7 +702,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           f' examples/sec on {str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab jax
 def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
           wd, lr_period, lr_decay):
@@ -785,7 +783,7 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     return variables
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab tensorflow
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
@@ -829,13 +827,13 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return net
 ```
 
-## [**Training and Validating the Model**]
+## Training and Validating the Model
 
 Now we can train and validate the model.
 The following hyperparameters are all tunable.
 For example, the number of epochs can be increased. Because `lr_period` and `lr_decay` are set to 2 and 0.9, respectively, the learning rate of the optimization algorithm will be multiplied by 0.9 after every 2 epochs.
 
-```{.python .input}
+```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab mxnet
 devices, num_epochs, lr, wd = d2l.try_all_gpus(), 10, 5e-3, 1e-4
 lr_period, lr_decay, net = 2, 0.9, get_net(devices)
@@ -844,7 +842,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab pytorch
 devices, num_epochs, lr, wd = d2l.try_all_gpus(), 10, 1e-4, 1e-4
 lr_period, lr_decay, net = 2, 0.9, get_net(devices)
@@ -852,7 +850,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab jax
 num_epochs, lr, wd = 10, 1e-4, 1e-4
 lr_period, lr_decay = 2, 0.9
@@ -861,7 +859,7 @@ variables = train(features_net, output_net, train_iter, valid_iter,
                   num_epochs, lr, wd, lr_period, lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab tensorflow
 num_epochs, lr, wd = 10, 1e-4, 1e-4
 lr_period, lr_decay = 2, 0.9
@@ -870,7 +868,7 @@ net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
             lr_decay)
 ```
 
-## [**Classifying the Testing Set**] and Submitting Results on Kaggle
+## Classifying the Testing Set and Submitting Results on Kaggle
 
 
 Similar to the final step in :numref:`sec_kaggle_cifar10`,
@@ -878,7 +876,7 @@ in the end all the labeled data (including the validation set) are used for trai
 We will use the trained custom output network
 for classification.
 
-```{.python .input}
+```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab mxnet
 net = get_net(devices)
 net.hybridize()
@@ -899,7 +897,7 @@ with open('submission.csv', 'w') as f:
             [str(num) for num in output]) + '\n')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab pytorch
 net = get_net(devices)
 train(net, train_valid_iter, None, num_epochs, lr, wd, devices, lr_period,
@@ -918,7 +916,7 @@ with open('submission.csv', 'w') as f:
             [str(num) for num in output]) + '\n')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab jax
 features_net, output_net = get_net()
 variables = train(features_net, output_net, train_valid_iter, None,
@@ -942,7 +940,7 @@ with open('submission.csv', 'w') as f:
             [str(num) for num in output]) + '\n')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab tensorflow
 net = get_net()
 net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
@@ -997,3 +995,81 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1481)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A second Kaggle capstone: ImageNet Dogs (120 fine-grained
+breeds). The big difference from CIFAR-10: this is a
+*subset* of ImageNet, so a pretrained ResNet already knows
+*almost everything* about these classes. Fine-tuning is
+the right play.
+
+![Kaggle "Dog Breed Identification" page.](../img/kaggle-dog.jpg){width=72%}
+
+@kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle
+:::
+
+::: {.slide title="Downloading"}
+@kaggle-dog-downloading-the-dataset
+:::
+
+::: {.slide title="Organizing the dataset"}
+Same idea as CIFAR-10 — reshuffle the Kaggle layout into
+`train/<class>/img.jpg` for the standard ImageFolder loader:
+
+@kaggle-dog-organizing-the-dataset
+:::
+
+::: {.slide title="Augmentation"}
+ImageNet-scale augmentation: random resized crop, random
+horizontal flip, color jitter, mean/std normalization with
+*the same statistics* the pretrained backbone expects:
+
+@kaggle-dog-image-augmentation-1
+
+. . .
+
+@kaggle-dog-image-augmentation-2
+:::
+
+::: {.slide title="DataLoaders"}
+@kaggle-dog-reading-the-dataset-1
+
+. . .
+
+@kaggle-dog-reading-the-dataset-2
+:::
+
+::: {.slide title="Fine-tuning a pretrained ResNet-34"}
+Backbone (frozen or with low LR) + new 120-way head:
+
+@kaggle-dog-fine-tuning-a-pretrained-model-1
+
+. . .
+
+@kaggle-dog-fine-tuning-a-pretrained-model-2
+:::
+
+::: {.slide title="Training function"}
+@kaggle-dog-defining-the-training-function
+:::
+
+::: {.slide title="Train"}
+@kaggle-dog-training-and-validating-the-model
+:::
+
+::: {.slide title="Submit predictions"}
+@kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
+
+::: {.slide title="Recap"}
+- ImageNet Dogs ⊂ ImageNet → fine-tuning a pretrained
+  CNN crushes from-scratch training.
+- Standard recipe: pretrained backbone, new 120-way head,
+  ImageNet-scale augmentation, ImageNet normalization.
+- Same shape as the CIFAR-10 deck; only the dataset and
+  the choice "train from scratch vs fine-tune" differ.
+- The general lesson: when your task is close to the
+  pretraining domain, transfer learning beats everything.
+:::

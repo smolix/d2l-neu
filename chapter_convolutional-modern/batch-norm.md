@@ -14,7 +14,7 @@ Together with residual blocks---covered later in :numref:`sec_resnet`---batch no
 has made it possible for practitioners to routinely train networks with over 100 layers.
 A secondary (serendipitous) benefit of batch normalization lies in its inherent regularization.
 
-```{.python .input}
+```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx, init
@@ -22,20 +22,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-batch-normalization}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-batch-normalization}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-batch-normalization}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -270,11 +270,11 @@ and then fix them at prediction time.
 Hence, batch normalization behaves differently during training than at test time.
 Recall that dropout also exhibits this characteristic.
 
-## (**Implementation from Scratch**)
+## Implementation from Scratch
 
 To see how batch normalization works in practice, we implement one from scratch below.
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-1}
 %%tab mxnet
 def batch_norm(X, gamma, beta, moving_mean, moving_var, eps, momentum):
     # Use autograd to determine whether we are in training mode
@@ -304,7 +304,7 @@ def batch_norm(X, gamma, beta, moving_mean, moving_var, eps, momentum):
     return Y, moving_mean, moving_var
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-1}
 %%tab pytorch
 def batch_norm(X, gamma, beta, moving_mean, moving_var, eps, momentum):
     # Use is_grad_enabled to determine whether we are in training mode
@@ -334,7 +334,7 @@ def batch_norm(X, gamma, beta, moving_mean, moving_var, eps, momentum):
     return Y, moving_mean.data, moving_var.data
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-1}
 %%tab tensorflow
 def batch_norm(X, gamma, beta, moving_mean, moving_var, eps):
     # Compute reciprocal of square root of the moving variance elementwise
@@ -345,7 +345,7 @@ def batch_norm(X, gamma, beta, moving_mean, moving_var, eps):
     return Y
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-1}
 %%tab jax
 def batch_norm(X, deterministic, gamma, beta, moving_mean, moving_var, eps,
                momentum):
@@ -378,7 +378,7 @@ def batch_norm(X, deterministic, gamma, beta, moving_mean, moving_var, eps,
     return Y
 ```
 
-We can now [**create a proper `BatchNorm` layer.**]
+We can now create a proper `BatchNorm` layer.
 Our layer will maintain proper parameters
 for scale `gamma` and shift `beta`,
 both of which will be updated in the course of training.
@@ -401,7 +401,7 @@ thus we need to specify the number of features throughout.
 By now all modern deep learning frameworks offer automatic detection of size and shape in the
 high-level batch normalization APIs (in practice we will use this instead).
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab mxnet
 class BatchNorm(nn.Block):
     # `num_features`: the number of outputs for a fully connected layer
@@ -435,7 +435,7 @@ class BatchNorm(nn.Block):
         return Y
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab pytorch
 class BatchNorm(nn.Module):
     # num_features: the number of outputs for a fully connected layer or the
@@ -469,7 +469,7 @@ class BatchNorm(nn.Module):
         return Y
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab tensorflow
 class BatchNorm(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -518,7 +518,7 @@ class BatchNorm(tf.keras.layers.Layer):
         return output
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab jax
 class BatchNorm(nn.Module):
     # `num_features`: the number of outputs for a fully connected layer
@@ -554,7 +554,7 @@ class BatchNorm(nn.Module):
 
 We used `momentum` to govern the aggregation over past mean and variance estimates. This is somewhat of a misnomer as it has nothing whatsoever to do with the *momentum* term of optimization. Nonetheless, it is the commonly adopted name for this term and in deference to API naming convention we use the same variable name in our code.
 
-## [**LeNet with Batch Normalization**]
+## LeNet with Batch Normalization
 
 To see how to apply `BatchNorm` in context,
 below we apply it to a traditional LeNet model (:numref:`sec_lenet`).
@@ -562,7 +562,7 @@ Recall that batch normalization is applied
 after the convolutional layers or fully connected layers
 but before the corresponding activation functions.
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-1}
 %%tab pytorch
 class BNLeNetScratch(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -579,7 +579,7 @@ class BNLeNetScratch(d2l.Classifier):
             nn.LazyLinear(num_classes))
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-1}
 %%tab mxnet
 class BNLeNetScratch(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -599,7 +599,7 @@ class BNLeNetScratch(d2l.Classifier):
         self.initialize()
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-1}
 %%tab tensorflow
 class BNLeNetScratch(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -620,7 +620,7 @@ class BNLeNetScratch(d2l.Classifier):
             tf.keras.layers.Dense(num_classes)])
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-1}
 %%tab jax
 class BNLeNetScratch(d2l.Classifier):
     lr: float = 0.1
@@ -657,7 +657,7 @@ these should be passed to the `mutable` argument, so that Flax returns the mutat
 variables.
 :end_tab:
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-2}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -672,10 +672,10 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), updates) if averaged else (fn(Y_hat, Y), updates)
 ```
 
-As before, we will [**train our network on the Fashion-MNIST dataset**].
+As before, we will train our network on the Fashion-MNIST dataset.
 This code is virtually identical to that when we first trained LeNet.
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-3}
 %%tab mxnet
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -683,7 +683,7 @@ model = BNLeNetScratch(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-3}
 %%tab pytorch
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -692,7 +692,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-3}
 %%tab jax
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -700,7 +700,7 @@ model = BNLeNetScratch(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-3}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128)
@@ -709,33 +709,33 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-Let's [**have a look at the scale parameter `gamma`
-and the shift parameter `beta`**] learned
+Let's have a look at the scale parameter `gamma`
+and the shift parameter `beta` learned
 from the first batch normalization layer.
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-4}
 %%tab mxnet
 model.net[1].gamma.data().reshape(-1,), model.net[1].beta.data().reshape(-1,)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-4}
 %%tab pytorch
 model.net[1].gamma.reshape((-1,)), model.net[1].beta.reshape((-1,))
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-4}
 %%tab tensorflow
 tf.reshape(model.net.layers[1].gamma, (-1,)), tf.reshape(
     model.net.layers[1].beta, (-1,))
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-lenet-with-batch-normalization-4}
 %%tab jax
 trainer.state.params['net']['layers_1']['gamma'].reshape((-1,)), \
 trainer.state.params['net']['layers_1']['beta'].reshape((-1,))
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Compared with the `BatchNorm` class,
 which we just defined ourselves,
@@ -743,7 +743,7 @@ we can use the `BatchNorm` class defined in high-level APIs from the deep learni
 The code looks virtually identical
 to our implementation above, except that we no longer need to provide additional arguments for it to get the dimensions right.
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-1}
 %%tab pytorch
 class BNLeNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -759,7 +759,7 @@ class BNLeNet(d2l.Classifier):
             nn.Sigmoid(), nn.LazyLinear(num_classes))
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-1}
 %%tab tensorflow
 class BNLeNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -784,7 +784,7 @@ class BNLeNet(d2l.Classifier):
             tf.keras.layers.Dense(num_classes)])
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-1}
 %%tab mxnet
 class BNLeNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -804,7 +804,7 @@ class BNLeNet(d2l.Classifier):
         self.initialize()
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-1}
 %%tab jax
 class BNLeNet(d2l.Classifier):
     lr: float = 0.1
@@ -831,12 +831,12 @@ class BNLeNet(d2l.Classifier):
             nn.Dense(self.num_classes)])
 ```
 
-Below, we [**use the same hyperparameters to train our model.**]
+Below, we use the same hyperparameters to train our model.
 Note that as usual, the high-level API variant runs much faster
 because its code has been compiled to C++ or CUDA
 while our custom implementation must be interpreted by Python.
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-2}
 %%tab mxnet
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -844,7 +844,7 @@ model = BNLeNet(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-2}
 %%tab pytorch
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -853,7 +853,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-2}
 %%tab jax
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
@@ -861,7 +861,7 @@ model = BNLeNet(lr=0.1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #batch-norm-concise-implementation-2}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128)
@@ -985,3 +985,87 @@ On a more practical note, there are a number of aspects worth remembering about 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18005)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Batch Normalization** (Ioffe & Szegedy, 2015) is the
+single-biggest stability win in modern deep learning.
+
+At each layer, **normalize** activations within the
+minibatch to zero mean / unit variance, then **rescale**
+with learned $\gamma$ and $\beta$:
+
+$$\text{BN}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x} - \hat\mu_\mathcal{B}}{\sqrt{\hat\sigma_\mathcal{B}^2 + \epsilon}} + \beta.$$
+:::
+
+::: {.slide title="Why it works"}
+- Lets you train **much deeper** nets — gradients stay
+  well-conditioned through the depth.
+- Allows **higher learning rates**; mildly regularizing.
+- **Test time** uses running estimates of mean / variance
+  (no minibatch then).
+- Spawned a family — **LayerNorm** (per-example, used in
+  Transformers), **GroupNorm**, **InstanceNorm**.
+:::
+
+::: {.slide title="From scratch"}
+Compute per-channel mean and variance over the minibatch (and
+spatial dims, for conv); normalize, then scale + shift:
+
+@batch-norm-batch-normalization
+
+@batch-norm-implementation-from-scratch-1
+:::
+
+::: {.slide title="Wrapping as a `Module`"}
+Buffers for `moving_mean` / `moving_var` (updated only during
+training); learnable `gamma` / `beta` parameters:
+
+@batch-norm-implementation-from-scratch-2
+:::
+
+::: {.slide title="LeNet + BatchNorm"}
+Drop a `BatchNorm` layer between each conv/linear and its
+activation:
+
+@batch-norm-lenet-with-batch-normalization-1
+:::
+
+::: {.slide title="Train"}
+Trains noticeably **faster** than vanilla LeNet — same accuracy in
+fewer epochs:
+
+@batch-norm-lenet-with-batch-normalization-3
+
+. . .
+
+After training, `gamma` and `beta` are non-trivial — the layer
+**learned** the scale/shift it wants:
+
+@batch-norm-lenet-with-batch-normalization-4
+:::
+
+::: {.slide title="The framework version"}
+`nn.BatchNorm2d` for conv layers, `nn.BatchNorm1d` for linear
+layers — same idea, much faster, handles the eval/training mode
+switch automatically:
+
+@batch-norm-concise-implementation-1
+
+. . .
+
+@batch-norm-concise-implementation-2
+:::
+
+::: {.slide title="Recap"}
+- BatchNorm normalizes activations to zero mean / unit variance
+  within each minibatch, then **rescales** with learned $\gamma,
+  \beta$.
+- Track running statistics during training; **use them** at
+  inference (no minibatch at test time).
+- Enables much **deeper networks**, **higher LRs**, faster
+  convergence; mildly regularizing.
+- Spawned a family — **LayerNorm** (per-example, used in
+  Transformers), **GroupNorm**, **InstanceNorm**.
+:::

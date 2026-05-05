@@ -17,7 +17,7 @@ algorithms and to confirm that our implementations work as expected.
 For example, if we create data for which the correct parameters are known *a priori*,
 then we can check that our model can in fact recover them.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -26,7 +26,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -34,7 +34,7 @@ import torch
 import random
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -42,7 +42,7 @@ import tensorflow as tf
 import random
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -68,7 +68,7 @@ a *ground truth* linear function,
 corrupting them via additive noise $\boldsymbol{\epsilon}$, 
 drawn independently and identically for each example:
 
-(**$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$**)
+$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
 
 For convenience we assume that $\boldsymbol{\epsilon}$ is drawn 
 from a normal distribution with mean $\mu= 0$ 
@@ -79,7 +79,7 @@ It is good practice to allow the setting of any additional hyperparameters.
 We accomplish this with `save_hyperparameters()`. 
 The `batch_size` will be determined later.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab pytorch
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -93,7 +93,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab tensorflow
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -107,7 +107,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab jax
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -123,7 +123,7 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab mxnet
 class SyntheticRegressionData(d2l.DataModule):  #@save
     """Synthetic data for linear regression."""
@@ -140,15 +140,13 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
 Below, we set the true parameters to $\mathbf{w} = [2, -3.4]^\top$ and $b = 4.2$.
 Later, we can check our estimated parameters against these *ground truth* values.
 
-```{.python .input}
-%%tab all
+```{.python .input #synthetic-regression-data-generating-the-dataset-2}
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
-[**Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar.**] Let's have a look at the first entry.
+Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar. Let's have a look at the first entry.
 
-```{.python .input}
-%%tab all
+```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 print('features:', data.X[0],'\nlabel:', data.y[0])
 ```
 
@@ -158,17 +156,17 @@ Training machine learning models often requires multiple passes over a dataset,
 grabbing one minibatch of examples at a time. 
 This data is then used to update the model. 
 To illustrate how this works, we 
-[**implement the `get_dataloader` method,**] 
+implement the `get_dataloader` method, 
 registering it in the `SyntheticRegressionData` class via `add_to_class` (introduced in :numref:`oo-design-utilities`).
-It (**takes a batch size, a matrix of features,
-and a vector of labels, and generates minibatches of size `batch_size`.**)
+It takes a batch size, a matrix of features,
+and a vector of labels, and generates minibatches of size `batch_size`.
 As such, each minibatch consists of a tuple of features and labels. 
 Note that we need to be mindful of whether we're in training or validation mode: 
 in the former, we will want to read the data in random order, 
 whereas for the latter, being able to read data in a pre-defined order 
 may be important for debugging purposes.
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab pytorch
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -183,7 +181,7 @@ def get_dataloader(self, train):
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab tensorflow
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -198,7 +196,7 @@ def get_dataloader(self, train):
         yield tf.gather(self.X, j), tf.gather(self.y, j)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab jax
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -213,7 +211,7 @@ def get_dataloader(self, train):
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-reading-the-dataset-1}
 %%tab mxnet
 @d2l.add_to_class(SyntheticRegressionData)
 def get_dataloader(self, train):
@@ -232,8 +230,7 @@ To build some intuition, let's inspect the first minibatch of
 data. Each minibatch of features provides us with both its size and the dimensionality of input features.
 Likewise, our minibatch of labels will have a matching shape given by `batch_size`.
 
-```{.python .input}
-%%tab all
+```{.python .input #synthetic-regression-data-reading-the-dataset-2}
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
 ```
@@ -262,7 +259,7 @@ Next let's try to implement the same method using built-in iterators.
 ## Concise Implementation of the Data Loader
 
 Rather than writing our own iterator,
-we can [**call the existing API in a framework to load data.**]
+we can call the existing API in a framework to load data.
 As before, we need a dataset with features `X` and labels `y`. 
 Beyond that, we set `batch_size` in the built-in data loader 
 and let it take care of shuffling examples  efficiently.
@@ -275,7 +272,7 @@ and JAX suggests using them instead. Here we will grab TensorFlow’s data loade
 and modify it slightly to make it work with JAX.
 :end_tab:
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab pytorch
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -285,7 +282,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
                                        shuffle=train)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab tensorflow
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -295,7 +292,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         buffer_size=shuffle_buffer).batch(self.batch_size)
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab jax
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -313,7 +310,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         ).batch(self.batch_size, drop_remainder=train))
 ```
 
-```{.python .input}
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab mxnet
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
@@ -323,8 +320,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
                                  shuffle=train)
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-2}
 @d2l.add_to_class(SyntheticRegressionData)  #@save
 def get_dataloader(self, train):
     i = slice(0, self.num_train) if train else slice(self.num_train, None)
@@ -333,8 +329,7 @@ def get_dataloader(self, train):
 
 The new data loader behaves just like the previous one, except that it is more efficient and has some added functionality.
 
-```{.python .input  n=4}
-%%tab all
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-3  n=4}
 X, y = next(iter(data.train_dataloader()))
 print('X shape:', X.shape, '\ny shape:', y.shape)
 ```
@@ -344,8 +339,7 @@ supports the built-in `__len__` method,
 so we can query its length, 
 i.e., the number of batches.
 
-```{.python .input}
-%%tab all
+```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-4}
 len(data.train_dataloader())
 ```
 
@@ -397,3 +391,90 @@ We will put this to good use in the next section.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17975)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Before we train a model we need **data**. For pedagogy, we'll
+synthesize it — known weights, known noise, and a guaranteed
+correct answer to compare against:
+
+$$\mathbf{y} = \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon},
+  \quad \boldsymbol{\epsilon} \sim \mathcal{N}(0, \sigma^2 I).$$
+
+This chapter:
+
+- Subclass `DataModule` to generate the synthetic batch.
+- Roll a hand-written minibatch sampler (to see how it works).
+- Swap in the framework's built-in dataloader (the version we'll
+  actually use).
+:::
+
+::: {.slide title="Generating the dataset"}
+A `DataModule` subclass that draws features and computes labels
+in `__init__`:
+
+@synthetic-regression-data
+
+@synthetic-regression-data-generating-the-dataset-1
+
+. . .
+
+Instantiate with the true `w = [2, -3.4]`, `b = 4.2`:
+
+@synthetic-regression-data-generating-the-dataset-2
+:::
+
+::: {.slide title="Inspecting one example"}
+Each row of `features` is a vector in $\mathbb{R}^2$; the
+corresponding `label` is a scalar:
+
+@synthetic-regression-data-generating-the-dataset-3
+:::
+
+::: {.slide title="A handwritten dataloader"}
+`get_dataloader` shuffles indices, then yields minibatches of
+size `batch_size`:
+
+@synthetic-regression-data-reading-the-dataset-1
+
+. . .
+
+@synthetic-regression-data-reading-the-dataset-2
+
+Educational, but slow — Python loops over indices, no
+prefetching, no parallelism.
+:::
+
+::: {.slide title="The framework dataloader"}
+For real work, wrap features and labels in the framework's
+built-in dataset / dataloader (workers, prefetch, GPU pinning):
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-1
+
+. . .
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
+:::
+
+::: {.slide title="Same minibatch interface"}
+Identical iteration protocol from the caller's POV:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-3
+
+. . .
+
+`len(dl)` reports the number of batches per epoch — convenient
+for progress bars:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-4
+:::
+
+::: {.slide title="Recap"}
+- Synthetic data → ground-truth `w`, `b` you can compare against
+  later.
+- `DataModule` subclasses encapsulate "where do batches come
+  from?" once, reusable across models.
+- Hand-rolled iterator vs. framework dataloader — same protocol;
+  framework version wins on speed and ergonomics.
+:::

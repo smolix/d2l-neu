@@ -41,26 +41,26 @@ can greatly simplify the task of specifying
 and subsequently modifying our models.
 Next, we go deeper into the mechanics of initialization.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-1}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -70,19 +70,19 @@ from jax import numpy as jnp
 
 To begin, let's instantiate an MLP.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(256, activation='relu'))
 net.add(nn.Dense(10))
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Dense(256, activation=tf.nn.relu),
@@ -90,7 +90,7 @@ net = tf.keras.models.Sequential([
 ])
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-2}
 %%tab jax
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 ```
@@ -120,18 +120,18 @@ imperative frameworks; the JAX path simply runs `net.init(...)` once and
 proceeds.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab mxnet
 print(net.collect_params)
 print(net.collect_params())
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab pytorch
 net[0].weight
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-3}
 %%tab tensorflow
 [net.layers[i].get_weights() for i in range(len(net.layers))]
 ```
@@ -154,7 +154,7 @@ Using `net.get_weights()` would throw an error since the weights
 have not been initialized yet.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-4}
 %%tab mxnet
 net.initialize()
 net.collect_params()
@@ -172,7 +172,7 @@ to initialize the parameters.
 Next let's pass data through the network
 to make the framework finally initialize parameters.
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab mxnet
 X = np.random.uniform(size=(2, 20))
 net(X)
@@ -180,7 +180,7 @@ net(X)
 net.collect_params()
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab pytorch
 X = torch.rand(2, 20)
 net(X)
@@ -188,14 +188,14 @@ net(X)
 net[0].weight.shape
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab tensorflow
 X = tf.random.uniform((2, 20))
 net(X)
 [w.shape for w in net.get_weights()]
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-5}
 %%tab jax
 params = net.init(d2l.get_key(), jnp.zeros((2, 20)))
 jax.tree_util.tree_flatten_with_path(
@@ -235,7 +235,7 @@ Ultimately the method initializes the model returning the parameters.
 We have been using it under the hood in the previous sections as well.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-6}
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
 def apply_init(self, inputs, init=None):
@@ -244,7 +244,7 @@ def apply_init(self, inputs, init=None):
         self.net.apply(init)
 ```
 
-```{.python .input}
+```{.python .input #lazy-init-lazy-initialization-6}
 %%tab jax
 @d2l.add_to_class(d2l.Module)  #@save
 def apply_init(self, dummy_input, key):
@@ -279,3 +279,110 @@ We can pass data through the model to make the framework finally initialize para
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17992)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Lazy initialization** lets you declare a layer's *output*
+size without specifying its *input* size:
+
+```python
+nn.LazyLinear(256)   # only num_outputs!
+```
+
+The framework defers allocating the weight tensor until the
+first forward pass — when it has seen real data and can
+infer shapes from the upstream output.
+
+In old frameworks: `nn.Linear(in_features=20, out_features=256)`.
+Now: `nn.LazyLinear(256)` — less arithmetic, fewer bugs when
+you change the architecture.
+:::
+
+::: {.slide title="The cascade"}
+```
+declare layer  -->  shapes UNKNOWN, no params yet
+       │
+       │  nn.LazyLinear(256)
+       ▼
+declare model  -->  same — placeholders
+       │
+       │  net = Sequential(...)
+       ▼
+forward(X)     -->  X.shape known → infer first layer
+       │              first layer output → second layer input
+       │              ... cascade through the model
+       ▼
+parameters allocated, model usable, optimizer can see them
+```
+:::
+
+::: {.slide title="Why this matters more than it seems"}
+Hand-counting input dims is painful in real architectures:
+
+- A CNN's flattened feature map depends on the input image
+  size *and* every previous layer's stride/padding.
+- Adding a layer in the middle changes every following
+  layer's `in_features`.
+- Variable-length sequences (RNNs, Transformers) make
+  shapes data-dependent.
+
+Pre-lazy code was full of $16 \cdot 5 \cdot 5 = 400$
+"compute the flatten size by hand" comments. Lazy init
+removes that bookkeeping — declare *outputs*, let *inputs*
+come from data.
+:::
+
+::: {.slide title="Setup"}
+@lazy-init-lazy-initialization-1
+
+. . .
+
+@lazy-init-lazy-initialization-2
+:::
+
+::: {.slide title="Before forward: no parameters yet"}
+Inspect the first layer's weight: it's a placeholder, not
+an allocated tensor:
+
+@lazy-init-lazy-initialization-3
+
+The framework has registered the *intent* to create a
+weight, but can't allocate one until it sees the input
+shape.
+:::
+
+::: {.slide title="One forward pass materializes everything"}
+Pass any tensor through. Now the framework knows
+`X.shape == (2, 20)` → first layer is `Linear(20, 256)` →
+second layer's input is 256 → second is `Linear(256, 10)`:
+
+@lazy-init-lazy-initialization-5
+
+After this, every layer has concrete `weight` and `bias`
+you can inspect, save, optimize.
+:::
+
+::: {.slide title="Tying lazy init to a custom initializer"}
+The trick combines naturally with custom init: do the
+forward to materialize, *then* run your initializer:
+
+@lazy-init-lazy-initialization-6
+
+This is what `d2l.Module.apply_init(...)` does behind the
+scenes. The same pattern works for loading pretrained
+weights, swapping random init for a curated one, etc.
+:::
+
+::: {.slide title="Recap"}
+- Lazy init: declare layer outputs, let inputs come from
+  data.
+- Parameter buffers are allocated on the *first* forward
+  pass after seeing the input shape.
+- Saves you from hand-computing `in_features` for every
+  layer in deep / variable-shape architectures.
+- Combine with custom initialization by doing one dummy
+  forward, then `apply_init`.
+- Limitations: can't `optim.SGD(net.parameters())` until
+  parameters exist — pass data once first.
+:::

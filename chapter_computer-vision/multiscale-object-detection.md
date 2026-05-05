@@ -43,7 +43,7 @@ To demonstrate how to generate anchor boxes
 at multiple scales, let's read an image.
 Its height and width are 561 and 728 pixels, respectively.
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -56,7 +56,7 @@ h, w = img.shape[:2]
 h, w
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -67,7 +67,7 @@ h, w = img.shape[:2]
 h, w
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -80,7 +80,7 @@ h, w = img.shape[:2]
 h, w
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -99,7 +99,7 @@ we can determine centers of uniformly sampled anchor boxes  on any image.
 
 
 The `display_anchors` function is defined below.
-[**We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center.**]
+We generate anchor boxes (`anchors`) on the feature map (`fmap`) with each unit (pixel) as the anchor box center.
 Since the $(x, y)$-axis coordinate values
 in the anchor boxes (`anchors`) have been divided by the width and height of the feature map (`fmap`),
 these values are between 0 and 1,
@@ -120,7 +120,7 @@ Centered on these uniformly sampled pixels,
 anchor boxes of scale `s` (assuming the length of the list `s` is 1) and different aspect ratios (`ratios`)
 will be generated.
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-2}
 #@tab mxnet
 def display_anchors(fmap_w, fmap_h, s):
     d2l.set_figsize()
@@ -132,7 +132,7 @@ def display_anchors(fmap_w, fmap_h, s):
                     anchors[0] * bbox_scale)
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-2}
 #@tab pytorch
 def display_anchors(fmap_w, fmap_h, s):
     d2l.set_figsize()
@@ -144,7 +144,7 @@ def display_anchors(fmap_w, fmap_h, s):
                     anchors[0] * bbox_scale)
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-2}
 #@tab jax
 def display_anchors(fmap_w, fmap_h, s):
     d2l.set_figsize()
@@ -156,7 +156,7 @@ def display_anchors(fmap_w, fmap_h, s):
                     anchors[0] * bbox_scale)
 ```
 
-```{.python .input}
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-2}
 #@tab tensorflow
 def display_anchors(fmap_w, fmap_h, s):
     d2l.set_figsize()
@@ -168,30 +168,27 @@ def display_anchors(fmap_w, fmap_h, s):
                     anchors[0] * bbox_scale)
 ```
 
-First, let's [**consider
-detection of small objects**].
+First, let's consider
+detection of small objects.
 In order to make it easier to distinguish when displayed, the anchor boxes with different centers here do not overlap:
 the anchor box scale is set to 0.15
 and the height and width of the feature map are set to 4. We can see
 that the centers of the anchor boxes in 4 rows and 4 columns on the image are uniformly distributed.
 
-```{.python .input}
-#@tab all
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-3}
 display_anchors(fmap_w=4, fmap_h=4, s=[0.15])
 ```
 
-We move on to [**reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects**]. When the scale is set to 0.4, 
+We move on to reduce the height and width of the feature map by half and use larger anchor boxes to detect larger objects. When the scale is set to 0.4, 
 some anchor boxes will overlap with each other.
 
-```{.python .input}
-#@tab all
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-4}
 display_anchors(fmap_w=2, fmap_h=2, s=[0.4])
 ```
 
-Finally, we [**further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8**]. Now the center of the anchor box is the center of the image.
+Finally, we further reduce the height and width of the feature map by half and increase the anchor box scale to 0.8. Now the center of the anchor box is the center of the image.
 
-```{.python .input}
-#@tab all
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-5}
 display_anchors(fmap_w=1, fmap_h=1, s=[0.8])
 ```
 
@@ -292,3 +289,68 @@ in :numref:`sec_ssd`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1607)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A single feature map can't detect objects at all scales —
+small objects are tiny on the deep feature maps, large
+objects don't fit in the receptive field of the early
+ones. The fix: generate anchors on **multiple feature
+maps**, each tuned to a different size range.
+
+The recipe — used by SSD and FPN:
+
+- Early feature map (high resolution) → small anchors for
+  small objects.
+- Middle feature map → medium anchors.
+- Deep feature map (low resolution, large receptive
+  field) → large anchors.
+
+Each feature map gets its own classification + regression
+heads. Predictions from all maps are concatenated, then
+NMS prunes the result.
+:::
+
+::: {.slide title="Setup"}
+@multiscale-object-detection-multiscale-anchor-boxes-1
+:::
+
+::: {.slide title="Anchors on a feature map"}
+Tile each pixel of the feature map with $n + m - 1$
+anchors. The pixel positions back-project to image coords:
+
+@multiscale-object-detection-multiscale-anchor-boxes-2
+:::
+
+::: {.slide title="Small objects on a fine map"}
+$4 \times 4$ feature map, small anchor scale → dense
+coverage of small image regions:
+
+@multiscale-object-detection-multiscale-anchor-boxes-3
+:::
+
+::: {.slide title="Medium objects on a coarser map"}
+$2 \times 2$ feature map, larger anchor scale — fewer
+anchors, each covering more area:
+
+@multiscale-object-detection-multiscale-anchor-boxes-4
+:::
+
+::: {.slide title="Large objects on the coarsest map"}
+$1 \times 1$ feature map, anchor scale 0.8 — the whole
+image as a single anchor, with several aspect ratios:
+
+@multiscale-object-detection-multiscale-anchor-boxes-5
+:::
+
+::: {.slide title="Recap"}
+- Multiscale = anchors generated on several feature maps
+  at different resolutions.
+- Each feature map handles its own size range; total
+  anchor count grows linearly with #scales.
+- The basis of SSD's pyramid; FPN improves on this with
+  top-down feature merging.
+- Modern detectors (RetinaNet, FCOS, DETR) all rely on
+  some multiscale prior.
+:::

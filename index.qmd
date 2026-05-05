@@ -240,6 +240,62 @@ page-layout: full
   margin-top: 0.15rem;
 }
 
+/* ── Contributors (smaller grid for chapter & framework leads) ─ */
+.d2l-contrib-group {
+  margin-top: 1.75rem;
+}
+.d2l-contrib-group:first-child { margin-top: 0; }
+.d2l-contrib-group h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--d2l-ink);
+  margin: 0 0 1rem;
+  letter-spacing: -0.005em;
+}
+.d2l-contrib-group h3 .chapter-name {
+  color: var(--d2l-ink-3);
+  font-weight: 500;
+}
+.d2l-contributors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.25rem;
+}
+.d2l-contributor {
+  text-align: center;
+  margin: 0;
+}
+.d2l-contributor a {
+  text-decoration: none !important;
+  color: inherit !important;
+  display: block;
+}
+.d2l-contributor img {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--d2l-line), 0 4px 12px -8px rgba(15, 23, 42, 0.2);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+.d2l-contributor a:hover img {
+  box-shadow: 0 0 0 1px var(--d2l-blue-light), 0 6px 18px -6px rgba(33, 150, 243, 0.35);
+  transform: translateY(-1px);
+}
+.d2l-contributor .name {
+  display: block;
+  font-weight: 600;
+  color: var(--d2l-ink);
+  margin-top: 0.6rem;
+  font-size: 0.9375rem;
+}
+.d2l-contributor .affil {
+  display: block;
+  color: var(--d2l-ink-3);
+  font-size: 0.8125rem;
+  margin-top: 0.1rem;
+}
+
 /* ── Universities ─────────────────────────────────────────── */
 .d2l-universities {
   background: var(--d2l-bg-soft);
@@ -446,6 +502,139 @@ page-layout: full
       <img src="static/landing/alex.jpg" alt="Alexander J. Smola">
       <span class="name">Alexander J. Smola</span>
       <span class="affil">Boson AI &middot; CMU</span>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Chapter contributors</h2>
+  <p style="color: var(--d2l-ink-3); margin: -0.5rem 0 1.75rem; max-width: 50rem;">Specialist authors who led the writing of individual chapters in the second volume.</p>
+
+  <div class="d2l-contrib-group">
+    <h3>Reinforcement Learning</h3>
+    <div class="d2l-contributors">
+      <figure class="d2l-contributor">
+        <a href="https://pratikac.github.io/">
+          <img src="static/landing/pratik.jpg" alt="Pratik Chaudhari">
+          <span class="name">Pratik Chaudhari</span>
+          <span class="affil">UPenn &middot; Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="https://sites.google.com/site/rfakoor">
+          <img src="static/landing/rasool.jpg" alt="Rasool Fakoor">
+          <span class="name">Rasool Fakoor</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="https://cs.brown.edu/~kasadiat/">
+          <img src="static/landing/kavosh.jpg" alt="Kavosh Asadi">
+          <span class="name">Kavosh Asadi</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+    </div>
+  </div>
+
+  <div class="d2l-contrib-group">
+    <h3>Gaussian Processes</h3>
+    <div class="d2l-contributors">
+      <figure class="d2l-contributor">
+        <a href="https://cims.nyu.edu/~andrewgw/">
+          <img src="static/landing/andrew.jpg" alt="Andrew Gordon Wilson">
+          <span class="name">Andrew Gordon Wilson</span>
+          <span class="affil">NYU &middot; Amazon</span>
+        </a>
+      </figure>
+    </div>
+  </div>
+
+  <div class="d2l-contrib-group">
+    <h3>Hyperparameter Optimization</h3>
+    <div class="d2l-contributors">
+      <figure class="d2l-contributor">
+        <a href="https://aaronkl.github.io/">
+          <img src="static/landing/aaron.jpg" alt="Aaron Klein">
+          <span class="name">Aaron Klein</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="https://mseeger.github.io/">
+          <img src="static/landing/matthias.jpg" alt="Matthias Seeger">
+          <span class="name">Matthias Seeger</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="http://www0.cs.ucl.ac.uk/staff/c.archambeau/">
+          <img src="static/landing/cedric.png" alt="Cedric Archambeau">
+          <span class="name">Cedric Archambeau</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+    </div>
+  </div>
+
+  <div class="d2l-contrib-group">
+    <h3>Recommender Systems</h3>
+    <div class="d2l-contributors">
+      <figure class="d2l-contributor">
+        <a href="https://shuaizhang.tech/">
+          <img src="static/landing/shuai.jpg" alt="Shuai Zhang">
+          <span class="name">Shuai Zhang</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="https://vanzytay.github.io/">
+          <img src="static/landing/yi.jpg" alt="Yi Tay">
+          <span class="name">Yi Tay</span>
+          <span class="affil">Google</span>
+        </a>
+      </figure>
+    </div>
+  </div>
+
+  <div class="d2l-contrib-group">
+    <h3>Mathematics for Deep Learning</h3>
+    <div class="d2l-contributors">
+      <figure class="d2l-contributor">
+        <a href="https://www.linkedin.com/in/brent-werness-1506471b7/">
+          <img src="static/landing/brent.jpg" alt="Brent Werness">
+          <span class="name">Brent Werness</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+      <figure class="d2l-contributor">
+        <a href="https://www.linkedin.com/in/rachelsonghu/">
+          <img src="static/landing/rachel.jpeg" alt="Rachel Hu">
+          <span class="name">Rachel Hu</span>
+          <span class="affil">Amazon</span>
+        </a>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Framework adaptation leads</h2>
+  <p style="color: var(--d2l-ink-3); margin: -0.5rem 0 1.75rem; max-width: 50rem;">Driving the per-framework code: porting every example to PyTorch, JAX, and TensorFlow.</p>
+  <div class="d2l-contributors">
+    <figure class="d2l-contributor">
+      <a href="https://github.com/AnirudhDagar">
+        <img src="static/landing/anirudh.jpg" alt="Anirudh Dagar">
+        <span class="name">Anirudh Dagar</span>
+        <span class="affil">PyTorch &amp; JAX &middot; Amazon</span>
+      </a>
+    </figure>
+    <figure class="d2l-contributor">
+      <a href="https://terrytangyuan.github.io/about/">
+        <img src="static/landing/yuan.jpg" alt="Yuan Tang">
+        <span class="name">Yuan Tang</span>
+        <span class="affil">TensorFlow &middot; Akuity</span>
+      </a>
     </figure>
   </div>
 </section>

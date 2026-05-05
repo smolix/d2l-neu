@@ -27,26 +27,26 @@ it is worthwhile knowing that "dog bites man" is much more frequent than "man bi
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=2}
+```{.python .input #language-model-language-models  n=2}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #language-model-language-models  n=3}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input  n=4}
+```{.python .input #language-model-language-models  n=4}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #language-model-language-models}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
@@ -226,7 +226,7 @@ Before introducing the model,
 let's assume that it
 processes a minibatch of sequences with predefined length
 at a time.
-Now the question is how to [**read minibatches of input sequences and target sequences at random**].
+Now the question is how to read minibatches of input sequences and target sequences at random.
 
 
 Suppose that the dataset takes the form of a sequence of $T$ token indices in `corpus`.
@@ -262,8 +262,7 @@ is $\mathbf x_{t+1}$ with length $n$.
 
 :numref:`fig_lang_model_data` shows an example of obtaining five pairs of input sequences and target sequences with $n=5$ and $d=2$.
 
-```{.python .input  n=5}
-%%tab all
+```{.python .input #language-model-partitioning-sequences-1  n=5}
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000):
     super(d2l.TimeMachine, self).__init__()
@@ -282,8 +281,7 @@ The following data loader randomly generates a minibatch from the dataset each t
 The argument `batch_size` specifies the number of subsequence examples in each minibatch
 and `num_steps` is the subsequence length in tokens.
 
-```{.python .input  n=6}
-%%tab all
+```{.python .input #language-model-partitioning-sequences-2  n=6}
 @d2l.add_to_class(d2l.TimeMachine)  #@save
 def get_dataloader(self, train):
     idx = slice(0, self.num_train) if train else slice(
@@ -297,8 +295,7 @@ can be obtained
 by shifting the input sequences
 by one token.
 
-```{.python .input  n=7}
-%%tab all
+```{.python .input #language-model-partitioning-sequences-3  n=7}
 data = d2l.TimeMachine(batch_size=2, num_steps=10)
 for X, Y in data.train_dataloader():
     print('X:', X, '\nY:', Y)
@@ -340,3 +337,69 @@ large language models form the basis of state-of-the-art systems across diverse 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18012)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A **language model** assigns a probability to a sequence
+of tokens:
+
+$$P(x_1, x_2, \dots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
+
+That decomposition is the heart of every modern LM —
+predict the next token given everything before it.
+:::
+
+::: {.slide title="Training data: shifted targets"}
+![Five (input, target) pairs from a length-5 partition: targets are inputs shifted by one.](../img/lang-model-data.svg){width=78%}
+:::
+
+::: {.slide title="What this deck sets up"}
+- **n-gram models** with Laplace smoothing — the classical
+  baseline.
+- **Perplexity** $= 2^{H}$ — the standard quality metric.
+- **Partitioning** the corpus into training minibatches.
+:::
+
+::: {.slide title="Setup"}
+We'll build LMs on the *Time Machine* corpus introduced in the
+previous chapter:
+
+@language-model-language-models
+:::
+
+::: {.slide title="Random minibatch sampling"}
+For each batch we draw random subsequences of length
+`num_steps` from the corpus. Targets are inputs shifted by one —
+"predict the next token":
+
+@language-model-partitioning-sequences-1
+
+. . .
+
+Sequential sampling: consecutive batches keep adjacent
+subsequences, useful for stateful RNNs:
+
+@language-model-partitioning-sequences-2
+
+. . .
+
+A small example — vocab of digits, num_steps=10:
+
+@language-model-partitioning-sequences-3
+
+Each batch yields an `(X, Y)` pair where Y is X shifted by one
+position.
+:::
+
+::: {.slide title="Recap"}
+- A language model factors $P(x_{1:T}) = \prod_t P(x_t \mid
+  x_{<t})$.
+- **Perplexity** $= \exp(\text{avg cross-entropy})$ — geometric
+  mean of "how many guesses to get the next token."
+- **n-gram with Laplace smoothing** is the classical baseline
+  (every modern LM beats it).
+- Training data = randomly sampled length-`num_steps`
+  subsequences; target = input shifted by one. Same protocol
+  drives every RNN / Transformer LM in the book.
+:::

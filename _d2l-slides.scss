@@ -1,0 +1,349 @@
+/*-- scss:defaults --*/
+
+// ── d2l color tokens (mirror _d2l-theme.scss) ────────────
+$blue:          #2196F3;
+$blue-dark:     #1976D2;
+$blue-darker:   #0D47A1;
+$blue-light:    #BBDEFB;
+$blue-50:       #E8F3FD;
+$deep-orange:   #FF5722;
+
+$ink:           #15181C;
+$ink-2:         #3A4049;
+$ink-3:         #6A717B;
+$ink-4:         #9CA3AD;
+$line:          #E7E9EC;
+$line-soft:     #F0F2F5;
+$bg:            #FFFFFF;
+$bg-soft:       #F8F9FB;
+$bg-code:       #F5F7FA;
+
+// ── Reveal.js theme defaults ─────────────────────────────
+$body-bg:                $bg;
+$body-color:             $ink-2;
+
+$main-font:              'Source Sans 3', -apple-system, BlinkMacSystemFont,
+                         'Segoe UI', Roboto, sans-serif;
+$heading-font:           $main-font;
+$code-font:              'JetBrains Mono', ui-monospace, 'Cascadia Code',
+                         Menlo, monospace;
+
+$main-font-size:         30px;
+$presentation-font-size-root: 30px;
+$heading-color:          $ink;
+$heading-text-shadow:    none;
+$heading-font-weight:    600;
+$heading-line-height:    1.15;
+$heading-letter-spacing: -0.005em;
+$heading-text-transform: none;
+
+$h1-size:                1.55em;
+$h2-size:                1.3em;
+$h3-size:                1.12em;
+$h4-size:                1.0em;
+
+$link-color:             $blue-dark;
+$link-color-hover:       $blue;
+$selection-bg:           rgba($blue, 0.25);
+$selection-color:        $ink;
+
+$code-block-font-size:   0.78em;
+$code-block-padding:     0.45em 0.7em;
+
+/*-- scss:rules --*/
+
+// ── Web fonts (Google Fonts; book also uses the same families) ──
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+// ── Slide chrome ─────────────────────────────────────────
+.reveal {
+  font-family: $main-font;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-family: $heading-font;
+  font-weight: $heading-font-weight;
+  color: $ink;
+  line-height: $heading-line-height;
+  text-transform: none;
+  letter-spacing: $heading-letter-spacing;
+  margin-bottom: 0.4em;
+  margin-top: 0;
+}
+
+// Deck title (the file H1). Intentionally no underline — the
+// horizontal blue line cuts through the logo in the top-right
+// corner. The H2 slide titles keep theirs as a section divider.
+.reveal h1 {
+  font-size: $h1-size;
+  padding-bottom: 0.18em;
+}
+.reveal h2 {
+  font-size: $h2-size;
+  border-bottom: 2px solid $blue-light;
+  padding-bottom: 0.15em;
+}
+.reveal h3 { font-size: $h3-size; color: $ink-2; }
+.reveal h4 { font-size: $h4-size; color: $ink-2; }
+
+.reveal p, .reveal li {
+  color: $ink-2;
+  line-height: 1.3;
+}
+
+.reveal p { margin: 0.35em 0; }
+
+.reveal a, .reveal a:visited {
+  color: $blue-dark;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.reveal a:hover {
+  color: $blue;
+  border-bottom-color: $blue-light;
+}
+
+.reveal strong { color: $ink; font-weight: 600; }
+.reveal em { color: $ink; font-style: italic; }
+
+.reveal hr {
+  border: none;
+  border-top: 1px solid $line;
+  margin: 0.7em 0;
+}
+
+// ── Lists ────────────────────────────────────────────────
+.reveal ul, .reveal ol {
+  display: block;
+  margin: 0.25em 0 0.25em 1.2em;
+}
+.reveal li { margin: 0.15em 0; }
+.reveal ul li::marker { color: $blue; }
+
+// ── Code blocks ──────────────────────────────────────────
+.reveal pre {
+  background: $bg-code;
+  border-left: 3px solid $blue-light;
+  border-radius: 0 4px 4px 0;
+  box-shadow: none;
+  margin: 0.35em 0;
+  width: 100%;
+  font-size: $code-block-font-size;
+  line-height: 1.3;
+}
+
+.reveal pre code {
+  font-family: $code-font;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+  background: transparent;
+  padding: $code-block-padding;
+  display: block;
+  overflow-x: auto;
+  max-height: none;
+  color: $ink;
+}
+
+.reveal code {
+  font-family: $code-font;
+  background: $bg-code;
+  color: $ink;
+  border-radius: 2px;
+  padding: 0.05em 0.3em;
+  font-size: 0.92em;
+}
+
+// ── Cell outputs (injected by inject_outputs.py slides) ──
+.reveal .cell-output {
+  margin: 0.25em 0;
+  max-height: 28vh;
+  overflow: auto;
+}
+
+.reveal .cell-output-stdout pre,
+.reveal .cell-output pre {
+  background: $line-soft;
+  border-left: 3px solid $ink-4;
+  font-size: 0.7em;
+  line-height: 1.3;
+  margin: 0;
+  // Long single-line outputs (e.g. `print(dir(module))`) overflow
+  // the slide horizontally otherwise. Wrap them. Source-code blocks
+  // (`pre.sourceCode`) keep their default whitespace handling.
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reveal .cell-output-display {
+  margin: 0.3em 0;
+  text-align: center;
+}
+
+.reveal .cell-output-display img,
+.reveal .cell-output-display svg {
+  max-height: 52vh;
+  max-width: 100%;
+  background: white;
+  border-radius: 2px;
+}
+
+// ── Block quotes ─────────────────────────────────────────
+.reveal blockquote {
+  border-left: 3px solid $blue;
+  background: $blue-50;
+  padding: 0.4em 0.75em;
+  margin: 0.35em 0;
+  color: $ink-2;
+  font-style: normal;
+  width: auto;
+  box-shadow: none;
+}
+
+// ── Tables ───────────────────────────────────────────────
+.reveal table {
+  font-size: 0.7em;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+}
+.reveal table th {
+  background: $blue-50;
+  color: $ink;
+  font-weight: 600;
+  border-bottom: 2px solid $blue-light;
+  padding: 0.3em 0.6em;
+  text-align: left;
+}
+.reveal table td {
+  border-bottom: 1px solid $line;
+  padding: 0.3em 0.6em;
+}
+
+// ── KaTeX / MathJax ──────────────────────────────────────
+.reveal .katex, .reveal .MathJax { color: $ink; }
+
+// ── Slide-number / controls coloring ─────────────────────
+.reveal .slide-number {
+  background: rgba($blue-dark, 0.85);
+  color: white;
+  font-family: $main-font;
+  font-size: 0.6em;
+  padding: 0.2em 0.55em;
+  border-radius: 2px;
+}
+
+.reveal .controls {
+  color: $blue;
+}
+
+.reveal .progress {
+  color: $blue;
+  background: $line;
+  height: 3px;
+}
+
+// ── Fragment styles (Quarto-default fragments are fine) ──
+.reveal .fragment.highlight-blue.visible { color: $blue-dark; }
+
+// ── Layout classes (used via `::: {.slide layout="2col"}`) ──
+.reveal .slide.slide-2col > section,
+.reveal section.slide-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+
+  pre, .cell { margin: 0; }
+  img, svg { max-height: 70vh; max-width: 50vw; }
+}
+
+.reveal section.slide-figure {
+  text-align: center;
+  img, svg { max-height: 72vh; max-width: 100%; }
+  .quarto-figure-caption, figcaption {
+    font-size: 0.7em;
+    color: $ink-3;
+    margin-top: 0.3em;
+  }
+}
+
+.reveal section.slide-code {
+  pre.sourceCode code {
+    font-size: 0.5em;
+    line-height: 1.2;
+  }
+  .cell-output {
+    max-height: 28vh;
+    overflow: auto;
+    font-size: 0.6em;
+  }
+}
+
+// ── Floating overlay (logo + "Book" link) ────────────────
+.d2l-overlay {
+  position: fixed;
+  top: 10px;
+  right: 18px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.d2l-overlay-link {
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: $blue;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem 0.6rem;
+  border-radius: 3px;
+  text-decoration: none;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+}
+.d2l-overlay-link:hover {
+  opacity: 1;
+  background: white;
+}
+
+.d2l-logo {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transition: opacity 0.15s, transform 0.15s;
+  opacity: 0.85;
+}
+.d2l-logo:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.d2l-logo:focus { outline: 2px solid $blue; outline-offset: 4px; }
+.d2l-logo img {
+  display: block;
+  height: 38px;
+  width: auto;
+}
+
+// Defeat reveal's `a { border-bottom }` rule for the overlay links
+.reveal .d2l-logo,
+.reveal .d2l-logo:visited,
+.reveal .d2l-logo:hover,
+.reveal .d2l-overlay-link,
+.reveal .d2l-overlay-link:visited,
+.reveal .d2l-overlay-link:hover { border-bottom: none; }
+
+@media print {
+  .d2l-overlay { display: none; }
+}
+
+// ── Speaker notes / overview view tweaks ─────────────────
+.reveal .pause-fragment { transition: opacity 0.15s; }
+.reveal-viewport { background: $bg; }

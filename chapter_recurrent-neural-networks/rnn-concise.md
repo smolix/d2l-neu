@@ -23,7 +23,7 @@ We begin, as before, by loading
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-concise-implementation-of-recurrent-neural-networks}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -31,7 +31,7 @@ from mxnet.gluon import nn, rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-concise-implementation-of-recurrent-neural-networks}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -39,20 +39,20 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-concise-implementation-of-recurrent-neural-networks}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-concise-implementation-of-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
 from jax import numpy as jnp
 ```
 
-## [**Defining the Model**]
+## Defining the Model
 
 We define the following class
 using the RNN implemented
@@ -77,7 +77,7 @@ as of today. There are more advanced variants of RNNs like LSTMs and GRUs
 which are available in the Flax `linen` API.
 :end_tab:
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-1}
 %%tab mxnet
 class RNN(d2l.Module):  #@save
     """The RNN model implemented with high-level APIs."""
@@ -93,7 +93,7 @@ class RNN(d2l.Module):  #@save
         return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-1}
 %%tab pytorch
 class RNN(d2l.Module):  #@save
     """The RNN model implemented with high-level APIs."""
@@ -106,7 +106,7 @@ class RNN(d2l.Module):  #@save
         return self.rnn(inputs, H)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-1}
 %%tab tensorflow
 class RNN(d2l.Module):  #@save
     """The RNN model implemented with high-level APIs."""
@@ -122,7 +122,7 @@ class RNN(d2l.Module):  #@save
         return tf.transpose(outputs, perm=[1, 0, 2]), H
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-1}
 %%tab jax
 class RNN(nn.Module):  #@save
     """The RNN model implemented with high-level APIs."""
@@ -137,7 +137,7 @@ Inheriting from the `RNNLMScratch` class in :numref:`sec_rnn-scratch`,
 the following `RNNLM` class defines a complete RNN-based language model.
 Note that we need to create a separate fully connected output layer.
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-2}
 %%tab pytorch
 class RNNLM(d2l.RNNLMScratch):  #@save
     """The RNN-based language model implemented with high-level APIs."""
@@ -148,7 +148,7 @@ class RNNLM(d2l.RNNLMScratch):  #@save
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-2}
 %%tab mxnet
 class RNNLM(d2l.RNNLMScratch):  #@save
     """The RNN-based language model implemented with high-level APIs."""
@@ -159,7 +159,7 @@ class RNNLM(d2l.RNNLMScratch):  #@save
         return d2l.swapaxes(self.linear(hiddens), 0, 1)        
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-2}
 %%tab tensorflow
 class RNNLM(d2l.RNNLMScratch):  #@save
     """The RNN-based language model implemented with high-level APIs."""
@@ -170,7 +170,7 @@ class RNNLM(d2l.RNNLMScratch):  #@save
         return d2l.transpose(self.linear(hiddens), (1, 0, 2))
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-defining-the-model-2}
 %%tab jax
 class RNNLM(d2l.RNNLMScratch):  #@save
     """The RNN-based language model implemented with high-level APIs."""
@@ -190,12 +190,12 @@ class RNNLM(d2l.RNNLMScratch):  #@save
 
 ## Training and Predicting
 
-Before training the model, let's [**make a prediction 
-with a model initialized with random weights.**]
+Before training the model, let's make a prediction 
+with a model initialized with random weights.
 Given that we have not trained the network, 
 it will generate nonsensical predictions.
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-1}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNN(num_inputs=len(data.vocab), num_hiddens=32)
@@ -203,7 +203,7 @@ model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-1}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNN(num_hiddens=32)
@@ -211,7 +211,7 @@ model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-1}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn = RNN(num_hiddens=32)
@@ -219,21 +219,21 @@ model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 model.predict('it has', 20, data.vocab)
 ```
 
-Next, we [**train our model, leveraging the high-level API**].
+Next, we train our model, leveraging the high-level API.
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-2}
 %%tab pytorch
 trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-2}
 %%tab mxnet
 trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-2}
 %%tab tensorflow
 with d2l.try_gpu():
     trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1)
@@ -246,12 +246,12 @@ but runs faster due to the optimized implementations.
 As before, we can generate predicted tokens 
 following the specified prefix string.
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-3}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #rnn-concise-training-and-predicting-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
@@ -285,3 +285,64 @@ framework implementations are often highly optimized,
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18015)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The same character-level LM, using the framework's built-in
+`nn.RNN`. The cell + unroll + projection from scratch boil down
+to a few lines:
+
+- `nn.RNN(input_size, hidden_size)` handles the recurrence,
+  including hardware-accelerated cuDNN kernels on GPU.
+- Reuse the `RNNLMScratch` head — it doesn't care whether the
+  cell is hand-rolled.
+- Same `Trainer`, same gradient clipping, same data.
+
+End result: faster training, ~5× fewer lines of code, identical
+mathematics.
+:::
+
+::: {.slide title="The model"}
+Built-in `RNN` cell + handing off the rest of the LM scaffold to
+the from-scratch base class:
+
+@rnn-concise-concise-implementation-of-recurrent-neural-networks
+
+@rnn-concise-defining-the-model-1
+
+. . .
+
+@rnn-concise-defining-the-model-2
+:::
+
+::: {.slide title="Sanity check"}
+Untrained model still runs — predictions are random characters,
+but shapes line up:
+
+@rnn-concise-training-and-predicting-1
+:::
+
+::: {.slide title="Training and decoding"}
+Same `Trainer`, with `gradient_clip_val=1` on the optimizer:
+
+@rnn-concise-training-and-predicting-2
+
+. . .
+
+@rnn-concise-training-and-predicting-3
+
+Output looks like simple English-shaped text — same character-
+level statistics the from-scratch version learned, in much less
+training time.
+:::
+
+::: {.slide title="Recap"}
+- `nn.RNN` is the cell + unroll + (with cuDNN) GPU kernels in
+  one stock layer.
+- Reuse the from-scratch LM wrapper — only the cell changes.
+- Same scaffold accepts `nn.LSTM`, `nn.GRU`, etc. — drop-in
+  replacements with better long-range gradient behavior.
+- The framework version trains noticeably faster than the
+  from-scratch version on the same hardware.
+:::

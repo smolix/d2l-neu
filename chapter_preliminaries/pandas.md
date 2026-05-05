@@ -27,14 +27,13 @@ In them, each line corresponds to one record
 and consists of several (comma-separated) fields, e.g.,
 "Albert Einstein,March 14 1879,Ulm,Federal polytechnic school,field of gravitational physics".
 To demonstrate how to load CSV files with `pandas`, 
-we (**create a CSV file below**) `../data/house_tiny.csv`. 
+we create a CSV file below `../data/house_tiny.csv`. 
 This file represents a dataset of homes,
 where each row corresponds to a distinct home
 and the columns correspond to the number of rooms (`NumRooms`),
 the roof type (`RoofType`), and the price (`Price`).
 
-```{.python .input}
-%%tab all
+```{.python .input #pandas-reading-the-dataset-1}
 import os
 
 os.makedirs(os.path.join('..', 'data'), exist_ok=True)
@@ -49,8 +48,7 @@ NA,NA,140000''')
 
 Now let's import `pandas` and load the dataset with `read_csv`.
 
-```{.python .input}
-%%tab all
+```{.python .input #pandas-reading-the-dataset-2}
 import pandas as pd
 
 data = pd.read_csv(data_file)
@@ -87,8 +85,8 @@ either those rows or those columns
 that contain missing values. 
 
 Here are some common imputation heuristics.
-[**For categorical input fields, 
-we can treat `NaN` as a category.**]
+For categorical input fields, 
+we can treat `NaN` as a category.
 Since the `RoofType` column takes values `Slate` and `NaN`,
 `pandas` can convert this column 
 into two columns `RoofType_Slate` and `RoofType_nan`.
@@ -96,8 +94,7 @@ A row whose roof type is `Slate` will set values
 of `RoofType_Slate` and `RoofType_nan` to 1 and 0, respectively.
 The converse holds for a row with a missing `RoofType` value.
 
-```{.python .input}
-%%tab all
+```{.python .input #pandas-data-preparation-1}
 inputs, targets = data.iloc[:, 0:2], data.iloc[:, 2]
 inputs = pd.get_dummies(inputs, dummy_na=True)
 print(inputs)
@@ -105,21 +102,20 @@ print(inputs)
 
 For missing numerical values, 
 one common heuristic is to 
-[**replace the `NaN` entries with 
-the mean value of the corresponding column**].
+replace the `NaN` entries with 
+the mean value of the corresponding column.
 
-```{.python .input}
-%%tab all
+```{.python .input #pandas-data-preparation-2}
 inputs = inputs.fillna(inputs.mean())
 print(inputs)
 ```
 
 ## Conversion to the Tensor Format
 
-Now that [**all the entries in `inputs` and `targets` are numerical,
-we can load them into a tensor**] (recall :numref:`sec_ndarray`).
+Now that all the entries in `inputs` and `targets` are numerical,
+we can load them into a tensor (recall :numref:`sec_ndarray`).
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab mxnet
 from mxnet import np
 
@@ -127,7 +123,7 @@ X, y = np.array(inputs.to_numpy(dtype=float)), np.array(targets.to_numpy(dtype=f
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab pytorch
 import torch
 
@@ -136,7 +132,7 @@ y = torch.tensor(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab tensorflow
 import tensorflow as tf
 
@@ -145,7 +141,7 @@ y = tf.constant(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input}
+```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab jax
 from jax import numpy as jnp
 
@@ -213,3 +209,70 @@ the type of problems you may need to address.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17967)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Real datasets rarely arrive as tensors. The usual path:
+
+1. **Read** raw rows (CSV, JSON, Parquet, …) → a `DataFrame`.
+2. **Preprocess** — fill missing values, encode categoricals.
+3. **Split** into inputs and targets.
+4. **Convert** the numeric columns into a tensor.
+
+This whole chapter walks through that pipeline on a tiny toy
+dataset.
+:::
+
+::: {.slide title="Reading the data"}
+First, dump a CSV to disk so we have something to load:
+
+@pandas-reading-the-dataset-1
+
+. . .
+
+`pandas` reads CSVs into a `DataFrame`. Note the `NaN`s — pandas's
+sentinel for missing values:
+
+@pandas-reading-the-dataset-2
+:::
+
+::: {.slide title="Splitting inputs and targets"}
+Conventionally the **last column** is the target (`y`); the rest
+are inputs (`X`). `iloc` slices by integer position:
+
+@pandas-data-preparation-1
+
+Categorical columns with missing values often benefit from
+treating `NaN` as its own category — `pd.get_dummies` does that
+when `dummy_na=True`.
+:::
+
+::: {.slide title="Imputing missing numbers"}
+For numeric columns, the simplest fill is the column **mean**:
+
+@pandas-data-preparation-2
+
+This is **mean imputation** — fast and assumption-free, but biases
+the variance downward. More principled fills (median, KNN,
+model-based) live in `sklearn.impute`.
+:::
+
+::: {.slide title="Conversion to a tensor"}
+Once every entry is numeric, hand the DataFrame's `.to_numpy()`
+view to the framework's tensor constructor:
+
+@pandas-conversion-to-the-tensor-format
+
+From here on we live in tensor-land — gradients, GPUs, the works.
+:::
+
+::: {.slide title="Recap"}
+- `pd.read_csv` → DataFrame.
+- `iloc[:, …]` to slice columns into inputs and targets.
+- `fillna(mean)` for numeric; `get_dummies(dummy_na=True)` for
+  categorical.
+- `.to_numpy()` then `tensor(...)` to leave pandas.
+- For anything beyond toy CSVs, reach for `sklearn.preprocessing`
+  and `sklearn.impute`.
+:::

@@ -16,7 +16,7 @@ we will apply the knowledge we learned
 in previous sections
 to practice the Kaggle competition of
 CIFAR-10 image classification.
-(**The web address of the competition is https://www.kaggle.com/c/cifar-10**)
+The web address of the competition is https://www.kaggle.com/c/cifar-10
 
 :numref:`fig_kaggle_cifar10` shows the information on the competition's webpage.
 In order to submit the results,
@@ -26,7 +26,7 @@ you need to register a Kaggle account.
 :width:`600px`
 :label:`fig_kaggle_cifar10`
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab mxnet
 import collections
 from d2l import mxnet as d2l
@@ -40,7 +40,7 @@ import shutil
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab pytorch
 import collections
 from d2l import torch as d2l
@@ -53,7 +53,7 @@ import pandas as pd
 import shutil
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab jax
 import collections
 from d2l import jax as d2l
@@ -69,7 +69,7 @@ import pandas as pd
 import shutil
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab tensorflow
 import collections
 from d2l import tensorflow as d2l
@@ -114,12 +114,11 @@ After unzipping the downloaded file in `../data`, and unzipping `train.7z` and `
 
 where the `train` and `test` directories contain the training and testing images, respectively, `trainLabels.csv` provides labels for the training images, and `sample_submission.csv` is a sample submission file.
 
-To make it easier to get started, [**we provide a small-scale sample of the dataset that
-contains the first 1000 training images and 5 random testing images.**]
+To make it easier to get started, we provide a small-scale sample of the dataset that
+contains the first 1000 training images and 5 random testing images.
 To use the full dataset of the Kaggle competition, you need to set the following `demo` variable to `False`.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-downloading-the-dataset}
 #@save
 d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
                                 '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
@@ -134,15 +133,14 @@ else:
     data_dir = '../data/cifar-10/'
 ```
 
-### [**Organizing the Dataset**]
+### Organizing the Dataset
 
 We need to organize datasets to facilitate model training and testing.
 Let's first read the labels from the csv file.
 The following function returns a dictionary that maps
 the non-extension part of the filename to its label.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-organizing-the-dataset-1}
 #@save
 def read_csv_labels(fname):
     """Read `fname` to return a filename to label dictionary."""
@@ -157,7 +155,7 @@ print('# training examples:', len(labels))
 print('# classes:', len(set(labels.values())))
 ```
 
-Next, we define the `reorg_train_valid` function to [**split the validation set out of the original training set.**]
+Next, we define the `reorg_train_valid` function to split the validation set out of the original training set.
 The argument `valid_ratio` in this function is the ratio of the number of examples in the validation set to the number of examples in the original training set.
 More concretely,
 let $n$ be the number of images of the class with the least examples, and $r$ be the ratio.
@@ -168,8 +166,7 @@ there will be 45000 images used for training in the path `train_valid_test/train
 while the other 5000 images will be split out
 as validation set in the path `train_valid_test/valid`. After organizing the dataset, images of the same class will be placed under the same folder.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-organizing-the-dataset-2}
 #@save
 def copyfile(filename, target_dir):
     """Copy a file into a target directory."""
@@ -200,10 +197,9 @@ def reorg_train_valid(data_dir, labels, valid_ratio):
     return n_valid_per_label
 ```
 
-The `reorg_test` function below [**organizes the testing set for data loading during prediction.**]
+The `reorg_test` function below organizes the testing set for data loading during prediction.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-organizing-the-dataset-3}
 #@save
 def reorg_test(data_dir):
     """Organize the testing set for data loading during prediction."""
@@ -213,11 +209,10 @@ def reorg_test(data_dir):
                               'unknown'))
 ```
 
-Finally, we use a function to [**invoke**]
-the `read_csv_labels`, `reorg_train_valid`, and `reorg_test` (**functions defined above.**)
+Finally, we use a function to invoke
+the `read_csv_labels`, `reorg_train_valid`, and `reorg_test` functions defined above.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-organizing-the-dataset-4}
 def reorg_cifar10_data(data_dir, valid_ratio):
     labels = read_csv_labels(os.path.join(data_dir, 'trainLabels.csv'))
     reorg_train_valid(data_dir, labels, valid_ratio)
@@ -230,20 +225,19 @@ the complete dataset of the Kaggle competition,
 `batch_size` should be set to a larger integer, such as 128.
 We split out 10% of the training examples as the validation set for tuning hyperparameters.
 
-```{.python .input}
-#@tab all
+```{.python .input #kaggle-cifar10-organizing-the-dataset-5}
 batch_size = 32 if demo else 128
 valid_ratio = 0.1
 reorg_cifar10_data(data_dir, valid_ratio)
 ```
 
-## [**Image Augmentation**]
+## Image Augmentation
 
 We use image augmentation to address overfitting.
 For example, images can be flipped horizontally at random during training.
 We can also perform standardization for the three RGB channels of color images. Below lists some of these operations that you can tweak.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-1}
 #@tab mxnet
 transform_train = gluon.data.vision.transforms.Compose([
     # Scale the image up to a square of 40 pixels in both height and width
@@ -261,7 +255,7 @@ transform_train = gluon.data.vision.transforms.Compose([
                                            [0.2023, 0.1994, 0.2010])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-1}
 #@tab pytorch
 transform_train = torchvision.transforms.Compose([
     # Scale the image up to a square of 40 pixels in both height and width
@@ -279,7 +273,7 @@ transform_train = torchvision.transforms.Compose([
                                      [0.2023, 0.1994, 0.2010])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-1}
 #@tab jax
 CIFAR_MEAN = np.array([0.4914, 0.4822, 0.4465], dtype=np.float32)
 CIFAR_STD = np.array([0.2023, 0.1994, 0.2010], dtype=np.float32)
@@ -301,7 +295,7 @@ def transform_test_fn(image, label):
     return image, label
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-1}
 #@tab tensorflow
 CIFAR_MEAN = tf.constant([0.4914, 0.4822, 0.4465], dtype=tf.float32)
 CIFAR_STD = tf.constant([0.2023, 0.1994, 0.2010], dtype=tf.float32)
@@ -328,7 +322,7 @@ we only perform standardization on images
 so as to
 remove randomness in the evaluation results.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-2}
 #@tab mxnet
 transform_test = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.ToTensor(),
@@ -336,7 +330,7 @@ transform_test = gluon.data.vision.transforms.Compose([
                                            [0.2023, 0.1994, 0.2010])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-2}
 #@tab pytorch
 transform_test = torchvision.transforms.Compose([
     torchvision.transforms.ToTensor(),
@@ -344,21 +338,21 @@ transform_test = torchvision.transforms.Compose([
                                      [0.2023, 0.1994, 0.2010])])
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-2}
 #@tab jax
 # Test transform is defined above as transform_test_fn
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-image-augmentation-2}
 #@tab tensorflow
 # Test transform is defined above as transform_test_fn
 ```
 
 ## Reading the Dataset
 
-Next, we [**read the organized dataset consisting of raw image files**]. Each example includes an image and a label.
+Next, we read the organized dataset consisting of raw image files. Each example includes an image and a label.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-1}
 #@tab mxnet
 train_ds, valid_ds, train_valid_ds, test_ds = [
     gluon.data.vision.ImageFolderDataset(
@@ -366,7 +360,7 @@ train_ds, valid_ds, train_valid_ds, test_ds = [
     for folder in ['train', 'valid', 'train_valid', 'test']]
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-1}
 #@tab pytorch
 train_ds, train_valid_ds = [torchvision.datasets.ImageFolder(
     os.path.join(data_dir, 'train_valid_test', folder),
@@ -377,7 +371,7 @@ valid_ds, test_ds = [torchvision.datasets.ImageFolder(
     transform=transform_test) for folder in ['valid', 'test']]
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-1}
 #@tab jax
 def _load_image_folder_tf(folder_path):
     """Load images from a class-subfolder directory into a tf.data.Dataset
@@ -397,7 +391,7 @@ test_ds = _load_image_folder_tf(
     os.path.join(data_dir, 'train_valid_test', 'test'))
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-1}
 #@tab tensorflow
 def _load_image_folder_tf(folder_path):
     """Load images from a class-subfolder directory into a tf.data.Dataset
@@ -418,14 +412,14 @@ test_ds = _load_image_folder_tf(
 ```
 
 During training,
-we need to [**specify all the image augmentation operations defined above**].
+we need to specify all the image augmentation operations defined above.
 When the validation set
 is used for model evaluation during hyperparameter tuning,
 no randomness from image augmentation should be introduced.
 Before final prediction,
 we train the model on the combined training set and validation set to make full use of all the labeled data.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab mxnet
 train_iter, train_valid_iter = [gluon.data.DataLoader(
     dataset.transform_first(transform_train), batch_size, shuffle=True,
@@ -440,7 +434,7 @@ test_iter = gluon.data.DataLoader(
     last_batch='keep')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab pytorch
 train_iter, train_valid_iter = [torch.utils.data.DataLoader(
     dataset, batch_size, shuffle=True, drop_last=True)
@@ -453,7 +447,7 @@ test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
                                         drop_last=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab jax
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
@@ -470,7 +464,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab tensorflow
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
               .shuffle(10000).batch(batch_size, drop_remainder=True)
@@ -487,7 +481,7 @@ test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
-## Defining the [**Model**]
+## Defining the Model
 
 :begin_tab:`mxnet`
 Here, we build the residual blocks based on the `HybridBlock` class, which is
@@ -496,7 +490,7 @@ slightly different from the implementation described in
 This is for improving computational efficiency.
 :end_tab:
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-1}
 #@tab mxnet
 class Residual(nn.HybridBlock):
     def __init__(self, num_channels, use_1x1conv=False, strides=1, **kwargs):
@@ -524,7 +518,7 @@ class Residual(nn.HybridBlock):
 Next, we define the ResNet-18 model.
 :end_tab:
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-2}
 #@tab mxnet
 def resnet18(num_classes):
     net = nn.HybridSequential()
@@ -562,7 +556,7 @@ We define the ResNet-18 model described in
 :numref:`sec_resnet` using Flax.
 :end_tab:
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab mxnet
 def get_net(devices):
     num_classes = 10
@@ -573,7 +567,7 @@ def get_net(devices):
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab pytorch
 def get_net():
     num_classes = 10
@@ -583,7 +577,7 @@ def get_net():
 loss = nn.CrossEntropyLoss(reduction="none")
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab jax
 class Residual(nn.Module):
     num_channels: int
@@ -633,7 +627,7 @@ def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab tensorflow
 def _resnet_block(x, num_filters, strides=1):
     """A single residual block with Keras functional API."""
@@ -675,12 +669,12 @@ loss = keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
 ```
 
-## Defining the [**Training Function**]
+## Defining the Training Function
 
 We will select models and tune hyperparameters according to the model's performance on the validation set.
 In the following, we define the model training function `train`.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-training-function}
 #@tab mxnet
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           lr_decay):
@@ -719,7 +713,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           f' examples/sec on {str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-training-function}
 #@tab pytorch
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           lr_decay):
@@ -758,7 +752,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
           f' examples/sec on {str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-training-function}
 #@tab jax
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
@@ -834,7 +828,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return variables
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-defining-the-training-function}
 #@tab tensorflow
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
@@ -895,7 +889,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     return net
 ```
 
-## [**Training and Validating the Model**]
+## Training and Validating the Model
 
 Now, we can train and validate the model.
 All the following hyperparameters can be tuned.
@@ -903,7 +897,7 @@ For example, we can increase the number of epochs.
 When `lr_period` and `lr_decay` are set to 4 and 0.9, respectively, the learning rate of the optimization algorithm will be multiplied by 0.9 after every 4 epochs. Just for ease of demonstration,
 we only train 20 epochs here.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab mxnet
 devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 0.02, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net(devices)
@@ -912,7 +906,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab pytorch
 devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 2e-4, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net()
@@ -921,7 +915,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab jax
 num_epochs, lr, wd = 20, 2e-4, 5e-4
 lr_period, lr_decay = 4, 0.9
@@ -930,7 +924,7 @@ variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
                   lr_decay)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab tensorflow
 num_epochs, lr, wd = 20, 2e-4, 5e-4
 lr_period, lr_decay = 4, 0.9
@@ -939,12 +933,12 @@ net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
             lr_decay)
 ```
 
-## [**Classifying the Testing Set**] and Submitting Results on Kaggle
+## Classifying the Testing Set and Submitting Results on Kaggle
 
 After obtaining a promising model with hyperparameters,
 we use all the labeled data (including the validation set) to retrain the model and classify the testing set.
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab mxnet
 net, preds = get_net(devices), []
 net.hybridize()
@@ -961,7 +955,7 @@ df['label'] = df['label'].apply(lambda x: train_valid_ds.synsets[x])
 df.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab pytorch
 net, preds = get_net(), []
 net(next(iter(train_valid_iter))[0])
@@ -978,7 +972,7 @@ df['label'] = df['label'].apply(lambda x: train_valid_ds.classes[x])
 df.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab jax
 net, preds = get_net(), []
 variables = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
@@ -998,7 +992,7 @@ df['label'] = df['label'].apply(lambda x: class_names[x])
 df.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab tensorflow
 net = get_net()
 net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
@@ -1065,3 +1059,114 @@ is similar to that in :numref:`sec_kaggle_house`.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1479)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A capstone deck: assemble everything from the chapter
+(augmentation, fine-tuning, modern CNN architectures) and
+take a Kaggle competition. CIFAR-10 has been done to death,
+but it's the right size for a teaching example — small
+enough to fit in memory, big enough that augmentation and
+ensembling matter.
+
+![Kaggle CIFAR-10 competition page.](../img/kaggle-cifar10.png){width=72%}
+
+@kaggle-cifar10-image-classification-cifar-10-on-kaggle
+:::
+
+::: {.slide title="Downloading"}
+Tiny demo subset for the book; swap in the full dataset
+for the actual competition:
+
+@kaggle-cifar10-downloading-the-dataset
+:::
+
+::: {.slide title="Organizing the dataset"}
+Kaggle ships everything in one folder; standard
+torchvision-style training expects `train/<class>/img.png`.
+Build that layout from the labels.csv:
+
+@kaggle-cifar10-organizing-the-dataset-1
+
+. . .
+
+@kaggle-cifar10-organizing-the-dataset-2
+
+. . .
+
+@kaggle-cifar10-organizing-the-dataset-3
+:::
+
+::: {.slide title="Run the reorg"}
+@kaggle-cifar10-organizing-the-dataset-4
+
+. . .
+
+@kaggle-cifar10-organizing-the-dataset-5
+:::
+
+::: {.slide title="Augmentation pipelines"}
+Standard recipe — random crop, flip, normalize for train;
+just normalize for eval:
+
+@kaggle-cifar10-image-augmentation-1
+
+. . .
+
+@kaggle-cifar10-image-augmentation-2
+:::
+
+::: {.slide title="DataLoaders"}
+Folder-based dataset + the augmentation pipelines:
+
+@kaggle-cifar10-reading-the-dataset-1
+
+. . .
+
+@kaggle-cifar10-reading-the-dataset-2
+:::
+
+::: {.slide title="ResNet-18 model"}
+Standard ResNet-18 with 10-way head. No transfer learning
+this time — train from scratch on CIFAR-10:
+
+@kaggle-cifar10-defining-the-model-1
+
+. . .
+
+@kaggle-cifar10-defining-the-model-2
+
+. . .
+
+@kaggle-cifar10-defining-the-model-3
+:::
+
+::: {.slide title="Training function"}
+SGD with momentum + weight decay + LR step decay. The
+classic vision recipe:
+
+@kaggle-cifar10-defining-the-training-function
+:::
+
+::: {.slide title="Train"}
+@kaggle-cifar10-training-and-validating-the-model
+:::
+
+::: {.slide title="Submit predictions"}
+Run on the test set, write a Kaggle-format CSV:
+
+@kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
+
+::: {.slide title="Recap"}
+- Real competition setup: download → reorganize files →
+  augment → train → predict → submit.
+- Augmentation matters more than model tweaks at the
+  CIFAR-10 scale.
+- ResNet-18 from scratch + standard recipe is a strong
+  baseline; the chapter techniques (mixup, cutmix, cosine
+  schedule, longer training) push it higher.
+- This pipeline scales to ImageNet — only the model size
+  and training time change.
+:::

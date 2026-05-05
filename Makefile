@@ -16,7 +16,9 @@
 #   make -j4 notebooks         Generate (not execute) all notebooks in parallel
 #
 # NOT parallel-safe (GPU contention):
-#   run-notebooks-*, slides-*  Run one framework at a time
+#   run-notebooks-*           Run one framework at a time
+# Parallel-safe (CPU-only, after slide refactor):
+#   slides-*                   make -j4 slides works
 #
 # GPU workers per framework: 2 per GPU (8 total on 4 GPUs)
 #
@@ -37,8 +39,10 @@ FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 NB_FILES      ?= $(FILES)
 
-# Source files — the ultimate upstream for everything
-SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md)
+# Source files — the ultimate upstream for everything.
+# Includes top-level index.md (landing page), which d2l_preprocess.py
+# converts to index.qmd alongside the chapter files.
+SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md) $(SOURCE)/index.md
 TOOLS   := $(wildcard tools/*.py)
 
 # Logging: each recipe logs to logs/<target>-YYYYMMDD-HHMMSS.log
@@ -71,6 +75,7 @@ help:
 	@echo "  slides                  Build slides for all frameworks"
 	@echo "  lib                     Build d2l Python package"
 	@echo "  venv-<fw>              Sync UV environment for one framework"
+	@echo "  kernels                 Register d2l-<fw> ipykernels (for VS Code)"
 	@echo "  clean                   Remove build artifacts (keep data/)"
 	@echo "  veryclean               Remove everything including data/"
 	@echo "  all                     Full pipeline: generate, execute, rebuild with outputs"
@@ -103,6 +108,19 @@ d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 venv-%: .venv-%/.synced
 	@echo "Venv .venv-$* is ready"
 
+# ── Jupyter kernels ────────────────────────────────────────
+# Register one ipykernel per framework so VS Code can auto-select the
+# right interpreter from the .ipynb's metadata.kernelspec.name.
+
+.PHONY: kernels
+kernels: $(addprefix .venv-,$(addsuffix /.synced,$(FRAMEWORKS)))
+	@for fw in $(FRAMEWORKS); do \
+	  echo "Registering kernel d2l-$$fw"; \
+	  .venv-$$fw/bin/python -m ipykernel install --user \
+	    --name d2l-$$fw --display-name "d2l ($$fw)"; \
+	done
+	@echo "All d2l kernels registered."
+
 # ── HTML book ──────────────────────────────────────────────
 
 html: _book/index.html
@@ -116,7 +134,7 @@ html: _book/index.html
 	python3 tools/gen_api_doc.py
 	@touch $@
 
-# Stage 2+3+4: inject (optional) + quarto render + fix numbering
+# Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
 _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building HTML book ==="
@@ -125,8 +143,18 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			echo "Injecting notebook outputs..."; \
 			python3 tools/inject_outputs.py html; \
 		fi; \
+		echo "Building slides manifest (TOC button + landing page)..."; \
+		python3 tools/build_slides_index.py; \
 		quarto render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
+		if [ -d _slides ] && [ -f _slides/index.html ]; then \
+			echo "Integrating _slides/ → _book/slides/ ..."; \
+			rm -rf _book/slides; \
+			mkdir -p _book/slides; \
+			rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
+				--exclude='.gitignore' --exclude='errors/' \
+				_slides/ _book/slides/; \
+		fi; \
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
 # ── Notebooks (generate) ──────────────────────────────────
@@ -235,7 +263,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) \
+		--render --workers 8 \
 		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
@@ -244,6 +272,7 @@ slides-%: _slides/%/.built
 	@echo "Slides for $* in _slides/$*/"
 	@echo "Log: $(LOGDIR)/slides-$*-$(TS).log"
 
+# CPU-only after the slide refactor — parallel-safe across frameworks.
 slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Aggregate targets ─────────────────────────────────────
@@ -265,14 +294,19 @@ all-quick: html pdfs notebooks slides lib
 
 # ── Clean ──────────────────────────────────────────────────
 
+# `clean` preserves expensive state: ./data/ (downloaded datasets),
+# logs/, and .upload-manifest-*.txt (sha256 manifest of the last R2
+# upload — losing it forces a full re-upload). Use `veryclean` to wipe
+# those too.
 clean:
 	rm -rf _book _pdf _notebooks _slides
-	rm -f img/*.pdf .preprocess.stamp d2l/.built
+	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
 	rm -f $(wildcard _pdf/*/.generated)
 	rm -f $(wildcard _slides/*/.built)
-	@echo "Cleaned build artifacts (kept ./data/ and $(LOGDIR)/)"
+	@echo "Cleaned build artifacts (kept ./data/, $(LOGDIR)/, and .upload-manifest-*.txt)"
 
 veryclean: clean
 	rm -rf data $(LOGDIR)
-	@echo "Also deleted ./data/ and $(LOGDIR)/"
+	rm -f .upload-manifest-*.txt
+	@echo "Also deleted ./data/, $(LOGDIR)/, and .upload-manifest-*.txt"

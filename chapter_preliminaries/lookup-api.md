@@ -29,22 +29,22 @@ provide such documentation.
 This section provides some guidance for how to explore the TensorFlow API.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab pytorch
 import torch
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-documentation}
 %%tab jax
 import jax
 ```
@@ -53,24 +53,24 @@ import jax
 
 To know which functions and classes can be called in a module,
 we invoke the `dir` function. For instance, we can
-(**query all properties in the module for generating random numbers**):
+query all properties in the module for generating random numbers:
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
 print(dir(np.random))
 ```
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
 print(dir(torch.distributions))
 ```
 
-```{.python .input  n=1}
+```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
 print(dir(tf.random))
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
 print(dir(jax.random))
 ```
@@ -87,24 +87,24 @@ normal distribution (`normal`), and multinomial distribution (`multinomial`).
 
 For specific instructions on how to use a given function or class,
 we can invoke the  `help` function. As an example, let's
-[**explore the usage instructions for tensors' `ones` function**].
+explore the usage instructions for tensors' `ones` function.
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab mxnet
 help(np.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab pytorch
 help(torch.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab tensorflow
 help(tf.ones)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab jax
 help(jax.numpy.ones)
 ```
@@ -112,25 +112,25 @@ help(jax.numpy.ones)
 From the documentation, we can see that the `ones` function 
 creates a new tensor with the specified shape 
 and sets all the elements to the value of 1. 
-Whenever possible, you should (**run a quick test**) 
+Whenever possible, you should run a quick test 
 to confirm your interpretation:
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
 np.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab pytorch
 torch.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab tensorflow
 tf.ones(4)
 ```
 
-```{.python .input}
+```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab jax
 jax.numpy.ones(4)
 ```
@@ -166,3 +166,52 @@ in addition to becoming a better scientist.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17972)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Every framework has thousands of functions and classes. You
+won't memorize them — you'll **look them up**.
+
+Two Python builtins do most of the work:
+
+- `dir(module)` — what's in here?
+- `help(thing)` (or `?thing` in Jupyter) — how do I use it?
+
+Plus the official docs: pytorch.org, jax.dev, tensorflow.org,
+mxnet.apache.org.
+:::
+
+::: {.slide title="`dir`: discovering the API"}
+Standard import:
+
+@lookup-api-documentation
+
+. . .
+
+`dir(...)` lists every public name in a module — handy for
+finding the function you half-remember:
+
+@lookup-api-functions-and-classes-in-a-module
+:::
+
+::: {.slide title="`help`: usage details"}
+Once you have the name, `help(...)` prints the docstring with
+arguments, defaults, and a usage example:
+
+@lookup-api-specific-functions-and-classes-1
+
+. . .
+
+Then run a one-liner to confirm the call:
+
+@lookup-api-specific-functions-and-classes-2
+:::
+
+::: {.slide title="Recap"}
+- `dir(module)` — list contents.
+- `help(symbol)` (or `symbol?` in Jupyter) — show the docstring.
+- Notebook autocomplete (`Tab`) is your fastest discovery tool.
+- For prose-heavy explanations, deep links into the framework's
+  official documentation beat the inline help.
+:::

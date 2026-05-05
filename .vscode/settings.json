@@ -1,0 +1,36 @@
+{
+  "files.exclude": {
+    "_book": true,
+    "_pdf": true,
+    "_notebooks": true,
+    "_slides": true,
+    "logs": true,
+    ".venv-*": true,
+    ".d2l-sync-state": true,
+    "**/__pycache__": true,
+    "chapter_*/*.qmd": true
+  },
+  "search.exclude": {
+    "**/.venv-*/**": true,
+    "logs/**": true,
+    "_book/**": true,
+    "_pdf/**": true,
+    "_notebooks/**": true,
+    "_slides/**": true
+  },
+  "files.watcherExclude": {
+    "**/.venv-*/**": true,
+    "**/data/**": true,
+    "**/_pdf/**": true,
+    "**/_notebooks/**": true,
+    "**/_slides/**": true,
+    "**/_book/**": true
+  },
+  "files.associations": {
+    "chapter_*/**/*.md": "quarto"
+  },
+  "jupyter.askForKernelRestart": false,
+  "notebook.output.scrolling": true,
+  "notebook.output.textLineLimit": 30,
+  "quarto.render.previewType": "external"
+}

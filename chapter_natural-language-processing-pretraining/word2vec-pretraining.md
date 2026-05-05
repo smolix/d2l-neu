@@ -14,7 +14,7 @@ and the vocabulary for this dataset
 by calling the `d2l.load_data_ptb`
 function, which was described in :numref:`sec_word2vec_data`
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab mxnet
 from d2l import mxnet as d2l
 import math
@@ -27,7 +27,7 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab pytorch
 from d2l import torch as d2l
 import math
@@ -39,7 +39,7 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -54,7 +54,7 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import math
@@ -87,21 +87,21 @@ the vector dimension for each token (`output_dim`).
 After a word embedding model is trained,
 this weight is what we need.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-1}
 #@tab mxnet
 embed = nn.Embedding(input_dim=20, output_dim=4)
 embed.initialize()
 embed.weight
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-1}
 #@tab pytorch
 embed = nn.Embedding(num_embeddings=20, embedding_dim=4)
 print(f'Parameter embedding_weight ({embed.weight.shape}, '
       f'dtype={embed.weight.dtype})')
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-1}
 #@tab jax
 embed = nn.Embed(num_embeddings=20, features=4)
 params = embed.init(jax.random.PRNGKey(0), jnp.ones((1,), dtype=jnp.int32))
@@ -109,7 +109,7 @@ print(f'Parameter embedding ({params["params"]["embedding"].shape}, '
       f'dtype={params["params"]["embedding"].dtype})')
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-1}
 #@tab tensorflow
 embed = keras.layers.Embedding(input_dim=20, output_dim=4)
 # Build the layer so weights are allocated
@@ -132,19 +132,19 @@ returns vectors with shape (2, 3, 4)
 for a minibatch of token indices with shape
 (2, 3).
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-2}
 #@tab mxnet, pytorch
 x = d2l.tensor([[1, 2, 3], [4, 5, 6]])
 embed(x)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-2}
 #@tab jax
 x = jnp.array([[1, 2, 3], [4, 5, 6]])
 embed.apply(params, x)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-embedding-layer-2}
 #@tab tensorflow
 x = tf.constant([[1, 2, 3], [4, 5, 6]])
 embed(x)
@@ -172,7 +172,7 @@ an output of shape (batch size, 1, `max_len`).
 Each element in the output is the dot product of
 a center word vector and a context or noise word vector.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-1}
 #@tab mxnet
 def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     v = embed_v(center)
@@ -181,7 +181,7 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     return pred
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-1}
 #@tab pytorch
 def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     v = embed_v(center)
@@ -190,7 +190,7 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     return pred
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-1}
 #@tab jax
 def skip_gram(center, contexts_and_negatives, embed_v, embed_u,
               params_v, params_u):
@@ -200,7 +200,7 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u,
     return pred
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-1}
 #@tab tensorflow
 def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     v = embed_v(center)
@@ -211,25 +211,25 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
 
 Let's print the output shape of this `skip_gram` function for some example inputs.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab mxnet
 skip_gram(np.ones((2, 1)), np.ones((2, 4)), embed, embed).shape
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab pytorch
 skip_gram(torch.ones((2, 1), dtype=torch.long),
           torch.ones((2, 4), dtype=torch.long), embed, embed).shape
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab jax
 skip_gram(jnp.ones((2, 1), dtype=jnp.int32),
           jnp.ones((2, 4), dtype=jnp.int32), embed, embed,
           params, params).shape
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab tensorflow
 skip_gram(tf.ones((2, 1), dtype=tf.int32),
           tf.ones((2, 4), dtype=tf.int32), embed, embed).shape
@@ -248,12 +248,12 @@ for negative sampling in :numref:`subsec_negative-sampling`,
 we will use 
 the binary cross-entropy loss.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-1}
 #@tab mxnet
 loss = gluon.loss.SigmoidBCELoss()
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-1}
 #@tab pytorch
 class SigmoidBCELoss(nn.Module):
     # Binary cross-entropy loss with masking
@@ -268,7 +268,7 @@ class SigmoidBCELoss(nn.Module):
 loss = SigmoidBCELoss()
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-1}
 #@tab jax
 def loss(inputs, target, mask=None):
     """Binary cross-entropy loss with masking."""
@@ -278,7 +278,7 @@ def loss(inputs, target, mask=None):
     return out.mean(axis=1)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-1}
 #@tab tensorflow
 def loss(inputs, target, mask=None):
     """Binary cross-entropy loss with masking."""
@@ -300,7 +300,7 @@ calculates the
 binary cross-entropy loss
 for the given variables.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-2}
 #@tab pytorch, mxnet, jax
 pred = d2l.tensor([[1.1, -2.2, 3.3, -4.4]] * 2)
 label = d2l.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
@@ -308,7 +308,7 @@ mask = d2l.tensor([[1, 1, 1, 1], [1, 1, 0, 0]])
 loss(pred, label, mask) * mask.shape[1] / mask.sum(axis=1)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-2}
 #@tab tensorflow
 pred = d2l.tensor([[1.1, -2.2, 3.3, -4.4]] * 2)
 label = d2l.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
@@ -327,8 +327,7 @@ the two outputs as
 two normalized losses
 that are averaged over non-masked predictions.
 
-```{.python .input}
-#@tab all
+```{.python .input #word2vec-pretraining-binary-cross-entropy-loss-3}
 def sigmd(x):
     return -math.log(1 / (1 + math.exp(-x)))
 
@@ -345,7 +344,7 @@ and context words, respectively.
 The word vector dimension
 `embed_size` is set to 100.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-initializing-model-parameters}
 #@tab mxnet
 embed_size = 100
 net = nn.Sequential()
@@ -353,7 +352,7 @@ net.add(nn.Embedding(input_dim=len(vocab), output_dim=embed_size),
         nn.Embedding(input_dim=len(vocab), output_dim=embed_size))
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-initializing-model-parameters}
 #@tab pytorch
 embed_size = 100
 net = nn.Sequential(nn.Embedding(num_embeddings=len(vocab),
@@ -362,14 +361,14 @@ net = nn.Sequential(nn.Embedding(num_embeddings=len(vocab),
                                  embedding_dim=embed_size))
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-initializing-model-parameters}
 #@tab jax
 embed_size = 100
 embed_v = nn.Embed(num_embeddings=len(vocab), features=embed_size)
 embed_u = nn.Embed(num_embeddings=len(vocab), features=embed_size)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-initializing-model-parameters}
 #@tab tensorflow
 embed_size = 100
 embed_v = keras.layers.Embedding(input_dim=len(vocab),
@@ -382,7 +381,7 @@ embed_u = keras.layers.Embedding(input_dim=len(vocab),
 
 The training loop is defined below. Because of the existence of padding, the calculation of the loss function is slightly different compared to the previous training functions.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab mxnet
 def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
     net.initialize(ctx=device, force_reinit=True)
@@ -411,7 +410,7 @@ def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
           f'{metric[1] / timer.stop():.1f} tokens/sec on {str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab pytorch
 def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
     def init_weights(module):
@@ -444,7 +443,7 @@ def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
           f'{metric[1] / timer.stop():.1f} tokens/sec on {str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab jax
 def train(embed_v, embed_u, data_iter, lr, num_epochs):
     key = jax.random.PRNGKey(42)
@@ -494,7 +493,7 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
     return all_params
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab tensorflow
 def train(embed_v, embed_u, data_iter, lr, num_epochs):
     optimizer = keras.optimizers.Adam(learning_rate=lr)
@@ -525,19 +524,19 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
 
 Now we can train a skip-gram model using negative sampling.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-2}
 #@tab mxnet, pytorch
 lr, num_epochs = 0.002, 5
 train(net, data_iter, lr, num_epochs)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-2}
 #@tab jax
 lr, num_epochs = 0.002, 5
 all_params = train(embed_v, embed_u, data_iter, lr, num_epochs)
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-defining-the-training-loop-2}
 #@tab tensorflow
 lr, num_epochs = 0.002, 5
 train(embed_v, embed_u, data_iter, lr, num_epochs)
@@ -555,7 +554,7 @@ find words from the dictionary
 that are most semantically similar
 to an input word.
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-applying-word-embeddings}
 #@tab mxnet
 def get_similar_tokens(query_token, k, embed):
     W = embed.weight.data()
@@ -569,7 +568,7 @@ def get_similar_tokens(query_token, k, embed):
 get_similar_tokens('chip', 3, net[0])
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-applying-word-embeddings}
 #@tab pytorch
 def get_similar_tokens(query_token, k, embed):
     W = embed.weight.data
@@ -584,7 +583,7 @@ def get_similar_tokens(query_token, k, embed):
 get_similar_tokens('chip', 3, net[0])
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-applying-word-embeddings}
 #@tab jax
 def get_similar_tokens(query_token, k, embed_params):
     W = embed_params['params']['embedding']
@@ -599,7 +598,7 @@ def get_similar_tokens(query_token, k, embed_params):
 get_similar_tokens('chip', 3, all_params['v'])
 ```
 
-```{.python .input}
+```{.python .input #word2vec-pretraining-applying-word-embeddings}
 #@tab tensorflow
 def get_similar_tokens(query_token, k, embed):
     W = embed.embeddings
@@ -640,3 +639,99 @@ get_similar_tokens('chip', 3, embed_v)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1335)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The skip-gram model with negative sampling, Mikolov et al.
+2013. Each word has *two* embedding vectors:
+
+- $\mathbf{v}_w$ — its embedding *as a center word*.
+- $\mathbf{u}_w$ — its embedding *as a context word*.
+
+Per minibatch, for each (center, context+) pair plus $K$
+sampled negatives:
+
+$$\mathcal{L} = -\log \sigma(\mathbf{u}_{c+}^\top \mathbf{v}_w) - \sum_{c-} \log \sigma(-\mathbf{u}_{c-}^\top \mathbf{v}_w).$$
+
+Binary classification — distinguish real (center, context)
+pairs from negatives. Cheap, embarrassingly parallel,
+trains fast on a CPU. After convergence, $\mathbf{v}_w$
+(or $\mathbf{u}_w$, or their sum) is the word embedding.
+:::
+
+::: {.slide title="Setup"}
+@word2vec-pretraining-pretraining-word2vec
+:::
+
+::: {.slide title="Embedding layers"}
+Two `nn.Embedding`s — one for center words, one for
+context. Same vocab, same dimension, separate weights:
+
+@word2vec-pretraining-embedding-layer-1
+
+. . .
+
+@word2vec-pretraining-embedding-layer-2
+:::
+
+::: {.slide title="Forward pass"}
+Look up center embeddings and context embeddings, batched
+matmul gives the dot products that go into the binary
+cross-entropy loss:
+
+@word2vec-pretraining-defining-the-forward-propagation-1
+
+. . .
+
+@word2vec-pretraining-defining-the-forward-propagation-2
+:::
+
+::: {.slide title="Masked binary cross-entropy"}
+Pad mask kicks the loss for invalid positions to zero so
+batching with variable-length context lists works:
+
+@word2vec-pretraining-binary-cross-entropy-loss-1
+
+. . .
+
+@word2vec-pretraining-binary-cross-entropy-loss-2
+
+. . .
+
+@word2vec-pretraining-binary-cross-entropy-loss-3
+:::
+
+::: {.slide title="Init"}
+@word2vec-pretraining-initializing-model-parameters
+:::
+
+::: {.slide title="Training loop"}
+Standard SGD; CPU is fine because the model is tiny and
+data loading dominates:
+
+@word2vec-pretraining-defining-the-training-loop-1
+
+. . .
+
+@word2vec-pretraining-defining-the-training-loop-2
+:::
+
+::: {.slide title="Using the embeddings"}
+Look up similar words by cosine similarity. Trained
+embeddings cluster semantically related terms:
+
+@word2vec-pretraining-applying-word-embeddings
+:::
+
+::: {.slide title="Recap"}
+- Skip-gram + neg sampling = train two embeddings per
+  word with binary cross-entropy on (center, context)
+  pairs.
+- Cheap, parallelizable, no softmax over the vocab.
+- Output: dense word vectors with semantic structure
+  ($\mathbf{v}_\text{king} - \mathbf{v}_\text{man} + \mathbf{v}_\text{woman} \approx \mathbf{v}_\text{queen}$).
+- Outdated as a state-of-the-art (BERT/contextual
+  embeddings dominate) but still useful as input to
+  small classifiers and as a teaching example.
+:::

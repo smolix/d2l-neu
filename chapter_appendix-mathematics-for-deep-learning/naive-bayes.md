@@ -5,7 +5,7 @@ Throughout the previous sections, we learned about the theory of probability and
 
 Learning is all about making assumptions. If we want to classify a new data example that we have never seen before we have to make some assumptions about which data examples are similar to each other. The naive Bayes classifier, a popular and remarkably clear algorithm, assumes all features are independent from each other to simplify the computation. In this section, we will apply this model to recognize characters in images.
 
-```{.python .input}
+```{.python .input #naive-bayes}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -15,7 +15,7 @@ npx.set_np()
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -25,7 +25,7 @@ import torchvision
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -34,7 +34,7 @@ import tensorflow as tf
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -57,7 +57,7 @@ We specify whether we are requesting the training set or the test set
 by setting the value of the parameter `train` to `True` or `False`, respectively.
 Each image is a grayscale image with both width and height of $28$ with shape ($28$,$28$,$1$). We use a customized transformation to remove the last channel dimension. In addition, the dataset represents each pixel by an unsigned $8$-bit integer.  We quantize them into binary features to simplify the problem.
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-1}
 #@tab mxnet
 def transform(data, label):
     return np.floor(data.astype('float32') / 128).squeeze(axis=-1), label
@@ -66,7 +66,7 @@ mnist_train = gluon.data.vision.MNIST(train=True, transform=transform)
 mnist_test = gluon.data.vision.MNIST(train=False, transform=transform)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-1}
 #@tab pytorch
 data_transform = torchvision.transforms.Compose([
     torchvision.transforms.ToTensor(),
@@ -79,7 +79,7 @@ mnist_test = torchvision.datasets.MNIST(
     root='./temp', train=False, transform=data_transform, download=True)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-1}
 #@tab tensorflow
 ((train_images, train_labels), (
     test_images, test_labels)) = tf.keras.datasets.mnist.load_data()
@@ -95,7 +95,7 @@ train_labels = tf.constant(train_labels, dtype = tf.int32)
 test_labels = tf.constant(test_labels, dtype = tf.int32)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-1}
 #@tab jax
 (train_images, train_labels), (
     test_images, test_labels) = tf.keras.datasets.mnist.load_data()
@@ -107,25 +107,25 @@ test_labels = test_labels.astype(np.int32)
 
 We can access a particular example, which contains the image and the corresponding label.
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-2}
 #@tab mxnet
 image, label = mnist_train[2]
 image.shape, label
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-2}
 #@tab pytorch
 image, label = mnist_train[2]
 image.shape, label
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-2}
 #@tab tensorflow
 image, label = train_images[2], train_labels[2]
 image.shape, label.numpy()
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-2}
 #@tab jax
 image, label = train_images[2], train_labels[2]
 image.shape, label
@@ -133,56 +133,55 @@ image.shape, label
 
 Our example, stored here in the variable `image`, corresponds to an image with a height and width of $28$ pixels.
 
-```{.python .input}
-#@tab all
+```{.python .input #naive-bayes-optical-character-recognition-3}
 image.shape, image.dtype
 ```
 
 Our code stores the label of each image as a scalar. Its type is a $32$-bit integer.
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-4}
 #@tab mxnet
 label, type(label), label.dtype
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-4}
 #@tab pytorch
 label, type(label)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-4}
 #@tab tensorflow
 label.numpy(), label.dtype
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-4}
 #@tab jax
 label, type(label)
 ```
 
 We can also access multiple examples at the same time.
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-5}
 #@tab mxnet
 images, labels = mnist_train[10:38]
 images.shape, labels.shape
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-5}
 #@tab pytorch
 images = torch.stack([mnist_train[i][0] for i in range(10, 38)], dim=0)
 labels = torch.tensor([mnist_train[i][1] for i in range(10, 38)])
 images.shape, labels.shape
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-5}
 #@tab tensorflow
 images = tf.stack([train_images[i] for i in range(10, 38)], axis=0)
 labels = tf.constant([train_labels[i].numpy() for i in range(10, 38)])
 images.shape, labels.shape
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-optical-character-recognition-5}
 #@tab jax
 images = jnp.array(train_images[10:38])
 labels = jnp.array(train_labels[10:38])
@@ -191,8 +190,7 @@ images.shape, labels.shape
 
 Let's visualize these examples.
 
-```{.python .input}
-#@tab all
+```{.python .input #naive-bayes-optical-character-recognition-6}
 d2l.show_images(images, 2, 9);
 ```
 
@@ -246,7 +244,7 @@ for any $y$. So our assumption of conditional independence has taken the complex
 
 The problem now is that we do not know $P_{xy}$ and $P_y$. So we need to estimate their values given some training data first. This is *training* the model. Estimating $P_y$ is not too hard. Since we are only dealing with $10$ classes, we may count the number of occurrences $n_y$ for each of the digits and divide it by the total amount of data $n$. For instance, if digit 8 occurs $n_8 = 5,800$ times and we have a total of $n = 60,000$ images, the probability estimate is $p(y=8) = 0.0967$.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-1}
 #@tab mxnet
 X, Y = mnist_train[:]  # All training examples
 
@@ -257,7 +255,7 @@ P_y = n_y / n_y.sum()
 P_y
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-1}
 #@tab pytorch
 X = torch.stack([mnist_train[i][0] for i in range(len(mnist_train))], dim=0)
 Y = torch.tensor([mnist_train[i][1] for i in range(len(mnist_train))])
@@ -269,7 +267,7 @@ P_y = n_y / n_y.sum()
 P_y
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-1}
 #@tab tensorflow
 X = train_images
 Y = train_labels
@@ -281,7 +279,7 @@ P_y = n_y / tf.reduce_sum(n_y)
 P_y
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-1}
 #@tab jax
 X = jnp.array(train_images)
 Y = jnp.array(train_labels)
@@ -295,7 +293,7 @@ P_y
 
 Now on to slightly more difficult things $P_{xy}$. Since we picked black and white images, $p(x_i  \mid  y)$ denotes the probability that pixel $i$ is switched on for class $y$. Just like before we can go and count the number of times $n_{iy}$ such that an event occurs and divide it by the total number of occurrences of $y$, i.e., $n_y$. But there is something slightly troubling: certain pixels may never be black (e.g., for well cropped images the corner pixels might always be white). A convenient way for statisticians to deal with this problem is to add pseudo counts to all occurrences. Hence, rather than $n_{iy}$ we use $n_{iy}+1$ and instead of $n_y$ we use $n_{y}+2$ (since there are two possible values pixel $i$ can take - it can either be black or white). This is also called *Laplace Smoothing*.  It may seem ad-hoc, however it can be motivated from a Bayesian point-of-view by a Beta-binomial model.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-2}
 #@tab mxnet
 n_x = np.zeros((10, 28, 28))
 for y in range(10):
@@ -305,7 +303,7 @@ P_xy = (n_x + 1) / (n_y + 2).reshape(10, 1, 1)
 d2l.show_images(P_xy, 2, 5);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-2}
 #@tab pytorch
 n_x = torch.zeros((10, 28, 28))
 for y in range(10):
@@ -315,7 +313,7 @@ P_xy = (n_x + 1) / (n_y + 2).reshape(10, 1, 1)
 d2l.show_images(P_xy, 2, 5);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-2}
 #@tab tensorflow
 n_x = tf.Variable(tf.zeros((10, 28, 28)))
 for y in range(10):
@@ -326,7 +324,7 @@ P_xy = (n_x + 1) / tf.reshape((n_y + 2), (10, 1, 1))
 d2l.show_images(P_xy, 2, 5);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-2}
 #@tab jax
 n_x = jnp.zeros((10, 28, 28))
 for y in range(10):
@@ -341,7 +339,7 @@ By visualizing these $10\times 28\times 28$ probabilities (for each pixel for ea
 
 Now we can use :eqref:`eq_naive_bayes_estimation` to predict a new image. Given $\mathbf x$, the following functions computes $p(\mathbf x \mid y)p(y)$ for every $y$.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-3}
 #@tab mxnet
 def bayes_pred(x):
     x = np.expand_dims(x, axis=0)  # (28, 28) -> (1, 28, 28)
@@ -353,7 +351,7 @@ image, label = mnist_test[0]
 bayes_pred(image)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-3}
 #@tab pytorch
 def bayes_pred(x):
     x = x.unsqueeze(0)  # (28, 28) -> (1, 28, 28)
@@ -365,7 +363,7 @@ image, label = mnist_test[0]
 bayes_pred(image)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-3}
 #@tab tensorflow
 def bayes_pred(x):
     x = tf.expand_dims(x, axis=0)  # (28, 28) -> (1, 28, 28)
@@ -377,7 +375,7 @@ image, label = test_images[0], test_labels[0]
 bayes_pred(image)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-3}
 #@tab jax
 def bayes_pred(x):
     x = jnp.expand_dims(x, axis=0)  # (28, 28) -> (1, 28, 28)
@@ -394,28 +392,28 @@ This went horribly wrong! To find out why, let's look at the per pixel probabili
 As discussed in that section, we fix this by use the fact that $\log a b = \log a + \log b$, i.e., we switch to summing logarithms.
 Even if both $a$ and $b$ are small numbers, the logarithm values should be in a proper range.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-4}
 #@tab mxnet
 a = 0.1
 print('underflow:', a**784)
 print('logarithm is normal:', 784*math.log(a))
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-4}
 #@tab pytorch
 a = 0.1
 print('underflow:', a**784)
 print('logarithm is normal:', 784*math.log(a))
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-4}
 #@tab tensorflow
 a = 0.1
 print('underflow:', a**784)
 print('logarithm is normal:', 784*tf.math.log(a).numpy())
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-4}
 #@tab jax
 a = 0.1
 print('underflow:', a**784)
@@ -428,7 +426,7 @@ $$ \hat{y} = \mathrm{argmax}_y \ \log P_y[y] + \sum_{i=1}^d \Big[t_i\log P_{xy}[
 
 We can implement the following stable version:
 
-```{.python .input}
+```{.python .input #naive-bayes-training-5}
 #@tab mxnet
 log_P_xy = np.log(P_xy)
 log_P_xy_neg = np.log(1 - P_xy)
@@ -444,7 +442,7 @@ py = bayes_pred_stable(image)
 py
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-5}
 #@tab pytorch
 log_P_xy = torch.log(P_xy)
 log_P_xy_neg = torch.log(1 - P_xy)
@@ -460,7 +458,7 @@ py = bayes_pred_stable(image)
 py
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-5}
 #@tab tensorflow
 log_P_xy = tf.math.log(P_xy)
 log_P_xy_neg = tf.math.log(1 - P_xy)
@@ -476,7 +474,7 @@ py = bayes_pred_stable(image)
 py
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-5}
 #@tab jax
 log_P_xy = jnp.log(P_xy)
 log_P_xy_neg = jnp.log(1 - P_xy)
@@ -494,24 +492,24 @@ py
 
 We may now check if the prediction is correct.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-6}
 #@tab mxnet
 # Convert label which is a scalar tensor of int32 dtype to a Python scalar
 # integer for comparison
 py.argmax(axis=0) == int(label)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-6}
 #@tab pytorch
 py.argmax(dim=0) == label
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-6}
 #@tab tensorflow
 tf.argmax(py, axis=0, output_type = tf.int32) == label
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-6}
 #@tab jax
 jnp.argmax(py, axis=0) == label
 ```
@@ -519,7 +517,7 @@ jnp.argmax(py, axis=0) == label
 If we now predict a few validation examples, we can see the Bayes
 classifier works pretty well.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-7}
 #@tab mxnet
 def predict(X):
     return [bayes_pred_stable(x).argmax(axis=0).astype(np.int32) for x in X]
@@ -529,7 +527,7 @@ preds = predict(X)
 d2l.show_images(X, 2, 9, titles=[str(d) for d in preds]);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-7}
 #@tab pytorch
 def predict(X):
     return [bayes_pred_stable(x).argmax(dim=0).type(torch.int32).item()
@@ -541,7 +539,7 @@ preds = predict(X)
 d2l.show_images(X, 2, 9, titles=[str(d) for d in preds]);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-7}
 #@tab tensorflow
 def predict(X):
     return [tf.argmax(
@@ -554,7 +552,7 @@ preds = predict(X)
 d2l.show_images(X, 2, 9, titles=[str(d) for d in preds]);
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-7}
 #@tab jax
 def predict(X):
     return [int(jnp.argmax(bayes_pred_stable(x), axis=0)) for x in X]
@@ -567,14 +565,14 @@ d2l.show_images(X, 2, 9, titles=[str(d) for d in preds]);
 
 Finally, let's compute the overall accuracy of the classifier.
 
-```{.python .input}
+```{.python .input #naive-bayes-training-8}
 #@tab mxnet
 X, y = mnist_test[:]
 preds = np.array(predict(X), dtype=np.int32)
 float((preds == y).sum()) / len(y)  # Validation accuracy
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-8}
 #@tab pytorch
 X = torch.stack([mnist_test[i][0] for i in range(len(mnist_test))], dim=0)
 y = torch.tensor([mnist_test[i][1] for i in range(len(mnist_test))])
@@ -582,7 +580,7 @@ preds = torch.tensor(predict(X), dtype=torch.int32)
 float((preds == y).sum()) / len(y)  # Validation accuracy
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-8}
 #@tab tensorflow
 X = test_images
 y = test_labels
@@ -591,7 +589,7 @@ preds = tf.constant(predict(X), dtype=tf.int32)
 tf.reduce_sum(tf.cast(preds == y, tf.float32)).numpy() / len(y)
 ```
 
-```{.python .input}
+```{.python .input #naive-bayes-training-8}
 #@tab jax
 X = jnp.array(test_images)
 y = jnp.array(test_labels)
@@ -626,3 +624,98 @@ Modern deep networks achieve error rates of less than $0.01$. The relatively poo
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1101)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Naive Bayes** — the simplest probabilistic classifier.
+Apply Bayes' rule:
+
+$$P(y \mid \mathbf{x}) \propto P(y) \prod_i P(x_i \mid y).$$
+
+The "naive" part is the assumption that features are
+**conditionally independent** given the class. Wrong in
+general — pixels of an image are obviously correlated —
+but the model is fast, requires little data, and is a
+useful starting point.
+
+This deck applies it to MNIST digit classification with
+binarized pixels.
+:::
+
+::: {.slide title="Setup + binary MNIST"}
+@naive-bayes
+:::
+
+::: {.slide title="Looking at the data"}
+@naive-bayes-optical-character-recognition-1
+
+. . .
+
+@naive-bayes-optical-character-recognition-2
+
+. . .
+
+@naive-bayes-optical-character-recognition-3
+:::
+
+::: {.slide title="Per-class pixel statistics"}
+For each class $y$ and pixel $i$, estimate
+$P(x_i = 1 \mid y)$ from the training set. With Laplace
+smoothing to avoid zeros:
+
+@naive-bayes-optical-character-recognition-4
+
+. . .
+
+@naive-bayes-optical-character-recognition-5
+
+. . .
+
+@naive-bayes-optical-character-recognition-6
+:::
+
+::: {.slide title="Training: just count"}
+@naive-bayes-training-1
+
+. . .
+
+@naive-bayes-training-2
+:::
+
+::: {.slide title="Training (cont.)"}
+@naive-bayes-training-3
+
+. . .
+
+@naive-bayes-training-4
+:::
+
+::: {.slide title="Predicting in log-space"}
+Sums of logs instead of products of probabilities — avoids
+underflow:
+
+@naive-bayes-training-5
+
+. . .
+
+@naive-bayes-training-6
+:::
+
+::: {.slide title="Evaluating"}
+@naive-bayes-training-7
+
+. . .
+
+@naive-bayes-training-8
+:::
+
+::: {.slide title="Recap"}
+- Bayes rule + conditional independence = naive Bayes.
+- Training is one pass over the data — count and
+  smooth.
+- Surprisingly competitive baseline for text
+  classification (sparse features, large vocab).
+- Bad on images (independence is too wrong) — but a
+  great teaching example for Bayesian classification.
+:::

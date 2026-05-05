@@ -46,7 +46,7 @@ dramatically increase the complexity of our model.
 Thus we often need a more fine-grained tool
 for adjusting function complexity.
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -55,7 +55,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -63,14 +63,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #weight-decay}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -81,9 +81,9 @@ import optax
 
 ## Norms and Weight Decay
 
-(**Rather than directly manipulating the number of parameters,
+Rather than directly manipulating the number of parameters,
 *weight decay* operates by restricting the values 
-that the parameters can take.**)
+that the parameters can take.
 More commonly called $\ell_2$ regularization
 outside of deep learning circles
 when optimized by minibatch stochastic gradient descent,
@@ -223,10 +223,10 @@ still holds true.
 We can illustrate the benefits of weight decay 
 through a simple synthetic example.
 
-First, we [**generate some data as before**]:
+First, we generate some data as before:
 
-(**$$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
-\epsilon \sim \mathcal{N}(0, 0.01^2).$$**)
+$$y = 0.05 + \sum_{i = 1}^d 0.01 x_i + \epsilon \textrm{ where }
+\epsilon \sim \mathcal{N}(0, 0.01^2).$$
 
 In this synthetic dataset, our label is given 
 by an underlying linear function of our inputs,
@@ -237,7 +237,7 @@ we can make the effects of overfitting pronounced,
 by increasing the dimensionality of our problem to $d = 200$
 and working with a small training set with only 20 examples.
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab pytorch
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -253,7 +253,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab tensorflow
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -269,7 +269,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab jax
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -286,7 +286,7 @@ class Data(d2l.DataModule):
         return self.get_tensorloader([self.X, self.y], train, i)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-high-dimensional-linear-regression}
 %%tab mxnet
 class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
@@ -310,13 +310,12 @@ is our optimizer,
 we just need to add the squared $\ell_2$ penalty
 to the original loss function.
 
-### (**Defining $\ell_2$ Norm Penalty**)
+### Defining $\ell_2$ Norm Penalty
 
 Perhaps the most convenient way of implementing this penalty
 is to square all terms in place and sum them.
 
-```{.python .input}
-%%tab all
+```{.python .input #weight-decay-defining-ell-2-norm-penalty}
 def l2_penalty(w):
     return d2l.reduce_sum(w**2) / 2
 ```
@@ -327,7 +326,7 @@ In the final model,
 the linear regression and the squared loss have not changed since :numref:`sec_linear_scratch`,
 so we will just define a subclass of `d2l.LinearRegressionScratch`. The only change here is that our loss now includes the penalty term.
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-1}
 %%tab pytorch, mxnet, tensorflow
 class WeightDecayScratch(d2l.LinearRegressionScratch):
     def __init__(self, num_inputs, lambd, lr, sigma=0.01):
@@ -339,7 +338,7 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
                 self.lambd * l2_penalty(self.w))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-1}
 %%tab jax
 class WeightDecayScratch(d2l.LinearRegressionScratch):
     lambd: int = 0
@@ -351,7 +350,7 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
 
 The following code fits our model on the training set with 20 examples and evaluates it on the validation set with 100 examples.
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab pytorch
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -363,7 +362,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab tensorflow
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -375,7 +374,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab jax
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -388,7 +387,7 @@ def train_scratch(lambd):
           float(l2_penalty(trainer.state.params['w'])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-defining-the-model-2}
 %%tab mxnet
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
 trainer = d2l.Trainer(max_epochs=10)
@@ -400,7 +399,7 @@ def train_scratch(lambd):
     print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
-### [**Training without Regularization**]
+### Training without Regularization
 
 We now run this code with `lambd = 0`,
 disabling weight decay.
@@ -408,12 +407,11 @@ Note that we overfit badly,
 decreasing the training error but not the
 validation error---a textbook case of overfitting.
 
-```{.python .input}
-%%tab all
+```{.python .input #weight-decay-training-without-regularization}
 train_scratch(0)
 ```
 
-### [**Using Weight Decay**]
+### Using Weight Decay
 
 Below, we run with substantial weight decay.
 Note that the training error increases
@@ -421,12 +419,11 @@ but the validation error decreases.
 This is precisely the effect
 we expect from regularization.
 
-```{.python .input}
-%%tab all
+```{.python .input #weight-decay-using-weight-decay}
 train_scratch(3)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Because weight decay is ubiquitous
 in neural network optimization,
@@ -472,7 +469,7 @@ the weight decay hyperparameter `wd` and apply it to the layer's weights
 through the `kernel_regularizer` argument.
 :end_tab:
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab mxnet
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -487,7 +484,7 @@ class WeightDecay(d2l.LinearRegression):
                              {'learning_rate': self.lr, 'wd': self.wd})
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab pytorch
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -501,7 +498,7 @@ class WeightDecay(d2l.LinearRegression):
             {'params': self.net.bias}], lr=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab tensorflow
 class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
@@ -516,7 +513,7 @@ class WeightDecay(d2l.LinearRegression):
         return super().loss(y_hat, y) + tf.add_n(self.net.losses)
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-1}
 %%tab jax
 class WeightDecay(d2l.LinearRegression):
     wd: float = 0
@@ -528,15 +525,15 @@ class WeightDecay(d2l.LinearRegression):
                            optax.sgd(self.lr))
 ```
 
-[**The plot looks similar to that when
-we implemented weight decay from scratch**].
+The plot looks similar to that when
+we implemented weight decay from scratch.
 However, this version runs faster
 and is easier to implement,
 benefits that will become more
 pronounced as you address larger problems
 and this work becomes more routine.
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab pytorch
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -545,7 +542,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab tensorflow
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -554,7 +551,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab jax
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -563,7 +560,7 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b(trainer.state)[0])))
 ```
 
-```{.python .input}
+```{.python .input #weight-decay-concise-implementation-2}
 %%tab mxnet
 model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
@@ -616,3 +613,99 @@ Different sets of parameters can have different update behaviors within the same
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17979)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The simplest **regularization** technique in the book —
+add a penalty on the squared norm of the weights:
+
+$$L_{\text{reg}}(\mathbf{w}, b) =
+  L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2.$$
+
+The optimizer sees an extra $-\lambda\mathbf{w}$ in the
+gradient → weights *decay* toward zero each step. One
+hyperparameter $\lambda$ (`wd` in code) controls how
+much.
+
+Why? An overparameterized model fit to a tiny dataset
+memorizes the noise. Capping how big the weights can grow
+keeps the fit tame.
+:::
+
+::: {.slide title="Setup"}
+@weight-decay
+:::
+
+::: {.slide title="A regression that overfits"}
+Generate a tiny dataset (20 train, 100 val) where the truth has
+**200 inputs** but only a small total signal:
+
+$$y = 0.05 + \sum_{i=1}^{200} 0.01\,x_i + \epsilon,
+  \quad \epsilon \sim \mathcal{N}(0, 0.01^2).$$
+
+Far more parameters than data — perfect overfitting setup:
+
+@weight-decay-high-dimensional-linear-regression
+:::
+
+::: {.slide title="The penalty + the model"}
+The penalty itself is one line:
+
+@weight-decay-defining-ell-2-norm-penalty
+
+. . .
+
+Subclass the from-scratch linear regression to add the penalty
+into the loss:
+
+@weight-decay-defining-the-model-1
+
+. . .
+
+@weight-decay-defining-the-model-2
+:::
+
+::: {.slide title="Without regularization → overfit"}
+$\lambda = 0$: the model fits the 20 training examples almost
+perfectly while validation loss explodes:
+
+@weight-decay-training-without-regularization
+:::
+
+::: {.slide title="With weight decay → controlled"}
+$\lambda = 3$: training loss is *higher*, but validation loss is
+much lower. Generalization wins:
+
+@weight-decay-using-weight-decay
+
+The training-vs-validation gap is the regularization payoff.
+:::
+
+::: {.slide title="The framework version"}
+Most optimizers accept a `weight_decay` argument that adds the
+$\lambda \mathbf{w}$ gradient term automatically — same idea, no
+manual penalty code:
+
+@weight-decay-concise-implementation-1
+
+. . .
+
+@weight-decay-concise-implementation-2
+
+(Note: framework `weight_decay` typically applies to **all**
+parameters; if you don't want bias decay, exclude it explicitly
+via parameter groups.)
+:::
+
+::: {.slide title="Recap"}
+- $\ell_2$-regularized loss = original loss + $\frac{\lambda}{2}
+  \|\mathbf{w}\|_2^2$.
+- Per-step effect: an extra $-\lambda \mathbf{w}$ in the
+  gradient — weights are pulled toward zero each update.
+- Hyperparameter $\lambda$ ("`wd`" in code) trades training
+  fit for generalization. Tune it on a validation set.
+- Frameworks expose this as the optimizer's `weight_decay=` arg.
+- The same idea generalizes — $\ell_1$ (sparsity), elastic net,
+  dropout, etc. — but $\ell_2$ is the default first try.
+:::

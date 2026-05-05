@@ -73,7 +73,7 @@ Trial-5) on rung 0.
 ![Asynchronous successive halving (ASHA) with two workers.](../img/asha.svg)
 :label:`asha`
 
-```{.python .input}
+```{.python .input #sh-async-asynchronous-successive-halving}
 from d2l import torch as d2l
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -90,7 +90,7 @@ from syne_tune.experiments import load_experiment
 We will use *Syne Tune* with the same objective function as in
 :numref:`sec_rs_async`.
 
-```{.python .input  n=54}
+```{.python .input #sh-async-objective-function-1  n=54}
 def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
     from d2l import torch as d2l
     from syne_tune import Reporter
@@ -112,7 +112,7 @@ def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
 
 We will also use the same configuration space as before:
 
-```{.python .input  n=55}
+```{.python .input #sh-async-objective-function-2  n=55}
 min_number_of_epochs = 2
 max_number_of_epochs = 10
 eta = 2
@@ -134,7 +134,7 @@ First, we define the number of workers that evaluate trials concurrently. We
 also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
-```{.python .input  n=56}
+```{.python .input #sh-async-asynchronous-scheduler-1  n=56}
 n_workers = 2  # Needs to be <= the number of available GPUs
 max_wallclock_time = 2 * 60  # 2 minutes
 ```
@@ -142,7 +142,7 @@ max_wallclock_time = 2 * 60  # 2 minutes
 The code for running ASHA is a simple variation of what we did for asynchronous
 random search.
 
-```{.python .input  n=56}
+```{.python .input #sh-async-asynchronous-scheduler-2  n=56}
 mode = "min"
 metric = "validation_error"
 resource_attr = "epoch"
@@ -165,7 +165,7 @@ corresponds to $r_{\mathrm{max}}$. Moreover, `grace_period` provides $r_{\mathrm
 `reduction_factor` is $\eta$. We can run Syne Tune as before (this will
 take a few minutes):
 
-```{.python .input  n=57}
+```{.python .input #sh-async-asynchronous-scheduler-3  n=57}
 trial_backend = PythonBackend(
     tune_function=hpo_objective_lenet_synetune,
     config_space=config_space,
@@ -192,7 +192,7 @@ implemented efficiently by checkpointing the training state after each epoch,
 but we avoid this extra complexity here. After the experiment has finished,
 we can retrieve and plot results.
 
-```{.python .input  n=59}
+```{.python .input #sh-async-asynchronous-scheduler-4  n=59}
 d2l.set_figsize()
 e = load_experiment(tuner.name)
 e.plot()
@@ -208,7 +208,7 @@ at the same point, because they require different amount of time per epoch. If
 we ran standard successive halving instead of ASHA, we would need to synchronize
 our workers, before we can promote configurations to the next rung level.
 
-```{.python .input  n=60}
+```{.python .input #sh-async-visualize-the-optimization-process  n=60}
 d2l.set_figsize([6, 2.5])
 results = e.results
 for trial_id in results.trial_id.unique():
@@ -235,3 +235,72 @@ than the loss of the suboptimal decision making.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12101)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Synchronous successive halving has a problem: at each
+rung, you wait for *all* surviving configs to finish
+before promoting. With multiple workers, fast configs
+finish first and idle waiting for stragglers.
+
+![Synchronous SH: workers idle while waiting for slow trials at the rung boundary.](../img/sync_sh.svg){width=72%}
+
+**ASHA** (Asynchronous Successive Halving) fixes this:
+promote configs to the next rung the moment they qualify,
+without waiting for the rest of the cohort. Workers
+always have something to do.
+
+![ASHA: free worker, qualified config, instant promotion.](../img/asha.svg){width=72%}
+
+State-of-the-art-grade HPO performance, with one
+parallelism mechanism that handles both early stopping
+and parallel dispatch.
+:::
+
+::: {.slide title="Objective with epochs as budget"}
+@sh-async-asynchronous-successive-halving
+
+. . .
+
+@sh-async-objective-function-1
+
+. . .
+
+@sh-async-objective-function-2
+:::
+
+::: {.slide title="ASHA scheduler"}
+Per-rung "halving books": each book holds the configs
+that have completed up to budget $r_i$. When a worker
+frees up, look across all rungs for any config that
+qualifies for promotion (top $1/\eta$ at its rung); if
+none, sample a fresh config:
+
+@sh-async-asynchronous-scheduler-1
+
+. . .
+
+@sh-async-asynchronous-scheduler-2
+:::
+
+::: {.slide title="ASHA scheduler (cont.)"}
+@sh-async-asynchronous-scheduler-3
+
+. . .
+
+@sh-async-asynchronous-scheduler-4
+:::
+
+::: {.slide title="Running ASHA"}
+@sh-async-visualize-the-optimization-process
+:::
+
+::: {.slide title="Recap"}
+- ASHA = SH with no rung-boundary wait — promote
+  qualified configs as soon as they qualify.
+- Workers are always busy; throughput scales much closer
+  to linearly with the number of workers.
+- Practical default for large-scale HPO. SyneTune /
+  Ray Tune both ship ASHA out of the box.
+:::

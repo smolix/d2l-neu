@@ -45,7 +45,7 @@ with the novel inclusion of multiplicative nodes.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -53,20 +53,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -241,7 +241,7 @@ Now let's implement an LSTM from scratch.
 As in the experiments in :numref:`sec_rnn-scratch`,
 we first load *The Time Machine* dataset.
 
-### [**Initializing Model Parameters**]
+### Initializing Model Parameters
 
 Next, we need to define and initialize the model parameters. 
 As previously, the hyperparameter `num_hiddens` 
@@ -250,7 +250,7 @@ We initialize weights following a Gaussian distribution
 with 0.01 standard deviation, 
 and we set the biases to 0.
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab pytorch
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -267,7 +267,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab mxnet
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -284,7 +284,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab tensorflow
 class LSTMScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -302,7 +302,7 @@ class LSTMScratch(d2l.Module):
         self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-1}
 %%tab jax
 class LSTMScratch(d2l.Module):
     num_inputs: int
@@ -325,13 +325,13 @@ class LSTMScratch(d2l.Module):
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-[**The actual model**] is defined as described above,
+The actual model is defined as described above,
 consisting of three gates and an input node. 
 Note that only the hidden state is passed to the output layer.
 :end_tab:
 
 :begin_tab:`jax`
-[**The actual model**] is defined as described above,
+The actual model is defined as described above,
 consisting of three gates and an input node. 
 Note that only the hidden state is passed to the output layer.
 A long for-loop in the `forward` method will result in an extremely long
@@ -343,7 +343,7 @@ is scanned on its leading axis. The `scan` transformation ultimately
 returns the final state and the stacked outputs as expected.
 :end_tab:
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab pytorch
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -371,7 +371,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab mxnet
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -399,7 +399,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab tensorflow
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -425,7 +425,7 @@ def forward(self, inputs, H_C=None):
     return outputs, (H, C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-initializing-model-parameters-2}
 %%tab jax
 @d2l.add_to_class(LSTMScratch)
 def forward(self, inputs, H_C=None):
@@ -457,11 +457,11 @@ def forward(self, inputs, H_C=None):
     return outputs, carry
 ```
 
-### [**Training**] and Prediction
+### Training and Prediction
 
 Let's train an LSTM model by instantiating the `RNNLMScratch` class from :numref:`sec_rnn-scratch`.
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -470,7 +470,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -480,7 +480,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -489,7 +489,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-training-and-prediction}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -498,7 +498,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 Using high-level APIs,
 we can directly instantiate an LSTM model.
@@ -508,7 +508,7 @@ The code is significantly faster as it uses
 compiled operators rather than Python
 for many details that we spelled out before.
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab mxnet
 class LSTM(d2l.RNN):
     def __init__(self, num_hiddens):
@@ -522,7 +522,7 @@ class LSTM(d2l.RNN):
         return self.rnn(inputs, H_C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab pytorch
 class LSTM(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -534,7 +534,7 @@ class LSTM(d2l.RNN):
         return self.rnn(inputs, H_C)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab tensorflow
 class LSTM(d2l.RNN):
     def __init__(self, num_hiddens):
@@ -549,7 +549,7 @@ class LSTM(d2l.RNN):
         return tf.transpose(outputs, perm=[1, 0, 2]), H_C
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-1}
 %%tab jax
 class LSTM(d2l.RNN):
     num_hiddens: int
@@ -568,14 +568,14 @@ class LSTM(d2l.RNN):
         return outputs, H_C
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab pytorch
 lstm = LSTM(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab tensorflow
 lstm = LSTM(num_hiddens=32)
 with d2l.try_gpu():
@@ -583,31 +583,31 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab jax
 lstm = LSTM(num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-2}
 %%tab mxnet
 lstm = LSTM(num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #lstm-concise-implementation-3}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```
@@ -661,3 +661,128 @@ LSTMs can alleviate vanishing and exploding gradients.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18016)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Vanilla RNNs hit a ceiling: gradients vanish across long
+sequences. **LSTMs** (Hochreiter & Schmidhuber, 1997) fix
+this by giving each unit a *memory cell* with a self-loop
+of weight 1 and three learned gates.
+
+- **Forget gate** $\mathbf{F}_t$ — keep or wipe memory.
+- **Input gate** $\mathbf{I}_t$ — let new content in.
+- **Output gate** $\mathbf{O}_t$ — expose or hide memory.
+
+For two decades, *the* sequence model — speech, translation,
+language modeling — until Transformers took over (2017).
+:::
+
+::: {.slide title="Setup"}
+@lstm-long-short-term-memory-lstm
+:::
+
+::: {.slide title="The three gates"}
+Three sigmoid heads — $\mathbf{X}_t$ and $\mathbf{H}_{t-1}$
+in, gating values in $(0, 1)$ out:
+
+$$
+\mathbf{I}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),
+$$
+$$
+\mathbf{F}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xf} + \mathbf{H}_{t-1} \mathbf{W}_{hf} + \mathbf{b}_f),
+$$
+$$
+\mathbf{O}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xo} + \mathbf{H}_{t-1} \mathbf{W}_{ho} + \mathbf{b}_o).
+$$
+
+![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=78%}
+:::
+
+::: {.slide title="Plus an input node"}
+A fourth head — the *input node* — uses $\tanh$ and
+proposes content to write into memory:
+
+$$\tilde{\mathbf{C}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \mathbf{W}_{hc} + \mathbf{b}_c).$$
+
+Same algebra four times — only the activation and what
+each output controls differ.
+
+![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=78%}
+:::
+
+::: {.slide title="Memory cell update"}
+Mix the previous cell with the new proposal, gated
+elementwise:
+
+$$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$
+
+If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$,
+the cell holds its value unchanged across arbitrary
+horizons. That's the **constant error carousel** that
+fixes vanishing gradients.
+
+![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=78%}
+:::
+
+::: {.slide title="Hidden state"}
+Gated, squashed cell:
+
+$$\mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
+
+![Computing $\mathbf{H}_t$ from $\mathbf{C}_t$ and the output gate.](../img/lstm-3.svg){width=78%}
+:::
+
+::: {.slide title="From scratch: parameters"}
+Twelve weight matrices and four biases — the same `triple()`
+factory four times, one per gate/node:
+
+@lstm-initializing-model-parameters-1
+:::
+
+::: {.slide title="Forward pass"}
+Walk the sequence; at each step compute the four gate/node
+heads, update $\mathbf{C}$, then $\mathbf{H}$. Carry both states
+forward.
+
+@lstm-initializing-model-parameters-2
+:::
+
+::: {.slide title="Training the from-scratch LSTM"}
+Same `RNNLMScratch` head, same `Trainer`, same gradient
+clipping — only the cell changed. Higher learning rate
+(`lr=4`) is fine because gates keep activations bounded.
+
+@lstm-training-and-prediction
+:::
+
+::: {.slide title="Concise: nn.LSTM"}
+Library cell + cuDNN kernels — usually 5–10× faster than the
+loop in Python:
+
+@lstm-concise-implementation-1
+
+. . .
+
+Drop into the same LM scaffold and train:
+
+@lstm-concise-implementation-2
+:::
+
+::: {.slide title="Decoding"}
+Predict from a prefix:
+
+@lstm-concise-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- LSTM = vanilla RNN cell replaced by a memory cell with three
+  multiplicative gates.
+- The cell update $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$
+  is what fixes vanishing gradients.
+- Only $\mathbf{H}_t$ leaves the cell; $\mathbf{C}_t$ is internal.
+- Reuse the from-scratch LM scaffold; `nn.LSTM` is the cuDNN
+  drop-in for production.
+- Dominant sequence model 2011–2017; many ideas (gating,
+  residual paths) carried into Transformers.
+:::

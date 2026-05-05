@@ -28,7 +28,7 @@ $$
 
 As before in :numref:`sec_momentum` we use $1 + \gamma + \gamma^2 + \ldots, = \frac{1}{1-\gamma}$. Hence the sum of weights is normalized to $1$ with a half-life time of an observation of $\gamma^{-1}$. Let's visualize the weights for the past 40 time steps for various choices of $\gamma$.
 
-```{.python .input}
+```{.python .input #rmsprop-the-algorithm-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -38,21 +38,21 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-the-algorithm-1}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
 import math
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-the-algorithm-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import math
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-the-algorithm-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -61,8 +61,7 @@ import math
 import numpy as np
 ```
 
-```{.python .input}
-#@tab all
+```{.python .input #rmsprop-the-algorithm-2}
 d2l.set_figsize()
 gammas = [0.95, 0.9, 0.8, 0.7]
 for gamma in gammas:
@@ -75,8 +74,7 @@ d2l.plt.xlabel('time');
 
 As before we use the quadratic function $f(\mathbf{x})=0.1x_1^2+2x_2^2$ to observe the trajectory of RMSProp. Recall that in :numref:`sec_adagrad`, when we used Adagrad with a learning rate of 0.4, the variables moved only very slowly in the later stages of the algorithm since the learning rate decreased too quickly. Since $\eta$ is controlled separately this does not happen with RMSProp.
 
-```{.python .input}
-#@tab all
+```{.python .input #rmsprop-implementation-from-scratch-1}
 def rmsprop_2d(x1, x2, s1, s2):
     g1, g2, eps = 0.2 * x1, 4 * x2, 1e-6
     s1 = gamma * s1 + (1 - gamma) * g1 ** 2
@@ -94,7 +92,7 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(rmsprop_2d))
 
 Next, we implement RMSProp to be used in a deep network. This is equally straightforward.
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-2}
 #@tab mxnet,pytorch
 def init_rmsprop_states(feature_dim):
     s_w = d2l.zeros((feature_dim, 1))
@@ -102,7 +100,7 @@ def init_rmsprop_states(feature_dim):
     return (s_w, s_b)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-2}
 #@tab tensorflow
 def init_rmsprop_states(feature_dim):
     s_w = tf.Variable(d2l.zeros((feature_dim, 1)))
@@ -110,7 +108,7 @@ def init_rmsprop_states(feature_dim):
     return (s_w, s_b)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-2}
 #@tab jax
 def init_rmsprop_states(feature_dim):
     s_w = jnp.zeros((feature_dim, 1))
@@ -118,7 +116,7 @@ def init_rmsprop_states(feature_dim):
     return [s_w, s_b]
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-3}
 #@tab mxnet
 def rmsprop(params, states, hyperparams):
     gamma, eps = hyperparams['gamma'], 1e-6
@@ -127,7 +125,7 @@ def rmsprop(params, states, hyperparams):
         p[:] -= hyperparams['lr'] * p.grad / np.sqrt(s + eps)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-3}
 #@tab pytorch
 def rmsprop(params, states, hyperparams):
     gamma, eps = hyperparams['gamma'], 1e-6
@@ -138,7 +136,7 @@ def rmsprop(params, states, hyperparams):
         p.grad.data.zero_()
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-3}
 #@tab tensorflow
 def rmsprop(params, grads, states, hyperparams):
     gamma, eps = hyperparams['gamma'], 1e-6
@@ -147,7 +145,7 @@ def rmsprop(params, grads, states, hyperparams):
         p[:].assign(p - hyperparams['lr'] * g / tf.math.sqrt(s + eps))
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-implementation-from-scratch-3}
 #@tab jax
 def rmsprop(params, grads, states, hyperparams):
     gamma, eps = hyperparams['gamma'], 1e-6
@@ -160,8 +158,7 @@ def rmsprop(params, grads, states, hyperparams):
 
 We set the initial learning rate to 0.01 and the weighting term $\gamma$ to 0.9. That is, $\mathbf{s}$ aggregates on average over the past $1/(1-\gamma) = 10$ observations of the square gradient.
 
-```{.python .input}
-#@tab all
+```{.python .input #rmsprop-implementation-from-scratch-4}
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(rmsprop, init_rmsprop_states(feature_dim),
                {'lr': 0.01, 'gamma': 0.9}, data_iter, feature_dim);
@@ -171,27 +168,27 @@ d2l.train_ch11(rmsprop, init_rmsprop_states(feature_dim),
 
 Since RMSProp is a rather popular algorithm it is also available in the `Trainer` instance. All we need to do is instantiate it using an algorithm named `rmsprop`, assigning $\gamma$ to the parameter `gamma1`.
 
-```{.python .input}
+```{.python .input #rmsprop-concise-implementation}
 #@tab mxnet
 d2l.train_concise_ch11('rmsprop', {'learning_rate': 0.01, 'gamma1': 0.9},
                        data_iter)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-concise-implementation}
 #@tab pytorch
 trainer = torch.optim.RMSprop
 d2l.train_concise_ch11(trainer, {'lr': 0.01, 'alpha': 0.9},
                        data_iter)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-concise-implementation}
 #@tab tensorflow
 trainer = tf.keras.optimizers.RMSprop
 d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'rho': 0.9},
                        data_iter)
 ```
 
-```{.python .input}
+```{.python .input #rmsprop-concise-implementation}
 #@tab jax
 import optax
 trainer = optax.rmsprop
@@ -228,3 +225,71 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1075)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Adagrad's accumulator $\mathbf{s}_t = \sum_{\tau \le t} \mathbf{g}_\tau^2$
+grows without bound. The effective learning rate
+$\eta / \sqrt{\mathbf{s}_t}$ collapses to zero — fine for
+convex / sparse problems, disastrous for deep non-convex
+training where the model never stops needing updates.
+:::
+
+::: {.slide title="RMSProp"}
+**RMSProp** (Hinton, 2012) replaces the running sum with
+an exponentially weighted average:
+
+$$\mathbf{s}_t = \gamma \mathbf{s}_{t-1} + (1-\gamma) \mathbf{g}_t^2,\quad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t.$$
+
+Finite memory: $\sim 1/(1-\gamma)$ steps, typically
+$\gamma = 0.9$ → ~10 steps. Effective LR stops decaying;
+old gradient magnitudes are forgotten.
+:::
+
+::: {.slide title="Decay coefficients"}
+Visualize $\gamma^t$ for several $\gamma$ — choosing
+$\gamma$ is choosing an effective time horizon:
+
+@rmsprop-the-algorithm-1
+
+. . .
+
+Demo on the anisotropic quadratic:
+
+@rmsprop-the-algorithm-2
+:::
+
+::: {.slide title="From-scratch RMSProp"}
+Same skeleton as Adagrad, but the accumulator update is now
+an EMA. One extra hyperparameter ($\gamma$):
+
+@rmsprop-implementation-from-scratch-1
+
+. . .
+
+@rmsprop-implementation-from-scratch-2
+
+. . .
+
+@rmsprop-implementation-from-scratch-3
+
+. . .
+
+@rmsprop-implementation-from-scratch-4
+:::
+
+::: {.slide title="Concise: framework RMSProp"}
+@rmsprop-concise-implementation
+:::
+
+::: {.slide title="Recap"}
+- RMSProp = Adagrad with the accumulator replaced by an
+  EMA: $\mathbf{s}_t = \gamma \mathbf{s}_{t-1} + (1-\gamma) \mathbf{g}_t^2$.
+- Standard $\gamma = 0.9$ → ~10-step effective window.
+- Effective learning rate doesn't collapse, so usable in
+  deep non-convex training.
+- Adam = RMSProp + momentum on the gradient (with bias
+  correction). Coming up.
+:::

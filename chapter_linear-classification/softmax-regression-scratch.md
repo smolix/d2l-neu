@@ -15,26 +15,26 @@ and reuse the other components
 from our linear regression section,
 including the training loop.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx, gluon
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -51,12 +51,11 @@ For a refresher, recall the operation of the sum operator
 along specific dimensions in a tensor,
 as discussed in :numref:`subsec_lin-alg-reduction`
 and :numref:`subsec_lin-alg-non-reduction`.
-[**Given a matrix `X` we can sum over all elements (by default) or only
-over elements in the same axis.**]
+Given a matrix `X` we can sum over all elements (by default) or only
+over elements in the same axis.
 The `axis` variable lets us compute row and column sums:
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-scratch-the-softmax-1}
 X = d2l.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 d2l.reduce_sum(X, 0, keepdims=True), d2l.reduce_sum(X, 1, keepdims=True)
 ```
@@ -67,9 +66,9 @@ Computing the softmax requires three steps:
 (iii) division of each row by its normalization constant,
 ensuring that the result sums to 1:
 
-(**
+
 $$\mathrm{softmax}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
-**)
+
 
 The (logarithm of the) denominator
 is called the (log) *partition function*.
@@ -77,34 +76,33 @@ It was introduced in [statistical physics](https://en.wikipedia.org/wiki/Partiti
 to sum over all possible states in a thermodynamic ensemble.
 The implementation is straightforward:
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-scratch-the-softmax-2}
 def softmax(X):
     X_exp = d2l.exp(X)
     partition = d2l.reduce_sum(X_exp, 1, keepdims=True)
     return X_exp / partition  # The broadcasting mechanism is applied here
 ```
 
-For any input `X`, [**we turn each element
+For any input `X`, we turn each element
 into a nonnegative number.
-Each row sums up to 1,**]
+Each row sums up to 1,
 as is required for a probability. Caution: the code above is *not* robust against very large or very small arguments. While it is sufficient to illustrate what is happening, you should *not* use this code verbatim for any serious purpose. Deep learning frameworks have such protections built in and we will be using the built-in softmax going forward.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-softmax-3}
 %%tab mxnet
 X = d2l.rand(2, 5)
 X_prob = softmax(X)
 X_prob, d2l.reduce_sum(X_prob, 1)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-softmax-3}
 %%tab tensorflow, pytorch
 X = d2l.rand((2, 5))
 X_prob = softmax(X)
 X_prob, d2l.reduce_sum(X_prob, 1)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-softmax-3}
 %%tab jax
 X = jax.random.uniform(d2l.get_key(), (2, 5))
 X_prob = softmax(X)
@@ -114,14 +112,14 @@ X_prob, d2l.reduce_sum(X_prob, 1)
 ## The Model
 
 We now have everything that we need
-to implement [**the softmax regression model.**]
+to implement the softmax regression model.
 As in our linear regression example,
 each instance will be represented
 by a fixed-length vector.
 Since the raw data here consists
 of $28 \times 28$ pixel images,
-[**we flatten each image,
-treating them as vectors of length 784.**]
+we flatten each image,
+treating them as vectors of length 784.
 In later chapters, we will introduce
 convolutional neural networks,
 which exploit the spatial structure
@@ -131,8 +129,8 @@ in a more satisfying way.
 In softmax regression,
 the number of outputs from our network
 should be equal to the number of classes.
-(**Since our dataset has 10 classes,
-our network has an output dimension of 10.**)
+Since our dataset has 10 classes,
+our network has an output dimension of 10.
 Consequently, our weights constitute a $784 \times 10$ matrix
 plus a $1 \times 10$ row vector for the biases.
 As with linear regression,
@@ -140,7 +138,7 @@ we initialize the weights `W`
 with Gaussian noise.
 The biases are initialized as zeros.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab mxnet
 class SoftmaxRegressionScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
@@ -155,7 +153,7 @@ class SoftmaxRegressionScratch(d2l.Classifier):
         return [self.W, self.b]
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab pytorch
 class SoftmaxRegressionScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
@@ -169,7 +167,7 @@ class SoftmaxRegressionScratch(d2l.Classifier):
         return [self.W, self.b]
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab tensorflow
 class SoftmaxRegressionScratch(d2l.Classifier):
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
@@ -181,7 +179,7 @@ class SoftmaxRegressionScratch(d2l.Classifier):
         self.b = tf.Variable(self.b)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab jax
 class SoftmaxRegressionScratch(d2l.Classifier):
     num_inputs: int
@@ -201,8 +199,7 @@ Note that we flatten each $28 \times 28$ pixel image in the batch
 into a vector using `reshape`
 before passing the data through our model.
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-scratch-the-model-2}
 @d2l.add_to_class(SoftmaxRegressionScratch)
 def forward(self, X):
     X = d2l.reshape(X, (-1, self.W.shape[0]))
@@ -225,20 +222,20 @@ For efficiency we avoid Python for-loops and use indexing instead.
 In particular, the one-hot encoding in $\mathbf{y}$
 allows us to select the matching terms in $\hat{\mathbf{y}}$.
 
-To see this in action we [**create sample data `y_hat`
-with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`.**]
+To see this in action we create sample data `y_hat`
+with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`.
 The correct labels are $0$ and $2$ respectively (i.e., the first and third class).
-[**Using `y` as the indices of the probabilities in `y_hat`,**]
+Using `y` as the indices of the probabilities in `y_hat`,
 we can pick out terms efficiently.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
 %%tab mxnet, pytorch, jax
 y = d2l.tensor([0, 2])
 y_hat = d2l.tensor([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
 y_hat[[0, 1], y]
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
 %%tab tensorflow
 y_hat = tf.constant([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
 y = tf.constant([0, 2])
@@ -246,11 +243,11 @@ tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-Now we can (**implement the cross-entropy loss function**) by averaging over the logarithms of the selected probabilities.
+Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
 :end_tab:
 
 :begin_tab:`jax`
-Now we can (**implement the cross-entropy loss function**) by averaging over the logarithms of the selected probabilities.
+Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
 
 Note that to make use of `jax.jit` to speed up JAX implementations, and
 to make sure `loss` is a pure function, the `cross_entropy` function is re-defined
@@ -259,7 +256,7 @@ which may render the `loss` function impure.
 We refer interested readers to the [JAX documentation](https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html#pure-functions) on `jax.jit` and pure functions.
 :end_tab:
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab mxnet, pytorch, jax
 def cross_entropy(y_hat, y):
     return -d2l.reduce_mean(d2l.log(y_hat[list(range(len(y_hat))), y]))
@@ -267,7 +264,7 @@ def cross_entropy(y_hat, y):
 cross_entropy(y_hat, y)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab tensorflow
 def cross_entropy(y_hat, y):
     return -tf.reduce_mean(tf.math.log(tf.boolean_mask(
@@ -278,14 +275,14 @@ cross_entropy(y_hat, y)
 
 Note that we take $\log(\hat{y})$ without clipping. In practice this can produce $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically clamps the argument away from zero or, preferably, uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation. We keep the code as written to mirror the mathematical definition.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(SoftmaxRegressionScratch)
 def loss(self, y_hat, y):
     return cross_entropy(y_hat, y)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab jax
 @d2l.add_to_class(SoftmaxRegressionScratch)
 @partial(jax.jit, static_argnums=(0))
@@ -300,7 +297,7 @@ def loss(self, params, X, y, state):
 
 ## Training
 
-We reuse the `fit` method defined in :numref:`sec_linear_scratch` to [**train the model with 10 epochs.**]
+We reuse the `fit` method defined in :numref:`sec_linear_scratch` to train the model with 10 epochs.
 Note that the number of epochs (`max_epochs`),
 the minibatch size (`batch_size`),
 and learning rate (`lr`)
@@ -320,8 +317,7 @@ as the validation set, thus
 reporting validation loss and validation accuracy
 on this split.
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-scratch-training}
 data = d2l.FashionMNIST(batch_size=256)
 model = SoftmaxRegressionScratch(num_inputs=784, num_outputs=10, lr=0.1)
 trainer = d2l.Trainer(max_epochs=10)
@@ -331,30 +327,30 @@ trainer.fit(model, data)
 ## Prediction
 
 Now that training is complete,
-our model is ready to [**classify some images.**]
+our model is ready to classify some images.
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab pytorch
 X, y = next(iter(data.val_dataloader()))
 preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab tensorflow
 X, y = next(iter(data.val_dataloader()))
 preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab jax
 X, y = next(iter(data.val_dataloader()))
 preds = d2l.argmax(model.apply({'params': trainer.state.params}, X), axis=1)
 preds.shape
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab mxnet
 X, y = next(iter(data.val_dataloader()))
 preds = d2l.argmax(model(X), axis=1)
@@ -367,8 +363,7 @@ comparing their actual labels
 with the predictions from the model
 (second line of text output).
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-scratch-prediction-2}
 wrong = d2l.astype(preds, y.dtype) != y
 X, y, preds = X[wrong], y[wrong], preds[wrong]
 labels = [a+'\n'+b for a, b in zip(
@@ -420,3 +415,107 @@ much more efficiently.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17982)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The same recipe as linear regression, with two new pieces:
+
+1. **Softmax** turns logits into a probability distribution.
+2. **Cross-entropy** is the loss for distributions.
+
+Wired into the same `Module` / `Trainer` scaffold from the
+regression chapter — `Classifier` adds accuracy reporting and we
+inherit the rest.
+:::
+
+::: {.slide title="Sums along an axis"}
+Quick reminder before defining softmax — sum along chosen axes:
+
+@softmax-regression-scratch-softmax-regression-implementation-from-scratch
+
+@softmax-regression-scratch-the-softmax-1
+:::
+
+::: {.slide title="Softmax"}
+$$\mathrm{softmax}(\mathbf{X})_{ij}
+  = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
+
+Three steps: exponentiate, sum across the class axis, divide.
+
+@softmax-regression-scratch-the-softmax-2
+
+. . .
+
+Result: every row is non-negative and **sums to 1** — a valid
+probability distribution over classes:
+
+@softmax-regression-scratch-the-softmax-3
+:::
+
+::: {.slide title="The model"}
+Flatten each 32×32 image into a 1024-vector, hit one linear layer
+that outputs 10 logits — one per class:
+
+@softmax-regression-scratch-the-model-1
+
+. . .
+
+The forward pass = flatten → linear → softmax:
+
+@softmax-regression-scratch-the-model-2
+:::
+
+::: {.slide title="Cross-entropy loss"}
+For label `y` (an integer class), the loss on one example is just
+
+$$\ell = -\log \hat{y}_{y}$$
+
+— the negative log of the *predicted probability of the correct
+class*. Here are two examples with 3 classes:
+
+@softmax-regression-scratch-the-cross-entropy-loss-1
+:::
+
+::: {.slide title="Implementing it"}
+One line — fancy indexing pulls out `y_hat[i, y[i]]` for each
+example, then negative log:
+
+@softmax-regression-scratch-the-cross-entropy-loss-2
+
+. . .
+
+@softmax-regression-scratch-the-cross-entropy-loss-3
+:::
+
+::: {.slide title="Train"}
+10 epochs on Fashion-MNIST. The base `Classifier` already handles
+the validation loop and accuracy reporting:
+
+@softmax-regression-scratch-training
+:::
+
+::: {.slide title="Predicting"}
+Pull a fresh validation batch and look at predicted vs. true
+classes:
+
+@softmax-regression-scratch-prediction-1
+
+. . .
+
+Tile the misclassified images, captioned with `predicted / true`:
+
+@softmax-regression-scratch-prediction-2
+
+Linear models cap out around ~83% on Fashion-MNIST — easy classes
+right, ambiguous shirt-vs-pullover wrong.
+:::
+
+::: {.slide title="Recap"}
+- **Softmax** = exp + row-sum normalization → probabilities.
+- **Cross-entropy** = $-\log p_\text{correct}$, the standard
+  classification loss.
+- A 10-output linear layer + softmax + CE loss is *the* baseline
+  classifier — anything fancier (MLPs, CNNs) just replaces the
+  forward pass.
+:::

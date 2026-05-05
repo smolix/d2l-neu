@@ -132,7 +132,7 @@ and 10.
 
 Below we demonstrate the computation of the region of interest pooling layer. Suppose that the height and width of the CNN-extracted features `X` are both 4, and there is only a single channel.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab mxnet
 from mxnet import np, npx
 
@@ -142,7 +142,7 @@ X = np.arange(16).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab pytorch
 import torch
 import torchvision
@@ -151,7 +151,7 @@ X = torch.arange(16.).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -162,7 +162,7 @@ X = jnp.arange(16.).reshape(1, 1, 4, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -179,22 +179,22 @@ Each region proposal
 is expressed as five elements:
 its object class followed by the $(x, y)$-coordinates of its upper-left and lower-right corners.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab mxnet
 rois = np.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab pytorch
 rois = torch.Tensor([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab jax
 rois = jnp.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]])
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-2}
 #@tab tensorflow
 rois = np.array([[0, 0, 0, 20, 20], [0, 0, 10, 30, 30]], dtype=np.float32)
 ```
@@ -208,17 +208,17 @@ each region of interest is divided
 into a grid of sub-windows to
 further extract features of the same shape $2\times 2$.
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab mxnet
 npx.roi_pooling(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab pytorch
 torchvision.ops.roi_pool(X, rois, output_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab jax
 # JAX does not have a built-in ROI pooling operator, so we implement it
 def roi_pool(X, rois, pooled_size, spatial_scale):
@@ -250,7 +250,7 @@ def roi_pool(X, rois, pooled_size, spatial_scale):
 roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
 
-```{.python .input}
+```{.python .input #rcnn-fast-r-cnn-3}
 #@tab tensorflow
 # TensorFlow does not ship a built-in RoI pooling op in the public API,
 # so we implement max-RoI pooling manually.  X is NHWC here.
@@ -409,3 +409,89 @@ in subsequent sections of this chapter.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1409)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+SSD does it all in one forward pass. The **R-CNN family**
+takes a different approach: first propose regions of
+interest, then classify and refine each one. Slower per
+image but historically more accurate and easier to extend
+(masks, keypoints).
+
+The lineage:
+
+- **R-CNN** (2014) — selective search + per-region CNN.
+- **Fast R-CNN** (2015) — one CNN forward, RoI pooling per
+  region. ~100× speedup.
+- **Faster R-CNN** (2016) — learn the region proposal too.
+- **Mask R-CNN** (2017) — adds a per-RoI segmentation head.
+:::
+
+::: {.slide title="R-CNN"}
+For each of ~2k selective-search proposals, warp to fixed
+size, run a CNN, classify with an SVM, regress a refined
+box. Conceptually clear, computationally horrible — 2k
+forward passes per image:
+
+![R-CNN: per-proposal forward passes.](../img/r-cnn.svg){width=72%}
+:::
+
+::: {.slide title="Fast R-CNN"}
+One forward pass on the whole image. Proposals come from
+the same selective search, but they index into the *shared*
+feature map via **RoI pooling**, which crops and resizes a
+variable rectangle to a fixed-size feature:
+
+![Fast R-CNN: shared backbone + RoI pooling per proposal.](../img/fast-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="RoI pooling"}
+Variable rectangle in feature space → fixed grid (e.g.
+$2 \times 2$). Each output cell is the max over its
+sub-region of the rectangle. Differentiable, fast,
+batchable:
+
+![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
+
+@rcnn-fast-r-cnn-1
+
+. . .
+
+@rcnn-fast-r-cnn-2
+
+. . .
+
+@rcnn-fast-r-cnn-3
+:::
+
+::: {.slide title="Faster R-CNN"}
+Replace selective search with a learnable **Region Proposal
+Network**. The RPN is a small CNN head sharing the same
+backbone — it proposes anchors that the second-stage head
+classifies and refines. End-to-end trainable:
+
+![Faster R-CNN: RPN replaces selective search; one network does both stages.](../img/faster-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="Mask R-CNN"}
+Add a third per-RoI head — a small FCN that produces a
+binary mask. Switching from RoI pool to **RoI align**
+(no quantization rounding) was crucial for getting masks
+sharp enough to be useful:
+
+![Mask R-CNN: Faster R-CNN + per-RoI mask FCN.](../img/mask-rcnn.svg){width=72%}
+:::
+
+::: {.slide title="Recap"}
+- Two-stage detectors: propose regions, then classify and
+  refine each one.
+- Fast R-CNN's contribution: shared backbone + RoI
+  pooling, $\sim$100× faster than R-CNN.
+- Faster R-CNN's contribution: learn the proposal too —
+  end-to-end trainable.
+- Mask R-CNN's contribution: per-RoI mask head + RoI
+  align — instance segmentation as a small extension.
+- Single-stage (SSD) wins on speed; two-stage often wins
+  on accuracy. Both are dominant production patterns.
+:::

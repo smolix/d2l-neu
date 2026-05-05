@@ -43,7 +43,7 @@ is to perform well on *previously unseen* data.
 That problem is called *generalization*
 and will be a key focus of other chapters.
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -52,7 +52,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -60,7 +60,7 @@ from matplotlib_inline import backend_inline
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -68,7 +68,7 @@ from matplotlib_inline import backend_inline
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #calculus}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -86,9 +86,9 @@ to *increase* or *decrease* each parameter
 by an infinitesimally small amount.
 Formally, for functions $f: \mathbb{R} \rightarrow \mathbb{R}$,
 that map from scalars to scalars,
-[**the *derivative* of $f$ at a point $x$ is defined as**]
+the *derivative* of $f$ at a point $x$ is defined as
 
-(**$$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$**)
+$$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$
 :eqlabel:`eq_derivative`
 
 This term on the right hand side is called a *limit* 
@@ -122,40 +122,39 @@ $f'(x)$
 as the *instantaneous* rate of change 
 of $f(x)$ with respect to $x$.
 Let's develop some intuition with an example.
-(**Define $u = f(x) = 3x^2-4x$.**)
+Define $u = f(x) = 3x^2-4x$.
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab mxnet
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab pytorch
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab tensorflow
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-```{.python .input}
+```{.python .input #calculus-derivatives-and-differentiation-1}
 %%tab jax
 def f(x):
     return 3 * x ** 2 - 4 * x
 ```
 
-[**Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$**] (**approaches $2$
-as $h$ approaches $0$.**)
+Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$ approaches $2$
+as $h$ approaches $0$.
 While this experiment lacks 
 the rigor of a mathematical proof,
 we can quickly see that indeed $f'(1) = 2$.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-derivatives-and-differentiation-2}
 for h in 10.0**np.arange(-1, -6, -1):
     print(f'h={h:.5f}, numerical limit={(f(1+h)-f(1))/h:.5f}')
 ```
@@ -192,7 +191,7 @@ at a particular location.
 
 ## Visualization Utilities
 
-[**We can visualize the slopes of functions using the `matplotlib` library**].
+We can visualize the slopes of functions using the `matplotlib` library.
 We need to define a few functions. 
 As its name indicates, `use_svg_display` 
 tells `matplotlib` to output graphics 
@@ -204,8 +203,7 @@ so that we can invoke it later
 without repeating the code, 
 e.g., via `d2l.use_svg_display()`.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-visualization-utilities-1}
 def use_svg_display():  #@save
     """Use the svg format to display a plot in Jupyter."""
     backend_inline.set_matplotlib_formats('svg')
@@ -215,8 +213,7 @@ Conveniently, we can set figure sizes with `set_figsize`.
 Since the import statement `from matplotlib import pyplot as plt` 
 was marked via `#@save` in the `d2l` package, we can call `d2l.plt`.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-visualization-utilities-2}
 def set_figsize(figsize=(3.5, 2.5)):  #@save
     """Set the figure size for matplotlib."""
     use_svg_display()
@@ -227,8 +224,7 @@ The `set_axes` function can associate axes
 with properties, including labels, ranges,
 and scales.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-visualization-utilities-3}
 #@save
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib."""
@@ -245,8 +241,7 @@ to overlay multiple curves.
 Much of the code here is just ensuring 
 that the sizes and shapes of inputs match.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-visualization-utilities-4}
 #@save
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
          ylim=None, xscale='linear', yscale='linear',
@@ -274,11 +269,10 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
     set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
 ```
 
-Now we can [**plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$**],
+Now we can plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$,
 where the coefficient $2$ is the slope of the tangent line.
 
-```{.python .input}
-%%tab all
+```{.python .input #calculus-visualization-utilities-5}
 x = np.arange(0, 3, 0.1)
 plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'])
 ```
@@ -453,3 +447,67 @@ throughout this book will require calculating the gradient.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17969)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Training a neural net = **minimizing a loss**. Calculus tells us
+which way to step:
+
+- The **derivative** measures the slope — how fast the loss
+  changes when we nudge a parameter.
+- For multi-parameter models, the gradient $\nabla_\theta L$ is
+  the vector of partial derivatives.
+- Optimizers follow $-\nabla_\theta L$ downhill.
+
+The geometric picture: a function and its tangent line at a point.
+The tangent's slope **is** the derivative.
+
+@!calculus-visualization-utilities-5
+:::
+
+::: {.slide title="Derivatives, by definition"}
+The derivative of $f$ at $x$ is
+$$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
+
+Take a concrete example, $u = f(x) = 3x^2 - 4x$ (analytic
+derivative: $f'(x) = 6x - 4$, so $f'(1) = 2$):
+
+@calculus
+
+@calculus-derivatives-and-differentiation-1
+:::
+
+::: {.slide title="Verifying numerically"}
+At $x = 1$, the difference quotient
+$\frac{f(x+h) - f(x)}{h}$ should approach $f'(1) = 2$ as $h \to 0$:
+
+@calculus-derivatives-and-differentiation-2
+
+. . .
+
+It does — but small `h` runs into floating-point cancellation,
+which is exactly the problem **autograd** sidesteps in the next
+chapter.
+:::
+
+::: {.slide title="Function and tangent line"}
+Plot $u = f(x)$ alongside its tangent at $x=1$, $y = 2x - 3$:
+
+@calculus-visualization-utilities-5
+
+The tangent's slope **is** $f'(1) = 2$ — derivatives are slopes,
+made geometric. (The d2l package wraps a few matplotlib helpers
+— `set_figsize`, `plot`, `set_axes` — used throughout the book.
+See the source if you're curious.)
+:::
+
+::: {.slide title="Recap"}
+- Derivative = limit of the difference quotient.
+- Multi-variable functions have **partial derivatives**, one per
+  input; the gradient bundles them into a vector.
+- The **chain rule** lets you differentiate compositions —
+  the engine inside backprop.
+- We won't compute derivatives by hand for long: the next chapter
+  shows how autograd handles it automatically.
+:::

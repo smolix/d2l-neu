@@ -28,7 +28,7 @@ and discuss some useful heuristics
 that you will find useful
 throughout your career in deep learning.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -36,21 +36,21 @@ from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -105,7 +105,7 @@ rendering learning impossible as parameters
 hardly move on each update.
 
 
-### (**Vanishing Gradients**)
+### Vanishing Gradients
 
 One frequent culprit causing the vanishing gradient problem
 is the choice of the activation function $\sigma$
@@ -120,7 +120,7 @@ the idea of neurons that fire either *fully* or *not at all*
 Let's take a closer look at the sigmoid
 to see why it can cause vanishing gradients.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab mxnet
 x = np.arange(-8.0, 8.0, 0.1)
 x.attach_grad()
@@ -131,7 +131,7 @@ y.backward()
 d2l.plot(x, [y, x.grad], legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab pytorch
 x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
 y = torch.sigmoid(x)
@@ -141,7 +141,7 @@ d2l.plot(x.detach().numpy(), [y.detach().numpy(), x.grad.numpy()],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab tensorflow
 x = tf.Variable(tf.range(-8.0, 8.0, 0.1))
 with tf.GradientTape() as t:
@@ -150,7 +150,7 @@ d2l.plot(x.numpy(), [y.numpy(), t.gradient(y, x).numpy()],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-vanishing-gradients}
 %%tab jax
 x = jnp.arange(-8.0, 8.0, 0.1)
 y = jax.nn.sigmoid(x)
@@ -159,8 +159,8 @@ d2l.plot(x, [y, grad_sigmoid(x)],
          legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
 ```
 
-As you can see, (**the sigmoid's gradient vanishes
-both when its inputs are large and when they are small**).
+As you can see, the sigmoid's gradient vanishes
+both when its inputs are large and when they are small.
 Moreover, when backpropagating through many layers,
 unless we are in the Goldilocks zone, where
 the inputs to many of the sigmoids are close to zero,
@@ -174,7 +174,7 @@ Consequently, ReLUs, which are more stable
 have emerged as the default choice for practitioners.
 
 
-### [**Exploding Gradients**]
+### Exploding Gradients
 
 The opposite problem, when gradients explode,
 can be similarly vexing.
@@ -188,7 +188,7 @@ When this happens because of the initialization
 of a deep network, we have no chance of getting
 a gradient descent optimizer to converge.
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab mxnet
 M = np.random.normal(size=(4, 4))
 print('a single matrix', M)
@@ -197,7 +197,7 @@ for i in range(100):
 print('after multiplying 100 matrices', M)
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab pytorch
 M = torch.normal(0, 1, size=(4, 4))
 print('a single matrix \n',M)
@@ -206,7 +206,7 @@ for i in range(100):
 print('after multiplying 100 matrices\n', M)
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab tensorflow
 M = tf.random.normal((4, 4))
 print('a single matrix \n', M)
@@ -215,7 +215,7 @@ for i in range(100):
 print('after multiplying 100 matrices\n', M.numpy())
 ```
 
-```{.python .input}
+```{.python .input #numerical-stability-and-init-exploding-gradients}
 %%tab jax
 M = jax.random.normal(d2l.get_key(), (4, 4))
 print('a single matrix \n', M)
@@ -423,3 +423,161 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17986)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Why was deep learning hard before 2012?** Nobody could
+*train* deep networks reliably — gradients either died at
+zero or blew up to infinity.
+
+Three ingredients fixed it:
+
+1. **Non-saturating activations** — ReLU and friends.
+2. **Careful weight initialization** — Xavier, Kaiming.
+3. **Symmetry breaking** — random init, not zero init.
+
+This deck makes the failure modes concrete.
+:::
+
+::: {.slide title="The chain rule turns the gradient into a product"}
+For an $L$-layer network with hidden states
+$\mathbf{h}^{(1)}, \mathbf{h}^{(2)}, \ldots$, the gradient
+of the loss with respect to a weight in layer $\ell$ is
+
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^{(\ell)}} =
+\underbrace{\frac{\partial \mathcal{L}}{\partial \mathbf{h}^{(L)}}}_{\text{loss}}
+\cdot \underbrace{\frac{\partial \mathbf{h}^{(L)}}{\partial \mathbf{h}^{(L-1)}}}_{\mathbf{M}_L}
+\cdots
+\underbrace{\frac{\partial \mathbf{h}^{(\ell+1)}}{\partial \mathbf{h}^{(\ell)}}}_{\mathbf{M}_{\ell+1}}
+\cdot \frac{\partial \mathbf{h}^{(\ell)}}{\partial \mathbf{W}^{(\ell)}}.$$
+
+It's a **product** of $L - \ell$ Jacobian matrices. Two
+ways this product can misbehave:
+
+- All Jacobians have spectral radius $< 1$ → product
+  shrinks geometrically → **vanishing gradient**.
+- All Jacobians have spectral radius $> 1$ → product
+  grows geometrically → **exploding gradient**.
+:::
+
+::: {.slide title="Setup"}
+@numerical-stability-and-init-numerical-stability-and-initialization
+:::
+
+::: {.slide title="Vanishing — sigmoid is the culprit"}
+@numerical-stability-and-init-vanishing-gradients
+
+The sigmoid's derivative peaks at $\sigma'(0) = 0.25$ and
+collapses to zero at the tails. In a 10-layer stack
+$0.25^{10} \approx 10^{-6}$ — gradients at layer 1 are a
+*millionth* of those near the output. ReLU fixes this:
+derivative is exactly 1 wherever the unit is active.
+:::
+
+::: {.slide title="Exploding — random-matrix products"}
+Multiply 100 random $4\times4$ Gaussian matrices and watch
+the entries:
+
+@numerical-stability-and-init-exploding-gradients
+
+Random Gaussian matrices have spectral radius $> 1$, so
+the product diverges. Same effect on gradients in a deep
+net with poorly scaled weights — loss goes to NaN in a
+few hundred steps.
+:::
+
+::: {.slide title="Crash modes you'll actually see"}
+- **Loss spikes mid-training** — exploding gradient on a
+  bad batch.
+- **Loss is NaN from step 1** — exploding init.
+- **Loss won't go down** — vanishing gradient (or learning
+  rate too small).
+:::
+
+::: {.slide title="The fix: keep variance constant through depth"}
+Forward pass through a linear layer with $n_{\text{in}}$
+inputs:
+
+$$o_i = \sum_{j=1}^{n_{\text{in}}} w_{ij}\, x_j.$$
+
+If $w_{ij} \sim \mathcal{N}(0, \sigma^2)$ and inputs are
+i.i.d. with variance $\gamma^2$:
+
+$$\mathbb{E}[o_i] = 0,\quad
+\mathrm{Var}[o_i] = n_{\text{in}}\, \sigma^2\, \gamma^2.$$
+
+For variance to be preserved layer-to-layer ($\mathrm{Var}[o] = \gamma^2$):
+
+$$\boxed{\sigma^2 = \frac{1}{n_{\text{in}}}}.$$
+
+Same argument for the **backward** pass gives
+$\sigma^2 = 1/n_{\text{out}}$. Can't satisfy both — so
+**Xavier** averages them.
+:::
+
+::: {.slide title="Xavier and Kaiming"}
+**Xavier / Glorot** (2010):
+
+$$\sigma^2 = \frac{2}{n_{\text{in}} + n_{\text{out}}}.$$
+
+Preserves variance both forward and backward.
+Designed for $\tanh$ / sigmoid.
+
+**Kaiming / He** (2015):
+
+$$\sigma^2 = \frac{2}{n_{\text{in}}}.$$
+
+Same idea, but compensates for ReLU *halving* the
+post-activation variance. Default for modern CNNs and
+Transformers.
+
+Both ship as defaults in every framework. Bias starts at 0.
+:::
+
+::: {.slide title="Symmetry breaking"}
+Set every weight to the same constant $c$:
+
+- Every hidden unit in a layer computes the *same* thing.
+- Every gradient is the same.
+- After every update, the weights are *still* the same.
+- An $h$-unit layer behaves like a 1-unit layer forever.
+
+Initialize **randomly** — even tiny noise breaks the
+permutation symmetry between hidden units. (SGD alone
+doesn't.)
+:::
+
+::: {.slide title="Modern building blocks"}
+Init alone gets you "trains a 10-layer net without NaN".
+Modern best practice for hundreds of layers stacks more on
+top:
+
+- **BatchNorm / LayerNorm** — re-normalize activations to
+  unit variance *during* training, removing the burden from
+  init.
+- **Residual connections** — $h^{(\ell+1)} = h^{(\ell)} + f(h^{(\ell)})$
+  gives the gradient a direct path back, so the multiplicative
+  shrinkage doesn't compound.
+- **GroupNorm / RMSNorm** — variants robust to small
+  batch sizes / sequence models.
+- **Mixed-precision training** — keep master weights in
+  fp32 to avoid underflow even when activations are fp16.
+
+The chapter on Modern CNNs revisits these.
+:::
+
+::: {.slide title="Recap"}
+- Gradients in a deep net are products of per-layer
+  Jacobians — they vanish or explode without care.
+- **Vanishing**: saturated activations (sigmoid/tanh) +
+  small weights → no gradient at the bottom layers.
+- **Exploding**: large weights → NaN.
+- Two complementary fixes: **non-saturating activations**
+  (ReLU) and **variance-preserving init** (Xavier /
+  Kaiming).
+- Random init breaks symmetry between units; zero init
+  collapses every hidden layer to a single neuron.
+- BatchNorm + residuals + careful init together get you
+  to 100+ layers reliably.
+:::

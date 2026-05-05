@@ -34,26 +34,26 @@ and they can only be computed by looking at data at previous time steps.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
 import jax
@@ -161,21 +161,21 @@ we define matrices `X`, `W_xh`, `H`, and `W_hh`, whose shapes are (3, 1), (1, 4)
 Multiplying `X` by `W_xh`, and `H` by `W_hh`, and then adding these two products,
 we obtain a matrix of shape (3, 4).
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab mxnet, pytorch
 X, W_xh = d2l.randn(3, 1), d2l.randn(1, 4)
 H, W_hh = d2l.randn(3, 4), d2l.randn(4, 4)
 d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab tensorflow
 X, W_xh = d2l.normal((3, 1)), d2l.normal((1, 4))
 H, W_hh = d2l.normal((3, 4)), d2l.normal((4, 4))
 d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
 ```
 
-```{.python .input}
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab jax
 X, W_xh = jax.random.normal(d2l.get_key(), (3, 1)), jax.random.normal(
                                                         d2l.get_key(), (1, 4))
@@ -196,8 +196,7 @@ Multiplying these two concatenated matrices,
 we obtain the same output matrix of shape (3, 4)
 as above.
 
-```{.python .input}
-%%tab all
+```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-2}
 d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
 ```
 
@@ -259,3 +258,68 @@ The hidden state of an RNN can capture historical information of the sequence up
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18013)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A **recurrent neural network** carries a **hidden state**
+$\mathbf{h}_t$ across time steps — a learned summary of
+all input seen so far:
+
+$$\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
+                     \mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{b}).$$
+
+Same weights at every step → constant parameter count
+regardless of sequence length. Unbounded effective
+context (in principle), no fixed-size window like n-grams.
+:::
+
+::: {.slide title="Stateful by design"}
+![An RNN with a hidden state.](../img/rnn.svg){width=70%}
+:::
+
+::: {.slide title="Setup"}
+@rnn-recurrent-neural-networks
+:::
+
+::: {.slide title="The recurrence in code"}
+The naive form: two matrix multiplies, summed:
+
+@rnn-recurrent-neural-networks-with-hidden-states-1
+
+. . .
+
+Equivalently — concatenate input and hidden, multiply by the
+concatenated weight matrix — same result, one matmul:
+
+@rnn-recurrent-neural-networks-with-hidden-states-2
+
+The "concat then multiply" form is what most framework `RNN`
+implementations actually do.
+:::
+
+::: {.slide title="As a language model"}
+- **Embedding** maps token id → vector $\mathbf{x}_t$.
+- **RNN** updates the hidden state $\mathbf{h}_t$.
+- **Linear head** projects $\mathbf{h}_t$ to vocab logits;
+  softmax → $P(x_{t+1} \mid x_{\le t})$.
+- Loss = **cross-entropy** with the next-token target.
+:::
+
+::: {.slide title="Character LM training"}
+![Input "machin", target "achine" — same RNN, target shifted by one.](../img/rnn-train.svg){width=80%}
+
+The next two sections build this end-to-end (from scratch +
+concise).
+:::
+
+::: {.slide title="Recap"}
+- RNN: $\mathbf{h}_t = \phi(\mathbf{W}_{xh}\mathbf{x}_t +
+  \mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{b})$.
+- Same parameters at every time step; hidden state carries
+  arbitrarily long context (in theory).
+- Trains by backprop **through time** — gradients flow from
+  $\mathbf{h}_T$ back to every earlier hidden state.
+- Vanilla RNNs suffer from vanishing/exploding gradients on long
+  sequences — fixed by **LSTM** and **GRU** in the next chapter.
+:::

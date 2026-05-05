@@ -44,7 +44,7 @@ One nice thing about this example will be that we know the answer going in.  Ind
 
 For our example, the plot of $P(X \mid \theta)$ is as follows:
 
-```{.python .input}
+```{.python .input #maximum-likelihood-a-concrete-example}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -57,7 +57,7 @@ p = theta**9 * (1 - theta)**4.
 d2l.plot(theta, p, 'theta', 'likelihood')
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-a-concrete-example}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -69,7 +69,7 @@ p = theta**9 * (1 - theta)**4.
 d2l.plot(theta, p, 'theta', 'likelihood')
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-a-concrete-example}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -81,7 +81,7 @@ p = theta**9 * (1 - theta)**4.
 d2l.plot(theta, p, 'theta', 'likelihood')
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-a-concrete-example}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -136,7 +136,7 @@ $$
 
 This can be written into code, and freely optimized even for billions of coin flips.
 
-```{.python .input}
+```{.python .input #maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood}
 #@tab mxnet
 # Set up our data
 n_H = 8675309
@@ -158,7 +158,7 @@ for iter in range(100):
 theta, n_H / (n_H + n_T)
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood}
 #@tab pytorch
 # Set up our data
 n_H = 8675309
@@ -180,7 +180,7 @@ for iter in range(100):
 theta, n_H / (n_H + n_T)
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood}
 #@tab tensorflow
 # Set up our data
 n_H = 8675309
@@ -200,7 +200,7 @@ for iter in range(100):
 theta, n_H / (n_H + n_T)
 ```
 
-```{.python .input}
+```{.python .input #maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood}
 #@tab jax
 import jax
 
@@ -334,3 +334,45 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1097)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Maximum likelihood**: pick the parameters that make the
+observed data most probable.
+
+$$\hat\theta = \arg\max_\theta \prod_i p(x_i \mid \theta)
+            = \arg\min_\theta -\sum_i \log p(x_i \mid \theta).$$
+
+The negative log-likelihood form is what every
+classification and regression loss in the book actually
+optimizes:
+
+- Cross-entropy = NLL of a categorical $p(y \mid x)$.
+- MSE = NLL of a Gaussian $p(y \mid x)$ with fixed variance.
+- BPR / softmax-with-temperature etc. — all NLLs.
+
+So "minimize the loss" is "do MLE" in fancy clothes.
+:::
+
+::: {.slide title="A concrete example"}
+@maximum-likelihood-a-concrete-example
+:::
+
+::: {.slide title="Numerical optimization (NLL)"}
+Sums of logs are easier than products: floating point
+behaves; gradients have closed forms; SGD works on the NLL.
+
+@maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
+:::
+
+::: {.slide title="Recap"}
+- MLE: maximize $\sum_i \log p(x_i \mid \theta)$;
+  equivalently, minimize NLL.
+- Connects optimization (the chapter's main topic) to
+  probability (this chapter's main topic).
+- Most "losses" in DL are NLLs of suitable conditional
+  distributions.
+- MLE is consistent and asymptotically efficient for
+  well-specified models.
+:::

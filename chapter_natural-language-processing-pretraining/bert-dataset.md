@@ -19,7 +19,7 @@ we use a smaller corpus WikiText-2 :cite:`Merity.Xiong.Bradbury.ea.2016`.
 Comparing with the PTB dataset used for pretraining word2vec in :numref:`sec_word2vec_data`,
 WikiText-2 (i) retains the original punctuation, making it suitable for next sentence prediction; (ii) retains the original case and numbers; (iii) is over twice larger.
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
@@ -29,7 +29,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab pytorch
 from d2l import torch as d2l
 import os
@@ -37,7 +37,7 @@ import random
 import torch
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -49,7 +49,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -58,7 +58,7 @@ import os
 import random
 ```
 
-In [**the WikiText-2 dataset**],
+In the WikiText-2 dataset,
 each line represents a paragraph where
 space is inserted between any punctuation and its preceding token.
 Paragraphs with at least two sentences are retained.
@@ -66,8 +66,7 @@ To split sentences, we only use the period as the delimiter for simplicity.
 We leave discussions of more complex sentence splitting techniques in the exercises
 at the end of this section.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-2}
 #@save
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
@@ -93,14 +92,13 @@ These helper functions will be invoked later
 when transforming the raw text corpus
 into the dataset of the ideal format to pretrain BERT.
 
-### [**Generating the Next Sentence Prediction Task**]
+### Generating the Next Sentence Prediction Task
 
 According to descriptions of :numref:`subsec_nsp`,
 the `_get_next_sentence` function generates a training example
 for the binary classification task.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-1}
 #@save
 def _get_next_sentence(sentence, next_sentence, paragraphs):
     if random.random() < 0.5:
@@ -117,8 +115,7 @@ from the input `paragraph` by invoking the `_get_next_sentence` function.
 Here `paragraph` is a list of sentences, where each sentence is a list of tokens.
 The argument `max_len` specifies the maximum length of a BERT input sequence during pretraining.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-generating-the-next-sentence-prediction-task-2}
 #@save
 def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
     nsp_data_from_paragraph = []
@@ -133,7 +130,7 @@ def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
     return nsp_data_from_paragraph
 ```
 
-### [**Generating the Masked Language Modeling Task**]
+### Generating the Masked Language Modeling Task
 :label:`subsec_prepare_mlm_data`
 
 In order to generate training examples
@@ -150,8 +147,7 @@ a special “&lt;mask&gt;” token or a random token, or remain unchanged.
 In the end, the function returns the input tokens after possible replacement,
 the token indices where predictions take place and labels for these predictions.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-1}
 #@save
 def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
                         vocab):
@@ -189,8 +185,7 @@ as an input and returns indices of the input tokens
 the token indices where predictions take place,
 and label indices for these predictions.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-generating-the-masked-language-modeling-task-2}
 #@save
 def _get_mlm_data_from_tokens(tokens, vocab):
     candidate_pred_positions = []
@@ -217,10 +212,10 @@ def _get_mlm_data_from_tokens(tokens, vocab):
 Now we are almost ready to customize a `Dataset` class for pretraining BERT.
 Before that, 
 we still need to define a helper function `_pad_bert_inputs`
-to [**append the special “&lt;pad&gt;” tokens to the inputs.**]
+to append the special “&lt;pad&gt;” tokens to the inputs.
 Its argument `examples` contain the outputs from the helper functions `_get_nsp_data_from_paragraph` and `_get_mlm_data_from_tokens` for the two pretraining tasks.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab mxnet
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -250,7 +245,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab pytorch
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -281,7 +276,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab jax
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -312,7 +307,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-1}
 #@tab tensorflow
 #@save
 def _pad_bert_inputs(examples, max_len, vocab):
@@ -344,7 +339,7 @@ def _pad_bert_inputs(examples, max_len, vocab):
 Putting the helper functions for
 generating training examples of the two pretraining tasks,
 and the helper function for padding inputs together,
-we customize the following `_WikiTextDataset` class as [**the WikiText-2 dataset for pretraining BERT**].
+we customize the following `_WikiTextDataset` class as the WikiText-2 dataset for pretraining BERT.
 By implementing the `__getitem__ `function,
 we can arbitrarily access the pretraining (masked language modeling and next sentence prediction) examples 
 generated from a pair of sentences from the WikiText-2 corpus.
@@ -355,7 +350,7 @@ the original byte pair encoding algorithm in :numref:`subsec_Byte_Pair_Encoding`
 For simplicity, we use the `d2l.tokenize` function for tokenization.
 Infrequent tokens that appear less than five times are filtered out.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab mxnet
 #@save
 class _WikiTextDataset(gluon.data.Dataset):
@@ -394,7 +389,7 @@ class _WikiTextDataset(gluon.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab pytorch
 #@save
 class _WikiTextDataset(torch.utils.data.Dataset):
@@ -433,7 +428,7 @@ class _WikiTextDataset(torch.utils.data.Dataset):
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab jax
 #@save
 class _WikiTextDataset:
@@ -472,7 +467,7 @@ class _WikiTextDataset:
         return len(self.all_token_ids)
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-2}
 #@tab tensorflow
 #@save
 class _WikiTextDataset:
@@ -506,10 +501,10 @@ class _WikiTextDataset:
 ```
 
 By using the `_read_wiki` function and the `_WikiTextDataset` class,
-we define the following `load_data_wiki` to [**download the WikiText-2 dataset
-and generate pretraining examples**] from it.
+we define the following `load_data_wiki` to download the WikiText-2 dataset
+and generate pretraining examples from it.
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab mxnet
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -522,7 +517,7 @@ def load_data_wiki(batch_size, max_len):
     return train_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab pytorch
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -535,7 +530,7 @@ def load_data_wiki(batch_size, max_len):
     return train_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab jax
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -562,7 +557,7 @@ def load_data_wiki(batch_size, max_len):
     return data_iter(), train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
 #@tab tensorflow
 #@save
 def load_data_wiki(batch_size, max_len):
@@ -583,12 +578,11 @@ def load_data_wiki(batch_size, max_len):
 ```
 
 Setting the batch size to 512 and the maximum length of a BERT input sequence to be 64,
-we [**print out the shapes of a minibatch of BERT pretraining examples**].
+we print out the shapes of a minibatch of BERT pretraining examples.
 Note that in each BERT input sequence,
 $10$ ($64 \times 0.15$) positions are predicted for the masked language modeling task.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-4}
 batch_size, max_len = 512, 64
 train_iter, vocab = load_data_wiki(batch_size, max_len)
 
@@ -604,8 +598,7 @@ In the end, let's take a look at the vocabulary size.
 Even after filtering out infrequent tokens,
 it is still over twice larger than that of the PTB dataset.
 
-```{.python .input}
-#@tab all
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-5}
 len(vocab)
 ```
 
@@ -635,3 +628,94 @@ len(vocab)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1496)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The previous deck specified BERT's *model*. This one
+specifies the *data*: how to turn raw text into the
+(masked tokens, NSP label, segment IDs, valid lengths)
+tuples that the pretraining loop expects.
+
+We use **WikiText-2** — a small, readable Wikipedia
+subset. Real BERT was pretrained on BookCorpus + English
+Wikipedia (~3.3B tokens); the recipe is identical, just
+scaled up.
+
+@bert-dataset-the-dataset-for-pretraining-bert-1
+
+. . .
+
+@bert-dataset-the-dataset-for-pretraining-bert-2
+:::
+
+::: {.slide title="Generating NSP examples"}
+For each sentence, with probability 0.5 pair it with the
+*next* sentence (`is_next=1`); otherwise pair with a
+*random* sentence (`is_next=0`):
+
+@bert-dataset-generating-the-next-sentence-prediction-task-1
+
+. . .
+
+@bert-dataset-generating-the-next-sentence-prediction-task-2
+:::
+
+::: {.slide title="Generating Masked LM labels"}
+Pick 15% of token positions. For those:
+- 80%: replace with `<mask>`.
+- 10%: replace with a random token.
+- 10%: leave the original (so the model can't tell which
+  position was selected for prediction).
+
+@bert-dataset-generating-the-masked-language-modeling-task-1
+
+. . .
+
+@bert-dataset-generating-the-masked-language-modeling-task-2
+:::
+
+::: {.slide title="Padding"}
+Pad to the batch max length; track `valid_lens` for
+attention masking; pad MLM labels with zero so the loss
+ignores them:
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-1
+:::
+
+::: {.slide title="Custom Dataset class"}
+Wraps the per-example generators into a `__getitem__`
+interface — the standard PyTorch / framework idiom:
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-2
+:::
+
+::: {.slide title="Loader factory"}
+Download corpus → tokenize → generate NSP + MLM pairs →
+DataLoader:
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-3
+:::
+
+::: {.slide title="Inspect a minibatch"}
+Verify shapes: `tokens`, `segments`, `valid_lens`,
+`pred_positions`, `mlm_weights`, `mlm_labels`,
+`nsp_labels`:
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-4
+
+. . .
+
+@bert-dataset-transforming-text-into-the-pretraining-dataset-5
+:::
+
+::: {.slide title="Recap"}
+- A BERT minibatch carries seven tensors: tokens,
+  segments, valid_lens, masked positions, MLM weights,
+  MLM labels, NSP label.
+- 15% MLM masking with the 80/10/10 split is the original
+  recipe; modern variants (RoBERTa) drop NSP, increase
+  masking, and dynamic-mask each epoch.
+- Pretraining BERT for real takes 16+ TPU/GPU-days; the
+  WikiText-2 demo is small enough to play with.
+:::

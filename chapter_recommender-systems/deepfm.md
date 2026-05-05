@@ -32,7 +32,7 @@ where $\sigma$ is the sigmoid function. The architecture of DeepFM is illustrate
 
 It is worth noting that DeepFM is not the only way to combine deep neural networks with FM. We can also add nonlinear layers over the feature interactions :cite:`He.Chua.2017`.
 
-```{.python .input  n=2}
+```{.python .input #deepfm-model-architectures  n=2}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import init, gluon, np, npx
@@ -42,7 +42,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input  n=2}
+```{.python .input #deepfm-model-architectures  n=2}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -53,7 +53,7 @@ import os
 ## Implementation of DeepFM
 The implementation of DeepFM is similar to that of FM. We keep the FM part unchanged and use an MLP block with `relu` as the activation function. Dropout is also used to regularize the model. The number of neurons of the MLP can be adjusted with the `mlp_dims` hyperparameter.
 
-```{.python .input  n=2}
+```{.python .input #deepfm-implementation-of-deepfm  n=2}
 #@tab mxnet
 class DeepFM(nn.Block):
     def __init__(self, field_dims, num_factors, mlp_dims, drop_rate=0.1):
@@ -81,7 +81,7 @@ class DeepFM(nn.Block):
         return x
 ```
 
-```{.python .input  n=2}
+```{.python .input #deepfm-implementation-of-deepfm  n=2}
 #@tab pytorch
 class DeepFM(nn.Module):
     def __init__(self, field_dims, num_factors, mlp_dims, drop_rate=0.1):
@@ -114,7 +114,7 @@ class DeepFM(nn.Module):
 ## Training and Evaluating the Model
 The data loading process is the same as that of FM. We set the MLP component of DeepFM to a three-layered dense network with a pyramid structure (30-20-10). All other hyperparameters remain the same as FM.
 
-```{.python .input  n=4}
+```{.python .input #deepfm-training-and-evaluating-the-model  n=4}
 #@tab mxnet
 batch_size = 2048
 data_dir = d2l.download_extract('ctr')
@@ -139,7 +139,7 @@ loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input  n=4}
+```{.python .input #deepfm-training-and-evaluating-the-model  n=4}
 #@tab pytorch
 batch_size = 2048
 data_dir = d2l.download_extract('ctr')
@@ -189,3 +189,49 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/407)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**DeepFM** (Guo et al., 2017) — combine a factorization
+machine and a deep MLP, sharing the embedding table.
+
+- **FM branch** — linear + pairwise bilinear interactions
+  (same as the previous deck).
+- **Deep branch** — concat all field embeddings, feed to
+  an MLP. Captures *high-order* nonlinear interactions
+  that the bilinear FM misses.
+
+Final prediction: $\sigma(\hat y_{FM} + \hat y_{Deep})$.
+End-to-end training. Has been a workhorse of industry CTR
+systems since ~2017 — Wide & Deep with the FM
+substitution.
+:::
+
+::: {.slide title="Architecture"}
+Shared embeddings feed both the FM head and the deep MLP
+head:
+
+@deepfm-model-architectures
+:::
+
+::: {.slide title="Implementation"}
+@deepfm-implementation-of-deepfm
+:::
+
+::: {.slide title="Training"}
+Same CTR pipeline as the FM deck — only the model
+changes:
+
+@deepfm-training-and-evaluating-the-model
+:::
+
+::: {.slide title="Recap"}
+- DeepFM = FM (low-order) + deep MLP (high-order),
+  sharing the same embedding table.
+- Same input format as FM; one extra branch.
+- Family of "two-tower" CTR models: Wide & Deep,
+  DeepFM, xDeepFM, AutoInt, DLRM. All variations on the
+  same idea: explicit interaction term + nonlinear
+  feature mixer + sigmoid head.
+:::

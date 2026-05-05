@@ -39,13 +39,13 @@ We will implement the base class `mxnet.gluon.loss.Loss` and override the `forwa
 We will subclass `nn.Module` and implement the BPR loss in its `forward` method.
 :end_tab:
 
-```{.python .input  n=5}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-1  n=5}
 #@tab mxnet
 from mxnet import gluon, np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=5}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-1  n=5}
 #@tab pytorch
 import torch
 from torch import nn
@@ -53,7 +53,7 @@ from torch import nn
 
 The implementation of BPR loss is as follows.
 
-```{.python .input  n=2}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-2  n=2}
 #@tab mxnet
 #@save
 class BPRLoss(gluon.loss.Loss):
@@ -66,7 +66,7 @@ class BPRLoss(gluon.loss.Loss):
         return loss
 ```
 
-```{.python .input  n=2}
+```{.python .input #ranking-bayesian-personalized-ranking-loss-and-its-implementation-2  n=2}
 #@tab pytorch
 #@save
 class BPRLoss(nn.Module):
@@ -90,7 +90,7 @@ $$
 
 where $m$ is the safety margin size. It aims to push negative items away from positive items. Similar to BPR, it aims to optimize for relevant distance between positive and negative samples instead of absolute outputs, making it well suited to recommender systems.
 
-```{.python .input  n=3}
+```{.python .input #ranking-hinge-loss-and-its-implementation  n=3}
 #@tab mxnet
 #@save
 class HingeLossbRec(gluon.loss.Loss):
@@ -104,7 +104,7 @@ class HingeLossbRec(gluon.loss.Loss):
         return loss
 ```
 
-```{.python .input  n=3}
+```{.python .input #ranking-hinge-loss-and-its-implementation  n=3}
 #@tab pytorch
 #@save
 class HingeLossbRec(nn.Module):
@@ -136,3 +136,58 @@ These two losses are interchangeable for personalized ranking in recommendation.
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/402)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Most real-world recommender data is **implicit** —
+clicks, watches, purchases. There are no explicit ratings,
+and the unobserved (user, item) pairs are a *mix* of
+"didn't like it" and "haven't seen it yet". MSE on a 0/1
+target is wrong.
+
+Better framing: **personalized ranking** — given an
+observed positive (user, $i$), the model should rank $i$
+*above* random unobserved items.
+
+Two pairwise losses for this:
+
+- **BPR** (Bayesian Personalized Ranking, Rendle et al.
+  2009) — log-sigmoid of score margin:
+  $-\log \sigma(\hat r_{ui} - \hat r_{uj})$ for sampled
+  negatives $j$.
+- **Hinge** — max-margin variant:
+  $\max(0, m - (\hat r_{ui} - \hat r_{uj}))$.
+
+Both turn implicit feedback into pairwise comparisons; the
+model learns to put positives above negatives.
+:::
+
+::: {.slide title="BPR loss"}
+Sampled negatives $j$ per positive $(u, i)$; loss is
+log-sigmoid of the score margin:
+
+@ranking-bayesian-personalized-ranking-loss-and-its-implementation-1
+
+. . .
+
+@ranking-bayesian-personalized-ranking-loss-and-its-implementation-2
+:::
+
+::: {.slide title="Hinge loss"}
+Hard-margin alternative — equivalent to a max-margin
+classifier over score differences:
+
+@ranking-hinge-loss-and-its-implementation
+:::
+
+::: {.slide title="Recap"}
+- Personalized ranking turns implicit feedback into a
+  pairwise comparison task.
+- BPR: log-sigmoid of the (positive - negative) score
+  margin. Soft, differentiable, the most-used choice.
+- Hinge: hard margin; sometimes better with very
+  imbalanced data.
+- Negative sampling is the implementation hammer that
+  makes either loss tractable on large item catalogs.
+:::

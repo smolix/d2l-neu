@@ -38,7 +38,7 @@ describes multi-head attention.
 ![Multi-head attention, where multiple heads are concatenated then linearly transformed.](../img/multi-head-attention.svg)
 :label:`fig_multi-head-attention`
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab mxnet
 from d2l import mxnet as d2l
 import math
@@ -47,7 +47,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab pytorch
 from d2l import torch as d2l
 import math
@@ -55,13 +55,13 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-multi-head-attention}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -106,8 +106,8 @@ than the simple weighted average can be expressed.
 ## Implementation
 
 In our implementation,
-we [**choose the scaled dot product attention
-for each head**] of the multi-head attention.
+we choose the scaled dot product attention
+for each head of the multi-head attention.
 To avoid significant growth of computational cost and parametrization cost,
 we set $p_q = p_k = p_v = p_o / h$.
 Note that $h$ heads can be computed in parallel
@@ -118,7 +118,7 @@ to $p_q h = p_k h = p_v h = p_o$.
 In the following implementation,
 $p_o$ is specified via the argument `num_hiddens`.
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab mxnet
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -157,7 +157,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab pytorch
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -195,7 +195,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab tensorflow
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
@@ -235,7 +235,7 @@ class MultiHeadAttention(d2l.Module):  #@save
         return self.W_o(output_concat)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-1}
 %%tab jax
 class MultiHeadAttention(nn.Module):  #@save
     num_hiddens: int
@@ -276,13 +276,13 @@ class MultiHeadAttention(nn.Module):  #@save
         return self.W_o(output_concat), attention_weights
 ```
 
-To allow for [**parallel computation of multiple heads**],
+To allow for parallel computation of multiple heads,
 the above `MultiHeadAttention` class uses two transposition methods as defined below.
 Specifically,
 the `transpose_output` method reverses the operation
 of the `transpose_qkv` method.
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab mxnet
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -306,7 +306,7 @@ def transpose_output(self, X):
     return X.reshape(X.shape[0], X.shape[1], -1)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab pytorch
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -330,7 +330,7 @@ def transpose_output(self, X):
     return X.reshape(X.shape[0], X.shape[1], -1)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab tensorflow
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -354,7 +354,7 @@ def transpose_output(self, X):
     return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-2}
 %%tab jax
 @d2l.add_to_class(MultiHeadAttention)  #@save
 def transpose_qkv(self, X):
@@ -378,13 +378,13 @@ def transpose_output(self, X):
     return X.reshape((X.shape[0], X.shape[1], -1))
 ```
 
-Let's [**test our implemented**] `MultiHeadAttention` class
+Let's test our implemented `MultiHeadAttention` class
 using a toy example where keys and values are the same.
 As a result,
 the shape of the multi-head attention output
 is (`batch_size`, `num_queries`, `num_hiddens`).
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab pytorch
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
@@ -396,27 +396,27 @@ d2l.check_shape(attention(X, Y, Y, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab mxnet
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 attention.initialize()
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab jax
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-3}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
 attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
                                num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab mxnet
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
@@ -426,7 +426,7 @@ d2l.check_shape(attention(X, Y, Y, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab tensorflow
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
@@ -436,7 +436,7 @@ d2l.check_shape(attention(X, Y, Y, valid_lens, training=False),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #multihead-attention-implementation-4}
 %%tab jax
 batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
@@ -475,3 +475,70 @@ proper tensor manipulation is needed.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18029)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A single attention head computes one weighted average —
+one notion of "relevance". But a sentence has many
+parallel relations: subject-verb agreement, syntax,
+coreference, topical similarity.
+
+**Multi-head attention** runs $h$ independent attention
+mechanisms in parallel, each with its own learned linear
+projections of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$.
+Modern Transformers use 8, 16, even 96 heads.
+:::
+
+::: {.slide title="The architecture"}
+$$\mathbf{h}_i = f(\mathbf{W}_i^{(q)}\mathbf{q}, \mathbf{W}_i^{(k)}\mathbf{k}, \mathbf{W}_i^{(v)}\mathbf{v}),$$
+$$\text{MHA} = \mathbf{W}_o\,[\mathbf{h}_1; \ldots; \mathbf{h}_h].$$
+
+![$h$ projections in parallel, concatenated and linearly transformed.](../img/multi-head-attention.svg){width=72%}
+:::
+
+::: {.slide title="Setup"}
+@multihead-attention-multi-head-attention
+:::
+
+::: {.slide title="Per-head dimension trick"}
+To keep cost flat as $h$ grows, set $p_q = p_k = p_v = p_o/h$.
+The $h$ heads then have the same total compute as a single-
+head attention with hidden size $p_o$. Implementation: do
+*one* big $\mathbf{W}_q$ producing $p_o$-dim outputs, then
+reshape into $h$ heads.
+
+@multihead-attention-implementation-1
+:::
+
+::: {.slide title="Reshape trick for parallel heads"}
+Reshape `(batch, len, num_hiddens)` →
+`(batch, len, num_heads, dim/heads)` →
+`(batch * num_heads, len, dim/heads)` so the attention layer
+sees all heads as just more batch entries. `transpose_output`
+reverses it after the attention layer:
+
+@multihead-attention-implementation-2
+:::
+
+::: {.slide title="Shape check"}
+5 heads × 100 hidden, batch 2, 4 queries, 6 key-value pairs.
+Output shape matches input shape:
+
+@multihead-attention-implementation-3
+
+. . .
+
+@multihead-attention-implementation-4
+:::
+
+::: {.slide title="Recap"}
+- $h$ heads, each its own learned $\mathbf{W}_q, \mathbf{W}_k,
+  \mathbf{W}_v$, run in parallel; concat then project.
+- Set per-head dim to `num_hiddens / num_heads` so total
+  compute stays the same as a single-head layer.
+- Reshape `(B, L, D) → (B*h, L, D/h)` to run all heads as one
+  batched matmul — no Python loop.
+- The block of choice for Transformers; multiple heads let one
+  layer learn many simultaneous notions of relevance.
+:::

@@ -28,7 +28,7 @@ We hope that through a hands-on approach,
 you will gain some intuitions that will guide you
 in your career as a data scientist.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -39,7 +39,7 @@ import pandas as pd
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -48,7 +48,7 @@ from torch import nn
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -56,7 +56,7 @@ import tensorflow as tf
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -70,13 +70,12 @@ import pandas as pd
 
 Throughout the book, we will train and test models
 on various downloaded datasets.
-Here, we (**implement two utility functions**)
+Here, we implement two utility functions
 for downloading and extracting zip or tar files.
 Again, we skip implementation details of
 such utility functions.
 
-```{.python .input  n=2}
-%%tab all
+```{.python .input #kaggle-house-price-downloading-data  n=2}
 def download(url, folder, sha1_hash=None):
     """Download a file to folder and return the local filepath."""
 
@@ -147,14 +146,13 @@ The "Data" tab on the competition tab
 in :numref:`fig_house_pricing`
 has links for downloading the data.
 
-To get started, we will [**read in and process the data
-using `pandas`**], which we introduced in :numref:`sec_pandas`.
+To get started, we will read in and process the data
+using `pandas`, which we introduced in :numref:`sec_pandas`.
 For convenience, we can download and cache
 the Kaggle housing dataset.
 If a file corresponding to this dataset already exists in the cache directory and its SHA-1 matches `sha1_hash`, our code will use the cached file to avoid clogging up your Internet with redundant downloads.
 
-```{.python .input  n=30}
-%%tab all
+```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
 class KaggleHouse(d2l.DataModule):
     def __init__(self, batch_size, train=None, val=None):
         super().__init__()
@@ -172,8 +170,7 @@ The training dataset includes 1460 examples,
 80 features, and one label, while the validation data
 contains 1459 examples and 80 features.
 
-```{.python .input  n=31}
-%%tab all
+```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
 data = KaggleHouse(batch_size=64)
 print(data.raw_train.shape)
 print(data.raw_val.shape)
@@ -181,11 +178,10 @@ print(data.raw_val.shape)
 
 ## Data Preprocessing
 
-Let's [**take a look at the first four and final two features
-as well as the label (SalePrice)**] from the first four examples.
+Let's take a look at the first four and final two features
+as well as the label (SalePrice) from the first four examples.
 
-```{.python .input  n=10}
-%%tab all
+```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
@@ -201,11 +197,11 @@ we will need to preprocess the data before we can start modeling.
 
 Let's start with the numerical features.
 First, we apply a heuristic,
-[**replacing all missing values
-by the corresponding feature's mean.**]
+replacing all missing values
+by the corresponding feature's mean.
 Then, to put all features on a common scale,
-we (***standardize* the data by
-rescaling features to zero mean and unit variance**):
+we *standardize* the data by
+rescaling features to zero mean and unit variance:
 
 $$x \leftarrow \frac{x - \mu}{\sigma},$$
 
@@ -222,9 +218,9 @@ which features will be relevant,
 we do not want to penalize coefficients
 assigned to one feature more than any other.
 
-[**Next we deal with discrete values.**]
+Next we deal with discrete values.
 These include features such as "MSZoning".
-(**We replace them by a one-hot encoding**)
+We replace them by a one-hot encoding
 in the same way that we earlier transformed
 multiclass labels into vectors (see :numref:`subsec_classification-problem`).
 For instance, "MSZoning" assumes the values "RL" and "RM".
@@ -236,8 +232,7 @@ if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
 
-```{.python .input  n=32}
-%%tab all
+```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 @d2l.add_to_class(KaggleHouse)
 def preprocess(self):
     # Remove the ID and label columns
@@ -266,8 +261,7 @@ def preprocess(self):
 You can see that this conversion increases
 the number of features from 79 to 331 (excluding ID and label columns).
 
-```{.python .input  n=33}
-%%tab all
+```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
 data.preprocess()
 data.train.shape
 ```
@@ -279,8 +273,8 @@ To get started we will train a linear model with squared loss. Not surprisingly,
 With house prices, as with stock prices,
 we care about relative quantities
 more than absolute quantities.
-Thus [**we tend to care more about
-the relative error $\frac{y - \hat{y}}{y}$**]
+Thus we tend to care more about
+the relative error $\frac{y - \hat{y}}{y}$
 than about the absolute error $y - \hat{y}$.
 For instance, if our prediction is off by \$100,000
 when estimating the price of a house in rural Ohio,
@@ -291,8 +285,8 @@ in Los Altos Hills, California,
 this might represent a stunningly accurate prediction
 (there, the median house price exceeds \$4 million).
 
-(**One way to address this problem is to
-measure the discrepancy in the logarithm of the price estimates.**)
+One way to address this problem is to
+measure the discrepancy in the logarithm of the price estimates.
 In fact, this is also the official error measure
 used by the competition to evaluate the quality of submissions.
 After all, a small value $\delta$ for $|\log y - \log \hat{y}| \leq \delta$
@@ -301,8 +295,7 @@ This leads to the following root-mean-squared-error between the logarithm of the
 
 $$\sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i -\log \hat{y}_i\right)^2}.$$
 
-```{.python .input  n=60}
-%%tab all
+```{.python .input #kaggle-house-price-error-measure  n=60}
 @d2l.add_to_class(KaggleHouse)
 def get_dataloader(self, train):
     label = 'SalePrice'
@@ -318,7 +311,7 @@ def get_dataloader(self, train):
 
 ## $K$-Fold Cross-Validation
 
-You might recall that we introduced [**cross-validation**]
+You might recall that we introduced cross-validation
 in :numref:`subsec_generalization-model-selection`, where we discussed how to deal
 with model selection.
 We will put this to good use to select the model design
@@ -334,8 +327,7 @@ if our dataset was considerably larger.
 But this added complexity might obfuscate our code unnecessarily
 so we can safely omit it here owing to the simplicity of our problem.
 
-```{.python .input}
-%%tab all
+```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(data, k):
     rets = []
     fold_size = data.train.shape[0] // k
@@ -346,10 +338,10 @@ def k_fold_data(data, k):
     return rets
 ```
 
-[**The average validation error is returned**]
+The average validation error is returned
 when we train $K$ times in the $K$-fold cross-validation.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab pytorch, mxnet, tensorflow
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
@@ -364,7 +356,7 @@ def k_fold(trainer, data, k, lr):
     return models
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab jax
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
@@ -381,7 +373,7 @@ def k_fold(trainer, data, k, lr):
     return models
 ```
 
-## [**Model Selection**]
+## Model Selection
 
 In this example, we pick an untuned set of hyperparameters
 and leave it up to the reader to improve the model.
@@ -395,8 +387,7 @@ However, if we try an unreasonably large number of options
 we might find that our validation
 performance is no longer representative of the true error.
 
-```{.python .input}
-%%tab all
+```{.python .input #kaggle-house-price-model-selection}
 trainer = d2l.Trainer(max_epochs=10)
 models = k_fold(trainer, data, k=5, lr=0.01)
 ```
@@ -411,7 +402,7 @@ Less overfitting might indicate that our data can support a more powerful model.
 Massive overfitting might suggest that we can gain
 by incorporating regularization techniques.
 
-##  [**Submitting Predictions on Kaggle**]
+##  Submitting Predictions on Kaggle
 
 Now that we know what a good choice of hyperparameters should be,
 we might 
@@ -422,7 +413,7 @@ Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
 The following code will generate a file called `submission.csv`.
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab pytorch
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
@@ -433,7 +424,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab tensorflow
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
@@ -444,7 +435,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab jax
 preds = [model.apply({'params': params},
          d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
@@ -456,7 +447,7 @@ submission = pd.DataFrame({'Id':data.raw_val.Id,
 submission.to_csv('submission.csv', index=False)
 ```
 
-```{.python .input}
+```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab mxnet
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
@@ -519,3 +510,178 @@ we can use $K$-fold cross-validation .
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17988)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**House Prices: Advanced Regression Techniques** —
+predict sale prices of Ames, Iowa houses from 80 numeric
+and categorical features. A small but realistic end-to-end
+ML exercise.
+
+What makes it interesting:
+
+- **1460 train / 1459 test** — small data.
+- **80 mixed features** — needs preprocessing.
+- **Missing values** in dozens of columns.
+- **Targets vary 10×** ($65k–$755k) — wrong loss
+  overweights expensive houses.
+
+The MLP is 5 lines. The lesson is the **pipeline** around
+it — preprocessing, the right loss, CV, submission.
+:::
+
+::: {.slide title="Kaggle in 30 seconds"}
+Kaggle hosts open ML competitions. Download train + test
+CSVs, train locally, upload predictions, get scored on a
+held-out portion of the test set.
+
+![Kaggle competition page.](../img/kaggle.png){width=80%}
+:::
+
+::: {.slide title="The House Prices page"}
+![The competition's data tab — download and inspect.](../img/house-pricing.png){width=82%}
+
+Real-world ML practice: data isn't preprocessed for you,
+the leaderboard tells you instantly if you're better than
+baseline, and the public/private split keeps people honest
+about overfitting.
+:::
+
+::: {.slide title="Setup and data download"}
+A reusable hash-checked download helper we'll keep using
+throughout the book:
+
+@kaggle-house-price-predicting-house-prices-on-kaggle
+
+. . .
+
+@kaggle-house-price-downloading-data
+:::
+
+::: {.slide title="Reading the data"}
+Wrap train and test CSVs in a `KaggleHouse(d2l.DataModule)`:
+
+@kaggle-house-price-accessing-and-reading-the-dataset-1
+
+. . .
+
+@kaggle-house-price-accessing-and-reading-the-dataset-2
+:::
+
+::: {.slide title="What the rows look like"}
+@kaggle-house-price-data-preprocessing-1
+
+Mixed numeric and categorical columns; lots of missing
+values; final column is the target `SalePrice`. Models eat
+tensors, not DataFrames — preprocessing is mandatory.
+:::
+
+::: {.slide title="Three preprocessing transforms"}
+Apply on **train + test together** so train statistics
+match what we'll see at test time:
+
+1. **Numeric NaN → mean.** Simple imputation; median or
+   zero are alternatives.
+2. **Standardize** numeric columns to mean 0, std 1 —
+   makes optimization well-conditioned across wildly
+   different scales.
+3. **One-hot encode** categorical columns. `NaN` becomes
+   its own category — missing-as-a-signal.
+:::
+
+::: {.slide title="The transforms in code"}
+@kaggle-house-price-data-preprocessing-2
+
+. . .
+
+@kaggle-house-price-data-preprocessing-3
+
+After preprocessing: ~330 columns of well-scaled floats.
+:::
+
+::: {.slide title="Choosing the right loss"}
+Plain squared error penalizes a $10k mistake on a $70k
+house the same as on a $700k house. The *relative* error
+is more honest — predict the **logarithm** of the price:
+
+$$\text{RMSLE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \big(\log y_i - \log \hat y_i\big)^2}.$$
+
+The official Kaggle metric for this competition. Mistakes
+are measured **as percentages**, not dollars.
+:::
+
+::: {.slide title="Loss in code"}
+@kaggle-house-price-error-measure
+:::
+
+::: {.slide title="K-fold cross-validation"}
+With ~1500 training examples, a single 80/20 split is
+noisy. **K-fold CV**: split into $K$ folds, train $K$
+times holding each fold out, average the scores.
+
+```
+fold 1:  [ val ][ train ][ train ][ train ][ train ]
+fold 2:  [train][  val  ][ train ][ train ][ train ]
+fold 3:  [train][ train ][  val  ][ train ][ train ]
+fold 4:  [train][ train ][ train ][  val  ][ train ]
+fold 5:  [train][ train ][ train ][ train ][  val  ]
+```
+
+Costs $K\times$ more compute; gives a stable estimate of
+generalization error.
+:::
+
+::: {.slide title="K-fold in code"}
+@kaggle-house-price-k-fold-cross-validation-1
+
+. . .
+
+@kaggle-house-price-k-fold-cross-validation-2
+:::
+
+::: {.slide title="Model selection"}
+@kaggle-house-price-model-selection
+
+In practice you'd grid- or random-search over learning
+rate, hidden size, weight decay, dropout. Same loop,
+different hyperparameters. Pick the config with the lowest
+**average** val score.
+:::
+
+::: {.slide title="Submitting predictions"}
+Final step: re-fit on **all** training data (no
+validation hold-out), predict the test set, write the
+Kaggle-format CSV:
+
+@kaggle-house-price-submitting-predictions-on-kaggle
+
+![Upload the CSV; Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=84%}
+:::
+
+::: {.slide title="The general competition recipe"}
+Same shape works for almost any tabular ML competition:
+
+1. **Download** train + test data.
+2. **Preprocess** — impute, scale, encode (combined stats).
+3. **Choose the right loss** — match the scoring metric.
+4. **K-fold CV** for generalization estimate + HP search.
+5. **Refit on all training data** with the best HPs.
+6. **Submit** predictions in the host's format.
+
+GBDTs (XGBoost / LightGBM) usually win tabular; nets shine
+on images, text, audio. The pipeline is the same.
+:::
+
+::: {.slide title="Recap"}
+- Real-world ML is mostly **pipeline**, not model
+  architecture.
+- Heterogeneous tabular data → impute, standardize,
+  one-hot encode.
+- Match the loss to the metric — log-RMSE for prices, not
+  squared error.
+- K-fold CV for stable generalization estimates on small
+  data.
+- Refit on full data before final predictions.
+- The MLP is a few lines; everything around it is the lesson.
+:::

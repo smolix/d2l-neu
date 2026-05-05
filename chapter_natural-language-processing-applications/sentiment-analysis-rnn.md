@@ -30,7 +30,7 @@ choice later.
 ![This section feeds pretrained GloVe to an RNN-based architecture for sentiment analysis.](../img/nlp-map-sa-rnn.svg)
 :label:`fig_nlp-map-sa-rnn`
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, init, np, npx
@@ -41,7 +41,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -51,7 +51,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -65,7 +65,7 @@ batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -108,7 +108,7 @@ is then transformed into output categories
 by a fully connected layer (`self.decoder`)
 with two outputs ("positive" and "negative").
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-1}
 #@tab mxnet
 class BiRNN(nn.Block):
     def __init__(self, vocab_size, embed_size, num_hiddens,
@@ -139,7 +139,7 @@ class BiRNN(nn.Block):
         return outs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-1}
 #@tab pytorch
 class BiRNN(nn.Module):
     def __init__(self, vocab_size, embed_size, num_hiddens,
@@ -171,7 +171,7 @@ class BiRNN(nn.Module):
         return outs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-1}
 #@tab jax
 class BiRNN(nn.Module):
     vocab_size: int
@@ -205,7 +205,7 @@ class BiRNN(nn.Module):
         return outs
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-1}
 #@tab tensorflow
 class BiRNN(d2l.Classifier):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -239,18 +239,17 @@ class BiRNN(d2l.Classifier):
 
 Let's construct a bidirectional RNN with two hidden layers to represent single text for sentiment analysis.
 
-```{.python .input}
-#@tab all
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-2}
 embed_size, num_hiddens, num_layers, devices = 100, 100, 2, d2l.try_all_gpus()
 net = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab mxnet
 net.initialize(init.Xavier(), ctx=devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab pytorch
 def init_weights(module):
     if type(module) == nn.Linear:
@@ -262,14 +261,14 @@ def init_weights(module):
 net.apply(init_weights);
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab jax
 # JAX/Flax modules are initialized lazily; we initialize parameters here
 dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
 params = net.init(jax.random.PRNGKey(0), dummy_input)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab tensorflow
 # Build the model by calling it once on a dummy input
 dummy_input = tf.zeros((1, 500), dtype=tf.int32)
@@ -280,16 +279,14 @@ net(dummy_input)
 
 Below we load the pretrained 100-dimensional (needs to be consistent with `embed_size`) GloVe embeddings for tokens in the vocabulary.
 
-```{.python .input}
-#@tab all
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-1}
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 ```
 
 Print the shape of the vectors
 for all the tokens in the vocabulary.
 
-```{.python .input}
-#@tab all
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-2}
 embeds = glove_embedding[vocab.idx_to_token]
 embeds.shape
 ```
@@ -300,19 +297,19 @@ to represent tokens in the reviews
 and will not update
 these vectors during training.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab mxnet
 net.embedding.weight.set_data(embeds)
 net.embedding.collect_params().setattr('grad_req', 'null')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab pytorch
 net.embedding.weight.data.copy_(embeds)
 net.embedding.weight.requires_grad = False
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab jax
 # Set pretrained embedding weights in the parameters
 params = flax.core.unfreeze(params)
@@ -320,7 +317,7 @@ params['params']['embedding']['embedding'] = jnp.array(embeds)
 params = flax.core.freeze(params)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab tensorflow
 net.embedding.set_weights([np.array(embeds)])
 net.embedding.trainable = False
@@ -330,7 +327,7 @@ net.embedding.trainable = False
 
 Now we can train the bidirectional RNN for sentiment analysis.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab mxnet
 lr, num_epochs = 0.01, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
@@ -338,7 +335,7 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab pytorch
 lr, num_epochs = 0.01, 5
 trainer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -346,7 +343,7 @@ loss = nn.CrossEntropyLoss(reduction="none")
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab jax
 lr, num_epochs = 0.01, 5
 # Work with the inner params dict directly so JIT caches across iterations
@@ -390,7 +387,7 @@ for epoch in range(num_epochs):
 params = {'params': params_p}
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab tensorflow
 lr, num_epochs = 0.01, 5
 net.compile(optimizer=keras.optimizers.Adam(lr),
@@ -401,7 +398,7 @@ net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
 
 We define the following function to predict the sentiment of a text sequence using the trained model `net`.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-2}
 #@tab mxnet
 #@save
 def predict_sentiment(net, vocab, sequence):
@@ -411,7 +408,7 @@ def predict_sentiment(net, vocab, sequence):
     return 'positive' if label == 1 else 'negative'
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-2}
 #@tab pytorch
 #@save
 def predict_sentiment(net, vocab, sequence):
@@ -421,7 +418,7 @@ def predict_sentiment(net, vocab, sequence):
     return 'positive' if label == 1 else 'negative'
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-2}
 #@tab jax
 #@save
 def predict_sentiment(net, params, vocab, sequence):
@@ -431,7 +428,7 @@ def predict_sentiment(net, params, vocab, sequence):
     return 'positive' if label == 1 else 'negative'
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-2}
 #@tab tensorflow
 #@save
 def predict_sentiment(net, vocab, sequence):
@@ -444,32 +441,32 @@ def predict_sentiment(net, vocab, sequence):
 
 Finally, let's use the trained model to predict the sentiment for two simple sentences.
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-3}
 #@tab mxnet, pytorch
 predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-3}
 #@tab jax
 predict_sentiment(net, params, vocab, 'this movie is so great')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-3}
 #@tab tensorflow
 predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-4}
 #@tab mxnet, pytorch
 predict_sentiment(net, vocab, 'this movie is so bad')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-4}
 #@tab jax
 predict_sentiment(net, params, vocab, 'this movie is so bad')
 ```
 
-```{.python .input}
+```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-4}
 #@tab tensorflow
 predict_sentiment(net, vocab, 'this movie is so bad')
 ```
@@ -502,3 +499,79 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1424)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Sentiment classification on IMDb: pretrained word vectors
+→ bidirectional LSTM → linear head. Standard
+pre-Transformer text-classification recipe.
+
+The encoder reads the review left-to-right and
+right-to-left; concatenated final hidden states feed a
+binary classifier. GloVe gives a strong initialization
+that the LSTM then specializes for sentiment.
+:::
+
+::: {.slide title="Pipeline"}
+![GloVe embeddings → BiLSTM → output classifier.](../img/nlp-map-sa-rnn.svg){width=82%}
+:::
+
+::: {.slide title="Setup"}
+@sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks
+:::
+
+::: {.slide title="BiRNN classifier"}
+@sentiment-analysis-rnn-representing-single-text-with-rnns-1
+
+. . .
+
+@sentiment-analysis-rnn-representing-single-text-with-rnns-2
+
+. . .
+
+@sentiment-analysis-rnn-representing-single-text-with-rnns-3
+:::
+
+::: {.slide title="Loading pretrained GloVe"}
+Use 100-dim GloVe vectors trained on Wikipedia + Gigaword.
+Initialize the embedding layer from them; freeze or
+fine-tune (we fine-tune):
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-1
+
+. . .
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-2
+
+. . .
+
+@sentiment-analysis-rnn-loading-pretrained-word-vectors-3
+:::
+
+::: {.slide title="Training"}
+Standard cross-entropy + Adam:
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-1
+
+. . .
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-2
+:::
+
+::: {.slide title="Predict on new reviews"}
+@sentiment-analysis-rnn-training-and-evaluating-the-model-3
+
+. . .
+
+@sentiment-analysis-rnn-training-and-evaluating-the-model-4
+:::
+
+::: {.slide title="Recap"}
+- BiLSTM-on-GloVe: a strong pre-Transformer baseline for
+  text classification.
+- Pretrained embeddings carry general-purpose word
+  semantics; LSTM specializes for sentiment.
+- Easily beaten today by fine-tuned BERT, but a clean
+  template for sequence-to-label tasks more broadly.
+:::

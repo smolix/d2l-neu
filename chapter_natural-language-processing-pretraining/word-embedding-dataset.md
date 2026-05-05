@@ -16,7 +16,7 @@ will be transformed
 into minibatches
 that can be iterated over during training.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab mxnet
 import collections
 from d2l import mxnet as d2l
@@ -26,7 +26,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab pytorch
 import collections
 from d2l import torch as d2l
@@ -36,7 +36,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab jax
 import collections
 from d2l import jax as d2l
@@ -48,7 +48,7 @@ import os
 import random
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab tensorflow
 import collections
 from d2l import tensorflow as d2l
@@ -71,8 +71,7 @@ each line of the text file
 represents a sentence of words that are separated by spaces.
 Here we treat each word as a token.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-reading-the-dataset-1}
 #@save
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -98,8 +97,7 @@ the "&lt;unk&gt;" token.
 Note that the original dataset
 also contains "&lt;unk&gt;" tokens that represent rare (unknown) words.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-reading-the-dataset-2}
 vocab = d2l.Vocab(sentences, min_freq=10)
 f'vocab size: {len(vocab)}'
 ```
@@ -144,8 +142,7 @@ $f(w_i) > t$  can the (high-frequency) word $w_i$ be discarded,
 and the higher the relative frequency of the word, 
 the greater the probability of being discarded.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-subsampling-1}
 #@save
 def subsample(sentences, vocab):
     """Subsample high-frequency words."""
@@ -176,16 +173,14 @@ subsampling significantly shortens sentences
 by dropping high-frequency words,
 which will lead to training speedup.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-subsampling-2}
 d2l.show_list_len_pair_hist(['origin', 'subsampled'], '# tokens per sentence',
                             'count', sentences, subsampled);
 ```
 
 For individual tokens, the sampling rate of the high-frequency word "the" is less than 1/20.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-subsampling-3}
 def compare_counts(token):
     return (f'# of "{token}": '
             f'before={sum([l.count(token) for l in sentences])}, '
@@ -197,15 +192,13 @@ compare_counts('the')
 In contrast, 
 low-frequency words "join" are completely kept.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-subsampling-4}
 compare_counts('join')
 ```
 
 After subsampling, we map tokens to their indices for the corpus.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-subsampling-5}
 corpus = [vocab[line] for line in subsampled]
 corpus[:3]
 ```
@@ -226,8 +219,7 @@ does not exceed the sampled
 context window size
 are its context words.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-1}
 #@save
 def get_centers_and_contexts(corpus, max_window_size):
     """Return center words and context words in skip-gram."""
@@ -252,8 +244,7 @@ Next, we create an artificial dataset containing two sentences of 7 and 3 words,
 Let the maximum context window size be 2 
 and print all the center words and their context words.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-2}
 tiny_dataset = [list(range(7)), list(range(7, 10))]
 print('dataset', tiny_dataset)
 for center, context in zip(*get_centers_and_contexts(tiny_dataset, 2)):
@@ -264,8 +255,7 @@ When training on the PTB dataset,
 we set the maximum context window size to 5. 
 The following extracts all the center words and their context words in the dataset.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-extracting-center-words-and-context-words-3}
 all_centers, all_contexts = get_centers_and_contexts(corpus, 5)
 f'# center-context pairs: {sum([len(contexts) for contexts in all_contexts])}'
 ```
@@ -279,8 +269,7 @@ we define the following `RandomGenerator` class,
 where the (possibly unnormalized) sampling distribution is passed
 via the argument `sampling_weights`.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-negative-sampling-1}
 #@save
 class RandomGenerator:
     """Randomly draw among {1, ..., n} according to n sampling weights."""
@@ -306,25 +295,25 @@ we can draw 10 random variables $X$
 among indices 1, 2, and 3
 with sampling probabilities $P(X=1)=2/9, P(X=2)=3/9$, and $P(X=3)=4/9$ as follows.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab mxnet
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab pytorch
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab jax
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-negative-sampling-2}
 #@tab tensorflow
 generator = RandomGenerator([2, 3, 4])
 [generator.draw() for _ in range(10)]
@@ -340,8 +329,7 @@ in the dictionary
 raised to 
 the power of 0.75 :cite:`Mikolov.Sutskever.Chen.ea.2013`.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-negative-sampling-3}
 #@save
 def get_negatives(all_contexts, vocab, counter, K):
     """Return noise words in negative sampling."""
@@ -415,8 +403,7 @@ a minibatch that can be loaded for calculations
 during training,
 such as including the mask variable.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-1}
 #@save
 def batchify(data):
     """Return a minibatch of examples for skip-gram with negative sampling."""
@@ -434,8 +421,7 @@ def batchify(data):
 
 Let's test this function using a minibatch of two examples.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-loading-training-examples-in-minibatches-2}
 x_1 = (1, [2, 2], [3, 3, 3, 3])
 x_2 = (1, [2, 2, 2], [3, 3])
 batch = batchify((x_1, x_2))
@@ -456,8 +442,7 @@ arrays. Per-epoch shuffling and per-batch slicing are then both O(1)
 per batch. The helper `_pad_ptb` below does the one-time padding and is
 what `load_data_ptb` actually calls.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-putting-it-all-together-1}
 #@save
 def _pad_ptb(all_centers, all_contexts, all_negatives):
     """Pre-pad all skip-gram examples to the global max length.
@@ -484,7 +469,7 @@ Finally, `load_data_ptb` wires everything together: read the PTB dataset,
 build the vocabulary, extract centers/contexts/negatives, pad once, and
 return a framework-native data iterator backed by those arrays.
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab mxnet
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -508,7 +493,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return data_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab pytorch
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -533,7 +518,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return data_iter, vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab jax
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -565,7 +550,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
     return PTBDataIter(), vocab
 ```
 
-```{.python .input}
+```{.python .input #word-embedding-dataset-putting-it-all-together-2}
 #@tab tensorflow
 #@save
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
@@ -594,8 +579,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
 
 Let's print the first minibatch of the data iterator.
 
-```{.python .input}
-#@tab all
+```{.python .input #word-embedding-dataset-putting-it-all-together-3}
 data_iter, vocab = load_data_ptb(512, 5, 5)
 for batch in data_iter:
     for name, data in zip(names, batch):
@@ -631,3 +615,130 @@ for batch in data_iter:
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1330)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Data pipeline for word2vec. Three classical tricks make
+skip-gram tractable on large corpora:
+
+- **Subsampling** — drop frequent words ("the", "a") with
+  probability rising with their frequency.
+- **Center / context window** — each token contributes a
+  few (center, context) pairs.
+- **Negative sampling** — train a binary classifier with
+  $K$ random negatives per positive; $\mathcal{O}(|V|) \to \mathcal{O}(K)$.
+
+Output: minibatches of `(center, context+, context-)` ready
+for the next deck's skip-gram model.
+:::
+
+::: {.slide title="Setup"}
+@word-embedding-dataset-the-dataset-for-pretraining-word-embeddings
+:::
+
+::: {.slide title="PTB corpus"}
+Standard small-corpus NLP benchmark. Stream as a list of
+sentences, each a list of tokens:
+
+@word-embedding-dataset-reading-the-dataset-1
+
+. . .
+
+@word-embedding-dataset-reading-the-dataset-2
+:::
+
+::: {.slide title="Subsampling frequent words"}
+Drop word $w$ with probability
+$1 - \sqrt{t / f(w)}$, where $f(w)$ is its corpus
+frequency. Common words get aggressively dropped, rare
+ones almost never:
+
+@word-embedding-dataset-subsampling-1
+
+. . .
+
+@word-embedding-dataset-subsampling-2
+:::
+
+::: {.slide title="Subsampling effect"}
+Compare counts before / after — frequent words shrink,
+rare words mostly survive:
+
+@word-embedding-dataset-subsampling-3
+
+. . .
+
+@word-embedding-dataset-subsampling-4
+
+. . .
+
+@word-embedding-dataset-subsampling-5
+:::
+
+::: {.slide title="Center + context windows"}
+For each center token, sample a window size up to
+`max_window_size` and take the surrounding tokens as
+context:
+
+@word-embedding-dataset-extracting-center-words-and-context-words-1
+
+. . .
+
+@word-embedding-dataset-extracting-center-words-and-context-words-2
+
+. . .
+
+@word-embedding-dataset-extracting-center-words-and-context-words-3
+:::
+
+::: {.slide title="Negative sampling"}
+Sample $K$ negative context words per positive pair from
+$P(w) \propto f(w)^{0.75}$ — the empirical-frequency
+distribution dampened by an exponent (the original
+word2vec choice):
+
+@word-embedding-dataset-negative-sampling-1
+
+. . .
+
+@word-embedding-dataset-negative-sampling-2
+
+. . .
+
+@word-embedding-dataset-negative-sampling-3
+:::
+
+::: {.slide title="Padding into minibatches"}
+Different centers have different numbers of context +
+negative tokens. Pad to the batch max, store a mask so
+loss only counts real positions:
+
+@word-embedding-dataset-loading-training-examples-in-minibatches-1
+
+. . .
+
+@word-embedding-dataset-loading-training-examples-in-minibatches-2
+:::
+
+::: {.slide title="Reusable loader"}
+@word-embedding-dataset-putting-it-all-together-1
+
+. . .
+
+@word-embedding-dataset-putting-it-all-together-2
+
+. . .
+
+@word-embedding-dataset-putting-it-all-together-3
+:::
+
+::: {.slide title="Recap"}
+- Subsample frequent words, sample dynamic-size context
+  windows, draw $K$ negatives per pair.
+- Pad to batch-max with a binary mask — same trick as
+  variable-length sequence batching elsewhere.
+- This loader feeds the skip-gram model in the next deck;
+  same pattern still used by fastText / GloVe-style
+  pretraining.
+:::

@@ -3,7 +3,7 @@
 
 There is no small dataset such as MNIST and Fashion-MNIST in the field of object detection.
 In order to quickly demonstrate object detection models,
-[**we collected and labeled a small dataset**].
+we collected and labeled a small dataset.
 First, we took photos of free bananas from our office
 and generated
 1000 banana images with different rotations and sizes.
@@ -12,12 +12,12 @@ at a random position on some background image.
 In the end, we labeled bounding boxes for those bananas on the images.
 
 
-## [**Downloading the Dataset**]
+## Downloading the Dataset
 
 The banana detection dataset with all the image and
 csv label files can be downloaded directly from the Internet.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -28,7 +28,7 @@ import pandas as pd
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -38,7 +38,7 @@ import os
 import pandas as pd
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -52,7 +52,7 @@ import pandas as pd
 from PIL import Image
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -63,8 +63,7 @@ import pandas as pd
 from PIL import Image
 ```
 
-```{.python .input}
-#@tab all
+```{.python .input #object-detection-dataset-downloading-the-dataset-2}
 #@save
 d2l.DATA_HUB['banana-detection'] = (
     d2l.DATA_URL + 'banana-detection.zip',
@@ -73,14 +72,14 @@ d2l.DATA_HUB['banana-detection'] = (
 
 ## Reading the Dataset
 
-We are going to [**read the banana detection dataset**] in the `read_data_bananas`
+We are going to read the banana detection dataset in the `read_data_bananas`
 function below.
 The dataset includes a csv file for
 object class labels and
 ground-truth bounding box coordinates
 at the upper-left and lower-right corners.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab mxnet
 #@save
 def read_data_bananas(is_train=True):
@@ -102,7 +101,7 @@ def read_data_bananas(is_train=True):
     return images, np.expand_dims(np.array(targets), 1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab pytorch
 #@save
 def read_data_bananas(is_train=True):
@@ -124,7 +123,7 @@ def read_data_bananas(is_train=True):
     return images, torch.tensor(targets).unsqueeze(1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab jax
 #@save
 def read_data_bananas(is_train=True):
@@ -148,7 +147,7 @@ def read_data_bananas(is_train=True):
     return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-1}
 #@tab tensorflow
 #@save
 def read_data_bananas(is_train=True):
@@ -175,10 +174,10 @@ def read_data_bananas(is_train=True):
 
 By using the `read_data_bananas` function to read images and labels,
 the following `BananasDataset` class
-will allow us to [**create a customized `Dataset` instance**]
+will allow us to create a customized `Dataset` instance
 for loading the banana detection dataset.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab mxnet
 #@save
 class BananasDataset(gluon.data.Dataset):
@@ -196,7 +195,7 @@ class BananasDataset(gluon.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab pytorch
 #@save
 class BananasDataset(torch.utils.data.Dataset):
@@ -213,7 +212,7 @@ class BananasDataset(torch.utils.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab jax
 #@save
 class BananasDataset:
@@ -230,7 +229,7 @@ class BananasDataset:
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-2}
 #@tab tensorflow
 #@save
 class BananasDataset:
@@ -248,12 +247,12 @@ class BananasDataset:
 ```
 
 Finally, we define
-the `load_data_bananas` function to [**return two
-data iterator instances for both the training and test sets.**]
+the `load_data_bananas` function to return two
+data iterator instances for both the training and test sets.
 For the test dataset,
 there is no need to read it in random order.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab mxnet
 #@save
 def load_data_bananas(batch_size):
@@ -265,7 +264,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab pytorch
 #@save
 def load_data_bananas(batch_size):
@@ -277,7 +276,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab jax
 #@save
 def load_data_bananas(batch_size):
@@ -293,7 +292,7 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-reading-the-dataset-3}
 #@tab tensorflow
 #@save
 def load_data_bananas(batch_size):
@@ -317,8 +316,8 @@ def load_data_bananas(batch_size):
     return train_iter, val_iter
 ```
 
-Let's [**read a minibatch and print the shapes of
-both images and labels**] in this minibatch.
+Let's read a minibatch and print the shapes of
+both images and labels in this minibatch.
 The shape of the image minibatch,
 (batch size, number of channels, height, width),
 looks familiar:
@@ -349,22 +348,21 @@ For the banana dataset,
 since there is only one bounding box on each image,
 we have $m=1$.
 
-```{.python .input}
-#@tab all
+```{.python .input #object-detection-dataset-reading-the-dataset-4}
 batch_size, edge_size = 32, 256
 train_iter, _ = load_data_bananas(batch_size)
 batch = next(iter(train_iter))
 batch[0].shape, batch[1].shape
 ```
 
-## [**Demonstration**]
+## Demonstration
 
 Let's demonstrate ten images with their labeled ground-truth bounding boxes.
 We can see that the rotations, sizes, and positions of bananas vary across all these images.
 Of course, this is just a simple artificial dataset.
 In practice, real-world datasets are usually much more complicated.
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab mxnet
 imgs = (batch[0][:10].transpose(0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -372,7 +370,7 @@ for ax, label in zip(axes, batch[1][:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab pytorch
 imgs = (batch[0][:10].permute(0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -380,7 +378,7 @@ for ax, label in zip(axes, batch[1][:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab jax
 imgs = jnp.transpose(batch[0][:10], (0, 2, 3, 1)) / 255
 axes = d2l.show_images(imgs, 2, 5, scale=2)
@@ -388,7 +386,7 @@ for ax, label in zip(axes, np.array(batch[1][:10])):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
-```{.python .input}
+```{.python .input #object-detection-dataset-demonstration}
 #@tab tensorflow
 # Images are already NHWC (H, W, C) in TF; normalize to [0, 1]
 imgs = batch[0][:10] / 255
@@ -423,3 +421,66 @@ for ax, label in zip(axes, batch[1][:10]):
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1608)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The classic detection benchmarks (PASCAL VOC, COCO) are
+big — too big for a teaching demo. Instead this section
+uses the **banana detection dataset**: 1000 images, one
+banana per image, fixed size, three random parameters
+(position, scale, rotation).
+
+The point isn't to push detection accuracy; it's to walk
+through the data plumbing every detector needs:
+
+- Read images and per-image lists of $(class, x_1, y_1, x_2, y_2)$.
+- Pad the per-image label list to a fixed length so it
+  fits in a tensor.
+- Yield `(images, labels)` minibatches. Labels have shape
+  `(batch, max_objects, 5)`.
+:::
+
+::: {.slide title="Download"}
+@object-detection-dataset-downloading-the-dataset-1
+
+. . .
+
+@object-detection-dataset-downloading-the-dataset-2
+:::
+
+::: {.slide title="Reading the dataset"}
+Read all images, parse the CSV-style annotation file,
+return aligned arrays of images and label tensors:
+
+@object-detection-dataset-reading-the-dataset-1
+:::
+
+::: {.slide title="Custom Dataset class"}
+Wrap the loader in a framework-native `Dataset` so we get
+a standard DataLoader:
+
+@object-detection-dataset-reading-the-dataset-2
+:::
+
+::: {.slide title="Train + val loaders"}
+@object-detection-dataset-reading-the-dataset-3
+
+. . .
+
+@object-detection-dataset-reading-the-dataset-4
+:::
+
+::: {.slide title="A batch with annotations"}
+@object-detection-dataset-demonstration
+:::
+
+::: {.slide title="Recap"}
+- Detection minibatch = images + per-image variable-length
+  list of $(class, x_1, y_1, x_2, y_2)$.
+- Standard fix: pad each list to a fixed `max_objects`
+  with $-1$ class for ignore.
+- Plumbing learned here is reused by SSD; real datasets
+  (COCO, OpenImages) just have more classes and more
+  objects per image.
+:::

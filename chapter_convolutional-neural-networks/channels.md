@@ -23,27 +23,27 @@ channels is as old as CNNs themselves: for instance LeNet-5 :cite:`LeCun.Jackel.
 In this section, we will take a deeper look
 at convolution kernels with multiple input and multiple output channels.
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab jax
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -85,18 +85,18 @@ $(1\times1+2\times2+4\times3+5\times4)+(0\times0+1\times1+3\times2+4\times3)=56$
 
 
 To make sure we really understand what is going on here,
-we can (**implement cross-correlation operations with multiple input channels**) ourselves.
+we can implement cross-correlation operations with multiple input channels ourselves.
 Notice that all we are doing is performing a cross-correlation operation
 per channel and then adding up the results.
 
-```{.python .input}
+```{.python .input #channels-multiple-input-channels-1}
 %%tab mxnet, pytorch, jax
 def corr2d_multi_in(X, K):
     # Iterate through the 0th dimension (channel) of K first, then add them up
     return sum(d2l.corr2d(x, k) for x, k in zip(X, K))
 ```
 
-```{.python .input}
+```{.python .input #channels-multiple-input-channels-1}
 %%tab tensorflow
 def corr2d_multi_in(X, K):
     # Iterate through the 0th dimension (channel) of K first, then add them up
@@ -105,10 +105,9 @@ def corr2d_multi_in(X, K):
 
 We can construct the input tensor `X` and the kernel tensor `K`
 corresponding to the values in :numref:`fig_conv_multi_in`
-to (**validate the output**) of the cross-correlation operation.
+to validate the output of the cross-correlation operation.
 
-```{.python .input}
-%%tab all
+```{.python .input #channels-multiple-input-channels-2}
 X = d2l.tensor([[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]],
                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]])
 K = d2l.tensor([[[0.0, 1.0], [2.0, 3.0]], [[1.0, 2.0], [3.0, 4.0]]])
@@ -152,10 +151,9 @@ from the convolution kernel corresponding to that output channel
 and takes input from all channels in the input tensor.
 
 We implement a cross-correlation function
-to [**calculate the output of multiple channels**] as shown below.
+to calculate the output of multiple channels as shown below.
 
-```{.python .input}
-%%tab all
+```{.python .input #channels-multiple-output-channels-1}
 def corr2d_multi_in_out(X, K):
     # Iterate through the 0th dimension of K, and each time, perform
     # cross-correlation operations with input X. All of the results are
@@ -166,8 +164,7 @@ def corr2d_multi_in_out(X, K):
 We construct a trivial convolution kernel with three output channels
 by concatenating the kernel tensor for `K` with `K+1` and `K+2`.
 
-```{.python .input}
-%%tab all
+```{.python .input #channels-multiple-output-channels-2}
 K = d2l.stack((K, K + 1, K + 2), 0)
 K.shape
 ```
@@ -180,15 +177,14 @@ with the result of the previous input tensor `X`
 and the multi-input channel,
 single-output channel kernel.
 
-```{.python .input}
-%%tab all
+```{.python .input #channels-multiple-output-channels-3}
 corr2d_multi_in_out(X, K)
 ```
 
 ## $1\times 1$ Convolutional Layer
 :label:`subsec_1x1`
 
-At first, a [**$1 \times 1$ convolution**], i.e., $k_\textrm{h} = k_\textrm{w} = 1$,
+At first, a $1 \times 1$ convolution, i.e., $k_\textrm{h} = k_\textrm{w} = 1$,
 does not seem to make much sense.
 After all, a convolution correlates adjacent pixels.
 A $1 \times 1$ convolution obviously does not.
@@ -230,8 +226,7 @@ using a fully connected layer.
 The only thing is that we need to make some adjustments
 to the data shape before and after the matrix multiplication.
 
-```{.python .input}
-%%tab all
+```{.python .input #channels-1-times-1-convolutional-layer-1}
 def corr2d_multi_in_out_1x1(X, K):
     c_i, h, w = X.shape
     c_o = K.shape[0]
@@ -246,7 +241,7 @@ When performing $1\times 1$ convolutions,
 the above function is equivalent to the previously implemented cross-correlation function `corr2d_multi_in_out`.
 Let's check this with some sample data.
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab mxnet, pytorch
 X = d2l.normal(0, 1, (3, 3, 3))
 K = d2l.normal(0, 1, (2, 3, 1, 1))
@@ -255,7 +250,7 @@ Y2 = corr2d_multi_in_out(X, K)
 assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
 ```
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab tensorflow
 X = d2l.normal((3, 3, 3), 0, 1)
 K = d2l.normal((2, 3, 1, 1), 0, 1)
@@ -264,7 +259,7 @@ Y2 = corr2d_multi_in_out(X, K)
 assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
 ```
 
-```{.python .input}
+```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab jax
 X = jax.random.normal(d2l.get_key(), (3, 3, 3))
 K = jax.random.normal(d2l.get_key(), (2, 3, 1, 1))
@@ -320,3 +315,159 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 [Discussions](https://discuss.d2l.ai/t/17998)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+Real images have **channels**: RGB has 3, a modern CNN's
+deep feature map has hundreds (64 → 2048 is typical).
+
+Going deeper, networks trade spatial resolution for
+channel depth — same information capacity, but
+representing *kinds* of features instead of *places*.
+
+This deck:
+
+- **Multiple input channels** — kernels grow a 3rd axis.
+- **Multiple output channels** — stack many filters.
+- **$1 \times 1$ convolutions** — pure channel mixing.
+:::
+
+::: {.slide title="Multi-input-channel convolution"}
+With $c_i$ input channels, the kernel becomes
+$c_i \times k_h \times k_w$ — a 2D filter *per input channel*.
+The output is the sum of per-channel cross-correlations:
+
+$$Y = \sum_{c=1}^{c_i} X_c * K_c.$$
+
+![Two input channels: per-channel cross-correlation, then sum. $(1{\cdot}1 + 2{\cdot}2 + 4{\cdot}3 + 5{\cdot}4) + (0{\cdot}0 + 1{\cdot}1 + 3{\cdot}2 + 4{\cdot}3) = 56$.](../img/conv-multi-in.svg){width=82%}
+:::
+
+::: {.slide title="In code: it's just a sum"}
+@channels-multiple-input-and-multiple-output-channels
+
+. . .
+
+@channels-multiple-input-channels-1
+
+. . .
+
+Verify against the figure — same numbers:
+
+@channels-multiple-input-channels-2
+:::
+
+::: {.slide title="Multi-output-channel convolution"}
+Each output channel comes from its *own* set of input-channel
+filters. Stack $c_o$ such filter sets to get a 4-D kernel
+of shape $c_o \times c_i \times k_h \times k_w$:
+
+$$\mathbf{Y}_j = \sum_{c=1}^{c_i} \mathbf{X}_c * \mathbf{K}_{j, c} \quad\text{for}\quad j = 1, \ldots, c_o.$$
+
+Intuition: each of the $c_o$ output channels is a *different
+combination* of inputs, learned to detect a different feature.
+The network discovers an entire "feature dictionary" per
+layer.
+:::
+
+::: {.slide title="Implementation"}
+Apply the multi-input-channel function $c_o$ times and stack
+the results along a new leading axis:
+
+@channels-multiple-output-channels-1
+
+. . .
+
+Build a 3-output-channel kernel by stacking three offset
+copies:
+
+@channels-multiple-output-channels-2
+
+. . .
+
+@channels-multiple-output-channels-3
+:::
+
+::: {.slide title="Parameter count"}
+A conv layer with $c_o$ outputs, $c_i$ inputs, and a
+$k_h \times k_w$ kernel has
+
+$$c_o \cdot c_i \cdot k_h \cdot k_w \;+\; c_o$$
+
+learnable parameters. Standard sizes:
+
+- 3 → 64 channels, 3×3 kernel: 1.7k weights.
+- 256 → 256 channels, 3×3 kernel: 590k weights.
+- 512 → 2048 channels, 3×3 kernel: 9.4M weights.
+
+Channel count drives parameter count *quadratically*. That's
+why deeper layers in CNNs widen, but not too much.
+:::
+
+::: {.slide title="The 1×1 convolution"}
+A 1×1 kernel has *no* spatial structure — it doesn't look at
+neighbors. So why use it?
+
+Because it acts as a **per-pixel fully connected layer
+across channels**. At every spatial position, it computes a
+linear combination of the $c_i$ input channels into the
+$c_o$ output channels:
+
+![1×1 conv: 3 input channels × 2 output channels. Each output pixel = a 2×3 matrix-vector product on the input channel vector at that position.](../img/conv-1x1.svg){width=82%}
+:::
+
+::: {.slide title="1×1 conv as matmul"}
+At each pixel, the 1×1 conv applies the same $c_o \times c_i$
+matrix to the input channel vector. Reshape the spatial axes
+out and it's a single matrix multiply:
+
+@channels-1-times-1-convolutional-layer-1
+
+. . .
+
+@channels-1-times-1-convolutional-layer-2
+:::
+
+::: {.slide title="Why 1×1 convs everywhere"}
+Modern architectures use them constantly:
+
+- **Bottlenecks** (ResNet) — squeeze channels with 1×1,
+  do expensive 3×3 in the smaller space, expand back with
+  1×1. Cuts compute by $\sim 4×$ for the same expressive
+  power.
+- **Pointwise convs** (MobileNet) — depthwise 3×3 +
+  pointwise 1×1 splits a regular conv into two cheaper
+  pieces.
+- **Squeeze-and-Excitation, attention heads** — wherever
+  you need cheap channel mixing without changing
+  resolution.
+:::
+
+::: {.slide title="Cost of channel depth"}
+A $h \times w$ image with $k \times k$ kernel and
+$c_i \to c_o$ channels takes
+
+$$\mathcal{O}(h \cdot w \cdot k^2 \cdot c_i \cdot c_o)$$
+
+operations. For a 256×256 image, 5×5 kernel, 128→128
+channels: ~53 *billion* multiply-adds. That's per layer;
+multiply by depth.
+
+This is why
+- Convs benefit massively from GPU/TPU acceleration.
+- Channel reduction tricks (1×1 bottlenecks, depthwise
+  separable, group conv, ResNeXt) get serious attention
+  in efficiency-driven architectures.
+:::
+
+::: {.slide title="Recap"}
+- Multi-input-channel: per-channel kernel, results summed
+  across input channels.
+- Multi-output-channel: stack independent filter banks; one
+  output channel per filter set.
+- Total weights: $c_o c_i k_h k_w + c_o$.
+- $1\times 1$ convs = per-pixel fully connected layer
+  across channels; the workhorse of modern CNN
+  architecture (bottlenecks, pointwise convs).
+- Compute scales linearly with $c_i \cdot c_o$ — the
+  dominant cost in deep CNNs.
+:::

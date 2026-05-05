@@ -101,8 +101,7 @@ The algorithm for computing the action-value function $Q^\pi(s, a)$ of a policy 
 :label:`subsec_valueitercode`
 We next show how to implement Value Iteration for a navigation problem called FrozenLake from [Gymnasium](https://gymnasium.farama.org/) (the maintained successor to OpenAI Gym). We first need to set up the environment as shown in the following code.
 
-```{.python .input}
-%%tab all
+```{.python .input #value-iter-implementation-of-value-iteration-1}
 
 %matplotlib inline
 import numpy as np
@@ -123,8 +122,7 @@ In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are
 
 The following function implements Value Iteration, where `env_info` contains MDP and environment related information and `gamma` is the discount factor:
 
-```{.python .input}
-%%tab all
+```{.python .input #value-iter-implementation-of-value-iteration-2}
 
 def value_iteration(env_info, gamma, num_iters):
     env_desc = env_info['desc']  # 2D array shows what each item means
@@ -174,3 +172,50 @@ The main idea behind the Value Iteration algorithm is to use the principle of dy
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12005)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+For a known MDP — known transition probabilities $P$ and
+rewards $r$ — we can compute the optimal policy
+*without* any learning, via **dynamic programming**.
+
+Two key concepts:
+
+- **Value function** $V^\pi(s)$ — expected discounted
+  return from state $s$ under policy $\pi$:
+  $V^\pi(s) = \mathbb{E}\big[\sum_{t=0}^\infty \gamma^t r_t \mid s_0 = s\big]$.
+- **Action-value** $Q^\pi(s, a)$ — same, but committing
+  to action $a$ first.
+
+The Bellman optimality equation:
+
+$$V^*(s) = \max_a \big[r(s,a) + \gamma \sum_{s'} P(s' \mid s, a) V^*(s')\big].$$
+
+**Value iteration** turns this fixed-point equation into
+an algorithm: repeatedly apply the right-hand side as an
+update until convergence.
+:::
+
+::: {.slide title="Implementation"}
+Frozen Lake — a 4×4 gridworld with slippery tiles. Iterate
+$V \leftarrow \max_a [r + \gamma P V]$ until convergence;
+extract $\pi(s) = \arg\max_a [r + \gamma P V]$:
+
+@value-iter-implementation-of-value-iteration-1
+
+. . .
+
+@value-iter-implementation-of-value-iteration-2
+:::
+
+::: {.slide title="Recap"}
+- Value iteration is dynamic programming on the Bellman
+  optimality equation.
+- Requires *known* transitions and rewards — won't work
+  on real environments where the dynamics aren't given.
+- Converges geometrically with rate $\gamma$.
+- The starting point for *all* model-based RL; learning
+  algorithms (Q-learning, next deck) replace the known
+  $P, r$ with sampled experience.
+:::

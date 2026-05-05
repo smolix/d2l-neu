@@ -39,12 +39,12 @@ distinguish them from semantic segmentation as follows.
 
 ## The Pascal VOC2012 Semantic Segmentation Dataset
 
-[**One of the most important semantic segmentation dataset
-is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/).**]
+One of the most important semantic segmentation dataset
+is [Pascal VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/).
 In the following,
 we will take a look at this dataset.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -54,7 +54,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -63,7 +63,7 @@ import torchvision
 import os
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -75,7 +75,7 @@ import numpy as np
 import os
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -88,8 +88,7 @@ The tar file of the dataset is about 2 GB,
 so it may take a while to download the file.
 The extracted dataset is located at `../data/VOCdevkit/VOC2012`.
 
-```{.python .input}
-#@tab all
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2}
 #@save
 d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
                            '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
@@ -108,9 +107,9 @@ with the same size
 as its labeled input image.
 Besides,
 pixels with the same color in any label image belong to the same semantic class.
-The following defines the `read_voc_images` function to [**read all the input images and labels into the memory**].
+The following defines the `read_voc_images` function to read all the input images and labels into the memory.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3}
 #@tab mxnet
 #@save
 def read_voc_images(voc_dir, is_train=True):
@@ -130,7 +129,7 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3}
 #@tab pytorch
 #@save
 def read_voc_images(voc_dir, is_train=True):
@@ -151,7 +150,7 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3}
 #@tab jax
 #@save
 def read_voc_images(voc_dir, is_train=True):
@@ -172,7 +171,7 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3}
 #@tab tensorflow
 #@save
 def read_voc_images(voc_dir, is_train=True):
@@ -193,17 +192,17 @@ def read_voc_images(voc_dir, is_train=True):
 train_features, train_labels = read_voc_images(voc_dir, True)
 ```
 
-We [**draw the first five input images and their labels**].
+We draw the first five input images and their labels.
 In the label images, white and black represent borders and  background, respectively, while the other colors correspond to different classes.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4}
 #@tab mxnet
 n = 5
 imgs = train_features[:n] + train_labels[:n]
 d2l.show_images(imgs, 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4}
 #@tab pytorch
 n = 5
 imgs = train_features[:n] + train_labels[:n]
@@ -211,26 +210,25 @@ imgs = [img.permute(1,2,0) for img in imgs]
 d2l.show_images(imgs, 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4}
 #@tab jax
 n = 5
 imgs = train_features[:n] + train_labels[:n]
 d2l.show_images(imgs, 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4}
 #@tab tensorflow
 n = 5
 imgs = train_features[:n] + train_labels[:n]
 d2l.show_images(imgs, 2, n);
 ```
 
-Next, we [**enumerate
-the RGB color values and class names**]
+Next, we enumerate
+the RGB color values and class names
 for all the labels in this dataset.
 
-```{.python .input}
-#@tab all
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5}
 #@save
 VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
                 [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
@@ -248,14 +246,14 @@ VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
 
 With the two constants defined above,
 we can conveniently
-[**find the class index for each pixel in a label**].
+find the class index for each pixel in a label.
 We define the `voc_colormap2label` function
 to build the mapping from the above RGB color values
 to class indices,
 and the `voc_label_indices` function
 to map any RGB values to their class indices in this Pascal VOC2012 dataset.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6}
 #@tab mxnet
 #@save
 def voc_colormap2label():
@@ -275,7 +273,7 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6}
 #@tab pytorch
 #@save
 def voc_colormap2label():
@@ -295,7 +293,7 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6}
 #@tab jax
 #@save
 def voc_colormap2label():
@@ -315,7 +313,7 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6}
 #@tab tensorflow
 #@save
 def voc_colormap2label():
@@ -335,12 +333,11 @@ def voc_label_indices(colormap, colormap2label):
     return colormap2label[idx]
 ```
 
-[**For example**], in the first example image,
+For example, in the first example image,
 the class index for the front part of the airplane is 1,
 while the background index is 0.
 
-```{.python .input}
-#@tab all
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7}
 y = voc_label_indices(train_labels[0], voc_colormap2label())
 y[105:115, 130:140], VOC_CLASSES[1]
 ```
@@ -357,10 +354,10 @@ requires rescaling the predicted pixel classes
 back to the original shape of the input image.
 Such rescaling may be inaccurate,
 especially for segmented regions with different classes. To avoid this issue,
-we crop the image to a *fixed* shape instead of rescaling. Specifically, [**using random cropping from image augmentation, we crop the same area of
-the input image and the label**].
+we crop the image to a *fixed* shape instead of rescaling. Specifically, using random cropping from image augmentation, we crop the same area of
+the input image and the label.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-1}
 #@tab mxnet
 #@save
 def voc_rand_crop(feature, label, height, width):
@@ -370,7 +367,7 @@ def voc_rand_crop(feature, label, height, width):
     return feature, label
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-1}
 #@tab pytorch
 #@save
 def voc_rand_crop(feature, label, height, width):
@@ -382,7 +379,7 @@ def voc_rand_crop(feature, label, height, width):
     return feature, label
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-1}
 #@tab jax
 #@save
 def voc_rand_crop(feature, label, height, width):
@@ -396,7 +393,7 @@ def voc_rand_crop(feature, label, height, width):
     return feature, label
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-1}
 #@tab tensorflow
 #@save
 def voc_rand_crop(feature, label, height, width):
@@ -412,7 +409,7 @@ def voc_rand_crop(feature, label, height, width):
     return feat, lab
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-2}
 #@tab mxnet
 imgs = []
 for _ in range(n):
@@ -420,7 +417,7 @@ for _ in range(n):
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-2}
 #@tab pytorch
 imgs = []
 for _ in range(n):
@@ -430,7 +427,7 @@ imgs = [img.permute(1, 2, 0) for img in imgs]
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-2}
 #@tab jax
 imgs = []
 for _ in range(n):
@@ -438,7 +435,7 @@ for _ in range(n):
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-data-preprocessing-2}
 #@tab tensorflow
 imgs = []
 for _ in range(n):
@@ -446,7 +443,7 @@ for _ in range(n):
 d2l.show_images(imgs[::2] + imgs[1::2], 2, n);
 ```
 
-### [**Custom Semantic Segmentation Dataset Class**]
+### Custom Semantic Segmentation Dataset Class
 
 We define a custom semantic segmentation dataset class `VOCSegDataset` by inheriting the `Dataset` class provided by high-level APIs.
 By implementing the `__getitem__` function,
@@ -460,7 +457,7 @@ In addition, we also
 define the `normalize_image` function to
 standardize the values of the three RGB channels of input images.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class}
 #@tab mxnet
 #@save
 class VOCSegDataset(gluon.data.Dataset):
@@ -494,7 +491,7 @@ class VOCSegDataset(gluon.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class}
 #@tab pytorch
 #@save
 class VOCSegDataset(torch.utils.data.Dataset):
@@ -528,7 +525,7 @@ class VOCSegDataset(torch.utils.data.Dataset):
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class}
 #@tab jax
 #@save
 class VOCSegDataset:
@@ -563,7 +560,7 @@ class VOCSegDataset:
         return len(self.features)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class}
 #@tab tensorflow
 #@save
 class VOCSegDataset:
@@ -600,7 +597,7 @@ class VOCSegDataset:
         return len(self.features)
 ```
 
-### [**Reading the Dataset**]
+### Reading the Dataset
 
 We use the custom `VOCSegDataset` class to
 create instances of the training set and test set, respectively.
@@ -609,8 +606,7 @@ we specify that the output shape of randomly cropped images is $320\times 480$.
 Below we can view the number of examples
 that are retained in the training set and test set.
 
-```{.python .input}
-#@tab all
+```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-1}
 crop_size = (320, 480)
 voc_train = VOCSegDataset(True, crop_size, voc_dir)
 voc_test = VOCSegDataset(False, crop_size, voc_dir)
@@ -621,7 +617,7 @@ we define the data iterator for the training set.
 Let's print the shape of the first minibatch.
 Different from in image classification or object detection, labels here are three-dimensional tensors.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-2}
 #@tab mxnet
 batch_size = 64
 train_iter = gluon.data.DataLoader(voc_train, batch_size, shuffle=True,
@@ -633,7 +629,7 @@ for X, Y in train_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-2}
 #@tab pytorch
 batch_size = 64
 train_iter = torch.utils.data.DataLoader(voc_train, batch_size, shuffle=True,
@@ -645,7 +641,7 @@ for X, Y in train_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-2}
 #@tab jax
 batch_size = 64
 num_examples = len(voc_train) // batch_size * batch_size
@@ -657,7 +653,7 @@ print(X.shape)
 print(Y.shape)
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-reading-the-dataset-2}
 #@tab tensorflow
 batch_size = 64
 indices = np.random.permutation(len(voc_train))
@@ -668,13 +664,13 @@ print(X.shape)
 print(Y.shape)
 ```
 
-### [**Putting It All Together**]
+### Putting It All Together
 
 Finally, we define the following `load_data_voc` function
 to download and read the Pascal VOC2012 semantic segmentation dataset.
 It returns data iterators for both the training and test datasets.
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-putting-it-all-together}
 #@tab mxnet
 #@save
 def load_data_voc(batch_size, crop_size):
@@ -691,7 +687,7 @@ def load_data_voc(batch_size, crop_size):
     return train_iter, test_iter
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-putting-it-all-together}
 #@tab pytorch
 #@save
 def load_data_voc(batch_size, crop_size):
@@ -708,7 +704,7 @@ def load_data_voc(batch_size, crop_size):
     return train_iter, test_iter
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-putting-it-all-together}
 #@tab jax
 #@save
 def load_data_voc(batch_size, crop_size):
@@ -724,7 +720,7 @@ def load_data_voc(batch_size, crop_size):
     return train_iter, test_iter
 ```
 
-```{.python .input}
+```{.python .input #semantic-segmentation-and-dataset-putting-it-all-together}
 #@tab tensorflow
 #@save
 def load_data_voc(batch_size, crop_size):
@@ -797,3 +793,102 @@ def load_data_voc(batch_size, crop_size):
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1480)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Semantic segmentation** assigns a class label to *every
+pixel*, not just to the image as a whole. Output shape =
+input shape; output channels = number of classes.
+
+Two related tasks to keep distinct:
+
+- **Image segmentation** — group pixels by similarity (no
+  semantic labels). Pure clustering.
+- **Instance segmentation** — like semantic, but separate
+  instances of the same class get different labels (Mask
+  R-CNN).
+
+![Semantic segmentation: pixel-level labels for dog, cat, background.](../img/segmentation.svg){width=70%}
+
+This deck sets up the **PASCAL VOC 2012** dataset and the
+data plumbing for FCN training (next deck).
+:::
+
+::: {.slide title="Downloading VOC 2012"}
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1
+
+. . .
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2
+:::
+
+::: {.slide title="Reading images and labels"}
+Inputs are RGB images; labels are RGB images too — the
+class is encoded in the *color*, not in a 1-channel id
+tensor:
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3
+
+. . .
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
+:::
+
+::: {.slide title="Color → class index"}
+Build a lookup table from the 21 RGB triplets to class
+indices 0–20:
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5
+
+. . .
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6
+
+. . .
+
+@semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7
+:::
+
+::: {.slide title="Crop, not resize"}
+Standard image preprocessing resizes — but resizing the
+*label* would interpolate class IDs, which is meaningless.
+Use random *crop* on both image and label, with the same
+random window:
+
+@semantic-segmentation-and-dataset-data-preprocessing-1
+
+. . .
+
+@semantic-segmentation-and-dataset-data-preprocessing-2
+:::
+
+::: {.slide title="Custom Dataset class"}
+Drops images smaller than the crop size; converts
+RGB labels to class-index tensors during `__getitem__`:
+
+@semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class
+:::
+
+::: {.slide title="Train + val loaders"}
+@semantic-segmentation-and-dataset-reading-the-dataset-1
+
+. . .
+
+@semantic-segmentation-and-dataset-reading-the-dataset-2
+:::
+
+::: {.slide title="Reusable loader factory"}
+@semantic-segmentation-and-dataset-putting-it-all-together
+:::
+
+::: {.slide title="Recap"}
+- Semantic segmentation = per-pixel classification; output
+  shape matches input shape.
+- VOC labels encode classes as RGB triplets; build a
+  lookup table to convert.
+- Resize is wrong for label maps; use random crop with the
+  same window for image and label.
+- Output of this deck: a clean `(image, label)` loader the
+  next deck (FCN) trains on.
+:::

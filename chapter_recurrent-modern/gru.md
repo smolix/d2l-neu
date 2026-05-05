@@ -20,7 +20,7 @@ to compute :cite:`Chung.Gulcehre.Cho.ea.2014`.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=6}
+```{.python .input #gru-gated-recurrent-units-gru  n=6}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -28,20 +28,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input  n=7}
+```{.python .input #gru-gated-recurrent-units-gru  n=7}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input  n=8}
+```{.python .input #gru-gated-recurrent-units-gru  n=8}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #gru-gated-recurrent-units-gru}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -170,7 +170,7 @@ In summary, GRUs have the following two distinguishing features:
 
 To gain a better understanding of the GRU model, let's implement it from scratch.
 
-### (**Initializing Model Parameters**)
+### Initializing Model Parameters
 
 The first step is to initialize the model parameters.
 We draw the weights from a Gaussian distribution
@@ -179,7 +179,7 @@ The hyperparameter `num_hiddens` defines the number of hidden units.
 We instantiate all weights and biases relating to the update gate, 
 the reset gate, and the candidate hidden state.
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab pytorch
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -195,7 +195,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab mxnet
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -211,7 +211,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab tensorflow
 class GRUScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
@@ -228,7 +228,7 @@ class GRUScratch(d2l.Module):
         self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state        
 ```
 
-```{.python .input}
+```{.python .input #gru-initializing-model-parameters}
 %%tab jax
 class GRUScratch(d2l.Module):
     num_inputs: int
@@ -251,11 +251,11 @@ class GRUScratch(d2l.Module):
 
 ### Defining the Model
 
-Now we are ready to [**define the GRU forward computation**].
+Now we are ready to define the GRU forward computation.
 Its structure is the same as that of the basic RNN cell, 
 except that the update equations are more complex.
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab pytorch
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -276,7 +276,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab mxnet
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -297,7 +297,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab tensorflow
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -317,7 +317,7 @@ def forward(self, inputs, H=None):
     return outputs, H
 ```
 
-```{.python .input}
+```{.python .input #gru-defining-the-model}
 %%tab jax
 @d2l.add_to_class(GRUScratch)
 def forward(self, inputs, H=None):
@@ -346,10 +346,10 @@ def forward(self, inputs, H=None):
 
 ### Training
 
-[**Training**] a language model on *The Time Machine* dataset
+Training a language model on *The Time Machine* dataset
 works in exactly the same manner as in :numref:`sec_rnn-scratch`.
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -358,7 +358,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -368,7 +368,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -377,7 +377,7 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-training}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
@@ -386,12 +386,12 @@ trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 In high-level APIs, we can directly instantiate a GRU model.
 This encapsulates all the configuration detail that we made explicit above.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab pytorch
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -400,7 +400,7 @@ class GRU(d2l.RNN):
         self.rnn = nn.GRU(num_inputs, num_hiddens)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab mxnet
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -409,7 +409,7 @@ class GRU(d2l.RNN):
         self.rnn = rnn.GRU(num_hiddens)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab tensorflow
 class GRU(d2l.RNN):
     def __init__(self, num_inputs, num_hiddens):
@@ -419,7 +419,7 @@ class GRU(d2l.RNN):
                                        return_state=True)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-1}
 %%tab jax
 class GRU(d2l.RNN):
     num_hiddens: int
@@ -441,14 +441,14 @@ class GRU(d2l.RNN):
 The code is significantly faster in training as it uses compiled operators 
 rather than Python.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab pytorch
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab tensorflow
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 with d2l.try_gpu():
@@ -456,14 +456,14 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab jax
 gru = GRU(num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-2}
 %%tab mxnet
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
@@ -473,17 +473,17 @@ trainer.fit(model, data)
 After training, we print out the perplexity on the training set
 and the predicted sequence following the provided prefix.
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab mxnet, pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #gru-concise-implementation-3}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```
@@ -519,3 +519,105 @@ They can also skip subsequences by turning on the update gate.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18017)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+LSTMs work, but they're heavy: three gates, an input node,
+a separate cell state. Cho et al. (2014) asked whether the
+gating idea could be kept while collapsing the bookkeeping.
+
+**GRU** = two gates, no separate cell state, a single
+hidden state. Often matches LSTM quality at lower compute.
+
+- **Reset gate** $\mathbf{R}_t$ — how much of the past to
+  mix into the candidate hidden state.
+- **Update gate** $\mathbf{Z}_t$ — convex blend between
+  old hidden state and new candidate.
+:::
+
+::: {.slide title="Setup"}
+@gru-gated-recurrent-units-gru
+:::
+
+::: {.slide title="Reset and update gates"}
+The gates are sigmoid heads of $X_t$ and $H_{t-1}$:
+
+$$
+\mathbf{R}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xr} + \mathbf{H}_{t-1} \mathbf{W}_{hr} + \mathbf{b}_r),\quad
+\mathbf{Z}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xz} + \mathbf{H}_{t-1} \mathbf{W}_{hz} + \mathbf{b}_z).
+$$
+
+![Computing the reset and update gates.](../img/gru-1.svg){width=72%}
+:::
+
+::: {.slide title="Candidate hidden state"}
+Like a vanilla RNN cell, but $\mathbf{H}_{t-1}$ is filtered by
+$\mathbf{R}_t$ before entering the recurrence:
+
+$$\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xh} + (\mathbf{R}_t \odot \mathbf{H}_{t-1}) \mathbf{W}_{hh} + \mathbf{b}_h).$$
+
+![Computing the candidate hidden state $\tilde{\mathbf{H}}_t$.](../img/gru-2.svg){width=72%}
+:::
+
+::: {.slide title="Final hidden state"}
+Convex combination of old state and candidate, ruled by
+$\mathbf{Z}_t$:
+
+$$\mathbf{H}_t = \mathbf{Z}_t \odot \mathbf{H}_{t-1} + (1 - \mathbf{Z}_t) \odot \tilde{\mathbf{H}}_t.$$
+
+$\mathbf{Z}_t \to 1$: skip this step. $\mathbf{Z}_t \to 0$:
+fully replace with the candidate. $\mathbf{R}_t \to 1$ recovers
+a vanilla RNN.
+
+![Computing the hidden state $\mathbf{H}_t$.](../img/gru-3.svg){width=72%}
+:::
+
+::: {.slide title="From scratch: parameters"}
+Nine matrices and three biases, grouped by gate:
+
+@gru-initializing-model-parameters
+:::
+
+::: {.slide title="Forward pass"}
+One step computes $\mathbf{Z}_t$, $\mathbf{R}_t$, the
+candidate, and the convex blend — five matmuls per time step
+versus eight in an LSTM.
+
+@gru-defining-the-model
+:::
+
+::: {.slide title="Training"}
+Same `RNNLMScratch` head, same `Trainer`. Often converges to
+the same perplexity as the LSTM with fewer parameters.
+
+@gru-training
+:::
+
+::: {.slide title="Concise: nn.GRU"}
+Library cell drops into the same RNN scaffold:
+
+@gru-concise-implementation-1
+
+. . .
+
+Train it:
+
+@gru-concise-implementation-2
+
+. . .
+
+Decode:
+
+@gru-concise-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- GRU = LSTM with one gate fewer and no separate cell state.
+- Reset gate gates the *past* before the recurrence; update
+  gate convex-blends old vs. new.
+- Recovers vanilla RNN ($\mathbf{R}_t = 1$, $\mathbf{Z}_t = 0$)
+  and identity ($\mathbf{Z}_t = 1$) as limit cases.
+- Roughly 25 % fewer parameters than LSTM at the same width;
+  comparable perplexity on most LM tasks.
+:::

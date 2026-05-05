@@ -79,7 +79,7 @@ the class and bounding box prediction.
 
 
 
-### [**Class Prediction Layer**]
+### Class Prediction Layer
 
 Let the number of object classes be $q$.
 Then anchor boxes have $q+1$ classes,
@@ -128,7 +128,7 @@ padding of 1.
 The width and height of the input and output of this
 convolutional layer remain unchanged.
 
-```{.python .input}
+```{.python .input #ssd-class-prediction-layer}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -142,7 +142,7 @@ def cls_predictor(num_anchors, num_classes):
                      padding=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-class-prediction-layer}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -156,7 +156,7 @@ def cls_predictor(num_inputs, num_anchors, num_classes):
                      kernel_size=3, padding=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-class-prediction-layer}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -172,7 +172,7 @@ def cls_predictor(num_anchors, num_classes):
                    padding='SAME')
 ```
 
-```{.python .input}
+```{.python .input #ssd-class-prediction-layer}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -185,37 +185,37 @@ def cls_predictor(num_anchors, num_classes):
                                kernel_size=3, padding='same')
 ```
 
-### (**Bounding Box Prediction Layer**)
+### Bounding Box Prediction Layer
 
 The design of the bounding box prediction layer is similar to that of the class prediction layer.
 The only difference lies in the number of outputs for each anchor box:
 here we need to predict four offsets rather than $q+1$ classes.
 
-```{.python .input}
+```{.python .input #ssd-bounding-box-prediction-layer}
 #@tab mxnet
 def bbox_predictor(num_anchors):
     return nn.Conv2D(num_anchors * 4, kernel_size=3, padding=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-bounding-box-prediction-layer}
 #@tab pytorch
 def bbox_predictor(num_inputs, num_anchors):
     return nn.Conv2d(num_inputs, num_anchors * 4, kernel_size=3, padding=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-bounding-box-prediction-layer}
 #@tab jax
 def bbox_predictor(num_anchors):
     return nn.Conv(num_anchors * 4, kernel_size=(3, 3), padding='SAME')
 ```
 
-```{.python .input}
+```{.python .input #ssd-bounding-box-prediction-layer}
 #@tab tensorflow
 def bbox_predictor(num_anchors):
     return keras.layers.Conv2D(num_anchors * 4, kernel_size=3, padding='same')
 ```
 
-### [**Concatenating Predictions for Multiple Scales**]
+### Concatenating Predictions for Multiple Scales
 
 As we mentioned, single-shot multibox detection
 uses multiscale feature maps to generate anchor boxes and predict their classes and offsets.
@@ -245,7 +245,7 @@ are $5\times(10+1)=55$ and $3\times(10+1)=33$, respectively,
 where either output shape is
 (batch size, number of channels, height, width).
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab mxnet
 def forward(x, block):
     block.initialize()
@@ -256,7 +256,7 @@ Y2 = forward(np.zeros((2, 16, 10, 10)), cls_predictor(3, 10))
 Y1.shape, Y2.shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab pytorch
 def forward(x, block):
     return block(x)
@@ -266,7 +266,7 @@ Y2 = forward(torch.zeros((2, 16, 10, 10)), cls_predictor(16, 3, 10))
 Y1.shape, Y2.shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab jax
 def forward(x, block):
     # Flax uses NHWC format; input shape: (N, H, W, C)
@@ -277,7 +277,7 @@ Y2 = forward(jnp.zeros((2, 10, 10, 16)), cls_predictor(3, 10))
 Y1.shape, Y2.shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab tensorflow
 def forward(x, block):
     # Keras uses NHWC format; input shape: (N, H, W, C)
@@ -305,7 +305,7 @@ Then we can concatenate
 such outputs at different scales
 along dimension 1.
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-2}
 #@tab mxnet
 def flatten_pred(pred):
     return npx.batch_flatten(pred.transpose(0, 2, 3, 1))
@@ -314,7 +314,7 @@ def concat_preds(preds):
     return np.concatenate([flatten_pred(p) for p in preds], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-2}
 #@tab pytorch
 def flatten_pred(pred):
     return torch.flatten(pred.permute(0, 2, 3, 1), start_dim=1)
@@ -323,7 +323,7 @@ def concat_preds(preds):
     return torch.cat([flatten_pred(p) for p in preds], dim=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-2}
 #@tab jax
 def flatten_pred(pred):
     # Flax output is NHWC, flatten H*W*C
@@ -333,7 +333,7 @@ def concat_preds(preds):
     return jnp.concatenate([flatten_pred(p) for p in preds], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-2}
 #@tab tensorflow
 def flatten_pred(pred):
     # pred is (N, H, W, C); flatten H*W*C with channel innermost so that
@@ -349,12 +349,11 @@ even though `Y1` and `Y2` have different sizes
 in channels, heights, and widths,
 we can still concatenate these two prediction outputs at two different scales for the same minibatch.
 
-```{.python .input}
-#@tab all
+```{.python .input #ssd-concatenating-predictions-for-multiple-scales-3}
 concat_preds([Y1, Y2]).shape
 ```
 
-### [**Downsampling Block**]
+### Downsampling Block
 
 In order to detect objects at multiple scales,
 we define the following downsampling block `down_sample_blk` that
@@ -374,7 +373,7 @@ each unit in the output
 has a $6\times6$ receptive field on the input.
 Therefore, the downsampling block enlarges the receptive field of each unit in its output feature maps.
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-1}
 #@tab mxnet
 def down_sample_blk(num_channels):
     blk = nn.Sequential()
@@ -386,7 +385,7 @@ def down_sample_blk(num_channels):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-1}
 #@tab pytorch
 def down_sample_blk(in_channels, out_channels):
     blk = []
@@ -400,7 +399,7 @@ def down_sample_blk(in_channels, out_channels):
     return nn.Sequential(*blk)
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-1}
 #@tab jax
 class DownSampleBlk(nn.Module):
     num_channels: int
@@ -416,7 +415,7 @@ class DownSampleBlk(nn.Module):
         return x
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-1}
 #@tab tensorflow
 def down_sample_blk(num_channels):
     blk = keras.Sequential()
@@ -431,27 +430,27 @@ def down_sample_blk(num_channels):
 
 In the following example, our constructed downsampling block changes the number of input channels and halves the height and width of the input feature maps.
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-2}
 #@tab mxnet
 forward(np.zeros((2, 3, 20, 20)), down_sample_blk(10)).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-2}
 #@tab pytorch
 forward(torch.zeros((2, 3, 20, 20)), down_sample_blk(3, 10)).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-2}
 #@tab jax
 forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(num_channels=10)).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-downsampling-block-2}
 #@tab tensorflow
 forward(tf.zeros((2, 20, 20, 3)), down_sample_blk(10)).shape
 ```
 
-### [**Base Network Block**]
+### Base Network Block
 
 The base network block is used to extract features from input images.
 For simplicity,
@@ -461,7 +460,7 @@ that double the number of channels at each block.
 Given a $256\times256$ input image,
 this base network block outputs $32 \times 32$ feature maps ($256/2^3=32$).
 
-```{.python .input}
+```{.python .input #ssd-base-network-block}
 #@tab mxnet
 def base_net():
     blk = nn.Sequential()
@@ -472,7 +471,7 @@ def base_net():
 forward(np.zeros((2, 3, 256, 256)), base_net()).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-base-network-block}
 #@tab pytorch
 def base_net():
     blk = []
@@ -484,7 +483,7 @@ def base_net():
 forward(torch.zeros((2, 3, 256, 256)), base_net()).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-base-network-block}
 #@tab jax
 class BaseNet(nn.Module):
     @nn.compact
@@ -496,7 +495,7 @@ class BaseNet(nn.Module):
 forward(jnp.zeros((2, 256, 256, 3)), BaseNet()).shape
 ```
 
-```{.python .input}
+```{.python .input #ssd-base-network-block}
 #@tab tensorflow
 def base_net():
     blk = keras.Sequential()
@@ -510,9 +509,9 @@ forward(tf.zeros((2, 256, 256, 3)), base_net()).shape
 ### The Complete Model
 
 
-[**The complete
+The complete
 single shot multibox detection model
-consists of five blocks.**]
+consists of five blocks.
 The feature maps produced by each block
 are used for both
 (i) generating anchor boxes
@@ -532,7 +531,7 @@ those
 multiscale feature map blocks
 in :numref:`fig_ssd`.
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-1}
 #@tab mxnet
 def get_blk(i):
     if i == 0:
@@ -544,7 +543,7 @@ def get_blk(i):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-1}
 #@tab pytorch
 def get_blk(i):
     if i == 0:
@@ -558,7 +557,7 @@ def get_blk(i):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-1}
 #@tab jax
 def get_blk(i):
     if i == 0:
@@ -569,7 +568,7 @@ def get_blk(i):
         return DownSampleBlk(num_channels=128)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-1}
 #@tab tensorflow
 def get_blk(i):
     if i == 0:
@@ -580,7 +579,7 @@ def get_blk(i):
         return down_sample_blk(128)
 ```
 
-Now we [**define the forward propagation**]
+Now we define the forward propagation
 for each block.
 Different from
 in image classification tasks,
@@ -590,7 +589,7 @@ outputs here include
 and (iii) classes and offsets predicted (based on `Y`)
 for these anchor boxes.
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-2}
 #@tab mxnet
 def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
     Y = blk(X)
@@ -600,7 +599,7 @@ def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
     return (Y, anchors, cls_preds, bbox_preds)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-2}
 #@tab pytorch
 def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
     Y = blk(X)
@@ -610,7 +609,7 @@ def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
     return (Y, anchors, cls_preds, bbox_preds)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-2}
 #@tab jax
 def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
                 cls_apply, bbox_params, bbox_apply, training=False,
@@ -639,7 +638,7 @@ def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
     return (Y, anchors, cls_preds, bbox_preds, updates)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-2}
 #@tab tensorflow
 def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor,
                 training=False):
@@ -674,19 +673,18 @@ Then their larger scale values
 are given by
 $\sqrt{0.2 \times 0.37} = 0.272$, $\sqrt{0.37 \times 0.54} = 0.447$, and so on.
 
-[~~Hyperparameters for each block~~]
 
-```{.python .input}
-#@tab all
+
+```{.python .input #ssd-the-complete-model-3}
 sizes = [[0.2, 0.272], [0.37, 0.447], [0.54, 0.619], [0.71, 0.79],
          [0.88, 0.961]]
 ratios = [[1, 2, 0.5]] * 5
 num_anchors = len(sizes[0]) + len(ratios[0]) - 1
 ```
 
-Now we can [**define the complete model**] `TinySSD` as follows.
+Now we can define the complete model `TinySSD` as follows.
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-4}
 #@tab mxnet
 class TinySSD(nn.Block):
     def __init__(self, num_classes, **kwargs):
@@ -713,7 +711,7 @@ class TinySSD(nn.Block):
         return anchors, cls_preds, bbox_preds
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-4}
 #@tab pytorch
 class TinySSD(nn.Module):
     def __init__(self, num_classes, **kwargs):
@@ -743,7 +741,7 @@ class TinySSD(nn.Module):
         return anchors, cls_preds, bbox_preds
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-4}
 #@tab jax
 class TinySSD(nn.Module):
     num_classes: int
@@ -782,7 +780,7 @@ class TinySSD(nn.Module):
         return anchors, cls_preds, bbox_preds
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-4}
 #@tab tensorflow
 #@save
 class TinySSD(keras.Model):
@@ -851,8 +849,8 @@ class TinySSD(keras.Model):
                 'bbox_abs': bbox_abs, 'bbox_total': bbox_total}
 ```
 
-We [**create a model instance
-and use it to perform forward propagation**]
+We create a model instance
+and use it to perform forward propagation
 on a minibatch of $256 \times 256$ images `X`.
 
 As shown earlier in this section,
@@ -867,7 +865,7 @@ of feature maps,
 at all the five scales
 a total of $(32^2 + 16^2 + 8^2 + 4^2 + 1)\times 4 = 5444$ anchor boxes are generated for each image.
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-5}
 #@tab mxnet
 net = TinySSD(num_classes=1)
 net.initialize()
@@ -879,7 +877,7 @@ print('output class preds:', cls_preds.shape)
 print('output bbox preds:', bbox_preds.shape)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-5}
 #@tab pytorch
 net = TinySSD(num_classes=1)
 X = torch.zeros((32, 3, 256, 256))
@@ -890,7 +888,7 @@ print('output class preds:', cls_preds.shape)
 print('output bbox preds:', bbox_preds.shape)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-5}
 #@tab jax
 net = TinySSD(num_classes=1)
 X = jnp.zeros((32, 3, 256, 256))
@@ -902,7 +900,7 @@ print('output class preds:', cls_preds.shape)
 print('output bbox preds:', bbox_preds.shape)
 ```
 
-```{.python .input}
+```{.python .input #ssd-the-complete-model-5}
 #@tab tensorflow
 net = TinySSD(num_classes=1)
 X = tf.zeros((32, 256, 256, 3))  # NHWC for Keras
@@ -923,21 +921,20 @@ for object detection.
 ### Reading the Dataset and Initializing the Model
 
 To begin with,
-let's [**read
-the banana detection dataset**]
+let's read
+the banana detection dataset
 described in :numref:`sec_object-detection-dataset`.
 
-```{.python .input}
-#@tab all
+```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-1}
 batch_size = 32
 train_iter, _ = d2l.load_data_bananas(batch_size)
 ```
 
 There is only one class in the banana detection dataset. After defining the model,
-we need to (**initialize its parameters and define
-the optimization algorithm**).
+we need to initialize its parameters and define
+the optimization algorithm.
 
-```{.python .input}
+```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab mxnet
 device, net = d2l.try_gpu(), TinySSD(num_classes=1)
 net.initialize(init=init.Xavier(), ctx=device)
@@ -945,13 +942,13 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': 0.2, 'wd': 5e-4})
 ```
 
-```{.python .input}
+```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab pytorch
 device, net = d2l.try_gpu(), TinySSD(num_classes=1)
 trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
 ```
 
-```{.python .input}
+```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab jax
 net = TinySSD(num_classes=1)
 dummy_X = jnp.zeros((32, 3, 256, 256))
@@ -962,14 +959,14 @@ trainer = optax.sgd(learning_rate=0.2)
 opt_state = trainer.init(params)
 ```
 
-```{.python .input}
+```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab tensorflow
 net = TinySSD(num_classes=1)
 net.compile(optimizer=keras.optimizers.SGD(learning_rate=0.2,
                                            weight_decay=5e-4))
 ```
 
-### [**Defining Loss and Evaluation Functions**]
+### Defining Loss and Evaluation Functions
 
 Object detection has two types of losses.
 The first loss concerns classes of anchor boxes:
@@ -996,7 +993,7 @@ the anchor box class loss
 and the anchor box offset loss
 to obtain the loss function for the model.
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-1}
 #@tab mxnet
 cls_loss = gluon.loss.SoftmaxCrossEntropyLoss()
 bbox_loss = gluon.loss.L1Loss()
@@ -1007,7 +1004,7 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     return cls + bbox
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-1}
 #@tab pytorch
 cls_loss = nn.CrossEntropyLoss(reduction='none')
 bbox_loss = nn.L1Loss(reduction='none')
@@ -1021,7 +1018,7 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     return cls + bbox
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-1}
 #@tab jax
 def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     batch_size, num_classes = cls_preds.shape[0], cls_preds.shape[2]
@@ -1034,7 +1031,7 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     return cls + bbox
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-1}
 #@tab tensorflow
 # Loss functions are encapsulated in TinySSD._compute_ssd_loss and
 # train_step; these module-level helpers mirror the other frameworks for
@@ -1059,7 +1056,7 @@ These prediction results are obtained
 from the generated anchor boxes and the
 predicted offsets for them.
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-2}
 #@tab mxnet
 def cls_eval(cls_preds, cls_labels):
     # Because the class prediction results are on the final dimension,
@@ -1071,7 +1068,7 @@ def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((np.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-2}
 #@tab pytorch
 def cls_eval(cls_preds, cls_labels):
     # Because the class prediction results are on the final dimension,
@@ -1083,7 +1080,7 @@ def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((torch.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-2}
 #@tab jax
 def cls_eval(cls_preds, cls_labels):
     # Because the class prediction results are on the final dimension,
@@ -1095,7 +1092,7 @@ def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((jnp.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
 ```
 
-```{.python .input}
+```{.python .input #ssd-defining-loss-and-evaluation-functions-2}
 #@tab tensorflow
 def cls_eval(cls_preds, cls_labels):
     # Because the class prediction results are on the final dimension,
@@ -1109,7 +1106,7 @@ def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
         tf.abs((bbox_labels - bbox_preds) * bbox_masks)))
 ```
 
-### [**Training the Model**]
+### Training the Model
 
 When training the model,
 we need to generate multiscale anchor boxes (`anchors`)
@@ -1122,7 +1119,7 @@ of the classes and offsets.
 For concise implementations,
 evaluation of the test dataset is omitted here.
 
-```{.python .input}
+```{.python .input #ssd-training-the-model}
 #@tab mxnet
 num_epochs, timer = 20, d2l.Timer()
 animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
@@ -1158,7 +1155,7 @@ print(f'{len(train_iter._dataset) / timer.stop():.1f} examples/sec on '
       f'{str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #ssd-training-the-model}
 #@tab pytorch
 num_epochs, timer = 20, d2l.Timer()
 animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
@@ -1194,7 +1191,7 @@ print(f'{len(train_iter.dataset) / timer.stop():.1f} examples/sec on '
       f'{str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #ssd-training-the-model}
 #@tab jax
 @jax.jit
 def train_step(params, batch_stats, opt_state, X, Y):
@@ -1253,7 +1250,7 @@ print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec on '
       f'{str(jax.devices()[0])}')
 ```
 
-```{.python .input}
+```{.python .input #ssd-training-the-model}
 #@tab tensorflow
 num_epochs, timer = 20, d2l.Timer()
 animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
@@ -1314,7 +1311,7 @@ print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
 print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec')
 ```
 
-## [**Prediction**]
+## Prediction
 
 During prediction,
 the goal is to detect all the objects of interest
@@ -1325,20 +1322,20 @@ converting it to
 a four-dimensional tensor that is
 required by convolutional layers.
 
-```{.python .input}
+```{.python .input #ssd-prediction-1}
 #@tab mxnet
 img = image.imread('../img/banana.jpg')
 feature = image.imresize(img, 256, 256).astype('float32')
 X = np.expand_dims(feature.transpose(2, 0, 1), axis=0)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-1}
 #@tab pytorch
 X = torchvision.io.read_image('../img/banana.jpg').unsqueeze(0).float()
 img = X.squeeze(0).permute(1, 2, 0).long()
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-1}
 #@tab jax
 from PIL import Image as PILImage
 img_pil = PILImage.open('../img/banana.jpg')
@@ -1347,7 +1344,7 @@ X = jnp.transpose(img, (2, 0, 1)).astype(jnp.float32)
 X = jnp.expand_dims(X, axis=0)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-1}
 #@tab tensorflow
 from PIL import Image as PILImage
 img_pil = PILImage.open('../img/banana.jpg')
@@ -1363,7 +1360,7 @@ from the anchor boxes and their predicted offsets.
 Then non-maximum suppression is used
 to remove similar predicted bounding boxes.
 
-```{.python .input}
+```{.python .input #ssd-prediction-2}
 #@tab mxnet
 def predict(X):
     anchors, cls_preds, bbox_preds = net(X.as_in_ctx(device))
@@ -1375,7 +1372,7 @@ def predict(X):
 output = predict(X)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-2}
 #@tab pytorch
 def predict(X):
     net.eval()
@@ -1388,7 +1385,7 @@ def predict(X):
 output = predict(X)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-2}
 #@tab jax
 def predict(X):
     variables = {'params': params, 'batch_stats': batch_stats}
@@ -1401,7 +1398,7 @@ def predict(X):
 output = predict(X)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-2}
 #@tab tensorflow
 def predict(X):
     anchors, cls_preds, bbox_preds = net(X, training=False)
@@ -1417,12 +1414,12 @@ def predict(X):
 output = predict(X)
 ```
 
-Finally, we [**display
+Finally, we display
 all the predicted bounding boxes with
-confidence 0.9 or above**]
+confidence 0.9 or above
 as output.
 
-```{.python .input}
+```{.python .input #ssd-prediction-3}
 #@tab mxnet
 def display(img, output, threshold):
     d2l.set_figsize((5, 5))
@@ -1438,7 +1435,7 @@ def display(img, output, threshold):
 display(img, output, threshold=0.9)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-3}
 #@tab pytorch
 def display(img, output, threshold):
     d2l.set_figsize((5, 5))
@@ -1454,7 +1451,7 @@ def display(img, output, threshold):
 display(img, output.cpu(), threshold=0.9)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-3}
 #@tab jax
 def display(img, output, threshold):
     d2l.set_figsize((5, 5))
@@ -1470,7 +1467,7 @@ def display(img, output, threshold):
 display(img, output, threshold=0.9)
 ```
 
-```{.python .input}
+```{.python .input #ssd-prediction-3}
 #@tab tensorflow
 def display(img, output, threshold):
     d2l.set_figsize((5, 5))
@@ -1507,7 +1504,7 @@ $$
 
 When $\sigma$ is very large, this loss is similar to the $\ell_1$ norm loss. When its value is smaller, the loss function is smoother.
 
-```{.python .input}
+```{.python .input #ssd-exercises-1}
 #@tab mxnet
 sigmas = [10, 1, 0.5]
 lines = ['-', '--', '-.']
@@ -1520,7 +1517,7 @@ for l, s in zip(lines, sigmas):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-1}
 #@tab pytorch
 def smooth_l1(data, scalar):
     out = []
@@ -1542,7 +1539,7 @@ for l, s in zip(lines, sigmas):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-1}
 #@tab jax
 def smooth_l1(data, scalar):
     out = []
@@ -1564,7 +1561,7 @@ for l, s in zip(lines, sigmas):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-1}
 #@tab tensorflow
 def smooth_l1(data, scalar):
     cond = tf.abs(data) < 1 / (scalar ** 2)
@@ -1596,7 +1593,7 @@ for well-classified examples (e.g., $p_j > 0.5$)
 so the training
 can focus more on those difficult examples that are misclassified.
 
-```{.python .input}
+```{.python .input #ssd-exercises-2}
 #@tab mxnet
 def focal_loss(gamma, x):
     return -(1 - x) ** gamma * np.log(x)
@@ -1608,7 +1605,7 @@ for l, gamma in zip(lines, [0, 1, 5]):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-2}
 #@tab pytorch
 def focal_loss(gamma, x):
     return -(1 - x) ** gamma * torch.log(x)
@@ -1619,7 +1616,7 @@ for l, gamma in zip(lines, [0, 1, 5]):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-2}
 #@tab jax
 def focal_loss(gamma, x):
     return -(1 - x) ** gamma * jnp.log(x)
@@ -1630,7 +1627,7 @@ for l, gamma in zip(lines, [0, 1, 5]):
 d2l.plt.legend();
 ```
 
-```{.python .input}
+```{.python .input #ssd-exercises-2}
 #@tab tensorflow
 def focal_loss(gamma, x):
     return -(1 - x) ** gamma * tf.math.log(x)
@@ -1664,3 +1661,157 @@ d2l.plt.legend();
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1604)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Single Shot MultiBox Detector** (Liu et al., 2016) is the
+prototype single-stage detector. One forward pass produces
+class scores and box offsets for every anchor at every
+scale; NMS keeps the survivors.
+
+The architecture: a CNN trunk, then a *pyramid* of feature
+maps at decreasing resolutions. Each level has its own pair
+of 1×1-style heads — one for class scores, one for box
+offsets. Predictions from all levels are concatenated.
+
+![SSD = base network + several multiscale feature blocks; each block has its own anchor predictor.](../img/ssd.svg){width=68%}
+:::
+
+::: {.slide title="Class and box prediction heads"}
+For a feature map with $a$ anchors per pixel and $q$
+classes, the class head is a 3×3 conv with $a(q+1)$ output
+channels; the box head outputs $4a$:
+
+@ssd-class-prediction-layer
+
+. . .
+
+@ssd-bounding-box-prediction-layer
+:::
+
+::: {.slide title="Concatenating across scales"}
+Each level produces predictions of a different shape;
+flatten and concat them so the loss can run on a single
+tensor:
+
+@ssd-concatenating-predictions-for-multiple-scales-1
+
+. . .
+
+@ssd-concatenating-predictions-for-multiple-scales-2
+
+. . .
+
+@ssd-concatenating-predictions-for-multiple-scales-3
+:::
+
+::: {.slide title="Downsampling block"}
+Halves the feature map resolution between scales — two
+3×3 conv-BN-ReLU layers + 2×2 max pool:
+
+@ssd-downsampling-block-1
+
+. . .
+
+@ssd-downsampling-block-2
+:::
+
+::: {.slide title="Base network"}
+A small CNN that takes the input image down to the first
+useful resolution:
+
+@ssd-base-network-block
+:::
+
+::: {.slide title="Five-block pyramid"}
+Stack base network + a few downsampling blocks. Each level
+exposes its feature map for anchor prediction:
+
+@ssd-the-complete-model-1
+
+. . .
+
+@ssd-the-complete-model-2
+:::
+
+::: {.slide title="Per-level scales"}
+Bigger anchor scales at deeper levels (small feature map →
+large receptive field → large anchors):
+
+@ssd-the-complete-model-3
+
+. . .
+
+@ssd-the-complete-model-4
+
+. . .
+
+@ssd-the-complete-model-5
+:::
+
+::: {.slide title="Loading data + init"}
+@ssd-reading-the-dataset-and-initializing-the-model-1
+
+. . .
+
+@ssd-reading-the-dataset-and-initializing-the-model-2
+:::
+
+::: {.slide title="Multi-task loss"}
+Two loss terms:
+
+- **Classification** — cross-entropy over class scores.
+- **Localization** — $L_1$ on box offsets, computed only
+  on positive anchors (ignore the rest).
+
+@ssd-defining-loss-and-evaluation-functions-1
+
+. . .
+
+@ssd-defining-loss-and-evaluation-functions-2
+:::
+
+::: {.slide title="Training"}
+Standard SGD loop, two evaluation metrics (class accuracy,
+box mean abs error):
+
+@ssd-training-the-model
+:::
+
+::: {.slide title="Inference"}
+Forward pass → anchors + class scores + offsets → invert
+offsets → NMS → keep boxes above a confidence threshold:
+
+@ssd-prediction-1
+
+. . .
+
+@ssd-prediction-2
+:::
+
+::: {.slide title="Detect bananas"}
+Visualize all predictions with confidence ≥ 0.9:
+
+@ssd-prediction-3
+
+. . .
+
+@ssd-exercises-1
+
+. . .
+
+@ssd-exercises-2
+:::
+
+::: {.slide title="Recap"}
+- SSD = base CNN + multiscale feature pyramid +
+  per-level class & offset heads.
+- One forward pass → all anchor predictions; NMS at the
+  end. No region proposal step.
+- Loss = class cross-entropy + offset $L_1$, only on
+  positive anchors.
+- The architectural blueprint for YOLO, RetinaNet,
+  EfficientDet — single-stage detectors all share this
+  shape.
+:::

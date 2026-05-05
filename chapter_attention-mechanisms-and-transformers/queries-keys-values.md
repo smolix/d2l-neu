@@ -45,26 +45,26 @@ where weights are derived according to the compatibility between a query $\mathb
 
 What is quite remarkable is that the actual "code" for executing on the set of keys and values, namely the query, can be quite concise, even though the space to operate on is significant. This is a desirable property for a network layer as it does not require too many parameters to learn. Just as convenient is the fact that attention can operate on arbitrarily large databases without the need to change the way the attention pooling operation is performed.
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=2}
+```{.python .input #queries-keys-values-queries-keys-and-values  n=2}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
@@ -76,7 +76,7 @@ One of the benefits of the attention mechanism is that it can be quite intuitive
 
 We thus define the `show_heatmaps` function. Note that it does not take a matrix (of attention weights) as its input but rather a tensor with four axes, allowing for an array of different queries and weights. Consequently the input `matrices` has the shape (number of rows for display, number of columns for display, number of queries, number of keys). This will come in handy later on when we want to visualize the workings that are to design Transformers.
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab pytorch
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -98,7 +98,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab tensorflow
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -120,7 +120,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab jax
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -142,7 +142,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
     fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
-```{.python .input  n=17}
+```{.python .input #queries-keys-values-visualization-1  n=17}
 %%tab mxnet
 #@save
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
@@ -167,8 +167,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
 As a quick sanity check let's visualize the identity matrix, representing a case 
 where the attention weight is $1$ only when the query and the key are the same.
 
-```{.python .input  n=20}
-%%tab all
+```{.python .input #queries-keys-values-visualization-2  n=20}
 attention_weights = d2l.reshape(d2l.eye(10), (1, 1, 10, 10))
 show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')
 ```
@@ -203,3 +202,66 @@ by which a neural network can select elements from a set and to construct an ass
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18024)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The seq2seq encoder squashes the entire source into one
+fixed-size vector — no matter the sentence length. Works
+for short sentences, breaks for long ones.
+:::
+
+::: {.slide title="Attention as soft database lookup"}
+A database is a set of $(\text{key}, \text{value})$ pairs;
+a query retrieves the matching value. Attention is the
+*differentiable, soft* version:
+
+$$\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^{m} \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i.$$
+
+Sharp $\alpha$ → database lookup; uniform $\alpha$ →
+average pooling. Everything in between is attention.
+
+![Attention pooling: linear combination of values, weights from query–key compatibility.](../img/qkv.svg){width=68%}
+:::
+
+::: {.slide title="Setup"}
+@queries-keys-values-queries-keys-and-values
+:::
+
+::: {.slide title="Softmax-normalized weights"}
+Most often we want $\alpha$ to be a convex combination — non-
+negative and sum to one. Pick *any* scoring function $a(\mathbf{q}, \mathbf{k})$
+and softmax it:
+
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
+
+Differentiable, gradient never vanishes, available in every
+framework. The rest of the chapter is about choices for $a$
+and what to put in $\mathbf{q}, \mathbf{k}, \mathbf{v}$.
+:::
+
+::: {.slide title="show_heatmaps"}
+Visualizing attention weights as a (queries × keys) heatmap
+is the standard diagnostic. We'll need it in every section
+ahead, so package it now:
+
+@queries-keys-values-visualization-1
+:::
+
+::: {.slide title="Sanity check"}
+Identity attention — each query picks the matching key:
+
+@queries-keys-values-visualization-2
+:::
+
+::: {.slide title="Recap"}
+- Attention = soft, differentiable database lookup.
+- $\text{Attention}(\mathbf{q}, \mathcal{D}) = \sum_i \alpha_i \mathbf{v}_i$
+  with weights derived from compatibility $a(\mathbf{q}, \mathbf{k}_i)$.
+- Softmax of any scoring function $\Rightarrow$ valid convex
+  weights; that's what every modern attention mechanism uses.
+- Operates on arbitrary-size databases — no fixed input width
+  required.
+- Sharp/uniform/single-hot weights recover lookup, average
+  pooling, and database query as limit cases.
+:::

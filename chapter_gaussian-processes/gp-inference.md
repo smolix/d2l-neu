@@ -46,7 +46,7 @@ Typically, we do not need to make use of the full predictive covariance matrix $
 
 The kernel matrix has parameters $\theta$ that we also wish to estimate, such the amplitude $a$ and lengthscale $\ell$ of the RBF kernel above. For these purposes we use the _marginal likelihood_, $p(\textbf{y} | \theta, X)$, which we already derived in working out the marginal distributions to find the joint distribution over $\textbf{y},\textbf{f}_*$. As we will see, the marginal likelihood compartmentalizes into model fit and model complexity terms, and automatically encodes a notion of Occam's razor for learning hyperparameters. For a full discussion, see MacKay Ch. 28 :cite:`mackay2003information`, and Rasmussen and Williams Ch. 5 :cite:`rasmussen2006gaussian`.
 
-```{.python .input}
+```{.python .input #gp-inference-posterior-inference-for-regression}
 from d2l import torch as d2l
 import numpy as np
 from scipy.spatial import distance_matrix
@@ -99,7 +99,7 @@ Let's create some regression data, and then fit the data with a GP, implementing
 We'll sample data from 
 $$y(x) = \sin(x) + \frac{1}{2}\sin(4x) + \epsilon,$$ with $\epsilon \sim \mathcal{N}(0,\sigma^2)$. The noise free function we wish to find is $f(x) = \sin(x) + \frac{1}{2}\sin(4x)$. We'll start by using a noise standard deviation $\sigma = 0.25$.
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-1}
 def data_maker1(x, sig):
     return np.sin(x) + 0.5 * np.sin(4 * x) + np.random.randn(x.shape[0]) * sig
 
@@ -119,14 +119,14 @@ Here we see the noisy observations as circles, and the noise-free function in bl
 Now, let's specify a GP prior over the latent noise-free function, $f(x)\sim \mathcal{GP}(m,k)$. We'll use a mean function $m(x) = 0$, and an RBF covariance function (kernel)
 $$k(x_i,x_j) = a^2\exp\left(-\frac{1}{2\ell^2}||x-x'||^2\right).$$
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-2}
 mean = np.zeros(test_x.shape[0])
 cov = d2l.rbfkernel(test_x, test_x, ls=0.2)
 ```
 
 We have started with a length-scale of 0.2. Before we fit the data, it is important to consider whether we have specified a reasonable prior. Let's visualize some sample functions from this prior, as well as the 95\% credible set (we believe there's a 95\% chance that the true function is within this region).
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-3}
 prior_samples = np.random.multivariate_normal(mean=mean, cov=cov, size=5)
 d2l.plt.plot(test_x, prior_samples.T, color='black', alpha=0.5)
 d2l.plt.plot(test_x, mean, linewidth=2.)
@@ -159,7 +159,7 @@ $$
 
 Perhaps our prior functions were too quickly varying. Let's guess a length-scale of 0.4. We'll also guess a noise standard deviation of 0.75. These are simply hyperparameter initializations --- we will learn these parameters from the marginal likelihood.
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-4}
 ell_est = 0.4
 post_sig_est = 0.5
 
@@ -186,7 +186,7 @@ In general, it is crucial to put careful thought into selecting the kernel and i
 
 Now, let's make predictions with these learned hypers.
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-5}
 K_x_xstar = d2l.rbfkernel(train_x, test_x, ls=ell)
 K_x_x = d2l.rbfkernel(train_x, train_x, ls=ell)
 K_xstar_xstar = d2l.rbfkernel(test_x, test_x, ls=ell)
@@ -209,7 +209,7 @@ d2l.plt.show()
 
 We see the posterior mean in orange almost perfectly matches the true noise free function! Note that the 95\% credible set we are showing is for the latent _noise free_ (true) function, and not the data points. We see that this credible set entirely contains the true function, and does not seem overly wide or narrow. We would not want nor expect it to contain the data points. If we wish to have a credible set for the observations, we should compute
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-6}
 lw_bd_observed = post_mean - 2 * np.sqrt(np.diag(post_cov) + post_sig_est ** 2)
 up_bd_observed = post_mean + 2 * np.sqrt(np.diag(post_cov) + post_sig_est ** 2)
 ```
@@ -224,7 +224,7 @@ In the spirit of playing close attention to what our uncertainty represents, it 
 
 Finally, let's take a look at 20 posterior samples. These samples tell us what types of functions we believe might fit our data, a posteriori.
 
-```{.python .input}
+```{.python .input #gp-inference-worked-example-from-scratch-7}
 post_samples = np.random.multivariate_normal(post_mean, post_cov, size=20)
 d2l.plt.scatter(train_x, train_y)
 d2l.plt.plot(test_x, test_y, linewidth=2.)
@@ -243,7 +243,7 @@ As we have seen, it is actually pretty easy to implement basic Gaussian process 
 
 In these cases, the _GPyTorch_ library will make our lives a lot easier. We'll be discussing GPyTorch more in future notebooks on Gaussian process numerics, and advanced methods. The GPyTorch library contains [many examples](https://github.com/cornellius-gp/gpytorch/tree/master/examples). To get a feel for the package, we will walk through the [simple regression example](https://github.com/cornellius-gp/gpytorch/blob/master/examples/01_Exact_GPs/Simple_GP_Regression.ipynb), showing how it can be adapted to reproduce our above results using GPyTorch. This may seem like a lot of code to simply reproduce the basic regression above, and in a sense, it is. But we can immediately use a variety of kernels, scalable inference techniques, and approximate inference, by only changing a few lines of code from below, instead of writing potentially thousands of lines of new code.
 
-```{.python .input}
+```{.python .input #gp-inference-making-life-easy-with-gpytorch-1}
 # First let's convert our data into tensors for use with PyTorch
 train_x = torch.tensor(train_x)
 train_y = torch.tensor(train_y)
@@ -271,7 +271,7 @@ For Gaussian processes, we can only perform exact inference when we have a Gauss
 assume that our observations are generated as a noise-free function represented by a Gaussian process, plus Gaussian noise.
 In future notebooks, we will consider other settings, such as classification, where we cannot make these assumptions.
 
-```{.python .input}
+```{.python .input #gp-inference-making-life-easy-with-gpytorch-2}
 # Initialize Gaussian likelihood
 likelihood = gpytorch.likelihoods.GaussianLikelihood()
 model = ExactGPModel(train_x, train_y, likelihood)
@@ -287,7 +287,7 @@ mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
 Here, we explicitly specify the likelihood we want to use (Gaussian), the objective we will use for training kernel hyperparameters (here, the marginal likelihood), and the procedure we want to use for optimizing that objective (in this case, Adam). We note that while we are using Adam, which is a "stochastic" optimizer, in this case, it is full-batch Adam. Because the marginal likelihood does not factorize over data instances, we cannot use an optimizer over "mini-batches" of data and be guaranteed convergence. Other optimizers, such as L-BFGS, are also supported by GPyTorch. Unlike in standard deep learning, doing a good job of optimizing the marginal likelihood corresponds strongly with good generalization, which often inclines us towards powerful optimizers like L-BFGS, assuming they are not prohibitively expensive.
 
-```{.python .input}
+```{.python .input #gp-inference-making-life-easy-with-gpytorch-3}
 for i in range(training_iter):
     # Zero gradients from previous iteration
     optimizer.zero_grad()
@@ -306,7 +306,7 @@ for i in range(training_iter):
 
 Here we actually run the optimization procedure, outputting the values of the loss every 10 iterations.
 
-```{.python .input}
+```{.python .input #gp-inference-making-life-easy-with-gpytorch-4}
 # Get into evaluation (predictive posterior) mode
 test_x = torch.tensor(test_x)
 model.eval()
@@ -316,7 +316,7 @@ observed_pred = likelihood(model(test_x))
 
 The above codeblock enables us to make predictions on our test inputs.
 
-```{.python .input}
+```{.python .input #gp-inference-making-life-easy-with-gpytorch-5}
 with torch.no_grad():
     # Initialize plot
     f, ax = d2l.plt.subplots(1, 1, figsize=(4, 3))
@@ -360,3 +360,98 @@ Try seeing if you can find these local optima: initialize with very large length
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12117)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+GP regression has a closed-form posterior. Given training
+data $(\mathbf{X}, \mathbf{y})$ and noise $\sigma_n^2$,
+the posterior at a new test point $\mathbf{x}_*$ is
+Gaussian with:
+
+$$\mu(\mathbf{x}_*) = \mathbf{k}_*^\top (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{y},$$
+$$\sigma^2(\mathbf{x}_*) = k(\mathbf{x}_*, \mathbf{x}_*) - \mathbf{k}_*^\top (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{k}_*.$$
+
+Mean = best linear unbiased estimate. Variance =
+calibrated uncertainty. Both fall out of multivariate-
+Gaussian conditioning.
+
+Hyperparameters (length-scale, noise, signal variance)
+are learned by maximizing the **log marginal
+likelihood** — Bayesian Occam's razor in closed form.
+:::
+
+::: {.slide title="The posterior equations"}
+@gp-inference-posterior-inference-for-regression
+:::
+
+::: {.slide title="From-scratch GP regression"}
+Build $\mathbf{K}$ from the kernel; solve the linear
+system; predict mean and variance everywhere:
+
+@gp-inference-worked-example-from-scratch-1
+
+. . .
+
+@gp-inference-worked-example-from-scratch-2
+
+. . .
+
+@gp-inference-worked-example-from-scratch-3
+:::
+
+::: {.slide title="Visualizing predictions"}
+Mean prediction + 2σ shaded band — uncertainty grows
+between training points and at the edges of the data:
+
+@gp-inference-worked-example-from-scratch-4
+
+. . .
+
+@gp-inference-worked-example-from-scratch-5
+:::
+
+::: {.slide title="Predictions (cont.)"}
+@gp-inference-worked-example-from-scratch-6
+
+. . .
+
+@gp-inference-worked-example-from-scratch-7
+:::
+
+::: {.slide title="Production GPs with GPyTorch"}
+Same model, library implementation. Handles batched
+inference, GPU, and the linear-algebra tricks
+(KISS-GP, conjugate gradients) that make GPs scale
+beyond the naive $\mathcal{O}(n^3)$ limit:
+
+@gp-inference-making-life-easy-with-gpytorch-1
+
+. . .
+
+@gp-inference-making-life-easy-with-gpytorch-2
+
+. . .
+
+@gp-inference-making-life-easy-with-gpytorch-3
+:::
+
+::: {.slide title="GPyTorch (cont.)"}
+@gp-inference-making-life-easy-with-gpytorch-4
+
+. . .
+
+@gp-inference-making-life-easy-with-gpytorch-5
+:::
+
+::: {.slide title="Recap"}
+- GP regression posterior is closed-form Gaussian; mean +
+  variance fall out of conjugate updates.
+- Hyperparameters fit by maximizing the log marginal
+  likelihood — automatic capacity control.
+- Naive cost is $\mathcal{O}(n^3)$ from the matrix
+  inverse. Modern scalable GPs (variational, KISS-GP,
+  inducing points) push this to ~$\mathcal{O}(n)$.
+- Workhorse for Bayesian optimization, active learning,
+  and uncertainty-aware regression.
+:::

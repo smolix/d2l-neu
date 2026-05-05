@@ -9,7 +9,7 @@ $$ \textrm{CTR} = \frac{\#\textrm{Clicks}} {\#\textrm{Impressions}} \times 100 \
 
 Click-through rate is an important signal that indicates the effectiveness of prediction algorithms. Click-through rate prediction is a task of predicting the likelihood that something on a website will be clicked. Models on CTR prediction can not only be employed in targeted advertising systems but also in general item (e.g., movies, news, products) recommender systems, email campaigns, and even search engines. It is also closely related to user satisfaction, conversion rate, and can be helpful in setting campaign goals as it can help advertisers to set realistic expectations.
 
-```{.python .input}
+```{.python .input #ctr-feature-rich-recommender-systems}
 #@tab mxnet
 from collections import defaultdict
 from d2l import mxnet as d2l
@@ -17,7 +17,7 @@ from mxnet import gluon, np
 import os
 ```
 
-```{.python .input}
+```{.python .input #ctr-feature-rich-recommender-systems}
 #@tab pytorch
 from collections import defaultdict
 from d2l import torch as d2l
@@ -31,7 +31,7 @@ With the considerable advancements of Internet and mobile technology, online adv
 
 The following code downloads the dataset from our server and saves it into the local data folder.
 
-```{.python .input  n=15}
+```{.python .input #ctr-an-online-advertising-dataset  n=15}
 #@tab mxnet
 #@save
 d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
@@ -40,7 +40,7 @@ d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
 data_dir = d2l.download_extract('ctr')
 ```
 
-```{.python .input  n=15}
+```{.python .input #ctr-an-online-advertising-dataset  n=15}
 #@tab pytorch
 #@save
 d2l.DATA_HUB['ctr'] = (d2l.DATA_URL + 'ctr.zip',
@@ -55,7 +55,7 @@ There are a training set and a test set, consisting of 15000 and 3000 samples/li
 
 For the convenience of data loading, we implement a `CTRDataset` which loads the advertising dataset from the CSV file and can be used by `DataLoader`.
 
-```{.python .input  n=13}
+```{.python .input #ctr-dataset-wrapper-1  n=13}
 #@tab mxnet
 #@save
 class CTRDataset(gluon.data.Dataset):
@@ -97,7 +97,7 @@ class CTRDataset(gluon.data.Dataset):
         return feat + self.offsets, self.data[idx]['y']
 ```
 
-```{.python .input  n=13}
+```{.python .input #ctr-dataset-wrapper-1  n=13}
 #@tab pytorch
 #@save
 class CTRDataset(torch.utils.data.Dataset):
@@ -141,13 +141,13 @@ class CTRDataset(torch.utils.data.Dataset):
 
 The following example loads the training data and print out the first record.
 
-```{.python .input  n=16}
+```{.python .input #ctr-dataset-wrapper-2  n=16}
 #@tab mxnet
 train_data = CTRDataset(os.path.join(data_dir, 'train.csv'))
 train_data[0]
 ```
 
-```{.python .input  n=16}
+```{.python .input #ctr-dataset-wrapper-2  n=16}
 #@tab pytorch
 train_data = CTRDataset(os.path.join(data_dir, 'train.csv'))
 train_data[0]
@@ -170,3 +170,51 @@ As can be seen, all the 34 fields are categorical features. Each value represent
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/405)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Pure (user, item) collaborative filtering breaks for cold
+start — new users and new items have no history. Real
+recommenders integrate **side features**: item attributes,
+user profiles, time, device, query context, …
+
+This deck sets up the **online advertising CTR
+prediction** problem: predict click probability from a
+sparse vector of categorical features. Feature-rich
+recommendation in its purest form. The next two decks
+(FM and DeepFM) train models on this loader.
+
+@ctr-feature-rich-recommender-systems
+:::
+
+::: {.slide title="The advertising dataset"}
+Tab-separated; each row has many one-hot categorical
+fields plus a binary click label. Sparsity is extreme —
+think "1 of 10000 in each field":
+
+@ctr-an-online-advertising-dataset
+:::
+
+::: {.slide title="Dataset wrapper"}
+Build per-field vocabularies, encode each row as a sparse
+feature index vector, yield (features, label) pairs:
+
+@ctr-dataset-wrapper-1
+
+. . .
+
+@ctr-dataset-wrapper-2
+:::
+
+::: {.slide title="Recap"}
+- CTR prediction = binary classification on sparse
+  categorical features.
+- Side features handle cold start; pure collaborative
+  filtering can't.
+- Output of this deck: indexed-categorical mini-batches
+  the FM / DeepFM decks consume.
+- Real-world systems extend this with continuous
+  features, multi-task heads, and embedding tables on
+  the order of billions of entries.
+:::

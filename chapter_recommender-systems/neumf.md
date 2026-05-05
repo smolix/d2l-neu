@@ -36,7 +36,7 @@ The following figure illustrates the model architecture of NeuMF.
 
 ![Illustration of the NeuMF model](../img/rec-neumf.svg)
 
-```{.python .input  n=1}
+```{.python .input #neumf-the-neumf-model  n=1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, np, npx
@@ -47,7 +47,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input  n=1}
+```{.python .input #neumf-the-neumf-model  n=1}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -58,7 +58,7 @@ import random
 ## Model Implementation
 The following code implements the NeuMF model. It consists of a generalized matrix factorization model and an MLP with different user and item embedding vectors. The structure of the MLP is controlled with the parameter `nums_hiddens`. ReLU is used as the default activation function.
 
-```{.python .input  n=2}
+```{.python .input #neumf-model-implementation  n=2}
 #@tab mxnet
 class NeuMF(nn.Block):
     def __init__(self, num_factors, num_users, num_items, nums_hiddens,
@@ -85,7 +85,7 @@ class NeuMF(nn.Block):
         return self.prediction_layer(con_res)
 ```
 
-```{.python .input  n=2}
+```{.python .input #neumf-model-implementation  n=2}
 #@tab pytorch
 class NeuMF(nn.Module):
     def __init__(self, num_factors, num_users, num_items, nums_hiddens):
@@ -120,7 +120,7 @@ class NeuMF(nn.Module):
 
 For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with form the pool of negative items. The following function takes user identities and the per-user set of *observed* items (the `candidates` argument, holding items each user has interacted with) and samples a random negative item for each user by drawing from the complement — items not in that user's observed set. During the training stage, the model ensures that the items that a user likes are ranked higher than items he dislikes or has not interacted with.
 
-```{.python .input  n=3}
+```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab mxnet
 class PRDataset(gluon.data.Dataset):
     def __init__(self, users, items, candidates, num_items):
@@ -138,7 +138,7 @@ class PRDataset(gluon.data.Dataset):
         return self.users[idx], self.items[idx], neg_items[indices]
 ```
 
-```{.python .input  n=3}
+```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab pytorch
 class PRDataset(torch.utils.data.Dataset):
     def __init__(self, users, items, candidates, num_items):
@@ -175,7 +175,7 @@ where $\mathcal{I}$ is the item set and $S_u$ is the set of items user $u$ has a
 
 The following function calculates the hit counts and AUC for each user.
 
-```{.python .input  n=4}
+```{.python .input #neumf-evaluator-1  n=4}
 #@tab mxnet
 #@save
 def hit_and_auc(rankedlist, test_matrix, k):
@@ -188,7 +188,7 @@ def hit_and_auc(rankedlist, test_matrix, k):
     return len(hits_k), auc
 ```
 
-```{.python .input  n=4}
+```{.python .input #neumf-evaluator-1  n=4}
 #@tab pytorch
 #@save
 def hit_and_auc(rankedlist, test_matrix, k):
@@ -203,7 +203,7 @@ def hit_and_auc(rankedlist, test_matrix, k):
 
 Then, the overall Hit rate and AUC are calculated as follows.
 
-```{.python .input  n=5}
+```{.python .input #neumf-evaluator-2  n=5}
 #@tab mxnet
 #@save
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
@@ -236,7 +236,7 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
     return np.mean(np.array(hit_rate)), np.mean(np.array(auc))
 ```
 
-```{.python .input  n=5}
+```{.python .input #neumf-evaluator-2  n=5}
 #@tab pytorch
 #@save
 def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
@@ -274,7 +274,7 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
 
 The training function is defined below. We train the model in the pairwise manner.
 
-```{.python .input  n=6}
+```{.python .input #neumf-training-and-evaluating-the-model-1  n=6}
 #@tab mxnet
 #@save
 def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
@@ -311,7 +311,7 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
           f'on {str(devices)}')
 ```
 
-```{.python .input  n=6}
+```{.python .input #neumf-training-and-evaluating-the-model-1  n=6}
 #@tab pytorch
 #@save
 def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
@@ -347,7 +347,7 @@ def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
 
 Now, we can load the MovieLens 100k dataset and train the model. Since there are only ratings in the MovieLens dataset, with some losses of accuracy, we binarize these ratings to zeros and ones. If a user rated an item, we consider the implicit feedback as one, otherwise as zero. The action of rating an item can be treated as a form of providing implicit feedback.  Here, we split the dataset in the `seq-aware` mode where users' latest interacted items are left out for test.
 
-```{.python .input  n=11}
+```{.python .input #neumf-training-and-evaluating-the-model-2  n=11}
 #@tab mxnet
 batch_size = 1024
 df, num_users, num_items = d2l.read_data_ml100k()
@@ -362,7 +362,7 @@ train_iter = gluon.data.DataLoader(
     True, last_batch="rollover", num_workers=d2l.get_dataloader_workers())
 ```
 
-```{.python .input  n=11}
+```{.python .input #neumf-training-and-evaluating-the-model-2  n=11}
 #@tab pytorch
 batch_size = 1024
 df, num_users, num_items = d2l.read_data_ml100k()
@@ -379,7 +379,7 @@ train_iter = torch.utils.data.DataLoader(
 
 We then create and initialize the model. We use a three-layer MLP with constant hidden size 10.
 
-```{.python .input  n=8}
+```{.python .input #neumf-training-and-evaluating-the-model-3  n=8}
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
@@ -389,7 +389,7 @@ net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
 net.initialize(ctx=devices, force_reinit=True, init=mx.init.Xavier())
 ```
 
-```{.python .input  n=8}
+```{.python .input #neumf-training-and-evaluating-the-model-3  n=8}
 #@tab pytorch
 devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
@@ -402,7 +402,7 @@ net = net.to(devices[0])
 
 The following code trains the model.
 
-```{.python .input  n=12}
+```{.python .input #neumf-training-and-evaluating-the-model-4  n=12}
 #@tab mxnet
 lr, num_epochs, wd, optimizer = 0.01, 10, 1e-5, 'adam'
 loss = d2l.BPRLoss()
@@ -412,7 +412,7 @@ train_ranking(net, train_iter, test_iter, loss, trainer, None, num_users,
               num_items, num_epochs, devices, evaluate_ranking, candidates)
 ```
 
-```{.python .input  n=12}
+```{.python .input #neumf-training-and-evaluating-the-model-4  n=12}
 #@tab pytorch
 lr, num_epochs, wd = 0.01, 10, 1e-5
 loss = d2l.BPRLoss()
@@ -440,3 +440,90 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/403)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**NeuMF** (He et al., 2017) — neural collaborative
+filtering with implicit feedback. Two parallel pathways
+fed into one prediction:
+
+- **GMF** (Generalized Matrix Factorization) — element-wise
+  product of user and item embeddings. The "linear" pathway.
+- **MLP** — concat of user and item embeddings, fed through
+  a fully connected MLP. The "nonlinear" pathway.
+
+Concatenate the two pathway outputs and project to a
+scalar score. Train with BPR loss + sampled negatives.
+
+This deck pulls together: NeuMF model + a custom dataset
+with negative sampling + leave-one-out ranking evaluator
+(Hit@10, NDCG@10) — the recommender-systems evaluation
+classic.
+:::
+
+::: {.slide title="Model architecture"}
+Two embedding tables per side (one for GMF, one for MLP);
+elementwise product on one side, concat→MLP on the other;
+final concat → linear → sigmoid score:
+
+@neumf-the-neumf-model
+
+. . .
+
+@neumf-model-implementation
+:::
+
+::: {.slide title="Implicit-feedback dataset"}
+Each training instance: a (user, positive item) plus
+sampled negatives. The dataset class handles negative
+sampling on the fly:
+
+@neumf-customized-dataset-with-negative-sampling
+:::
+
+::: {.slide title="Hit@k and NDCG@k"}
+Standard ranking metrics:
+
+- **Hit@k** — does the held-out positive land in the top
+  k recommendations?
+- **NDCG@k** — discounted gain weighted by position; gives
+  full credit for top-1, log-discounted for lower ranks.
+
+@neumf-evaluator-1
+
+. . .
+
+@neumf-evaluator-2
+:::
+
+::: {.slide title="Training loop"}
+BPR loss + Adam. Evaluate on held-out positives + 99
+random negatives per user (a standard convention to keep
+evaluation cheap):
+
+@neumf-training-and-evaluating-the-model-1
+
+. . .
+
+@neumf-training-and-evaluating-the-model-2
+
+. . .
+
+@neumf-training-and-evaluating-the-model-3
+
+. . .
+
+@neumf-training-and-evaluating-the-model-4
+:::
+
+::: {.slide title="Recap"}
+- NeuMF = GMF (elementwise product) + MLP (concat) →
+  fused score.
+- Implicit-feedback training with BPR + negative sampling.
+- Hit@k / NDCG@k are the right metrics; RMSE doesn't
+  apply to implicit settings.
+- A standard reference for "how to combine MF and an MLP";
+  many later models (DeepFM, AutoInt) elaborate on the
+  same dual-pathway pattern.
+:::

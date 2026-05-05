@@ -21,7 +21,7 @@ execute the following steps:
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=2}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=2}
 %%tab mxnet
 import collections
 import re
@@ -31,7 +31,7 @@ import random
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=3}
 %%tab pytorch
 import collections
 import re
@@ -40,7 +40,7 @@ import torch
 import random
 ```
 
-```{.python .input  n=4}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data  n=4}
 %%tab tensorflow
 import collections
 import re
@@ -49,7 +49,7 @@ import tensorflow as tf
 import random
 ```
 
-```{.python .input}
+```{.python .input #text-sequence-converting-raw-text-into-sequence-data}
 %%tab jax
 import collections
 from d2l import jax as d2l
@@ -69,10 +69,9 @@ involve significantly larger datasets,
 this is sufficient to demonstrate
 the preprocessing pipeline.
 The following `_download` method
-(**reads the raw text into a string**).
+reads the raw text into a string.
 
-```{.python .input  n=5}
-%%tab all
+```{.python .input #text-sequence-reading-the-dataset-1  n=5}
 class TimeMachine(d2l.DataModule): #@save
     """The Time Machine dataset."""
     def _download(self):
@@ -88,8 +87,7 @@ raw_text[:60]
 
 For simplicity, we ignore punctuation and capitalization when preprocessing the raw text.
 
-```{.python .input  n=6}
-%%tab all
+```{.python .input #text-sequence-reading-the-dataset-2  n=6}
 @d2l.add_to_class(TimeMachine)  #@save
 def _preprocess(self, text):
     return re.sub('[^A-Za-z]+', ' ', text).lower()
@@ -116,8 +114,7 @@ using a much smaller vocabulary
 Below, we tokenize our preprocessed text
 into a sequence of characters.
 
-```{.python .input  n=7}
-%%tab all
+```{.python .input #text-sequence-tokenization  n=7}
 @d2l.add_to_class(TimeMachine)  #@save
 def _tokenize(self, text):
     return list(text)
@@ -132,11 +129,11 @@ These tokens are still strings.
 However, the inputs to our models
 must ultimately consist
 of numerical inputs.
-[**Next, we introduce a class
+Next, we introduce a class
 for constructing *vocabularies*,
 i.e., objects that associate
 each distinct token value
-with a unique index.**]
+with a unique index.
 First, we determine the set of unique tokens in our training *corpus*.
 We then assign a numerical index to each unique token.
 Rare vocabulary elements are often dropped for convenience.
@@ -145,8 +142,7 @@ that had not been previously seen or was dropped from the vocabulary,
 we represent it by a special "&lt;unk&gt;" token,
 signifying that this is an *unknown* value.
 
-```{.python .input  n=8}
-%%tab all
+```{.python .input #text-sequence-vocabulary-1  n=8}
 class Vocab:  #@save
     """Vocabulary for text."""
     def __init__(self, tokens=[], min_freq=0, reserved_tokens=[]):
@@ -181,15 +177,14 @@ class Vocab:  #@save
         return self.token_to_idx['<unk>']
 ```
 
-We now [**construct a vocabulary**] for our dataset,
+We now construct a vocabulary for our dataset,
 converting the sequence of strings
 into a list of numerical indices.
 Note that we have not lost any information
 and can easily convert our dataset
 back to its original (string) representation.
 
-```{.python .input  n=9}
-%%tab all
+```{.python .input #text-sequence-vocabulary-2  n=9}
 vocab = Vocab(tokens)
 indices = vocab[tokens[:10]]
 print('indices:', indices)
@@ -199,8 +194,8 @@ print('words:', vocab.to_tokens(indices))
 ## Putting It All Together
 
 Using the above classes and methods,
-we [**package everything into the following
-`build` method of the `TimeMachine` class**],
+we package everything into the following
+`build` method of the `TimeMachine` class,
 which returns `corpus`, a list of token indices, and `vocab`,
 the vocabulary of *The Time Machine* corpus.
 The modifications we did here are:
@@ -210,8 +205,7 @@ to simplify the training in later sections;
 since each text line in *The Time Machine* dataset
 is not necessarily a sentence or paragraph.
 
-```{.python .input  n=10}
-%%tab all
+```{.python .input #text-sequence-putting-it-all-together  n=10}
 @d2l.add_to_class(TimeMachine)  #@save
 def build(self, raw_text, vocab=None):
     tokens = self._tokenize(self._preprocess(raw_text))
@@ -231,14 +225,13 @@ we can inspect basic statistics concerning word use in our corpus.
 Below, we construct a vocabulary from words used in *The Time Machine*
 and print the ten most frequently occurring of them.
 
-```{.python .input  n=11}
-%%tab all
+```{.python .input #text-sequence-exploratory-language-statistics-1  n=11}
 words = text.split()
 vocab = Vocab(words)
 vocab.token_freqs[:10]
 ```
 
-Note that (**the ten most frequent words**)
+Note that the ten most frequent words
 are not all that descriptive.
 You might even imagine that
 we might see a very similar list
@@ -248,7 +241,7 @@ pronouns like "i" and "my",
 and prepositions like "of", "to", and "in"
 occur often because they serve common syntactic roles.
 Such words that are common but not particularly descriptive
-are often called (***stop words***) and,
+are often called *stop words* and,
 in previous generations of text classifiers
 based on so-called bag-of-words representations,
 they were most often filtered out.
@@ -263,10 +256,9 @@ The $10^{\textrm{th}}$ most frequent word
 is less than $1/5$ as common as the most popular.
 Word frequency tends to follow a power law distribution
 (specifically the Zipfian) as we go down the ranks.
-To get a better idea, we [**plot the figure of the word frequency**].
+To get a better idea, we plot the figure of the word frequency.
 
-```{.python .input  n=12}
-%%tab all
+```{.python .input #text-sequence-exploratory-language-statistics-2  n=12}
 freqs = [freq for token, freq in vocab.token_freqs]
 d2l.plot(freqs, xlabel='token: x', ylabel='frequency: n(x)',
          xscale='log', yscale='log')
@@ -289,11 +281,10 @@ where $\alpha$ is the exponent that characterizes
 the distribution and $c$ is a constant.
 This should already give us pause for thought if we want
 to model words by counting statistics.
-After all, we will significantly overestimate the frequency of the tail, also known as the infrequent words. But [**what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams)**], and beyond?
+After all, we will significantly overestimate the frequency of the tail, also known as the infrequent words. But what about the other word combinations, such as two consecutive words (bigrams), three consecutive words (trigrams), and beyond?
 Let's see whether the bigram frequency behaves in the same manner as the single word (unigram) frequency.
 
-```{.python .input  n=13}
-%%tab all
+```{.python .input #text-sequence-exploratory-language-statistics-3  n=13}
 bigram_tokens = ['--'.join(pair) for pair in zip(words[:-1], words[1:])]
 bigram_vocab = Vocab(bigram_tokens)
 bigram_vocab.token_freqs[:10]
@@ -301,18 +292,16 @@ bigram_vocab.token_freqs[:10]
 
 One thing is notable here. Out of the ten most frequent word pairs, nine are composed of both stop words and only one is relevant to the actual book---"the time". Furthermore, let's see whether the trigram frequency behaves in the same manner.
 
-```{.python .input  n=14}
-%%tab all
+```{.python .input #text-sequence-exploratory-language-statistics-4  n=14}
 trigram_tokens = ['--'.join(triple) for triple in zip(
     words[:-2], words[1:-1], words[2:])]
 trigram_vocab = Vocab(trigram_tokens)
 trigram_vocab.token_freqs[:10]
 ```
 
-Now, let's [**visualize the token frequency**] among these three models: unigrams, bigrams, and trigrams.
+Now, let's visualize the token frequency among these three models: unigrams, bigrams, and trigrams.
 
-```{.python .input  n=15}
-%%tab all
+```{.python .input #text-sequence-exploratory-language-statistics-5  n=15}
 bigram_freqs = [freq for token, freq in bigram_vocab.token_freqs]
 trigram_freqs = [freq for token, freq in trigram_vocab.token_freqs]
 d2l.plot([freqs, bigram_freqs, trigram_freqs], xlabel='token: x',
@@ -364,3 +353,108 @@ In practice, the frequency of words tends to follow Zipf's law. This is true not
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18011)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Text isn't tensors out of the box. The pipeline:
+
+1. **Read** the raw string.
+2. **Tokenize** — split into characters, words, or subwords.
+3. **Build a vocabulary** — map each token to an integer index.
+4. **Index** the corpus → a sequence of ints.
+
+Running example: H. G. Wells's *The Time Machine* (32 k tokens) —
+small enough to index in a notebook, big enough to train a
+language model on. The other half of the chapter looks at the
+**statistics** of natural-language text: long-tail word
+distributions, stop words, bigrams.
+:::
+
+::: {.slide title="Read"}
+@text-sequence-converting-raw-text-into-sequence-data
+
+. . .
+
+@text-sequence-reading-the-dataset-1
+
+. . .
+
+@text-sequence-reading-the-dataset-2
+:::
+
+::: {.slide title="Tokenize"}
+Word-level splits on whitespace; character-level keeps
+individual characters:
+
+@text-sequence-tokenization
+:::
+
+::: {.slide title="Vocabulary"}
+A `Vocab` class maps tokens ↔ integer indices, with reserved
+slots for `<unk>` (rare/OOV tokens) and a few specials:
+
+@text-sequence-vocabulary-1
+:::
+
+::: {.slide title="Building the vocab"}
+Pass the tokenized corpus and (optionally) a min-frequency
+threshold to drop very rare tokens:
+
+@text-sequence-vocabulary-2
+:::
+
+::: {.slide title="One-stop dataloading"}
+Wrap the whole pipeline in a `TimeMachine.build()` so models
+just call `data.build(...)` to get tensors:
+
+@text-sequence-putting-it-all-together
+:::
+
+::: {.slide title="Word-frequency statistics"}
+Tokenize, count, sort:
+
+@text-sequence-exploratory-language-statistics-1
+
+. . .
+
+The most common tokens are **function words** ("the", "of",
+"and", …) — the so-called *stop words*. Plotting frequency rank
+gives the famous **Zipf law** straight line on log-log axes:
+
+@text-sequence-exploratory-language-statistics-2
+:::
+
+::: {.slide title="Bigrams and trigrams"}
+N-gram statistics give a richer view. Consecutive token pairs
+and triples:
+
+@text-sequence-exploratory-language-statistics-3
+
+. . .
+
+@text-sequence-exploratory-language-statistics-4
+:::
+
+::: {.slide title="Zipf at every n"}
+Plot unigram, bigram, and trigram frequencies on log-log axes —
+all three follow Zipf-like power laws, with steeper slopes (and
+sparser high-frequency regimes) for higher n:
+
+@text-sequence-exploratory-language-statistics-5
+
+This **long-tail sparsity** is exactly why neural language
+models — which embed each token into a continuous space — work so
+much better than n-gram count tables.
+:::
+
+::: {.slide title="Recap"}
+- Pipeline: **read → tokenize → build vocab → index** = corpus
+  as `LongTensor`.
+- Word vs character tokenization is a tradeoff between
+  vocabulary size and sequence length; subword (BPE) is the
+  modern default.
+- Natural-language frequencies are **Zipfian** at every n —
+  long-tail sparsity makes neural models a much better fit than
+  count-based ones.
+:::

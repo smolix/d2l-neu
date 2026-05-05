@@ -45,7 +45,7 @@ one in the source language and another (the translation) in the target language.
 The following code snippets will show how 
 to load the preprocessed data into minibatches for training.
 
-```{.python .input  n=2}
+```{.python .input #machine-translation-and-dataset-machine-translation-and-the-dataset  n=2}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -53,28 +53,28 @@ import os
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #machine-translation-and-dataset-machine-translation-and-the-dataset  n=3}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 import os
 ```
 
-```{.python .input  n=4}
+```{.python .input #machine-translation-and-dataset-machine-translation-and-the-dataset  n=4}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import os
 ```
 
-```{.python .input  n=4}
+```{.python .input #machine-translation-and-dataset-machine-translation-and-the-dataset  n=4}
 %%tab jax
 from d2l import jax as d2l
 from jax import numpy as jnp
 import os
 ```
 
-## [**Downloading and Preprocessing the Dataset**]
+## Downloading and Preprocessing the Dataset
 
 To begin, we download an English--French dataset
 that consists of [bilingual sentence pairs from the Tatoeba Project](http://www.manythings.org/anki/).
@@ -85,8 +85,7 @@ Note that each text sequence
 can be just one sentence,
 or a paragraph of multiple sentences.
 
-```{.python .input  n=5}
-%%tab all
+```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1  n=5}
 class MTFraEng(d2l.DataModule):  #@save
     """The English-French dataset."""
     def _download(self):
@@ -97,22 +96,20 @@ class MTFraEng(d2l.DataModule):  #@save
             return f.read()
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2}
 data = MTFraEng() 
 raw_text = data._download()
 print(raw_text[:75])
 ```
 
 After downloading the dataset,
-we [**proceed with several preprocessing steps**]
+we proceed with several preprocessing steps
 for the raw text data.
 For instance, we replace non-breaking space with space,
 convert uppercase letters to lowercase ones,
 and insert space between words and punctuation marks.
 
-```{.python .input  n=6}
-%%tab all
+```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3  n=6}
 @d2l.add_to_class(MTFraEng)  #@save
 def _preprocess(self, text):
     # Replace non-breaking space with space
@@ -124,13 +121,12 @@ def _preprocess(self, text):
     return ''.join(out)
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4}
 text = data._preprocess(raw_text)
 print(text[:80])
 ```
 
-## [**Tokenization**]
+## Tokenization
 
 Unlike the character-level tokenization
 in :numref:`sec_language-model`,
@@ -154,8 +150,7 @@ Specifically, `src[i]` is a list of tokens from the
 $i^\textrm{th}$ text sequence in the source language (English here) 
 and `tgt[i]` is that in the target language (French here).
 
-```{.python .input  n=7}
-%%tab all
+```{.python .input #machine-translation-and-dataset-tokenization-1  n=7}
 @d2l.add_to_class(MTFraEng)  #@save
 def _tokenize(self, text, max_examples=None):
     src, tgt = [], []
@@ -169,18 +164,16 @@ def _tokenize(self, text, max_examples=None):
     return src, tgt
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #machine-translation-and-dataset-tokenization-2}
 src, tgt = data._tokenize(text)
 src[:6], tgt[:6]
 ```
 
-Let's [**plot the histogram of the number of tokens per text sequence.**]
+Let's plot the histogram of the number of tokens per text sequence.
 In this simple English--French dataset,
 most of the text sequences have fewer than 20 tokens.
 
-```{.python .input  n=8}
-%%tab all
+```{.python .input #machine-translation-and-dataset-tokenization-3  n=8}
 #@save
 def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
     """Plot the histogram for list length pairs."""
@@ -194,8 +187,7 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
     d2l.plt.legend(legend)
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #machine-translation-and-dataset-tokenization-4}
 show_list_len_pair_hist(['source', 'target'], '# tokens per sequence',
                         'count', src, tgt);
 ```
@@ -204,10 +196,10 @@ show_list_len_pair_hist(['source', 'target'], '# tokens per sequence',
 :label:`subsec_loading-seq-fixed-len`
 
 Recall that in language modeling
-[**each example sequence**],
+each example sequence,
 either a segment of one sentence
 or a span over multiple sentences,
-(**had a fixed length.**)
+had a fixed length.
 This was specified by the `num_steps`
 (number of time steps or tokens) argument from :numref:`sec_language-model`.
 In machine translation, each example is
@@ -253,8 +245,7 @@ and the special beginning-of-sequence "&lt;bos&gt;" token
 will be used as the first input token
 for predicting the target sequence (:numref:`fig_seq2seq_predict`).
 
-```{.python .input  n=9}
-%%tab all
+```{.python .input #machine-translation-and-dataset-loading-sequences-of-fixed-length-1  n=9}
 @d2l.add_to_class(MTFraEng)  #@save
 def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
     super(MTFraEng, self).__init__()
@@ -263,8 +254,7 @@ def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
         self._download())
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #machine-translation-and-dataset-loading-sequences-of-fixed-length-2}
 @d2l.add_to_class(MTFraEng)  #@save
 def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
     def _build_array(sentences, vocab, is_tgt=False):
@@ -287,23 +277,21 @@ def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
             src_vocab, tgt_vocab)
 ```
 
-## [**Reading the Dataset**]
+## Reading the Dataset
 
 Finally, we define the `get_dataloader` method
 to return the data iterator.
 
-```{.python .input  n=10}
-%%tab all
+```{.python .input #machine-translation-and-dataset-reading-the-dataset-1  n=10}
 @d2l.add_to_class(MTFraEng)  #@save
 def get_dataloader(self, train):
     idx = slice(0, self.num_train) if train else slice(self.num_train, None)
     return self.get_tensorloader(self.arrays, train, idx)
 ```
 
-Let's [**read the first minibatch from the English--French dataset.**]
+Let's read the first minibatch from the English--French dataset.
 
-```{.python .input  n=11}
-%%tab all
+```{.python .input #machine-translation-and-dataset-reading-the-dataset-2  n=11}
 data = MTFraEng(batch_size=3)
 src, tgt, src_valid_len, label = next(iter(data.train_dataloader()))
 print('source:', d2l.astype(src, d2l.int32))
@@ -316,8 +304,7 @@ We show a pair of source and target sequences
 processed by the above `_build_arrays` method
 (in the string format).
 
-```{.python .input  n=12}
-%%tab all
+```{.python .input #machine-translation-and-dataset-reading-the-dataset-3  n=12}
 @d2l.add_to_class(MTFraEng)  #@save
 def build(self, src_sentences, tgt_sentences):
     raw_text = '\n'.join([src + '\t' + tgt for src, tgt in zip(
@@ -327,8 +314,7 @@ def build(self, src_sentences, tgt_sentences):
     return arrays
 ```
 
-```{.python .input  n=13}
-%%tab all
+```{.python .input #machine-translation-and-dataset-reading-the-dataset-4  n=13}
 src, tgt, _,  _ = data.build(['hi .'], ['salut .'])
 print('source:', data.src_vocab.to_tokens(d2l.astype(src[0], d2l.int32)))
 print('target:', data.tgt_vocab.to_tokens(d2l.astype(tgt[0], d2l.int32)))
@@ -359,3 +345,118 @@ In natural language processing, *machine translation* refers to the task of auto
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18020)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Language modeling predicts one sequence. Translation maps
+*between* sequences — different lengths, different word orders.
+This unaligned source-to-target structure is the
+*sequence-to-sequence* (seq2seq) setting that drives the rest
+of this chapter and most of the attention chapter.
+
+This deck builds the data plumbing for English→French:
+
+- download a parallel corpus from Tatoeba,
+- normalize and word-tokenize both sides,
+- build separate source / target vocabularies,
+- pad and truncate to fixed length, with `<bos>` / `<eos>` /
+  `<pad>` / `<unk>` special tokens.
+
+@machine-translation-and-dataset-machine-translation-and-the-dataset
+:::
+
+::: {.slide title="Downloading the Tatoeba corpus"}
+Tab-separated bilingual sentence pairs — one English, one
+French per line:
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1
+
+. . .
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2
+:::
+
+::: {.slide title="Preprocessing"}
+Lower-case, replace non-breaking spaces, insert a space before
+punctuation so `,.!?` become their own tokens:
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3
+
+. . .
+
+@machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4
+:::
+
+::: {.slide title="Word-level tokenization"}
+Word tokens (modern systems use BPE / WordPiece). Append
+`<eos>` so the model knows when to stop generating.
+
+@machine-translation-and-dataset-tokenization-1
+
+. . .
+
+Two parallel lists: `src[i]` and `tgt[i]` are the i-th English
+sentence and its French translation:
+
+@machine-translation-and-dataset-tokenization-2
+:::
+
+::: {.slide title="Length distribution"}
+Most sentences are short — under 20 tokens. That justifies a
+small fixed `num_steps` and pad/truncate strategy.
+
+@machine-translation-and-dataset-tokenization-3
+
+. . .
+
+@!machine-translation-and-dataset-tokenization-4
+:::
+
+::: {.slide title="Padding to fixed length"}
+Truncate long sequences, pad short ones with `<pad>`. Track
+`valid_len` (real tokens, no padding) — the model needs it to
+mask attention/loss later. Target sequences get a `<bos>`
+prefix; the label is the target shifted by one.
+
+@machine-translation-and-dataset-loading-sequences-of-fixed-length-1
+
+. . .
+
+@machine-translation-and-dataset-loading-sequences-of-fixed-length-2
+:::
+
+::: {.slide title="Dataloader"}
+Standard split — first `num_train` examples for training, the
+rest for validation:
+
+@machine-translation-and-dataset-reading-the-dataset-1
+:::
+
+::: {.slide title="A minibatch end to end"}
+Source IDs, decoder input (target shifted right with `<bos>`),
+valid length, label (target shifted left):
+
+@machine-translation-and-dataset-reading-the-dataset-2
+
+. . .
+
+Convert IDs back to tokens for inspection:
+
+@machine-translation-and-dataset-reading-the-dataset-3
+
+. . .
+
+@machine-translation-and-dataset-reading-the-dataset-4
+:::
+
+::: {.slide title="Recap"}
+- Translation = pairs of unaligned sequences (different
+  lengths, possibly different word orders).
+- Word-level tokenization → much larger vocab than character;
+  treat rare tokens as `<unk>` to keep it manageable.
+- Pad/truncate to fixed `num_steps` for batching; record
+  `valid_len` to mask later.
+- Decoder input is target with `<bos>` prefix; label is target
+  shifted left by one — that's teacher forcing setup.
+:::

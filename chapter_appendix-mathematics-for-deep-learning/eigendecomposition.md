@@ -88,7 +88,7 @@ We can solve this with the vectors $[1, -1]^\top$ and $[1, 2]^\top$ respectively
 
 We can check this in code using the built-in `numpy.linalg.eig` routine.
 
-```{.python .input}
+```{.python .input #eigendecomposition-an-example}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -98,7 +98,7 @@ import numpy as np
 np.linalg.eig(np.array([[2, 1], [2, 3]]))
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-an-example}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -108,7 +108,7 @@ import torch
 torch.linalg.eig(torch.tensor([[2, 1], [2, 3]], dtype=torch.float64))
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-an-example}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -118,7 +118,7 @@ import tensorflow as tf
 tf.linalg.eig(tf.constant([[2, 1], [2, 3]], dtype=tf.float64))
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-an-example}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -287,7 +287,7 @@ Performing the numerical computation shows
 that the eigenvalues are approximately $0.99$, $2.97$, $4.95$, $9.08$,
 all comfortably inside the ranges provided.
 
-```{.python .input}
+```{.python .input #eigendecomposition-gershgorin-circle-theorem}
 #@tab mxnet
 A = np.array([[1.0, 0.1, 0.1, 0.1],
               [0.1, 3.0, 0.2, 0.3],
@@ -298,7 +298,7 @@ v, _ = np.linalg.eig(A)
 v
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-gershgorin-circle-theorem}
 #@tab pytorch
 A = torch.tensor([[1.0, 0.1, 0.1, 0.1],
               [0.1, 3.0, 0.2, 0.3],
@@ -309,7 +309,7 @@ v, _ = torch.linalg.eig(A)
 v
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-gershgorin-circle-theorem}
 #@tab tensorflow
 A = tf.constant([[1.0, 0.1, 0.1, 0.1],
                 [0.1, 3.0, 0.2, 0.3],
@@ -320,7 +320,7 @@ v, _ = tf.linalg.eigh(A)
 v
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-gershgorin-circle-theorem}
 #@tab jax
 A = jnp.array([[1.0, 0.1, 0.1, 0.1],
                [0.1, 3.0, 0.2, 0.3],
@@ -366,7 +366,7 @@ When these models are initialized, $A$ is taken to be
 a random matrix with Gaussian entries, so let's make one of those.
 To be concrete, we start with a mean zero, variance one Gaussian distributed $5 \times 5$ matrix.
 
-```{.python .input}
+```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
 #@tab mxnet
 np.random.seed(8675309)
 
@@ -375,7 +375,7 @@ A = np.random.randn(k, k)
 A
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
 #@tab pytorch
 torch.manual_seed(42)
 
@@ -384,14 +384,14 @@ A = torch.randn(k, k, dtype=torch.float64)
 A
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
 #@tab tensorflow
 k = 5
 A = tf.random.normal((k, k), dtype=tf.float64)
 A
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
 #@tab jax
 k = 5
 A = jax.random.normal(jax.random.PRNGKey(42), (k, k), dtype=jnp.float64)
@@ -423,7 +423,7 @@ to make sure that our output changes depending on our input, but not much!
 Let's see what happens when we repeatedly multiply our matrix $\mathbf{A}$
 against a random input vector, and keep track of the norm.
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-1}
 #@tab mxnet
 # Calculate the sequence of norms after repeatedly applying `A`
 v_in = np.random.randn(k, 1)
@@ -436,7 +436,7 @@ for i in range(1, 100):
 d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-1}
 #@tab pytorch
 # Calculate the sequence of norms after repeatedly applying `A`
 v_in = torch.randn(k, 1, dtype=torch.float64)
@@ -449,7 +449,7 @@ for i in range(1, 100):
 d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-1}
 #@tab tensorflow
 # Calculate the sequence of norms after repeatedly applying `A`
 v_in = tf.random.normal((k, 1), dtype=tf.float64)
@@ -462,7 +462,7 @@ for i in range(1, 100):
 d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-1}
 #@tab jax
 # Calculate the sequence of norms after repeatedly applying `A`
 v_in = jax.random.normal(jax.random.PRNGKey(1), (k, 1), dtype=jnp.float64)
@@ -478,7 +478,7 @@ d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
 The norm is growing uncontrollably!
 Indeed if we take the list of quotients, we will see a pattern.
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-2}
 #@tab mxnet
 # Compute the scaling factor of the norms
 norm_ratio_list = []
@@ -488,7 +488,7 @@ for i in range(1, 100):
 d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-2}
 #@tab pytorch
 # Compute the scaling factor of the norms
 norm_ratio_list = []
@@ -498,7 +498,7 @@ for i in range(1, 100):
 d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-2}
 #@tab tensorflow
 # Compute the scaling factor of the norms
 norm_ratio_list = []
@@ -508,7 +508,7 @@ for i in range(1, 100):
 d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-behavior-on-random-data-2}
 #@tab jax
 # Compute the scaling factor of the norms
 norm_ratio_list = []
@@ -538,7 +538,7 @@ By taking the norm of the complex number
 (square root of the sums of squares of real and imaginary parts)
 we can measure that stretching factor. Let's also sort them.
 
-```{.python .input}
+```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
 #@tab mxnet
 # Compute the eigenvalues
 eigs = np.linalg.eigvals(A).tolist()
@@ -547,7 +547,7 @@ norm_eigs.sort()
 print(f'norms of eigenvalues: {norm_eigs}')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
 #@tab pytorch
 # Compute the eigenvalues
 eigs = torch.linalg.eig(A).eigenvalues.tolist()
@@ -556,7 +556,7 @@ norm_eigs.sort()
 print(f'norms of eigenvalues: {norm_eigs}')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
 #@tab tensorflow
 # Compute the eigenvalues (A is not symmetric in general, so use eig).
 eigs = tf.linalg.eig(A)[0].numpy().tolist()
@@ -565,7 +565,7 @@ norm_eigs.sort()
 print(f'norms of eigenvalues: {norm_eigs}')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
 #@tab jax
 # Compute the eigenvalues
 eigs = jnp.linalg.eigvals(A).tolist()
@@ -617,7 +617,7 @@ To do so, we now rescale our matrix by this principal eigenvalue
 so that the largest eigenvalue is instead now just one.
 Let's see what happens in this case.
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-1}
 #@tab mxnet
 # Rescale the matrix `A`
 A /= norm_eigs[-1]
@@ -633,7 +633,7 @@ for i in range(1, 100):
 d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-1}
 #@tab pytorch
 # Rescale the matrix `A`
 A /= norm_eigs[-1]
@@ -649,7 +649,7 @@ for i in range(1, 100):
 d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-1}
 #@tab tensorflow
 # Rescale the matrix `A`
 A /= norm_eigs[-1]
@@ -665,7 +665,7 @@ for i in range(1, 100):
 d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-1}
 #@tab jax
 # Rescale the matrix `A`
 A = A / norm_eigs[-1]
@@ -683,7 +683,7 @@ d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
 
 We can also plot the ratio between consecutive norms as before and see that indeed it stabilizes.
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-2}
 #@tab mxnet
 # Also plot the ratio
 norm_ratio_list = []
@@ -693,7 +693,7 @@ for i in range(1, 100):
 d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-2}
 #@tab pytorch
 # Also plot the ratio
 norm_ratio_list = []
@@ -703,7 +703,7 @@ for i in range(1, 100):
 d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-2}
 #@tab tensorflow
 # Also plot the ratio
 norm_ratio_list = []
@@ -713,7 +713,7 @@ for i in range(1, 100):
 d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
-```{.python .input}
+```{.python .input #eigendecomposition-fixing-the-normalization-2}
 #@tab jax
 # Also plot the ratio
 norm_ratio_list = []
@@ -786,3 +786,75 @@ $$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1087)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A square matrix $\mathbf{A}$ has **eigenvalue** $\lambda$
+and **eigenvector** $\mathbf{v}$ when
+
+$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
+
+Geometrically: $\mathbf{A}$ stretches $\mathbf{v}$ by
+$\lambda$ but doesn't rotate it. If $\mathbf{A}$ is
+diagonalizable: $\mathbf{A} = \mathbf{V}\mathbf{\Lambda}\mathbf{V}^{-1}$
+— a basis change in which the action is just stretching
+along axes.
+
+Why we care: matrix powers $\mathbf{A}^t$ are governed by
+$\lambda^t$. Repeated application of $\mathbf{A}$ aligns
+arbitrary inputs with the dominant eigenvector. That's the
+heart of vanishing/exploding gradients in RNNs, of
+PageRank, and of every iterative solver.
+:::
+
+::: {.slide title="A concrete example"}
+@eigendecomposition-an-example
+:::
+
+::: {.slide title="Gershgorin circles"}
+Cheap eigenvalue bounds without computing them:
+eigenvalues lie in the union of disks centered at
+$a_{ii}$ with radius $\sum_{j \ne i} |a_{ij}|$. Useful for
+stability arguments:
+
+@eigendecomposition-gershgorin-circle-theorem
+:::
+
+::: {.slide title="Eigenvectors govern long-run behavior"}
+Power iteration: keep multiplying by $\mathbf{A}$. The
+direction converges to the leading eigenvector; the norm
+grows like $\lambda_1^t$:
+
+@eigendecomposition-eigenvectors-as-long-term-behavior
+
+. . .
+
+@eigendecomposition-behavior-on-random-data-1
+
+. . .
+
+@eigendecomposition-behavior-on-random-data-2
+:::
+
+::: {.slide title="Relating back"}
+@eigendecomposition-relating-back-to-eigenvectors
+
+. . .
+
+@eigendecomposition-fixing-the-normalization-1
+
+. . .
+
+@eigendecomposition-fixing-the-normalization-2
+:::
+
+::: {.slide title="Recap"}
+- $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$: $\mathbf{A}$
+  acts as scaling along the eigenvector axes.
+- Largest $|\lambda|$ controls long-run iterated dynamics.
+- Symmetric matrices have orthonormal eigenvectors and
+  real eigenvalues — the basis for PCA.
+- Vanishing/exploding RNN gradients = "iterated map" with
+  bad spectral radius.
+:::

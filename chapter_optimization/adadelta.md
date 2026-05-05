@@ -39,7 +39,7 @@ and $\epsilon$ (a small value such as $10^{-5}$) is added to maintain numerical 
 
 Adadelta needs to maintain two state variables for each variable, $\mathbf{s}_t$ and $\Delta\mathbf{x}_t$. This yields the following implementation.
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -61,7 +61,7 @@ def adadelta(params, states, hyperparams):
         delta[:] = rho * delta + (1 - rho) * g * g
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -84,7 +84,7 @@ def adadelta(params, states, hyperparams):
         p.grad.data.zero_()
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -106,7 +106,7 @@ def adadelta(params, grads, states, hyperparams):
         delta[:].assign(rho * delta + (1 - rho) * g * g)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -131,8 +131,7 @@ def adadelta(params, grads, states, hyperparams):
 
 Choosing $\rho = 0.9$ amounts to a half-life time of 10 for each parameter update. This tends to work quite well. We get the following behavior.
 
-```{.python .input}
-#@tab all
+```{.python .input #adadelta-implementation-2}
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 d2l.train_ch11(adadelta, init_adadelta_states(feature_dim),
                {'rho': 0.9}, data_iter, feature_dim);
@@ -140,18 +139,18 @@ d2l.train_ch11(adadelta, init_adadelta_states(feature_dim),
 
 For a concise implementation we simply use the Adadelta algorithm from high-level APIs. This yields the following one-liner for a much more compact invocation.
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab mxnet
 d2l.train_concise_ch11('adadelta', {'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab pytorch
 trainer = torch.optim.Adadelta
 d2l.train_concise_ch11(trainer, {'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab tensorflow
 # adadelta is not converging at default learning rate
 # but it is converging at lr = 5.0
@@ -159,7 +158,7 @@ trainer = tf.keras.optimizers.Adadelta
 d2l.train_concise_ch11(trainer, {'learning_rate':5.0, 'rho': 0.9}, data_iter)
 ```
 
-```{.python .input}
+```{.python .input #adadelta-implementation-3}
 #@tab jax
 import optax
 trainer = optax.adadelta
@@ -195,3 +194,53 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1077)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Adadelta** (Zeiler, 2012) takes RMSProp further: adapt
+per-parameter step magnitudes *and* remove the global
+learning rate entirely.
+
+Keeps two EMAs — one over squared gradients, one over
+squared *updates*. The ratio of their square roots is
+dimensionally consistent — a "unitless" step size, so no
+separate $\eta$ needed (in principle).
+:::
+
+::: {.slide title="The update rule"}
+$$\mathbf{s}_t = \rho \mathbf{s}_{t-1} + (1-\rho) \mathbf{g}_t^2,$$
+
+$$\mathbf{g}'_t = \frac{\sqrt{\Delta\mathbf{x}_{t-1} + \epsilon}}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t,$$
+
+$$\Delta\mathbf{x}_t = \rho \Delta\mathbf{x}_{t-1} + (1-\rho)\, \mathbf{g}'^2_t,$$
+
+$$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \mathbf{g}'_t.$$
+
+In practice frameworks still expose a learning-rate hyper
+for fine-tuning.
+:::
+
+::: {.slide title="From-scratch implementation"}
+Two state buffers per parameter (`s` and `delta`):
+
+@adadelta-implementation-1
+:::
+
+::: {.slide title="Training the airfoil model"}
+@adadelta-implementation-2
+:::
+
+::: {.slide title="Concise: framework Adadelta"}
+@adadelta-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- Two EMAs: squared gradients $\mathbf{s}_t$ and squared
+  updates $\Delta\mathbf{x}_t$.
+- Per-parameter step is the ratio $\sqrt{\Delta\mathbf{x}_{t-1}}/\sqrt{\mathbf{s}_t}$,
+  dimensionally consistent — drops the explicit learning
+  rate.
+- Less popular today than Adam, but a good case study in
+  scale-invariant optimization design.
+:::

@@ -31,7 +31,7 @@ local nonlinearities across the channel activations and (ii) use global average 
 across all locations in the last representation layer. Note that global average pooling would not
 be effective, were it not for the added nonlinearities. Let's dive into this in detail.
 
-```{.python .input}
+```{.python .input #nin-network-in-network-nin}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx, init
@@ -39,20 +39,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #nin-network-in-network-nin}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #nin-network-in-network-nin}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #nin-network-in-network-nin}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -60,7 +60,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## (**NiN Blocks**)
+## NiN Blocks
 
 Recall :numref:`subsec_1x1`. In it we said that the inputs and outputs of convolutional layers
 consist of four-dimensional tensors with axes
@@ -80,7 +80,7 @@ Note both the difference in the NiN blocks (the initial convolution is followed 
 :width:`600px`
 :label:`fig_nin`
 
-```{.python .input}
+```{.python .input #nin-nin-blocks}
 %%tab mxnet
 def nin_block(num_channels, kernel_size, strides, padding):
     blk = nn.Sequential()
@@ -91,7 +91,7 @@ def nin_block(num_channels, kernel_size, strides, padding):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-blocks}
 %%tab pytorch
 def nin_block(out_channels, kernel_size, strides, padding):
     return nn.Sequential(
@@ -100,7 +100,7 @@ def nin_block(out_channels, kernel_size, strides, padding):
         nn.LazyConv2d(out_channels, kernel_size=1), nn.ReLU())
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-blocks}
 %%tab tensorflow
 def nin_block(out_channels, kernel_size, strides, padding):
     return tf.keras.models.Sequential([
@@ -113,7 +113,7 @@ def nin_block(out_channels, kernel_size, strides, padding):
     tf.keras.layers.Activation('relu')])
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-blocks}
 %%tab jax
 def nin_block(out_channels, kernel_size, strides, padding):
     return nn.Sequential([
@@ -123,7 +123,7 @@ def nin_block(out_channels, kernel_size, strides, padding):
         nn.Conv(out_channels, kernel_size=(1, 1)), nn.relu])
 ```
 
-## [**NiN Model**]
+## NiN Model
 
 NiN uses the same initial convolution sizes as AlexNet (it was proposed shortly thereafter).
 The kernel sizes are $11\times 11$, $5\times 5$, and $3\times 3$, respectively,
@@ -136,7 +136,7 @@ Instead, NiN uses a NiN block with a number of output channels equal to the numb
 yielding a vector of logits.
 This design significantly reduces the number of required model parameters, albeit at the expense of a potential increase in training time.
 
-```{.python .input}
+```{.python .input #nin-nin-model-1}
 %%tab pytorch
 class NiN(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -156,7 +156,7 @@ class NiN(d2l.Classifier):
         self.net.apply(d2l.init_cnn)
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-model-1}
 %%tab mxnet
 class NiN(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -177,7 +177,7 @@ class NiN(d2l.Classifier):
         self.net.initialize(init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-model-1}
 %%tab tensorflow
 class NiN(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -196,7 +196,7 @@ class NiN(d2l.Classifier):
             tf.keras.layers.Flatten()])
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-model-1}
 %%tab jax
 import optax
 
@@ -226,29 +226,29 @@ class NiN(d2l.Classifier):
         return optax.chain(optax.clip_by_global_norm(1.0), optax.sgd(self.lr))
 ```
 
-We create a data example to see [**the output shape of each block**].
+We create a data example to see the output shape of each block.
 
-```{.python .input}
+```{.python .input #nin-nin-model-2}
 %%tab mxnet, pytorch
 NiN().layer_summary((1, 1, 224, 224))
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-model-2}
 %%tab tensorflow
 NiN().layer_summary((1, 224, 224, 1))
 ```
 
-```{.python .input}
+```{.python .input #nin-nin-model-2}
 %%tab jax
 NiN(training=False).layer_summary((1, 224, 224, 1))
 ```
 
-## [**Training**]
+## Training
 
 As before we use Fashion-MNIST to train the model using the same 
 optimizer that we used for AlexNet and VGG.
 
-```{.python .input}
+```{.python .input #nin-training}
 %%tab mxnet
 model = NiN(lr=0.05)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -256,7 +256,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #nin-training}
 %%tab pytorch
 model = NiN(lr=0.05)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -265,7 +265,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #nin-training}
 %%tab jax
 model = NiN(lr=0.05)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -273,7 +273,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #nin-training}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
@@ -312,3 +312,58 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18003)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Network-in-Network** (Lin et al., 2014) introduces two
+ideas the rest of the field happily adopts:
+
+- **1×1 convolutions** as a lightweight "MLP per pixel" —
+  adds nonlinearity and channel mixing without spatial cost.
+- **Global average pooling** replaces the giant FC
+  classifier head — huge parameter reduction.
+
+![NiN: regular conv followed by two 1×1 convs; ends in global average pool.](../img/nin.svg){width=72%}
+:::
+
+::: {.slide title="The NiN block"}
+A regular conv followed by **two 1×1 convs** (with ReLU between)
+— the "MLP within a conv layer":
+
+@nin-network-in-network-nin
+
+@nin-nin-blocks
+:::
+
+::: {.slide title="The NiN model"}
+Four NiN blocks at growing channel counts (96, 256, 384,
+**num_classes**), with max-pool downsampling between, then
+**global average pooling** + flatten → done. **No FC layers.**
+
+@nin-nin-model-1
+:::
+
+::: {.slide title="Shape inspection"}
+Walk a `1×1×224×224` input through; spatial dims shrink, channels
+grow until the final block produces `num_classes` channels:
+
+@nin-nin-model-2
+:::
+
+::: {.slide title="Training"}
+Same `Trainer`, slightly higher learning rate than the FC nets
+(no dense layer to overfit on small batches):
+
+@nin-training
+:::
+
+::: {.slide title="Recap"}
+- NiN puts an **MLP inside each conv block** via two 1×1 convs.
+- **Global average pooling** as the classifier head — one number
+  per class per feature map, no FC layers needed.
+- The 1×1 conv as channel-mixer becomes a foundational primitive
+  in all later architectures.
+- Despite never winning a major benchmark, NiN's ideas are in
+  every ConvNet that came after.
+:::

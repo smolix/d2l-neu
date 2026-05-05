@@ -10,11 +10,11 @@ We are now ready to work through
 a fully functioning implementation 
 of linear regression. 
 In this section, 
-(**we will implement the entire method from scratch,
+we will implement the entire method from scratch,
 including (i) the model; (ii) the loss function;
 (iii) a minibatch stochastic gradient descent optimizer;
 and (iv) the training function 
-that stitches all of these pieces together.**)
+that stitches all of these pieces together.
 Finally, we will run our synthetic data generator
 from :numref:`sec_synthetic-regression-data`
 and apply our model
@@ -32,7 +32,7 @@ Later, we will introduce a more concise implementation,
 taking advantage of the bells and whistles of deep learning frameworks 
 while retaining the structure of what follows below.
 
-```{.python .input  n=2}
+```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=2}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -40,21 +40,21 @@ from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=3}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input  n=4}
+```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=4}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input  n=5}
+```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=5}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -66,8 +66,8 @@ import optax
 
 ## Defining the Model
 
-[**Before we can begin optimizing our model's parameters**] by minibatch SGD,
-(**we need to have some parameters in the first place.**)
+Before we can begin optimizing our model's parameters by minibatch SGD,
+we need to have some parameters in the first place.
 In the following we initialize weights by drawing
 random numbers from a normal distribution with mean 0
 and a standard deviation of 0.01. 
@@ -78,7 +78,7 @@ Moreover we set the bias to 0.
 Note that for object-oriented design
 we add the code to the `__init__` method of a subclass of `d2l.Module` (introduced in :numref:`subsec_oo-design-models`).
 
-```{.python .input  n=6}
+```{.python .input #linear-regression-scratch-defining-the-model-1  n=6}
 %%tab pytorch
 class LinearRegressionScratch(d2l.Module):  #@save
     """The linear regression model implemented from scratch."""
@@ -89,7 +89,7 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b = d2l.zeros(1, requires_grad=True)
 ```
 
-```{.python .input  n=6}
+```{.python .input #linear-regression-scratch-defining-the-model-1  n=6}
 %%tab mxnet
 class LinearRegressionScratch(d2l.Module):  #@save
     """The linear regression model implemented from scratch."""
@@ -102,7 +102,7 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b.attach_grad()
 ```
 
-```{.python .input  n=6}
+```{.python .input #linear-regression-scratch-defining-the-model-1  n=6}
 %%tab tensorflow
 class LinearRegressionScratch(d2l.Module):  #@save
     """The linear regression model implemented from scratch."""
@@ -115,7 +115,7 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b = tf.Variable(b, trainable=True)
 ```
 
-```{.python .input  n=7}
+```{.python .input #linear-regression-scratch-defining-the-model-1  n=7}
 %%tab jax
 class LinearRegressionScratch(d2l.Module):  #@save
     """The linear regression model implemented from scratch."""
@@ -129,8 +129,8 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b = self.param('b', nn.initializers.zeros, (1))
 ```
 
-Next we must [**define our model,
-relating its input and parameters to its output.**]
+Next we must define our model,
+relating its input and parameters to its output.
 Using the same notation as :eqref:`eq_linreg-y-vec`
 for our linear model we simply take the matrix--vector product
 of the input features $\mathbf{X}$ 
@@ -145,8 +145,7 @@ The resulting `forward` method
 is registered in the `LinearRegressionScratch` class
 via `add_to_class` (introduced in :numref:`oo-design-utilities`).
 
-```{.python .input  n=8}
-%%tab all
+```{.python .input #linear-regression-scratch-defining-the-model-2  n=8}
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def forward(self, X):
     return d2l.matmul(X, self.w) + self.b
@@ -154,9 +153,9 @@ def forward(self, X):
 
 ## Defining the Loss Function
 
-Since [**updating our model requires taking
-the gradient of our loss function,**]
-we ought to (**define the loss function first.**)
+Since updating our model requires taking
+the gradient of our loss function,
+we ought to define the loss function first.
 Here we use the squared loss function
 in :eqref:`eq_mse`.
 In the implementation, we need to transform the true value `y`
@@ -166,7 +165,7 @@ will also have the same shape as `y_hat`.
 We also return the averaged loss value
 among all examples in the minibatch.
 
-```{.python .input  n=9}
+```{.python .input #linear-regression-scratch-defining-the-loss-function  n=9}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def loss(self, y_hat, y):
@@ -174,7 +173,17 @@ def loss(self, y_hat, y):
     return d2l.reduce_mean(l)
 ```
 
-```{.python .input  n=10}
+:begin_tab:`jax`
+JAX/Flax models are stateless — parameters are not stored on
+the module. The loss takes the parameter pytree `params` plus
+the model state explicitly and runs the forward pass via
+`state.apply_fn`, returning the loss for `jax.grad` to
+differentiate. The other frameworks can take the already-
+computed `y_hat` directly because the model carries its
+parameters internally.
+:end_tab:
+
+```{.python .input #linear-regression-scratch-defining-the-loss-function  n=10}
 %%tab jax
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def loss(self, params, X, y, state):
@@ -238,7 +247,7 @@ We update the parameters in the `apply_gradients` method.
 It accepts a list of parameter and gradient pairs.
 :end_tab:
 
-```{.python .input  n=11}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=11}
 %%tab mxnet
 class SGD(d2l.HyperParameters):  #@save
     """Minibatch stochastic gradient descent."""
@@ -250,7 +259,7 @@ class SGD(d2l.HyperParameters):  #@save
             param -= self.lr * param.grad
 ```
 
-```{.python .input  n=11}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=11}
 %%tab pytorch
 class SGD(d2l.HyperParameters):  #@save
     """Minibatch stochastic gradient descent."""
@@ -267,7 +276,7 @@ class SGD(d2l.HyperParameters):  #@save
                 param.grad.zero_()
 ```
 
-```{.python .input  n=12}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=12}
 %%tab tensorflow
 class SGD(d2l.HyperParameters):  #@save
     """Minibatch stochastic gradient descent."""
@@ -279,7 +288,7 @@ class SGD(d2l.HyperParameters):  #@save
             param.assign_sub(self.lr * grad)
 ```
 
-```{.python .input  n=13}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=13}
 %%tab jax
 class SGD(d2l.HyperParameters):  #@save
     """Minibatch stochastic gradient descent."""
@@ -309,28 +318,28 @@ class SGD(d2l.HyperParameters):  #@save
 
 We next define the `configure_optimizers` method, which returns an instance of the `SGD` class.
 
-```{.python .input  n=14}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-2  n=14}
 %%tab pytorch
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def configure_optimizers(self):
     return SGD([self.w, self.b], self.lr)
 ```
 
-```{.python .input  n=14}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-2  n=14}
 %%tab tensorflow
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def configure_optimizers(self):
     return SGD(self.lr)
 ```
 
-```{.python .input  n=14}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-2  n=14}
 %%tab jax
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def configure_optimizers(self):
     return SGD(self.lr)
 ```
 
-```{.python .input  n=14}
+```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-2  n=14}
 %%tab mxnet
 @d2l.add_to_class(LinearRegressionScratch)  #@save
 def configure_optimizers(self):
@@ -341,7 +350,7 @@ def configure_optimizers(self):
 
 Now that we have all of the parts in place
 (parameters, loss function, model, and optimizer),
-we are ready to [**implement the main training loop.**]
+we are ready to implement the main training loop.
 It is crucial that you understand this code fully
 since you will employ similar training loops
 for every other deep learning model
@@ -424,14 +433,13 @@ We fall back to the non-JIT path when the optimizer state is not a
 pytree, which covers the hand-rolled `SGD` we will define below.
 :end_tab:
 
-```{.python .input  n=15}
-%%tab all    
+```{.python .input #linear-regression-scratch-training-1  n=15}
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
     return batch
 ```
 
-```{.python .input  n=16}
+```{.python .input #linear-regression-scratch-training-2  n=16}
 %%tab pytorch
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
@@ -454,7 +462,7 @@ def fit_epoch(self):
         self.val_batch_idx += 1
 ```
 
-```{.python .input  n=17}
+```{.python .input #linear-regression-scratch-training-2  n=17}
 %%tab mxnet
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
@@ -473,7 +481,7 @@ def fit_epoch(self):
         self.val_batch_idx += 1
 ```
 
-```{.python .input  n=18}
+```{.python .input #linear-regression-scratch-training-2  n=18}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Trainer)  #@save
 def _compile_steps(self):
@@ -522,7 +530,7 @@ def fit_epoch(self):
         self.val_batch_idx += 1
 ```
 
-```{.python .input  n=19}
+```{.python .input #linear-regression-scratch-training-2  n=19}
 %%tab jax
 # Fuse the optimizer + state.replace updates into a single JIT'd call so
 # JAX dispatches one compiled kernel per batch instead of many Python-level
@@ -597,8 +605,7 @@ and the third reserved for the final evaluation.
 We elide these details for now but will revise them
 later.
 
-```{.python .input  n=20}
-%%tab all
+```{.python .input #linear-regression-scratch-training-3  n=20}
 model = LinearRegressionScratch(2, lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=3)
@@ -607,25 +614,25 @@ trainer.fit(model, data)
 
 Because we synthesized the dataset ourselves,
 we know precisely what the true parameters are.
-Thus, we can [**evaluate our success in training
+Thus, we can evaluate our success in training
 by comparing the true parameters
-with those that we learned**] through our training loop.
+with those that we learned through our training loop.
 Indeed they turn out to be very close to each other.
 
-```{.python .input  n=21}
+```{.python .input #linear-regression-scratch-training-4  n=21}
 %%tab pytorch
 with torch.no_grad():
     print(f'error in estimating w: {data.w - d2l.reshape(model.w, data.w.shape)}')
     print(f'error in estimating b: {data.b - model.b}')
 ```
 
-```{.python .input  n=22}
+```{.python .input #linear-regression-scratch-training-4  n=22}
 %%tab mxnet, tensorflow
 print(f'error in estimating w: {data.w - d2l.reshape(model.w, data.w.shape)}')
 print(f'error in estimating b: {data.b - model.b}')
 ```
 
-```{.python .input  n=23}
+```{.python .input #linear-regression-scratch-training-4  n=23}
 %%tab jax
 params = trainer.state.params
 print(f"error in estimating w: {data.w - d2l.reshape(params['w'], data.w.shape)}")
@@ -713,3 +720,98 @@ and *more efficiently* (using our GPUs to their full potential).
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17976)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+End-to-end linear regression with **nothing** but tensor ops:
+
+1. **Model** — a `Module` with `w` and `b` parameters and a
+   `forward`.
+2. **Loss** — squared error.
+3. **Optimizer** — minibatch SGD, written by hand.
+4. **Training loop** — the `Trainer`'s `fit_epoch`, also from
+   scratch.
+
+The next chapter does the same with `nn.LazyLinear` + `MSELoss` +
+`SGD` in two lines. This one shows what those two lines hide.
+:::
+
+::: {.slide title="Parameters"}
+Initialize `w` randomly (small Gaussian), `b` at zero:
+
+@linear-regression-scratch-linear-regression-implementation-from-scratch
+
+@linear-regression-scratch-defining-the-model-1
+
+`requires_grad=True` (or the framework equivalent) so autograd
+tracks them.
+:::
+
+::: {.slide title="Forward pass"}
+The model is one matrix-vector product plus a bias —
+$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$:
+
+@linear-regression-scratch-defining-the-model-2
+:::
+
+::: {.slide title="Loss"}
+Squared error per example, averaged across the batch:
+
+$$\ell(\hat{y}, y) = \tfrac{1}{2}(\hat{y} - y)^2.$$
+
+@linear-regression-scratch-defining-the-loss-function
+:::
+
+::: {.slide title="Optimizer: minibatch SGD"}
+The update rule
+$\theta \leftarrow \theta - \eta \nabla_\theta L$
+written out by hand:
+
+@linear-regression-scratch-defining-the-optimization-algorithm-1
+
+. . .
+
+The model class wires it up in `configure_optimizers`:
+
+@linear-regression-scratch-defining-the-optimization-algorithm-2
+:::
+
+::: {.slide title="Training step"}
+What happens once per minibatch — forward, loss, backward, step:
+
+@linear-regression-scratch-training-1
+:::
+
+::: {.slide title="The whole epoch"}
+The `Trainer` walks the train and val loaders once per epoch,
+calling the steps:
+
+@linear-regression-scratch-training-2
+
+. . .
+
+Run training on the synthetic dataset:
+
+@linear-regression-scratch-training-3
+:::
+
+::: {.slide title="Did it learn the right thing?"}
+We **know** the true `w` and `b` — compare with the learned
+values:
+
+@linear-regression-scratch-training-4
+
+Tiny differences come from finite training data + noise; tighter
+than that requires either more data or a better optimizer.
+:::
+
+::: {.slide title="Recap"}
+- A `Module` for linear regression boils down to `__init__`,
+  `forward`, `loss`, `configure_optimizers`.
+- A hand-rolled SGD is ~10 lines.
+- The `Trainer.fit_epoch` glue is what pytorch / tensorflow /
+  jax / mxnet's training APIs hide.
+- Synthetic data lets us check that the optimizer recovered the
+  ground-truth parameters.
+:::

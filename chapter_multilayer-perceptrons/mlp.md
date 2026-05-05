@@ -23,7 +23,7 @@ we can launch our exploration of deep neural networks,
 the comparatively rich class of models
 with which this book is primarily concerned.
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -31,21 +31,21 @@ from mxnet import autograd, np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #mlp-multilayer-perceptrons}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -300,7 +300,7 @@ We will touch upon more rigorous arguments in subsequent chapters.
 Activation functions are differentiable operators for transforming
 pre-activation signals to outputs, introducing nonlinearity into the network.
 Because activation functions are fundamental to deep learning,
-(**let's briefly survey some common ones**).
+let's briefly survey some common ones.
 
 ### ReLU Function
 
@@ -308,7 +308,7 @@ The most popular choice,
 due to both simplicity of implementation and
 its good performance on a variety of predictive tasks,
 is the *rectified linear unit* (*ReLU*) :cite:`Nair.Hinton.2010`.
-[**ReLU provides a very simple nonlinear transformation**].
+ReLU provides a very simple nonlinear transformation.
 Given an element $x$, the function is defined
 as the maximum of that element and $0$:
 
@@ -320,7 +320,7 @@ by setting the corresponding activations to 0.
 To gain some intuition, we can plot the function.
 As you can see, the activation function is piecewise linear.
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab mxnet
 x = np.arange(-8.0, 8.0, 0.1)
 x.attach_grad()
@@ -329,21 +329,21 @@ with autograd.record():
 d2l.plot(x, y, 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab pytorch
 x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
 y = torch.relu(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab tensorflow
 x = tf.Variable(tf.range(-8.0, 8.0, 0.1), dtype=tf.float32)
 y = tf.nn.relu(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'relu(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-1}
 %%tab jax
 x = jnp.arange(-8.0, 8.0, 0.1)
 y = jax.nn.relu(x)
@@ -367,19 +367,19 @@ That conventional wisdom may apply here, or at least, the fact that
 we are not performing constrained optimization :cite:`Mangasarian.1965,Rockafellar.1970`.
 We plot the derivative of the ReLU function below.
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of relu', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab pytorch
 y.backward(torch.ones_like(x), retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of relu', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.relu(x)
@@ -387,7 +387,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of relu',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-relu-function-2}
 %%tab jax
 grad_relu = vmap(grad(jax.nn.relu))
 d2l.plot(x, grad_relu(x), 'x', 'grad of relu', figsize=(5, 2.5))
@@ -411,9 +411,9 @@ $$\operatorname{pReLU}(x) = \max(0, x) + \alpha \min(0, x).$$
 
 ### Sigmoid Function
 
-[**The *sigmoid function* transforms those inputs**]
+The *sigmoid function* transforms those inputs
 whose values lie in the domain $\mathbb{R}$,
-(**to outputs that lie on the interval (0, 1).**)
+to outputs that lie on the interval (0, 1).
 For that reason, the sigmoid is
 often called a *squashing function*:
 it squashes any input in the range (-inf, inf)
@@ -455,26 +455,26 @@ Note that when the input is close to 0,
 the sigmoid function approaches
 a linear transformation.
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab mxnet
 with autograd.record():
     y = npx.sigmoid(x)
 d2l.plot(x, y, 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab pytorch
 y = torch.sigmoid(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab tensorflow
 y = tf.nn.sigmoid(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'sigmoid(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-1}
 %%tab jax
 y = jax.nn.sigmoid(x)
 d2l.plot(x, y, 'x', 'sigmoid(x)', figsize=(5, 2.5))
@@ -492,13 +492,13 @@ reaches a maximum of 0.25.
 As the input diverges from 0 in either direction,
 the derivative approaches 0.
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab pytorch
 # Clear out previous gradients
 x.grad.data.zero_()
@@ -506,7 +506,7 @@ y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.sigmoid(x)
@@ -514,7 +514,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of sigmoid',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-sigmoid-function-2}
 %%tab jax
 grad_sigmoid = vmap(grad(jax.nn.sigmoid))
 d2l.plot(x, grad_sigmoid(x), 'x', 'grad of sigmoid', figsize=(5, 2.5))
@@ -523,34 +523,34 @@ d2l.plot(x, grad_sigmoid(x), 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ### Tanh Function
 :label:`subsec_tanh`
 
-Like the sigmoid function, [**the tanh (hyperbolic tangent)
-function also squashes its inputs**],
-transforming them into elements on the interval (**between $-1$ and $1$**):
+Like the sigmoid function, the tanh (hyperbolic tangent)
+function also squashes its inputs,
+transforming them into elements on the interval between $-1$ and $1$:
 
 $$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$
 
 We plot the tanh function below. Note that as input nears 0, the tanh function approaches a linear transformation. Although the shape of the function is similar to that of the sigmoid function, the tanh function exhibits point symmetry about the origin of the coordinate system :cite:`Kalman.Kwasny.1992`.
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab mxnet
 with autograd.record():
     y = np.tanh(x)
 d2l.plot(x, y, 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab pytorch
 y = torch.tanh(x)
 d2l.plot(x.detach(), y.detach(), 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab tensorflow
 y = tf.nn.tanh(x)
 d2l.plot(x.numpy(), y.numpy(), 'x', 'tanh(x)', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-1}
 %%tab jax
 y = jax.nn.tanh(x)
 d2l.plot(x, y, 'x', 'tanh(x)', figsize=(5, 2.5))
@@ -567,13 +567,13 @@ And as we saw with the sigmoid function,
 as input moves away from 0 in either direction,
 the derivative of the tanh function approaches 0.
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab mxnet
 y.backward()
 d2l.plot(x, x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab pytorch
 # Clear out previous gradients
 x.grad.data.zero_()
@@ -581,7 +581,7 @@ y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab tensorflow
 with tf.GradientTape() as t:
     y = tf.nn.tanh(x)
@@ -589,7 +589,7 @@ d2l.plot(x.numpy(), t.gradient(y, x).numpy(), 'x', 'grad of tanh',
          figsize=(5, 2.5))
 ```
 
-```{.python .input}
+```{.python .input #mlp-tanh-function-2}
 %%tab jax
 grad_tanh = vmap(grad(jax.nn.tanh))
 d2l.plot(x, grad_tanh(x), 'x', 'grad of tanh', figsize=(5, 2.5))
@@ -655,3 +655,197 @@ in many cases.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17984)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A **multilayer perceptron** (MLP) is a stack of
+fully-connected layers separated by elementwise
+nonlinearities. The simplest deep network — and the
+foundation everything else in this book builds on.
+
+A linear classifier draws one hyperplane per class.
+That's not enough for most things we want to model:
+
+- **Body temperature → health risk** — U-shaped, not
+  even monotonic.
+- **Cat vs dog from pixels** — the meaning of pixel
+  $(13, 17)$ depends on its neighbors.
+- **XOR** — the canonical small problem a linear model
+  *provably* cannot solve.
+:::
+
+::: {.slide title="The fix: alternate linear and nonlinear"}
+Stack linear layers with a **nonlinearity** between them.
+The linear layers mix features; the nonlinearity lets the
+composition curve, fold, and twist the decision surface.
+
+That's it. Two ingredients, deep architectures from there.
+:::
+
+::: {.slide title="Architecture"}
+An MLP is a stack of fully-connected layers. The middle
+layers are *hidden* — neither input nor output:
+
+![One hidden layer with five units, four inputs, three outputs.](../img/mlp.svg){width=58%}
+
+Math for the one-hidden-layer case (minibatch
+$\mathbf{X} \in \mathbb{R}^{n \times d}$, hidden width $h$,
+$q$ outputs):
+
+$$\mathbf{H} = \mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}, \qquad
+  \mathbf{O} = \mathbf{H} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
+
+Two layers. Two weight matrices. Two biases. So far it
+looks like genuine progress.
+:::
+
+::: {.slide title="Why naïve stacking doesn't help"}
+Plug $\mathbf{H}$ from the first equation into the second:
+
+$$\mathbf{O} = (\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)})\,\mathbf{W}^{(2)} + \mathbf{b}^{(2)}
+            = \mathbf{X}\,\underbrace{\mathbf{W}^{(1)}\mathbf{W}^{(2)}}_{=\mathbf{W}} + \underbrace{\mathbf{b}^{(1)}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}}_{=\mathbf{b}}.$$
+
+A composition of affine maps is just another affine map.
+The hidden layer adds *zero* expressive power — same model
+class as plain softmax regression.
+
+You need a **nonlinearity** between the layers, or stacking
+is wasted.
+:::
+
+::: {.slide title="Activation functions: the missing ingredient"}
+Insert an elementwise nonlinearity $\sigma$ after every
+hidden layer:
+
+$$\mathbf{H} = \sigma(\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}),\qquad
+  \mathbf{O} = \mathbf{H} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
+
+Now the network represents a **piecewise nonlinear**
+function — and stacking actually buys us something.
+
+**Universal approximation theorem** (Cybenko 1989):
+a single hidden layer with enough units, plus a sane
+$\sigma$, can approximate any continuous function
+arbitrarily well.
+
+Caveat: "enough units" can be exponentially many. Depth
+trades width for parameter efficiency — the modern reason
+deep nets work.
+:::
+
+::: {.slide title="Setup"}
+@mlp-multilayer-perceptrons
+:::
+
+::: {.slide title="ReLU — the modern default"}
+$$\mathrm{ReLU}(x) = \max(0, x).$$
+
+@mlp-relu-function-1
+
+Three reasons it dominates:
+
+- **Doesn't saturate on the right** — gradient is exactly
+  1 for any $x > 0$. No vanishing gradient.
+- **Cheap** — one comparison, one max. No exponential.
+- **Sparse activations** — half the units output zero on
+  average; acts as implicit regularization.
+:::
+
+::: {.slide title="ReLU's derivative"}
+The derivative is just the step function — 0 for negative
+inputs, 1 for positive:
+
+$$\mathrm{ReLU}'(x) = \mathbb{1}[x > 0].$$
+
+@mlp-relu-function-2
+:::
+
+::: {.slide title="Dead ReLU"}
+A unit whose pre-activation is always negative gets zero
+gradient and never updates again — a permanently silent
+neuron.
+
+The fix: **LeakyReLU / PReLU** —
+$\max(0, x) + \alpha\min(0, x)$, with a small slope on the
+left to keep gradient flowing.
+:::
+
+::: {.slide title="Sigmoid — squashes to (0, 1)"}
+$$\sigma(x) = \frac{1}{1 + e^{-x}}.$$
+
+@mlp-sigmoid-function-1
+
+The original neural net activation (1960s–2000s). Today
+mostly used for:
+
+- **Output layers** in binary classification
+  (probability ∈ (0, 1)).
+- **Gates** in LSTM/GRU and attention (still ∈ (0, 1)).
+
+For *hidden* layers it's been replaced by ReLU: see why on
+the next slide.
+:::
+
+::: {.slide title="Why sigmoid hurts deep nets"}
+$$\sigma'(x) = \sigma(x)(1 - \sigma(x)).$$
+
+@mlp-sigmoid-function-2
+
+Maximum gradient is $\sigma'(0) = 0.25$. Worse, $\sigma'$
+**vanishes** for $|x| \gtrsim 5$.
+
+In a 10-layer net with sigmoid activations, the backward
+pass multiplies $\le 0.25$ at every layer — gradients shrink
+by $\le 4^{-10} \approx 10^{-6}$ before reaching the input
+layer. That's the **vanishing gradient** problem ReLU
+solved.
+:::
+
+::: {.slide title="Tanh — sigmoid's symmetric cousin"}
+$$\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1.$$
+
+@mlp-tanh-function-1
+
+Range $(-1, 1)$ — **zero-centered**, which mildly helps
+optimization. Default in RNNs (LSTM cell update, GRU
+candidate hidden state) where bounded activations are
+useful.
+:::
+
+::: {.slide title="Tanh's derivative"}
+Still saturates at both tails — same vanishing-gradient
+issue as sigmoid:
+
+@mlp-tanh-function-2
+:::
+
+::: {.slide title="Cheat sheet"}
+| | Range | Saturates? | Use case |
+|---|---|---|---|
+| **ReLU** | $[0, \infty)$ | only at $x{<}0$ (dead) | default for hidden |
+| **LeakyReLU / PReLU** | $\mathbb{R}$ | no | when ReLU dies |
+| **GELU** ($x\Phi(x)$) | $\approx \mathbb{R}$ | barely | Transformers, modern LLMs |
+| **Sigmoid** | $(0, 1)$ | both ends | gates, binary output |
+| **Tanh** | $(-1, 1)$ | both ends | RNN cells |
+| **Softmax** | simplex | one end | multiclass output |
+
+Default: ReLU for hidden layers, GELU if you're imitating
+modern Transformer models, sigmoid/softmax at outputs to
+turn logits into probabilities.
+:::
+
+::: {.slide title="Recap"}
+- An MLP = several affine layers, with an *elementwise*
+  nonlinearity between them.
+- The nonlinearity is essential — without it the stack
+  collapses to a single affine map.
+- One sufficiently wide hidden layer is a universal
+  approximator. Depth makes the same expressiveness
+  *parameter-efficient*.
+- **ReLU** is the modern default. Sigmoid and tanh persist
+  in specific roles (output, gates, RNNs) where their
+  bounded ranges are useful.
+- The whole rest of this chapter is about *training* MLPs:
+  forward pass, backprop, init, regularization.
+:::

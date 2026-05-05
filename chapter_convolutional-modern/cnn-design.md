@@ -32,7 +32,7 @@ is a single network instance. EfficientNets are a notable outcome of this search
 
 In the following we discuss an idea that is quite different to the quest for the *single best network*. It is computationally relatively inexpensive, it leads to scientific insights on the way, and it is quite effective in terms of the quality of outcomes. Let's review the strategy by :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` to *design network design spaces*. The strategy combines the strength of manual design and NAS. It accomplishes this by operating on *distributions of networks* and optimizing the distributions in a way to obtain good performance for entire families of networks. The outcome of it are *RegNets*, specifically RegNetX and RegNetY, plus a range of guiding principles for the design of performant CNNs.
 
-```{.python .input}
+```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx, init
@@ -41,7 +41,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -49,13 +49,13 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -82,7 +82,7 @@ As such, with bottleneck ratio $k_i \geq 1$ we afford some number of channels, $
 This seemingly generic design space provides us nonetheless with many parameters: we can set the block width (number of channels) $c_0, \ldots c_4$, the depth (number of blocks) per stage $d_1, \ldots d_4$, the bottleneck ratios $k_1, \ldots k_4$, and the group widths (numbers of groups) $g_1, \ldots g_4$. 
 In total this adds up to 17 parameters, resulting in an unreasonably large number of configurations that would warrant exploring. We need some tools to reduce this huge design space effectively. This is where the conceptual beauty of design spaces comes in. Before we do so, let's implement the generic design first.
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab mxnet
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
@@ -92,7 +92,7 @@ class AnyNet(d2l.Classifier):
         return net
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab pytorch
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
@@ -101,7 +101,7 @@ class AnyNet(d2l.Classifier):
             nn.LazyBatchNorm2d(), nn.ReLU())
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab tensorflow
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
@@ -112,7 +112,7 @@ class AnyNet(d2l.Classifier):
             tf.keras.layers.Activation('relu')])
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab jax
 class AnyNet(d2l.Classifier):
     arch: tuple
@@ -137,7 +137,7 @@ Each stage consists of `depth` ResNeXt blocks,
 where `num_channels` specifies the block width.
 Note that the first block halves the height and width of input images.
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab mxnet
 @d2l.add_to_class(AnyNet)
 def stage(self, depth, num_channels, groups, bot_mul):
@@ -152,7 +152,7 @@ def stage(self, depth, num_channels, groups, bot_mul):
     return net
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab pytorch
 @d2l.add_to_class(AnyNet)
 def stage(self, depth, num_channels, groups, bot_mul):
@@ -166,7 +166,7 @@ def stage(self, depth, num_channels, groups, bot_mul):
     return nn.Sequential(*blk)
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab tensorflow
 @d2l.add_to_class(AnyNet)
 def stage(self, depth, num_channels, groups, bot_mul):
@@ -180,7 +180,7 @@ def stage(self, depth, num_channels, groups, bot_mul):
     return net
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab jax
 @d2l.add_to_class(AnyNet)
 def stage(self, depth, num_channels, groups, bot_mul):
@@ -198,7 +198,7 @@ def stage(self, depth, num_channels, groups, bot_mul):
 Putting the network stem, body, and head together,
 we complete the implementation of AnyNet.
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab pytorch
 @d2l.add_to_class(AnyNet)
 def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
@@ -213,7 +213,7 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
     self.net.apply(d2l.init_cnn)
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab mxnet
 @d2l.add_to_class(AnyNet)
 def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
@@ -227,7 +227,7 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
     self.net.initialize(init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab tensorflow
 @d2l.add_to_class(AnyNet)
 def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
@@ -241,7 +241,7 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
         tf.keras.layers.Dense(units=num_classes)]))
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab jax
 @d2l.add_to_class(AnyNet)
 def create_net(self):
@@ -299,7 +299,7 @@ This leaves us with a final set of choices: how to pick the specific values for 
 
 We recommend the interested reader reviews further details in the design of specific networks for different amounts of computation by perusing :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`. For instance, an effective 32-layer RegNetX variant is given by $k = 1$ (no bottleneck), $g = 16$ (group width is 16), $c_1 = 32$ and $c_2 = 80$ channels for the first and second stage, respectively, chosen to be $d_1=4$ and $d_2=6$ blocks deep. The astonishing insight from the design is that it still applies, even when investigating networks at a larger scale. Even better, it even holds for Squeeze-and-Excitation (SE) network designs (RegNetY) that have a global channel activation :cite:`Hu.Shen.Sun.2018`.
 
-```{.python .input}
+```{.python .input #cnn-design-regnet-1}
 %%tab pytorch, mxnet, tensorflow
 class RegNetX32(AnyNet):
     def __init__(self, lr=0.1, num_classes=10):
@@ -311,7 +311,7 @@ class RegNetX32(AnyNet):
             stem_channels, lr, num_classes)
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-regnet-1}
 %%tab jax
 class RegNetX32(AnyNet):
     lr: float = 0.1
@@ -322,12 +322,12 @@ class RegNetX32(AnyNet):
 
 We can see that each RegNetX stage progressively reduces resolution and increases output channels.
 
-```{.python .input}
+```{.python .input #cnn-design-regnet-2}
 %%tab mxnet, pytorch
 RegNetX32().layer_summary((1, 1, 96, 96))
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-regnet-2}
 %%tab tensorflow
 import logging
 tf.get_logger().setLevel(logging.ERROR)
@@ -335,7 +335,7 @@ RegNetX32().layer_summary((1, 96, 96, 1))
 tf.get_logger().setLevel(logging.WARNING)
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-regnet-2}
 %%tab jax
 RegNetX32(training=False).layer_summary((1, 96, 96, 1))
 ```
@@ -344,7 +344,7 @@ RegNetX32(training=False).layer_summary((1, 96, 96, 1))
 
 Training the 32-layer RegNetX on the Fashion-MNIST dataset is just like before.
 
-```{.python .input}
+```{.python .input #cnn-design-training}
 %%tab mxnet, pytorch, jax
 model = RegNetX32(lr=0.05)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -352,7 +352,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #cnn-design-training}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
@@ -396,3 +396,75 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 [Discussions](https://discuss.d2l.ai/t/18009)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+We've seen a sequence of hand-designed architectures
+(LeNet → AlexNet → VGG → GoogLeNet → ResNet → DenseNet) —
+each a **hypothesis** about what makes nets work.
+
+Can we design networks more **systematically**?
+:::
+
+::: {.slide title="RegNet — design space search"}
+**RegNet** (Radosavovic et al., 2020):
+
+- Define a parametric **design space** (`AnyNet`) — same
+  template, free hyperparameters.
+- **Sample many** networks, train each briefly, see how
+  accuracy correlates with hyperparameter choices.
+- Constrain the design space based on what works.
+
+Simple closed-form rules ("width grows linearly with stage")
+outperform years of expert tuning.
+:::
+
+::: {.slide title="The AnyNet design space"}
+Stem (low-level conv) → 4 stages of residual blocks → head
+(global pool + linear). Each stage's depth, width, group count
+are free parameters:
+
+@cnn-design-designing-convolutional-network-architectures
+
+@cnn-design-the-anynet-design-space-1
+
+. . .
+
+@cnn-design-the-anynet-design-space-2
+
+. . .
+
+@cnn-design-the-anynet-design-space-3
+:::
+
+::: {.slide title="A RegNetX-3.2GF instance"}
+The paper's empirical findings collapse to: **width grows
+linearly with stage**, depth stays roughly constant, ResNeXt-style
+groups. A scaled-down version for Fashion-MNIST:
+
+@cnn-design-regnet-1
+
+. . .
+
+@cnn-design-regnet-2
+:::
+
+::: {.slide title="Training"}
+@cnn-design-training
+
+The architecture is competitive with hand-designed ResNets at
+similar parameter counts — and the **discovery process** scales
+trivially with compute.
+:::
+
+::: {.slide title="Recap"}
+- Modern architecture design = **search over a parametric
+  design space**, not heroic engineering.
+- AnyNet specifies the template (stem / 4 stages / head); the
+  empirical search picks widths, depths, and groups.
+- Resulting networks (RegNet) match or beat hand-designed
+  rivals with simpler, more interpretable rules.
+- Sets the stage for **NAS** (neural architecture search) and
+  the modern philosophy: pick the design space carefully, then
+  let compute find the best instance.
+:::

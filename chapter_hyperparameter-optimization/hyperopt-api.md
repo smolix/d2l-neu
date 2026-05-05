@@ -21,14 +21,14 @@ This concept of scheduler and searcher is also implemented in popular HPO
 libraries, such as Syne Tune :cite:`salinas-automl22`, Ray Tune
 :cite:`liaw-arxiv18` or Optuna :cite:`akiba-sigkdd19`.
 
-```{.python .input  n=2}
+```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab pytorch
 import time
 from d2l import torch as d2l
 from scipy import stats
 ```
 
-```{.python .input  n=2}
+```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab tensorflow
 import time
 import tensorflow as tf
@@ -39,7 +39,7 @@ import numpy as np
 from scipy import stats
 ```
 
-```{.python .input  n=2}
+```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab jax
 import time
 from d2l import jax as d2l
@@ -63,7 +63,7 @@ algorithms are able to sample more promising candidates over time. We add the
 `update` function in order to update the history of previous trials, which can
 then be exploited to improve our sampling distribution.
 
-```{.python .input  n=3}
+```{.python .input #hyperopt-api-searcher-1  n=3}
 %%tab pytorch, tensorflow, jax
 class HPOSearcher(d2l.HyperParameters):  #@save
     def sample_configuration(self) -> dict:
@@ -78,7 +78,7 @@ previous section in this API. As a slight extension, we allow the user to
 prescribe the first configuration to be evaluated via `initial_config`, while
 subsequent ones are drawn at random.
 
-```{.python .input  n=4}
+```{.python .input #hyperopt-api-searcher-2  n=4}
 %%tab pytorch, tensorflow, jax
 class RandomSearcher(HPOSearcher):  #@save
     def __init__(self, config_space: dict, initial_config=None):
@@ -107,7 +107,7 @@ may also decide upon parameters like `max_epochs` (i.e., how long to train the
 model for). The `update` method is called whenever a trial returns a new
 observation.
 
-```{.python .input  n=5}
+```{.python .input #hyperopt-api-scheduler-1  n=5}
 %%tab pytorch, tensorflow, jax
 class HPOScheduler(d2l.HyperParameters):  #@save
     def suggest(self) -> dict:
@@ -121,7 +121,7 @@ To implement random search, but also other HPO algorithms, we only need a basic
 scheduler that schedules a new configuration every time new resources become
 available.
 
-```{.python .input  n=6}
+```{.python .input #hyperopt-api-scheduler-2  n=6}
 %%tab pytorch, tensorflow, jax
 class BasicScheduler(HPOScheduler):  #@save
     def __init__(self, searcher: HPOSearcher):
@@ -142,7 +142,7 @@ execution of the HPO trials that evaluates one training job after the next and
 will serve as a basic example. We will later use *Syne Tune* for more scalable
 distributed HPO cases.
 
-```{.python .input  n=7}
+```{.python .input #hyperopt-api-tuner  n=7}
 %%tab pytorch
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
@@ -168,7 +168,7 @@ class HPOTuner(d2l.HyperParameters):  #@save
             print(f"    error = {error}, runtime = {runtime}")
 ```
 
-```{.python .input  n=7}
+```{.python .input #hyperopt-api-tuner  n=7}
 %%tab tensorflow
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
@@ -194,7 +194,7 @@ class HPOTuner(d2l.HyperParameters):  #@save
             print(f"    error = {error}, runtime = {runtime}")
 ```
 
-```{.python .input  n=7}
+```{.python .input #hyperopt-api-tuner  n=7}
 %%tab jax
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
@@ -232,7 +232,7 @@ make a decision (call of `scheduler.suggest`). In the sequel, we will plot
 (and `searcher`). This allows us to quantify not only how well the configuration
 found by an optimizer works, but also how quickly an optimizer is able to find it.
 
-```{.python .input  n=8}
+```{.python .input #hyperopt-api-bookkeeping-the-performance-of-hpo-algorithms  n=8}
 %%tab pytorch, tensorflow, jax
 @d2l.add_to_class(HPOTuner)  #@save
 def bookkeeping(self, config: dict, error: float, runtime: float):
@@ -256,7 +256,7 @@ We now use our new implementation of random search to optimize the
 from :numref:`sec_lenet`. We begin by defining the objective function, which
 will once more be validation error.
 
-```{.python .input  n=9}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1  n=9}
 %%tab pytorch
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     model = d2l.LeNet(lr=learning_rate, num_classes=10)
@@ -268,7 +268,7 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     return validation_error
 ```
 
-```{.python .input  n=9}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1  n=9}
 %%tab tensorflow
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     import keras
@@ -297,7 +297,7 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     return 1 - val_acc
 ```
 
-```{.python .input  n=9}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1  n=9}
 %%tab jax
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     model = d2l.LeNet(lr=learning_rate, num_classes=10)
@@ -311,7 +311,7 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
 We also need to define the configuration space. Moreover, the first configuration
 to be evaluated is the default setting used in :numref:`sec_lenet`.
 
-```{.python .input  n=10}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2  n=10}
 config_space = {
     "learning_rate": stats.loguniform(1e-2, 1),
     "batch_size": stats.randint(32, 256),
@@ -324,7 +324,7 @@ initial_config = {
 
 Now we can start our random search:
 
-```{.python .input}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3}
 searcher = RandomSearcher(config_space, initial_config=initial_config)
 scheduler = BasicScheduler(searcher=searcher)
 tuner = HPOTuner(scheduler=scheduler, objective=hpo_objective_lenet)
@@ -334,7 +334,7 @@ tuner.run(number_of_trials=5)
 Below we plot the optimization trajectory of the incumbent to get the any-time
 performance of random search:
 
-```{.python .input  n=11}
+```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4  n=11}
 board = d2l.ProgressBoard(xlabel="time", ylabel="error")
 for time_stamp, error in zip(
     tuner.cumulative_runtime, tuner.incumbent_trajectory
@@ -397,3 +397,89 @@ algorithms, and potential pitfalls one needs to be aware of.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/12092)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+HPO algorithms have a common structure. The next two decks
+will swap out pieces (parallel scheduling, multi-fidelity).
+This deck factors out the common skeleton:
+
+- **Searcher** — proposes the next configuration. Random,
+  Bayesian, evolutionary, …
+- **Scheduler** — decides which trials to run, when to
+  stop them, how to allocate compute. Async, Hyperband,
+  ASHA, …
+- **Tuner** — runs the loop: ask searcher, ask scheduler,
+  evaluate, log.
+
+Same shape every modern HPO library uses (Optuna,
+SyneTune, Vizier, Ray Tune).
+
+@hyperopt-api-hyperparameter-optimization-api
+:::
+
+::: {.slide title="Searcher base class"}
+@hyperopt-api-searcher-1
+
+. . .
+
+A concrete `RandomSearcher`:
+
+@hyperopt-api-searcher-2
+:::
+
+::: {.slide title="Scheduler base class"}
+@hyperopt-api-scheduler-1
+
+. . .
+
+Concrete sequential / FIFO scheduler:
+
+@hyperopt-api-scheduler-2
+:::
+
+::: {.slide title="Tuner"}
+Combines searcher + scheduler + objective into a single
+loop:
+
+@hyperopt-api-tuner
+:::
+
+::: {.slide title="Bookkeeping"}
+Track wall-clock time and best-seen objective so we can
+plot any-time performance later:
+
+@hyperopt-api-bookkeeping-the-performance-of-hpo-algorithms
+:::
+
+::: {.slide title="Tuning a CNN"}
+Run the abstraction on a real model — a small CNN on
+Fashion-MNIST. Search over learning rate, batch size, and
+network width:
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1
+
+. . .
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2
+:::
+
+::: {.slide title="Run + results"}
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
+
+. . .
+
+@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
+:::
+
+::: {.slide title="Recap"}
+- HPO library skeleton: searcher + scheduler + tuner.
+- The next decks plug in:
+  - **Async random search** — parallel workers without
+    waiting.
+  - **Successive halving / ASHA** — early-stopping bad
+    trials based on partial training curves.
+- Compare algorithms on **any-time performance** plots:
+  best-seen-vs-wall-clock-time, not just final accuracy.
+:::

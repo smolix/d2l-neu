@@ -64,7 +64,7 @@ that a slightly bigger or cleaner dataset
 or a slightly improved feature-extraction pipeline
 mattered far more to the final accuracy than any learning algorithm.
 
-```{.python .input  n=2}
+```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=2}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, init, npx
@@ -72,20 +72,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input  n=3}
+```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=3}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input  n=4}
+```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=4}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -321,7 +321,7 @@ such as flipping, clipping, and color changes.
 This makes the model more robust and the larger sample size effectively reduces overfitting.
 See :citet:`Buslaev.Iglovikov.Khvedchenya.ea.2020` for an in-depth review of such preprocessing steps.
 
-```{.python .input  n=5}
+```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab pytorch
 class AlexNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -344,7 +344,7 @@ class AlexNet(d2l.Classifier):
         # a dummy forward pass materializes the parameters.
 ```
 
-```{.python .input  n=5}
+```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab mxnet
 class AlexNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -366,7 +366,7 @@ class AlexNet(d2l.Classifier):
         self.net.initialize(init.Xavier())
 ```
 
-```{.python .input  n=5}
+```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab tensorflow
 class AlexNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_classes=10):
@@ -394,7 +394,7 @@ class AlexNet(d2l.Classifier):
             tf.keras.layers.Dense(num_classes)])
 ```
 
-```{.python .input}
+```{.python .input #alexnet-capacity-control-and-preprocessing-1}
 %%tab jax
 class AlexNet(d2l.Classifier):
     lr: float = 0.1
@@ -424,19 +424,19 @@ class AlexNet(d2l.Classifier):
         ])
 ```
 
-We [**construct a single-channel data example**] with both height and width of 224 (**to observe the output shape of each layer**). It matches the AlexNet architecture in :numref:`fig_alexnet`.
+We construct a single-channel data example with both height and width of 224 to observe the output shape of each layer. It matches the AlexNet architecture in :numref:`fig_alexnet`.
 
-```{.python .input  n=6}
+```{.python .input #alexnet-capacity-control-and-preprocessing-2  n=6}
 %%tab pytorch, mxnet
 AlexNet().layer_summary((1, 1, 224, 224))
 ```
 
-```{.python .input  n=7}
+```{.python .input #alexnet-capacity-control-and-preprocessing-2  n=7}
 %%tab tensorflow
 AlexNet().layer_summary((1, 224, 224, 1))
 ```
 
-```{.python .input}
+```{.python .input #alexnet-capacity-control-and-preprocessing-2}
 %%tab jax
 AlexNet(training=False).layer_summary((1, 224, 224, 1))
 ```
@@ -447,21 +447,21 @@ Although AlexNet was trained on ImageNet in :citet:`Krizhevsky.Sutskever.Hinton.
 we use Fashion-MNIST here
 since training an ImageNet model to convergence could take hours or days
 even on a modern GPU.
-One of the problems with applying AlexNet directly on [**Fashion-MNIST**]
-is that its (**images have lower resolution**) ($28 \times 28$ pixels)
-(**than ImageNet images.**)
-To make things work, (**we upsample them to $224 \times 224$**).
+One of the problems with applying AlexNet directly on Fashion-MNIST
+is that its images have lower resolution ($28 \times 28$ pixels)
+than ImageNet images.
+To make things work, we upsample them to $224 \times 224$.
 This is generally not a smart practice, as it simply increases the computational
 complexity without adding information. Nonetheless, we do it here to be faithful to the AlexNet architecture.
 We perform this resizing with the `resize` argument in the `d2l.FashionMNIST` constructor.
 
-Now, we can [**start training AlexNet.**]
+Now, we can start training AlexNet.
 Compared to LeNet in :numref:`sec_lenet`,
 the main change here is the use of a smaller learning rate
 and much slower training due to the deeper and wider network,
 the higher image resolution, and the more costly convolutions.
 
-```{.python .input  n=8}
+```{.python .input #alexnet-training  n=8}
 %%tab pytorch, mxnet, jax
 model = AlexNet(lr=0.01)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
@@ -473,7 +473,7 @@ if tab.selected('pytorch'):
 trainer.fit(model, data)
 ```
 
-```{.python .input  n=9}
+```{.python .input #alexnet-training  n=9}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
@@ -521,3 +521,63 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18001)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what
+made deep learning *the* approach to vision. Won ImageNet
+by a huge margin and started the modern era.
+
+![AlexNet alongside the LeNet from a decade earlier.](../img/alexnet.svg){width=70%}
+:::
+
+::: {.slide title="What changed from LeNet"}
+- **Bigger** — 8 layers, 60 M parameters, larger first-layer
+  filters (11×11), deeper feature stack.
+- **ReLU** activations (no more saturating sigmoids).
+- **Dropout** in the dense head for regularization.
+- **GPUs**, **ImageNet** (1.2 M images), and
+  **augmentation** — the missing ingredients.
+
+The architecture itself is straightforward; what changed
+was the *scale*.
+:::
+
+::: {.slide title="The architecture in code"}
+Five conv layers (11×11 → 5×5 → three 3×3) + max-pool,
+then three FC layers down to 1000 classes:
+
+@alexnet-deep-convolutional-neural-networks-alexnet
+
+@alexnet-capacity-control-and-preprocessing-1
+:::
+
+::: {.slide title="Shape inspection"}
+Walk a single 1×1×224×224 image through and print each block's
+output shape — the feature pyramid going from `224×224×1` down to
+`6×6×256`:
+
+@alexnet-capacity-control-and-preprocessing-2
+:::
+
+::: {.slide title="Training on Fashion-MNIST"}
+For demonstration, upsample the 28×28 Fashion-MNIST images to the
+224×224 input AlexNet expects, then train at lr=0.01:
+
+@alexnet-training
+
+Trains slowly even on a GPU — AlexNet has ~10× the parameters of
+LeNet. The architecture's lasting contribution: it proved that
+**bigger is better** when paired with enough data and compute.
+:::
+
+::: {.slide title="Recap"}
+- AlexNet = LeNet's recipe at **8× the depth**, **massive
+  parameter count**, **ReLU**, **Dropout**, **GPU training**, on
+  **ImageNet**.
+- Validates the "deeper, bigger, more data" formula that drives
+  the field for the next decade.
+- The next handful of architectures (VGG, GoogLeNet, ResNet) are
+  systematic refinements of this template.
+:::

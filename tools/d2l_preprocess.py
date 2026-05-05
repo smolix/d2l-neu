@@ -37,15 +37,17 @@ class MarkdownBlock:
         self.lines = lines
 
 class CodeBlock:
-    def __init__(self, info, lines, tab=None):
+    def __init__(self, info, lines, tab=None, cell_id=None):
         self.info = info       # info string after opening ```
         self.lines = lines     # code content lines
         self.tab = tab         # None, 'all', 'pytorch', etc.
+        self.cell_id = cell_id # stable #<id> from info string, or None
 
 class CodeTabSet:
     """Grouped consecutive framework-specific code blocks."""
     def __init__(self):
         self.tabs = {}         # framework -> list of code lines
+        self.ids = {}          # framework -> cell_id (or None)
 
 class TocBlock:
     """Table of contents block - handled by _quarto.yml, skipped in output."""
@@ -58,17 +60,21 @@ class TocBlock:
 
 def extract_tab(lines):
     """Extract tab marker from first line(s) of code.
-    Returns (tab_string, cleaned_lines).
+
+    Returns (tab_string, cleaned_lines). Untagged Python cells default
+    to 'all' (was None in the legacy convention) — every Python cell
+    has a tab value after this call. Non-Python blocks bypass this
+    function and keep tab=None.
     """
     if not lines:
-        return None, lines
+        return 'all', lines
 
     # Skip leading blank lines
     start = 0
     while start < len(lines) and lines[start].strip() == '':
         start += 1
     if start >= len(lines):
-        return None, lines
+        return 'all', lines
 
     first = lines[start]
 
@@ -82,7 +88,7 @@ def extract_tab(lines):
     if m:
         return m.group(1).strip(), lines[start + 1:]
 
-    return None, lines
+    return 'all', lines
 
 
 def is_boilerplate(lines):
@@ -98,9 +104,35 @@ def is_python_block(info):
             or info.startswith('{.python'))
 
 
+# Match `#<id>` inside a fence info string (e.g. `{.python .input #foo}`).
+# Anchored on whitespace or `{` so it doesn't confuse `#@tab` (which
+# appears inside the fence body, never in the info string).
+_CELL_ID_RE = re.compile(r'(?:^|[\s{])#([a-z][a-z0-9-]*)(?=\s|\}|$)')
+
+
+def extract_cell_id(info):
+    """Return the `#<id>` from a fence info string, or None."""
+    m = _CELL_ID_RE.search(info)
+    return m.group(1) if m else None
+
+
 def clean_save_markers(lines):
     """Remove #@save markers from code lines."""
     return [re.sub(r'\s*#@save\b', '', line) for line in lines]
+
+
+_SLIDES_BLOCK_RE = re.compile(
+    r'(?ms)^<!--\s*slides\s*-->\s*\n.*\Z')
+
+
+def strip_slide_divs(text):
+    """Strip the trailing `<!-- slides -->` section from a source .md.
+
+    Slide divs (`::: {.slide}` etc.) live below this marker and are
+    consumed by `gen_slides.py`. The HTML book / PDF / per-fw notebook
+    renders should not see them.
+    """
+    return _SLIDES_BLOCK_RE.sub('', text)
 
 
 def parse_blocks(text):
@@ -142,7 +174,8 @@ def parse_blocks(text):
                     continue
                 tab, cleaned = extract_tab(code_lines)
                 cleaned = clean_save_markers(cleaned)
-                blocks.append(CodeBlock(info, cleaned, tab))
+                cell_id = extract_cell_id(info)
+                blocks.append(CodeBlock(info, cleaned, tab, cell_id))
             else:
                 # Non-Python code (bash, etc.) - keep as-is
                 blocks.append(CodeBlock(info, code_lines, None))
@@ -204,6 +237,7 @@ def group_code_tabs(blocks, primary):
                     for fw in fws:
                         if fw in FRAMEWORKS:
                             tabset.tabs[fw] = cb.lines
+                            tabset.ids[fw] = cb.cell_id
                     i += 1
                 elif (is_blank_md(blocks[i])
                       and i + 1 < len(blocks)
@@ -607,22 +641,25 @@ def emit_qmd(blocks, primary='pytorch'):
 
         elif isinstance(block, CodeBlock):
             code = '\n'.join(block.lines)
+            id_prefix = f'#| label: {block.cell_id}\n' if block.cell_id else ''
 
             if not is_python_block(block.info) and block.tab is None:
-                # Non-Python block (bash, etc.) - keep as-is
+                # Non-Python block (bash, etc.) - keep as-is, no label
                 lang = block.info or ''
                 parts.append(f'\n```{lang}\n{code}\n```\n')
 
             elif block.tab is None or block.tab == 'all':
                 # Shared or un-tabbed Python → executable
-                parts.append(f'\n```{{python}}\n{code}\n```\n')
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
 
             else:
                 # Framework-specific block not in a tabset (shouldn't happen
                 # after group_code_tabs, but handle gracefully)
                 if primary in (block.tab or ''):
-                    parts.append(f'\n```{{python}}\n{code}\n```\n')
+                    parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
                 else:
+                    # Display-only: no label (Quarto would render `#| label:`
+                    # as a literal comment in non-executed code blocks).
                     parts.append(f'\n```python\n{code}\n```\n')
 
         elif isinstance(block, CodeTabSet):
@@ -635,10 +672,14 @@ def emit_qmd(blocks, primary='pytorch'):
                     code = '\n'.join(block.tabs[fw])
 
                     if fw == primary:
+                        cid = block.ids.get(fw)
+                        id_prefix = f'#| label: {cid}\n' if cid else ''
                         parts.append(
                             f'\n## {display}\n\n'
-                            f'```{{python}}\n{code}\n```\n')
+                            f'```{{python}}\n{id_prefix}{code}\n```\n')
                     else:
+                        # Display-only: omit `#| label:` so it doesn't render
+                        # as a Python comment.
                         parts.append(
                             f'\n## {display}\n\n'
                             f'```python\n{code}\n```\n')
@@ -674,6 +715,10 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
             the logical chapter.
     """
     text = Path(src_path).read_text(encoding='utf-8')
+
+    # Step 0: Strip the trailing `<!-- slides -->` block (and slide divs
+    # below it). The book renderer should not see slide-only content.
+    text = strip_slide_divs(text)
 
     # Step 1: Convert prose tabs on raw text BEFORE block parsing
     text = convert_prose_tabs(text, primary)

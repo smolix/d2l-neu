@@ -48,10 +48,10 @@ To study this problem, we will begin by investigating a popular natural language
 
 ## The Stanford Natural Language Inference (SNLI) Dataset
 
-[**Stanford Natural Language Inference (SNLI) Corpus**] is a collection of over 500000 labeled English sentence pairs :cite:`Bowman.Angeli.Potts.ea.2015`.
+Stanford Natural Language Inference (SNLI) Corpus is a collection of over 500000 labeled English sentence pairs :cite:`Bowman.Angeli.Potts.ea.2015`.
 We download and store the extracted SNLI dataset in the path `../data/snli_1.0`.
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
@@ -68,7 +68,7 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -84,7 +84,7 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -103,7 +103,7 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -119,12 +119,11 @@ d2l.DATA_HUB['SNLI'] = (
 data_dir = d2l.download_extract('SNLI')
 ```
 
-### [**Reading the Dataset**]
+### Reading the Dataset
 
 The original SNLI dataset contains much richer information than what we really need in our experiments. Thus, we define a function `read_snli` to only extract part of the dataset, then return lists of premises, hypotheses, and their labels.
 
-```{.python .input}
-#@tab all
+```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-1}
 #@save
 def read_snli(data_dir, is_train):
     """Read the SNLI dataset into premises, hypotheses, and labels."""
@@ -146,10 +145,9 @@ def read_snli(data_dir, is_train):
     return premises, hypotheses, labels
 ```
 
-Now let's [**print the first 3 pairs**] of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
+Now let's print the first 3 pairs of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
 
-```{.python .input}
-#@tab all
+```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-2}
 train_data = read_snli(data_dir, is_train=True)
 for x0, x1, y in zip(train_data[0][:3], train_data[1][:3], train_data[2][:3]):
     print('premise:', x0)
@@ -160,24 +158,23 @@ for x0, x1, y in zip(train_data[0][:3], train_data[1][:3], train_data[2][:3]):
 The training set has about 550000 pairs,
 and the testing set has about 10000 pairs.
 The following shows that 
-the three [**labels "entailment", "contradiction", and "neutral" are balanced**] in 
+the three labels "entailment", "contradiction", and "neutral" are balanced in 
 both the training set and the testing set.
 
-```{.python .input}
-#@tab all
+```{.python .input #natural-language-inference-and-dataset-reading-the-dataset-3}
 test_data = read_snli(data_dir, is_train=False)
 for data in [train_data, test_data]:
     print([[row for row in data[2]].count(i) for i in range(3)])
 ```
 
-### [**Defining a Class for Loading the Dataset**]
+### Defining a Class for Loading the Dataset
 
 Below we define a class for loading the SNLI dataset by inheriting from the `Dataset` class in Gluon. The argument `num_steps` in the class constructor specifies the length of a text sequence so that each minibatch of sequences will have the same shape. 
 In other words,
 tokens after the first `num_steps` ones in longer sequence are trimmed, while special tokens “&lt;pad&gt;” will be appended to shorter sequences until their length becomes `num_steps`.
 By implementing the `__getitem__` function, we can arbitrarily access the premise, hypothesis, and label with the index `idx`.
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset}
 #@tab mxnet
 #@save
 class SNLIDataset(gluon.data.Dataset):
@@ -208,7 +205,7 @@ class SNLIDataset(gluon.data.Dataset):
         return len(self.premises)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset}
 #@tab pytorch
 #@save
 class SNLIDataset(torch.utils.data.Dataset):
@@ -239,7 +236,7 @@ class SNLIDataset(torch.utils.data.Dataset):
         return len(self.premises)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset}
 #@tab jax
 #@save
 class SNLIDataset:
@@ -270,7 +267,7 @@ class SNLIDataset:
         return len(self.premises)
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset}
 #@tab tensorflow
 #@save
 class SNLIDataset:
@@ -301,14 +298,14 @@ class SNLIDataset:
         return len(self.premises)
 ```
 
-### [**Putting It All Together**]
+### Putting It All Together
 
 Now we can invoke the `read_snli` function and the `SNLIDataset` class to download the SNLI dataset and return `DataLoader` instances for both training and testing sets, together with the vocabulary of the training set.
 It is noteworthy that we must use the vocabulary constructed from the training set
 as that of the testing set. 
 As a result, any new token from the testing set will be unknown to the model trained on the training set.
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-1}
 #@tab mxnet
 #@save
 def load_data_snli(batch_size, num_steps=50):
@@ -326,7 +323,7 @@ def load_data_snli(batch_size, num_steps=50):
     return train_iter, test_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-1}
 #@tab pytorch
 #@save
 def load_data_snli(batch_size, num_steps=50):
@@ -346,7 +343,7 @@ def load_data_snli(batch_size, num_steps=50):
     return train_iter, test_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-1}
 #@tab jax
 #@save
 def load_data_snli(batch_size, num_steps=50):
@@ -365,7 +362,7 @@ def load_data_snli(batch_size, num_steps=50):
     return train_iter, test_iter, train_set.vocab
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-1}
 #@tab tensorflow
 #@save
 def load_data_snli(batch_size, num_steps=50):
@@ -389,8 +386,7 @@ Here we set the batch size to 128 and sequence length to 50,
 and invoke the `load_data_snli` function to get the data iterators and vocabulary.
 Then we print the vocabulary size.
 
-```{.python .input}
-#@tab all
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-2}
 train_iter, test_iter, vocab = load_data_snli(128, 50)
 len(vocab)
 ```
@@ -399,7 +395,7 @@ Now we print the shape of the first minibatch.
 Contrary to sentiment analysis,
 we have two inputs `X[0]` and `X[1]` representing pairs of premises and hypotheses.
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-3}
 #@tab mxnet, pytorch
 for X, Y in train_iter:
     print(X[0].shape)
@@ -408,7 +404,7 @@ for X, Y in train_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-3}
 #@tab jax
 for batch in train_iter:
     print(batch[0].shape)
@@ -417,7 +413,7 @@ for batch in train_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #natural-language-inference-and-dataset-putting-it-all-together-3}
 #@tab tensorflow
 for premises, hypotheses, labels in train_iter:
     print(premises.shape)
@@ -453,3 +449,70 @@ for premises, hypotheses, labels in train_iter:
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1388)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Natural Language Inference (NLI)** — given a *premise*
+sentence and a *hypothesis* sentence, decide whether the
+hypothesis is
+
+- **entailed** by the premise,
+- **contradicted** by it, or
+- **neutral** (independent).
+
+A 3-way sentence-pair classification benchmark. Pre-BERT
+NLI was a hard task that drove a lot of attention-based
+research; BERT then crushed it and made NLI a standard
+fine-tuning probe.
+
+This deck loads **SNLI** (Stanford NLI), 570k labeled
+sentence pairs. Output: `(premise_ids, hypothesis_ids,
+label)` minibatches.
+:::
+
+::: {.slide title="Setup"}
+@natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset
+:::
+
+::: {.slide title="Reading SNLI"}
+TSV format: gold_label \t premise \t hypothesis \t ...
+Skip the `-` (no consensus) labels:
+
+@natural-language-inference-and-dataset-reading-the-dataset-1
+
+. . .
+
+@natural-language-inference-and-dataset-reading-the-dataset-2
+
+. . .
+
+@natural-language-inference-and-dataset-reading-the-dataset-3
+:::
+
+::: {.slide title="Custom Dataset"}
+Two parallel sequence inputs, one label per pair:
+
+@natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset
+:::
+
+::: {.slide title="Loader factory"}
+@natural-language-inference-and-dataset-putting-it-all-together-1
+
+. . .
+
+@natural-language-inference-and-dataset-putting-it-all-together-2
+
+. . .
+
+@natural-language-inference-and-dataset-putting-it-all-together-3
+:::
+
+::: {.slide title="Recap"}
+- NLI = 3-way premise/hypothesis classification
+  (entailment, contradiction, neutral).
+- SNLI is the standard corpus; 550k+ labeled pairs.
+- Output: aligned premise/hypothesis token ID pairs +
+  label, ready for the attention model (next deck) and
+  BERT fine-tuning (deck after).
+:::

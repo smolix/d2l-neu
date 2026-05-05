@@ -5,7 +5,7 @@ In :numref:`sec_basic_gan`, we introduced the basic ideas behind how GANs work. 
 
 In this section, we will demonstrate how you can use GANs to generate photorealistic images. We will be basing our models on the deep convolutional GANs (DCGAN) introduced in :citet:`Radford.Metz.Chintala.2015`. We will borrow the convolutional architectures that have proven so successful for discriminative computer vision problems and show how via GANs, they can be leveraged to generate photorealistic images.
 
-```{.python .input}
+```{.python .input #dcgan-deep-convolutional-generative-adversarial-networks}
 #@tab mxnet
 from mxnet import gluon, init, np, npx
 from mxnet.gluon import nn
@@ -14,7 +14,7 @@ from d2l import mxnet as d2l
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #dcgan-deep-convolutional-generative-adversarial-networks}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -23,13 +23,13 @@ from torch import nn
 import warnings
 ```
 
-```{.python .input}
+```{.python .input #dcgan-deep-convolutional-generative-adversarial-networks}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #dcgan-deep-convolutional-generative-adversarial-networks}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -47,7 +47,7 @@ import os
 
 The dataset we will use is a collection of Pokemon sprites obtained from [pokemondb](https://pokemondb.net/sprites). First download, extract and load this dataset.
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-1}
 #@tab mxnet
 #@save
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
@@ -57,7 +57,7 @@ data_dir = d2l.download_extract('pokemon')
 pokemon = gluon.data.vision.datasets.ImageFolderDataset(data_dir)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-1}
 #@tab pytorch
 #@save
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
@@ -67,7 +67,7 @@ data_dir = d2l.download_extract('pokemon')
 pokemon = torchvision.datasets.ImageFolder(data_dir)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-1}
 #@tab tensorflow
 #@save
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
@@ -79,7 +79,7 @@ pokemon = tf.keras.preprocessing.image_dataset_from_directory(
     data_dir, batch_size=batch_size, image_size=(64, 64))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-1}
 #@tab jax
 #@save
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
@@ -90,7 +90,7 @@ data_dir = d2l.download_extract('pokemon')
 
 We resize each image into $64\times 64$. The `ToTensor` transformation will project the pixel value into $[0, 1]$, while our generator will use the tanh function to obtain outputs in $[-1, 1]$. Therefore we normalize the data with $0.5$ mean and $0.5$ standard deviation to match the value range.
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-2}
 #@tab mxnet
 batch_size = 256
 transformer = gluon.data.vision.transforms.Compose([
@@ -103,7 +103,7 @@ data_iter = gluon.data.DataLoader(
     shuffle=True, num_workers=d2l.get_dataloader_workers())
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-2}
 #@tab pytorch
 batch_size = 256
 transformer = torchvision.transforms.Compose([
@@ -117,7 +117,7 @@ data_iter = torch.utils.data.DataLoader(
     shuffle=True, num_workers=d2l.get_dataloader_workers())
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-2}
 #@tab tensorflow
 def transform_func(X):
     X = X / 255.
@@ -131,7 +131,7 @@ data_iter = data_iter.cache().shuffle(buffer_size=1000).prefetch(
     buffer_size=tf.data.experimental.AUTOTUNE)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-2}
 #@tab jax
 batch_size = 256
 
@@ -155,7 +155,7 @@ data_iter = d2l.load_array((_all_images, _all_labels), batch_size,
 
 Let's visualize the first 20 images.
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-3}
 #@tab mxnet
 d2l.set_figsize((4, 4))
 for X, y in data_iter:
@@ -164,7 +164,7 @@ for X, y in data_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-3}
 #@tab pytorch
 warnings.filterwarnings('ignore')
 d2l.set_figsize((4, 4))
@@ -174,7 +174,7 @@ for X, y in data_iter:
     break
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-3}
 #@tab tensorflow
 d2l.set_figsize(figsize=(4, 4))
 for X, y in data_iter.take(1):
@@ -182,7 +182,7 @@ for X, y in data_iter.take(1):
     d2l.show_images(imgs, num_rows=4, num_cols=5)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-pokemon-dataset-3}
 #@tab jax
 d2l.set_figsize((4, 4))
 for batch in data_iter:
@@ -196,7 +196,7 @@ for batch in data_iter:
 
 The generator needs to map the noise variable $\mathbf z\in\mathbb R^d$, a length-$d$ vector, to an RGB image with width and height of $64\times 64$ . In :numref:`sec_fcn` we introduced the fully convolutional network that uses transposed convolution layer (refer to :numref:`sec_transposed_conv`) to enlarge input size. The basic block of the generator contains a transposed convolution layer followed by the batch normalization and ReLU activation.
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-1}
 #@tab mxnet
 class G_block(nn.Block):
     def __init__(self, channels, kernel_size=4,
@@ -211,7 +211,7 @@ class G_block(nn.Block):
         return self.activation(self.batch_norm(self.conv2d_trans(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-1}
 #@tab pytorch
 class G_block(nn.Module):
     def __init__(self, out_channels, in_channels=3, kernel_size=4, strides=2,
@@ -226,7 +226,7 @@ class G_block(nn.Module):
         return self.activation(self.batch_norm(self.conv2d_trans(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-1}
 #@tab tensorflow
 class G_block(tf.keras.layers.Layer):
     def __init__(self, out_channels, kernel_size=4, strides=2, padding="same",
@@ -241,7 +241,7 @@ class G_block(tf.keras.layers.Layer):
         return self.activation(self.batch_norm(self.conv2d_trans(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-1}
 #@tab jax
 class G_block(nn.Module):
     out_channels: int
@@ -280,7 +280,7 @@ n_h^{'} \times n_w^{'} &= [(n_h k_h - (n_h-1)(k_h-s_h)- 2p_h] \times [(n_w k_w -
 \end{aligned}
 $$
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-2}
 #@tab mxnet
 x = np.zeros((2, 3, 16, 16))
 g_blk = G_block(20)
@@ -288,21 +288,21 @@ g_blk.initialize()
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-2}
 #@tab pytorch
 x = torch.zeros((2, 3, 16, 16))
 g_blk = G_block(20)
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-2}
 #@tab tensorflow
 x = tf.zeros((2, 16, 16, 3))  # Channel last convention
 g_blk = G_block(20)
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-2}
 #@tab jax
 x = jnp.zeros((2, 16, 16, 3))  # Channel last convention
 g_blk = G_block(out_channels=20)
@@ -312,7 +312,7 @@ g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 
 If we change the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding, then with an input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-3}
 #@tab mxnet
 x = np.zeros((2, 3, 1, 1))
 g_blk = G_block(20, strides=1, padding=0)
@@ -320,14 +320,14 @@ g_blk.initialize()
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-3}
 #@tab pytorch
 x = torch.zeros((2, 3, 1, 1))
 g_blk = G_block(20, strides=1, padding=0)
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-3}
 #@tab tensorflow
 x = tf.zeros((2, 1, 1, 3))
 # `padding="valid"` corresponds to no padding
@@ -335,7 +335,7 @@ g_blk = G_block(20, strides=1, padding="valid")
 g_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-3}
 #@tab jax
 x = jnp.zeros((2, 1, 1, 3))
 # `padding="VALID"` corresponds to no padding
@@ -346,7 +346,7 @@ g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 
 The generator consists of four basic blocks that increase input's both width and height from 1 to 32. At the same time, it first projects the latent variable into $64\times 8$ channels, and then halve the channels each time. At last, a transposed convolution layer is used to generate the output. It further doubles the width and height to match the desired $64\times 64$ shape, and reduces the channel size to $3$. The tanh activation function is applied to project output values into the $(-1, 1)$ range.
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-4}
 #@tab mxnet
 n_G = 64
 net_G = nn.Sequential()
@@ -359,7 +359,7 @@ net_G.add(G_block(n_G*8, strides=1, padding=0),  # Output: (64 * 8, 4, 4)
               activation='tanh'))  # Output: (3, 64, 64)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-4}
 #@tab pytorch
 n_G = 64
 net_G = nn.Sequential(
@@ -373,7 +373,7 @@ net_G = nn.Sequential(
     nn.Tanh())  # Output: (3, 64, 64)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-4}
 #@tab tensorflow
 n_G = 64
 net_G = tf.keras.Sequential([
@@ -389,7 +389,7 @@ net_G = tf.keras.Sequential([
 ])
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-4}
 #@tab jax
 n_G = 64
 
@@ -424,26 +424,26 @@ net_G = Generator(n_G=n_G)
 
 Generate a 100 dimensional latent variable to verify the generator's output shape.
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-5}
 #@tab mxnet
 x = np.zeros((1, 100, 1, 1))
 net_G.initialize()
 net_G(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-5}
 #@tab pytorch
 x = torch.zeros((1, 100, 1, 1))
 net_G(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-5}
 #@tab tensorflow
 x = tf.zeros((1, 1, 1, 100))
 net_G(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-the-generator-5}
 #@tab jax
 x = jnp.zeros((1, 1, 1, 100))
 params_G = net_G.init(jax.random.PRNGKey(0), x)
@@ -458,7 +458,7 @@ $$\textrm{leaky ReLU}(x) = \begin{cases}x & \textrm{if}\ x > 0\\ \alpha x &\text
 
 As it can be seen, it is normal ReLU if $\alpha=0$, and an identity function if $\alpha=1$. For $\alpha \in (0, 1)$, leaky ReLU is a nonlinear function that give a non-zero output for a negative input. It aims to fix the "dying ReLU" problem that a neuron might always output a negative value and therefore cannot make any progress since the gradient of ReLU is 0.
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-1}
 #@tab mxnet,pytorch
 alphas = [0, .2, .4, .6, .8, 1]
 x = d2l.arange(-2, 1, 0.1)
@@ -466,7 +466,7 @@ Y = [d2l.numpy(nn.LeakyReLU(alpha)(x)) for alpha in alphas]
 d2l.plot(d2l.numpy(x), Y, 'x', 'y', alphas)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-1}
 #@tab tensorflow
 alphas = [0, .2, .4, .6, .8, 1]
 x = tf.range(-2, 1, 0.1)
@@ -474,7 +474,7 @@ Y = [tf.keras.layers.LeakyReLU(alpha)(x).numpy() for alpha in alphas]
 d2l.plot(x.numpy(), Y, 'x', 'y', alphas)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-1}
 #@tab jax
 alphas = [0, .2, .4, .6, .8, 1]
 x = jnp.arange(-2, 1, 0.1)
@@ -484,7 +484,7 @@ d2l.plot(np.array(x), Y, 'x', 'y', alphas)
 
 The basic block of the discriminator is a convolution layer followed by a batch normalization layer and a leaky ReLU activation. The hyperparameters of the convolution layer are similar to the transpose convolution layer in the generator block.
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-2}
 #@tab mxnet
 class D_block(nn.Block):
     def __init__(self, channels, kernel_size=4, strides=2,
@@ -499,7 +499,7 @@ class D_block(nn.Block):
         return self.activation(self.batch_norm(self.conv2d(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-2}
 #@tab pytorch
 class D_block(nn.Module):
     def __init__(self, out_channels, in_channels=3, kernel_size=4, strides=2,
@@ -514,7 +514,7 @@ class D_block(nn.Module):
         return self.activation(self.batch_norm(self.conv2d(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-2}
 #@tab tensorflow
 class D_block(tf.keras.layers.Layer):
     def __init__(self, out_channels, kernel_size=4, strides=2, padding="same",
@@ -529,7 +529,7 @@ class D_block(tf.keras.layers.Layer):
         return self.activation(self.batch_norm(self.conv2d(X)))
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-2}
 #@tab jax
 class D_block(nn.Module):
     out_channels: int
@@ -562,7 +562,7 @@ n_h^{'} \times n_w^{'} &= \lfloor(n_h-k_h+2p_h+s_h)/s_h\rfloor \times \lfloor(n_
 \end{aligned}
 $$
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-3}
 #@tab mxnet
 x = np.zeros((2, 3, 16, 16))
 d_blk = D_block(20)
@@ -570,21 +570,21 @@ d_blk.initialize()
 d_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-3}
 #@tab pytorch
 x = torch.zeros((2, 3, 16, 16))
 d_blk = D_block(20)
 d_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-3}
 #@tab tensorflow
 x = tf.zeros((2, 16, 16, 3))
 d_blk = D_block(20)
 d_blk(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-3}
 #@tab jax
 x = jnp.zeros((2, 16, 16, 3))
 d_blk = D_block(out_channels=20)
@@ -594,7 +594,7 @@ d_blk.apply(params, x, mutable=['batch_stats'])[0].shape
 
 The discriminator is a mirror of the generator.
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-4}
 #@tab mxnet
 n_D = 64
 net_D = nn.Sequential()
@@ -605,7 +605,7 @@ net_D.add(D_block(n_D),   # Output: (64, 32, 32)
           nn.Conv2D(1, kernel_size=4, use_bias=False))  # Output: (1, 1, 1)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-4}
 #@tab pytorch
 n_D = 64
 net_D = nn.Sequential(
@@ -617,7 +617,7 @@ net_D = nn.Sequential(
               kernel_size=4, bias=False))  # Output: (1, 1, 1)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-4}
 #@tab tensorflow
 n_D = 64
 net_D = tf.keras.Sequential([
@@ -630,7 +630,7 @@ net_D = tf.keras.Sequential([
 ])
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-4}
 #@tab jax
 n_D = 64
 
@@ -663,26 +663,26 @@ net_D = Discriminator(n_D=n_D)
 
 It uses a convolution layer with output channel $1$ as the last layer to obtain a single prediction value.
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-5}
 #@tab mxnet
 x = np.zeros((1, 3, 64, 64))
 net_D.initialize()
 net_D(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-5}
 #@tab pytorch
 x = torch.zeros((1, 3, 64, 64))
 net_D(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-5}
 #@tab tensorflow
 x = tf.zeros((1, 64, 64, 3))
 net_D(x).shape
 ```
 
-```{.python .input}
+```{.python .input #dcgan-discriminator-5}
 #@tab jax
 x = jnp.zeros((1, 64, 64, 3))
 params_D = net_D.init(jax.random.PRNGKey(0), x)
@@ -693,7 +693,7 @@ net_D.apply(params_D, x, mutable=['batch_stats'])[0].shape
 
 Compared to the basic GAN in :numref:`sec_basic_gan`, we use the same learning rate for both generator and discriminator since they are similar to each other. In addition, we change $\beta_1$ in Adam (:numref:`sec_adam`) from $0.9$ to $0.5$. It decreases the smoothness of the momentum, the exponentially weighted moving average of past gradients, to take care of the rapid changing gradients because the generator and the discriminator fight with each other. Besides, the random generated noise `Z`, is a 4-D tensor and we are using GPU to accelerate the computation.
 
-```{.python .input}
+```{.python .input #dcgan-training-1}
 #@tab mxnet
 def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           device=d2l.try_gpu()):
@@ -734,7 +734,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           f'{metric[2] / timer.stop():.1f} examples/sec on {str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #dcgan-training-1}
 #@tab pytorch
 def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           device=d2l.try_gpu()):
@@ -779,7 +779,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           f'{metric[2] / timer.stop():.1f} examples/sec on {str(device)}')
 ```
 
-```{.python .input}
+```{.python .input #dcgan-training-1}
 #@tab tensorflow
 def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           device=d2l.try_gpu()):
@@ -842,7 +842,7 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
           f'{metric[2] / timer.stop():.1f} examples/sec on {str(device._device_name)}')
 ```
 
-```{.python .input}
+```{.python .input #dcgan-training-1}
 #@tab jax
 def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
     key = jax.random.PRNGKey(0)
@@ -977,19 +977,19 @@ We train the model with a small number of epochs just for demonstration.
 For better performance,
 the variable `num_epochs` can be set to a larger number.
 
-```{.python .input}
+```{.python .input #dcgan-training-2}
 #@tab mxnet, pytorch
 latent_dim, lr, num_epochs = 100, 0.005, 20
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-training-2}
 #@tab tensorflow
 latent_dim, lr, num_epochs = 100, 0.0005, 40
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 
-```{.python .input}
+```{.python .input #dcgan-training-2}
 #@tab jax
 latent_dim, lr, num_epochs = 100, 0.005, 20
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
@@ -1018,3 +1018,118 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1083)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**DCGAN** (Radford, Metz, Chintala 2015) — the recipe that
+made image GANs work in practice. Architectural rules
+that became standard:
+
+- All-convolutional generator (transposed convs to
+  upsample, no fully connected layers).
+- All-convolutional discriminator (strided convs to
+  downsample).
+- Batch normalization in both networks.
+- ReLU in generator (Tanh on output), LeakyReLU in
+  discriminator.
+- Adam optimizer, learning rate 0.0002, $\beta_1 = 0.5$.
+
+These choices transformed GANs from "interesting but
+unstable" to a workable image-generation tool.
+
+This deck trains a DCGAN to generate Pokémon sprites.
+:::
+
+::: {.slide title="Pokémon dataset"}
+Small image dataset — perfect size for a teaching demo of
+DCGAN. Resize to 64×64, normalize to $[-1, 1]$ (matches
+generator's `tanh` output range):
+
+@dcgan-deep-convolutional-generative-adversarial-networks
+
+. . .
+
+@dcgan-the-pokemon-dataset-1
+:::
+
+::: {.slide title="Inspecting samples"}
+@dcgan-the-pokemon-dataset-2
+
+. . .
+
+@dcgan-the-pokemon-dataset-3
+:::
+
+::: {.slide title="Generator block"}
+TransposedConv → BatchNorm → ReLU. Stack five of these to
+upsample $1 \times 1$ noise to $64 \times 64$ pixels:
+
+@dcgan-the-generator-1
+
+. . .
+
+@dcgan-the-generator-2
+
+. . .
+
+@dcgan-the-generator-3
+:::
+
+::: {.slide title="Generator architecture"}
+Five generator blocks; final layer projects to 3 channels
+with `tanh`:
+
+@dcgan-the-generator-4
+
+. . .
+
+@dcgan-the-generator-5
+:::
+
+::: {.slide title="Discriminator block"}
+Conv → BatchNorm → LeakyReLU. Mirrored architecture:
+five blocks downsampling $64 \times 64$ to $1 \times 1$:
+
+@dcgan-discriminator-1
+
+. . .
+
+@dcgan-discriminator-2
+
+. . .
+
+@dcgan-discriminator-3
+:::
+
+::: {.slide title="Discriminator architecture"}
+@dcgan-discriminator-4
+
+. . .
+
+@dcgan-discriminator-5
+:::
+
+::: {.slide title="Training"}
+Same minimax loss as basic GAN; per-step alternation of
+$D$ then $G$ updates with the DCGAN-recommended Adam
+hyperparameters:
+
+@dcgan-training-1
+
+. . .
+
+@dcgan-training-2
+:::
+
+::: {.slide title="Recap"}
+- DCGAN = standard architectural recipe for image GANs:
+  all-conv generator/discriminator, BatchNorm,
+  Tanh/LeakyReLU.
+- Adam(0.0002, $\beta_1=0.5$) is the magic LR/momentum
+  combo that stabilized training in 2015.
+- Modern image generators (StyleGAN, BigGAN, diffusion
+  models) supersede DCGAN; the architectural lessons
+  (all-conv, normalization, careful activation choice)
+  carry over.
+:::

@@ -32,7 +32,7 @@ With this reformulation, the model complexity is decreased greatly. Moreover, fo
 
 To learn the FM model, we can use the MSE loss for regression task, the cross-entropy loss for classification tasks, and the BPR loss for ranking task. Standard optimizers such as stochastic gradient descent and Adam are viable for optimization.
 
-```{.python .input  n=2}
+```{.python .input #fm-an-efficient-optimization-criterion  n=2}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import init, gluon, np, npx
@@ -42,7 +42,7 @@ import os
 npx.set_np()
 ```
 
-```{.python .input  n=2}
+```{.python .input #fm-an-efficient-optimization-criterion  n=2}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
@@ -53,7 +53,7 @@ import os
 ## Model Implementation
 The following code implement the factorization machines. It is clear to see that FM consists a linear regression block and an efficient feature interaction block. The model returns raw scores (logits); the sigmoid transformation is absorbed into the loss function (`SigmoidBinaryCrossEntropyLoss` / `BCEWithLogitsLoss`) for numerical stability.
 
-```{.python .input  n=2}
+```{.python .input #fm-model-implementation  n=2}
 #@tab mxnet
 class FM(nn.Block):
     def __init__(self, field_dims, num_factors):
@@ -71,7 +71,7 @@ class FM(nn.Block):
         return x
 ```
 
-```{.python .input  n=2}
+```{.python .input #fm-model-implementation  n=2}
 #@tab pytorch
 class FM(nn.Module):
     def __init__(self, field_dims, num_factors):
@@ -92,7 +92,7 @@ class FM(nn.Module):
 ## Load the Advertising Dataset
 We use the CTR data wrapper from the last section to load the online advertising dataset.
 
-```{.python .input  n=3}
+```{.python .input #fm-load-the-advertising-dataset  n=3}
 #@tab mxnet
 batch_size = 2048
 data_dir = d2l.download_extract('ctr')
@@ -108,7 +108,7 @@ test_iter = gluon.data.DataLoader(
     num_workers=d2l.get_dataloader_workers())
 ```
 
-```{.python .input  n=3}
+```{.python .input #fm-load-the-advertising-dataset  n=3}
 #@tab pytorch
 batch_size = 2048
 data_dir = d2l.download_extract('ctr')
@@ -127,7 +127,7 @@ test_iter = torch.utils.data.DataLoader(
 ## Train the Model
 Afterwards, we train the model. The learning rate is set to 0.02 and the embedding size is set to 20 by default. The `Adam` optimizer and the `SigmoidBinaryCrossEntropyLoss` loss are used for model training.
 
-```{.python .input  n=5}
+```{.python .input #fm-train-the-model  n=5}
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = FM(train_data.field_dims, num_factors=20)
@@ -139,7 +139,7 @@ loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
-```{.python .input  n=5}
+```{.python .input #fm-train-the-model  n=5}
 #@tab pytorch
 devices = d2l.try_all_gpus()
 net = FM(train_data.field_dims, num_factors=20)
@@ -174,3 +174,59 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/406)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Factorization Machines** (Rendle, 2010) — generalize MF
+to *arbitrary* feature pairs, not just (user, item).
+Predict from a sparse feature vector $\mathbf{x}$ via:
+
+$$\hat y(\mathbf{x}) = w_0 + \sum_i w_i x_i + \sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j.$$
+
+- Linear term — like logistic regression.
+- Pairwise term — every pair of features contributes a
+  bilinear interaction, with each feature represented by
+  a $k$-dim latent vector $\mathbf{v}_i$ (just like an
+  embedding).
+
+The crucial trick: the pairwise sum can be computed in
+$\mathcal{O}(kn)$ instead of $\mathcal{O}(n^2)$ via:
+
+$$\sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j = \tfrac{1}{2} \sum_f \big[ (\sum_i v_{i,f} x_i)^2 - \sum_i v_{i,f}^2 x_i^2 \big].$$
+
+Powerful for **CTR prediction** on sparse one-hot ad
+features. Generalizes MF (with two features = user +
+item) and recovers logistic regression as a special case.
+:::
+
+::: {.slide title="Efficient optimization"}
+@fm-an-efficient-optimization-criterion
+:::
+
+::: {.slide title="Model implementation"}
+@fm-model-implementation
+:::
+
+::: {.slide title="CTR (advertising) dataset"}
+Standard sparse-features benchmark — many one-hot
+categorical fields per row:
+
+@fm-load-the-advertising-dataset
+:::
+
+::: {.slide title="Training"}
+Binary cross-entropy + Adam:
+
+@fm-train-the-model
+:::
+
+::: {.slide title="Recap"}
+- FMs = linear model + bilinear feature interactions, all
+  feature pairs share latent factor structure.
+- Closed-form $\mathcal{O}(kn)$ pairwise computation
+  makes FMs practical on sparse features with millions of
+  fields.
+- Generalizes MF; foundation for DeepFM (next deck) and
+  many production CTR models.
+:::

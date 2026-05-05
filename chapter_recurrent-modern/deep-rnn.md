@@ -95,7 +95,7 @@ with that from an LSTM or a GRU.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-deep-recurrent-neural-networks}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -103,20 +103,20 @@ from mxnet.gluon import rnn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-deep-recurrent-neural-networks}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-deep-recurrent-neural-networks}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-deep-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -130,7 +130,7 @@ To implement a multilayer RNN from scratch,
 we can treat each layer as an `RNNScratch` instance
 with its own learnable parameters.
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-1}
 %%tab mxnet, tensorflow
 class StackedRNNScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, num_layers, sigma=0.01):
@@ -141,7 +141,7 @@ class StackedRNNScratch(d2l.Module):
                      for i in range(num_layers)]
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-1}
 %%tab pytorch
 class StackedRNNScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, num_layers, sigma=0.01):
@@ -152,7 +152,7 @@ class StackedRNNScratch(d2l.Module):
                                     for i in range(num_layers)])
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-1}
 %%tab jax
 class StackedRNNScratch(d2l.Module):
     num_inputs: int
@@ -170,8 +170,7 @@ The multilayer forward computation
 simply performs forward computation
 layer by layer.
 
-```{.python .input}
-%%tab all
+```{.python .input #deep-rnn-implementation-from-scratch-2}
 @d2l.add_to_class(StackedRNNScratch)
 def forward(self, inputs, Hs=None):
     outputs = inputs
@@ -187,7 +186,7 @@ As an example, we train a deep GRU model on
 *The Time Machine* dataset (same as in :numref:`sec_rnn-scratch`).
 To keep things simple we set the number of layers to 2.
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-3}
 %%tab pytorch
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn_block = StackedRNNScratch(num_inputs=len(data.vocab),
@@ -197,7 +196,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-3}
 %%tab tensorflow
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 with d2l.try_gpu():
@@ -208,7 +207,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-3}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn_block = StackedRNNScratch(num_inputs=len(data.vocab),
@@ -218,7 +217,7 @@ trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-implementation-from-scratch-3}
 %%tab mxnet
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 rnn_block = StackedRNNScratch(num_inputs=len(data.vocab),
@@ -251,7 +250,7 @@ allowing specification of the number of layers explicitly
 rather than picking the default of a single layer.
 :end_tab:
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-1}
 %%tab mxnet
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model."""
@@ -261,7 +260,7 @@ class GRU(d2l.RNN):  #@save
         self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-1}
 %%tab pytorch
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model."""
@@ -272,7 +271,7 @@ class GRU(d2l.RNN):  #@save
                           dropout=dropout)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-1}
 %%tab tensorflow
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model."""
@@ -290,7 +289,7 @@ class GRU(d2l.RNN):  #@save
         return tf.transpose(outputs, perm=[1, 0, 2]), state
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-1}
 %%tab jax
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model."""
@@ -329,10 +328,10 @@ We pick the same number of inputs and outputs
 as we have distinct tokens, i.e., `vocab_size`.
 The number of hidden units is still 32.
 The only difference is that we now 
-(**select a nontrivial number of hidden layers 
-by specifying the value of `num_layers`.**)
+select a nontrivial number of hidden layers 
+by specifying the value of `num_layers`.
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-2}
 %%tab mxnet
 gru = GRU(num_hiddens=32, num_layers=2)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
@@ -342,14 +341,14 @@ model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
 # model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-2}
 %%tab pytorch
 gru = GRU(num_inputs=len(data.vocab), num_hiddens=32, num_layers=2)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-2}
 %%tab tensorflow
 gru = GRU(num_hiddens=32, num_layers=2)
 with d2l.try_gpu():
@@ -357,24 +356,24 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-2}
 %%tab jax
 gru = GRU(num_hiddens=32, num_layers=2)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-3}
 %%tab pytorch
 model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-3}
 %%tab tensorflow
 model.predict('it has', 20, data.vocab)
 ```
 
-```{.python .input}
+```{.python .input #deep-rnn-concise-implementation-3}
 %%tab jax
 model.predict('it has', 20, data.vocab, trainer.state.params)
 ```
@@ -413,3 +412,79 @@ to ensure proper convergence.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18018)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A single RNN layer is already deep *in time* — but within
+one time step, input-to-output is just one nonlinearity.
+
+Stacking RNN layers makes the model deep along the *layer*
+axis too. Each layer sees the previous layer's hidden
+states as its input sequence; topmost layer feeds the
+readout.
+
+$$\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)} \mathbf{W}_{xh}^{(l)} + \mathbf{H}_{t-1}^{(l)} \mathbf{W}_{hh}^{(l)} + \mathbf{b}_h^{(l)}).$$
+
+Typical sizes: width 64–2048, depth 1–8.
+:::
+
+::: {.slide title="Architecture"}
+![Layer $l$ at time $t$ depends on layer $l$ at time $t{-}1$ *and* layer $l{-}1$ at time $t$.](../img/deep-rnn.svg){width=78%}
+:::
+
+::: {.slide title="Setup"}
+@deep-rnn-deep-recurrent-neural-networks
+:::
+
+::: {.slide title="Stacking from scratch"}
+A `StackedRNNScratch` is just a list of `RNNScratch` cells —
+each layer's input width is `num_hiddens` (except the bottom
+layer, which sees raw inputs):
+
+@deep-rnn-implementation-from-scratch-1
+
+. . .
+
+The forward pass walks the layers, feeding each layer's
+output sequence into the next:
+
+@deep-rnn-implementation-from-scratch-2
+:::
+
+::: {.slide title="Training the stacked RNN"}
+Two-layer stack on *The Time Machine*. Lower learning rate
+(`lr=2`) — deeper recurrents are harder to optimize:
+
+@deep-rnn-implementation-from-scratch-3
+:::
+
+::: {.slide title="Concise: multilayer GRU"}
+`nn.GRU(..., num_layers=L, dropout=p)` collapses the stack
+into one library call — and adds dropout between layers,
+which is the standard regularizer for stacked RNNs:
+
+@deep-rnn-concise-implementation-1
+:::
+
+::: {.slide title="Training and decoding"}
+Two-layer GRU LM, same `Trainer`:
+
+@deep-rnn-concise-implementation-2
+
+. . .
+
+Decode from a prefix:
+
+@deep-rnn-concise-implementation-3
+:::
+
+::: {.slide title="Recap"}
+- Deep RNNs stack $L$ recurrent layers; layer $l$'s input is
+  layer $l{-}1$'s output sequence.
+- Same idea applies to vanilla RNN, LSTM, or GRU cells.
+- Use lower learning rate and (usually) inter-layer dropout —
+  vertical depth makes optimization noticeably trickier.
+- `nn.GRU(..., num_layers=L, dropout=p)` is the production
+  one-liner.
+:::

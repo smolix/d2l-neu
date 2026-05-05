@@ -105,7 +105,7 @@ $$
 
 By design, the expectation remains unchanged, i.e., $E[h'] = h$.
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -113,20 +113,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #dropout}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -179,13 +179,13 @@ from the uniform distribution $U[0, 1]$.
 Then we can keep those nodes for which the corresponding
 sample is greater than $p$, dropping the rest.
 
-In the following code, we (**implement a `dropout_layer` function
+In the following code, we implement a `dropout_layer` function
 that drops out the elements in the tensor input `X`
-with probability `dropout`**),
+with probability `dropout`,
 rescaling the remainder as described above:
 dividing the survivors by `1.0-dropout`.
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab mxnet
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -194,7 +194,7 @@ def dropout_layer(X, dropout):
     return mask.astype(np.float32) * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab pytorch
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -203,7 +203,7 @@ def dropout_layer(X, dropout):
     return mask * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab tensorflow
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
@@ -213,7 +213,7 @@ def dropout_layer(X, dropout):
     return tf.cast(mask, dtype=tf.float32) * X / (1.0 - dropout)
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-1}
 %%tab jax
 def dropout_layer(X, dropout, key=d2l.get_key()):
     # Note: `key` is bound at function-definition time (mutable default
@@ -229,12 +229,12 @@ def dropout_layer(X, dropout, key=d2l.get_key()):
     return jnp.asarray(mask, dtype=jnp.float32) * X / (1.0 - dropout)
 ```
 
-We can [**test out the `dropout_layer` function on a few examples**].
+We can test out the `dropout_layer` function on a few examples.
 In the following lines of code,
 we pass our input `X` through the dropout operation,
 with probabilities 0, 0.5, and 1, respectively.
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab pytorch
 X = torch.arange(16, dtype = torch.float32).reshape((2, 8))
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -242,7 +242,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab tensorflow
 X = tf.reshape(tf.range(16, dtype=tf.float32), (2, 8))
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -250,7 +250,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab jax
 X = jnp.arange(16, dtype=jnp.float32).reshape(2, 8)
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -258,7 +258,7 @@ print('dropout_p = 0.5:', dropout_layer(X, 0.5))
 print('dropout_p = 1:', dropout_layer(X, 1))
 ```
 
-```{.python .input}
+```{.python .input #dropout-implementation-from-scratch-2}
 %%tab mxnet
 X = np.arange(16).reshape(2, 8)
 print('dropout_p = 0:', dropout_layer(X, 0))
@@ -275,7 +275,7 @@ A common choice is to set
 a lower dropout probability closer to the input layer.
 We ensure that dropout is only active during training.
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab mxnet
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -297,7 +297,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab pytorch
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -319,7 +319,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab tensorflow
 class DropoutMLPScratch(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -340,7 +340,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-```{.python .input}
+```{.python .input #dropout-defining-the-model}
 %%tab jax
 class DropoutMLPScratch(d2l.Classifier):
     num_hiddens_1: int
@@ -367,12 +367,11 @@ class DropoutMLPScratch(d2l.Classifier):
         return self.lin3(H2)
 ```
 
-### [**Training**]
+### Training
 
 The following is similar to the training of MLPs described previously.
 
-```{.python .input}
-%%tab all
+```{.python .input #dropout-training}
 hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
@@ -381,7 +380,7 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-## [**Concise Implementation**]
+## Concise Implementation
 
 With high-level APIs, all we need to do is add a `Dropout` layer
 after each fully connected layer,
@@ -394,7 +393,7 @@ according to the specified dropout probability.
 When not in training mode,
 the `Dropout` layer simply passes the data through during testing.
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab mxnet
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -410,7 +409,7 @@ class DropoutMLP(d2l.Classifier):
         self.net.initialize()
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab pytorch
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -423,7 +422,7 @@ class DropoutMLP(d2l.Classifier):
             nn.Dropout(dropout_2), nn.LazyLinear(num_outputs))
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab tensorflow
 class DropoutMLP(d2l.Classifier):
     def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
@@ -439,7 +438,7 @@ class DropoutMLP(d2l.Classifier):
             tf.keras.layers.Dense(num_outputs)])
 ```
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-1}
 %%tab jax
 class DropoutMLP(d2l.Classifier):
     num_hiddens_1: int
@@ -474,7 +473,7 @@ it is replaced with a new `dropout_rng`. We already handled this with the
 `fit_epoch` method defined in :numref:`sec_linear_scratch`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #dropout-concise-implementation-2}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -490,10 +489,9 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 ```
 
-Next, we [**train the model**].
+Next, we train the model.
 
-```{.python .input}
-%%tab all
+```{.python .input #dropout-concise-implementation-3}
 model = DropoutMLP(**hparams)
 trainer.fit(model, data)
 ```
@@ -531,3 +529,171 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17987)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Dropout** (Srivastava, Hinton et al., 2014) is the
+simplest and most widely used regularizer for neural
+networks:
+
+> *During training, set each hidden unit to zero
+> independently with probability* $p$. *Rescale the
+> survivors by* $1/(1-p)$. *Turn it off at test time.*
+
+Counterintuitive — we actively damage the network
+mid-training — but the trick is rock-solid. It still
+ships in modern Transformers (~10% rate standard).
+:::
+
+::: {.slide title="Why we need it"}
+Modern networks are **overparameterized** — more weights
+than training examples. Without a regularizer, gradient
+descent happily memorizes the training set.
+
+Two complementary reasons dropout helps:
+
+- **Noise injection** = smoothness regularization
+  (Bishop 1995). Robustness to hidden-unit dropout forces
+  the network to be a smoother function of its inputs.
+- **Anti-co-adaptation**: a unit can't rely on any
+  *specific* upstream unit being present, so it picks up
+  signal from a broader, redundant set of features.
+:::
+
+::: {.slide title="What dropout looks like"}
+On every minibatch we randomly zero a fraction of hidden
+units; the network on this iteration is a *thinned*
+subnetwork. Across iterations we sample many subnetworks:
+
+![Two of the five hidden units zeroed by a single dropout draw. Each iteration samples a different subset.](../img/dropout2.svg){width=82%}
+
+At test time dropout is **off** — we use the full
+network. Effectively we average exponentially many
+thinned subnetworks (a kind of cheap ensemble).
+:::
+
+::: {.slide title="The arithmetic: keep the expectation"}
+Per hidden unit $h$, replace with
+
+$$h' = \begin{cases}
+0 & \text{with probability } p, \\
+\dfrac{h}{1 - p} & \text{otherwise.}
+\end{cases}$$
+
+The **rescaling** $1/(1-p)$ is what makes
+$\mathbb{E}[h'] = h$. Without it, expected activations
+shrink by $(1-p)$ during training but recover their full
+scale at test time → train/test mismatch.
+
+This is "inverted dropout"; the version every modern
+framework uses.
+:::
+
+::: {.slide title="Setup"}
+@dropout
+:::
+
+::: {.slide title="Implementing it"}
+Sample a Bernoulli mask, multiply, rescale:
+
+@dropout-implementation-from-scratch-1
+
+. . .
+
+Quick check on a 2×8 input:
+
+@dropout-implementation-from-scratch-2
+
+- $p = 0$ → identity (no dropout).
+- $p = 0.5$ → about half the entries zero, the rest
+  doubled.
+- $p = 1.0$ → all zeros (degenerate).
+:::
+
+::: {.slide title="Where to put dropout"}
+After the activation, before the next linear layer:
+
+```
+Linear → ReLU → Dropout(p₁) → Linear → ReLU → Dropout(p₂) → Linear
+```
+
+Convention: *less* on early layers (low-level features
+need to be reliable), *more* later (high-level features
+overfit).
+
+Typical values:
+
+- MLPs / Transformers: 0.1–0.5.
+- CNNs: 0–0.2 (BatchNorm largely supplants dropout).
+- Just before the classifier head: 0.5 is standard.
+:::
+
+::: {.slide title="MLP with dropout"}
+@dropout-defining-the-model
+:::
+
+::: {.slide title="Training"}
+Two hidden layers (256 each), dropout 0.5 between them:
+
+@dropout-training
+
+Validation accuracy is better than the plain MLP from the
+previous deck — the gap between train and test loss
+shrinks visibly. Dropout shines when capacity exceeds the
+data.
+:::
+
+::: {.slide title="Framework version"}
+`nn.Dropout(p)` is a stock layer. It also handles the
+**train vs. eval mode** switch — call `model.eval()` and
+dropout becomes a no-op:
+
+@dropout-concise-implementation-1
+
+. . .
+
+@dropout-concise-implementation-3
+:::
+
+::: {.slide title="Why dropout works (the modern view)"}
+Several complementary explanations, none complete on its own:
+
+- **Bayesian model averaging** — training samples a
+  different thinned network each step; testing averages
+  $\sim 2^n$ subnetworks → cheap ensemble.
+- **Stochastic regularization** — equivalent to adding
+  Gaussian noise; Bishop showed this is Tikhonov
+  ($\ell_2$) regularization *on the function*.
+- **Anti-co-adaptation** — forces redundant features.
+- **Variance bound** — caps the variance the network puts
+  into any one direction in feature space.
+:::
+
+::: {.slide title="Dropout in 2026"}
+Modern deep nets often replace dropout with **BatchNorm
+/ LayerNorm**, which provides similar regularization
+"for free".
+
+But dropout remains alive and well:
+
+- **Transformers** — rate 0.1 by default in attention and
+  FFN sublayers.
+- **Final classifier heads** — 0.5 right before the
+  output projection is still a standard recipe.
+:::
+
+::: {.slide title="Recap"}
+- **Dropout**: zero each hidden unit with prob $p$
+  during training; rescale survivors by $1/(1-p)$ to
+  preserve expectations.
+- **Off at test time** — full network in use.
+- Place after activation, before next linear layer; rates
+  0.1–0.5 typical.
+- Equivalent to (a) injecting noise = smoothness
+  regularization, and (b) ensembling exponentially many
+  thinned subnetworks.
+- One of the cheapest, most reliable regularizers —
+  combines well with weight decay, layer norm, and
+  data augmentation.
+:::

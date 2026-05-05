@@ -99,7 +99,7 @@ i.e., $p(\mathbf{x}_1, \ldots, \mathbf{x}_T)$.
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-```{.python .input  n=7}
+```{.python .input #sequence-working-with-sequences  n=7}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -108,7 +108,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input  n=8}
+```{.python .input #sequence-working-with-sequences  n=8}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -116,14 +116,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input  n=9}
+```{.python .input #sequence-working-with-sequences  n=9}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input  n=9}
+```{.python .input #sequence-working-with-sequences  n=9}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -392,15 +392,15 @@ Before we focus our attention on text data,
 let's first try this out with some
 continuous-valued synthetic data.
 
-(**Here, our 1000 synthetic data will follow
+Here, our 1000 synthetic data will follow
 the trigonometric `sin` function,
 applied to 0.01 times the time step.
 To make the problem a little more interesting,
-we corrupt each sample with additive noise.**)
+we corrupt each sample with additive noise.
 From this sequence we extract training examples,
 each consisting of features and a label.
 
-```{.python .input  n=10}
+```{.python .input #sequence-training-1  n=10}
 %%tab pytorch
 class Data(d2l.DataModule):
     def __init__(self, batch_size=16, T=1000, num_train=600, tau=4):
@@ -409,7 +409,7 @@ class Data(d2l.DataModule):
         self.x = d2l.sin(0.01 * self.time) + d2l.randn(T) * 0.2
 ```
 
-```{.python .input  n=10}
+```{.python .input #sequence-training-1  n=10}
 %%tab tensorflow
 class Data(d2l.DataModule):
     def __init__(self, batch_size=16, T=1000, num_train=600, tau=4):
@@ -418,7 +418,7 @@ class Data(d2l.DataModule):
         self.x = d2l.sin(0.01 * self.time) + d2l.normal([T]) * 0.2
 ```
 
-```{.python .input  n=10}
+```{.python .input #sequence-training-1  n=10}
 %%tab jax
 class Data(d2l.DataModule):
     def __init__(self, batch_size=16, T=1000, num_train=600, tau=4):
@@ -429,7 +429,7 @@ class Data(d2l.DataModule):
                                                                [T]) * 0.2
 ```
 
-```{.python .input  n=10}
+```{.python .input #sequence-training-1  n=10}
 %%tab mxnet
 class Data(d2l.DataModule):
     def __init__(self, batch_size=16, T=1000, num_train=600, tau=4):
@@ -438,8 +438,7 @@ class Data(d2l.DataModule):
         self.x = d2l.sin(0.01 * self.time) + d2l.randn(T) * 0.2
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #sequence-training-2}
 data = Data()
 d2l.plot(data.time, data.x, 'time', 'x', xlim=[1, 1000], figsize=(6, 3))
 ```
@@ -447,9 +446,9 @@ d2l.plot(data.time, data.x, 'time', 'x', xlim=[1, 1000], figsize=(6, 3))
 To begin, we try a model that acts as if
 the data satisfied a $\tau^{\textrm{th}}$-order Markov condition,
 and thus predicts $x_t$ using only the past $\tau$ observations.
-[**Thus for each time step we have an example
+Thus for each time step we have an example
 with label $y  = x_t$ and features
-$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$.**]
+$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$.
 The astute reader might have noticed that
 this results in $1000-\tau$ examples,
 since we lack sufficient history for $y_1, \ldots, y_\tau$.
@@ -457,11 +456,10 @@ While we could pad the first $\tau$ sequences with zeros,
 to keep things simple, we drop them for now.
 The resulting dataset contains $T - \tau$ examples,
 where each input to the model has sequence length $\tau$.
-We (**create a data iterator on the first 600 examples**),
+We create a data iterator on the first 600 examples,
 covering a period of the sin function.
 
-```{.python .input}
-%%tab all
+```{.python .input #sequence-training-3}
 @d2l.add_to_class(Data)
 def get_dataloader(self, train):
     features = [self.x[i : self.T-self.tau+i] for i in range(self.tau)]
@@ -473,8 +471,7 @@ def get_dataloader(self, train):
 
 In this example our model will be a standard linear regression.
 
-```{.python .input}
-%%tab all
+```{.python .input #sequence-training-4}
 model = d2l.LinearRegression(lr=0.01)
 trainer = d2l.Trainer(max_epochs=5)
 trainer.fit(model, data)
@@ -482,17 +479,17 @@ trainer.fit(model, data)
 
 ## Prediction
 
-[**To evaluate our model, we first check
-how well it performs at one-step-ahead prediction**].
+To evaluate our model, we first check
+how well it performs at one-step-ahead prediction.
 
-```{.python .input}
+```{.python .input #sequence-prediction-1}
 %%tab pytorch, mxnet, tensorflow
 onestep_preds = d2l.numpy(model(data.features))
 d2l.plot(data.time[data.tau:], [data.labels, onestep_preds], 'time', 'x',
          legend=['labels', '1-step preds'], figsize=(6, 3))
 ```
 
-```{.python .input}
+```{.python .input #sequence-prediction-1}
 %%tab jax
 onestep_preds = model.apply({'params': trainer.state.params}, data.features)
 d2l.plot(data.time[data.tau:], [data.labels, onestep_preds], 'time', 'x',
@@ -534,7 +531,7 @@ keep on using our own predictions
 to make multistep-ahead predictions.
 Let's see how well this goes.
 
-```{.python .input}
+```{.python .input #sequence-prediction-2}
 %%tab mxnet, pytorch
 multistep_preds = d2l.zeros(data.T)
 multistep_preds[:] = data.x
@@ -544,7 +541,7 @@ for i in range(data.num_train + data.tau, data.T):
 multistep_preds = d2l.numpy(multistep_preds)
 ```
 
-```{.python .input}
+```{.python .input #sequence-prediction-2}
 %%tab tensorflow
 multistep_preds = tf.Variable(d2l.zeros(data.T))
 multistep_preds[:].assign(data.x)
@@ -553,7 +550,7 @@ for i in range(data.num_train + data.tau, data.T):
         d2l.reshape(multistep_preds[i-data.tau : i], (1, -1))), ()))
 ```
 
-```{.python .input}
+```{.python .input #sequence-prediction-2}
 %%tab jax
 multistep_preds = d2l.zeros(data.T)
 multistep_preds = multistep_preds.at[:].set(data.x)
@@ -563,8 +560,7 @@ for i in range(data.num_train + data.tau, data.T):
     multistep_preds = multistep_preds.at[i].set(pred.item())
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #sequence-prediction-3}
 d2l.plot([data.time[data.tau:], data.time[data.num_train+data.tau:]],
          [onestep_preds, multistep_preds[data.num_train+data.tau:]], 'time',
          'x', legend=['1-step preds', 'multistep preds'], figsize=(6, 3))
@@ -592,10 +588,10 @@ accuracy declines rapidly.
 We will discuss methods for improving this
 throughout this chapter and beyond.
 
-Let's [**take a closer look at the difficulties in $k$-step-ahead predictions**]
+Let's take a closer look at the difficulties in $k$-step-ahead predictions
 by computing predictions on the entire sequence for $k = 1, 4, 16, 64$.
 
-```{.python .input}
+```{.python .input #sequence-prediction-4}
 %%tab pytorch, mxnet, tensorflow
 def k_step_pred(k):
     features = []
@@ -608,7 +604,7 @@ def k_step_pred(k):
     return features[data.tau:]
 ```
 
-```{.python .input}
+```{.python .input #sequence-prediction-4}
 %%tab jax
 def k_step_pred(k):
     features = []
@@ -622,8 +618,7 @@ def k_step_pred(k):
     return features[data.tau:]
 ```
 
-```{.python .input}
-%%tab all
+```{.python .input #sequence-prediction-5}
 steps = (1, 4, 16, 64)
 preds = k_step_pred(steps[-1])
 d2l.plot(data.time[data.tau+steps[-1]-1:],
@@ -686,3 +681,82 @@ often dramatically.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18010)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Sequences are everywhere — text, speech, time-series, video.
+Three concepts set up the rest of the chapter:
+
+- **Autoregressive** — predict $x_t$ given $(x_{t-\tau},
+  \ldots, x_{t-1})$. Reduces sequence modeling to regression.
+- **Markov assumption** — only the last $\tau$ steps matter.
+- **Multi-step prediction** — feeding predictions back as
+  inputs makes errors compound rapidly.
+:::
+
+::: {.slide title="A latent autoregressive model"}
+![](../img/sequence-model.svg){width=70%}
+
+This deck demos on a noisy sine wave: "predict the next
+value" is much easier than "predict the next 64 values."
+:::
+
+::: {.slide title="Generating data"}
+A noisy sine wave, 1000 time steps:
+
+@sequence-working-with-sequences
+
+@sequence-training-1
+
+@sequence-training-2
+:::
+
+::: {.slide title="Autoregressive features"}
+Each example is the next value $x_t$ given the last $\tau$:
+$\mathbf{x}_t = [x_{t-\tau}, \ldots, x_{t-1}]$. Train a linear
+regressor on the first 600 windows:
+
+@sequence-training-3
+
+. . .
+
+@sequence-training-4
+:::
+
+::: {.slide title="One-step prediction"}
+Predict $\hat{x}_t$ from the **true** previous $\tau$ values.
+Looks great:
+
+@sequence-prediction-1
+
+. . .
+
+@sequence-prediction-2
+
+@sequence-prediction-3
+:::
+
+::: {.slide title="Multi-step prediction"}
+But forecasting more than one step requires feeding **predicted**
+values back as inputs — errors compound:
+
+@sequence-prediction-4
+
+. . .
+
+@sequence-prediction-5
+
+The 1- and 4-step curves track the truth; 16- and 64-step
+predictions decay to noise. **Long-horizon forecasting is hard.**
+:::
+
+::: {.slide title="Recap"}
+- Autoregressive: predict $x_t$ given a window of past values.
+- Markov assumption: only the last $\tau$ matter.
+- One-step prediction is easy; **multi-step compounds errors**
+  exponentially.
+- Specialized recurrent / attention architectures (RNN, LSTM,
+  Transformer) are the rest of the chapter's response to this
+  fundamental difficulty.
+:::

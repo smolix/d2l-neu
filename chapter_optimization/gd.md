@@ -31,7 +31,7 @@ to iterate $x$, the value of function $f(x)$ might decline. Therefore, in gradie
 
 For simplicity we choose the objective function $f(x)=x^2$ to illustrate how to implement gradient descent. Although we know that $x=0$ is the solution to minimize $f(x)$, we still use this simple function to observe how $x$ changes.
 
-```{.python .input}
+```{.python .input #gd-one-dimensional-gradient-descent-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -39,7 +39,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #gd-one-dimensional-gradient-descent-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -47,7 +47,7 @@ import numpy as np
 import torch
 ```
 
-```{.python .input}
+```{.python .input #gd-one-dimensional-gradient-descent-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -55,7 +55,7 @@ import numpy as np
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #gd-one-dimensional-gradient-descent-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -64,8 +64,7 @@ from jax import numpy as jnp
 import numpy as np
 ```
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-one-dimensional-gradient-descent-2}
 def f(x):  # Objective function
     return x ** 2
 
@@ -75,8 +74,7 @@ def f_grad(x):  # Gradient (derivative) of the objective function
 
 Next, we use $x=10$ as the initial value and assume $\eta=0.2$. Using gradient descent to iterate $x$ for 10 times we can see that, eventually, the value of $x$ approaches the optimal solution.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-one-dimensional-gradient-descent-3}
 def gd(eta, f_grad):
     x = 10.0
     results = [x]
@@ -91,8 +89,7 @@ results = gd(0.2, f_grad)
 
 The progress of optimizing over $x$ can be plotted as follows.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-one-dimensional-gradient-descent-4}
 def show_trace(results, f):
     n = max(abs(min(results)), abs(max(results)))
     f_line = d2l.arange(-n, n, 0.01)
@@ -108,15 +105,13 @@ show_trace(results, f)
 
 The learning rate $\eta$ can be set by the algorithm designer. If we use a learning rate that is too small, it will cause $x$ to update very slowly, requiring more iterations to get a better solution. To show what happens in such a case, consider the progress in the same optimization problem for $\eta = 0.05$. As we can see, even after 10 steps we are still very far from the optimal solution.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-learning-rate-1}
 show_trace(gd(0.05, f_grad), f)
 ```
 
 Conversely, if we use an excessively high learning rate, $\left|\eta f'(x)\right|$ might be too large for the first-order Taylor expansion formula. That is, the term $\mathcal{O}(\eta^2 f'^2(x))$ in :eqref:`gd-taylor-2` might become significant. In this case, we cannot guarantee that the iteration of $x$ will be able to lower the value of $f(x)$. For example, when we set the learning rate to $\eta=1.1$, $x$ overshoots the optimal solution $x=0$ and gradually diverges.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-learning-rate-2}
 show_trace(gd(1.1, f_grad), f)
 ```
 
@@ -124,8 +119,7 @@ show_trace(gd(1.1, f_grad), f)
 
 To illustrate what happens for nonconvex functions consider the case of $f(x) = x \cdot \cos(cx)$ for some constant $c$. This function has infinitely many local minima. Depending on our choice of the learning rate and depending on how well conditioned the problem is, we may end up with one of many solutions. The example below illustrates how an (unrealistically) high learning rate will lead to a poor local minimum.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-local-minima}
 c = d2l.tensor(0.15 * np.pi)
 
 def f(x):  # Objective function
@@ -156,8 +150,7 @@ To see how the algorithm behaves in practice let's construct an objective functi
 
 To begin with, we need two more helper functions. The first uses an update function and applies it 20 times to the initial value. The second helper visualizes the trajectory of $\mathbf{x}$.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-multivariate-gradient-descent-1}
 def train_2d(trainer, steps=20, f_grad=None):  #@save
     """Optimize a 2D objective function with a customized trainer."""
     # `s1` and `s2` are internal state variables that will be used in Momentum, adagrad, RMSProp
@@ -173,7 +166,7 @@ def train_2d(trainer, steps=20, f_grad=None):  #@save
     return results
 ```
 
-```{.python .input}
+```{.python .input #gd-multivariate-gradient-descent-2}
 #@tab mxnet
 def show_trace_2d(f, results):  #@save
     """Show the trace of 2D variables during optimization."""
@@ -187,7 +180,7 @@ def show_trace_2d(f, results):  #@save
     d2l.plt.ylabel('x2')
 ```
 
-```{.python .input}
+```{.python .input #gd-multivariate-gradient-descent-2}
 #@tab tensorflow
 def show_trace_2d(f, results):  #@save
     """Show the trace of 2D variables during optimization."""
@@ -200,7 +193,7 @@ def show_trace_2d(f, results):  #@save
     d2l.plt.ylabel('x2')
 ```
 
-```{.python .input}
+```{.python .input #gd-multivariate-gradient-descent-2}
 #@tab pytorch
 def show_trace_2d(f, results):  #@save
     """Show the trace of 2D variables during optimization."""
@@ -213,7 +206,7 @@ def show_trace_2d(f, results):  #@save
     d2l.plt.ylabel('x2')
 ```
 
-```{.python .input}
+```{.python .input #gd-multivariate-gradient-descent-2}
 #@tab jax
 def show_trace_2d(f, results):  #@save
     """Show the trace of 2D variables during optimization."""
@@ -228,8 +221,7 @@ def show_trace_2d(f, results):  #@save
 
 Next, we observe the trajectory of the optimization variable $\mathbf{x}$ for learning rate $\eta = 0.1$. We can see that after 20 steps the value of $\mathbf{x}$ approaches its minimum at $[0, 0]$. Progress is fairly well-behaved albeit rather slow.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-multivariate-gradient-descent-3}
 def f_2d(x1, x2):  # Objective function
     return x1 ** 2 + 2 * x2 ** 2
 
@@ -276,8 +268,7 @@ Given a convex hyperbolic cosine function $f(x) = \cosh(cx)$ for some constant $
 the global minimum at $x=0$ is reached
 after a few iterations.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-newton-s-method-1}
 c = d2l.tensor(0.5)
 
 def f(x):  # Objective function
@@ -305,8 +296,7 @@ Now let's consider a *nonconvex* function, such as $f(x) = x \cos(c x)$ for some
 That is a fatal flaw of the algorithm.
 Let's see what happens in practice.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-newton-s-method-2}
 c = d2l.tensor(0.15 * np.pi)
 
 def f(x):  # Objective function
@@ -324,8 +314,7 @@ show_trace(newton(), f)
 This went spectacularly wrong. How can we fix it? One way would be to "fix" the Hessian by taking its absolute value instead. Another strategy is to bring back the learning rate. This seems to defeat the purpose, but not quite. Having second-order information allows us to be cautious whenever the curvature is large and to take longer steps whenever the objective function is flatter.
 Let's see how this works with a slightly smaller learning rate, say $\eta = 0.5$. As we can see, we have quite an efficient algorithm.
 
-```{.python .input}
-#@tab all
+```{.python .input #gd-newton-s-method-3}
 show_trace(newton(0.5), f)
 ```
 
@@ -399,3 +388,117 @@ This algorithm converges rapidly (for an analysis and proof see e.g., :citet:`Bo
 1. Apply the algorithm above to a number of objective functions (convex or not). What happens if you rotate coordinates by $45$ degrees?
 
 [Discussions](https://discuss.d2l.ai/t/351)
+
+<!-- slides -->
+
+::: {.slide}
+Plain gradient descent isn't what trains deep nets — SGD
+and its descendants do — but every issue those methods
+hit shows up here first, in cleaner form: LR sensitivity,
+divergence, local minima, poor conditioning, second-order
+corrections.
+
+The rule:
+
+$$x \leftarrow x - \eta \nabla f(x).$$
+
+A first-order Taylor expansion shows that for small enough
+$\eta$, this decreases $f$ locally. The art is picking
+$\eta$.
+:::
+
+::: {.slide title="1D demo: $f(x) = x^2$"}
+Setup and define $f$, $f'$:
+
+@gd-one-dimensional-gradient-descent-1
+
+. . .
+
+@gd-one-dimensional-gradient-descent-2
+:::
+
+::: {.slide title="GD iteration"}
+Start at $x = 10$, $\eta = 0.2$, 10 steps. Converges to 0:
+
+@gd-one-dimensional-gradient-descent-3
+
+. . .
+
+@gd-one-dimensional-gradient-descent-4
+:::
+
+::: {.slide title="Learning rate too small"}
+$\eta = 0.05$: takes forever to converge:
+
+@gd-learning-rate-1
+:::
+
+::: {.slide title="Learning rate too big"}
+$\eta = 1.1$: the $\mathcal{O}(\eta^2 f'^2)$ Taylor remainder
+dominates and the iterates diverge:
+
+@gd-learning-rate-2
+:::
+
+::: {.slide title="Non-convex: trapped in a local min"}
+$f(x) = x \cos(cx)$ has infinitely many local minima. Even
+with a moderately large learning rate, GD ends up in
+whichever basin it falls into:
+
+@gd-local-minima
+:::
+
+::: {.slide title="Multivariate GD"}
+Same rule on vectors:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
+
+Demo on $f(x_1, x_2) = x_1^2 + 2 x_2^2$ — anisotropic,
+$x_2$ direction is steeper.
+
+@gd-multivariate-gradient-descent-1
+
+. . .
+
+@gd-multivariate-gradient-descent-2
+:::
+
+::: {.slide title="Run it"}
+@gd-multivariate-gradient-descent-3
+:::
+
+::: {.slide title="Newton's method: second-order"}
+Use the Hessian to set the step size automatically. From
+the second-order Taylor expansion:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f(\mathbf{x})]^{-1} \nabla f(\mathbf{x}).$$
+
+For $f(x) = (\cosh(cx))^2$, one Newton step finds the
+minimum:
+
+@gd-newton-s-method-1
+:::
+
+::: {.slide title="Newton fails on non-convex"}
+$f(x) = x \cos(cx)$: Newton happily steps to a *maximum* if
+that's where the second-order model points. Without
+positive-definite Hessian (i.e. local convexity), Newton
+breaks:
+
+@gd-newton-s-method-2
+
+. . .
+
+@gd-newton-s-method-3
+:::
+
+::: {.slide title="Recap"}
+- GD update: $x \leftarrow x - \eta \nabla f(x)$.
+- Learning rate too small → slow; too large → diverge.
+- Local minima trap plain GD on non-convex objectives.
+- Newton uses the Hessian as a preconditioner — fast on
+  well-conditioned convex problems, unsafe elsewhere.
+- For deep learning, the Hessian is too big to invert; we
+  build cheap *adaptive* preconditioners instead — Adagrad,
+  RMSProp, Adam, all coming up.
+:::

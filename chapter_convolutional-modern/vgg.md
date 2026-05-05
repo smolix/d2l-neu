@@ -31,7 +31,7 @@ in their eponymously-named *VGG* network :cite:`Simonyan.Zisserman.2014`.
 It is easy to implement these repeated structures in code
 with any modern deep learning framework by using loops and subroutines.
 
-```{.python .input}
+```{.python .input #vgg-networks-using-blocks-vgg}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx, init
@@ -39,27 +39,27 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #vgg-networks-using-blocks-vgg}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #vgg-networks-using-blocks-vgg}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #vgg-networks-using-blocks-vgg}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
 import jax
 ```
 
-## (**VGG Blocks**)
+## VGG Blocks
 :label:`subsec_vgg-blocks`
 
 The basic building block of CNNs
@@ -93,7 +93,7 @@ The function below takes two arguments,
 corresponding to the number of convolutional layers `num_convs`
 and the number of output channels `num_channels`.
 
-```{.python .input  n=2}
+```{.python .input #vgg-vgg-blocks  n=2}
 %%tab mxnet
 def vgg_block(num_convs, num_channels):
     blk = nn.Sequential()
@@ -104,7 +104,7 @@ def vgg_block(num_convs, num_channels):
     return blk
 ```
 
-```{.python .input  n=3}
+```{.python .input #vgg-vgg-blocks  n=3}
 %%tab pytorch
 def vgg_block(num_convs, out_channels):
     layers = []
@@ -115,7 +115,7 @@ def vgg_block(num_convs, out_channels):
     return nn.Sequential(*layers)
 ```
 
-```{.python .input  n=4}
+```{.python .input #vgg-vgg-blocks  n=4}
 %%tab tensorflow
 def vgg_block(num_convs, num_channels):
     blk = tf.keras.models.Sequential()
@@ -127,7 +127,7 @@ def vgg_block(num_convs, num_channels):
     return blk
 ```
 
-```{.python .input}
+```{.python .input #vgg-vgg-blocks}
 %%tab jax
 def vgg_block(num_convs, out_channels):
     layers = []
@@ -138,7 +138,7 @@ def vgg_block(num_convs, out_channels):
     return nn.Sequential(layers)
 ```
 
-## [**VGG Network**]
+## VGG Network
 :label:`subsec_vgg-network`
 
 Like AlexNet and LeNet, 
@@ -165,7 +165,7 @@ which are precisely the arguments required to call
 the `vgg_block` function. As such, VGG defines a *family* of networks rather than just 
 a specific manifestation. To build a specific network we simply iterate over `arch` to compose the blocks.
 
-```{.python .input  n=5}
+```{.python .input #vgg-vgg-network-1  n=5}
 %%tab pytorch
 class VGG(d2l.Classifier):
     def __init__(self, arch, lr=0.1, num_classes=10):
@@ -182,7 +182,7 @@ class VGG(d2l.Classifier):
         self.net.apply(d2l.init_cnn)
 ```
 
-```{.python .input  n=5}
+```{.python .input #vgg-vgg-network-1  n=5}
 %%tab mxnet
 class VGG(d2l.Classifier):
     def __init__(self, arch, lr=0.1, num_classes=10):
@@ -197,7 +197,7 @@ class VGG(d2l.Classifier):
         self.net.initialize(init.Xavier())
 ```
 
-```{.python .input  n=5}
+```{.python .input #vgg-vgg-network-1  n=5}
 %%tab tensorflow
 class VGG(d2l.Classifier):
     def __init__(self, arch, lr=0.1, num_classes=10):
@@ -216,7 +216,7 @@ class VGG(d2l.Classifier):
             tf.keras.layers.Dense(num_classes)]))
 ```
 
-```{.python .input  n=5}
+```{.python .input #vgg-vgg-network-1  n=5}
 %%tab jax
 class VGG(d2l.Classifier):
     arch: list
@@ -248,19 +248,19 @@ until that number reaches 512.
 Since this network uses eight convolutional layers
 and three fully connected layers, it is often called VGG-11.
 
-```{.python .input  n=6}
+```{.python .input #vgg-vgg-network-2  n=6}
 %%tab pytorch, mxnet
 VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))).layer_summary(
     (1, 1, 224, 224))
 ```
 
-```{.python .input  n=7}
+```{.python .input #vgg-vgg-network-2  n=7}
 %%tab tensorflow
 VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))).layer_summary(
     (1, 224, 224, 1))
 ```
 
-```{.python .input}
+```{.python .input #vgg-vgg-network-2}
 %%tab jax
 VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512)),
     training=False).layer_summary((1, 224, 224, 1))
@@ -276,14 +276,14 @@ different speed--accuracy trade-off when introducing a new architecture.
 
 ## Training
 
-[**Since VGG-11 is computationally more demanding than AlexNet
-we construct a network with a smaller number of channels.**]
+Since VGG-11 is computationally more demanding than AlexNet
+we construct a network with a smaller number of channels.
 This is more than sufficient for training on Fashion-MNIST.
-The [**model training**] process is similar to that of AlexNet in :numref:`sec_alexnet`. 
+The model training process is similar to that of AlexNet in :numref:`sec_alexnet`. 
 Again observe the close match between validation and training loss, 
 suggesting only a small amount of overfitting.
 
-```{.python .input  n=8}
+```{.python .input #vgg-training  n=8}
 %%tab mxnet
 model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -291,7 +291,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 trainer.fit(model, data)
 ```
 
-```{.python .input  n=8}
+```{.python .input #vgg-training  n=8}
 %%tab pytorch
 model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -300,7 +300,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input  n=8}
+```{.python .input #vgg-training  n=8}
 %%tab jax
 model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -308,7 +308,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 trainer.fit(model, data)
 ```
 
-```{.python .input  n=9}
+```{.python .input #vgg-training  n=9}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
@@ -349,3 +349,70 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18002)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**VGG** (Simonyan & Zisserman, 2014) is AlexNet taken
+seriously: stack more layers, but make them **regular**.
+
+The contribution wasn't a clever architecture — it was a
+**design principle**: regular blocks of `3×3 conv + ReLU`,
+ending in a `2×2 max-pool`. Whole network = a sequence of
+such blocks at growing channel counts.
+
+![From AlexNet's hand-tuned layers to VGG's repeated 3×3 blocks.](../img/vgg.svg){width=72%}
+:::
+
+::: {.slide title="Why 3×3 convs only"}
+- Two stacked 3×3 convs cover the same receptive field as
+  one 5×5 — fewer parameters, one extra nonlinearity.
+- All convs are stride 1 — easier to reason about,
+  surprisingly competitive with hand-designed kernels.
+- The architecture becomes a tuple of `(n_convs, channels)`
+  pairs; pass a different tuple for VGG-13/16/19.
+:::
+
+::: {.slide title="The VGG block"}
+A reusable subunit: `n_convs` consecutive `Conv-ReLU` pairs at
+`out_channels`, followed by a `2×2 MaxPool`:
+
+@vgg-networks-using-blocks-vgg
+
+@vgg-vgg-blocks
+:::
+
+::: {.slide title="The VGG network"}
+A whole VGG-11 (the smallest variant) is just five blocks at
+growing channel counts (`64, 128, 256, 512, 512`) plus a 3-layer
+dense head:
+
+@vgg-vgg-network-1
+
+. . .
+
+@vgg-vgg-network-2
+
+The "named architecture" is just a tuple of `(n_convs, channels)`
+pairs — passing a different tuple gives you VGG-13/16/19.
+:::
+
+::: {.slide title="Training (a thin VGG)"}
+Full VGG-11 is heavy for a notebook. Train a thinned version
+(channels 16/32/64/128/128) on Fashion-MNIST as a smoke test:
+
+@vgg-training
+
+Validates the **block-at-scale** design principle without
+melting your GPU.
+:::
+
+::: {.slide title="Recap"}
+- VGG = "stack identical, regular blocks." A block is $n$ × 3×3
+  conv + ReLU + maxpool.
+- Two 3×3 convs ≈ one 5×5 receptive field, with fewer params and
+  more nonlinearity.
+- The architecture-as-a-tuple-of-blocks pattern (`((1, 64), (1,
+  128), (2, 256), …)`) is everywhere — VGG, ResNet, EfficientNet,
+  ConvNeXt all use it.
+:::

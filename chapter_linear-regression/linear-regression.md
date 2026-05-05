@@ -30,7 +30,7 @@ The variables (age and area)
 upon which the predictions are based
 are called *features* (or *covariates*).
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -39,7 +39,7 @@ from mxnet import np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -49,7 +49,7 @@ import numpy as np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -59,7 +59,7 @@ import numpy as np
 import time
 ```
 
-```{.python .input}
+```{.python .input #linear-regression}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -421,30 +421,29 @@ In the following we will stick to *prediction* whenever possible.
 
 When training our models, we typically want to process
 whole minibatches of examples simultaneously.
-Doing this efficiently requires that (**we**) (~~should~~)
-(**vectorize the calculations and leverage
+Doing this efficiently requires that we 
+vectorize the calculations and leverage
 fast linear algebra libraries
-rather than writing costly for-loops in Python.**)
+rather than writing costly for-loops in Python.
 
 To see why this matters so much,
-let's (**consider two methods for adding vectors.**)
+let's consider two methods for adding vectors.
 To start, we instantiate two 10,000-dimensional vectors
 containing all 1s.
 In the first method, we loop over the vectors with a Python for-loop.
 In the second, we rely on a single call to `+`.
 
-```{.python .input}
-%%tab all
+```{.python .input #linear-regression-vectorization-for-speed-1}
 n = 10000
 a = d2l.ones(n)
 b = d2l.ones(n)
 ```
 
 Now we can benchmark the workloads.
-First, [**we add them, one coordinate at a time,
-using a for-loop.**]
+First, we add them, one coordinate at a time,
+using a for-loop.
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab mxnet, pytorch
 c = d2l.zeros(n)
 t = time.time()
@@ -453,7 +452,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab tensorflow
 c = tf.Variable(d2l.zeros(n))
 t = time.time()
@@ -462,7 +461,7 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-vectorization-for-speed-2}
 %%tab jax
 # JAX arrays are immutable, meaning that once created their contents
 # cannot be changed. For updating individual elements, JAX provides
@@ -474,10 +473,9 @@ for i in range(n):
 f'{time.time() - t:.5f} sec'
 ```
 
-(**Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.**)
+Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.
 
-```{.python .input}
-%%tab all
+```{.python .input #linear-regression-vectorization-for-speed-3}
 t = time.time()
 d = a + b
 f'{time.time() - t:.5f} sec'
@@ -518,39 +516,39 @@ is given as
 
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (x - \mu)^2\right).$$
 
-Below [**we define a function to compute the normal distribution**].
+Below we define a function to compute the normal distribution.
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab pytorch
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab tensorflow
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab jax
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * jnp.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab mxnet
 def normal(x, mu, sigma):
     p = 1 / math.sqrt(2 * math.pi * sigma**2)
     return p * np.exp(-0.5 * (x - mu)**2 / sigma**2)
 ```
 
-We can now (**visualize the normal distributions**).
+We can now visualize the normal distributions.
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab mxnet
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -562,7 +560,7 @@ d2l.plot(x.asnumpy(), [normal(x, mu, sigma).asnumpy() for mu, sigma in params], 
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab pytorch
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -574,7 +572,7 @@ d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab tensorflow
 # Use NumPy again for visualization
 x = np.arange(-7, 7, 0.01)
@@ -586,7 +584,7 @@ d2l.plot(x, [normal(x, mu, sigma) for mu, sigma in params], xlabel='x',
          legend=[f'mean {mu}, std {sigma}' for mu, sigma in params])
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-2}
 %%tab jax
 # Use NumPy again for visualization
 x = jnp.arange(-7, 7, 0.01)
@@ -798,3 +796,114 @@ and ultimately, evaluation on previously unseen data.
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/259)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The simplest predictive model: a **linear function** of the inputs
+plus a bias.
+
+$$\hat{y} = \mathbf{w}^\top \mathbf{x} + b.$$
+
+- Fit `w` and `b` to minimize **squared error** on training data.
+- Has a **closed-form solution** for problems where it scales,
+  but the *iterative* recipe (gradient descent on minibatches)
+  generalizes to everything that follows.
+- Connects neatly to the **Gaussian noise model** —
+  squared loss = negative log-likelihood under
+  $\mathcal{N}(0, \sigma^2)$.
+
+@!linear-regression-the-normal-distribution-and-squared-loss-2
+:::
+
+::: {.slide title="The model and the loss"}
+For one example $\mathbf{x}^{(i)} \in \mathbb{R}^d$ and target
+$y^{(i)} \in \mathbb{R}$, the model predicts
+
+$$\hat{y}^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b.$$
+
+Squared loss on the training set of $n$ examples:
+
+$$L(\mathbf{w}, b)
+  = \frac{1}{n} \sum_{i=1}^{n}
+    \tfrac{1}{2}\left(\hat{y}^{(i)} - y^{(i)}\right)^2.$$
+
+Convex in $(\mathbf{w}, b)$ — every local minimum is global.
+:::
+
+::: {.slide title="Two ways to fit"}
+**Closed form** (when it fits in memory):
+
+$$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
+
+Doesn't generalize beyond linear models.
+
+. . .
+
+**Minibatch SGD** (the recipe we'll keep using):
+
+$$\mathbf{w} \leftarrow \mathbf{w} -
+  \frac{\eta}{|\mathcal{B}|}
+    \sum_{i \in \mathcal{B}} \nabla_\mathbf{w}\,\ell^{(i)}(\mathbf{w}, b).$$
+
+- Sample minibatch $\mathcal{B}$.
+- Compute gradient of the average loss on it.
+- Step in the negative-gradient direction.
+:::
+
+::: {.slide title="Vectorization for speed"}
+Same operation, two implementations. Set up two 10 000-element
+vectors:
+
+@linear-regression
+
+@linear-regression-vectorization-for-speed-1
+:::
+
+::: {.slide title="Loop vs. vectorized add"}
+Adding element-by-element in a Python loop:
+
+@linear-regression-vectorization-for-speed-2
+
+. . .
+
+The same answer in one library call:
+
+@linear-regression-vectorization-for-speed-3
+
+Roughly **3 orders of magnitude faster** on this size — Python's
+interpreter overhead is the killer; the C kernel barely breaks a
+sweat.
+:::
+
+::: {.slide title="Why squared loss?"}
+Assume each label is the linear prediction plus Gaussian noise:
+
+$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
+  \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
+
+Then minimizing **squared error** is exactly maximizing the
+**Gaussian log-likelihood** of the observed labels.
+
+@linear-regression-the-normal-distribution-and-squared-loss-1
+:::
+
+::: {.slide title="Visualizing the connection"}
+Plot a few normal densities — different means and variances:
+
+@linear-regression-the-normal-distribution-and-squared-loss-2
+
+Squared loss assumes the **errors** look like one of these bells
+centered at the model's prediction.
+:::
+
+::: {.slide title="Recap"}
+- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
+- **Loss:** mean squared error — convex, single global optimum.
+- **Optimizer:** minibatch SGD steps in the gradient direction;
+  closed form exists but doesn't generalize.
+- **Vectorize** every inner loop — orders of magnitude faster
+  than Python iteration.
+- Squared loss is the **MLE** under Gaussian noise — sets the
+  template for matching loss functions to noise models.
+:::

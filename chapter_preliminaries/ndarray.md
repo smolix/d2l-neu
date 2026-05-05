@@ -52,8 +52,8 @@ by other components of MXNet.
 :end_tab:
 
 :begin_tab:`pytorch`
-(**To start, we import the PyTorch library.
-Note that the package name is `torch`.**)
+To start, we import the PyTorch library.
+Note that the package name is `torch`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -62,29 +62,29 @@ For brevity, practitioners
 often assign the alias `tf`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab mxnet
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab pytorch
 import torch
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-1}
 %%tab jax
 import jax
 from jax import numpy as jnp
 ```
 
-[**A tensor represents a (possibly multidimensional) array of numerical values.**]
+A tensor represents a (possibly multidimensional) array of numerical values.
 In the one-dimensional case, i.e., when only one axis is needed for the data,
 a tensor is called a *vector*.
 With two axes, a tensor is called a *matrix*.
@@ -133,25 +133,25 @@ new tensors are stored in main memory
 and designated for CPU-based computation.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab mxnet
 x = np.arange(12)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab pytorch
 x = torch.arange(12, dtype=torch.float32)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab tensorflow
 x = tf.range(12, dtype=tf.float32)
 x
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-2}
 %%tab jax
 x = jnp.arange(12)
 x
@@ -181,35 +181,34 @@ We can inspect the total number of elements
 in a tensor via the `size` function.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab mxnet, jax
 x.size
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab pytorch
 x.numel()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-3}
 %%tab tensorflow
 tf.size(x)
 ```
 
-(**We can access a tensor's *shape***) 
+We can access a tensor's *shape* 
 (the length along each axis)
 by inspecting its `shape` attribute.
 Because we are dealing with a vector here,
 the `shape` contains just a single element
 and is identical to the size.
 
-```{.python .input}
-%%tab all
+```{.python .input #ndarray-getting-started-4}
 x.shape
 ```
 
-We can [**change the shape of a tensor
-without altering its size or values**],
+We can change the shape of a tensor
+without altering its size or values,
 by invoking `reshape`.
 For example, we can transform 
 our vector `x` whose shape is (12,) 
@@ -220,13 +219,13 @@ Notice that the elements of our vector
 are laid out one row at a time and thus
 `x[3] == X[0, 3]`.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-5}
 %%tab mxnet, pytorch, jax
 X = x.reshape(3, 4)
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-5}
 %%tab tensorflow
 X = tf.reshape(x, (3, 4))
 X
@@ -247,25 +246,25 @@ we could have equivalently called `x.reshape(-1, 4)` or `x.reshape(3, -1)`.
 
 Practitioners often need to work with tensors
 initialized to contain all 0s or 1s.
-[**We can construct a tensor with all elements set to 0**] (~~or one~~)
+We can construct a tensor with all elements set to 0 
 and a shape of (2, 3, 4) via the `zeros` function.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab mxnet
 np.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab pytorch
 torch.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab tensorflow
 tf.zeros((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-6}
 %%tab jax
 jnp.zeros((2, 3, 4))
 ```
@@ -273,28 +272,28 @@ jnp.zeros((2, 3, 4))
 Similarly, we can create a tensor 
 with all 1s by invoking `ones`.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab mxnet
 np.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab pytorch
 torch.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab tensorflow
 tf.ones((2, 3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-7}
 %%tab jax
 jnp.ones((2, 3, 4))
 ```
 
 We often wish to 
-[**sample each element randomly (and independently)**] 
+sample each element randomly (and independently) 
 from a given probability distribution.
 For example, the parameters of neural networks
 are often initialized randomly.
@@ -303,22 +302,22 @@ with elements drawn from
 a standard Gaussian (normal) distribution
 with mean 0 and standard deviation 1.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab mxnet
 np.random.normal(0, 1, size=(3, 4))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab pytorch
 torch.randn(3, 4)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab tensorflow
 tf.random.normal(shape=[3, 4])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-8}
 %%tab jax
 # Any call of a random function in JAX requires a key to be
 # specified, feeding the same key to a random function will
@@ -327,29 +326,29 @@ jax.random.normal(jax.random.PRNGKey(0), (3, 4))
 ```
 
 Finally, we can construct tensors by
-[**supplying the exact values for each element**]
+supplying the exact values for each element
 via (possibly nested) Python list(s)
 containing numerical literals.
 Here, we construct a matrix with a list of lists,
 where the outermost list corresponds to axis 0,
 and the inner list corresponds to axis 1.
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab mxnet
 np.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab pytorch
 torch.tensor([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab tensorflow
 tf.constant([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-```{.python .input}
+```{.python .input #ndarray-getting-started-9}
 %%tab jax
 jnp.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
@@ -370,16 +369,15 @@ Finally, when only one index (or slice)
 is specified for a $k^\textrm{th}$-order tensor,
 it is applied along axis 0.
 Thus, in the following code,
-[**`[-1]` selects the last row and `[1:3]`
-selects the second and third rows**].
+`[-1]` selects the last row and `[1:3]`
+selects the second and third rows.
 
-```{.python .input}
-%%tab all
+```{.python .input #ndarray-indexing-and-slicing-1}
 X[-1], X[1:3]
 ```
 
 :begin_tab:`mxnet, pytorch`
-Beyond reading them, (**we can also *write* elements of a matrix by specifying indices.**)
+Beyond reading them, we can also *write* elements of a matrix by specifying indices.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -392,20 +390,20 @@ Beyond assigning a value to the entire `Variable`, we can write elements of a
 `Variable` by specifying indices.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab mxnet, pytorch
 X[1, 2] = 17
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab tensorflow
 X_var = tf.Variable(X)
 X_var[1, 2].assign(9)
 X_var
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab jax
 # JAX arrays are immutable. jax.numpy.ndarray.at index
 # update operators create a new array with the corresponding
@@ -414,9 +412,9 @@ X_new_1 = X.at[1, 2].set(17)
 X_new_1
 ```
 
-If we want [**to assign multiple elements the same value,
+If we want to assign multiple elements the same value,
 we apply the indexing on the left-hand side 
-of the assignment operation.**]
+of the assignment operation.
 For instance, `[:2, :]` accesses 
 the first and second rows,
 where `:` takes all the elements along axis 1 (column).
@@ -424,20 +422,20 @@ While we discussed indexing for matrices,
 this also works for vectors
 and for tensors of more than two dimensions.
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab mxnet, pytorch
 X[:2, :] = 12
 X
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab tensorflow
 X_var = tf.Variable(X)
 X_var[:2, :].assign(tf.ones(X_var[:2,:].shape, dtype=tf.float32) * 12)
 X_var
 ```
 
-```{.python .input}
+```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab jax
 X_new_2 = X_new_1.at[:2, :].set(12)
 X_new_2
@@ -468,22 +466,22 @@ This just means that the function maps
 from any real number onto some other real number.
 Most standard operators, including unary ones like $e^x$, can be applied elementwise.
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab mxnet
 np.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab pytorch
 torch.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab tensorflow
 tf.exp(x)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-1}
 %%tab jax
 jnp.exp(x)
 ```
@@ -511,28 +509,28 @@ and exponentiation (`**`)
 have all been *lifted* to elementwise operations
 for identically-shaped tensors of arbitrary shape.
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab mxnet
 x = np.array([1, 2, 4, 8])
 y = np.array([2, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab pytorch
 x = torch.tensor([1.0, 2, 4, 8])
 y = torch.tensor([2, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab tensorflow
 x = tf.constant([1.0, 2, 4, 8])
 y = tf.constant([2.0, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-2}
 %%tab jax
 x = jnp.array([1.0, 2, 4, 8])
 y = jnp.array([2, 2, 2, 2])
@@ -545,7 +543,7 @@ such as dot products and matrix multiplications.
 We will elaborate on these
 in :numref:`sec_linear-algebra`.
 
-We can also [***concatenate* multiple tensors,**]
+We can also *concatenate* multiple tensors,
 stacking them end-to-end to form a larger one.
 We just need to provide a list of tensors
 and tell the system along which axis to concatenate.
@@ -557,28 +555,28 @@ is the sum of the two input tensors' axis-0 lengths ($3 + 3$);
 while the second output's axis-1 length ($8$)
 is the sum of the two input tensors' axis-1 lengths ($4 + 4$).
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab mxnet
 X = np.arange(12).reshape(3, 4)
 Y = np.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 np.concatenate([X, Y], axis=0), np.concatenate([X, Y], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab pytorch
 X = torch.arange(12, dtype=torch.float32).reshape((3,4))
 Y = torch.tensor([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 torch.cat((X, Y), dim=0), torch.cat((X, Y), dim=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab tensorflow
 X = tf.reshape(tf.range(12, dtype=tf.float32), (3, 4))
 Y = tf.constant([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 tf.concat([X, Y], axis=0), tf.concat([X, Y], axis=1)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-3}
 %%tab jax
 X = jnp.arange(12, dtype=jnp.float32).reshape((3, 4))
 Y = jnp.array([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
@@ -586,25 +584,24 @@ jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
 ```
 
 Sometimes, we want to 
-[**construct a binary tensor via *logical statements*.**]
+construct a binary tensor via *logical statements*.
 Take `X == Y` as an example.
 For each position `i, j`, if `X[i, j]` and `Y[i, j]` are equal, 
 then the corresponding entry in the result takes value `1`,
 otherwise it takes value `0`.
 
-```{.python .input}
-%%tab all
+```{.python .input #ndarray-operations-4}
 X == Y
 ```
 
-[**Summing all the elements in the tensor**] yields a tensor with only one element.
+Summing all the elements in the tensor yields a tensor with only one element.
 
-```{.python .input}
+```{.python .input #ndarray-operations-5}
 %%tab mxnet, pytorch, jax
 X.sum()
 ```
 
-```{.python .input}
+```{.python .input #ndarray-operations-5}
 %%tab tensorflow
 tf.reduce_sum(X)
 ```
@@ -617,8 +614,8 @@ elementwise binary operations
 on two tensors of the same shape. 
 Under certain conditions,
 even when shapes differ, 
-we can still [**perform elementwise binary operations
-by invoking the *broadcasting mechanism*.**]
+we can still perform elementwise binary operations
+by invoking the *broadcasting mechanism*.
 Broadcasting works according to 
 the following two-step procedure:
 (i) expand one or both arrays
@@ -628,28 +625,28 @@ the two tensors have the same shape;
 (ii) perform an elementwise operation
 on the resulting arrays.
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab mxnet
 a = np.arange(3).reshape(3, 1)
 b = np.arange(2).reshape(1, 2)
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab pytorch
 a = torch.arange(3).reshape((3, 1))
 b = torch.arange(2).reshape((1, 2))
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab tensorflow
 a = tf.reshape(tf.range(3), (3, 1))
 b = tf.reshape(tf.range(2), (1, 2))
 a, b
 ```
 
-```{.python .input}
+```{.python .input #ndarray-broadcasting-1}
 %%tab jax
 a = jnp.arange(3).reshape((3, 1))
 b = jnp.arange(2).reshape((1, 2))
@@ -664,15 +661,14 @@ by replicating matrix `a` along the columns
 and matrix `b` along the rows
 before adding them elementwise.
 
-```{.python .input}
-%%tab all
+```{.python .input #ndarray-broadcasting-2}
 a + b
 ```
 
 ## Saving Memory
 
-[**Running operations can cause new memory to be
-allocated to host results.**]
+Running operations can cause new memory to be
+allocated to host results.
 For example, if we write `Y = X + Y`,
 we dereference the tensor that `Y` used to point to
 and instead point `Y` at the newly allocated memory.
@@ -685,8 +681,7 @@ That is because Python first evaluates `Y + X`,
 allocating new memory for the result 
 and then points `Y` to this new location in memory.
 
-```{.python .input}
-%%tab all
+```{.python .input #ndarray-saving-memory-1}
 before = id(Y)
 Y = Y + X
 id(Y) == before
@@ -707,7 +702,7 @@ lest we spring a memory leak
 or inadvertently refer to stale parameters.
 
 :begin_tab:`mxnet, pytorch`
-Fortunately, (**performing in-place operations**) is easy.
+Fortunately, performing in-place operations is easy.
 We can assign the result of an operation
 to a previously allocated array `Y`
 by using slice notation: `Y[:] = <expression>`.
@@ -728,7 +723,7 @@ after initializing it, using `zeros_like`,
 to have the same shape as `Y`.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab mxnet
 Z = np.zeros_like(Y)
 print('id(Z):', id(Z))
@@ -736,7 +731,7 @@ Z[:] = X + Y
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab pytorch
 Z = torch.zeros_like(Y)
 print('id(Z):', id(Z))
@@ -744,7 +739,7 @@ Z[:] = X + Y
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab tensorflow
 Z = tf.Variable(tf.zeros_like(Y))
 print('id(Z):', id(Z))
@@ -752,15 +747,15 @@ Z.assign(X + Y)
 print('id(Z):', id(Z))
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-2}
 %%tab jax
 # JAX arrays do not allow in-place operations
 ```
 
 :begin_tab:`mxnet, pytorch`
-[**If the value of `X` is not reused in subsequent computations,
+If the value of `X` is not reused in subsequent computations,
 we can also use `X[:] = X + Y` or `X += Y`
-to reduce the memory overhead of the operation.**]
+to reduce the memory overhead of the operation.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -780,14 +775,14 @@ and to reuse prior allocations that are no longer needed.
 This minimizes the memory overhead of TensorFlow computations.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-3}
 %%tab mxnet, pytorch
 before = id(X)
 X += Y
 id(X) == before
 ```
 
-```{.python .input}
+```{.python .input #ndarray-saving-memory-3}
 %%tab tensorflow
 @tf.function
 def computation(X, Y):
@@ -803,7 +798,7 @@ computation(X, Y)
 ## Conversion to Other Python Objects
 
 :begin_tab:`mxnet, tensorflow`
-[**Converting to a NumPy tensor (`ndarray`)**], or vice versa, is easy.
+Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The converted result does not share memory.
 This minor inconvenience is actually quite important:
 when you perform operations on the CPU or on GPUs,
@@ -814,63 +809,63 @@ with the same chunk of memory.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**Converting to a NumPy tensor (`ndarray`)**], or vice versa, is easy.
+Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The torch tensor and NumPy array 
 will share their underlying memory, 
 and changing one through an in-place operation 
 will also change the other.
 :end_tab:
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab mxnet
 A = X.asnumpy()
 B = np.array(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab pytorch
 A = X.numpy()
 B = torch.from_numpy(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab tensorflow
 A = X.numpy()
 B = tf.constant(A)
 type(A), type(B)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-1}
 %%tab jax
 A = jax.device_get(X)
 B = jax.device_put(A)
 type(A), type(B)
 ```
 
-To (**convert a size-1 tensor to a Python scalar**),
+To convert a size-1 tensor to a Python scalar,
 we can invoke the `item` function or Python's built-in functions.
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab mxnet
 a = np.array([3.5])
 a, a.item(), float(a), int(a)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab pytorch
 a = torch.tensor([3.5])
 a, a.item(), float(a), int(a)
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab tensorflow
 a = tf.constant([3.5]).numpy()
 a, a.item(), float(a.item()), int(a.item())
 ```
 
-```{.python .input}
+```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab jax
 a = jnp.array(3.5)
 a, a.item(), float(a), int(a)
@@ -902,3 +897,195 @@ Tensors provide a variety of functionalities including construction routines; in
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17966)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A **tensor** is an *n*-dimensional array of numbers — the
+fundamental data structure for everything that follows in this book.
+
+- Like a NumPy `ndarray`, but **GPU-accelerated** and
+  **differentiable**.
+- 1-D tensor → vector, 2-D → matrix, *n*-D → general tensor.
+- All four frameworks expose nearly identical tensor APIs.
+
+In this section: how to **create**, **reshape**, **index**,
+**operate on**, and **share memory with** tensors.
+:::
+
+::: {.slide title="Getting Started"}
+A single import wires up the framework's tensor library:
+
+@ndarray-getting-started-1
+
+. . .
+
+A 1-D tensor of `n` evenly spaced floats — our running example:
+
+@ndarray-getting-started-2
+:::
+
+::: {.slide title="Shape and size"}
+Two attributes you'll reach for constantly:
+
+- `.numel()` — the total number of elements
+- `.shape` — the size along each axis (a tuple)
+
+@ndarray-getting-started-3
+
+@ndarray-getting-started-4
+:::
+
+::: {.slide title="Reshaping"}
+`reshape` rearranges the same elements into a different shape — the
+total `numel` is preserved.
+
+@ndarray-getting-started-5
+
+A 12-element vector becomes a $3\times 4$ matrix. No data is copied;
+only the **stride metadata** changes.
+:::
+
+::: {.slide title="Filled and random tensors"}
+Constant fills take a shape tuple — any rank, any size:
+
+@ndarray-getting-started-6
+
+. . .
+
+For weight initialization, `randn` draws from $\mathcal{N}(0, 1)$
+(elements sampled independently):
+
+@ndarray-getting-started-8
+
+`ones`, `full(shape, value)`, `eye(n)`, `empty` (uninitialized,
+fastest), and `*_like(x)` round out the family.
+:::
+
+::: {.slide title="Tensors from Python lists"}
+For exact control, pass a (nested) list literal — same row-major
+convention as NumPy:
+
+@ndarray-getting-started-9
+:::
+
+::: {.slide title="Reading"}
+Standard NumPy-style indexing:
+
+- `X[-1]` — the **last row**
+- `X[1:3]` — rows **1 and 2** (3 is exclusive)
+
+@ndarray-indexing-and-slicing-1
+:::
+
+::: {.slide title="Writing"}
+Assignment works the same way:
+
+@ndarray-indexing-and-slicing-2
+
+. . .
+
+A slice on the **left** sets multiple elements at once:
+
+@ndarray-indexing-and-slicing-3
+:::
+
+::: {.slide title="Elementwise"}
+Most common math is applied **elementwise** — same shape in,
+same shape out.
+
+@ndarray-operations-1
+
+. . .
+
+The arithmetic operators are overloaded — `+`, `-`, `*`, `/`, `**`
+all run elementwise:
+
+@ndarray-operations-2
+:::
+
+::: {.slide title="Concatenation"}
+`cat` glues tensors along an existing axis. Pick the axis with `dim`:
+
+- `dim=0` → stack rows (more rows out)
+- `dim=1` → stack columns (wider matrix out)
+
+@ndarray-operations-3
+:::
+
+::: {.slide title="Comparisons and reductions"}
+Comparison operators broadcast and return a **boolean tensor** of
+the same shape — useful for masking entries that satisfy a
+condition:
+
+@ndarray-operations-4
+
+. . .
+
+`sum`, `mean`, `max`, … collapse one or more axes. Without a
+`dim=` argument the whole tensor reduces to a scalar:
+
+@ndarray-operations-5
+:::
+
+::: {.slide title="Broadcasting" layout="2col"}
+When tensors of different shapes meet, the smaller one is
+**virtually expanded** along missing dimensions — no data copy.
+
+The rule: dimensions of size 1 stretch; everything else must match.
+
+@ndarray-broadcasting-1
+
+. . .
+
+@ndarray-broadcasting-2
+
+A $3\times 1$ + $1\times 2$ becomes a $3\times 2$ matrix.
+:::
+
+::: {.slide title="The hidden cost of `Y = Y + X`"}
+Every assignment of an arithmetic expression **allocates a new
+tensor**. Matters a lot when `Y` is gigabytes:
+
+@ndarray-saving-memory-1
+
+`id(Y) == before` is `False`: `Y` now points at a brand-new buffer.
+:::
+
+::: {.slide title="In-place operations"}
+Pre-allocate the output and write into it with `Z[:] = ...`:
+
+@ndarray-saving-memory-2
+
+. . .
+
+If the original value of `X` isn't needed afterward, the most
+ergonomic forms are `X[:] = X + Y` or `X += Y`:
+
+@ndarray-saving-memory-3
+:::
+
+::: {.slide title="NumPy round-trip"}
+Tensors and NumPy `ndarray`s convert cheaply — most frameworks
+share storage with NumPy when possible:
+
+@ndarray-conversion-to-other-python-objects-1
+
+. . .
+
+A size-1 tensor unwraps to a Python scalar with `.item()`,
+`float(x)`, or `int(x)`:
+
+@ndarray-conversion-to-other-python-objects-2
+:::
+
+::: {.slide title="Recap"}
+- `arange / zeros / ones / randn / tensor(list)` — create.
+- `.shape`, `.numel()`, `reshape` — inspect / reorganize.
+- `[i, j]`, `[a:b, c:d]` — read and write slices.
+- `+ - * / **`, `cat`, `==`, `sum` — element-wise ops, joins,
+  comparisons, reductions.
+- **Broadcasting** stretches mismatched shapes; **in-place** ops
+  avoid copying for large tensors.
+- `.numpy()` / `.item()` — leave the tensor world.
+:::

@@ -13,7 +13,7 @@ made it easier to implement linear regression
 (see :numref:`sec_linear_concise`),
 they are similarly convenient here.
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, init, npx
@@ -21,7 +21,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -29,13 +29,13 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -79,7 +79,7 @@ method, without needing to define the standard `setup` method in
 the dataclass.
 :end_tab:
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab pytorch
 class SoftmaxRegression(d2l.Classifier):  #@save
     """The softmax regression model."""
@@ -93,7 +93,7 @@ class SoftmaxRegression(d2l.Classifier):  #@save
         return self.net(X)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab mxnet
 class SoftmaxRegression(d2l.Classifier):  #@save
     """The softmax regression model."""
@@ -106,7 +106,7 @@ class SoftmaxRegression(d2l.Classifier):  #@save
         return self.net(X)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab tensorflow
 class SoftmaxRegression(d2l.Classifier):  #@save
     """The softmax regression model."""
@@ -121,7 +121,7 @@ class SoftmaxRegression(d2l.Classifier):  #@save
         return self.net(X)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab jax
 class SoftmaxRegression(d2l.Classifier):  #@save
     num_outputs: int
@@ -187,11 +187,11 @@ We will want to keep the conventional softmax function handy
 in case we ever want to evaluate the output probabilities by our model.
 But instead of passing softmax probabilities into our new loss function,
 we just
-[**pass the logits and compute the softmax and its log
-all at once inside the cross-entropy loss function,**]
+pass the logits and compute the softmax and its log
+all at once inside the cross-entropy loss function,
 which does smart things like the ["LogSumExp trick"](https://en.wikipedia.org/wiki/LogSumExp).
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab pytorch
 @d2l.add_to_class(d2l.Classifier)  #@save
 def loss(self, Y_hat, Y, averaged=True):
@@ -201,7 +201,7 @@ def loss(self, Y_hat, Y, averaged=True):
         Y_hat, Y, reduction='mean' if averaged else 'none')
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab mxnet
 @d2l.add_to_class(d2l.Classifier)  #@save
 def loss(self, Y_hat, Y, averaged=True):
@@ -212,7 +212,7 @@ def loss(self, Y_hat, Y, averaged=True):
     return l.mean() if averaged else l
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Classifier)  #@save
 def loss(self, Y_hat, Y, averaged=True):
@@ -225,7 +225,7 @@ def loss(self, Y_hat, Y, averaged=True):
     return fn(Y, Y_hat)
 ```
 
-```{.python .input}
+```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -245,8 +245,7 @@ def loss(self, params, X, Y, state, averaged=True):
 
 Next we train our model. We use Fashion-MNIST images, flattened to 784-dimensional feature vectors.
 
-```{.python .input}
-%%tab all
+```{.python .input #softmax-regression-concise-training}
 data = d2l.FashionMNIST(batch_size=256)
 model = SoftmaxRegression(num_outputs=10, lr=0.1)
 trainer = d2l.Trainer(max_epochs=10)
@@ -289,3 +288,54 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17983)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Same model, same data — using the framework's built-in primitives:
+
+- One linear layer instead of hand-rolled `W` and `b`.
+- Built-in `cross_entropy` that fuses softmax + log + NLL with
+  numerical-stability tricks (the LogSumExp trick).
+- Same `Trainer`, same convergence, much less code.
+:::
+
+::: {.slide title="The model"}
+Imports + a one-line linear layer wrapped in our `Classifier`
+scaffold:
+
+@softmax-regression-concise-concise-implementation-of-softmax-regression
+
+@softmax-regression-concise-defining-the-model
+:::
+
+::: {.slide title="Softmax + cross-entropy, fused"}
+Computing softmax then `log` then NLL separately blows up
+numerically when logits are large (`exp(50)` overflows). The
+framework's `cross_entropy` takes raw **logits** and computes the
+loss directly via the LogSumExp trick — equivalent math, stable
+arithmetic:
+
+@softmax-regression-concise-softmax-revisited
+
+The model output skips the explicit softmax — the loss handles
+both pieces.
+:::
+
+::: {.slide title="Train"}
+Same Fashion-MNIST data, same 10 epochs, same `Trainer`:
+
+@softmax-regression-concise-training
+
+Identical accuracy curve to the from-scratch version. Built-in
+loss = cleaner code + better numerics.
+:::
+
+::: {.slide title="Recap"}
+- **From-scratch** taught us softmax and cross-entropy; **concise**
+  is what we actually use.
+- Built-in `cross_entropy(logits, y)` ≡ `softmax → log → NLL`
+  with the LogSumExp stability trick baked in.
+- The forward pass should output **logits**, not softmax
+  probabilities — the loss does the rest.
+:::

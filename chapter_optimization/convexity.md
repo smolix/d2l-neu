@@ -8,7 +8,7 @@ if the algorithm performs poorly even in the convex setting,
 typically we should not hope to see great results otherwise. 
 Furthermore, even though the optimization problems in deep learning are generally nonconvex, they often exhibit some properties of convex ones near local minima. This can lead to exciting new optimization variants such as :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`.
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -17,7 +17,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -26,7 +26,7 @@ from mpl_toolkits import mplot3d
 import torch
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -35,7 +35,7 @@ from mpl_toolkits import mplot3d
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #convexity}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -91,8 +91,7 @@ $$\lambda f(x) + (1-\lambda) f(x') \geq f(\lambda x + (1-\lambda) x').$$
 To illustrate this let's plot a few functions and check which ones satisfy the requirement.
 Below we define a few functions, both convex and nonconvex.
 
-```{.python .input}
-#@tab all
+```{.python .input #convexity-convex-functions}
 f = lambda x: 0.5 * x**2  # Convex
 g = lambda x: d2l.cos(np.pi * x)  # Nonconvex
 h = lambda x: d2l.exp(0.5 * x)  # Convex
@@ -171,8 +170,7 @@ Therefore, there does not exist $x' \in \mathcal{X}$ for which $f(x') < f(x^{\as
 
 For instance, the convex function $f(x) = (x-1)^2$ has a local minimum at $x=1$, which is also the global minimum.
 
-```{.python .input}
-#@tab all
+```{.python .input #convexity-local-minima-are-global-minima}
 f = lambda x: (x - 1) ** 2
 d2l.set_figsize()
 d2l.plot([x, segment], [f(x), f(segment)], 'x', 'f(x)')
@@ -383,3 +381,97 @@ In the context of deep learning the main purpose of convex functions is to motiv
 
 
 [Discussions](https://discuss.d2l.ai/t/350)
+
+<!-- slides -->
+
+::: {.slide}
+Deep learning loss surfaces are *not* convex. So why a
+chapter on convexity? Two reasons:
+
+- It's the only setting where we can prove convergence of
+  algorithms cleanly. Pre-deep-learning optimization theory
+  is almost entirely about convex problems.
+- Local behavior near a deep-learning minimum often looks
+  approximately convex. Many practical tricks (averaging,
+  Polyak averaging, weight averaging like SWA) are
+  motivated by convex theory.
+
+If a method fails on a convex problem, it has no hope on a
+non-convex one.
+
+@convexity
+:::
+
+::: {.slide title="Convex sets and functions"}
+A set $\mathcal{X}$ is **convex** if for all $x, x' \in \mathcal{X}$
+and $\lambda \in [0, 1]$, $\lambda x + (1-\lambda) x' \in \mathcal{X}$
+— it contains every line segment between its points.
+
+![Nonconvex (left) vs. convex (middle, right).](../img/pacman.svg){width=70%}
+
+. . .
+
+A function $f$ is **convex** if for all such $x, x', \lambda$:
+
+$$\lambda f(x) + (1-\lambda) f(x') \;\geq\; f(\lambda x + (1-\lambda) x').$$
+
+The chord lies above the function:
+
+@convexity-convex-functions
+:::
+
+::: {.slide title="Convex set algebra"}
+Intersections of convex sets are convex (useful: feasible
+sets defined by multiple convex constraints stay convex).
+Unions are not.
+
+![Convex ∩ convex = convex.](../img/convex-intersect.svg){width=44%}
+
+![Convex ∪ convex need not be convex.](../img/nonconvex.svg){width=44%}
+:::
+
+::: {.slide title="Local = global for convex"}
+**Key property**: every local minimum of a convex function
+is also a global minimum. So convex optimization can't get
+stuck in a "wrong" minimum.
+
+Proof sketch: if $x^*$ is local but $x'$ is strictly better,
+then a point $\lambda x^* + (1-\lambda)x'$ near $x^*$ has
+$f(\cdot) < f(x^*)$ — contradicting "local minimum".
+
+@convexity-local-minima-are-global-minima
+:::
+
+::: {.slide title="Other useful properties"}
+- **Below sets** $\{x : f(x) \le b\}$ of convex functions
+  are convex sets.
+- **Second-order test**: $f$ is convex iff its Hessian
+  $\nabla^2 f \succeq 0$ everywhere.
+- **Jensen's inequality**: $\mathbb{E}[f(X)] \ge f(\mathbb{E}[X])$.
+  Foundation of variational methods, the EM algorithm,
+  ELBO objectives.
+:::
+
+::: {.slide title="Constrained convex optimization"}
+For constrained problems $\min f(x)$ s.t. $c_i(x) \le 0$,
+three workhorse techniques:
+
+- **Lagrangian** — turn constraints into penalty terms with
+  multipliers $\alpha_i \ge 0$.
+- **Penalty methods** — soft constraints via large
+  $\sum_i \max(0, c_i(x))^2$ terms.
+- **Projection** — after each gradient step, project back
+  onto the feasible set.
+
+![Projecting an external point onto a convex set.](../img/projections.svg){width=45%}
+:::
+
+::: {.slide title="Recap"}
+- Convex set: line segments stay inside; convex function:
+  chords lie above the curve.
+- Convex local minimum = global minimum — no traps.
+- Hessian PSD ⇔ convex (local second-order check).
+- Real DL is non-convex, but local-around-minimum behavior
+  is often convex-like; convex theory motivates many of the
+  optimizers in the rest of the chapter.
+:::

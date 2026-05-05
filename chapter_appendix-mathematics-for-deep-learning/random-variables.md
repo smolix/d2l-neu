@@ -40,7 +40,7 @@ $$P(\textrm{distance is in an}\; \epsilon \textrm{-sized interval around}\; x ) 
 
 Indeed, :eqref:`eq_pdf_deriv` precisely defines the *probability density function*.  It is a function $p(x)$ which encodes the relative probability of hitting near one point vs. another.  Let's visualize what such a function might look like.
 
-```{.python .input}
+```{.python .input #random-variables-from-discrete-to-continuous}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -56,7 +56,7 @@ p = 0.2*np.exp(-(x - 3)**2 / 2)/np.sqrt(2 * np.pi) + \
 d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-from-discrete-to-continuous}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -72,7 +72,7 @@ p = 0.2*torch.exp(-(x - 3)**2 / 2)/torch.sqrt(2 * torch.tensor(torch.pi)) + \
 d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-from-discrete-to-continuous}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -88,7 +88,7 @@ p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi)) + \
 d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-from-discrete-to-continuous}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -150,7 +150,7 @@ $$
 
 We may approximate this in code by using the same discrete approximation methods as before.  In this case we can approximate the probability of falling in the blue region.
 
-```{.python .input}
+```{.python .input #random-variables-probability-density-functions}
 #@tab mxnet
 # Approximate probability using numerical integration
 epsilon = 0.01
@@ -166,7 +166,7 @@ d2l.plt.show()
 f'approximate Probability: {np.sum(epsilon*p[300:800])}'
 ```
 
-```{.python .input}
+```{.python .input #random-variables-probability-density-functions}
 #@tab pytorch
 # Approximate probability using numerical integration
 epsilon = 0.01
@@ -182,7 +182,7 @@ d2l.plt.show()
 f'approximate Probability: {torch.sum(epsilon*p[300:800])}'
 ```
 
-```{.python .input}
+```{.python .input #random-variables-probability-density-functions}
 #@tab tensorflow
 # Approximate probability using numerical integration
 epsilon = 0.01
@@ -198,7 +198,7 @@ d2l.plt.show()
 f'approximate Probability: {tf.reduce_sum(epsilon*p[300:800])}'
 ```
 
-```{.python .input}
+```{.python .input #random-variables-probability-density-functions}
 #@tab jax
 # Approximate probability using numerical integration
 epsilon = 0.01
@@ -350,7 +350,7 @@ This means that $75\%$ of the time, this random variable will fall within this i
 
 Let's visualize this.  We will show the probability of getting the three values as three vertical bars with height proportional to the probability.  The interval will be drawn as a horizontal line in the middle.  The first plot shows what happens for $p > 1/8$ where the interval safely contains all points.
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-1}
 #@tab mxnet
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
@@ -372,7 +372,7 @@ def plot_chebyshev(a, p):
 plot_chebyshev(0.0, 0.2)
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-1}
 #@tab pytorch
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
@@ -394,7 +394,7 @@ def plot_chebyshev(a, p):
 plot_chebyshev(0.0, torch.tensor(0.2))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-1}
 #@tab tensorflow
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
@@ -416,7 +416,7 @@ def plot_chebyshev(a, p):
 plot_chebyshev(0.0, tf.constant(0.2))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-1}
 #@tab jax
 # Define a helper to plot these figures
 def plot_chebyshev(a, p):
@@ -440,25 +440,25 @@ plot_chebyshev(0.0, jnp.float32(0.2))
 
 The second shows that at $p = 1/8$, the interval exactly touches the two points.  This shows that the inequality is *sharp*, since no smaller interval could be taken while keeping the inequality true.
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-2}
 #@tab mxnet
 # Plot interval when p = 1/8
 plot_chebyshev(0.0, 0.125)
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-2}
 #@tab pytorch
 # Plot interval when p = 1/8
 plot_chebyshev(0.0, torch.tensor(0.125))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-2}
 #@tab tensorflow
 # Plot interval when p = 1/8
 plot_chebyshev(0.0, tf.constant(0.125))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-2}
 #@tab jax
 # Plot interval when p = 1/8
 plot_chebyshev(0.0, jnp.float32(0.125))
@@ -466,25 +466,25 @@ plot_chebyshev(0.0, jnp.float32(0.125))
 
 The third shows that for $p < 1/8$ the interval only contains the center.  This does not invalidate the inequality since we only needed to ensure that no more than $1/4$ of the probability falls outside the interval, which means that once $p < 1/8$, the two points at $a-2$ and $a+2$ can be discarded.
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-3}
 #@tab mxnet
 # Plot interval when p < 1/8
 plot_chebyshev(0.0, 0.05)
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-3}
 #@tab pytorch
 # Plot interval when p < 1/8
 plot_chebyshev(0.0, torch.tensor(0.05))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-3}
 #@tab tensorflow
 # Plot interval when p < 1/8
 plot_chebyshev(0.0, tf.constant(0.05))
 ```
 
-```{.python .input}
+```{.python .input #random-variables-standard-deviations-3}
 #@tab jax
 # Plot interval when p < 1/8
 plot_chebyshev(0.0, jnp.float32(0.05))
@@ -540,7 +540,7 @@ $$
 p(x) = \frac{1}{\pi(1+x^2)}.
 $$
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
 #@tab mxnet
 # Plot the Cauchy distribution p.d.f.
 x = np.arange(-5, 5, 0.01)
@@ -549,7 +549,7 @@ p = 1 / (1 + x**2)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
 #@tab pytorch
 # Plot the Cauchy distribution p.d.f.
 x = torch.arange(-5, 5, 0.01)
@@ -558,7 +558,7 @@ p = 1 / (1 + x**2)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
 #@tab tensorflow
 # Plot the Cauchy distribution p.d.f.
 x = tf.range(-5, 5, 0.01)
@@ -567,7 +567,7 @@ p = 1 / (1 + x**2)
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
 #@tab jax
 # Plot the Cauchy distribution p.d.f.
 x = jnp.arange(-5, 5, 0.01)
@@ -586,7 +586,7 @@ $$
 
 The function on the inside looks like this:
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
 #@tab mxnet
 # Plot the integrand needed to compute the variance
 x = np.arange(-20, 20, 0.01)
@@ -595,7 +595,7 @@ p = x**2 / (1 + x**2)
 d2l.plot(x, p, 'x', 'integrand')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
 #@tab pytorch
 # Plot the integrand needed to compute the variance
 x = torch.arange(-20, 20, 0.01)
@@ -604,7 +604,7 @@ p = x**2 / (1 + x**2)
 d2l.plot(x, p, 'x', 'integrand')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
 #@tab tensorflow
 # Plot the integrand needed to compute the variance
 x = tf.range(-20, 20, 0.01)
@@ -613,7 +613,7 @@ p = x**2 / (1 + x**2)
 d2l.plot(x, p, 'x', 'integrand')
 ```
 
-```{.python .input}
+```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
 #@tab jax
 # Plot the integrand needed to compute the variance
 x = jnp.arange(-20, 20, 0.01)
@@ -752,7 +752,7 @@ $$
 
 For visualization, let's take a look at a collection of random variables with tunable covariance.
 
-```{.python .input}
+```{.python .input #random-variables-covariance}
 #@tab mxnet
 # Plot a few random variables adjustable covariance
 covs = [-0.9, 0.0, 1.2]
@@ -769,7 +769,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-covariance}
 #@tab pytorch
 # Plot a few random variables adjustable covariance
 covs = [-0.9, 0.0, 1.2]
@@ -786,7 +786,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-covariance}
 #@tab tensorflow
 # Plot a few random variables adjustable covariance
 covs = [-0.9, 0.0, 1.2]
@@ -803,7 +803,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-covariance}
 #@tab jax
 # Plot a few random variables adjustable covariance
 covs = [-0.9, 0.0, 1.2]
@@ -877,7 +877,7 @@ Thus we see that the correlation is $+1$ for any $a > 0$, and $-1$ for any $a < 
 
 Let's again plot a collection of random variables with tunable correlation.
 
-```{.python .input}
+```{.python .input #random-variables-correlation}
 #@tab mxnet
 # Plot a few random variables adjustable correlations
 cors = [-0.9, 0.0, 1.0]
@@ -894,7 +894,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-correlation}
 #@tab pytorch
 # Plot a few random variables adjustable correlations
 cors = [-0.9, 0.0, 1.0]
@@ -912,7 +912,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-correlation}
 #@tab tensorflow
 # Plot a few random variables adjustable correlations
 cors = [-0.9, 0.0, 1.0]
@@ -930,7 +930,7 @@ for i in range(3):
 d2l.plt.show()
 ```
 
-```{.python .input}
+```{.python .input #random-variables-correlation}
 #@tab jax
 # Plot a few random variables adjustable correlations
 cors = [-0.9, 0.0, 1.0]
@@ -1004,3 +1004,67 @@ Indeed if we think of norms as being related to standard deviations, and correla
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1095)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Continuous random variables and their summaries:
+
+- **PDF** $p(x)$ — probability density; $P(X \in A) = \int_A p$.
+- **Mean** $\mu = \mathbb{E}[X] = \int x\, p(x)\, dx$.
+- **Variance** $\sigma^2 = \mathbb{E}[(X-\mu)^2]$ —
+  spread.
+- **Covariance** $\text{Cov}(X, Y)$ — joint variation.
+- **Correlation** $\rho$ — covariance normalized to
+  $[-1, 1]$.
+
+These are the building blocks of every probabilistic
+analysis in the book.
+:::
+
+::: {.slide title="From discrete to continuous"}
+@random-variables-from-discrete-to-continuous
+:::
+
+::: {.slide title="PDFs"}
+@random-variables-probability-density-functions
+:::
+
+::: {.slide title="Standard deviation in code"}
+@random-variables-standard-deviations-1
+
+. . .
+
+@random-variables-standard-deviations-2
+
+. . .
+
+@random-variables-standard-deviations-3
+:::
+
+::: {.slide title="Continuous mean and variance"}
+@random-variables-means-and-variances-in-the-continuum-1
+
+. . .
+
+@random-variables-means-and-variances-in-the-continuum-2
+:::
+
+::: {.slide title="Covariance and correlation"}
+@random-variables-covariance
+
+. . .
+
+@random-variables-correlation
+:::
+
+::: {.slide title="Recap"}
+- PDF integrates to 1; the integral over an interval is
+  the probability of falling in it.
+- $\mathbb{E}, \text{Var}$ are integrals weighted by the
+  PDF.
+- Correlation = covariance / product of std devs;
+  measures linear relationship strength.
+- Foundation for cross-entropy, KL divergence,
+  expectations through stochastic gradients, ...
+:::

@@ -26,7 +26,7 @@ Then, download the [NVIDIA driver and CUDA](https://developer.nvidia.com/cuda-do
 and follow the prompts to set the appropriate path.
 Once these preparations are complete,
 the `nvidia-smi` command can be used
-to (**view the graphics card information**).
+to view the graphics card information.
 
 :begin_tab:`mxnet`
 You might have noticed that a MXNet tensor
@@ -82,7 +82,7 @@ but it is easily available in the cloud, e.g.,
 by using the AWS EC2 multi-GPU instances.
 Almost all other sections do *not* require multiple GPUs, but here we simply wish to illustrate data flow between different devices.
 
-```{.python .input}
+```{.python .input #use-gpu-gpus}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
@@ -90,20 +90,20 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-gpus}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-gpus}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-gpus}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -111,7 +111,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## [**Computing Devices**]
+## Computing Devices
 
 We can specify devices, such as CPUs and GPUs,
 for storage and calculation.
@@ -145,7 +145,7 @@ to represent the $i^\textrm{th}$ GPU ($i$ starts at 0).
 Also, `gpu:0` and `gpu` are equivalent.
 :end_tab:
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-1}
 %%tab pytorch
 def cpu():  #@save
     """Get the CPU device."""
@@ -158,7 +158,7 @@ def gpu(i=0):  #@save
 cpu(), gpu(), gpu(1)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-1}
 %%tab mxnet
 def cpu():  #@save
     """Get the CPU device."""
@@ -169,7 +169,7 @@ def gpu(i=0):  #@save
 cpu(), gpu(), gpu(1)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-1}
 %%tab tensorflow
 def cpu():  #@save
     """Get the CPU device."""
@@ -180,7 +180,7 @@ def gpu(i=0):  #@save
 cpu(), gpu(), gpu(1)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-1}
 %%tab jax
 def cpu():  #@save
     """Get the CPU device."""
@@ -193,9 +193,9 @@ def gpu(i=0):  #@save
 cpu(), gpu(), gpu(1)
 ```
 
-We can (**query the number of available GPUs.**)
+We can query the number of available GPUs.
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-2}
 %%tab pytorch
 def num_gpus():  #@save
     """Get the number of available GPUs."""
@@ -204,7 +204,7 @@ def num_gpus():  #@save
 num_gpus()
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-2}
 %%tab mxnet
 def num_gpus():  #@save
     """Get the number of available GPUs."""
@@ -212,7 +212,7 @@ def num_gpus():  #@save
 num_gpus()
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-2}
 %%tab tensorflow
 def num_gpus():  #@save
     """Get the number of available GPUs."""
@@ -220,7 +220,7 @@ def num_gpus():  #@save
 num_gpus()
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-computing-devices-2}
 %%tab jax
 def num_gpus():  #@save
     """Get the number of available GPUs."""
@@ -232,11 +232,10 @@ def num_gpus():  #@save
 num_gpus()
 ```
 
-Now we [**define two convenient functions that allow us
-to run code even if the requested GPUs do not exist.**]
+Now we define two convenient functions that allow us
+to run code even if the requested GPUs do not exist.
 
-```{.python .input}
-%%tab all
+```{.python .input #use-gpu-computing-devices-3}
 def try_gpu(i=0):  #@save
     """Return gpu(i) if exists, otherwise return cpu()."""
     if num_gpus() >= i + 1:
@@ -254,39 +253,39 @@ try_gpu(), try_gpu(10), try_all_gpus()
 
 :begin_tab:`pytorch`
 By default, tensors are created on the CPU.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
 :begin_tab:`mxnet`
 By default, tensors are created on the CPU.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
 By default, tensors are created on the GPU/TPU if they are available,
 else CPU is used if not available.
-We can [**query the device where the tensor is located.**]
+We can query the device where the tensor is located.
 :end_tab:
 
-```{.python .input}
+```{.python .input #use-gpu-tensors-and-gpus}
 %%tab mxnet
 x = np.array([1, 2, 3])
 x.ctx
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-tensors-and-gpus}
 %%tab pytorch
 x = torch.tensor([1, 2, 3])
 x.device
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-tensors-and-gpus}
 %%tab tensorflow
 x = tf.constant([1, 2, 3])
 x.device
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-tensors-and-gpus}
 %%tab jax
 x = jnp.array([1, 2, 3])
 x.device
@@ -303,61 +302,61 @@ or even how to decide where to perform the computation.
 
 ### Storage on the GPU
 
-There are several ways to [**store a tensor on the GPU.**]
+There are several ways to store a tensor on the GPU.
 For example, we can specify a storage device when creating a tensor.
 Next, we create the tensor variable `X` on the first `gpu`.
 The tensor created on a GPU only consumes the memory of this GPU.
 We can use the `nvidia-smi` command to view GPU memory usage.
 In general, we need to make sure that we do not create data that exceeds the GPU memory limit.
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-1}
 %%tab mxnet
 X = np.ones((2, 3), ctx=try_gpu())
 X
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-1}
 %%tab pytorch
 X = torch.ones(2, 3, device=try_gpu())
 X
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-1}
 %%tab tensorflow
 with try_gpu():
     X = tf.ones((2, 3))
 X
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-1}
 %%tab jax
 # By default JAX puts arrays to GPUs or TPUs if available
 X = jax.device_put(jnp.ones((2, 3)), try_gpu())
 X
 ```
 
-Assuming that you have at least two GPUs, the following code will (**create a random tensor, `Y`, on the second GPU.**)
+Assuming that you have at least two GPUs, the following code will create a random tensor, `Y`, on the second GPU.
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-2}
 %%tab mxnet
 Y = np.random.uniform(size=(2, 3), ctx=try_gpu(1))
 Y
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-2}
 %%tab pytorch
 Y = torch.rand(2, 3, device=try_gpu(1))
 Y
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-2}
 %%tab tensorflow
 with try_gpu(1):
     Y = tf.random.uniform((2, 3))
 Y
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-storage-on-the-gpu-2}
 %%tab jax
 Y = jax.device_put(jax.random.uniform(jax.random.PRNGKey(0), (2, 3)),
                    try_gpu(1))
@@ -366,8 +365,8 @@ Y
 
 ### Copying
 
-[**If we want to compute `X + Y`,
-we need to decide where to perform this operation.**]
+If we want to compute `X + Y`,
+we need to decide where to perform this operation.
 For instance, as shown in :numref:`fig_copyto`,
 we can transfer `X` to the second GPU
 and perform the operation there.
@@ -381,21 +380,21 @@ we need to move `X` there before we can add the two.
 ![Copy data to perform an operation on the same device.](../img/copyto.svg)
 :label:`fig_copyto`
 
-```{.python .input}
+```{.python .input #use-gpu-copying-1}
 %%tab mxnet
 Z = X.copyto(try_gpu(1))
 print(X)
 print(Z)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-1}
 %%tab pytorch
 Z = X.cuda(1)
 print(X)
 print(Z)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-1}
 %%tab tensorflow
 with try_gpu(1):
     Z = X
@@ -403,17 +402,16 @@ print(X)
 print(Z)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-1}
 %%tab jax
 Z = jax.device_put(X, try_gpu(1))
 print(X)
 print(Z)
 ```
 
-Now that [**the data (both `Z` and `Y`) are on the same GPU, we can add them up.**]
+Now that the data (both `Z` and `Y`) are on the same GPU, we can add them up.
 
-```{.python .input}
-%%tab all
+```{.python .input #use-gpu-copying-2}
 Y + Z
 ```
 
@@ -451,24 +449,24 @@ What happens if we still call `Z2 = Z` under the same device scope?
 It will return `Z` instead of making a copy and allocating new memory.
 :end_tab:
 
-```{.python .input}
+```{.python .input #use-gpu-copying-3}
 %%tab mxnet
 Z.as_in_ctx(try_gpu(1)) is Z
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-3}
 %%tab pytorch
 Z.cuda(1) is Z
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-3}
 %%tab tensorflow
 with try_gpu(1):
     Z2 = Z
 Z2 is Z
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-copying-3}
 %%tab jax
 Z2 = jax.device_put(Z, try_gpu(1))
 Z2 is Z
@@ -508,25 +506,25 @@ Even worse, it is now subject to the dreaded global interpreter lock
 that makes everything wait for Python to complete.
 
 
-## [**Neural Networks and GPUs**]
+## Neural Networks and GPUs
 
 Similarly, a neural network model can specify devices.
 The following code puts the model parameters on the GPU.
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-1}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(1))
 net.initialize(ctx=try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-1}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(1))
 net = net.to(device=try_gpu())
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-1}
 %%tab tensorflow
 strategy = tf.distribute.MirroredStrategy()
 with strategy.scope():
@@ -534,7 +532,7 @@ with strategy.scope():
         tf.keras.layers.Dense(1)])
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-1}
 %%tab jax
 net = nn.Sequential([nn.Dense(1)])
 
@@ -549,41 +547,41 @@ simply because the models will become somewhat more computationally intensive.
 
 For example, when the input is a tensor on the GPU, the model will calculate the result on the same GPU.
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-2}
 %%tab mxnet, pytorch, tensorflow
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-2}
 %%tab jax
 net.apply(params, x)
 ```
 
-Let's (**confirm that the model parameters are stored on the same GPU.**)
+Let's confirm that the model parameters are stored on the same GPU.
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab mxnet
 net[0].weight.data().ctx
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab pytorch
 net[0].weight.data.device
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab tensorflow
 tf.identity(net.layers[0].weights[0]).device, tf.identity(net.layers[0].weights[1]).device
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab jax
 print(jax.tree_util.tree_map(lambda x: x.device, params))
 ```
 
 Let the trainer support GPU.
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-4}
 %%tab mxnet
 @d2l.add_to_class(d2l.Module)  #@save
 def set_scratch_params_device(self, device):
@@ -600,7 +598,7 @@ def set_scratch_params_device(self, device):
                 elem.set_scratch_params_device(device)
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-5}
 %%tab mxnet
 @d2l.add_to_class(d2l.Trainer)  #@save
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
@@ -623,7 +621,7 @@ def prepare_model(self, model):
     self.model = model
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-5}
 %%tab pytorch
 @d2l.add_to_class(d2l.Trainer)  #@save
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
@@ -645,7 +643,7 @@ def prepare_model(self, model):
     self.model = model
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-5}
 %%tab jax
 @d2l.add_to_class(d2l.Trainer)  #@save
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
@@ -659,7 +657,7 @@ def prepare_batch(self, batch):
     return batch
 ```
 
-```{.python .input}
+```{.python .input #use-gpu-neural-networks-and-gpus-5}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Trainer)  #@save
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
@@ -738,3 +736,157 @@ You can lose significant performance by moving data without care.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17995)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+GPUs are the reason modern deep learning works at scale. A
+single 4090 does ~80 TFLOPs of FP16 — about a thousand times
+faster than a CPU on the matmul-heavy ops convolutions and
+attention need.
+
+The cost: every tensor and every parameter has a **device**.
+Mix devices in one operation and you crash.
+
+![Add tensors from different devices: implicit copies are forbidden, you must copy explicitly.](../img/copyto.svg){width=86%}
+:::
+
+::: {.slide title="The two-and-a-half rules"}
+```
+RuntimeError: Expected all tensors to be on the same device,
+but found at least two devices, cuda:0 and cpu!
+```
+
+- **Tensors live on a device.** Cross-device operations
+  require an explicit copy.
+- **Model parameters live on a device.** Move the model to
+  the GPU *before* training; the optimizer's state follows.
+- **Cross-device copies are slow.** Avoid them in the inner
+  loop — copy at the boundary, keep the loop on one device.
+:::
+
+::: {.slide title="What hardware do we have?"}
+@use-gpu-gpus
+
+. . .
+
+@use-gpu-computing-devices-1
+
+. . .
+
+@use-gpu-computing-devices-2
+:::
+
+::: {.slide title="Portable device handle"}
+`try_gpu(i)` returns GPU $i$ if it exists, else CPU. Same
+code runs on a laptop, a workstation, or a multi-GPU box —
+the device object swaps but the code stays the same:
+
+@use-gpu-computing-devices-3
+:::
+
+::: {.slide title="Tensors carry a device"}
+Every tensor has a `.device` attribute:
+
+@use-gpu-tensors-and-gpus
+
+. . .
+
+Create directly on a device — avoids an unnecessary CPU →
+GPU copy:
+
+@use-gpu-storage-on-the-gpu-1
+
+. . .
+
+@use-gpu-storage-on-the-gpu-2
+:::
+
+::: {.slide title="Cross-device math: copy, then operate"}
+Tensors on different devices can't be combined directly.
+The fix: explicit copy with `.cuda(i)` or `.to(device)`:
+
+@use-gpu-copying-1
+
+. . .
+
+@use-gpu-copying-2
+
+. . .
+
+`.cuda(i)` on a tensor already on GPU $i$ is a **no-op** —
+the framework checks first:
+
+@use-gpu-copying-3
+
+Why this matters: a `.to(device)` in your training inner
+loop adds a cudaMemcpy round trip that can dwarf the actual
+computation. Copy at the boundary; keep everything inside
+the loop on one device.
+:::
+
+::: {.slide title="Models on the GPU"}
+The model is a tree of `Parameter` tensors. Move them all
+in one shot with `.to(device)`:
+
+@use-gpu-neural-networks-and-gpus-1
+
+. . .
+
+@use-gpu-neural-networks-and-gpus-2
+
+. . .
+
+After this, every input batch must also be on `device`
+before the forward pass:
+
+@use-gpu-neural-networks-and-gpus-3
+:::
+
+::: {.slide title="Where to put the device move"}
+The training-loop sweet spot:
+
+```
+device = try_gpu(0)
+model = MyModel().to(device)         # once, before training
+opt = SGD(model.parameters(), …)     # picks up device
+
+for batch in loader:
+    X, y = batch[0].to(device), batch[1].to(device)
+    # ... forward, loss, backward, step ...
+```
+
+The `Trainer` baseline does exactly this — patch
+`prepare_batch` to call `.to(device)` and `prepare_model` to
+move parameters once:
+
+@use-gpu-neural-networks-and-gpus-5
+:::
+
+::: {.slide title="Common mistakes"}
+- **Forgetting one tensor.** Every tensor in the forward
+  pass has to be on the same device. Custom buffers are
+  the usual culprit — use `register_buffer` so they move
+  with `.to(device)`.
+- **Creating tensors with `torch.zeros((10,))` mid-forward**
+  defaults to CPU. Use `torch.zeros((10,), device=x.device)`
+  to follow the input.
+- **Optimizer set up before move.** Construct the optimizer
+  *after* `.to(device)` — otherwise its state lives on the
+  wrong side.
+- **`.numpy()` mid-loop forces a sync to CPU.** The
+  asynchronous CUDA stream stalls. Defer all conversions
+  to the end of the epoch.
+:::
+
+::: {.slide title="Recap"}
+- Tensors and parameters carry a **device**; cross-device
+  operations require an explicit copy.
+- Move the model to the GPU **once**, before training; the
+  optimizer follows its parameters.
+- `try_gpu(i)` keeps code portable across hardware.
+- Cross-device copies are expensive — keep the inner loop
+  device-clean.
+- Use `register_buffer` so non-trainable state moves
+  alongside parameters.
+:::

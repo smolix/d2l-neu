@@ -32,7 +32,7 @@ the model aligns (or attends)
 only to parts of the input sequence
 that are deemed relevant to the current prediction. This is then used to update the current state before generating the next token. While quite innocuous in its description, this *Bahdanau attention mechanism* has arguably turned into one of the most influential ideas of the past decade in deep learning, giving rise to Transformers :cite:`Vaswani.Shazeer.Parmar.ea.2017` and many related new architectures.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import init, np, npx
@@ -40,20 +40,20 @@ from mxnet.gluon import rnn, nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -82,9 +82,9 @@ using attention is depicted in :numref:`fig_s2s_attention_details`. Note that la
 ## Defining the Decoder with Attention
 
 To implement the RNN encoder--decoder with attention,
-we only need to redefine the decoder (omitting the generated symbols from the attention function simplifies the design). Let's begin with [**the base interface for decoders with attention**] by defining the quite unsurprisingly named `AttentionDecoder` class.
+we only need to redefine the decoder (omitting the generated symbols from the attention function simplifies the design). Let's begin with the base interface for decoders with attention by defining the quite unsurprisingly named `AttentionDecoder` class.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-1}
 %%tab pytorch, mxnet, tensorflow
 class AttentionDecoder(d2l.Decoder):  #@save
     """The base attention-based decoder interface."""
@@ -96,7 +96,7 @@ class AttentionDecoder(d2l.Decoder):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-1}
 %%tab jax
 class AttentionDecoder(d2l.Decoder):  #@save
     """The base attention-based decoder interface.
@@ -110,7 +110,7 @@ class AttentionDecoder(d2l.Decoder):  #@save
         raise NotImplementedError
 ```
 
-We need to [**implement the RNN decoder**]
+We need to implement the RNN decoder
 in the `Seq2SeqAttentionDecoder` class.
 The state of the decoder is initialized with
 (i) the hidden states of the last layer of the encoder at all time steps, used as keys and values for attention;
@@ -119,7 +119,7 @@ and (iii) the valid length of the encoder, to exclude the padding tokens in atte
 At each decoding time step, the hidden state of the final layer of the decoder, obtained at the previous time step, is used as the query of the attention mechanism.
 Both the output of the attention mechanism and the input embedding are concatenated to serve as the input of the RNN decoder.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab mxnet
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -168,7 +168,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab pytorch
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -218,7 +218,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab tensorflow
 class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
@@ -272,7 +272,7 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab jax
 class Seq2SeqAttentionDecoder(nn.Module):
     vocab_size: int
@@ -328,11 +328,11 @@ class Seq2SeqAttentionDecoder(nn.Module):
                                             enc_valid_lens]
 ```
 
-In the following, we [**test the implemented
-decoder**] with attention
+In the following, we test the implemented
+decoder with attention
 using a minibatch of four sequences, each of which are seven time steps long.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab pytorch
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -347,7 +347,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab tensorflow
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -362,7 +362,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab jax
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -380,7 +380,7 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-3}
 %%tab mxnet
 vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 7
@@ -395,14 +395,14 @@ d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
-## [**Training**]
+## Training
 
 Now that we specified the new decoder we can proceed analogously to :numref:`sec_seq2seq_training`:
 specify the hyperparameters, instantiate
 a regular encoder and a decoder with attention,
 and train this model for machine translation.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab pytorch
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -416,7 +416,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab tensorflow
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -431,7 +431,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab jax
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -445,7 +445,7 @@ trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-1}
 %%tab mxnet
 data = d2l.MTFraEng(batch_size=128)
 embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
@@ -460,10 +460,10 @@ trainer.fit(model, data)
 ```
 
 After the model is trained,
-we use it to [**translate a few English sentences**]
+we use it to translate a few English sentences
 into French and compute their BLEU scores.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab pytorch
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -479,7 +479,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab tensorflow
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -495,7 +495,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab jax
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -511,7 +511,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-2}
 %%tab mxnet
 engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
@@ -527,7 +527,7 @@ for en, fr, p in zip(engs, fras, preds):
           f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
 ```
 
-Let's [**visualize the attention weights**]
+Let's visualize the attention weights
 when translating the last English sentence.
 We see that each query assigns non-uniform weights
 over key--value pairs.
@@ -535,7 +535,7 @@ It shows that at each decoding step,
 different parts of the input sequences
 are selectively aggregated in the attention pooling.
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab pytorch
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -544,7 +544,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab tensorflow
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -553,7 +553,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab jax
 _, (dec_attention_weights, _) = model.predict_step(
     trainer.state.params, data.build([engs[-1]], [fras[-1]]),
@@ -563,7 +563,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-3}
 %%tab mxnet
 _, dec_attention_weights = model.predict_step(
     data.build([engs[-1]], [fras[-1]]), d2l.try_gpu(), data.num_steps, True)
@@ -572,7 +572,7 @@ attention_weights = d2l.concat(
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab mxnet
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(
@@ -580,7 +580,7 @@ d2l.show_heatmaps(
     xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab pytorch
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(
@@ -588,14 +588,14 @@ d2l.show_heatmaps(
     xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab tensorflow
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(attention_weights[:, :, :, :len(engs[-1].split()) + 1],
                   xlabel='Key positions', ylabel='Query positions')
 ```
 
-```{.python .input}
+```{.python .input #bahdanau-attention-training-4}
 %%tab jax
 # Plus one to include the end-of-sequence token
 d2l.show_heatmaps(attention_weights[:, :, :, :len(engs[-1].split()) + 1],
@@ -629,3 +629,93 @@ In the RNN encoder--decoder, the Bahdanau attention mechanism treats the decoder
 [Discussions](https://discuss.d2l.ai/t/18028)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+Plain seq2seq jams the entire source into one fixed vector
+— a bottleneck. Early tokens get forgotten by the time the
+encoder finishes.
+
+Bahdanau, Cho & Bengio (2015): instead of one context
+vector, let the decoder *query* the encoder at every step.
+
+$$\mathbf{c}_{t'} = \sum_{t=1}^{T} \alpha(\mathbf{s}_{t'-1}, \mathbf{h}_t)\, \mathbf{h}_t.$$
+
+The original "soft alignment" mechanism — template for
+every Transformer.
+:::
+
+::: {.slide title="Without attention"}
+![Plain seq2seq: a single state vector is the only bridge between encoder and decoder.](../img/seq2seq-state.svg){width=82%}
+:::
+
+::: {.slide title="With attention"}
+![Decoder queries the encoder's per-step outputs at every decoding step.](../img/seq2seq-details-attention.svg){width=82%}
+:::
+
+::: {.slide title="Setup"}
+@bahdanau-attention-the-bahdanau-attention-mechanism
+:::
+
+::: {.slide title="AttentionDecoder interface"}
+Just adds an `attention_weights` property so we can pull
+weights out for visualization:
+
+@bahdanau-attention-defining-the-decoder-with-attention-1
+:::
+
+::: {.slide title="Seq2SeqAttentionDecoder"}
+Per step: take the previous decoder hidden state, run
+additive attention against the encoder outputs (masked by
+source `valid_len`), concat the resulting context with the
+embedded input, run one GRU step, project to vocab.
+
+@bahdanau-attention-defining-the-decoder-with-attention-2
+:::
+
+::: {.slide title="Decoder shape check"}
+Same harness as plain seq2seq — same logit shape, plus a
+new attention-weight tensor of shape (num_steps, batch,
+src_steps):
+
+@bahdanau-attention-defining-the-decoder-with-attention-3
+:::
+
+::: {.slide title="Training"}
+Same hyperparameters as plain seq2seq (embed/hidden 256,
+2 layers, dropout 0.2, Adam 0.005, 30 epochs). Gives the
+model attention; everything else stays the same:
+
+@bahdanau-attention-training-1
+:::
+
+::: {.slide title="Translate four sentences"}
+Compare BLEU vs. plain seq2seq — attention typically helps
+more on longer/harder sentences:
+
+@bahdanau-attention-training-2
+:::
+
+::: {.slide title="Attention heatmap"}
+Pull attention weights from the predict step and plot them
+— rows are decoder steps, columns are source tokens. The
+diagonal-ish band is the model learning soft alignment:
+
+@bahdanau-attention-training-3
+
+. . .
+
+@bahdanau-attention-training-4
+:::
+
+::: {.slide title="Recap"}
+- Bahdanau attention replaces the seq2seq bottleneck: at
+  each decoder step, attend over *all* encoder outputs.
+- Decoder hidden state = query, encoder outputs = keys and
+  values. Additive scoring; masked softmax with source
+  `valid_len`.
+- Visualizing weights = soft alignment between source and
+  target tokens.
+- This is the conceptual ancestor of the Transformer's
+  cross-attention.
+:::

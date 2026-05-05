@@ -5,7 +5,7 @@ Implementing parallelism from scratch for every new model is no fun. Moreover, t
 The mathematics and the algorithms are the same as in :numref:`sec_multi_gpu`.
 Quite unsurprisingly you will need at least two GPUs to run code of this section.
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-concise-implementation-for-multiple-gpus}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -13,14 +13,14 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-concise-implementation-for-multiple-gpus}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-concise-implementation-for-multiple-gpus}
 #@tab jax
 from d2l import jax as d2l
 import functools
@@ -33,20 +33,20 @@ import flax
 import numpy as np
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-concise-implementation-for-multiple-gpus}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import keras
 ```
 
-## [**A Toy Network**]
+## A Toy Network
 
 Let's use a slightly more meaningful network than LeNet from :numref:`sec_multi_gpu` that is still sufficiently easy and quick to train.
 We pick a ResNet-18 variant :cite:`He.Zhang.Ren.ea.2016`. Since the input images are tiny we modify it slightly. In particular, the difference from :numref:`sec_resnet` is that we use a smaller convolution kernel, stride, and padding at the beginning.
 Moreover, we remove the max-pooling layer.
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-a-toy-network}
 #@tab mxnet
 #@save
 def resnet18(num_classes):
@@ -74,7 +74,7 @@ def resnet18(num_classes):
     return net
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-a-toy-network}
 #@tab pytorch
 #@save
 def resnet18(num_classes, in_channels=1):
@@ -106,7 +106,7 @@ def resnet18(num_classes, in_channels=1):
     return net
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-a-toy-network}
 #@tab jax
 #@save
 class ResNet18(nn.Module):
@@ -140,7 +140,7 @@ class ResNet18(nn.Module):
         return self.net(x)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-a-toy-network}
 #@tab tensorflow
 #@save
 def resnet18(num_classes, in_channels=1):
@@ -190,7 +190,7 @@ In JAX, we initialize the model parameters and create a `TrainState` that bundle
 With `tf.distribute.MirroredStrategy`, the model is built inside `strategy.scope()`. All variables created within the scope are automatically mirrored across all GPUs. We will initialize the network and optimizer inside the training function.
 :end_tab:
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-1}
 #@tab mxnet
 net = resnet18(10)
 # Get a list of GPUs
@@ -199,7 +199,7 @@ devices = d2l.try_all_gpus()
 net.initialize(init=init.Normal(sigma=0.01), ctx=devices)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-1}
 #@tab pytorch
 net = resnet18(10)
 # Get a list of GPUs
@@ -207,7 +207,7 @@ devices = d2l.try_all_gpus()
 # We will initialize the network inside the training loop
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-1}
 #@tab jax
 net = ResNet18(num_classes=10)
 # Count available devices (GPUs/TPUs)
@@ -216,7 +216,7 @@ print(f'Using {num_devices} devices: {jax.devices()}')
 # We will initialize the network inside the training loop
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-1}
 #@tab tensorflow
 # MirroredStrategy distributes training across all available GPUs
 strategy = tf.distribute.MirroredStrategy()
@@ -228,7 +228,7 @@ print(f'Number of devices: {strategy.num_replicas_in_sync}')
 Using the `split_and_load` function introduced in :numref:`sec_multi_gpu` we can divide a minibatch of data and copy portions to the list of devices provided by the `devices` variable. The network instance *automatically* uses the appropriate GPU to compute the value of the forward propagation. Here we generate 4 observations and split them over the GPUs.
 :end_tab:
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-2}
 #@tab mxnet
 x = np.random.uniform(size=(4, 1, 28, 28))
 x_shards = gluon.utils.split_and_load(x, devices)
@@ -240,7 +240,7 @@ Once data passes through the network, the corresponding parameters are initializ
 This means that initialization happens on a per-device basis. Since we picked GPU 0 and GPU 1 for initialization, the network is initialized only there, and not on the CPU. In fact, the parameters do not even exist on the CPU. We can verify this by printing out the parameters and observing any errors that might arise.
 :end_tab:
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-3}
 #@tab mxnet
 weight = net[0].params.get('weight')
 
@@ -252,10 +252,10 @@ weight.data(devices[0])[0], weight.data(devices[1])[0]
 ```
 
 :begin_tab:`mxnet`
-Next, let's replace the code to [**evaluate the accuracy**] by one that works (**in parallel across multiple devices**). This serves as a replacement of the `evaluate_accuracy_gpu` function from :numref:`sec_lenet`. The main difference is that we split a minibatch before invoking the network. All else is essentially identical.
+Next, let's replace the code to evaluate the accuracy by one that works in parallel across multiple devices. This serves as a replacement of the `evaluate_accuracy_gpu` function from :numref:`sec_lenet`. The main difference is that we split a minibatch before invoking the network. All else is essentially identical.
 :end_tab:
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-network-initialization-4}
 #@tab mxnet
 #@save
 def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
@@ -274,7 +274,7 @@ def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
     return metric[0] / metric[1]
 ```
 
-## [**Training**]
+## Training
 
 As before, the training code needs to perform several basic functions for efficient parallelism:
 
@@ -285,7 +285,7 @@ As before, the training code needs to perform several basic functions for effici
 
 In the end we compute the accuracy (again in parallel) to report the final performance of the network. The training routine is quite similar to implementations in previous chapters, except that we need to split and aggregate data.
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-1}
 #@tab mxnet
 def train(num_gpus, batch_size, lr):
     train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
@@ -313,7 +313,7 @@ def train(num_gpus, batch_size, lr):
           f'on {str(ctx)}')
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-1}
 #@tab pytorch
 def train(net, num_gpus, batch_size, lr):
     train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
@@ -346,7 +346,7 @@ def train(net, num_gpus, batch_size, lr):
           f'on {str(devices)}')
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-1}
 #@tab jax
 def train(num_devices, batch_size, lr):
     data = d2l.FashionMNIST(batch_size=batch_size)
@@ -432,7 +432,7 @@ def train(num_devices, batch_size, lr):
           f'on {num_devices} devices')
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-1}
 #@tab tensorflow
 def train(num_gpus, batch_size, lr):
     train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
@@ -460,48 +460,48 @@ def train(num_gpus, batch_size, lr):
           f'on {str([g.name for g in gpus])}')
 ```
 
-Let's see how this works in practice. As a warm-up we [**train the network on a single GPU.**]
+Let's see how this works in practice. As a warm-up we train the network on a single GPU.
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-2}
 #@tab mxnet
 train(num_gpus=1, batch_size=256, lr=0.1)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-2}
 #@tab pytorch
 train(net, num_gpus=1, batch_size=256, lr=0.1)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-2}
 #@tab jax
 train(num_devices=1, batch_size=256, lr=0.1)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-2}
 #@tab tensorflow
 train(num_gpus=1, batch_size=256, lr=0.1)
 ```
 
-Next we [**use 2 GPUs for training**]. Compared with LeNet
+Next we use 2 GPUs for training. Compared with LeNet
 evaluated in :numref:`sec_multi_gpu`,
 the model for ResNet-18 is considerably more complex. This is where parallelization shows its advantage. The time for computation is meaningfully larger than the time for synchronizing parameters. This improves scalability since the overhead for parallelization is less relevant.
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-3}
 #@tab mxnet
 train(num_gpus=2, batch_size=512, lr=0.2)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-3}
 #@tab pytorch
 train(net, num_gpus=2, batch_size=512, lr=0.2)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-3}
 #@tab jax
 train(num_devices=2, batch_size=512, lr=0.2)
 ```
 
-```{.python .input}
+```{.python .input #multiple-gpus-concise-training-3}
 #@tab tensorflow
 train(num_gpus=2, batch_size=512, lr=0.2)
 ```
@@ -569,3 +569,77 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1403)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The previous section did data-parallel training the hard
+way — manual `all_reduce`, manual replica management. In
+practice, every framework wraps it in a one-liner:
+
+- PyTorch: `nn.DataParallel(net)` (multi-GPU on one host) or
+  `nn.parallel.DistributedDataParallel` (multi-host).
+- MXNet: `gluon.Trainer(..., kvstore='device')`.
+- TensorFlow: `tf.distribute.MirroredStrategy()`.
+
+Same numerical result; orders of magnitude less boilerplate;
+NCCL all-reduce under the hood.
+
+@multiple-gpus-concise-concise-implementation-for-multiple-gpus
+:::
+
+::: {.slide title="A bigger model"}
+We use a small ResNet for these experiments — the speedup
+from data parallelism only matters once the per-GPU
+compute is non-trivial:
+
+@multiple-gpus-concise-a-toy-network
+:::
+
+::: {.slide title="Multi-GPU initialization"}
+Wrap the model in the framework's data-parallel container.
+Parameters are replicated to each GPU automatically:
+
+@multiple-gpus-concise-network-initialization-1
+
+. . .
+
+@multiple-gpus-concise-network-initialization-2
+
+. . .
+
+@multiple-gpus-concise-network-initialization-3
+:::
+
+::: {.slide title="Parallel evaluation"}
+The wrapper also handles inference — splits the input
+minibatch across replicas, gathers outputs:
+
+@multiple-gpus-concise-network-initialization-4
+:::
+
+::: {.slide title="Training loop"}
+Identical to single-GPU: forward, backward, step. The
+data-parallel wrapper does the gradient averaging
+behind the scenes:
+
+@multiple-gpus-concise-training-1
+:::
+
+::: {.slide title="Single-GPU baseline"}
+@multiple-gpus-concise-training-2
+:::
+
+::: {.slide title="Two GPUs"}
+@multiple-gpus-concise-training-3
+:::
+
+::: {.slide title="Recap"}
+- Framework wrappers (`DataParallel`, `MirroredStrategy`)
+  reduce data-parallel SGD to one line of setup.
+- Same numerical recipe as the from-scratch version:
+  replicate, split, all-reduce, identical step.
+- For multi-host distributed training, use
+  `DistributedDataParallel` / `MultiWorkerMirroredStrategy`
+  — same idea, NCCL/Gloo across the network.
+:::

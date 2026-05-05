@@ -25,7 +25,7 @@ To accomplish the latter we need to pay
 attention to overfitting in addition to using the optimization algorithm to
 reduce the training error.
 
-```{.python .input}
+```{.python .input #optimization-intro-goal-of-optimization-1}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -34,7 +34,7 @@ from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #optimization-intro-goal-of-optimization-1}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -43,7 +43,7 @@ from mpl_toolkits import mplot3d
 import torch
 ```
 
-```{.python .input}
+```{.python .input #optimization-intro-goal-of-optimization-1}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -52,7 +52,7 @@ from mpl_toolkits import mplot3d
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #optimization-intro-goal-of-optimization-1}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -78,8 +78,7 @@ and the empirical risk function `g`.
 Suppose that we have only a finite amount of training data.
 As a result, here `g` is less smooth than `f`.
 
-```{.python .input}
-#@tab all
+```{.python .input #optimization-intro-goal-of-optimization-2}
 def f(x):
     return x * d2l.cos(np.pi * x)
 
@@ -89,8 +88,7 @@ def g(x):
 
 The graph below illustrates that the minimum of the empirical risk on a training dataset may be at a different location from the minimum of the risk (generalization error).
 
-```{.python .input}
-#@tab all
+```{.python .input #optimization-intro-goal-of-optimization-3}
 def annotate(text, xy, xytext):  #@save
     d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
                            arrowprops=dict(arrowstyle='->'))
@@ -133,8 +131,7 @@ $$f(x) = x \cdot \textrm{cos}(\pi x) \textrm{ for } -1.0 \leq x \leq 2.0,$$
 
 we can approximate the local minimum and global minimum of this function.
 
-```{.python .input}
-#@tab all
+```{.python .input #optimization-intro-local-minima}
 x = d2l.arange(-1.0, 2.0, 0.01)
 d2l.plot(x, [f(x), ], 'x', 'f(x)')
 annotate('local minimum', (-0.3, -0.25), (-0.77, -1.0))
@@ -152,8 +149,7 @@ minibatch stochastic gradient descent where the natural variation of gradients o
 Besides local minima, saddle points are another reason for gradients to vanish. A *saddle point* is any location where all gradients of a function vanish but which is neither a global nor a local minimum.
 Consider the function $f(x) = x^3$. Its first and second derivative vanish for $x=0$. Optimization might stall at this point, even though it is not a minimum.
 
-```{.python .input}
-#@tab all
+```{.python .input #optimization-intro-saddle-points-1}
 x = d2l.arange(-2.0, 2.0, 0.01)
 d2l.plot(x, [x**3], 'x', 'f(x)')
 annotate('saddle point', (0, -0.2), (-0.52, -5.0))
@@ -161,7 +157,7 @@ annotate('saddle point', (0, -0.2), (-0.52, -5.0))
 
 Saddle points in higher dimensions are even more insidious, as the example below shows. Consider the function $f(x, y) = x^2 - y^2$. It has its saddle point at $(0, 0)$. This is a maximum with respect to $y$ and a minimum with respect to $x$. Moreover, it *looks* like a saddle, which is where this mathematical property got its name.
 
-```{.python .input}
+```{.python .input #optimization-intro-saddle-points-2}
 #@tab mxnet
 x, y = d2l.meshgrid(
     d2l.linspace(-1.0, 1.0, 101), d2l.linspace(-1.0, 1.0, 101))
@@ -179,7 +175,7 @@ d2l.plt.xlabel('x')
 d2l.plt.ylabel('y');
 ```
 
-```{.python .input}
+```{.python .input #optimization-intro-saddle-points-2}
 #@tab pytorch, tensorflow, jax
 x, y = d2l.meshgrid(
     d2l.linspace(-1.0, 1.0, 101), d2l.linspace(-1.0, 1.0, 101))
@@ -216,8 +212,7 @@ For instance, assume that we want to minimize the function $f(x) = \tanh(x)$ and
 More specifically, $f'(x) = 1 - \tanh^2(x)$ and thus $f'(4) = 0.0013$.
 Consequently, optimization will get stuck for a long time before we make progress. This turns out to be one of the reasons that training deep learning models was quite tricky prior to the introduction of the ReLU activation function.
 
-```{.python .input}
-#@tab all
+```{.python .input #optimization-intro-vanishing-gradients}
 x = d2l.arange(-2.0, 5.0, 0.01)
 d2l.plot(x, [d2l.tanh(x)], 'x', 'f(x)')
 annotate('vanishing gradient', (4, 1), (2, 0.0))
@@ -262,3 +257,83 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/489)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Optimization** and **deep learning** are not the same
+problem. Optimization minimizes the *training* loss; deep
+learning cares about the *generalization* loss.
+
+Three things make optimization hard:
+
+- **Local minima** — GD stalls at points that aren't
+  globally best.
+- **Saddle points** — zero gradient, neither min nor max.
+  In high dim they're *far* more common than minima.
+- **Vanishing gradients** — flat regions where progress is
+  essentially zero (e.g. $\tanh$ saturation).
+:::
+
+::: {.slide title="Empirical risk vs. risk"}
+Setup the modules and define a smooth risk `f` and a
+noisier empirical risk `g` (training loss):
+
+@optimization-intro-goal-of-optimization-1
+
+. . .
+
+@optimization-intro-goal-of-optimization-2
+
+. . .
+
+The minimum of empirical risk on the training set is at a
+*different* location from the minimum of the population
+risk. Optimizing one doesn't optimize the other:
+
+@optimization-intro-goal-of-optimization-3
+:::
+
+::: {.slide title="Local minima"}
+$f(x) = x \cos(\pi x)$ has multiple basins. Gradient descent
+stalls at the first one it falls into; only noise (e.g., SGD
+minibatch variance) can knock it out:
+
+@optimization-intro-local-minima
+:::
+
+::: {.slide title="Saddle points"}
+1D — $f(x) = x^3$ has $f'(0) = 0$ but it's not a min:
+
+@optimization-intro-saddle-points-1
+
+. . .
+
+In high dim, with a Hessian of mixed signs, you get the
+classic saddle shape. *Most* zero-gradient points in deep
+learning are saddles, not minima — random Hessian
+eigenvalues are unlikely to all share a sign:
+
+@optimization-intro-saddle-points-2
+:::
+
+::: {.slide title="Vanishing gradients"}
+$f(x) = \tanh(x)$ at $x = 4$: $f'(4) \approx 0.0013$.
+Gradient descent makes essentially no progress here. ReLU
+fixed this for activation functions; layer norm and residual
+connections fix it across deep networks.
+
+@optimization-intro-vanishing-gradients
+:::
+
+::: {.slide title="Recap"}
+- Minimizing training loss ≠ minimizing test loss; that
+  gap is what generalization is about.
+- High-dim non-convex landscapes have many local minima
+  and many more saddle points; vanishing gradients add a
+  third stall mode.
+- The good news: you don't need *the* global optimum —
+  approximate solutions found by SGD-class methods work
+  well in practice. The rest of the chapter is the
+  algorithmic toolkit.
+:::

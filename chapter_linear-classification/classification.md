@@ -8,26 +8,26 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 You may have noticed that the implementations from scratch and the concise implementation using framework functionality were quite similar in the case of regression. The same is true for classification. Since many models in this book deal with classification, it is worth adding functionalities to support this setting specifically. This section provides a base class for classification models to simplify future code.
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx, gluon
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #classification-the-base-classification-model}
 %%tab jax
 from d2l import jax as d2l
 from functools import partial
@@ -61,7 +61,7 @@ we will make the loss also return a placeholder (empty dictionary) to
 represent the auxiliary data.
 :end_tab:
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-1}
 %%tab pytorch, mxnet, tensorflow
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
@@ -75,7 +75,7 @@ class Classifier(d2l.Module):  #@save
         self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-1}
 %%tab jax
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
@@ -99,7 +99,7 @@ class Classifier(d2l.Module):  #@save
 
 By default we use a stochastic gradient descent optimizer, operating on minibatches, just as we did in the context of linear regression.
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
@@ -109,21 +109,21 @@ def configure_optimizers(self):
     return gluon.Trainer(params, 'sgd', {'learning_rate': self.lr})
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
     return torch.optim.SGD(self.parameters(), lr=self.lr)
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab tensorflow
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
     return tf.keras.optimizers.SGD(float(self.lr))
 ```
 
-```{.python .input}
+```{.python .input #classification-the-classifier-class-2}
 %%tab jax
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
@@ -150,13 +150,13 @@ Accuracy is computed as follows.
 First, if `y_hat` is a matrix,
 we assume that the second dimension stores prediction scores for each class.
 We use `argmax` to obtain the predicted class by the index for the largest entry in each row.
-Then we [**compare the predicted class with the ground truth `y` elementwise.**]
+Then we compare the predicted class with the ground truth `y` elementwise.
 Since the equality operator `==` is sensitive to data types,
 we convert `y_hat`'s data type to match that of `y`.
 The result is a tensor containing entries of 0 (false) and 1 (true).
 Taking the sum yields the number of correct predictions.
 
-```{.python .input  n=9}
+```{.python .input #classification-accuracy-1  n=9}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(Classifier)  #@save
 def accuracy(self, Y_hat, Y, averaged=True):
@@ -167,7 +167,18 @@ def accuracy(self, Y_hat, Y, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
-```{.python .input  n=9}
+:begin_tab:`jax`
+The JAX `accuracy` differs from the imperative version in a
+few places. It takes `params` and `state` instead of a
+precomputed `Y_hat` (Flax modules are stateless, so the
+forward pass needs both), reaches into `state.batch_stats` to
+support models with BatchNorm (a no-op for models without it),
+and is decorated with `@jax.jit` for compiled execution. The
+arithmetic that follows the forward pass is identical to the
+other frameworks.
+:end_tab:
+
+```{.python .input #classification-accuracy-1  n=9}
 %%tab jax
 @d2l.add_to_class(Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
@@ -182,7 +193,18 @@ def accuracy(self, params, X, Y, state, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
-```{.python .input  n=10}
+:begin_tab:`mxnet`
+MXNet's `gluon.Block.collect_params` only finds parameters declared
+through Gluon's `Parameter` machinery — it misses bare `np.ndarray`
+attributes that the from-scratch implementations in this book use.
+We extend `d2l.Module` with a fallback `get_scratch_params` that
+walks attributes recursively, and a `parameters` method that returns
+Gluon's params when present and the scratch params otherwise. The
+other frameworks don't need this — PyTorch's `nn.Module`, TensorFlow
+Keras, and JAX/Flax all expose parameters uniformly.
+:end_tab:
+
+```{.python .input #classification-accuracy-2  n=10}
 %%tab mxnet
 
 @d2l.add_to_class(d2l.Module)  #@save
@@ -229,3 +251,50 @@ Classification is a sufficiently common problem that it warrants its own conveni
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17981)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+A small `Classifier` base class that every classification model
+in the book inherits from. Same role as `d2l.Module` for
+regression — but with classification-specific defaults:
+
+- A **validation step** that reports loss **and** accuracy.
+- An **accuracy** helper that compares the argmax of the predicted
+  scores to the true labels.
+
+Subclasses just supply `forward` (and a custom `loss` if not
+plain cross-entropy).
+:::
+
+::: {.slide title="The `Classifier` class"}
+@classification-the-base-classification-model
+
+@classification-the-classifier-class-1
+
+. . .
+
+A default `configure_optimizers` on `Module` so subclasses don't
+have to write it:
+
+@classification-the-classifier-class-2
+:::
+
+::: {.slide title="Accuracy"}
+Take the **argmax** along the class axis, compare with the true
+label element-wise, and average. The result is the fraction of
+correctly-classified examples in the batch:
+
+@classification-accuracy-1
+
+The validation step then reports both the loss (lower is better)
+and accuracy (higher is better) every epoch.
+:::
+
+::: {.slide title="Recap"}
+- `Classifier(d2l.Module)` adds **accuracy reporting** to the
+  base scaffold from the regression chapter.
+- One line for accuracy: `argmax → ==y → mean`.
+- The same training loop now drives every classification model
+  we'll build through the rest of the book.
+:::

@@ -39,31 +39,31 @@ in subsequent sections,
 this section will convert this architecture
 into an interface that will be implemented later.
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet.gluon import nn
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab pytorch
 from d2l import torch as d2l
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
 ```
 
-## (**Encoder**)
+## Encoder
 
 In the encoder interface,
 we just specify that
@@ -71,7 +71,7 @@ the encoder takes variable-length sequences as input `X`.
 The implementation will be provided
 by any model that inherits this base `Encoder` class.
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab mxnet
 class Encoder(nn.Block):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -83,7 +83,7 @@ class Encoder(nn.Block):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab pytorch
 class Encoder(nn.Module):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -95,7 +95,7 @@ class Encoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab tensorflow
 class Encoder(tf.keras.layers.Layer):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -107,7 +107,7 @@ class Encoder(tf.keras.layers.Layer):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-encoder}
 %%tab jax
 class Encoder(nn.Module):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
@@ -119,7 +119,7 @@ class Encoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-## [**Decoder**]
+## Decoder
 
 In the following decoder interface,
 we add an additional `init_state` method
@@ -136,7 +136,7 @@ every time the decoder may map an input
 and the encoded state
 into an output token at the current time step.
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab mxnet
 class Decoder(nn.Block):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -151,7 +151,7 @@ class Decoder(nn.Block):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab pytorch
 class Decoder(nn.Module):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -166,7 +166,7 @@ class Decoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab tensorflow
 class Decoder(tf.keras.layers.Layer):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -181,7 +181,7 @@ class Decoder(tf.keras.layers.Layer):  #@save
         raise NotImplementedError
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-decoder}
 %%tab jax
 class Decoder(nn.Module):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
@@ -196,7 +196,7 @@ class Decoder(nn.Module):  #@save
         raise NotImplementedError
 ```
 
-## [**Putting the Encoder and Decoder Together**]
+## Putting the Encoder and Decoder Together
 
 In the forward propagation,
 the output of the encoder
@@ -204,7 +204,7 @@ is used to produce the encoded state,
 and this state will be further used
 by the decoder as one of its inputs.
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab mxnet, pytorch
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
@@ -220,7 +220,7 @@ class EncoderDecoder(d2l.Classifier):  #@save
         return self.decoder(dec_X, dec_state)[0]
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab tensorflow
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
@@ -236,7 +236,7 @@ class EncoderDecoder(d2l.Classifier):  #@save
         return self.decoder(dec_X, dec_state, training=True)[0]
 ```
 
-```{.python .input}
+```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
 %%tab jax
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
@@ -290,3 +290,64 @@ to a variable-length sequence.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18021)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Translation, summarization, dialogue — variable-length
+input mapped to variable-length output, no positional
+alignment between the two.
+
+- **Encoder** reads the source sequence, compresses it
+  into a state.
+- **Decoder** reads that state plus target tokens so far,
+  predicts the next target token.
+
+The decoder is a *conditional* language model:
+$P(y_t \mid y_{<t}, \text{enc}(x))$.
+:::
+
+::: {.slide title="The architecture"}
+![Encoder–decoder: a state in between handles arbitrary in/out lengths.](../img/encoder-decoder.svg){width=78%}
+:::
+
+::: {.slide title="Setup"}
+@encoder-decoder-the-encoder-decoder-architecture
+:::
+
+::: {.slide title="Encoder interface"}
+One method: read a variable-length input. The downstream
+implementation chooses the architecture (RNN now, Transformer
+later):
+
+@encoder-decoder-encoder
+:::
+
+::: {.slide title="Decoder interface"}
+Two methods. `init_state` packs the encoder output into a
+state object the decoder consumes; `forward` takes the next
+input token plus the state and returns logits + updated state:
+
+@encoder-decoder-decoder
+:::
+
+::: {.slide title="Wiring them together"}
+`EncoderDecoder` runs the encoder once on the source, hands
+its output to `init_state`, then drives the decoder with the
+target tokens (teacher forcing during training):
+
+@encoder-decoder-putting-the-encoder-and-decoder-together
+:::
+
+::: {.slide title="Recap"}
+- Encoder–decoder splits seq2seq into two pieces with a
+  state in between — fixed shape inside, variable lengths
+  outside.
+- The decoder is just a conditional language model: same
+  $P(y_t \mid y_{<t}, \cdot)$ factorization, with the encoder
+  output as extra context.
+- Concrete implementations only override the encoder, the
+  decoder, and how the encoder output becomes a state.
+- Same scaffold will host RNN seq2seq, attention, and
+  Transformers in the chapters ahead.
+:::

@@ -10,7 +10,7 @@ The MovieLens dataset is hosted by the [GroupLens](https://grouplens.org/dataset
 
 To begin with, let's import the packages required to run this section's experiments.
 
-```{.python .input  n=1}
+```{.python .input #movielens-getting-the-data-1  n=1}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import gluon, np
@@ -18,7 +18,7 @@ import os
 import pandas as pd
 ```
 
-```{.python .input  n=1}
+```{.python .input #movielens-getting-the-data-1  n=1}
 #@tab pytorch
 from d2l import torch as d2l
 import numpy as np
@@ -29,7 +29,7 @@ import torch
 
 Then, we download the MovieLens 100k dataset and load the interactions as `DataFrame`.
 
-```{.python .input  n=2}
+```{.python .input #movielens-getting-the-data-2  n=2}
 #@tab mxnet
 #@save
 d2l.DATA_HUB['ml-100k'] = (
@@ -47,7 +47,7 @@ def read_data_ml100k():
     return data, num_users, num_items
 ```
 
-```{.python .input  n=2}
+```{.python .input #movielens-getting-the-data-2  n=2}
 #@tab pytorch
 #@save
 d2l.DATA_HUB['ml-100k'] = (
@@ -69,7 +69,7 @@ def read_data_ml100k():
 
 Let's load up the data and inspect the first five records manually. It is an effective way to learn the data structure and verify that they have been loaded properly.
 
-```{.python .input  n=3}
+```{.python .input #movielens-statistics-of-the-dataset-1  n=3}
 #@tab mxnet
 data, num_users, num_items = read_data_ml100k()
 sparsity = 1 - len(data) / (num_users * num_items)
@@ -78,7 +78,7 @@ print(f'matrix sparsity: {sparsity:f}')
 print(data.head(5))
 ```
 
-```{.python .input  n=3}
+```{.python .input #movielens-statistics-of-the-dataset-1  n=3}
 #@tab pytorch
 data, num_users, num_items = read_data_ml100k()
 sparsity = 1 - len(data) / (num_users * num_items)
@@ -91,7 +91,7 @@ We can see that each line consists of four columns, including "user id" 1-943, "
 
 We then plot the distribution of the count of different ratings. As expected, it appears to be a normal distribution, with most ratings centered at 3-4.
 
-```{.python .input  n=4}
+```{.python .input #movielens-statistics-of-the-dataset-2  n=4}
 #@tab mxnet
 d2l.plt.hist(data['rating'], bins=5, ec='black')
 d2l.plt.xlabel('Rating')
@@ -100,7 +100,7 @@ d2l.plt.title('Distribution of Ratings in MovieLens 100K')
 d2l.plt.show()
 ```
 
-```{.python .input  n=4}
+```{.python .input #movielens-statistics-of-the-dataset-2  n=4}
 #@tab pytorch
 d2l.plt.hist(data['rating'], bins=5, ec='black')
 d2l.plt.xlabel('Rating')
@@ -113,7 +113,7 @@ d2l.plt.show()
 
 We split the dataset into training and test sets. The following function provides two split modes including `random` and `seq-aware`. In the `random` mode, the function splits the 100k interactions randomly without considering timestamp and uses the 90% of the data as training samples and the rest 10% as test samples by default. In the `seq-aware` mode, we leave out the item that a user rated most recently for test, and users' historical interactions as training set.  User historical interactions are sorted from oldest to newest based on timestamp. This mode will be used in the sequence-aware recommendation section.
 
-```{.python .input  n=5}
+```{.python .input #movielens-splitting-the-dataset  n=5}
 #@tab mxnet
 #@save
 def split_data_ml100k(data, num_users, num_items,
@@ -140,7 +140,7 @@ def split_data_ml100k(data, num_users, num_items,
     return train_data, test_data
 ```
 
-```{.python .input  n=5}
+```{.python .input #movielens-splitting-the-dataset  n=5}
 #@tab pytorch
 #@save
 def split_data_ml100k(data, num_users, num_items,
@@ -173,7 +173,7 @@ Note that it is good practice to use a validation set in practice, apart from on
 
 After dataset splitting, we will convert the training set and test set into lists and dictionaries/matrix for the sake of convenience. The following function reads the dataframe line by line and enumerates the index of users/items start from zero. The function then returns lists of users, items, ratings and a dictionary/matrix that records the interactions. We can specify the type of feedback to either `explicit` or `implicit`.
 
-```{.python .input  n=6}
+```{.python .input #movielens-loading-the-data-1  n=6}
 #@tab mxnet
 #@save
 def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
@@ -192,7 +192,7 @@ def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
     return users, items, scores, inter
 ```
 
-```{.python .input  n=6}
+```{.python .input #movielens-loading-the-data-1  n=6}
 #@tab pytorch
 #@save
 def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
@@ -213,7 +213,7 @@ def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
 
 Afterwards, we put the above steps together and it will be used in the next section. The results are wrapped with `Dataset` and `DataLoader`. We keep the partial last batch in both frameworks (`last_batch='keep'` for MXNet, `drop_last=False` for PyTorch) so that no training samples are silently dropped from each epoch, and orders are shuffled.
 
-```{.python .input  n=7}
+```{.python .input #movielens-loading-the-data-2  n=7}
 #@tab mxnet
 #@save
 def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
@@ -237,7 +237,7 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
     return num_users, num_items, train_iter, test_iter
 ```
 
-```{.python .input  n=7}
+```{.python .input #movielens-loading-the-data-2  n=7}
 #@tab pytorch
 #@save
 def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
@@ -281,3 +281,70 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/399)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**MovieLens** — the canonical recommender systems
+benchmark. 100k version: 943 users, 1682 movies, 100k
+explicit ratings on a 1–5 scale. Sparse: only ~6% of
+the user×item matrix is filled.
+
+This deck loads MovieLens-100k and sets up:
+
+- **Random split** — for rating prediction (matrix
+  factorization style).
+- **Sequence split** — for sequential recommendation
+  (later in the chapter).
+
+Output: minibatches of `(user, item, rating)` triples. The
+following decks build matrix factorization, AutoRec, and
+neural collaborative filtering on top.
+:::
+
+::: {.slide title="Downloading"}
+@movielens-getting-the-data-1
+
+. . .
+
+@movielens-getting-the-data-2
+:::
+
+::: {.slide title="Dataset statistics"}
+Sparsity calculation, rating distribution histogram —
+the two most informative diagnostics for a recommender
+dataset:
+
+@movielens-statistics-of-the-dataset-1
+
+. . .
+
+@movielens-statistics-of-the-dataset-2
+:::
+
+::: {.slide title="Train / test split"}
+Two splits to support different evaluation protocols:
+
+- *Random* — split rows uniformly. For rating prediction.
+- *Seq-aware* — hold out the *last* interaction per user.
+  Closer to "predict what they rate next".
+
+@movielens-splitting-the-dataset
+:::
+
+::: {.slide title="DataLoader"}
+@movielens-loading-the-data-1
+
+. . .
+
+@movielens-loading-the-data-2
+:::
+
+::: {.slide title="Recap"}
+- MovieLens-100k: small, well-understood ratings dataset
+  — ideal for teaching, too small for SOTA claims.
+- Sparsity (~94% missing) is the central challenge for
+  every method in this chapter.
+- Output format: `(user, item, rating)` minibatches +
+  framework-native loaders.
+:::

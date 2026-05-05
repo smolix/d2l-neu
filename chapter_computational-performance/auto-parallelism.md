@@ -12,27 +12,27 @@ Typically, a single operator will use all the computational resources on all CPU
 
 Note that we need at least two GPUs to run the experiments in this section.
 
-```{.python .input}
+```{.python .input #auto-parallelism-automatic-parallelism}
 #@tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-automatic-parallelism}
 #@tab pytorch
 from d2l import torch as d2l
 import torch
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-automatic-parallelism}
 #@tab jax
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-automatic-parallelism}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
@@ -42,7 +42,7 @@ import tensorflow as tf
 
 Let's start by defining a reference workload to test: the `run` function below performs 50 matrix-matrix multiplications on the device of our choice using data allocated into two variables: `x_gpu1` and `x_gpu2`.
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-1}
 #@tab mxnet
 devices = d2l.try_all_gpus()
 def run(x):
@@ -52,7 +52,7 @@ x_gpu1 = np.random.uniform(size=(4000, 4000), ctx=devices[0])
 x_gpu2 = np.random.uniform(size=(4000, 4000), ctx=devices[1])
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-1}
 #@tab pytorch
 devices = d2l.try_all_gpus()
 def run(x):
@@ -62,7 +62,7 @@ x_gpu1 = torch.rand(size=(4000, 4000), device=devices[0])
 x_gpu2 = torch.rand(size=(4000, 4000), device=devices[1])
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-1}
 #@tab jax
 devices = jax.devices('gpu')
 def run(x):
@@ -74,7 +74,7 @@ x_gpu2 = jax.device_put(jax.random.normal(jax.random.PRNGKey(1), (4000, 4000)),
                          devices[1])
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-1}
 #@tab tensorflow
 devices = tf.config.list_logical_devices('GPU')
 
@@ -104,7 +104,7 @@ Now we apply the function to the data. To ensure that caching does not play a ro
 Now we apply the function to the data. To ensure that caching does not play a role in the results we warm up the devices by performing a single pass on either of them prior to measuring. `@tf.function` traces the function on the first call; subsequent calls run the compiled graph. We call `.numpy()` on the last result to force GPU synchronization before timing.
 :end_tab:
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-2}
 #@tab mxnet
 run(x_gpu1)  # Warm-up both devices
 run(x_gpu2)
@@ -119,7 +119,7 @@ with d2l.Benchmark('GPU2 time'):
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-2}
 #@tab pytorch
 run(x_gpu1)
 run(x_gpu2)  # Warm-up all devices
@@ -135,7 +135,7 @@ with d2l.Benchmark('GPU2 time'):
     torch.cuda.synchronize(devices[1])
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-2}
 #@tab jax
 run(x_gpu1)[-1].block_until_ready()  # Warm-up both devices
 run(x_gpu2)[-1].block_until_ready()
@@ -147,7 +147,7 @@ with d2l.Benchmark('GPU2 time'):
     run(x_gpu2)[-1].block_until_ready()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-2}
 #@tab tensorflow
 # Warm-up: trigger tf.function tracing and CUDA kernel loading on both GPUs
 run(x_gpu1)[-1].numpy()
@@ -176,7 +176,7 @@ If we remove the `block_until_ready` call between both tasks the system is free 
 If we remove the per-GPU `.numpy()` barrier between both tasks the TensorFlow runtime is free to dispatch work to both GPUs concurrently. The `@tf.function`-compiled ops on GPU 0 and GPU 1 run in separate CUDA streams and overlap automatically.
 :end_tab:
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-3}
 #@tab mxnet
 with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
@@ -184,7 +184,7 @@ with d2l.Benchmark('GPU1 & GPU2'):
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-3}
 #@tab pytorch
 with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
@@ -192,14 +192,14 @@ with d2l.Benchmark('GPU1 & GPU2'):
     torch.cuda.synchronize()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-3}
 #@tab jax
 with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
     run(x_gpu2)[-1].block_until_ready()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-on-gpus-3}
 #@tab tensorflow
 with d2l.Benchmark('GPU1 & GPU2'):
     run(x_gpu1)
@@ -216,7 +216,7 @@ In many cases we need to move data between different devices, say between the CP
 For instance,
 this occurs when we want to perform distributed optimization where we need to aggregate the gradients over multiple accelerator cards. Let's simulate this by computing on the GPU and then copying the results back to the CPU.
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-1}
 #@tab mxnet
 def copy_to_cpu(x):
     return [y.copyto(npx.cpu()) for y in x]
@@ -230,7 +230,7 @@ with d2l.Benchmark('Copy to CPU'):
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-1}
 #@tab pytorch
 def copy_to_cpu(x, non_blocking=False):
     return [y.to('cpu', non_blocking=non_blocking) for y in x]
@@ -244,7 +244,7 @@ with d2l.Benchmark('Copy to CPU'):
     torch.cuda.synchronize()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-1}
 #@tab jax
 def copy_to_cpu(x):
     return [jax.device_put(y, jax.devices('cpu')[0]) for y in x]
@@ -258,7 +258,7 @@ with d2l.Benchmark('Copy to CPU'):
     y_cpu[-1].block_until_ready()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-1}
 #@tab tensorflow
 def copy_to_cpu(x):
     with tf.device('/CPU:0'):
@@ -289,7 +289,7 @@ This is somewhat inefficient. Note that we could already start copying parts of 
 This is somewhat inefficient. Note that we could already start copying parts of `y` to the CPU while the remainder of the list is still being computed. This situation occurs, e.g., when we compute the (backprop) gradient on a minibatch. The gradients of some of the parameters will be available earlier than that of others. Hence it works to our advantage to start using PCI-Express bus bandwidth while the GPU is still running. In TensorFlow, `tf.identity` with a `/CPU:0` device placement dispatches the D2H transfer asynchronously. Launching all copies before calling `.numpy()` allows computation and communication to overlap.
 :end_tab:
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-2}
 #@tab mxnet
 with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
@@ -297,7 +297,7 @@ with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-2}
 #@tab pytorch
 with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
@@ -305,7 +305,7 @@ with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     torch.cuda.synchronize()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-2}
 #@tab jax
 with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
@@ -313,7 +313,7 @@ with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y_cpu[-1].block_until_ready()
 ```
 
-```{.python .input}
+```{.python .input #auto-parallelism-parallel-computation-and-communication-2}
 #@tab tensorflow
 with d2l.Benchmark('Run on GPU1 and copy to CPU'):
     y = run(x_gpu1)
@@ -359,3 +359,69 @@ We conclude with an illustration of the computational graph and its dependencies
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/1681)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Once the framework runs asynchronously and tracks
+dependencies, two kinds of parallelism happen *for free*:
+
+- **Independent ops on different devices** — if op A
+  doesn't depend on op B, the scheduler can run them in
+  parallel on GPU 0 and GPU 1.
+- **Computation overlapped with communication** — while
+  the GPUs reduce gradients across the network, the next
+  layer's forward pass can start running.
+
+![Two-layer MLP scheduled across CPU and 2 GPUs — independent branches run in parallel.](../img/twogpu.svg){width=58%}
+
+You don't write any threads. The dependency tracker does
+it for you. This deck quantifies the speedup.
+
+@auto-parallelism-automatic-parallelism
+:::
+
+::: {.slide title="Two GPUs, two independent jobs"}
+Run the same matmul on GPU 0 and GPU 1 separately, then
+run both at the same time:
+
+@auto-parallelism-parallel-computation-on-gpus-1
+
+. . .
+
+@auto-parallelism-parallel-computation-on-gpus-2
+
+. . .
+
+@auto-parallelism-parallel-computation-on-gpus-3
+
+Concurrent run is roughly the time of one GPU — the
+scheduler used both in parallel.
+:::
+
+::: {.slide title="Computation + communication"}
+Compute on GPU 0 and copy the result to GPU 1 — sequential
+vs overlapped:
+
+@auto-parallelism-parallel-computation-and-communication-1
+
+. . .
+
+@auto-parallelism-parallel-computation-and-communication-2
+
+Overlapping shaves real time. Same idea scales to
+multi-GPU training: fuse `all_reduce` with the next layer's
+forward.
+:::
+
+::: {.slide title="Recap"}
+- Async backend + dependency tracker = automatic
+  parallelism across devices.
+- Independent ops run in parallel; communication overlaps
+  with computation.
+- No explicit thread management — write straight-line code,
+  the scheduler finds the parallelism.
+- Frameworks like NCCL, Horovod, DeepSpeed take this
+  further with explicit pipeline / sharded
+  parallelism for very large models.
+:::

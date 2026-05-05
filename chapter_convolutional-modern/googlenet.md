@@ -16,7 +16,7 @@ convolution kernels in an ingenious way. While other works tried to identify whi
 In what follows we introduce a slightly simplified version of GoogLeNet: the original design included a number of tricks for stabilizing training through intermediate loss functions, applied to multiple layers of the network. 
 They are no longer necessary due to the availability of improved training algorithms.
 
-```{.python .input}
+```{.python .input #googlenet-multi-branch-networks-googlenet}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import np, npx, init
@@ -24,7 +24,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #googlenet-multi-branch-networks-googlenet}
 %%tab pytorch
 from d2l import torch as d2l
 import torch
@@ -32,13 +32,13 @@ from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #googlenet-multi-branch-networks-googlenet}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
-```{.python .input}
+```{.python .input #googlenet-multi-branch-networks-googlenet}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -46,7 +46,7 @@ from jax import numpy as jnp
 import jax
 ```
 
-## (**Inception Blocks**)
+## Inception Blocks
 
 The basic convolutional block in GoogLeNet is called an *Inception block*,
 stemming from the meme "we need to go deeper" from the movie *Inception*.
@@ -70,7 +70,7 @@ along the channel dimension and comprise the block's output.
 The commonly-tuned hyperparameters of the Inception block
 are the number of output channels per layer, i.e., how to allocate capacity among convolutions of different size.
 
-```{.python .input}
+```{.python .input #googlenet-inception-blocks}
 %%tab mxnet
 class Inception(nn.Block):
     # c1--c4 are the number of output channels for each branch
@@ -98,7 +98,7 @@ class Inception(nn.Block):
         return np.concatenate((b1, b2, b3, b4), axis=1)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-inception-blocks}
 %%tab pytorch
 class Inception(nn.Module):
     # c1--c4 are the number of output channels for each branch
@@ -124,7 +124,7 @@ class Inception(nn.Module):
         return torch.cat((b1, b2, b3, b4), dim=1)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-inception-blocks}
 %%tab tensorflow
 class Inception(tf.keras.Model):
     # c1--c4 are the number of output channels for each branch
@@ -148,7 +148,7 @@ class Inception(tf.keras.Model):
         return tf.keras.layers.Concatenate()([b1, b2, b3, b4])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-inception-blocks}
 %%tab jax
 class Inception(nn.Module):
     # `c1`--`c4` are the number of output channels for each branch
@@ -188,7 +188,7 @@ At the same time, we can allocate different amounts of parameters
 for different filters.
 
 
-## [**GoogLeNet Model**]
+## GoogLeNet Model
 
 As shown in :numref:`fig_inception_full`, GoogLeNet uses a stack of a total of 9 inception blocks, arranged into three groups with max-pooling in between,
 and global average pooling in its head to generate its estimates.
@@ -201,7 +201,7 @@ At its stem, the first module is similar to AlexNet and LeNet.
 We can now implement GoogLeNet piece by piece. Let's begin with the stem.
 The first module uses a 64-channel $7\times 7$ convolutional layer.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-1}
 %%tab pytorch
 class GoogleNet(d2l.Classifier):
     def b1(self):
@@ -210,7 +210,7 @@ class GoogleNet(d2l.Classifier):
             nn.ReLU(), nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-1}
 %%tab mxnet
 class GoogleNet(d2l.Classifier):
     def b1(self):
@@ -221,7 +221,7 @@ class GoogleNet(d2l.Classifier):
         return net
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-1}
 %%tab tensorflow
 class GoogleNet(d2l.Classifier):
     def b1(self):
@@ -232,7 +232,7 @@ class GoogleNet(d2l.Classifier):
                                       padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-1}
 %%tab jax
 class GoogleNet(d2l.Classifier):
     lr: float = 0.1
@@ -254,7 +254,7 @@ The second module uses two convolutional layers:
 first, a 64-channel $1\times 1$ convolutional layer,
 followed by a $3\times 3$ convolutional layer that triples the number of channels. This corresponds to the second branch in the Inception block and concludes the design of the body. At this point we have 192 channels.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-2}
 %%tab pytorch
 @d2l.add_to_class(GoogleNet)
 def b2(self):
@@ -264,7 +264,7 @@ def b2(self):
         nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-2}
 %%tab tensorflow
 @d2l.add_to_class(GoogleNet)
 def b2(self):
@@ -274,7 +274,7 @@ def b2(self):
         tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-2}
 %%tab jax
 @d2l.add_to_class(GoogleNet)
 def b2(self):
@@ -287,7 +287,7 @@ def b2(self):
                                                 padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-2}
 %%tab mxnet
 @d2l.add_to_class(GoogleNet)
 def b2(self):
@@ -312,7 +312,7 @@ we need to reduce the number of intermediate dimensions in the second and third 
 scale of $\frac{1}{2}$ and $\frac{1}{8}$ respectively suffices, yielding $128$ and $32$ channels
 respectively. This is captured by the arguments of the following `Inception` block constructors.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-3}
 %%tab pytorch
 @d2l.add_to_class(GoogleNet)
 def b3(self):
@@ -321,7 +321,7 @@ def b3(self):
                          nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-3}
 %%tab tensorflow
 @d2l.add_to_class(GoogleNet)
 def b3(self):
@@ -331,7 +331,7 @@ def b3(self):
         tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-3}
 %%tab jax
 @d2l.add_to_class(GoogleNet)
 def b3(self):
@@ -342,7 +342,7 @@ def b3(self):
                                                 padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-3}
 %%tab mxnet
 @d2l.add_to_class(GoogleNet)
 def b3(self):
@@ -369,7 +369,7 @@ The second and third branches will first reduce
 the number of channels according to the ratio.
 These ratios are slightly different in different Inception blocks.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-4}
 %%tab pytorch
 @d2l.add_to_class(GoogleNet)
 def b4(self):
@@ -381,7 +381,7 @@ def b4(self):
                          nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-4}
 %%tab tensorflow
 @d2l.add_to_class(GoogleNet)
 def b4(self):
@@ -394,7 +394,7 @@ def b4(self):
         tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-4}
 %%tab jax
 @d2l.add_to_class(GoogleNet)
 def b4(self):
@@ -408,7 +408,7 @@ def b4(self):
                                                 padding='same')])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-4}
 %%tab mxnet
 @d2l.add_to_class(GoogleNet)
 def b4(self):
@@ -434,7 +434,7 @@ Finally, we turn the output into a two-dimensional array
 followed by a fully connected layer
 whose number of outputs is the number of label classes.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-5}
 %%tab pytorch
 @d2l.add_to_class(GoogleNet)
 def b5(self):
@@ -443,7 +443,7 @@ def b5(self):
                          nn.AdaptiveAvgPool2d((1,1)), nn.Flatten())
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-5}
 %%tab tensorflow
 @d2l.add_to_class(GoogleNet)
 def b5(self):
@@ -454,7 +454,7 @@ def b5(self):
         tf.keras.layers.Flatten()])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-5}
 %%tab jax
 @d2l.add_to_class(GoogleNet)
 def b5(self):
@@ -468,7 +468,7 @@ def b5(self):
                           lambda x: x.reshape((x.shape[0], -1))])
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-5}
 %%tab mxnet
 @d2l.add_to_class(GoogleNet)
 def b5(self):
@@ -481,7 +481,7 @@ def b5(self):
 
 Now that we defined all blocks `b1` through `b5`, it is just a matter of assembling them all into a full network.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-6}
 %%tab pytorch
 @d2l.add_to_class(GoogleNet)
 def __init__(self, lr=0.1, num_classes=10):
@@ -492,7 +492,7 @@ def __init__(self, lr=0.1, num_classes=10):
     self.net.apply(d2l.init_cnn)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-6}
 %%tab mxnet
 @d2l.add_to_class(GoogleNet)
 def __init__(self, lr=0.1, num_classes=10):
@@ -504,7 +504,7 @@ def __init__(self, lr=0.1, num_classes=10):
     self.net.initialize(init.Xavier())
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-6}
 %%tab tensorflow
 @d2l.add_to_class(GoogleNet)
 def __init__(self, lr=0.1, num_classes=10):
@@ -521,28 +521,28 @@ fact that at the time when GoogLeNet was introduced, automatic tools for network
 were not yet available. For instance, by now we take it for granted that a competent deep learning framework is capable of inferring dimensionalities of input tensors automatically. At the time, many such configurations had to be specified explicitly by the experimenter, thus often slowing down active experimentation. Moreover, the tools needed for automatic exploration were still in flux and initial experiments largely amounted to costly brute-force exploration, genetic algorithms, and similar strategies. 
 
 For now the only modification we will carry out is to
-[**reduce the input height and width from 224 to 96
-to have a reasonable training time on Fashion-MNIST.**]
+reduce the input height and width from 224 to 96
+to have a reasonable training time on Fashion-MNIST.
 This simplifies the computation. Let's have a look at the
 changes in the shape of the output between the various modules.
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-7}
 %%tab mxnet, pytorch
 model = GoogleNet().layer_summary((1, 1, 96, 96))
 ```
 
-```{.python .input}
+```{.python .input #googlenet-googlenet-model-7}
 %%tab tensorflow, jax
 model = GoogleNet().layer_summary((1, 96, 96, 1))
 ```
 
-## [**Training**]
+## Training
 
 As before, we train our model using the Fashion-MNIST dataset.
  We transform it to $96 \times 96$ pixel resolution
  before invoking the training procedure.
 
-```{.python .input}
+```{.python .input #googlenet-training}
 %%tab mxnet
 model = GoogleNet(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -550,7 +550,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-training}
 %%tab pytorch
 model = GoogleNet(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -559,7 +559,7 @@ model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-training}
 %%tab jax
 model = GoogleNet(lr=0.01)
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
@@ -567,7 +567,7 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 trainer.fit(model, data)
 ```
 
-```{.python .input}
+```{.python .input #googlenet-training}
 %%tab tensorflow
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
@@ -612,3 +612,88 @@ Over the following sections we will encounter a number of design choices (e.g., 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18004)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**GoogLeNet** (Szegedy et al., 2014) — winner of ImageNet 2014 —
+introduces a different design axis: **width**, not just depth.
+
+Each layer is an **Inception block** that runs **multiple
+filter sizes in parallel** (1×1, 3×3, 5×5, plus pool) and
+**concatenates** their outputs. The network can choose, layer by
+layer, which scale of filter is most useful.
+
+Heavy use of **1×1 convs** as bottleneck reductions keeps the
+parameter count manageable despite the multi-branch design.
+:::
+
+::: {.slide title="Inception block"}
+Four parallel branches at the same spatial size,
+concatenated along the channel axis:
+
+![Inception: four parallel branches, channel-concatenated.](../img/inception.svg){width=82%}
+:::
+
+::: {.slide title="The four branches"}
+- **1:** 1×1 conv (small filter only)
+- **2:** 1×1 conv → 3×3 conv (with bottleneck)
+- **3:** 1×1 conv → 5×5 conv (with bottleneck)
+- **4:** 3×3 max-pool → 1×1 conv
+
+@googlenet-multi-branch-networks-googlenet
+
+@googlenet-inception-blocks
+:::
+
+::: {.slide title="GoogLeNet stages"}
+Five sequential "stages" — each a small stack of conv + pool +
+inception modules — built up methodically:
+
+@googlenet-googlenet-model-1
+
+. . .
+
+@googlenet-googlenet-model-2
+
+. . .
+
+@googlenet-googlenet-model-3
+:::
+
+::: {.slide title="More stages"}
+@googlenet-googlenet-model-4
+
+. . .
+
+@googlenet-googlenet-model-5
+
+. . .
+
+@googlenet-googlenet-model-6
+:::
+
+::: {.slide title="Shape inspection"}
+For Fashion-MNIST we shrink the input to 96×96 to keep training
+time reasonable; layer summary on the smaller input:
+
+@googlenet-googlenet-model-7
+:::
+
+::: {.slide title="Training"}
+@googlenet-training
+
+The original GoogLeNet has 22 weighted layers (~7M params) — far
+fewer than VGG (~138M) — yet better ImageNet accuracy.
+:::
+
+::: {.slide title="Recap"}
+- **Inception block** = multi-branch, multi-scale, concatenated.
+  The network learns which filter size matters per layer.
+- **1×1 bottlenecks** keep parameter count low.
+- The "go wider, not just deeper" lesson informs every modern
+  attention/feature-pyramid design.
+- GoogLeNet's descendants (Inception-v3/v4, Xception) refined the
+  block; the underlying **multi-branch + bottleneck** template
+  endures.
+:::

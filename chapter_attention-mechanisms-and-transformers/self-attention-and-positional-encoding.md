@@ -26,7 +26,7 @@ and elsewhere described as *intra-attention* model :cite:`Cheng.Dong.Lapata.2016
 In this section, we will discuss sequence encoding using self-attention,
 including using additional information for the sequence order.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab mxnet
 from d2l import mxnet as d2l
 import math
@@ -35,7 +35,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab pytorch
 from d2l import torch as d2l
 import math
@@ -43,14 +43,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import numpy as np
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -58,7 +58,7 @@ from jax import numpy as jnp
 import jax
 ```
 
-## [**Self-Attention**]
+## Self-Attention
 
 Given a sequence of input tokens
 $\mathbf{x}_1, \ldots, \mathbf{x}_n$ where any $\mathbf{x}_i \in \mathbb{R}^d$ ($1 \leq i \leq n$),
@@ -77,7 +77,7 @@ computes the self-attention of a tensor
 with shape (batch size, number of time steps or sequence length in tokens, $d$).
 The output tensor has the same shape.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab pytorch
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
@@ -87,27 +87,27 @@ d2l.check_shape(attention(X, X, X, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab mxnet
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
 attention.initialize()
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab jax
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-1}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
 attention = d2l.MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
                                    num_hiddens, num_heads, 0.5)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab mxnet
 batch_size, num_queries, valid_lens = 2, 4, d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
@@ -115,7 +115,7 @@ d2l.check_shape(attention(X, X, X, valid_lens),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab tensorflow
 batch_size, num_queries, valid_lens = 2, 4, tf.constant([3, 2])
 X = tf.ones((batch_size, num_queries, num_hiddens))
@@ -123,7 +123,7 @@ d2l.check_shape(attention(X, X, X, valid_lens, training=False),
                 (batch_size, num_queries, num_hiddens))
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-self-attention-2}
 %%tab jax
 batch_size, num_queries, valid_lens = 2, 4, d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
@@ -213,7 +213,7 @@ makes self-attention prohibitively slow for very long sequences.
 
 
 
-## [**Positional Encoding**]
+## Positional Encoding
 :label:`subsec_positional-encoding`
 
 
@@ -259,7 +259,7 @@ design looks weird.
 Before we give explanations of this design,
 let's first implement it in the following `PositionalEncoding` class.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab mxnet
 class PositionalEncoding(nn.Block):  #@save
     """Positional encoding."""
@@ -278,7 +278,7 @@ class PositionalEncoding(nn.Block):  #@save
         return self.dropout(X)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab pytorch
 class PositionalEncoding(nn.Module):  #@save
     """Positional encoding."""
@@ -298,7 +298,7 @@ class PositionalEncoding(nn.Module):  #@save
         return self.dropout(X)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab tensorflow
 class PositionalEncoding(tf.keras.layers.Layer):  #@save
     """Positional encoding."""
@@ -318,7 +318,7 @@ class PositionalEncoding(tf.keras.layers.Layer):  #@save
         return self.dropout(X, training=training)
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab jax
 class PositionalEncoding(nn.Module):  #@save
     """Positional encoding."""
@@ -344,8 +344,8 @@ class PositionalEncoding(nn.Module):  #@save
 ```
 
 In the positional embedding matrix $\mathbf{P}$,
-[**rows correspond to positions within a sequence
-and columns represent different positional encoding dimensions**].
+rows correspond to positions within a sequence
+and columns represent different positional encoding dimensions.
 In the example below,
 we can see that
 the $6^{\textrm{th}}$ and the $7^{\textrm{th}}$
@@ -357,7 +357,7 @@ The offset between
 the $6^{\textrm{th}}$ and the $7^{\textrm{th}}$ (same for the $8^{\textrm{th}}$ and the $9^{\textrm{th}}$) columns
 is due to the alternation of sine and cosine functions.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab mxnet
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -368,7 +368,7 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab pytorch
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -378,7 +378,7 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab tensorflow
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -388,7 +388,7 @@ d2l.plot(np.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-positional-encoding-2}
 %%tab jax
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
@@ -405,13 +405,12 @@ d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
 
 To see how the monotonically decreased frequency
 along the encoding dimension relates to absolute positional information,
-let's print out [**the binary representations**] of $0, 1, \ldots, 7$.
+let's print out the binary representations of $0, 1, \ldots, 7$.
 As we can see, the lowest bit, the second-lowest bit, 
 and the third-lowest bit alternate on every number, 
 every two numbers, and every four numbers, respectively.
 
-```{.python .input}
-%%tab all
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-1}
 for i in range(8):
     print(f'{i} in binary is {i:>03b}')
 ```
@@ -419,36 +418,36 @@ for i in range(8):
 In binary representations, a higher bit 
 has a lower frequency than a lower bit.
 Similarly, as demonstrated in the heat map below,
-[**the positional encoding decreases
-frequencies along the encoding dimension**]
+the positional encoding decreases
+frequencies along the encoding dimension
 by using trigonometric functions.
 Since the outputs are float numbers,
 such continuous representations
 are more space-efficient
 than binary representations.
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab mxnet
 P = np.expand_dims(np.expand_dims(P[0, :, :], 0), 0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab pytorch
 P = P[0, :, :].unsqueeze(0).unsqueeze(0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab tensorflow
 P = tf.expand_dims(tf.expand_dims(P[0, :, :], axis=0), axis=0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
                   ylabel='Row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-```{.python .input}
+```{.python .input #self-attention-and-positional-encoding-absolute-positional-information-2}
 %%tab jax
 P = jnp.expand_dims(jnp.expand_dims(P[0, :, :], axis=0), axis=0)
 d2l.show_heatmaps(P, xlabel='Column (encoding dimension)',
@@ -523,3 +522,122 @@ by adding positional encoding to the input representations.
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18030)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Bahdanau attention links *two* sequences (decoder steps to
+encoder steps). What if we use the same trick *within* a
+single sequence — let every token query every other token?
+That's *self-attention*: queries, keys, and values all come
+from the same input.
+
+The output for each token is a weighted average of *all*
+tokens, with weights determined by query-key compatibility.
+This is the elementary block of every Transformer encoder
+and decoder layer.
+
+@self-attention-and-positional-encoding
+:::
+
+::: {.slide title="Self-attention as MultiHead(X, X, X)"}
+Reuse multi-head attention with the same input fed three
+times. Output shape matches input shape — same sequence
+length, same hidden size:
+
+@self-attention-and-positional-encoding-self-attention-1
+
+. . .
+
+Shape check:
+
+@self-attention-and-positional-encoding-self-attention-2
+:::
+
+::: {.slide title="CNN vs. RNN vs. self-attention"}
+Three ways to map a length-$n$ sequence to another
+length-$n$ sequence with $d$-dim tokens:
+
+| | Compute | Sequential ops | Max path |
+|--|--|--|--|
+| CNN ($k$-wide) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
+| RNN | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
+| Self-attention | $\mathcal{O}(n^2 d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+
+Self-attention wins on parallelism *and* path length —
+every token reaches every other in one hop. The price is
+$n^2$ scaling.
+:::
+
+::: {.slide title="One picture"}
+![CNN, RNN, self-attention. Path lengths: $\mathcal{O}(n/k)$, $\mathcal{O}(n)$, $\mathcal{O}(1)$.](../img/cnn-rnn-self-attention.svg){width=88%}
+:::
+
+::: {.slide title="Why we need positional encoding"}
+Self-attention is permutation-equivariant: shuffle the input
+tokens, and the outputs shuffle the same way. The model has
+*no idea* about word order.
+
+Solution: inject position information into each token's
+representation. Vaswani et al. use fixed sine/cosine
+encodings:
+
+$$p_{i,2j} = \sin\!\left(\frac{i}{10000^{2j/d}}\right),\quad p_{i,2j+1} = \cos\!\left(\frac{i}{10000^{2j/d}}\right).$$
+
+Different frequencies along the embedding dimension; same
+position $i$ across all dims gives a unique fingerprint.
+:::
+
+::: {.slide title="PositionalEncoding class"}
+Precompute $\mathbf{P}$ once for `max_len` positions, slice
+to actual length at forward time, add to inputs:
+
+@self-attention-and-positional-encoding-positional-encoding-1
+:::
+
+::: {.slide title="Frequency along the dimension"}
+Plot four columns of $\mathbf{P}$. Lower-index columns
+oscillate fast; higher columns oscillate slow:
+
+@self-attention-and-positional-encoding-positional-encoding-2
+:::
+
+::: {.slide title="Position as continuous binary"}
+Compare with binary representations of small integers — same
+"low bits flip fast, high bits flip slow" pattern, but in
+continuous values:
+
+@self-attention-and-positional-encoding-absolute-positional-information-1
+:::
+
+::: {.slide title="The full positional matrix"}
+Heatmap reveals the multi-frequency structure. Each row is a
+unique fingerprint for a position:
+
+@self-attention-and-positional-encoding-absolute-positional-information-2
+:::
+
+::: {.slide title="Why sin/cos: relative positions"}
+For any fixed offset $\delta$, the encoding at position
+$i + \delta$ is a *linear function* of the encoding at
+position $i$:
+
+$$\begin{bmatrix} p_{i+\delta, 2j} \\ p_{i+\delta, 2j+1} \end{bmatrix} =
+\begin{bmatrix} \cos(\delta\omega_j) & \sin(\delta\omega_j) \\ -\sin(\delta\omega_j) & \cos(\delta\omega_j) \end{bmatrix}
+\begin{bmatrix} p_{i, 2j} \\ p_{i, 2j+1} \end{bmatrix}.$$
+
+The rotation depends on $\delta$ but not on $i$. So the
+network can learn to "shift attention by 5 tokens" with one
+linear transformation — relative positions come for free.
+:::
+
+::: {.slide title="Recap"}
+- Self-attention = multi-head attention with $\mathbf{Q} = \mathbf{K} = \mathbf{V} = \mathbf{X}$.
+- Output sequence length = input sequence length.
+- Compared to RNNs: same complexity per step but $\mathcal{O}(1)$
+  path length and full parallelism. Cost: $\mathcal{O}(n^2 d)$.
+- Self-attention is permutation-equivariant; need positional
+  encoding to know token order.
+- Sin/cos encoding gives unique absolute positions and lets
+  the model express relative offsets as linear maps.
+:::

@@ -103,8 +103,7 @@ In the following, we will illustrate how byte pair encoding works.
 
 First, we initialize the vocabulary of symbols as all the English lowercase characters, a special end-of-word symbol `'_'`, and a special unknown symbol `'[UNK]'`.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-1}
 import collections
 
 symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -121,8 +120,7 @@ from a sequence of output symbols ( e.g., "a_ tall er_ man").
 Since we start the merging process from a vocabulary of only single characters and special symbols, space is inserted between every pair of consecutive characters within each word (keys of the dictionary `token_freqs`).
 In other words, space is the delimiter between symbols within a word.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-2}
 raw_token_freqs = {'fast_': 4, 'faster_': 3, 'tall_': 5, 'taller_': 4}
 token_freqs = {}
 for token, freq in raw_token_freqs.items():
@@ -134,8 +132,7 @@ We define the following `get_max_freq_pair` function that
 returns the most frequent pair of consecutive symbols within a word,
 where words come from keys of the input dictionary `token_freqs`.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-3}
 def get_max_freq_pair(token_freqs):
     pairs = collections.defaultdict(int)
     for token, freq in token_freqs.items():
@@ -149,8 +146,7 @@ def get_max_freq_pair(token_freqs):
 As a greedy approach based on frequency of consecutive symbols,
 byte pair encoding will use the following `merge_symbols` function to merge the most frequent pair of consecutive symbols to produce new symbols.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-4}
 def merge_symbols(max_freq_pair, token_freqs, symbols):
     symbols.append(''.join(max_freq_pair))
     new_token_freqs = dict()
@@ -163,8 +159,7 @@ def merge_symbols(max_freq_pair, token_freqs, symbols):
 
 Now we iteratively perform the byte pair encoding algorithm over the keys of the dictionary `token_freqs`. In the first iteration, the most frequent pair of consecutive symbols are `'t'` and `'a'`, thus byte pair encoding merges them to produce a new symbol `'ta'`. In the second iteration, byte pair encoding continues to merge `'ta'` and `'l'` to result in another new symbol `'tal'`.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-5}
 num_merges = 10
 for i in range(num_merges):
     max_freq_pair = get_max_freq_pair(token_freqs)
@@ -174,8 +169,7 @@ for i in range(num_merges):
 
 After 10 iterations of byte pair encoding, we can see that list `symbols` now contains 10 more symbols that are iteratively merged from other symbols.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-6}
 print(symbols)
 ```
 
@@ -184,8 +178,7 @@ each word in the dataset is now segmented by subwords "fast_", "fast", "er_", "t
 as a result of the byte pair encoding algorithm.
 For instance, words "faster_" and "taller_" are segmented as "fast er_" and "tall er_", respectively.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-7}
 print(list(token_freqs.keys()))
 ```
 
@@ -194,8 +187,7 @@ We can also use the subwords learned from one dataset
 to segment words of another dataset.
 As a greedy approach, the following `segment_BPE` function tries to break words into the longest possible subwords from the input argument `symbols`.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-8}
 def segment_BPE(tokens, symbols):
     outputs = []
     for token in tokens:
@@ -218,8 +210,7 @@ def segment_BPE(tokens, symbols):
 In the following, we use the subwords in list `symbols`, which is learned from the aforementioned dataset,
 to segment `tokens` that represent another dataset.
 
-```{.python .input}
-#@tab all
+```{.python .input #subword-embedding-byte-pair-encoding-9}
 tokens = ['tallest_', 'fatter_']
 print(segment_BPE(tokens, symbols))
 ```
@@ -246,3 +237,84 @@ print(segment_BPE(tokens, symbols))
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/4587)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Word-level embeddings have a problem: morphologically
+related words ("happy", "happily", "happiness") get
+*independent* vectors. Rare or out-of-vocabulary words
+get nothing.
+
+Two responses:
+
+- **fastText** (Bojanowski et al., 2017) — represent each
+  word as a sum of n-gram embeddings. Generalizes to
+  unseen words via shared subword vectors.
+- **Byte pair encoding (BPE)** — learn a vocabulary of
+  variable-length subword units from the training data.
+  Frequent words become single tokens; rare words split
+  into morpheme-like pieces. The default in modern
+  Transformers (GPT, BERT-WordPiece, T5).
+
+This deck implements BPE in pure Python.
+:::
+
+::: {.slide title="BPE: greedy merging"}
+Start with a character-level vocabulary. Repeatedly: count
+adjacent symbol pairs, merge the most common one into a
+new token. Stop after $k$ merges (sets the final
+vocabulary size).
+
+@subword-embedding-byte-pair-encoding-1
+
+. . .
+
+@subword-embedding-byte-pair-encoding-2
+
+. . .
+
+@subword-embedding-byte-pair-encoding-3
+:::
+
+::: {.slide title="Building the merge list"}
+@subword-embedding-byte-pair-encoding-4
+
+. . .
+
+@subword-embedding-byte-pair-encoding-5
+
+. . .
+
+@subword-embedding-byte-pair-encoding-6
+:::
+
+::: {.slide title="Tokenizing new text"}
+After learning, segment a new word by greedily applying
+the merge rules in order. Out-of-vocabulary words still
+work — they're broken into in-vocabulary subwords:
+
+@subword-embedding-byte-pair-encoding-7
+
+. . .
+
+@subword-embedding-byte-pair-encoding-8
+
+. . .
+
+@subword-embedding-byte-pair-encoding-9
+:::
+
+::: {.slide title="Recap"}
+- Subword tokenization sits between character-level
+  (universal but long sequences) and word-level (compact
+  but OOV-prone).
+- BPE greedily merges the most frequent symbol pair each
+  iteration.
+- Modern variants: WordPiece (BERT) — uses likelihood
+  instead of frequency; SentencePiece (T5, LLaMA) —
+  language-agnostic, handles whitespace as a regular
+  symbol.
+- Every modern LM tokenizer is a subword tokenizer of
+  some flavor.
+:::

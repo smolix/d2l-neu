@@ -95,26 +95,26 @@ when defining our own module,
 we only need to worry about parameters
 and the forward propagation method.
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab mxnet
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab pytorch
 import torch
 from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab tensorflow
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-1}
 %%tab jax
 from typing import List
 from d2l import jax as d2l
@@ -123,8 +123,8 @@ import jax
 from jax import numpy as jnp
 ```
 
-[**To begin, we revisit the code
-that we used to implement MLPs**]
+To begin, we revisit the code
+that we used to implement MLPs
 (:numref:`sec_mlp`).
 The following code generates a network
 with one fully connected hidden layer
@@ -132,7 +132,7 @@ with 256 units and ReLU activation,
 followed by a fully connected output layer
 with ten units (no activation function).
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(256, activation='relu'))
@@ -143,7 +143,7 @@ X = np.random.uniform(size=(2, 20))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 
@@ -151,7 +151,7 @@ X = torch.rand(2, 20)
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab tensorflow
 net = tf.keras.models.Sequential([
     tf.keras.layers.Dense(256, activation=tf.nn.relu),
@@ -162,7 +162,7 @@ X = tf.random.uniform((2, 20))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-layers-and-modules-2}
 %%tab jax
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 
@@ -200,7 +200,7 @@ the `Block` class's `__call__` method.
 In this example, we constructed
 our model by instantiating an `nn.Sequential`, with layers in the order
 that they should be executed passed as arguments.
-In short, (**`nn.Sequential` defines a special kind of `Module`**),
+In short, `nn.Sequential` defines a special kind of `Module`,
 the class that presents a module in PyTorch.
 It maintains an ordered list of constituent `Module`s.
 Note that each of the two fully connected layers is an instance of the `Linear` class
@@ -232,7 +232,7 @@ a slick Python trick achieved via
 the module class's `__call__` method.
 :end_tab:
 
-## [**A Custom Module**]
+## A Custom Module
 
 Perhaps the easiest way to develop intuition
 about how a module works
@@ -259,7 +259,7 @@ Note that the `MLP` class below inherits the class that represents a module.
 We will heavily rely on the parent class's methods,
 supplying only our own constructor (the `__init__` method in Python) and the forward propagation method.
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab mxnet
 class MLP(nn.Block):
     def __init__(self):
@@ -275,7 +275,7 @@ class MLP(nn.Block):
         return self.out(self.hidden(X))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab pytorch
 class MLP(nn.Module):
     def __init__(self):
@@ -291,7 +291,7 @@ class MLP(nn.Module):
         return self.out(F.relu(self.hidden(X)))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab tensorflow
 class MLP(tf.keras.Model):
     def __init__(self):
@@ -307,7 +307,7 @@ class MLP(tf.keras.Model):
         return self.out(self.hidden(X))
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-1}
 %%tab jax
 class MLP(nn.Module):
     def setup(self):
@@ -334,9 +334,9 @@ and training them on different data.
 Naturally, we would expect them
 to represent two different learned models.
 
-We [**instantiate the MLP's layers**]
+We instantiate the MLP's layers
 in the constructor
-(**and subsequently invoke these layers**)
+and subsequently invoke these layers
 on each call to the forward propagation method.
 Note a few key details.
 First, our customized `__init__` method
@@ -352,26 +352,26 @@ or parameter initialization.
 The system will generate these methods automatically.
 Let's try this out.
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab pytorch
 net = MLP()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab mxnet
 net = MLP()
 net.initialize()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab tensorflow
 net = MLP()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-a-custom-module-2}
 %%tab jax
 net = MLP()
 params = net.init(d2l.get_key(), X)
@@ -389,7 +389,7 @@ such as when addressing
 convolutional neural networks.
 
 
-## [**The Sequential Module**]
+## The Sequential Module
 :label:`subsec_model-construction-sequential`
 
 We can now take a closer look
@@ -405,7 +405,7 @@ we just need to define two key methods:
 The following `MySequential` class delivers the same
 functionality of the default `Sequential` class.
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab mxnet
 class MySequential(nn.Block):
     def add(self, block):
@@ -424,7 +424,7 @@ class MySequential(nn.Block):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab pytorch
 class MySequential(nn.Module):
     def __init__(self, *args):
@@ -438,7 +438,7 @@ class MySequential(nn.Module):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab tensorflow
 class MySequential(tf.keras.Model):
     def __init__(self, *args):
@@ -451,7 +451,7 @@ class MySequential(tf.keras.Model):
         return X
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-1}
 %%tab jax
 class MySequential(nn.Module):
     modules: List
@@ -489,7 +489,7 @@ in the order in which they were added.
 We can now reimplement an MLP
 using our `MySequential` class.
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab mxnet
 net = MySequential()
 net.add(nn.Dense(256, activation='relu'))
@@ -498,13 +498,13 @@ net.initialize()
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab pytorch
 net = MySequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab tensorflow
 net = MySequential(
     tf.keras.layers.Dense(units=256, activation=tf.nn.relu),
@@ -512,7 +512,7 @@ net = MySequential(
 net(X).shape
 ```
 
-```{.python .input}
+```{.python .input #model-construction-the-sequential-module-2}
 %%tab jax
 net = MySequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 params = net.init(d2l.get_key(), X)
@@ -525,7 +525,7 @@ for the `Sequential` class
 (as described in :numref:`sec_mlp`).
 
 
-## [**Executing Code in the Forward Propagation Method**]
+## Executing Code in the Forward Propagation Method
 
 The `Sequential` class makes model construction easy,
 allowing us to assemble new architectures
@@ -556,7 +556,7 @@ and $c$ is some specified constant
 that is not updated during optimization.
 So we implement a `FixedHiddenMLP` class as follows.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab mxnet
 class FixedHiddenMLP(nn.Block):
     def __init__(self):
@@ -581,7 +581,7 @@ class FixedHiddenMLP(nn.Block):
         return X.sum()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab pytorch
 class FixedHiddenMLP(nn.Module):
     def __init__(self):
@@ -603,7 +603,7 @@ class FixedHiddenMLP(nn.Module):
         return X.sum()
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab tensorflow
 class FixedHiddenMLP(tf.keras.Model):
     def __init__(self):
@@ -636,7 +636,7 @@ class FixedHiddenMLP(tf.keras.Model):
         return (input_shape[0],)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab jax
 class FixedHiddenMLP(nn.Module):
     def setup(self):
@@ -681,38 +681,38 @@ Our point is only to show you how to integrate
 arbitrary code into the flow of your
 neural network computations.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab pytorch
 net = FixedHiddenMLP()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab mxnet
 net = FixedHiddenMLP()
 net.initialize()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab tensorflow
 net = FixedHiddenMLP()
 net(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-2}
 %%tab jax
 net = FixedHiddenMLP()
 params = net.init(d2l.get_key(), X)
 net.apply(params, X)
 ```
 
-We can [**mix and match various
-ways of assembling modules together.**]
+We can mix and match various
+ways of assembling modules together.
 In the following example, we nest modules
 in some creative ways.
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab mxnet
 class NestMLP(nn.Block):
     def __init__(self, **kwargs):
@@ -731,7 +731,7 @@ chimera.initialize()
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab pytorch
 class NestMLP(nn.Module):
     def __init__(self):
@@ -747,7 +747,7 @@ chimera = nn.Sequential(NestMLP(), nn.LazyLinear(20), FixedHiddenMLP())
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab tensorflow
 class NestMLP(tf.keras.Model):
     def __init__(self):
@@ -767,7 +767,7 @@ chimera.add(FixedHiddenMLP())
 chimera(X)
 ```
 
-```{.python .input}
+```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab jax
 class NestMLP(nn.Module):
     def setup(self):
@@ -816,3 +816,126 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17989)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Modern networks aren't flat stacks. ResNet-152 has 152
+conv layers, organized into a handful of *repeating
+patterns*. Transformers stack 12, 24, 96 identical
+*blocks*. Writing them one layer at a time would be
+miserable.
+
+The **module** abstraction (`nn.Module` in PyTorch,
+`flax.linen.Module` in JAX) handles the recursion. A
+module can be a single layer, a block of layers, or the
+whole model — all three are the same Python class.
+:::
+
+::: {.slide title="Modules compose recursively"}
+![Layers compose into modules; modules compose into models.](../img/blocks.svg){width=88%}
+:::
+
+::: {.slide title="What every module must do"}
+The framework asks five things of every module:
+
+1. Take input via `forward(x)`.
+2. Return output (possibly a different shape).
+3. Compute gradients of output w.r.t. input (autograd
+   does this for free).
+4. Store and expose its parameters.
+5. Initialize them (or accept user init).
+
+Subclass `nn.Module`, write `__init__` + `forward`, and the
+base class supplies the bookkeeping automatically.
+:::
+
+::: {.slide title="The simple way: nn.Sequential"}
+For a linear chain of layers, `nn.Sequential` does
+everything. Construct, call, done:
+
+@model-construction-layers-and-modules-1
+
+. . .
+
+@model-construction-layers-and-modules-2
+
+`Sequential` *is* a module. Internally it stores its
+children in a list and the `forward` walks them in order.
+"List of layers, run them in sequence" — that's all.
+:::
+
+::: {.slide title="Hand-rolled MLP module"}
+`Sequential` is good when the topology is a chain. For
+anything else, define your own subclass. The pattern: name
+sub-modules in `__init__`, write `forward` to use them:
+
+@model-construction-a-custom-module-1
+
+The two attributes `self.hidden` and `self.out` aren't
+ordinary fields — assigning a `Module` to a `Module`
+attribute *registers* it as a child. From this moment on:
+
+- `net.parameters()` includes both layers' weights/biases.
+- `net.to('cuda')` moves both to GPU.
+- `net.state_dict()` gives a flat dict of every parameter.
+
+Total user code: ~6 lines.
+:::
+
+::: {.slide title="Building a Sequential ourselves"}
+What does `nn.Sequential` actually do? Almost nothing — its
+implementation in 4 lines:
+
+@model-construction-the-sequential-module-1
+
+. . .
+
+Plug it in and the API is identical to the framework's:
+
+@model-construction-the-sequential-module-2
+
+The "magic" is just using `add_module()` so children get
+registered, then a `for` loop in `forward`.
+:::
+
+::: {.slide title="`forward` is just Python"}
+This is the **superpower** of the module abstraction:
+`forward` is normal Python. Use loops, conditionals,
+random tensors, anything you'd write in numpy:
+
+@model-construction-executing-code-in-the-forward-propagation-method-1
+
+The `while` loop, the fixed `rand_weight`, even reusing
+`self.linear` *twice* (parameter sharing!) all work, and
+all flow gradients correctly:
+
+@model-construction-executing-code-in-the-forward-propagation-method-2
+:::
+
+::: {.slide title="Composition: modules all the way down"}
+Modules nest to any depth. A `NestMLP` holds a
+`Sequential`; a top-level `Sequential` holds a `NestMLP` +
+a `Linear` + a `FixedHiddenMLP`:
+
+@model-construction-executing-code-in-the-forward-propagation-method-3
+
+The framework recursively walks this tree to find every
+parameter. Every modern architecture is built this way:
+ResNet = blocks of ResBlocks of conv+BN+ReLU. Transformer
+= blocks of attention+FFN. Same recursion every time.
+:::
+
+::: {.slide title="Recap"}
+- A **module** is one Python class that represents a
+  layer, a block, *or* a whole model.
+- Children assigned to attributes are auto-registered for
+  parameter tracking, device placement, serialization.
+- `Sequential` is a 4-line module that runs children in
+  order; for arbitrary topologies, subclass and write
+  `forward`.
+- `forward` is plain Python — control flow, parameter
+  sharing, fixed buffers all welcome.
+- Modules compose recursively; that recursion is what
+  lets ResNet-152 be 50 lines instead of 5000.
+:::

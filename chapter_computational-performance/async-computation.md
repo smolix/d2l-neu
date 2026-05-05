@@ -9,7 +9,7 @@ TensorFlow similarly uses an asynchronous execution model. In eager mode (the de
 
 Hence, understanding how asynchronous programming works helps us to develop more efficient programs, by proactively reducing computational requirements and mutual dependencies. This allows us to reduce memory overhead and increase processor utilization.
 
-```{.python .input}
+```{.python .input #async-computation-asynchronous-computation}
 #@tab mxnet
 from d2l import mxnet as d2l
 import numpy, os, subprocess
@@ -18,7 +18,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchronous-computation}
 #@tab pytorch
 from d2l import torch as d2l
 import numpy, os, subprocess
@@ -26,7 +26,7 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchronous-computation}
 #@tab jax
 from d2l import jax as d2l
 import jax
@@ -34,7 +34,7 @@ from jax import numpy as jnp
 import numpy
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchronous-computation}
 #@tab tensorflow
 from d2l import tensorflow as d2l
 import numpy
@@ -62,7 +62,7 @@ For a warmup consider the following toy problem: we want to generate a random ma
 Note that TensorFlow dispatches GPU operations asynchronously: Python returns immediately while the GPU kernel is still running.
 :end_tab:
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-1}
 #@tab mxnet
 with d2l.Benchmark('numpy'):
     for _ in range(10):
@@ -75,7 +75,7 @@ with d2l.Benchmark('mxnet.np'):
         b = np.dot(a, a)
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-1}
 #@tab pytorch
 # Warmup for GPU computation
 device = d2l.try_gpu()
@@ -93,7 +93,7 @@ with d2l.Benchmark('torch'):
         b = torch.mm(a, a)
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-1}
 #@tab jax
 # Warmup for GPU computation
 device = jax.devices('gpu')[0]
@@ -112,7 +112,7 @@ with d2l.Benchmark('jax'):
         b = jnp.dot(a, a)
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-1}
 #@tab tensorflow
 # Warmup for GPU computation
 with tf.device('/GPU:0'):
@@ -170,7 +170,7 @@ GPU is done. To see the true cost we must force synchronization by calling
 `.numpy()` on the result, which blocks until the GPU kernel finishes.
 :end_tab:
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-2}
 #@tab mxnet
 with d2l.Benchmark():
     for _ in range(10):
@@ -179,7 +179,7 @@ with d2l.Benchmark():
     npx.waitall()
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-2}
 #@tab pytorch
 with d2l.Benchmark():
     for _ in range(10):
@@ -188,7 +188,7 @@ with d2l.Benchmark():
     torch.cuda.synchronize(device)
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-2}
 #@tab jax
 with d2l.Benchmark():
     for _ in range(10):
@@ -197,7 +197,7 @@ with d2l.Benchmark():
     b.block_until_ready()
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-2}
 #@tab tensorflow
 with d2l.Benchmark():
     for _ in range(10):
@@ -244,7 +244,7 @@ Hence, it is not possible to parallelize operations that depend on each other.
 
 Let's look at another toy example to understand the dependency graph a bit better.
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-3}
 #@tab mxnet
 x = np.ones((1, 2))
 y = np.ones((1, 2))
@@ -252,7 +252,7 @@ z = x * y + 2
 z
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-3}
 #@tab pytorch
 x = torch.ones((1, 2), device=device)
 y = torch.ones((1, 2), device=device)
@@ -260,7 +260,7 @@ z = x * y + 2
 z
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-3}
 #@tab jax
 x = jax.device_put(jnp.ones((1, 2)), device)
 y = jax.device_put(jnp.ones((1, 2)), device)
@@ -268,7 +268,7 @@ z = x * y + 2
 z
 ```
 
-```{.python .input}
+```{.python .input #async-computation-asynchrony-via-backend-3}
 #@tab tensorflow
 x = tf.ones((1, 2))
 y = tf.ones((1, 2))
@@ -323,7 +323,7 @@ Copying small amounts of data frequently from TensorFlow's device to NumPy can d
 Let's see how this works in practice.
 :end_tab:
 
-```{.python .input}
+```{.python .input #async-computation-barriers-and-blockers-1}
 #@tab mxnet
 with d2l.Benchmark('waitall'):
     b = np.dot(a, a)
@@ -340,7 +340,7 @@ Both operations take approximately the same time to complete. Besides the obviou
 Copying small amounts of data frequently from MXNet's scope to NumPy and back can destroy performance of an otherwise efficient code, since each such operation requires the computational graph to evaluate all intermediate results needed to get the relevant term *before* anything else can be done.
 :end_tab:
 
-```{.python .input}
+```{.python .input #async-computation-barriers-and-blockers-2}
 #@tab tensorflow
 with d2l.Benchmark('numpy conversion'):
     with tf.device('/GPU:0'):
@@ -353,7 +353,7 @@ with d2l.Benchmark('scalar conversion'):
     _ = float(tf.reduce_sum(b))  # Also blocks
 ```
 
-```{.python .input}
+```{.python .input #async-computation-barriers-and-blockers-2}
 #@tab mxnet
 with d2l.Benchmark('numpy conversion'):
     b = np.dot(a, a)
@@ -375,7 +375,7 @@ On a heavily multithreaded system the overhead of scheduling operations can beco
 We simulate synchronous execution by calling `.numpy()` to force a barrier after each addition, and compare it against the fully asynchronous eager loop as well as a `@tf.function`-compiled loop.
 :end_tab:
 
-```{.python .input}
+```{.python .input #async-computation-improving-computation}
 #@tab tensorflow
 x = tf.ones((1, 2))
 
@@ -403,7 +403,7 @@ with d2l.Benchmark('tf.function (compiled graph)'):
     _ = y.numpy()
 ```
 
-```{.python .input}
+```{.python .input #async-computation-improving-computation}
 #@tab mxnet
 with d2l.Benchmark('synchronous'):
     for _ in range(10000):
@@ -476,3 +476,88 @@ If we synchronize after *every* op (the `.numpy()` barrier loop), the total cost
 :begin_tab:`tensorflow`
 [Discussions](https://discuss.d2l.ai/t/2564)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+GPUs are fast; Python is slow. If every tensor op had to
+wait for the GPU before Python proceeds to the next line,
+GPU utilization would be terrible.
+
+The fix: deep-learning frameworks run *asynchronously*. The
+Python frontend dispatches an op (returns immediately) and
+the C++/CUDA backend queues it on a stream. Subsequent ops
+join the queue. The CPU and GPU work in parallel, and
+synchronization happens implicitly when you actually need
+a value (e.g. `.numpy()`, printing, conversion).
+
+![Programming language frontends and DL framework backends.](../img/frontends.png){width=70%}
+
+This deck shows how to *measure* async behavior, where it
+backfires, and how to write code that benefits from it.
+:::
+
+::: {.slide title="Asynchrony in action"}
+Time the same computation in pure NumPy vs the framework.
+NumPy is synchronous; the framework op returns
+immediately and the GPU runs in the background:
+
+@async-computation-asynchronous-computation
+
+. . .
+
+@async-computation-asynchrony-via-backend-1
+:::
+
+::: {.slide title="Asynchrony (cont.)"}
+@async-computation-asynchrony-via-backend-2
+
+. . .
+
+@async-computation-asynchrony-via-backend-3
+:::
+
+::: {.slide title="The dependency graph"}
+The backend tracks dependencies between queued ops; ops
+without dependencies can run in parallel on different
+streams:
+
+![Backend tracks dependencies between graph nodes.](../img/asyncgraph.svg){width=72%}
+:::
+
+::: {.slide title="Frontend ↔ backend"}
+![Python frontend hands ops to a C++/CUDA backend; CUDA stream runs them asynchronously.](../img/threading.svg){width=72%}
+:::
+
+::: {.slide title="Barriers"}
+Anything that *needs* a value forces a barrier — Python
+waits until the GPU catches up. Common offenders: printing
+intermediate values, `.item()`, `.numpy()`, control flow
+based on a tensor value:
+
+@async-computation-barriers-and-blockers-1
+
+. . .
+
+@async-computation-barriers-and-blockers-2
+:::
+
+::: {.slide title="Improving throughput"}
+Avoid unnecessary barriers. Don't `print(loss)` inside the
+training loop unless you need it. Don't `.cpu().numpy()`
+mid-batch. Save metrics to a list of tensors and reduce
+later:
+
+@async-computation-improving-computation
+:::
+
+::: {.slide title="Recap"}
+- Frontend dispatches ops; backend queues and executes
+  asynchronously. CPU and GPU overlap.
+- Synchronization is implicit on `.item()`, `.numpy()`,
+  printing, conversion to NumPy.
+- Reading values mid-loop forces barriers and stalls the
+  pipeline. Buffer metrics; reduce at epoch boundaries.
+- TF needs `@tf.function` to actually be async; PyTorch
+  and MXNet are async by default.
+:::

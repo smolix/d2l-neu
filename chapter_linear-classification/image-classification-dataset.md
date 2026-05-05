@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # The Image Classification Dataset
 :label:`sec_fashion_mnist`
 
-(~~The MNIST dataset is one of the widely used dataset for image classification, while it is too simple as a benchmark dataset. We will use the similar, but more complex Fashion-MNIST dataset ~~)
+
 
 One widely used dataset for image classification is the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998` of handwritten digits. At the time of its release in the 1990s it posed a formidable challenge to most machine learning algorithms, consisting of 60,000 images of $28 \times 28$ pixel resolution (plus a test dataset of 10,000 images). To put things into perspective, back in 1995, a Sun SPARCStation 5 with a whopping 64MB of RAM and a blistering 5 MFLOPs was considered state-of-the-art equipment for machine learning at AT&T Bell Laboratories. Achieving high accuracy on digit recognition was a key component in automating letter sorting for the USPS in the 1990s. Deep networks such as LeNet-5 :cite:`LeCun.Jackel.Bottou.ea.1995`, support vector machines with invariances :cite:`Scholkopf.Burges.Vapnik.1996`, and tangent distance classifiers :cite:`Simard.LeCun.Denker.ea.1998` all could reach error rates below 1%. 
 
@@ -18,7 +18,7 @@ Today, MNIST serves as more of a sanity check than as a benchmark. ImageNet :cit
 more relevant challenge. Unfortunately, ImageNet is too large for many of the examples and illustrations in this book, as it would take too long to train to make the examples interactive. As a substitute we will focus our discussion in the coming sections on the qualitatively similar, but much smaller Fashion-MNIST
 dataset :cite:`Xiao.Rasul.Vollgraf.2017` which was released in 2017. It contains images of 10 categories of clothing at $28 \times 28$ pixel resolution.
 
-```{.python .input}
+```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab mxnet
 %matplotlib inline
 import time
@@ -30,7 +30,7 @@ npx.set_np()
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab pytorch
 %matplotlib inline
 import time
@@ -42,7 +42,7 @@ from torchvision import transforms
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab tensorflow
 %matplotlib inline
 import time
@@ -52,7 +52,7 @@ import tensorflow as tf
 d2l.use_svg_display()
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -68,9 +68,9 @@ d2l.use_svg_display()
 
 ## Loading the Dataset
 
-Since the Fashion-MNIST dataset is so useful, all major frameworks provide preprocessed versions of it. We can [**download and read it into memory using built-in framework utilities.**]
+Since the Fashion-MNIST dataset is so useful, all major frameworks provide preprocessed versions of it. We can download and read it into memory using built-in framework utilities.
 
-```{.python .input}
+```{.python .input #image-classification-dataset-loading-the-dataset-1}
 %%tab mxnet
 class FashionMNIST(d2l.DataModule):  #@save
     """The Fashion-MNIST dataset."""
@@ -85,7 +85,7 @@ class FashionMNIST(d2l.DataModule):  #@save
             train=False).transform_first(trans)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-loading-the-dataset-1}
 %%tab pytorch
 class FashionMNIST(d2l.DataModule):  #@save
     """The Fashion-MNIST dataset."""
@@ -100,7 +100,7 @@ class FashionMNIST(d2l.DataModule):  #@save
             root=self.root, train=False, transform=trans, download=True)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-loading-the-dataset-1}
 %%tab tensorflow, jax
 class FashionMNIST(d2l.DataModule):  #@save
     """The Fashion-MNIST dataset."""
@@ -116,13 +116,13 @@ A *test dataset* is used for evaluating model performance (it must not be used f
 Consequently the training set and the test set
 contain 60,000 and 10,000 images, respectively.
 
-```{.python .input}
+```{.python .input #image-classification-dataset-loading-the-dataset-2}
 %%tab mxnet, pytorch
 data = FashionMNIST(resize=(32, 32))
 len(data.train), len(data.val)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-loading-the-dataset-2}
 %%tab tensorflow, jax
 data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
@@ -131,18 +131,16 @@ len(data.train[0]), len(data.val[0])
 The images are grayscale and upscaled to $32 \times 32$ pixels in resolution above. This is similar to the original MNIST dataset which consisted of (binary) black and white images. Note, though, that most modern image data has three channels (red, green, blue) and that hyperspectral images can have in excess of 100 channels (the HyMap sensor has 126 channels).
 By convention we store an image as a $c \times h \times w$ tensor, where $c$ is the number of color channels, $h$ is the height and $w$ is the width.
 
-```{.python .input}
-%%tab all
+```{.python .input #image-classification-dataset-loading-the-dataset-3}
 data.train[0][0].shape
 ```
 
-[~~Two utility functions to visualize the dataset~~]
+
 
 The categories of Fashion-MNIST have human-understandable names. 
 The following convenience method converts between numeric labels and their names.
 
-```{.python .input}
-%%tab all
+```{.python .input #image-classification-dataset-loading-the-dataset-4}
 @d2l.add_to_class(FashionMNIST)  #@save
 def text_labels(self, indices):
     """Return text labels."""
@@ -156,10 +154,10 @@ def text_labels(self, indices):
 To make our life easier when reading from the training and test sets,
 we use the built-in data iterator rather than creating one from scratch.
 Recall that at each iteration, a data iterator
-[**reads a minibatch of data with size `batch_size`.**]
+reads a minibatch of data with size `batch_size`.
 We also randomly shuffle the examples for the training data iterator.
 
-```{.python .input}
+```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab mxnet
 @d2l.add_to_class(FashionMNIST)  #@save
 def get_dataloader(self, train):
@@ -168,7 +166,7 @@ def get_dataloader(self, train):
                                  num_workers=self.num_workers)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab pytorch
 @d2l.add_to_class(FashionMNIST)  #@save
 def get_dataloader(self, train):
@@ -177,7 +175,7 @@ def get_dataloader(self, train):
                                        num_workers=self.num_workers)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab tensorflow
 @d2l.add_to_class(FashionMNIST)  #@save
 def get_dataloader(self, train):
@@ -195,7 +193,7 @@ def get_dataloader(self, train):
                            drop_remainder=train).map(resize_fn)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab jax
 @d2l.add_to_class(FashionMNIST)  #@save
 def get_dataloader(self, train):
@@ -214,16 +212,14 @@ def get_dataloader(self, train):
 
 To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.
 
-```{.python .input}
-%%tab all
+```{.python .input #image-classification-dataset-reading-a-minibatch-2}
 X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
 Let's look at the time it takes to read the images. Even though it is a built-in loader, it is not blazingly fast. Nonetheless, this is sufficient since processing images with a deep network takes quite a bit longer. Hence it is good enough that training a network will not be I/O constrained.
 
-```{.python .input}
-%%tab all
+```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
 for X, y in data.train_dataloader():
     continue
@@ -236,18 +232,17 @@ We will often be using the Fashion-MNIST dataset. A convenience function `show_i
 Skipping implementation details, we just show the interface below: we only need to know how to invoke `d2l.show_images` rather than how it works
 for such utility functions.
 
-```{.python .input}
-%%tab all
+```{.python .input #image-classification-dataset-visualization-1}
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     """Plot a list of images."""
     raise NotImplementedError
 ```
 
 Let's put it to good use. In general, it is a good idea to visualize and inspect data that you are training on. 
-Humans are very good at spotting oddities and because of that, visualization serves as an additional safeguard against mistakes and errors in the design of experiments. Here are [**the images and their corresponding labels**] (in text)
+Humans are very good at spotting oddities and because of that, visualization serves as an additional safeguard against mistakes and errors in the design of experiments. Here are the images and their corresponding labels (in text)
 for the first few examples in the training dataset.
 
-```{.python .input}
+```{.python .input #image-classification-dataset-visualization-2}
 %%tab pytorch
 @d2l.add_to_class(FashionMNIST)  #@save
 def visualize(self, batch, nrows=1, ncols=8, labels=None):
@@ -259,7 +254,7 @@ batch = next(iter(data.val_dataloader()))
 data.visualize(batch)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-visualization-2}
 %%tab tensorflow
 @d2l.add_to_class(FashionMNIST)  #@save
 def visualize(self, batch, nrows=1, ncols=8, labels=None):
@@ -271,7 +266,7 @@ batch = next(iter(data.val_dataloader()))
 data.visualize(batch)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-visualization-2}
 %%tab jax
 @d2l.add_to_class(FashionMNIST)  #@save
 def visualize(self, batch, nrows=1, ncols=8, labels=None):
@@ -284,7 +279,7 @@ batch = next(iter(data.val_dataloader()))
 data.visualize(batch)
 ```
 
-```{.python .input}
+```{.python .input #image-classification-dataset-visualization-2}
 %%tab mxnet
 @d2l.add_to_class(FashionMNIST)  #@save
 def visualize(self, batch, nrows=1, ncols=8, labels=None):
@@ -326,3 +321,89 @@ Lastly, data iterators are a key component for efficient performance. For instan
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17980)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+**Fashion-MNIST** is the workhorse dataset for the rest of this
+chapter:
+
+- 10 classes (T-shirt / trouser / pullover / …) of 28×28 grayscale
+  images; 60 k train, 10 k test.
+- Drop-in replacement for MNIST — same shape, same API, harder.
+- We'll wrap it in a `DataModule` so every classifier we build can
+  reuse the same loaders.
+
+@!image-classification-dataset-visualization-2
+:::
+
+::: {.slide title="Loading"}
+Imports and the `FashionMNIST` `DataModule` shell:
+
+@image-classification-dataset-the-image-classification-dataset
+
+@image-classification-dataset-loading-the-dataset-1
+
+. . .
+
+Instantiate (resizing to 32×32 to match later ConvNet inputs):
+
+@image-classification-dataset-loading-the-dataset-2
+:::
+
+::: {.slide title="What does one example look like?"}
+Each train item is a `(C, H, W)` image tensor + an integer label:
+
+@image-classification-dataset-loading-the-dataset-3
+
+A 1×32×32 grayscale image — single channel, after the resize.
+:::
+
+::: {.slide title="Human-readable labels"}
+The dataset stores labels as integers 0–9. A small helper turns
+each label into its English name (T-shirt, Trouser, Pullover, …):
+
+@image-classification-dataset-loading-the-dataset-4
+:::
+
+::: {.slide title="Minibatches"}
+Wrap the framework dataloader so train and val each yield batches
+in the same shape:
+
+@image-classification-dataset-reading-a-minibatch-1
+
+. . .
+
+@image-classification-dataset-reading-a-minibatch-2
+
+A batch of 64 32×32 grayscale images plus 64 integer labels.
+:::
+
+::: {.slide title="Throughput sanity check"}
+Time one full epoch through the loader. Slow loading bottlenecks
+training as much as the model itself:
+
+@image-classification-dataset-reading-a-minibatch-3
+:::
+
+::: {.slide title="Visualization helpers"}
+A grid plotter we'll reuse for spot-checks:
+
+@image-classification-dataset-visualization-1
+
+. . .
+
+Bound to the dataset as a method that pulls one batch and labels
+each tile with the class name:
+
+@image-classification-dataset-visualization-2
+:::
+
+::: {.slide title="Recap"}
+- Fashion-MNIST: 10 classes, 28×28 grayscale, harder than MNIST.
+- A `DataModule` subclass owns the framework's
+  `train` / `val_dataloader`, label decoding, and a `visualize`
+  helper.
+- Always sanity-check throughput — slow I/O caps training speed.
+- Same data API drives every model in this chapter.
+:::

@@ -33,11 +33,11 @@ and (ii) automatic differentiation for calculating gradients.
 In practice, because data iterators, loss functions, optimizers,
 and neural network layers
 are so common, modern libraries implement these components for us as well.
-In this section, (**we will show you how to implement
-the linear regression model**) from :numref:`sec_linear_scratch`
-(**concisely by using high-level APIs**) of deep learning frameworks.
+In this section, we will show you how to implement
+the linear regression model from :numref:`sec_linear_scratch`
+concisely by using high-level APIs of deep learning frameworks.
 
-```{.python .input}
+```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
 from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
@@ -45,7 +45,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab pytorch
 from d2l import torch as d2l
 import numpy as np
@@ -53,14 +53,14 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import numpy as np
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -86,7 +86,7 @@ but you would be a lousy web developer
 if you spent a month reinventing the wheel.
 
 For standard operations,
-we can [**use a framework's predefined layers,**]
+we can use a framework's predefined layers,
 which allow us to focus
 on the layers used to construct the model
 rather than worrying about their implementation.
@@ -143,7 +143,7 @@ the number of inputs to each layer.
 We will describe how this works in more detail later.
 :end_tab:
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-1}
 %%tab pytorch
 class LinearRegression(d2l.Module):  #@save
     """The linear regression model implemented with high-level APIs."""
@@ -155,7 +155,7 @@ class LinearRegression(d2l.Module):  #@save
         self.net.bias.data.fill_(0)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-1}
 %%tab mxnet
 class LinearRegression(d2l.Module):  #@save
     """The linear regression model implemented with high-level APIs."""
@@ -166,7 +166,7 @@ class LinearRegression(d2l.Module):  #@save
         self.net.initialize(init.Normal(sigma=0.01))
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-1}
 %%tab tensorflow
 class LinearRegression(d2l.Module):  #@save
     """The linear regression model implemented with high-level APIs."""
@@ -177,7 +177,7 @@ class LinearRegression(d2l.Module):  #@save
         self.net = tf.keras.layers.Dense(1, kernel_initializer=initializer)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-1}
 %%tab jax
 class LinearRegression(d2l.Module):  #@save
     """The linear regression model implemented with high-level APIs."""
@@ -189,14 +189,14 @@ class LinearRegression(d2l.Module):  #@save
 
 In the `forward` method we just invoke the built-in `__call__` method of the predefined layers to compute the outputs.
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-2}
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(LinearRegression)  #@save
 def forward(self, X):
     return self.net(X)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-model-2}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
 def forward(self, X):
@@ -215,7 +215,7 @@ we use `mean`to average the loss across over the minibatch.
 :end_tab:
 
 :begin_tab:`pytorch`
-[**The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`).**]
+The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`).
 By default, `MSELoss` returns the average loss over examples.
 It is faster (and easier to use) than implementing our own.
 :end_tab:
@@ -225,7 +225,7 @@ The `MeanSquaredError` class computes the mean squared error (without the $1/2$ 
 By default, it returns the average loss over examples.
 :end_tab:
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab pytorch
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, y_hat, y):
@@ -233,7 +233,7 @@ def loss(self, y_hat, y):
     return fn(y_hat, y)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab mxnet
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, y_hat, y):
@@ -241,7 +241,7 @@ def loss(self, y_hat, y):
     return 2 * fn(y_hat, y).mean()  # Gluon's L2Loss includes 1/2; multiply by 2 to get plain MSE
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab tensorflow
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, y_hat, y):
@@ -249,7 +249,7 @@ def loss(self, y_hat, y):
     return fn(y, y_hat)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
 def loss(self, params, X, y, state):
@@ -283,7 +283,7 @@ Minibatch SGD is a standard tool
 for optimizing neural networks
 and thus PyTorch supports it alongside a number of
 variations on this algorithm in the `optim` module.
-When we (**instantiate an `SGD` instance,**)
+When we instantiate an `SGD` instance,
 we specify the parameters to optimize over,
 obtainable from our model via `self.parameters()`,
 and the learning rate (`self.lr`)
@@ -297,28 +297,28 @@ and thus Keras supports it alongside a number of
 variations on this algorithm in the `optimizers` module.
 :end_tab:
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab pytorch
 @d2l.add_to_class(LinearRegression)  #@save
 def configure_optimizers(self):
     return torch.optim.SGD(self.parameters(), self.lr)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab tensorflow
 @d2l.add_to_class(LinearRegression)  #@save
 def configure_optimizers(self):
     return tf.keras.optimizers.SGD(self.lr)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
 def configure_optimizers(self):
     return optax.sgd(self.lr)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab mxnet
 @d2l.add_to_class(LinearRegression)  #@save
 def configure_optimizers(self):
@@ -337,15 +337,14 @@ Once we start working with much more complex models,
 the advantages of the high-level API will grow considerably.
 
 Now that we have all the basic pieces in place,
-[**the training loop itself is the same
-as the one we implemented from scratch.**]
+the training loop itself is the same
+as the one we implemented from scratch.
 So we just call the `fit` method (introduced in :numref:`oo-design-training`),
 which relies on the implementation of the `fit_epoch` method
 in :numref:`sec_linear_scratch`,
 to train our model.
 
-```{.python .input}
-%%tab all
+```{.python .input #linear-regression-concise-training-1}
 model = LinearRegression(lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=3)
@@ -353,9 +352,9 @@ trainer.fit(model, data)
 ```
 
 Below, we
-[**compare the model parameters learned
+compare the model parameters learned
 by training on finite data
-and the actual parameters**]
+and the actual parameters
 that generated our dataset.
 To access parameters,
 we access the weights and bias
@@ -364,7 +363,7 @@ As in our implementation from scratch,
 note that our estimated parameters
 are close to their true counterparts.
 
-```{.python .input}
+```{.python .input #linear-regression-concise-training-2}
 %%tab pytorch
 @d2l.add_to_class(LinearRegression)  #@save
 def get_w_b(self):
@@ -372,7 +371,7 @@ def get_w_b(self):
 w, b = model.get_w_b()
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-training-2}
 %%tab mxnet
 @d2l.add_to_class(LinearRegression)  #@save
 def get_w_b(self):
@@ -380,7 +379,7 @@ def get_w_b(self):
 w, b = model.get_w_b()
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-training-2}
 %%tab tensorflow
 @d2l.add_to_class(LinearRegression)  #@save
 def get_w_b(self):
@@ -389,7 +388,7 @@ def get_w_b(self):
 w, b = model.get_w_b()
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-training-2}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
 def get_w_b(self, state):
@@ -399,7 +398,7 @@ def get_w_b(self, state):
 w, b = model.get_w_b(trainer.state)
 ```
 
-```{.python .input}
+```{.python .input #linear-regression-concise-training-3}
 print(f'error in estimating w: {data.w - d2l.reshape(w, data.w.shape)}')
 print(f'error in estimating b: {data.b - b}')
 ```
@@ -489,3 +488,75 @@ Dimensionality and storage for networks are automatically inferred
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/17977)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+The same model, same data, same training — using the framework's
+high-level layers and built-in losses:
+
+- **Model:** one `LazyLinear` (or equivalent) instead of hand-rolled
+  `w`, `b`.
+- **Loss:** built-in `MSELoss` (no factor of ½).
+- **Optimizer:** built-in `SGD`.
+
+End result: ~5 lines of model code instead of 30. Same convergence
+on synthetic data.
+:::
+
+::: {.slide title="The model"}
+Wrap a single linear layer with the right output dimension. The
+"lazy" variant defers the input-dim shape until the first forward:
+
+@linear-regression-concise-concise-implementation-of-linear-regression
+
+@linear-regression-concise-defining-the-model-1
+
+. . .
+
+Hook the layer into our `Module` interface (`forward`,
+`configure_optimizers`):
+
+@linear-regression-concise-defining-the-model-2
+:::
+
+::: {.slide title="Loss and optimizer"}
+Built-in MSE — note it omits the $1/2$ factor we used by hand:
+
+@linear-regression-concise-defining-the-loss-function
+
+. . .
+
+Same SGD, instantiated with one call:
+
+@linear-regression-concise-defining-the-optimization-algorithm
+:::
+
+::: {.slide title="Train"}
+Identical loop — the `Trainer` doesn't care that the model is now
+a thin wrapper around a built-in layer:
+
+@linear-regression-concise-training-1
+:::
+
+::: {.slide title="Compare with ground truth"}
+Pull weights and bias back out of the layer:
+
+@linear-regression-concise-training-2
+
+. . .
+
+@linear-regression-concise-training-3
+
+Errors are tiny — same recovery as the from-scratch version, less
+glue code.
+:::
+
+::: {.slide title="Recap"}
+- **From scratch** taught us what was happening; **concise** is
+  what we'll actually use.
+- The high-level layers / losses / optimizers compose with the
+  same `Module` / `Trainer` scaffold.
+- Same minibatch loop, same convergence; one-line layer instead
+  of hand-rolled parameters.
+:::

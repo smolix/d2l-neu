@@ -68,7 +68,7 @@ $$
 
 We can test this in code to see how good the approximation is.
 
-```{.python .input}
+```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
@@ -89,7 +89,7 @@ true_value = f(0 + epsilon[0], np.log(2) + epsilon[1])
 f'approximation: {grad_approx}, true Value: {true_value}'
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
@@ -113,7 +113,7 @@ true_value = f(torch.tensor([0.]) + epsilon[0], torch.log(
 f'approximation: {grad_approx}, true Value: {true_value}'
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
@@ -137,7 +137,7 @@ true_value = f(tf.constant([0.]) + epsilon[0], tf.math.log(
 f'approximation: {grad_approx}, true Value: {true_value}'
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
@@ -222,7 +222,7 @@ $$
 
 The only possible location of minima are at $x = -1, 0, 2$, where the function takes the values $-5,0, -32$ respectively, and thus we can conclude that we minimize our function when $x = 2$.  A quick plot confirms this.
 
-```{.python .input}
+```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
 #@tab mxnet
 x = np.arange(-2, 3, 0.01)
 f = (3 * x**4) - (4 * x**3) - (12 * x**2)
@@ -230,7 +230,7 @@ f = (3 * x**4) - (4 * x**3) - (12 * x**2)
 d2l.plot(x, f, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
 #@tab pytorch
 x = torch.arange(-2, 3, 0.01)
 f = (3 * x**4) - (4 * x**3) - (12 * x**2)
@@ -238,7 +238,7 @@ f = (3 * x**4) - (4 * x**3) - (12 * x**2)
 d2l.plot(x, f, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
 #@tab tensorflow
 x = tf.range(-2, 3, 0.01)
 f = (3 * x**4) - (4 * x**3) - (12 * x**2)
@@ -246,7 +246,7 @@ f = (3 * x**4) - (4 * x**3) - (12 * x**2)
 d2l.plot(x, f, 'x', 'f(x)')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
 #@tab jax
 x = jnp.arange(-2, 3, 0.01)
 f = (3 * x**4) - (4 * x**3) - (12 * x**2)
@@ -352,8 +352,7 @@ $$
 
 If we write this out into code this becomes a fairly manageable expression.
 
-```{.python .input}
-#@tab all
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
 # Compute the value of the function from inputs to outputs
 w, x, y, z = -1, 0, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
@@ -396,8 +395,7 @@ $$
 
 and then keeping track of how $f$ changes when we change *any* node in the entire network.  Let's implement it.
 
-```{.python .input}
-#@tab all
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
 # Compute the value of the function from inputs to outputs
 w, x, y, z = -1, 0, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
@@ -433,7 +431,7 @@ This is precisely what every deep learning algorithm implements to allow the com
 
 To see how to encapsulate this, let's take a quick look at this example.
 
-```{.python .input}
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab mxnet
 # Initialize as ndarrays, then attach gradients
 w, x, y, z = np.array(-1), np.array(0), np.array(-2), np.array(1)
@@ -458,7 +456,7 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {y.grad}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {z.grad}')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab pytorch
 # Initialize as ndarrays, then attach gradients
 w = torch.tensor([-1.], requires_grad=True)
@@ -483,7 +481,7 @@ print(f'df/dz at {w.data.item()}, {x.data.item()}, {y.data.item()}, '
       f'{z.data.item()} is {z.grad.data.item()}')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab tensorflow
 # Initialize as ndarrays, then attach gradients
 w = tf.Variable(tf.constant([-1.]))
@@ -512,7 +510,7 @@ print(f'df/dz at {w.numpy()}, {x.numpy()}, {y.numpy()}, '
       f'{z.numpy()} is {z_grad}')
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab jax
 # Define the function to differentiate
 def f_comp(w, x, y, z):
@@ -598,7 +596,7 @@ $$
 f(x, y) \approx e^{-1}\left(-1 - (x+1) +(x+1)^2+y^2\right).
 $$
 
-```{.python .input}
+```{.python .input #multivariable-calculus-hessians}
 #@tab mxnet
 # Construct grid and compute function
 x, y = np.meshgrid(np.linspace(-2, 2, 101),
@@ -623,7 +621,7 @@ ax.set_zlim(-1, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-hessians}
 #@tab pytorch
 # Construct grid and compute function
 x, y = torch.meshgrid(torch.linspace(-2, 2, 101),
@@ -649,7 +647,7 @@ ax.set_zlim(-1, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-hessians}
 #@tab tensorflow
 # Construct grid and compute function
 x, y = tf.meshgrid(tf.linspace(-2., 2., 101),
@@ -675,7 +673,7 @@ ax.set_zlim(-1, 1)
 ax.dist = 12
 ```
 
-```{.python .input}
+```{.python .input #multivariable-calculus-hessians}
 #@tab jax
 # Construct grid and compute function
 x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101),
@@ -946,3 +944,65 @@ It is reasonable to ask at this point, "Why can I not just write down matrix ver
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/1091)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Generalize differentiation to many inputs. The **gradient**
+
+$$\nabla f(\mathbf{x}) = [\partial f/\partial x_1, \ldots, \partial f/\partial x_d]^\top$$
+
+points in the direction of steepest ascent; $-\nabla f$
+is the descent direction. Local quadratic structure is
+captured by the **Hessian** $\nabla^2 f$, the matrix of
+second partials.
+
+The deck also covers the **chain rule** in vector form,
+and connects it to **backpropagation** — backprop is just
+reverse-mode application of the multivariate chain rule.
+:::
+
+::: {.slide title="Higher-dimensional differentiation"}
+@multivariable-calculus-higher-dimensional-differentiation
+:::
+
+::: {.slide title="Optimization in many dimensions"}
+GD: $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$.
+Newton: $\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f]^{-1} \nabla f$.
+The latter is exact for quadratics, expensive in high dim:
+
+@multivariable-calculus-a-note-on-mathematical-optimization
+:::
+
+::: {.slide title="Chain rule and backprop"}
+Reverse-mode auto-diff = walk the chain rule from outputs
+to inputs, accumulating partial derivatives:
+
+@multivariable-calculus-the-backpropagation-algorithm-1
+
+. . .
+
+@multivariable-calculus-the-backpropagation-algorithm-2
+
+. . .
+
+@multivariable-calculus-the-backpropagation-algorithm-3
+:::
+
+::: {.slide title="Hessians"}
+Curvature in many dimensions. PSD Hessian = local minimum,
+mixed signs = saddle, NSD = maximum:
+
+@multivariable-calculus-hessians
+:::
+
+::: {.slide title="Recap"}
+- Gradient: direction of steepest ascent.
+- Hessian: local curvature matrix; eigenvalues classify
+  stationary points.
+- Backprop = reverse-mode chain rule, $\mathcal{O}(\text{model size})$
+  per parameter.
+- Same calculus everywhere: GD, Newton, conjugate gradient,
+  Adam — they're all approximations to the local Taylor
+  expansion of the loss.
+:::

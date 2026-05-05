@@ -16,7 +16,7 @@ much of the work has gone into *attention scoring functions* $a$ in :eqref:`eq_s
 ![Computing the output of attention pooling as a weighted average of values, where weights are computed with the attention scoring function $\mathit{a}$ and the softmax operation.](../img/attention-output.svg)
 :label:`fig_attention_output`
 
-```{.python .input}
+```{.python .input #attention-scoring-functions}
 %%tab mxnet
 import math
 from d2l import mxnet as d2l
@@ -25,7 +25,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions}
 %%tab pytorch
 from d2l import torch as d2l
 import math
@@ -33,13 +33,13 @@ import torch
 from torch import nn
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions}
 %%tab tensorflow
 from d2l import tensorflow as d2l
 import tensorflow as tf
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions}
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
@@ -48,7 +48,7 @@ import jax
 import math
 ```
 
-## [**Dot Product Attention**]
+## Dot Product Attention
 
 
 Let's review the attention function (without exponentiation) from the Gaussian kernel for a moment:
@@ -76,7 +76,7 @@ As it turns out, all popular attention mechanisms use the softmax, hence we will
 We need a few functions to make the attention mechanism efficient to deploy. This includes tools for dealing with strings of variable lengths (common for natural language processing) and tools for efficient evaluation on minibatches (batch matrix multiplication). 
 
 
-### [**Masked Softmax Operation**]
+### Masked Softmax Operation
 
 One of the most popular applications of the attention mechanism is to sequence models. Hence we need to be able to deal with sequences of different lengths. In some cases, such sequences may end up in the same minibatch, necessitating padding with dummy tokens for shorter sequences (see :numref:`sec_machine_translation` for an example). These special tokens do not carry meaning. For instance, assume that we have the following three sentences:
 
@@ -91,7 +91,7 @@ Since we do not want blanks in our attention model we simply need to limit $\sum
 
 Let's implement it. Actually, the implementation cheats ever so slightly by setting the values of $\mathbf{v}_i$, for $i > l$, to zero. Moreover, it sets the attention weights to a large negative number, such as $-10^{6}$, in order to make their contribution to gradients and values vanish in practice. This is done since linear algebra kernels and operators are heavily optimized for GPUs and it is faster to be slightly wasteful in computation rather than to have code with conditional (if then else) statements.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-1}
 %%tab mxnet
 def masked_softmax(X, valid_lens):  #@save
     """Perform softmax operation by masking elements on the last axis."""
@@ -111,7 +111,7 @@ def masked_softmax(X, valid_lens):  #@save
         return npx.softmax(X).reshape(shape)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-1}
 %%tab pytorch
 def masked_softmax(X, valid_lens):  #@save
     """Perform softmax operation by masking elements on the last axis."""
@@ -137,7 +137,7 @@ def masked_softmax(X, valid_lens):  #@save
         return nn.functional.softmax(X.reshape(shape), dim=-1)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-1}
 %%tab tensorflow
 def masked_softmax(X, valid_lens):  #@save
     """Perform softmax operation by masking elements on the last axis."""
@@ -163,7 +163,7 @@ def masked_softmax(X, valid_lens):  #@save
         return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-1}
 %%tab jax
 def masked_softmax(X, valid_lens):  #@save
     """Perform softmax operation by masking elements on the last axis."""
@@ -188,51 +188,51 @@ def masked_softmax(X, valid_lens):  #@save
         return nn.softmax(X.reshape(shape), axis=-1)
 ```
 
-To [**illustrate how this function works**],
+To illustrate how this function works,
 consider a minibatch of two examples of size $2 \times 4$,
 where their valid lengths are $2$ and $3$, respectively. 
 As a result of the masked softmax operation,
 values beyond the valid lengths for each pair of vectors are all masked as zero.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-2}
 %%tab mxnet
 masked_softmax(np.random.uniform(size=(2, 2, 4)), d2l.tensor([2, 3]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-2}
 %%tab pytorch
 masked_softmax(torch.rand(2, 2, 4), torch.tensor([2, 3]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-2}
 %%tab tensorflow
 masked_softmax(tf.random.uniform(shape=(2, 2, 4)), tf.constant([2, 3]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-2}
 %%tab jax
 masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)), jnp.array([2, 3]))
 ```
 
 If we need more fine-grained control to specify the valid length for each of the two vectors of every example, we simply use a two-dimensional tensor of valid lengths. This yields:
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-3}
 %%tab mxnet
 masked_softmax(np.random.uniform(size=(2, 2, 4)),
                d2l.tensor([[1, 3], [2, 4]]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-3}
 %%tab pytorch
 masked_softmax(torch.rand(2, 2, 4), d2l.tensor([[1, 3], [2, 4]]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-3}
 %%tab tensorflow
 masked_softmax(tf.random.uniform((2, 2, 4)), tf.constant([[1, 3], [2, 4]]))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-masked-softmax-operation-3}
 %%tab jax
 masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
                jnp.array([[1, 3], [2, 4]]))
@@ -254,35 +254,35 @@ $$\textrm{BMM}(\mathbf{Q}, \mathbf{K}) = [\mathbf{Q}_1 \mathbf{K}_1, \mathbf{Q}_
 
 Let's see this in action in a deep learning framework.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-batch-matrix-multiplication}
 %%tab mxnet
 Q = d2l.ones((2, 3, 4))
 K = d2l.ones((2, 4, 6))
 d2l.check_shape(npx.batch_dot(Q, K), (2, 3, 6))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-batch-matrix-multiplication}
 %%tab pytorch
 Q = d2l.ones((2, 3, 4))
 K = d2l.ones((2, 4, 6))
 d2l.check_shape(torch.bmm(Q, K), (2, 3, 6))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-batch-matrix-multiplication}
 %%tab tensorflow
 Q = d2l.ones((2, 3, 4))
 K = d2l.ones((2, 4, 6))
 d2l.check_shape(tf.matmul(Q, K).numpy(), (2, 3, 6))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-batch-matrix-multiplication}
 %%tab jax
 Q = d2l.ones((2, 3, 4))
 K = d2l.ones((2, 4, 6))
 d2l.check_shape(jax.lax.batch_matmul(Q, K), (2, 3, 6))
 ```
 
-## [**Scaled Dot Product Attention**]
+## Scaled Dot Product Attention
 
 Let's return to the dot product attention introduced in :eqref:`eq_dot_product_attention`. 
 In general, it requires that both the query and the key
@@ -304,7 +304,7 @@ $$ \mathrm{softmax}\left(\frac{\mathbf Q \mathbf K^\top }{\sqrt{d}}\right) \math
 Note that when applying this to a minibatch, we need the batch matrix multiplication introduced in :eqref:`eq_batch-matrix-mul`. In the following implementation of the scaled dot product attention,
 we use dropout for model regularization.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-1}
 %%tab mxnet
 class DotProductAttention(nn.Block):  #@save
     """Scaled dot product attention."""
@@ -324,7 +324,7 @@ class DotProductAttention(nn.Block):  #@save
         return npx.batch_dot(self.dropout(self.attention_weights), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-1}
 %%tab pytorch
 class DotProductAttention(nn.Module):  #@save
     """Scaled dot product attention."""
@@ -344,7 +344,7 @@ class DotProductAttention(nn.Module):  #@save
         return torch.bmm(self.dropout(self.attention_weights), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-1}
 %%tab tensorflow
 class DotProductAttention(tf.keras.layers.Layer):  #@save
     """Scaled dot product attention."""
@@ -365,7 +365,7 @@ class DotProductAttention(tf.keras.layers.Layer):  #@save
             self.attention_weights, training=training), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-1}
 %%tab jax
 class DotProductAttention(nn.Module):  #@save
     """Scaled dot product attention."""
@@ -386,10 +386,10 @@ class DotProductAttention(nn.Module):  #@save
         return dropout_layer(attention_weights)@values, attention_weights
 ```
 
-To [**illustrate how the `DotProductAttention` class works**],
+To illustrate how the `DotProductAttention` class works,
 we use the same keys, values, and valid lengths from the earlier toy example for additive attention. For the purpose of our example we assume that we have a minibatch size of $2$, a total of $10$ keys and values, and that the dimensionality of the values is $4$. Lastly, we assume that the valid length per observation is $2$ and $6$ respectively. Given that, we expect the output to be a $2 \times 1 \times 4$ tensor, i.e., one row per example of the minibatch.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-2}
 %%tab mxnet
 queries = d2l.normal(0, 1, (2, 1, 2))
 keys = d2l.normal(0, 1, (2, 10, 2))
@@ -401,7 +401,7 @@ attention.initialize()
 d2l.check_shape(attention(queries, keys, values, valid_lens), (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-2}
 %%tab pytorch
 queries = d2l.normal(0, 1, (2, 1, 2))
 keys = d2l.normal(0, 1, (2, 10, 2))
@@ -413,7 +413,7 @@ attention.eval()
 d2l.check_shape(attention(queries, keys, values, valid_lens), (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-2}
 %%tab tensorflow
 queries = tf.random.normal(shape=(2, 1, 2))
 keys = tf.random.normal(shape=(2, 10, 2))
@@ -425,7 +425,7 @@ d2l.check_shape(attention(queries, keys, values, valid_lens, training=False),
                 (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-2}
 %%tab jax
 queries = jax.random.normal(d2l.get_key(), (2, 1, 2))
 keys = jax.random.normal(d2l.get_key(), (2, 10, 2))
@@ -440,19 +440,19 @@ print(output)
 
 Let's check whether the attention weights actually vanish for anything beyond the second and sixth column respectively (because of setting the valid length to $2$ and $6$).
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-3}
 %%tab pytorch, mxnet, tensorflow
 d2l.show_heatmaps(d2l.reshape(attention.attention_weights, (1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-scaled-dot-product-attention-3}
 %%tab jax
 d2l.show_heatmaps(d2l.reshape(attention_weights, (1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
 ```
 
-## [**Additive Attention**]
+## Additive Attention
 :label:`subsec_additive-attention`
 
 When queries $\mathbf{q}$ and keys $\mathbf{k}$ are vectors of different dimension,
@@ -472,7 +472,7 @@ and fed into an MLP with a single hidden layer.
 Using $\tanh$ as the activation function and disabling bias terms, 
 we implement additive attention as follows:
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-1}
 %%tab mxnet
 class AdditiveAttention(nn.Block):  #@save
     """Additive attention."""
@@ -504,7 +504,7 @@ class AdditiveAttention(nn.Block):  #@save
         return npx.batch_dot(self.dropout(self.attention_weights), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-1}
 %%tab pytorch
 class AdditiveAttention(nn.Module):  #@save
     """Additive attention."""
@@ -532,7 +532,7 @@ class AdditiveAttention(nn.Module):  #@save
         return torch.bmm(self.dropout(self.attention_weights), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-1}
 %%tab tensorflow
 class AdditiveAttention(tf.keras.layers.Layer):  #@save
     """Additive attention."""
@@ -562,7 +562,7 @@ class AdditiveAttention(tf.keras.layers.Layer):  #@save
             self.attention_weights, training=training), values)
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-1}
 %%tab jax
 class AdditiveAttention(nn.Module):  #@save
     num_hiddens: int
@@ -592,10 +592,10 @@ class AdditiveAttention(nn.Module):  #@save
         return dropout_layer(attention_weights)@values, attention_weights
 ```
 
-Let's [**see how `AdditiveAttention` works**]. In our toy example we pick queries, keys and values of size 
+Let's see how `AdditiveAttention` works. In our toy example we pick queries, keys and values of size 
 $(2, 1, 20)$, $(2, 10, 2)$ and $(2, 10, 4)$, respectively. This is identical to our choice for `DotProductAttention`, except that now the queries are $20$-dimensional. Likewise, we pick $(2, 6)$ as the valid lengths for the sequences in the minibatch.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-2}
 %%tab mxnet
 queries = d2l.normal(0, 1, (2, 1, 20))
 
@@ -604,7 +604,7 @@ attention.initialize()
 d2l.check_shape(attention(queries, keys, values, valid_lens), (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-2}
 %%tab pytorch
 queries = d2l.normal(0, 1, (2, 1, 20))
 
@@ -613,7 +613,7 @@ attention.eval()
 d2l.check_shape(attention(queries, keys, values, valid_lens), (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-2}
 %%tab tensorflow
 queries = tf.random.normal(shape=(2, 1, 20))
 
@@ -623,7 +623,7 @@ d2l.check_shape(attention(queries, keys, values, valid_lens, training=False),
                 (2, 1, 4))
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-2}
 %%tab jax
 queries = jax.random.normal(d2l.get_key(), (2, 1, 20))
 attention = AdditiveAttention(num_hiddens=8, dropout=0.1)
@@ -634,13 +634,13 @@ print(output)
 
 When reviewing the attention function we see a behavior that is qualitatively quite similar to that of `DotProductAttention`. That is, only terms within the chosen valid length $(2, 6)$ are nonzero.
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-3}
 %%tab pytorch, mxnet, tensorflow
 d2l.show_heatmaps(d2l.reshape(attention.attention_weights, (1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
 ```
 
-```{.python .input}
+```{.python .input #attention-scoring-functions-additive-attention-3}
 %%tab jax
 d2l.show_heatmaps(d2l.reshape(attention_weights, (1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
@@ -672,3 +672,122 @@ we can use the additive attention scoring function instead. Optimizing these lay
 :begin_tab:`jax`
 [Discussions](https://discuss.d2l.ai/t/18027)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Attention pooling needs a *scoring function*
+$a(\mathbf{q}, \mathbf{k})$ that softmax turns into weights:
+
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp\, a(\mathbf{q}, \mathbf{k}_i)}{\sum_j \exp\, a(\mathbf{q}, \mathbf{k}_j)}.$$
+
+![Output = weighted sum of values; weights = softmax of scoring function $a$.](../img/attention-output.svg){width=70%}
+:::
+
+::: {.slide title="Two scorings dominate practice"}
+- **Scaled dot product** — $a = \mathbf{q}^\top \mathbf{k}/\sqrt{d}$.
+  Cheap, parameter-free; query and key share a dimension.
+  The Transformer choice.
+- **Additive (Bahdanau)** — a tiny MLP over
+  $[\mathbf{q}; \mathbf{k}]$. More expressive, learns the
+  metric, allows different $\mathbf{q}$/$\mathbf{k}$ shapes.
+
+Both feed into the same softmax + value-pooling pipeline.
+:::
+
+::: {.slide title="Setup"}
+@attention-scoring-functions
+:::
+
+::: {.slide title="Why scaled dot product"}
+A Gaussian kernel expands to
+$\mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2$.
+Softmax kills the query-only term; layer-norm bounds the
+key-norm term — only $\mathbf{q}^\top \mathbf{k}_i$ remains.
+
+For $d$-dim i.i.d. unit-variance entries, $\mathbf{q}^\top \mathbf{k}$
+has variance $d$. Without scaling, softmax saturates as $d$
+grows and gradients vanish. Scale by $1/\sqrt d$ to keep the
+variance at 1:
+
+$$a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+:::
+
+::: {.slide title="Masked softmax"}
+Padded sequences in a minibatch — we don't want `<pad>` keys
+to receive attention mass. Set their pre-softmax scores to a
+large negative number so $\exp$ flushes them to zero:
+
+@attention-scoring-functions-masked-softmax-operation-1
+:::
+
+::: {.slide title="Masked softmax in action"}
+Random scores; specify a valid length per row:
+
+@attention-scoring-functions-masked-softmax-operation-2
+
+. . .
+
+Per-row mask vectors work too:
+
+@attention-scoring-functions-masked-softmax-operation-3
+:::
+
+::: {.slide title="Batched matmul"}
+Attention runs in batches; weights × values is a batched
+matmul. `bmm` does the right thing — confirm shapes:
+
+@attention-scoring-functions-batch-matrix-multiplication
+:::
+
+::: {.slide title="DotProductAttention class"}
+Stateless layer — no parameters, just $\mathbf{Q}\mathbf{K}^\top/\sqrt d$,
+masked softmax, then weighted sum of values:
+
+@attention-scoring-functions-scaled-dot-product-attention-1
+:::
+
+::: {.slide title="DotProduct demo"}
+2 queries, 10 keys/values, valid lengths (2, 6) — only the
+first 2 / first 6 keys per batch get nonzero weight:
+
+@attention-scoring-functions-scaled-dot-product-attention-2
+
+. . .
+
+Visualize the resulting attention matrix:
+
+@attention-scoring-functions-scaled-dot-product-attention-3
+:::
+
+::: {.slide title="AdditiveAttention class"}
+$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q\mathbf{q} + \mathbf{W}_k\mathbf{k})$.
+Learnable $\mathbf{W}_q, \mathbf{W}_k, \mathbf{w}_v$. Lets queries
+and keys live in different feature spaces.
+
+@attention-scoring-functions-additive-attention-1
+:::
+
+::: {.slide title="Additive demo"}
+Same shapes as before, with mismatched query/key dims allowed:
+
+@attention-scoring-functions-additive-attention-2
+
+. . .
+
+Visualize:
+
+@attention-scoring-functions-additive-attention-3
+:::
+
+::: {.slide title="Recap"}
+- Scoring function $a$ + softmax $\Rightarrow$ attention
+  weights; pool values with those weights.
+- Scaled dot product is the default — cheap, parameter-free,
+  scales by $1/\sqrt d$ to control softmax saturation.
+- Additive attention is more flexible (separate $\mathbf{q}$/
+  $\mathbf{k}$ shapes, learned metric) but slower and less
+  used at modern scale.
+- Masked softmax is the workhorse for handling padded
+  sequences in batched inference.
+:::

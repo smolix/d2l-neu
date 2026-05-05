@@ -30,8 +30,9 @@ page-layout: full
   line-height: 1.65;
 }
 
-/* Hide the auto-generated H1 — the hero supplies the title. */
-.d2l-landing-suppress-title h1.title { display: none; }
+/* Hide Quarto's auto-generated title block (h1, "Authors" meta box,
+   "Published" date) — the hero below supplies all of that. */
+.d2l-landing-suppress-title #title-block-header { display: none; }
 
 .d2l-landing h2 {
   font-size: 1.625rem;
@@ -307,7 +308,7 @@ page-layout: full
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  margin: 0 0 1rem;
+  margin: 0 0 1.5rem;
   flex-wrap: wrap;
 }
 .d2l-universities .stat .num {
@@ -321,18 +322,33 @@ page-layout: full
   color: var(--d2l-ink-2);
   font-size: 1rem;
 }
-.d2l-uni-list {
-  columns: 3 220px;
-  column-gap: 2rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 0.9375rem;
-  color: var(--d2l-ink-2);
+
+/* Logo grid: equal-height cells, logos centered, soft hover. */
+.d2l-uni-logos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: center;
 }
-.d2l-uni-list li {
-  break-inside: avoid;
-  padding: 0.2rem 0;
+.d2l-uni-logos img {
+  width: 100%;
+  height: 56px;
+  object-fit: contain;
+  display: block;
+  filter: grayscale(0.4);
+  opacity: 0.85;
+  transition: filter 150ms ease, opacity 150ms ease, transform 150ms ease;
+}
+.d2l-uni-logos img:hover {
+  filter: grayscale(0);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.d2l-uni-note {
+  margin: 1.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--d2l-ink-3);
+  font-style: italic;
 }
 
 /* ── Testimonials ─────────────────────────────────────────── */
@@ -643,40 +659,266 @@ page-layout: full
   <h2>Adopted at universities worldwide</h2>
   <div class="d2l-universities">
     <p class="stat"><span class="num">500+</span><span class="desc">universities in 70+ countries teach with <em>Dive into Deep Learning</em>.</span></p>
-    <ul class="d2l-uni-list">
-      <li>MIT</li>
-      <li>Stanford</li>
-      <li>Carnegie Mellon</li>
-      <li>UC Berkeley</li>
-      <li>Harvard</li>
-      <li>Yale</li>
-      <li>Princeton</li>
-      <li>Cornell</li>
-      <li>Penn</li>
-      <li>Northwestern</li>
-      <li>Michigan</li>
-      <li>Illinois Urbana-Champaign</li>
-      <li>UT Austin</li>
-      <li>UC San Diego</li>
-      <li>NYU</li>
-      <li>Columbia</li>
-      <li>Oxford</li>
-      <li>Cambridge</li>
-      <li>Imperial College London</li>
-      <li>ETH Zürich</li>
-      <li>EPFL</li>
-      <li>University of Toronto</li>
-      <li>McGill</li>
-      <li>National University of Singapore</li>
-      <li>Tsinghua</li>
-      <li>Peking</li>
-      <li>Shanghai Jiao Tong</li>
-      <li>Tokyo</li>
-      <li>Seoul National</li>
-      <li>IIT Bombay / Delhi / Madras</li>
-      <li>Australian National</li>
-      <li>Monash</li>
-    </ul>
+    <div class="d2l-uni-logos">
+      <img src="static/landing/universities/Alexandria-University.svg" alt="Alexandria University" loading="lazy">
+      <img src="static/landing/universities/Amity-University.png" alt="Amity University" loading="lazy">
+      <img src="static/landing/universities/Ateneo-de-Naga-University.png" alt="Ateneo de Naga University" loading="lazy">
+      <img src="static/landing/universities/Australian-National-University.png" alt="Australian National University" loading="lazy">
+      <img src="static/landing/universities/Bar-Ilan-University.svg" alt="Bar Ilan University" loading="lazy">
+      <img src="static/landing/universities/Barnard-College.svg" alt="Barnard College" loading="lazy">
+      <img src="static/landing/universities/Birla-Institute-of-Technology-and-Science,-Hyderabad.svg" alt="Birla Institute of Technology and Science, Hyderabad" loading="lazy">
+      <img src="static/landing/universities/Boston-University.svg" alt="Boston University" loading="lazy">
+      <img src="static/landing/universities/Brandeis-University.svg" alt="Brandeis University" loading="lazy">
+      <img src="static/landing/universities/Brown-University.png" alt="Brown University" loading="lazy">
+      <img src="static/landing/universities/Cairo-University.png" alt="Cairo University" loading="lazy">
+      <img src="static/landing/universities/Carnegie-Mellon-University.png" alt="Carnegie Mellon University" loading="lazy">
+      <img src="static/landing/universities/Chongqing-University-of-Science-and-Technology.svg" alt="Chongqing University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/College-of-Engineering-Pune.png" alt="College of Engineering Pune" loading="lazy">
+      <img src="static/landing/universities/Columbia-University.png" alt="Columbia University" loading="lazy">
+      <img src="static/landing/universities/Cornell-University.svg" alt="Cornell University" loading="lazy">
+      <img src="static/landing/universities/Cyprus-Institute.png" alt="Cyprus Institute" loading="lazy">
+      <img src="static/landing/universities/Dalian-University-of-Technology.png" alt="Dalian University of Technology" loading="lazy">
+      <img src="static/landing/universities/Duke-University.svg" alt="Duke University" loading="lazy">
+      <img src="static/landing/universities/Durban-University-of-Technology.png" alt="Durban University of Technology" loading="lazy">
+      <img src="static/landing/universities/EPFL.svg" alt="EPFL" loading="lazy">
+      <img src="static/landing/universities/Ecole-Nationale-Superieure-dInformatique.png" alt="Ecole Nationale Superieure dInformatique" loading="lazy">
+      <img src="static/landing/universities/Emory-University.png" alt="Emory University" loading="lazy">
+      <img src="static/landing/universities/Eotvos-Lorand-University.png" alt="Eotvos Lorand University" loading="lazy">
+      <img src="static/landing/universities/Escuela-Politecnica-Nacional.png" alt="Escuela Politecnica Nacional" loading="lazy">
+      <img src="static/landing/universities/Federal-University-Lokoja.png" alt="Federal University Lokoja" loading="lazy">
+      <img src="static/landing/universities/Fudan-University.svg" alt="Fudan University" loading="lazy">
+      <img src="static/landing/universities/Gayatri-Vidya-Parishad-College-of-Engineering-(Autonomous).png" alt="Gayatri Vidya Parishad College of Engineering (Autonomous)" loading="lazy">
+      <img src="static/landing/universities/Gazi-Universitesi.png" alt="Gazi Universitesi" loading="lazy">
+      <img src="static/landing/universities/George-Mason-University.svg" alt="George Mason University" loading="lazy">
+      <img src="static/landing/universities/Georgetown-University.svg" alt="Georgetown University" loading="lazy">
+      <img src="static/landing/universities/Georgia-Institute-of-Technology.svg" alt="Georgia Institute of Technology" loading="lazy">
+      <img src="static/landing/universities/Golden-Gate-University.png" alt="Golden Gate University" loading="lazy">
+      <img src="static/landing/universities/Guangdong-University-of-Technology.svg" alt="Guangdong University of Technology" loading="lazy">
+      <img src="static/landing/universities/Habib-University.png" alt="Habib University" loading="lazy">
+      <img src="static/landing/universities/Hamad-Bin-Khalifa-University.png" alt="Hamad Bin Khalifa University" loading="lazy">
+      <img src="static/landing/universities/Hangzhou-Dianzi-University.png" alt="Hangzhou Dianzi University" loading="lazy">
+      <img src="static/landing/universities/Hankuk-University-of-Foreign-Studies.png" alt="Hankuk University of Foreign Studies" loading="lazy">
+      <img src="static/landing/universities/Harbin-Institute-of-Technology.png" alt="Harbin Institute of Technology" loading="lazy">
+      <img src="static/landing/universities/Harvard-University.png" alt="Harvard University" loading="lazy">
+      <img src="static/landing/universities/Hasso-Plattner-Institut.png" alt="Hasso Plattner Institut" loading="lazy">
+      <img src="static/landing/universities/Heinrich-Heine-Universitat-Dusseldorf.svg" alt="Heinrich Heine Universitat Dusseldorf" loading="lazy">
+      <img src="static/landing/universities/Hertie-School.png" alt="Hertie School" loading="lazy">
+      <img src="static/landing/universities/Hiroshima-University.png" alt="Hiroshima University" loading="lazy">
+      <img src="static/landing/universities/Ho-Chi-Minh-City-University-of-Foreign-Languages-and-Information-Technology.png" alt="Ho Chi Minh City University of Foreign Languages and Information Technology" loading="lazy">
+      <img src="static/landing/universities/Hochschule-Bremen.png" alt="Hochschule Bremen" loading="lazy">
+      <img src="static/landing/universities/Hochschule-fur-Technik-und-Wirtschaft.svg" alt="Hochschule fur Technik und Wirtschaft" loading="lazy">
+      <img src="static/landing/universities/Hong-Kong-Polytechnic-University.svg" alt="Hong Kong Polytechnic University" loading="lazy">
+      <img src="static/landing/universities/Hong-Kong-University-of-Science-and-Technology.png" alt="Hong Kong University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/Huazhong-University-of-Science-and-Technology.png" alt="Huazhong University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/IMT-Mines-Ales.png" alt="IMT Mines Ales" loading="lazy">
+      <img src="static/landing/universities/IT-Universitetet-i-Kobenhavn.svg" alt="IT Universitetet i Kobenhavn" loading="lazy">
+      <img src="static/landing/universities/Imperial-College-London.svg" alt="Imperial College London" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Bombay.png" alt="Indian Institute of Technology Bombay" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Hyderabad.png" alt="Indian Institute of Technology Hyderabad" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Jodhpur.png" alt="Indian Institute of Technology Jodhpur" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Kanpur.svg" alt="Indian Institute of Technology Kanpur" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Kharagpur.svg" alt="Indian Institute of Technology Kharagpur" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Mandi.png" alt="Indian Institute of Technology Mandi" loading="lazy">
+      <img src="static/landing/universities/Indian-Institute-of-Technology-Ropar.png" alt="Indian Institute of Technology Ropar" loading="lazy">
+      <img src="static/landing/universities/Indira-Gandhi-National-Open-University.svg" alt="Indira Gandhi National Open University" loading="lazy">
+      <img src="static/landing/universities/Indraprastha-Institute-of-Information-Technology,-Delhi.png" alt="Indraprastha Institute of Information Technology, Delhi" loading="lazy">
+      <img src="static/landing/universities/Institut-Superieur-De-L%27electronique-Et-Du-Numerique.png" alt="Institut Superieur De L'electronique Et Du Numerique" loading="lazy">
+      <img src="static/landing/universities/Institut-Superieur-d%27Informatique-et-des-Techniques-de-Communication.png" alt="Institut Superieur d'Informatique et des Techniques de Communication" loading="lazy">
+      <img src="static/landing/universities/Institut-Teknologi-Bandung.svg" alt="Institut Teknologi Bandung" loading="lazy">
+      <img src="static/landing/universities/Institut-catholique-d%27arts-et-metiers-(ICAM).svg" alt="Institut catholique d'arts et metiers (ICAM)" loading="lazy">
+      <img src="static/landing/universities/Institut-de-recherche-en-informatique-de-Toulouse.svg" alt="Institut de recherche en informatique de Toulouse" loading="lazy">
+      <img src="static/landing/universities/Instituto-Tecnologico-Autonomo-de-Mexico.png" alt="Instituto Tecnologico Autonomo de Mexico" loading="lazy">
+      <img src="static/landing/universities/Instituto-Tecnologico-de-Buenos-Aires.png" alt="Instituto Tecnologico de Buenos Aires" loading="lazy">
+      <img src="static/landing/universities/Istanbul-Teknik-Universitesi.svg" alt="Istanbul Teknik Universitesi" loading="lazy">
+      <img src="static/landing/universities/Johns-Hopkins-University.png" alt="Johns Hopkins University" loading="lazy">
+      <img src="static/landing/universities/KPR-Institute-of-Engineering-and-Technology.png" alt="KPR Institute of Engineering and Technology" loading="lazy">
+      <img src="static/landing/universities/Keio-University.png" alt="Keio University" loading="lazy">
+      <img src="static/landing/universities/King-Abdullah-University-of-Science-and-Technology.svg" alt="King Abdullah University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/King-Fahd-University-of-Petroleum-and-Minerals.svg" alt="King Fahd University of Petroleum and Minerals" loading="lazy">
+      <img src="static/landing/universities/Kongu-Engineering-College.png" alt="Kongu Engineering College" loading="lazy">
+      <img src="static/landing/universities/Kyungpook-National-University.png" alt="Kyungpook National University" loading="lazy">
+      <img src="static/landing/universities/Lancaster-University.png" alt="Lancaster University" loading="lazy">
+      <img src="static/landing/universities/Leading-Unviersity.png" alt="Leading Unviersity" loading="lazy">
+      <img src="static/landing/universities/Leibniz-Universitat-Hannover.png" alt="Leibniz Universitat Hannover" loading="lazy">
+      <img src="static/landing/universities/Leuphana-University-of-Luneburg.png" alt="Leuphana University of Luneburg" loading="lazy">
+      <img src="static/landing/universities/London-School-of-Economics-&-Political-Science.png" alt="London School of Economics & Political Science" loading="lazy">
+      <img src="static/landing/universities/Make-School.png" alt="Make School" loading="lazy">
+      <img src="static/landing/universities/Masaryk-University.svg" alt="Masaryk University" loading="lazy">
+      <img src="static/landing/universities/Massachusetts-Institute-of-Technology.svg" alt="Massachusetts Institute of Technology" loading="lazy">
+      <img src="static/landing/universities/McGill-University.png" alt="McGill University" loading="lazy">
+      <img src="static/landing/universities/Menoufia-University.png" alt="Menoufia University" loading="lazy">
+      <img src="static/landing/universities/Milwaukee-School-of-Engineering.svg" alt="Milwaukee School of Engineering" loading="lazy">
+      <img src="static/landing/universities/Minia-University.png" alt="Minia University" loading="lazy">
+      <img src="static/landing/universities/Mohammed-V-University-in-Rabat.png" alt="Mohammed V University in Rabat" loading="lazy">
+      <img src="static/landing/universities/Monash-University.png" alt="Monash University" loading="lazy">
+      <img src="static/landing/universities/Multimedia-University.png" alt="Multimedia University" loading="lazy">
+      <img src="static/landing/universities/Nanjing-Normal-University-Zhongbei-College.png" alt="Nanjing Normal University Zhongbei College" loading="lazy">
+      <img src="static/landing/universities/Nanjing-University.png" alt="Nanjing University" loading="lazy">
+      <img src="static/landing/universities/National-Chung-Hsing-University.png" alt="National Chung Hsing University" loading="lazy">
+      <img src="static/landing/universities/National-Institute-of-Technical-Teachers-Training-&-Research.png" alt="National Institute of Technical Teachers Training & Research" loading="lazy">
+      <img src="static/landing/universities/National-Institute-of-Technology,-Warangal.png" alt="National Institute of Technology, Warangal" loading="lazy">
+      <img src="static/landing/universities/National-Sun-Yat-sen-University.png" alt="National Sun Yat sen University" loading="lazy">
+      <img src="static/landing/universities/National-Taiwan-University.png" alt="National Taiwan University" loading="lazy">
+      <img src="static/landing/universities/National-Technical-University-of-Athens.png" alt="National Technical University of Athens" loading="lazy">
+      <img src="static/landing/universities/National-Technical-University-of-Ukraine.png" alt="National Technical University of Ukraine" loading="lazy">
+      <img src="static/landing/universities/National-United-University.svg" alt="National United University" loading="lazy">
+      <img src="static/landing/universities/National-University-of-Singapore.png" alt="National University of Singapore" loading="lazy">
+      <img src="static/landing/universities/Nazarbayev-University.png" alt="Nazarbayev University" loading="lazy">
+      <img src="static/landing/universities/New-York-University.png" alt="New York University" loading="lazy">
+      <img src="static/landing/universities/Newman-University.png" alt="Newman University" loading="lazy">
+      <img src="static/landing/universities/North-Ossetian-State-University.png" alt="North Ossetian State University" loading="lazy">
+      <img src="static/landing/universities/Northeastern-University.svg" alt="Northeastern University" loading="lazy">
+      <img src="static/landing/universities/Northwestern-University.png" alt="Northwestern University" loading="lazy">
+      <img src="static/landing/universities/Ohio-University.svg" alt="Ohio University" loading="lazy">
+      <img src="static/landing/universities/Pakuan-University.png" alt="Pakuan University" loading="lazy">
+      <img src="static/landing/universities/Peking-University.svg" alt="Peking University" loading="lazy">
+      <img src="static/landing/universities/Pennsylvania-State-University.png" alt="Pennsylvania State University" loading="lazy">
+      <img src="static/landing/universities/Pohang-University-of-Science-and-Technology.png" alt="Pohang University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/Politecnico-di-Milano.png" alt="Politecnico di Milano" loading="lazy">
+      <img src="static/landing/universities/Pontificia-Universidad-Catolica-de-Chile.svg" alt="Pontificia Universidad Catolica de Chile" loading="lazy">
+      <img src="static/landing/universities/Pontificia-Universidad-Catolica-del-Peru.png" alt="Pontificia Universidad Catolica del Peru" loading="lazy">
+      <img src="static/landing/universities/Portland-State-University.svg" alt="Portland State University" loading="lazy">
+      <img src="static/landing/universities/Purdue-University.svg" alt="Purdue University" loading="lazy">
+      <img src="static/landing/universities/Quaid-e-Azam-University.png" alt="Quaid e Azam University" loading="lazy">
+      <img src="static/landing/universities/Queen%27s-University.png" alt="Queen's University" loading="lazy">
+      <img src="static/landing/universities/Radboud-Universiteit.png" alt="Radboud Universiteit" loading="lazy">
+      <img src="static/landing/universities/Rensselaer-Polytechnic-Institute.png" alt="Rensselaer Polytechnic Institute" loading="lazy">
+      <img src="static/landing/universities/Rowan-University.svg" alt="Rowan University" loading="lazy">
+      <img src="static/landing/universities/Rutgers,-The-State-University-of-New-Jersey.svg" alt="Rutgers, The State University of New Jersey" loading="lazy">
+      <img src="static/landing/universities/Santa-Clara-University.svg" alt="Santa Clara University" loading="lazy">
+      <img src="static/landing/universities/Sapienza-Universita-di-Roma.png" alt="Sapienza Universita di Roma" loading="lazy">
+      <img src="static/landing/universities/Seoul-National-University-of-Science-and-Technology.png" alt="Seoul National University of Science and Technology" loading="lazy">
+      <img src="static/landing/universities/Seoul-National-University.svg" alt="Seoul National University" loading="lazy">
+      <img src="static/landing/universities/Shandong-University.svg" alt="Shandong University" loading="lazy">
+      <img src="static/landing/universities/Shanghai-Jiao-Tong-University.png" alt="Shanghai Jiao Tong University" loading="lazy">
+      <img src="static/landing/universities/Shanghai-University-of-Finance-and-Economics.png" alt="Shanghai University of Finance and Economics" loading="lazy">
+      <img src="static/landing/universities/Sharif-University-of-Technology.svg" alt="Sharif University of Technology" loading="lazy">
+      <img src="static/landing/universities/Shenzhen-University.svg" alt="Shenzhen University" loading="lazy">
+      <img src="static/landing/universities/Simon-Fraser-University.png" alt="Simon Fraser University" loading="lazy">
+      <img src="static/landing/universities/Singapore-University-of-Technology-and-Design.png" alt="Singapore University of Technology and Design" loading="lazy">
+      <img src="static/landing/universities/Sogang-University.png" alt="Sogang University" loading="lazy">
+      <img src="static/landing/universities/Southern-New-Hampshire-University.svg" alt="Southern New Hampshire University" loading="lazy">
+      <img src="static/landing/universities/St.-Polten-University-of-Applied-Sciences.svg" alt="St. Polten University of Applied Sciences" loading="lazy">
+      <img src="static/landing/universities/Stanford-University.png" alt="Stanford University" loading="lazy">
+      <img src="static/landing/universities/State-University-of-New-York-at-Binghamton.png" alt="State University of New York at Binghamton" loading="lazy">
+      <img src="static/landing/universities/Stevens-Institute-of-Technology.svg" alt="Stevens Institute of Technology" loading="lazy">
+      <img src="static/landing/universities/Sungkyunkwan-University.svg" alt="Sungkyunkwan University" loading="lazy">
+      <img src="static/landing/universities/Technion---Israel-Institute-of-Technology.svg" alt="Technion Israel Institute of Technology" loading="lazy">
+      <img src="static/landing/universities/Technische-Universitat-Berlin.svg" alt="Technische Universitat Berlin" loading="lazy">
+      <img src="static/landing/universities/Technische-Universiteit-Delft.png" alt="Technische Universiteit Delft" loading="lazy">
+      <img src="static/landing/universities/Tekirdag-Namik-Kemal-Universitesi.png" alt="Tekirdag Namik Kemal Universitesi" loading="lazy">
+      <img src="static/landing/universities/Texas-A&M-University.png" alt="Texas A&M University" loading="lazy">
+      <img src="static/landing/universities/Texas-Christian-University.svg" alt="Texas Christian University" loading="lazy">
+      <img src="static/landing/universities/Thapar-Institute-of-Engineering-and-Technology.png" alt="Thapar Institute of Engineering and Technology" loading="lazy">
+      <img src="static/landing/universities/Tsinghua-University.png" alt="Tsinghua University" loading="lazy">
+      <img src="static/landing/universities/Tufts-University.svg" alt="Tufts University" loading="lazy">
+      <img src="static/landing/universities/Umea-University.png" alt="Umea University" loading="lazy">
+      <img src="static/landing/universities/Universidad-Carlos-III-de-Madrid.svg" alt="Universidad Carlos III de Madrid" loading="lazy">
+      <img src="static/landing/universities/Universidad-Militar-Nueva-Granada.svg" alt="Universidad Militar Nueva Granada" loading="lazy">
+      <img src="static/landing/universities/Universidad-Nacional-Agraria-La-Molina.png" alt="Universidad Nacional Agraria La Molina" loading="lazy">
+      <img src="static/landing/universities/Universidad-Nacional-Autonoma-de-Mexico.svg" alt="Universidad Nacional Autonoma de Mexico" loading="lazy">
+      <img src="static/landing/universities/Universidad-Nacional-de-Colombia-Sede-Manizales.png" alt="Universidad Nacional de Colombia Sede Manizales" loading="lazy">
+      <img src="static/landing/universities/Universidad-Nacional-de-Tierra-del-Fuego.png" alt="Universidad Nacional de Tierra del Fuego" loading="lazy">
+      <img src="static/landing/universities/Universidad-San-Francisco-de-Quito.png" alt="Universidad San Francisco de Quito" loading="lazy">
+      <img src="static/landing/universities/Universidad-Tecnologica-de-Pereira.png" alt="Universidad Tecnologica de Pereira" loading="lazy">
+      <img src="static/landing/universities/Universidad-de-Chile.svg" alt="Universidad de Chile" loading="lazy">
+      <img src="static/landing/universities/Universidad-de-Zaragoza.png" alt="Universidad de Zaragoza" loading="lazy">
+      <img src="static/landing/universities/Universidade-Catolica-de-Brasilia.png" alt="Universidade Catolica de Brasilia" loading="lazy">
+      <img src="static/landing/universities/Universidade-Estadual-de-Campinas.svg" alt="Universidade Estadual de Campinas" loading="lazy">
+      <img src="static/landing/universities/Universidade-Federal-de-Minas-Gerais.jpg" alt="Universidade Federal de Minas Gerais" loading="lazy">
+      <img src="static/landing/universities/Universidade-Federal-de-Ouro-Preto.png" alt="Universidade Federal de Ouro Preto" loading="lazy">
+      <img src="static/landing/universities/Universidade-Federal-do-Rio-Grande.svg" alt="Universidade Federal do Rio Grande" loading="lazy">
+      <img src="static/landing/universities/Universidade-NOVA-de-Lisboa.png" alt="Universidade NOVA de Lisboa" loading="lazy">
+      <img src="static/landing/universities/Universidade-Presbiteriana-Mackenzie.png" alt="Universidade Presbiteriana Mackenzie" loading="lazy">
+      <img src="static/landing/universities/Universita-Bocconi.svg" alt="Universita Bocconi" loading="lazy">
+      <img src="static/landing/universities/Universita-degli-Studi-di-Bari-Aldo-Moro.png" alt="Universita degli Studi di Bari Aldo Moro" loading="lazy">
+      <img src="static/landing/universities/Universita-degli-Studi-di-Brescia.svg" alt="Universita degli Studi di Brescia" loading="lazy">
+      <img src="static/landing/universities/Universita-degli-Studi-di-Catania.png" alt="Universita degli Studi di Catania" loading="lazy">
+      <img src="static/landing/universities/Universita-degli-Studi-di-Padova.svg" alt="Universita degli Studi di Padova" loading="lazy">
+      <img src="static/landing/universities/Universita-degli-Studi-di-Roma-Tor-Vergata.svg" alt="Universita degli Studi di Roma Tor Vergata" loading="lazy">
+      <img src="static/landing/universities/Universita-di-Bologna.svg" alt="Universita di Bologna" loading="lazy">
+      <img src="static/landing/universities/Universitas-Andalas,-Padang.svg" alt="Universitas Andalas, Padang" loading="lazy">
+      <img src="static/landing/universities/Universitas-Udayana.png" alt="Universitas Udayana" loading="lazy">
+      <img src="static/landing/universities/Universitat-Heidelberg.png" alt="Universitat Heidelberg" loading="lazy">
+      <img src="static/landing/universities/Universitat-Politecnica-de-Catalunya.svg" alt="Universitat Politecnica de Catalunya" loading="lazy">
+      <img src="static/landing/universities/Universitat-Tubingen.svg" alt="Universitat Tubingen" loading="lazy">
+      <img src="static/landing/universities/Universitat-de-Barcelona.png" alt="Universitat de Barcelona" loading="lazy">
+      <img src="static/landing/universities/Universitatea-Babes-Bolyai.png" alt="Universitatea Babes Bolyai" loading="lazy">
+      <img src="static/landing/universities/Universitatea-de-Vest-din-Timisoara.png" alt="Universitatea de Vest din Timisoara" loading="lazy">
+      <img src="static/landing/universities/Universite-Cote-dAzur.png" alt="Universite Cote dAzur" loading="lazy">
+      <img src="static/landing/universities/Universite-Paris-Saclay.svg" alt="Universite Paris Saclay" loading="lazy">
+      <img src="static/landing/universities/Universite-de-technologie-de-Compiegne.png" alt="Universite de technologie de Compiegne" loading="lazy">
+      <img src="static/landing/universities/Universiteit-van-Amsterdam.svg" alt="Universiteit van Amsterdam" loading="lazy">
+      <img src="static/landing/universities/University-of-Arkansas.svg" alt="University of Arkansas" loading="lazy">
+      <img src="static/landing/universities/University-of-Augsburg.svg" alt="University of Augsburg" loading="lazy">
+      <img src="static/landing/universities/University-of-British-Columbia.png" alt="University of British Columbia" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-Berkeley.png" alt="University of California, Berkeley" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-Irvine.svg" alt="University of California, Irvine" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-Los-Angeles.png" alt="University of California, Los Angeles" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-San-Diego.png" alt="University of California, San Diego" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-Santa-Barbara.png" alt="University of California, Santa Barbara" loading="lazy">
+      <img src="static/landing/universities/University-of-California,-Santa-Cruz.svg" alt="University of California, Santa Cruz" loading="lazy">
+      <img src="static/landing/universities/University-of-Cambridge.png" alt="University of Cambridge" loading="lazy">
+      <img src="static/landing/universities/University-of-Canberra.png" alt="University of Canberra" loading="lazy">
+      <img src="static/landing/universities/University-of-Cincinnati.png" alt="University of Cincinnati" loading="lazy">
+      <img src="static/landing/universities/University-of-Colorado-Denver.svg" alt="University of Colorado Denver" loading="lazy">
+      <img src="static/landing/universities/University-of-Connecticut.svg" alt="University of Connecticut" loading="lazy">
+      <img src="static/landing/universities/University-of-Copenhagen.svg" alt="University of Copenhagen" loading="lazy">
+      <img src="static/landing/universities/University-of-Florida.svg" alt="University of Florida" loading="lazy">
+      <img src="static/landing/universities/University-of-Ghana.png" alt="University of Ghana" loading="lazy">
+      <img src="static/landing/universities/University-of-Groningen.png" alt="University of Groningen" loading="lazy">
+      <img src="static/landing/universities/University-of-Hamburg.svg" alt="University of Hamburg" loading="lazy">
+      <img src="static/landing/universities/University-of-Hull.svg" alt="University of Hull" loading="lazy">
+      <img src="static/landing/universities/University-of-Iceland.svg" alt="University of Iceland" loading="lazy">
+      <img src="static/landing/universities/University-of-Idaho.svg" alt="University of Idaho" loading="lazy">
+      <img src="static/landing/universities/University-of-Illinois-at-Urbana-Champaign.png" alt="University of Illinois at Urbana Champaign" loading="lazy">
+      <img src="static/landing/universities/University-of-International-Business-and-Economics.png" alt="University of International Business and Economics" loading="lazy">
+      <img src="static/landing/universities/University-of-Klagenfurt.png" alt="University of Klagenfurt" loading="lazy">
+      <img src="static/landing/universities/University-of-Liege.svg" alt="University of Liege" loading="lazy">
+      <img src="static/landing/universities/University-of-Maryland.svg" alt="University of Maryland" loading="lazy">
+      <img src="static/landing/universities/University-of-Michigan.png" alt="University of Michigan" loading="lazy">
+      <img src="static/landing/universities/University-of-Minnesota,-Twin-Cities.svg" alt="University of Minnesota, Twin Cities" loading="lazy">
+      <img src="static/landing/universities/University-of-Moratuwa.png" alt="University of Moratuwa" loading="lazy">
+      <img src="static/landing/universities/University-of-New-Hampshire.png" alt="University of New Hampshire" loading="lazy">
+      <img src="static/landing/universities/University-of-New-South-Wales.png" alt="University of New South Wales" loading="lazy">
+      <img src="static/landing/universities/University-of-Newcastle.png" alt="University of Newcastle" loading="lazy">
+      <img src="static/landing/universities/University-of-North-Carolina-at-Chapel-Hill.svg" alt="University of North Carolina at Chapel Hill" loading="lazy">
+      <img src="static/landing/universities/University-of-North-Texas.png" alt="University of North Texas" loading="lazy">
+      <img src="static/landing/universities/University-of-Northern-Philippines.png" alt="University of Northern Philippines" loading="lazy">
+      <img src="static/landing/universities/University-of-Nottingham.png" alt="University of Nottingham" loading="lazy">
+      <img src="static/landing/universities/University-of-Oslo.png" alt="University of Oslo" loading="lazy">
+      <img src="static/landing/universities/University-of-Pennsylvania.png" alt="University of Pennsylvania" loading="lazy">
+      <img src="static/landing/universities/University-of-Pittsburgh.svg" alt="University of Pittsburgh" loading="lazy">
+      <img src="static/landing/universities/University-of-Sao-Paulo.png" alt="University of Sao Paulo" loading="lazy">
+      <img src="static/landing/universities/University-of-Science-and-Technology-of-China.svg" alt="University of Science and Technology of China" loading="lazy">
+      <img src="static/landing/universities/University-of-Southern-California.png" alt="University of Southern California" loading="lazy">
+      <img src="static/landing/universities/University-of-Southern-Maine.svg" alt="University of Southern Maine" loading="lazy">
+      <img src="static/landing/universities/University-of-St-Andrews.svg" alt="University of St Andrews" loading="lazy">
+      <img src="static/landing/universities/University-of-Szeged.png" alt="University of Szeged" loading="lazy">
+      <img src="static/landing/universities/University-of-Technology-Sydney.png" alt="University of Technology Sydney" loading="lazy">
+      <img src="static/landing/universities/University-of-Tehran.svg" alt="University of Tehran" loading="lazy">
+      <img src="static/landing/universities/University-of-Texas-at-Austin.svg" alt="University of Texas at Austin" loading="lazy">
+      <img src="static/landing/universities/University-of-Warsaw.png" alt="University of Warsaw" loading="lazy">
+      <img src="static/landing/universities/University-of-Washington.png" alt="University of Washington" loading="lazy">
+      <img src="static/landing/universities/University-of-Waterloo.png" alt="University of Waterloo" loading="lazy">
+      <img src="static/landing/universities/University-of-Wisconsin-Madison.png" alt="University of Wisconsin Madison" loading="lazy">
+      <img src="static/landing/universities/Univerzita-Komenskeho-v-Bratislave.png" alt="Univerzita Komenskeho v Bratislave" loading="lazy">
+      <img src="static/landing/universities/Vardhaman-College-of-Engineering.png" alt="Vardhaman College of Engineering" loading="lazy">
+      <img src="static/landing/universities/Vardhman-Mahaveer-Open-University.png" alt="Vardhman Mahaveer Open University" loading="lazy">
+      <img src="static/landing/universities/Vietnamese-German-University.png" alt="Vietnamese German University" loading="lazy">
+      <img src="static/landing/universities/Virginia-Tech.svg" alt="Virginia Tech" loading="lazy">
+      <img src="static/landing/universities/Wageningen-University.png" alt="Wageningen University" loading="lazy">
+      <img src="static/landing/universities/West-Virginia-University.svg" alt="West Virginia University" loading="lazy">
+      <img src="static/landing/universities/Western-University.png" alt="Western University" loading="lazy">
+      <img src="static/landing/universities/Xavier-University-Bhubaneswar.png" alt="Xavier University Bhubaneswar" loading="lazy">
+      <img src="static/landing/universities/Xi%27an-Jiaotong-Liverpool-University.png" alt="Xi'an Jiaotong Liverpool University" loading="lazy">
+      <img src="static/landing/universities/Xiamen-University.svg" alt="Xiamen University" loading="lazy">
+      <img src="static/landing/universities/Yale-University.svg" alt="Yale University" loading="lazy">
+      <img src="static/landing/universities/Yeshiva-University.png" alt="Yeshiva University" loading="lazy">
+      <img src="static/landing/universities/Yonsei-University.svg" alt="Yonsei University" loading="lazy">
+      <img src="static/landing/universities/Yunnan-University.png" alt="Yunnan University" loading="lazy">
+      <img src="static/landing/universities/Zhejiang-University.svg" alt="Zhejiang University" loading="lazy">
+    </div>
   </div>
 </section>
 

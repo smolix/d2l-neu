@@ -1,17 +1,20 @@
 <!--
-  Floating affordances injected into every slide deck via Quarto's
-  `include-after-body`. CSS lives in `_d2l-slides.scss` (.d2l-overlay,
-  .d2l-logo).
+  Top navigation bar injected into every slide deck via Quarto's
+  `include-after-body`. CSS lives in `_d2l-slides.scss` (.d2l-deck-nav).
 
-  When the slides are deployed under `_book/slides/<fw>/<chapter>/<file>.html`,
-  `../../index.html` resolves to `_book/slides/index.html` (slides landing)
-  and `../../../index.html` resolves to `_book/index.html` (book home).
+  Path math, with the deck deployed at
+  `_book/slides/<fw>/<chapter>/<file>.html` (4 levels under _book):
+    ../../../../index.html         → _book/index.html       (book home)
+    ../../../index.html            → _book/slides/index.html (slides landing)
+    ../../../../static/logo-with-text.png  → _book/static/logo-with-text.png
 -->
-<div class="d2l-overlay">
-  <a class="d2l-overlay-link" href="../../../index.html"
-     title="Back to the book">Book</a>
-  <a class="d2l-logo" href="../../index.html"
-     title="Back to slide index (Esc / B)">
-    <img src="../img/d2l-logo.png" alt="d2l">
+<nav class="d2l-deck-nav">
+  <a class="d2l-deck-logo" href="../../../../index.html"
+     title="Dive into Deep Learning — book home">
+    <img src="../../../../static/logo-with-text.png" alt="Dive into Deep Learning">
   </a>
-</div>
+  <ul class="d2l-deck-nav-links">
+    <li><a href="../../../../index.html">Book</a></li>
+    <li><a href="../../../index.html">Slides</a></li>
+  </ul>
+</nav>

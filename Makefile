@@ -154,6 +154,12 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
 				--exclude='.gitignore' --exclude='errors/' \
 				_slides/ _book/slides/; \
+			echo "Stripping per-fw data/img symlinks (R2 storage bloat)..."; \
+			find _book/slides -mindepth 2 -maxdepth 2 -type l \
+				\( -name data -o -name img \) -delete; \
+			echo "Rewriting deck '../img/' refs to '../../../img/' (single-source)..."; \
+			find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
+				-exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +; \
 		fi; \
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 

@@ -131,18 +131,31 @@ body {
   line-height: 1.5;
 }
 
-/* Navbar — matches the book's Quarto navbar (cosmo + custom blue). */
+/* Navbar — matches the book's Quarto navbar (cosmo + custom blue).
+   Bootstrap's .navbar uses 1rem text and 0.5rem 1rem padding; we
+   mirror those numbers so the bar reads identically across the site. */
 .d2l-navbar {
   background: var(--blue);
   color: white;
   padding: 0.5rem 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
   font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  min-height: 3.5rem;
+}
+
+.d2l-navbar-logo {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.5rem;
+}
+.d2l-navbar-logo img {
+  height: 32px;
+  width: auto;
+  display: block;
 }
 
 .d2l-navbar-brand {
@@ -152,8 +165,8 @@ body {
   color: white;
   text-decoration: none;
   font-weight: 500;
-  font-size: 1.1rem;
-  margin: 0 auto;
+  font-size: 1rem;
+  letter-spacing: -0.005em;
 }
 .d2l-navbar-brand:hover { color: white; opacity: 0.92; }
 .d2l-navbar-brand .navbar-subtitle {
@@ -174,9 +187,9 @@ body {
 .d2l-navbar-nav a {
   color: white;
   text-decoration: none;
-  padding: 0.4rem 0.75rem;
+  padding: 0.5rem 1rem;
   border-radius: 3px;
-  font-size: 0.95rem;
+  font-size: 1rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -361,9 +374,11 @@ footer {
 </head>
 <body>
 <nav class="d2l-navbar">
+  <a class="d2l-navbar-logo" href="../index.html" aria-label="Dive into Deep Learning — back to book">
+    <img src="../static/logo-with-text.png" alt="Dive into Deep Learning">
+  </a>
   <a class="d2l-navbar-brand" href="../index.html">
-    <span>Dive into Deep Learning</span>
-    <span class="navbar-subtitle">— Slides</span>
+    <span class="navbar-subtitle">Slides</span>
   </a>
   <ul class="d2l-navbar-nav">
     <li><a href="../index.html">Book</a></li>
@@ -386,14 +401,6 @@ footer {
 </div>
 
 <main>
-  <section class="intro">
-    <p><kbd>→</kbd>/<kbd>←</kbd> to navigate slides,
-       <kbd>?</kbd> for help, <kbd>S</kbd> for speaker notes.
-       Click a row to open in the selected framework, or click a
-       badge (PT&nbsp;/&nbsp;TF&nbsp;/&nbsp;JAX&nbsp;/&nbsp;MX) to
-       open that framework's variant.</p>
-  </section>
-
   __CONTENT__
 </main>
 

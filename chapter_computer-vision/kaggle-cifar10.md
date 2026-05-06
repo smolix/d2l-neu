@@ -727,6 +727,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
                             legend=legend)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
+    best_valid_acc = None
     for epoch in range(num_epochs):
         net.train()
         metric = d2l.Accumulator(3)
@@ -742,12 +743,14 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
                               None))
         if valid_iter is not None:
             valid_acc = d2l.evaluate_accuracy_gpu(net, valid_iter)
+            best_valid_acc = valid_acc if best_valid_acc is None else max(
+                best_valid_acc, valid_acc)
             animator.add(epoch + 1, (None, None, valid_acc))
         scheduler.step()
     measures = (f'train loss {metric[0] / metric[2]:.3f}, '
                 f'train acc {metric[1] / metric[2]:.3f}')
     if valid_iter is not None:
-        measures += f', valid acc {valid_acc:.3f}'
+        measures += f', best valid acc {best_valid_acc:.3f}'
     print(measures + f'\n{metric[2] * num_epochs / timer.sum():.1f}'
           f' examples/sec on {str(devices)}')
 ```
@@ -912,9 +915,13 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab pytorch
-devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 2e-4, 5e-4
+devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 5e-4, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net()
 net(next(iter(train_iter))[0])
+def init_weights(module):
+    if type(module) in [nn.Linear, nn.Conv2d]:
+        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+net.apply(init_weights)
 train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```

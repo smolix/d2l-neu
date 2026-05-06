@@ -315,8 +315,9 @@ def train(num_gpus, batch_size, lr):
 
 ```{.python .input #multiple-gpus-concise-training-1}
 #@tab pytorch
-def train(net, num_gpus, batch_size, lr):
-    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+def train(net, num_gpus, batch_size, lr, resize=64):
+    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size,
+                                                        resize=resize)
     devices = [d2l.try_gpu(i) for i in range(num_gpus)]
     def init_weights(module):
         if type(module) in [nn.Linear, nn.Conv2d]:
@@ -329,7 +330,7 @@ def train(net, num_gpus, batch_size, lr):
     net = nn.DataParallel(net, device_ids=devices)
     trainer = torch.optim.SGD(net.parameters(), lr)
     loss = nn.CrossEntropyLoss()
-    timer, num_epochs = d2l.Timer(), 10
+    timer, num_epochs = d2l.Timer(), 3
     animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
     for epoch in range(num_epochs):
         net.train()
@@ -469,7 +470,7 @@ train(num_gpus=1, batch_size=256, lr=0.1)
 
 ```{.python .input #multiple-gpus-concise-training-2}
 #@tab pytorch
-train(net, num_gpus=1, batch_size=256, lr=0.1)
+train(net, num_gpus=1, batch_size=512, lr=0.2)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-2}
@@ -485,10 +486,9 @@ train(num_gpus=1, batch_size=256, lr=0.1)
 Next we use 2 GPUs for training. Compared with LeNet
 evaluated in :numref:`sec_multi_gpu`,
 the model for ResNet-18 is considerably more complex. This is where parallelization shows its advantage. The time for computation is meaningfully larger than the time for synchronizing parameters. This improves scalability since the overhead for parallelization is less relevant.
-On small local runs, however, data loading, Python overhead, and device
-synchronization can still dominate. A two-GPU run that is only marginally
-faster, or even slightly slower, is a sign that the workload is too small for
-the hardware rather than a contradiction of data parallelism.
+To make the per-minibatch computation large enough for data parallelism to
+matter, we resize Fashion-MNIST images to `64 x 64` and scale both the global
+batch size and learning rate when moving from one to two GPUs.
 
 ```{.python .input #multiple-gpus-concise-training-3}
 #@tab mxnet
@@ -497,7 +497,7 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 
 ```{.python .input #multiple-gpus-concise-training-3}
 #@tab pytorch
-train(net, num_gpus=2, batch_size=512, lr=0.2)
+train(net, num_gpus=2, batch_size=1024, lr=0.4)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-3}

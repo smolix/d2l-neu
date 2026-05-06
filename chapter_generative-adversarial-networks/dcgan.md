@@ -983,7 +983,7 @@ teaching signal, and use longer runs when comparing architectures.
 
 ```{.python .input #dcgan-training-2}
 #@tab mxnet, pytorch
-latent_dim, lr, num_epochs = 100, 0.005, 20
+latent_dim, lr, num_epochs = 100, 0.0002, 40
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 

@@ -405,13 +405,25 @@ Mean prediction + 2σ shaded band — uncertainty grows
 between training points and at the edges of the data:
 
 @gp-inference-worked-example-from-scratch-4
+:::
 
-. . .
+::: {.slide title="Latent-function uncertainty"}
+The shaded region below is a credible set for the **noise-free latent
+function**, not for future noisy observations. It should contain the
+true function, but it should not be expected to contain every data
+point:
 
 @gp-inference-worked-example-from-scratch-5
 :::
 
-::: {.slide title="Predictions (cont.)"}
+::: {.slide title="Two kinds of uncertainty"}
+For noisy observations, uncertainty has two components:
+
+- **Epistemic**: reducible uncertainty about the latent function,
+  captured by `diag(post_cov)`.
+- **Aleatoric**: irreducible observation noise, captured by
+  `post_sig_est**2`.
+
 @gp-inference-worked-example-from-scratch-6
 
 . . .
@@ -421,9 +433,8 @@ between training points and at the edges of the data:
 
 ::: {.slide title="Production GPs with GPyTorch"}
 Same model, library implementation. Handles batched
-inference, GPU, and the linear-algebra tricks
-(KISS-GP, conjugate gradients) that make GPs scale
-beyond the naive $\mathcal{O}(n^3)$ limit:
+inference, GPU, and the linear-algebra abstractions used by
+larger GP models:
 
 @gp-inference-making-life-easy-with-gpytorch-1
 
@@ -434,6 +445,23 @@ beyond the naive $\mathcal{O}(n^3)$ limit:
 . . .
 
 @gp-inference-making-life-easy-with-gpytorch-3
+:::
+
+::: {.slide title="Where the cubic cost comes from"}
+Exact GP regression needs the matrix
+$\mathbf{K}+\sigma_n^2\mathbf{I}$.
+
+- Training log marginal likelihood uses a Cholesky factorization:
+  $\mathcal{O}(n^3)$ time and $\mathcal{O}(n^2)$ memory.
+- Predictive means require triangular solves; predictive variances
+  are usually more expensive than means.
+- The bottleneck is linear algebra, not evaluating the kernel.
+
+Scalable GPs change the algebra: inducing points, structured
+kernels/KISS-GP, conjugate gradients, and variational objectives.
+Their complexity depends on assumptions such as number of inducing
+points, grid structure, and solver tolerance; it is not generically
+linear in $n$.
 :::
 
 ::: {.slide title="GPyTorch (cont.)"}
@@ -449,9 +477,9 @@ beyond the naive $\mathcal{O}(n^3)$ limit:
   variance fall out of conjugate updates.
 - Hyperparameters fit by maximizing the log marginal
   likelihood — automatic capacity control.
-- Naive cost is $\mathcal{O}(n^3)$ from the matrix
-  inverse. Modern scalable GPs (variational, KISS-GP,
-  inducing points) push this to ~$\mathcal{O}(n)$.
+- Exact training cost is cubic from Cholesky factorization;
+  scalable approximations trade exactness for structured or
+  iterative linear algebra.
 - Workhorse for Bayesian optimization, active learning,
   and uncertainty-aware regression.
 :::

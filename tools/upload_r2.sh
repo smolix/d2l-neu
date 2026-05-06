@@ -17,11 +17,14 @@
 #   ./tools/upload_r2.sh --delete     # also remove bucket files that
 #                                     # no longer exist locally
 #   ./tools/upload_r2.sh --full       # ignore manifest, re-upload all
+#   ./tools/upload_r2.sh --no-stage-slides
+#                                     # do not refresh _book/slides from _slides
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
 
 if [[ -f "$PROJECT_DIR/.env" ]]; then
     # shellcheck disable=SC1091
@@ -35,13 +38,15 @@ MANIFEST_FILE="${PROJECT_DIR}/.upload-manifest-${BUCKET}.txt"
 DRY_RUN=""
 DELETE=false
 FORCE_FULL=false
+STAGE_SLIDES=true
 
 for arg in "$@"; do
     case "$arg" in
-        --dry-run)  DRY_RUN="--dryrun" ;;
-        --delete)   DELETE=true ;;
-        --full)     FORCE_FULL=true ;;
-        *)          echo "Unknown arg: $arg"; exit 1 ;;
+        --dry-run)         DRY_RUN="--dryrun" ;;
+        --delete)          DELETE=true ;;
+        --full)            FORCE_FULL=true ;;
+        --no-stage-slides) STAGE_SLIDES=false ;;
+        *)                 echo "Unknown arg: $arg"; exit 1 ;;
     esac
 done
 
@@ -53,6 +58,24 @@ fi
 if [[ ! -d "$BOOK_DIR" ]]; then
     echo "Error: $BOOK_DIR not found. Run 'make html' first." >&2
     exit 1
+fi
+
+# Slide rendering writes fresh decks to _slides/. The public site serves
+# them from _book/slides/, which is normally refreshed by `make html`.
+# Refresh that subtree here too so a slide-only rebuild followed by upload
+# actually publishes the new decks instead of hashing a stale _book/.
+if $STAGE_SLIDES && [[ -d _slides ]]; then
+    echo "Staging current _slides/ into $BOOK_DIR/slides/ ..."
+    python3 tools/build_slides_index.py
+    rm -rf "$BOOK_DIR/slides"
+    mkdir -p "$BOOK_DIR/slides"
+    rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
+        --exclude='.gitignore' --exclude='errors/' \
+        _slides/ "$BOOK_DIR/slides/"
+    find "$BOOK_DIR/slides" -mindepth 2 -maxdepth 2 -type l \
+        \( -name data -o -name img \) -delete
+    find "$BOOK_DIR/slides" -mindepth 3 -maxdepth 3 -name '*.html' \
+        -exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +
 fi
 
 ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"

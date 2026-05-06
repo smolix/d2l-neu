@@ -364,9 +364,10 @@ constant per rung.
 ::: {.slide title="Running it"}
 @sh-intro-successive-halving-5
 
-. . .
-
-@sh-intro-successive-halving-6
+The run evaluates 30 configurations across increasing
+budgets. For lecture, keep the code visible but suppress the
+intermediate animation frames; the next slide shows the
+resulting incumbent trajectory.
 :::
 
 ::: {.slide title="Comparing to random search"}

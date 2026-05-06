@@ -27,8 +27,8 @@ chapter_*/                  Source .md + generated .qmd (27 dirs, 191 files each
 tools/                      Build scripts (5,235 lines total)
   d2l_preprocess.py         .md → .qmd conversion (1,075 lines)
   build_lib.py              #@save extraction → d2l package (705 lines)
-  inject_outputs.py         Notebook output → HTML/PDF injection (534 lines)
-  gen_slides.py             Slide generation + GPU-parallel rendering (500 lines)
+  inject_outputs.py         Notebook output → HTML/PDF/slides injection
+  gen_slides.py             Slide generation + CPU-only revealjs rendering
   gen_pdf.py                Single-framework PDF sources (355 lines)
   run_notebooks.py          GPU-parallel notebook execution (355 lines)
   fix_crossref_numbers.py   Post-render HTML chapter/section numbering (332 lines)
@@ -113,13 +113,21 @@ As shown in :numref:`sec_my_section` and :numref:`fig_my_figure`...
 :cite:`Author.2020`
 ```
 
-**Slide markers** — control what enters slide decks:
+**Slide divs** — control what enters slide decks:
 ```markdown
-[**Slide title text**]       ← starts new slide, included in book + slides
-(**Continuation text**)      ← continues slide, included in book + slides
-[~~Slide-only heading~~]     ← starts new slide, slides only (not in book)
-(~~Slide-only text~~)        ← continues slide, slides only
+<!-- slides -->
+
+::: {.slide title="Why vectorize?" layout="2col"}
+@vec-loop
+
+@!vec-add
+:::
 ```
+
+Slides are authored in `<!-- slides -->` sections as `::: {.slide ...}`
+divs. `@<id>` placeholders include a source code cell by its stable
+cell ID, and `@!<id>` injects the executed output without echoing code.
+Use `@<id>@<fw>` or `@!<id>@<fw>` to force a framework-specific variant.
 
 ---
 
@@ -197,17 +205,43 @@ files that contain code for that framework.
 run_notebooks.py <fw> --parallel 8 --num-gpus 4 --continue-on-error
 ```
 
-See [Parallel execution model](#parallel-execution-model) below.
+Execution writes outputs into `_notebooks/<fw>/*.ipynb` in place. These
+outputs are later injected into HTML, PDF, and slide `.qmd` files.
 
-#### Slides (GPU-parallel rendering)
+`run_notebooks.py` can narrow execution with `--files` or `--glob`.
+Through Make, use `NB_FILES="chapter/name/file.ipynb"` or `FILES=...`
+with notebook paths relative to `_notebooks/<fw>/`. Make still tracks a single
+`_notebooks/<fw>/.executed` stamp per framework, so force a rerun when
+the stamp is already fresh:
+
+```bash
+make -B run-notebooks-pytorch NB_FILES=chapter_linear-regression/linear-regression.ipynb
+```
+
+If a source edit changes any `#@save` code, rebuild `d2l/` first and
+treat downstream notebook results as potentially stale until rerun.
+
+#### Slides (CPU-only rendering)
 
 ```
-gen_slides.py <source> _slides --frameworks <fw> --render --parallel 8 --num-gpus 4
+gen_slides.py <source> _slides --frameworks <fw> --render --workers 8
 ```
 
-Extracts slide-marked content from source .md, generates per-framework
-Reveal.js .qmd, then renders via `quarto render --to revealjs` using
-the same GPU scheduling as notebooks.
+Extracts `::: {.slide}` divs from source `.md`, resolves `@<id>`
+placeholders to framework-specific source cells, generates per-framework
+Reveal.js `.qmd`, injects outputs from executed notebooks when present,
+then renders with `quarto render --to revealjs`.
+
+Slide rendering is CPU-only. It is safe to run multiple frameworks in
+parallel, for example `make -j4 slides`. To regenerate and render a
+single deck for one framework:
+
+```bash
+make -B slides-pytorch SLIDES_FILTER=chapter_linear-regression/linear-regression.md
+```
+
+The `-B` matters for the same reason as notebook execution: Make uses
+one `_slides/<fw>/.built` stamp per framework.
 
 #### d2l library
 
@@ -237,19 +271,59 @@ Aliases (simple, fluent, custom) are appended from `config.ini`.
 #### Output injection
 
 ```
-inject_outputs.py html|pdf [--framework <fw>] [--pdf-dir <dir>]
+inject_outputs.py html
+inject_outputs.py pdf --framework <fw> --pdf-dir <dir>
+inject_outputs.py slides --framework <fw> --slides-dir _slides
 ```
 
 After notebooks are executed, this tool injects their cell outputs
-(text, images, tables) back into the HTML or PDF source `.qmd` files.
-This is what makes the rendered book show actual computation results.
+(text, images, tables) back into HTML, PDF, or slide source `.qmd`
+files. This is what makes rendered artifacts show actual computation
+results. Matching is by stable notebook cell ID.
 
 ---
 
-## Parallel execution model
+## Incremental build map
 
-Both `run_notebooks.py` and `gen_slides.py` use the same GPU-aware
-scheduling from `runtime_env.py`.
+The Makefile is the source of truth. It optimizes by target stamps, not
+by per-notebook dependency tracking.
+
+| Change | Minimum useful command | Why |
+|--------|------------------------|-----|
+| Prose only in one source file | `make html` or `make -B slides-<fw> SLIDES_FILTER=<file.md>` | HTML and slides read source text directly. |
+| One notebook source cell | `make notebooks-<fw>` then `make -B run-notebooks-<fw> NB_FILES=<file.ipynb>` | Notebook generation is per-framework; execution can be filtered. |
+| One slide deck | `make -B slides-<fw> SLIDES_FILTER=<file.md>` | Slide generation/rendering accepts source `.md` paths. |
+| One framework PDF | `make pdf-<fw>` | PDFs are isolated under `_pdf/<fw>/`. |
+| `#@save` library code | `make lib` then rerun affected notebooks; when in doubt rerun all frameworks | `d2l/*.py` is imported by many notebooks, so a package rebuild can affect results far beyond the edited file. |
+| `pyproject.toml` or `uv.lock` | `make venv-<fw>` or target that depends on it | `.venv-<fw>/.synced` is keyed on these files. |
+| Shared tools in `tools/*.py` | Rebuild the stage that uses the tool | Most generated artifacts depend on the relevant script. |
+
+Useful single-file examples:
+
+```bash
+# Generate notebooks for one framework, then execute one notebook.
+make notebooks-pytorch
+make -B run-notebooks-pytorch NB_FILES=chapter_linear-regression/linear-regression.ipynb
+
+# Render one slide deck for one framework.
+make -B slides-jax SLIDES_FILTER=chapter_attention-mechanisms-and-transformers/transformer.md
+
+# Build one framework's PDF after notebook outputs exist.
+make pdf-tensorflow
+```
+
+There is no Make target today that generates only one notebook file.
+`gen_notebooks.py` generates all notebooks for the requested framework,
+then `run_notebooks.py --files` can execute a subset. Likewise, `html`
+and `pdf-<fw>` render full books, not single pages.
+
+---
+
+## Notebook execution model
+
+`run_notebooks.py` uses GPU-aware scheduling from `runtime_env.py`.
+Slides no longer use this path; they render with CPU-only Quarto
+subprocesses.
 
 ### Worker layout (default: --parallel 8 --num-gpus 4)
 
@@ -267,12 +341,12 @@ CPU:   worker 8..11           ← CUDA_VISIBLE_DEVICES="" (no GPU)
 - **CPU workers**: `ThreadPoolExecutor(max_workers=4)`, run with
   `CUDA_VISIBLE_DEVICES=""` plus `CPU_ONLY_ENV` (JAX_PLATFORMS=cpu,
   TF_CPP_MIN_LOG_LEVEL=3).
-- **Multi-GPU notebooks/slides**: Run serially after the parallel phase
-  with all GPUs visible. Known list in `MULTI_GPU_NOTEBOOKS`.
+- **Multi-GPU notebooks**: Run serially after the parallel phase with
+  all GPUs visible. Known list in `MULTI_GPU_NOTEBOOKS`.
 
 ### Classification
 
-Notebooks/slides are classified by scanning code cells for GPU keywords:
+Notebooks are classified by scanning code cells for GPU keywords:
 `gpu(`, `cuda`, `GPU`, `num_gpus`, `try_gpu`, `Trainer(`, `d2l.train`, etc.
 
 ### CPU affinity
@@ -286,12 +360,10 @@ contention between adjacent workers.
 
 - **Notebooks**: `jupyter nbconvert --execute --inplace` as a subprocess.
   Per-cell timeout 3600s.
-- **Slides**: `quarto render <file> --to revealjs` as a subprocess.
-  Per-file timeout configurable.
 
 ### Stale kernel cleanup
 
-After each run, `kill_stale_kernels(venv_dir)` scans `/proc` for
+After each notebook run, `kill_stale_kernels(venv_dir)` scans `/proc` for
 surviving `ipykernel_launcher` processes from the framework's venv and
 SIGKILL-s them. MXNet kernels in particular deadlock during Python
 interpreter shutdown (GIL vs MXNet engine threads) and survive their
@@ -347,6 +419,7 @@ PARALLEL_jax        ?= 8
 PARALLEL_mxnet      ?= 8
 SLIDES_FILTER       ?=            # Optional glob to select specific slides
 NB_FILES            ?=            # Optional file list for notebook execution
+FILES               ?=            # Default for NB_FILES and SLIDES_FILTER
 ```
 
 ### Key targets
@@ -359,8 +432,8 @@ NB_FILES            ?=            # Optional file list for notebook execution
 | `notebooks` | Generate .ipynb (no execution) | yes |
 | `run-notebooks-<fw>` | Execute one framework's notebooks | **no** (GPU) |
 | `run-all-notebooks` | Execute PT → TF → JAX → MX sequentially | **no** (GPU) |
-| `slides-<fw>` | Generate + render one framework's slides | **no** (GPU) |
-| `slides` | All 4 frameworks' slides | **no** (GPU) |
+| `slides-<fw>` | Generate + render one framework's slides | yes (CPU-only) |
+| `slides` | All 4 frameworks' slides; use `make -j4 slides` | yes (CPU-only) |
 | `lib` | Build d2l Python package | yes |
 | `all` | Full pipeline (lib → notebooks → run → slides → html → pdfs) | **no** |
 | `all-quick` | html + pdfs + notebooks + slides + lib (no execution) | partially |
@@ -419,6 +492,6 @@ The build system assumes a machine with:
 
 The full pipeline (`make all`) takes approximately:
 - Notebook execution: ~110 min total (PT ~21, TF ~24, JAX ~11, MX ~54)
-- Slides: ~40 min total
+- Slides: a few minutes with CPU parallel rendering
 - HTML + PDFs: ~15 min
 - Total wall time: ~3 hours

@@ -19,6 +19,7 @@ import json
 import base64
 import hashlib
 import argparse
+import textwrap
 from pathlib import Path
 
 FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
@@ -47,6 +48,23 @@ MAX_TEXT_LINES = 40  # legacy default; some callers may pass mode='html'/'pdf'
 # in the qmd corrupts Quarto's intermediate markdown — the ESC bytes confuse
 # the panel-tabset Lua filter and silently truncate the document.
 _ANSI_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
+_KERAS_PROGRESS_RE = re.compile(
+    r'^\s*\d+/(?:\d+|Unknown)\b.*(?:/step|\sstep\b|━)')
+_KERAS_EPOCH_RE = re.compile(r'^Epoch\s+\d+/\d+\s*$')
+_NOISY_SLIDE_OUTPUT_RE = re.compile(
+    r'^(WARNING:|WARNING:absl:|INFO:tensorflow:|I\d{4} |W\d{4} |'
+    r'INFO:root:|'
+    r'All log messages before absl::InitializeLog\(\)|'
+    r'Downloading .* from https?://|'
+    r'Found \d+ files belonging to \d+ classes\.|'
+    r'<keras\.src\.callbacks\.history\.History at )')
+_NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
+    'UserWarning:',
+    'VisibleDeprecationWarning:',
+    'AWS dependencies are not imported',
+    '/home/smola/d2l/d2l-neu/',
+    '/tmp/ipykernel_',
+)
 
 
 # ── QMD Parsing ──────────────────────────────────────────────
@@ -255,6 +273,83 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
     max_lines = MAX_TEXT_LINES_BY_MODE.get(mode, MAX_TEXT_LINES)
     parts = []
     img_idx = 0
+    slide_text_lines = []
+    image_output_count = sum(
+        1 for out in raw_outputs
+        if 'image/png' in out.get('data', {})
+        or 'image/svg+xml' in out.get('data', {}))
+    image_output_seen = 0
+
+    def clean_text_output(text):
+        text = _ANSI_RE.sub('', text)
+        # Drop carriage returns and the text they overwrite (terminal-style
+        # progress-bar redraws). Each \r resets to the start of the line, so
+        # only the segment after the last \r in any given line is what the
+        # user would have seen.
+        text = re.sub(r'[^\n]*\r', '', text)
+        if mode == 'slides':
+            kept = []
+            for ln in text.split('\n'):
+                stripped = ln.strip()
+                if _NOISY_SLIDE_OUTPUT_RE.match(stripped):
+                    continue
+                if any(s in stripped for s in _NOISY_SLIDE_OUTPUT_SUBSTRINGS):
+                    continue
+                if len(ln) > 160:
+                    ln = textwrap.shorten(ln, width=160, placeholder=' ...')
+                kept.append(ln)
+            text = '\n'.join(kept)
+            text = collapse_keras_progress(text)
+        return text.rstrip('\n')
+
+    def collapse_keras_progress(text):
+        lines = text.split('\n')
+        if not any(_KERAS_PROGRESS_RE.match(ln) for ln in lines):
+            return text
+
+        collapsed = []
+        last_progress = None
+        for ln in lines:
+            if _KERAS_PROGRESS_RE.match(ln):
+                last_progress = ln.strip()
+                continue
+            if _KERAS_EPOCH_RE.match(ln):
+                continue
+            if ln.strip() == '...':
+                continue
+            collapsed.append(ln)
+
+        if last_progress:
+            metrics = re.sub(r'^\d+/(?:\d+|Unknown)\s+.*?/step\s+-\s*',
+                             '', last_progress)
+            metrics = re.sub(r'^\d+/(?:\d+|Unknown)\s+.*?\s+-\s*',
+                             '', metrics)
+            collapsed.append(f'Final epoch metrics: {metrics}')
+
+        return '\n'.join(collapsed)
+
+    def append_text_block(text):
+        if not text:
+            return
+        text_lines = text.split('\n')
+        n = len(text_lines)
+
+        if n > max_lines:
+            if mode in ('pdf', 'slides'):
+                half = max_lines // 2
+                text = '\n'.join(
+                    text_lines[:half] + ['...'] + text_lines[-half:])
+                parts.append(
+                    f'::: {{.cell-output .cell-output-stdout}}\n'
+                    f'```\n{text}\n```\n:::')
+            else:
+                parts.append(
+                    f'::: {{.cell-output .cell-output-stdout '
+                    f'.d2l-output-scroll}}\n```\n{text}\n```\n:::')
+        else:
+            parts.append(
+                f'::: {{.cell-output .cell-output-stdout}}\n'
+                f'```\n{text}\n```\n:::')
 
     for out in raw_outputs:
         otype = out.get('output_type', '')
@@ -268,6 +363,9 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         # caption by Pandoc's implicit_figures extension. We don't
         # want every notebook plot to display its cell-id underneath.
         if 'image/png' in data:
+            image_output_seen += 1
+            if mode == 'slides' and image_output_count > 2 and image_output_seen < image_output_count:
+                continue
             img_idx += 1
             fname = f'{cell_id}-{img_idx}.png'
             fpath = Path(img_dir) / fname
@@ -279,6 +377,9 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             continue
 
         if 'image/svg+xml' in data:
+            image_output_seen += 1
+            if mode == 'slides' and image_output_count > 2 and image_output_seen < image_output_count:
+                continue
             img_idx += 1
             svg = data['image/svg+xml']
             if isinstance(svg, list):
@@ -301,35 +402,18 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         else:
             continue
 
-        text = _ANSI_RE.sub('', text)
-        # Drop carriage returns and the text they overwrite (terminal-style
-        # progress-bar redraws). Each \r resets to the start of the line, so
-        # only the segment after the last \r in any given line is what the
-        # user would have seen.
-        text = re.sub(r'[^\n]*\r', '', text)
-        text = text.rstrip('\n')
+        text = clean_text_output(text)
         if not text:
             continue
 
-        text_lines = text.split('\n')
-        n = len(text_lines)
-
-        if n > max_lines:
-            if mode in ('pdf', 'slides'):
-                half = max_lines // 2
-                text = '\n'.join(
-                    text_lines[:half] + ['...'] + text_lines[-half:])
-                parts.append(
-                    f'::: {{.cell-output .cell-output-stdout}}\n'
-                    f'```\n{text}\n```\n:::')
-            else:
-                parts.append(
-                    f'::: {{.cell-output .cell-output-stdout '
-                    f'.d2l-output-scroll}}\n```\n{text}\n```\n:::')
+        if mode == 'slides':
+            slide_text_lines.extend(text.split('\n'))
         else:
-            parts.append(
-                f'::: {{.cell-output .cell-output-stdout}}\n'
-                f'```\n{text}\n```\n:::')
+            append_text_block(text)
+
+    if slide_text_lines:
+        text = '\n'.join(slide_text_lines)
+        append_text_block(text)
 
     return '\n'.join(parts)
 

@@ -1038,13 +1038,11 @@ fine-tuning on a pretrained encoder.
 ::: {.slide title="Loading pretrained BERT"}
 We use a small pretrained BERT (the one we trained
 ourselves in the previous chapter, or a downloaded
-checkpoint):
+checkpoint). The framework-specific checkpoint conversion
+helpers are implementation plumbing, so the slide shows only
+the setup and final instantiated encoder:
 
 @natural-language-inference-bert-loading-pretrained-bert-1
-
-. . .
-
-@natural-language-inference-bert-loading-pretrained-bert-2
 
 . . .
 

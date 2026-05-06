@@ -211,11 +211,19 @@ separate $\eta$ needed (in principle).
 ::: {.slide title="The update rule"}
 $$\mathbf{s}_t = \rho \mathbf{s}_{t-1} + (1-\rho) \mathbf{g}_t^2,$$
 
-$$\mathbf{g}'_t = \frac{\sqrt{\Delta\mathbf{x}_{t-1} + \epsilon}}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t,$$
+$$\mathbf{u}_t = \rho \mathbf{u}_{t-1}
+  + (1-\rho)(\Delta\mathbf{x}_t)^2,$$
 
-$$\Delta\mathbf{x}_t = \rho \Delta\mathbf{x}_{t-1} + (1-\rho)\, \mathbf{g}'^2_t,$$
+where $\mathbf{s}_t$ tracks squared gradients and
+$\mathbf{u}_t$ tracks squared parameter updates. The actual
+step uses the *previous* update scale:
 
-$$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \mathbf{g}'_t.$$
+$$\Delta\mathbf{x}_t =
+  -\frac{\sqrt{\mathbf{u}_{t-1}+\epsilon}}
+          {\sqrt{\mathbf{s}_t+\epsilon}}
+    \odot \mathbf{g}_t,$$
+
+$$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} + \Delta\mathbf{x}_t.$$
 
 In practice frameworks still expose a learning-rate hyper
 for fine-tuning.
@@ -237,8 +245,8 @@ Two state buffers per parameter (`s` and `delta`):
 
 ::: {.slide title="Recap"}
 - Two EMAs: squared gradients $\mathbf{s}_t$ and squared
-  updates $\Delta\mathbf{x}_t$.
-- Per-parameter step is the ratio $\sqrt{\Delta\mathbf{x}_{t-1}}/\sqrt{\mathbf{s}_t}$,
+  updates $\mathbf{u}_t$.
+- Per-parameter step is the ratio $\sqrt{\mathbf{u}_{t-1}}/\sqrt{\mathbf{s}_t}$,
   dimensionally consistent — drops the explicit learning
   rate.
 - Less popular today than Adam, but a good case study in

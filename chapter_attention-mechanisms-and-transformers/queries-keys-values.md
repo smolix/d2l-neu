@@ -235,9 +235,11 @@ and softmax it:
 
 $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
 
-Differentiable, gradient never vanishes, available in every
-framework. The rest of the chapter is about choices for $a$
-and what to put in $\mathbf{q}, \mathbf{k}, \mathbf{v}$.
+Differentiable, easy to batch, and available in every
+framework. But saturated logits give tiny gradients, so
+score scaling and masking details matter. The rest of the
+chapter is about choices for $a$ and what to put in
+$\mathbf{q}, \mathbf{k}, \mathbf{v}$.
 :::
 
 ::: {.slide title="show_heatmaps"}

@@ -197,14 +197,37 @@ an algorithm: repeatedly apply the right-hand side as an
 update until convergence.
 :::
 
-::: {.slide title="Implementation"}
-Frozen Lake — a 4×4 gridworld with slippery tiles. Iterate
-$V \leftarrow \max_a [r + \gamma P V]$ until convergence;
-extract $\pi(s) = \arg\max_a [r + \gamma P V]$:
+::: {.slide title="What the Bellman backup does"}
+For each state, value iteration asks one local question:
+
+$$\text{if I take action } a \text{ now, what is my immediate reward plus discounted future value?}$$
+
+Then it keeps the best action:
+
+$$V_{k+1}(s)
+  = \max_a \left\{r(s,a) +
+    \gamma \sum_{s'} P(s'\mid s,a)V_k(s')\right\}.$$
+
+Interpretation:
+
+- $\sum_{s'} P(s'\mid s,a)V_k(s')$ averages over stochastic next states.
+- $\gamma$ controls how far the planning horizon effectively reaches.
+- The max converts policy evaluation into policy improvement.
+:::
+
+::: {.slide title="Frozen Lake setup"}
+Frozen Lake is a 4×4 gridworld: start `S`, frozen cells `F`,
+holes `H`, and goal `G`. The reward is sparse — only the goal
+pays — so values propagate backward from the goal over repeated
+Bellman backups.
 
 @value-iter-implementation-of-value-iteration-1
+:::
 
-. . .
+::: {.slide title="Value iteration loop"}
+Iterate $V \leftarrow \max_a [r + \gamma P V]$ until convergence;
+then extract the greedy policy
+$\pi(s) = \arg\max_a [r + \gamma P V]$:
 
 @value-iter-implementation-of-value-iteration-2
 :::

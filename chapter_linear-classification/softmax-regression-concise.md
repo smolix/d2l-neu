@@ -311,10 +311,14 @@ scaffold:
 
 ::: {.slide title="Softmax + cross-entropy, fused"}
 Computing softmax then `log` then NLL separately blows up
-numerically when logits are large (`exp(50)` overflows). The
+numerically when logits are large (`exp(100)` overflows in
+common float32 arithmetic). The
 framework's `cross_entropy` takes raw **logits** and computes the
 loss directly via the LogSumExp trick — equivalent math, stable
 arithmetic:
+
+$$\log \sum_j e^{o_j}
+  = m + \log \sum_j e^{o_j-m}, \quad m=\max_j o_j.$$
 
 @softmax-regression-concise-softmax-revisited
 

@@ -473,7 +473,7 @@ the second-order Taylor expansion:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f(\mathbf{x})]^{-1} \nabla f(\mathbf{x}).$$
 
-For $f(x) = (\cosh(cx))^2$, one Newton step finds the
+For $f(x) = \cosh(cx)$, one Newton step finds the
 minimum:
 
 @gd-newton-s-method-1

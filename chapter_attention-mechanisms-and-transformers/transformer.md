@@ -1549,6 +1549,21 @@ self-attention and encoder-decoder cross-attention.
 Embedding + positional encoding before the first block.
 :::
 
+::: {.slide title="Encoder vs decoder attention"}
+The same multi-head attention operator is used in three
+different roles:
+
+- **Encoder self-attention:** queries, keys, and values all come
+  from the source sequence. Every source position can read every
+  other non-padding source position.
+- **Decoder masked self-attention:** queries, keys, and values
+  come from the target prefix. The causal mask hides future target
+  tokens.
+- **Cross-attention:** decoder states provide the queries; encoder
+  outputs provide keys and values. This is where the target prefix
+  looks back at the source sentence.
+:::
+
 ::: {.slide title="Positionwise FFN"}
 A two-layer MLP applied independently at every sequence
 position — same weights everywhere. Lets each position

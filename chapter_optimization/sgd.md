@@ -389,8 +389,9 @@ Common schedules:
 :::
 
 ::: {.slide title="Decay schedule comparison"}
-Run the same SGD with an exponential decay schedule —
-trajectory tightens around the minimum as $\eta_t \to 0$:
+Exponential decay reduces variance quickly, but can shrink the step
+size too fast. Polynomial inverse-square-root decay keeps exploration
+longer and converges better in this example:
 
 @sgd-dynamic-learning-rate-2
 :::

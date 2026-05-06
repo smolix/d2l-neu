@@ -700,17 +700,22 @@ Both feed into the same softmax + value-pooling pipeline.
 :::
 
 ::: {.slide title="Why scaled dot product"}
-A Gaussian kernel expands to
-$\mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2$.
-Softmax kills the query-only term; layer-norm bounds the
-key-norm term — only $\mathbf{q}^\top \mathbf{k}_i$ remains.
+For $d$-dimensional queries and keys with independent,
+zero-mean, unit-variance coordinates,
 
-For $d$-dim i.i.d. unit-variance entries, $\mathbf{q}^\top \mathbf{k}$
-has variance $d$. Without scaling, softmax saturates as $d$
-grows and gradients vanish. Scale by $1/\sqrt d$ to keep the
-variance at 1:
+$$\operatorname{Var}(\mathbf{q}^\top\mathbf{k})
+  = \operatorname{Var}\left(\sum_{\ell=1}^d q_\ell k_\ell\right)
+  = d.$$
+
+As $d$ grows, raw dot products become large in magnitude,
+softmax saturates, and gradients shrink. Scaling by
+$1/\sqrt d$ keeps the logit variance approximately constant:
 
 $$a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+
+A Gaussian-kernel view gives useful geometric intuition, but
+the variance argument is the operational reason used in
+Transformers.
 :::
 
 ::: {.slide title="Masked softmax"}

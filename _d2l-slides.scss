@@ -147,7 +147,8 @@ $code-block-padding:     0.45em 0.7em;
   padding: $code-block-padding;
   display: block;
   overflow-x: auto;
-  max-height: none;
+  max-height: 58vh;
+  overflow-y: auto;
   color: $ink;
 }
 

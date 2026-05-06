@@ -1678,6 +1678,20 @@ offsets. Predictions from all levels are concatenated.
 ![SSD = base network + several multiscale feature blocks; each block has its own anchor predictor.](../img/ssd.svg){width=68%}
 :::
 
+::: {.slide title="Scaling to objects in images"}
+Objects appear at different pixel sizes. SSD handles this by
+predicting from several feature maps at once:
+
+- early maps: many spatial cells, small receptive fields,
+  small anchor boxes;
+- deeper maps: fewer spatial cells, larger receptive fields,
+  larger anchor boxes.
+
+The model does not resize every candidate region. It learns
+classification and offset heads at each scale, then pools all
+anchors into one detection set before NMS.
+:::
+
 ::: {.slide title="Class and box prediction heads"}
 For a feature map with $a$ anchors per pixel and $q$
 classes, the class head is a 3×3 conv with $a(q+1)$ output
@@ -1811,7 +1825,8 @@ Visualize all predictions with confidence ≥ 0.9:
   end. No region proposal step.
 - Loss = class cross-entropy + offset $L_1$, only on
   positive anchors.
-- The architectural blueprint for YOLO, RetinaNet,
-  EfficientDet — single-stage detectors all share this
-  shape.
+- SSD and RetinaNet are anchor-based dense single-stage
+  detectors. YOLO is a related single-stage family, while
+  modern anchor-free detectors remove explicit anchors but
+  keep dense classification/localization over feature maps.
 :::

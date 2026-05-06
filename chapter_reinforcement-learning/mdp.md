@@ -58,3 +58,61 @@ The reinforcement learning problem is typically modeled using Markov Decision Pr
 :begin_tab:`pytorch`
 [Discussions](https://discuss.d2l.ai/t/12084)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+Reinforcement learning starts with an **agent-environment loop**.
+At time $t$:
+
+$$s_t \xrightarrow{\text{agent chooses } a_t}
+  (r_t, s_{t+1}) \xrightarrow{\text{environment}} s_{t+1}.$$
+
+The hard part is delayed consequence: an action can look bad
+immediately but set up large future reward, or look good now and
+lead into a dead end.
+:::
+
+::: {.slide title="MDP tuple"}
+A Markov decision process packages the assumptions:
+
+$$\mathcal{M}=(\mathcal{S},\mathcal{A},P,r,\gamma).$$
+
+- $\mathcal{S}$: states, the information the agent conditions on.
+- $\mathcal{A}$: actions available to the agent.
+- $P(s'\mid s,a)$: transition kernel.
+- $r(s,a)$ or $r(s,a,s')$: immediate reward.
+- $\gamma\in[0,1)$: discount factor.
+
+The **Markov** assumption says the current state contains all
+history relevant for predicting the next state.
+:::
+
+::: {.slide title="Return and objective"}
+A policy $\pi(a\mid s)$ maps states to action probabilities.
+Its objective is expected discounted return:
+
+$$J(\pi)=\mathbb{E}_{\tau\sim\pi}
+\left[\sum_{t=0}^{\infty}\gamma^t r_t\right].$$
+
+Discounting does two jobs:
+
+- makes infinite-horizon returns finite when rewards are bounded;
+- trades off immediate reward against long-horizon planning.
+
+Small $\gamma$ makes the agent myopic; $\gamma$ near 1 makes
+future rewards matter.
+:::
+
+::: {.slide title="Known model vs sampled experience"}
+Two regimes lead to the next two decks:
+
+- **Known MDP:** $P$ and $r$ are available. Dynamic programming
+  can back up values over all next states exactly.
+- **Unknown MDP:** the agent only observes samples
+  $(s,a,r,s')$. Learning replaces exact expectations with
+  experience.
+
+Value iteration is the clean model-known baseline. Q-learning is
+the sampled, model-free analog.
+:::

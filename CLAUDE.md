@@ -14,6 +14,25 @@ See **architecture.md** for full build system documentation.
   across frameworks (`make -j4 slides`).
 - `make clean` keeps `data/`; use `make veryclean` to force re-download.
 
+## Build dependency notes
+
+- `make lib` rebuilds `d2l/*.py` from every source `#@save` block.
+  Because notebooks import `d2l`, a library rebuild can affect notebooks
+  outside the edited file and outside the edited framework. Rerun all
+  plausibly affected notebooks; when unsure, rerun all frameworks.
+- Notebook generation is per-framework, not per-file:
+  `make notebooks-pytorch` regenerates that framework's notebook set.
+- Notebook execution can be narrowed, but Make uses one
+  `_notebooks/<fw>/.executed` stamp. Force the target when rerunning a
+  subset:
+  `make -B run-notebooks-pytorch NB_FILES=chapter_x/foo.ipynb`.
+- Slide generation/rendering can be narrowed by source file, but Make
+  uses one `_slides/<fw>/.built` stamp. Force the target:
+  `make -B slides-jax SLIDES_FILTER=chapter_x/foo.md`.
+- `FILES=...` is the default for both `NB_FILES` and `SLIDES_FILTER`,
+  but the expected suffix differs by stage: notebook execution wants
+  `.ipynb` paths, while slide rendering wants source `.md` paths.
+
 ## Source conventions (post-slides-refactor)
 
 - Every Python code fence carries a stable `#<id>`. IDs are assigned

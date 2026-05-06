@@ -57,22 +57,23 @@ query all properties in the module for generating random numbers:
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
-print(dir(np.random))
+print([name for name in dir(np.random) if not name.startswith('_')][:20])
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
-print(dir(torch.distributions))
+print([name for name in dir(torch.distributions)
+       if not name.startswith('_')][:20])
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
-print(dir(tf.random))
+print([name for name in dir(tf.random) if not name.startswith('_')][:20])
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
-print(dir(jax.random))
+print([name for name in dir(jax.random) if not name.startswith('_')][:20])
 ```
 
 Generally, we can ignore functions that start and end with `__` (special objects in Python) 
@@ -189,8 +190,9 @@ Standard import:
 
 . . .
 
-`dir(...)` lists every public name in a module — handy for
-finding the function you half-remember:
+`dir(...)` lists names in a module. Filter private names and
+show a small prefix on slides; in a notebook you can inspect
+the full list interactively:
 
 @lookup-api-functions-and-classes-in-a-module
 :::

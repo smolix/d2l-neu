@@ -295,9 +295,10 @@ asynchronously:
 :::
 
 ::: {.slide title="Loop (cont.)"}
-@rs-async-asynchronous-scheduler-7
-
-. . .
+Run the tuner, then load the experiment results. The raw
+Syne Tune logs contain local paths and backend commands, so
+the slide keeps the plot-producing analysis cell instead of
+the console transcript.
 
 @rs-async-asynchronous-scheduler-8
 :::

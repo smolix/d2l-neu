@@ -373,6 +373,22 @@ such blocks at growing channel counts.
   pairs; pass a different tuple for VGG-13/16/19.
 :::
 
+::: {.slide title="Receptive field arithmetic"}
+Stacking small kernels grows the visible patch without paying
+for a large kernel in one step.
+
+For stride 1 and no dilation:
+
+$$r_L = 1 + \sum_{\ell=1}^L (k_\ell - 1).$$
+
+Two 3×3 convolutions see
+
+$$1 + (3 - 1) + (3 - 1) = 5$$
+
+pixels across: the same 5×5 receptive field as one 5×5 conv,
+but with two ReLUs and fewer weights.
+:::
+
 ::: {.slide title="The VGG block"}
 A reusable subunit: `n_convs` consecutive `Conv-ReLU` pairs at
 `out_channels`, followed by a `2×2 MaxPool`:

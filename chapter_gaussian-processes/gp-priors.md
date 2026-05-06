@@ -219,6 +219,23 @@ regression:
 @gp-priors-the-radial-basis-function-rbf-kernel
 :::
 
+::: {.slide title="Neural network kernels"}
+An infinitely wide one-hidden-layer Bayesian neural network becomes a
+Gaussian process:
+
+$$f(x) = b + \sum_{i=1}^{J} v_i h(x; u_i).$$
+
+With zero-mean independent weights, finite collections of function
+values are jointly Gaussian, with
+
+$$m(x)=E[f(x)]=0,$$
+$$k(x,x')=E[f(x)f(x')].$$
+
+RBF kernels are stationary: behavior depends only on $x-x'$. Neural
+network kernels are non-stationary, so the function class can change
+across input space.
+:::
+
 ::: {.slide title="Recap"}
 - GP = distribution over functions defined by mean +
   kernel.

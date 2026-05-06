@@ -296,7 +296,7 @@ def show_Q_function_progress(env_desc, V_all, pi_all): #@save
 
 Trainer
 
-A bunch of functions that will be deprecated:
+Legacy helper functions retained for backward compatibility:
 
 ```{.python .input #utils-utility-functions-and-classes-8}
 %%tab mxnet
@@ -1403,78 +1403,71 @@ from scratch.
 :::
 
 ::: {.slide title="Core base classes"}
-@utils-utility-functions-and-classes-1
-
-. . .
-
-@utils-utility-functions-and-classes-2
-
-. . .
-
-@utils-utility-functions-and-classes-3
+- `HyperParameters` records constructor arguments so models,
+  data modules, and trainers can expose reproducible settings.
+- `Module` owns model logic: `forward`, loss, metrics, and
+  optimizer configuration.
+- `DataModule` owns data logic: download, preprocessing,
+  batching, and train/validation iterators.
+- `Trainer` coordinates the loop without hiding the math used
+  in chapter-specific subclasses.
 :::
 
 ::: {.slide title="Plotting and progress"}
-@utils-utility-functions-and-classes-4
-
-. . .
-
-@utils-utility-functions-and-classes-5
-
-. . .
-
-@utils-utility-functions-and-classes-6
+- `ProgressBoard` and `Animator` collect streaming metrics and
+  redraw one compact figure during training.
+- The display helpers are intentionally stateful: they remember
+  previous points so chapter code can call `plot` or `add` from
+  inside minibatch loops.
+- For lecture slides, the important invariant is not the plotting
+  implementation; it is the API shape: log scalar metrics against
+  an x-axis such as epoch, update count, or wall-clock time.
 :::
 
 ::: {.slide title="Training loop primitives"}
-@utils-utility-functions-and-classes-7
-
-. . .
-
-@utils-utility-functions-and-classes-8
-
-. . .
-
-@utils-utility-functions-and-classes-9
+- `Accumulator` keeps running sums for losses, accuracies, and
+  counts, avoiding per-minibatch global state.
+- `accuracy`, `evaluate_accuracy`, and `evaluate_loss` separate
+  evaluation from parameter updates.
+- `grad_clipping` rescales gradients when their global norm is
+  too large, a recurring requirement for recurrent and sequence
+  models.
 :::
 
 ::: {.slide title="Data loading helpers"}
-@utils-utility-functions-and-classes-10
-
-. . .
-
-@utils-utility-functions-and-classes-11
-
-. . .
-
-@utils-utility-functions-and-classes-12
+- `load_array` turns aligned tensors into minibatches.
+- `download`, `extract`, and `download_extract` provide cached,
+  checksum-aware dataset access for examples throughout the book.
+- `tokenize`, `truncate_pad`, and the Fashion-MNIST label helpers
+  standardize common preprocessing steps used before the full NLP
+  and vision abstractions are introduced.
 :::
 
-::: {.slide title="Misc helpers"}
-@utils-utility-functions-and-classes-13
-
-. . .
-
-@utils-utility-functions-and-classes-14
-
-. . .
-
-@utils-utility-functions-and-classes-15
+::: {.slide title="Reinforcement learning helpers"}
+- `make_env('FrozenLake-v1', seed)` returns a small tabular MDP
+  with transition tuples $(p, s', r, done)$ for value iteration.
+- `show_value_function_progress` and
+  `show_Q_function_progress` visualize how values and greedy
+  policies evolve over dynamic-programming or TD iterations.
+- These utilities are deliberately tiny: they make the Bellman
+  updates visible before moving to function approximation.
 :::
 
-::: {.slide title="More misc"}
-@utils-utility-functions-and-classes-16
-
-. . .
-
-@utils-utility-functions-and-classes-17
+::: {.slide title="Sequence-model helpers"}
+- `read_data_nmt`, `preprocess_nmt`, and `tokenize_nmt` prepare
+  the English-French translation corpus.
+- `build_array_nmt` converts variable-length token sequences into
+  padded arrays plus valid lengths.
+- `MaskedSoftmaxCELoss`, `sequence_mask`, `train_seq2seq`, and
+  `predict_seq2seq` implement the core sequence-to-sequence
+  training and decoding machinery reused in the attention chapter.
 :::
 
 ::: {.slide title="Recap"}
 - The `d2l` library provides reusable training, plotting,
   and data primitives so chapter code can focus on the
   ideas, not boilerplate.
-- All examples in the book work with the same
-  `Trainer.fit(model, data)` shape, regardless of
-  framework or chapter topic.
+- Newer chapters use the `Trainer.fit(model, data)` shape;
+  legacy chapters retain framework-specific helpers where
+  older examples depend on them.
 :::

@@ -267,6 +267,24 @@ Subclasses just supply `forward` (and a custom `loss` if not
 plain cross-entropy).
 :::
 
+::: {.slide title="Scores, probabilities, decisions"}
+Classifiers usually produce a vector of scores
+$\mathbf{o}\in\mathbb{R}^q$. The training loss may turn
+scores into probabilities, but the deployed decision is often
+just
+
+$$\hat{y}=\arg\max_j o_j.$$
+
+Keep the roles separate:
+
+- **scores/logits:** differentiable quantities the model outputs;
+- **loss:** smooth training signal, e.g. cross-entropy;
+- **accuracy:** discrete evaluation metric after taking argmax.
+
+Accuracy is what many benchmarks report, but it is not a useful
+gradient: one tiny score change usually leaves argmax unchanged.
+:::
+
 ::: {.slide title="The `Classifier` class"}
 @classification-the-base-classification-model
 
@@ -289,6 +307,19 @@ correctly-classified examples in the batch:
 
 The validation step then reports both the loss (lower is better)
 and accuracy (higher is better) every epoch.
+:::
+
+::: {.slide title="Why report both loss and accuracy?"}
+Two models can have the same accuracy but different confidence.
+Cross-entropy still notices whether the correct class received
+probability 0.51 or 0.99.
+
+Use both during training:
+
+- **loss** detects calibration and optimization progress;
+- **accuracy** tracks the hard decision quality students and
+  benchmarks usually care about;
+- disagreement between them is diagnostic, not a bug.
 :::
 
 ::: {.slide title="Recap"}

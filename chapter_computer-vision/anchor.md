@@ -1422,22 +1422,38 @@ in the final output.
 <!-- slides -->
 
 ::: {.slide}
-A detector can't predict an arbitrary box from raw pixels
-— the search space is too large. **Anchor boxes** restrict
-prediction to *offsets* from a fixed grid of candidates.
+A dense detector should not regress arbitrary boxes from
+scratch at every location. **Anchor boxes** turn the problem
+into residual regression around structured candidate boxes.
 
-1. Tile the image with anchors at every pixel, in many
-   shapes and sizes.
+1. Attach anchors to spatial locations, usually feature-map
+   cells mapped back to image coordinates.
 2. For each anchor, predict **class** and box **offset**.
 3. After the forward pass, **non-maximum suppression**
    prunes overlapping high-confidence predictions.
 
-Core of SSD, YOLO, RetinaNet, and the region proposal
-network in Faster R-CNN.
+Core of SSD, RetinaNet, and the region proposal network in
+Faster R-CNN. Some modern detectors are anchor-free, but the
+same ideas — dense classification, localization, and NMS —
+remain central.
 :::
 
 ::: {.slide title="Setup"}
 @anchor-anchor-boxes
+:::
+
+::: {.slide title="Coordinates and feature maps"}
+Keep three coordinate systems separate:
+
+- **image coordinates:** box corners or centers measured in pixels;
+- **feature-map cells:** locations after CNN downsampling, each with
+  a receptive field in the image;
+- **normalized anchors:** candidate boxes parameterized relative to
+  image width/height or to a feature-map stride.
+
+In toy code we generate anchors at image pixels for clarity. In
+production detectors, anchors are usually tied to feature-map
+locations so each prediction uses the local receptive field.
 :::
 
 ::: {.slide title="Generating anchors"}

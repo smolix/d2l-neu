@@ -148,7 +148,9 @@ target is wrong.
 
 Better framing: **personalized ranking** — given an
 observed positive (user, $i$), the model should rank $i$
-*above* random unobserved items.
+*above* sampled unobserved items. Treating every unobserved
+pair as a literal negative target is usually misaligned with
+ranking because exposure is missing-not-at-random.
 
 Two pairwise losses for this:
 
@@ -161,6 +163,24 @@ Two pairwise losses for this:
 
 Both turn implicit feedback into pairwise comparisons; the
 model learns to put positives above negatives.
+:::
+
+::: {.slide title="Training triples"}
+For each user $u$, let $I_u^+$ be observed positives
+(clicked, watched, bought) and sample negatives
+$j \notin I_u^+$ from the item catalog. Training examples are
+triples:
+
+$$D = \{(u,i,j): i\in I_u^+,\, j\notin I_u^+\}.$$
+
+The model never needs an absolute rating target. It only needs
+the score gap
+
+$$\Delta_{uij} = \hat r_{ui} - \hat r_{uj}.$$
+
+Large positive gaps mean the positive item outranks the sampled
+negative. The sampled negative is a training contrast, not proof
+that the user would dislike the item.
 :::
 
 ::: {.slide title="BPR loss"}
@@ -179,6 +199,19 @@ Hard-margin alternative — equivalent to a max-margin
 classifier over score differences:
 
 @ranking-hinge-loss-and-its-implementation
+:::
+
+::: {.slide title="BPR vs hinge"}
+Both losses reward positive margins, but their gradients behave
+differently:
+
+$$\ell_\textrm{BPR}(\Delta) = -\log \sigma(\Delta), \qquad
+  \ell_\textrm{hinge}(\Delta) = \max(0, m-\Delta).$$
+
+- BPR keeps a smooth, nonzero gradient for every sampled pair.
+- Hinge stops updating once the margin is satisfied.
+- The most important implementation choice is often the negative
+  sampler, not the algebraic form of the loss.
 :::
 
 ::: {.slide title="Recap"}

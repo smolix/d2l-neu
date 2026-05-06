@@ -420,12 +420,17 @@ outperform years of expert tuning.
 :::
 
 ::: {.slide title="The AnyNet design space"}
+![The AnyNet design space.](../img/anynet.svg){width=76%}
+
 Stem (low-level conv) → 4 stages of residual blocks → head
 (global pool + linear). Each stage's depth, width, group count
 are free parameters:
 
 @cnn-design-designing-convolutional-network-architectures
 
+:::
+
+::: {.slide title="AnyNet in code"}
 @cnn-design-the-anynet-design-space-1
 
 . . .
@@ -435,6 +440,15 @@ are free parameters:
 . . .
 
 @cnn-design-the-anynet-design-space-3
+:::
+
+::: {.slide title="RegNet design-space evidence"}
+![Comparing error empirical distribution functions of design spaces.](../img/regnet-fig.png){width=82%}
+
+RegNet narrows AnyNet with simple constraints: stage widths grow
+approximately linearly, bottleneck ratios stay fixed, and group widths
+are shared across stages. The result is a smaller search space with
+better probability of good models.
 :::
 
 ::: {.slide title="A RegNetX-3.2GF instance"}

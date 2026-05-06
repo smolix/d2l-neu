@@ -185,6 +185,46 @@ Three pieces to make this work:
   policy, not the behavior policy.
 :::
 
+::: {.slide title="TD target and TD error"}
+The update is easiest to read as a prediction-correction
+step:
+
+$$\underbrace{r + \gamma \max_{a'} Q(s',a')}_{\textrm{TD target}}
+  \quad\text{vs.}\quad
+  \underbrace{Q(s,a)}_{\textrm{current estimate}}.$$
+
+Their difference is the **temporal-difference error**:
+
+$$\delta = r + \gamma \max_{a'} Q(s',a') - Q(s,a).$$
+
+Then Q-learning applies an exponential moving average:
+
+$$Q(s,a) \leftarrow Q(s,a) + \alpha \delta.$$
+
+Large $\alpha$ learns quickly but can be noisy; small $\alpha$
+is stable but slow. In theory, convergence uses a decaying
+learning-rate schedule.
+:::
+
+::: {.slide title="Exploration is not optional"}
+If the agent always exploits the current table, early random
+errors can lock in a bad policy. ε-greedy avoids that failure:
+
+$$
+\pi_e(a\mid s)=
+\begin{cases}
+\textrm{random action}, & \epsilon \\
+\arg\max_{a'} Q(s,a'), & 1-\epsilon.
+\end{cases}
+$$
+
+The practical tradeoff:
+
+- high ε: broader coverage, slower apparent improvement;
+- low ε: faster exploitation, higher risk of missing good actions;
+- annealed ε: explore early, exploit once estimates are useful.
+:::
+
 ::: {.slide title="Frozen Lake setup"}
 Same gridworld as the value-iter deck — easy to see the
 algorithm converge to the same answer the model-based
@@ -194,8 +234,10 @@ DP got, but without knowing $P$ in advance:
 :::
 
 ::: {.slide title="Q-learning training loop"}
-Sample episodes; each step applies the Q update with the
-observed transition; track returns over training:
+Sample episodes; each transition gives one supervised-looking
+target for one table entry. The update touches only
+$Q(s_t,a_t)$, but bootstrapping lets information propagate
+backward through later visits:
 
 @qlearning-implementation-of-q-learning-2
 

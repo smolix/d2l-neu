@@ -118,7 +118,7 @@ class NeuMF(nn.Module):
 
 ## Customized Dataset with Negative Sampling
 
-For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with form the pool of negative items. The following function takes user identities and the per-user set of *observed* items (the `candidates` argument, holding items each user has interacted with) and samples a random negative item for each user by drawing from the complement — items not in that user's observed set. During the training stage, the model ensures that the items that a user likes are ranked higher than items he dislikes or has not interacted with.
+For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with form the pool of negative items. The following function takes user identities and the per-user set of *observed* items (the `candidates` argument, holding items each user has interacted with) and samples a random negative item for each user by drawing from the complement — items not in that user's observed set. During training, the model learns to rank observed positive items above sampled items that were not observed for that user.
 
 ```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab mxnet
@@ -458,8 +458,7 @@ scalar score. Train with BPR loss + sampled negatives.
 
 This deck pulls together: NeuMF model + a custom dataset
 with negative sampling + leave-one-out ranking evaluator
-(Hit@10, NDCG@10) — the recommender-systems evaluation
-classic.
+(Hit@50, AUC) — the recommender-systems evaluation classic.
 :::
 
 ::: {.slide title="Model architecture"}
@@ -467,7 +466,7 @@ Two embedding tables per side (one for GMF, one for MLP);
 elementwise product on one side, concat→MLP on the other;
 final concat → linear → sigmoid score:
 
-@neumf-the-neumf-model
+![NeuMF architecture: GMF and MLP pathways are fused before scoring a user-item pair.](../img/rec-neumf.svg)
 
 . . .
 
@@ -482,13 +481,14 @@ sampling on the fly:
 @neumf-customized-dataset-with-negative-sampling
 :::
 
-::: {.slide title="Hit@k and NDCG@k"}
+::: {.slide title="Hit@50 and AUC"}
 Standard ranking metrics:
 
-- **Hit@k** — does the held-out positive land in the top
-  k recommendations?
-- **NDCG@k** — discounted gain weighted by position; gives
-  full credit for top-1, log-discounted for lower ranks.
+- **Hit@50** — does the held-out positive land in the top
+  50 recommendations?
+- **AUC** — is the held-out positive ranked above the
+  unobserved items? This is a pairwise ranking view, not
+  a calibrated-rating metric.
 
 @neumf-evaluator-1
 
@@ -498,9 +498,8 @@ Standard ranking metrics:
 :::
 
 ::: {.slide title="Training loop"}
-BPR loss + Adam. Evaluate on held-out positives + 99
-random negatives per user (a standard convention to keep
-evaluation cheap):
+BPR loss + Adam. Evaluate by ranking the held-out positives
+against each user's unobserved items:
 
 @neumf-training-and-evaluating-the-model-1
 
@@ -521,9 +520,9 @@ evaluation cheap):
 - NeuMF = GMF (elementwise product) + MLP (concat) →
   fused score.
 - Implicit-feedback training with BPR + negative sampling.
-- Hit@k / NDCG@k are the right metrics; RMSE doesn't
-  apply to implicit settings.
+- Hit@50 / AUC match ranking behavior; RMSE is a poor target
+  when zeros mostly mean "unobserved", not explicit dislike.
 - A standard reference for "how to combine MF and an MLP";
-  many later models (DeepFM, AutoInt) elaborate on the
-  same dual-pathway pattern.
+  keep it conceptually separate from CTR architectures such
+  as DeepFM and AutoInt, which score feature-rich impressions.
 :::

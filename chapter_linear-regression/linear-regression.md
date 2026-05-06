@@ -816,6 +816,29 @@ $$\hat{y} = \mathbf{w}^\top \mathbf{x} + b.$$
 @!linear-regression-the-normal-distribution-and-squared-loss-2
 :::
 
+::: {.slide title="Squared loss from Gaussian noise"}
+Assume the target is the linear prediction plus fixed-variance
+Gaussian noise:
+
+$$y^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b + \epsilon^{(i)},
+  \quad \epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2).$$
+
+Then
+
+$$p(y^{(i)} \mid \mathbf{x}^{(i)}, \mathbf{w}, b)
+  = \frac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\left(-\frac{(y^{(i)} - \hat{y}^{(i)})^2}{2\sigma^2}\right).$$
+
+For independent examples, the negative log-likelihood is
+
+$$-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w},b)
+  = \textrm{const} +
+    \frac{1}{2\sigma^2}\sum_i (y^{(i)}-\hat{y}^{(i)})^2.$$
+
+With fixed $\sigma$, maximum likelihood and minimizing squared
+error choose the same parameters.
+:::
+
 ::: {.slide title="The model and the loss"}
 For one example $\mathbf{x}^{(i)} \in \mathbb{R}^d$ and target
 $y^{(i)} \in \mathbb{R}$, the model predicts

@@ -203,16 +203,18 @@ machine and a deep MLP, sharing the embedding table.
   that the bilinear FM misses.
 
 Final prediction: $\sigma(\hat y_{FM} + \hat y_{Deep})$.
-End-to-end training. Has been a workhorse of industry CTR
-systems since ~2017 — Wide & Deep with the FM
-substitution.
+End-to-end training. This became a widely used template
+for CTR models after 2017: explicit interaction terms plus
+learned nonlinear feature mixing.
 :::
 
 ::: {.slide title="Architecture"}
 Shared embeddings feed both the FM head and the deep MLP
 head:
 
-@deepfm-model-architectures
+![DeepFM architecture: shared field embeddings feed both an FM branch and a deep MLP branch.](../img/rec-deepfm.svg)
+
+$$\hat y = \sigma(\hat y^{(FM)} + \hat y^{(DNN)})$$
 :::
 
 ::: {.slide title="Implementation"}
@@ -230,8 +232,10 @@ changes:
 - DeepFM = FM (low-order) + deep MLP (high-order),
   sharing the same embedding table.
 - Same input format as FM; one extra branch.
-- Family of "two-tower" CTR models: Wide & Deep,
-  DeepFM, xDeepFM, AutoInt, DLRM. All variations on the
-  same idea: explicit interaction term + nonlinear
-  feature mixer + sigmoid head.
+- A member of the wide/deep interaction-model family:
+  explicit low-order terms plus a nonlinear feature mixer
+  and a sigmoid head.
+- Unlike retrieval architectures that score independently
+  encoded users and items, DeepFM fuses all impression
+  features before scoring one candidate.
 :::

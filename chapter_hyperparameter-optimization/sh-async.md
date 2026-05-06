@@ -285,9 +285,10 @@ none, sample a fresh config:
 :::
 
 ::: {.slide title="ASHA scheduler (cont.)"}
-@sh-async-asynchronous-scheduler-3
-
-. . .
+The tuner launch is intentionally omitted from the lecture
+slide: its console output is backend bookkeeping, not a
+conceptual step. The relevant result is the incumbent curve
+loaded from the completed experiment.
 
 @sh-async-asynchronous-scheduler-4
 :::

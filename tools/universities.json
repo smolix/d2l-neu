@@ -1,0 +1,4574 @@
+[
+  {
+    "slug": "Abasyn-University-Islamabad-Campus",
+    "name": "Abasyn University, Islamabad Campus",
+    "country": "Pakistan",
+    "logo": "Abasyn-University-Islamabad-Campus.jpg",
+    "evidence": [
+      {
+        "url": "https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Alexandria-University",
+    "name": "Alexandria University",
+    "country": "Egypt",
+    "logo": "Alexandria-University.svg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Amity-University",
+    "name": "Amity University",
+    "country": "",
+    "logo": "Amity-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Anna-University",
+    "name": "Anna University",
+    "country": "India",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://www.aplustopper.com/ad3501-deep-learning-syllabus/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Ateneo-de-Naga-University",
+    "name": "Ateneo de Naga University",
+    "country": "",
+    "logo": "Ateneo-de-Naga-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Australian-National-University",
+    "name": "Australian National University",
+    "country": "Australia",
+    "logo": "Australian-National-University.png",
+    "evidence": [
+      {
+        "url": "https://programsandcourses.anu.edu.au/2024/course/comp8536/second%20semester/9203",
+        "course": "COMP8536 — Advanced Topics in Deep Learning for Computer Vision (2024 S2)",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning — Dive into Deep Learning 0.16.6 documentation — Zhang, Lipton, Li, Smola (d2l.ai)\"",
+        "source_file": "verified_chunk_15_OCCA.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Bar-Ilan-University",
+    "name": "Bar Ilan University",
+    "country": "Israel",
+    "logo": "Bar-Ilan-University.svg",
+    "evidence": [
+      {
+        "url": "https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Barnard-College",
+    "name": "Barnard College",
+    "country": "",
+    "logo": "Barnard-College.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Beijing-Institute-of-Mathematical-Sciences-and-Applications",
+    "name": "Beijing Institute of Mathematical Sciences and Applications",
+    "country": "Mainland China",
+    "logo": "Beijing-Institute-of-Mathematical-Sciences-and-Applications.png",
+    "evidence": [
+      {
+        "url": "https://www.bimsa.cn/research_detail/DeeLea.html",
+        "course": "Deep Learning",
+        "instructor": "Guoqing Hu (胡国庆)",
+        "snippet": "Course material lists \"English Version https://d2l.ai/\" and \"Chinese Version https://zh.d2l.ai/\" as key references",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Birla-Institute-of-Technology-and-Science,-Hyderabad",
+    "name": "Birla Institute of Technology and Science, Hyderabad",
+    "country": "India",
+    "logo": "Birla-Institute-of-Technology-and-Science,-Hyderabad.svg",
+    "evidence": [
+      {
+        "url": "https://www.studocu.com/in/document/birla-institute-of-technology-and-science-pilani/deep-learning/deep-learning-ss-zg529-course-handout/80885828",
+        "course": "SS ZG529 — Deep Learning",
+        "instructor": "(not confirmed; BITS WILP online program)",
+        "snippet": "Search engine snippet confirms course handout for SS ZG529 at BITS Pilani references \"Dive into Deep Learning\" by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola as reference R3. (Studocu page requires login to read full text.)",
+        "source_file": "verified_chunk_07_IN.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Birla-Institute-of-Technology-and-Science-Pilani",
+    "name": "Birla Institute of Technology and Science, Pilani",
+    "country": "India",
+    "logo": "Birla-Institute-of-Technology-and-Science-Pilani.png",
+    "evidence": [
+      {
+        "url": "https://github.com/tirtharajdash/CS-F425_Deep-Learning",
+        "course": "",
+        "instructor": "",
+        "snippet": "From the repository README (CS F425 Deep Learning, BITS Pilani Goa Campus): *\"Primary textbooks: 1. A. Zhang, Z.C. Lipton, M. Li, A.J. Smola, [Dive into Deep Learning](https://d2l.ai/index.html).\"* The README also links directly to d2l.ai chapter pages for multiple lectures (e.g., Lecture 14: Modern CNNs links to `d2l.ai/chapter_convolutional-modern/index.html`; Lecture 16: Sequence Learning links to `d2l.ai/chapter_recurrent-neural-networks/index.html`), and lab materials reference `\"Section 2.1-2.3 of d2l.ai\"`, `\"Section 6 from d2l.ai\"`. Additionally, a BITS Pilani WILP DSECLZG (Deep Learning) course handout lists \"Dive into Deep Learning\" by Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola as reference R3.",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "BITS-Pilani",
+    "name": "BITS Pilani",
+    "country": "India",
+    "logo": "BITS-Pilani.png",
+    "evidence": [
+      {
+        "url": "https://github.com/tirtharajdash/CS-F425_Deep-Learning",
+        "course": "CS F425 — Deep Learning",
+        "instructor": "Tirtharaj Dash",
+        "snippet": "\"Listed as the first primary textbook by A. Zhang, Z.C. Lipton, M. Li, and A.J. Smola … Linked as 'd2l.ai' in multiple lab reading materials; students directed to specific chapters (2.1–2.3, 4.4–4.6, 6, 8)\"",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "BML-Munjal-University",
+    "name": "BML Munjal University",
+    "country": "India",
+    "logo": "BML-Munjal-University.png",
+    "evidence": [
+      {
+        "url": "https://www.bmu.edu.in/social/b-tech-computer-science-engineering-where-logics-meets-creativity/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Boston-University",
+    "name": "Boston University",
+    "country": "",
+    "logo": "Boston-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Brac-University",
+    "name": "Brac University",
+    "country": "Bangladesh",
+    "logo": "Brac-University.png",
+    "evidence": [
+      {
+        "url": "https://www.bracu.ac.bd/research-area/data-analysis-and-machine-learning",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Brandeis-University",
+    "name": "Brandeis University",
+    "country": "USA",
+    "logo": "Brandeis-University.svg",
+    "evidence": [
+      {
+        "url": "https://chuxuzhang.github.io/course/COSI165B.html",
+        "course": "COSI 165B — Deep Learning",
+        "instructor": "Chuxu Zhang (Assistant Professor of Computer Science)",
+        "snippet": "\"[Dive into Deep Learning](https://d2l.ai), Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola\" listed under \"Course materials\"",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Brown-University",
+    "name": "Brown University",
+    "country": "",
+    "logo": "Brown-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Cairo-University",
+    "name": "Cairo University",
+    "country": "Egypt",
+    "logo": "Cairo-University.png",
+    "evidence": [
+      {
+        "url": "https://eng.cu.edu.eg/en/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Carnegie-Mellon-University",
+    "name": "Carnegie Mellon University",
+    "country": "USA",
+    "logo": "Carnegie-Mellon-University.png",
+    "evidence": [
+      {
+        "url": "https://deeplearning.cs.cmu.edu/S25/",
+        "course": "11-785 — Introduction to Deep Learning (Spring 2025 / Fall 2024)",
+        "instructor": "Bhiksha Raj and Rita Singh",
+        "snippet": "\"Dive Into Deep Learning By Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola PDF, 2020\" listed in Textbooks section with link to http://d2l.ai",
+        "source_file": "north_america.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Chennai-Mathematical-Institute",
+    "name": "Chennai Mathematical Institute",
+    "country": "India",
+    "logo": "Chennai-Mathematical-Institute.jpg",
+    "evidence": [
+      {
+        "url": "https://www.cmi.ac.in/~pranabendu/aml22/ and https://www.cmi.ac.in/~pranabendu/aml23/",
+        "course": "Advanced Machine Learning (Autumn 2022 and Autumn 2023)",
+        "instructor": "Pranabendu Misra",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola: Dive into Deep Learning, 2022\" listed as primary reference; Chapter 6 cited for CNNs, Chapter 18 for GANs with direct link to d2l.ai chapters",
+        "source_file": "south_asia.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "China-Ocean-University",
+    "name": "China Ocean University",
+    "country": "Mainland China",
+    "logo": "China-Ocean-University.png",
+    "evidence": [
+      {
+        "url": "https://ouc.ai/zhenghaiyong/courses/dl/2024fall/index.html",
+        "course": "深度学习 (Deep Learning), Fall 2024 — DL2024Fall",
+        "instructor": "郑海永 (Haiyong Zheng)",
+        "snippet": "TextBook/参考书 section lists \"Dive into Deep Learning, an interactive deep learning book with code, math, and discussions\" with link to http://d2l.ai",
+        "source_file": "china_hk_tw.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Chinese-University-of-Hong-Kong",
+    "name": "Chinese University of Hong Kong",
+    "country": "Hong Kong",
+    "logo": "Chinese-University-of-Hong-Kong.png",
+    "evidence": [
+      {
+        "url": "https://github.com/rphilipzhang/AI-PhD-S25",
+        "course": "AI for Business Research (DOTE 6635 / DSME 6635), Spring 2025",
+        "instructor": "Renyu (Philip) Zhang, Associate Professor, CUHK Business School",
+        "snippet": "\"_Dive into Deep Learning_ (2nd Edition), 2023, by Aston Zhang, Zack Lipton, Mu Li, and Alex J. Smola, [link to d2l](https://d2l.ai/)\" (foundational text in course syllabus)",
+        "source_file": "china_hk_tw.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Chinese-University-of-Hong-Kong-Shenzhen",
+    "name": "Chinese University of Hong Kong, Shenzhen",
+    "country": "Mainland China / HK",
+    "logo": "Chinese-University-of-Hong-Kong-Shenzhen.png",
+    "evidence": [
+      {
+        "url": "https://library.cuhk.edu.cn/zh-hans/books-recommendation",
+        "course": "(recommended textbook, School of Science and Engineering)",
+        "instructor": "(unknown)",
+        "snippet": "\"'Dive into Deep Learning' … 理工学院教授们强烈推荐 … 理工学院课程\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Chongqing-University-of-Science-and-Technology",
+    "name": "Chongqing University of Science and Technology",
+    "country": "Mainland China",
+    "logo": "Chongqing-University-of-Science-and-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf",
+        "course": "深度学习 (Deep Learning), 智能科学与技术专业",
+        "instructor": "(unknown)",
+        "snippet": "\"教学大纲 制定时间：2024 年2 月 … 《动手学深度学习（PyTorch 版）》ISBN 9787115600820\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Christ-University-Bengaluru",
+    "name": "Christ University, Bengaluru",
+    "country": "India",
+    "logo": "Christ-University-Bengaluru.png",
+    "evidence": [
+      {
+        "url": "https://christuniversity.in/uploads/course/MSc_AI_23-24_20230907104038.pdf",
+        "course": "MSc AI (Artificial Intelligence and Machine Learning) — 2023-24",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2019) is listed as a reference text\" in the Department of Computer Science syllabus for MSc AI 2023-24",
+        "source_file": "south_asia.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "Chulalongkorn-University",
+    "name": "Chulalongkorn University",
+    "country": "Thailand",
+    "logo": "Chulalongkorn-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Chulalongkorn University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "City-University-of-Hong-Kong",
+    "name": "City University of Hong Kong",
+    "country": "Hong Kong",
+    "logo": "City-University-of-Hong-Kong.png",
+    "evidence": [
+      {
+        "url": "https://www.ee.cityu.edu.hk/~lmpo/ee4016/pdf/2026_AI_L01A_Course.pdf",
+        "course": "EE4016 — AI with Deep Learning",
+        "instructor": "(unknown — lmpo)",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zack Lipton, Mu Li, and Alex Smola at https://d2l.ai/\" (search snippet)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "College-of-Engineering-Pune",
+    "name": "College of Engineering Pune",
+    "country": "",
+    "logo": "College-of-Engineering-Pune.png",
+    "evidence": []
+  },
+  {
+    "slug": "Columbia-University",
+    "name": "Columbia University",
+    "country": "",
+    "logo": "Columbia-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Concordia-University",
+    "name": "Concordia University",
+    "country": "Canada",
+    "logo": "Concordia-University.png",
+    "evidence": [
+      {
+        "url": "https://www.coursehero.com/file/227177359/COMP433-Syllabus-Fall-2023-1pdf/",
+        "course": "COMP 433 — Introduction to Deep Learning (Fall 2023)",
+        "instructor": "Geraldin Nanfack",
+        "snippet": "\"Dive into Deep Learning\" freely available at http://preview.d2l.ai/d2l-en/master/ listed as one of the two primary textbooks for the course (alongside Goodfellow et al.).",
+        "source_file": "north_america.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "Cornell-University",
+    "name": "Cornell University",
+    "country": "USA",
+    "logo": "Cornell-University.svg",
+    "evidence": [
+      {
+        "url": "https://www.cs.cornell.edu/courses/cs4782/2024sp/",
+        "course": "CS 4782 — Intro to Deep Learning (Spring 2024, Spring 2025)",
+        "instructor": "Varsha Kishore and Justin Lovelace (Sp24); Kilian Q. Weinberger and Jennifer J. Sun (Sp25)",
+        "snippet": "\"Dive Into Deep Learning, by Zhang, A., Lipton, Z.C., Li, M. & Smola, A.J. This text includes many of the topics covered in this course with instructive Pytorch implementations.\"",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Cyprus-Institute",
+    "name": "Cyprus Institute",
+    "country": "Cyprus",
+    "logo": "Cyprus-Institute.png",
+    "evidence": [
+      {
+        "url": "https://www.cyi.ac.cy/index.php/education/masters-programs/simulation-and-data-sciences/sds-418-deep-learning-approaches.html",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Dalian-University-of-Technology",
+    "name": "Dalian University of Technology",
+    "country": "",
+    "logo": "Dalian-University-of-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "Deakin-University",
+    "name": "Deakin University",
+    "country": "Australia",
+    "logo": "Deakin-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Deakin University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Diponegoro-University",
+    "name": "Diponegoro University",
+    "country": "Indonesia",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Diponegoro University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Duke-University",
+    "name": "Duke University",
+    "country": "",
+    "logo": "Duke-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Durban-University-of-Technology",
+    "name": "Durban University of Technology",
+    "country": "",
+    "logo": "Durban-University-of-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "E-tv-s-Lor-nd-University-ELTE-Budapest",
+    "name": "Eötvös Loránd University (ELTE), Budapest",
+    "country": "Hungary",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://github.com/saxovia/deepnetworkdevelopment",
+        "course": "Deep Network Development (2025/26, Semester 1)",
+        "instructor": "",
+        "snippet": "\"Zhang, Aston, and Lipton, Zachary C., and Li, Mu, and Smola, Alexander J.: Dive into Deep Learning. https://d2l.ai/\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "East-China-Normal-University",
+    "name": "East China Normal University",
+    "country": "Mainland China",
+    "logo": "East-China-Normal-University.png",
+    "evidence": [
+      {
+        "url": "https://lanyunshi.github.io/resources/html/deep-learning2024-2025.html",
+        "course": "深度学习 (Deep Learning), 2024-2025 academic year",
+        "instructor": "兰韵诗 (Lanyunshi), 数据科学与工程学院",
+        "snippet": "\"阿斯顿·张等，《动手学深度学习》\" listed in 相关书籍推荐 (Recommended Books) with link to d2l.ai",
+        "source_file": "china_hk_tw.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Eastern-Mediterranean-University",
+    "name": "Eastern Mediterranean University",
+    "country": "Cyprus/N. Cyprus",
+    "logo": "Eastern-Mediterranean-University.png",
+    "evidence": [
+      {
+        "url": "https://www.emu.edu.tr/en/programs/artificial-intelligence-engineering-undergraduate-program/1760?tab=curriculum",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Ecole-Nationale-Superieure-dInformatique",
+    "name": "Ecole Nationale Superieure dInformatique",
+    "country": "",
+    "logo": "Ecole-Nationale-Superieure-dInformatique.png",
+    "evidence": []
+  },
+  {
+    "slug": "Emory-University",
+    "name": "Emory University",
+    "country": "",
+    "logo": "Emory-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Eotvos-Lorand-University",
+    "name": "Eotvos Lorand University",
+    "country": "",
+    "logo": "Eotvos-Lorand-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "EPFL",
+    "name": "EPFL",
+    "country": "",
+    "logo": "EPFL.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Escuela-Politecnica-Nacional",
+    "name": "Escuela Politecnica Nacional",
+    "country": "",
+    "logo": "Escuela-Politecnica-Nacional.png",
+    "evidence": []
+  },
+  {
+    "slug": "Escuela-Superior-Politecnica-del-Litoral",
+    "name": "Escuela Superior Politecnica del Litoral",
+    "country": "Ecuador",
+    "logo": "Escuela-Superior-Politecnica-del-Litoral.png",
+    "evidence": [
+      {
+        "url": "https://www.fiec.espol.edu.ec/en/undergraduate-programs/data-science-and-artificial-intelligence-online",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      },
+      {
+        "url": "https://smartx.espol.edu.ec/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Reuniones semanales para discutir la lectura de uno de los libros más usados a nivel mundial para ingresar al mundo del Deep Learning: D2L\" — SmartX research initiative at FIEC/ESPOL, weekly D2L reading group since January 2024.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Federal-University-Lokoja",
+    "name": "Federal University Lokoja",
+    "country": "Nigeria",
+    "logo": "Federal-University-Lokoja.png",
+    "evidence": [
+      {
+        "url": "https://fulokoja.edu.ng/academic-programme.php?i=bachelor-of-science-degree-in-computer-science&section=structure-and-content",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Feng-Chia-University",
+    "name": "Feng Chia University",
+    "country": "Taiwan",
+    "logo": "Feng-Chia-University.png",
+    "evidence": [
+      {
+        "url": "http://service005.sds.fcu.edu.tw/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Final-Report",
+    "name": "Final Report",
+    "country": "",
+    "logo": "Final-Report.jpg",
+    "evidence": [
+      {
+        "url": "https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf`",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_08_INNA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "FPT-University",
+    "name": "FPT University",
+    "country": "Vietnam",
+    "logo": "FPT-University.jpg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"FPT University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Fudan-University",
+    "name": "Fudan University",
+    "country": "",
+    "logo": "Fudan-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Gayatri-Vidya-Parishad-College-of-Engineering-(Autonomous)",
+    "name": "Gayatri Vidya Parishad College of Engineering (Autonomous)",
+    "country": "",
+    "logo": "Gayatri-Vidya-Parishad-College-of-Engineering-(Autonomous).png",
+    "evidence": []
+  },
+  {
+    "slug": "Gazi-Universitesi",
+    "name": "Gazi Universitesi",
+    "country": "",
+    "logo": "Gazi-Universitesi.png",
+    "evidence": []
+  },
+  {
+    "slug": "George-Mason-University",
+    "name": "George Mason University",
+    "country": "",
+    "logo": "George-Mason-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Georgetown-University",
+    "name": "Georgetown University",
+    "country": "",
+    "logo": "Georgetown-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Georgia-Institute-of-Technology",
+    "name": "Georgia Institute of Technology",
+    "country": "",
+    "logo": "Georgia-Institute-of-Technology.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Golden-Gate-University",
+    "name": "Golden Gate University",
+    "country": "",
+    "logo": "Golden-Gate-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Great-Lakes-Institute-of-Management",
+    "name": "Great Lakes Institute of Management",
+    "country": "India",
+    "logo": "Great-Lakes-Institute-of-Management.jpg",
+    "evidence": [
+      {
+        "url": "https://www.greatlakes.edu.in/e-learning-programs/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Guangdong-University-of-Technology",
+    "name": "Guangdong University of Technology",
+    "country": "Mainland China",
+    "logo": "Guangdong-University-of-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://courses.gdut.edu.cn/course/view.php?id=1381",
+        "course": "机器学习（2024年春） (Machine Learning, Spring 2024) — and a second ML course (id=1967)",
+        "instructor": "(unknown — course on courses.gdut.edu.cn / 自动化学院)",
+        "snippet": "\"教材2《动手深度学习》李沐https://zh.d2l.ai/ … 《动手学深度学习》的MindSpore实现\"",
+        "source_file": "china_hk_tw.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Gwangju-Institute-of-Science-and-Technology",
+    "name": "Gwangju Institute of Science and Technology",
+    "country": "South Korea",
+    "logo": "Gwangju-Institute-of-Science-and-Technology.jpg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "Deep learning course (graduate level)",
+        "instructor": "",
+        "snippet": "\"Gwangju Institute of Science and Technology\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Habib-University",
+    "name": "Habib University",
+    "country": "",
+    "logo": "Habib-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Hamad-Bin-Khalifa-University",
+    "name": "Hamad Bin Khalifa University",
+    "country": "Qatar",
+    "logo": "Hamad-Bin-Khalifa-University.png",
+    "evidence": [
+      {
+        "url": "https://catalog.hbku.edu.qa/course-descriptions/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Hangzhou-Dianzi-University",
+    "name": "Hangzhou Dianzi University",
+    "country": "",
+    "logo": "Hangzhou-Dianzi-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Hankuk-University-of-Foreign-Studies",
+    "name": "Hankuk University of Foreign Studies",
+    "country": "",
+    "logo": "Hankuk-University-of-Foreign-Studies.png",
+    "evidence": []
+  },
+  {
+    "slug": "Harare-Institute-of-Technology",
+    "name": "Harare Institute of Technology",
+    "country": "Zimbabwe",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Harare Institute of Technology\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Harbin-Institute-of-Technology",
+    "name": "Harbin Institute of Technology",
+    "country": "Mainland China",
+    "logo": "Harbin-Institute-of-Technology.png",
+    "evidence": [
+      {
+        "url": "https://www.icourse163.org/spoc/course/HIT-1469674174",
+        "course": "深度学习理论及实践 (Deep Learning Theory and Practice) — MOOC on icourse163.org",
+        "instructor": "刘远超 (Liu Yuanchao)",
+        "snippet": "\"Aston Zhang 《动手学深度学习》\" listed as recommended reading",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Harvard-University",
+    "name": "Harvard University",
+    "country": "USA",
+    "logo": "Harvard-University.png",
+    "evidence": [
+      {
+        "url": "https://harvard-iacs.github.io/CS287/supplemental",
+        "course": "AC295/CS287 — Deep Learning for NLP",
+        "instructor": "Chris Tanner",
+        "snippet": "\"Dive into Deep Learning by Zhang et al. 2020.\" listed under BOOKS > MACHINE LEARNING on the Supplemental Resources page",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Hasso-Plattner-Institut",
+    "name": "Hasso Plattner Institut",
+    "country": "Germany",
+    "logo": "Hasso-Plattner-Institut.png",
+    "evidence": [
+      {
+        "url": "https://hpi.de/en/studies/during-your-studies/courses/it-systems-engineering-ma/course/sose-20-3033-introduction-to-deep-learning.html",
+        "course": "SOSE-20-3033 — Introduction to Deep Learning",
+        "instructor": "Not named on public page (HPI Digital Health / IT-Systems Engineering MA)",
+        "snippet": "\"The course is based on material provided at http://d2l.ai/ and uses online tools including Zoom for meetings, a learning platform (OpenHPI, Teletask, or Moodle), and Google Colab as a programming environment.\"",
+        "source_file": "verified_chunk_03_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Hebrew-University-of-Jerusalem",
+    "name": "Hebrew University of Jerusalem",
+    "country": "Israel",
+    "logo": "Hebrew-University-of-Jerusalem.png",
+    "evidence": [
+      {
+        "url": "https://shnaton.huji.ac.il/index.php/NewSyl/67822/2/2022/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Heinrich-Heine-Universitat-Dusseldorf",
+    "name": "Heinrich Heine Universitat Dusseldorf",
+    "country": "",
+    "logo": "Heinrich-Heine-Universitat-Dusseldorf.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Hertie-School",
+    "name": "Hertie School",
+    "country": "",
+    "logo": "Hertie-School.png",
+    "evidence": []
+  },
+  {
+    "slug": "Hiroshima-University",
+    "name": "Hiroshima University",
+    "country": "",
+    "logo": "Hiroshima-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Ho-Chi-Minh-City-University-of-Foreign-Languages-and-Information-Technology",
+    "name": "Ho Chi Minh City University of Foreign Languages and Information Technology",
+    "country": "",
+    "logo": "Ho-Chi-Minh-City-University-of-Foreign-Languages-and-Information-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "Hochschule-Bremen",
+    "name": "Hochschule Bremen",
+    "country": "",
+    "logo": "Hochschule-Bremen.png",
+    "evidence": []
+  },
+  {
+    "slug": "Hochschule-fur-Technik-und-Wirtschaft",
+    "name": "Hochschule fur Technik und Wirtschaft",
+    "country": "",
+    "logo": "Hochschule-fur-Technik-und-Wirtschaft.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Hong-Kong-Polytechnic-University",
+    "name": "Hong Kong Polytechnic University",
+    "country": "Hong Kong",
+    "logo": "Hong-Kong-Polytechnic-University.svg",
+    "evidence": [
+      {
+        "url": "https://www.polyu.edu.hk/dsai/-/media/department/dsai/programme/sdfs/dsai5206.pdf",
+        "course": "DSAI5206 — (Deep Learning / AI course, School of Data Science and AI)",
+        "instructor": "(unknown)",
+        "snippet": "\"https://d2l.ai/\" linked in course materials (search snippet confirmed)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Hong-Kong-University-of-Science-and-Technology",
+    "name": "Hong Kong University of Science and Technology",
+    "country": "Hong Kong",
+    "logo": "Hong-Kong-University-of-Science-and-Technology.png",
+    "evidence": [
+      {
+        "url": "https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Fall_2023-2024/COMP4471_Fall%2023-24.pdf",
+        "course": "COMP4471 — Deep Learning in Computer Vision (multiple terms including Fall 2023-24)",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola\" (search snippet)",
+        "source_file": "china_hk_tw.md",
+        "year": "2023"
+      },
+      {
+        "url": "https://isom.hkust.edu.hk/sites/isom/files/course-attachments/Fall%2023-24%20(IS)/ISOM4030_Syllabus%20Fall%202023-24.pdf",
+        "course": "ISOM4030 — Natural Language Processing in Business Using Deep Learning (Fall 2023-24 and other terms)",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive Into Deep Learning by Aston Zhang, et al.\" (search snippet)",
+        "source_file": "china_hk_tw.md",
+        "year": "2023"
+      },
+      {
+        "url": "https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Spring_2022-2023/COMP4211_Spring%2022-23.pdf",
+        "course": "COMP4211 — Machine Learning",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola (2021), Cambridge University Press\" (search snippet as reference book)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      },
+      {
+        "url": "https://ece.hkust.edu.hk/sites/default/files/Course%20Syllabi_202104/ELEC4230.pdf",
+        "course": "ELEC4230 — Deep Learning for Natural Language Processing",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zack Lipton, Mu Li and Alex Smola\" (search snippet; PDF unreadable directly)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      },
+      {
+        "url": "https://ece.hkust.edu.hk/sites/default/files/2023-07/ELEC4240.pdf",
+        "course": "ELEC4240 — Deep Learning in Computer Vision",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive into Deep Learning\" listed as reference (search snippet; PDF unreadable directly)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Huazhong-University-of-Science-and-Technology",
+    "name": "Huazhong University of Science and Technology",
+    "country": "",
+    "logo": "Huazhong-University-of-Science-and-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "IIT-Bombay",
+    "name": "IIT Bombay",
+    "country": "India",
+    "logo": "IIT-Bombay.png",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitb.ac.in/~cs772/",
+        "course": "CS772 — Deep Learning for Natural Language Processing (Autumn 2025-26; also 2023)",
+        "instructor": "Prof. Pushpak Bhattacharyya",
+        "snippet": "\"Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola, Dive into Deep Learning, e-book, 2020\" listed as one of six primary references; course is sequel to CS626 covering NLP through deep learning lens",
+        "source_file": "south_asia.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Delhi",
+    "name": "IIT Delhi",
+    "country": "India",
+    "logo": "IIT-Delhi.png",
+    "evidence": [
+      {
+        "url": "https://www.csccm.in/courses/deep-learning-for-mechanics-23-24",
+        "course": "Deep Learning for Mechanics — 4 credits (3-0-2); offered 2022-23 and 2023-24",
+        "instructor": "Dr. Souvik Chakraborty; Dr. Rajdip Nayek",
+        "snippet": "\"Zhang, A., Lipton, Z. C., Li, M. and Smola, A. J. 'Dive into Deep Learning'\" listed as a recommended resource alongside Goodfellow et al. and Murphy",
+        "source_file": "south_asia.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Gandhinagar",
+    "name": "IIT Gandhinagar",
+    "country": "India",
+    "logo": "IIT-Gandhinagar.png",
+    "evidence": [
+      {
+        "url": "https://sites.google.com/iitgn.ac.in/es413/home",
+        "course": "ES 413 — Deep Learning (January–April 2025)",
+        "instructor": "Anirban Dasgupta (2025); Mayank Singh (2022-23)",
+        "snippet": "\"Ashton Zhang, Zachary Lipton, Dive into Deep Learning (https://d2l.ai/) listed as one of the primary textbooks and references for the course\"",
+        "source_file": "south_asia.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Guwahati",
+    "name": "IIT Guwahati",
+    "country": "India",
+    "logo": "IIT-Guwahati.png",
+    "evidence": [
+      {
+        "url": "https://iitg.ac.in/dsai/dsai_bsc_syllabus.html",
+        "course": "DA302 — Deep Learning Essentials; DA326 — Deep Learning for Computer Vision (BSc DSAI Program)",
+        "instructor": "",
+        "snippet": "\"A. Zhang, Z. C. Lipton, M. Li, and A. J. Smola, Dive into Deep Learning, Cambridge University Press, 2021\" listed as reference in both DA302 and DA326 course syllabi",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Jodhpur",
+    "name": "IIT Jodhpur",
+    "country": "India",
+    "logo": "IIT-Jodhpur.png",
+    "evidence": [
+      {
+        "url": "https://iitj.ac.in/PageImages/Gallery/07-2025/CSE-Courses-Details.pdf",
+        "course": "CSE Department courses (multiple courses referencing d2l)",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning (Release 0.7.1) by A. Zhang, Z. Lipton, M. Li, and A. Smola (2020), available at https://d2l.ai/d2l-en.pdf\" listed as reference in CSE courses document",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Kanpur",
+    "name": "IIT Kanpur",
+    "country": "India",
+    "logo": "IIT-Kanpur.png",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitk.ac.in/users/piyush/courses/ml-autumn23/index.html",
+        "course": "CS771A — Introduction to Machine Learning (Autumn 2018, 2020, 2023)",
+        "instructor": "Piyush Rai",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola. Dive into Deep Learning (D2L), Cambridge University Press, 2023\" listed among recommended references; described as \"another useful, interactive (Python notebooks) book on deep learning\"",
+        "source_file": "south_asia.md",
+        "year": "2018"
+      }
+    ]
+  },
+  {
+    "slug": "IIT-Madras",
+    "name": "IIT Madras",
+    "country": "India",
+    "logo": "IIT-Madras.png",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitm.ac.in/~miteshk/CS6910.html",
+        "course": "CS6910 / CS7015 — Deep Learning (January–May 2024)",
+        "instructor": "Mitesh M. Khapra",
+        "snippet": "\"Dive into Deep Learning (https://d2l.ai/)\" listed as one of three primary reference textbooks alongside Goodfellow et al. and Aggarwal; 70% assignments, 30% end-semester exam",
+        "source_file": "south_asia.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://study.iitm.ac.in/ds/course_pages/BSDA5005.html",
+        "course": "BSDA5005 — Introduction to Natural Language Processing (i-NLP)",
+        "instructor": "",
+        "snippet": "\"Deep Dive into Deep Learning, Aston Zhang, Zack C. Lipton, Mu Li, Alexander J. Smola\" listed in Prescribed Books section of the NLP course",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Imperial-College-London",
+    "name": "Imperial College London",
+    "country": "UK",
+    "logo": "Imperial-College-London.svg",
+    "evidence": [
+      {
+        "url": "https://wp.doc.ic.ac.uk/bkainz/teaching/70010-deep-learning-from-2023/",
+        "course": "60034/70010/97111 — Deep Learning (from 2024)",
+        "instructor": "Bernhard Kainz",
+        "snippet": "\"Book: Dive into Deep Learning\" listed under the Reading section, with link to d2l.ai.",
+        "source_file": "verified_chunk_03_EU.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "IMT-Mines-Ales",
+    "name": "IMT Mines Ales",
+    "country": "",
+    "logo": "IMT-Mines-Ales.png",
+    "evidence": []
+  },
+  {
+    "slug": "Indian-Institute-of-Science-IISc-Bangalore",
+    "name": "Indian Institute of Science (IISc), Bangalore",
+    "country": "India",
+    "logo": "Indian-Institute-of-Science-IISc-Bangalore.png",
+    "evidence": [
+      {
+        "url": "https://onlinecourses.nptel.ac.in/noc26_cs01/preview",
+        "course": "Foundations of Deep Learning: Concepts and Applications (NPTEL NOC26-CS01)",
+        "instructor": "Prof. Sriram Ganapathy (IISc); Prof. Ashwini Kodipalli and Prof. Baishali Garai (RV University, Bengaluru)",
+        "snippet": "\"Zhang, Aston, et al. 'Dive into deep learning.' Cambridge University Press, 2023, ISBN-13: 9781009389433\" in Books and references section; 15,563 learners enrolled; certificate bears IISc logo",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Bombay",
+    "name": "Indian Institute of Technology Bombay",
+    "country": "India",
+    "logo": "Indian-Institute-of-Technology-Bombay.png",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitb.ac.in/~cs772/2023/",
+        "course": "CS772 — Deep Learning for Natural Language Processing",
+        "instructor": "Prof. Pushpak Bhattacharyya",
+        "snippet": "\"Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola, Dive into Deep Learning, e-book, 2020.\"",
+        "source_file": "verified_chunk_07_IN.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Hyderabad",
+    "name": "Indian Institute of Technology Hyderabad",
+    "country": "",
+    "logo": "Indian-Institute-of-Technology-Hyderabad.png",
+    "evidence": []
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Jodhpur",
+    "name": "Indian Institute of Technology Jodhpur",
+    "country": "India",
+    "logo": "Indian-Institute-of-Technology-Jodhpur.png",
+    "evidence": [
+      {
+        "url": "https://iitj.ac.in/PageImages/Gallery/07-2025/CSE-Courses-Details.pdf",
+        "course": "CSE (multiple courses) — Deep Learning referenced in CSE course catalog",
+        "instructor": "(department-level document; multiple instructors)",
+        "snippet": "Google snippet confirms: \"Dive into Deep Learning (Release 0.7.1) by A. Zhang, Z. Lipton, M. Li, and A. Smola (2020)\" listed as reference in IIT Jodhpur CSE Department course catalog, with link pointing to https://d2l.ai/d2l-en.pdf.",
+        "source_file": "verified_chunk_07_IN.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Kanpur",
+    "name": "Indian Institute of Technology Kanpur",
+    "country": "India",
+    "logo": "Indian-Institute-of-Technology-Kanpur.svg",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitk.ac.in/users/piyush/courses/ml-autumn23/index.html",
+        "course": "CS771A — Introduction to Machine Learning",
+        "instructor": "Prof. Piyush Rai",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola. Dive into Deep Learning (D2L), Cambridge University Press, 2023.\"",
+        "source_file": "verified_chunk_07_IN.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Kharagpur",
+    "name": "Indian Institute of Technology Kharagpur",
+    "country": "",
+    "logo": "Indian-Institute-of-Technology-Kharagpur.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Mandi",
+    "name": "Indian Institute of Technology Mandi",
+    "country": "",
+    "logo": "Indian-Institute-of-Technology-Mandi.png",
+    "evidence": []
+  },
+  {
+    "slug": "Indian-Institute-of-Technology-Ropar",
+    "name": "Indian Institute of Technology Ropar",
+    "country": "",
+    "logo": "Indian-Institute-of-Technology-Ropar.png",
+    "evidence": []
+  },
+  {
+    "slug": "Indira-Gandhi-National-Open-University",
+    "name": "Indira Gandhi National Open University",
+    "country": "",
+    "logo": "Indira-Gandhi-National-Open-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Indraprastha-Institute-of-Information-Technology,-Delhi",
+    "name": "Indraprastha Institute of Information Technology, Delhi",
+    "country": "",
+    "logo": "Indraprastha-Institute-of-Information-Technology,-Delhi.png",
+    "evidence": []
+  },
+  {
+    "slug": "Institut-catholique-d'arts-et-metiers-(ICAM)",
+    "name": "Institut catholique d'arts et metiers (ICAM)",
+    "country": "",
+    "logo": "Institut-catholique-d'arts-et-metiers-(ICAM).svg",
+    "evidence": []
+  },
+  {
+    "slug": "Institut-de-recherche-en-informatique-de-Toulouse",
+    "name": "Institut de recherche en informatique de Toulouse",
+    "country": "",
+    "logo": "Institut-de-recherche-en-informatique-de-Toulouse.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Institut-Superieur-d'Informatique-et-des-Techniques-de-Communication",
+    "name": "Institut Superieur d'Informatique et des Techniques de Communication",
+    "country": "",
+    "logo": "Institut-Superieur-d'Informatique-et-des-Techniques-de-Communication.png",
+    "evidence": []
+  },
+  {
+    "slug": "Institut-Superieur-De-L'electronique-Et-Du-Numerique",
+    "name": "Institut Superieur De L'electronique Et Du Numerique",
+    "country": "",
+    "logo": "Institut-Superieur-De-L'electronique-Et-Du-Numerique.png",
+    "evidence": []
+  },
+  {
+    "slug": "Institut-Teknologi-Bandung",
+    "name": "Institut Teknologi Bandung",
+    "country": "",
+    "logo": "Institut-Teknologi-Bandung.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Instituto-Polit-cnico-Nacional",
+    "name": "Instituto Politécnico Nacional",
+    "country": "Mexico",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Instituto Politécnico Nacional\" listed on the d2l.ai main adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Instituto-Tecnologico-Autonomo-de-Mexico",
+    "name": "Instituto Tecnologico Autonomo de Mexico",
+    "country": "ITAM",
+    "logo": "Instituto-Tecnologico-Autonomo-de-Mexico.png",
+    "evidence": [
+      {
+        "url": "https://mcdatos.itam.mx/es/aprendizaje-de-maquina-avanzado",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Instituto-Tecnologico-de-Buenos-Aires",
+    "name": "Instituto Tecnologico de Buenos Aires",
+    "country": "Argentina",
+    "logo": "Instituto-Tecnologico-de-Buenos-Aires.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/ (adopters list) and https://innovacion.itba.edu.ar/educacion-ejecutiva/tic/deep-learning",
+        "course": "Deep Learning",
+        "instructor": "",
+        "snippet": "Listed in d2l.ai adopters: \"Instituto Tecnológico de Buenos Aires\" — adopted at 500 universities from 70 countries.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Islamic-University-of-Medina",
+    "name": "Islamic University of Medina",
+    "country": "Saudi Arabia",
+    "logo": "Islamic-University-of-Medina.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Islamic University of Medina\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Istanbul-Teknik-Universitesi",
+    "name": "Istanbul Teknik Universitesi",
+    "country": "",
+    "logo": "Istanbul-Teknik-Universitesi.svg",
+    "evidence": []
+  },
+  {
+    "slug": "IT-Universitetet-i-Kobenhavn",
+    "name": "IT Universitetet i Kobenhavn",
+    "country": "",
+    "logo": "IT-Universitetet-i-Kobenhavn.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Jeonbuk-National-University",
+    "name": "Jeonbuk National University",
+    "country": "South Korea",
+    "logo": "Jeonbuk-National-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Jeonbuk National Univerity\" [sic] listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Johns-Hopkins-University",
+    "name": "Johns Hopkins University",
+    "country": "USA",
+    "logo": "Johns-Hopkins-University.png",
+    "evidence": [
+      {
+        "url": "https://apps.ep.jhu.edu/syllabus/spring-2024/605.742.82",
+        "course": "605.742 — Deep Neural Networks",
+        "instructor": "Oleg Melnikov",
+        "snippet": "\"Dive into deep learning. Zhang, A., Lipton, Z.C., Li, M. and Smola, A.J., 2021.\" listed under optional textbooks",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Keio-University",
+    "name": "Keio University",
+    "country": "",
+    "logo": "Keio-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "King-Abdullah-University-of-Science-and-Technology",
+    "name": "King Abdullah University of Science and Technology",
+    "country": "Saudi Arabia",
+    "logo": "King-Abdullah-University-of-Science-and-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://ml.kaust.edu.sa/courses.html",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "King-Fahd-University-of-Petroleum-and-Minerals",
+    "name": "King Fahd University of Petroleum and Minerals",
+    "country": "Saudi Arabia",
+    "logo": "King-Fahd-University-of-Petroleum-and-Minerals.svg",
+    "evidence": [
+      {
+        "url": "https://faculty.kfupm.edu.sa/ICS/hluqman/courses/221-ICS471.html",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "King-Faisal-University",
+    "name": "King Faisal University",
+    "country": "Saudi Arabia",
+    "logo": "King-Faisal-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"King Faisal University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Kongu-Engineering-College",
+    "name": "Kongu Engineering College",
+    "country": "",
+    "logo": "Kongu-Engineering-College.png",
+    "evidence": []
+  },
+  {
+    "slug": "Korea-Aerospace-University",
+    "name": "Korea Aerospace University",
+    "country": "South Korea",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Korea Aerospace University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "KPR-Institute-of-Engineering-and-Technology",
+    "name": "KPR Institute of Engineering and Technology",
+    "country": "",
+    "logo": "KPR-Institute-of-Engineering-and-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "KU-Leuven",
+    "name": "KU Leuven",
+    "country": "Belgium",
+    "logo": "KU-Leuven.png",
+    "evidence": [
+      {
+        "url": "https://onderwijsaanbod.kuleuven.be/syllabi/e/H0Q42AE.htm",
+        "course": "H0Q42A — Artificial Neural Networks and Deep Learning",
+        "instructor": "Verbeke Mathias",
+        "snippet": "\"Zhang et al., Dive into Deep Learning (2021, http://d2l.ai)\"",
+        "source_file": "europe.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Kyungpook-National-University",
+    "name": "Kyungpook National University",
+    "country": "",
+    "logo": "Kyungpook-National-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Lancaster-University",
+    "name": "Lancaster University",
+    "country": "",
+    "logo": "Lancaster-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Leading-Unviersity",
+    "name": "Leading Unviersity",
+    "country": "",
+    "logo": "Leading-Unviersity.png",
+    "evidence": []
+  },
+  {
+    "slug": "Leibniz-Universitat-Hannover",
+    "name": "Leibniz Universitat Hannover",
+    "country": "",
+    "logo": "Leibniz-Universitat-Hannover.png",
+    "evidence": []
+  },
+  {
+    "slug": "Leuphana-University-of-Luneburg",
+    "name": "Leuphana University of Luneburg",
+    "country": "Germany",
+    "logo": "Leuphana-University-of-Luneburg.png",
+    "evidence": [
+      {
+        "url": "http://d2l.ai/\"",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_03_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Liuzhou-Institute-of-Technology",
+    "name": "Liuzhou Institute of Technology",
+    "country": "Mainland China",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://www.lzhit.edu.cn/rjxy/info/1098/1341.htm",
+        "course": "动手学深度学习 (Deep Learning)",
+        "instructor": "(unknown)",
+        "snippet": "\"动手学深度学习 … 学习资源：https://zh.d2l.ai/\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "London-School-of-Economics-&-Political-Science",
+    "name": "London School of Economics & Political Science",
+    "country": "UK",
+    "logo": "London-School-of-Economics-&-Political-Science.png",
+    "evidence": [
+      {
+        "url": "https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST449.htm",
+        "course": "ST449 Artificial Intelligence (Half Unit)",
+        "instructor": "(LSE Statistics Department)",
+        "snippet": "\"Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola. Dive into Deep Learning, 2021. [http://d2l.ai/]\"",
+        "source_file": "verified_chunk_04_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "London-School-of-Economics-and-Political-Science",
+    "name": "London School of Economics and Political Science",
+    "country": "UK",
+    "logo": "London-School-of-Economics-and-Political-Science.png",
+    "evidence": [
+      {
+        "url": "https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST456.htm",
+        "course": "ST456 — Deep Learning (2023-24, 2025-26) / ST449 — Artificial Intelligence (2024-25, 2025-26) / ST510 — Foundations of Machine Learning (2024-25)",
+        "instructor": "Alessandro De Palma (ST456 2025-26), Dr Tengyao Wang (ST449)",
+        "snippet": "\"Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola, Dive into Deep Learning, https://d2l.ai/\"",
+        "source_file": "europe.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "Make-School",
+    "name": "Make School",
+    "country": "",
+    "logo": "Make-School.png",
+    "evidence": []
+  },
+  {
+    "slug": "Masaryk-University",
+    "name": "Masaryk University",
+    "country": "",
+    "logo": "Masaryk-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Massachusetts-Institute-of-Technology",
+    "name": "Massachusetts Institute of Technology",
+    "country": "USA",
+    "logo": "Massachusetts-Institute-of-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://dcai.csail.mit.edu/",
+        "course": "Introduction to Data-Centric AI (MIT IAP 2024)",
+        "instructor": "MIT CSAIL",
+        "snippet": "\"To learn this on your own, check out [Andrew Ng's ML course]..., [fast.ai's ML course]..., or [Dive into Deep Learning](https://d2l.ai/).\" listed under Prerequisites as a self-study option",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "McGill-University",
+    "name": "McGill University",
+    "country": "Canada",
+    "logo": "McGill-University.png",
+    "evidence": [
+      {
+        "url": "https://www.cs.mcgill.ca/~isabeau/COMP551/F23/",
+        "course": "COMP 551 — Applied Machine Learning",
+        "instructor": "Isabeau Prémont-Schwarz",
+        "snippet": "\"Dive into Deep Learning, by Aston Zhang, Zachary Lipton, Mu Li, and Alexander J. Smola (2019)\" listed under textbooks; also confirmed in Fall 2024 materials page at https://www.cs.mcgill.ca/~isabeau/COMP551/F24/material.html as \"Dive into Deep Learning BY by Aston Zhang, Zachary Lipton, Mu Li, and Alexander J. Smola\"",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Menoufia-University",
+    "name": "Menoufia University",
+    "country": "Egypt",
+    "logo": "Menoufia-University.png",
+    "evidence": [
+      {
+        "url": "https://mu.menofia.edu.eg/fci/Home/en",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Michigan-State-University",
+    "name": "Michigan State University",
+    "country": "USA",
+    "logo": "Michigan-State-University.png",
+    "evidence": [
+      {
+        "url": "https://hal.cse.msu.edu/teaching/2024-spring-deep-learning/",
+        "course": "Deep Learning (Spring 2024)",
+        "instructor": "",
+        "snippet": "MSU HAL Lab Spring 2024 deep learning course — confirmed by search results that d2l.ai is referenced as course resource; course covers CNNs, RNNs, transformers, and diffusion models.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Milwaukee-School-of-Engineering",
+    "name": "Milwaukee School of Engineering",
+    "country": "",
+    "logo": "Milwaukee-School-of-Engineering.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Minia-University",
+    "name": "Minia University",
+    "country": "",
+    "logo": "Minia-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Mohammed-V-University-in-Rabat",
+    "name": "Mohammed V University in Rabat",
+    "country": "",
+    "logo": "Mohammed-V-University-in-Rabat.png",
+    "evidence": []
+  },
+  {
+    "slug": "Monash-University",
+    "name": "Monash University",
+    "country": "Australia",
+    "logo": "Monash-University.png",
+    "evidence": [
+      {
+        "url": "https://github.com/SimonTheFool/deep-learning-notebook",
+        "course": "FIT5215 — Deep Learning (postgraduate)",
+        "instructor": "",
+        "snippet": "\"This learning experience mainly based on the book Dive into Deep Learning (https://d2l.ai/index.html)\" — FIT5215, Monash University student repo",
+        "source_file": "verified_chunk_15_OCCA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Multimedia-University",
+    "name": "Multimedia University",
+    "country": "",
+    "logo": "Multimedia-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Murdoch-University",
+    "name": "Murdoch University",
+    "country": "Australia",
+    "logo": "Murdoch-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Murdoch University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Nanchang-Hangkong-University",
+    "name": "Nanchang Hangkong University",
+    "country": "China",
+    "logo": "Nanchang-Hangkong-University.png",
+    "evidence": [
+      {
+        "url": "https://www.nchu.edu.cn/en",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Nanjing-Normal-University-Zhongbei-College",
+    "name": "Nanjing Normal University Zhongbei College",
+    "country": "Mainland China",
+    "logo": "Nanjing-Normal-University-Zhongbei-College.png",
+    "evidence": [
+      {
+        "url": "http://jwc.nnudy.edu.cn/c211/20240731/i35828.html",
+        "course": "深度学习与智能应用 (AI micro-specialty, Autumn 2024)",
+        "instructor": "(unknown)",
+        "snippet": "\"推荐教材：《动手学深度学习PyTorch版》/阿斯顿·张（Aston Zhang），李沐（Mu Li）等著\"",
+        "source_file": "china_hk_tw.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Nanjing-University",
+    "name": "Nanjing University",
+    "country": "",
+    "logo": "Nanjing-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Nanjing-University-of-Finance-and-Economics",
+    "name": "Nanjing University of Finance and Economics",
+    "country": "Mainland China",
+    "logo": "Nanjing-University-of-Finance-and-Economics.png",
+    "evidence": [
+      {
+        "url": "https://www.icourse163.org/course/NJUE-1469604166",
+        "course": "机器学习 (Machine Learning), MOOC on icourse163.org",
+        "instructor": "(unknown — 课程团队)",
+        "snippet": "\"第6章部分内容参考了李沐老师的《动手学深度学习》教材\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "National-Chengchi-University",
+    "name": "National Chengchi University",
+    "country": "Taiwan",
+    "logo": "National-Chengchi-University.png",
+    "evidence": [
+      {
+        "url": "https://newdoc.nccu.edu.tw/teaschm/1122/schmPrv.jsp-yy=112&smt=2&num=352769&gop=00&s=1.html",
+        "course": "金融科技概論 (Introduction to Financial Technology), code 352769001",
+        "instructor": "LIAO SZU-LANG (廖四郎)",
+        "snippet": "\"Zhang A., Lipton Z.C., Li M., Smola A. (2020): Dive into Deep Learning, Release 0.15.1, Nov.\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "National-Chung-Hsing-University",
+    "name": "National Chung Hsing University",
+    "country": "Taiwan",
+    "logo": "National-Chung-Hsing-University.png",
+    "evidence": [
+      {
+        "url": "https://guides.lib.nchu.edu.tw/c.php?g=939671",
+        "course": "Master's Program in Artificial Intelligence and Data Science (library guide)",
+        "instructor": "(unknown)",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola\" (search snippet)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "National-Institute-of-Technical-Teachers-Training-&-Research",
+    "name": "National Institute of Technical Teachers Training & Research",
+    "country": "",
+    "logo": "National-Institute-of-Technical-Teachers-Training-&-Research.png",
+    "evidence": []
+  },
+  {
+    "slug": "National-Institute-of-Technology,-Warangal",
+    "name": "National Institute of Technology, Warangal",
+    "country": "",
+    "logo": "National-Institute-of-Technology,-Warangal.png",
+    "evidence": []
+  },
+  {
+    "slug": "National-Sun-Yat-sen-University",
+    "name": "National Sun Yat sen University",
+    "country": "",
+    "logo": "National-Sun-Yat-sen-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "National-Taiwan-University",
+    "name": "National Taiwan University",
+    "country": "",
+    "logo": "National-Taiwan-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "National-Technical-University-of-Athens",
+    "name": "National Technical University of Athens",
+    "country": "Greece",
+    "logo": "National-Technical-University-of-Athens.png",
+    "evidence": [
+      {
+        "url": "https://courses.ntua.gr/course/view.php?id=953",
+        "course": "Neural Networks and Intelligent Systems",
+        "instructor": "(ECE Department, NTUA)",
+        "snippet": "\"Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J. - Dive into deep learning - (2020) ([available online](https://d2l.ai/))\" — listed in Supplementary textbooks (Συμπληρωματικά) section.",
+        "source_file": "verified_chunk_04_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "National-Technical-University-of-Ukraine",
+    "name": "National Technical University of Ukraine",
+    "country": "",
+    "logo": "National-Technical-University-of-Ukraine.png",
+    "evidence": []
+  },
+  {
+    "slug": "National-United-University",
+    "name": "National United University",
+    "country": "",
+    "logo": "National-United-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "National-University-of-Sciences-and-Technology",
+    "name": "National University of Sciences and Technology",
+    "country": "Pakistan",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://dll.seecs.nust.edu.pk/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "National-University-of-Singapore",
+    "name": "National University of Singapore",
+    "country": "",
+    "logo": "National-University-of-Singapore.png",
+    "evidence": []
+  },
+  {
+    "slug": "Nazarbayev-University",
+    "name": "Nazarbayev University",
+    "country": "",
+    "logo": "Nazarbayev-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "New-Jersey-Institute-of-Technology",
+    "name": "New Jersey Institute of Technology",
+    "country": "USA",
+    "logo": "New-Jersey-Institute-of-Technology.png",
+    "evidence": [
+      {
+        "url": "https://web.njit.edu/~ikoutis/courses/ds677-s23.htm",
+        "course": "DS677 — Deep Learning (Spring 2023)",
+        "instructor": "Ioannis Koutis",
+        "snippet": "Course materials reference Dive into Deep Learning chapters by Zhang, Lipton, Li, Smola (full extraction in north_america_verified.md)",
+        "source_file": "_supplementary_finds.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "New-York-University",
+    "name": "New York University",
+    "country": "USA",
+    "logo": "New-York-University.png",
+    "evidence": [
+      {
+        "url": "https://engineering.nyu.edu/sites/default/files/2020-11/CS-GY%209223%20Deep%20Learning.pdf",
+        "course": "CS-GY 9223 — Deep Learning",
+        "instructor": "(Fall 2020 section)",
+        "snippet": "\"loosely follows the structure listed in the (excellent) online textbook 'Dive Into Deep Learning' available at d2l.ai\" (confirmed by search engine snippet; d2l.ai URL visible in PDF structure)",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Newman-University",
+    "name": "Newman University",
+    "country": "",
+    "logo": "Newman-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "North-Ossetian-State-University",
+    "name": "North Ossetian State University",
+    "country": "",
+    "logo": "North-Ossetian-State-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Northeastern-University",
+    "name": "Northeastern University",
+    "country": "USA",
+    "logo": "Northeastern-University.svg",
+    "evidence": [
+      {
+        "url": "https://course.ccs.neu.edu/ds4440f24/",
+        "course": "DS4440 — Practical Neural Networks",
+        "instructor": "Byron Wallace",
+        "snippet": "\"This is the main reference book for the class. It is online and free.\" with d2l.ai chapters (Introduction, Preliminaries, MLPs, Layers and blocks, Autodiff, Backprop, Optimization, Word embeddings, CNNs, RNNs, Attention) cited throughout the schedule",
+        "source_file": "verified_chunk_12_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Northwestern-University",
+    "name": "Northwestern University",
+    "country": "USA",
+    "logo": "Northwestern-University.png",
+    "evidence": [
+      {
+        "url": "https://interactiveaudiolab.github.io/course-deep-learning/",
+        "course": "COMP_SCI 449 — Deep Learning (Spring 2024, Spring 2025, Spring 2026)",
+        "instructor": "Bryan Pardo",
+        "snippet": "\"Dive Into Deep Learning provides example code and instruction for how to write DL models in Pytorch, Tensorflow and MXNet.\" Listed in \"Helpful Books on Deep Learning\" section with URL http://d2l.ai/index.html",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Ohio-University",
+    "name": "Ohio University",
+    "country": "",
+    "logo": "Ohio-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Pakuan-University",
+    "name": "Pakuan University",
+    "country": "",
+    "logo": "Pakuan-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Peking-University",
+    "name": "Peking University",
+    "country": "",
+    "logo": "Peking-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Pennsylvania-State-University",
+    "name": "Pennsylvania State University",
+    "country": "USA",
+    "logo": "Pennsylvania-State-University.png",
+    "evidence": [
+      {
+        "url": "https://sites.psu.edu/gvwc/course/ai-570-deep-learning/",
+        "course": "AI-570 — Deep Learning (Penn State Great Valley / World Campus)",
+        "instructor": "Not named on public syllabus page",
+        "snippet": "\"**[Dive into Deep Learning](https://d2l.ai/) (Recommended)** — A digital version of this text is available on the web at https://d2l.ai.\"",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Pohang-University-of-Science-and-Technology",
+    "name": "Pohang University of Science and Technology",
+    "country": "South Korea",
+    "logo": "Pohang-University-of-Science-and-Technology.png",
+    "evidence": [
+      {
+        "url": "https://plms.postech.ac.kr/local/ubion/course/syllabusV.php?id=7827",
+        "course": "",
+        "instructor": "",
+        "snippet": "Section 7 (참고문헌 및 자료) lists: \"Dive into Deep Learning, Aston Zhang et al., online preview\" — POSTECH Deep Learning course, Spring 2023 (AIGS538-01), Instructor: Namhoon Lee.",
+        "source_file": "verified_chunk_09_JK.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Politecnico-di-Milano",
+    "name": "Politecnico di Milano",
+    "country": "Italy",
+    "logo": "Politecnico-di-Milano.png",
+    "evidence": [
+      {
+        "url": "http://chrome.ws.dei.polimi.it/index.php?title=Artificial_Neural_Networks_and_Deep_Learning",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Pomona-College",
+    "name": "Pomona College",
+    "country": "USA",
+    "logo": "Pomona-College.png",
+    "evidence": [
+      {
+        "url": "https://cs.pomona.edu/classes/cs152/archive/21-22Spring/",
+        "course": "CS 152 — Neural Networks (Spring 2022)",
+        "instructor": "Anthony Clark",
+        "snippet": "Course schedule references Dive into Deep Learning chapters (full extraction in north_america_verified.md)",
+        "source_file": "_supplementary_finds.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "Pontificia-Universidad-Catolica-de-Chile",
+    "name": "Pontificia Universidad Catolica de Chile",
+    "country": "Chile",
+    "logo": "Pontificia-Universidad-Catolica-de-Chile.svg",
+    "evidence": [
+      {
+        "url": "https://catalogo.uc.cl/index.php?tmpl=component&option=com_catalogo&view=programa&sigla=INF3812):",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Pontificia-Universidad-Catolica-del-Peru",
+    "name": "Pontificia Universidad Catolica del Peru",
+    "country": "PUCP",
+    "logo": "Pontificia-Universidad-Catolica-del-Peru.png",
+    "evidence": [
+      {
+        "url": "https://neptuno.pucp.edu.pe/homepucp/curso/deep-learning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Portland-State-University",
+    "name": "Portland State University",
+    "country": "USA",
+    "logo": "Portland-State-University.svg",
+    "evidence": [
+      {
+        "url": "https://web.cecs.pdx.edu/~lipor/courses/519/",
+        "course": "EE 5191 Deep Learning Theory & Fundamentals (also listed as EE 519)",
+        "instructor": "John Lipor (Associate Professor, Electrical & Computer Engineering)",
+        "snippet": "\"The course will utilize the free textbooks below. [Dive Into Deep Learning](https://d2l.ai/index.html)\" — listed as first primary textbook.",
+        "source_file": "verified_chunk_04_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Purdue-University",
+    "name": "Purdue University",
+    "country": "USA",
+    "logo": "Purdue-University.svg",
+    "evidence": [
+      {
+        "url": "https://www.davidinouye.com/course/ece47300-spring-2024/",
+        "course": "ECE 47300 — Introduction to Artificial Intelligence (Spring 2024)",
+        "instructor": "David I. Inouye",
+        "snippet": "\"[DD] Dive into Deep Learning by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola, 2023. https://d2l.ai/\" listed as optional textbook; [DD] reference used throughout the lecture schedule.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Quaid-e-Azam-University",
+    "name": "Quaid e Azam University",
+    "country": "",
+    "logo": "Quaid-e-Azam-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Queen's-University",
+    "name": "Queen's University",
+    "country": "",
+    "logo": "Queen's-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Radboud-Universiteit",
+    "name": "Radboud Universiteit",
+    "country": "",
+    "logo": "Radboud-Universiteit.png",
+    "evidence": []
+  },
+  {
+    "slug": "Rensselaer-Polytechnic-Institute",
+    "name": "Rensselaer Polytechnic Institute",
+    "country": "",
+    "logo": "Rensselaer-Polytechnic-Institute.png",
+    "evidence": []
+  },
+  {
+    "slug": "Rowan-University",
+    "name": "Rowan University",
+    "country": "",
+    "logo": "Rowan-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Rutgers,-The-State-University-of-New-Jersey",
+    "name": "Rutgers, The State University of New Jersey",
+    "country": "USA",
+    "logo": "Rutgers,-The-State-University-of-New-Jersey.svg",
+    "evidence": [
+      {
+        "url": "https://datascience.sas.rutgers.edu/images/data-science/sample_syllabi/CS462__Introduction_to_Deep_Learning.pdf",
+        "course": "CS 462 — Introduction to Deep Learning (Spring 2022)",
+        "instructor": "Hao Wang",
+        "snippet": "\"Dive into Deep Learning\" with link to https://d2l.ai/ listed as a recommended resource in the course materials section of the syllabus.",
+        "source_file": "north_america.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "RV-University-Bengaluru",
+    "name": "RV University, Bengaluru",
+    "country": "India",
+    "logo": "RV-University-Bengaluru.png",
+    "evidence": [
+      {
+        "url": "https://onlinecourses.nptel.ac.in/noc26_cs01/preview",
+        "course": "Foundations of Deep Learning: Concepts and Applications (NPTEL NOC26-CS01, jointly with IISc)",
+        "instructor": "Prof. Ashwini Kodipalli and Prof. Baishali Garai",
+        "snippet": "\"Zhang, Aston, et al. 'Dive into deep learning.' Cambridge University Press, 2023\" in Books and references; both instructors are faculty at RV University's School of Computer Science and Engineering",
+        "source_file": "south_asia.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Sant-Longowal-Institute-of-Engineering-Technology",
+    "name": "Sant Longowal Institute of Engineering Technology",
+    "country": "India",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://sites.google.com/sliet.ac.in/akabiography",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Santa-Clara-University",
+    "name": "Santa Clara University",
+    "country": "",
+    "logo": "Santa-Clara-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Sapienza-Universita-di-Roma",
+    "name": "Sapienza Universita di Roma",
+    "country": "",
+    "logo": "Sapienza-Universita-di-Roma.png",
+    "evidence": []
+  },
+  {
+    "slug": "Seoul-National-University",
+    "name": "Seoul National University",
+    "country": "South Korea",
+    "logo": "Seoul-National-University.svg",
+    "evidence": [
+      {
+        "url": "https://gsds.snu.ac.kr/course/m3239-002300003/",
+        "course": "",
+        "instructor": "",
+        "snippet": "Textbooks section lists \"Dive into Deep Learning ([https://d2l.ai](https://d2l.ai/))\" — SNU Graduate School of Data Science, course 데이터사이언스 특강: 메타러닝 (Meta Learning), Instructor: Taesup Kim.",
+        "source_file": "verified_chunk_09_JK.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Seoul-National-University-of-Science-and-Technology",
+    "name": "Seoul National University of Science and Technology",
+    "country": "",
+    "logo": "Seoul-National-University-of-Science-and-Technology.png",
+    "evidence": []
+  },
+  {
+    "slug": "Shahid-Beheshti-University",
+    "name": "Shahid Beheshti University",
+    "country": "Iran",
+    "logo": "Shahid-Beheshti-University.png",
+    "evidence": [
+      {
+        "url": "https://hhaji.github.io/Deep-Learning/",
+        "course": "Deep Learning Using PyTorch (2020)",
+        "instructor": "Hossein Hajiabolhassan (Data Science Center)",
+        "snippet": "Main TextBooks section links \"[Dive into Deep Learning](https://d2l.ai)\" and the Attention Mechanisms lecture cites d2l.ai chapters (10.1 Attention Cues, 10.7 Transformer, etc.)",
+        "source_file": "rest_of_world.md",
+        "year": "2020"
+      }
+    ]
+  },
+  {
+    "slug": "Shandong-University",
+    "name": "Shandong University",
+    "country": "Mainland China",
+    "logo": "Shandong-University.svg",
+    "evidence": [
+      {
+        "url": "https://splab.sdu.edu.cn/zryycl1.htm",
+        "course": "自然语言处理 (Natural Language Processing)",
+        "instructor": "孙宇清 (Prof. Sun Yuqing), 语义计算实验室",
+        "snippet": "\"课外资源 … Dive into Deep Learning https://d2l.ai … 李沐视频\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Shanghai-Jiao-Tong-University",
+    "name": "Shanghai Jiao Tong University",
+    "country": "Mainland China",
+    "logo": "Shanghai-Jiao-Tong-University.png",
+    "evidence": [
+      {
+        "url": "https://github.com/rphilipzhang/AI-PhD-Antai-Su2024",
+        "course": "Artificial Intelligence for Business Research, Antai College of Economics and Management, Summer 2024",
+        "instructor": "Renyu (Philip) Zhang (visiting, CUHK Business School)",
+        "snippet": "\"Dive into Deep Learning (2nd Edition), 2023... https://d2l.ai/\" cited in multiple sessions",
+        "source_file": "china_hk_tw.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Shanghai-University-of-Electric-Power",
+    "name": "Shanghai University of Electric Power",
+    "country": "China",
+    "logo": "Shanghai-University-of-Electric-Power.png",
+    "evidence": [
+      {
+        "url": "https://www.shiep.edu.cn/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Shanghai-University-of-Finance-and-Economics",
+    "name": "Shanghai University of Finance and Economics",
+    "country": "",
+    "logo": "Shanghai-University-of-Finance-and-Economics.png",
+    "evidence": []
+  },
+  {
+    "slug": "Sharif-University-of-Technology",
+    "name": "Sharif University of Technology",
+    "country": "Iran",
+    "logo": "Sharif-University-of-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Sharif University of Technology\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Shenzhen-University",
+    "name": "Shenzhen University",
+    "country": "",
+    "logo": "Shenzhen-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Shivaji-University-Kolhapur",
+    "name": "Shivaji University, Kolhapur",
+    "country": "India",
+    "logo": "Shivaji-University-Kolhapur.jpg",
+    "evidence": [
+      {
+        "url": "https://www.unishivaji.ac.in/syllabusnew/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Simon-Fraser-University",
+    "name": "Simon Fraser University",
+    "country": "",
+    "logo": "Simon-Fraser-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Singapore-University-of-Technology-and-Design",
+    "name": "Singapore University of Technology and Design",
+    "country": "Singapore",
+    "logo": "Singapore-University-of-Technology-and-Design.png",
+    "evidence": [
+      {
+        "url": "https://www.sutd.edu.sg/course/60-001-applied-deep-learning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J. (2021). Dive into deep learning.\" — listed under Textbook(s) and/or Other Required Material for SUTD 60.001 Applied Deep Learning.",
+        "source_file": "verified_chunk_16_SEA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Sogang-University",
+    "name": "Sogang University",
+    "country": "",
+    "logo": "Sogang-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Sookmyung-Women-s-University",
+    "name": "Sookmyung Women's University",
+    "country": "South Korea",
+    "logo": "Sookmyung-Women-s-University.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Sookmyung Women's University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Southern-New-Hampshire-University",
+    "name": "Southern New Hampshire University",
+    "country": "",
+    "logo": "Southern-New-Hampshire-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "St.-Polten-University-of-Applied-Sciences",
+    "name": "St. Polten University of Applied Sciences",
+    "country": "",
+    "logo": "St.-Polten-University-of-Applied-Sciences.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Stanford-University",
+    "name": "Stanford University",
+    "country": "",
+    "logo": "Stanford-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "State-University-of-New-York-at-Binghamton",
+    "name": "State University of New York at Binghamton",
+    "country": "",
+    "logo": "State-University-of-New-York-at-Binghamton.png",
+    "evidence": []
+  },
+  {
+    "slug": "Stellenbosch-University",
+    "name": "Stellenbosch University",
+    "country": "South Africa",
+    "logo": "Stellenbosch-University.jpg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Stellenbosch University\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Stevens-Institute-of-Technology",
+    "name": "Stevens Institute of Technology",
+    "country": "USA",
+    "logo": "Stevens-Institute-of-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://github.com/sergulaydore/EE-628-Spring-2020",
+        "course": "EE-628 — Deep Learning (Electrical and Computer Engineering, Spring 2020)",
+        "instructor": "Serkan Gülaydın",
+        "snippet": "\"Textbook(s): [Dive into Deep Learning by A. Zhang, Z. Lipton, M. Lu, A. Smola] (https://www.d2l.ai/index.html)\"",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2020"
+      }
+    ]
+  },
+  {
+    "slug": "Sungkyunkwan-University",
+    "name": "Sungkyunkwan University",
+    "country": "South Korea",
+    "logo": "Sungkyunkwan-University.svg",
+    "evidence": [
+      {
+        "url": "https://bmi.skku.edu/?page_id=2531",
+        "course": "",
+        "instructor": "",
+        "snippet": "Course description states DHC5035 covers \"the remaining parts of 'Dive into Deep Learning' (freely available on d2l.ai) from Chapter 9 Modern RNN to Chapter 17 GAN\" — SKKU BMI Lab@SAIHST, Spring 2022, Instructor: Prof. Soo-Yong Shin.",
+        "source_file": "verified_chunk_09_JK.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Technion---Israel-Institute-of-Technology",
+    "name": "Technion   Israel Institute of Technology",
+    "country": "Israel",
+    "logo": "Technion---Israel-Institute-of-Technology.svg",
+    "evidence": [
+      {
+        "url": "https://vistalab-technion.github.io/cs236781/info/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Technische-Universitat-Berlin",
+    "name": "Technische Universitat Berlin",
+    "country": "",
+    "logo": "Technische-Universitat-Berlin.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Technische-Universiteit-Delft",
+    "name": "Technische Universiteit Delft",
+    "country": "",
+    "logo": "Technische-Universiteit-Delft.png",
+    "evidence": []
+  },
+  {
+    "slug": "Tecnol-gico-de-Monterrey-Campus-Guadalajara",
+    "name": "Tecnológico de Monterrey, Campus Guadalajara",
+    "country": "Mexico",
+    "logo": "Tecnol-gico-de-Monterrey-Campus-Guadalajara.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Tecnológico de Monterrey, Campus Guadalajara\" listed on the d2l.ai main adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Tekirdag-Namik-Kemal-Universitesi",
+    "name": "Tekirdag Namik Kemal Universitesi",
+    "country": "",
+    "logo": "Tekirdag-Namik-Kemal-Universitesi.png",
+    "evidence": []
+  },
+  {
+    "slug": "Texas-A&M-University",
+    "name": "Texas A&M University",
+    "country": "USA",
+    "logo": "Texas-A&M-University.png",
+    "evidence": [
+      {
+        "url": "https://people.tamu.edu/~sji/classes/syllabus-CSCE636-DL-F2020.pdf",
+        "course": "CSCE 636 — Deep Learning (Fall 2020)",
+        "instructor": "Shuiwang Ji",
+        "snippet": "URL https://www.d2l.ai/ listed in course resources/recommended reading section alongside Aggarwal's Neural Networks and Deep Learning.",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2020"
+      }
+    ]
+  },
+  {
+    "slug": "Texas-Christian-University",
+    "name": "Texas Christian University",
+    "country": "USA",
+    "logo": "Texas-Christian-University.svg",
+    "evidence": [
+      {
+        "url": "https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf",
+        "course": "",
+        "instructor": "",
+        "snippet": "Syllabus lists `d2l.ai` (https://d2l.ai/) as a course resource for COSC 40523 Deep Learning, alongside PyTorch and other references. Instructor: c.pandey@tcu.edu.",
+        "source_file": "verified_chunk_08_INNA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Thapar-Institute-of-Engineering-and-Technology",
+    "name": "Thapar Institute of Engineering and Technology",
+    "country": "India",
+    "logo": "Thapar-Institute-of-Engineering-and-Technology.png",
+    "evidence": [
+      {
+        "url": "https://csed.thapar.edu/upload/files/AI_ML24.pdf`",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_08_INNA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Tsinghua-University",
+    "name": "Tsinghua University",
+    "country": "",
+    "logo": "Tsinghua-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Tufts-University",
+    "name": "Tufts University",
+    "country": "",
+    "logo": "Tufts-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Tunghai-University",
+    "name": "Tunghai University",
+    "country": "Taiwan",
+    "logo": "Tunghai-University.png",
+    "evidence": [
+      {
+        "url": "https://course.thu.edu.tw/view/112/1/1046",
+        "course": "深度學習應用 (Deep Learning Applications), code 1046, Term 1121",
+        "instructor": "陳隆彬 (Chen Long-bin)",
+        "snippet": "\"Dive into Deep Learning (動手學深度學習). Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola. Amazon Science, Mar, 2022.\"",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Umea-University",
+    "name": "Umea University",
+    "country": "",
+    "logo": "Umea-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Carlos-III-de-Madrid",
+    "name": "Universidad Carlos III de Madrid",
+    "country": "Spain",
+    "logo": "Universidad-Carlos-III-de-Madrid.svg",
+    "evidence": [
+      {
+        "url": "https://aplicaciones.uc3m.es/cpa/generaFicha?est=378&asig=19203&idioma=2",
+        "course": "19203 — Neural Networks (Master in Applied Artificial Intelligence, 2025/26)",
+        "instructor": "Lancho Serrano, Alejandro",
+        "snippet": "\"Aston Zhang, Zachary C. Lipton, Mu Li, Alexander J. Smola. Dive into Deep Learning. Cambridge University Press.\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-de-Chile",
+    "name": "Universidad de Chile",
+    "country": "Chile",
+    "logo": "Universidad-de-Chile.svg",
+    "evidence": [
+      {
+        "url": "https://github.com/dccuchile/CC6204",
+        "course": "CC6204 — Deep Learning",
+        "instructor": "Jorge Pérez (with TAs Gabriel Chaperon, Ho Jin Kang, Juan-Pablo Silva, Mauricio Romero, Jesús Pérez-Martín)",
+        "snippet": "README lists \"Dive into Deep Learning by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola\" as a course resource. Course teaches theory of deep neural networks in Spanish at Universidad de Chile DCC.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-de-Ibagu",
+    "name": "Universidad de Ibagué",
+    "country": "Colombia",
+    "logo": "Universidad-de-Ibagu.jpg",
+    "evidence": [
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad de Ibagué\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-de-Ingenier-a-y-Tecnolog-a",
+    "name": "Universidad de Ingeniería y Tecnología",
+    "country": "Peru",
+    "logo": "Universidad-de-Ingenier-a-y-Tecnolog-a.png",
+    "evidence": [
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad de Ingeniería y Tecnología - UTEC\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-de-Salamanca",
+    "name": "Universidad de Salamanca",
+    "country": "Spain",
+    "logo": "Universidad-de-Salamanca.png",
+    "evidence": [
+      {
+        "url": "https://bisite.usal.es/es/formacion/cursos/rna",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-de-Zaragoza",
+    "name": "Universidad de Zaragoza",
+    "country": "Spain",
+    "logo": "Universidad-de-Zaragoza.png",
+    "evidence": [
+      {
+        "url": "https://estudios.unizar.es/estudio/asignatura?anyo_academico=2021&asignatura_id=60979&estudio_id=20210682&centro_id=110&plan_id_nk=623",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-del-Norte",
+    "name": "Universidad del Norte",
+    "country": "Colombia",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad del Norte, Colombia\" listed on the d2l.ai main adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Icesi",
+    "name": "Universidad Icesi",
+    "country": "Colombia",
+    "logo": "Universidad-Icesi.jpg",
+    "evidence": [
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad Icesi\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Militar-Nueva-Granada",
+    "name": "Universidad Militar Nueva Granada",
+    "country": "Colombia",
+    "logo": "Universidad-Militar-Nueva-Granada.svg",
+    "evidence": [
+      {
+        "url": "https://catalogo.umng.edu.co/cgi-bin/koha/opac-detail.pl?biblionumber=37154",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Nacional-Agraria-La-Molina",
+    "name": "Universidad Nacional Agraria La Molina",
+    "country": "",
+    "logo": "Universidad-Nacional-Agraria-La-Molina.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Nacional-Autonoma-de-Mexico",
+    "name": "Universidad Nacional Autonoma de Mexico",
+    "country": "Mexico",
+    "logo": "Universidad-Nacional-Autonoma-de-Mexico.svg",
+    "evidence": [
+      {
+        "url": "https://turing.iimas.unam.mx/~ricardoml/course/iap/",
+        "course": "Aprendizaje Profundo (Deep Learning) — Licenciatura en Ciencia de Datos",
+        "instructor": "Berenice and Ricardo Montalvo Lezama",
+        "snippet": "Bibliography explicitly lists \"[Dive into Deep Learning. Zhang et al.](https://d2l.ai)\" — course at IIMAS-UNAM for the Bachelor's in Data Science program.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Nacional-de-Colombia-Sede-Manizales",
+    "name": "Universidad Nacional de Colombia Sede Manizales",
+    "country": "Colombia",
+    "logo": "Universidad-Nacional-de-Colombia-Sede-Manizales.png",
+    "evidence": [
+      {
+        "url": "https://mlds.unal.edu.co/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Nacional-de-Tierra-del-Fuego",
+    "name": "Universidad Nacional de Tierra del Fuego",
+    "country": "",
+    "logo": "Universidad-Nacional-de-Tierra-del-Fuego.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Polit-cnica-Salesiana-Cuenca",
+    "name": "Universidad Politécnica Salesiana, Cuenca",
+    "country": "Ecuador",
+    "logo": "Universidad-Polit-cnica-Salesiana-Cuenca.jpg",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad Politécnica Salesiana, Cuenca\" listed on the d2l.ai main adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Rafael-Land-var",
+    "name": "Universidad Rafael Landívar",
+    "country": "Guatemala",
+    "logo": "Universidad-Rafael-Land-var.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidad Rafael Landivar\" listed on the d2l.ai main adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Rey-Juan-Carlos",
+    "name": "Universidad Rey Juan Carlos",
+    "country": "Spain",
+    "logo": "Universidad-Rey-Juan-Carlos.png",
+    "evidence": [
+      {
+        "url": "https://en.urjc.es/universidad/campus/sedes/7094-inteligencia-artificial",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-San-Francisco-de-Quito",
+    "name": "Universidad San Francisco de Quito",
+    "country": "Ecuador",
+    "logo": "Universidad-San-Francisco-de-Quito.png",
+    "evidence": [
+      {
+        "url": "https://www.d2l.com/es/por-que-elegir-d2l/clientes/usfq-2/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Tecnol-gica-Nacional",
+    "name": "Universidad Tecnológica Nacional",
+    "country": "Argentina",
+    "logo": "Universidad-Tecnol-gica-Nacional.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "Listed on the d2l.ai main adopters page: \"Universidad Tecnológica Nacional\" (Argentina) among institutions where the book is used as a textbook or reference book.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidad-Tecnologica-de-Pereira",
+    "name": "Universidad Tecnologica de Pereira",
+    "country": "",
+    "logo": "Universidad-Tecnologica-de-Pereira.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-Catolica-de-Brasilia",
+    "name": "Universidade Catolica de Brasilia",
+    "country": "",
+    "logo": "Universidade-Catolica-de-Brasilia.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-de-Coimbra",
+    "name": "Universidade de Coimbra",
+    "country": "Portugal",
+    "logo": "Universidade-de-Coimbra.png",
+    "evidence": [
+      {
+        "url": "https://apps.uc.pt/courses/PT/unit/99807/25568/2025-2026?common_core=true&type=ram&id=12661",
+        "course": "02056692 — Inteligência Artificial para Visão por Computador (AI for Computer Vision, 2025-26)",
+        "instructor": "Jorge Manuel Moreira de Campos Pereira Batista",
+        "snippet": "\"'Dive into Deep Learning', A. Zhang and Z. C. Lipton and Mu Li and A. Smola, arXiv:2106.11342, 2021.\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Estadual-de-Campinas",
+    "name": "Universidade Estadual de Campinas",
+    "country": "Brazil",
+    "logo": "Universidade-Estadual-de-Campinas.svg",
+    "evidence": [
+      {
+        "url": "https://www.ic.unicamp.br/historico-ic/graduacao/plano-desenvolvimento-disciplinas/1s2025/MC934A.pdf",
+        "course": "",
+        "instructor": "",
+        "snippet": "Course MO434A/MC934A \"Deep Learning,\" UNICAMP Instituto de Computação, lists *\"Dive into Deep Learning: Interactive deep learning book with code, math, and discussions, https://d2l.ai/\"* as reference (Prof. Alexandre Xavier Falcão, 2025).",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-Goi-s",
+    "name": "Universidade Federal de Goiás",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-Goi-s.png",
+    "evidence": [
+      {
+        "url": "https://ww2.inf.ufg.br/~anderson/deeplearning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      },
+      {
+        "url": "https://classic.d2l.ai/ (adopters list); also https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidade Federal de Goiás\" listed on classic.d2l.ai and d2l.ai adopters pages among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-Minas-Gerais",
+    "name": "Universidade Federal de Minas Gerais",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-Minas-Gerais.jpg",
+    "evidence": [
+      {
+        "url": "https://deep-ufmg.github.io/",
+        "course": "Aprendizado Profundo (Deep Learning)",
+        "instructor": "Flávio Figueiredo",
+        "snippet": "\"Dive Into Deep Learning\" listed as second recommended resource, with link to d2l.ai, in the Aprendizado Profundo course at DCC-UFMG.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-Ouro-Preto",
+    "name": "Universidade Federal de Ouro Preto",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-Ouro-Preto.png",
+    "evidence": [
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidade Federal de Ouro Preto\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-Pernambuco",
+    "name": "Universidade Federal de Pernambuco",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-Pernambuco.png",
+    "evidence": [
+      {
+        "url": "https://deeplearning.cin.ufpe.br/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-S-o-Carlos",
+    "name": "Universidade Federal de São Carlos",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-S-o-Carlos.png",
+    "evidence": [
+      {
+        "url": "https://www.ppgcc.ufscar.br/pt-br/programa/estrutura-curricular/disciplinas-do-programa/cco-03-2-02-aprendizado-profundo-para-reconhecimento-visual-deep-learning-for-visual-recognition",
+        "course": "CCO-03.2.02 — Aprendizado Profundo Para Reconhecimento Visual (Deep Learning For Visual Recognition)",
+        "instructor": "",
+        "snippet": "\"ZHANG, A.; LIPTON, Z. C.; LI, M.; SMOLA, A. J. Dive into Deep Learning. CoRR abs/2106.11342, 2021. https://d2l.ai\" — listed in main bibliography.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-de-Vi-osa",
+    "name": "Universidade Federal de Viçosa",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-de-Vi-osa.jpg",
+    "evidence": [
+      {
+        "url": "https://ufv-inf721-2024-2.lucasnferreira.com/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      },
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidade Federal de Viçosa\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-do-Pampa",
+    "name": "Universidade Federal do Pampa",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-do-Pampa.png",
+    "evidence": [
+      {
+        "url": "https://cursos.unipampa.edu.br/cursos/ppgcap/estrutura-curricular/componentes-curriculares/componente-deep-learning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "The UNIPAMPA Programa de Pós-Graduação em Computação Aplicada (PPGCAP) Deep Learning component bibliography lists: *\"Zhang, A.; Lipton, Z. C.; Li, M.; Smola A. J.. Dive into Deep Learning. Release 0.17.5. Available at https://d2l.ai/d2l-en.pdf\"* — one of three primary references for the course, taught by Professor Sandro da Silva Camargo.",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      },
+      {
+        "url": "https://cursos.unipampa.edu.br/cursos/ppgcap/estrutura-curricular/componentes-curriculares/componente-deep-learning/",
+        "course": "Deep Learning — Programa de Pós-Graduação em Computação Aplicada",
+        "instructor": "Sandro da Silva Camargo",
+        "snippet": "\"Zhang, A.; Lipton, Z. C.; Li, M.; Smola A. J.. Dive into Deep Learning. Release 0.17.5. Available at https://d2l.ai/d2l-en.pdf\" — listed as primary bibliographic source.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Federal-do-Rio-Grande",
+    "name": "Universidade Federal do Rio Grande",
+    "country": "Brazil",
+    "logo": "Universidade-Federal-do-Rio-Grande.svg",
+    "evidence": [
+      {
+        "url": "https://classic.d2l.ai/ (adopters list)",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universidade Federal do Rio Grande\" listed on classic.d2l.ai adopters page among institutions using the book as a textbook or reference.",
+        "source_file": "latin_america.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Lus-fona",
+    "name": "Universidade Lusófona",
+    "country": "Portugal",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://www.ulusofona.pt/en/lisboa/bachelor/computation-and-applied-mathematics/ULHT6638-24450",
+        "course": "ULHT6638-24450 — Machine Learning II",
+        "instructor": "",
+        "snippet": "\"Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J. (2023). Dive into deep learning. CUP, https://d2l.ai\"",
+        "source_file": "europe.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-NOVA-de-Lisboa",
+    "name": "Universidade NOVA de Lisboa",
+    "country": "Portugal",
+    "logo": "Universidade-NOVA-de-Lisboa.png",
+    "evidence": [
+      {
+        "url": "https://guia.unl.pt/en/2022/fct/program/1059/course/12423",
+        "course": "",
+        "instructor": "",
+        "snippet": "NOVA FCT course \"Deep Learning\" (program 1059) bibliography includes \"Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J. (2023). Dive into deep learning. Cambridge University Press. https://d2l.ai.\"",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Presbiteriana-Mackenzie",
+    "name": "Universidade Presbiteriana Mackenzie",
+    "country": "Brazil",
+    "logo": "Universidade-Presbiteriana-Mackenzie.png",
+    "evidence": [
+      {
+        "url": "https://www.mackenzie.br/fileadmin/ARQUIVOS/Public/6-pos-graduacao/upm-higienopolis/EAD/Intelig%C3%AAncia_Artificial/EAD_EMENTA_-_INTELIGENCIA_ARTIFICIAL_.pdf",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universidade-Tecnol-gica-Federal-do-Paran",
+    "name": "Universidade Tecnológica Federal do Paraná",
+    "country": "Brazil",
+    "logo": "Universidade-Tecnol-gica-Federal-do-Paran.jpg",
+    "evidence": [
+      {
+        "url": "https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "asia_meaf_la_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Bologna",
+    "name": "Università degli Studi di Bologna",
+    "country": "Italy",
+    "logo": "Universit-degli-Studi-di-Bologna.png",
+    "evidence": [
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264",
+        "course": "93398 — Architectures for Artificial Intelligence M (2025/26)",
+        "instructor": "Luca Benini (Module 1), Francesco Conti (Module 2)",
+        "snippet": "\"Dive into Deep Learning (online: d2l.ai)\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      },
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455112",
+        "course": "93319 — INTRODUZIONE ALL'APPRENDIMENTO AUTOMATICO (2025/26)",
+        "instructor": "Andrea Asperti",
+        "snippet": "\"SECOND PART: Dive into Deep Learning by Zhang et al. (D2L). Free Online Book with several notebooks.\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      },
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/444067",
+        "course": "90477 — Machine Learning Systems For Data Science (2025/26)",
+        "instructor": "Stefano Lodi (Module 1), Elisabetta Ronchieri (Module 2)",
+        "snippet": "\"Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J. (2023). Dive into Deep Learning\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Firenze",
+    "name": "Università degli Studi di Firenze",
+    "country": "Italy",
+    "logo": "Universit-degli-Studi-di-Firenze.png",
+    "evidence": [
+      {
+        "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
+        "course": "B031278 — Deep Learning (Fall 2025)",
+        "instructor": "Paolo Frasconi",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2023). Dive into Deep Learning. Cambridge University Press. Freely available from the website.\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Milano-Bicocca",
+    "name": "Università degli Studi di Milano-Bicocca",
+    "country": "Italy",
+    "logo": "Universit-degli-Studi-di-Milano-Bicocca.jpg",
+    "evidence": [
+      {
+        "url": "https://elearning.unimib.it/course/info.php?id=61652",
+        "course": "Advanced Artificial Intelligence, Machine Learning and Deep Learning (A.Y. 2025-26)",
+        "instructor": "Italo Francesco Zoppis",
+        "snippet": "\"Zhang, Aston, et al. 'Dive into deep learning.' arXiv preprint arXiv:2106.11342 (2021).\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Pavia",
+    "name": "Università degli Studi di Pavia",
+    "country": "Italy",
+    "logo": "Universit-degli-Studi-di-Pavia.png",
+    "evidence": [
+      {
+        "url": "https://vision.unipv.it/DL/",
+        "course": "Deep Learning (A.A. 2025-2026), Facoltà di Ingegneria",
+        "instructor": "Marco Piastra",
+        "snippet": "\"Aston Zhang, Zachary Lipton, Mu Li, Alexander Smola, Dive into Deep Learning, Cambridge University Press, 2024 [Online version, with exercises]\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "Universit-di-Roma-Tor-Vergata",
+    "name": "Università di Roma Tor Vergata",
+    "country": "",
+    "logo": "Universit-di-Roma-Tor-Vergata.png",
+    "evidence": [
+      {
+        "url": "http://www.ce.uniroma2.it/courses/ml2425/",
+        "course": "Machine Learning (A.A. 2024/25)",
+        "instructor": "F. Lo Presti, G. Russo Russo",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (free online version)\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Universita-Bocconi",
+    "name": "Universita Bocconi",
+    "country": "",
+    "logo": "Universita-Bocconi.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Universita-degli-Studi-di-Bari-Aldo-Moro",
+    "name": "Universita degli Studi di Bari Aldo Moro",
+    "country": "",
+    "logo": "Universita-degli-Studi-di-Bari-Aldo-Moro.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universita-degli-Studi-di-Brescia",
+    "name": "Universita degli Studi di Brescia",
+    "country": "",
+    "logo": "Universita-degli-Studi-di-Brescia.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Universita-degli-Studi-di-Catania",
+    "name": "Universita degli Studi di Catania",
+    "country": "Italy",
+    "logo": "Universita-degli-Studi-di-Catania.png",
+    "evidence": [
+      {
+        "url": "https://syllabus.unict.it/insegnamento.php?id=16349",
+        "course": "Deep Learning (Laurea Magistrale in Informatica / Data Science)",
+        "instructor": "(DMI Department, UNICT)",
+        "snippet": "\"Dive into Deep Learning (2020) https://d2l.ai/d2l-en.pdf\" — appears in \"Testi di riferimento\" (Reference Texts) section and is cited in the course schedule under topic 5 (Convolutional Neural Networks).",
+        "source_file": "verified_chunk_04_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universita-degli-Studi-di-Padova",
+    "name": "Universita degli Studi di Padova",
+    "country": "",
+    "logo": "Universita-degli-Studi-di-Padova.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Universita-degli-Studi-di-Roma-Tor-Vergata",
+    "name": "Universita degli Studi di Roma Tor Vergata",
+    "country": "Italy",
+    "logo": "Universita-degli-Studi-di-Roma-Tor-Vergata.svg",
+    "evidence": [
+      {
+        "url": "http://www.ce.uniroma2.it/courses/ml2425/",
+        "course": "Machine Learning (A.A. 2024/25 and 2023/24)",
+        "instructor": "(Computer Engineering dept., ce.uniroma2.it / tvml.github.io)",
+        "snippet": "Search snippets directly quote course page: \"Dive into Deep Learning by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola as a textbook resource. The free online version is available.\" Listed consistently in both 2023/24 and 2024/25 editions.",
+        "source_file": "verified_chunk_04_EU.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Universita-di-Bologna",
+    "name": "Universita di Bologna",
+    "country": "",
+    "logo": "Universita-di-Bologna.svg",
+    "evidence": [
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/455807",
+        "course": "91250 — Deep Learning (2024/25)",
+        "instructor": "Matteo Ferrara",
+        "snippet": "\"A. Zhang, Z. C. Lipton, M. Li, and A. J. Smola, 'Dive into Deep Learning', 2020.\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/412651",
+        "course": "29443 / 8614 — Computer Vision (2024/25)",
+        "instructor": "Annalisa Franco, Matteo Ferrara",
+        "snippet": "\"Zhang, Lipton, Li, Smola, Dive into Deep Learning, https://d2l.ai, 2020.\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/503599",
+        "course": "Introduction to Machine Learning (2024/25)",
+        "instructor": "Stefano Pagliarani, Giovanni Paolini",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola, Dive into Deep Learning\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/446614",
+        "course": "91266 — Machine Learning for Computer Vision (2024/25)",
+        "instructor": "Samuele Salti",
+        "snippet": "\"Aston Zhang and Zachary C. Lipton and Mu Li and Alexander J. Smola 'Dive into Deep Learning', 2020\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Universitas-Andalas,-Padang",
+    "name": "Universitas Andalas, Padang",
+    "country": "",
+    "logo": "Universitas-Andalas,-Padang.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Universitas-Indonesia",
+    "name": "Universitas Indonesia",
+    "country": "Indonesia",
+    "logo": "Universitas-Indonesia.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universitas Indonesia\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitas-Negeri-Yogyakarta",
+    "name": "Universitas Negeri Yogyakarta",
+    "country": "Indonesia",
+    "logo": "Universitas-Negeri-Yogyakarta.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Universitas Negeri Yogyakarta\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitas-Udayana",
+    "name": "Universitas Udayana",
+    "country": "",
+    "logo": "Universitas-Udayana.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universitat-de-Barcelona",
+    "name": "Universitat de Barcelona",
+    "country": "",
+    "logo": "Universitat-de-Barcelona.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universitat-Heidelberg",
+    "name": "Universitat Heidelberg",
+    "country": "Germany",
+    "logo": "Universitat-Heidelberg.png",
+    "evidence": [
+      {
+        "url": "https://hci.iwr.uni-heidelberg.de/teaching/machine_learning_essentials_2023",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Zhang, Lipton, Li & Smola: [Dive into Deep Learning](https://d2l.ai/) (interactive book with Jupyter notebooks)\"",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitat-Politecnica-de-Catalunya",
+    "name": "Universitat Politecnica de Catalunya",
+    "country": "Spain",
+    "logo": "Universitat-Politecnica-de-Catalunya.svg",
+    "evidence": [
+      {
+        "url": "https://telecombcn-dl.github.io/dlai-2020/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Deep Learning for Artificial Intelligence\" (DLAI 2020), ETSETB TelecomBCN, Universitat Politècnica de Catalunya — course materials list: \"Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola, 'Dive into Deep Learning'\" (d2l.ai, available in PyTorch via GitHub).",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitat-Tubingen",
+    "name": "Universitat Tubingen",
+    "country": "Germany",
+    "logo": "Universitat-Tubingen.svg",
+    "evidence": [
+      {
+        "url": "https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/autonomous-vision/lectures/deep-learning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"Zhang, Lipton, Li, Smola: [Dive into Deep Learning](https://d2l.ai/)\" — listed in the \"Further Readings\" section.",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitatea-Babes-Bolyai",
+    "name": "Universitatea Babes Bolyai",
+    "country": "Romania",
+    "logo": "Universitatea-Babes-Bolyai.png",
+    "evidence": [
+      {
+        "url": "https://www.ubbcluj.ro/ro/infoubb/posturi_vacante/files/cercetare/2025/269/tematica.pdf",
+        "course": "",
+        "instructor": "",
+        "snippet": "Research vacancy thematic document (2025) from UBB Cluj cites \"Dive into Deep Learning\" by Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola, with URL http://d2l.ai/",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Universitatea-de-Vest-din-Timisoara",
+    "name": "Universitatea de Vest din Timisoara",
+    "country": "",
+    "logo": "Universitatea-de-Vest-din-Timisoara.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universite-Cote-dAzur",
+    "name": "Universite Cote dAzur",
+    "country": "",
+    "logo": "Universite-Cote-dAzur.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universite-de-technologie-de-Compiegne",
+    "name": "Universite de technologie de Compiegne",
+    "country": "",
+    "logo": "Universite-de-technologie-de-Compiegne.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universite-Paris-Saclay",
+    "name": "Universite Paris Saclay",
+    "country": "",
+    "logo": "Universite-Paris-Saclay.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Universiteit-Leiden",
+    "name": "Universiteit Leiden",
+    "country": "Netherlands",
+    "logo": "Universiteit-Leiden.png",
+    "evidence": [
+      {
+        "url": "https://studiegids.universiteitleiden.nl/en/courses/122697/introduction-to-deep-learning",
+        "course": "4343INTDL — Introduction to Deep Learning (2024-25)",
+        "instructor": "Dr. D.M. Pelt",
+        "snippet": "\"Dive into Deep Learning: https://d2l.ai/\"",
+        "source_file": "europe.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Universiteit-van-Amsterdam",
+    "name": "Universiteit van Amsterdam",
+    "country": "",
+    "logo": "Universiteit-van-Amsterdam.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Arkansas",
+    "name": "University of Arkansas",
+    "country": "USA",
+    "logo": "University-of-Arkansas.svg",
+    "evidence": [
+      {
+        "url": "https://csce.uark.edu/~lz006/course/2021fall/5063.html",
+        "course": "CSCE 5063 — Machine Learning (Fall 2021)",
+        "instructor": "Liang Zhao (csce.uark.edu/~lz006)",
+        "snippet": "Based on search engine snippet: the course page references d2l.ai as a course material resource. Direct page fetch timed out; confirmed via search result snippet showing d2l.ai URL listed in course content.",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2021"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Augsburg",
+    "name": "University of Augsburg",
+    "country": "",
+    "logo": "University-of-Augsburg.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Baghdad",
+    "name": "University of Baghdad",
+    "country": "Iraq",
+    "logo": "University-of-Baghdad.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"University of Baghdad\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-British-Columbia",
+    "name": "University of British Columbia",
+    "country": "",
+    "logo": "University-of-British-Columbia.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Cagliari",
+    "name": "University of Cagliari",
+    "country": "Italy",
+    "logo": "University-of-Cagliari.jpg",
+    "evidence": [
+      {
+        "url": "https://github.com/unica-ml/ml",
+        "course": "Machine Learning (MSc Computer Engineering, Cybersecurity and AI, 2025-26)",
+        "instructor": "Prof. Battista Biggio",
+        "snippet": "\"Dive into Deep Learning, A. Zhang, Z. C. Lipton, M. Li, A. J. Smola, 2020, available at: https://d2l.ai\"",
+        "source_file": "europe.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-California,-Berkeley",
+    "name": "University of California, Berkeley",
+    "country": "USA",
+    "logo": "University-of-California,-Berkeley.png",
+    "evidence": [
+      {
+        "url": "https://c.d2l.ai/berkeley-stat-157/",
+        "course": "STAT 157 — Introduction to Deep Learning (Spring 2019)",
+        "instructor": "Alex Smola and Mu Li (authors of D2L)",
+        "snippet": "\"STAT 157, UC Berkeley, Spring, 2019 … Supporting material can be found at https://d2l.ai. The course loosely follows Dive into Deep Learning in terms of notebooks, slides and assignments.\"",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2019"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-California,-Irvine",
+    "name": "University of California, Irvine",
+    "country": "",
+    "logo": "University-of-California,-Irvine.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-California,-Los-Angeles",
+    "name": "University of California, Los Angeles",
+    "country": "USA",
+    "logo": "University-of-California,-Los-Angeles.png",
+    "evidence": [
+      {
+        "url": "https://uclaml.github.io/CS269-Spring2022/",
+        "course": "CS269 — Foundations of Deep Learning (Spring 2022)",
+        "instructor": "Quanquan Gu",
+        "snippet": "\"[ZLLS] Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola, Dive into Deep Learning, 2018.\" listed in recommended textbooks section. No required textbook; D2L is one of two references.",
+        "source_file": "north_america.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-California,-San-Diego",
+    "name": "University of California, San Diego",
+    "country": "USA",
+    "logo": "University-of-California,-San-Diego.png",
+    "evidence": [
+      {
+        "url": "https://shangjingbo1226.github.io/teaching/2025-winter-CSE151A-ML",
+        "course": "CSE 151A — Introduction to Machine Learning (Winter 2025)",
+        "instructor": "Jingbo Shang",
+        "snippet": "\"**[Dive into Deep Learning](https://d2l.ai/) book by Aston Zhang et al.**\" listed under recommended readings. Course explicitly states \"There is no textbook required\" but lists d2l.ai as recommended.",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-California,-Santa-Barbara",
+    "name": "University of California, Santa Barbara",
+    "country": "USA",
+    "logo": "University-of-California,-Santa-Barbara.png",
+    "evidence": [
+      {
+        "url": "https://lileicc.github.io/course/dl23w/",
+        "course": "CS 190I — Deep Learning (Winter 2023)",
+        "instructor": "Lei Li",
+        "snippet": "\"[D2L] Dive into Deep Learning, Aston Zhang, Zachary Lipton, Mu Li, Alexander Smola. available online.\" Listed as primary textbook; D2L chapter numbers assigned throughout syllabus (linear models → graph neural networks).",
+        "source_file": "north_america.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-California,-Santa-Cruz",
+    "name": "University of California, Santa Cruz",
+    "country": "",
+    "logo": "University-of-California,-Santa-Cruz.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Cambridge",
+    "name": "University of Cambridge",
+    "country": "UK",
+    "logo": "University-of-Cambridge.png",
+    "evidence": [
+      {
+        "url": "https://www.cl.cam.ac.uk/teaching/2324/L46/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"If these topics were not covered within the machine learning course taken, students should supplement by reviewing material in a book like: 'Dive into Deep Learning'.\"",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Canberra",
+    "name": "University of Canberra",
+    "country": "",
+    "logo": "University-of-Canberra.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Catania",
+    "name": "University of Catania",
+    "country": "Italy",
+    "logo": "University-of-Catania.png",
+    "evidence": [
+      {
+        "url": "https://syllabus.unict.it/insegnamento.php?id=16349",
+        "course": "Neural Computing (INF/01, 6 CFU), Master in Data Science / Deep Learning – Modulo BASIC, 2023/2024",
+        "instructor": "Sebastiano Battiato",
+        "snippet": "\"Textbooks listed include 'Dive into Deep Learning (2020)' with link to https://d2l.ai/d2l-en.pdf\"",
+        "source_file": "_supplementary_finds.md",
+        "year": "2023"
+      },
+      {
+        "url": "https://syllabus.unict.it/insegnamento.php?id=16349",
+        "course": "Neural Computing (INF/01, 6 CFU), Master in Data Science, Università degli Studi di Catania",
+        "instructor": "",
+        "snippet": "Textbooks listed include \"Dive into Deep Learning (2020)\" with link to https://d2l.ai/d2l-en.pdf",
+        "source_file": "europe_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Cincinnati",
+    "name": "University of Cincinnati",
+    "country": "",
+    "logo": "University-of-Cincinnati.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Colorado-Denver",
+    "name": "University of Colorado Denver",
+    "country": "USA",
+    "logo": "University-of-Colorado-Denver.svg",
+    "evidence": [
+      {
+        "url": "https://cse.ucdenver.edu/~biswasa/teaching/2023-spring-DL-5931/",
+        "course": "CSCI-5931 — Deep Learning (Spring 2023)",
+        "instructor": "Ashis Biswas (\"Dr. B\")",
+        "snippet": "\"Zhang, Aston, Zachary C. Lipton, Mu Li, and Alexander J. Smola (2020). Dive into Deep Learning. [official-web]\" listed under Recommended Textbooks alongside Goodfellow et al.",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Connecticut",
+    "name": "University of Connecticut",
+    "country": "",
+    "logo": "University-of-Connecticut.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Copenhagen",
+    "name": "University of Copenhagen",
+    "country": "",
+    "logo": "University-of-Copenhagen.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Florida",
+    "name": "University of Florida",
+    "country": "USA",
+    "logo": "University-of-Florida.svg",
+    "evidence": [
+      {
+        "url": "https://github.com/AIBiology/aibiology.github.io/blob/main/index.md (course site at aibiology.github.io)",
+        "course": "ZOO4926 / ZOO6927 — AI in Biology (Spring 2022)",
+        "instructor": "Not named in accessible materials",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zachary Lipton, Mu Li and Alexander Smola — We likely won't use this much, but another good resource—especially if you want more of the mathematical background—is: Dive into Deep Learning\"",
+        "source_file": "verified_chunk_13_NA.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Ghana",
+    "name": "University of Ghana",
+    "country": "Ghana",
+    "logo": "University-of-Ghana.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"University of Ghana\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Groningen",
+    "name": "University of Groningen",
+    "country": "",
+    "logo": "University-of-Groningen.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Hamburg",
+    "name": "University of Hamburg",
+    "country": "",
+    "logo": "University-of-Hamburg.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Hull",
+    "name": "University of Hull",
+    "country": "",
+    "logo": "University-of-Hull.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Iceland",
+    "name": "University of Iceland",
+    "country": "",
+    "logo": "University-of-Iceland.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Idaho",
+    "name": "University of Idaho",
+    "country": "",
+    "logo": "University-of-Idaho.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Illinois-at-Chicago",
+    "name": "University of Illinois at Chicago",
+    "country": "USA",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://www.cs.uic.edu/~zhangx/teaching/CS512_Spring_2024_Syllabus.pdf",
+        "course": "CS 512 — Advanced Machine Learning (Spring 2024)",
+        "instructor": "",
+        "snippet": "\"Dive into deep learning (https://www.d2l.ai)\" listed as one of the course resources. Confirmed by search result snippets for the Spring 2024 and prior semester syllabi.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Illinois-at-Urbana-Champaign",
+    "name": "University of Illinois at Urbana Champaign",
+    "country": "USA",
+    "logo": "University-of-Illinois-at-Urbana-Champaign.png",
+    "evidence": [
+      {
+        "url": "https://slazebni.cs.illinois.edu/spring21/",
+        "course": "CS 498 Introduction to Deep Learning, Spring 2021 (Svetlana Lazebnik, UIUC)",
+        "instructor": "",
+        "snippet": "Resources section lists: \"[Dive into Deep Learning](http://en.diveintodeeplearning.org/index.html) -- an interactive online book by A. Zhang, Z. Lipton, M. Li and A. Smola from Amazon\" under \"Useful textbooks available online.\"",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": "2021"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Illinois-Urbana-Champaign",
+    "name": "University of Illinois Urbana-Champaign",
+    "country": "USA",
+    "logo": "University-of-Illinois-Urbana-Champaign.png",
+    "evidence": [
+      {
+        "url": "https://slazebni.cs.illinois.edu/spring24/",
+        "course": "CS 444 — Deep Learning for Computer Vision (Spring 2024)",
+        "instructor": "Svetlana Lazebnik",
+        "snippet": "\"Dive into Deep Learning -- an interactive online book by A. Zhang, Z. Lipton, M. Li and A. Smola from Amazon\" listed under \"Useful textbooks available online\" on the course page.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-International-Business-and-Economics",
+    "name": "University of International Business and Economics",
+    "country": "",
+    "logo": "University-of-International-Business-and-Economics.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Juba",
+    "name": "University of Juba",
+    "country": "South Sudan",
+    "logo": "University-of-Juba.png",
+    "evidence": [
+      {
+        "url": "https://uojai.github.io/deeplearning/resources.html",
+        "course": "Deep Learning",
+        "instructor": "Dr. Felix Gonda (Assistant Professor of Computer Science, AI Lab)",
+        "snippet": "\"Dive into Deep Learning\" listed under \"Additional Reading Materials (free online)\" with direct link to https://d2l.ai/index.html",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Jyv-skyl",
+    "name": "University of Jyväskylä",
+    "country": "Finland",
+    "logo": "University-of-Jyv-skyl.jpg",
+    "evidence": [
+      {
+        "url": "https://studyguide.jyu.fi/2025/en/courseunit/ties4700/",
+        "course": "TIES4700 — Deep Learning (5 cr)",
+        "instructor": "",
+        "snippet": "\"During the course, the textbook 'Dive into Deep Learning' (https://d2l.ai/) is used, which provides students with a thorough understanding of the key concepts and techniques of deep learning.\"",
+        "source_file": "europe.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Klagenfurt",
+    "name": "University of Klagenfurt",
+    "country": "Austria",
+    "logo": "University-of-Klagenfurt.png",
+    "evidence": [
+      {
+        "url": "https://github.com/ingambe/PracticumAAUDeepLearning",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"The material for this course are built upon the following resources: **[Dive into Deep Learning](https://d2l.ai/)**\"",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Liege",
+    "name": "University of Liege",
+    "country": "Belgium",
+    "logo": "University-of-Liege.svg",
+    "evidence": [
+      {
+        "url": "https://github.com/glouppe/info8010-deep-learning/blob/master/lecture4.md",
+        "course": "",
+        "instructor": "",
+        "snippet": "\".footnote[Credits: [Dive Into Deep Learning](https://d2l.ai/), 2020.]\" and \".footnote[Credits: [Dive Into Deep Learning](https://d2l.ai/), 2023.]\"",
+        "source_file": "verified_chunk_05_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Maryland",
+    "name": "University of Maryland",
+    "country": "USA",
+    "logo": "University-of-Maryland.svg",
+    "evidence": [
+      {
+        "url": "https://www.cs.umd.edu/class/spring2019/cmsc498L/",
+        "course": "CMSC 498L — Introduction to Deep Learning (Spring 2019)",
+        "instructor": "Abhinav Shrivastava",
+        "snippet": "Listed under \"Useful interactive textbooks/courses available online\" as \"Dive into Deep Learning -- an interactive online book by folks at Amazon\"",
+        "source_file": "north_america.md",
+        "year": "2019"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Maryland-Baltimore-County",
+    "name": "University of Maryland Baltimore County",
+    "country": "USA",
+    "logo": "University-of-Maryland-Baltimore-County.png",
+    "evidence": [
+      {
+        "url": "https://bdal.umbc.edu/resources/knowledge-base/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "north_america_verified.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Melbourne",
+    "name": "University of Melbourne",
+    "country": "Australia",
+    "logo": "University-of-Melbourne.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"University of Melbourne\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Michigan",
+    "name": "University of Michigan",
+    "country": "",
+    "logo": "University-of-Michigan.png",
+    "evidence": [
+      {
+        "url": "http://www.ambujtewari.com/stats315-winter2024/",
+        "course": "STATS / DATA SCI 315 — Introduction to Deep Learning (Winter 2024)",
+        "instructor": "Ambuj Tewari",
+        "snippet": "\"D2L = Dive into Deep Learning by Zhang, Lipton, Li and Smola\" — \"an advanced text from research scientists at Amazon that weaves together math, figures, and code in an interactive online resource.\" D2L chapters assigned throughout weekly readings; linked to https://d2l.ai/",
+        "source_file": "north_america.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://yixinwang.github.io/courses/deeplearning/fall23/deeplearning23f.html",
+        "course": "STATS / DATA SCI 315 — Statistics and Artificial Intelligence (Fall 2023)",
+        "instructor": "Yixin Wang",
+        "snippet": "\"D2L = Dive into Deep Learning by Zhang, Lipton, Li and Smola\" with link to https://d2l.ai/. Assigned readings for multiple lectures including linear models, regression, and geometry topics.",
+        "source_file": "north_america.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Milano-Bicocca",
+    "name": "University of Milano-Bicocca",
+    "country": "Italy",
+    "logo": "University-of-Milano-Bicocca.jpg",
+    "evidence": [
+      {
+        "url": "https://elearning.unimib.it/course/info.php?id=51006",
+        "course": "Advanced Artificial Intelligence, Machine Learning and Deep Learning — Università degli Studi di Milano-Bicocca",
+        "instructor": "",
+        "snippet": "Syllabus lists \"Zhang, Aston, et al. 'Dive into deep learning.' arXiv preprint arXiv:2106.11342 (2021).\"",
+        "source_file": "europe_verified.md",
+        "year": ""
+      },
+      {
+        "url": "https://elearning.unimib.it/course/info.php?id=51006",
+        "course": "Advanced Artificial Intelligence, Machine Learning and Deep Learning",
+        "instructor": "",
+        "snippet": "\"Zhang, Aston, et al. 'Dive into deep learning.' arXiv preprint arXiv:2106.11342 (2021).\"",
+        "source_file": "_supplementary_finds.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Minnesota,-Twin-Cities",
+    "name": "University of Minnesota, Twin Cities",
+    "country": "USA",
+    "logo": "University-of-Minnesota,-Twin-Cities.svg",
+    "evidence": [
+      {
+        "url": "https://sunju.org/teach/DL-Fall-2022/DL.pdf (course syllabus PDF)",
+        "course": "CSCI 5527 — Deep Learning: Models, Computation, and Applications, Fall 2022 (Ju Sun, UMN)",
+        "instructor": "",
+        "snippet": "\"There is no required textbook … However, the following books can be very helpful: A livebook (online URL: https://d2l.ai/) by Aston Zhang and Zachary C. Lipton and Mu Li and Alexander J. Smola.\"",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Moratuwa",
+    "name": "University of Moratuwa",
+    "country": "",
+    "logo": "University-of-Moratuwa.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-New-Hampshire",
+    "name": "University of New Hampshire",
+    "country": "USA",
+    "logo": "University-of-New-Hampshire.png",
+    "evidence": [
+      {
+        "url": "https://www.cs.unh.edu/~dietz/teaching/nn/index.html",
+        "course": "Neural Networks (deep learning) course, Laura Dietz, UNH Computer Science",
+        "instructor": "",
+        "snippet": "\"**Book:** Dive into Deep Learning … **Book website**: https://d2l.ai/\" — listed as primary textbook; preparation materials link to d2l.ai chapters on linear algebra, probability, and calculus.",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-New-South-Wales",
+    "name": "University of New South Wales",
+    "country": "Australia",
+    "logo": "University-of-New-South-Wales.png",
+    "evidence": [
+      {
+        "url": "https://webcms3.cse.unsw.edu.au/COMP9444/25T2/outline",
+        "course": "COMP9444 — Neural Networks and Deep Learning (2025 T2)",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning / By Aston Zhang, Zachary C. Lipton, Mu Li, and Alexandar J. Smola / https://d2l.ai/ / https://www.cambridge.org/au/universitypress/subjects/computer-science/pattern-recognition-and-machine-learning/dive-deep-learning?format=PB&isbn=9781009389433\"",
+        "source_file": "verified_chunk_15_OCCA.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Newcastle",
+    "name": "University of Newcastle",
+    "country": "",
+    "logo": "University-of-Newcastle.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-North-Carolina-at-Chapel-Hill",
+    "name": "University of North Carolina at Chapel Hill",
+    "country": "",
+    "logo": "University-of-North-Carolina-at-Chapel-Hill.svg",
+    "evidence": [
+      {
+        "url": "https://github.com/craffel/comp664-deep-learning-spring-2023",
+        "course": "COMP 664 — Deep Learning (Spring 2023)",
+        "instructor": "Colin Raffel",
+        "snippet": "\"We will use portions of the 'Dive into Deep Learning' textbook\" — course schedule references specific d2l.ai chapters throughout the semester.",
+        "source_file": "north_america.md",
+        "year": "2023"
+      },
+      {
+        "url": "https://github.com/craffel/comp790-deep-learning-spring-2022",
+        "course": "COMP 590/790 — Deep Learning (Spring 2022)",
+        "instructor": "Colin Raffel",
+        "snippet": "\"The course will closely follow the 'Dive into Deep Learning' textbook.\" All reading assignments drawn from d2l.ai sections throughout semester schedule.",
+        "source_file": "north_america.md",
+        "year": "2022"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-North-Texas",
+    "name": "University of North Texas",
+    "country": "USA",
+    "logo": "University-of-North-Texas.png",
+    "evidence": [
+      {
+        "url": "https://hengfan2010.github.io/teaching/24S-5218/index.htm",
+        "course": "CSCE 5218 — Deep Learning (Spring 2024)",
+        "instructor": "Heng Fan",
+        "snippet": "\"Dive into Deep Learning by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2019). Online version is https://d2l.ai/index.html. A lot of examples are provided to practice deep learning.\"",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Northern-Philippines",
+    "name": "University of Northern Philippines",
+    "country": "",
+    "logo": "University-of-Northern-Philippines.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Nottingham",
+    "name": "University of Nottingham",
+    "country": "",
+    "logo": "University-of-Nottingham.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Oslo",
+    "name": "University of Oslo",
+    "country": "",
+    "logo": "University-of-Oslo.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Pennsylvania",
+    "name": "University of Pennsylvania",
+    "country": "USA",
+    "logo": "University-of-Pennsylvania.png",
+    "evidence": [
+      {
+        "url": "https://www.seas.upenn.edu/~cis5190/fall2025/resources.html",
+        "course": "CIS 4190/5190 — Applied Machine Learning, Fall 2025, UPenn SEAS",
+        "instructor": "",
+        "snippet": "Under \"Hands-On Machine Learning Through Interactive iPython Notebooks\": \"• [Dive into Deep Learning](https://d2l.ai/index.html)\"",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": "2025"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Pittsburgh",
+    "name": "University of Pittsburgh",
+    "country": "USA",
+    "logo": "University-of-Pittsburgh.svg",
+    "evidence": [
+      {
+        "url": "https://people.cs.pitt.edu/~kovashka/cs1678_sp24/",
+        "course": "CS 1678/2078 — Intro to Deep Learning (Spring 2024)",
+        "instructor": "Adriana Kovashka",
+        "snippet": "Primary textbook: \"Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola. Dive into Deep Learning. [online version](https://d2l.ai/index.html)\" — cited in multiple lecture weeks covering MLPs, CNNs, RNNs, Transformers, and RL.",
+        "source_file": "north_america.md",
+        "year": "2078"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Rochester",
+    "name": "University of Rochester",
+    "country": "USA",
+    "logo": "University-of-Rochester.png",
+    "evidence": [
+      {
+        "url": "https://www.cs.rochester.edu/~cxu22/t/298F21/",
+        "course": "CSC 298/578 — Deep Learning (Fall 2021)",
+        "instructor": "",
+        "snippet": "Course search results confirm CSC 245/445/298 Deep Learning at Rochester — search snippets link to d2l.ai; instructor Chenlu Xu runs the course series.",
+        "source_file": "north_america.md",
+        "year": "2021"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Sao-Paulo",
+    "name": "University of Sao Paulo",
+    "country": "Brazil",
+    "logo": "University-of-Sao-Paulo.png",
+    "evidence": [
+      {
+        "url": "https://www.icmc.usp.br/pos-graduacao/disciplinas?programa=55134&disciplina=SSC5984",
+        "course": "",
+        "instructor": "",
+        "snippet": "Course SSC5984 \"Inteligência Artificial Embarcada,\" ICMC, Universidade de São Paulo — fundamental bibliography: \"ZHANG, ASTON; LIPTON, ZACHARY C.; LI, MU; AND SMOLA, ALEXANDER J.. Dive Into Deep Learning. Cambridge University Press, 1st Edition, 2023.\"",
+        "source_file": "verified_chunk_10_LA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Science-and-Technology-of-China",
+    "name": "University of Science and Technology of China",
+    "country": "",
+    "logo": "University-of-Science-and-Technology-of-China.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Southern-California",
+    "name": "University of Southern California",
+    "country": "USA",
+    "logo": "University-of-Southern-California.png",
+    "evidence": [
+      {
+        "url": "https://ee541.usc-ece.com/syllabus.html",
+        "course": "EE 541 — A Computational Introduction to Deep Learning, USC Viterbi",
+        "instructor": "",
+        "snippet": "Primary textbook listed as: \"*Dive into Deep Learning*, Zhang, A., Lipton, Z. C., Li, M., Smola, A. J., Cambridge University Press, 2024.\" Chapters assigned across multiple weeks (Ch. 1–2, 3, 4–5, 7, 8.1–8.6).",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Southern-Maine",
+    "name": "University of Southern Maine",
+    "country": "USA",
+    "logo": "University-of-Southern-Maine.svg",
+    "evidence": [
+      {
+        "url": "https://usm.maine.edu/department-computer-science/cos-472-artificial-intelligence-and-data-mining/",
+        "course": "COS 472 — Artificial Intelligence and Data Mining, USM Department of Computer Science",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning, Aston Zhang, Alexander J. Smola, Zachary Lipton, Mu Li.\" Listed as one of five recommended optional resources for the AI course.",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-St-Andrews",
+    "name": "University of St Andrews",
+    "country": "",
+    "logo": "University-of-St-Andrews.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Sydney",
+    "name": "University of Sydney",
+    "country": "Australia",
+    "logo": "University-of-Sydney.png",
+    "evidence": [
+      {
+        "url": "https://d2l.ai/",
+        "course": "",
+        "instructor": "",
+        "snippet": "\"University of Sydney\" listed in the \"Institutions that have adopted this book\" section of the Dive into Deep Learning homepage.",
+        "source_file": "rest_of_world.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Szeged",
+    "name": "University of Szeged",
+    "country": "",
+    "logo": "University-of-Szeged.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Technology-Sydney",
+    "name": "University of Technology Sydney",
+    "country": "",
+    "logo": "University-of-Technology-Sydney.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Tehran",
+    "name": "University of Tehran",
+    "country": "Iran",
+    "logo": "University-of-Tehran.svg",
+    "evidence": [
+      {
+        "url": "https://hhaji.github.io/Deep-Learning/",
+        "course": "",
+        "instructor": "",
+        "snippet": "",
+        "source_file": "verified_chunk_11_MEAF.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Texas-at-Austin",
+    "name": "University of Texas at Austin",
+    "country": "",
+    "logo": "University-of-Texas-at-Austin.svg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Toronto",
+    "name": "University of Toronto",
+    "country": "",
+    "logo": "University-of-Toronto.png",
+    "evidence": [
+      {
+        "url": "https://github.com/craffel/csc413-2516-deep-learning-fall-2024",
+        "course": "CSC 413/2516 — Neural Networks and Deep Learning (Fall 2024)",
+        "instructor": "Colin Raffel",
+        "snippet": "\"The course will cover portions of the 'Dive into Deep Learning' textbook.\" All lecture readings reference \"corresponding sections in Dive into Deep Learning\" at d2l.ai.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      },
+      {
+        "url": "https://amfarahmand.github.io/NN-Winter2024/",
+        "course": "CSC 413 — Neural Networks and Deep Learning (Winter 2024)",
+        "instructor": "Amir-massoud Farahmand",
+        "snippet": "\"Dive into Deep Learning\" listed among recommended textbook resources that \"can be useful for the course.\"",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Warsaw",
+    "name": "University of Warsaw",
+    "country": "",
+    "logo": "University-of-Warsaw.png",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Washington",
+    "name": "University of Washington",
+    "country": "USA",
+    "logo": "University-of-Washington.png",
+    "evidence": [
+      {
+        "url": "http://dlsys.cs.washington.edu/materials",
+        "course": "CSE 599W — Systems for ML (Deep Learning Systems), UW Paul G. Allen School",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning is an interactive open source book with code, math, and discussions.\" Listed as third key learning resource for students alongside other foundational DL texts.",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Waterloo",
+    "name": "University of Waterloo",
+    "country": "Canada",
+    "logo": "University-of-Waterloo.png",
+    "evidence": [
+      {
+        "url": "https://watml.github.io/",
+        "course": "CS 480/680 — Introduction to Machine Learning (Winter 2024)",
+        "instructor": "Hongyang Zhang and Yaoliang Yu",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li and Alex J. Smola. Dive into Deep Learning. 2019.\" with link to en.d2l.ai/d2l-en.pdf listed as recommended textbook alongside Bishop and Barber.",
+        "source_file": "north_america.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Wisconsin",
+    "name": "University of Wisconsin",
+    "country": "",
+    "logo": "University-of-Wisconsin.png",
+    "evidence": [
+      {
+        "url": "https://pages.cs.wisc.edu/~sharonli/courses/cs762_fall2023/index.html",
+        "course": "CS 762 — Advanced Deep Learning (Fall 2022, Fall 2023)",
+        "instructor": "Sharon Li",
+        "snippet": "\"Dive into Deep Learning, Aston Zhang and Zachary C. Lipton and Mu Li and Alexander J. Smola\" listed as recommended textbook; \"D2L Book Chapter 7 & 10\" directly assigned for \"Evolution of Neural Architecture\" topic.",
+        "source_file": "north_america.md",
+        "year": "2022"
+      },
+      {
+        "url": "https://pages.cs.wisc.edu/~sharonli/courses/cs839_fall2020/about.html",
+        "course": "CS 839 — Special Topics in AI: Deep Learning (Fall 2020)",
+        "instructor": "Sharon Li",
+        "snippet": "\"_Dive into Deep Learning_, Aston Zhang and Zachary C. Lipton and Mu Li and Alexander J. Smola\" listed under Recommended Textbooks with URL https://d2l.ai/",
+        "source_file": "north_america.md",
+        "year": "2020"
+      }
+    ]
+  },
+  {
+    "slug": "University-of-Wisconsin-Madison",
+    "name": "University of Wisconsin Madison",
+    "country": "",
+    "logo": "University-of-Wisconsin-Madison.png",
+    "evidence": []
+  },
+  {
+    "slug": "Univerzita-Komenskeho-v-Bratislave",
+    "name": "Univerzita Komenskeho v Bratislave",
+    "country": "",
+    "logo": "Univerzita-Komenskeho-v-Bratislave.png",
+    "evidence": []
+  },
+  {
+    "slug": "Vardhaman-College-of-Engineering",
+    "name": "Vardhaman College of Engineering",
+    "country": "",
+    "logo": "Vardhaman-College-of-Engineering.png",
+    "evidence": []
+  },
+  {
+    "slug": "Vardhman-Mahaveer-Open-University",
+    "name": "Vardhman Mahaveer Open University",
+    "country": "",
+    "logo": "Vardhman-Mahaveer-Open-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Vietnamese-German-University",
+    "name": "Vietnamese German University",
+    "country": "",
+    "logo": "Vietnamese-German-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Virginia-Tech",
+    "name": "Virginia Tech",
+    "country": "USA",
+    "logo": "Virginia-Tech.svg",
+    "evidence": [
+      {
+        "url": "https://xuanwang91.github.io/teaching/2023-Spring-CS5814-Intro-DL",
+        "course": "CS 5814 — Introduction to Deep Learning, Spring 2023 (Xuan Wang, Virginia Tech)",
+        "instructor": "",
+        "snippet": "\"[Dive into Deep Learning](https://d2l.ai/) – an interactive online book, A. Zhang, Z. Lipton, M. Li, and A. Smola from Amazon.\" Listed alongside two other DL textbooks.",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": "2023"
+      }
+    ]
+  },
+  {
+    "slug": "VIT-Vellore-Institute-of-Technology-Vellore",
+    "name": "VIT (Vellore Institute of Technology), Vellore",
+    "country": "India",
+    "logo": null,
+    "evidence": [
+      {
+        "url": "https://vit.ac.in/wp-content/uploads/2024/09/MAI-2024-2025.pdf and https://vit.ac.in/wp-content/uploads/2026/01/MCA-2025-2026-AY.pdf",
+        "course": "MAI — M.Tech Artificial Intelligence (2024–25); MCA (2025–26 Academic Year)",
+        "instructor": "",
+        "snippet": "\"Dive into Deep Learning by Zhang, A., Lipton, Z. C., Li, M., & Smola, A. J., Cambridge University Press\" listed as reference in MAI 2024-25 AI curriculum and MCA 2025-26 program syllabus",
+        "source_file": "south_asia.md",
+        "year": "2024"
+      }
+    ]
+  },
+  {
+    "slug": "Wageningen-University",
+    "name": "Wageningen University",
+    "country": "Netherlands",
+    "logo": "Wageningen-University.png",
+    "evidence": [
+      {
+        "url": "https://ssc.wur.nl/Studiegids/Vak/GRS-34806",
+        "course": "",
+        "instructor": "",
+        "snippet": "*\"The course uses 'Dive into deep learning' by Aston Zhang, Zachary C. Lipton, Mu Li, and Alex J. Smola (2020) from https://d2l.ai\"*",
+        "source_file": "verified_chunk_06_EU.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "West-Virginia-University",
+    "name": "West Virginia University",
+    "country": "",
+    "logo": "West-Virginia-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Western-University",
+    "name": "Western University",
+    "country": "Canada",
+    "logo": "Western-University.png",
+    "evidence": [
+      {
+        "url": "https://www.eng.uwo.ca/electrical/undergraduate/Programs/AISE_4010_1259.pdf (course outline PDF)",
+        "course": "AISE 4010 — Deep Learning for Time Series Data, Western University Faculty of Engineering (Artificial Intelligence Systems Engineering program)",
+        "instructor": "",
+        "snippet": "Per search result extraction: \"Dive into Deep Learning, by Zhang, A., et al., Cambridge University Press, available at https://d2l.ai/d2l-en.pdf\" listed among recommended textbooks alongside Goodfellow et al. and Chollet.",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Xavier-University-Bhubaneswar",
+    "name": "Xavier University Bhubaneswar",
+    "country": "",
+    "logo": "Xavier-University-Bhubaneswar.png",
+    "evidence": []
+  },
+  {
+    "slug": "Xi'an-Jiaotong-Liverpool-University",
+    "name": "Xi'an Jiaotong Liverpool University",
+    "country": "",
+    "logo": "Xi'an-Jiaotong-Liverpool-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Xiamen-University",
+    "name": "Xiamen University",
+    "country": "",
+    "logo": "Xiamen-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Yale-University",
+    "name": "Yale University",
+    "country": "",
+    "logo": "Yale-University.svg",
+    "evidence": []
+  },
+  {
+    "slug": "Yeshiva-University",
+    "name": "Yeshiva University",
+    "country": "",
+    "logo": "Yeshiva-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Yonsei-University",
+    "name": "Yonsei University",
+    "country": "South Korea",
+    "logo": "Yonsei-University.svg",
+    "evidence": [
+      {
+        "url": "https://yonseivnl.github.io/courses/dtp2022fall/",
+        "course": "",
+        "instructor": "",
+        "snippet": "Textbooks section: \"(D2L) Dive into Deep Learning (Aston Zhang et al., 2019)\" with link to https://d2l.ai/ — Yonsei Vision and Learning Lab, Theory and Practice of Deep Learning (AAI3201-01), Fall 2022.",
+        "source_file": "verified_chunk_09_JK.md",
+        "year": ""
+      }
+    ]
+  },
+  {
+    "slug": "Yunnan-University",
+    "name": "Yunnan University",
+    "country": "",
+    "logo": "Yunnan-University.png",
+    "evidence": []
+  },
+  {
+    "slug": "Zhejiang-University",
+    "name": "Zhejiang University",
+    "country": "Mainland China",
+    "logo": "Zhejiang-University.svg",
+    "evidence": [
+      {
+        "url": "https://www.icourse163.org/course/ZJU-1206573810",
+        "course": "机器学习 (Machine Learning) — MOOC on icourse163.org",
+        "instructor": "(unknown — 浙江大学)",
+        "snippet": "\"Dive into Deep Learning, A. Zhang, Z. C. Lipton, M. Li and A. J. Smola, Cambridge University Press, 2021\" (listed as reference)",
+        "source_file": "china_hk_tw.md",
+        "year": ""
+      }
+    ]
+  }
+]

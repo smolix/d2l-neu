@@ -11,6 +11,23 @@
 (function() {
   var GROUP = 'framework';
   var STORAGE_KEY = 'quarto-persistent-tabsets-data';
+  var FW_TO_DISPLAY = {
+    pytorch: 'PyTorch',
+    tensorflow: 'TensorFlow',
+    jax: 'JAX',
+    mxnet: 'MXNet'
+  };
+  var DISPLAY_TO_FW = {};
+  Object.keys(FW_TO_DISPLAY).forEach(function(key) {
+    DISPLAY_TO_FW[FW_TO_DISPLAY[key].toLowerCase()] = FW_TO_DISPLAY[key];
+    DISPLAY_TO_FW[key] = FW_TO_DISPLAY[key];
+  });
+
+  function normalizeFramework(name) {
+    if (!name) return null;
+    var key = String(name).trim();
+    return DISPLAY_TO_FW[key] || DISPLAY_TO_FW[key.toLowerCase()] || key;
+  }
 
   function getStored() {
     try {
@@ -81,8 +98,10 @@
     });
 
     // Restore saved preference, or default to whatever is currently active
+    var params = new URLSearchParams(window.location.search);
+    var requested = params.get('framework');
     var stored = getStored();
-    var initial = stored[GROUP];
+    var initial = normalizeFramework(requested || stored[GROUP]);
     if (!initial) {
       var firstActive = document.querySelector(
         '.panel-tabset[data-group="' + GROUP + '"] .nav-link.active'
@@ -269,6 +288,10 @@
 
   function getDepth() {
     var segs = window.location.pathname.split('/').filter(Boolean);
+    var bookIdx = segs.lastIndexOf('_book');
+    if (bookIdx >= 0) {
+      return Math.max(0, segs.length - bookIdx - 2);
+    }
     return Math.max(0, segs.length - 1);
   }
 

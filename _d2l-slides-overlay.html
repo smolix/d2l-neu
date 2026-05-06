@@ -2,11 +2,8 @@
   Top navigation bar injected into every slide deck via Quarto's
   `include-after-body`. CSS lives in `_d2l-slides.scss` (.d2l-deck-nav).
 
-  Path math, with the deck deployed at
-  `_book/slides/<fw>/<chapter>/<file>.html` (4 levels under _book):
-    ../../../../index.html         → _book/index.html       (book home)
-    ../../../index.html            → _book/slides/index.html (slides landing)
-    ../../../../static/logo-with-text.png  → _book/static/logo-with-text.png
+  Links are filled dynamically from the deployed path:
+  `<prefix>/slides/<fw>/<chapter>/<file>.html`.
 -->
 <nav class="d2l-deck-nav">
   <a class="d2l-deck-logo" href="../../../../index.html"
@@ -18,3 +15,54 @@
     <li><a href="../../../index.html">Slides</a></li>
   </ul>
 </nav>
+<script>
+(function() {
+  var FW_TO_DISPLAY = {
+    pytorch: 'PyTorch',
+    tensorflow: 'TensorFlow',
+    jax: 'JAX',
+    mxnet: 'MXNet'
+  };
+
+  function init() {
+    var nav = document.querySelector('.d2l-deck-nav');
+    if (!nav) return;
+    var parts = window.location.pathname.split('/');
+    var i = parts.lastIndexOf('slides');
+    if (i < 0 || i + 3 >= parts.length) return;
+
+    var prefix = parts.slice(0, i).join('/') + '/';
+    var framework = parts[i + 1];
+    var frameworkLabel = FW_TO_DISPLAY[framework] || framework;
+    var chapter = parts[i + 2];
+    var file = parts[i + 3];
+    var bookUrl = prefix + chapter + '/' + file + '?framework=' +
+      encodeURIComponent(framework);
+    var slidesUrl = prefix + 'slides/index.html';
+    var homeUrl = prefix + 'index.html';
+    var logoUrl = prefix + 'static/logo-with-text.png';
+
+    var logo = nav.querySelector('.d2l-deck-logo');
+    if (logo) logo.setAttribute('href', homeUrl);
+    var logoImg = nav.querySelector('.d2l-deck-logo img');
+    if (logoImg) logoImg.setAttribute('src', logoUrl);
+
+    var links = nav.querySelectorAll('.d2l-deck-nav-links a');
+    if (links[0]) {
+      links[0].setAttribute('href', bookUrl);
+      links[0].addEventListener('click', function() {
+        try {
+          localStorage.setItem('quarto-persistent-tabsets-data',
+            JSON.stringify({framework: frameworkLabel}));
+        } catch(e) {}
+      });
+    }
+    if (links[1]) links[1].setAttribute('href', slidesUrl);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

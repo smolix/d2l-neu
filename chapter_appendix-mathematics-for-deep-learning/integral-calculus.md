@@ -641,18 +641,27 @@ variable shows up.
 :::
 
 ::: {.slide title="Geometric interpretation"}
-Approximate the area by rectangles; refine; the limit is
-the integral. Riemann sums in pictures:
+Integration starts as area under a nonnegative curve:
 
-@integral-calculus-geometric-interpretation-1
+@!integral-calculus-geometric-interpretation-1
+:::
 
-. . .
+::: {.slide title="Definite integral"}
+Most useful integrals are over an interval $[a,b]$:
 
-@integral-calculus-geometric-interpretation-2
+$$\int_a^b f(x)\,dx.$$
 
-. . .
+Geometrically this keeps only the area between the vertical
+boundaries.
 
-@integral-calculus-geometric-interpretation-3
+@!integral-calculus-geometric-interpretation-2
+:::
+
+::: {.slide title="Riemann approximation"}
+Approximate the area by rectangles; refine the partition; the
+limit is the integral.
+
+@!integral-calculus-geometric-interpretation-3
 :::
 
 ::: {.slide title="Multiple integrals"}

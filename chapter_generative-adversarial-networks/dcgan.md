@@ -1046,68 +1046,65 @@ Small image dataset — perfect size for a teaching demo of
 DCGAN. Resize to 64×64, normalize to $[-1, 1]$ (matches
 generator's `tanh` output range):
 
-@dcgan-deep-convolutional-generative-adversarial-networks
-
-. . .
-
-@dcgan-the-pokemon-dataset-1
+- images are resized to $64 \times 64$;
+- pixel values are scaled to $[-1, 1]$;
+- the generator's last activation is `tanh`, so real and
+  generated images live in the same numeric range.
 :::
 
 ::: {.slide title="Inspecting samples"}
-@dcgan-the-pokemon-dataset-2
-
-. . .
-
-@dcgan-the-pokemon-dataset-3
+@!dcgan-the-pokemon-dataset-3
 :::
 
 ::: {.slide title="Generator block"}
 TransposedConv → BatchNorm → ReLU. Stack five of these to
 upsample $1 \times 1$ noise to $64 \times 64$ pixels:
 
-@dcgan-the-generator-1
-
-. . .
-
-@dcgan-the-generator-2
-
-. . .
-
-@dcgan-the-generator-3
+- each block doubles spatial resolution;
+- BatchNorm stabilizes feature scales;
+- ReLU keeps gradients healthy;
+- the final block uses `tanh` instead of ReLU.
 :::
 
 ::: {.slide title="Generator architecture"}
 Five generator blocks; final layer projects to 3 channels
 with `tanh`:
 
-@dcgan-the-generator-4
+$$
+\mathbf{z}\in\mathbb{R}^{d}
+\rightarrow 4{\times}4
+\rightarrow 8{\times}8
+\rightarrow 16{\times}16
+\rightarrow 32{\times}32
+\rightarrow 64{\times}64{\times}3.
+$$
 
-. . .
-
-@dcgan-the-generator-5
+Pedagogically: the generator learns an upsampling map from a
+latent code to an image, not a pixel-by-pixel lookup table.
 :::
 
 ::: {.slide title="Discriminator block"}
 Conv → BatchNorm → LeakyReLU. Mirrored architecture:
 five blocks downsampling $64 \times 64$ to $1 \times 1$:
 
-@dcgan-discriminator-1
-
-. . .
-
-@dcgan-discriminator-2
-
-. . .
-
-@dcgan-discriminator-3
+- strided convolutions replace pooling;
+- LeakyReLU avoids dead activations;
+- BatchNorm is skipped on the input layer;
+- the output is a real/fake logit.
 :::
 
 ::: {.slide title="Discriminator architecture"}
-@dcgan-discriminator-4
+$$
+64{\times}64{\times}3
+\rightarrow 32{\times}32
+\rightarrow 16{\times}16
+\rightarrow 8{\times}8
+\rightarrow 4{\times}4
+\rightarrow 1.
+$$
 
-. . .
-
-@dcgan-discriminator-5
+This is a learned critic: high score for real images, low score
+for generated images. The generator trains against this signal.
 :::
 
 ::: {.slide title="Training"}
@@ -1115,11 +1112,16 @@ Same minimax loss as basic GAN; per-step alternation of
 $D$ then $G$ updates with the DCGAN-recommended Adam
 hyperparameters:
 
-@dcgan-training-1
+- update $D$ on real images labeled 1;
+- update $D$ on generated images labeled 0;
+- update $G$ so generated images make $D$ predict 1.
 
-. . .
+This alternating game is why GAN training is unstable:
+the target distribution moves every time either player improves.
+:::
 
-@dcgan-training-2
+::: {.slide title="Training trace"}
+@!dcgan-training-2
 :::
 
 ::: {.slide title="Recap"}

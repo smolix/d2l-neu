@@ -134,10 +134,11 @@ upload_one() {
         "${args[@]}" $DRY_RUN
 }
 
-# We export S3_ARGS / BOOK_DIR / BUCKET / DRY_RUN so xargs -I{} bash -c
-# can call upload_one in subshells.
-export S3_ARGS_STR="${S3_ARGS[*]}"
+# Export scalar values so the xargs worker can rebuild its own argv array.
+# Do not flatten `S3_ARGS` into one shell string: values such as
+# `text/css; charset=utf-8` must remain a single argv element.
 export BOOK_DIR BUCKET DRY_RUN
+export R2_ENDPOINT="$ENDPOINT"
 
 upload_changed() {
     local list=$1
@@ -160,13 +161,14 @@ upload_changed() {
             *.json) ct="application/json; charset=utf-8" ;;
             *)      ct="" ;;
         esac
+        args=(--endpoint-url "$R2_ENDPOINT")
         if [[ -n "$ct" ]]; then
-            aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" \
-                $S3_ARGS_STR --content-type "$ct" $DRY_RUN
-        else
-            aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" \
-                $S3_ARGS_STR $DRY_RUN
+            args+=(--content-type "$ct")
         fi
+        if [[ -n "$DRY_RUN" ]]; then
+            args+=("$DRY_RUN")
+        fi
+        aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" "${args[@]}"
     ' _ {}
 }
 
@@ -215,13 +217,14 @@ else
     # We diff full lines (hash + path) so a path with a changed hash
     # shows up here.
     LC_ALL=C comm -13 "$MANIFEST_FILE" "$NEW_MANIFEST" \
-        | awk '{print substr($0, 67)}' > "$WORK_DIR/changed.txt"
+        | awk '{p=substr($0, 67); sub("^\\./", "", p); print p}' \
+        > "$WORK_DIR/changed.txt"
 
     # Lines unique to OLD = deleted or content-changed. To get strictly
     # removed paths, diff the path columns.
-    awk '{print substr($0, 67)}' "$MANIFEST_FILE" \
+    awk '{p=substr($0, 67); sub("^\\./", "", p); print p}' "$MANIFEST_FILE" \
         | LC_ALL=C sort > "$WORK_DIR/old-paths.txt"
-    awk '{print substr($0, 67)}' "$NEW_MANIFEST" \
+    awk '{p=substr($0, 67); sub("^\\./", "", p); print p}' "$NEW_MANIFEST" \
         | LC_ALL=C sort > "$WORK_DIR/new-paths.txt"
     LC_ALL=C comm -23 "$WORK_DIR/old-paths.txt" "$WORK_DIR/new-paths.txt" \
         > "$WORK_DIR/removed.txt"

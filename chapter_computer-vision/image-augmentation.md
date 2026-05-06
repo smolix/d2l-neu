@@ -1092,15 +1092,17 @@ RandAugment — same idea, more aggressive.
 Load a sample image and a helper to display a grid of
 augmented samples:
 
-@image-augmentation
+- start from one image;
+- sample a random transform several times;
+- visualize a grid so the transform distribution is visible,
+  not just one lucky draw.
 
-. . .
+The important object is the augmentation distribution, not the
+helper function used to plot it.
+:::
 
-@image-augmentation-common-image-augmentation-methods-1
-
-. . .
-
-@image-augmentation-common-image-augmentation-methods-2
+::: {.slide title="Reference image"}
+@!image-augmentation-common-image-augmentation-methods-1
 :::
 
 ::: {.slide title="Flips and crops"}
@@ -1151,31 +1153,35 @@ Train CIFAR-10 ResNet18 with and without augmentation. Same
 model, same hyperparameters — augmentation just transforms
 the data loader output:
 
-@image-augmentation-training-with-image-augmentation-1
+- training loader: random crop + random horizontal flip;
+- test loader: deterministic normalization only;
+- model and optimizer stay unchanged.
 
-. . .
-
-@image-augmentation-training-with-image-augmentation-2
-
-. . .
-
-@image-augmentation-training-with-image-augmentation-3
+This separation matters: evaluation should measure the trained
+classifier, not randomness in the augmentation pipeline.
 :::
 
-::: {.slide title="Multi-GPU training helper"}
-@image-augmentation-multi-gpu-training-1
+::: {.slide title="CIFAR-10 samples"}
+@!image-augmentation-training-with-image-augmentation-1
+:::
 
-. . .
+::: {.slide title="Training helper"}
+The training helper has no augmentation-specific logic.
 
-@image-augmentation-multi-gpu-training-2
+It receives already-transformed minibatches from the data loader,
+then performs the usual supervised update:
 
-. . .
+$$
+\mathbf{x}' \sim a(\mathbf{x}), \qquad
+\min_\theta \ell(f_\theta(\mathbf{x}'), y).
+$$
 
-@image-augmentation-multi-gpu-training-3
+That is the clean abstraction: augment in input pipeline, train in
+optimization loop.
 :::
 
 ::: {.slide title="Train it"}
-@image-augmentation-multi-gpu-training-4
+@!image-augmentation-multi-gpu-training-4
 :::
 
 ::: {.slide title="Recap"}

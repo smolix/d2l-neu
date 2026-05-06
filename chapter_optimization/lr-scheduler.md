@@ -692,45 +692,53 @@ gets both: aggressive early, careful late.
 ::: {.slide title="Toy training loop"}
 LeNet on Fashion-MNIST as the experimental harness:
 
-@lr-scheduler-toy-problem-1
+- same model and data for every schedule;
+- only the learning-rate policy changes;
+- compare training curves, not isolated final numbers.
 
-. . .
+The implementation is deliberately ordinary so that the schedule
+effect is the only teaching variable.
+:::
 
-@lr-scheduler-toy-problem-2
+::: {.slide title="Toy baseline"}
+@!lr-scheduler-toy-problem-2
 :::
 
 ::: {.slide title="Constant-LR baselines"}
-@lr-scheduler-schedulers-1
+Fixed learning rates expose the central tradeoff:
 
-. . .
+- large $\eta$: quick early progress, noisy late convergence;
+- small $\eta$: stable late convergence, slow early progress.
 
-@lr-scheduler-schedulers-2
+@!lr-scheduler-schedulers-1
 :::
 
 ::: {.slide title="Constant-LR baselines (cont.)"}
-@lr-scheduler-schedulers-3
+The first custom scheduler uses
+$\eta_t = \eta_0(t+1)^{-1/2}$.
 
-. . .
+@!lr-scheduler-schedulers-3
 
-@lr-scheduler-schedulers-4
+It is simple and monotone, but modern practice usually prefers
+multi-step or cosine schedules.
 :::
 
 ::: {.slide title="Polynomial / factor decay"}
 $\eta_t = \eta_0 \cdot (1 + \beta t)^{-\alpha}$ — gradual
 decay. The ML classic before step decay took over:
 
-@lr-scheduler-factor-scheduler
+@!lr-scheduler-factor-scheduler
 :::
 
 ::: {.slide title="Multi-step decay"}
 Drop $\eta$ by a fixed factor at preset epochs (e.g. 30, 60,
 90). Standard for ImageNet ResNet training:
 
-@lr-scheduler-multi-factor-scheduler-1
+@!lr-scheduler-multi-factor-scheduler-1
+:::
 
-. . .
-
-@lr-scheduler-multi-factor-scheduler-2
+::: {.slide title="Multi-step training"}
+@!lr-scheduler-multi-factor-scheduler-2
 :::
 
 ::: {.slide title="Cosine annealing"}
@@ -739,11 +747,11 @@ Smooth decay over $T$ steps; small $\eta$ at the end yields
 clean fine-tuning. Often paired with warmup and warm
 restarts:
 
-@lr-scheduler-cosine-scheduler-1
+@!lr-scheduler-cosine-scheduler-1
+:::
 
-. . .
-
-@lr-scheduler-cosine-scheduler-2
+::: {.slide title="Cosine training"}
+@!lr-scheduler-cosine-scheduler-2
 :::
 
 ::: {.slide title="Warmup"}
@@ -752,11 +760,11 @@ target value — preconditioner $\hat{\mathbf{s}}_t$ hasn't
 stabilized yet. Linear warmup from 0 to $\eta_0$ over the
 first ~1k steps fixes it:
 
-@lr-scheduler-warmup-1
+@!lr-scheduler-warmup-1
+:::
 
-. . .
-
-@lr-scheduler-warmup-2
+::: {.slide title="Warmup training"}
+@!lr-scheduler-warmup-2
 :::
 
 ::: {.slide title="Recap"}

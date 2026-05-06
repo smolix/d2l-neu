@@ -1040,13 +1040,16 @@ We use a small pretrained BERT (the one we trained
 ourselves in the previous chapter, or a downloaded
 checkpoint). The framework-specific checkpoint conversion
 helpers are implementation plumbing, so the slide shows only
-the setup and final instantiated encoder:
+the teaching contract:
 
-@natural-language-inference-bert-loading-pretrained-bert-1
+- register a checkpoint URL and checksum;
+- load the vocabulary;
+- instantiate the same BERT architecture;
+- copy pretrained weights into the encoder.
+:::
 
-. . .
-
-@natural-language-inference-bert-loading-pretrained-bert-3
+::: {.slide title="Instantiate pretrained BERT"}
+@!natural-language-inference-bert-loading-pretrained-bert-3
 :::
 
 ::: {.slide title="Encoding sentence pairs"}

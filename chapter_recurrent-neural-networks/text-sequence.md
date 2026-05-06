@@ -412,28 +412,58 @@ just call `data.build(...)` to get tensors:
 :::
 
 ::: {.slide title="Word-frequency statistics"}
-Tokenize, count, sort:
+Tokenize words, count occurrences, sort by decreasing count.
 
-@text-sequence-exploratory-language-statistics-1
-
-. . .
-
-The most common tokens are **function words** ("the", "of",
-"and", …) — the so-called *stop words*. Plotting frequency rank
-gives the famous **Zipf law** straight line on log-log axes:
-
-@text-sequence-exploratory-language-statistics-2
+- The head of the distribution is mostly **function words**:
+  "the", "of", "and", "to", "a", ...
+- These words are common because they carry grammatical structure.
+- In old bag-of-words classifiers they were often removed as
+  *stop words*; neural sequence models usually keep them.
 :::
 
-::: {.slide title="Bigrams and trigrams"}
-N-gram statistics give a richer view. Consecutive token pairs
-and triples:
+::: {.slide title="Zipf law"}
+After the first few words, frequency is close to a straight line
+on log-log axes:
 
-@text-sequence-exploratory-language-statistics-3
+$$n_i \propto \frac{1}{i^\alpha}, \qquad
+\log n_i = -\alpha \log i + c.$$
 
-. . .
+Interpretation:
 
-@text-sequence-exploratory-language-statistics-4
+- A few tokens appear extremely often.
+- Most tokens are rare.
+- Count tables waste probability mass in the tail.
+:::
+
+::: {.slide title="Word-frequency plot"}
+@!text-sequence-exploratory-language-statistics-2
+:::
+
+::: {.slide title="Bigrams"}
+Bigrams count consecutive word pairs:
+
+$$ (w_t, w_{t+1}). $$
+
+The most common bigrams are still dominated by function-word
+phrases. One exception in this corpus is semantically meaningful:
+`the--time`.
+
+Pedagogical point: increasing context length makes the counts more
+specific, but also much sparser.
+:::
+
+::: {.slide title="Trigrams"}
+Trigrams count consecutive triples:
+
+$$ (w_t, w_{t+1}, w_{t+2}). $$
+
+The vocabulary grows quickly with $n$, while the corpus size is fixed.
+Most possible triples are never observed.
+
+This is the classic n-gram tradeoff:
+
+- larger $n$ captures more context;
+- larger $n$ creates a much longer tail.
 :::
 
 ::: {.slide title="Zipf at every n"}
@@ -441,7 +471,7 @@ Plot unigram, bigram, and trigram frequencies on log-log axes —
 all three follow Zipf-like power laws, with steeper slopes (and
 sparser high-frequency regimes) for higher n:
 
-@text-sequence-exploratory-language-statistics-5
+@!text-sequence-exploratory-language-statistics-5
 
 This **long-tail sparsity** is exactly why neural language
 models — which embed each token into a continuous space — work so

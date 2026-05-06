@@ -1753,15 +1753,29 @@ exposes its feature map for anchor prediction:
 Bigger anchor scales at deeper levels (small feature map →
 large receptive field → large anchors):
 
-@ssd-the-complete-model-3
+- five feature levels use progressively larger anchors;
+- each level predicts class logits and box offsets;
+- predictions are concatenated across levels before loss or
+  decoding.
 
-. . .
+@!ssd-the-complete-model-3
+:::
 
-@ssd-the-complete-model-4
+::: {.slide title="TinySSD model"}
+The full model is a feature pyramid plus two lightweight heads
+per level:
 
-. . .
+$$
+\text{image} \rightarrow
+\{(\text{anchors}_\ell, \text{class}_\ell, \text{box}_\ell)\}_{\ell=1}^{5}.
+$$
 
-@ssd-the-complete-model-5
+Showing the whole class definition on a slide hides the idea; the
+important contract is the output shape.
+:::
+
+::: {.slide title="TinySSD output shapes"}
+@!ssd-the-complete-model-5
 :::
 
 ::: {.slide title="Loading data + init"}

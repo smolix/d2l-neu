@@ -1099,15 +1099,23 @@ Rare events: $P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}$.
 Approximates binomial with $n$ large, $p$ small,
 $np \to \lambda$:
 
-@distributions-poisson-1
+@!distributions-poisson-1
+:::
 
-. . .
+::: {.slide title="Poisson CDF"}
+The cumulative distribution sums the probability of observing
+up to $k$ events:
 
-@distributions-poisson-2
+$$F(k)=P(X \le k).$$
 
-. . .
+@!distributions-poisson-2
+:::
 
-@distributions-poisson-3
+::: {.slide title="Poisson samples"}
+Sampling turns the distribution into count data: nonnegative
+integers with mean and variance both near $\lambda$.
+
+@!distributions-poisson-3
 :::
 
 ::: {.slide title="Gaussian"}

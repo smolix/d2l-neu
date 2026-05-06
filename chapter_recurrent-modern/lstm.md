@@ -678,13 +678,15 @@ For two decades, *the* sequence model — speech, translation,
 language modeling — until Transformers took over (2017).
 :::
 
-::: {.slide title="Setup"}
-@lstm-long-short-term-memory-lstm
+::: {.slide title="Gates at a glance"}
+The input $\mathbf{X}_t$ and previous hidden state
+$\mathbf{H}_{t-1}$ feed three sigmoid gates.
+
+![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=88%}
 :::
 
 ::: {.slide title="The three gates"}
-Three sigmoid heads — $\mathbf{X}_t$ and $\mathbf{H}_{t-1}$
-in, gating values in $(0, 1)$ out:
+The gates are learned, elementwise switches:
 
 $$
 \mathbf{I}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),
@@ -696,24 +698,35 @@ $$
 \mathbf{O}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xo} + \mathbf{H}_{t-1} \mathbf{W}_{ho} + \mathbf{b}_o).
 $$
 
-![Computing the input, forget, and output gates.](../img/lstm-0.svg){width=78%}
+Each value lies in $(0, 1)$:
+
+- $\mathbf{F}_t$ decides what to retain.
+- $\mathbf{I}_t$ decides what new content to write.
+- $\mathbf{O}_t$ decides what memory to expose.
 :::
 
 ::: {.slide title="Plus an input node"}
 A fourth head — the *input node* — uses $\tanh$ and
 proposes content to write into memory:
 
+![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=86%}
+:::
+
+::: {.slide title="Input-node equation"}
 $$\tilde{\mathbf{C}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \mathbf{W}_{hc} + \mathbf{b}_c).$$
 
 Same algebra four times — only the activation and what
 each output controls differ.
-
-![Computing the input node $\tilde{\mathbf{C}}_t$.](../img/lstm-1.svg){width=78%}
 :::
 
 ::: {.slide title="Memory cell update"}
-Mix the previous cell with the new proposal, gated
-elementwise:
+The cell state is the LSTM's long-lived memory.
+
+![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=86%}
+:::
+
+::: {.slide title="Cell-update equation"}
+Mix the previous cell with the new proposal, gated elementwise:
 
 $$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.$$
 
@@ -721,8 +734,6 @@ If $\mathbf{F}_t \approx 1$ and $\mathbf{I}_t \approx 0$,
 the cell holds its value unchanged across arbitrary
 horizons. That's the **constant error carousel** that
 fixes vanishing gradients.
-
-![Computing the cell internal state $\mathbf{C}_t$.](../img/lstm-2.svg){width=78%}
 :::
 
 ::: {.slide title="Hidden state"}

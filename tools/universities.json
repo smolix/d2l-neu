@@ -1,7 +1,7 @@
 [
   {
     "slug": "Abasyn-University-Islamabad-Campus",
-    "name": "Abasyn University, Islamabad Campus",
+    "name": "Abasyn University Islamabad Campus",
     "country": "Pakistan",
     "logo": "Abasyn-University-Islamabad-Campus.jpg",
     "evidence": [
@@ -134,7 +134,7 @@
   },
   {
     "slug": "Birla-Institute-of-Technology-and-Science-Pilani",
-    "name": "Birla Institute of Technology and Science, Pilani",
+    "name": "Birla Institute of Technology and Science Pilani",
     "country": "India",
     "logo": "Birla-Institute-of-Technology-and-Science-Pilani.png",
     "evidence": [
@@ -308,7 +308,7 @@
   },
   {
     "slug": "Chinese-University-of-Hong-Kong-Shenzhen",
-    "name": "Chinese University of Hong Kong, Shenzhen",
+    "name": "Chinese University of Hong Kong Shenzhen",
     "country": "Mainland China / HK",
     "logo": "Chinese-University-of-Hong-Kong-Shenzhen.png",
     "evidence": [
@@ -340,7 +340,7 @@
   },
   {
     "slug": "Christ-University-Bengaluru",
-    "name": "Christ University, Bengaluru",
+    "name": "Christ University Bengaluru",
     "country": "India",
     "logo": "Christ-University-Bengaluru.png",
     "evidence": [
@@ -636,22 +636,6 @@
         "instructor": "",
         "snippet": "",
         "source_file": "asia_meaf_la_verified.md",
-        "year": ""
-      }
-    ]
-  },
-  {
-    "slug": "Final-Report",
-    "name": "Final Report",
-    "country": "",
-    "logo": "Final-Report.jpg",
-    "evidence": [
-      {
-        "url": "https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf`",
-        "course": "",
-        "instructor": "",
-        "snippet": "",
-        "source_file": "verified_chunk_08_INNA.md",
         "year": ""
       }
     ]
@@ -1144,7 +1128,7 @@
   },
   {
     "slug": "Indian-Institute-of-Science-IISc-Bangalore",
-    "name": "Indian Institute of Science (IISc), Bangalore",
+    "name": "Indian Institute of Science IISc Bangalore",
     "country": "India",
     "logo": "Indian-Institute-of-Science-IISc-Bangalore.png",
     "evidence": [
@@ -2179,7 +2163,7 @@
   },
   {
     "slug": "RV-University-Bengaluru",
-    "name": "RV University, Bengaluru",
+    "name": "RV University Bengaluru",
     "country": "India",
     "logo": "RV-University-Bengaluru.png",
     "evidence": [
@@ -2342,7 +2326,7 @@
   },
   {
     "slug": "Shivaji-University-Kolhapur",
-    "name": "Shivaji University, Kolhapur",
+    "name": "Shivaji University Kolhapur",
     "country": "India",
     "logo": "Shivaji-University-Kolhapur.jpg",
     "evidence": [
@@ -2388,7 +2372,7 @@
   },
   {
     "slug": "Sookmyung-Women-s-University",
-    "name": "Sookmyung Women's University",
+    "name": "Sookmyung Women s University",
     "country": "South Korea",
     "logo": "Sookmyung-Women-s-University.png",
     "evidence": [
@@ -2510,9 +2494,16 @@
   },
   {
     "slug": "Tecnol-gico-de-Monterrey-Campus-Guadalajara",
+    "name": "Tecnol gico de Monterrey Campus Guadalajara",
+    "country": "",
+    "logo": "Tecnol-gico-de-Monterrey-Campus-Guadalajara.png",
+    "evidence": []
+  },
+  {
+    "slug": "Tecnol-gico-de-Monterrey-Campus-Guadalajara-2",
     "name": "Tecnológico de Monterrey, Campus Guadalajara",
     "country": "Mexico",
-    "logo": "Tecnol-gico-de-Monterrey-Campus-Guadalajara.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -2650,9 +2641,16 @@
   },
   {
     "slug": "Universidad-de-Ibagu",
+    "name": "Universidad de Ibagu",
+    "country": "",
+    "logo": "Universidad-de-Ibagu.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-de-Ibagu-2",
     "name": "Universidad de Ibagué",
     "country": "Colombia",
-    "logo": "Universidad-de-Ibagu.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://classic.d2l.ai/ (adopters list)",
@@ -2666,9 +2664,16 @@
   },
   {
     "slug": "Universidad-de-Ingenier-a-y-Tecnolog-a",
+    "name": "Universidad de Ingenier a y Tecnolog a",
+    "country": "",
+    "logo": "Universidad-de-Ingenier-a-y-Tecnolog-a.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-de-Ingenier-a-y-Tecnolog-a-2",
     "name": "Universidad de Ingeniería y Tecnología",
     "country": "Peru",
-    "logo": "Universidad-de-Ingenier-a-y-Tecnolog-a.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://classic.d2l.ai/ (adopters list)",
@@ -2808,9 +2813,16 @@
   },
   {
     "slug": "Universidad-Polit-cnica-Salesiana-Cuenca",
+    "name": "Universidad Polit cnica Salesiana Cuenca",
+    "country": "",
+    "logo": "Universidad-Polit-cnica-Salesiana-Cuenca.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Polit-cnica-Salesiana-Cuenca-2",
     "name": "Universidad Politécnica Salesiana, Cuenca",
     "country": "Ecuador",
-    "logo": "Universidad-Polit-cnica-Salesiana-Cuenca.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -2824,9 +2836,16 @@
   },
   {
     "slug": "Universidad-Rafael-Land-var",
+    "name": "Universidad Rafael Land var",
+    "country": "",
+    "logo": "Universidad-Rafael-Land-var.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Rafael-Land-var-2",
     "name": "Universidad Rafael Landívar",
     "country": "Guatemala",
-    "logo": "Universidad-Rafael-Land-var.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -2872,9 +2891,16 @@
   },
   {
     "slug": "Universidad-Tecnol-gica-Nacional",
+    "name": "Universidad Tecnol gica Nacional",
+    "country": "",
+    "logo": "Universidad-Tecnol-gica-Nacional.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidad-Tecnol-gica-Nacional-2",
     "name": "Universidad Tecnológica Nacional",
     "country": "Argentina",
-    "logo": "Universidad-Tecnol-gica-Nacional.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -2934,9 +2960,16 @@
   },
   {
     "slug": "Universidade-Federal-de-Goi-s",
+    "name": "Universidade Federal de Goi s",
+    "country": "",
+    "logo": "Universidade-Federal-de-Goi-s.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-Federal-de-Goi-s-2",
     "name": "Universidade Federal de Goiás",
     "country": "Brazil",
-    "logo": "Universidade-Federal-de-Goi-s.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://ww2.inf.ufg.br/~anderson/deeplearning/",
@@ -3006,9 +3039,16 @@
   },
   {
     "slug": "Universidade-Federal-de-S-o-Carlos",
+    "name": "Universidade Federal de S o Carlos",
+    "country": "",
+    "logo": "Universidade-Federal-de-S-o-Carlos.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-Federal-de-S-o-Carlos-2",
     "name": "Universidade Federal de São Carlos",
     "country": "Brazil",
-    "logo": "Universidade-Federal-de-S-o-Carlos.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://www.ppgcc.ufscar.br/pt-br/programa/estrutura-curricular/disciplinas-do-programa/cco-03-2-02-aprendizado-profundo-para-reconhecimento-visual-deep-learning-for-visual-recognition",
@@ -3022,9 +3062,16 @@
   },
   {
     "slug": "Universidade-Federal-de-Vi-osa",
+    "name": "Universidade Federal de Vi osa",
+    "country": "",
+    "logo": "Universidade-Federal-de-Vi-osa.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-Federal-de-Vi-osa-2",
     "name": "Universidade Federal de Viçosa",
     "country": "Brazil",
-    "logo": "Universidade-Federal-de-Vi-osa.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://ufv-inf721-2024-2.lucasnferreira.com/",
@@ -3134,9 +3181,16 @@
   },
   {
     "slug": "Universidade-Tecnol-gica-Federal-do-Paran",
+    "name": "Universidade Tecnol gica Federal do Paran",
+    "country": "",
+    "logo": "Universidade-Tecnol-gica-Federal-do-Paran.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "Universidade-Tecnol-gica-Federal-do-Paran-2",
     "name": "Universidade Tecnológica Federal do Paraná",
     "country": "Brazil",
-    "logo": "Universidade-Tecnol-gica-Federal-do-Paran.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001",
@@ -3150,9 +3204,16 @@
   },
   {
     "slug": "Universit-degli-Studi-di-Bologna",
+    "name": "Universit degli Studi di Bologna",
+    "country": "",
+    "logo": "Universit-degli-Studi-di-Bologna.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Bologna-2",
     "name": "Università degli Studi di Bologna",
     "country": "Italy",
-    "logo": "Universit-degli-Studi-di-Bologna.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264",
@@ -3182,9 +3243,16 @@
   },
   {
     "slug": "Universit-degli-Studi-di-Firenze",
+    "name": "Universit degli Studi di Firenze",
+    "country": "",
+    "logo": "Universit-degli-Studi-di-Firenze.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Firenze-2",
     "name": "Università degli Studi di Firenze",
     "country": "Italy",
-    "logo": "Universit-degli-Studi-di-Firenze.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
@@ -3198,9 +3266,16 @@
   },
   {
     "slug": "Universit-degli-Studi-di-Milano-Bicocca",
+    "name": "Universit degli Studi di Milano Bicocca",
+    "country": "",
+    "logo": "Universit-degli-Studi-di-Milano-Bicocca.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Milano-Bicocca-2",
     "name": "Università degli Studi di Milano-Bicocca",
     "country": "Italy",
-    "logo": "Universit-degli-Studi-di-Milano-Bicocca.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://elearning.unimib.it/course/info.php?id=61652",
@@ -3214,9 +3289,16 @@
   },
   {
     "slug": "Universit-degli-Studi-di-Pavia",
+    "name": "Universit degli Studi di Pavia",
+    "country": "",
+    "logo": "Universit-degli-Studi-di-Pavia.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universit-degli-Studi-di-Pavia-2",
     "name": "Università degli Studi di Pavia",
     "country": "Italy",
-    "logo": "Universit-degli-Studi-di-Pavia.png",
+    "logo": null,
     "evidence": [
       {
         "url": "https://vision.unipv.it/DL/",
@@ -3230,9 +3312,16 @@
   },
   {
     "slug": "Universit-di-Roma-Tor-Vergata",
-    "name": "Università di Roma Tor Vergata",
+    "name": "Universit di Roma Tor Vergata",
     "country": "",
     "logo": "Universit-di-Roma-Tor-Vergata.png",
+    "evidence": []
+  },
+  {
+    "slug": "Universit-di-Roma-Tor-Vergata-2",
+    "name": "Università di Roma Tor Vergata",
+    "country": "",
+    "logo": null,
     "evidence": [
       {
         "url": "http://www.ce.uniroma2.it/courses/ml2425/",
@@ -3837,7 +3926,7 @@
   },
   {
     "slug": "University-of-Illinois-Urbana-Champaign",
-    "name": "University of Illinois Urbana-Champaign",
+    "name": "University of Illinois Urbana Champaign",
     "country": "USA",
     "logo": "University-of-Illinois-Urbana-Champaign.png",
     "evidence": [
@@ -3876,9 +3965,16 @@
   },
   {
     "slug": "University-of-Jyv-skyl",
+    "name": "University of Jyv skyl",
+    "country": "",
+    "logo": "University-of-Jyv-skyl.jpg",
+    "evidence": []
+  },
+  {
+    "slug": "University-of-Jyv-skyl-2",
     "name": "University of Jyväskylä",
     "country": "Finland",
-    "logo": "University-of-Jyv-skyl.jpg",
+    "logo": null,
     "evidence": [
       {
         "url": "https://studyguide.jyu.fi/2025/en/courseunit/ties4700/",
@@ -3996,7 +4092,7 @@
   },
   {
     "slug": "University-of-Milano-Bicocca",
-    "name": "University of Milano-Bicocca",
+    "name": "University of Milano Bicocca",
     "country": "Italy",
     "logo": "University-of-Milano-Bicocca.jpg",
     "evidence": [

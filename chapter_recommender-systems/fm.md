@@ -153,7 +153,7 @@ def init_weights(m):
 net.apply(init_weights)
 lr, num_epochs = 0.02, 30
 optimizer = torch.optim.Adam(net.parameters(), lr=lr)
-loss = nn.BCEWithLogitsLoss()
+loss = nn.BCEWithLogitsLoss(reduction='none')
 d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 ```
 

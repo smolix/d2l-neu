@@ -273,8 +273,8 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     import keras
     model = keras.Sequential([
-        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
-                            input_shape=(28, 28, 1)),
+        keras.layers.Input(shape=(28, 28, 1)),
+        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu'),
         keras.layers.MaxPooling2D(pool_size=2, strides=2),
         keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
         keras.layers.MaxPooling2D(pool_size=2, strides=2),

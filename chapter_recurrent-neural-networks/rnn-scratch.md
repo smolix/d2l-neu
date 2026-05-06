@@ -820,22 +820,29 @@ def predict(self, prefix, num_preds, vocab, params):
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
 
-In the following, we specify the prefix 
-and have it generate 20 additional characters.
+In the following, we print the final validation perplexity
+beside a generated continuation from a prefix that appears
+in the training corpus.
 
 ```{.python .input #rnn-scratch-decoding-2}
 %%tab mxnet, pytorch
-model.predict('it has', 20, data.vocab, d2l.try_gpu())
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab, d2l.try_gpu())
+print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-scratch-decoding-2}
 %%tab tensorflow
-model.predict('it has', 20, data.vocab)
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab)
+print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-scratch-decoding-2}
 %%tab jax
-model.predict('it has', 20, data.vocab, trainer.state.params)
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab, trainer.state.params)
+print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 
 While implementing the above RNN model from scratch is instructive, it is not convenient.

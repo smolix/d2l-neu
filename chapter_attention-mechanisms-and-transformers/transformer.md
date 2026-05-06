@@ -1262,8 +1262,8 @@ to translate a few English sentences into French and compute their BLEU scores.
 
 ```{.python .input #transformer-training-2}
 %%tab pytorch
-engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
-fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
+fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
@@ -1278,8 +1278,8 @@ for en, fr, p in zip(engs, fras, preds):
 
 ```{.python .input #transformer-training-2}
 %%tab tensorflow
-engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
-fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
+fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
@@ -1294,8 +1294,8 @@ for en, fr, p in zip(engs, fras, preds):
 
 ```{.python .input #transformer-training-2}
 %%tab jax
-engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
-fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
+fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     trainer.state.params, data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
@@ -1310,8 +1310,8 @@ for en, fr, p in zip(engs, fras, preds):
 
 ```{.python .input #transformer-training-2}
 %%tab mxnet
-engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
-fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
+fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):

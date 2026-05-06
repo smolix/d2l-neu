@@ -556,8 +556,9 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
         return trainer_fn([w, b], list(grads), states, hyperparams)
     # Pre-stack the full dataset on device so the periodic evaluate_loss
     # stays inside one compiled call instead of looping in Python.
-    Xs = jnp.concatenate([jnp.array(X) for X, _ in data_iter], axis=0)
-    ys = jnp.concatenate([jnp.array(y) for _, y in data_iter], axis=0)
+    eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
+    Xs = jnp.concatenate([X for X, _ in eval_batches], axis=0)
+    ys = jnp.concatenate([y for _, y in eval_batches], axis=0)
     @jax.jit
     def full_eval(w, b):
         out = d2l.linreg(Xs, w, b)
@@ -748,8 +749,9 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
 
     # Pre-stack the full dataset on device so the periodic full-loss
     # evaluation is a single compiled call.
-    Xs = jnp.concatenate([jnp.array(X) for X, _ in data_iter], axis=0)
-    ys = jnp.concatenate([jnp.array(y) for _, y in data_iter], axis=0)
+    eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
+    Xs = jnp.concatenate([X for X, _ in eval_batches], axis=0)
+    ys = jnp.concatenate([y for _, y in eval_batches], axis=0)
     @jax.jit
     def full_eval(params):
         out = net.apply(params, Xs)

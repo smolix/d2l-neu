@@ -243,17 +243,21 @@ trainer.fit(model, data)
 Compared with :numref:`sec_rnn-scratch`,
 this model achieves comparable perplexity,
 but runs faster due to the optimized implementations.
-As before, we can generate predicted tokens 
-following the specified prefix string.
+As before, we can print the final validation perplexity
+beside generated tokens following a prefix from the corpus.
 
 ```{.python .input #rnn-concise-training-and-predicting-3}
 %%tab mxnet, pytorch
-model.predict('it has', 20, data.vocab, d2l.try_gpu())
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab, d2l.try_gpu())
+print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-concise-training-and-predicting-3}
 %%tab tensorflow
-model.predict('it has', 20, data.vocab)
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab)
+print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 
 ## Summary

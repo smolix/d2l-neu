@@ -593,8 +593,8 @@ but first we need some training data.
 Here we use the `SyntheticRegressionData` class 
 and pass in some ground truth parameters.
 Then we train our model with 
-the learning rate `lr=0.03` 
-and set `max_epochs=3`. 
+the learning rate `lr=0.03`
+and set `max_epochs=10`.
 Note that in general, both the number of epochs 
 and the learning rate are hyperparameters.
 Setting hyperparameters is tricky
@@ -608,7 +608,7 @@ later.
 ```{.python .input #linear-regression-scratch-training-3  n=20}
 model = LinearRegressionScratch(2, lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
-trainer = d2l.Trainer(max_epochs=3)
+trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 

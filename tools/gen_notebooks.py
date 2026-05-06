@@ -341,18 +341,21 @@ def main():
                         help='Frameworks to generate (default: all)')
     parser.add_argument('--convert', action='store_true',
                         help='Also run quarto convert to produce .ipynb files')
+    parser.add_argument('--files', nargs='*', default=None,
+                        help='Source .md files to regenerate, relative to source root')
     args = parser.parse_args()
 
     src = args.source
-    files = list(CHAPTER_NUMBERING.keys())
+    files = args.files or list(CHAPTER_NUMBERING.keys())
 
     for fw in args.frameworks:
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} ===')
 
-        # Wipe stale chapter output — skip the img/ and data/ symlinks that
-        # build.sh recreates, since those are cross-run infrastructure.
-        if fw_dir.exists():
+        # Full generation wipes stale chapter output. Targeted generation
+        # overwrites only requested notebooks so executed outputs for unrelated
+        # notebooks are preserved.
+        if fw_dir.exists() and args.files is None:
             for child in fw_dir.iterdir():
                 if child.is_symlink() or child.name in ('img', 'data'):
                     continue

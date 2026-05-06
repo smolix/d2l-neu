@@ -856,7 +856,7 @@ def accuracy(y_hat, y):  #@save
     """Compute the number of correct predictions."""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
-    elif y_hat.dtype != y.dtype:
+    elif (len(y_hat.shape) > 1 and y_hat.shape[-1] == 1) or y_hat.dtype != y.dtype:
         # Binary classification with float scores (logits or probabilities):
         # threshold at 0 (logits) to get class labels, then reshape to match y.
         y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
@@ -1378,16 +1378,16 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
 
 The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,
 `train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for
-parity with the original :cite:`Zhang.Lipton.Li.ea.2021` implementation,
-which predates the unified `d2l.Trainer` class introduced in this
-edition. They are deliberately not provided for JAX, and PyTorch only
-ships the subset that is genuinely useful outside of the `Trainer`
-flow. If you are reading the JAX tab, the corresponding chapters use
-`d2l.Trainer.fit(model, data)` end-to-end; the per-batch logic that
-these helpers spell out lives inside `Trainer.fit_epoch` and the
-`@d2l.add_to_class` extensions defined alongside it. The MXNet and
-TensorFlow tabs additionally retain `evaluate_accuracy` because some of
-their earlier-chapter snippets call it directly; for PyTorch and JAX,
+parity with the original D2L implementation, which predates the unified
+`d2l.Trainer` class introduced in this edition. They are deliberately
+not provided for JAX, and PyTorch only ships the subset that is genuinely
+useful outside of the `Trainer` flow. If you are reading the JAX tab,
+the corresponding chapters use `d2l.Trainer.fit(model, data)` end-to-end;
+the per-batch logic that these helpers spell out lives inside
+`Trainer.fit_epoch` and the `@d2l.add_to_class` extensions defined
+alongside it. The MXNet and TensorFlow tabs additionally retain
+`evaluate_accuracy` because some of their earlier-chapter snippets call
+it directly; for PyTorch and JAX,
 use `Trainer.validation_step` (or its return value) instead.
 
 <!-- slides -->

@@ -73,8 +73,11 @@ WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
 
 #@save
 def _read_wiki(data_dir=None):
+    import contextlib
+    import io
     import pandas as pd
-    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    with contextlib.redirect_stdout(io.StringIO()):
+        fname = d2l.download(WIKITEXT_2_URL, folder='../data')
     lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')

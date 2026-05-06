@@ -383,6 +383,8 @@ def train_bert(train_iter, net, vocab_size, devices, num_steps):
 
 We can plot both the masked language modeling loss and the next sentence prediction loss
 during BERT pretraining.
+The 50-step run below is a mechanics-only smoke test for the training loop;
+it is intentionally too short to produce a converged BERT model or meaningful downstream representations.
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab mxnet

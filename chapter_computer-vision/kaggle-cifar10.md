@@ -896,6 +896,10 @@ All the following hyperparameters can be tuned.
 For example, we can increase the number of epochs.
 When `lr_period` and `lr_decay` are set to 4 and 0.9, respectively, the learning rate of the optimization algorithm will be multiplied by 0.9 after every 4 epochs. Just for ease of demonstration,
 we only train 20 epochs here.
+When `demo=True`, the tiny sample has only a few validation images per class,
+so the validation accuracy is a noisy smoke test of the pipeline rather than
+a meaningful competition score. Use the full dataset (`demo=False`) and the
+longer recipe in the exercises to assess model quality.
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab mxnet

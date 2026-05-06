@@ -85,6 +85,10 @@ class MF(nn.Module):
         self.Q = nn.Embedding(num_items, num_factors)
         self.user_bias = nn.Embedding(num_users, 1)
         self.item_bias = nn.Embedding(num_items, 1)
+        nn.init.normal_(self.P.weight, std=0.01)
+        nn.init.normal_(self.Q.weight, std=0.01)
+        nn.init.zeros_(self.user_bias.weight)
+        nn.init.zeros_(self.item_bias.weight)
 
     def forward(self, user_id, item_id):
         P_u = self.P(user_id)

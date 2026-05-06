@@ -725,7 +725,7 @@ def train_batch_ch13(net, X, y, loss, trainer, devices):
     l = loss(pred, y)
     l.sum().backward()
     trainer.step()
-    train_loss_sum = l.sum()
+    train_loss_sum = l.sum() if l.numel() > 1 else l * y.numel()
     train_acc_sum = d2l.accuracy(pred, y)
     return train_loss_sum, train_acc_sum
 ```

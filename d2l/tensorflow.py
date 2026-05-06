@@ -2515,8 +2515,11 @@ WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
 
 def _read_wiki(data_dir=None):
+    import contextlib
+    import io
     import pandas as pd
-    fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+    with contextlib.redirect_stdout(io.StringIO()):
+        fname = d2l.download(WIKITEXT_2_URL, folder='../data')
     lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')
@@ -2909,8 +2912,8 @@ class HPOTuner(d2l.HyperParameters):
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
     import keras
     model = keras.Sequential([
-        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu',
-                            input_shape=(28, 28, 1)),
+        keras.layers.Input(shape=(28, 28, 1)),
+        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu'),
         keras.layers.MaxPooling2D(pool_size=2, strides=2),
         keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
         keras.layers.MaxPooling2D(pool_size=2, strides=2),
@@ -3241,7 +3244,7 @@ def accuracy(y_hat, y):
     Defined in :numref:`sec_utils`"""
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = d2l.argmax(y_hat, axis=1)
-    elif y_hat.dtype != y.dtype:
+    elif (len(y_hat.shape) > 1 and y_hat.shape[-1] == 1) or y_hat.dtype != y.dtype:
         # Binary classification with float scores (logits or probabilities):
         # threshold at 0 (logits) to get class labels, then reshape to match y.
         y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)

@@ -843,7 +843,7 @@ Halve spatial dims and double channels (transition between stages):
 Stages of N residual blocks, with downsampling at the start
 of each stage:
 
-![ResNet-18: four stages of two residual blocks each, plus stem and head.](../img/resnet18.svg){width=66%}
+![ResNet-18: four stages of two residual blocks each, plus stem and head.](../img/resnet18-90.svg){width=66%}
 :::
 
 ::: {.slide title="Stage and stem in code"}

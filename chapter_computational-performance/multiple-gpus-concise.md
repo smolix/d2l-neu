@@ -485,6 +485,10 @@ train(num_gpus=1, batch_size=256, lr=0.1)
 Next we use 2 GPUs for training. Compared with LeNet
 evaluated in :numref:`sec_multi_gpu`,
 the model for ResNet-18 is considerably more complex. This is where parallelization shows its advantage. The time for computation is meaningfully larger than the time for synchronizing parameters. This improves scalability since the overhead for parallelization is less relevant.
+On small local runs, however, data loading, Python overhead, and device
+synchronization can still dominate. A two-GPU run that is only marginally
+faster, or even slightly slower, is a sign that the workload is too small for
+the hardware rather than a contradiction of data parallelism.
 
 ```{.python .input #multiple-gpus-concise-training-3}
 #@tab mxnet

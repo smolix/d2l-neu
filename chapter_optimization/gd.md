@@ -286,7 +286,7 @@ def newton(eta=1):
     for i in range(10):
         x -= eta * f_grad(x) / f_hess(x)
         results.append(float(x))
-    print('epoch 10, x:', x)
+    print(f'epoch 10, x: {float(x):f}')
     return results
 
 show_trace(newton(), f)

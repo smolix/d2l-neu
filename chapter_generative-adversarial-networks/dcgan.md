@@ -976,6 +976,10 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
 We train the model with a small number of epochs just for demonstration.
 For better performance,
 the variable `num_epochs` can be set to a larger number.
+GAN losses should not be read like supervised validation loss: a large
+generator loss can coexist with useful samples when the discriminator is
+confident. Inspect the generated image grid in the lower panel as the primary
+teaching signal, and use longer runs when comparing architectures.
 
 ```{.python .input #dcgan-training-2}
 #@tab mxnet, pytorch

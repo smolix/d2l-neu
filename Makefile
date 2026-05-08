@@ -162,7 +162,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-layout.html d2l.bib
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building HTML book ==="
 	@{ \

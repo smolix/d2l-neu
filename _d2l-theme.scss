@@ -52,22 +52,47 @@ $code-bg:               $bg-code;
 
 $d2l-navbar-height: 62px;
 
-// At ≤1199px the right margin sidebar is hidden (see media query
-// below). Stretch body content into the reclaimed space so the
-// transition from "with TOC" to "without TOC" doesn't leave a
-// proportional 5fr gutter on the right that narrows as the viewport
-// shrinks (the "ghost TOC" effect).
-$d2l-floating-grid-no-toc: [screen-start] 1.5em [screen-start-inset] 5fr [page-start] minmax(28px, 56px) [page-start-inset] minmax(56px, 168px) [body-start-outset] minmax(28px, 56px) [body-start] 1.5em [body-content-start] minmax(500px, 1fr) [body-content-end body-end body-end-outset page-end-inset page-end screen-end-inset] 1.5em [screen-end];
+// Pin the sidebar to a fixed 280px column at all desktop widths so
+// the navbar/sidebar-header/grid all agree on the same offset
+// without JS measurement. (Quarto's default `minmax(28,56) +
+// minmax(56,168) + minmax(28,56)` gives a responsive 140-280px,
+// which is the source of both the 1199.98 sidebar-jump and the
+// logo-flicker we used to paper over with a JS layout helper.)
+$d2l-sidebar-width: 280px;
 
-// At ≤991px the left sidebar collapses to a drawer. Body should fill
-// the entire content area — no proportional margins on either side.
-$d2l-collapsed-grid: [screen-start screen-start-inset page-start page-start-inset body-start-outset body-start] 1.5em [body-content-start] minmax(0, 1fr) [body-content-end body-end body-end-outset page-end-inset page-end screen-end-inset] 1.5em [screen-end];
+// Reusable grid templates. The sidebar column is the same fixed
+// 280px in every desktop variant; only what's to the right of body
+// content changes (TOC visible / TOC hidden / body fills full width
+// after sidebar collapses).
+$d2l-grid-cols-base:
+  [screen-start screen-start-inset page-start page-start-inset] $d2l-sidebar-width
+  [body-start-outset body-start] 1.5em
+  [body-content-start] minmax(500px, calc(1100px - 3em))
+  [body-content-end] 1.5em;
 
-:root {
-  --d2l-sidebar-left: 0px;
-  --d2l-sidebar-right: 304px;
-  --d2l-sidebar-width: 304px;
-}
+// Default (≥1200px): TOC visible to the right of body content.
+$d2l-grid-cols-with-toc: $d2l-grid-cols-base
+  [body-end] minmax(20px, 40px)
+  [body-end-outset] minmax(40px, 120px)
+  [page-end-inset] minmax(20px, 40px)
+  [page-end] minmax(0, 1fr)
+  [screen-end-inset] 1.5em
+  [screen-end];
+
+// 992-1199px: TOC hidden (display: none); right side collapses to a
+// single 1fr gutter so the body keeps its cap and the sidebar stays
+// flush-left at exactly the same 280px offset as the wider layout.
+$d2l-grid-cols-no-toc: $d2l-grid-cols-base
+  [body-end body-end-outset page-end-inset page-end] minmax(0, 1fr)
+  [screen-end-inset] 1.5em
+  [screen-end];
+
+// ≤991px: sidebar collapsed. Body fills the entire content area.
+$d2l-grid-cols-mobile:
+  [screen-start screen-start-inset page-start page-start-inset body-start-outset body-start] 1.5em
+  [body-content-start] minmax(0, 1fr)
+  [body-content-end body-end body-end-outset page-end-inset page-end screen-end-inset] 1.5em
+  [screen-end];
 
 // ── Sidebar logo ─────────────────────────────────────────
 .sidebar-logo {
@@ -153,8 +178,17 @@ $d2l-collapsed-grid: [screen-start screen-start-inset page-start page-start-inse
 }
 
 @media (min-width: 992px) {
+  // Override Quarto's default 140-280px responsive sidebar column with
+  // a fixed 280px so the navbar / sidebar-header / grid all line up
+  // at one offset that's known statically — no JS measurement needed.
+  body.floating #quarto-content.page-columns,
+  body.floating.fullcontent #quarto-content.page-columns,
+  body.floating.slimcontent #quarto-content.page-columns {
+    grid-template-columns: $d2l-grid-cols-with-toc;
+  }
+
   body.nav-sidebar #quarto-header .navbar {
-    left: var(--d2l-sidebar-right);
+    left: $d2l-sidebar-width;
     right: 0;
     width: auto !important;
     min-height: $d2l-navbar-height;
@@ -195,9 +229,9 @@ $d2l-collapsed-grid: [screen-start screen-start-inset page-start page-start-inse
   body.nav-sidebar #quarto-sidebar .sidebar-header {
     position: fixed;
     top: 0;
-    left: var(--d2l-sidebar-left);
+    left: 0;
     z-index: 1041;
-    width: var(--d2l-sidebar-width);
+    width: $d2l-sidebar-width;
     height: $d2l-navbar-height;
     min-height: $d2l-navbar-height;
     background: $white !important;
@@ -215,28 +249,29 @@ $d2l-collapsed-grid: [screen-start screen-start-inset page-start page-start-inse
   }
 }
 
+// 992-1199px: TOC disappears, body absorbs the freed space. Sidebar
+// stays at the same 280px offset across the breakpoint, so the
+// transition no longer "jumps" the sidebar to the middle.
 @media (min-width: 992px) and (max-width: 1199.98px) {
-  body.floating #quarto-content.page-columns {
-    grid-template-columns: $d2l-floating-grid-no-toc;
-  }
-}
-
-@media (max-width: 1199.98px) {
   body.floating #quarto-margin-sidebar {
     display: none !important;
   }
-}
-
-// At ≤991px Quarto collapses the left sidebar into a drawer. Override
-// its default grid (which still reserves a 5fr right-margin column for
-// the now-hidden TOC) so the body fills the entire content area. This
-// removes the "ghost TOC" empty space that would otherwise narrow as
-// the viewport shrinks.
-@media (max-width: 991.98px) {
   body.floating #quarto-content.page-columns,
   body.floating.fullcontent #quarto-content.page-columns,
   body.floating.slimcontent #quarto-content.page-columns {
-    grid-template-columns: $d2l-collapsed-grid;
+    grid-template-columns: $d2l-grid-cols-no-toc;
+  }
+}
+
+// ≤991px: sidebar collapses to a drawer; body fills the full width.
+@media (max-width: 991.98px) {
+  body.floating #quarto-margin-sidebar {
+    display: none !important;
+  }
+  body.floating #quarto-content.page-columns,
+  body.floating.fullcontent #quarto-content.page-columns,
+  body.floating.slimcontent #quarto-content.page-columns {
+    grid-template-columns: $d2l-grid-cols-mobile;
   }
 }
 

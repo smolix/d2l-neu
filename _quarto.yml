@@ -281,7 +281,6 @@ format:
     include-after-body:
       - _d2l-slides-data.html
       - _d2l-tabs.html
-      - _d2l-layout.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

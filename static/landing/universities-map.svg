@@ -1,0 +1,460 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" role="img" aria-label="Universities teaching Dive into Deep Learning">
+  <defs>
+    <radialGradient id="ocean" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#e6edf7"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.6" flood-color="#7f1d1d" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="820" fill="url(#ocean)"/>
+  <g fill="#d7e2d1" stroke="#ffffff" stroke-width="1.4" opacity="0.98">
+    <path d="M 53.3 169.5 L 177.8 183.5 L 244.4 263.3 L 275.6 281.6 L 351.1 278.1 L 435.6 291.7 L 502.2 285.0 L 568.9 247.0 L 533.3 196.2 L 373.3 153.9 L 222.2 169.5 Z"/>
+    <path d="M 248.9 281.6 L 306.7 333.0 L 360.0 348.6 L 435.6 351.2 L 444.4 335.7 L 391.1 307.4 L 333.3 281.6 Z"/>
+    <path d="M 417.8 358.6 L 453.3 389.4 L 431.1 391.7 L 395.6 373.1 L 364.4 363.5 Z"/>
+    <path d="M 440.0 382.5 L 506.7 391.7 L 577.8 414.6 L 640.0 442.2 L 604.4 466.3 L 564.4 498.0 L 533.3 556.7 L 480.0 541.9 L 462.2 481.7 L 444.4 437.5 Z"/>
+    <path d="M 755.6 322.0 L 808.9 298.2 L 862.2 291.7 L 933.3 242.6 L 986.7 255.3 L 942.2 295.0 L 888.9 310.4 L 844.4 322.0 Z"/>
+    <path d="M 764.4 247.0 L 808.9 233.5 L 835.6 255.3 L 808.9 278.1 L 773.3 274.5 Z"/>
+    <path d="M 720.0 324.8 L 844.4 319.2 L 951.1 335.7 L 1026.7 382.5 L 986.7 451.7 L 933.3 492.4 L 880.0 495.2 L 817.8 476.5 L 755.6 423.7 L 724.4 375.4 Z"/>
+    <path d="M 924.4 310.4 L 1000.0 259.4 L 1120.0 247.0 L 1217.8 259.4 L 1333.3 278.1 L 1444.4 295.0 L 1466.7 338.3 L 1386.7 368.3 L 1297.8 363.5 L 1244.4 391.7 L 1146.7 358.6 L 1075.6 351.2 L 1000.0 363.5 L 951.1 333.0 Z"/>
+    <path d="M 1097.8 353.7 L 1146.7 391.7 L 1195.6 363.5 L 1155.6 338.3 Z"/>
+    <path d="M 1226.7 375.4 L 1271.1 391.7 L 1257.8 419.1 L 1217.8 400.9 Z"/>
+    <path d="M 1315.6 396.3 L 1360.0 405.4 L 1351.1 426.0 L 1302.2 419.1 Z"/>
+    <path d="M 1417.8 295.0 L 1448.9 316.3 L 1431.1 333.0 L 1404.4 327.6 Z"/>
+    <path d="M 1297.8 435.2 L 1484.4 437.5 L 1480.0 503.7 L 1426.7 521.8 L 1311.1 492.4 Z"/>
+    <path d="M 1537.8 495.2 L 1591.1 503.7 L 1573.3 528.3 L 1537.8 525.0 Z"/>
+    <path d="M 568.9 238.1 L 662.2 196.2 L 702.2 116.0 L 604.4 62.8 L 524.4 136.3 L 480.0 207.9 Z"/>
+  </g>
+  <g fill="none" stroke="#c8d5e5" stroke-width="0.8" opacity="0.45">
+    <line x1="0" y1="0" x2="0" y2="820"/><line x1="200" y1="0" x2="200" y2="820"/><line x1="400" y1="0" x2="400" y2="820"/><line x1="600" y1="0" x2="600" y2="820"/><line x1="800" y1="0" x2="800" y2="820"/><line x1="1000" y1="0" x2="1000" y2="820"/><line x1="1200" y1="0" x2="1200" y2="820"/><line x1="1400" y1="0" x2="1400" y2="820"/><line x1="1600" y1="0" x2="1600" y2="820"/>
+    <line x1="0" y1="100" x2="1600" y2="100"/><line x1="0" y1="220" x2="1600" y2="220"/><line x1="0" y1="340" x2="1600" y2="340"/><line x1="0" y1="460" x2="1600" y2="460"/><line x1="0" y1="580" x2="1600" y2="580"/><line x1="0" y1="700" x2="1600" y2="700"/>
+  </g>
+  <g fill="#df2b2b" stroke="#ffffff" stroke-width="1.1" filter="url(#shadow)" opacity="0.92">
+    <circle cx="1124.7" cy="328.4" r="4.2"><title>Abasyn University Islamabad Campus</title></circle>
+    <circle cx="939.0" cy="338.1" r="4.2"><title>Ain Shams University</title></circle>
+    <circle cx="932.9" cy="335.1" r="4.2"><title>Alexandria University</title></circle>
+    <circle cx="1143.7" cy="342.1" r="4.2"><title>Amity University</title></circle>
+    <circle cx="1170.3" cy="369.0" r="4.2"><title>Andhra University</title></circle>
+    <circle cx="1156.6" cy="380.1" r="4.2"><title>Anna University</title></circle>
+    <circle cx="1347.5" cy="378.7" r="4.2"><title>Ateneo de Naga University</title></circle>
+    <circle cx="1480.4" cy="474.9" r="4.2"><title>Australian Catholic University</title></circle>
+    <circle cx="1462.8" cy="496.0" r="4.2"><title>Australian National University</title></circle>
+    <circle cx="954.9" cy="332.8" r="4.2"><title>Bar Ilan University</title></circle>
+    <circle cx="471.3" cy="308.0" r="4.2"><title>Barnard College</title></circle>
+    <circle cx="1316.9" cy="310.2" r="4.2"><title>Beijing Institute of Mathematical Sciences and Applications</title></circle>
+    <circle cx="929.3" cy="307.2" r="4.2"><title>Beykoz University</title></circle>
+    <circle cx="1148.8" cy="369.8" r="4.2"><title>Birla Institute of Technology and Science, Hyderabad</title></circle>
+    <circle cx="1135.9" cy="342.6" r="4.2"><title>Birla Institute of Technology and Science Pilani</title></circle>
+    <circle cx="1135.9" cy="342.6" r="4.2"><title>BITS Pilani</title></circle>
+    <circle cx="1141.4" cy="342.9" r="4.2"><title>BML Munjal University</title></circle>
+    <circle cx="483.7" cy="303.4" r="4.2"><title>Boston College</title></circle>
+    <circle cx="484.0" cy="303.3" r="4.2"><title>Boston University</title></circle>
+    <circle cx="1201.9" cy="354.2" r="4.2"><title>Brac University</title></circle>
+    <circle cx="483.3" cy="303.3" r="4.2"><title>Brandeis University</title></circle>
+    <circle cx="482.7" cy="304.9" r="4.2"><title>Brown University</title></circle>
+    <circle cx="928.3" cy="309.8" r="4.2"><title>Bursa Uludag University</title></circle>
+    <circle cx="938.7" cy="338.2" r="4.2"><title>Cairo University</title></circle>
+    <circle cx="944.7" cy="311.0" r="4.2"><title>Cankaya University</title></circle>
+    <circle cx="444.7" cy="309.1" r="4.2"><title>Carnegie Mellon University</title></circle>
+    <circle cx="1156.5" cy="380.5" r="4.2"><title>Chennai Mathematical Institute</title></circle>
+    <circle cx="1334.8" cy="321.8" r="4.2"><title>China Ocean University</title></circle>
+    <circle cx="1307.6" cy="357.6" r="4.2"><title>Chinese University of Hong Kong</title></circle>
+    <circle cx="1307.6" cy="356.9" r="4.2"><title>Chinese University of Hong Kong Shenzhen</title></circle>
+    <circle cx="1272.6" cy="339.4" r="4.2"><title>Chongqing University of Science and Technology</title></circle>
+    <circle cx="1144.9" cy="380.3" r="4.2"><title>Christ University Bengaluru</title></circle>
+    <circle cx="1246.8" cy="378.4" r="4.2"><title>Chulalongkorn University</title></circle>
+    <circle cx="1307.4" cy="357.8" r="4.2"><title>City University of Hong Kong</title></circle>
+    <circle cx="1128.3" cy="367.1" r="4.2"><title>College of Engineering Pune</title></circle>
+    <circle cx="333.0" cy="308.7" r="4.2"><title>Colorado State University</title></circle>
+    <circle cx="471.3" cy="308.0" r="4.2"><title>Columbia University</title></circle>
+    <circle cx="473.0" cy="293.4" r="4.2"><title>Concordia University</title></circle>
+    <circle cx="460.1" cy="303.0" r="4.2"><title>Cornell University</title></circle>
+    <circle cx="948.4" cy="324.4" r="4.2"><title>Cyprus Institute</title></circle>
+    <circle cx="1340.2" cy="313.8" r="4.2"><title>Dalian University of Technology</title></circle>
+    <circle cx="1144.7" cy="380.3" r="4.2"><title>Dayananda Sagar University</title></circle>
+    <circle cx="1441.3" cy="504.3" r="4.2"><title>Deakin University</title></circle>
+    <circle cx="410.4" cy="304.6" r="4.2"><title>DePaul University</title></circle>
+    <circle cx="1290.8" cy="426.1" r="4.2"><title>Diponegoro University</title></circle>
+    <circle cx="449.2" cy="322.0" r="4.2"><title>Duke University</title></circle>
+    <circle cx="937.8" cy="481.3" r="4.2"><title>Durban University of Technology</title></circle>
+    <circle cx="1339.6" cy="335.1" r="4.2"><title>East China Normal University</title></circle>
+    <circle cx="950.7" cy="324.4" r="4.2"><title>Eastern Mediterranean University</title></circle>
+    <circle cx="814.0" cy="320.0" r="4.2"><title>Ecole Nationale Superieure dInformatique</title></circle>
+    <circle cx="425.2" cy="328.1" r="4.2"><title>Emory University</title></circle>
+    <circle cx="884.7" cy="286.8" r="4.2"><title>Eötvös Loránd University (ELTE), Budapest</title></circle>
+    <circle cx="829.2" cy="290.0" r="4.2"><title>EPFL</title></circle>
+    <circle cx="451.2" cy="410.5" r="4.2"><title>Escuela Politecnica Nacional</title></circle>
+    <circle cx="444.6" cy="414.9" r="4.2"><title>Escuela Superior Politecnica del Litoral</title></circle>
+    <circle cx="1364.2" cy="317.6" r="4.2"><title>Ewha Womans University</title></circle>
+    <circle cx="829.7" cy="392.1" r="4.2"><title>Federal University Lokoja</title></circle>
+    <circle cx="929.4" cy="307.5" r="4.2"><title>Fenerbahce University</title></circle>
+    <circle cx="1336.2" cy="353.2" r="4.2"><title>Feng Chia University</title></circle>
+    <circle cx="1269.0" cy="361.0" r="4.2"><title>FPT University</title></circle>
+    <circle cx="1340.0" cy="334.9" r="4.2"><title>Fudan University</title></circle>
+    <circle cx="1169.9" cy="369.1" r="4.2"><title>Gayatri Vidya Parishad College of Engineering (Autonomous)</title></circle>
+    <circle cx="945.9" cy="310.6" r="4.2"><title>Gazi Universitesi</title></circle>
+    <circle cx="456.4" cy="313.9" r="4.2"><title>George Mason University</title></circle>
+    <circle cx="457.5" cy="313.7" r="4.2"><title>Georgetown University</title></circle>
+    <circle cx="424.9" cy="328.2" r="4.2"><title>Georgia Institute of Technology</title></circle>
+    <circle cx="1128.2" cy="374.4" r="4.2"><title>Goa University</title></circle>
+    <circle cx="256.0" cy="316.9" r="4.2"><title>Golden Gate University</title></circle>
+    <circle cx="1156.2" cy="381.1" r="4.2"><title>Great Lakes Institute of Management</title></circle>
+    <circle cx="1304.0" cy="356.1" r="4.2"><title>Guangdong University of Technology</title></circle>
+    <circle cx="1363.7" cy="324.2" r="4.2"><title>Gwangju Institute of Science and Technology</title></circle>
+    <circle cx="1098.4" cy="351.4" r="4.2"><title>Habib University</title></circle>
+    <circle cx="1028.6" cy="350.4" r="4.2"><title>Hamad Bin Khalifa University</title></circle>
+    <circle cx="1335.0" cy="337.5" r="4.2"><title>Hangzhou Dianzi University</title></circle>
+    <circle cx="1364.7" cy="317.5" r="4.2"><title>Hankuk University of Foreign Studies</title></circle>
+    <circle cx="937.8" cy="451.3" r="4.2"><title>Harare Institute of Technology</title></circle>
+    <circle cx="1362.8" cy="292.6" r="4.2"><title>Harbin Institute of Technology</title></circle>
+    <circle cx="905.4" cy="316.4" r="4.2"><title>Harokopio University</title></circle>
+    <circle cx="483.9" cy="303.2" r="4.2"><title>Harvard University</title></circle>
+    <circle cx="858.4" cy="269.4" r="4.2"><title>Hasso Plattner Institut</title></circle>
+    <circle cx="956.4" cy="333.6" r="4.2"><title>Hebrew University of Jerusalem</title></circle>
+    <circle cx="1362.9" cy="292.3" r="4.2"><title>Heilongjiang University of Science and Technology</title></circle>
+    <circle cx="830.2" cy="273.8" r="4.2"><title>Heinrich Heine Universitat Dusseldorf</title></circle>
+    <circle cx="859.5" cy="268.9" r="4.2"><title>Hertie School</title></circle>
+    <circle cx="1388.7" cy="326.5" r="4.2"><title>Hiroshima University</title></circle>
+    <circle cx="1273.8" cy="385.1" r="4.2"><title>Ho Chi Minh City University of Foreign Languages and Information Technology</title></circle>
+    <circle cx="839.1" cy="266.8" r="4.2"><title>Hochschule Bremen</title></circle>
+    <circle cx="860.1" cy="269.0" r="4.2"><title>Hochschule fur Technik und Wirtschaft</title></circle>
+    <circle cx="1307.5" cy="357.9" r="4.2"><title>Hong Kong Polytechnic University</title></circle>
+    <circle cx="1307.8" cy="357.8" r="4.2"><title>Hong Kong University of Science and Technology</title></circle>
+    <circle cx="1308.5" cy="337.0" r="4.2"><title>Huazhong University of Science and Technology</title></circle>
+    <circle cx="1124.1" cy="365.6" r="4.2"><title>IIT Bombay</title></circle>
+    <circle cx="1143.1" cy="342.1" r="4.2"><title>IIT Delhi</title></circle>
+    <circle cx="1123.1" cy="355.6" r="4.2"><title>IIT Gandhinagar</title></circle>
+    <circle cx="1207.5" cy="348.2" r="4.2"><title>IIT Guwahati</title></circle>
+    <circle cx="1125.0" cy="347.4" r="4.2"><title>IIT Jodhpur</title></circle>
+    <circle cx="1156.6" cy="347.3" r="4.2"><title>IIT Kanpur</title></circle>
+    <circle cx="1156.6" cy="380.2" r="4.2"><title>IIT Madras</title></circle>
+    <circle cx="799.2" cy="272.7" r="4.2"><title>Imperial College London</title></circle>
+    <circle cx="818.2" cy="297.7" r="4.2"><title>IMT Mines Ales</title></circle>
+    <circle cx="1160.1" cy="346.6" r="4.2"><title>Indian Institute of Information Technology Lucknow</title></circle>
+    <circle cx="1138.7" cy="334.4" r="4.2"><title>Indian Institute of Information Technology Una</title></circle>
+    <circle cx="1144.7" cy="380.1" r="4.2"><title>Indian Institute of Science Bangalore</title></circle>
+    <circle cx="1144.7" cy="380.1" r="4.2"><title>Indian Institute of Science IISc Bangalore</title></circle>
+    <circle cx="1124.1" cy="365.6" r="4.2"><title>Indian Institute of Technology Bombay</title></circle>
+    <circle cx="1143.1" cy="342.1" r="4.2"><title>Indian Institute of Technology Delhi</title></circle>
+    <circle cx="1123.1" cy="355.6" r="4.2"><title>Indian Institute of Technology Gandhinagar</title></circle>
+    <circle cx="1207.5" cy="348.2" r="4.2"><title>Indian Institute of Technology Guwahati</title></circle>
+    <circle cx="1147.2" cy="369.3" r="4.2"><title>Indian Institute of Technology Hyderabad</title></circle>
+    <circle cx="1124.6" cy="347.9" r="4.2"><title>Indian Institute of Technology Jodhpur</title></circle>
+    <circle cx="1156.6" cy="347.3" r="4.2"><title>Indian Institute of Technology Kanpur</title></circle>
+    <circle cx="1188.0" cy="357.8" r="4.2"><title>Indian Institute of Technology Kharagpur</title></circle>
+    <circle cx="1156.6" cy="380.2" r="4.2"><title>Indian Institute of Technology Madras</title></circle>
+    <circle cx="1142.2" cy="333.6" r="4.2"><title>Indian Institute of Technology Mandi</title></circle>
+    <circle cx="1177.1" cy="349.8" r="4.2"><title>Indian Institute of Technology Patna</title></circle>
+    <circle cx="1140.2" cy="335.7" r="4.2"><title>Indian Institute of Technology Ropar</title></circle>
+    <circle cx="1143.1" cy="342.2" r="4.2"><title>Indira Gandhi National Open University</title></circle>
+    <circle cx="1143.4" cy="342.1" r="4.2"><title>Indraprastha Institute of Information Technology, Delhi</title></circle>
+    <circle cx="1130.4" cy="334.4" r="4.2"><title>Information Technology University Lahore</title></circle>
+    <circle cx="813.5" cy="275.9" r="4.2"><title>Institut catholique d'arts et metiers (ICAM)</title></circle>
+    <circle cx="806.5" cy="299.6" r="4.2"><title>Institut de recherche en informatique de Toulouse</title></circle>
+    <circle cx="847.1" cy="322.4" r="4.2"><title>Institut Superieur d'Informatique et des Techniques de Communication</title></circle>
+    <circle cx="813.5" cy="275.8" r="4.2"><title>Institut Superieur De L'electronique Et Du Numerique</title></circle>
+    <circle cx="1278.3" cy="425.7" r="4.2"><title>Institut Teknologi Bandung</title></circle>
+    <circle cx="359.4" cy="364.7" r="4.2"><title>Instituto Politécnico Nacional</title></circle>
+    <circle cx="359.1" cy="365.1" r="4.2"><title>Instituto Tecnologico Autonomo de Mexico</title></circle>
+    <circle cx="540.4" cy="494.2" r="4.2"><title>Instituto Tecnologico de Buenos Aires</title></circle>
+    <circle cx="975.8" cy="352.5" r="4.2"><title>Islamic University of Medina</title></circle>
+    <circle cx="928.8" cy="307.2" r="4.2"><title>Istanbul Atlas University</title></circle>
+    <circle cx="929.0" cy="307.1" r="4.2"><title>Istanbul Teknik Universitesi</title></circle>
+    <circle cx="928.8" cy="307.1" r="4.2"><title>Istinye University</title></circle>
+    <circle cx="856.0" cy="256.7" r="4.2"><title>IT Universitetet i Kobenhavn</title></circle>
+    <circle cx="1365.0" cy="322.4" r="4.2"><title>Jeonbuk National University</title></circle>
+    <circle cx="459.5" cy="312.4" r="4.2"><title>Johns Hopkins University</title></circle>
+    <circle cx="370.8" cy="312.8" r="4.2"><title>Kansas State University</title></circle>
+    <circle cx="1421.1" cy="323.0" r="4.2"><title>Keio University</title></circle>
+    <circle cx="424.1" cy="327.5" r="4.2"><title>Kennesaw State University</title></circle>
+    <circle cx="973.8" cy="357.8" r="4.2"><title>King Abdullah University of Science and Technology</title></circle>
+    <circle cx="1022.9" cy="347.8" r="4.2"><title>King Fahd University of Petroleum and Minerals</title></circle>
+    <circle cx="1023.1" cy="347.6" r="4.2"><title>King Faisal University</title></circle>
+    <circle cx="1144.9" cy="384.2" r="4.2"><title>Kongu Engineering College</title></circle>
+    <circle cx="1363.8" cy="317.5" r="4.2"><title>Korea Aerospace University</title></circle>
+    <circle cx="1142.9" cy="384.6" r="4.2"><title>KPR Institute of Engineering and Technology</title></circle>
+    <circle cx="820.9" cy="275.0" r="4.2"><title>KU Leuven</title></circle>
+    <circle cx="1364.7" cy="317.5" r="4.2"><title>Kyung Hee University</title></circle>
+    <circle cx="1371.6" cy="322.3" r="4.2"><title>Kyungpook National University</title></circle>
+    <circle cx="1130.7" cy="334.4" r="4.2"><title>Lahore University of Management Sciences</title></circle>
+    <circle cx="787.6" cy="263.2" r="4.2"><title>Lancaster University</title></circle>
+    <circle cx="1208.0" cy="351.5" r="4.2"><title>Leading Unviersity</title></circle>
+    <circle cx="843.2" cy="269.4" r="4.2"><title>Leibniz Universitat Hannover</title></circle>
+    <circle cx="846.2" cy="266.2" r="4.2"><title>Leuphana University of Luneburg</title></circle>
+    <circle cx="1286.3" cy="352.8" r="4.2"><title>Liuzhou Institute of Technology</title></circle>
+    <circle cx="799.5" cy="272.6" r="4.2"><title>London School of Economics &amp; Political Science</title></circle>
+    <circle cx="799.5" cy="272.6" r="4.2"><title>London School of Economics and Political Science</title></circle>
+    <circle cx="255.9" cy="316.9" r="4.2"><title>Make School</title></circle>
+    <circle cx="1141.9" cy="390.4" r="4.2"><title>Mar Baselios College of Engineering and Technology</title></circle>
+    <circle cx="929.1" cy="307.5" r="4.2"><title>Marmara University</title></circle>
+    <circle cx="873.8" cy="280.9" r="4.2"><title>Masaryk University</title></circle>
+    <circle cx="484.0" cy="303.3" r="4.2"><title>Massachusetts Institute of Technology</title></circle>
+    <circle cx="473.0" cy="293.3" r="4.2"><title>McGill University</title></circle>
+    <circle cx="929.0" cy="307.1" r="4.2"><title>MEF University</title></circle>
+    <circle cx="937.8" cy="336.8" r="4.2"><title>Menoufia University</title></circle>
+    <circle cx="424.5" cy="302.2" r="4.2"><title>Michigan State University</title></circle>
+    <circle cx="474.8" cy="298.1" r="4.2"><title>Middlebury College</title></circle>
+    <circle cx="409.3" cy="301.2" r="4.2"><title>Milwaukee School of Engineering</title></circle>
+    <circle cx="936.6" cy="343.2" r="4.2"><title>Minia University</title></circle>
+    <circle cx="769.6" cy="327.6" r="4.2"><title>Mohammed V University in Rabat</title></circle>
+    <circle cx="1445.1" cy="503.4" r="4.2"><title>Monash University</title></circle>
+    <circle cx="1254.6" cy="404.9" r="4.2"><title>Multimedia University</title></circle>
+    <circle cx="1314.8" cy="487.2" r="4.2"><title>Murdoch University</title></circle>
+    <circle cx="1408.7" cy="324.4" r="4.2"><title>Nagoya University</title></circle>
+    <circle cx="1314.9" cy="341.8" r="4.2"><title>Nanchang Hangkong University</title></circle>
+    <circle cx="1328.0" cy="332.8" r="4.2"><title>Nanjing Normal University Zhongbei College</title></circle>
+    <circle cx="1327.9" cy="332.8" r="4.2"><title>Nanjing University</title></circle>
+    <circle cx="1327.8" cy="332.8" r="4.2"><title>Nanjing University of Finance and Economics</title></circle>
+    <circle cx="1340.3" cy="351.2" r="4.2"><title>National Chengchi University</title></circle>
+    <circle cx="1336.3" cy="353.4" r="4.2"><title>National Chung Hsing University</title></circle>
+    <circle cx="1141.2" cy="336.4" r="4.2"><title>National Institute of Technical Teachers Training &amp; Research</title></circle>
+    <circle cx="1153.5" cy="368.4" r="4.2"><title>National Institute of Technology, Warangal</title></circle>
+    <circle cx="1142.5" cy="342.0" r="4.2"><title>National Institute of Technology Delhi</title></circle>
+    <circle cx="1141.4" cy="338.4" r="4.2"><title>National Institute of Technology Kurukshetra</title></circle>
+    <circle cx="1168.5" cy="358.0" r="4.2"><title>National Institute of Technology Rourkela</title></circle>
+    <circle cx="1334.5" cy="357.1" r="4.2"><title>National Sun Yat sen University</title></circle>
+    <circle cx="1340.2" cy="351.1" r="4.2"><title>National Taiwan University</title></circle>
+    <circle cx="905.5" cy="316.3" r="4.2"><title>National Technical University of Athens</title></circle>
+    <circle cx="935.4" cy="276.5" r="4.2"><title>National Technical University of Ukraine</title></circle>
+    <circle cx="1336.8" cy="352.3" r="4.2"><title>National United University</title></circle>
+    <circle cx="1124.4" cy="328.5" r="4.2"><title>National University of Sciences and Technology</title></circle>
+    <circle cx="1261.2" cy="407.0" r="4.2"><title>National University of Singapore</title></circle>
+    <circle cx="1117.3" cy="274.2" r="4.2"><title>Nazarbayev University</title></circle>
+    <circle cx="470.3" cy="308.2" r="4.2"><title>New Jersey Institute of Technology</title></circle>
+    <circle cx="471.1" cy="308.3" r="4.2"><title>New York University</title></circle>
+    <circle cx="791.1" cy="269.2" r="4.2"><title>Newman University</title></circle>
+    <circle cx="1144.4" cy="342.3" r="4.2"><title>Noida Institute of Engineering and Technology</title></circle>
+    <circle cx="450.4" cy="322.6" r="4.2"><title>North Carolina State University</title></circle>
+    <circle cx="998.6" cy="301.2" r="4.2"><title>North Ossetian State University</title></circle>
+    <circle cx="484.1" cy="303.4" r="4.2"><title>Northeastern University</title></circle>
+    <circle cx="410.3" cy="304.2" r="4.2"><title>Northwestern University</title></circle>
+    <circle cx="1158.8" cy="371.5" r="4.2"><title>NRI Institute of Technology</title></circle>
+    <circle cx="435.1" cy="312.4" r="4.2"><title>Ohio University</title></circle>
+    <circle cx="1384.9" cy="329.8" r="4.2"><title>Oita University</title></circle>
+    <circle cx="449.4" cy="298.3" r="4.2"><title>Ontario Tech University</title></circle>
+    <circle cx="1274.7" cy="425.1" r="4.2"><title>Pakuan University</title></circle>
+    <circle cx="1316.9" cy="310.5" r="4.2"><title>Peking University</title></circle>
+    <circle cx="453.9" cy="308.1" r="4.2"><title>Pennsylvania State University</title></circle>
+    <circle cx="1374.8" cy="322.0" r="4.2"><title>Pohang University of Science and Technology</title></circle>
+    <circle cx="841.0" cy="293.4" r="4.2"><title>Politecnico di Milano</title></circle>
+    <circle cx="276.8" cy="327.3" r="4.2"><title>Pomona College</title></circle>
+    <circle cx="486.0" cy="490.9" r="4.2"><title>Pontificia Universidad Catolica de Chile</title></circle>
+    <circle cx="457.4" cy="437.7" r="4.2"><title>Pontificia Universidad Catolica del Peru</title></circle>
+    <circle cx="254.7" cy="293.3" r="4.2"><title>Portland State University</title></circle>
+    <circle cx="1158.6" cy="371.9" r="4.2"><title>Prasad V. Potluri Siddhartha Institute of Technology</title></circle>
+    <circle cx="413.7" cy="309.2" r="4.2"><title>Purdue University</title></circle>
+    <circle cx="1125.0" cy="328.3" r="4.2"><title>Quaid e Azam University</title></circle>
+    <circle cx="460.0" cy="297.5" r="4.2"><title>Queen's University</title></circle>
+    <circle cx="826.1" cy="271.5" r="4.2"><title>Radboud Universiteit</title></circle>
+    <circle cx="472.5" cy="302.2" r="4.2"><title>Rensselaer Polytechnic Institute</title></circle>
+    <circle cx="1420.9" cy="322.8" r="4.2"><title>Rikkyo University</title></circle>
+    <circle cx="466.1" cy="311.3" r="4.2"><title>Rowan University</title></circle>
+    <circle cx="469.1" cy="308.9" r="4.2"><title>Rutgers, The State University of New Jersey</title></circle>
+    <circle cx="1144.4" cy="380.3" r="4.2"><title>RV University Bengaluru</title></circle>
+    <circle cx="1136.4" cy="337.8" r="4.2"><title>Sant Longowal Institute of Engineering Technology</title></circle>
+    <circle cx="258.1" cy="318.2" r="4.2"><title>Santa Clara University</title></circle>
+    <circle cx="1287.0" cy="367.5" r="4.2"><title>Sanya University</title></circle>
+    <circle cx="855.6" cy="304.7" r="4.2"><title>Sapienza Universita di Roma</title></circle>
+    <circle cx="1364.2" cy="317.9" r="4.2"><title>Seoul National University</title></circle>
+    <circle cx="1364.8" cy="317.4" r="4.2"><title>Seoul National University of Science and Technology</title></circle>
+    <circle cx="1028.4" cy="322.6" r="4.2"><title>Shahid Beheshti University</title></circle>
+    <circle cx="1320.2" cy="320.1" r="4.2"><title>Shandong University</title></circle>
+    <circle cx="1339.7" cy="335.1" r="4.2"><title>Shanghai Jiao Tong University</title></circle>
+    <circle cx="1339.9" cy="335.1" r="4.2"><title>Shanghai University of Electric Power</title></circle>
+    <circle cx="1340.0" cy="334.9" r="4.2"><title>Shanghai University of Finance and Economics</title></circle>
+    <circle cx="1340.4" cy="335.2" r="4.2"><title>ShanghaiTech University</title></circle>
+    <circle cx="1028.2" cy="322.8" r="4.2"><title>Sharif University of Technology</title></circle>
+    <circle cx="1306.4" cy="357.3" r="4.2"><title>Shenzhen University</title></circle>
+    <circle cx="1130.0" cy="371.5" r="4.2"><title>Shivaji University Kolhapur</title></circle>
+    <circle cx="253.7" cy="280.6" r="4.2"><title>Simon Fraser University</title></circle>
+    <circle cx="1262.1" cy="406.9" r="4.2"><title>Singapore University of Technology and Design</title></circle>
+    <circle cx="966.0" cy="256.6" r="4.2"><title>Skolkovo Institute of Science and Technology</title></circle>
+    <circle cx="1364.2" cy="317.6" r="4.2"><title>Sogang University</title></circle>
+    <circle cx="1364.3" cy="317.6" r="4.2"><title>Sookmyung Women s University</title></circle>
+    <circle cx="482.4" cy="301.2" r="4.2"><title>Southern New Hampshire University</title></circle>
+    <circle cx="297.5" cy="317.2" r="4.2"><title>Southern Utah University</title></circle>
+    <circle cx="869.5" cy="284.3" r="4.2"><title>St. Polten University of Applied Sciences</title></circle>
+    <circle cx="257.0" cy="317.9" r="4.2"><title>Stanford University</title></circle>
+    <circle cx="462.4" cy="304.1" r="4.2"><title>State University of New York at Binghamton</title></circle>
+    <circle cx="883.8" cy="492.3" r="4.2"><title>Stellenbosch University</title></circle>
+    <circle cx="471.0" cy="308.2" r="4.2"><title>Stevens Institute of Technology</title></circle>
+    <circle cx="475.0" cy="307.7" r="4.2"><title>Stony Brook University</title></circle>
+    <circle cx="1364.4" cy="317.5" r="4.2"><title>Sungkyunkwan University</title></circle>
+    <circle cx="955.7" cy="330.9" r="4.2"><title>Technion   Israel Institute of Technology</title></circle>
+    <circle cx="859.2" cy="269.0" r="4.2"><title>Technische Universitat Berlin</title></circle>
+    <circle cx="819.4" cy="270.9" r="4.2"><title>Technische Universiteit Delft</title></circle>
+    <circle cx="340.7" cy="361.9" r="4.2"><title>Tecnológico de Monterrey, Campus Guadalajara</title></circle>
+    <circle cx="922.6" cy="307.5" r="4.2"><title>Tekirdag Namik Kemal Universitesi</title></circle>
+    <circle cx="371.8" cy="336.7" r="4.2"><title>Texas A&amp;M University</title></circle>
+    <circle cx="367.3" cy="331.1" r="4.2"><title>Texas Christian University</title></circle>
+    <circle cx="1139.4" cy="337.4" r="4.2"><title>Thapar Institute of Engineering and Technology</title></circle>
+    <circle cx="1317.0" cy="310.4" r="4.2"><title>Tsinghua University</title></circle>
+    <circle cx="483.9" cy="303.1" r="4.2"><title>Tufts University</title></circle>
+    <circle cx="1336.0" cy="353.2" r="4.2"><title>Tunghai University</title></circle>
+    <circle cx="890.2" cy="219.6" r="4.2"><title>Umea University</title></circle>
+    <circle cx="1202.0" cy="354.2" r="4.2"><title>United International University</title></circle>
+    <circle cx="783.5" cy="309.5" r="4.2"><title>Universidad Carlos III de Madrid</title></circle>
+    <circle cx="486.0" cy="490.9" r="4.2"><title>Universidad de Chile</title></circle>
+    <circle cx="465.8" cy="399.9" r="4.2"><title>Universidad de Ibagué</title></circle>
+    <circle cx="457.7" cy="437.8" r="4.2"><title>Universidad de Ingeniería y Tecnología</title></circle>
+    <circle cx="774.8" cy="307.6" r="4.2"><title>Universidad de Salamanca</title></circle>
+    <circle cx="796.0" cy="305.5" r="4.2"><title>Universidad de Zaragoza</title></circle>
+    <circle cx="543.9" cy="469.6" r="4.2"><title>Universidad del Norte</title></circle>
+    <circle cx="459.9" cy="402.4" r="4.2"><title>Universidad Icesi</title></circle>
+    <circle cx="470.9" cy="399.3" r="4.2"><title>Universidad Militar Nueva Granada</title></circle>
+    <circle cx="458.0" cy="437.7" r="4.2"><title>Universidad Nacional Agraria La Molina</title></circle>
+    <circle cx="359.2" cy="365.1" r="4.2"><title>Universidad Nacional Autonoma de Mexico</title></circle>
+    <circle cx="464.4" cy="398.4" r="4.2"><title>Universidad Nacional de Colombia Sede Manizales</title></circle>
+    <circle cx="496.3" cy="559.9" r="4.2"><title>Universidad Nacional de Tierra del Fuego</title></circle>
+    <circle cx="448.9" cy="416.6" r="4.2"><title>Universidad Politécnica Salesiana, Cuenca</title></circle>
+    <circle cx="397.8" cy="376.4" r="4.2"><title>Universidad Rafael Landívar</title></circle>
+    <circle cx="782.8" cy="309.4" r="4.2"><title>Universidad Rey Juan Carlos</title></circle>
+    <circle cx="451.4" cy="410.4" r="4.2"><title>Universidad San Francisco de Quito</title></circle>
+    <circle cx="540.6" cy="494.1" r="4.2"><title>Universidad Tecnológica Nacional</title></circle>
+    <circle cx="463.6" cy="399.1" r="4.2"><title>Universidad Tecnologica de Pereira</title></circle>
+    <circle cx="587.1" cy="446.3" r="4.2"><title>Universidade Catolica de Brasilia</title></circle>
+    <circle cx="762.5" cy="309.8" r="4.2"><title>Universidade de Coimbra</title></circle>
+    <circle cx="590.8" cy="463.4" r="4.2"><title>Universidade Estadual de Campinas</title></circle>
+    <circle cx="581.1" cy="448.4" r="4.2"><title>Universidade Federal de Goiás</title></circle>
+    <circle cx="604.6" cy="456.2" r="4.2"><title>Universidade Federal de Minas Gerais</title></circle>
+    <circle cx="609.5" cy="458.4" r="4.2"><title>Universidade Federal de Ouro Preto</title></circle>
+    <circle cx="644.7" cy="428.4" r="4.2"><title>Universidade Federal de Pernambuco</title></circle>
+    <circle cx="1012.8" cy="358.6" r="4.2"><title>Universidade Federal de São Carlos</title></circle>
+    <circle cx="609.5" cy="458.4" r="4.2"><title>Universidade Federal de Viçosa</title></circle>
+    <circle cx="559.6" cy="485.2" r="4.2"><title>Universidade Federal do Pampa</title></circle>
+    <circle cx="568.2" cy="487.2" r="4.2"><title>Universidade Federal do Rio Grande</title></circle>
+    <circle cx="759.3" cy="314.1" r="4.2"><title>Universidade Lusófona</title></circle>
+    <circle cx="759.3" cy="314.2" r="4.2"><title>Universidade NOVA de Lisboa</title></circle>
+    <circle cx="592.7" cy="465.2" r="4.2"><title>Universidade Presbiteriana Mackenzie</title></circle>
+    <circle cx="581.0" cy="469.9" r="4.2"><title>Universidade Tecnológica Federal do Paraná</title></circle>
+    <circle cx="850.1" cy="298.9" r="4.2"><title>Università degli Studi di Firenze</title></circle>
+    <circle cx="840.7" cy="294.4" r="4.2"><title>Università degli Studi di Pavia</title></circle>
+    <circle cx="840.8" cy="293.5" r="4.2"><title>Universita Bocconi</title></circle>
+    <circle cx="875.0" cy="307.1" r="4.2"><title>Universita degli Studi di Bari Aldo Moro</title></circle>
+    <circle cx="845.4" cy="293.2" r="4.2"><title>Universita degli Studi di Brescia</title></circle>
+    <circle cx="867.1" cy="317.7" r="4.2"><title>Universita degli Studi di Catania</title></circle>
+    <circle cx="852.8" cy="293.6" r="4.2"><title>Universita degli Studi di Padova</title></circle>
+    <circle cx="856.1" cy="304.9" r="4.2"><title>Università degli Studi di Roma Tor Vergata</title></circle>
+    <circle cx="850.4" cy="296.6" r="4.2"><title>Università degli Studi di Bologna</title></circle>
+    <circle cx="1246.5" cy="412.1" r="4.2"><title>Universitas Andalas, Padang</title></circle>
+    <circle cx="1274.8" cy="424.5" r="4.2"><title>Universitas Indonesia</title></circle>
+    <circle cx="1290.6" cy="427.8" r="4.2"><title>Universitas Negeri Yogyakarta</title></circle>
+    <circle cx="1311.9" cy="430.1" r="4.2"><title>Universitas Udayana</title></circle>
+    <circle cx="809.6" cy="306.3" r="4.2"><title>Universitat de Barcelona</title></circle>
+    <circle cx="838.7" cy="280.2" r="4.2"><title>Universitat Heidelberg</title></circle>
+    <circle cx="809.4" cy="306.3" r="4.2"><title>Universitat Politecnica de Catalunya</title></circle>
+    <circle cx="840.3" cy="283.2" r="4.2"><title>Universitat Tubingen</title></circle>
+    <circle cx="904.8" cy="289.2" r="4.2"><title>Universitatea Babes Bolyai</title></circle>
+    <circle cx="894.4" cy="292.6" r="4.2"><title>Universitatea de Vest din Timisoara</title></circle>
+    <circle cx="832.3" cy="299.1" r="4.2"><title>Universite Cote dAzur</title></circle>
+    <circle cx="812.4" cy="280.2" r="4.2"><title>Universite de technologie de Compiegne</title></circle>
+    <circle cx="809.7" cy="282.6" r="4.2"><title>Universite Paris Saclay</title></circle>
+    <circle cx="819.9" cy="270.3" r="4.2"><title>Universiteit Leiden</title></circle>
+    <circle cx="821.7" cy="269.5" r="4.2"><title>Universiteit van Amsterdam</title></circle>
+    <circle cx="381.4" cy="321.8" r="4.2"><title>University of Arkansas</title></circle>
+    <circle cx="848.4" cy="283.9" r="4.2"><title>University of Augsburg</title></circle>
+    <circle cx="997.3" cy="329.6" r="4.2"><title>University of Baghdad</title></circle>
+    <circle cx="848.4" cy="278.5" r="4.2"><title>University of Bamberg</title></circle>
+    <circle cx="252.2" cy="280.7" r="4.2"><title>University of British Columbia</title></circle>
+    <circle cx="840.5" cy="312.8" r="4.2"><title>University of Cagliari</title></circle>
+    <circle cx="256.6" cy="316.7" r="4.2"><title>University of California, Berkeley</title></circle>
+    <circle cx="276.3" cy="328.5" r="4.2"><title>University of California, Irvine</title></circle>
+    <circle cx="273.6" cy="327.4" r="4.2"><title>University of California, Los Angeles</title></circle>
+    <circle cx="278.9" cy="330.6" r="4.2"><title>University of California, San Diego</title></circle>
+    <circle cx="267.3" cy="326.4" r="4.2"><title>University of California, Santa Barbara</title></circle>
+    <circle cx="257.5" cy="319.2" r="4.2"><title>University of California, Santa Cruz</title></circle>
+    <circle cx="800.5" cy="270.1" r="4.2"><title>University of Cambridge</title></circle>
+    <circle cx="1462.6" cy="495.9" r="4.2"><title>University of Canberra</title></circle>
+    <circle cx="867.1" cy="317.7" r="4.2"><title>University of Catania</title></circle>
+    <circle cx="439.1" cy="342.0" r="4.2"><title>University of Central Florida</title></circle>
+    <circle cx="1316.6" cy="310.7" r="4.2"><title>University of Chinese Academy of Sciences</title></circle>
+    <circle cx="424.4" cy="313.0" r="4.2"><title>University of Cincinnati</title></circle>
+    <circle cx="333.3" cy="311.2" r="4.2"><title>University of Colorado Denver</title></circle>
+    <circle cx="478.9" cy="305.0" r="4.2"><title>University of Connecticut</title></circle>
+    <circle cx="855.9" cy="256.6" r="4.2"><title>University of Copenhagen</title></circle>
+    <circle cx="850.0" cy="298.9" r="4.2"><title>University of Florence</title></circle>
+    <circle cx="434.0" cy="339.2" r="4.2"><title>University of Florida</title></circle>
+    <circle cx="799.2" cy="397.1" r="4.2"><title>University of Ghana</title></circle>
+    <circle cx="829.2" cy="266.3" r="4.2"><title>University of Groningen</title></circle>
+    <circle cx="844.4" cy="265.0" r="4.2"><title>University of Hamburg</title></circle>
+    <circle cx="798.4" cy="264.2" r="4.2"><title>University of Hull</title></circle>
+    <circle cx="702.4" cy="218.0" r="4.2"><title>University of Iceland</title></circle>
+    <circle cx="280.0" cy="289.3" r="4.2"><title>University of Idaho</title></circle>
+    <circle cx="410.4" cy="304.8" r="4.2"><title>University of Illinois at Chicago</title></circle>
+    <circle cx="407.9" cy="310.1" r="4.2"><title>University of Illinois at Urbana Champaign</title></circle>
+    <circle cx="407.9" cy="310.1" r="4.2"><title>University of Illinois Urbana Champaign</title></circle>
+    <circle cx="1317.4" cy="310.5" r="4.2"><title>University of International Business and Economics</title></circle>
+    <circle cx="940.4" cy="399.0" r="4.2"><title>University of Juba</title></circle>
+    <circle cx="914.4" cy="227.6" r="4.2"><title>University of Jyväskylä</title></circle>
+    <circle cx="424.4" cy="316.2" r="4.2"><title>University of Kentucky</title></circle>
+    <circle cx="863.4" cy="289.7" r="4.2"><title>University of Klagenfurt</title></circle>
+    <circle cx="824.8" cy="275.8" r="4.2"><title>University of Liege</title></circle>
+    <circle cx="418.8" cy="315.7" r="4.2"><title>University of Louisville</title></circle>
+    <circle cx="458.0" cy="313.4" r="4.2"><title>University of Maryland</title></circle>
+    <circle cx="459.1" cy="312.6" r="4.2"><title>University of Maryland Baltimore County</title></circle>
+    <circle cx="1444.3" cy="503.1" r="4.2"><title>University of Melbourne</title></circle>
+    <circle cx="427.8" cy="303.5" r="4.2"><title>University of Michigan</title></circle>
+    <circle cx="840.9" cy="293.3" r="4.2"><title>Università degli Studi di Milano-Bicocca</title></circle>
+    <circle cx="385.6" cy="295.1" r="4.2"><title>University of Minnesota, Twin Cities</title></circle>
+    <circle cx="1155.1" cy="394.5" r="4.2"><title>University of Moratuwa</title></circle>
+    <circle cx="991.7" cy="320.9" r="4.2"><title>University of Mosul</title></circle>
+    <circle cx="370.2" cy="308.0" r="4.2"><title>University of Nebraska-Lincoln</title></circle>
+    <circle cx="267.5" cy="311.8" r="4.2"><title>University of Nevada, Reno</title></circle>
+    <circle cx="484.7" cy="300.9" r="4.2"><title>University of New Hampshire</title></circle>
+    <circle cx="1472.1" cy="492.2" r="4.2"><title>University of New South Wales</title></circle>
+    <circle cx="1474.2" cy="489.4" r="4.2"><title>University of Newcastle</title></circle>
+    <circle cx="448.7" cy="322.3" r="4.2"><title>University of North Carolina at Chapel Hill</title></circle>
+    <circle cx="368.2" cy="329.7" r="4.2"><title>University of North Texas</title></circle>
+    <circle cx="1335.0" cy="369.4" r="4.2"><title>University of Northern Philippines</title></circle>
+    <circle cx="794.7" cy="267.3" r="4.2"><title>University of Nottingham</title></circle>
+    <circle cx="366.9" cy="324.2" r="4.2"><title>University of Oklahoma</title></circle>
+    <circle cx="847.7" cy="238.4" r="4.2"><title>University of Oslo</title></circle>
+    <circle cx="465.8" cy="310.6" r="4.2"><title>University of Pennsylvania</title></circle>
+    <circle cx="444.7" cy="309.1" r="4.2"><title>University of Pittsburgh</title></circle>
+    <circle cx="482.1" cy="306.0" r="4.2"><title>University of Rhode Island</title></circle>
+    <circle cx="455.0" cy="300.9" r="4.2"><title>University of Rochester</title></circle>
+    <circle cx="592.3" cy="465.2" r="4.2"><title>University of Sao Paulo</title></circle>
+    <circle cx="1321.2" cy="333.4" r="4.2"><title>University of Science and Technology of China</title></circle>
+    <circle cx="1416.0" cy="495.0" r="4.2"><title>University of South Australia</title></circle>
+    <circle cx="274.3" cy="327.5" r="4.2"><title>University of Southern California</title></circle>
+    <circle cx="487.7" cy="299.2" r="4.2"><title>University of Southern Maine</title></circle>
+    <circle cx="787.6" cy="253.9" r="4.2"><title>University of St Andrews</title></circle>
+    <circle cx="1472.0" cy="492.1" r="4.2"><title>University of Sydney</title></circle>
+    <circle cx="889.5" cy="290.9" r="4.2"><title>University of Szeged</title></circle>
+    <circle cx="1472.0" cy="492.1" r="4.2"><title>University of Technology Sydney</title></circle>
+    <circle cx="1028.5" cy="322.8" r="4.2"><title>University of Tehran</title></circle>
+    <circle cx="365.6" cy="337.6" r="4.2"><title>University of Texas at Austin</title></circle>
+    <circle cx="370.0" cy="330.3" r="4.2"><title>University of Texas at Dallas</title></circle>
+    <circle cx="447.1" cy="299.2" r="4.2"><title>University of Toronto</title></circle>
+    <circle cx="451.1" cy="316.2" r="4.2"><title>University of Virginia</title></circle>
+    <circle cx="893.4" cy="270.0" r="4.2"><title>University of Warsaw</title></circle>
+    <circle cx="256.4" cy="286.2" r="4.2"><title>University of Washington</title></circle>
+    <circle cx="442.0" cy="299.8" r="4.2"><title>University of Waterloo</title></circle>
+    <circle cx="402.6" cy="301.1" r="4.2"><title>University of Wisconsin</title></circle>
+    <circle cx="402.6" cy="301.1" r="4.2"><title>University of Wisconsin Madison</title></circle>
+    <circle cx="876.1" cy="284.6" r="4.2"><title>Univerzita Komenskeho v Bratislave</title></circle>
+    <circle cx="992.4" cy="314.7" r="4.2"><title>Van Yuzuncu Yil University</title></circle>
+    <circle cx="1148.8" cy="369.8" r="4.2"><title>Vardhaman College of Engineering</title></circle>
+    <circle cx="1136.9" cy="350.8" r="4.2"><title>Vardhman Mahaveer Open University</title></circle>
+    <circle cx="1273.8" cy="384.5" r="4.2"><title>Vietnamese German University</title></circle>
+    <circle cx="442.6" cy="318.5" r="4.2"><title>Virginia Tech</title></circle>
+    <circle cx="1151.8" cy="380.2" r="4.2"><title>VIT (Vellore Institute of Technology), Vellore</title></circle>
+    <circle cx="1274.1" cy="385.3" r="4.2"><title>VNU-HCM University of Science</title></circle>
+    <circle cx="825.2" cy="270.9" r="4.2"><title>Wageningen University</title></circle>
+    <circle cx="444.6" cy="311.5" r="4.2"><title>West Virginia University</title></circle>
+    <circle cx="438.8" cy="301.3" r="4.2"><title>Western University</title></circle>
+    <circle cx="1181.4" cy="362.8" r="4.2"><title>Xavier University Bhubaneswar</title></circle>
+    <circle cx="1336.6" cy="334.9" r="4.2"><title>Xi'an Jiaotong Liverpool University</title></circle>
+    <circle cx="1324.8" cy="352.6" r="4.2"><title>Xiamen University</title></circle>
+    <circle cx="475.9" cy="306.5" r="4.2"><title>Yale University</title></circle>
+    <circle cx="471.4" cy="307.9" r="4.2"><title>Yeshiva University</title></circle>
+    <circle cx="928.9" cy="307.3" r="4.2"><title>Yildiz Technical University</title></circle>
+    <circle cx="1364.2" cy="317.6" r="4.2"><title>Yonsei University</title></circle>
+    <circle cx="1256.5" cy="351.0" r="4.2"><title>Yunnan University</title></circle>
+    <circle cx="1333.9" cy="337.6" r="4.2"><title>Zhejiang University</title></circle>
+    <circle cx="1306.2" cy="325.3" r="4.2"><title>Zhengzhou Tourism College</title></circle>
+  </g>
+  <text x="48" y="70" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#203040">Universities teaching Dive into Deep Learning</text>
+  <text x="48" y="106" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#526173">423 located universities from tools/universities.json</text>
+</svg>

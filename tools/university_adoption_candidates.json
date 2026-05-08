@@ -1,0 +1,1037 @@
+[
+  {
+    "name": "University of Kentucky",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://www.ms.uky.edu/~qye/MA421/ma421.html",
+        "course": "MA 421G Mathematical Introduction to Deep Learning",
+        "instructor": "Qiang Ye",
+        "snippet": "Course page lists Dive into Deep Learning as a good source of references.",
+        "year": "Spring 2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Rhode Island",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://homepage.cs.uri.edu/~malvarez/teaching/csc-561/",
+        "course": "CSC 561 Neural Networks and Deep Learning",
+        "instructor": "Marco Alvarez",
+        "snippet": "Recommended textbooks include Dive into Deep Learning.",
+        "year": "Spring 2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Virginia",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://linklab-uva.github.io/robotlearning/materials/",
+        "course": "Learning in Robotics",
+        "instructor": "",
+        "snippet": "Materials include Dive into Deep Learning by Zhang, Lipton, Li, and Smola.",
+        "year": "Spring 2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Southern Utah University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://my.suu.edu/syllabus/202620/ANLY-6500-B70/",
+        "course": "ANLY 6500 Advanced Data Analytics",
+        "instructor": "",
+        "snippet": "Required texts list Dive into Deep Learning with d2l.ai link.",
+        "year": "Summer 2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Boston College",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://miayuanai.github.io/csci3370/f24/",
+        "course": "CSCI 3370 Deep Learning",
+        "instructor": "Yuan Yuan",
+        "snippet": "Textbooks and materials include Dive into Deep Learning.",
+        "year": "Fall 2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Central Florida",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://shahana-ibrahim.github.io/EEL6812/",
+        "course": "EEL6812 Introduction to Neural Networks and Deep Learning",
+        "instructor": "Shahana Ibrahim",
+        "snippet": "Reference textbooks list Dive into Deep Learning and schedule links D2L sections.",
+        "year": "Spring 2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "DePaul University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://gaotx-cs.github.io/teaching/csc578/",
+        "course": "CSC578 Neural Networks and Deep Learning",
+        "instructor": "Tianxiang Gao",
+        "snippet": "Recommended readings include Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Kennesaw State University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://drcs.codes/deep-learning/ksu/cs4277/syllabus.html",
+        "course": "CS 4277 Deep Learning",
+        "instructor": "Christopher Simpkins",
+        "snippet": "Recommended texts include Dive into Deep Learning with d2l.ai link.",
+        "year": "Spring 2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "North Carolina State University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://dongkuanx27.github.io/page-teaching.html",
+        "course": "CSC 791/591 Efficient Deep Learning",
+        "instructor": "Dongkuan Xu",
+        "snippet": "Faculty teaching page lists course materials: Dive into Deep Learning.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Colorado State University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://courses.cs.colostate.edu/cs545/syllabus/",
+        "course": "CS 545",
+        "instructor": "Asa Ben-Hur",
+        "snippet": "Course materials are based on Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Stony Brook University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://www.stonybrook.edu/commcms/ams/academics/undergraduate/_courses/ams380",
+        "course": "AMS 380 Data Mining",
+        "instructor": "",
+        "snippet": "Recommended textbooks include Dive into Deep Learning.",
+        "year": "Fall 2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Kansas State University",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://wiki.kdd.cs.ksu.edu/page/courses-vision",
+        "course": "Computer Vision",
+        "instructor": "",
+        "snippet": "Required textbook is Dive into Deep Learning, online at d2l.ai.",
+        "year": "2019-present",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Texas at Dallas",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://dox.utdallas.edu/syl154373",
+        "course": "CS 6375",
+        "instructor": "Wei Yang",
+        "snippet": "Required materials say the course will use Dive into Deep Learning as main textbook.",
+        "year": "Spring 2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Nevada, Reno",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://www.cse.unr.edu/~bebis/CS791/Fall2025/Handouts/syllabus.pdf",
+        "course": "CS 791 Topics: Mass Detection in Mammograms",
+        "instructor": "George Bebis",
+        "snippet": "Optional texts include Dive into Deep Learning.",
+        "year": "Fall 2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Oklahoma",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://www.ou.edu/content/dam/coe/cs/course-syllabi/spring-2026/CS_5043_Lan_Sp26.pdf",
+        "course": "CS5043 Advanced Machine Learning",
+        "instructor": "Chao Lan",
+        "snippet": "Lecture materials include Dive into Deep Learning at d2l.ai.",
+        "year": "Spring 2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Nebraska-Lincoln",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://dxg-engineering.unl.edu/hasan/deep-learning/",
+        "course": "CSCE 496/896 Deep Learning",
+        "instructor": "Iftekharul Hasan",
+        "snippet": "Text resources include Dive into Deep Learning.",
+        "year": "Spring 2021",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Ontario Tech University",
+    "country": "Canada",
+    "evidence": [
+      {
+        "url": "https://csci4052u.science.ontariotechu.ca/",
+        "course": "CSCI 4052U Machine Learning II",
+        "instructor": "Ken Pu",
+        "snippet": "Required reading and reference material includes Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Bamberg",
+    "country": "Germany",
+    "evidence": [
+      {
+        "url": "https://univis.uni-bamberg.de/form?autoexports=session&dir=wiai%2Fbereic%2Flehrst_5&dsc=anew%2Flecture_view&lvs=wiai%2Fbereic%2Flehrst_5%2F2&print=1&sem=2024w",
+        "course": "xAI-DL-M Deep Learning",
+        "instructor": "Christian Ledig",
+        "snippet": "Recommended literature lists Dive into Deep Learning with d2l.ai link.",
+        "year": "2024/2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Harokopio University",
+    "country": "Greece",
+    "evidence": [
+      {
+        "url": "https://msc2024.dit.hua.gr/en/course/vathia-mathhsh/",
+        "course": "Deep Learning",
+        "instructor": "",
+        "snippet": "Literature lists Dive into Deep Learning with d2l.ai link.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Florence",
+    "country": "Italy",
+    "evidence": [
+      {
+        "url": "https://ai.dinfo.unifi.it/teaching/dl_2024.html",
+        "course": "B031278 Deep Learning",
+        "instructor": "Paolo Frasconi",
+        "snippet": "Suggested readings include Dive into Deep Learning.",
+        "year": "Fall 2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Skolkovo Institute of Science and Technology",
+    "country": "Russia",
+    "evidence": [
+      {
+        "url": "https://dl.skoltech.ru/",
+        "course": "Deep Learning",
+        "instructor": "Ivan Oseledets",
+        "snippet": "Course materials include Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Ain Shams University",
+    "country": "Egypt",
+    "evidence": [
+      {
+        "url": "https://eng.asu.edu.eg/courses/11343/details/347",
+        "course": "CSE374s Fundamentals of Deep Learning",
+        "instructor": "",
+        "snippet": "Official course page references Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of South Australia",
+    "country": "Australia",
+    "evidence": [
+      {
+        "url": "https://lo.unisa.edu.au/mod/glossary/view.php?fullsearch=0&hook=L&id=3089147&mode=author&page=-1&sortkey=LASTNAME&sortorder=desc",
+        "course": "COMP 5075",
+        "instructor": "Yee Wei Law",
+        "snippet": "Learnonline page references Dive into Deep Learning, Cambridge University Press, available at d2l.ai.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Technology Gandhinagar",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://sites.google.com/iitgn.ac.in/deep-learning-2023/home",
+        "course": "ES 413 Deep Learning",
+        "instructor": "Mayank Singh",
+        "snippet": "Course references cite Dive into Deep Learning with d2l.ai link.",
+        "year": "2022-2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Science Bangalore",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://onlinecourses.nptel.ac.in/noc26_cs01/preview",
+        "course": "Foundations of Deep Learning: Concepts and Applications",
+        "instructor": "Sriram Ganapathy; Ashwini Kodipalli; Baishali Garai",
+        "snippet": "Books and references include Dive into Deep Learning, Cambridge University Press.",
+        "year": "2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Information Technology University Lahore",
+    "country": "Pakistan",
+    "evidence": [
+      {
+        "url": "https://im.itu.edu.pk/deeplearning2021/",
+        "course": "Deep Learning",
+        "instructor": "Mohsen Ali",
+        "snippet": "Recommended resources/textbook include Dive into Deep Learning with d2l.ai link.",
+        "year": "2021",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "VNU-HCM University of Science",
+    "country": "Vietnam",
+    "evidence": [
+      {
+        "url": "https://guide.glib.hcmus.edu.vn/trangchinh/FIT/%E1%BB%A9ng-d%E1%BB%A5ng-th%E1%BB%8B-gi%C3%A1c-m%C3%A1y-t%C3%ADnh",
+        "course": "Ứng dụng thị giác máy tính",
+        "instructor": "",
+        "snippet": "Official course guide lists Dive into Deep Learning by Zhang, Lipton, Li, and Smola.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Technology Guwahati",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html",
+        "course": "DA322M Elements of Deep Learning",
+        "instructor": "",
+        "snippet": "Syllabus references Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Technology Patna",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2023_CS365",
+        "course": "CS365 Deep Learning",
+        "instructor": "",
+        "snippet": "Course books include Dive into Deep Learning, available online.",
+        "year": "2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Goa University",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.unigoa.ac.in/uploads/syllabus/me-computer-science-and-engineering-artificial-intelligence-and-machine-learning_syllabus_35820251022.060733.pdf",
+        "course": "CAM-600 Deep Learning",
+        "instructor": "",
+        "snippet": "Syllabus uses Dive into Deep Learning as a textbook.",
+        "year": "2024-25",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Information Technology Lucknow",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://iiitl.ac.in/wp-content/uploads/2023/06/M.-Sc-Data_Science-course-structure-and-syllabus.pdf",
+        "course": "DLE631C Deep Learning",
+        "instructor": "Chandranath Adak",
+        "snippet": "Deep Learning course references Dive into Deep Learning and d2l.ai.",
+        "year": "2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "National Institute of Technology Kurukshetra",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://nitkkr.ac.in/wp-content/uploads/2024/07/Scheme-and-Syllabus-of-B.Tech-Information-Technology.pdf",
+        "course": "ITOE 405 Deep Learning",
+        "instructor": "",
+        "snippet": "Syllabus includes Dive into Deep Learning.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "National Institute of Technology Delhi",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://nitdelhi.ac.in/wp-content/uploads/2025/07/M_TECH_ECE_2024_2025_ONWARDS.pdf",
+        "course": "ECEM 534 Deep Learning and AI for Signal Processing",
+        "instructor": "",
+        "snippet": "Syllabus lists Dive into Deep Learning as a textbook.",
+        "year": "2024-25",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Lahore University of Management Sciences",
+    "country": "Pakistan",
+    "evidence": [
+      {
+        "url": "https://web.lums.edu.pk/~hmd/assets/teaching/EE414_Tutorials.pdf",
+        "course": "EE 414/517, CS 437/5317 Deep Learning",
+        "instructor": "Hassan Mohy-ud-Din",
+        "snippet": "Tutorial references Dive into Deep Learning.",
+        "year": "2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "United International University",
+    "country": "Bangladesh",
+    "evidence": [
+      {
+        "url": "https://datascience.uiu.ac.bd/wp-content/uploads/sites/11/2025/08/Data_Science_Curriculum-233.pdf",
+        "course": "DS 4211 Deep Learning",
+        "instructor": "",
+        "snippet": "Curriculum names Dive into Deep Learning as textbook.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Chinese Academy of Sciences",
+    "country": "Mainland China",
+    "evidence": [
+      {
+        "url": "https://jwba.ucas.ac.cn/sc/course/courseplan/305340",
+        "course": "深度学习理论与实践 / Deep Learning Theory and Practice",
+        "instructor": "姜海勇",
+        "snippet": "Official syllabus reference book line includes Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "ShanghaiTech University",
+    "country": "Mainland China",
+    "evidence": [
+      {
+        "url": "https://eams.shanghaitech.edu.cn/eams/courseSearchOther%21syllabusInfoView.action?syllabus.id=703",
+        "course": "CS280 Deep Learning",
+        "instructor": "许岚",
+        "snippet": "Official syllabus lists 动手学深度学习 by Zhang, Li, Lipton, and Smola.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Nagoya University",
+    "country": "Japan",
+    "evidence": [
+      {
+        "url": "https://syllabus.adm.nagoya-u.ac.jp/data/2024/06_2024_X320000619811.html",
+        "course": "Special Course on Applied Mathematics II",
+        "instructor": "宇澤達",
+        "snippet": "Official syllabus lists Dive into Deep Learning as a reference.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Rikkyo University",
+    "country": "Japan",
+    "evidence": [
+      {
+        "url": "https://ry.rikkyo.ac.jp/syllabus/pdf/2025/ken_ai.pdf",
+        "course": "AI-related deep learning seminar",
+        "instructor": "",
+        "snippet": "Course has students read selected chapters from Dive into Deep Learning.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Ewha Womans University",
+    "country": "South Korea",
+    "evidence": [
+      {
+        "url": "https://cmsfox.ewha.ac.kr/aix/board/notice.do?articleNo=757832&attachNo=486516&mode=download",
+        "course": "G18425 Deep Learning",
+        "instructor": "Taehoon Shin",
+        "snippet": "Syllabus optional textbooks include Dive into Deep Learning.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Kyung Hee University",
+    "country": "South Korea",
+    "evidence": [
+      {
+        "url": "https://com.khu.ac.kr/resources/user/download/ice/%EC%BB%B4%ED%93%A8%ED%84%B0%EA%B3%B5%ED%95%99/%EC%9D%B8%EA%B3%B5%EC%A7%80%EB%8A%A5.pdf",
+        "course": "Artificial Intelligence",
+        "instructor": "",
+        "snippet": "Course plan references Dive into Deep Learning as supplementary textbook.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Oita University",
+    "country": "Japan",
+    "evidence": [
+      {
+        "url": "https://www.st.oita-u.ac.jp/students/undergraduate/doc/syl_csisp.pdf",
+        "course": "Special Topics in Computer Science 1",
+        "instructor": "青谷知幸",
+        "snippet": "Syllabus PDF lists Dive into Deep Learning as textbook/reference.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Technology Delhi",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.csccm.in/courses/deep-learning-for-mechanics-23-24",
+        "course": "Deep Learning for Mechanics",
+        "instructor": "Souvik Chakraborty; Rajdip Nayek",
+        "snippet": "Course page lists Dive into Deep Learning as a recommended resource.",
+        "year": "2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Technology Madras",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.cse.iitm.ac.in/~miteshk/CS6910.html",
+        "course": "CS6910 / CS7015 Deep Learning",
+        "instructor": "Mitesh M. Khapra",
+        "snippet": "Course page lists Dive into Deep Learning under reference textbooks.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "National Institute of Technology Rourkela",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.nitrkl.ac.in/CS/Syllabus/33?sid=9067",
+        "course": "Deep Learning syllabus",
+        "instructor": "",
+        "snippet": "Official syllabus lists Dive into Deep Learning as a reference.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Mosul",
+    "country": "Iraq",
+    "evidence": [
+      {
+        "url": "https://uomosul.edu.iq/engineering/wp-content/uploads/sites/9/2023/10/Artificial-Intelligence.pdf",
+        "course": "Artificial Intelligence, M.Sc. course",
+        "instructor": "",
+        "snippet": "Course PDF lists Dive into Deep Learning Release 0.7.1 as textbook.",
+        "year": "2023",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Sanya University",
+    "country": "Mainland China",
+    "evidence": [
+      {
+        "url": "https://iie.sanyau.edu.cn/2025/0714/c1929a401860/page.psp",
+        "course": "智能信息处理实践",
+        "instructor": "甘林",
+        "snippet": "Official textbook-use directory lists course with book 动手学深度学习 by Aston Zhang as main textbook.",
+        "year": "2025-2026 Fall",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Heilongjiang University of Science and Technology",
+    "country": "Mainland China",
+    "evidence": [
+      {
+        "url": "https://scie.usth.edu.cn/__local/9/4F/2C/2EE8FAECB48CD117456EF3891C7_BEADB2B9_180BE9.pdf",
+        "course": "深度学习",
+        "instructor": "",
+        "snippet": "Official syllabus PDF lists reference book 李沐《动手学深度学习》.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Zhengzhou Tourism College",
+    "country": "Mainland China",
+    "evidence": [
+      {
+        "url": "https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf",
+        "course": "PyTorch",
+        "instructor": "",
+        "snippet": "Official course-standard PDF lists textbook 动手学深度学习（PyTorch版） by Aston Zhang and Mu Li.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "NRI Institute of Technology",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://nriit.edu.in/wp-content/uploads/2021/11/I-YEAR-B.TECH-CSD-NRIA20-SYLLABUS.pdf",
+        "course": "B.Tech CSE Data Science syllabus, Deep Learning",
+        "instructor": "",
+        "snippet": "Textbooks include Dive into Deep Learning by Zhang, Lipton, Li, and Smola.",
+        "year": "2021",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Indian Institute of Information Technology Una",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://cdn.iiitu.ac.in/uploads/course/CYSyllabus2024_28.pdf",
+        "course": "B.Tech Computer Science and Engineering, Deep Learning",
+        "instructor": "",
+        "snippet": "Text books list includes Dive into Deep Learning, Cambridge University Press, 2023.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Dayananda Sagar University",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.dsu.edu.in/images/Engineering/AIML-dept/PDF/Syllabus_2021-25.pdf",
+        "course": "B.Tech CSE Artificial Intelligence & Machine Learning, Deep Learning",
+        "instructor": "",
+        "snippet": "Text books include Dive Into Deep Learning.",
+        "year": "2021",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Mar Baselios College of Engineering and Technology",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://mbcet.ac.in/wp-content/uploads/2025/06/Curriculum-2022_CSEAI_B-Tech4year-06062025.pdf",
+        "course": "B.Tech CSE Artificial Intelligence, Deep Learning",
+        "instructor": "",
+        "snippet": "Text books include Dive into Deep Learning.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Noida Institute of Engineering and Technology",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.niet.co.in/pdf/syllabus-fourth-year-2023-24/B.Tech-in-Computer-Science-and-Engineering-Artificial-Intelligence-AI-Fourth-Year-2023-24.pdf",
+        "course": "B.Tech CSE Artificial Intelligence, Deep Learning",
+        "instructor": "",
+        "snippet": "Reference books include Dive into Deep Learning, Release 0.17.4.",
+        "year": "2023-24",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Prasad V. Potluri Siddhartha Institute of Technology",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.pvpsiddhartha.ac.in/autonomous20/32/csd/20DS3603.pdf",
+        "course": "20DS3603 Deep Learning",
+        "instructor": "",
+        "snippet": "Text books include Dive into Deep Learning, Cambridge University Press.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Andhra University",
+    "country": "India",
+    "evidence": [
+      {
+        "url": "https://www.andhrauniversity.edu.in/syllabus/ug/37%20DATA%20SCIENCE%20%28B.Sc.%29%20MAJOR.pdf",
+        "course": "B.Sc. Honours Data Science Major, Deep Learning",
+        "instructor": "",
+        "snippet": "Text books include Dive into Deep Learning.",
+        "year": "2023-24",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Istanbul Atlas University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://ois.atlas.edu.tr/bilgipaketi/index/ders/ders_id/31175/program_kodu/0501002/h/465/s/8/st/DE/ln/en/print/1/",
+        "course": "NLP and Deep Learning",
+        "instructor": "",
+        "snippet": "Course notes/textbooks list Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Cankaya University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://ceng481.cankaya.edu.tr/",
+        "course": "CENG 481 Artificial Neural Networks",
+        "instructor": "A. Nurdan Saran",
+        "snippet": "Course page lists Dive into Deep Learning as textbook.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Beykoz University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://ects.beykoz.edu.tr/bilgipaketi/eobsakts/ders/ders_id/10719/program_kodu/3007004/h/1378/s//st/E6/submenuheader/0/ln/en/print/1",
+        "course": "Deep Learning",
+        "instructor": "",
+        "snippet": "References include Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Marmara University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://cse-eng.marmara.edu.tr/dosya/eng/cse/documents/syllabus_tr/te/v0/CSE4079.pdf",
+        "course": "CSE4079 Deep Learning",
+        "instructor": "",
+        "snippet": "Official faculty PDF lists Dive into Deep Learning among course resources.",
+        "year": "2025",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Istinye University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://ois.istinye.edu.tr/bilgipaketi/eobsakts/ders/ders_id/13149/program_kodu/0403001/h/1303/s/8/st/D/ln/en",
+        "course": "Deep Learning in Medical Image Processing",
+        "instructor": "",
+        "snippet": "Course notes/textbooks and references list Dive Into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "MEF University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://sis.mef.edu.tr/bilgipaketi/index/ders/ders_id/11772/program_kodu/0201001/h/908/s/1/st/N/ln/en/print/1/",
+        "course": "Deep Learning",
+        "instructor": "",
+        "snippet": "Required reading is Dive into Deep Learning by Zhang, Lipton, Li, and Smola.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Fenerbahce University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://ois.fbu.edu.tr/bilgipaketi/index/ders/ders_id/27887/program_kodu/0702001/h/600/s/8/st/D/ln/tr",
+        "course": "Deep Learning",
+        "instructor": "",
+        "snippet": "Weekly preparation repeatedly lists Dive into Deep Learning with d2l.ai link.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Bursa Uludag University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://bilgipaketi.uludag.edu.tr/Ders/IndexENG/1241785",
+        "course": "Artificial Intelligence",
+        "instructor": "",
+        "snippet": "Textbooks/references include Dive into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Van Yuzuncu Yil University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://obs.yyu.edu.tr/ogrenci/ogr0513/default.aspx?DersID=AcE1h3VcdqGBe9VvO85F3g%3D%3D&MufredatID=1wFcxggE3j%2F5m6CZLfYfLQ%3D%3D&RaporAdi=T4ox+MwXMZRJbJMT%2FVo8f9JdIYSvlJZF1r6lbnFpVzc%3D&Yil=K7ixeY%2FHQs+z6wCIawyq5A%3D%3D",
+        "course": "FBYZR7051 Deep Learning I",
+        "instructor": "Fatih Kutlu",
+        "snippet": "Course bibliography lists Dive into Deep Learning.",
+        "year": "2025-2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Yildiz Technical University",
+    "country": "Turkey",
+    "evidence": [
+      {
+        "url": "https://bologna.yildiz.edu.tr/index.php?aid=33&id=10166&r=course%2Fview",
+        "course": "Artificial Intelligence",
+        "instructor": "",
+        "snippet": "Recommended resources include Dive Into Deep Learning.",
+        "year": "",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Australian Catholic University",
+    "country": "Australia",
+    "evidence": [
+      {
+        "url": "https://www.acu.edu.au/handbook/handbook-2026/unit/aint600",
+        "course": "AINT600 Applied Deep Learning and Neural Networks",
+        "instructor": "",
+        "snippet": "Representative texts include Dive into Deep Learning.",
+        "year": "2026",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "Middlebury College",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://middlebury-csci-0451.github.io/CSCI-0451-s24/",
+        "course": "CSCI 0451 Machine Learning",
+        "instructor": "Phil Chodrow",
+        "snippet": "Readings/references identify Dive into Deep Learning as a deep learning reference.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  },
+  {
+    "name": "University of Louisville",
+    "country": "United States",
+    "evidence": [
+      {
+        "url": "https://louisville.edu/facultysenate/committees/standing-committees/academic-programs-committee/proposals/2024/november/grad-cert-in-analytics-for-decision-making/curriculum-new-course-syllabi",
+        "course": "IE 662 Predictive Analytics for Decision Making",
+        "instructor": "Luis Segura",
+        "snippet": "Official syllabus lists Dive into Deep Learning as textbook, online at d2l.ai.",
+        "year": "2024",
+        "source_file": "d2l_adoption_research_2026-05-08"
+      }
+    ],
+    "status": "verified_needs_logo"
+  }
+]

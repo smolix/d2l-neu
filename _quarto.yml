@@ -24,7 +24,15 @@ book:
       - text: Discuss
         href: https://discuss.d2l.ai
       - text: PDF
-        href: https://d2l.ai/d2l-en.pdf
+        menu:
+          - text: PyTorch
+            href: /pdf/Dive-into-Deep-Learning-pytorch.pdf
+          - text: JAX
+            href: /pdf/Dive-into-Deep-Learning-jax.pdf
+          - text: TensorFlow
+            href: /pdf/Dive-into-Deep-Learning-tensorflow.pdf
+          - text: MXNet
+            href: /pdf/Dive-into-Deep-Learning-mxnet.pdf
   sidebar:
     logo: static/logo-with-text.png
   chapters:
@@ -273,6 +281,7 @@ format:
     include-after-body:
       - _d2l-slides-data.html
       - _d2l-tabs.html
+      - _d2l-layout.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

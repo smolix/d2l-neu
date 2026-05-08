@@ -1,0 +1,47 @@
+<script>
+(function () {
+  const root = document.documentElement;
+  const desktopQuery = window.matchMedia("(min-width: 992px)");
+
+  function clearSidebarMetrics() {
+    root.style.removeProperty("--d2l-sidebar-left");
+    root.style.removeProperty("--d2l-sidebar-right");
+    root.style.removeProperty("--d2l-sidebar-width");
+  }
+
+  function syncSidebarMetrics() {
+    const sidebar = document.getElementById("quarto-sidebar");
+    if (!sidebar || !desktopQuery.matches) {
+      clearSidebarMetrics();
+      return;
+    }
+
+    const rect = sidebar.getBoundingClientRect();
+    if (rect.width <= 0) {
+      clearSidebarMetrics();
+      return;
+    }
+
+    const left = Math.max(0, rect.left);
+    const right = Math.max(left, rect.right);
+    root.style.setProperty("--d2l-sidebar-left", `${left}px`);
+    root.style.setProperty("--d2l-sidebar-right", `${right}px`);
+    root.style.setProperty("--d2l-sidebar-width", `${right - left}px`);
+  }
+
+  window.addEventListener("load", syncSidebarMetrics);
+  window.addEventListener("resize", syncSidebarMetrics);
+  desktopQuery.addEventListener("change", syncSidebarMetrics);
+
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(syncSidebarMetrics);
+    window.addEventListener("load", function () {
+      const sidebar = document.getElementById("quarto-sidebar");
+      if (sidebar) observer.observe(sidebar);
+      observer.observe(document.body);
+    });
+  }
+
+  syncSidebarMetrics();
+})();
+</script>

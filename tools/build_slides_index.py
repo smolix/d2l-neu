@@ -140,7 +140,7 @@ body {
   padding: 0.5rem 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
   font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
-  font-size: 1rem;
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -165,14 +165,14 @@ body {
   color: white;
   text-decoration: none;
   font-weight: 500;
-  font-size: 1rem;
+  font-size: 1.1rem;
   letter-spacing: -0.005em;
 }
 .d2l-navbar-brand:hover { color: white; opacity: 0.92; }
 .d2l-navbar-brand .navbar-subtitle {
   font-weight: 300;
   opacity: 0.85;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .d2l-navbar-nav {
@@ -189,21 +189,67 @@ body {
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 3px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   opacity: 0.92;
 }
 .d2l-navbar-nav a:hover {
-  background: rgba(255,255,255,0.15);
+  color: white;
+  background: transparent;
   opacity: 1;
 }
 
 .d2l-navbar-nav a.active {
-  background: rgba(255,255,255,0.18);
+  background: transparent;
   font-weight: 500;
   opacity: 1;
+}
+.d2l-nav-menu {
+  position: relative;
+}
+.d2l-nav-menu > span {
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 3px;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  opacity: 0.92;
+}
+.d2l-nav-menu:hover > span {
+  color: white;
+  background: transparent;
+  opacity: 1;
+}
+.d2l-nav-menu .d2l-nav-submenu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 12rem;
+  background: white;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.35);
+  padding: 0.35rem;
+  z-index: 20;
+}
+.d2l-nav-menu:hover .d2l-nav-submenu,
+.d2l-nav-menu:focus-within .d2l-nav-submenu {
+  display: block;
+}
+.d2l-navbar-nav .d2l-nav-submenu a {
+  display: block;
+  color: var(--text);
+  white-space: nowrap;
+  font-size: 1.1rem;
+}
+.d2l-navbar-nav .d2l-nav-submenu a:hover {
+  color: var(--blue);
+  background: transparent;
 }
 
 /* Sub-bar holding the framework picker */
@@ -386,7 +432,15 @@ footer {
     <li><a href="https://courses.d2l.ai">Courses</a></li>
     <li><a href="https://github.com/d2l-ai/d2l-en" title="GitHub">GitHub</a></li>
     <li><a href="https://discuss.d2l.ai">Discuss</a></li>
-    <li><a href="https://d2l.ai/d2l-en.pdf">PDF</a></li>
+    <li class="d2l-nav-menu">
+      <span>PDF</span>
+      <div class="d2l-nav-submenu">
+        <a href="/pdf/Dive-into-Deep-Learning-pytorch.pdf">PyTorch</a>
+        <a href="/pdf/Dive-into-Deep-Learning-jax.pdf">JAX</a>
+        <a href="/pdf/Dive-into-Deep-Learning-tensorflow.pdf">TensorFlow</a>
+        <a href="/pdf/Dive-into-Deep-Learning-mxnet.pdf">MXNet</a>
+      </div>
+    </li>
   </ul>
 </nav>
 

@@ -50,13 +50,34 @@ $code-bg:               $bg-code;
 
 /*-- scss:rules --*/
 
+$d2l-navbar-height: 62px;
+
+// At ≤1199px the right margin sidebar is hidden (see media query
+// below). Stretch body content into the reclaimed space so the
+// transition from "with TOC" to "without TOC" doesn't leave a
+// proportional 5fr gutter on the right that narrows as the viewport
+// shrinks (the "ghost TOC" effect).
+$d2l-floating-grid-no-toc: [screen-start] 1.5em [screen-start-inset] 5fr [page-start] minmax(28px, 56px) [page-start-inset] minmax(56px, 168px) [body-start-outset] minmax(28px, 56px) [body-start] 1.5em [body-content-start] minmax(500px, 1fr) [body-content-end body-end body-end-outset page-end-inset page-end screen-end-inset] 1.5em [screen-end];
+
+// At ≤991px the left sidebar collapses to a drawer. Body should fill
+// the entire content area — no proportional margins on either side.
+$d2l-collapsed-grid: [screen-start screen-start-inset page-start page-start-inset body-start-outset body-start] 1.5em [body-content-start] minmax(0, 1fr) [body-content-end body-end body-end-outset page-end-inset page-end screen-end-inset] 1.5em [screen-end];
+
+:root {
+  --d2l-sidebar-left: 0px;
+  --d2l-sidebar-right: 304px;
+  --d2l-sidebar-width: 304px;
+}
+
 // ── Sidebar logo ─────────────────────────────────────────
 .sidebar-logo {
-  max-height: none;
-  width: 100%;
+  display: block;
+  height: $d2l-navbar-height;
+  max-height: $d2l-navbar-height;
+  width: auto;
   max-width: none;
-  height: auto;
-  padding: 0.8rem 0;
+  padding: 0;
+  background: $white;
 }
 
 .sidebar-title {
@@ -78,11 +99,26 @@ $code-bg:               $bg-code;
 
   .nav-link {
     color: rgba($white, 0.88) !important;
-    font-size: 13px;
+    font-size: 17px;
+    line-height: 1.2;
     font-weight: 500;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
 
-    &:hover {
+    &:hover,
+    &:focus {
+      background-color: transparent !important;
       color: $white !important;
+    }
+  }
+
+  .dropdown-item {
+    font-size: 17px;
+
+    &:hover,
+    &:focus {
+      background-color: transparent !important;
+      color: $blue-dark !important;
     }
   }
 }
@@ -91,6 +127,117 @@ $code-bg:               $bg-code;
 #quarto-sidebar {
   background: $bg;
   border-right: 1px solid $line;
+}
+
+#quarto-sidebar .sidebar-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: $white;
+  border-bottom: 1px solid $line;
+  margin: 0 !important;
+  min-height: 52px;
+  padding: 0 !important;
+  display: flex;
+  align-items: stretch;
+}
+
+#quarto-sidebar .sidebar-logo-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: $white;
+  cursor: pointer;
+}
+
+@media (min-width: 992px) {
+  body.nav-sidebar #quarto-header .navbar {
+    left: var(--d2l-sidebar-right);
+    right: 0;
+    width: auto !important;
+    min-height: $d2l-navbar-height;
+    margin-left: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body.nav-sidebar #quarto-header .navbar .navbar-container {
+    min-height: $d2l-navbar-height;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    width: 100%;
+    max-width: none;
+  }
+
+  body.nav-sidebar #quarto-header .navbar .navbar-collapse {
+    order: 3;
+    flex-grow: 0;
+  }
+
+  body.nav-sidebar #quarto-header .navbar .navbar-nav {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  body.nav-sidebar #quarto-header .navbar #quarto-search {
+    order: 20;
+    margin-left: auto;
+  }
+
+  body.nav-sidebar #quarto-sidebar {
+    top: 0 !important;
+    padding-top: 0 !important;
+    z-index: 1040;
+  }
+
+  body.nav-sidebar #quarto-sidebar .sidebar-header {
+    position: fixed;
+    top: 0;
+    left: var(--d2l-sidebar-left);
+    z-index: 1041;
+    width: var(--d2l-sidebar-width);
+    height: $d2l-navbar-height;
+    min-height: $d2l-navbar-height;
+    background: $white !important;
+    border-right: 1px solid $line;
+    border-bottom: none;
+    padding: 0 !important;
+    box-sizing: border-box;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  body.nav-sidebar #quarto-sidebar .sidebar-logo-link {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+  body.floating #quarto-content.page-columns {
+    grid-template-columns: $d2l-floating-grid-no-toc;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  body.floating #quarto-margin-sidebar {
+    display: none !important;
+  }
+}
+
+// At ≤991px Quarto collapses the left sidebar into a drawer. Override
+// its default grid (which still reserves a 5fr right-margin column for
+// the now-hidden TOC) so the body fills the entire content area. This
+// removes the "ghost TOC" empty space that would otherwise narrow as
+// the viewport shrinks.
+@media (max-width: 991.98px) {
+  body.floating #quarto-content.page-columns,
+  body.floating.fullcontent #quarto-content.page-columns,
+  body.floating.slimcontent #quarto-content.page-columns {
+    grid-template-columns: $d2l-collapsed-grid;
+  }
 }
 
 .sidebar-item-text {

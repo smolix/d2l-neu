@@ -42,6 +42,7 @@ Usage:
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -538,7 +539,6 @@ def main():
                 stale_root_yml.unlink()
             stale_root_cache = args.output / '.quarto'
             if stale_root_cache.exists():
-                import shutil
                 shutil.rmtree(stale_root_cache)
 
             # Inject executed notebook outputs into the slide qmds before
@@ -644,6 +644,43 @@ def main():
             failures = [(q, err) for q, ok, err in results if not ok]
             print(f'  Rendered {len(results) - len(failures)} / {len(results)} '
                   f'({len(failures)} failed)')
+
+            # Dedupe per-deck `<deck>_files/libs/` into a shared
+            # `_slides/libs/`. Quarto writes a full copy of revealjs +
+            # plugins (~115 files) next to every deck; with 261 decks
+            # that balloons the deployed tree to ~30k extra files,
+            # which makes incremental upload painfully slow. The libs
+            # are byte-identical across decks (and across frameworks),
+            # so we keep one copy and rewrite each deck's HTML to
+            # point at it via a relative path.
+            shared_libs = args.output / 'libs'
+            for deck_html in sorted(fw_dir.rglob('*.html')):
+                # Quarto's revealjs plugins ship .html assets (e.g.
+                # speaker-view.html) under <deck>_files/libs/. Skip
+                # anything inside a *_files/ tree — only top-level
+                # deck HTMLs need rewriting.
+                if any(p.endswith('_files') for p in deck_html.parts):
+                    continue
+                files_dir = deck_html.parent / f'{deck_html.stem}_files'
+                per_deck_libs = files_dir / 'libs'
+                if per_deck_libs.exists() and not shared_libs.exists():
+                    shutil.copytree(per_deck_libs, shared_libs,
+                                    dirs_exist_ok=True)
+                rel_libs = os.path.relpath(
+                    shared_libs, deck_html.parent) + '/'
+                old_ref = f'{deck_html.stem}_files/libs/'
+                text = deck_html.read_text(encoding='utf-8')
+                if old_ref in text:
+                    deck_html.write_text(
+                        text.replace(old_ref, rel_libs),
+                        encoding='utf-8')
+                if per_deck_libs.exists():
+                    shutil.rmtree(per_deck_libs)
+                if files_dir.exists():
+                    try:
+                        files_dir.rmdir()
+                    except OSError:
+                        pass  # not empty — keep figure-revealjs/ etc.
 
         print(f'  Generated {generated} slide deck(s)')
 

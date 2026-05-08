@@ -25,6 +25,7 @@
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
 SHELL      := /bin/bash
+.SHELLFLAGS := -o pipefail -c
 .DEFAULT_GOAL := help
 
 SOURCE     ?= .
@@ -161,7 +162,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-layout.html d2l.bib
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building HTML book ==="
 	@{ \
@@ -178,7 +179,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			rm -rf _book/slides; \
 			mkdir -p _book/slides; \
 			rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
-				--exclude='.gitignore' --exclude='errors/' \
+				--exclude='.gitignore' --exclude='.quarto/' --exclude='errors/' \
 				_slides/ _book/slides/; \
 			echo "Stripping per-fw data/img symlinks (R2 storage bloat)..."; \
 			find _book/slides -mindepth 2 -maxdepth 2 -type l \
@@ -186,6 +187,14 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			echo "Rewriting deck '../img/' refs to '../../../img/' (single-source)..."; \
 			find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
 				-exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +; \
+		fi; \
+		if [ -d _pdf ]; then \
+			echo "Staging PDFs into _book/pdf/ ..."; \
+			mkdir -p _book/pdf; \
+			for fw in $(FRAMEWORKS); do \
+				src="_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; \
+				[ -f "$$src" ] && cp "$$src" _book/pdf/ || true; \
+			done; \
 		fi; \
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
@@ -276,6 +285,10 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated
 		if [ -f _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf ]; then \
 			mv _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf; \
 		fi; \
+		if [ -f _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf ]; then \
+			mkdir -p _book/pdf; \
+			cp _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf _book/pdf/; \
+		fi; \
 	} 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log
 
 pdf-$(1): _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf
@@ -295,7 +308,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --workers 8 \
+		--render --workers 16 \
 		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@

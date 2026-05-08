@@ -19,6 +19,9 @@
 #   ./tools/upload_r2.sh --full       # ignore manifest, re-upload all
 #   ./tools/upload_r2.sh --no-stage-slides
 #                                     # do not refresh _book/slides from _slides
+#
+# Set UPLOAD_JOBS to tune local hashing and parallel incremental uploads
+# (default: 32).
 
 set -euo pipefail
 
@@ -34,6 +37,7 @@ fi
 BUCKET="staging-d2l"
 BOOK_DIR="${BOOK_DIR:-_book}"
 MANIFEST_FILE="${PROJECT_DIR}/.upload-manifest-${BUCKET}.txt"
+UPLOAD_JOBS="${UPLOAD_JOBS:-32}"
 
 DRY_RUN=""
 DELETE=false
@@ -60,6 +64,11 @@ if [[ ! -d "$BOOK_DIR" ]]; then
     exit 1
 fi
 
+if ! [[ "$UPLOAD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "Error: UPLOAD_JOBS must be a positive integer." >&2
+    exit 1
+fi
+
 # Slide rendering writes fresh decks to _slides/. The public site serves
 # them from _book/slides/, which is normally refreshed by `make html`.
 # Refresh that subtree here too so a slide-only rebuild followed by upload
@@ -70,7 +79,7 @@ if $STAGE_SLIDES && [[ -d _slides ]]; then
     rm -rf "$BOOK_DIR/slides"
     mkdir -p "$BOOK_DIR/slides"
     rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
-        --exclude='.gitignore' --exclude='errors/' \
+        --exclude='.gitignore' --exclude='.quarto/' --exclude='errors/' \
         _slides/ "$BOOK_DIR/slides/"
     find "$BOOK_DIR/slides" -mindepth 2 -maxdepth 2 -type l \
         \( -name data -o -name img \) -delete
@@ -92,8 +101,8 @@ trap 'rm -f "$NEW_MANIFEST"; rm -rf "$WORK_DIR"' EXIT
 # resolves to its content (matches what `aws s3 sync` would upload).
 # Full-line lex sort (not `-k2`) keeps both manifests in the byte-wise
 # order that `comm` expects.
-(cd "$BOOK_DIR" && find -L . -type f -print0 \
-  | xargs -0 -P 8 sha256sum) | LC_ALL=C sort > "$NEW_MANIFEST"
+(cd "$BOOK_DIR" && find -L . -path '*/.quarto/*' -prune -o -type f -print0 \
+  | xargs -0 -P "$UPLOAD_JOBS" sha256sum) | LC_ALL=C sort > "$NEW_MANIFEST"
 
 TOTAL=$(wc -l < "$NEW_MANIFEST")
 echo "  $TOTAL files."
@@ -108,37 +117,46 @@ elif $FORCE_FULL; then
     echo "--full requested — performing full sync."
 fi
 
-# ── Helper: pick a Content-Type for a path ──────────────────
-content_type_for() {
-    local path=$1
-    case "$path" in
-        *.html) echo "text/html; charset=utf-8" ;;
-        *.css)  echo "text/css; charset=utf-8" ;;
-        *.js)   echo "application/javascript; charset=utf-8" ;;
-        *.json) echo "application/json; charset=utf-8" ;;
-        *)      echo "" ;;  # let aws auto-detect
-    esac
-}
-export -f content_type_for
+# Export scalar values so the xargs worker can rebuild its own argv array.
+# `S3_ARGS` (an array) cannot survive an env hop, so the worker functions
+# below rebuild the endpoint / dry-run flags from `R2_ENDPOINT` and
+# `DRY_RUN` directly.
+export BOOK_DIR BUCKET
+export R2_ENDPOINT="$ENDPOINT"
+export DRY_RUN="${DRY_RUN:-}"
 
 # ── Upload one file with proper content-type ────────────────
 upload_one() {
     local rel=$1
     local ct
-    ct=$(content_type_for "$rel")
-    local args=("${S3_ARGS[@]}")
+    case "$rel" in
+        *.html) ct="text/html; charset=utf-8" ;;
+        *.css)  ct="text/css; charset=utf-8" ;;
+        *.js)   ct="application/javascript; charset=utf-8" ;;
+        *.json) ct="application/json; charset=utf-8" ;;
+        *)      ct="" ;;
+    esac
+    local args=(--endpoint-url "$R2_ENDPOINT")
     if [[ -n "$ct" ]]; then
         args+=(--content-type "$ct")
     fi
-    aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" \
-        "${args[@]}" $DRY_RUN
+    if [[ -n "${DRY_RUN:-}" ]]; then
+        args+=("$DRY_RUN")
+    fi
+    aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" "${args[@]}"
 }
 
-# Export scalar values so the xargs worker can rebuild its own argv array.
-# Do not flatten `S3_ARGS` into one shell string: values such as
-# `text/css; charset=utf-8` must remain a single argv element.
-export BOOK_DIR BUCKET DRY_RUN
-export R2_ENDPOINT="$ENDPOINT"
+# ── Delete one bucket object ────────────────────────────────
+delete_one() {
+    local rel=$1
+    local args=(--endpoint-url "$R2_ENDPOINT")
+    if [[ -n "${DRY_RUN:-}" ]]; then
+        args+=("$DRY_RUN")
+    fi
+    aws s3 rm "s3://${BUCKET}/$rel" "${args[@]}"
+}
+
+export -f upload_one delete_one
 
 upload_changed() {
     local list=$1
@@ -148,28 +166,12 @@ upload_changed() {
         echo "  Nothing to upload."
         return
     fi
-    echo "  Uploading $count file(s)..."
-    # Parallel uploads. Each line in $list is a relative path under
-    # $BOOK_DIR. We pipe-feed xargs to handle paths with spaces via -d.
+    echo "  Uploading $count file(s) with $UPLOAD_JOBS worker(s)..."
+    # Each line in $list is a relative path under $BOOK_DIR. -d '\n'
+    # keeps paths with spaces intact.
     # shellcheck disable=SC2016
-    xargs -a "$list" -d '\n' -P 8 -I{} bash -c '
-        rel="$1"
-        case "$rel" in
-            *.html) ct="text/html; charset=utf-8" ;;
-            *.css)  ct="text/css; charset=utf-8" ;;
-            *.js)   ct="application/javascript; charset=utf-8" ;;
-            *.json) ct="application/json; charset=utf-8" ;;
-            *)      ct="" ;;
-        esac
-        args=(--endpoint-url "$R2_ENDPOINT")
-        if [[ -n "$ct" ]]; then
-            args+=(--content-type "$ct")
-        fi
-        if [[ -n "$DRY_RUN" ]]; then
-            args+=("$DRY_RUN")
-        fi
-        aws s3 cp "$BOOK_DIR/$rel" "s3://${BUCKET}/$rel" "${args[@]}"
-    ' _ {}
+    xargs -a "$list" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+        bash -c 'upload_one "$1"' _ {}
 }
 
 # ── Full sync (first run or --full) ─────────────────────────
@@ -181,25 +183,25 @@ if [[ "$MODE" == "full" ]]; then
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --content-type "text/html; charset=utf-8" \
-        --exclude "*" --include "*.html" \
+        --exclude "*" --include "*.html" --exclude "*/.quarto/*" \
         $DRY_RUN
     # Pass 2: CSS
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --content-type "text/css; charset=utf-8" \
-        --exclude "*" --include "*.css" \
+        --exclude "*" --include "*.css" --exclude "*/.quarto/*" \
         $DRY_RUN
     # Pass 3: JS
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --content-type "application/javascript; charset=utf-8" \
-        --exclude "*" --include "*.js" \
+        --exclude "*" --include "*.js" --exclude "*/.quarto/*" \
         $DRY_RUN
     # Pass 4: JSON
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --content-type "application/json; charset=utf-8" \
-        --exclude "*" --include "*.json" \
+        --exclude "*" --include "*.json" --exclude "*/.quarto/*" \
         $DRY_RUN
     # Pass 5: rest
     DEL_FLAG=""
@@ -207,8 +209,14 @@ if [[ "$MODE" == "full" ]]; then
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --exclude "*.html" --exclude "*.css" \
-        --exclude "*.js" --exclude "*.json" \
+        --exclude "*.js" --exclude "*.json" --exclude "*/.quarto/*" \
         $DRY_RUN $DEL_FLAG
+
+    if $DELETE; then
+        echo "Removing bucket .quarto cache objects..."
+        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
+            --exclude "*" --include "*/.quarto/*" $DRY_RUN
+    fi
 else
     # ── Incremental sync ────────────────────────────────────
     echo "Diffing against $MANIFEST_FILE"
@@ -237,12 +245,19 @@ else
     upload_changed "$WORK_DIR/changed.txt"
 
     if $DELETE && [[ $REMOVED -gt 0 ]]; then
-        echo "  Removing $REMOVED file(s) from bucket..."
-        while IFS= read -r rel; do
-            aws s3 rm "s3://${BUCKET}/$rel" "${S3_ARGS[@]}" $DRY_RUN
-        done < "$WORK_DIR/removed.txt"
+        echo "  Removing $REMOVED file(s) from bucket with $UPLOAD_JOBS worker(s)..."
+        # shellcheck disable=SC2016
+        xargs -a "$WORK_DIR/removed.txt" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+            bash -c 'delete_one "$1"' _ {}
+        echo "  Removing bucket .quarto cache objects..."
+        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
+            --exclude "*" --include "*/.quarto/*" $DRY_RUN
     elif [[ $REMOVED -gt 0 ]]; then
         echo "  ($REMOVED file(s) gone locally — pass --delete to remove)"
+    elif $DELETE; then
+        echo "  Removing bucket .quarto cache objects..."
+        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
+            --exclude "*" --include "*/.quarto/*" $DRY_RUN
     fi
 fi
 

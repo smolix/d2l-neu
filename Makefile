@@ -259,6 +259,7 @@ _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	@echo "=== Running $* notebooks ==="
 	$(eval NVIDIA_LIBS := $(call nvidia_ld_path,$*))
 	UV_PROJECT_ENVIRONMENT=.venv-$* \
+	PATH="$(CURDIR)/.venv-$*/bin:$$PATH" \
 	LD_LIBRARY_PATH="$(NVIDIA_LIBS)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	.venv-$*/bin/python tools/run_notebooks.py $* \
 		--parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) --continue-on-error \

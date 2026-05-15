@@ -124,9 +124,12 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
     `compute_90` PTX; on Blackwell the first use of each op
     JIT-compiles from PTX (slower cold start, then cached).
   - **mxnet**: MXNet 1.9.1 (final upstream release, project archived)
-    ships cu117 wheels with SASS for sm_50..sm_86 and no PTX. Run on
-    a Hopper-or-older host where the cu117 SASS still matches the
-    GPU's compute capability. On Blackwell the only path is
+    ships cu117 wheels with SASS for sm_50, sm_60, sm_70, sm_80, sm_86
+    and **no PTX**. Loads natively on Ampere (sm_80/86) and Ada Lovelace
+    (sm_87/89) — Ada accepts sm_86 SASS via CUDA's minor-version
+    compatibility within major arch 8. Does **not** load on Hopper
+    (sm_90) or Blackwell (sm_100/sm_120) — different major arch, no PTX
+    fallback. On those hosts the only path is
     `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet` (slow).
     `tools/run_notebooks.py` accepts `--cpu-only` to bypass the
     GPU/CPU split entirely.

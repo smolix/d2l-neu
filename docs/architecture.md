@@ -447,16 +447,22 @@ All build output is logged to `logs/<target>-YYYYMMDD-HHMMSS.log`.
 ## UV environments
 
 ```bash
-uv sync --extra pytorch --extra run   # PyTorch + CUDA 12.4 + Jupyter
+uv sync --extra pytorch --extra run   # PyTorch + CUDA 12.8 + Jupyter
 uv sync --extra jax --extra run       # JAX + TF + Jupyter
 uv sync --extra tensorflow --extra run
 uv sync --extra mxnet --extra run
 ```
 
-- PyTorch and JAX extras are **mutually exclusive** (conflicting CUDA
-  packages) — each gets its own venv (`.venv-pytorch`, `.venv-jax`, etc.).
-- torch/torchvision pinned to `pytorch-cu124` index.
-- uv.lock covers Python 3.10–3.14, linux x86_64 only.
+- PyTorch, JAX, TensorFlow, and MXNet extras are **mutually exclusive**
+  (conflicting CUDA package majors) — each gets its own venv
+  (`.venv-pytorch`, `.venv-jax`, `.venv-tensorflow`, `.venv-mxnet`).
+- torch/torchvision pinned to the `pytorch-cu128` index (CUDA 12.8
+  wheels; includes sm_100/sm_120 SASS for Blackwell).
+- JAX uses `jax[cuda12]` (native CUDA 12 wheels).
+- TensorFlow and MXNet venvs install their own
+  `nvidia-*-cu12` / `nvidia-*-cu11` runtime libs; the Makefile prepends
+  those paths to `LD_LIBRARY_PATH` before launching notebooks.
+- uv.lock covers Python 3.11–3.14, linux x86_64 only.
 - The `run` extra adds jupyter, nbconvert, ipykernel.
 
 ---
@@ -485,13 +491,30 @@ background, 0.9rem font.
 ## Hardware assumptions
 
 The build system assumes a machine with:
-- 4× NVIDIA GPUs (RTX 4090 with 24 GB each, or similar)
-- Sufficient CPU cores for 8 GPU workers + 4 CPU workers with affinity
+- 1–4× NVIDIA GPUs (the Makefile autodetects count and per-GPU memory
+  from `nvidia-smi`; rule of thumb is ~11 GB per notebook job, so a
+  24 GB GPU runs 2 in parallel, a 16 GB GPU runs 1, etc.)
+- NVIDIA driver **590.48+** (CUDA 13.x driver line) recommended.
+  Lower drivers work for everything except Blackwell (sm_100/sm_120):
+  the cu128 and cu12 wheels load on driver 525+ via CUDA forward
+  compatibility, but Blackwell SASS in the `pytorch-cu128` index needs
+  driver 570+ and the CUDA 13 driver line (590+) for the full stack.
+- Sufficient CPU cores for the parallel workers + affinity
 - ~50 GB disk for all build artifacts
 - Linux x86_64
 
+### Per-framework GPU coverage
+
+| Framework  | Wheel arch coverage | Notes |
+|------------|--------------------|-------|
+| pytorch    | `pytorch-cu128` (torch 2.7+): SASS through sm_120 | Blackwell-native. |
+| jax        | `jax[cuda12]>=0.10` native CUDA 12 | XLA JIT targets the detected device. |
+| tensorflow | SASS through sm_89 + `compute_90` PTX (TF 2.21) | First op on Blackwell JIT-compiles from PTX (slower cold start, then cached). |
+| mxnet      | cu117 SASS for sm_50, sm_60, sm_70, sm_80, sm_86 — **no PTX** | Works natively on Ampere (sm_80/86) **and Ada (sm_87/89) via CUDA minor-version compat within major arch 8**. Does **not** load on Hopper (sm_90) or Blackwell (sm_100/sm_120) — different major arch. On those hosts use `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet`. MXNet 1.9.1 is the final upstream release; the project is archived. |
+
 The full pipeline (`make all`) takes approximately:
 - Notebook execution: ~110 min total (PT ~21, TF ~24, JAX ~11, MX ~54)
+  on 4× 24 GB GPUs; scales linearly with effective GPU-job parallelism.
 - Slides: a few minutes with CPU parallel rendering
 - HTML + PDFs: ~15 min
 - Total wall time: ~3 hours

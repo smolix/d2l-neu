@@ -226,10 +226,11 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── Notebooks (generate) ──────────────────────────────────
 
-_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py d2l/.built
+_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py d2l/.built | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating $* notebooks ==="
-	@python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
+	@PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
+	python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
 	@mkdir -p data
 	@[ -e _notebooks/$*/img ] || ln -s ../../img _notebooks/$*/img
 	@if [ -L _notebooks/$*/data ]; then :; \
@@ -342,9 +343,10 @@ pdfs: $(addprefix pdf-,$(FRAMEWORKS))
 # ── Slides (per-framework) ────────────────────────────────
 # WARNING: do not run multiple slides-* targets with -j (GPU contention)
 
-_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-%/.synced
+_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-%/.synced .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
+	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
 		--render --workers 16 \
 		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \

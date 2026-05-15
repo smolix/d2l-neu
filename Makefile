@@ -20,7 +20,9 @@
 # Parallel-safe (CPU-only, after slide refactor):
 #   slides-*                   make -j4 slides works
 #
-# GPU workers per framework: 2 per GPU (8 total on 4 GPUs)
+# GPU workers per framework: NUM_GPUS and PARALLEL_<fw> are auto-detected
+# from nvidia-smi (rule of thumb: 11GB per job, so a 24GB GPU runs 2 in
+# parallel). Override on the command line: `make NUM_GPUS=2 PARALLEL_pytorch=2`.
 #
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
@@ -30,12 +32,23 @@ SHELL      := /bin/bash
 
 SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
-NUM_GPUS   ?= 4
-# Per-framework GPU parallelism: 2 notebooks per GPU
-PARALLEL_pytorch    ?= 8
-PARALLEL_tensorflow ?= 8
-PARALLEL_jax        ?= 8
-PARALLEL_mxnet      ?= 8
+
+# Auto-detect GPU count and memory via nvidia-smi.
+# Rule of thumb: each notebook job needs ~11GB GPU memory, so a 24GB GPU
+# runs 2 in parallel, a 48GB GPU runs 4, etc. We use the *minimum* memory
+# across detected GPUs (workers_per_gpu must be uniform — see run_notebooks.py).
+# Falls back to "0 1" when no GPUs are visible (CPU-only host).
+# Override on the command line: `make NUM_GPUS=2 PARALLEL_pytorch=2 ...`.
+_GPU_QUERY := $(shell nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk 'BEGIN{n=0;m=0} {n++; if(n==1||$$1<m) m=$$1} END{per=int(m/11264); if(per<1) per=1; if(n==0) print "0 1"; else print n, n*per}')
+DETECTED_NUM_GPUS := $(word 1,$(_GPU_QUERY))
+DETECTED_PARALLEL := $(word 2,$(_GPU_QUERY))
+# If no GPU was detected, fall back to NUM_GPUS=1 (CPU-only path in run_notebooks.py).
+NUM_GPUS   ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
+_PARALLEL_DEFAULT := $(if $(DETECTED_PARALLEL),$(DETECTED_PARALLEL),1)
+PARALLEL_pytorch    ?= $(_PARALLEL_DEFAULT)
+PARALLEL_tensorflow ?= $(_PARALLEL_DEFAULT)
+PARALLEL_jax        ?= $(_PARALLEL_DEFAULT)
+PARALLEL_mxnet      ?= $(_PARALLEL_DEFAULT)
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 NB_FILES      ?= $(FILES)
@@ -106,6 +119,19 @@ d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*-$(TS).log
 	@touch $@
 
+# Dedicated venv that installs the Quarto CLI (via the quarto-cli PyPI package).
+# Used by HTML and PDF recipes so `quarto` is a real declared dependency rather
+# than an implicit system tool. Override-style rule for the `build` extra:
+# `uv sync --extra build` is enough; no `--extra run` (no jupyter needed).
+.venv-build/.synced: pyproject.toml uv.lock
+	@mkdir -p $(LOGDIR)
+	@echo "=== Syncing build venv (quarto-cli) ==="
+	UV_PROJECT_ENVIRONMENT=.venv-build uv sync --extra build 2>&1 | tee $(LOGDIR)/venv-build-$(TS).log
+	@touch $@
+
+# Resolved path to quarto: prefer the project-local build venv when present.
+QUARTO := .venv-build/bin/quarto
+
 venv-%: .venv-%/.synced
 	@echo "Venv .venv-$* is ready"
 
@@ -162,7 +188,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building HTML book ==="
 	@{ \
@@ -172,7 +198,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \
 		python3 tools/build_slides_index.py; \
-		quarto render --to html; \
+		$(CURDIR)/$(QUARTO) render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
 		if [ -d _slides ] && [ -f _slides/index.html ]; then \
 			echo "Integrating _slides/ → _book/slides/ ..."; \
@@ -200,7 +226,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── Notebooks (generate) ──────────────────────────────────
 
-_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py
+_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py d2l/.built
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating $* notebooks ==="
 	@python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
@@ -261,7 +287,7 @@ _pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/bui
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
 define PDF_RULE
-_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated
+_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building PDF ($(1)) ==="
 	@{ \
@@ -276,7 +302,7 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated
 				rsvg-convert -f pdf -o "$$$$pdf" "$$$$svg" 2>/dev/null && count=$$$$((count + 1)); \
 			fi; \
 		done; [ $$$$count -gt 0 ] && echo "Converted $$$$count SVGs to PDF" || true; \
-		cd _pdf/$(1) && quarto render --to pdf; \
+		cd _pdf/$(1) && "$(CURDIR)/$(QUARTO)" render --to pdf; \
 		cd "$(CURDIR)"; \
 		python3 tools/fix_latex.py _pdf/$(1)/Dive-into-Deep-Learning.tex; \
 		cd _pdf/$(1) && xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \

@@ -67,6 +67,11 @@ run = [
     "nbconvert",
     "ipykernel",
 ]
+# Build extra: tools needed to render HTML/PDF from .qmd sources.
+# `quarto-cli` installs the Quarto CLI into the venv's bin/.
+build = [
+    "quarto-cli",
+]
 
 [build-system]
 requires = ["hatchling"]

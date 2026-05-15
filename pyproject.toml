@@ -85,13 +85,13 @@ environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
 conflicts = [[{ extra = "pytorch" }, { extra = "jax" }, { extra = "mxnet" }, { extra = "tensorflow" }]]
 
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu124" }
-torchvision = { index = "pytorch-cu124" }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
 
 [dependency-groups]
 dev = [

@@ -256,13 +256,13 @@ endef
 
 # Per-framework extra args to tools/run_notebooks.py. MXNet's last release
 # (1.9.1, project archived) only ships cu117 wheels with sm_50..sm_86
-# kernels and no PTX fallback, so any Hopper-or-newer GPU raises
-# "no kernel image is available". Force CPU mode so the MXNet notebook
-# corpus still executes on modern hosts.
+# kernels and no PTX fallback — Blackwell hosts must add `--cpu-only`
+# manually (e.g. `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet`);
+# the default targets Hopper-or-older silicon where cu117 SASS still runs.
 RUN_EXTRA_pytorch    ?=
 RUN_EXTRA_tensorflow ?=
 RUN_EXTRA_jax        ?=
-RUN_EXTRA_mxnet      ?= --cpu-only
+RUN_EXTRA_mxnet      ?=
 
 _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	@mkdir -p $(LOGDIR)

@@ -115,18 +115,21 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 - UV venvs per framework: `.venv-pytorch`, `.venv-jax`, etc., plus
   `.venv-build` for Quarto.
 - PyTorch and JAX extras are mutually exclusive (conflicting CUDA packages)
-- Per-framework GPU support on Blackwell (sm_100/sm_120):
-  - **pytorch**: native via the `pytorch-cu128` index (torch 2.7+).
+- Per-framework GPU support (driver 590 / CUDA 13.1 floor):
+  - **pytorch**: native via the `pytorch-cu128` index (torch 2.7+);
+    SASS for sm_100/sm_120 included.
   - **jax**: native via `jax[cuda12]>=0.10`; XLA JIT targets the
     detected device.
-  - **tensorflow**: TF 2.21 ships kernels only through `sm_89` +
-    `compute_90` PTX; first use on Blackwell JIT-compiles from PTX
-    (slower cold start, then cached).
-  - **mxnet**: MXNet 1.9.1 (project archived) ships only `cu117`
-    wheels and no PTX fallback. The Makefile forces MXNet to CPU mode
-    via `RUN_EXTRA_mxnet := --cpu-only` so the corpus still runs;
-    override with `make RUN_EXTRA_mxnet= run-notebooks-mxnet` on a
-    GPU compatible with cu117 (Ada and older).
+  - **tensorflow**: TF 2.21 ships SASS through `sm_89` plus
+    `compute_90` PTX; on Blackwell the first use of each op
+    JIT-compiles from PTX (slower cold start, then cached).
+  - **mxnet**: MXNet 1.9.1 (final upstream release, project archived)
+    ships cu117 wheels with SASS for sm_50..sm_86 and no PTX. Run on
+    a Hopper-or-older host where the cu117 SASS still matches the
+    GPU's compute capability. On Blackwell the only path is
+    `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet` (slow).
+    `tools/run_notebooks.py` accepts `--cpu-only` to bypass the
+    GPU/CPU split entirely.
 
 ## Current status
 

@@ -104,9 +104,16 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 
 ## Environment
 
-- Quarto 1.7+, Python 3.11+, XeLaTeX + rsvg-convert (PDF only)
-- 4× RTX 4090 (24 GB each), NUM_GPUS=4, PARALLEL=8 (2 per GPU)
-- UV venvs per framework: `.venv-pytorch`, `.venv-jax`, etc.
+- Python 3.11+, XeLaTeX + rsvg-convert (PDF only). Quarto is declared as
+  a `build` extra (`uv sync --extra build` populates `.venv-build/bin/quarto`).
+- NVIDIA driver **590.48+** (CUDA 13.x driver line; backward-compatible
+  with the CUDA 11.7/12.x pip toolkits the framework venvs install).
+- GPU count and per-framework parallelism are auto-detected from
+  `nvidia-smi` (rule of thumb: ~11 GB per notebook job — 24 GB GPU → 2
+  jobs, 16 GB GPU → 1 job). Override with `NUM_GPUS=...
+  PARALLEL_<fw>=...` on the make command line.
+- UV venvs per framework: `.venv-pytorch`, `.venv-jax`, etc., plus
+  `.venv-build` for Quarto.
 - PyTorch and JAX extras are mutually exclusive (conflicting CUDA packages)
 
 ## Current status

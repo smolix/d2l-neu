@@ -254,6 +254,16 @@ define nvidia_ld_path
 $(shell find .venv-$(1)/lib -path "*/nvidia/*/lib" -type d 2>/dev/null | paste -sd: -)
 endef
 
+# Per-framework extra args to tools/run_notebooks.py. MXNet's last release
+# (1.9.1, project archived) only ships cu117 wheels with sm_50..sm_86
+# kernels and no PTX fallback, so any Hopper-or-newer GPU raises
+# "no kernel image is available". Force CPU mode so the MXNet notebook
+# corpus still executes on modern hosts.
+RUN_EXTRA_pytorch    ?=
+RUN_EXTRA_tensorflow ?=
+RUN_EXTRA_jax        ?=
+RUN_EXTRA_mxnet      ?= --cpu-only
+
 _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Running $* notebooks ==="
@@ -263,6 +273,7 @@ _notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
 	LD_LIBRARY_PATH="$(NVIDIA_LIBS)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	.venv-$*/bin/python tools/run_notebooks.py $* \
 		--parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) --continue-on-error \
+		$(RUN_EXTRA_$*) \
 		$(if $(NB_FILES),--files $(NB_FILES)) \
 		2>&1 | tee $(LOGDIR)/run-$*-$(TS).log
 	@touch $@

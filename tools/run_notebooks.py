@@ -281,13 +281,16 @@ def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, 
     passed, failed, errors = 0, 0, []
     total = len(gpu_nbs) + len(cpu_nbs)
 
-    workers_per_gpu = max(1, gpu_workers // num_gpus)
-    gpu_pool = queue.Queue()
-    for g in range(num_gpus):
-        for _ in range(workers_per_gpu):
-            gpu_pool.put(str(g))
+    if gpu_workers > 0:
+        workers_per_gpu = max(1, gpu_workers // max(1, num_gpus))
+        gpu_pool = queue.Queue()
+        for g in range(num_gpus):
+            for _ in range(workers_per_gpu):
+                gpu_pool.put(str(g))
+    else:
+        gpu_pool = None
 
-    total_workers = gpu_workers + cpu_workers
+    total_workers = max(1, gpu_workers + cpu_workers)
     _cpu_worker_id = [0]
     _cpu_id_lock = threading.Lock()
 
@@ -306,8 +309,10 @@ def run_parallel(gpu_nbs, cpu_nbs, timeout, gpu_workers, cpu_workers, num_gpus, 
         cpus = worker_cpu_set(wid, total_workers, MAX_CPUS_PER_CPU_WORKER)
         return _run_one(idx, total, nb, rel, timeout, cuda_devices="", cpu_affinity=cpus)
 
-    with ThreadPoolExecutor(max_workers=gpu_workers) as gpu_exec, \
-         ThreadPoolExecutor(max_workers=cpu_workers) as cpu_exec:
+    # ThreadPoolExecutor requires max_workers >= 1; use a sentinel size of 1
+    # for the unused side when one pool is empty.
+    with ThreadPoolExecutor(max_workers=max(1, gpu_workers)) as gpu_exec, \
+         ThreadPoolExecutor(max_workers=max(1, cpu_workers)) as cpu_exec:
         futures = {}
         idx = 0
         for nb in gpu_nbs:
@@ -416,6 +421,9 @@ def main():
                         help="Do not run notebooks that require multiple GPUs")
     parser.add_argument("--no-best-of-n", action="store_true",
                         help="Skip best-of-N retries for stochastic notebooks")
+    parser.add_argument("--cpu-only", action="store_true",
+                        help="Force every notebook to run with CUDA_VISIBLE_DEVICES='' "
+                             "(used for frameworks whose wheels lack kernels for this host's GPU)")
     args = parser.parse_args()
 
     setup_framework_env(args.framework)
@@ -433,19 +441,25 @@ def main():
             print(f"  {nb.relative_to(NOTEBOOKS_DIR)}")
         return
 
-    # Split into multi-GPU / single-GPU / CPU-only
+    # Split into multi-GPU / single-GPU / CPU-only. With --cpu-only every
+    # notebook is treated as CPU-only (CUDA_VISIBLE_DEVICES='') regardless of
+    # its GPU usage hints.
     single_gpu, cpu_only, multi_gpu = [], [], []
-    for nb in nbs:
-        rel = str(nb.relative_to(fw_root))
-        if rel in MULTI_GPU_NOTEBOOKS:
-            multi_gpu.append(nb)
-        elif notebook_uses_gpu(nb):
-            single_gpu.append(nb)
-        else:
-            cpu_only.append(nb)
+    if args.cpu_only:
+        cpu_only = list(nbs)
+    else:
+        for nb in nbs:
+            rel = str(nb.relative_to(fw_root))
+            if rel in MULTI_GPU_NOTEBOOKS:
+                multi_gpu.append(nb)
+            elif notebook_uses_gpu(nb):
+                single_gpu.append(nb)
+            else:
+                cpu_only.append(nb)
 
     print(f"  {len(single_gpu)} GPU notebooks, {len(cpu_only)} CPU-only notebooks, "
-          f"{len(multi_gpu)} multi-GPU notebooks")
+          f"{len(multi_gpu)} multi-GPU notebooks"
+          + (" (forced via --cpu-only)" if args.cpu_only else ""))
     if args.skip_multi_gpu:
         print("  (multi-GPU notebooks will be skipped)")
         multi_gpu = []
@@ -454,11 +468,15 @@ def main():
     all_passed, all_failed, all_errors = 0, 0, []
 
     if args.parallel > 1:
-        gpu_workers = args.parallel
-        cpu_workers = args.num_gpus
-        wpg = max(1, gpu_workers // args.num_gpus)
-        print(f"\n=== Parallel phase: {gpu_workers} GPU workers ({wpg}/GPU) + "
-              f"{cpu_workers} CPU workers across {args.num_gpus} GPUs ===")
+        if args.cpu_only:
+            gpu_workers, cpu_workers = 0, args.parallel
+            print(f"\n=== Parallel phase: {cpu_workers} CPU workers (cpu-only mode) ===")
+        else:
+            gpu_workers = args.parallel
+            cpu_workers = args.num_gpus
+            wpg = max(1, gpu_workers // args.num_gpus)
+            print(f"\n=== Parallel phase: {gpu_workers} GPU workers ({wpg}/GPU) + "
+                  f"{cpu_workers} CPU workers across {args.num_gpus} GPUs ===")
         p, f, e = run_parallel(single_gpu, cpu_only, args.timeout,
                                gpu_workers, cpu_workers, args.num_gpus, args.framework)
     else:

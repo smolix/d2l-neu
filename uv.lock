@@ -373,34 +373,34 @@ wheels = [
 
 [package.optional-dependencies]
 cublas = [
-    { name = "nvidia-cublas-cu12", version = "12.8.4.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cudart = [
-    { name = "nvidia-cuda-runtime-cu12", version = "12.8.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cufft = [
-    { name = "nvidia-cufft-cu12", version = "11.3.3.83", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cufile = [
     { name = "nvidia-cufile-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cupti = [
-    { name = "nvidia-cuda-cupti-cu12", version = "12.8.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 curand = [
     { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cusolver = [
-    { name = "nvidia-cusolver-cu12", version = "11.7.3.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 cusparse = [
-    { name = "nvidia-cusparse-cu12", version = "12.5.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 nvjitlink = [
-    { name = "nvidia-nvjitlink-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 nvrtc = [
-    { name = "nvidia-cuda-nvrtc-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 nvtx = [
     { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
@@ -474,17 +474,7 @@ run = [
     { name = "nbconvert", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow')" },
 ]
 tensorflow = [
-    { name = "nvidia-cublas-cu12", version = "12.4.5.8", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-cupti-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-nvrtc-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-runtime-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cudnn-cu12", version = "9.21.0.82", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cufft-cu12", version = "11.2.1.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusolver-cu12", version = "11.6.1.9", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", version = "12.3.1.170", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nccl-cu12", version = "2.21.5", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "tensorflow", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "tensorflow", extra = ["and-cuda"], marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow')" },
     { name = "tensorflow-datasets", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "tensorflow-probability", extra = ["tf"], marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow')" },
 ]
@@ -511,24 +501,14 @@ requires-dist = [
     { name = "numpy" },
     { name = "numpy", marker = "extra == 'mxnet'", specifier = "<1.24" },
     { name = "nvidia-cublas-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cublas-cu12", marker = "extra == 'tensorflow'" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-cuda-nvrtc-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-cuda-runtime-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-cudnn-cu11", marker = "extra == 'mxnet'", specifier = "<9" },
-    { name = "nvidia-cudnn-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-cufft-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cufft-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-curand-cu11", marker = "extra == 'mxnet'" },
     { name = "nvidia-cusolver-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cusolver-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-cusparse-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-cusparse-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-nccl-cu11", marker = "extra == 'mxnet'" },
-    { name = "nvidia-nccl-cu12", marker = "extra == 'tensorflow'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "extra == 'tensorflow'" },
     { name = "nvidia-nvtx-cu11", marker = "extra == 'mxnet'" },
     { name = "optax", marker = "extra == 'jax'" },
     { name = "pandas" },
@@ -538,7 +518,7 @@ requires-dist = [
     { name = "scipy" },
     { name = "syne-tune", extras = ["gpsearchers"], marker = "extra == 'pytorch'" },
     { name = "tensorflow", marker = "extra == 'jax'" },
-    { name = "tensorflow", marker = "extra == 'tensorflow'" },
+    { name = "tensorflow", extras = ["and-cuda"], marker = "extra == 'tensorflow'" },
     { name = "tensorflow-datasets", marker = "extra == 'jax'" },
     { name = "tensorflow-datasets", marker = "extra == 'tensorflow'" },
     { name = "tensorflow-probability", extras = ["tf"], marker = "extra == 'tensorflow'" },
@@ -1141,17 +1121,17 @@ wheels = [
 
 [package.optional-dependencies]
 with-cuda = [
-    { name = "nvidia-cublas-cu12", version = "12.8.4.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-cupti-cu12", version = "12.8.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cuda-nvcc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-nvrtc-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-runtime-cu12", version = "12.8.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cudnn-cu12", version = "9.21.0.82", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cufft-cu12", version = "11.3.3.83", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusolver-cu12", version = "11.7.3.90", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", version = "12.5.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nccl-cu12", version = "2.28.9", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nccl-cu12", version = "2.30.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-nvshmem-cu12", version = "3.6.5", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 
@@ -1861,31 +1841,8 @@ wheels = [
 
 [[package]]
 name = "nvidia-cublas-cu12"
-version = "12.4.5.8"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/71/1c91302526c45ab494c23f61c7a84aa568b8c1f9d196efa5993957faf906/nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_x86_64.whl", hash = "sha256:2fc8da60df463fdefa81e323eef2e36489e1c94335b5358bcb38360adf75ac9b", size = 363438805, upload-time = "2024-04-03T20:57:06.025Z" },
-]
-
-[[package]]
-name = "nvidia-cublas-cu12"
 version = "12.8.4.1"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142", size = 594346921, upload-time = "2025-03-07T01:44:31.254Z" },
 ]
@@ -1900,31 +1857,8 @@ wheels = [
 
 [[package]]
 name = "nvidia-cuda-cupti-cu12"
-version = "12.4.127"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/42/f4f60238e8194a3106d06a058d494b18e006c10bb2b915655bd9f6ea4cb1/nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:9dec60f5ac126f7bb551c055072b69d85392b13311fcc1bcda2202d172df30fb", size = 13813957, upload-time = "2024-04-03T20:55:01.564Z" },
-]
-
-[[package]]
-name = "nvidia-cuda-cupti-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182", size = 10248621, upload-time = "2025-03-07T01:40:21.213Z" },
 ]
@@ -1948,31 +1882,8 @@ wheels = [
 
 [[package]]
 name = "nvidia-cuda-nvrtc-cu12"
-version = "12.4.127"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/14/91ae57cd4db3f9ef7aa99f4019cfa8d54cb4caa7e00975df6467e9725a9f/nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:a178759ebb095827bd30ef56598ec182b85547f1508941a3d560eb7ea1fbf338", size = 24640306, upload-time = "2024-04-03T20:56:01.463Z" },
-]
-
-[[package]]
-name = "nvidia-cuda-nvrtc-cu12"
 version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994", size = 88040029, upload-time = "2025-03-07T01:42:13.562Z" },
 ]
@@ -1988,31 +1899,8 @@ wheels = [
 
 [[package]]
 name = "nvidia-cuda-runtime-cu12"
-version = "12.4.127"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/27/1795d86fe88ef397885f2e580ac37628ed058a92ed2c39dc8eac3adf0619/nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:64403288fa2136ee8e467cdc9c9427e0434110899d07c779f25b5c068934faa5", size = 883737, upload-time = "2024-04-03T20:54:51.355Z" },
-]
-
-[[package]]
-name = "nvidia-cuda-runtime-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90", size = 954765, upload-time = "2025-03-07T01:40:01.615Z" },
 ]
@@ -2039,7 +1927,7 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "nvidia-cublas-cu12", version = "12.8.4.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/41/65225d42fba06fb3dd3972485ea258e7dd07a40d6e01c95da6766ad87354/nvidia_cudnn_cu12-9.19.0.56-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:ac6ad90a075bb33a94f2b4cf4622eac13dd4dc65cf6dd9c7572a318516a36625", size = 657906812, upload-time = "2026-02-03T20:44:12.638Z" },
@@ -2056,8 +1944,7 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "nvidia-cublas-cu12", version = "12.4.5.8", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow')" },
-    { name = "nvidia-cublas-cu12", version = "12.8.4.1", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra != 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra != 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (extra != 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow')" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/cf/47778414dd633ba93395f9d34c87283916c3163f57000c2aeef1f869c649/nvidia_cudnn_cu12-9.21.0.82-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:286af0a8ee51e3e5eb0e858b0b93a85a5ae6a686f22a0c83c8d7d4dc9151402f", size = 704763924, upload-time = "2026-04-15T16:43:40.04Z" },
@@ -2074,36 +1961,10 @@ wheels = [
 
 [[package]]
 name = "nvidia-cufft-cu12"
-version = "11.2.1.3"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-dependencies = [
-    { name = "nvidia-nvjitlink-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/94/3266821f65b92b3138631e9c8e7fe1fb513804ac934485a8d05776e1dd43/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f083fc24912aa410be21fa16d157fed2055dab1cc4b6934a0e03cba69eb242b9", size = 211459117, upload-time = "2024-04-03T20:57:40.402Z" },
-]
-
-[[package]]
-name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
@@ -2148,40 +2009,12 @@ wheels = [
 
 [[package]]
 name = "nvidia-cusolver-cu12"
-version = "11.6.1.9"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-dependencies = [
-    { name = "nvidia-cublas-cu12", version = "12.4.5.8", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", version = "12.3.1.170", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/e1/5b9089a4b2a4790dfdea8b3a006052cfecff58139d5a4e34cb1a51df8d6f/nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_x86_64.whl", hash = "sha256:19e33fa442bcfd085b3086c4ebf7e8debc07cfe01e11513cc6d332fd918ac260", size = 127936057, upload-time = "2024-04-03T20:58:28.735Z" },
-]
-
-[[package]]
-name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 dependencies = [
-    { name = "nvidia-cublas-cu12", version = "12.8.4.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", version = "12.5.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
@@ -2198,36 +2031,10 @@ wheels = [
 
 [[package]]
 name = "nvidia-cusparse-cu12"
-version = "12.3.1.170"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-dependencies = [
-    { name = "nvidia-nvjitlink-cu12", version = "12.4.127", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/f7/97a9ea26ed4bbbfc2d470994b8b4f338ef663be97b8f677519ac195e113d/nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_x86_64.whl", hash = "sha256:ea4f11a2904e2a8dc4b1833cc1b5181cde564edd0d5cd33e3c168eff2d1863f1", size = 207454763, upload-time = "2024-04-03T20:58:59.995Z" },
-]
-
-[[package]]
-name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", version = "12.8.93", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },
@@ -2251,38 +2058,20 @@ wheels = [
 
 [[package]]
 name = "nvidia-nccl-cu12"
-version = "2.21.5"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/99/12cd266d6233f47d00daf3a72739872bdc10267d0383508b0b9c84a18bb6/nvidia_nccl_cu12-2.21.5-py3-none-manylinux2014_x86_64.whl", hash = "sha256:8579076d30a8c24988834445f8d633c697d42397e92ffc3f63fa26766d25e0a0", size = 188654414, upload-time = "2024-04-03T15:32:57.427Z" },
-]
-
-[[package]]
-name = "nvidia-nccl-cu12"
 version = "2.28.9"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
+    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/4e/44dbb46b3d1b0ec61afda8e84837870f2f9ace33c564317d59b70bc19d3e/nvidia_nccl_cu12-2.28.9-py3-none-manylinux_2_18_x86_64.whl", hash = "sha256:485776daa8447da5da39681af455aa3b2c2586ddcf4af8772495e7c532c7e5ab", size = 296782137, upload-time = "2025-11-18T05:49:34.248Z" },
 ]
 
 [[package]]
-name = "nvidia-nvjitlink-cu12"
-version = "12.4.127"
+name = "nvidia-nccl-cu12"
+version = "2.30.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'",
@@ -2291,22 +2080,13 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/ff/847841bacfbefc97a00036e0fce5a0f086b640756dc38caea5e1bb002655/nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:06b3b9b25bf3f8af351d664978ca26a16d2c5127dbd53c0497e28d1fb9611d57", size = 21066810, upload-time = "2024-04-03T20:59:46.957Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/c3/0e45ff4dce8401f6ea7c25d80d75738813a47f5ae2691e2478f2fd1e5e93/nvidia_nccl_cu12-2.30.4-py3-none-manylinux_2_18_x86_64.whl", hash = "sha256:040974b261edec4b8b793e59e92ab7176fe4ab4bc61b800f9f3bfaeec2d436f3", size = 300164158, upload-time = "2026-04-23T03:23:19.589Z" },
 ]
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
 version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version >= '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.13.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-jax' and extra != 'extra-3-d2l-mxnet' and extra != 'extra-3-d2l-pytorch' and extra != 'extra-3-d2l-tensorflow'",
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88", size = 39254836, upload-time = "2025-03-07T01:49:55.661Z" },
 ]
@@ -3178,6 +2958,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/26/a1/23b9b39c046c723db63a1c2c93397703efa3400a36f98d9c717b473aafb8/tensorflow-2.21.0-cp311-cp311-manylinux_2_27_x86_64.whl", hash = "sha256:9056fbc9ba04235810b71ae6cbd958a196e8804fb53bbcffbf3e23b56155f124", size = 572440367, upload-time = "2026-03-06T17:23:35.279Z" },
     { url = "https://files.pythonhosted.org/packages/ce/d7/6e71b4ded8ce99cd21add95611ca14af6e9ad4f2baeabdeb79a4a6b3cb1f/tensorflow-2.21.0-cp312-cp312-manylinux_2_27_x86_64.whl", hash = "sha256:b3b95643c4e70eb925839938fb35cbe142f317ec84af6844ee61513713bb13c0", size = 572611111, upload-time = "2026-03-06T17:24:26.209Z" },
     { url = "https://files.pythonhosted.org/packages/86/6c/10d075ffc09754c7f10e749ba3c9d46dd809fb007990c7f788128044180c/tensorflow-2.21.0-cp313-cp313-manylinux_2_27_x86_64.whl", hash = "sha256:e9d8da8dcab9650efb45f032ba70af2f016f907e6e0c6bda29dd101bba945406", size = 572881074, upload-time = "2026-03-06T17:25:14.453Z" },
+]
+
+[package.optional-dependencies]
+and-cuda = [
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvcc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cudnn-cu12", version = "9.21.0.82", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nccl-cu12", version = "2.30.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 
 [[package]]

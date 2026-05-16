@@ -40,19 +40,12 @@ mxnet = [
     "nvidia-nvtx-cu11",
 ]
 tensorflow = [
-    "tensorflow",
+    # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,
+    # cudnn>=9.3, etc.). Without it, uv resolves nccl to 2.21.5, which has
+    # no sm_120 kernels — every collective aborts with "unhandled cuda error".
+    "tensorflow[and-cuda]",
     "tensorflow-datasets",
     "tensorflow-probability[tf]",
-    "nvidia-cudnn-cu12",
-    "nvidia-cublas-cu12",
-    "nvidia-cuda-runtime-cu12",
-    "nvidia-cuda-nvrtc-cu12",
-    "nvidia-cufft-cu12",
-    "nvidia-cusolver-cu12",
-    "nvidia-cusparse-cu12",
-    "nvidia-nccl-cu12",
-    "nvidia-nvjitlink-cu12",
-    "nvidia-cuda-cupti-cu12",
 ]
 jax = [
     "jax[cuda12]>=0.10.0",

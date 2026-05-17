@@ -26,18 +26,11 @@ pytorch = [
     "syne-tune[gpsearchers]",
 ]
 mxnet = [
-    "mxnet-cu117>=1.9.1,<2",
-    "numpy<1.24",
-    "nvidia-cudnn-cu11<9",
-    "nvidia-nccl-cu11",
-    "nvidia-cublas-cu11",
-    "nvidia-cuda-runtime-cu11",
-    "nvidia-cuda-nvrtc-cu11",
-    "nvidia-cusolver-cu11",
-    "nvidia-cusparse-cu11",
-    "nvidia-cufft-cu11",
-    "nvidia-curand-cu11",
-    "nvidia-nvtx-cu11",
+    # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
+    # Upstream MXNet 1.9.1 / cu117 has no Blackwell kernels and no PTX fallback.
+    # The wheel is cp311-only; constrain via marker so resolution succeeds on
+    # other supported Python versions too.
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0.cu13.bw.20260517-beta/mxnet-2.0.0+cu13.bw.20260517-cp311-cp311-linux_x86_64.whl ; python_version == '3.11'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,
@@ -72,6 +65,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["d2l"]
+
+[tool.hatch.metadata]
+# Required so the mxnet extra can point at a custom-built wheel via direct URL.
+allow-direct-references = true
 
 [tool.uv]
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]

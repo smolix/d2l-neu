@@ -15,7 +15,7 @@ we stick with images as our running example.
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import autograd, np, npx
+from mxnet import autograd, gluon, np, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
@@ -188,10 +188,10 @@ calls the `corr2d` function and adds the bias.
 ```{.python .input #conv-layer-convolutional-layers}
 %%tab mxnet
 class Conv2D(nn.Block):
-    def __init__(self, kernel_size, **kwargs):
-        super().__init__(**kwargs)
-        self.weight = self.params.get('weight', shape=kernel_size)
-        self.bias = self.params.get('bias', shape=(1,))
+    def __init__(self, kernel_size):
+        super().__init__()
+        self.weight = gluon.Parameter('weight', shape=kernel_size)
+        self.bias = gluon.Parameter('bias', shape=(1,))
 
     def forward(self, x):
         return corr2d(x, self.weight.data()) + self.bias.data()

@@ -641,9 +641,9 @@ of the predicted class for all the pixels.
 
 ```{.python .input #fcn-training}
 #@tab mxnet
-num_epochs, lr, wd, devices = 5, 0.1, 1e-3, d2l.try_all_gpus()
+num_epochs, lr, wd, devices = 5, 0.001, 1e-3, d2l.try_all_gpus()
 loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
-net.collect_params().reset_ctx(devices)
+net.reset_ctx(devices)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': lr, 'wd': wd})
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
@@ -671,7 +671,7 @@ def loss_fn(params, batch_stats, X, Y):
     return loss.mean(), updates
 
 num_epochs, lr, wd = 5, 0.001, 1e-3
-optimizer = optax.sgd(lr, momentum=0.9)
+optimizer = optax.sgd(lr)
 opt_state = optimizer.init(variables['params'])
 batch_stats = variables.get('batch_stats', {})
 
@@ -698,15 +698,11 @@ variables = {'params': params, 'batch_stats': batch_stats}
 ```{.python .input #fcn-training}
 #@tab tensorflow
 # Loss: SparseCategoricalCrossentropy over per-pixel logits (NHWC -> NHW).
-# Backbone weights are frozen to match the PT/JAX approach of fine-tuning only
-# the head; unfreeze to replicate full fine-tuning.
-for layer in fcn_net.layers[:-2]:
-    layer.trainable = False
-
+# Full fine-tuning of the entire network (backbone + head) to match the
+# PyTorch tab.
 num_epochs, lr, wd = 5, 0.001, 1e-3
 fcn_net.compile(
-    optimizer=keras.optimizers.SGD(learning_rate=lr, momentum=0.9,
-                                   weight_decay=wd),
+    optimizer=keras.optimizers.SGD(learning_rate=lr, weight_decay=wd),
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)

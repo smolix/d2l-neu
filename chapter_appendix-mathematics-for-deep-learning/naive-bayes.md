@@ -62,8 +62,10 @@ Each image is a grayscale image with both width and height of $28$ with shape ($
 def transform(data, label):
     return np.floor(data.astype('float32') / 128).squeeze(axis=-1), label
 
-mnist_train = gluon.data.vision.MNIST(train=True, transform=transform)
-mnist_test = gluon.data.vision.MNIST(train=False, transform=transform)
+# In Gluon 2.0, `transform=` on the dataset constructor was deprecated in favor
+# of `dataset.transform(...)` so that transforms compose cleanly with DataLoader.
+mnist_train = gluon.data.vision.MNIST(train=True).transform(transform)
+mnist_test = gluon.data.vision.MNIST(train=False).transform(transform)
 ```
 
 ```{.python .input #naive-bayes-optical-character-recognition-1}
@@ -546,8 +548,8 @@ def predict(X):
         bayes_pred_stable(x), axis=0, output_type = tf.int32).numpy()
             for x in X]
 
-X = tf.stack([train_images[i] for i in range(10, 38)], axis=0)
-y = tf.constant([train_labels[i].numpy() for i in range(10, 38)])
+X = tf.stack([test_images[i] for i in range(10, 38)], axis=0)
+y = tf.constant([test_labels[i].numpy() for i in range(10, 38)])
 preds = predict(X)
 d2l.show_images(X, 2, 9, titles=[str(d) for d in preds]);
 ```

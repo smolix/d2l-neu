@@ -159,8 +159,7 @@ def relu(X):
 ```{.python .input #mlp-implementation-model-1}
 %%tab pytorch
 def relu(X):
-    a = torch.zeros_like(X)
-    return torch.max(X, a)
+    return torch.clamp(X, min=0)
 ```
 
 ```{.python .input #mlp-implementation-model-1}

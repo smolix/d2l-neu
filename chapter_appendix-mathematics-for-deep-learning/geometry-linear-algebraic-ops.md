@@ -326,12 +326,15 @@ and eyeball a crude threshold.  First we will load the data and compute the aver
 train = gluon.data.vision.FashionMNIST(train=True)
 test = gluon.data.vision.FashionMNIST(train=False)
 
-X_train_0 = np.stack([x[0] for x in train if x[1] == 0]).astype(float)
-X_train_1 = np.stack([x[0] for x in train if x[1] == 1]).astype(float)
+# In MXNet 2.0 reductions over `float` (== float64) inputs stay float64, but
+# many fused kernels still emit float32 — pin everything to float32 up front so
+# downstream dot products see matching dtypes.
+X_train_0 = np.stack([x[0] for x in train if x[1] == 0]).astype('float32')
+X_train_1 = np.stack([x[0] for x in train if x[1] == 1]).astype('float32')
 X_test = np.stack(
-    [x[0] for x in test if x[1] == 0 or x[1] == 1]).astype(float)
+    [x[0] for x in test if x[1] == 0 or x[1] == 1]).astype('float32')
 y_test = np.stack(
-    [x[1] for x in test if x[1] == 0 or x[1] == 1]).astype(float)
+    [x[1] for x in test if x[1] == 0 or x[1] == 1]).astype('float32')
 
 # Compute averages
 ave_0 = np.mean(X_train_0, axis=0)

@@ -418,7 +418,8 @@ finetune_net.features = pretrained_net.features
 finetune_net.output.initialize(init.Xavier())
 # The model parameters in the output layer will be iterated using a learning
 # rate ten times greater
-finetune_net.output.collect_params().setattr('lr_mult', 10)
+for p in finetune_net.output.collect_params().values():
+    p.lr_mult = 10
 ```
 
 ```{.python .input #fine-tuning-defining-and-initializing-the-model-3}
@@ -478,7 +479,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5):
     test_iter = gluon.data.DataLoader(
         test_imgs.transform_first(test_augs), batch_size)
     devices = d2l.try_all_gpus()
-    net.collect_params().reset_ctx(devices)
+    net.reset_ctx(devices)
     net.hybridize()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {
@@ -542,16 +543,17 @@ def train_fine_tuning(net, variables, learning_rate, batch_size=128,
 
     # Per-parameter learning rate: 10x for the new classifier, 1x for the
     # pretrained backbone. Use a label tree to drive optax.multi_transform.
+    # We use plain SGD (no momentum) with weight_decay=0.001 to match PT.
     if param_group:
         label_fn = lambda path, _: ('head' if path[0].key == 'classifier'
                                     else 'base')
         labels = jax.tree_util.tree_map_with_path(label_fn, params)
         tx = optax.multi_transform(
-            {'head': optax.sgd(learning_rate * 10, momentum=0.9),
-             'base': optax.sgd(learning_rate, momentum=0.9)},
+            {'head': optax.sgd(learning_rate * 10),
+             'base': optax.sgd(learning_rate)},
             labels)
     else:
-        tx = optax.sgd(learning_rate, momentum=0.9)
+        tx = optax.sgd(learning_rate)
     opt_state = tx.init(params)
 
     @jax.jit
@@ -609,27 +611,69 @@ def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
     ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     return ds
 
-# If `param_group=True`, the backbone is frozen and only the head is
-# trained at the base learning rate; effectively the head gets all updates.
-# This mirrors the PT version's 10x lr on the head (here we keep it simple:
-# freeze backbone = 0x, head = 1x, which is a common Keras fine-tuning idiom).
+# If `param_group=True`, the head (classifier Dense) is updated with a
+# learning rate ten times larger than the pretrained backbone; otherwise
+# all parameters are trained at the same rate. We use a custom training
+# loop with two SGD optimizers so the backbone stays trainable, matching
+# the PyTorch fine-tuning recipe (plain SGD + weight_decay=0.001, no
+# momentum).
 def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
                       param_group=True):
     train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
                                 train_augs, batch_size, shuffle=True)
     test_ds  = _make_tf_dataset(os.path.join(data_dir, 'test'),
                                 test_augs, batch_size, shuffle=False)
-    # Freeze or unfreeze the backbone (layer 0 of the Sequential)
-    net.layers[0].trainable = not param_group
-    net.compile(
-        optimizer=keras.optimizers.SGD(
-            learning_rate=learning_rate * (10 if param_group else 1),
-            momentum=0.9, weight_decay=0.001),
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy'])
-    history = net.fit(train_ds, epochs=num_epochs,
-                      validation_data=test_ds)
-    return history
+    # Backbone always trainable; discriminative LR (head at 10x) applied
+    # by routing gradients to two separate optimizers below.
+    net.layers[0].trainable = True
+    head_layer = net.layers[-1]
+    head_vars = head_layer.trainable_variables
+    head_var_ids = {id(v) for v in head_vars}
+
+    opt_head = keras.optimizers.SGD(
+        learning_rate=learning_rate * (10 if param_group else 1),
+        weight_decay=0.001)
+    opt_base = keras.optimizers.SGD(
+        learning_rate=learning_rate, weight_decay=0.001)
+    loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    acc_metric = keras.metrics.SparseCategoricalAccuracy()
+    val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+
+    @tf.function
+    def train_step(x, y):
+        with tf.GradientTape() as tape:
+            logits = net(x, training=True)
+            loss = loss_fn(y, logits)
+        grads = tape.gradient(loss, net.trainable_variables)
+        head_pairs, base_pairs = [], []
+        for g, v in zip(grads, net.trainable_variables):
+            if g is None:
+                continue
+            (head_pairs if id(v) in head_var_ids
+             else base_pairs).append((g, v))
+        if head_pairs:
+            opt_head.apply_gradients(head_pairs)
+        if base_pairs:
+            opt_base.apply_gradients(base_pairs)
+        acc_metric.update_state(y, logits)
+        return loss
+
+    @tf.function
+    def test_step(x, y):
+        logits = net(x, training=False)
+        val_acc_metric.update_state(y, logits)
+
+    for epoch in range(num_epochs):
+        acc_metric.reset_state()
+        val_acc_metric.reset_state()
+        total_loss, n_batches = 0.0, 0
+        for x, y in train_ds:
+            total_loss += float(train_step(x, y)); n_batches += 1
+        for x, y in test_ds:
+            test_step(x, y)
+        print(f'epoch {epoch + 1}, loss {total_loss / max(n_batches, 1):.3f}, '
+              f'train acc {float(acc_metric.result()):.3f}, '
+              f'test acc {float(val_acc_metric.result()):.3f}')
 ```
 
 We set the base learning rate to a small value
@@ -724,7 +768,8 @@ because its initial parameter values are more effective.
 
 ```{.python .input #fine-tuning-exercises-1}
 #@tab mxnet
-finetune_net.features.collect_params().setattr('grad_req', 'null')
+for p in finetune_net.features.collect_params().values():
+    p.grad_req = 'null'
 ```
 
 ```{.python .input #fine-tuning-exercises-1}

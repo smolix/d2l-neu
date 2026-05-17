@@ -478,6 +478,16 @@ def forward(self, X, state=None):
     return self.output_layer(rnn_outputs)
 ```
 
+Note that the code above passes `state=None` on every minibatch, so the
+hidden state is reset between batches and backprop-through-time is
+bounded by `num_steps`. If you instead choose to carry the final state
+forward as the next batch's initial state (a common trick for very long
+sequences), remember to *detach* the carried state from the autograd
+graph (e.g. `state.detach()` in PyTorch, `state.detach()` in MXNet,
+`tf.stop_gradient(state)` in TF, or `jax.lax.stop_gradient(state)` in
+JAX). Otherwise the graph grows without bound and BPTT runs through
+every previously seen batch.
+
 Let's check whether the forward computation
 produces outputs with the correct shape.
 

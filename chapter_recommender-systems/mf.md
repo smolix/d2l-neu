@@ -60,8 +60,8 @@ First, we implement the matrix factorization model described above. The user and
 ```{.python .input #mf-model-implementation  n=4}
 #@tab mxnet
 class MF(nn.Block):
-    def __init__(self, num_factors, num_users, num_items, **kwargs):
-        super(MF, self).__init__(**kwargs)
+    def __init__(self, num_factors, num_users, num_items):
+        super().__init__()
         self.P = nn.Embedding(input_dim=num_users, output_dim=num_factors)
         self.Q = nn.Embedding(input_dim=num_items, output_dim=num_factors)
         self.user_bias = nn.Embedding(num_users, 1)
@@ -107,12 +107,12 @@ $$
 \textrm{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|}\sum_{(u, i) \in \mathcal{T}}(\mathbf{R}_{ui} -\hat{\mathbf{R}}_{ui})^2}
 $$
 
-where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set. We can use the RMSE function provided by `mx.metric`.
+where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set. We can use the RMSE function provided by `mx.gluon.metric`.
 
 ```{.python .input #mf-evaluation-measures  n=3}
 #@tab mxnet
 def evaluator(net, test_iter, devices):
-    rmse = mx.metric.RMSE()  # Get the RMSE
+    rmse = mx.gluon.metric.RMSE()  # Get the RMSE
     rmse_list = []
     for idx, (users, items, ratings) in enumerate(test_iter):
         u = gluon.utils.split_and_load(users, devices, even_split=False)
@@ -233,7 +233,10 @@ num_users, num_items, train_iter, test_iter = d2l.split_and_load_ml100k(
 net = MF(30, num_users, num_items)
 net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
 lr, num_epochs, wd, optimizer = 0.002, 20, 1e-5, 'adam'
-loss = gluon.loss.L2Loss()
+# `gluon.loss.L2Loss()` returns 0.5 * MSE, so with identical `lr` MX would
+# train at half the effective gradient of PT's `nn.MSELoss()`. Scale by 2
+# to match PyTorch's mean-MSE convention.
+loss = gluon.loss.L2Loss(weight=2)
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {"learning_rate": lr, 'wd': wd})
 train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,

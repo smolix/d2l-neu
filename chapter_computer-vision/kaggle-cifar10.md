@@ -31,7 +31,7 @@ you need to register a Kaggle account.
 import collections
 from d2l import mxnet as d2l
 import math
-from mxnet import gluon, init, npx
+from mxnet import gluon, init, np, npx
 from mxnet.gluon import nn
 import os
 import pandas as pd
@@ -493,8 +493,8 @@ This is for improving computational efficiency.
 ```{.python .input #kaggle-cifar10-defining-the-model-1}
 #@tab mxnet
 class Residual(nn.HybridBlock):
-    def __init__(self, num_channels, use_1x1conv=False, strides=1, **kwargs):
-        super(Residual, self).__init__(**kwargs)
+    def __init__(self, num_channels, use_1x1conv=False, strides=1):
+        super(Residual, self).__init__()
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
                                strides=strides)
         self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
@@ -506,12 +506,12 @@ class Residual(nn.HybridBlock):
         self.bn1 = nn.BatchNorm()
         self.bn2 = nn.BatchNorm()
 
-    def hybrid_forward(self, F, X):
-        Y = F.npx.relu(self.bn1(self.conv1(X)))
+    def forward(self, X):
+        Y = npx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
             X = self.conv3(X)
-        return F.npx.relu(Y + X)
+        return npx.relu(Y + X)
 ```
 
 :begin_tab:`mxnet`

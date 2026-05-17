@@ -28,20 +28,24 @@ As an example, we show below the true density of a Gaussian random variable with
 ```{.python .input #statistics-evaluating-and-comparing-estimators}
 #@tab mxnet
 from d2l import mxnet as d2l
+import mxnet as mx
 from mxnet import np, npx
 import random
 npx.set_np()
 
 # Sample datapoints and create y coordinate
 epsilon = 0.1
+# `random.seed` only seeds the stdlib RNG, not MXNet's; seed both so the
+# demo is reproducible.
 random.seed(8675309)
+mx.random.seed(8675309)
 xs = np.random.normal(loc=0, scale=1, size=(300,))
 
 ys = [np.sum(np.exp(-(xs[:i] - xs[i])**2 / (2 * epsilon**2))
              / np.sqrt(2*np.pi*epsilon**2)) / len(xs) for i in range(len(xs))]
 
 # Compute true density
-xd = np.arange(np.min(xs), np.max(xs), 0.01)
+xd = np.arange(np.min(xs).item(), np.max(xs).item(), 0.01)
 yd = np.exp(-xd**2/2) / np.sqrt(2 * np.pi)
 
 # Plot the results
@@ -92,6 +96,7 @@ tf.pi = tf.acos(tf.zeros(1)) * 2  # define pi in TensorFlow
 
 # Sample datapoints and create y coordinate
 epsilon = 0.1
+tf.random.set_seed(8675309)
 xs = tf.random.normal((300,))
 
 ys = tf.constant(

@@ -113,8 +113,8 @@ We can store a list of tensors and read them back into memory.
 ```{.python .input #read-write-loading-and-saving-tensors-3}
 %%tab mxnet
 y = np.zeros(4)
-npx.save('x-files', [x, y])
-x2, y2 = npx.load('x-files')
+npx.savez('x-files', x, y)
+x2, y2 = (npx.load('x-files')[k] for k in ('arr_0', 'arr_1'))
 (x2, y2)
 ```
 
@@ -150,7 +150,7 @@ to read or write all the weights in a model.
 ```{.python .input #read-write-loading-and-saving-tensors-4}
 %%tab mxnet
 mydict = {'x': x, 'y': y}
-npx.save('mydict', mydict)
+npx.savez('mydict', **mydict)
 mydict2 = npx.load('mydict')
 mydict2
 ```
@@ -202,8 +202,8 @@ Let's start with our familiar MLP.
 ```{.python .input #read-write-loading-and-saving-model-parameters-1}
 %%tab mxnet
 class MLP(nn.Block):
-    def __init__(self, **kwargs):
-        super(MLP, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
         self.hidden = nn.Dense(256, activation='relu')
         self.output = nn.Dense(10)
 

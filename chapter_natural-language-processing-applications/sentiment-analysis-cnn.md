@@ -298,9 +298,8 @@ with fixed weights.
 ```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab mxnet
 class TextCNN(nn.Block):
-    def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
-                 **kwargs):
-        super(TextCNN, self).__init__(**kwargs)
+    def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels):
+        super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
         # The embedding layer not to be trained
         self.constant_embedding = nn.Embedding(vocab_size, embed_size)
@@ -495,7 +494,8 @@ glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
 net.embedding.weight.set_data(embeds)
 net.constant_embedding.weight.set_data(embeds)
-net.constant_embedding.collect_params().setattr('grad_req', 'null')
+for p in net.constant_embedding.collect_params().values():
+    p.grad_req = 'null'
 ```
 
 ```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}

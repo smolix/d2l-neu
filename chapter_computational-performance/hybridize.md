@@ -362,7 +362,10 @@ net.export('my_mlp')
 
 ```{.python .input #hybridize-serialization-1}
 #@tab pytorch
-net.save('my_mlp')
+# `net.save` only exists on the scripted module; make the dependency on
+# `torch.jit.script` explicit so this cell still works after a re-run.
+scripted = torch.jit.script(net)
+scripted.save('my_mlp')
 !ls -lh my_mlp*
 ```
 
@@ -394,27 +397,26 @@ The model is decomposed into a (large binary) parameter file and a JSON descript
 :begin_tab:`mxnet`
 Earlier, we demonstrated that, after calling the `hybridize` function, the model is able to achieve superior computing performance and portability. Note, though that hybridization can affect model flexibility, in particular in terms of control flow. 
 
-Besides, contrary to the `Block` instance, which needs to use the `forward` function, for a `HybridBlock` instance we need to use the `hybrid_forward` function.
+Like the `Block` instance, the `HybridBlock` instance uses the `forward` function.
 :end_tab:
 
 ```{.python .input #hybridize-serialization-3}
 #@tab mxnet
 class HybridNet(nn.HybridBlock):
-    def __init__(self, **kwargs):
-        super(HybridNet, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
         self.hidden = nn.Dense(4)
         self.output = nn.Dense(2)
 
-    def hybrid_forward(self, F, x):
-        print('module F: ', F)
+    def forward(self, x):
         print('value  x: ', x)
-        x = F.npx.relu(self.hidden(x))
+        x = npx.relu(self.hidden(x))
         print('result  : ', x)
         return self.output(x)
 ```
 
 :begin_tab:`mxnet`
-The code above implements a simple network with 4 hidden units and 2 outputs. The `hybrid_forward` function takes an additional argument `F`. This is needed since, depending on whether the code has been hybridized or not, it will use a slightly different library (`ndarray` or `symbol`) for processing. Both classes perform very similar functions and MXNet automatically determines the argument. To understand what is going on we print the arguments as part of the function invocation.
+The code above implements a simple network with 4 hidden units and 2 outputs. In Gluon 2.0, the `forward` function no longer takes an `F` (`ndarray` vs. `symbol`) argument: the framework infers the right module from the input type automatically. To understand what is going on we print the input as part of the function invocation.
 :end_tab:
 
 ```{.python .input #hybridize-serialization-4}
@@ -445,7 +447,7 @@ net(x)
 ```
 
 :begin_tab:`mxnet` 
-This is quite different from what we saw previously. All print statements, as defined in `hybrid_forward`, are omitted. Indeed, after hybridization the execution of `net(x)` does not involve the Python interpreter any longer. This means that any spurious Python code is omitted (such as print statements) in favor of a much more streamlined execution and better performance. Instead, MXNet directly calls the C++ backend. Also note that some functions are not supported in the `symbol` module (e.g.,  `asnumpy`) and operations in-place such as `a += b` and `a[:] = a + b` must be rewritten as `a = a + b`. Nonetheless, compilation of models is worth the effort whenever speed matters. The benefit can range from small percentage points to more than twice the speed, depending on the complexity of the model, the speed of the CPU, and the speed and number of GPUs.
+This is quite different from what we saw previously. All print statements, as defined in `forward`, are omitted. Indeed, after hybridization the execution of `net(x)` does not involve the Python interpreter any longer. This means that any spurious Python code is omitted (such as print statements) in favor of a much more streamlined execution and better performance. Instead, MXNet directly calls the C++ backend. Also note that some functions are not supported in the `symbol` module (e.g.,  `asnumpy`) and operations in-place such as `a += b` and `a[:] = a + b` must be rewritten as `a = a + b`. Nonetheless, compilation of models is worth the effort whenever speed matters. The benefit can range from small percentage points to more than twice the speed, depending on the complexity of the model, the speed of the CPU, and the speed and number of GPUs.
 :end_tab:
 
 ## Summary
@@ -464,8 +466,8 @@ This is quite different from what we saw previously. All print statements, as de
 
 
 :begin_tab:`mxnet` 
-1. Add `x.asnumpy()` to the first line of the `hybrid_forward` function of the `HybridNet` class in this section. Execute the code and observe the errors you encounter. Why do they happen?
-1. What happens if we add control flow, i.e., the Python statements `if` and `for` in the `hybrid_forward` function?
+1. Add `x.asnumpy()` to the first line of the `forward` function of the `HybridNet` class in this section. Execute the code and observe the errors you encounter. Why do they happen?
+1. What happens if we add control flow, i.e., the Python statements `if` and `for` in the `forward` function?
 1. Review the models that interest you in the previous chapters. Can you improve their computational performance by reimplementing them?
 :end_tab:
 

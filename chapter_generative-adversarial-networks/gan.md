@@ -520,11 +520,20 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
     dummy = jnp.ones((1, 2))
     params_D = net_D.init(key_D, dummy)
     params_G = net_G.init(key_G, dummy)
-    # Reinitialize with normal(0, 0.02)
-    params_D = jax.tree.map(
-        lambda p: jax.random.normal(key_D, p.shape) * 0.02, params_D)
-    params_G = jax.tree.map(
-        lambda p: jax.random.normal(key_G, p.shape) * 0.02, params_G)
+    # Reinitialize with normal(0, 0.02). Use one subkey per leaf so that
+    # different parameter tensors aren't drawn from the same RNG state.
+    leaves_D, treedef_D = jax.tree_util.tree_flatten(params_D)
+    keys_D = jax.random.split(key_D, len(leaves_D))
+    params_D = jax.tree_util.tree_unflatten(
+        treedef_D,
+        [jax.random.normal(k, p.shape) * 0.02
+         for k, p in zip(keys_D, leaves_D)])
+    leaves_G, treedef_G = jax.tree_util.tree_flatten(params_G)
+    keys_G = jax.random.split(key_G, len(leaves_G))
+    params_G = jax.tree_util.tree_unflatten(
+        treedef_G,
+        [jax.random.normal(k, p.shape) * 0.02
+         for k, p in zip(keys_G, leaves_G)])
     optimizer_D = optax.adam(lr_D)
     optimizer_G = optax.adam(lr_G)
     opt_state_D = optimizer_D.init(params_D)

@@ -261,9 +261,11 @@ net = nn.Sequential()
 # We need to give the shared layer a name so that we can refer to its
 # parameters
 shared = nn.Dense(8, activation='relu')
+shared_clone = nn.Dense(8, activation='relu')
+shared_clone.share_parameters(shared.collect_params())
 net.add(nn.Dense(8, activation='relu'),
         shared,
-        nn.Dense(8, activation='relu', params=shared.params),
+        shared_clone,
         nn.Dense(10))
 net.initialize()
 

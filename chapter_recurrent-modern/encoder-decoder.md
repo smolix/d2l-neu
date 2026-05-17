@@ -229,11 +229,11 @@ class EncoderDecoder(d2l.Classifier):  #@save
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args, training=True)
+    def call(self, enc_X, dec_X, *args, training=None):
+        enc_all_outputs = self.encoder(enc_X, *args, training=training)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=True)[0]
+        return self.decoder(dec_X, dec_state, training=training)[0]
 ```
 
 ```{.python .input #encoder-decoder-putting-the-encoder-and-decoder-together}
@@ -242,13 +242,12 @@ class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
     encoder: nn.Module
     decoder: nn.Module
-    training: bool
 
-    def __call__(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args, training=self.training)
+    def __call__(self, enc_X, dec_X, *args, training=False):
+        enc_all_outputs = self.encoder(enc_X, *args, training=training)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=self.training)[0]
+        return self.decoder(dec_X, dec_state, training=training)[0]
 ```
 
 In the next section,

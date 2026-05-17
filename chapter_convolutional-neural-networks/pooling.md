@@ -159,9 +159,6 @@ def pool2d(X, pool_size, mode='max'):
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-
 def pool2d(X, pool_size, mode='max'):
     p_h, p_w = pool_size
     Y = tf.Variable(tf.zeros((X.shape[0] - p_h + 1, X.shape[1] - p_w +1)))

@@ -129,12 +129,16 @@ def split_data_ml100k(data, num_users, num_items,
         for u in range(1, num_users + 1):
             train_list.extend(sorted(train_items[u], key=lambda k: k[3]))
         test_data = [(key, *value) for key, value in test_items.items()]
-        train_data = [item for item in train_list if item not in test_data]
+        # O(N) set-membership filter instead of O(N^2) list-membership.
+        test_set = set(test_data)
+        train_data = [item for item in train_list if item not in test_set]
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        mask = [True if x == 1 else False for x in np.random.uniform(
-            0, 1, (len(data))) < 1 - test_ratio]
+        # Seed for deterministic splits across frameworks; produces a plain
+        # boolean list rather than `True if x == 1 else False`.
+        rng = np.random.default_rng(0)
+        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data
@@ -156,12 +160,16 @@ def split_data_ml100k(data, num_users, num_items,
         for u in range(1, num_users + 1):
             train_list.extend(sorted(train_items[u], key=lambda k: k[3]))
         test_data = [(key, *value) for key, value in test_items.items()]
-        train_data = [item for item in train_list if item not in test_data]
+        # O(N) set-membership filter instead of O(N^2) list-membership.
+        test_set = set(test_data)
+        train_data = [item for item in train_list if item not in test_set]
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        mask = [True if x == 1 else False for x in np.random.uniform(
-            0, 1, len(data)) < 1 - test_ratio]
+        # Seed for deterministic splits across frameworks; produces a plain
+        # boolean list rather than `True if x == 1 else False`.
+        rng = np.random.default_rng(0)
+        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data

@@ -229,22 +229,22 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 filtering as autoencoder reconstruction.
 
 The input is a *partially observed* rating vector for one
-user (1 row of the rating matrix, length = #items, with
+item (1 column of the rating matrix, length = #users, with
 zeros for unobserved entries). The autoencoder reconstructs
 it. Loss is computed only at the *observed* positions —
 unobserved entries are ignored.
 
-$$\mathcal{L} = \sum_{(u,i) \in \Omega} (r_{ui} - h(\mathbf{r}_u; \theta)_i)^2 + \lambda \|\theta\|^2.$$
+$$\mathcal{L} = \sum_{(u,i) \in \Omega} (r_{ui} - h(\mathbf{r}_{*i}; \theta)_u)^2 + \lambda \|\theta\|^2.$$
 
 Adds the nonlinearity that pure MF lacks. Two variants:
 **user-based** (input = ratings the user gave) and
 **item-based** (input = ratings the item received). The
-deck implements user-based.
+deck implements item-based.
 :::
 
 ::: {.slide title="The model"}
 Encoder: linear → activation → bottleneck. Decoder: linear
-→ ratings. Train as an autoencoder over the user vectors:
+→ ratings. Train as an autoencoder over the item vectors:
 
 @autorec-model
 

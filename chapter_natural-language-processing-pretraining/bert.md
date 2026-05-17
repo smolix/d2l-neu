@@ -211,8 +211,8 @@ segment embeddings and learnable positional embeddings.
 class BERTEncoder(nn.Block):
     """BERT encoder."""
     def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, max_len=1000, **kwargs):
-        super(BERTEncoder, self).__init__(**kwargs)
+                 num_blks, dropout, max_len=1000):
+        super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, num_hiddens)
         self.segment_embedding = nn.Embedding(2, num_hiddens)
         self.blks = nn.Sequential()
@@ -221,7 +221,7 @@ class BERTEncoder(nn.Block):
                 num_hiddens, ffn_num_hiddens, num_heads, dropout, True))
         # In BERT, positional embeddings are learnable, thus we create a
         # parameter of positional embeddings that are long enough
-        self.pos_embedding = self.params.get('pos_embedding',
+        self.pos_embedding = gluon.Parameter('pos_embedding',
                                              shape=(1, max_len, num_hiddens))
 
     def forward(self, tokens, segments, valid_lens):
@@ -462,8 +462,8 @@ The output is the prediction results at these positions.
 #@save
 class MaskLM(nn.Block):
     """The masked language model task of BERT."""
-    def __init__(self, vocab_size, num_hiddens, **kwargs):
-        super(MaskLM, self).__init__(**kwargs)
+    def __init__(self, vocab_size, num_hiddens):
+        super().__init__()
         self.mlp = nn.Sequential()
         self.mlp.add(
             nn.Dense(num_hiddens, flatten=False, activation='relu'))
@@ -669,8 +669,8 @@ where `X` is the output of the MLP hidden layer whose input is the encoded “&l
 #@save
 class NextSentencePred(nn.Block):
     """The next sentence prediction task of BERT."""
-    def __init__(self, **kwargs):
-        super(NextSentencePred, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
         self.output = nn.Dense(2)
 
     def forward(self, X):

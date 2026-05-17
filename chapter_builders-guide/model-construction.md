@@ -409,12 +409,12 @@ functionality of the default `Sequential` class.
 %%tab mxnet
 class MySequential(nn.Block):
     def add(self, block):
-        # Here, block is an instance of a Block subclass, and we assume that
-        # it has a unique name. We save it in the member variable _children of
-        # the Block class, and its type is OrderedDict. When the MySequential
-        # instance calls the initialize method, the system automatically
-        # initializes all members of _children
-        self._children[block.name] = block
+        # Here, block is an instance of a Block subclass. We register it with
+        # the parent class so that the system tracks it as a child block; the
+        # base class stores children in the OrderedDict _children. When the
+        # MySequential instance calls the initialize method, the system
+        # automatically initializes all members of _children
+        self.register_child(block)
 
     def forward(self, X):
         # OrderedDict guarantees that members will be traversed in the order
@@ -558,13 +558,14 @@ So we implement a `FixedHiddenMLP` class as follows.
 
 ```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-1}
 %%tab mxnet
+from mxnet import gluon
+
 class FixedHiddenMLP(nn.Block):
     def __init__(self):
         super().__init__()
-        # Random weight parameters created with the get_constant method
-        # are not updated during training (i.e., constant parameters)
-        self.rand_weight = self.params.get_constant(
-            'rand_weight', np.random.uniform(size=(20, 20)))
+        # Random weight parameters wrapped in gluon.Constant are not updated
+        # during training (i.e., constant parameters)
+        self.rand_weight = gluon.Constant(np.random.uniform(size=(20, 20)))
         self.dense = nn.Dense(20, activation='relu')
 
     def forward(self, X):
@@ -715,8 +716,8 @@ in some creative ways.
 ```{.python .input #model-construction-executing-code-in-the-forward-propagation-method-3}
 %%tab mxnet
 class NestMLP(nn.Block):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
         self.net = nn.Sequential()
         self.net.add(nn.Dense(64, activation='relu'),
                      nn.Dense(32, activation='relu'))

@@ -130,7 +130,17 @@ class RNN(nn.Module):  #@save
 
     @nn.compact
     def __call__(self, inputs, H=None):
-        raise NotImplementedError
+        if H is None:
+            batch_size = inputs.shape[1]
+            H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(
+                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
+
+        SimpleRNN = nn.scan(nn.SimpleCell, variable_broadcast="params",
+                            in_axes=0, out_axes=0,
+                            split_rngs={"params": False})
+
+        H, outputs = SimpleRNN(features=self.num_hiddens)(H, inputs)
+        return outputs, H
 ```
 
 Inheriting from the `RNNLMScratch` class in :numref:`sec_rnn-scratch`, 

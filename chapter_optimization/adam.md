@@ -108,8 +108,8 @@ def adam(params, grads, states, hyperparams):
         s[:].assign(beta2 * s + (1 - beta2) * tf.math.square(grad))
         v_bias_corr = v / (1 - beta1 ** hyperparams['t'])
         s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
-        p[:].assign(p - hyperparams['lr'] * v_bias_corr  
-                    / tf.math.sqrt(s_bias_corr) + eps)
+        p[:].assign(p - hyperparams['lr'] * v_bias_corr
+                    / (tf.math.sqrt(s_bias_corr) + eps))
 ```
 
 ```{.python .input #adam-implementation-1}
@@ -235,8 +235,8 @@ def yogi(params, grads, states, hyperparams):
                    tf.math.square(grad) - s) * tf.math.square(grad))
         v_bias_corr = v / (1 - beta1 ** hyperparams['t'])
         s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
-        p[:].assign(p - hyperparams['lr'] * v_bias_corr  
-                    / tf.math.sqrt(s_bias_corr) + eps)
+        p[:].assign(p - hyperparams['lr'] * v_bias_corr
+                    / (tf.math.sqrt(s_bias_corr) + eps))
     hyperparams['t'] += 1
 
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)

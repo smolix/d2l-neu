@@ -44,7 +44,7 @@ We can calculate self information as shown below. Before that, let's first impor
 ```{.python .input #information-theory-self-information}
 #@tab mxnet
 from mxnet import np
-from mxnet.metric import NegativeLogLikelihood
+from mxnet.gluon.metric import NegativeLogLikelihood
 from mxnet.ndarray import nansum
 import random
 

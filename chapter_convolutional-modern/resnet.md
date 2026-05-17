@@ -132,8 +132,8 @@ This kind of design requires that the output of the two convolutional layers has
 %%tab mxnet
 class Residual(nn.Block):  #@save
     """The Residual block of ResNet models."""
-    def __init__(self, num_channels, use_1x1conv=False, strides=1, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, num_channels, use_1x1conv=False, strides=1):
+        super().__init__()
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
                                strides=strides)
         self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
@@ -586,8 +586,8 @@ The following implementation of the `ResNeXtBlock` class takes as argument `grou
 class ResNeXtBlock(nn.Block):  #@save
     """The ResNeXt block."""
     def __init__(self, num_channels, groups, bot_mul,
-                 use_1x1conv=False, strides=1, **kwargs):
-        super().__init__(**kwargs)
+                 use_1x1conv=False, strides=1):
+        super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
                                strides=1)

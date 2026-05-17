@@ -544,6 +544,8 @@ def load_data_wiki(batch_size, max_len):
     indices = list(range(len(train_set)))
     random.shuffle(indices)
 
+    # Return a callable so each call yields a fresh iterator (one-shot
+    # generators can't be re-entered for multi-epoch training).
     def data_iter():
         for i in range(0, len(indices), batch_size):
             batch_indices = indices[i:i + batch_size]
@@ -557,7 +559,7 @@ def load_data_wiki(batch_size, max_len):
                    jnp.stack([b[4] for b in batch]),
                    jnp.stack([b[5] for b in batch]),
                    jnp.stack([b[6] for b in batch]))
-    return data_iter(), train_set.vocab
+    return data_iter, train_set.vocab
 ```
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-3}
@@ -586,11 +588,26 @@ Note that in each BERT input sequence,
 $10$ ($64 \times 0.15$) positions are predicted for the masked language modeling task.
 
 ```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-4}
+#@tab mxnet, pytorch, tensorflow
 batch_size, max_len = 512, 64
 train_iter, vocab = load_data_wiki(batch_size, max_len)
 
 for (tokens_X, segments_X, valid_lens_x, pred_positions_X, mlm_weights_X,
      mlm_Y, nsp_y) in train_iter:
+    print(tokens_X.shape, segments_X.shape, valid_lens_x.shape,
+          pred_positions_X.shape, mlm_weights_X.shape, mlm_Y.shape,
+          nsp_y.shape)
+    break
+```
+
+```{.python .input #bert-dataset-transforming-text-into-the-pretraining-dataset-4}
+#@tab jax
+batch_size, max_len = 512, 64
+# train_iter is a callable returning a fresh iterator on each call.
+train_iter, vocab = load_data_wiki(batch_size, max_len)
+
+for (tokens_X, segments_X, valid_lens_x, pred_positions_X, mlm_weights_X,
+     mlm_Y, nsp_y) in train_iter():
     print(tokens_X.shape, segments_X.shape, valid_lens_x.shape,
           pred_positions_X.shape, mlm_weights_X.shape, mlm_Y.shape,
           nsp_y.shape)

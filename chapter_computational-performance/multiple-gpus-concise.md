@@ -330,7 +330,7 @@ def train(net, num_gpus, batch_size, lr, resize=64):
     net = nn.DataParallel(net, device_ids=devices)
     trainer = torch.optim.SGD(net.parameters(), lr)
     loss = nn.CrossEntropyLoss()
-    timer, num_epochs = d2l.Timer(), 3
+    timer, num_epochs = d2l.Timer(), 10
     animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
     for epoch in range(num_epochs):
         net.train()

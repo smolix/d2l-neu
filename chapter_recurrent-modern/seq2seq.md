@@ -214,7 +214,10 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(num_hiddens, num_layers, dropout)
-        self.initialize(init.Xavier())
+        # Per-Block init: Gluon 2.0's Xavier rejects 1D weights, and the
+        # fused GRU has 1D internal weights. Initialize the GRU with defaults.
+        self.embedding.initialize(init.Xavier())
+        self.rnn.initialize()
             
     def forward(self, X, *args):
         # X shape: (batch_size, num_steps)
@@ -449,7 +452,11 @@ class Seq2SeqDecoder(d2l.Decoder):
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(num_hiddens, num_layers, dropout)
         self.dense = nn.Dense(vocab_size, flatten=False)
-        self.initialize(init.Xavier())
+        # Per-Block init: Gluon 2.0's Xavier rejects 1D weights, and the
+        # fused GRU has 1D internal weights. Initialize the GRU with defaults.
+        self.embedding.initialize(init.Xavier())
+        self.rnn.initialize()
+        self.dense.initialize(init.Xavier())
             
     def init_state(self, enc_all_outputs, *args):
         return enc_all_outputs 
@@ -695,7 +702,16 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
     lr: float
 
     def validation_step(self, params, batch, state):
-        l, _ = self.loss(params, batch[:-1], batch[-1], state)
+        # Evaluate with dropout disabled (training=False); training=True path
+        # is used by self.loss during fit.
+        Y_hat = state.apply_fn({'params': params}, *batch[:-1],
+                               training=False)
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(batch[-1], (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        l = fn(Y_hat, Y)
+        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
+        l = d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
         self.plot('loss', l, train=False)
 
     def configure_optimizers(self):
@@ -739,7 +755,7 @@ def loss(self, Y_hat, Y):
 @d2l.add_to_class(Seq2Seq)
 @partial(jax.jit, static_argnums=(0, 5))
 def loss(self, params, X, Y, state, averaged=False):
-    Y_hat = state.apply_fn({'params': params}, *X,
+    Y_hat = state.apply_fn({'params': params}, *X, training=True,
                            rngs={'dropout': state.dropout_rng})
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     Y = d2l.reshape(Y, (-1,))
@@ -793,8 +809,8 @@ encoder = Seq2SeqEncoder(
 decoder = Seq2SeqDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                lr=0.005, training=True)
-trainer = d2l.Trainer(max_epochs=60, gradient_clip_val=1, num_gpus=1)
+                lr=0.005)
+trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 

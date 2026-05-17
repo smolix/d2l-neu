@@ -129,7 +129,14 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
         self.dense = nn.Dense(vocab_size, flatten=False)
-        self.initialize(init.Xavier())
+        # MXNet 2.0: `init.Xavier()` is applied per-Block (so it doesn't
+        # propagate into the GRU's fused 1D bias slice, which would raise
+        # "Xavier initializer cannot be applied to vector"). The GRU keeps
+        # its built-in Orthogonal/Xavier/Zero initialization.
+        self.embedding.initialize(init.Xavier())
+        self.dense.initialize(init.Xavier())
+        self.attention.initialize(init.Xavier())
+        self.rnn.initialize()
 
     def init_state(self, enc_outputs, enc_valid_lens):
         # Shape of outputs: (num_steps, batch_size, num_hiddens).
@@ -285,7 +292,7 @@ class Seq2SeqAttentionDecoder(nn.Module):
         self.attention = d2l.AdditiveAttention(self.num_hiddens, self.dropout)
         self.embedding = nn.Embed(self.vocab_size, self.embed_size)
         self.dense = nn.Dense(self.vocab_size)
-        self.rnn = d2l.GRU(num_hiddens, num_layers, dropout=self.dropout)
+        self.rnn = d2l.GRU(self.num_hiddens, self.num_layers, dropout=self.dropout)
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
         # Shape of outputs: (num_steps, batch_size, num_hiddens).
@@ -440,7 +447,7 @@ encoder = d2l.Seq2SeqEncoder(
 decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.005, training=True)
+                    lr=0.005)
 trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```

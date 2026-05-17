@@ -403,8 +403,9 @@ d2l.check_shape(add_norm(d2l.ones(shape), d2l.ones(shape)), shape)
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-3}
 %%tab tensorflow
-# Normalized_shape is: [i for i in range(len(input.shape))][1:]
-add_norm = AddNorm([1, 2], 0.5)
+# Match the 1-axis LayerNorm used by the trained model (norm_shape=[2]
+# normalizes the trailing feature axis), keeping demo and training consistent.
+add_norm = AddNorm([2], 0.5)
 shape = (2, 3, 4)
 d2l.check_shape(add_norm(tf.ones(shape), tf.ones(shape), training=False),
                 shape)
@@ -1069,7 +1070,13 @@ class TransformerDecoder(d2l.AttentionDecoder):
         return [enc_outputs, enc_valid_lens, [None] * self.num_blks]
 
     def forward(self, X, state):
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        # During step-by-step prediction, position-encode the new token using
+        # its true offset (the number of tokens already decoded), rather than
+        # always re-applying P[0:1]. This matches the pos encoding seen at
+        # training time and is critical for stable autoregressive decoding.
+        pos_offset = 0 if state[2][0] is None else state[2][0].shape[1]
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens),
+                              offset=pos_offset)
         self._attention_weights = [[None] * len(self.blks) for _ in range (2)]
         for i, blk in enumerate(self.blks):
             X, state = blk(X, state)
@@ -1159,8 +1166,13 @@ class TransformerDecoder(nn.Module):
         return [enc_outputs, enc_valid_lens, [None] * self.num_blks]
 
     def __call__(self, X, state, training=False):
+        # During step-by-step prediction, position-encode the new token using
+        # its true offset (the number of tokens already decoded), rather than
+        # always re-applying P[0:1]. This matches the pos encoding seen at
+        # training time and is critical for stable autoregressive decoding.
+        pos_offset = 0 if state[2][0] is None else state[2][0].shape[1]
         X = self.embedding(X) * jnp.sqrt(jnp.float32(self.num_hiddens))
-        X = self.pos_encoding(X, training=training)
+        X = self.pos_encoding(X, training=training, offset=pos_offset)
         attention_weights = [[None] * len(self.blks) for _ in range(2)]
         for i, blk in enumerate(self.blks):
             X, state, attention_w1, attention_w2 = blk(X, state,
@@ -1234,8 +1246,8 @@ decoder = TransformerDecoder(
     len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.001, training=True)
-trainer = d2l.Trainer(max_epochs=80, gradient_clip_val=1, num_gpus=1)
+                    lr=0.001)
+trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 

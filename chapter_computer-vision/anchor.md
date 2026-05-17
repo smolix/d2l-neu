@@ -564,9 +564,9 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     col_discard = np.full((num_anchors,), -1)
     row_discard = np.full((num_gt_boxes,), -1)
     for _ in range(num_gt_boxes):
-        max_idx = np.argmax(jaccard)  # Find the largest IoU
-        box_idx = (max_idx % num_gt_boxes).astype('int32')
-        anc_idx = (max_idx / num_gt_boxes).astype('int32')
+        max_idx = int(np.argmax(jaccard).item())  # Find the largest IoU
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map[anc_idx] = box_idx
         jaccard[:, box_idx] = col_discard
         jaccard[anc_idx, :] = row_discard
@@ -596,7 +596,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     for _ in range(num_gt_boxes):
         max_idx = torch.argmax(jaccard)  # Find the largest IoU
         box_idx = (max_idx % num_gt_boxes).long()
-        anc_idx = (max_idx / num_gt_boxes).long()
+        anc_idx = torch.div(max_idx, num_gt_boxes, rounding_mode='floor')
         anchors_bbox_map[anc_idx] = box_idx
         jaccard[:, box_idx] = col_discard
         jaccard[anc_idx, :] = row_discard

@@ -175,8 +175,8 @@ Below we define the `Attend` class to compute the soft alignment of hypotheses (
 ```{.python .input #natural-language-inference-attention-attending-2}
 #@tab mxnet
 class Attend(nn.Block):
-    def __init__(self, num_hiddens, **kwargs):
-        super(Attend, self).__init__(**kwargs)
+    def __init__(self, num_hiddens):
+        super().__init__()
         self.f = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B):
@@ -306,8 +306,8 @@ The following `Compare` class defines such a comparing step.
 ```{.python .input #natural-language-inference-attention-comparing}
 #@tab mxnet
 class Compare(nn.Block):
-    def __init__(self, num_hiddens, **kwargs):
-        super(Compare, self).__init__(**kwargs)
+    def __init__(self, num_hiddens):
+        super().__init__()
         self.g = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B, beta, alpha):
@@ -376,8 +376,8 @@ The aggregation step is defined in the following `Aggregate` class.
 ```{.python .input #natural-language-inference-attention-aggregating}
 #@tab mxnet
 class Aggregate(nn.Block):
-    def __init__(self, num_hiddens, num_outputs, **kwargs):
-        super(Aggregate, self).__init__(**kwargs)
+    def __init__(self, num_hiddens, num_outputs):
+        super().__init__()
         self.h = mlp(num_hiddens=num_hiddens, flatten=True)
         self.h.add(nn.Dense(num_outputs))
 
@@ -450,8 +450,8 @@ we define the decomposable attention model to jointly train these three steps.
 ```{.python .input #natural-language-inference-attention-putting-it-all-together}
 #@tab mxnet
 class DecomposableAttention(nn.Block):
-    def __init__(self, vocab, embed_size, num_hiddens, **kwargs):
-        super(DecomposableAttention, self).__init__(**kwargs)
+    def __init__(self, vocab, embed_size, num_hiddens):
+        super().__init__()
         self.embedding = nn.Embedding(len(vocab), embed_size)
         self.attend = Attend(num_hiddens)
         self.compare = Compare(num_hiddens)

@@ -357,7 +357,7 @@ trainer.fit(model, data)
 trainer = d2l.Trainer(max_epochs=10)
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 with d2l.try_gpu():
-    model = RegNetX32(lr=0.01)
+    model = RegNetX32(lr=0.05)
     trainer.fit(model, data)
 ```
 

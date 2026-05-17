@@ -13,6 +13,7 @@ In this section, we go on to discuss
 %matplotlib inline
 from d2l import mxnet as d2l
 import math
+import random
 from mxnet import np, npx
 npx.set_np()
 ```
@@ -22,6 +23,7 @@ npx.set_np()
 %matplotlib inline
 from d2l import torch as d2l
 import math
+import random
 import torch
 ```
 
@@ -84,9 +86,11 @@ def f_grad(x1, x2):  # Gradient of the objective function
 #@tab mxnet
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
-    # Simulate noisy gradient
-    g1 += d2l.normal(0.0, 1, (1,)).item()
-    g2 += d2l.normal(0.0, 1, (1,)).item()
+    # Simulate noisy gradient (Python's random.gauss avoids a GPU sync per
+    # step that a framework-tensor .item() would force in this 1000-step
+    # demo; the noise is scalar so a framework tensor buys nothing).
+    g1 += random.gauss(0, 1)
+    g2 += random.gauss(0, 1)
     eta_t = eta * lr()
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```
@@ -95,9 +99,11 @@ def sgd(x1, x2, s1, s2, f_grad):
 #@tab pytorch
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
-    # Simulate noisy gradient
-    g1 += torch.normal(0.0, 1, (1,)).item()
-    g2 += torch.normal(0.0, 1, (1,)).item()
+    # Simulate noisy gradient (Python's random.gauss avoids a GPU sync per
+    # step that a framework-tensor .item() would force in this 1000-step
+    # demo; the noise is scalar so a framework tensor buys nothing).
+    g1 += random.gauss(0, 1)
+    g2 += random.gauss(0, 1)
     eta_t = eta * lr()
     return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
 ```

@@ -257,23 +257,46 @@ We refer interested readers to the [JAX documentation](https://jax.readthedocs.i
 :end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
-%%tab mxnet, pytorch, jax
-def cross_entropy(y_hat, y):
-    return -d2l.reduce_mean(d2l.log(y_hat[list(range(len(y_hat))), y]))
+%%tab pytorch
+def cross_entropy(y_hat, y):  #@save
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = y_hat[list(range(len(y_hat))), y].clamp(min=1e-12)
+    return -d2l.reduce_mean(d2l.log(p))
+
+cross_entropy(y_hat, y)
+```
+
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
+%%tab mxnet
+def cross_entropy(y_hat, y):  #@save
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = y_hat[list(range(len(y_hat))), y].clip(a_min=1e-12, a_max=None)
+    return -d2l.reduce_mean(d2l.log(p))
+
+cross_entropy(y_hat, y)
+```
+
+```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
+%%tab jax
+def cross_entropy(y_hat, y):  #@save
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = jnp.clip(y_hat[list(range(len(y_hat))), y], a_min=1e-12)
+    return -d2l.reduce_mean(d2l.log(p))
 
 cross_entropy(y_hat, y)
 ```
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab tensorflow
-def cross_entropy(y_hat, y):
-    return -tf.reduce_mean(tf.math.log(tf.boolean_mask(
-        y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))))
+def cross_entropy(y_hat, y):  #@save
+    p = tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    return -tf.reduce_mean(tf.math.log(tf.maximum(p, 1e-12)))
 
 cross_entropy(y_hat, y)
 ```
 
-Note that we take $\log(\hat{y})$ without clipping. In practice this can produce $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically clamps the argument away from zero or, preferably, uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation. We keep the code as written to mirror the mathematical definition.
+Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab pytorch, mxnet, tensorflow
@@ -288,7 +311,9 @@ def loss(self, y_hat, y):
 @partial(jax.jit, static_argnums=(0))
 def loss(self, params, X, y, state):
     def cross_entropy(y_hat, y):
-        return -d2l.reduce_mean(d2l.log(y_hat[list(range(len(y_hat))), y]))
+        # Tiny clip to keep log finite when softmax outputs underflow to 0.
+        p = jnp.clip(y_hat[list(range(len(y_hat))), y], a_min=1e-12)
+        return -d2l.reduce_mean(d2l.log(p))
     y_hat = state.apply_fn({'params': params}, *X)
     # The returned empty dictionary is a placeholder for auxiliary data,
     # which will be used later (e.g., for batch norm)

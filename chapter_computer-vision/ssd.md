@@ -687,8 +687,8 @@ Now we can define the complete model `TinySSD` as follows.
 ```{.python .input #ssd-the-complete-model-4}
 #@tab mxnet
 class TinySSD(nn.Block):
-    def __init__(self, num_classes, **kwargs):
-        super(TinySSD, self).__init__(**kwargs)
+    def __init__(self, num_classes):
+        super(TinySSD, self).__init__()
         self.num_classes = num_classes
         for i in range(5):
             # Equivalent to the assignment statement `self.blk_i = get_blk(i)`
@@ -1036,15 +1036,21 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
 # Loss functions are encapsulated in TinySSD._compute_ssd_loss and
 # train_step; these module-level helpers mirror the other frameworks for
 # use in evaluation after training.
-_cls_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+_cls_loss = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
 
 def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks):
     batch_size = cls_preds.shape[0]
     num_classes = cls_preds.shape[2]
-    cls = _cls_loss(tf.reshape(cls_labels, [-1]),
-                    tf.reshape(cls_preds, [-1, num_classes]))
+    # Per-example mean cross-entropy over anchors (shape: (batch_size,))
+    cls = tf.reduce_mean(
+        tf.reshape(_cls_loss(tf.reshape(cls_labels, [-1]),
+                             tf.reshape(cls_preds, [-1, num_classes])),
+                   [batch_size, -1]),
+        axis=1)
+    # Per-example mean L1 bbox loss (shape: (batch_size,)) to match PT/JAX
     bbox = tf.reduce_mean(
-        tf.abs((bbox_preds * bbox_masks) - (bbox_labels * bbox_masks)))
+        tf.abs((bbox_preds - bbox_labels) * bbox_masks), axis=1)
     return cls + bbox
 ```
 

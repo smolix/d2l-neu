@@ -112,8 +112,8 @@ with two outputs ("positive" and "negative").
 #@tab mxnet
 class BiRNN(nn.Block):
     def __init__(self, vocab_size, embed_size, num_hiddens,
-                 num_layers, **kwargs):
-        super(BiRNN, self).__init__(**kwargs)
+                 num_layers):
+        super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
         # Set `bidirectional` to True to get a bidirectional RNN
         self.encoder = rnn.LSTM(num_hiddens, num_layers=num_layers,
@@ -194,13 +194,15 @@ class BiRNN(nn.Module):
         # Run forward and backward RNNs
         # Each output shape is (batch size, no. of time steps, num_hiddens)
         forward_out = self.forward_rnn(embeddings)
+        # Flax's `nn.RNN(..., reverse=True)` un-reverses its output back to
+        # input order, so `backward_out[:, 0, :]` corresponds to the
+        # backward LSTM having consumed the entire reversed sequence (its
+        # *final* hidden) while `forward_out[:, -1, :]` is the forward
+        # LSTM's final hidden. Concatenate these two: shape (batch size,
+        # 2 * num_hiddens).
         backward_out = self.backward_rnn(embeddings)
-        # Concatenate the hidden states at the initial and final time steps as
-        # the input of the fully connected layer. Its shape is (batch size,
-        # 4 * no. of hidden units)
         encoding = jnp.concatenate(
-            [forward_out[:, 0, :], forward_out[:, -1, :],
-             backward_out[:, 0, :], backward_out[:, -1, :]], axis=1)
+            [forward_out[:, -1, :], backward_out[:, 0, :]], axis=1)
         outs = self.decoder(encoding)
         return outs
 ```
@@ -300,7 +302,8 @@ these vectors during training.
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab mxnet
 net.embedding.weight.set_data(embeds)
-net.embedding.collect_params().setattr('grad_req', 'null')
+for p in net.embedding.collect_params().values():
+    p.grad_req = 'null'
 ```
 
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}

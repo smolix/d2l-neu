@@ -200,8 +200,8 @@ The generator needs to map the noise variable $\mathbf z\in\mathbb R^d$, a lengt
 #@tab mxnet
 class G_block(nn.Block):
     def __init__(self, channels, kernel_size=4,
-                 strides=2, padding=1, **kwargs):
-        super(G_block, self).__init__(**kwargs)
+                 strides=2, padding=1):
+        super().__init__()
         self.conv2d_trans = nn.Conv2DTranspose(
             channels, kernel_size, strides, padding, use_bias=False)
         self.batch_norm = nn.BatchNorm()
@@ -488,8 +488,8 @@ The basic block of the discriminator is a convolution layer followed by a batch 
 #@tab mxnet
 class D_block(nn.Block):
     def __init__(self, channels, kernel_size=4, strides=2,
-                 padding=1, alpha=0.2, **kwargs):
-        super(D_block, self).__init__(**kwargs)
+                 padding=1, alpha=0.2):
+        super().__init__()
         self.conv2d = nn.Conv2D(
             channels, kernel_size, strides, padding, use_bias=False)
         self.batch_norm = nn.BatchNorm()
@@ -854,12 +854,21 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
     variables_G = net_G.init(key_G, dummy_Z)
     variables_D = net_D.init(key_D, dummy_X)
 
-    # Reinitialize with normal(0, 0.02)
-    params_G = jax.tree.map(
-        lambda p: jax.random.normal(key_G, p.shape) * 0.02, variables_G['params'])
+    # Reinitialize with normal(0, 0.02). Use one subkey per leaf so that
+    # different parameter tensors aren't drawn from the same RNG state.
+    leaves_G, treedef_G = jax.tree_util.tree_flatten(variables_G['params'])
+    keys_G_init = jax.random.split(key_G, len(leaves_G))
+    params_G = jax.tree_util.tree_unflatten(
+        treedef_G,
+        [jax.random.normal(k, p.shape) * 0.02
+         for k, p in zip(keys_G_init, leaves_G)])
     batch_stats_G = variables_G.get('batch_stats', {})
-    params_D = jax.tree.map(
-        lambda p: jax.random.normal(key_D, p.shape) * 0.02, variables_D['params'])
+    leaves_D, treedef_D = jax.tree_util.tree_flatten(variables_D['params'])
+    keys_D_init = jax.random.split(key_D, len(leaves_D))
+    params_D = jax.tree_util.tree_unflatten(
+        treedef_D,
+        [jax.random.normal(k, p.shape) * 0.02
+         for k, p in zip(keys_D_init, leaves_D)])
     batch_stats_D = variables_D.get('batch_stats', {})
 
     optimizer_D = optax.adam(lr, b1=0.5, b2=0.999)
@@ -989,13 +998,13 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 
 ```{.python .input #dcgan-training-2}
 #@tab tensorflow
-latent_dim, lr, num_epochs = 100, 0.0005, 40
+latent_dim, lr, num_epochs = 100, 0.0002, 40
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 
 ```{.python .input #dcgan-training-2}
 #@tab jax
-latent_dim, lr, num_epochs = 100, 0.005, 20
+latent_dim, lr, num_epochs = 100, 0.0002, 40
 train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 ```
 

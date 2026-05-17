@@ -403,20 +403,22 @@ high-level batch normalization APIs (in practice we will use this instead).
 
 ```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab mxnet
+from mxnet import gluon
+
 class BatchNorm(nn.Block):
     # `num_features`: the number of outputs for a fully connected layer
     # or the number of output channels for a convolutional layer. `num_dims`:
     # 2 for a fully connected layer and 4 for a convolutional layer
-    def __init__(self, num_features, num_dims, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, num_features, num_dims):
+        super().__init__()
         if num_dims == 2:
             shape = (1, num_features)
         else:
             shape = (1, num_features, 1, 1)
         # The scale parameter and the shift parameter (model parameters) are
         # initialized to 1 and 0, respectively
-        self.gamma = self.params.get('gamma', shape=shape, init=init.One())
-        self.beta = self.params.get('beta', shape=shape, init=init.Zero())
+        self.gamma = gluon.Parameter('gamma', shape=shape, init=init.One())
+        self.beta = gluon.Parameter('beta', shape=shape, init=init.Zero())
         # The variables that are not model parameters are initialized to 0 and
         # 1
         self.moving_mean = np.zeros(shape)
@@ -431,7 +433,7 @@ class BatchNorm(nn.Block):
         # Save the updated `moving_mean` and `moving_var`
         Y, self.moving_mean, self.moving_var = batch_norm(
             X, self.gamma.data(), self.beta.data(), self.moving_mean,
-            self.moving_var, eps=1e-12, momentum=0.1)
+            self.moving_var, eps=1e-5, momentum=0.1)
         return Y
 ```
 
@@ -812,21 +814,24 @@ class BNLeNet(d2l.Classifier):
     training: bool = True
 
     def setup(self):
+        # Flax's default momentum=0.99 decays the OLD running stats; PT/MX use
+        # momentum=0.1 on the NEW stats, i.e. decay-of-OLD = 0.9. Pass 0.9 to
+        # match the other tabs.
         self.net = nn.Sequential([
             nn.Conv(6, kernel_size=(5, 5)),
-            nn.BatchNorm(not self.training),
+            nn.BatchNorm(not self.training, momentum=0.9),
             nn.sigmoid,
             lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
             nn.Conv(16, kernel_size=(5, 5)),
-            nn.BatchNorm(not self.training),
+            nn.BatchNorm(not self.training, momentum=0.9),
             nn.sigmoid,
             lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
             lambda x: x.reshape((x.shape[0], -1)),
             nn.Dense(120),
-            nn.BatchNorm(not self.training),
+            nn.BatchNorm(not self.training, momentum=0.9),
             nn.sigmoid,
             nn.Dense(84),
-            nn.BatchNorm(not self.training),
+            nn.BatchNorm(not self.training, momentum=0.9),
             nn.sigmoid,
             nn.Dense(self.num_classes)])
 ```

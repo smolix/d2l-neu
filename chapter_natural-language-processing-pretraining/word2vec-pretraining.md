@@ -501,8 +501,11 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
                             xlim=[1, num_epochs])
     # Sum of normalized losses, no. of normalized losses
     metric = d2l.Accumulator(2)
+    # Count batches once, before training, to avoid re-iterating the dataset
+    # every epoch just to size the animator.
+    num_batches = int(tf.data.experimental.cardinality(data_iter).numpy())
     for epoch in range(num_epochs):
-        timer, num_batches = d2l.Timer(), sum(1 for _ in data_iter)
+        timer = d2l.Timer()
         for i, batch in enumerate(data_iter):
             center, context_negative, mask, label = batch
             with tf.GradientTape() as tape:

@@ -293,8 +293,10 @@ class PositionalEncoding(nn.Module):  #@save
         self.P[:, :, 0::2] = torch.sin(X)
         self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
 
-    def forward(self, X):
-        X = X + self.P[:, :X.shape[1], :].to(X.device)
+    def forward(self, X, offset=0):
+        # `offset` lets autoregressive decoders advance the encoding position
+        # past tokens already emitted, instead of always slicing from 0.
+        X = X + self.P[:, offset:offset + X.shape[1], :].to(X.device)
         return self.dropout(X)
 ```
 
@@ -336,10 +338,12 @@ class PositionalEncoding(nn.Module):  #@save
         self.P = self.P.at[:, :, 1::2].set(jnp.cos(X[:, :self.num_hiddens // 2]))
 
     @nn.compact
-    def __call__(self, X, training=False):
+    def __call__(self, X, training=False, offset=0):
         # Flax sow API is used to capture intermediate variables
         self.sow('intermediates', 'P', self.P)
-        X = X + self.P[:, :X.shape[1], :]
+        # `offset` lets autoregressive decoders advance the encoding position
+        # past tokens already emitted, instead of always slicing from 0.
+        X = X + self.P[:, offset:offset + X.shape[1], :]
         return nn.Dropout(self.dropout)(X, deterministic=not training)
 ```
 

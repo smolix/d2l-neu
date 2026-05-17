@@ -64,8 +64,8 @@ from the base layer class and implement the forward propagation function.
 ```{.python .input #custom-layer-layers-without-parameters-1}
 %%tab mxnet
 class CenteredLayer(nn.Block):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
     def forward(self, X):
         return X - X.mean()
@@ -182,11 +182,13 @@ denote the number of inputs and outputs, respectively.
 
 ```{.python .input #custom-layer-layers-with-parameters-1}
 %%tab mxnet
+from mxnet import gluon
+
 class MyDense(nn.Block):
-    def __init__(self, units, in_units, **kwargs):
-        super().__init__(**kwargs)
-        self.weight = self.params.get('weight', shape=(in_units, units))
-        self.bias = self.params.get('bias', shape=(units,))
+    def __init__(self, units, in_units):
+        super().__init__()
+        self.weight = gluon.Parameter('weight', shape=(in_units, units))
+        self.bias = gluon.Parameter('bias', shape=(units,))
 
     def forward(self, x):
         linear = np.dot(x, self.weight.data(ctx=x.ctx)) + self.bias.data(
@@ -199,8 +201,9 @@ class MyDense(nn.Block):
 class MyDense(nn.Module):
     def __init__(self, in_units, units):
         super().__init__()
-        self.weight = nn.Parameter(torch.randn(in_units, units))
-        self.bias = nn.Parameter(torch.randn(units,))
+        # Scaled init (Xavier-ish) keeps activations bounded on size-64 inputs
+        self.weight = nn.Parameter(torch.randn(in_units, units) / in_units**0.5)
+        self.bias = nn.Parameter(torch.zeros(units,))
         
     def forward(self, X):
         linear = torch.matmul(X, self.weight) + self.bias

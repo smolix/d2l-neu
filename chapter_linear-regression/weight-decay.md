@@ -478,7 +478,8 @@ class WeightDecay(d2l.LinearRegression):
         self.wd = wd
         
     def configure_optimizers(self):
-        self.collect_params('.*bias').setattr('wd_mult', 0)
+        for p in self.collect_params('.*bias').values():
+            p.wd_mult = 0
         return gluon.Trainer(self.collect_params(),
                              'sgd', 
                              {'learning_rate': self.lr, 'wd': self.wd})
@@ -504,8 +505,10 @@ class WeightDecay(d2l.LinearRegression):
     def __init__(self, wd, lr):
         super().__init__(lr)
         self.save_hyperparameters()
+        # Keras' l2(wd) penalty is wd*sum(w**2) (no 1/2 factor), so use
+        # wd/2 to match the (wd/2)*||w||^2 convention used elsewhere.
         self.net = tf.keras.layers.Dense(
-            1, kernel_regularizer=tf.keras.regularizers.l2(wd),
+            1, kernel_regularizer=tf.keras.regularizers.l2(wd / 2),
             kernel_initializer=tf.keras.initializers.RandomNormal(0, 0.01)
         )
         
@@ -517,12 +520,18 @@ class WeightDecay(d2l.LinearRegression):
 %%tab jax
 class WeightDecay(d2l.LinearRegression):
     wd: float = 0
-    
+
     def configure_optimizers(self):
         # Weight Decay is not available directly within optax.sgd, but
-        # optax allows chaining several transformations together
-        return optax.chain(optax.add_decayed_weights(self.wd),
-                           optax.sgd(self.lr))
+        # optax allows chaining several transformations together. We
+        # mask the decay so it applies to the kernel only (not bias),
+        # matching the per-parameter-group convention in PyTorch / MXNet.
+        def kernel_mask(params):
+            return jax.tree_util.tree_map_with_path(
+                lambda path, _: path[-1].key != 'bias', params)
+        return optax.chain(
+            optax.masked(optax.add_decayed_weights(self.wd), kernel_mask),
+            optax.sgd(self.lr))
 ```
 
 The plot looks similar to that when

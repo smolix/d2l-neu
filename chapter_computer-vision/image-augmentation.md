@@ -840,11 +840,15 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
                             legend=['train loss', 'train acc', 'test acc'])
     timer = d2l.Timer()
 
+    # Use a separate eval module (training=False) so BatchNorm uses
+    # running stats instead of batch stats at test time. Params are shared
+    # with the training network; only the `training` flag differs.
+    eval_net = net.clone(training=False)
+
     @jax.jit
     def eval_step(params, batch_stats, X):
-        logits, _ = state.apply_fn(
-            {'params': params, 'batch_stats': batch_stats},
-            X, mutable=['batch_stats'])
+        logits = eval_net.apply(
+            {'params': params, 'batch_stats': batch_stats}, X)
         return logits
 
     for epoch in range(num_epochs):

@@ -165,12 +165,15 @@ post_sig_est = 0.5
 
 def neg_MLL(pars):
     K = d2l.rbfkernel(train_x, train_x, ls=pars[0])
-    kernel_term = -0.5 * train_y @ \
-        np.linalg.inv(K + pars[1] ** 2 * np.eye(train_x.shape[0])) @ train_y
-    logdet = -0.5 * np.log(np.linalg.det(K + pars[1] ** 2 * \
-                                         np.eye(train_x.shape[0])))
+    # Solve (K + sigma^2 I) z = y rather than inverting the matrix; this is
+    # numerically more stable and a bit cheaper.
+    A = K + pars[1] ** 2 * np.eye(train_x.shape[0])
+    alpha = np.linalg.solve(A, train_y)
+    kernel_term = -0.5 * train_y @ alpha
+    sign, logabsdet = np.linalg.slogdet(A)
+    logdet = -0.5 * logabsdet
     const = -train_x.shape[0] / 2. * np.log(2 * np.pi)
-    
+
     return -(kernel_term + logdet + const)
 
 
@@ -191,10 +194,11 @@ K_x_xstar = d2l.rbfkernel(train_x, test_x, ls=ell)
 K_x_x = d2l.rbfkernel(train_x, train_x, ls=ell)
 K_xstar_xstar = d2l.rbfkernel(test_x, test_x, ls=ell)
 
-post_mean = K_x_xstar.T @ np.linalg.inv((K_x_x + \
-                post_sig_est ** 2 * np.eye(train_x.shape[0]))) @ train_y
-post_cov = K_xstar_xstar - K_x_xstar.T @ np.linalg.inv((K_x_x + \
-                post_sig_est ** 2 * np.eye(train_x.shape[0]))) @ K_x_xstar
+# Solve against (K_x_x + sigma^2 I) once rather than inverting the matrix:
+# `np.linalg.solve` is numerically more stable and a bit cheaper.
+A = K_x_x + post_sig_est ** 2 * np.eye(train_x.shape[0])
+post_mean = K_x_xstar.T @ np.linalg.solve(A, train_y)
+post_cov = K_xstar_xstar - K_x_xstar.T @ np.linalg.solve(A, K_x_xstar)
 
 lw_bd = post_mean - 2 * np.sqrt(np.diag(post_cov))
 up_bd = post_mean + 2 * np.sqrt(np.diag(post_cov))

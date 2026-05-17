@@ -84,7 +84,10 @@ seed = 0  # Random number generator seed
 gamma = 0.95  # Discount factor
 num_iters = 256  # Number of iterations
 alpha   = 0.9  # Learning rate
-epsilon = 0.9  # Epsilon in epsilon greedy algorithm
+# Anneal epsilon linearly from `epsilon_start` to `epsilon_end` across the
+# `num_iters` episodes: explore broadly early, exploit once Q is informative.
+epsilon_start = 0.9
+epsilon_end = 0.05
 random.seed(seed)  # Set the random seed
 np.random.seed(seed)
 
@@ -111,7 +114,7 @@ We are now ready to implement Q-learning:
 
 ```{.python .input #qlearning-implementation-of-q-learning-3}
 
-def q_learning(env_info, gamma, num_iters, alpha, epsilon):
+def q_learning(env_info, gamma, num_iters, alpha, epsilon_start, epsilon_end):
     env_desc = env_info['desc']  # 2D array specifying what each grid item means
     env = env_info['env']  # 2D array specifying what each grid item means
     num_states = env_info['num_states']
@@ -122,6 +125,9 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon):
     pi = np.zeros((num_iters + 1, num_states))
 
     for k in range(1, num_iters + 1):
+        # Linearly anneal epsilon over episodes
+        epsilon = epsilon_start + (epsilon_end - epsilon_start) * (
+            (k - 1) / max(1, num_iters - 1))
         # Reset environment
         state, _ = env.reset()
         done = False
@@ -131,8 +137,12 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon):
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Q-update:
-            y = reward + gamma * np.max(Q[next_state,:])
+            # Q-update: mask the bootstrap term at terminal states so the
+            # target is just the observed reward when the episode ends.
+            if done:
+                y = reward
+            else:
+                y = reward + gamma * np.max(Q[next_state,:])
             Q[state, action] = Q[state, action] + alpha * (y - Q[state, action])
 
             # Move to the next state
@@ -143,7 +153,8 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon):
             pi[k,s] = np.argmax(Q[s,:])
     d2l.show_Q_function_progress(env_desc, V[:-1], pi[:-1])
 
-q_learning(env_info=env_info, gamma=gamma, num_iters=num_iters, alpha=alpha, epsilon=epsilon)
+q_learning(env_info=env_info, gamma=gamma, num_iters=num_iters, alpha=alpha,
+           epsilon_start=epsilon_start, epsilon_end=epsilon_end)
 
 ```
 

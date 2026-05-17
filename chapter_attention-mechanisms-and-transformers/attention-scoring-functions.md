@@ -120,8 +120,9 @@ def masked_softmax(X, valid_lens):  #@save
         maxlen = X.size(1)
         mask = torch.arange((maxlen), dtype=torch.float32,
                             device=X.device)[None, :] < valid_len[:, None]
-        X[~mask] = value
-        return X
+        # Out-of-place to avoid mutating the input tensor in-place, which
+        # autograd can flag and which interferes with downstream views.
+        return torch.where(mask, X, torch.full_like(X, value))
     
     if valid_lens is None:
         return nn.functional.softmax(X, dim=-1)
@@ -476,8 +477,8 @@ we implement additive attention as follows:
 %%tab mxnet
 class AdditiveAttention(nn.Block):  #@save
     """Additive attention."""
-    def __init__(self, num_hiddens, dropout, **kwargs):
-        super(AdditiveAttention, self).__init__(**kwargs)
+    def __init__(self, num_hiddens, dropout):
+        super().__init__()
         # Use flatten=False to only transform the last axis so that the
         # shapes for the other axes are kept the same
         self.W_k = nn.Dense(num_hiddens, use_bias=False, flatten=False)

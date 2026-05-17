@@ -221,7 +221,7 @@ def get_scratch_params(self):
 @d2l.add_to_class(d2l.Module)  #@save
 def parameters(self):
     params = self.collect_params()
-    return params if isinstance(params, gluon.parameter.ParameterDict) and len(
+    return params if isinstance(params, dict) and len(
         params.keys()) else self.get_scratch_params()
 ```
 

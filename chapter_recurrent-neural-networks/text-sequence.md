@@ -153,9 +153,11 @@ class Vocab:  #@save
         counter = collections.Counter(tokens)
         self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
                                   reverse=True)
-        # The list of unique tokens
-        self.idx_to_token = list(sorted(set(['<unk>'] + reserved_tokens + [
-            token for token, freq in self.token_freqs if freq >= min_freq])))
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
                              for idx, token in enumerate(self.idx_to_token)}
 

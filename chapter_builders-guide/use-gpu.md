@@ -588,8 +588,7 @@ def set_scratch_params_device(self, device):
     for attr in dir(self):
         a = getattr(self, attr)
         if isinstance(a, np.ndarray):
-            with autograd.record():
-                setattr(self, attr, a.as_in_ctx(device))
+            setattr(self, attr, a.as_in_ctx(device))
             getattr(self, attr).attach_grad()
         if isinstance(a, d2l.Module):
             a.set_scratch_params_device(device)
@@ -616,7 +615,7 @@ def prepare_model(self, model):
     model.trainer = self
     model.board.xlim = [0, self.max_epochs]
     if self.gpus:
-        model.collect_params().reset_ctx(self.gpus[0])
+        model.reset_ctx(self.gpus[0])
         model.set_scratch_params_device(self.gpus[0])
     self.model = model
 ```

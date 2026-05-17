@@ -641,9 +641,9 @@ In this model, forward propagation just returns the model parameters.
 ```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab mxnet
 class SynthesizedImage(nn.Block):
-    def __init__(self, img_shape, **kwargs):
-        super(SynthesizedImage, self).__init__(**kwargs)
-        self.weight = self.params.get('weight', shape=img_shape)
+    def __init__(self, img_shape):
+        super(SynthesizedImage, self).__init__()
+        self.weight = gluon.Parameter('weight', shape=img_shape)
 
     def forward(self):
         return self.weight.data()
@@ -871,7 +871,7 @@ We use the content image to initialize the synthesized image.
 ```{.python .input #neural-style-training-2}
 #@tab mxnet
 device, image_shape = d2l.try_gpu(), (450, 300)
-net.collect_params().reset_ctx(device)
+net.reset_ctx(device)
 content_X, contents_Y = get_contents(image_shape, device)
 _, styles_Y = get_styles(image_shape, device)
 output = train(content_X, contents_Y, styles_Y, device, 0.9, 500, 50)

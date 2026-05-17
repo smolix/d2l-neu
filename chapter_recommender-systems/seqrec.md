@@ -69,8 +69,8 @@ The following code implements the Caser model. It consists of a vertical convolu
 #@tab mxnet
 class Caser(nn.Block):
     def __init__(self, num_factors, num_users, num_items, L=5, d=16,
-                 d_prime=4, drop_ratio=0.05, **kwargs):
-        super(Caser, self).__init__(**kwargs)
+                 d_prime=4, drop_ratio=0.05):
+        super().__init__()
         self.P = nn.Embedding(num_users, num_factors)
         self.Q = nn.Embedding(num_items, num_factors)
         self.d_prime, self.d = d_prime, d
@@ -108,7 +108,9 @@ class Caser(nn.Block):
         z = self.fc(self.dropout(out))
         x = np.concatenate([z, user_emb], axis=1)
         q_prime_i = np.squeeze(self.Q_prime(item_id))
-        b = np.squeeze(self.b(item_id))
+        # Squeeze only the trailing axis so a batch of 1 keeps its batch
+        # dim (bare squeeze would collapse it).
+        b = np.squeeze(self.b(item_id), axis=-1)
         res = (x * q_prime_i).sum(1) + b
         return res
 ```
@@ -156,8 +158,10 @@ class Caser(nn.Module):
         out = torch.cat([out_v, out_h], dim=1)
         z = self.fc(self.dropout(out))
         x = torch.cat([z, user_emb], dim=1)
-        q_prime_i = self.Q_prime(item_id).squeeze()
-        b = self.b(item_id).squeeze()
+        # Squeeze only the trailing axis so a batch of 1 keeps its batch
+        # dim (bare squeeze would collapse it).
+        q_prime_i = self.Q_prime(item_id).squeeze(-1)
+        b = self.b(item_id).squeeze(-1)
         res = (x * q_prime_i).sum(1) + b
         return res
 ```
@@ -171,13 +175,20 @@ To process the sequential interaction data, we need to reimplement the `Dataset`
 #@tab mxnet
 class SeqDataset(gluon.data.Dataset):
     def __init__(self, user_ids, item_ids, L, num_users, num_items,
-                 candidates):
+                 candidates, test_items=None):
         user_ids, item_ids = np.array(user_ids), np.array(item_ids)
         sort_idx = np.array(sorted(range(len(user_ids)),
                                    key=lambda k: user_ids[k]))
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
-        temp, u_ids, self.cand = {}, u_ids.asnumpy(), candidates
-        self.all_items = set([i for i in range(num_items)])
+        temp, u_ids = {}, u_ids.asnumpy()
+        # Precompute each user's negative pool once: items the user has not
+        # interacted with in train AND not held out as a test positive
+        # (excluding test positives prevents leakage into the BPR loss).
+        all_items = set(range(num_items))
+        test_items = test_items or {}
+        self.neg_pool = {
+            u: list(all_items - set(candidates.get(u, [])) - set(test_items.get(u, [])))
+            for u in candidates}
         [temp.setdefault(u_ids[i], []).append(i) for i, _ in enumerate(u_ids)]
         temp = sorted(temp.items(), key=lambda x: x[0])
         u_ids = np.array([i[0] for i in temp])
@@ -216,7 +227,7 @@ class SeqDataset(gluon.data.Dataset):
         return self.ns
 
     def __getitem__(self, idx):
-        neg = list(self.all_items - set(self.cand[int(self.seq_users[idx])]))
+        neg = self.neg_pool[int(self.seq_users[idx])]
         i = random.randint(0, len(neg) - 1)
         return (self.seq_users[idx], self.seq_items[idx], self.seq_tgt[idx],
                 neg[i])
@@ -226,15 +237,22 @@ class SeqDataset(gluon.data.Dataset):
 #@tab pytorch
 class SeqDataset(torch.utils.data.Dataset):
     def __init__(self, user_ids, item_ids, L, num_users, num_items,
-                 candidates):
+                 candidates, test_items=None):
         user_ids = torch.tensor(user_ids, dtype=torch.long)
         item_ids = torch.tensor(item_ids, dtype=torch.long)
         sort_idx = sorted(range(len(user_ids)),
                           key=lambda k: user_ids[k].item())
         sort_idx = torch.tensor(sort_idx, dtype=torch.long)
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
-        temp, u_ids_np, self.cand = {}, u_ids.numpy(), candidates
-        self.all_items = set([i for i in range(num_items)])
+        temp, u_ids_np = {}, u_ids.numpy()
+        # Precompute each user's negative pool once: items the user has not
+        # interacted with in train AND not held out as a test positive
+        # (excluding test positives prevents leakage into the BPR loss).
+        all_items = set(range(num_items))
+        test_items = test_items or {}
+        self.neg_pool = {
+            u: list(all_items - set(candidates.get(u, [])) - set(test_items.get(u, [])))
+            for u in candidates}
         [temp.setdefault(u_ids_np[i], []).append(i)
          for i, _ in enumerate(u_ids_np)]
         temp = sorted(temp.items(), key=lambda x: x[0])
@@ -274,7 +292,7 @@ class SeqDataset(torch.utils.data.Dataset):
         return self.ns
 
     def __getitem__(self, idx):
-        neg = list(self.all_items - set(self.cand[int(self.seq_users[idx])]))
+        neg = self.neg_pool[int(self.seq_users[idx])]
         i = random.randint(0, len(neg) - 1)
         return (self.seq_users[idx], self.seq_items[idx], self.seq_tgt[idx],
                 neg[i])
@@ -295,7 +313,7 @@ users_train, items_train, ratings_train, candidates = d2l.load_data_ml100k(
 users_test, items_test, ratings_test, test_iter = d2l.load_data_ml100k(
     test_data, num_users, num_items, feedback="implicit")
 train_seq_data = SeqDataset(users_train, items_train, L, num_users,
-                            num_items, candidates)
+                            num_items, candidates, test_items=test_iter)
 train_iter = gluon.data.DataLoader(train_seq_data, batch_size, True,
                                    last_batch="rollover",
                                    num_workers=d2l.get_dataloader_workers())
@@ -314,7 +332,7 @@ users_train, items_train, ratings_train, candidates = d2l.load_data_ml100k(
 users_test, items_test, ratings_test, test_iter = d2l.load_data_ml100k(
     test_data, num_users, num_items, feedback="implicit")
 train_seq_data = SeqDataset(users_train, items_train, L, num_users,
-                            num_items, candidates)
+                            num_items, candidates, test_items=test_iter)
 train_iter = torch.utils.data.DataLoader(train_seq_data, batch_size,
                                          shuffle=True, drop_last=True,
                                          num_workers=d2l.get_dataloader_workers())
@@ -350,8 +368,14 @@ d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
 #@tab pytorch
 devices = d2l.try_all_gpus()
 net = Caser(10, num_users, num_items, L)
-net.apply(lambda m: (nn.init.normal_(m.weight, 0, 0.01)
-                     if hasattr(m, 'weight') else None))
+def _init(m):
+    # Match MX's `init.Normal(0.01)` semantics: initialize weights *and*
+    # biases, so biases don't keep their default uniform fan-in init.
+    if hasattr(m, 'weight') and m.weight is not None:
+        nn.init.normal_(m.weight, 0, 0.01)
+    if hasattr(m, 'bias') and m.bias is not None:
+        nn.init.zeros_(m.bias)
+net.apply(_init)
 net = net.to(devices[0])
 lr, num_epochs, wd, optimizer = 0.04, 8, 1e-5, 'adam'
 loss = d2l.BPRLoss()

@@ -220,10 +220,7 @@ class NiN(d2l.Classifier):
         ])
 
     def configure_optimizers(self):
-        # Add gradient clipping to stabilize training (matches PT/MX/TF
-        # behavior via d2l.Trainer.clip_gradients which is not applied in
-        # the JAX trainer).
-        return optax.chain(optax.clip_by_global_norm(1.0), optax.sgd(self.lr))
+        return optax.sgd(self.lr)
 ```
 
 We create a data example to see the output shape of each block.

@@ -332,9 +332,10 @@ def k_fold_data(data, k):
     rets = []
     fold_size = data.train.shape[0] // k
     for j in range(k):
-        idx = range(j * fold_size, (j+1) * fold_size)
-        rets.append(KaggleHouse(data.batch_size, data.train.drop(index=idx),  
-                                data.train.loc[idx]))    
+        idx = list(range(j * fold_size, (j+1) * fold_size))
+        rets.append(KaggleHouse(data.batch_size,
+                                data.train.drop(index=idx),
+                                data.train.iloc[idx]))
     return rets
 ```
 

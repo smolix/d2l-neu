@@ -61,9 +61,8 @@ The following code implements the NeuMF model. It consists of a generalized matr
 ```{.python .input #neumf-model-implementation  n=2}
 #@tab mxnet
 class NeuMF(nn.Block):
-    def __init__(self, num_factors, num_users, num_items, nums_hiddens,
-                 **kwargs):
-        super(NeuMF, self).__init__(**kwargs)
+    def __init__(self, num_factors, num_users, num_items, nums_hiddens):
+        super().__init__()
         self.P = nn.Embedding(num_users, num_factors)
         self.Q = nn.Embedding(num_items, num_factors)
         self.U = nn.Embedding(num_users, num_factors)
@@ -72,7 +71,9 @@ class NeuMF(nn.Block):
         for num_hiddens in nums_hiddens:
             self.mlp.add(nn.Dense(num_hiddens, activation='relu',
                                   use_bias=True))
-        self.prediction_layer = nn.Dense(1, activation='sigmoid', use_bias=False)
+        # Output raw logits; BPRLoss applies sigmoid internally, so adding
+        # a sigmoid here would compose with it and squash gradients.
+        self.prediction_layer = nn.Dense(1, use_bias=False)
 
     def forward(self, user_id, item_id):
         p_mf = self.P(user_id)
@@ -101,9 +102,10 @@ class NeuMF(nn.Module):
             mlp_layers.append(nn.ReLU())
             input_size = num_hiddens
         self.mlp = nn.Sequential(*mlp_layers)
-        self.prediction_layer = nn.Sequential(
-            nn.Linear(num_factors + nums_hiddens[-1], 1, bias=False),
-            nn.Sigmoid())
+        # Output raw logits; BPRLoss applies sigmoid internally, so adding
+        # a sigmoid here would compose with it and squash gradients.
+        self.prediction_layer = nn.Linear(num_factors + nums_hiddens[-1], 1,
+                                          bias=False)
 
     def forward(self, user_id, item_id):
         p_mf = self.P(user_id)
@@ -123,17 +125,23 @@ For pairwise ranking loss, an important step is negative sampling. For each user
 ```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab mxnet
 class PRDataset(gluon.data.Dataset):
-    def __init__(self, users, items, candidates, num_items):
+    def __init__(self, users, items, candidates, num_items, test_items=None):
         self.users = users
         self.items = items
-        self.cand = candidates
-        self.all = set([i for i in range(num_items)])
+        # Precompute each user's negative pool once: items the user has not
+        # interacted with in train AND not held out as a test positive
+        # (excluding test positives prevents leakage into the BPR loss).
+        all_items = set(range(num_items))
+        test_items = test_items or {}
+        self.neg_pool = {
+            u: list(all_items - set(candidates.get(u, [])) - set(test_items.get(u, [])))
+            for u in candidates}
 
     def __len__(self):
         return len(self.users)
 
     def __getitem__(self, idx):
-        neg_items = list(self.all - set(self.cand[int(self.users[idx])]))
+        neg_items = self.neg_pool[int(self.users[idx])]
         indices = random.randint(0, len(neg_items) - 1)
         return self.users[idx], self.items[idx], neg_items[indices]
 ```
@@ -141,17 +149,23 @@ class PRDataset(gluon.data.Dataset):
 ```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab pytorch
 class PRDataset(torch.utils.data.Dataset):
-    def __init__(self, users, items, candidates, num_items):
+    def __init__(self, users, items, candidates, num_items, test_items=None):
         self.users = users
         self.items = items
-        self.cand = candidates
-        self.all = set([i for i in range(num_items)])
+        # Precompute each user's negative pool once: items the user has not
+        # interacted with in train AND not held out as a test positive
+        # (excluding test positives prevents leakage into the BPR loss).
+        all_items = set(range(num_items))
+        test_items = test_items or {}
+        self.neg_pool = {
+            u: list(all_items - set(candidates.get(u, [])) - set(test_items.get(u, [])))
+            for u in candidates}
 
     def __len__(self):
         return len(self.users)
 
     def __getitem__(self, idx):
-        neg_items = list(self.all - set(self.cand[int(self.users[idx])]))
+        neg_items = self.neg_pool[int(self.users[idx])]
         indices = random.randint(0, len(neg_items) - 1)
         return self.users[idx], self.items[idx], neg_items[indices]
 ```
@@ -284,7 +298,7 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['test hit rate', 'test AUC'])
     for epoch in range(num_epochs):
-        metric, l = d2l.Accumulator(3), 0.
+        metric = d2l.Accumulator(3)
         for i, values in enumerate(train_iter):
             input_data = []
             for v in values:
@@ -295,9 +309,11 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
                                               input_data[-1])]
                 ls = [loss(p, n) for p, n in zip(p_pos, p_neg)]
             [l.backward(retain_graph=False) for l in ls]
-            l += sum([l.asnumpy() for l in ls]).mean()
+            # Per-batch loss only; accumulating across batches inside `l`
+            # turned the printed train-loss into a quadratic sum.
+            batch_loss = sum([l.asnumpy() for l in ls]).mean()
             trainer.step(values[0].shape[0])
-            metric.add(l, values[0].shape[0], values[0].size)
+            metric.add(batch_loss, values[0].shape[0], values[0].size)
             timer.stop()
         with autograd.predict_mode():
             if (epoch + 1) % eval_step == 0:
@@ -321,7 +337,7 @@ def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['test hit rate', 'test AUC'])
     for epoch in range(num_epochs):
-        metric, l = d2l.Accumulator(3), 0.
+        metric = d2l.Accumulator(3)
         for i, values in enumerate(train_iter):
             input_data = [v.to(devices[0]) for v in values]
             p_pos = net(*input_data[:-1])
@@ -330,8 +346,9 @@ def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
             optimizer.zero_grad()
             ls.backward()
             optimizer.step()
-            l += ls.item()
-            metric.add(l, values[0].shape[0], values[0].numel())
+            # Per-batch loss only; accumulating across batches inside `l`
+            # turned the printed train-loss into a quadratic sum.
+            metric.add(ls.item(), values[0].shape[0], values[0].numel())
             timer.stop()
         with torch.no_grad():
             if (epoch + 1) % eval_step == 0:
@@ -358,7 +375,8 @@ users_train, items_train, ratings_train, candidates = d2l.load_data_ml100k(
 users_test, items_test, ratings_test, test_iter = d2l.load_data_ml100k(
     test_data, num_users, num_items, feedback="implicit")
 train_iter = gluon.data.DataLoader(
-    PRDataset(users_train, items_train, candidates, num_items ), batch_size,
+    PRDataset(users_train, items_train, candidates, num_items,
+              test_items=test_iter), batch_size,
     True, last_batch="rollover", num_workers=d2l.get_dataloader_workers())
 ```
 
@@ -373,7 +391,8 @@ users_train, items_train, ratings_train, candidates = d2l.load_data_ml100k(
 users_test, items_test, ratings_test, test_iter = d2l.load_data_ml100k(
     test_data, num_users, num_items, feedback="implicit")
 train_iter = torch.utils.data.DataLoader(
-    PRDataset(users_train, items_train, candidates, num_items), batch_size,
+    PRDataset(users_train, items_train, candidates, num_items,
+              test_items=test_iter), batch_size,
     True, num_workers=d2l.get_dataloader_workers())
 ```
 

@@ -74,8 +74,8 @@ are the number of output channels per layer, i.e., how to allocate capacity amon
 %%tab mxnet
 class Inception(nn.Block):
     # c1--c4 are the number of output channels for each branch
-    def __init__(self, c1, c2, c3, c4, **kwargs):
-        super(Inception, self).__init__(**kwargs)
+    def __init__(self, c1, c2, c3, c4):
+        super().__init__()
         # Branch 1
         self.b1_1 = nn.Conv2D(c1, kernel_size=1, activation='relu')
         # Branch 2

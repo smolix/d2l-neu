@@ -230,26 +230,15 @@ Now the question is how to read minibatches of input sequences and target sequen
 
 
 Suppose that the dataset takes the form of a sequence of $T$ token indices in `corpus`.
-We will
-partition it
-into subsequences, where each subsequence has $n$ tokens (time steps).
-To iterate over 
-(almost) all the tokens of the entire dataset 
-for each epoch
-and obtain all possible length-$n$ subsequences,
-we can introduce randomness.
-More concretely,
-at the beginning of each epoch,
-discard the first $d$ tokens,
-where $d\in [0,n)$ is uniformly sampled at random.
-The rest of the sequence
-is then partitioned
-into $m=\lfloor (T-d)/n \rfloor$ subsequences.
-Denote by $\mathbf x_t = [x_t, \ldots, x_{t+n-1}]$ the length-$n$ subsequence starting from token $x_t$ at time step $t$. 
-The resulting $m$ partitioned subsequences
-are 
-$\mathbf x_d, \mathbf x_{d+n}, \ldots, \mathbf x_{d+n(m-1)}.$
-Each subsequence will be used as an input sequence into the language model.
+We will form all possible *overlapping* length-$n$ subsequences,
+where each subsequence has $n$ tokens (time steps).
+Denote by $\mathbf x_t = [x_t, \ldots, x_{t+n-1}]$ the length-$n$ subsequence starting from token $x_t$ at time step $t$.
+This yields $T - n$ input subsequences
+$\mathbf x_0, \mathbf x_1, \ldots, \mathbf x_{T-n-1},$
+each of which will be used as an input sequence into the language model.
+At training time, minibatches are drawn from this collection at random,
+which provides the stochasticity we need
+without having to discard any tokens.
 
 
 For language modeling,
@@ -260,7 +249,7 @@ is $\mathbf x_{t+1}$ with length $n$.
 ![Obtaining five pairs of input sequences and target sequences from partitioned length-5 subsequences.](../img/lang-model-data.svg) 
 :label:`fig_lang_model_data`
 
-:numref:`fig_lang_model_data` shows an example of obtaining five pairs of input sequences and target sequences with $n=5$ and $d=2$.
+:numref:`fig_lang_model_data` shows an example of pairing up input and target sequences with $n=5$.
 
 ```{.python .input #language-model-partitioning-sequences-1  n=5}
 @d2l.add_to_class(d2l.TimeMachine)  #@save

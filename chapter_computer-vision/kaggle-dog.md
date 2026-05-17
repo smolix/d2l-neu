@@ -436,14 +436,14 @@ by the pretrained model on ImageNet.
 def get_net(devices):
     finetune_net = gluon.model_zoo.vision.resnet34_v2(pretrained=True)
     # Define a new output network
-    finetune_net.output_new = nn.HybridSequential(prefix='')
+    finetune_net.output_new = nn.HybridSequential()
     finetune_net.output_new.add(nn.Dense(256, activation='relu'))
     # There are 120 output categories
     finetune_net.output_new.add(nn.Dense(120))
     # Initialize the output network
     finetune_net.output_new.initialize(init.Xavier(), ctx=devices)
     # Distribute the model parameters to the CPUs or GPUs used for computation
-    finetune_net.collect_params().reset_ctx(devices)
+    finetune_net.reset_ctx(devices)
     return finetune_net
 ```
 
@@ -710,12 +710,6 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     # ResNet50 with pooling='avg' outputs 2048-dim features
     dummy = jnp.ones((1, 2048))
     variables = output_net.init(jax.random.PRNGKey(0), dummy, training=True)
-    schedule = optax.exponential_decay(
-        init_value=lr, transition_steps=lr_period,
-        decay_rate=lr_decay, staircase=True)
-    tx = optax.chain(optax.add_decayed_weights(wd),
-                     optax.sgd(schedule, momentum=0.9))
-    opt_state = tx.init(variables['params'])
     timer = d2l.Timer()
     legend = ['train loss']
     if valid_iter is not None:
@@ -738,6 +732,17 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     bs = batch_size
     n_train = int(train_feats.shape[0])
     num_batches = (n_train + bs - 1) // bs
+
+    # `optax.exponential_decay.transition_steps` counts *gradient-update
+    # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`,
+    # which the PT tab steps once per epoch. Scale by `num_batches` so the
+    # LR decays every `lr_period` *epochs*, matching PT/MX.
+    schedule = optax.exponential_decay(
+        init_value=lr, transition_steps=lr_period * num_batches,
+        decay_rate=lr_decay, staircase=True)
+    tx = optax.chain(optax.add_decayed_weights(wd),
+                     optax.sgd(schedule, momentum=0.9))
+    opt_state = tx.init(variables['params'])
 
     @jax.jit
     def train_step(variables, opt_state, feats, y):
@@ -788,14 +793,18 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
     # Only train the custom head; backbone is already frozen in get_net()
+    # Keras's `ExponentialDecay.decay_steps` counts *gradient-update
+    # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`,
+    # which the PT tab steps once per epoch. Scale by `num_batches` so the
+    # LR decays every `lr_period` *epochs*, matching PT/MX.
+    num_batches = sum(1 for _ in train_iter)
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=lr,
-        decay_steps=lr_period,
+        decay_steps=lr_period * num_batches,
         decay_rate=lr_decay,
         staircase=True)
     optimizer = keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9,
                                      weight_decay=wd)
-    num_batches = sum(1 for _ in train_iter)
     timer = d2l.Timer()
     legend = ['train loss']
     if valid_iter is not None:

@@ -43,7 +43,15 @@ The batch size is 512 and the maximum length of a BERT input sequence is 64.
 Note that in the original BERT model, the maximum length is 512.
 
 ```{.python .input #bert-pretraining-pretraining-bert-2}
+#@tab mxnet, pytorch, tensorflow
 batch_size, max_len = 512, 64
+train_iter, vocab = d2l.load_data_wiki(batch_size, max_len)
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-2}
+#@tab jax
+batch_size, max_len = 512, 64
+# In JAX, train_iter is a callable returning a fresh iterator each call.
 train_iter, vocab = d2l.load_data_wiki(batch_size, max_len)
 ```
 
@@ -125,7 +133,6 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X_shards,
         mlm_ls.append(mlm_l)
         nsp_ls.append(nsp_l)
         ls.append(mlm_l + nsp_l)
-        npx.waitall()
     return mlm_ls, nsp_ls, ls
 ```
 
@@ -156,12 +163,12 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
 def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
                          segments_X, valid_lens_x,
                          pred_positions_X, mlm_weights_X,
-                         mlm_Y, nsp_y):
+                         mlm_Y, nsp_y, rng):
     # Forward pass
     _, mlm_Y_hat, nsp_Y_hat = net.apply(params, tokens_X, segments_X,
                                         valid_lens_x.reshape(-1),
                                         pred_positions_X, training=True,
-                                        rngs={'dropout': jax.random.PRNGKey(0)})
+                                        rngs={'dropout': rng})
     # Compute masked language model loss
     mlm_l = optax.softmax_cross_entropy_with_integer_labels(
         mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1))
@@ -177,25 +184,29 @@ def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
 ```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab tensorflow
 #@save
+# Construct loss functions once at module scope; re-instantiating per batch
+# is wasteful.
+_mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+_nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+
+#@save
 def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
                          valid_lens_x, pred_positions_X, mlm_weights_X,
                          mlm_Y, nsp_y, training=True):
-    mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-        from_logits=True, reduction='none')
-    nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-        from_logits=True, reduction='none')
     # Forward pass
     _, mlm_Y_hat, nsp_Y_hat = net(
         tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
                                       dtype=tf.float32),
         pred_positions_X, training=training)
     # Compute masked language model loss (mask per-token losses before summing)
-    mlm_l = mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
-                        tf.reshape(mlm_Y_hat, [-1, vocab_size]))
+    mlm_l = _mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
+                         tf.reshape(mlm_Y_hat, [-1, vocab_size]))
     mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
         tf.reduce_sum(mlm_weights_X) + 1e-8)
     # Compute next sentence prediction loss
-    nsp_l = tf.reduce_mean(nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
+    nsp_l = tf.reduce_mean(_nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
     l = mlm_l + nsp_l
     return mlm_l, nsp_l, l
 ```
@@ -213,7 +224,7 @@ specifies the number of iteration steps for training.
 #@tab mxnet
 def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
     trainer = gluon.Trainer(net.collect_params(), 'adam',
-                            {'learning_rate': 0.01})
+                            {'learning_rate': 1e-4})
     step, timer = 0, d2l.Timer()
     animator = d2l.Animator(xlabel='step', ylabel='loss',
                             xlim=[1, num_steps], legend=['mlm', 'nsp'])
@@ -236,9 +247,12 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
             for l in ls:
                 l.backward()
             trainer.step(1)
-            mlm_l_mean = sum([float(l) for l in mlm_ls]) / len(mlm_ls)
-            nsp_l_mean = sum([float(l) for l in nsp_ls]) / len(nsp_ls)
-            metric.add(mlm_l_mean, nsp_l_mean, batch[0].shape[0], 1)
+            # Accumulate without forcing a GPU->CPU sync per step; the
+            # animator's metric read below is the only sync point.
+            mlm_l_sum = sum(mlm_ls)
+            nsp_l_sum = sum(nsp_ls)
+            metric.add(mlm_l_sum / len(mlm_ls), nsp_l_sum / len(nsp_ls),
+                       batch[0].shape[0], 1)
             timer.stop()
             animator.add(step + 1,
                          (metric[0] / metric[3], metric[1] / metric[3]))
@@ -258,7 +272,7 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
 def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
     net(*next(iter(train_iter))[:4])
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    trainer = torch.optim.Adam(net.parameters(), lr=0.01)
+    trainer = torch.optim.Adam(net.parameters(), lr=1e-4)
     step, timer = 0, d2l.Timer()
     animator = d2l.Animator(xlabel='step', ylabel='loss',
                             xlim=[1, num_steps], legend=['mlm', 'nsp'])
@@ -308,7 +322,7 @@ def train_bert(train_iter, net, vocab_size, num_steps):
     key = jax.random.PRNGKey(0)
     params = net.init(key, dummy_tokens, dummy_segments, dummy_valid_lens,
                       dummy_pred_positions, training=False)
-    tx = optax.adam(learning_rate=0.01)
+    tx = optax.adam(learning_rate=1e-4)
     state = train_state.TrainState.create(
         apply_fn=net.apply, params=params, tx=tx)
 
@@ -320,13 +334,17 @@ def train_bert(train_iter, net, vocab_size, num_steps):
     # losses, no. of sentence pairs, count
     metric = d2l.Accumulator(4)
     num_steps_reached = False
+    rng = jax.random.PRNGKey(1)
     while step < num_steps and not num_steps_reached:
+        # train_iter is a callable: invoke it each epoch for a fresh iterator.
         for (tokens_X, segments_X, valid_lens_x, pred_positions_X,
-             mlm_weights_X, mlm_Y, nsp_y) in train_iter:
+             mlm_weights_X, mlm_Y, nsp_y) in train_iter():
             timer.start()
+            rng, step_rng = jax.random.split(rng)
             (l, (mlm_l, nsp_l)), grads = grad_fn(
                 state.params, net, vocab_size, tokens_X, segments_X,
-                valid_lens_x, pred_positions_X, mlm_weights_X, mlm_Y, nsp_y)
+                valid_lens_x, pred_positions_X, mlm_weights_X, mlm_Y, nsp_y,
+                step_rng)
             state = state.apply_gradients(grads=grads)
             metric.add(float(mlm_l), float(nsp_l), tokens_X.shape[0], 1)
             timer.stop()
@@ -347,7 +365,7 @@ def train_bert(train_iter, net, vocab_size, num_steps):
 ```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab tensorflow
 def train_bert(train_iter, net, vocab_size, devices, num_steps):
-    optimizer = keras.optimizers.Adam(learning_rate=0.01)
+    optimizer = keras.optimizers.Adam(learning_rate=1e-4)
     step, timer = 0, d2l.Timer()
     animator = d2l.Animator(xlabel='step', ylabel='loss',
                             xlim=[1, num_steps], legend=['mlm', 'nsp'])

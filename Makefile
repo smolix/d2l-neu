@@ -162,6 +162,15 @@ QUARTO := .venv-build/bin/quarto
 venv-%: .venv-%/.synced
 	@echo "Venv .venv-$* is ready"
 
+# Pull the latest mxnet wheel URL from
+# https://github.com/smolix/mxnet/releases/latest into pyproject.toml.
+# Manual (not on every sync) so builds stay reproducible and we don't
+# hit the unauthenticated GitHub API rate limit.
+.PHONY: update-mxnet-wheel
+update-mxnet-wheel:
+	python3 tools/update_mxnet_wheel.py
+	@echo "Run 'make venv-mxnet' to apply the bumped wheel."
+
 # ── Jupyter kernels ────────────────────────────────────────
 # Register one ipykernel per framework so VS Code can auto-select the
 # right interpreter from the .ipynb's metadata.kernelspec.name.

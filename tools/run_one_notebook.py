@@ -171,7 +171,7 @@ def notebook_mode(nb_path, fw):
     rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
     if rel in MULTI_GPU_NOTEBOOKS:
         return 'multi-gpu'
-    if file_uses_gpu(nb, NOTEBOOKS_DIR / fw):
+    if file_uses_gpu(nb, NOTEBOOKS_DIR):
         return 'gpu'
     return 'cpu'
 
@@ -210,9 +210,20 @@ def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
     best_score = -1.0
     any_success = False
 
+    # On failure, also dump the full stderr to a per-notebook log so the
+    # cause of a DeadKernelError (which has no Python traceback) can be
+    # diagnosed after the fact. Cleaned up on success.
+    err_log = (NOTEBOOKS_DIR.parent / 'logs' / 'nb-errors' / fw / rel).with_suffix('.log')
+
     for attempt in range(1, max_attempts + 1):
         ok, elapsed, err = _run_once(nb, fw, gpu_slots, num_gpus, cpu_slots,
                                      timeout, mode, label)
+        if not ok and err:
+            err_log.parent.mkdir(parents=True, exist_ok=True)
+            with err_log.open('a') as fh:
+                fh.write(f'\n=== attempt {attempt} @ {time.strftime("%H:%M:%S")} '
+                         f'({elapsed:.0f}s) ===\n')
+                fh.write(err + '\n')
         if not ok:
             last_err = err
             print(f"  attempt {attempt}: FAIL ({elapsed:.0f}s) — "
@@ -283,12 +294,7 @@ def main():
 
     rel = args.notebook.resolve().relative_to(
         (NOTEBOOKS_DIR / args.framework).resolve())
-    # "X/N" prefix uses live counts of `.executed` stamps vs total .ipynb
-    # for this framework — concurrent across processes, so the numbers
-    # are approximate (other workers may complete between our snapshot
-    # and our print) but the trend is correct.
-    done_before, total = progress_for(args.framework)
-    label = f"[{args.framework} {done_before + 1}/{total}] {rel}"
+    label = f"[{args.framework}] {rel}"
     mode = notebook_mode(args.notebook, args.framework)
     mode_tag = {'multi-gpu': '[all GPUs]', 'gpu': '[GPU]', 'cpu': '[CPU]'}[mode]
     print(f"{label}: start {mode_tag}", flush=True)
@@ -297,10 +303,18 @@ def main():
                              args.gpu_slots, args.num_gpus, args.cpu_slots,
                              args.timeout, mode, label)
     elapsed = time.time() - t0
+    # Progress counter ONLY on the end line — it's a "stamps now on disk vs
+    # total" snapshot. With parallel workers and brief gen_notebooks wipes
+    # the count can fluctuate non-monotonically; printing it on the END
+    # line (after our own stamp is written by the make recipe) makes it
+    # stable enough to be useful as a "remaining work" hint.
+    done_after, total = progress_for(args.framework)
+    # +1 because our own .executed stamp lands AFTER this script exits.
+    prog = f"({done_after + (1 if ok else 0)}/{total} {args.framework} done)"
     if ok:
-        print(f"{label}: OK ({elapsed:.0f}s) {mode_tag}", flush=True)
+        print(f"{label}: OK ({elapsed:.0f}s) {mode_tag} {prog}", flush=True)
         sys.exit(0)
-    print(f"{label}: FAIL ({elapsed:.0f}s) {mode_tag}",
+    print(f"{label}: FAIL ({elapsed:.0f}s) {mode_tag} {prog}",
           file=sys.stderr, flush=True)
     sys.exit(1)
 

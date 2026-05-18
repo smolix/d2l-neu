@@ -361,14 +361,27 @@ def main():
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} ===')
 
-        # Full generation wipes stale chapter output. Targeted generation
-        # overwrites only requested notebooks so executed outputs for unrelated
-        # notebooks are preserved.
+        # Full generation wipes stale chapter output. Preserves per-notebook
+        # .executed stamps (Phase-1 build system) — without this, every full
+        # gen invalidates every passed notebook by wiping its stamp, even
+        # though gen_notebooks.py's content-aware write below would otherwise
+        # keep the .ipynb mtime unchanged.
         if fw_dir.exists() and args.files is None:
             for child in fw_dir.iterdir():
                 if child.is_symlink() or child.name in ('img', 'data'):
                     continue
-                shutil.rmtree(child) if child.is_dir() else child.unlink()
+                if child.is_dir():
+                    for sub in child.iterdir():
+                        if sub.suffix == '.executed':
+                            continue  # preserve per-notebook stamp
+                        if sub.is_dir():
+                            shutil.rmtree(sub)
+                        else:
+                            sub.unlink()
+                    # Don't rmtree the chapter dir itself either (may still
+                    # hold .executed stamps).
+                else:
+                    child.unlink()
 
         converted = 0
         skipped = 0

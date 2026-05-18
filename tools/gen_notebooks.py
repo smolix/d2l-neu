@@ -9,11 +9,20 @@ Usage:
 """
 
 import re
+import os
 import json
 import shutil
 import argparse
 import subprocess
 from pathlib import Path
+
+
+def _write_if_changed(path, content_bytes):
+    """Write content to path only if it differs; preserves mtime otherwise."""
+    if path.exists() and path.read_bytes() == content_bytes:
+        return False
+    path.write_bytes(content_bytes)
+    return True
 
 # Reuse the preprocessor's parsing and directive translation
 import sys
@@ -379,7 +388,10 @@ def main():
 
             # Skip files that have no code at all (pure prose chapters)
             has_code = '```{python}' in output
-            dst_file.write_text(output, encoding='utf-8')
+            # Content-aware write: keep mtime if file is byte-identical so
+            # downstream per-notebook .executed stamps don't get invalidated
+            # by a no-op regeneration.
+            _write_if_changed(dst_file, output.encode('utf-8'))
             converted += 1
 
         print(f'  Generated {converted} .qmd files in {fw_dir}'
@@ -391,13 +403,25 @@ def main():
 
             def convert_one(qmd):
                 try:
+                    # quarto writes .ipynb next to .qmd; if the .ipynb
+                    # already exists, snapshot its mtime so we can restore
+                    # it when content is unchanged.
+                    ipynb = qmd.with_suffix('.ipynb')
+                    prev_bytes = ipynb.read_bytes() if ipynb.exists() else None
+                    prev_stat = ipynb.stat() if ipynb.exists() else None
                     result = subprocess.run(
                         ['quarto', 'convert', str(qmd)],
                         capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
-                        ipynb = qmd.with_suffix('.ipynb')
                         if ipynb.exists():
                             patch_ipynb_ids(ipynb, fw)
+                            # If post-patch content equals previous content,
+                            # restore prev mtime so downstream stamps stay
+                            # valid. Otherwise leave the new mtime.
+                            if prev_bytes is not None and \
+                                    ipynb.read_bytes() == prev_bytes:
+                                os.utime(ipynb, ns=(prev_stat.st_atime_ns,
+                                                    prev_stat.st_mtime_ns))
                         qmd.unlink()
                         return True
                     else:
@@ -411,6 +435,9 @@ def main():
 
             nb_count = sum(results)
             print(f'  Produced {nb_count} .ipynb files')
+
+        # Note: per-framework MANIFEST.mk is written by
+        # tools/scan_notebook_manifests.py at Make-parse time, not here.
 
     print(f'\nDone. Notebooks in {args.output}/')
 

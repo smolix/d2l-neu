@@ -614,22 +614,27 @@ def build_library(src_dir, output_file, framework, lib_config, files):
         elif existing.strip():
             preamble = existing
 
-    # Write output
+    # Build the new content in-memory, then write only if it differs from
+    # what's already on disk. Preserving the mtime when content is unchanged
+    # prevents downstream per-notebook .executed stamps from invalidating
+    # every time `make lib` runs.
+    parts = []
+    if preamble:
+        parts.append(preamble)
+    parts.append(HEADER + '\n')
+    for code, label, source in all_blocks:
+        parts.append(code + '\n\n')
+    aliases = generate_aliases(lib_config)
+    if aliases:
+        parts.append('\n' + aliases + '\n')
+    new_content = ''.join(parts).encode('utf-8')
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
-        if preamble:
-            f.write(preamble)
-        f.write(HEADER + '\n')
-
-        for code, label, source in all_blocks:
-            f.write(code + '\n\n')
-
-        # Append aliases
-        aliases = generate_aliases(lib_config)
-        if aliases:
-            f.write('\n' + aliases + '\n')
-
-    print(f'  Written to {output_file}')
+    if output_path.exists() and output_path.read_bytes() == new_content:
+        print(f'  Unchanged: {output_file}')
+    else:
+        output_path.write_bytes(new_content)
+        print(f'  Written to {output_file}')
 
 
 # ──────────────────────────────────────────────────────────

@@ -30,6 +30,17 @@ SHELL      := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 .DEFAULT_GOAL := help
 
+# Keep auto-generated stamps and manifests around. Without this, Make
+# treats them as "intermediate" and deletes them after the chain that
+# produced them completes (this caused the .generated files to be
+# re-created on every run, breaking incremental builds).
+.SECONDARY:
+
+# Enable secondary expansion so we can refer to per-framework variables
+# (EXECUTED_pytorch etc.) loaded from generated manifests when expanding
+# pattern-rule prerequisites.
+.SECONDEXPANSION:
+
 SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
 
@@ -105,11 +116,17 @@ help:
 
 lib: d2l/.built
 
-d2l/.built: $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
+# Grouped target (GNU Make 4.3+ `&:`): one invocation produces all four
+# d2l/<fw>.py files plus the d2l/.built stamp. build_lib.py is content-
+# aware: it only rewrites a d2l/<fw>.py whose content actually changed,
+# so unchanged frameworks keep their mtime and don't invalidate downstream
+# per-notebook .executed stamps.
+d2l/.built d2l/pytorch.py d2l/tensorflow.py d2l/jax.py d2l/mxnet.py &: \
+        $(SRC_MDS) tools/build_lib.py tools/d2l_preprocess.py
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building d2l library ==="
 	python3 tools/build_lib.py $(SOURCE) d2l/ 2>&1 | tee $(LOGDIR)/lib-$(TS).log
-	@touch $@
+	@touch d2l/.built
 
 # ── UV venvs ───────────────────────────────────────────────
 
@@ -248,42 +265,74 @@ notebooks-%: _notebooks/%/.generated
 
 notebooks: $(addprefix notebooks-,$(FRAMEWORKS))
 
-# ── Notebooks (execute) ───────────────────────────────────
-# WARNING: do not run multiple run-notebooks-* targets with -j (GPU contention)
+# .ipynb files are written by tools/gen_notebooks.py as a side effect of
+# the .generated rule above. Per-framework pattern rule that connects any
+# .ipynb to its framework's batch generator so per-notebook targets can
+# list a real .ipynb prerequisite without "no rule to make target".
+define IPYNB_FROM_GEN
+_notebooks/$(1)/%.ipynb: _notebooks/$(1)/.generated
+	@:
+endef
+$(foreach fw,$(FRAMEWORKS),$(eval $(call IPYNB_FROM_GEN,$(fw))))
+
+# ── Notebooks (execute) — per-notebook granularity ────────
+# Each .ipynb has its own .executed stamp. Editing one source .md (or one
+# d2l/<fw>.py block) only invalidates the affected notebook(s); make -j
+# parallelism is bounded by GPU-slot locking inside tools/run_one_notebook.py.
 
 define nvidia_ld_path
 $(shell find .venv-$(1)/lib -path "*/nvidia/*/lib" -type d 2>/dev/null | paste -sd: -)
 endef
 
-# Per-framework extra args to tools/run_notebooks.py. MXNet's last release
-# (1.9.1, project archived) only ships cu117 wheels with sm_50..sm_86
-# kernels and no PTX fallback — Blackwell hosts must add `--cpu-only`
-# manually (e.g. `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet`);
-# the default targets Hopper-or-older silicon where cu117 SASS still runs.
-RUN_EXTRA_pytorch    ?=
-RUN_EXTRA_tensorflow ?=
-RUN_EXTRA_jax        ?=
-RUN_EXTRA_mxnet      ?=
+# Per-framework manifest lists every _notebooks/<fw>/<rel>.executed target
+# for that framework. We use a CHEAP textual scan (tools/scan_notebook_
+# manifests.py, ~1s for the whole tree) instead of the full gen_notebooks
+# pipeline (~30s per framework) so `-include` doesn't trigger expensive
+# work during Makefile parsing. The scan only looks at #@tab / %%tab
+# markers in each source .md, which is enough to know which (fw, src)
+# pairs produce a notebook.
+$(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS))) &: \
+        $(SRC_MDS) tools/scan_notebook_manifests.py
+	@mkdir -p $(addprefix _notebooks/,$(FRAMEWORKS))
+	@python3 tools/scan_notebook_manifests.py \
+		--source $(SOURCE) --output-dir _notebooks
 
-_notebooks/%/.executed: _notebooks/%/.generated d2l/.built | .venv-%/.synced
-	@mkdir -p $(LOGDIR)
-	@echo "=== Running $* notebooks ==="
-	$(eval NVIDIA_LIBS := $(call nvidia_ld_path,$*))
-	UV_PROJECT_ENVIRONMENT=.venv-$* \
-	PATH="$(CURDIR)/.venv-$*/bin:$$PATH" \
-	LD_LIBRARY_PATH="$(NVIDIA_LIBS)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
-	.venv-$*/bin/python tools/run_notebooks.py $* \
-		--parallel $(PARALLEL_$*) --num-gpus $(NUM_GPUS) --continue-on-error \
-		$(RUN_EXTRA_$*) \
-		$(if $(NB_FILES),--files $(NB_FILES)) \
-		2>&1 | tee $(LOGDIR)/run-$*-$(TS).log
-	@touch $@
+-include $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS)))
 
-run-notebooks-%: _notebooks/%/.executed
-	@echo "Notebooks for $* executed"
-	@echo "Log: $(LOGDIR)/run-$*-$(TS).log"
+# Per-notebook execution pattern rule. The recipe runs ONE notebook via
+# tools/run_one_notebook.py, which handles GPU slot locking (flock-based)
+# and best-of-N retries for known-stochastic notebooks. d2l/<fw>.py is a
+# real dep so a change in #@save propagates only to the affected framework's
+# notebooks (and only to notebooks whose source content actually changed,
+# courtesy of the content-aware write in build_lib.py / gen_notebooks.py).
+define EXEC_RULE
+_notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb d2l/$(1).py | .venv-$(1)/.synced
+	@mkdir -p $$(@D) $(LOGDIR)
+	$$(eval NVIDIA_LIBS := $$(call nvidia_ld_path,$(1)))
+	@UV_PROJECT_ENVIRONMENT=.venv-$(1) \
+	PATH="$(CURDIR)/.venv-$(1)/bin:$$$$PATH" \
+	LD_LIBRARY_PATH="$$(NVIDIA_LIBS)$$$${LD_LIBRARY_PATH:+:$$$$LD_LIBRARY_PATH}" \
+	D2L_NUM_GPUS=$(NUM_GPUS) \
+	.venv-$(1)/bin/python tools/run_one_notebook.py $(1) $$< \
+		2>&1 | tee -a $(LOGDIR)/run-$(1)-$(TS).log
+	@touch $$@
+endef
+$(foreach fw,$(FRAMEWORKS),$(eval $(call EXEC_RULE,$(fw))))
 
-# Sequential execution of all frameworks (GPU-safe)
+# Aggregate per-framework target: depend on every per-notebook stamp listed
+# in the manifest. The first-ever build has no manifest, so we bootstrap by
+# generating notebooks first (which writes the manifest), then Make re-reads
+# it via the -include above.
+run-notebooks-%: _notebooks/%/.generated $$(EXECUTED_$$*)
+	@echo "Notebooks for $* up to date ($(words $(EXECUTED_$*)) total)"
+
+# Backwards-compatible alias: NB_FILES=foo.ipynb still works. The pattern
+# rule already handles arbitrary file selection — just hit the stamp directly:
+#   make _notebooks/pytorch/chapter_x/foo.executed
+
+# Sequential execution of all frameworks. With per-notebook stamps each
+# framework is itself an idempotent target — calling it when nothing changed
+# is essentially free.
 run-all-notebooks:
 	$(MAKE) run-notebooks-pytorch
 	$(MAKE) run-notebooks-tensorflow

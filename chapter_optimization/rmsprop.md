@@ -166,11 +166,11 @@ d2l.train_ch11(rmsprop, init_rmsprop_states(feature_dim),
 
 ## Concise Implementation
 
-Since RMSProp is a rather popular algorithm it is also available in the `Trainer` instance. All we need to do is instantiate it using an algorithm named `rmsprop`, assigning $\gamma$ to the parameter `gamma1`.
+Since RMSProp is a rather popular algorithm it is also available in the `Trainer` instance. All we need to do is instantiate it using an algorithm named `rmsprop`, assigning $\gamma$ to the parameter `rho` (renamed from `gamma1` in Gluon 2.0).
 
 ```{.python .input #rmsprop-concise-implementation}
 #@tab mxnet
-d2l.train_concise_ch11('rmsprop', {'learning_rate': 0.01, 'gamma1': 0.9},
+d2l.train_concise_ch11('rmsprop', {'learning_rate': 0.01, 'rho': 0.9},
                        data_iter)
 ```
 

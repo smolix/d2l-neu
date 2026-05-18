@@ -487,6 +487,11 @@ class Classifier(d2l.Module):
             X = layer(X)
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
 
+def cross_entropy(y_hat, y):
+    p = tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    return -tf.reduce_mean(tf.math.log(tf.maximum(p, 1e-12)))
+
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -668,9 +673,11 @@ class Vocab:
         counter = collections.Counter(tokens)
         self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
                                   reverse=True)
-        # The list of unique tokens
-        self.idx_to_token = list(sorted(set(['<unk>'] + reserved_tokens + [
-            token for token, freq in self.token_freqs if freq >= min_freq])))
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
                              for idx, token in enumerate(self.idx_to_token)}
 
@@ -943,11 +950,11 @@ class EncoderDecoder(d2l.Classifier):
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args, training=True)
+    def call(self, enc_X, dec_X, *args, training=None):
+        enc_all_outputs = self.encoder(enc_X, *args, training=training)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=True)[0]
+        return self.decoder(dec_X, dec_state, training=training)[0]
 
     def predict_step(self, batch, device, num_steps,
                      save_attention_weights=False):
@@ -2667,25 +2674,28 @@ def load_data_wiki(batch_size, max_len):
     )).shuffle(buffer_size=10000).batch(batch_size).prefetch(AUTOTUNE)
     return train_iter, train_set.vocab
 
+# Construct loss functions once at module scope; re-instantiating per batch
+# is wasteful.
+_mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+_nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+
 def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
                          valid_lens_x, pred_positions_X, mlm_weights_X,
                          mlm_Y, nsp_y, training=True):
-    mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-        from_logits=True, reduction='none')
-    nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-        from_logits=True, reduction='none')
     # Forward pass
     _, mlm_Y_hat, nsp_Y_hat = net(
         tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
                                       dtype=tf.float32),
         pred_positions_X, training=training)
     # Compute masked language model loss (mask per-token losses before summing)
-    mlm_l = mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
-                        tf.reshape(mlm_Y_hat, [-1, vocab_size]))
+    mlm_l = _mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
+                         tf.reshape(mlm_Y_hat, [-1, vocab_size]))
     mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
         tf.reduce_sum(mlm_weights_X) + 1e-8)
     # Compute next sentence prediction loss
-    nsp_l = tf.reduce_mean(nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
+    nsp_l = tf.reduce_mean(_nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
     l = mlm_l + nsp_l
     return mlm_l, nsp_l, l
 

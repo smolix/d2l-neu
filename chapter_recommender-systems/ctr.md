@@ -71,7 +71,7 @@ class CTRDataset(gluon.data.Dataset):
                 values = line.rstrip('\n').split('\t')
                 if len(values) != self.NUM_FEATS + 1:
                     continue
-                instance['y'] = [np.float32(values[0])]
+                instance['y'] = [float(values[0])]
                 for i in range(1, self.NUM_FEATS + 1):
                     feat_cnts[i][values[i]] += 1
                     instance.setdefault('x', []).append(values[i])

@@ -248,7 +248,12 @@ net = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab mxnet
-net.initialize(init.Xavier(), ctx=devices)
+# Per-block init: Gluon 2.0's Xavier rejects 1D weights, and the fused LSTM
+# has 1D internal weights. Initialize Xavier on the 2D blocks; let the LSTM
+# use its default initializer.
+net.embedding.initialize(init.Xavier(), ctx=devices)
+net.encoder.initialize(ctx=devices)
+net.decoder.initialize(init.Xavier(), ctx=devices)
 ```
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}

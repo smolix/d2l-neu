@@ -422,12 +422,11 @@ class SyntheticRegressionData(d2l.DataModule):
     """Synthetic data for linear regression.
 
     Defined in :numref:`sec_synthetic-regression-data`"""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000, 
-                 batch_size=32):
+    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000,
+                 batch_size=32, key=jax.random.PRNGKey(0)):
         super().__init__()
         self.save_hyperparameters()
         n = num_train + num_val
-        key = jax.random.PRNGKey(0)
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))
         noise = jax.random.normal(key2, (n, 1)) * noise
@@ -611,6 +610,11 @@ class Classifier(d2l.Module):
         Y = d2l.reshape(Y, (-1,))
         fn = optax.softmax_cross_entropy_with_integer_labels
         return (fn(Y_hat, Y).mean(), updates) if averaged else (fn(Y_hat, Y), updates)
+
+def cross_entropy(y_hat, y):
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
+    return -d2l.reduce_mean(d2l.log(p))
 
 class SoftmaxRegression(d2l.Classifier):
     num_outputs: int
@@ -810,9 +814,11 @@ class Vocab:
         counter = collections.Counter(tokens)
         self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
                                   reverse=True)
-        # The list of unique tokens
-        self.idx_to_token = list(sorted(set(['<unk>'] + reserved_tokens + [
-            token for token, freq in self.token_freqs if freq >= min_freq])))
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
                              for idx, token in enumerate(self.idx_to_token)}
 
@@ -932,7 +938,17 @@ class RNN(nn.Module):
 
     @nn.compact
     def __call__(self, inputs, H=None):
-        raise NotImplementedError
+        if H is None:
+            batch_size = inputs.shape[1]
+            H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(
+                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
+
+        SimpleRNN = nn.scan(nn.SimpleCell, variable_broadcast="params",
+                            in_axes=0, out_axes=0,
+                            split_rngs={"params": False})
+
+        H, outputs = SimpleRNN(features=self.num_hiddens)(H, inputs)
+        return outputs, H
 
 class RNNLM(d2l.RNNLMScratch):
     """The RNN-based language model implemented with high-level APIs.
@@ -1095,13 +1111,12 @@ class EncoderDecoder(d2l.Classifier):
     Defined in :numref:`sec_encoder-decoder`"""
     encoder: nn.Module
     decoder: nn.Module
-    training: bool
 
-    def __call__(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args, training=self.training)
+    def __call__(self, enc_X, dec_X, *args, training=False):
+        enc_all_outputs = self.encoder(enc_X, *args, training=training)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=self.training)[0]
+        return self.decoder(dec_X, dec_state, training=training)[0]
 
     def predict_step(self, params, batch, num_steps,
                      save_attention_weights=False):
@@ -1166,7 +1181,16 @@ class Seq2Seq(d2l.EncoderDecoder):
     lr: float
 
     def validation_step(self, params, batch, state):
-        l, _ = self.loss(params, batch[:-1], batch[-1], state)
+        # Evaluate with dropout disabled (training=False); training=True path
+        # is used by self.loss during fit.
+        Y_hat = state.apply_fn({'params': params}, *batch[:-1],
+                               training=False)
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(batch[-1], (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        l = fn(Y_hat, Y)
+        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
+        l = d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
         self.plot('loss', l, train=False)
 
     def configure_optimizers(self):
@@ -1373,10 +1397,12 @@ class PositionalEncoding(nn.Module):
         self.P = self.P.at[:, :, 1::2].set(jnp.cos(X[:, :self.num_hiddens // 2]))
 
     @nn.compact
-    def __call__(self, X, training=False):
+    def __call__(self, X, training=False, offset=0):
         # Flax sow API is used to capture intermediate variables
         self.sow('intermediates', 'P', self.P)
-        X = X + self.P[:, :X.shape[1], :]
+        # `offset` lets autoregressive decoders advance the encoding position
+        # past tokens already emitted, instead of always slicing from 0.
+        X = X + self.P[:, offset:offset + X.shape[1], :]
         return nn.Dropout(self.dropout)(X, deterministic=not training)
 
 class PositionWiseFFN(nn.Module):
@@ -1711,11 +1737,15 @@ def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
                             legend=['train loss', 'train acc', 'test acc'])
     timer = d2l.Timer()
 
+    # Use a separate eval module (training=False) so BatchNorm uses
+    # running stats instead of batch stats at test time. Params are shared
+    # with the training network; only the `training` flag differs.
+    eval_net = net.clone(training=False)
+
     @jax.jit
     def eval_step(params, batch_stats, X):
-        logits, _ = state.apply_fn(
-            {'params': params, 'batch_stats': batch_stats},
-            X, mutable=['batch_stats'])
+        logits = eval_net.apply(
+            {'params': params, 'batch_stats': batch_stats}, X)
         return logits
 
     for epoch in range(num_epochs):
@@ -2702,6 +2732,8 @@ def load_data_wiki(batch_size, max_len):
     indices = list(range(len(train_set)))
     random.shuffle(indices)
 
+    # Return a callable so each call yields a fresh iterator (one-shot
+    # generators can't be re-entered for multi-epoch training).
     def data_iter():
         for i in range(0, len(indices), batch_size):
             batch_indices = indices[i:i + batch_size]
@@ -2715,17 +2747,17 @@ def load_data_wiki(batch_size, max_len):
                    jnp.stack([b[4] for b in batch]),
                    jnp.stack([b[5] for b in batch]),
                    jnp.stack([b[6] for b in batch]))
-    return data_iter(), train_set.vocab
+    return data_iter, train_set.vocab
 
 def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
                          segments_X, valid_lens_x,
                          pred_positions_X, mlm_weights_X,
-                         mlm_Y, nsp_y):
+                         mlm_Y, nsp_y, rng):
     # Forward pass
     _, mlm_Y_hat, nsp_Y_hat = net.apply(params, tokens_X, segments_X,
                                         valid_lens_x.reshape(-1),
                                         pred_positions_X, training=True,
-                                        rngs={'dropout': jax.random.PRNGKey(0)})
+                                        rngs={'dropout': rng})
     # Compute masked language model loss
     mlm_l = optax.softmax_cross_entropy_with_integer_labels(
         mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1))

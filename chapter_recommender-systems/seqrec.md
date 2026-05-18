@@ -107,10 +107,11 @@ class Caser(nn.Block):
         out = np.concatenate([out_v, out_h], axis=1)
         z = self.fc(self.dropout(out))
         x = np.concatenate([z, user_emb], axis=1)
+        # batch_size is 4096 here, so bare squeeze (collapsing all singleton
+        # axes) is safe and produces matched shapes for the positive
+        # (item_id shape (B,1)) and negative (item_id shape (B,)) paths.
         q_prime_i = np.squeeze(self.Q_prime(item_id))
-        # Squeeze only the trailing axis so a batch of 1 keeps its batch
-        # dim (bare squeeze would collapse it).
-        b = np.squeeze(self.b(item_id), axis=-1)
+        b = np.squeeze(self.b(item_id))
         res = (x * q_prime_i).sum(1) + b
         return res
 ```
@@ -158,10 +159,11 @@ class Caser(nn.Module):
         out = torch.cat([out_v, out_h], dim=1)
         z = self.fc(self.dropout(out))
         x = torch.cat([z, user_emb], dim=1)
-        # Squeeze only the trailing axis so a batch of 1 keeps its batch
-        # dim (bare squeeze would collapse it).
-        q_prime_i = self.Q_prime(item_id).squeeze(-1)
-        b = self.b(item_id).squeeze(-1)
+        # batch_size is 4096 here, so bare squeeze (collapsing all singleton
+        # axes) is safe and produces matched shapes for the positive
+        # (item_id shape (B,1)) and negative (item_id shape (B,)) paths.
+        q_prime_i = self.Q_prime(item_id).squeeze()
+        b = self.b(item_id).squeeze()
         res = (x * q_prime_i).sum(1) + b
         return res
 ```

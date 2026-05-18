@@ -61,6 +61,12 @@ import jax
 from jax import numpy as jnp
 ```
 
+```{.python .input #pooling}
+%%tab tensorflow
+from d2l import tensorflow as d2l
+import tensorflow as tf
+```
+
 ## Maximum Pooling and Average Pooling
 
 Like convolutional layers, *pooling* operators

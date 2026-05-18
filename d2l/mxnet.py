@@ -224,15 +224,14 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
 
     def parameters(self):
         params = self.collect_params()
-        return params if isinstance(params, gluon.parameter.ParameterDict) and len(
+        return params if isinstance(params, dict) and len(
             params.keys()) else self.get_scratch_params()
 
     def set_scratch_params_device(self, device):
         for attr in dir(self):
             a = getattr(self, attr)
             if isinstance(a, np.ndarray):
-                with autograd.record():
-                    setattr(self, attr, a.as_in_ctx(device))
+                setattr(self, attr, a.as_in_ctx(device))
                 getattr(self, attr).attach_grad()
             if isinstance(a, d2l.Module):
                 a.set_scratch_params_device(device)
@@ -312,7 +311,7 @@ class Trainer(d2l.HyperParameters):
         model.trainer = self
         model.board.xlim = [0, self.max_epochs]
         if self.gpus:
-            model.collect_params().reset_ctx(self.gpus[0])
+            model.reset_ctx(self.gpus[0])
             model.set_scratch_params_device(self.gpus[0])
         self.model = model
 
@@ -467,6 +466,11 @@ class Classifier(d2l.Module):
             X = layer(X)
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
 
+def cross_entropy(y_hat, y):
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = y_hat[list(range(len(y_hat))), y].clip(a_min=1e-12, a_max=None)
+    return -d2l.reduce_mean(d2l.log(p))
+
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -545,8 +549,8 @@ class Residual(nn.Block):
     """The Residual block of ResNet models.
 
     Defined in :numref:`sec_resnet`"""
-    def __init__(self, num_channels, use_1x1conv=False, strides=1, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, num_channels, use_1x1conv=False, strides=1):
+        super().__init__()
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
                                strides=strides)
         self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
@@ -571,8 +575,8 @@ class ResNeXtBlock(nn.Block):
 
     Defined in :numref:`sec_resnet`"""
     def __init__(self, num_channels, groups, bot_mul,
-                 use_1x1conv=False, strides=1, **kwargs):
-        super().__init__(**kwargs)
+                 use_1x1conv=False, strides=1):
+        super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
                                strides=1)
@@ -645,9 +649,11 @@ class Vocab:
         counter = collections.Counter(tokens)
         self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
                                   reverse=True)
-        # The list of unique tokens
-        self.idx_to_token = list(sorted(set(['<unk>'] + reserved_tokens + [
-            token for token, freq in self.token_freqs if freq >= min_freq])))
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
                              for idx, token in enumerate(self.idx_to_token)}
 
@@ -936,7 +942,10 @@ class Seq2SeqEncoder(d2l.Encoder):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(num_hiddens, num_layers, dropout)
-        self.initialize(init.Xavier())
+        # Per-Block init: Gluon 2.0's Xavier rejects 1D weights, and the
+        # fused GRU has 1D internal weights. Initialize the GRU with defaults.
+        self.embedding.initialize(init.Xavier())
+        self.rnn.initialize()
             
     def forward(self, X, *args):
         # X shape: (batch_size, num_steps)
@@ -1044,8 +1053,8 @@ class AdditiveAttention(nn.Block):
     """Additive attention.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, num_hiddens, dropout, **kwargs):
-        super(AdditiveAttention, self).__init__(**kwargs)
+    def __init__(self, num_hiddens, dropout):
+        super().__init__()
         # Use flatten=False to only transform the last axis so that the
         # shapes for the other axes are kept the same
         self.W_k = nn.Dense(num_hiddens, use_bias=False, flatten=False)
@@ -1609,9 +1618,9 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     col_discard = np.full((num_anchors,), -1)
     row_discard = np.full((num_gt_boxes,), -1)
     for _ in range(num_gt_boxes):
-        max_idx = np.argmax(jaccard)  # Find the largest IoU
-        box_idx = (max_idx % num_gt_boxes).astype('int32')
-        anc_idx = (max_idx / num_gt_boxes).astype('int32')
+        max_idx = int(np.argmax(jaccard).item())  # Find the largest IoU
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map[anc_idx] = box_idx
         jaccard[:, box_idx] = col_discard
         jaccard[anc_idx, :] = row_discard
@@ -2149,8 +2158,8 @@ class BERTEncoder(nn.Block):
 
     Defined in :numref:`sec_bert`"""
     def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, max_len=1000, **kwargs):
-        super(BERTEncoder, self).__init__(**kwargs)
+                 num_blks, dropout, max_len=1000):
+        super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, num_hiddens)
         self.segment_embedding = nn.Embedding(2, num_hiddens)
         self.blks = nn.Sequential()
@@ -2159,7 +2168,7 @@ class BERTEncoder(nn.Block):
                 num_hiddens, ffn_num_hiddens, num_heads, dropout, True))
         # In BERT, positional embeddings are learnable, thus we create a
         # parameter of positional embeddings that are long enough
-        self.pos_embedding = self.params.get('pos_embedding',
+        self.pos_embedding = gluon.Parameter('pos_embedding',
                                              shape=(1, max_len, num_hiddens))
 
     def forward(self, tokens, segments, valid_lens):
@@ -2175,8 +2184,8 @@ class MaskLM(nn.Block):
     """The masked language model task of BERT.
 
     Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, **kwargs):
-        super(MaskLM, self).__init__(**kwargs)
+    def __init__(self, vocab_size, num_hiddens):
+        super().__init__()
         self.mlp = nn.Sequential()
         self.mlp.add(
             nn.Dense(num_hiddens, flatten=False, activation='relu'))
@@ -2200,8 +2209,8 @@ class NextSentencePred(nn.Block):
     """The next sentence prediction task of BERT.
 
     Defined in :numref:`sec_bert`"""
-    def __init__(self, **kwargs):
-        super(NextSentencePred, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
         self.output = nn.Dense(2)
 
     def forward(self, X):
@@ -2414,7 +2423,6 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X_shards,
         mlm_ls.append(mlm_l)
         nsp_ls.append(nsp_l)
         ls.append(mlm_l + nsp_l)
-        npx.waitall()
     return mlm_ls, nsp_ls, ls
 
 d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
@@ -2618,12 +2626,16 @@ def split_data_ml100k(data, num_users, num_items,
         for u in range(1, num_users + 1):
             train_list.extend(sorted(train_items[u], key=lambda k: k[3]))
         test_data = [(key, *value) for key, value in test_items.items()]
-        train_data = [item for item in train_list if item not in test_data]
+        # O(N) set-membership filter instead of O(N^2) list-membership.
+        test_set = set(test_data)
+        train_data = [item for item in train_list if item not in test_set]
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        mask = [True if x == 1 else False for x in np.random.uniform(
-            0, 1, (len(data))) < 1 - test_ratio]
+        # Seed for deterministic splits across frameworks; produces a plain
+        # boolean list rather than `True if x == 1 else False`.
+        rng = np.random.default_rng(0)
+        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data
@@ -2763,7 +2775,7 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['test hit rate', 'test AUC'])
     for epoch in range(num_epochs):
-        metric, l = d2l.Accumulator(3), 0.
+        metric = d2l.Accumulator(3)
         for i, values in enumerate(train_iter):
             input_data = []
             for v in values:
@@ -2774,9 +2786,11 @@ def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
                                               input_data[-1])]
                 ls = [loss(p, n) for p, n in zip(p_pos, p_neg)]
             [l.backward(retain_graph=False) for l in ls]
-            l += sum([l.asnumpy() for l in ls]).mean()
+            # Per-batch loss only; accumulating across batches inside `l`
+            # turned the printed train-loss into a quadratic sum.
+            batch_loss = sum([l.asnumpy() for l in ls]).mean()
             trainer.step(values[0].shape[0])
-            metric.add(l, values[0].shape[0], values[0].size)
+            metric.add(batch_loss, values[0].shape[0], values[0].size)
             timer.stop()
         with autograd.predict_mode():
             if (epoch + 1) % eval_step == 0:

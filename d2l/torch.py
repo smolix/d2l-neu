@@ -269,21 +269,24 @@ class Trainer(d2l.HyperParameters):
             self.fit_epoch()
 
     def fit_epoch(self):
-        self.model.train()        
-        for batch in self.train_dataloader:        
+        self.model.train()
+        for batch in self.train_dataloader:
             loss = self.model.training_step(self.prepare_batch(batch))
             self.optim.zero_grad()
+            loss.backward()
+            if self.gradient_clip_val > 0:  # To be discussed later
+                self.clip_gradients(self.gradient_clip_val, self.model)
+            # The `no_grad` only needs to wrap the parameter update; the
+            # scratch `SGD.step` does an in-place `param -= lr * grad`,
+            # which would otherwise be flagged as a leaf-tensor mutation.
             with torch.no_grad():
-                loss.backward()
-                if self.gradient_clip_val > 0:  # To be discussed later
-                    self.clip_gradients(self.gradient_clip_val, self.model)
                 self.optim.step()
             self.train_batch_idx += 1
         if self.val_dataloader is None:
             return
         self.model.eval()
         for batch in self.val_dataloader:
-            with torch.no_grad():            
+            with torch.no_grad():
                 self.model.validation_step(self.prepare_batch(batch))
             self.val_batch_idx += 1
 
@@ -453,6 +456,11 @@ class Classifier(d2l.Module):
         for layer in self.net:
             X = layer(X)
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
+
+def cross_entropy(y_hat, y):
+    # Tiny clip to keep log finite when softmax outputs underflow to 0.
+    p = y_hat[list(range(len(y_hat))), y].clamp(min=1e-12)
+    return -d2l.reduce_mean(d2l.log(p))
 
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
@@ -638,9 +646,11 @@ class Vocab:
         counter = collections.Counter(tokens)
         self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
                                   reverse=True)
-        # The list of unique tokens
-        self.idx_to_token = list(sorted(set(['<unk>'] + reserved_tokens + [
-            token for token, freq in self.token_freqs if freq >= min_freq])))
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
                              for idx, token in enumerate(self.idx_to_token)}
 
@@ -1014,8 +1024,9 @@ def masked_softmax(X, valid_lens):
         maxlen = X.size(1)
         mask = torch.arange((maxlen), dtype=torch.float32,
                             device=X.device)[None, :] < valid_len[:, None]
-        X[~mask] = value
-        return X
+        # Out-of-place to avoid mutating the input tensor in-place, which
+        # autograd can flag and which interferes with downstream views.
+        return torch.where(mask, X, torch.full_like(X, value))
     
     if valid_lens is None:
         return nn.functional.softmax(X, dim=-1)
@@ -1162,8 +1173,10 @@ class PositionalEncoding(nn.Module):
         self.P[:, :, 0::2] = torch.sin(X)
         self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
 
-    def forward(self, X):
-        X = X + self.P[:, :X.shape[1], :].to(X.device)
+    def forward(self, X, offset=0):
+        # `offset` lets autoregressive decoders advance the encoding position
+        # past tokens already emitted, instead of always slicing from 0.
+        X = X + self.P[:, offset:offset + X.shape[1], :].to(X.device)
         return self.dropout(X)
 
 class PositionWiseFFN(nn.Module):
@@ -1607,7 +1620,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     for _ in range(num_gt_boxes):
         max_idx = torch.argmax(jaccard)  # Find the largest IoU
         box_idx = (max_idx % num_gt_boxes).long()
-        anc_idx = (max_idx / num_gt_boxes).long()
+        anc_idx = torch.div(max_idx, num_gt_boxes, rounding_mode='floor')
         anchors_bbox_map[anc_idx] = box_idx
         jaccard[:, box_idx] = col_discard
         jaccard[anc_idx, :] = row_discard
@@ -2767,12 +2780,16 @@ def split_data_ml100k(data, num_users, num_items,
         for u in range(1, num_users + 1):
             train_list.extend(sorted(train_items[u], key=lambda k: k[3]))
         test_data = [(key, *value) for key, value in test_items.items()]
-        train_data = [item for item in train_list if item not in test_data]
+        # O(N) set-membership filter instead of O(N^2) list-membership.
+        test_set = set(test_data)
+        train_data = [item for item in train_list if item not in test_set]
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        mask = [True if x == 1 else False for x in np.random.uniform(
-            0, 1, len(data)) < 1 - test_ratio]
+        # Seed for deterministic splits across frameworks; produces a plain
+        # boolean list rather than `True if x == 1 else False`.
+        rng = np.random.default_rng(0)
+        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data
@@ -2913,7 +2930,7 @@ def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['test hit rate', 'test AUC'])
     for epoch in range(num_epochs):
-        metric, l = d2l.Accumulator(3), 0.
+        metric = d2l.Accumulator(3)
         for i, values in enumerate(train_iter):
             input_data = [v.to(devices[0]) for v in values]
             p_pos = net(*input_data[:-1])
@@ -2922,8 +2939,9 @@ def train_ranking(net, train_iter, test_iter, loss, optimizer, test_seq_iter,
             optimizer.zero_grad()
             ls.backward()
             optimizer.step()
-            l += ls.item()
-            metric.add(l, values[0].shape[0], values[0].numel())
+            # Per-batch loss only; accumulating across batches inside `l`
+            # turned the printed train-loss into a quadratic sum.
+            metric.add(ls.item(), values[0].shape[0], values[0].numel())
             timer.stop()
         with torch.no_grad():
             if (epoch + 1) % eval_step == 0:

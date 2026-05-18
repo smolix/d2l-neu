@@ -44,7 +44,7 @@ We can calculate self information as shown below. Before that, let's first impor
 ```{.python .input #information-theory-self-information}
 #@tab mxnet
 from mxnet import np
-from mxnet.gluon.metric import NegativeLogLikelihood
+from mxnet.gluon.metric import CrossEntropy
 from mxnet.ndarray import nansum
 import random
 
@@ -749,11 +749,11 @@ $$
 Since in maximum likelihood estimation, we maximizing the objective function $l(\theta)$ by having $\pi_{j} = p_{\theta} (y_{ij}  \mid  \mathbf{x}_i)$. Therefore, for any multi-class classification, maximizing the above log-likelihood function $l(\theta)$ is equivalent to minimizing the CE loss $\textrm{CE}(y, \hat{y})$.
 
 
-To test the above proof, let's apply the built-in measure `NegativeLogLikelihood`. Using the same `labels` and `preds` as in the earlier example, we will get the same numerical loss as the previous example up to the 5 decimal place.
+To test the above proof, let's apply the built-in `CrossEntropy` metric (the negative-log-likelihood under softmax probabilities). Using the same `labels` and `preds` as in the earlier example, we will get the same numerical loss as the previous example up to the 5 decimal place.
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
-nll_loss = NegativeLogLikelihood()
+nll_loss = CrossEntropy()
 nll_loss.update(labels.as_nd_ndarray(), preds.as_nd_ndarray())
 nll_loss.get()
 ```

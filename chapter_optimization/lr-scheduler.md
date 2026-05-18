@@ -350,6 +350,8 @@ More generally we want to define a scheduler. When invoked with the number of up
 class SquareRootScheduler:
     def __init__(self, lr=0.1):
         self.lr = lr
+        # Gluon 2.0 optimizers read `base_lr` off the scheduler at init.
+        self.base_lr = lr
 
     def __call__(self, num_update):
         return self.lr * pow(num_update + 1.0, -0.5)

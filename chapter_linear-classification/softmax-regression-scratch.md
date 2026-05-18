@@ -270,7 +270,7 @@ cross_entropy(y_hat, y)
 %%tab mxnet
 def cross_entropy(y_hat, y):  #@save
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = y_hat[list(range(len(y_hat))), y].clip(a_min=1e-12, a_max=None)
+    p = y_hat[list(range(len(y_hat))), y].clip(min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 cross_entropy(y_hat, y)
@@ -280,7 +280,7 @@ cross_entropy(y_hat, y)
 %%tab jax
 def cross_entropy(y_hat, y):  #@save
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = jnp.clip(y_hat[list(range(len(y_hat))), y], a_min=1e-12)
+    p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 cross_entropy(y_hat, y)
@@ -312,7 +312,7 @@ def loss(self, y_hat, y):
 def loss(self, params, X, y, state):
     def cross_entropy(y_hat, y):
         # Tiny clip to keep log finite when softmax outputs underflow to 0.
-        p = jnp.clip(y_hat[list(range(len(y_hat))), y], a_min=1e-12)
+        p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
         return -d2l.reduce_mean(d2l.log(p))
     y_hat = state.apply_fn({'params': params}, *X)
     # The returned empty dictionary is a placeholder for auxiliary data,

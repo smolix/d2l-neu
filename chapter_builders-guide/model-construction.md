@@ -408,19 +408,23 @@ functionality of the default `Sequential` class.
 ```{.python .input #model-construction-the-sequential-module-1}
 %%tab mxnet
 class MySequential(nn.Block):
+    def __init__(self):
+        super().__init__()
+        # Keep strong refs ourselves: _children in Gluon 2.0 holds weakrefs,
+        # so we'd otherwise lose blocks to GC right after add() returns.
+        self._layers = []
+
     def add(self, block):
-        # Here, block is an instance of a Block subclass. We register it with
-        # the parent class so that the system tracks it as a child block; the
-        # base class stores children in the OrderedDict _children. When the
-        # MySequential instance calls the initialize method, the system
-        # automatically initializes all members of _children
+        # block is an instance of a Block subclass. register_child tracks it
+        # for parameter discovery; the strong ref in self._layers keeps it
+        # alive (matches the upstream nn.Sequential pattern).
+        self._layers.append(block)
         self.register_child(block)
 
     def forward(self, X):
-        # OrderedDict guarantees that members will be traversed in the order
-        # they were added
+        # _children.values() yields weakrefs; call them to dereference.
         for block in self._children.values():
-            X = block(X)
+            X = block()(X)
         return X
 ```
 

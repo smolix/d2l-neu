@@ -303,14 +303,36 @@ $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS))) &: \
 
 -include $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS)))
 
+# Per-notebook .d files capture each notebook's actual `d2l.<symbol>`
+# usage and translate it into shard-file dependencies. With these, editing
+# one `#@save` block invalidates only the notebooks that reference its
+# symbol — not every notebook in the framework. The scan is fast (~1s)
+# and runs whenever a source .md or the shard set changes.
+DEP_FILES := $(foreach fw,$(FRAMEWORKS),$(patsubst %.executed,%.d,$(EXECUTED_$(fw))))
+
+# A single rule emits every .d file (grouped output for one invocation).
+# Depends on the source .md set so per-notebook .d files refresh when a
+# notebook adds/removes a d2l.X reference, AND on the per-framework shard
+# manifests so we pick up new/removed symbols.
+$(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
+        $(wildcard d2l/_blocks/*/MANIFEST.mk)
+	@python3 tools/scan_d2l_usage.py \
+		--source $(SOURCE) --output-dir _notebooks --shard-dir d2l/_blocks
+
+-include $(DEP_FILES)
+
 # Per-notebook execution pattern rule. The recipe runs ONE notebook via
 # tools/run_one_notebook.py, which handles GPU slot locking (flock-based)
-# and best-of-N retries for known-stochastic notebooks. d2l/<fw>.py is a
-# real dep so a change in #@save propagates only to the affected framework's
-# notebooks (and only to notebooks whose source content actually changed,
-# courtesy of the content-aware write in build_lib.py / gen_notebooks.py).
+# and best-of-N retries for known-stochastic notebooks.
+#
+# Content deps come from the per-notebook `.d` file, which lists the exact
+# `d2l/_blocks/<fw>/<symbol>.py` shards the notebook consumes (see
+# tools/scan_d2l_usage.py). d2l/<fw>.py is order-only (must exist at run
+# time, since notebooks `import d2l`, but its mtime doesn't trigger
+# rebuilds — that's the .d's job).
 define EXEC_RULE
-_notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb d2l/$(1).py | .venv-$(1)/.synced
+_notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
+        | d2l/$(1).py .venv-$(1)/.synced
 	@mkdir -p $$(@D) $(LOGDIR)
 	$$(eval NVIDIA_LIBS := $$(call nvidia_ld_path,$(1)))
 	@UV_PROJECT_ENVIRONMENT=.venv-$(1) \
@@ -438,8 +460,10 @@ all-quick: html pdfs notebooks slides lib
 # those too.
 clean:
 	rm -rf _book _pdf _notebooks _slides
+	rm -rf d2l/_blocks
 	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
+	rm -f $(wildcard _notebooks/*/MANIFEST.mk)
 	rm -f $(wildcard _pdf/*/.generated)
 	rm -f $(wildcard _slides/*/.built)
 	@echo "Cleaned build artifacts (kept ./data/, $(LOGDIR)/, and .upload-manifest-*.txt)"

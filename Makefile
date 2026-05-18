@@ -258,6 +258,10 @@ _notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.
 	else \
 		ln -s $$(pwd)/data _notebooks/$*/data; \
 	fi
+	@# Per-notebook .executed stamps depend on each .ipynb directly, and
+	@# gen_notebooks.py preserves .ipynb mtime when content is unchanged
+	@# (so unchanged notebooks don't re-execute). The .generated stamp's
+	@# own mtime doesn't propagate to .executed targets via this chain.
 	@touch $@
 
 notebooks-%: _notebooks/%/.generated

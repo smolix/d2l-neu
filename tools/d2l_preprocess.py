@@ -1112,14 +1112,24 @@ def main():
     src = args.source
     dst = args.output
 
+    def _write_if_changed(path, content):
+        """Preserve mtime when content unchanged so downstream Make rules
+        (HTML/PDF render) don't re-fire unnecessarily."""
+        new_bytes = content.encode('utf-8')
+        if path.exists() and path.read_bytes() == new_bytes:
+            return False
+        path.write_bytes(new_bytes)
+        return True
+
     # Convert main index
     index_dst = dst / 'index.qmd'
     index_dst.parent.mkdir(parents=True, exist_ok=True)
-    index_dst.write_text(convert_index(src / 'index.md'), encoding='utf-8')
-    print(f'  index.md -> index.qmd')
+    if _write_if_changed(index_dst, convert_index(src / 'index.md')):
+        print(f'  index.md -> index.qmd')
 
     # Convert chapter files. Compute pandoc_chapter (file position in book,
     # 1-indexed) for number-offset calculation.
+    n_changed = 0
     for pos, rel in enumerate(files, start=1):
         src_file = src / rel
         if not src_file.exists():
@@ -1132,10 +1142,10 @@ def main():
         ch_num = CHAPTER_NUMBERING.get(rel)
         output = convert_file(src_file, args.primary,
                               chapter_number=ch_num, pandoc_chapter=pos)
-        dst_file.write_text(output, encoding='utf-8')
-        print(f'  {rel} -> {dst_file.name}')
+        if _write_if_changed(dst_file, output):
+            n_changed += 1
 
-    print(f'\nConverted {len(files)} files to {dst}')
+    print(f'\nConverted {len(files)} files to {dst} ({n_changed} updated)')
 
 
 if __name__ == '__main__':

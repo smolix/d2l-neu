@@ -2843,7 +2843,9 @@ class CTRDataset(gluon.data.Dataset):
     def __getitem__(self, idx):
         feat = np.array([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
                          for i, v in enumerate(self.data[idx]['x'])])
-        return feat + self.offsets, self.data[idx]['y']
+        # Wrap label in np.array so DataLoader batching yields an ndarray
+        # (not a list-of-lists), matching the pytorch tab's torch.tensor(...).
+        return feat + self.offsets, np.array(self.data[idx]['y'])
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a Gluon data iterator.

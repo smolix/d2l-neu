@@ -30,7 +30,7 @@ mxnet = [
     # Upstream MXNet 1.9.1 / cu117 has no Blackwell kernels and no PTX fallback.
     # The wheel is cp311-only; constrain via marker so resolution succeeds on
     # other supported Python versions too.
-    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260518/mxnet-2.0.0%2Bcu13.bw.20260518-cp311-cp311-linux_x86_64.whl ; python_version == '3.11'",
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260518.2/mxnet-2.0.0%2Bcu13.bw.20260518.2-cp311-cp311-linux_x86_64.whl ; python_version == '3.11'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,

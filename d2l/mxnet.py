@@ -468,7 +468,7 @@ class Classifier(d2l.Module):
 
 def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = y_hat[list(range(len(y_hat))), y].clip(a_min=1e-12, a_max=None)
+    p = y_hat[list(range(len(y_hat))), y].clip(min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 class SoftmaxRegression(d2l.Classifier):
@@ -2632,10 +2632,11 @@ def split_data_ml100k(data, num_users, num_items,
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        # Seed for deterministic splits across frameworks; produces a plain
-        # boolean list rather than `True if x == 1 else False`.
-        rng = np.random.default_rng(0)
-        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
+        # Seed for deterministic splits across frameworks. Use Python's
+        # `random` module rather than `np.random.default_rng` because
+        # mxnet.numpy.random doesn't expose the modern numpy RNG API.
+        rng = random.Random(0)
+        mask = [rng.random() < 1 - test_ratio for _ in range(len(data))]
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data
@@ -2819,7 +2820,7 @@ class CTRDataset(gluon.data.Dataset):
                 values = line.rstrip('\n').split('\t')
                 if len(values) != self.NUM_FEATS + 1:
                     continue
-                instance['y'] = [np.float32(values[0])]
+                instance['y'] = [float(values[0])]
                 for i in range(1, self.NUM_FEATS + 1):
                     feat_cnts[i][values[i]] += 1
                     instance.setdefault('x', []).append(values[i])

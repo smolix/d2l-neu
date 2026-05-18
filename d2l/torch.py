@@ -2786,10 +2786,11 @@ def split_data_ml100k(data, num_users, num_items,
         train_data = pd.DataFrame(train_data)
         test_data = pd.DataFrame(test_data)
     else:
-        # Seed for deterministic splits across frameworks; produces a plain
-        # boolean list rather than `True if x == 1 else False`.
-        rng = np.random.default_rng(0)
-        mask = list(rng.uniform(0, 1, len(data)) < 1 - test_ratio)
+        # Seed for deterministic splits across frameworks; uses Python's
+        # `random` for cross-framework portability (some frameworks' numpy
+        # shim lacks `np.random.default_rng`).
+        rng = random.Random(0)
+        mask = [rng.random() < 1 - test_ratio for _ in range(len(data))]
         neg_mask = [not x for x in mask]
         train_data, test_data = data[mask], data[neg_mask]
     return train_data, test_data

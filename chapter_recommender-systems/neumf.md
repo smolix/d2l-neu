@@ -428,7 +428,8 @@ loss = d2l.BPRLoss()
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {"learning_rate": lr, 'wd': wd})
 train_ranking(net, train_iter, test_iter, loss, trainer, None, num_users,
-              num_items, num_epochs, devices, evaluate_ranking, candidates)
+              num_items, num_epochs, devices, evaluate_ranking, candidates,
+              eval_step=5)
 ```
 
 ```{.python .input #neumf-training-and-evaluating-the-model-4  n=12}

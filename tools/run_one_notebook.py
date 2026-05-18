@@ -41,21 +41,64 @@ from run_notebooks import (
 SLOT_DIR = Path('/tmp/d2l-slots')
 
 
-def _ensure_slots(num_gpus):
+def _ensure_slots(gpu_slots, cpu_slots):
     SLOT_DIR.mkdir(parents=True, exist_ok=True)
-    for i in range(num_gpus):
+    for i in range(gpu_slots):
         (SLOT_DIR / f'gpu-{i}.lock').touch()
+    for i in range(cpu_slots):
+        (SLOT_DIR / f'cpu-{i}.lock').touch()
+
+
+def _slot_to_gpu(slot_idx, gpu_slots, num_gpus):
+    """Map a GPU-slot index → physical CUDA device index.
+
+    With gpu_slots = num_gpus * workers_per_gpu, slots cluster per GPU:
+    slots 0..(workers_per_gpu-1) → GPU 0; next batch → GPU 1; etc.
+    """
+    workers_per_gpu = max(1, gpu_slots // max(1, num_gpus))
+    return slot_idx // workers_per_gpu
 
 
 @contextmanager
-def acquire_gpu_slot(num_gpus):
-    """Block until one of num_gpus slots is free; yield the GPU index (int).
+def acquire_gpu_slot(gpu_slots, num_gpus):
+    """Block until any of gpu_slots is free; yield the CUDA device index.
 
-    Polls every 0.5s using non-blocking flock so we can rotate across slots
-    instead of getting stuck waiting on a specific one.
+    With gpu_slots > num_gpus, multiple workers can share a GPU (suitable
+    when per-job VRAM is well below total VRAM, e.g. 11GB jobs on a 24GB
+    GPU → 2 workers per GPU). Polls every 0.5s with non-blocking flock so
+    workers rotate across slots fairly.
     """
-    _ensure_slots(num_gpus)
-    paths = [SLOT_DIR / f'gpu-{i}.lock' for i in range(num_gpus)]
+    _ensure_slots(gpu_slots, 0)
+    paths = [SLOT_DIR / f'gpu-{i}.lock' for i in range(gpu_slots)]
+    while True:
+        for i, p in enumerate(paths):
+            fp = open(p, 'w')
+            try:
+                fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                fp.close()
+                continue
+            try:
+                yield _slot_to_gpu(i, gpu_slots, num_gpus)
+            finally:
+                fcntl.flock(fp, fcntl.LOCK_UN)
+                fp.close()
+            return
+        time.sleep(0.5)
+
+
+@contextmanager
+def acquire_cpu_slot(cpu_slots):
+    """Block until one of cpu_slots is free; yield the slot index.
+
+    CPU-only notebooks each get ~`nproc / cpu_slots` cores worth of
+    headroom, mirroring the old run_notebooks.py "2 CPU workers" pool.
+    Beware: `make -j` already caps total concurrency, so cpu_slots really
+    means "no more than N CPU-only notebooks run at once" — useful when
+    `make -j` is set higher than CPU work can sustain.
+    """
+    _ensure_slots(0, cpu_slots)
+    paths = [SLOT_DIR / f'cpu-{i}.lock' for i in range(cpu_slots)]
     while True:
         for i, p in enumerate(paths):
             fp = open(p, 'w')
@@ -74,16 +117,17 @@ def acquire_gpu_slot(num_gpus):
 
 
 @contextmanager
-def acquire_all_gpus(num_gpus):
+def acquire_all_gpus(gpu_slots, num_gpus):
     """Block until ALL slots are free; yield comma-separated GPU index list.
 
-    Uses blocking flock; acquires in order, releases all on exit. Beware:
-    if a single-GPU notebook holds slot 0 forever, this can deadlock. We
-    avoid that by only using this context for explicitly multi-GPU notebooks
-    that are run after parallel batches.
+    Used by MULTI_GPU_NOTEBOOKS, which need exclusive access to every GPU.
+    Blocking flock; acquires in order, releases all on exit. Caller must
+    ensure this isn't called concurrently with itself (otherwise deadlock).
+    Make's -j scheduler will naturally serialize multi-GPU recipes because
+    they each need all slots.
     """
-    _ensure_slots(num_gpus)
-    paths = [SLOT_DIR / f'gpu-{i}.lock' for i in range(num_gpus)]
+    _ensure_slots(gpu_slots, 0)
+    paths = [SLOT_DIR / f'gpu-{i}.lock' for i in range(gpu_slots)]
     fps = []
     try:
         for p in paths:
@@ -100,22 +144,63 @@ def acquire_all_gpus(num_gpus):
                 pass
 
 
-def _run_once(nb_path, fw, num_gpus, timeout):
-    """Single attempt; selects CPU/single-GPU/multi-GPU context appropriately."""
+def progress_for(fw):
+    """Return (done, total) counts for a framework, snapshot-of-disk.
+
+    `done` counts existing .executed stamps; `total` counts .ipynb files.
+    Read concurrently across processes; numbers may briefly disagree but
+    converge to the true completion count.
+    """
+    fw_dir = NOTEBOOKS_DIR / fw
+    try:
+        total = sum(1 for _ in fw_dir.rglob('*.ipynb'))
+        done = sum(1 for _ in fw_dir.rglob('*.executed'))
+    except OSError:
+        return 0, 0
+    return done, total
+
+
+def notebook_mode(nb_path, fw):
+    """Classify a notebook's execution mode without acquiring any slot.
+
+    Returns one of: 'multi-gpu', 'gpu', 'cpu'. Used so we can print where
+    a notebook is about to run before slot acquisition (helpful when many
+    notebooks queue under `make -j`).
+    """
     nb = Path(nb_path).resolve()
     rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
-
     if rel in MULTI_GPU_NOTEBOOKS:
-        with acquire_all_gpus(num_gpus) as cuda:
-            return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+        return 'multi-gpu'
     if file_uses_gpu(nb, NOTEBOOKS_DIR / fw):
-        with acquire_gpu_slot(num_gpus) as i:
+        return 'gpu'
+    return 'cpu'
+
+
+def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label):
+    """Single attempt; uses pre-computed mode and prints which slot we acquired.
+
+    `mode` is 'multi-gpu', 'gpu', or 'cpu' (from notebook_mode()). `label`
+    is the human-readable prefix for log lines (e.g. "[mxnet] chapter/foo:").
+    """
+    nb = Path(nb_path).resolve()
+
+    if mode == 'multi-gpu':
+        with acquire_all_gpus(gpu_slots, num_gpus) as cuda:
+            print(f"{label}: [all GPUs] running", flush=True)
+            return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+    if mode == 'gpu':
+        with acquire_gpu_slot(gpu_slots, num_gpus) as i:
+            print(f"{label}: [GPU {i}] running", flush=True)
             return execute_notebook(nb, timeout=timeout, cuda_devices=str(i))
-    # CPU-only
-    return execute_notebook(nb, timeout=timeout, cuda_devices="")
+    # CPU-only: bounded-pool acquisition so we don't oversubscribe cores
+    # when many CPU notebooks are queued under `make -j`.
+    with acquire_cpu_slot(cpu_slots) as i:
+        print(f"{label}: [CPU {i}] running", flush=True)
+        return execute_notebook(nb, timeout=timeout, cuda_devices="")
 
 
-def run_with_retry(nb_path, fw, num_gpus, timeout):
+def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
+                   mode, label):
     """Execute one notebook, retrying for stochastic / transient cases."""
     nb = Path(nb_path).resolve()
     rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
@@ -126,7 +211,8 @@ def run_with_retry(nb_path, fw, num_gpus, timeout):
     any_success = False
 
     for attempt in range(1, max_attempts + 1):
-        ok, elapsed, err = _run_once(nb, fw, num_gpus, timeout)
+        ok, elapsed, err = _run_once(nb, fw, gpu_slots, num_gpus, cpu_slots,
+                                     timeout, mode, label)
         if not ok:
             last_err = err
             print(f"  attempt {attempt}: FAIL ({elapsed:.0f}s) — "
@@ -168,10 +254,26 @@ def main():
                         choices=["pytorch", "tensorflow", "jax", "mxnet"])
     parser.add_argument("notebook", type=Path,
                         help="Path to .ipynb under _notebooks/<framework>/")
+    # Physical GPU count (for CUDA_VISIBLE_DEVICES mapping) AND slot count
+    # (controlling concurrency) are tracked separately. Rule of thumb from
+    # CLAUDE.md: ≥11GB GPU RAM per GPU notebook, ≥16 cores per CPU notebook.
+    # Makefile passes D2L_NUM_GPUS / D2L_GPU_SLOTS / D2L_CPU_SLOTS based on
+    # nvidia-smi + nproc; explicit flags override here.
     parser.add_argument("--num-gpus", type=int,
-                        default=int(os.environ.get("D2L_NUM_GPUS", "1")))
+                        default=int(os.environ.get("D2L_NUM_GPUS", "1")),
+                        help="Physical GPU count for CUDA_VISIBLE_DEVICES")
+    parser.add_argument("--gpu-slots", type=int,
+                        default=int(os.environ.get("D2L_GPU_SLOTS", "0")) or None,
+                        help="Concurrent GPU notebook slots "
+                             "(default: D2L_GPU_SLOTS env, then num-gpus)")
+    parser.add_argument("--cpu-slots", type=int,
+                        default=int(os.environ.get("D2L_CPU_SLOTS", "2")),
+                        help="Concurrent CPU notebook slots (default: 2)")
     parser.add_argument("--timeout", type=int, default=3600)
     args = parser.parse_args()
+    # Default GPU slots = physical GPU count if not set (1 worker per GPU).
+    if args.gpu_slots is None:
+        args.gpu_slots = max(1, args.num_gpus)
 
     if not args.notebook.exists():
         print(f"Not found: {args.notebook}", file=sys.stderr)
@@ -181,16 +283,25 @@ def main():
 
     rel = args.notebook.resolve().relative_to(
         (NOTEBOOKS_DIR / args.framework).resolve())
-    print(f"[{args.framework}] {rel}: start", flush=True)
+    # "X/N" prefix uses live counts of `.executed` stamps vs total .ipynb
+    # for this framework — concurrent across processes, so the numbers
+    # are approximate (other workers may complete between our snapshot
+    # and our print) but the trend is correct.
+    done_before, total = progress_for(args.framework)
+    label = f"[{args.framework} {done_before + 1}/{total}] {rel}"
+    mode = notebook_mode(args.notebook, args.framework)
+    mode_tag = {'multi-gpu': '[all GPUs]', 'gpu': '[GPU]', 'cpu': '[CPU]'}[mode]
+    print(f"{label}: start {mode_tag}", flush=True)
     t0 = time.time()
     ok, err = run_with_retry(args.notebook, args.framework,
-                             args.num_gpus, args.timeout)
+                             args.gpu_slots, args.num_gpus, args.cpu_slots,
+                             args.timeout, mode, label)
     elapsed = time.time() - t0
     if ok:
-        print(f"[{args.framework}] {rel}: OK ({elapsed:.0f}s)", flush=True)
+        print(f"{label}: OK ({elapsed:.0f}s) {mode_tag}", flush=True)
         sys.exit(0)
-    print(f"[{args.framework}] {rel}: FAIL ({elapsed:.0f}s)", file=sys.stderr,
-          flush=True)
+    print(f"{label}: FAIL ({elapsed:.0f}s) {mode_tag}",
+          file=sys.stderr, flush=True)
     sys.exit(1)
 
 

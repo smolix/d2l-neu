@@ -754,7 +754,9 @@ To test the above proof, let's apply the built-in `CrossEntropy` metric (the neg
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
 nll_loss = CrossEntropy()
-nll_loss.update(labels.as_nd_ndarray(), preds.as_nd_ndarray())
+# MX 2.0's CrossEntropy operates on np arrays directly (it calls
+# `pred.to_device(label.device)` internally); no `as_nd_ndarray()` cast.
+nll_loss.update([labels], [preds])
 nll_loss.get()
 ```
 

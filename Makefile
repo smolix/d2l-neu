@@ -60,6 +60,15 @@ PARALLEL_pytorch    ?= $(_PARALLEL_DEFAULT)
 PARALLEL_tensorflow ?= $(_PARALLEL_DEFAULT)
 PARALLEL_jax        ?= $(_PARALLEL_DEFAULT)
 PARALLEL_mxnet      ?= $(_PARALLEL_DEFAULT)
+
+# Per-notebook slot counts. Re-tuned for the post-Phase-1 build system:
+#   GPU_SLOTS = NUM_GPUS × workers_per_GPU  (≥11GB VRAM per worker → 24GB
+#                                            GPU runs 2 jobs at once)
+#   CPU_SLOTS = max(1, cores / 16)          (≥16 cores per CPU notebook)
+# `make -j` should be at least GPU_SLOTS + CPU_SLOTS for full saturation.
+# Override either explicitly: `make GPU_SLOTS=8 CPU_SLOTS=4 ...`.
+GPU_SLOTS ?= $(_PARALLEL_DEFAULT)
+CPU_SLOTS ?= $(shell n=$$(nproc 2>/dev/null || echo 16); echo $$(( n / 16 < 1 ? 1 : n / 16 )))
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 NB_FILES      ?= $(FILES)
@@ -108,6 +117,7 @@ help:
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
 	@echo "           PARALLEL: pytorch=$(PARALLEL_pytorch) tf=$(PARALLEL_tensorflow) jax=$(PARALLEL_jax) mxnet=$(PARALLEL_mxnet)"
+	@echo "           GPU_SLOTS=$(GPU_SLOTS)  CPU_SLOTS=$(CPU_SLOTS)"
 	@echo "           FILES=$(FILES)  NB_FILES=$(NB_FILES)  SLIDES_FILTER=$(SLIDES_FILTER)"
 	@echo "Frameworks: $(FRAMEWORKS)"
 	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
@@ -339,6 +349,8 @@ _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
 	PATH="$(CURDIR)/.venv-$(1)/bin:$$$$PATH" \
 	LD_LIBRARY_PATH="$$(NVIDIA_LIBS)$$$${LD_LIBRARY_PATH:+:$$$$LD_LIBRARY_PATH}" \
 	D2L_NUM_GPUS=$(NUM_GPUS) \
+	D2L_GPU_SLOTS=$(GPU_SLOTS) \
+	D2L_CPU_SLOTS=$(CPU_SLOTS) \
 	.venv-$(1)/bin/python tools/run_one_notebook.py $(1) $$< \
 		2>&1 | tee -a $(LOGDIR)/run-$(1)-$(TS).log
 	@touch $$@

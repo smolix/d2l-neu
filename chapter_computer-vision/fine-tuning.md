@@ -278,18 +278,14 @@ def test_preprocess(x):
 
 ```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab tensorflow
-# Plain tf.image / tf.data preprocessing for ImageNet-style normalization
-# (NHWC). Wrapping these in a `keras.Sequential` and calling it inside
-# `tf.data.map` causes a SymbolicTensor leak under Keras 3, so we keep the
-# pipeline as plain tensor ops.
+# Plain tf.image / tf.data preprocessing for Keras ResNet50 (NHWC). Keras
+# ResNet50 expects its own `preprocess_input` convention, not PyTorch-style
+# RGB mean/std normalization.
 IMG_SIZE = 224
 
-# ImageNet channel-wise mean and std (RGB order)
-_IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
-_IMAGENET_STD  = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
-
 def _normalize(x):
-    return (tf.cast(x, tf.float32) / 255.0 - _IMAGENET_MEAN) / _IMAGENET_STD
+    return tf.keras.applications.resnet50.preprocess_input(
+        tf.cast(x, tf.float32))
 
 def train_augs(x, training=False):
     # Input is (256, 256, 3) — already resized by image_dataset_from_directory.
@@ -441,7 +437,8 @@ class FineTuneResNet18(fnn.Module):
     def __call__(self, x, train: bool):
         backbone = fm.ResNet18(output='activations', pretrained='imagenet',
                                normalize=False)
-        feats = backbone(x, train=train)['block4_1']  # (B, 7, 7, 512)
+        # Keep ImageNet BatchNorm statistics fixed for the tiny target set.
+        feats = backbone(x, train=False)['block4_1']  # (B, 7, 7, 512)
         feats = jnp.mean(feats, axis=(1, 2))          # global avg pool -> (B, 512)
         logits = fnn.Dense(self.num_classes,
                            kernel_init=fnn.initializers.glorot_uniform(),
@@ -549,11 +546,14 @@ def train_fine_tuning(net, variables, learning_rate, batch_size=128,
                                     else 'base')
         labels = jax.tree_util.tree_map_with_path(label_fn, params)
         tx = optax.multi_transform(
-            {'head': optax.sgd(learning_rate * 10),
-             'base': optax.sgd(learning_rate)},
+            {'head': optax.chain(optax.add_decayed_weights(0.001),
+                                 optax.sgd(learning_rate * 10)),
+             'base': optax.chain(optax.add_decayed_weights(0.001),
+                                 optax.sgd(learning_rate))},
             labels)
     else:
-        tx = optax.sgd(learning_rate)
+        tx = optax.chain(optax.add_decayed_weights(0.001),
+                         optax.sgd(learning_rate))
     opt_state = tx.init(params)
 
     @jax.jit
@@ -562,10 +562,10 @@ def train_fine_tuning(net, variables, learning_rate, batch_size=128,
             out, new_state = net.apply(
                 {'params': params, 'batch_stats': batch_stats}, x,
                 train=True, mutable=['batch_stats'])
+            new_batch_stats = new_state.get('batch_stats', batch_stats)
             loss = optax.softmax_cross_entropy_with_integer_labels(
-                out, y).mean() + 0.001 * sum(
-                jnp.sum(p ** 2) for p in jax.tree_util.tree_leaves(params))
-            return loss, (out, new_state['batch_stats'])
+                out, y).mean()
+            return loss, (out, new_batch_stats)
         (loss, (logits, new_bs)), grads = jax.value_and_grad(
             loss_fn, has_aux=True)(params)
         updates, new_opt_state = tx.update(grads, opt_state, params)
@@ -691,7 +691,8 @@ train_fine_tuning(finetune_net, 5e-5)
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab jax
-finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 5e-5)
+print('fine-tuned model')
+finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 1e-4)
 ```
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
@@ -717,6 +718,7 @@ train_fine_tuning(scratch_net, 5e-4, param_group=False)
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab jax
+print('scratch baseline')
 # Train from scratch: same architecture but with random weights.
 class ScratchResNet18(fnn.Module):
     num_classes: int = 2
@@ -844,7 +846,7 @@ hotdog_w.shape
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Fine-Tuning"}
 You'll rarely train a vision model from scratch.
 **Transfer learning** — start from weights pretrained on a
 big dataset (ImageNet) and adapt to your small one — is
@@ -883,35 +885,55 @@ transfer learning:
 
 ::: {.slide title="Augmentation pipelines"}
 Standard ImageNet recipe — random resized crop + flip for
-training, center crop for eval. Match the normalization
-that the pretrained model expects:
+training, center crop for eval. Match the preprocessing
+convention that the pretrained model expects:
 
 @fine-tuning-reading-the-dataset-4
 :::
 
-::: {.slide title="Loading a pretrained ResNet"}
-Take a pretrained ResNet-18, swap the 1000-way ImageNet
-classifier for a 2-way "hot dog" head:
+::: {.slide title="Inspect the pretrained head"}
+The source model was trained for 1000 ImageNet classes.
+Its convolutional body is reusable; the final classifier is
+task-specific and will be replaced:
 
 @fine-tuning-defining-and-initializing-the-model-1
+:::
 
-. . .
+::: {.slide title="Replace the task head"}
+Create a target model with the same pretrained backbone and
+a randomly initialized 2-way classifier for hot dog vs. not
+hot dog:
 
 @fine-tuning-defining-and-initializing-the-model-2
+:::
 
-. . .
+::: {.slide title="Discriminative learning rates"}
+Let $\theta_b$ be pretrained backbone parameters and
+$\theta_h$ the new head. Use a small step on $\theta_b$
+and a larger one on $\theta_h$:
+
+$$\eta_b = \eta,\qquad \eta_h = 10\eta.$$
 
 @fine-tuning-defining-and-initializing-the-model-3
 :::
 
-::: {.slide title="Fine-tuning training"}
-Discriminative learning rates: 10× higher LR on the new
-head than on the pretrained backbone. The backbone already
-knows useful features; the head doesn't yet:
+::: {.slide title="Training helper"}
+The helper hides framework details: parameter groups,
+optimizer construction, metric logging, and the
+scratch/fine-tune switch. The four-step pattern is:
 
-@fine-tuning-fine-tuning-the-model-1
+- build the pretrained backbone and new head;
+- assign a small learning rate to backbone parameters;
+- assign a larger learning rate to the randomly initialized
+  head;
+- train and compare against a scratch baseline.
+:::
 
-. . .
+::: {.slide title="Run fine-tuning"}
+With matched ImageNet preprocessing and a small base LR,
+the pretrained model should reach useful accuracy quickly.
+The point is not just a better final score; it is much less
+data and compute than training the same network cold.
 
 @fine-tuning-fine-tuning-the-model-2
 :::
@@ -922,8 +944,12 @@ small dataset — illustrates why transfer learning is the
 default:
 
 @fine-tuning-fine-tuning-the-model-3
+:::
 
-. . .
+::: {.slide title="What to vary"}
+The natural ablations are: freeze more or fewer layers,
+change the backbone/head learning-rate ratio, and compare
+against the source ImageNet "hotdog" class weights.
 
 @fine-tuning-exercises-1
 
@@ -939,7 +965,8 @@ default:
 - Use small LR on the backbone (10×–100× smaller than the
   head LR) — pretrained features need only nudges.
 - Match input preprocessing (mean/std normalization, input
-  size) to what the pretrained model expects.
+  size, or model-specific `preprocess_input`) to what the
+  pretrained model expects.
 - Modern variants: feature-extractor mode (freeze
   everything but head), full fine-tune (everything trains),
   parameter-efficient methods (LoRA, adapters).

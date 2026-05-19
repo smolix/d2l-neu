@@ -240,7 +240,7 @@ print(segment_BPE(tokens, symbols))
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Subword Embeddings"}
 Word-level embeddings have a problem: morphologically
 related words ("happy", "happily", "happiness") get
 *independent* vectors. Rare or out-of-vocabulary words

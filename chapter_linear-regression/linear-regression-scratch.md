@@ -726,7 +726,7 @@ and *more efficiently* (using our GPUs to their full potential).
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Linear regression from scratch"}
 End-to-end linear regression with **nothing** but tensor ops:
 
 1. **Model** — a `Module` with `w` and `b` parameters and a

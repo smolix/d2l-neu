@@ -291,7 +291,7 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Concise softmax regression"}
 Same model, same data — using the framework's built-in primitives:
 
 - One linear layer instead of hand-rolled `W` and `b`.

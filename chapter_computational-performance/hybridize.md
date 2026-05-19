@@ -492,7 +492,7 @@ This is quite different from what we saw previously. All print statements, as de
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="From Eager to Graph Execution"}
 PyTorch / MXNet imperative — *eager* execution. Every line
 of Python issues a kernel and waits. Easy to debug, but
 costs you Python-loop overhead and prevents whole-graph

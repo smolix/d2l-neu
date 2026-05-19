@@ -174,9 +174,6 @@ transform_train = torchvision.transforms.Compose([
 
 ```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab jax
-IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-
 def transform_train_fn(image, label):
     """Training augmentation: random crop, flip, color jitter, normalize."""
     image = tf.cast(image, tf.float32)
@@ -188,16 +185,11 @@ def transform_train_fn(image, label):
     image = tf.image.random_contrast(image, lower=0.6, upper=1.4)
     image = tf.image.random_saturation(image, lower=0.6, upper=1.4)
     image = tf.clip_by_value(image, 0.0, 255.0)
-    image = image / 255.0
-    image = (image - IMAGENET_MEAN) / IMAGENET_STD
-    return image, label
+    return tf.keras.applications.resnet50.preprocess_input(image), label
 ```
 
 ```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab tensorflow
-IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
-IMAGENET_STD = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
-
 def transform_train_fn(image, label):
     """Training augmentation: random crop, flip, color jitter, normalize."""
     image = tf.cast(image, tf.float32)
@@ -209,9 +201,7 @@ def transform_train_fn(image, label):
     image = tf.image.random_contrast(image, lower=0.6, upper=1.4)
     image = tf.image.random_saturation(image, lower=0.6, upper=1.4)
     image = tf.clip_by_value(image, 0.0, 255.0)
-    image = image / 255.0
-    image = (image - IMAGENET_MEAN) / IMAGENET_STD
-    return image, label
+    return tf.keras.applications.resnet50.preprocess_input(image), label
 ```
 
 During prediction,
@@ -248,9 +238,7 @@ def transform_test_fn(image, label):
     image = tf.image.resize(image, [256, 256])
     # Center crop to 224x224
     image = tf.image.resize_with_crop_or_pad(image, 224, 224)
-    image = image / 255.0
-    image = (image - IMAGENET_MEAN) / IMAGENET_STD
-    return image, label
+    return tf.keras.applications.resnet50.preprocess_input(image), label
 ```
 
 ```{.python .input #kaggle-dog-image-augmentation-2}
@@ -261,9 +249,7 @@ def transform_test_fn(image, label):
     image = tf.image.resize(image, [256, 256])
     # Center crop to 224x224
     image = tf.image.resize_with_crop_or_pad(image, 224, 224)
-    image = image / 255.0
-    image = (image - IMAGENET_MEAN) / IMAGENET_STD
-    return image, label
+    return tf.keras.applications.resnet50.preprocess_input(image), label
 ```
 
 ## Reading the Dataset
@@ -467,10 +453,12 @@ def get_net(devices):
 
 ```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab jax
-# Use a pretrained TF ResNet50 to extract features,
-# then train a small Flax output network on top
+# Use a pretrained TF ResNet50 to extract ImageNet logits as frozen features,
+# then train a small Flax output network on top. This mirrors the PyTorch tab,
+# where torchvision's pretrained ResNet emits 1000 ImageNet logits before the
+# custom dog-breed head.
 _resnet_for_features = tf.keras.applications.ResNet50(
-    weights='imagenet', include_top=False, pooling='avg',
+    weights='imagenet', include_top=True, classifier_activation=None,
     input_shape=(224, 224, 3))
 _resnet_for_features.trainable = False
 
@@ -493,14 +481,13 @@ def get_net():
 ```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab tensorflow
 def get_net():
-    # Load pretrained ResNet50, freeze backbone, add custom head
+    # Load pretrained ResNet50, freeze backbone, add custom head. Keep the
+    # ImageNet logits as frozen features to match the PyTorch tab.
     backbone = keras.applications.ResNet50(
-        weights='imagenet', include_top=False, pooling='avg',
+        weights='imagenet', include_top=True, classifier_activation=None,
         input_shape=(224, 224, 3))
     backbone.trainable = False
     inputs = keras.Input(shape=(224, 224, 3))
-    # ResNet50 expects inputs in [0, 255] or preprocessed; our inputs are
-    # already normalized to ImageNet stats so we use them directly
     x = backbone(inputs, training=False)
     x = keras.layers.Dense(256, activation='relu')(x)
     outputs = keras.layers.Dense(120)(x)
@@ -551,10 +538,6 @@ def loss_fn(logits, labels):
 
 def extract_features(features_net, X_batch):
     """Extract features using the frozen TF ResNet50."""
-    # Preprocess for ResNet50: expects values in [-1, 1] or uses built-in
-    # preprocessing. Since images are already normalized, we undo and re-apply
-    # ResNet preprocessing. Simpler: pass normalized images and let the model
-    # extract features (features are robust to small normalization diffs).
     feats = features_net.predict(X_batch, verbose=0)
     return jnp.array(feats)
 
@@ -707,8 +690,8 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
           wd, lr_period, lr_decay):
     # Only train the small custom output network
-    # ResNet50 with pooling='avg' outputs 2048-dim features
-    dummy = jnp.ones((1, 2048))
+    # ResNet50 with include_top=True outputs 1000 ImageNet logits.
+    dummy = jnp.ones((1, 1000))
     variables = output_net.init(jax.random.PRNGKey(0), dummy, training=True)
     timer = d2l.Timer()
     legend = ['train loss']
@@ -1007,7 +990,7 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Kaggle Dog Breed"}
 A second Kaggle capstone: ImageNet Dogs (120 fine-grained
 breeds). The big difference from CIFAR-10: this is a
 *subset* of ImageNet, so a pretrained ResNet already knows
@@ -1032,8 +1015,8 @@ Same idea as CIFAR-10 — reshuffle the Kaggle layout into
 
 ::: {.slide title="Augmentation"}
 ImageNet-scale augmentation: random resized crop, random
-horizontal flip, color jitter, mean/std normalization with
-*the same statistics* the pretrained backbone expects:
+horizontal flip, color jitter, and the same input
+preprocessing convention the pretrained backbone expects:
 
 @kaggle-dog-image-augmentation-1
 
@@ -1042,7 +1025,7 @@ horizontal flip, color jitter, mean/std normalization with
 @kaggle-dog-image-augmentation-2
 :::
 
-::: {.slide title="DataLoaders"}
+::: {.slide title="Data loaders"}
 @kaggle-dog-reading-the-dataset-1
 
 . . .
@@ -1050,25 +1033,52 @@ horizontal flip, color jitter, mean/std normalization with
 @kaggle-dog-reading-the-dataset-2
 :::
 
-::: {.slide title="Fine-tuning a pretrained ResNet-34"}
-Backbone (frozen or with low LR) + new 120-way head:
+::: {.slide title="Frozen ImageNet features"}
+This competition is close to ImageNet, so we reuse a
+pretrained ResNet as a frozen feature extractor and train
+only a small 120-way breed classifier:
 
 @kaggle-dog-fine-tuning-a-pretrained-model-1
+:::
 
-. . .
+::: {.slide title="Head loss and validation"}
+Only the custom output network receives gradients. The
+validation loss is computed through the same frozen
+features, so it measures whether the dog-breed head is
+generalizing:
 
 @kaggle-dog-fine-tuning-a-pretrained-model-2
 :::
 
 ::: {.slide title="Training function"}
-@kaggle-dog-defining-the-training-function
+The helper is mostly framework bookkeeping. The training
+structure is:
+
+- precompute frozen ImageNet features;
+- train the 120-way head with cross-entropy;
+- report validation loss on held-out breeds;
+- repeat on all training data before writing the
+  submission file.
+
+That is the practical transfer-learning tradeoff: far less
+memory and time, while keeping most ImageNet visual
+knowledge.
 :::
 
 ::: {.slide title="Train"}
+Expect validation loss to be the useful curve here; with
+120 fine-grained classes, top-line accuracy can be noisy on
+the tiny book subset. On the full competition data, train
+longer and tune the head/augmentation strength.
+
 @kaggle-dog-training-and-validating-the-model
 :::
 
 ::: {.slide title="Submit predictions"}
+Write one probability vector per test image. The CSV has
+image id plus 120 breed probabilities, so the final layer
+must stay aligned with the competition's class order:
+
 @kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
 :::
 
@@ -1076,7 +1086,7 @@ Backbone (frozen or with low LR) + new 120-way head:
 - ImageNet Dogs ⊂ ImageNet → fine-tuning a pretrained
   CNN crushes from-scratch training.
 - Standard recipe: pretrained backbone, new 120-way head,
-  ImageNet-scale augmentation, ImageNet normalization.
+  ImageNet-scale augmentation, ImageNet-compatible preprocessing.
 - Same shape as the CIFAR-10 deck; only the dataset and
   the choice "train from scratch vs fine-tune" differ.
 - The general lesson: when your task is close to the

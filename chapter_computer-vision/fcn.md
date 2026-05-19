@@ -900,7 +900,7 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Fully Convolutional Networks"}
 A **fully convolutional network** (Long, Shelhamer,
 Darrell 2015) is the simplest path to per-pixel prediction:
 
@@ -930,6 +930,11 @@ feature map:
 :::
 
 ::: {.slide title="Building the FCN"}
+After removing the classifier head, the backbone produces a
+low-resolution feature map. The new FCN head must restore
+the original spatial resolution while changing channels to
+class logits.
+
 @fcn-the-model-2
 
 . . .
@@ -951,8 +956,13 @@ Initialize it as bilinear interpolation — a sensible
 starting point that fine-tunes from there:
 
 @fcn-initializing-transposed-convolutional-layers-1
+:::
 
-. . .
+::: {.slide title="Upsampling sanity check"}
+Apply the initialized transposed convolution to an image.
+The output should be larger but visually similar, because
+the kernel starts as bilinear interpolation rather than
+random noise:
 
 @fcn-initializing-transposed-convolutional-layers-2
 
@@ -962,6 +972,10 @@ starting point that fine-tunes from there:
 :::
 
 ::: {.slide title="Bilinear init (cont.)"}
+The printed shapes should confirm the spatial scale-up.
+Then the same bilinear kernel initializes the FCN's final
+upsampling layer:
+
 @fcn-initializing-transposed-convolutional-layers-4
 
 . . .
@@ -986,8 +1000,12 @@ Run the network on test images, take argmax over the class
 dimension, map class indices back to RGB:
 
 @fcn-prediction-1
+:::
 
-. . .
+::: {.slide title="Visualize segmentation masks"}
+The output grid is image, prediction, ground truth. Expect
+coarse boundaries: this plain FCN upsamples from a 32×
+downsampled feature map and has no skip connections.
 
 @fcn-prediction-2
 

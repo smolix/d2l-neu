@@ -379,7 +379,7 @@ We have several ways of accessing and tying model parameters.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Managing Parameters"}
 A neural network is a tree of **parameters** — the weight
 matrices and bias vectors gradient descent updates.
 Training is one thing you do with them; this deck covers

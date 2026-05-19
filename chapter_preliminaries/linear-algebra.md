@@ -1159,7 +1159,7 @@ To recap:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Linear Algebra Toolkit"}
 The minimum linear-algebra vocabulary every chapter that follows
 assumes:
 

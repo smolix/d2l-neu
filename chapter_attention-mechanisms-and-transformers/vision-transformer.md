@@ -560,7 +560,7 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Vision Transformer"}
 The Transformer started as a translation model. Could it
 also do *vision*?
 
@@ -589,6 +589,9 @@ of 36 patch tokens, each a `num_hiddens`-dim vector:
 :::
 
 ::: {.slide title="Patch embedding shape check"}
+The convolution returns one vector per patch. For 96×96 images
+and 16×16 patches, the sequence length is $(96/16)^2 = 36$.
+
 @vision-transformer-patch-embedding-2
 :::
 
@@ -612,6 +615,10 @@ choice in modern Transformers (LLaMA, GPT, etc.).
 :::
 
 ::: {.slide title="JAX/TF variants and shape check"}
+The framework-specific code differs, but the contract is the
+same: a ViT block maps `(batch, num_patches + 1, num_hiddens)`
+back to the same shape so blocks can stack.
+
 @vision-transformer-vision-transformer-encoder-3
 
 . . .

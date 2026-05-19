@@ -329,7 +329,7 @@ large language models form the basis of state-of-the-art systems across diverse 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Language models"}
 A **language model** assigns a probability to a sequence
 of tokens:
 
@@ -348,6 +348,31 @@ predict the next token given everything before it.
   baseline.
 - **Perplexity** $= 2^{H}$ — the standard quality metric.
 - **Partitioning** the corpus into training minibatches.
+:::
+
+::: {.slide title="n-gram approximation"}
+The full context $x_{<t}$ grows with time. An $n$-gram model
+uses a Markov approximation:
+
+$$P(x_t \mid x_{<t}) \approx P(x_t \mid x_{t-n+1}, \ldots, x_{t-1}).$$
+
+For bigrams:
+
+$$\hat P(x_t \mid x_{t-1}) =
+  \frac{n(x_{t-1}, x_t)}{n(x_{t-1})}.$$
+
+Smoothing keeps unseen events from getting probability zero.
+:::
+
+::: {.slide title="Perplexity"}
+Perplexity is exponentiated average negative log-likelihood:
+
+$$\operatorname{PPL} =
+\exp\left(-\frac{1}{T}\sum_{t=1}^{T}
+\log P(x_t \mid x_{<t})\right).$$
+
+Lower is better. Perfect prediction gives 1; a uniform guess
+over $|\mathcal{V}|$ tokens gives $|\mathcal{V}|$.
 :::
 
 ::: {.slide title="Setup"}

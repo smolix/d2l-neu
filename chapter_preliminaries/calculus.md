@@ -450,7 +450,7 @@ throughout this book will require calculating the gradient.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Calculus for Optimization"}
 Training a neural net = **minimizing a loss**. Calculus tells us
 which way to step:
 

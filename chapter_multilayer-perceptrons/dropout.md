@@ -532,7 +532,7 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Dropout regularizes by thinning"}
 **Dropout** (Srivastava, Hinton et al., 2014) is the
 simplest and most widely used regularizer for neural
 networks:

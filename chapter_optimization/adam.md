@@ -298,7 +298,7 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Adam"}
 **Adam** (Kingma & Ba, 2014) combines the two best ideas
 of the chapter:
 
@@ -335,6 +335,10 @@ counter for bias correction:
 
 ::: {.slide title="Training"}
 @adam-implementation-2
+
+The key comparison is not syntax but behavior: Adam reaches
+a useful loss with little learning-rate tuning because the
+step is both smoothed and coordinate-scaled.
 :::
 
 ::: {.slide title="Concise: framework Adam"}

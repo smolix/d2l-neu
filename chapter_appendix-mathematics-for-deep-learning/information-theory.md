@@ -831,7 +831,7 @@ loss
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Information Theory for Learning"}
 Information theory (Shannon, 1948) gives the right
 language for many things in deep learning:
 
@@ -851,6 +851,9 @@ distributions, up to a constant.
 :::
 
 ::: {.slide title="Self-information"}
+Rare events carry more information than common ones. The log base
+only chooses the unit: bits for base 2, nats for base $e$.
+
 @information-theory-self-information
 :::
 
@@ -888,6 +891,9 @@ Asymmetric (not a metric); zero iff $p = q$:
 :::
 
 ::: {.slide title="Examples"}
+Small distributions make the abstractions concrete: entropy grows
+with uncertainty, while KL is zero only when the distributions match.
+
 @information-theory-example-1
 
 . . .
@@ -900,6 +906,9 @@ Asymmetric (not a metric); zero iff $p = q$:
 :::
 
 ::: {.slide title="Formal definitions"}
+Entropy, cross-entropy, and KL differ by which distribution supplies
+the expectation and which log-probability is scored.
+
 @information-theory-formal-definition-1
 
 . . .

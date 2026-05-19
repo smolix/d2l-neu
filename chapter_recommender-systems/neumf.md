@@ -463,7 +463,7 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Neural Matrix Factorization"}
 **NeuMF** (He et al., 2017) — neural collaborative
 filtering with implicit feedback. Two parallel pathways
 fed into one prediction:
@@ -475,6 +475,9 @@ fed into one prediction:
 
 Concatenate the two pathway outputs and project to a
 scalar score. Train with BPR loss + sampled negatives.
+
+$$\mathcal{L}_{BPR} = -\sum_{(u,i,j)}
+\log \sigma(\hat y_{ui} - \hat y_{uj}), \quad j \notin I_u^+.$$
 
 This deck pulls together: NeuMF model + a custom dataset
 with negative sampling + leave-one-out ranking evaluator
@@ -510,6 +513,8 @@ Standard ranking metrics:
   unobserved items? This is a pairwise ranking view, not
   a calibrated-rating metric.
 
+$$\textrm{Hit@}K = \mathbf{1}\{\textrm{rank}(i^+) \le K\}.$$
+
 @neumf-evaluator-1
 
 . . .
@@ -517,21 +522,32 @@ Standard ranking metrics:
 @neumf-evaluator-2
 :::
 
-::: {.slide title="Training loop"}
-BPR loss + Adam. Evaluate by ranking the held-out positives
-against each user's unobserved items:
+::: {.slide title="Training helper"}
+BPR loss + Adam. Each minibatch contains a user, one positive
+item, and one sampled negative item; the update increases the
+positive score relative to the negative score:
 
 @neumf-training-and-evaluating-the-model-1
+:::
 
-. . .
+::: {.slide title="Implicit MovieLens split"}
+Binarize MovieLens ratings into implicit feedback, then hold out
+each user's latest interaction for leave-one-out ranking:
 
 @neumf-training-and-evaluating-the-model-2
+:::
 
-. . .
+::: {.slide title="Model initialization"}
+The model uses separate GMF and MLP embeddings. Initialization
+matters because a saturated sigmoid head can erase BPR gradients:
 
 @neumf-training-and-evaluating-the-model-3
+:::
 
-. . .
+::: {.slide title="Training and Metrics"}
+The final printout should be read as ranking quality: higher
+Hit@50 and AUC mean the held-out item is placed above more
+unobserved candidates. They are not rating-prediction metrics:
 
 @neumf-training-and-evaluating-the-model-4
 :::

@@ -408,7 +408,7 @@ A second difference is the relative ease with which we were able to implement Le
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="LeNet sets the CNN template"}
 **LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
 was the first convolutional neural network at production
 scale — handwritten digits on U.S. bank checks. Some ATMs
@@ -450,19 +450,19 @@ Same network, vertical schematic — the textbook version:
   pooling* — much cheaper.
 :::
 
-::: {.slide title="Implementation"}
+::: {.slide title="Implementation setup"}
 Almost mechanical translation from the figure to a
 `Sequential`. Xavier init keeps the sigmoid layers from
 saturating early in training:
 
 @lenet-convolutional-neural-networks-lenet
+:::
 
-. . .
-
+::: {.slide title="LeNet in code"}
 @lenet-1
+:::
 
-. . .
-
+::: {.slide title="LeNet initialization"}
 @lenet-2
 :::
 

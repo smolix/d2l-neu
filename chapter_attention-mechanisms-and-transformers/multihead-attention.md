@@ -478,7 +478,7 @@ proper tensor manipulation is needed.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Multi-Head Attention"}
 A single attention head computes one weighted average —
 one notion of "relevance". But a sentence has many
 parallel relations: subject-verb agreement, syntax,

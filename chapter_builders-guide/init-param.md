@@ -423,7 +423,7 @@ Look up the online documentation for more built-in initializers.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Initialization Matters"}
 Initialization isn't cosmetic — it determines whether a deep
 network trains *at all*.
 

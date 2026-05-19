@@ -510,7 +510,7 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Sentiment RNN"}
 Sentiment classification on IMDb: pretrained word vectors
 → bidirectional LSTM → linear head. Standard
 pre-Transformer text-classification recipe.
@@ -530,9 +530,17 @@ that the LSTM then specializes for sentiment.
 :::
 
 ::: {.slide title="BiRNN classifier"}
-@sentiment-analysis-rnn-representing-single-text-with-rnns-1
+Class definition: embedding -> bidirectional LSTM -> concatenate
+the first and last hidden states -> 2-way decoder. The decoder
+input has width $4h$: two directions times two endpoint states.
 
-. . .
+@sentiment-analysis-rnn-representing-single-text-with-rnns-1
+:::
+
+::: {.slide title="BiRNN instance"}
+Instantiate a 2-layer BiLSTM with 100-dimensional embeddings and
+100 hidden units. Frameworks initialize recurrent weights
+differently, but the model contract is the same:
 
 @sentiment-analysis-rnn-representing-single-text-with-rnns-2
 
@@ -558,7 +566,9 @@ fine-tune (we fine-tune):
 :::
 
 ::: {.slide title="Training"}
-Standard cross-entropy + Adam:
+Standard cross-entropy + Adam. Watch validation accuracy, not
+just training loss; sentiment models overfit quickly on IMDb if
+the embedding and classifier are too large:
 
 @sentiment-analysis-rnn-training-and-evaluating-the-model-1
 
@@ -568,6 +578,10 @@ Standard cross-entropy + Adam:
 :::
 
 ::: {.slide title="Predict on new reviews"}
+The final check should classify clearly positive and clearly
+negative synthetic reviews differently. This is not a full
+evaluation, but it catches label/order mistakes in the pipeline.
+
 @sentiment-analysis-rnn-training-and-evaluating-the-model-3
 
 . . .

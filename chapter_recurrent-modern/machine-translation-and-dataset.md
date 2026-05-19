@@ -348,7 +348,7 @@ In natural language processing, *machine translation* refers to the task of auto
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Machine Translation Data"}
 Language modeling predicts one sequence. Translation maps
 *between* sequences — different lengths, different word orders.
 This unaligned source-to-target structure is the

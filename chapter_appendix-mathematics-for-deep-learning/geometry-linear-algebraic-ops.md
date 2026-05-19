@@ -1169,7 +1169,7 @@ $$
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Geometry of Linear Algebra"}
 The geometric intuitions behind the linear algebra used
 throughout the book. Two viewpoints on a vector $\mathbf{v}$:
 
@@ -1183,6 +1183,9 @@ hyperplanes (decision boundaries), and determinants
 :::
 
 ::: {.slide title="Vectors as geometry"}
+The same array can name a point or a displacement. Deep learning
+mostly uses the displacement view: directions, lengths, and angles.
+
 @geometry-linear-algebraic-ops-geometry-of-vectors
 :::
 
@@ -1210,6 +1213,9 @@ product gives the prediction. Most of deep learning is
 :::
 
 ::: {.slide title="Hyperplanes (cont.)"}
+Changing $\mathbf{w}$ rotates the boundary; changing $b$ shifts it.
+Normalized distance to the boundary is a margin.
+
 @geometry-linear-algebraic-ops-hyperplanes-3
 
 . . .
@@ -1240,6 +1246,9 @@ Translate all of this into NumPy / PyTorch:
 :::
 
 ::: {.slide title="In code (cont.)"}
+These final snippets connect the geometric ideas to the actual
+linear-algebra APIs for norms, determinants, and inverses.
+
 @geometry-linear-algebraic-ops-expressing-in-code-3
 
 . . .

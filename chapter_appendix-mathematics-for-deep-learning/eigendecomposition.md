@@ -789,7 +789,7 @@ $$
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Eigenvectors and Dynamics"}
 A square matrix $\mathbf{A}$ has **eigenvalue** $\lambda$
 and **eigenvector** $\mathbf{v}$ when
 
@@ -809,6 +809,9 @@ PageRank, and of every iterative solver.
 :::
 
 ::: {.slide title="A concrete example"}
+Use a small matrix so the geometry is visible: applying
+$\mathbf{A}$ to an eigenvector changes scale but not direction.
+
 @eigendecomposition-an-example
 :::
 
@@ -838,6 +841,9 @@ grows like $\lambda_1^t$:
 :::
 
 ::: {.slide title="Relating back"}
+After repeated multiplication, normalize the vector to read off the
+direction; the scale factor estimates the dominant eigenvalue.
+
 @eigendecomposition-relating-back-to-eigenvectors
 
 . . .

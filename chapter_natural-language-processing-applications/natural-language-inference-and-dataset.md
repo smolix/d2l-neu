@@ -452,7 +452,7 @@ for premises, hypotheses, labels in train_iter:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="NLI Data"}
 **Natural Language Inference (NLI)** — given a *premise*
 sentence and a *hypothesis* sentence, decide whether the
 hypothesis is

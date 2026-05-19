@@ -175,7 +175,7 @@ As can be seen, all the 34 fields are categorical features. Each value represent
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="CTR Prediction"}
 Pure (user, item) collaborative filtering breaks for cold
 start — new users and new items have no history. Real
 recommenders integrate **side features**: item attributes,

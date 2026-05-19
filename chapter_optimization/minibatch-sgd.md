@@ -833,7 +833,7 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Minibatch SGD"}
 GD: $\mathcal{O}(n)$ per step, optimal use of data.
 SGD: $\mathcal{O}(1)$ per step, noisy and one-at-a-time.
 
@@ -900,17 +900,26 @@ Real regression dataset for the experiments — 1503 examples,
 @minibatch-sgd-reading-the-dataset
 :::
 
-::: {.slide title="From-scratch SGD trainer"}
-Tiny linear regression model + manual SGD step. Returns
-loss-vs-time curves so we can compare batch sizes:
+::: {.slide title="Manual SGD update"}
+First isolate the optimizer step. For minibatch size $b$,
+average the gradients and move each parameter by
+$-\eta \nabla f_{\mathcal{B}}$:
 
 @minibatch-sgd-implementation-from-scratch-1
+:::
 
-. . .
+::: {.slide title="Generic training loop"}
+The reusable trainer initializes a tiny linear model,
+runs forward/backward on each minibatch, and records loss
+against wall-clock time:
 
 @minibatch-sgd-implementation-from-scratch-2
+:::
 
-. . .
+::: {.slide title="Full-batch baseline"}
+Set $b$ to the whole dataset. Each epoch gives only one
+update, so the curve is smooth but progress per second is
+poor:
 
 @minibatch-sgd-implementation-from-scratch-3
 :::
@@ -924,6 +933,10 @@ $b = 10$ — same model, same total epochs:
 . . .
 
 @minibatch-sgd-implementation-from-scratch-5
+
+Pure SGD updates often but wastes vector hardware.
+$b=100$ processes enough examples per step to make each
+update cheap and stable.
 :::
 
 ::: {.slide title="Wall-clock view"}
@@ -932,6 +945,10 @@ $b = 10$ — same model, same total epochs:
 . . .
 
 @minibatch-sgd-implementation-from-scratch-7
+
+Read the x-axis as elapsed time, not examples processed:
+minibatches win because they make each second of compute
+do more useful linear algebra.
 :::
 
 ::: {.slide title="Concise: framework optimizer"}

@@ -398,7 +398,7 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="From hand design to design spaces"}
 We've seen a sequence of hand-designed architectures
 (LeNet → AlexNet → VGG → GoogLeNet → ResNet → DenseNet) —
 each a **hypothesis** about what makes nets work.
@@ -430,14 +430,26 @@ are free parameters:
 
 :::
 
-::: {.slide title="AnyNet in code"}
-@cnn-design-the-anynet-design-space-1
+::: {.slide title="AnyNet stem"}
+The stem is deliberately plain: one stride-2 3×3 convolution,
+BatchNorm, ReLU. Its job is to halve resolution and create the
+first feature channels before the repeated stages begin.
 
-. . .
+@cnn-design-the-anynet-design-space-1
+:::
+
+::: {.slide title="AnyNet stage"}
+Each stage repeats the same ResNeXt block. The first block uses
+stride 2 and a 1×1 skip projection to change resolution and
+channel count; the rest preserve shape.
 
 @cnn-design-the-anynet-design-space-2
+:::
 
-. . .
+::: {.slide title="AnyNet assembly"}
+The architecture tuple supplies `(depth, channels, groups,
+bottleneck)` per stage. The head is the now-standard global
+average pool + linear classifier.
 
 @cnn-design-the-anynet-design-space-3
 :::

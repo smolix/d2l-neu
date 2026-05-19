@@ -192,7 +192,7 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="DeepFM"}
 **DeepFM** (Guo et al., 2017) — combine a factorization
 machine and a deep MLP, sharing the embedding table.
 

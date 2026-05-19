@@ -296,7 +296,7 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="MovieLens Dataset"}
 **MovieLens** — the canonical recommender systems
 benchmark. 100k version: 943 users, 1682 movies, 100k
 explicit ratings on a 1–5 scale. Sparse: only ~6% of

@@ -701,6 +701,17 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
     tgt_pad: int
     lr: float
 
+    @partial(jax.jit, static_argnums=(0, 5))
+    def loss(self, params, X, Y, state, averaged=False):
+        Y_hat = state.apply_fn({'params': params}, *X, training=True,
+                               rngs={'dropout': state.dropout_rng})
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(Y, (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        l = fn(Y_hat, Y)
+        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
+        return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask), {}
+
     def validation_step(self, params, batch, state):
         # Evaluate with dropout disabled (training=False); training=True path
         # is used by self.loss during fit.
@@ -1124,7 +1135,7 @@ BLEU is a popular measure that matches $n$-grams between the predicted sequence 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Sequence-to-Sequence"}
 Two RNNs glued together (Sutskever et al., 2014;
 Cho et al., 2014):
 
@@ -1214,6 +1225,13 @@ Subclass `EncoderDecoder`, add the optimizer:
 `<pad>` predictions shouldn't contribute to the loss. Build a
 mask `Y != tgt_pad` and average only over real tokens:
 
+$$
+\mathcal{L} =
+\frac{\sum_{b,t} \mathbf{1}\{y_{b,t} \ne \texttt{<pad>}\}
+\, \ell(\hat{\mathbf{y}}_{b,t}, y_{b,t})}
+{\sum_{b,t} \mathbf{1}\{y_{b,t} \ne \texttt{<pad>}\}}.
+$$
+
 @seq2seq-loss-function-with-masking
 :::
 
@@ -1246,7 +1264,9 @@ $$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{
 
 ::: {.slide title="Translate four sentences"}
 Run the model on a handful of English sentences and score
-each:
+each. Short, frequent patterns tend to translate cleanly; low
+BLEU on a sentence usually means one missing or misplaced
+token is enough to break an $n$-gram match:
 
 @seq2seq-evaluation-of-predicted-sequences-2
 :::

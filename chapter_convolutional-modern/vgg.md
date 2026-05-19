@@ -352,7 +352,7 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="VGG: regular blocks at scale"}
 **VGG** (Simonyan & Zisserman, 2014) is AlexNet taken
 seriously: stack more layers, but make them **regular**.
 

@@ -367,7 +367,7 @@ Saving the architecture has to be done in code rather than in parameters.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Saving model state"}
 Two real problems training pipelines hit constantly:
 
 - **Crash recovery** — a 12-hour training run dies in hour

@@ -1009,24 +1009,7 @@ def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
 batch_size = 256
 
 def get_net_tf():
-    net = keras.Sequential([
-        keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same',
-                            input_shape=(32, 32, 3)),
-        keras.layers.BatchNormalization(),
-        keras.layers.Activation('relu'),
-        keras.layers.Conv2D(128, kernel_size=3, strides=2, padding='same'),
-        keras.layers.BatchNormalization(),
-        keras.layers.Activation('relu'),
-        keras.layers.Conv2D(256, kernel_size=3, strides=2, padding='same'),
-        keras.layers.BatchNormalization(),
-        keras.layers.Activation('relu'),
-        keras.layers.Conv2D(512, kernel_size=3, strides=2, padding='same'),
-        keras.layers.BatchNormalization(),
-        keras.layers.Activation('relu'),
-        keras.layers.GlobalAveragePooling2D(),
-        keras.layers.Dense(10),
-    ])
-    return net
+    return d2l.resnet18(10, 3)
 
 def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     train_iter = load_cifar10(True, train_aug_fn, batch_size)
@@ -1076,7 +1059,7 @@ train_with_data_aug(train_augs, test_augs, net)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Image Augmentation"}
 **Image augmentation** multiplies the dataset's effective
 size for free: apply small, label-preserving perturbations
 on the fly during training (flips, crops, color jitter).
@@ -1106,18 +1089,25 @@ helper function used to plot it.
 :::
 
 ::: {.slide title="Reference image"}
+All augmentation examples start from this single image. The
+label is assumed to stay valid after each transform; that
+label-preserving assumption is what makes augmentation useful.
+
 @!image-augmentation-common-image-augmentation-methods-1
 :::
 
 ::: {.slide title="Flips and crops"}
 Random horizontal flip — the cheapest, most-used
-augmentation:
+augmentation. It is safe when left/right orientation is not
+part of the label:
 
 @image-augmentation-flipping-and-cropping-1
 
 . . .
 
-Vertical flip — used selectively (faces? probably not):
+Vertical flip — used selectively. It is valid for some
+textures or aerial imagery, but usually wrong for faces,
+street scenes, and text:
 
 @image-augmentation-flipping-and-cropping-2
 :::
@@ -1131,10 +1121,17 @@ invariance and translation invariance in one trick:
 :::
 
 ::: {.slide title="Color jitter — brightness"}
+Brightness jitter changes illumination without moving object
+geometry. The object should still be recognizable across the
+sample grid:
+
 @image-augmentation-changing-colors-1
 :::
 
 ::: {.slide title="Color jitter — hue"}
+Hue jitter changes color statistics. Use it only when color is
+not itself the label signal:
+
 @image-augmentation-changing-colors-2
 :::
 
@@ -1166,6 +1163,10 @@ classifier, not randomness in the augmentation pipeline.
 :::
 
 ::: {.slide title="CIFAR-10 samples"}
+The batch should still look like valid CIFAR-10 examples, just
+shifted, cropped, and flipped. If many objects are cropped out,
+the augmentation is too aggressive.
+
 @!image-augmentation-training-with-image-augmentation-1
 :::
 
@@ -1185,6 +1186,10 @@ optimization loop.
 :::
 
 ::: {.slide title="Train it"}
+Augmentation often slows training loss at first because the
+problem is harder. The payoff is lower validation error from
+reduced overfitting.
+
 @!image-augmentation-multi-gpu-training-4
 :::
 

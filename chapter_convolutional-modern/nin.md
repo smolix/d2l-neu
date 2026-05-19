@@ -312,7 +312,7 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="NiN: MLPs inside convolutions"}
 **Network-in-Network** (Lin et al., 2014) introduces two
 ideas the rest of the field happily adopts:
 
@@ -353,6 +353,10 @@ Same `Trainer`, slightly higher learning rate than the FC nets
 (no dense layer to overfit on small batches):
 
 @nin-training
+
+The important comparison is parameter economy: accuracy comes
+from richer convolutional blocks, not a large fully connected
+head.
 :::
 
 ::: {.slide title="Recap"}

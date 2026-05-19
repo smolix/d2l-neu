@@ -317,7 +317,7 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Channels turn filters into feature banks"}
 Real images have **channels**: RGB has 3, a modern CNN's
 deep feature map has hundreds (64 → 2048 is typical).
 
@@ -342,15 +342,13 @@ $$Y = \sum_{c=1}^{c_i} X_c * K_c.$$
 ![Two input channels: per-channel cross-correlation, then sum. $(1{\cdot}1 + 2{\cdot}2 + 4{\cdot}3 + 5{\cdot}4) + (0{\cdot}0 + 1{\cdot}1 + 3{\cdot}2 + 4{\cdot}3) = 56$.](../img/conv-multi-in.svg){width=82%}
 :::
 
-::: {.slide title="In code: it's just a sum"}
+::: {.slide title="Input channels in code"}
 @channels-multiple-input-and-multiple-output-channels
 
-. . .
-
 @channels-multiple-input-channels-1
+:::
 
-. . .
-
+::: {.slide title="Verify multi-input convolution"}
 Verify against the figure — same numbers:
 
 @channels-multiple-input-channels-2
@@ -369,20 +367,18 @@ The network discovers an entire "feature dictionary" per
 layer.
 :::
 
-::: {.slide title="Implementation"}
+::: {.slide title="Output channels in code"}
 Apply the multi-input-channel function $c_o$ times and stack
 the results along a new leading axis:
 
 @channels-multiple-output-channels-1
+:::
 
-. . .
-
+::: {.slide title="Verify multi-output convolution"}
 Build a 3-output-channel kernel by stacking three offset
 copies:
 
 @channels-multiple-output-channels-2
-
-. . .
 
 @channels-multiple-output-channels-3
 :::

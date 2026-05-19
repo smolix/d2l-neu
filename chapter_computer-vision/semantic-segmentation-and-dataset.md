@@ -796,7 +796,7 @@ def load_data_voc(batch_size, crop_size):
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Semantic Segmentation Data"}
 **Semantic segmentation** assigns a class label to *every
 pixel*, not just to the image as a whole. Output shape =
 input shape; output channels = number of classes.
@@ -816,6 +816,10 @@ data plumbing for FCN training (next deck).
 :::
 
 ::: {.slide title="Downloading VOC 2012"}
+The download gives paired directories: JPEG images and
+segmentation masks. The important invariant is one RGB mask
+per input image, with matching spatial dimensions.
+
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1
 
 . . .
@@ -837,7 +841,8 @@ tensor:
 
 ::: {.slide title="Color → class index"}
 Build a lookup table from the 21 RGB triplets to class
-indices 0–20:
+indices 0–20. After conversion, each label pixel is an
+integer target for cross-entropy:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5
 
@@ -871,6 +876,11 @@ RGB labels to class-index tensors during `__getitem__`:
 :::
 
 ::: {.slide title="Train + val loaders"}
+The printed shapes should show image tensors with a channel
+axis, but label tensors with only `(batch, H, W)`. The
+label has no channel dimension because each pixel stores
+one class id.
+
 @semantic-segmentation-and-dataset-reading-the-dataset-1
 
 . . .

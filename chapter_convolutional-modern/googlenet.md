@@ -615,7 +615,7 @@ Over the following sections we will encounter a number of design choices (e.g., 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="GoogLeNet goes wide"}
 **GoogLeNet** (Szegedy et al., 2014) — winner of ImageNet 2014 —
 introduces a different design axis: **width**, not just depth.
 
@@ -646,29 +646,37 @@ concatenated along the channel axis:
 @googlenet-inception-blocks
 :::
 
-::: {.slide title="GoogLeNet stages"}
+::: {.slide title="GoogLeNet stem and early stages"}
 Five sequential "stages" — each a small stack of conv + pool +
-inception modules — built up methodically:
+inception modules — built up methodically. The stem and second
+stage reduce resolution quickly before the Inception blocks take
+over:
 
 @googlenet-googlenet-model-1
 
-. . .
-
 @googlenet-googlenet-model-2
+:::
 
-. . .
+::: {.slide title="First Inception stack"}
+Stage 3 introduces the repeating pattern: two Inception blocks,
+then pooling. Channel counts are split across branches, then
+concatenated back together.
 
 @googlenet-googlenet-model-3
 :::
 
-::: {.slide title="More stages"}
-@googlenet-googlenet-model-4
+::: {.slide title="Deep Inception stages"}
+Stage 4 is the compute-heavy middle of the network: five
+Inception blocks before the next spatial downsample.
 
-. . .
+@googlenet-googlenet-model-4
+:::
+
+::: {.slide title="Head and assembly"}
+Stage 5 uses global average pooling before the final classifier,
+then `__init__` simply wires `b1` through `b5` together.
 
 @googlenet-googlenet-model-5
-
-. . .
 
 @googlenet-googlenet-model-6
 :::
@@ -678,6 +686,10 @@ For Fashion-MNIST we shrink the input to 96×96 to keep training
 time reasonable; layer summary on the smaller input:
 
 @googlenet-googlenet-model-7
+
+Notice the pattern: spatial resolution falls at pools, while
+channel depth grows after concatenating each Inception block's
+branches.
 :::
 
 ::: {.slide title="Training"}

@@ -2,8 +2,8 @@
 """Execute Jupyter notebooks for a given framework.
 
 Runs each notebook in _notebooks/<framework>/ using nbconvert's execute
-preprocessor.  Produces executed notebooks in-place and writes a summary
-report to stdout.
+preprocessor.  Produces executed notebooks in-place, touches matching
+.executed stamps after successful runs, and writes a summary report to stdout.
 
 With --parallel N, runs N GPU notebooks concurrently, round-robin over
 --num-gpus.  Multiple workers may share a GPU (e.g. --parallel 8 --num-gpus 4
@@ -228,6 +228,10 @@ def _write_error_log(fw_root, rel, stderr):
     log_path.write_text(stderr or "")
 
 
+def _touch_executed_stamp(nb):
+    nb.with_suffix(".executed").touch()
+
+
 def _run_one(idx, total, nb, rel, timeout, cuda_devices, cpu_affinity=None,
              max_retries=1):
     with _print_lock:
@@ -253,15 +257,22 @@ def _run_one(idx, total, nb, rel, timeout, cuda_devices, cpu_affinity=None,
             short = _shorten_error(stderr)
             print(f"  -- error --\n{short}\n  -- end --", flush=True)
             _write_error_log(nb.parent.parent, rel, stderr)
+    if ok:
+        _touch_executed_stamp(nb)
     return ok, elapsed, stderr
 
 
-def run_sequential(nbs, timeout, continue_on_error, framework):
+def run_sequential(nbs, timeout, continue_on_error, framework,
+                   cuda_devices_for=None):
     fw_root = NOTEBOOKS_DIR / framework
     passed, failed, errors = 0, 0, []
     for i, nb in enumerate(nbs, 1):
         rel = str(nb.relative_to(fw_root))
-        ok, elapsed, stderr = _run_one(i, len(nbs), nb, rel, timeout, cuda_devices=None)
+        cuda_devices = (
+            cuda_devices_for(i - 1, nb) if callable(cuda_devices_for)
+            else cuda_devices_for)
+        ok, elapsed, stderr = _run_one(
+            i, len(nbs), nb, rel, timeout, cuda_devices=cuda_devices)
         if ok:
             passed += 1
         else:
@@ -396,6 +407,7 @@ def run_best_of_n(framework, nbs, timeout):
 
         # Restore the best result
         nb.write_bytes(best_nb)
+        _touch_executed_stamp(nb)
         print(f"  {rel}: BEST score={best_score:.3f} "
               f"({'good' if best_score >= good_enough else 'best available'})", flush=True)
 
@@ -481,7 +493,19 @@ def main():
                                gpu_workers, cpu_workers, args.num_gpus, args.framework)
     else:
         print(f"\n=== Sequential phase ===")
-        p, f, e = run_sequential(single_gpu + cpu_only, args.timeout, args.continue_on_error, args.framework)
+        p = f = 0
+        e = []
+        if single_gpu:
+            p1, f1, e1 = run_sequential(
+                single_gpu, args.timeout, args.continue_on_error,
+                args.framework,
+                cuda_devices_for=lambda i, _nb: str(i % args.num_gpus))
+            p += p1; f += f1; e += e1
+        if cpu_only and (args.continue_on_error or f == 0):
+            p1, f1, e1 = run_sequential(
+                cpu_only, args.timeout, args.continue_on_error,
+                args.framework, cuda_devices_for="")
+            p += p1; f += f1; e += e1
     all_passed += p; all_failed += f; all_errors += e
 
     if multi_gpu:

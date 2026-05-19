@@ -302,7 +302,7 @@ framework implementations are often highly optimized,
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Concise RNNs"}
 The same character-level LM, using the framework's built-in
 `nn.RNN`. The cell + unroll + projection from scratch boil down
 to a few lines:
@@ -332,7 +332,8 @@ the from-scratch base class:
 
 ::: {.slide title="Sanity check"}
 Untrained model still runs — predictions are random characters,
-but shapes line up:
+but shapes line up. This check isolates API wiring from
+learning quality:
 
 @rnn-concise-training-and-predicting-1
 :::

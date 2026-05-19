@@ -702,7 +702,7 @@ For now, try to remember these basics:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Automatic Differentiation"}
 Hand-deriving gradients for a 100-million-parameter network is a
 non-starter. Every modern framework ships an **automatic
 differentiation** engine that:

@@ -668,7 +668,7 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="textCNN"}
 **textCNN** (Kim, 2014) — a 1D conv net for sentiment.
 Different architecture, same task as the RNN deck.
 
@@ -729,17 +729,29 @@ Embedding (frozen GloVe + a fine-tunable copy) → parallel
 dropout → linear:
 
 @sentiment-analysis-cnn-defining-the-model-1
+:::
 
-. . .
+::: {.slide title="textCNN instance"}
+The concrete model uses 100 channels at each kernel width.
+After max-over-time pooling, the classifier sees
+`sum(num_channels)` features, independent of review length.
 
 @sentiment-analysis-cnn-defining-the-model-2
 :::
 
 ::: {.slide title="Loading pretrained GloVe"}
+Both embedding tables start from the same GloVe vectors: one
+stays fixed as a semantic anchor, the other is fine-tuned for
+sentiment-specific cues.
+
 @sentiment-analysis-cnn-loading-pretrained-word-vectors
 :::
 
 ::: {.slide title="Training"}
+CNNs train fast because all windows are processed in parallel.
+Use the metric output to compare with the BiLSTM deck: similar
+accuracy, less sequential computation.
+
 @sentiment-analysis-cnn-training-and-evaluating-the-model-1
 
 . . .

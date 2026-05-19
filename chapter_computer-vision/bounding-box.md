@@ -191,7 +191,7 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Bounding Boxes"}
 Image classification answers "what's in the image". **Object
 detection** answers "what's in the image *and where*" —
 locate one or more objects and return both class labels and
@@ -222,12 +222,19 @@ inverses of each other. Useful because some loss functions
 prefer center coords and some IoU code prefers corner
 coords:
 
+$$
+c_x=\frac{x_1+x_2}{2},\quad
+c_y=\frac{y_1+y_2}{2},\quad
+w=x_2-x_1,\quad h=y_2-y_1.
+$$
+
 @bounding-box-bounding-boxes-1
 :::
 
 ::: {.slide title="Annotating an image"}
 Label dog and cat with hand-picked boxes; verify the
-conversion is round-trip exact:
+conversion is round-trip exact. The visual check catches the
+most common bug: swapped width/height or x/y coordinates.
 
 @bounding-box-bounding-boxes-2
 

@@ -618,7 +618,7 @@ for batch in data_iter:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="word2vec Data"}
 Data pipeline for word2vec. Three classical tricks make
 skip-gram tractable on large corpora:
 
@@ -663,7 +663,9 @@ ones almost never:
 
 ::: {.slide title="Subsampling effect"}
 Compare counts before / after — frequent words shrink,
-rare words mostly survive:
+rare words mostly survive. The target is not a smaller corpus
+for its own sake; it is a less dominated training signal for
+content words:
 
 @word-embedding-dataset-subsampling-3
 
@@ -722,6 +724,9 @@ loss only counts real positions:
 :::
 
 ::: {.slide title="Reusable loader"}
+The final factory returns the same pieces the skip-gram loss
+expects: centers, contexts+negatives, masks, and labels.
+
 @word-embedding-dataset-putting-it-all-together-1
 
 . . .

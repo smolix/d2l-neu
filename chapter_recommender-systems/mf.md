@@ -294,7 +294,7 @@ scores
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Matrix Factorization"}
 **Matrix factorization** — the recommender baseline that
 everything else competes against. Treat the rating matrix
 $\mathbf{R} \in \mathbb{R}^{m \times n}$ (users × items)
@@ -307,6 +307,13 @@ item $i$ gets $\mathbf{q}_i$. Predicted rating is the dot
 product, plus bias terms:
 
 $$\hat r_{ui} = \mathbf{p}_u^\top \mathbf{q}_i + b_u + b_i.$$
+
+Training minimizes squared error on observed ratings plus
+regularization:
+
+$$\mathcal{L} = \sum_{(u,i)\in\Omega}(r_{ui}-\hat r_{ui})^2
+  + \lambda(\|\mathbf{P}\|_F^2+\|\mathbf{Q}\|_F^2
+  + \|\mathbf{b}^{user}\|_2^2+\|\mathbf{b}^{item}\|_2^2).$$
 
 Famously won the Netflix Prize era (Koren et al., 2009).
 Still a strong baseline; deep models add capacity on top.
@@ -336,8 +343,12 @@ embedding magnitudes — important for unobserved (u, i)
 pairs):
 
 @mf-training-and-evaluating-the-model-1
+:::
 
-. . .
+::: {.slide title="Model fit"}
+Initialize the embedding tables, run rating prediction training,
+then interpret the final RMSE as average prediction error on the
+1-5 rating scale:
 
 @mf-training-and-evaluating-the-model-2
 

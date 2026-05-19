@@ -591,7 +591,7 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Estimator Quality"}
 A primer on the language of estimators that ML borrows
 heavily from:
 
@@ -608,6 +608,10 @@ This deck makes the bias-variance tradeoff concrete.
 :::
 
 ::: {.slide title="Evaluating estimators"}
+An estimator is judged by its sampling distribution: repeat the
+same experiment on fresh datasets and ask where the estimates
+center and how widely they vary.
+
 @statistics-evaluating-and-comparing-estimators
 :::
 
@@ -623,6 +627,9 @@ estimates → empirical mean and spread:
 :::
 
 ::: {.slide title="Empirical bias / variance (cont.)"}
+The second pass turns simulated estimates into empirical bias,
+variance, and MSE, making the bias-variance decomposition visible.
+
 @statistics-evaluating-estimators-in-code-3
 
 . . .

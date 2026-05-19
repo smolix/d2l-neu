@@ -522,7 +522,7 @@ They can also skip subsequences by turning on the update gate.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Gated Recurrent Units"}
 LSTMs work, but they're heavy: three gates, an input node,
 a separate cell state. Cho et al. (2014) asked whether the
 gating idea could be kept while collapsing the bookkeeping.

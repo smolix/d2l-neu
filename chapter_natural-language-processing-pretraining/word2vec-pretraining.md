@@ -645,7 +645,7 @@ get_similar_tokens('chip', 3, embed_v)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="word2vec Pretraining"}
 The skip-gram model with negative sampling, Mikolov et al.
 2013. Each word has *two* embedding vectors:
 
@@ -706,12 +706,17 @@ batching with variable-length context lists works:
 :::
 
 ::: {.slide title="Init"}
+Initialize two embedding tables. At the end, nearest-neighbor
+queries usually use the center-word table, but the context table
+was trained jointly and contains similar information.
+
 @word2vec-pretraining-initializing-model-parameters
 :::
 
 ::: {.slide title="Training loop"}
 Standard SGD; CPU is fine because the model is tiny and
-data loading dominates:
+data loading dominates. The reported loss is binary
+classification loss over real and negative context pairs:
 
 @word2vec-pretraining-defining-the-training-loop-1
 
@@ -722,7 +727,8 @@ data loading dominates:
 
 ::: {.slide title="Using the embeddings"}
 Look up similar words by cosine similarity. Trained
-embeddings cluster semantically related terms:
+embeddings cluster semantically related terms; failures often
+come from rare words or corpus-specific meanings:
 
 @word2vec-pretraining-applying-word-embeddings
 :::

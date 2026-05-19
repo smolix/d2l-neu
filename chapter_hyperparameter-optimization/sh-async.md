@@ -238,7 +238,7 @@ than the loss of the suboptimal decision making.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Asynchronous Successive Halving"}
 Synchronous successive halving has a problem: at each
 rung, you wait for *all* surviving configs to finish
 before promoting. With multiple workers, fast configs
@@ -258,14 +258,29 @@ parallelism mechanism that handles both early stopping
 and parallel dispatch.
 :::
 
-::: {.slide title="Objective with epochs as budget"}
-@sh-async-asynchronous-successive-halving
+::: {.slide title="ASHA Setup"}
+Import Syne Tune's ASHA scheduler and reuse the same objective
+family as the random-search deck. The only new idea is that
+`max_epochs` becomes the resource budget:
 
-. . .
+@sh-async-asynchronous-successive-halving
+:::
+
+::: {.slide title="Objective with Epochs as Budget"}
+The objective reports validation error after every epoch, so the
+scheduler can decide whether to stop, continue, or promote a trial
+without waiting for full training:
 
 @sh-async-objective-function-1
+:::
 
-. . .
+::: {.slide title="ASHA Configuration"}
+Rung budgets grow geometrically:
+
+$$r_i = r_{\min}\eta^i,\quad r_i \le r_{\max}.$$
+
+With $\eta=2$, roughly half the trials advance at each rung and
+survivors receive twice as much training budget:
 
 @sh-async-objective-function-2
 :::
@@ -276,6 +291,10 @@ that have completed up to budget $r_i$. When a worker
 frees up, look across all rungs for any config that
 qualifies for promotion (top $1/\eta$ at its rung); if
 none, sample a fresh config:
+
+Promotion rule: after at least $\eta$ trials are observed at
+rung $i$, promote a config only if it is in the best
+$\lfloor n_i/\eta \rfloor$ scores at that rung.
 
 @sh-async-asynchronous-scheduler-1
 

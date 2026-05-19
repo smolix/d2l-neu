@@ -337,7 +337,7 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Maximum Likelihood"}
 **Maximum likelihood**: pick the parameters that make the
 observed data most probable.
 
@@ -356,6 +356,9 @@ So "minimize the loss" is "do MLE" in fancy clothes.
 :::
 
 ::: {.slide title="A concrete example"}
+For 9 heads and 4 tails, the likelihood curve peaks at
+$\hat\theta = 9/13$: the observed fraction of heads.
+
 @maximum-likelihood-a-concrete-example
 :::
 

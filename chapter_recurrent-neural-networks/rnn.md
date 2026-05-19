@@ -261,7 +261,7 @@ The hidden state of an RNN can capture historical information of the sequence up
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Recurrent Neural Networks"}
 A **recurrent neural network** carries a **hidden state**
 $\mathbf{h}_t$ across time steps — a learned summary of
 all input seen so far:

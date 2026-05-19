@@ -928,7 +928,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab jax
-num_epochs, lr, wd = 20, 2e-4, 5e-4
+num_epochs, lr, wd = 20, 5e-4, 5e-4
 lr_period, lr_decay = 4, 0.9
 net = get_net()
 variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
@@ -1073,7 +1073,7 @@ is similar to that in :numref:`sec_kaggle_house`.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Kaggle CIFAR-10"}
 A capstone deck: assemble everything from the chapter
 (augmentation, fine-tuning, modern CNN architectures) and
 take a Kaggle competition. CIFAR-10 has been done to death,
@@ -1128,7 +1128,7 @@ just normalize for eval:
 @kaggle-cifar10-image-augmentation-2
 :::
 
-::: {.slide title="DataLoaders"}
+::: {.slide title="Data loaders"}
 Folder-based dataset + the augmentation pipelines:
 
 @kaggle-cifar10-reading-the-dataset-1
@@ -1138,29 +1138,52 @@ Folder-based dataset + the augmentation pipelines:
 @kaggle-cifar10-reading-the-dataset-2
 :::
 
-::: {.slide title="ResNet-18 model"}
-Standard ResNet-18 with 10-way head. No transfer learning
-this time — train from scratch on CIFAR-10:
+::: {.slide title="ResNet-18 residual block"}
+No transfer learning this time — CIFAR-10 is small enough
+to train from scratch. The core unit is the same residual
+block from the ResNet chapter: two 3×3 convs plus an
+identity or 1×1 projection shortcut.
 
 @kaggle-cifar10-defining-the-model-1
+:::
 
-. . .
+::: {.slide title="Assembling ResNet-18"}
+Four residual stages progressively downsample the image
+and widen channels. Global average pooling removes spatial
+dimensions; the final dense layer emits 10 class logits:
 
 @kaggle-cifar10-defining-the-model-2
+:::
 
-. . .
+::: {.slide title="Framework model contract"}
+Across frameworks, `get_net` returns the same contract:
+input minibatches of CIFAR-10 images, output logits with
+shape `(batch, 10)`, and cross-entropy as the training
+loss.
 
 @kaggle-cifar10-defining-the-model-3
 :::
 
 ::: {.slide title="Training function"}
-SGD with momentum + weight decay + LR step decay. The
-classic vision recipe:
+SGD with momentum + weight decay + LR step decay is the
+classic small-image vision recipe. The long helper mainly
+adapts that recipe to each framework, so teach the invariant
+loop:
 
-@kaggle-cifar10-defining-the-training-function
+- augment and load a minibatch;
+- compute logits and cross-entropy;
+- backpropagate with momentum and weight decay;
+- step the learning-rate schedule;
+- log validation accuracy for model selection.
 :::
 
 ::: {.slide title="Train"}
+Use the validation split for model selection. Training
+loss should decline smoothly; validation accuracy is the
+signal for whether augmentation and the learning-rate
+schedule are helping rather than just fitting the train
+set.
+
 @kaggle-cifar10-training-and-validating-the-model
 :::
 

@@ -629,7 +629,7 @@ Modern deep networks achieve error rates of less than $0.01$. The relatively poo
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Naive Bayes Classification"}
 **Naive Bayes** — the simplest probabilistic classifier.
 Apply Bayes' rule:
 
@@ -646,10 +646,16 @@ binarized pixels.
 :::
 
 ::: {.slide title="Setup + binary MNIST"}
+Binarize pixels so each pixel can be modeled as a Bernoulli random
+variable conditioned on the digit class.
+
 @naive-bayes
 :::
 
 ::: {.slide title="Looking at the data"}
+Inspect the binarized digits before fitting: the class templates
+are recognizable, but neighboring pixels are clearly dependent.
+
 @naive-bayes-optical-character-recognition-1
 
 . . .
@@ -678,6 +684,9 @@ smoothing to avoid zeros:
 :::
 
 ::: {.slide title="Training: just count"}
+Training is counting, not gradient descent: estimate class priors
+and per-pixel likelihoods directly from the labeled examples.
+
 @naive-bayes-training-1
 
 . . .
@@ -686,6 +695,9 @@ smoothing to avoid zeros:
 :::
 
 ::: {.slide title="Training (cont.)"}
+Training stores only class priors and per-class pixel probabilities;
+prediction multiplies those likelihood terms, usually in log-space.
+
 @naive-bayes-training-3
 
 . . .
@@ -705,6 +717,10 @@ underflow:
 :::
 
 ::: {.slide title="Evaluating"}
+The accuracy is useful mostly as a sanity check: on images, the
+conditional-independence assumption leaves visible performance on
+the table.
+
 @naive-bayes-training-7
 
 . . .

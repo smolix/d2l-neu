@@ -491,7 +491,7 @@ Dimensionality and storage for networks are automatically inferred
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Framework linear regression"}
 The same model, same data, same training — using the framework's
 high-level layers and built-in losses:
 
@@ -504,16 +504,16 @@ End result: ~5 lines of model code instead of 30. Same convergence
 on synthetic data.
 :::
 
-::: {.slide title="The model"}
+::: {.slide title="Model setup"}
 Wrap a single linear layer with the right output dimension. The
 "lazy" variant defers the input-dim shape until the first forward:
 
 @linear-regression-concise-concise-implementation-of-linear-regression
 
 @linear-regression-concise-defining-the-model-1
+:::
 
-. . .
-
+::: {.slide title="Module hooks"}
 Hook the layer into our `Module` interface (`forward`,
 `configure_optimizers`):
 

@@ -324,7 +324,7 @@ Lastly, data iterators are a key component for efficient performance. For instan
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Fashion-MNIST as a reusable dataset"}
 **Fashion-MNIST** is the workhorse dataset for the rest of this
 chapter:
 
@@ -337,15 +337,15 @@ chapter:
 @!image-classification-dataset-visualization-2
 :::
 
-::: {.slide title="Loading"}
+::: {.slide title="Dataset setup"}
 Imports and the `FashionMNIST` `DataModule` shell:
 
 @image-classification-dataset-the-image-classification-dataset
 
 @image-classification-dataset-loading-the-dataset-1
+:::
 
-. . .
-
+::: {.slide title="Instantiate Fashion-MNIST"}
 Instantiate (resizing to 32×32 to match later ConvNet inputs):
 
 @image-classification-dataset-loading-the-dataset-2

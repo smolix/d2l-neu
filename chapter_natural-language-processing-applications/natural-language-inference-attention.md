@@ -801,7 +801,7 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Decomposable Attention"}
 **Decomposable Attention** (Parikh et al., 2016) — a
 small, fast NLI model that beat much more complex
 recurrence-based architectures on SNLI in 2016. No
@@ -850,10 +850,18 @@ sentence summaries → final MLP → 3-way logits:
 :::
 
 ::: {.slide title="Putting it together"}
+The final module wires the three stages into one classifier.
+Inputs are premise IDs and hypothesis IDs; output is 3 logits
+for entailment, contradiction, and neutral.
+
 @natural-language-inference-attention-putting-it-all-together
 :::
 
 ::: {.slide title="Loading data + model"}
+SNLI examples are padded premise/hypothesis pairs. Initialize
+the model with GloVe embeddings, then train all MLP stages
+end-to-end:
+
 @natural-language-inference-attention-reading-the-dataset
 
 . . .
@@ -862,6 +870,10 @@ sentence summaries → final MLP → 3-way logits:
 :::
 
 ::: {.slide title="Training"}
+Loss should fall quickly: there is no recurrence, so every
+token-pair alignment and every MLP comparison is fully
+parallelizable.
+
 @natural-language-inference-attention-training-and-evaluating-the-model-2-1
 
 . . .
@@ -870,6 +882,10 @@ sentence summaries → final MLP → 3-way logits:
 :::
 
 ::: {.slide title="Predict"}
+Read the examples semantically: "he is good" follows from
+"he is great", while "he is bad" contradicts it. The model's
+label mapping should reflect that ordering.
+
 @natural-language-inference-attention-using-the-model-1
 
 . . .

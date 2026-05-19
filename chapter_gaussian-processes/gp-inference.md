@@ -367,7 +367,7 @@ Try seeing if you can find these local optima: initialize with very large length
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="GP Regression Inference"}
 GP regression has a closed-form posterior. Given training
 data $(\mathbf{X}, \mathbf{y})$ and noise $\sigma_n^2$,
 the posterior at a new test point $\mathbf{x}_*$ is
@@ -389,17 +389,25 @@ likelihood** — Bayesian Occam's razor in closed form.
 @gp-inference-posterior-inference-for-regression
 :::
 
-::: {.slide title="From-scratch GP regression"}
-Build $\mathbf{K}$ from the kernel; solve the linear
-system; predict mean and variance everywhere:
+::: {.slide title="From-Scratch Setup"}
+Build the training and test inputs, choose a kernel, and prepare
+the covariance matrices used by the GP posterior:
 
 @gp-inference-worked-example-from-scratch-1
+:::
 
-. . .
+::: {.slide title="Posterior Mean and Variance"}
+The predictive mean and covariance are Gaussian-conditioning
+formulae. Implement them with linear solves rather than explicit
+matrix inverses when scaling this beyond a toy example:
 
 @gp-inference-worked-example-from-scratch-2
+:::
 
-. . .
+::: {.slide title="Learning Kernel Hyperparameters"}
+Maximize log marginal likelihood to fit the length-scale, signal
+variance, and observation noise. The output should move toward a
+smooth fit without driving noise to zero:
 
 @gp-inference-worked-example-from-scratch-3
 :::
@@ -441,12 +449,20 @@ inference, GPU, and the linear-algebra abstractions used by
 larger GP models:
 
 @gp-inference-making-life-easy-with-gpytorch-1
+:::
 
-. . .
+::: {.slide title="GPyTorch Training Objective"}
+The Gaussian likelihood contributes the noise parameter; the
+negative marginal log likelihood is the training loss for kernel
+hyperparameters:
 
 @gp-inference-making-life-easy-with-gpytorch-2
+:::
 
-. . .
+::: {.slide title="Optimizing GP Hyperparameters"}
+The printed length-scale and noise values should settle as the
+marginal likelihood improves. This is full-batch optimization,
+not minibatch SGD over independent examples:
 
 @gp-inference-making-life-easy-with-gpytorch-3
 :::
@@ -469,6 +485,9 @@ linear in $n$.
 :::
 
 ::: {.slide title="GPyTorch (cont.)"}
+Switch to evaluation mode to compute the predictive posterior, then
+plot the mean and 95% credible set in observation space:
+
 @gp-inference-making-life-easy-with-gpytorch-4
 
 . . .

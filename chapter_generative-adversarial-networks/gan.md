@@ -605,7 +605,7 @@ train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Generative Adversarial Networks"}
 **Generative Adversarial Networks** (Goodfellow et al.,
 2014) — train a generator $G$ and a discriminator $D$ in
 a minimax game:
@@ -627,20 +627,30 @@ This deck demos a tiny GAN on a 2D Gaussian. The next
 deck (DCGAN) generates real images.
 :::
 
-::: {.slide title="Setup + real data"}
-2D Gaussian-distributed "real" data — easy to visualize:
+::: {.slide title="Setup"}
+Import backend utilities and define the plotting helper used to
+watch the 2D distribution during training:
 
 @gan-generative-adversarial-networks
+:::
 
-. . .
+::: {.slide title="Real Data Distribution"}
+The "real" data is a 2D Gaussian, so success is visible: generated
+points should eventually match the same tilted elliptical cloud:
 
 @gan-generate-some-real-data-1
+:::
 
-. . .
+::: {.slide title="Sampling Real Batches"}
+Training batches are iid draws from the target Gaussian. The
+discriminator only sees samples, not the analytic density:
 
 @gan-generate-some-real-data-2
+:::
 
-. . .
+::: {.slide title="Inspecting Real Samples"}
+The scatter plot is the visual target for the generator. Later
+training plots should move the generated samples toward this shape:
 
 @gan-generate-some-real-data-3
 :::
@@ -659,26 +669,36 @@ binary classifier:
 @gan-discriminator
 :::
 
-::: {.slide title="Adversarial training step"}
+::: {.slide title="Discriminator Update"}
 For each batch:
 
 1. Sample fake $G(z)$, real $x$. Update $D$ on
    $\log D(x) + \log(1 - D(G(z)))$.
-2. Sample fresh fakes; update $G$ on $\log D(G(z))$
-   (the "non-saturating" form — gives stronger gradients
-   early in training).
 
 @gan-training-1
+:::
 
-. . .
+::: {.slide title="Generator Update"}
+Sample fresh fakes; update $G$ on $\log D(G(z))$ (the
+"non-saturating" form). It gives stronger gradients early in
+training than directly minimizing $\log(1-D(G(z)))$:
 
 @gan-training-2
 :::
 
-::: {.slide title="Training loop and run"}
-@gan-training-3
+::: {.slide title="Training loop"}
+Alternate one discriminator step and one generator step. The
+losses are useful diagnostics, but the sample plot is the clearest
+signal that the generator distribution is moving in the right
+direction:
 
-. . .
+@gan-training-3
+:::
+
+::: {.slide title="Training Run"}
+The final generated cloud should overlap the target Gaussian. If
+all samples collapse to a small region, the generator has found a
+mode-collapse failure instead of matching the distribution:
 
 @gan-training-4
 :::

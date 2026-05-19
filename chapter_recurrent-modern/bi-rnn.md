@@ -238,7 +238,7 @@ In bidirectional RNNs, the hidden state for each time step is simultaneously det
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Bidirectional RNNs"}
 LM conditions only on the past, so a left-to-right RNN is
 fine. But many tasks need both sides:
 

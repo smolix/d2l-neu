@@ -900,7 +900,7 @@ Tensors provide a variety of functionalities including construction routines; in
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Tensor Basics"}
 A **tensor** is an *n*-dimensional array of numbers — the
 fundamental data structure for everything that follows in this book.
 

@@ -630,11 +630,10 @@ def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
     # Convert NHWC to NCHW for multibox_prior
     Y_nchw = jnp.transpose(Y, (0, 3, 1, 2))
     anchors = d2l.multibox_prior(Y_nchw, sizes=size, ratios=ratio)
+    # Keep predictions in NHWC; flatten_pred relies on channel-last layout
+    # to align each anchor's class and box predictions with multibox_prior.
     cls_preds = cls_apply({'params': cls_params}, Y)
     bbox_preds = bbox_apply({'params': bbox_params}, Y)
-    # Convert NHWC predictions to NCHW format
-    cls_preds = jnp.transpose(cls_preds, (0, 3, 1, 2))
-    bbox_preds = jnp.transpose(bbox_preds, (0, 3, 1, 2))
     return (Y, anchors, cls_preds, bbox_preds, updates)
 ```
 
@@ -769,9 +768,8 @@ class TinySSD(nn.Module):
                                             ratios=ratios[i])
             cls_out = self.cls_layers[i](X)
             bbox_out = self.bbox_layers[i](X)
-            # Convert NHWC outputs to NCHW for concat_preds
-            cls_preds[i] = jnp.transpose(cls_out, (0, 3, 1, 2))
-            bbox_preds[i] = jnp.transpose(bbox_out, (0, 3, 1, 2))
+            cls_preds[i] = cls_out
+            bbox_preds[i] = bbox_out
         anchors = jnp.concatenate(anchors, axis=1)
         cls_preds = concat_preds(cls_preds)
         cls_preds = cls_preds.reshape(
@@ -1670,7 +1668,7 @@ d2l.plt.legend();
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Single Shot Detection"}
 **Single Shot MultiBox Detector** (Liu et al., 2016) is the
 prototype single-stage detector. One forward pass produces
 class scores and box offsets for every anchor at every
@@ -1777,10 +1775,19 @@ $$
 $$
 
 Showing the whole class definition on a slide hides the idea; the
-important contract is the output shape.
+important contract is the output shape and anchor ordering. Every
+anchor needs one class vector and one four-number offset vector.
 :::
 
 ::: {.slide title="TinySSD output shapes"}
+For a $256 \times 256$ image, the five feature maps create
+$(32^2 + 16^2 + 8^2 + 4^2 + 1) \times 4 = 5444$ anchors.
+With one foreground class, expect:
+
+- anchors: `(batch, 5444, 4)`;
+- class logits: `(batch, 5444, 2)` for background/banana;
+- offsets: `(batch, 5444 * 4)`.
+
 @!ssd-the-complete-model-5
 :::
 
@@ -1799,6 +1806,15 @@ Two loss terms:
 - **Localization** — $L_1$ on box offsets, computed only
   on positive anchors (ignore the rest).
 
+$$
+\mathcal{L}
+= \text{CE}(\hat{\mathbf{c}}, \mathbf{c})
++ \frac{1}{N_+}\sum_i m_i
+  \lVert \hat{\mathbf{t}}_i - \mathbf{t}_i\rVert_1,
+$$
+
+where $m_i=1$ only for anchors matched to an object.
+
 @ssd-defining-loss-and-evaluation-functions-1
 
 . . .
@@ -1808,7 +1824,9 @@ Two loss terms:
 
 ::: {.slide title="Training"}
 Standard SGD loop, two evaluation metrics (class accuracy,
-box mean abs error):
+box mean abs error). Read them together: class accuracy is
+dominated by many background anchors, while box error only
+makes sense on matched positive anchors.
 
 @ssd-training-the-model
 :::
@@ -1825,7 +1843,9 @@ offsets → NMS → keep boxes above a confidence threshold:
 :::
 
 ::: {.slide title="Detect bananas"}
-Visualize all predictions with confidence ≥ 0.9:
+Visualize all predictions with confidence ≥ 0.9. The useful
+thing to notice is not the raw tensor length, but whether
+NMS leaves one tight high-confidence box per banana:
 
 @ssd-prediction-3
 

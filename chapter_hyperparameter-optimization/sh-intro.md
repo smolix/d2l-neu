@@ -308,7 +308,7 @@ multi-fidelity HPO algorithm.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Multi-Fidelity HPO"}
 Random search wastes most of its compute on bad configs —
 training each one to convergence to find out. But you
 often *know after a few epochs* that a config is hopeless:
@@ -343,6 +343,10 @@ rung $i$:
 Continue to the next rung with $\eta \times$ the budget,
 $1/\eta$ the number of configs. Total compute roughly
 constant per rung.
+
+If $n_i \approx n_0/\eta^i$ and $r_i=r_0\eta^i$, then
+$n_i r_i \approx n_0 r_0$: later rungs spend the same
+budget on fewer, better configurations.
 :::
 
 ::: {.slide title="Implementation"}

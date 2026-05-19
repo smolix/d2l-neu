@@ -993,7 +993,7 @@ On a more practical note, there are a number of aspects worth remembering about 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="BatchNorm stabilizes deep nets"}
 **Batch Normalization** (Ioffe & Szegedy, 2015) is the
 single-biggest stability win in modern deep learning.
 

@@ -238,7 +238,7 @@ modifications.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Asynchronous Random Search"}
 Random search is *embarrassingly parallel* — each trial
 is independent. With $K$ machines, you'd hope for $K \times$
 speedup. But synchronous parallelism wastes time on

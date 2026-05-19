@@ -651,7 +651,7 @@ len(vocab)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="BERT Pretraining Data"}
 The previous deck specified BERT's *model*. This one
 specifies the *data*: how to turn raw text into the
 (masked tokens, NSP label, segment IDs, valid lengths)
@@ -661,6 +661,12 @@ We use **WikiText-2** — a small, readable Wikipedia
 subset. Real BERT was pretrained on BookCorpus + English
 Wikipedia (~3.3B tokens); the recipe is identical, just
 scaled up.
+:::
+
+::: {.slide title="Read WikiText-2"}
+WikiText-2 keeps punctuation, case, and numbers. The loader
+returns paragraphs as sentence lists so NSP can sample adjacent
+or random sentence pairs:
 
 @bert-dataset-the-dataset-for-pretraining-bert-1
 
@@ -683,6 +689,7 @@ For each sentence, with probability 0.5 pair it with the
 
 ::: {.slide title="Generating Masked LM labels"}
 Pick 15% of token positions. For those:
+
 - 80%: replace with `<mask>`.
 - 10%: replace with a random token.
 - 10%: leave the original (so the model can't tell which
@@ -720,7 +727,8 @@ DataLoader:
 ::: {.slide title="Inspect a minibatch"}
 Verify shapes: `tokens`, `segments`, `valid_lens`,
 `pred_positions`, `mlm_weights`, `mlm_labels`,
-`nsp_labels`:
+`nsp_labels`. `mlm_weights` marks which padded prediction
+slots should contribute to the MLM loss:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-4
 

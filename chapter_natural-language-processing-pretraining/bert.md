@@ -961,7 +961,7 @@ class BERTModel(keras.Model):
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="BERT"}
 **BERT** (Devlin et al., 2018) — bidirectional Transformer
 encoder pretrained on a giant corpus, then fine-tuned to
 arbitrary downstream NLP tasks. Started the "pretrain +
@@ -1003,6 +1003,11 @@ vector per input position:
 :::
 
 ::: {.slide title="Encoder shape check"}
+The encoder emits a contextual vector for every input token plus
+one pooled `<cls>` vector. Both shapes should agree with
+`num_hiddens`; mismatches usually mean segment or position
+embeddings were not summed correctly.
+
 @bert-input-representation-3
 
 . . .
@@ -1021,7 +1026,8 @@ the model to use *both* left and right context.
 
 ::: {.slide title="MaskLM forward"}
 Gather hidden states at the masked positions; project
-through an MLP head to vocab logits:
+through an MLP head to vocab logits. The loss is evaluated
+only on these selected positions, not on every token:
 
 @bert-masked-language-modeling-2
 

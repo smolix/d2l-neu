@@ -801,7 +801,7 @@ A common feature of the designs we have discussed so far is that the network des
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="ResNet learns residuals"}
 **ResNet** (He et al., 2015) is the architecture that
 finally made **very deep** networks trainable. The key:
 
@@ -846,14 +846,23 @@ of each stage:
 ![ResNet-18: four stages of two residual blocks each, plus stem and head.](../img/resnet18-90.svg){width=66%}
 :::
 
-::: {.slide title="Stage and stem in code"}
-@resnet-resnet-model-1
+::: {.slide title="ResNet stem"}
+The stem does early feature extraction and spatial reduction,
+similar to AlexNet and GoogLeNet:
 
-. . .
+@resnet-resnet-model-1
+:::
+
+::: {.slide title="Residual stages"}
+A stage is a stack of residual blocks. The first block can
+downsample and project the skip path; later blocks keep shape.
 
 @resnet-resnet-model-2
+:::
 
-. . .
+::: {.slide title="ResNet head"}
+After the residual stages, global average pooling collapses the
+spatial map and the final linear layer predicts classes.
 
 @resnet-resnet-model-3
 :::
@@ -869,6 +878,10 @@ defines ResNet-34/50/101/152:
 
 ::: {.slide title="Training"}
 @resnet-training
+
+The notebook trains a compact ResNet-18 variant on Fashion-MNIST;
+the point is to validate that the residual-stage template plugs
+into the same `Trainer` used by earlier CNNs.
 :::
 
 ::: {.slide title="ResNeXt: width via cardinality"}
@@ -877,8 +890,12 @@ A cleaner variant: each block has **multiple parallel paths**
 budget, better accuracy:
 
 @resnet-resnext-1
+:::
 
-. . .
+::: {.slide title="Grouped-conv savings"}
+Grouped convolution cuts the expensive 3×3 channel mixing by a
+factor of `groups`, while surrounding 1×1 convolutions let
+information mix before and after the grouped work.
 
 @resnet-resnext-2
 :::

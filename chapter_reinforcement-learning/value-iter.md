@@ -175,7 +175,7 @@ The main idea behind the Value Iteration algorithm is to use the principle of dy
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Value Iteration"}
 For a known MDP — known transition probabilities $P$ and
 rewards $r$ — we can compute the optimal policy
 *without* any learning, via **dynamic programming**.

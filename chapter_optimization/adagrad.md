@@ -261,7 +261,7 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Adaptive Learning Rates"}
 What if different parameters need different learning rates?
 A rare feature gets updated once per million steps; a
 common one every step. Sharing $\eta$ forces a compromise —

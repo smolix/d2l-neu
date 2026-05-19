@@ -1421,7 +1421,7 @@ in the final output.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Anchor Boxes"}
 A dense detector should not regress arbitrary boxes from
 scratch at every location. **Anchor boxes** turn the problem
 into residual regression around structured candidate boxes.
@@ -1548,6 +1548,11 @@ Run the labeler:
 :::
 
 ::: {.slide title="Worked example (cont.)"}
+The returned tensors are easier to read with the contract in mind:
+class label 0 means background, positive labels are shifted by one,
+and the offset mask zeros out anchors that should not contribute to
+the localization loss.
+
 @anchor-an-example-4
 
 . . .
@@ -1567,6 +1572,12 @@ A single object generates many high-confidence anchors.
 NMS keeps the highest-scoring one and suppresses any with
 $\text{IoU} > \tau$ to it:
 
+1. Sort boxes by confidence.
+2. Keep the current top box.
+3. Remove lower-scoring boxes whose IoU with it exceeds
+   $\tau$.
+4. Repeat until no candidates remain.
+
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-2
 
 . . .
@@ -1576,7 +1587,9 @@ $\text{IoU} > \tau$ to it:
 
 ::: {.slide title="NMS demo"}
 Four overlapping predictions; NMS picks the top-scoring
-one and suppresses the rest:
+one and suppresses the rest. If a lower-score box covers
+the same object, it should disappear; if it covers a
+different object, its IoU should be low enough to survive:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-4
 
@@ -1586,6 +1599,10 @@ one and suppresses the rest:
 :::
 
 ::: {.slide title="End-to-end output"}
+Each output row is `(class_id, confidence, x1, y1, x2, y2)`.
+Rows with class `-1` have been suppressed or filtered out;
+the remaining rows are the detector's final boxes.
+
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-6
 
 . . .

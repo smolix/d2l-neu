@@ -329,7 +329,7 @@ Sampling with replacement leads to an increased variance and decreased data effi
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="From Full Gradients to SGD"}
 The deep-learning loss is an *average*:
 
 $$f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^{n} f_i(\mathbf{x}).$$

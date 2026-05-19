@@ -426,7 +426,7 @@ reference implementation.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Sequential Recommendation with Caser"}
 Matrix factorization treats user history as a *bag* —
 order doesn't matter. But sessions reveal short-term
 intent that bags miss: someone who just watched two
@@ -444,6 +444,11 @@ predict the next item.
 A bridge between session-based RNN models and
 collaborative filtering. Combines a "what you've been
 doing recently" signal with a "who you are" signal.
+
+Training uses the same pairwise ranking objective as NeuMF:
+
+$$\mathcal{L}_{BPR} = -\sum_{(u,i,j)}
+\log \sigma(\hat y_{uit} - \hat y_{ujt}).$$
 :::
 
 ::: {.slide title="Architecture"}
@@ -469,10 +474,19 @@ sequence:
 @seqrec-sequential-dataset-with-negative-sampling
 :::
 
-::: {.slide title="Loading + training"}
-@seqrec-load-the-movielens-100k-dataset
+::: {.slide title="Loading Sequence Data"}
+The sequence-aware split holds out each user's most recent
+interaction. A training row is `(user, history, positive,
+negative)`, so the model sees both long-term identity and
+short-term context:
 
-. . .
+@seqrec-load-the-movielens-100k-dataset
+:::
+
+::: {.slide title="Training Caser"}
+Use the same optimizer and BPR loss as NeuMF for a fair comparison.
+The expensive part is ranking evaluation, which scores many
+candidate items per user:
 
 @seqrec-train-the-model
 :::

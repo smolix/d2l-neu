@@ -205,7 +205,7 @@ by which a neural network can select elements from a set and to construct an ass
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Queries, Keys, and Values"}
 The seq2seq encoder squashes the entire source into one
 fixed-size vector — no matter the sentence length. Works
 for short sentences, breaks for long ones.

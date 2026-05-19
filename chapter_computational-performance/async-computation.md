@@ -479,7 +479,7 @@ If we synchronize after *every* op (the `.numpy()` barrier loop), the total cost
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Asynchronous Execution"}
 GPUs are fast; Python is slow. If every tensor op had to
 wait for the GPU before Python proceeds to the next line,
 GPU utilization would be terrible.
@@ -515,6 +515,10 @@ immediately and the GPU runs in the background:
 . . .
 
 @async-computation-asynchrony-via-backend-3
+
+The small dispatch time is not the real compute time until
+a synchronization point forces Python to wait for the
+backend queue to drain.
 :::
 
 ::: {.slide title="The dependency graph"}

@@ -946,7 +946,7 @@ Some of these blocks even have the subtle texture of brush strokes.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Neural Style Transfer"}
 **Neural style transfer** (Gatys, Ecker, Bethge 2015):
 combine the *content* of one image with the *style* of
 another. No model training — just iterative optimization
@@ -1055,13 +1055,20 @@ variable; the network parameters are frozen:
 @neural-style-initializing-the-synthesized-image-2
 :::
 
-::: {.slide title="Optimization"}
-Adam (or LBFGS) over the pixels. After a few hundred
-iterations you have your stylized image:
+::: {.slide title="Optimization loop"}
+Adam (or LBFGS) optimizes the synthesized image itself.
+The CNN stays frozen; gradients flow through VGG features
+back to pixels:
 
 @neural-style-training-1
+:::
 
-. . .
+::: {.slide title="Optimization result"}
+After a few hundred iterations, the content layout should
+remain recognizable while colors and local textures move
+toward the style image. The three plotted losses are
+weighted differently, so compare their trends rather than
+their raw magnitudes:
 
 @neural-style-training-2
 :::

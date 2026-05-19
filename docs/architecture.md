@@ -30,7 +30,8 @@ tools/                      Build scripts (5,235 lines total)
   inject_outputs.py         Notebook output → HTML/PDF/slides injection
   gen_slides.py             Slide generation + CPU-only revealjs rendering
   gen_pdf.py                Single-framework PDF sources (355 lines)
-  run_notebooks.py          GPU-parallel notebook execution (355 lines)
+  run_one_notebook.py       Per-notebook execution worker + resource locks
+  run_notebooks.py          Legacy/manual batch notebook runner
   fix_crossref_numbers.py   Post-render HTML chapter/section numbering (332 lines)
   gen_notebooks.py          Per-framework .ipynb generation (248 lines)
   fix_latex.py              LaTeX hierarchy restructuring (214 lines)
@@ -140,7 +141,7 @@ Entry point: `make <target>` (preferred) or `./build.sh <target>`.
 ```
  1. lib                     build_lib.py → d2l/*.py
  2. notebooks               gen_notebooks.py → _notebooks/<fw>/*.ipynb
- 3. run-all-notebooks        run_notebooks.py (PT → TF → JAX → MX, sequential)
+ 3. run-all-notebooks        Make CPU/GPU queues → run_one_notebook.py
  4. slides                  gen_slides.py --render → _slides/<fw>/*.html
  5. html (rebuild)           d2l_preprocess.py → quarto render → fix_crossref_numbers.py
  6. pdfs (rebuild, -j4)      gen_pdf.py → inject_outputs.py → quarto → fix_latex.py → xelatex ×2
@@ -199,23 +200,21 @@ Per file: extracts the target framework's code, flattens
 Not every source file produces a notebook for every framework — only
 files that contain code for that framework.
 
-#### Notebook execution (GPU-parallel)
+#### Notebook execution (resource-scheduled)
 
 ```
-run_notebooks.py <fw> --parallel 8 --num-gpus 4 --continue-on-error
+make run-notebooks-<fw>
+make run-all-notebooks
 ```
 
 Execution writes outputs into `_notebooks/<fw>/*.ipynb` in place. These
 outputs are later injected into HTML, PDF, and slide `.qmd` files.
 
-`run_notebooks.py` can narrow execution with `--files` or `--glob`.
-Through Make, use `NB_FILES="chapter/name/file.ipynb"` or `FILES=...`
-with notebook paths relative to `_notebooks/<fw>/`. Make still tracks a single
-`_notebooks/<fw>/.executed` stamp per framework, so force a rerun when
-the stamp is already fresh:
+Make tracks one `.executed` stamp per notebook. To rerun one notebook,
+target its stamp directly:
 
 ```bash
-make -B run-notebooks-pytorch NB_FILES=chapter_linear-regression/linear-regression.ipynb
+make -B _notebooks/pytorch/chapter_linear-regression/linear-regression.executed
 ```
 
 If a source edit changes any `#@save` code, rebuild `d2l/` first and
@@ -285,13 +284,14 @@ results. Matching is by stable notebook cell ID.
 
 ## Incremental build map
 
-The Makefile is the source of truth. It optimizes by target stamps, not
-by per-notebook dependency tracking.
+The Makefile is the source of truth. Notebook execution is tracked by
+per-notebook `.executed` stamps plus generated `.d` files for `d2l.<symbol>`
+dependencies.
 
 | Change | Minimum useful command | Why |
 |--------|------------------------|-----|
 | Prose only in one source file | `make html` or `make -B slides-<fw> SLIDES_FILTER=<file.md>` | HTML and slides read source text directly. |
-| One notebook source cell | `make notebooks-<fw>` then `make -B run-notebooks-<fw> NB_FILES=<file.ipynb>` | Notebook generation is per-framework; execution can be filtered. |
+| One notebook source cell | `make notebooks-<fw>` then `make -B _notebooks/<fw>/<chapter>/<file>.executed` | Notebook generation is per-framework; execution is per notebook. |
 | One slide deck | `make -B slides-<fw> SLIDES_FILTER=<file.md>` | Slide generation/rendering accepts source `.md` paths. |
 | One framework PDF | `make pdf-<fw>` | PDFs are isolated under `_pdf/<fw>/`. |
 | `#@save` library code | `make lib` then rerun affected notebooks; when in doubt rerun all frameworks | `d2l/*.py` is imported by many notebooks, so a package rebuild can affect results far beyond the edited file. |
@@ -303,7 +303,7 @@ Useful single-file examples:
 ```bash
 # Generate notebooks for one framework, then execute one notebook.
 make notebooks-pytorch
-make -B run-notebooks-pytorch NB_FILES=chapter_linear-regression/linear-regression.ipynb
+make -B _notebooks/pytorch/chapter_linear-regression/linear-regression.executed
 
 # Render one slide deck for one framework.
 make -B slides-jax SLIDES_FILTER=chapter_attention-mechanisms-and-transformers/transformer.md
@@ -313,48 +313,49 @@ make pdf-tensorflow
 ```
 
 There is no Make target today that generates only one notebook file.
-`gen_notebooks.py` generates all notebooks for the requested framework,
-then `run_notebooks.py --files` can execute a subset. Likewise, `html`
-and `pdf-<fw>` render full books, not single pages.
+`gen_notebooks.py` generates all notebooks for the requested framework.
+Likewise, `html` and `pdf-<fw>` render full books, not single pages.
 
 ---
 
 ## Notebook execution model
 
-`run_notebooks.py` uses GPU-aware scheduling from `runtime_env.py`.
-Slides no longer use this path; they render with CPU-only Quarto
-subprocesses.
+The Makefile is the primary scheduler. `tools/scan_notebook_manifests.py`
+emits per-framework stamp lists split into:
 
-### Worker layout (default: --parallel 8 --num-gpus 4)
+- `EXECUTED_CPU_<fw>`
+- `EXECUTED_GPU_<fw>`
+- `EXECUTED_MULTI_GPU_<fw>`
 
-```
-GPU 0: worker 0, worker 4    ← CUDA_VISIBLE_DEVICES=0
-GPU 1: worker 1, worker 5    ← CUDA_VISIBLE_DEVICES=1
-GPU 2: worker 2, worker 6    ← CUDA_VISIBLE_DEVICES=2
-GPU 3: worker 3, worker 7    ← CUDA_VISIBLE_DEVICES=3
-CPU:   worker 8..11           ← CUDA_VISIBLE_DEVICES="" (no GPU)
-```
+`run-notebooks-<fw>` starts two sub-makes concurrently: one with
+`-j$(CPU_SLOTS)` over the CPU list, and one with `-j$(GPU_SLOTS)` over the
+single-GPU list. The multi-GPU list then runs with `-j1` after the
+single-GPU queue drains. `run-all-notebooks` does the same thing globally
+across all frameworks, so CPU-only notebooks from one framework can run
+while GPU notebooks from another framework are still using the GPUs.
 
-- **GPU workers**: `ThreadPoolExecutor(max_workers=8)`, GPU IDs from a
-  queue (2 tokens per GPU). Each subprocess gets
-  `CUDA_VISIBLE_DEVICES=<gpu>`.
-- **CPU workers**: `ThreadPoolExecutor(max_workers=4)`, run with
-  `CUDA_VISIBLE_DEVICES=""` plus `CPU_ONLY_ENV` (JAX_PLATFORMS=cpu,
-  TF_CPP_MIN_LOG_LEVEL=3).
-- **Multi-GPU notebooks**: Run serially after the parallel phase with
-  all GPUs visible. Known list in `MULTI_GPU_NOTEBOOKS`.
+Each stamp recipe runs `tools/run_one_notebook.py`, which still uses
+flock-based CPU/GPU slot locks as a backstop for direct stamp builds or
+accidental external parallelism. CPU notebooks run with
+`CUDA_VISIBLE_DEVICES=""` plus `CPU_ONLY_ENV`; GPU notebooks get a single
+`CUDA_VISIBLE_DEVICES=<gpu>`; multi-GPU notebooks acquire all GPU slots.
+
+`tools/run_notebooks.py` remains as a legacy/manual batch runner, but it is
+not the Makefile's primary execution path. Successful direct runs also touch
+the corresponding `.executed` stamp so the audit report can distinguish a
+current manual rerun from a stale generated notebook.
 
 ### Classification
 
-Notebooks are classified by scanning code cells for GPU keywords:
+Notebooks are classified by scanning source text for GPU keywords:
 `gpu(`, `cuda`, `GPU`, `num_gpus`, `try_gpu`, `Trainer(`, `d2l.train`, etc.
+Files listed in `MULTI_GPU_NOTEBOOKS` are routed to the multi-GPU queue.
 
 ### CPU affinity
 
-Each worker is pinned to a subset of host CPUs via
-`os.sched_setaffinity()` (preexec_fn). GPU workers get up to 32 CPUs,
-CPU workers get 16. Cores are strided across the host to minimize
-contention between adjacent workers.
+The Make scheduler controls CPU load with `CPU_SLOTS`. CPU-affinity helpers
+remain in `runtime_env.py` and are used by the legacy batch runner; the
+per-notebook Make path does not currently pin individual notebook processes.
 
 ### Execution method
 
@@ -363,11 +364,9 @@ contention between adjacent workers.
 
 ### Stale kernel cleanup
 
-After each notebook run, `kill_stale_kernels(venv_dir)` scans `/proc` for
-surviving `ipykernel_launcher` processes from the framework's venv and
-SIGKILL-s them. MXNet kernels in particular deadlock during Python
-interpreter shutdown (GIL vs MXNet engine threads) and survive their
-parent nbconvert process, leaking GPU memory.
+`runtime_env.py` provides `kill_stale_kernels(venv_dir)` for the legacy batch
+runner. The per-notebook Make path relies on normal nbconvert/kernel shutdown
+and the resource locks around each process.
 
 ---
 
@@ -394,6 +393,13 @@ Additionally: LD_LIBRARY_PATH is extended with `nvidia/*/lib` paths from
 the venv's pip-installed nvidia packages, and the RLIMIT_NPROC soft limit
 is raised to the hard limit (XLA spawns many threads).
 
+The custom MXNet wheel also has native OpenCV 4.6 runtime dependencies that
+are not expressible in Python package metadata. On Ubuntu 24.04 the required
+packages are `libopencv-core406t64`, `libopencv-imgproc406t64`, and
+`libopencv-imgcodecs406t64`. The Makefile runs `tools/check_runtime_deps.py
+mxnet` before MXNet notebook execution so a missing system library fails early
+with the install hint.
+
 ### JAX + TF memory coexistence
 
 JAX notebooks use TF for data loading (via `tensorflow_datasets`).
@@ -413,13 +419,10 @@ Two mechanisms prevent TF from fighting JAX for GPU memory:
 ```makefile
 SOURCE              ?= .          # Source directory
 NUM_GPUS            ?= 4          # GPUs available
-PARALLEL_pytorch    ?= 8          # 2 per GPU
-PARALLEL_tensorflow ?= 8
-PARALLEL_jax        ?= 8
-PARALLEL_mxnet      ?= 8
+GPU_SLOTS           ?= 8          # Concurrent single-GPU notebook slots
+CPU_SLOTS           ?= 4          # Concurrent CPU-only notebook slots
 SLIDES_FILTER       ?=            # Optional glob to select specific slides
-NB_FILES            ?=            # Optional file list for notebook execution
-FILES               ?=            # Default for NB_FILES and SLIDES_FILTER
+FILES               ?=            # Default for SLIDES_FILTER
 ```
 
 ### Key targets
@@ -430,8 +433,8 @@ FILES               ?=            # Default for NB_FILES and SLIDES_FILTER
 | `pdf-<fw>` | Generate + render + fix one PDF | yes |
 | `pdfs` | All 4 PDFs (use `make -j4 pdfs`) | yes |
 | `notebooks` | Generate .ipynb (no execution) | yes |
-| `run-notebooks-<fw>` | Execute one framework's notebooks | **no** (GPU) |
-| `run-all-notebooks` | Execute PT → TF → JAX → MX sequentially | **no** (GPU) |
+| `run-notebooks-<fw>` | Execute one framework's notebooks with CPU/GPU queues | yes, internally scheduled |
+| `run-all-notebooks` | Execute all frameworks with global CPU/GPU queues | yes, internally scheduled |
 | `slides-<fw>` | Generate + render one framework's slides | yes (CPU-only) |
 | `slides` | All 4 frameworks' slides; use `make -j4 slides` | yes (CPU-only) |
 | `lib` | Build d2l Python package | yes |
@@ -510,7 +513,7 @@ The build system assumes a machine with:
 | pytorch    | `pytorch-cu128` (torch 2.7+): SASS through sm_120 | Blackwell-native. |
 | jax        | `jax[cuda12]>=0.10` native CUDA 12 | XLA JIT targets the detected device. |
 | tensorflow | SASS through sm_89 + `compute_90` PTX (TF 2.21) | First op on Blackwell JIT-compiles from PTX (slower cold start, then cached). |
-| mxnet      | cu117 SASS for sm_50, sm_60, sm_70, sm_80, sm_86 — **no PTX** | Works natively on Ampere (sm_80/86) **and Ada (sm_87/89) via CUDA minor-version compat within major arch 8**. Does **not** load on Hopper (sm_90) or Blackwell (sm_100/sm_120) — different major arch. On those hosts use `make RUN_EXTRA_mxnet=--cpu-only run-notebooks-mxnet`. MXNet 1.9.1 is the final upstream release; the project is archived. |
+| mxnet      | Custom MXNet 2.0 CUDA 13 wheel, Blackwell-oriented | The current wheel imports on Ada (`sm_89`) but fails common GPU kernels with `cudaErrorNoKernelImageForDevice`; see `docs/mxnet-runtime-diagnostics.md`. Rebuild the wheel with `sm_89` and a PTX fallback before treating MXNet GPU notebooks as supported on RTX 4090 hosts. |
 
 The full pipeline (`make all`) takes approximately:
 - Notebook execution: ~110 min total (PT ~21, TF ~24, JAX ~11, MX ~54)

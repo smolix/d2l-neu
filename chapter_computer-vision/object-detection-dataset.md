@@ -424,7 +424,7 @@ for ax, label in zip(axes, batch[1][:10]):
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Detection Datasets"}
 The classic detection benchmarks (PASCAL VOC, COCO) are
 big — too big for a teaching demo. Instead this section
 uses the **banana detection dataset**: 1000 images, one
@@ -442,6 +442,10 @@ through the data plumbing every detector needs:
 :::
 
 ::: {.slide title="Download"}
+The tiny banana dataset is intentionally simple: one class,
+one object per image, and normalized box coordinates. That
+keeps the loader visible before SSD adds anchor matching.
+
 @object-detection-dataset-downloading-the-dataset-1
 
 . . .
@@ -464,6 +468,10 @@ a standard DataLoader:
 :::
 
 ::: {.slide title="Train + val loaders"}
+The batch shape check should show why detection labels need
+an extra object dimension: images have the usual framework
+layout, while labels are `(batch, max_objects, 5)`.
+
 @object-detection-dataset-reading-the-dataset-3
 
 . . .
@@ -472,6 +480,10 @@ a standard DataLoader:
 :::
 
 ::: {.slide title="A batch with annotations"}
+Each label row is `(class, x1, y1, x2, y2)` with normalized
+corners. In this dataset `max_objects = 1`, but the same
+layout supports variable object counts by padding.
+
 @object-detection-dataset-demonstration
 :::
 

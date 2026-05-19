@@ -684,7 +684,7 @@ often dramatically.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Working with Sequences"}
 Sequences are everywhere — text, speech, time-series, video.
 Three concepts set up the rest of the chapter:
 

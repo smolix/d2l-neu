@@ -453,7 +453,7 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Transposed Convolution"}
 A standard convolution + pooling stack reduces spatial
 resolution. For dense prediction (semantic segmentation,
 generative models, super-resolution) we need to go the
@@ -480,6 +480,10 @@ multiplied accordingly.
 :::
 
 ::: {.slide title="Verify on a small example"}
+The hand-written implementation should match the framework
+operator. If the shape or values differ, the usual culprits
+are padding semantics or channel layout:
+
 @transposed-conv-basic-operation-2
 
 . . .

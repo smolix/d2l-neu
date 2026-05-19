@@ -358,7 +358,7 @@ In practice, the frequency of words tends to follow Zipf's law. This is true not
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Text as Sequence Data"}
 Text isn't tensors out of the box. The pipeline:
 
 1. **Read** the raw string.

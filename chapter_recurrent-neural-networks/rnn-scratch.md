@@ -907,7 +907,7 @@ During training, gradient clipping can mitigate the problem of exploding gradien
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="RNNs from Scratch"}
 A character-level language model on *The Time Machine*,
 with nothing but tensor ops. Four pieces:
 
@@ -954,6 +954,17 @@ Add a vocab-sized output projection on top of the RNN's hidden
 states. This is the LM wrapper we'll train:
 
 @rnn-scratch-rnn-based-language-model
+:::
+
+::: {.slide title="Training objective"}
+At every time step, the model predicts the next character.
+Flatten batch and time, apply cross-entropy, and average:
+
+$$\mathcal{L} = \frac{1}{BT}\sum_{b,t}
+  -\log P(x_{b,t+1} \mid x_{b,\le t}).$$
+
+Perplexity is $\exp(\mathcal{L})$; lower means fewer effective
+choices for the next character.
 :::
 
 ::: {.slide title="Inputs as one-hot vectors"}

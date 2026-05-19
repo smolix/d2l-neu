@@ -5,9 +5,9 @@
 #   make html                  Build HTML book (multi-framework tabs)
 #   make pdf-pytorch           Build PDF for PyTorch
 #   make pdfs                  Build PDFs for all frameworks (safe with -j4)
-#   make run-notebooks-pytorch Execute PyTorch notebooks (GPU)
-#   make run-all-notebooks     Execute all frameworks sequentially (GPU)
-#   make slides-pytorch        Build + render PyTorch slides (GPU)
+#   make run-notebooks-pytorch Execute PyTorch notebooks (CPU/GPU queues)
+#   make run-all-notebooks     Execute all frameworks (CPU/GPU queues)
+#   make slides-pytorch        Build + render PyTorch slides (CPU)
 #   make lib                   Build d2l Python package
 #   make clean                 Remove build artifacts (keeps data/)
 #
@@ -15,14 +15,15 @@
 #   make -j4 pdfs              4 framework PDFs in parallel (separate dirs)
 #   make -j4 notebooks         Generate (not execute) all notebooks in parallel
 #
-# NOT parallel-safe (GPU contention):
-#   run-notebooks-*           Run one framework at a time
+# Notebook execution is internally resource-scheduled. Use
+# `run-all-notebooks` for all frameworks instead of wrapping multiple
+# `run-notebooks-*` targets in an outer `make -j`.
 # Parallel-safe (CPU-only, after slide refactor):
 #   slides-*                   make -j4 slides works
 #
-# GPU workers per framework: NUM_GPUS and PARALLEL_<fw> are auto-detected
-# from nvidia-smi (rule of thumb: 11GB per job, so a 24GB GPU runs 2 in
-# parallel). Override on the command line: `make NUM_GPUS=2 PARALLEL_pytorch=2`.
+# GPU slots are auto-detected from nvidia-smi (rule of thumb: 11GB per job,
+# so a 24GB GPU runs 2 in parallel). Override on the command line:
+# `make NUM_GPUS=2 GPU_SLOTS=4 CPU_SLOTS=2`.
 #
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
 
@@ -43,23 +44,23 @@ SHELL      := /bin/bash
 
 SOURCE     ?= .
 FRAMEWORKS := pytorch tensorflow jax mxnet
+RUN_NOTEBOOK_TARGETS := $(addprefix run-notebooks-,$(FRAMEWORKS))
+RUN_NOTEBOOK_CPU_TARGETS := $(addprefix run-notebooks-cpu-,$(FRAMEWORKS))
+RUN_NOTEBOOK_GPU_TARGETS := $(addprefix run-notebooks-gpu-,$(FRAMEWORKS))
+RUN_NOTEBOOK_MULTIGPU_TARGETS := $(addprefix run-notebooks-multigpu-,$(FRAMEWORKS))
 
 # Auto-detect GPU count and memory via nvidia-smi.
 # Rule of thumb: each notebook job needs ~11GB GPU memory, so a 24GB GPU
 # runs 2 in parallel, a 48GB GPU runs 4, etc. We use the *minimum* memory
-# across detected GPUs (workers_per_gpu must be uniform — see run_notebooks.py).
+# across detected GPUs (workers_per_gpu must be uniform — see run_one_notebook.py).
 # Falls back to "0 1" when no GPUs are visible (CPU-only host).
-# Override on the command line: `make NUM_GPUS=2 PARALLEL_pytorch=2 ...`.
+# Override on the command line: `make NUM_GPUS=2 GPU_SLOTS=4 ...`.
 _GPU_QUERY := $(shell nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk 'BEGIN{n=0;m=0} {n++; if(n==1||$$1<m) m=$$1} END{per=int(m/11264); if(per<1) per=1; if(n==0) print "0 1"; else print n, n*per}')
 DETECTED_NUM_GPUS := $(word 1,$(_GPU_QUERY))
-DETECTED_PARALLEL := $(word 2,$(_GPU_QUERY))
-# If no GPU was detected, fall back to NUM_GPUS=1 (CPU-only path in run_notebooks.py).
+DETECTED_GPU_SLOTS := $(word 2,$(_GPU_QUERY))
+# If no GPU was detected, fall back to NUM_GPUS=1 for slot-to-device mapping.
 NUM_GPUS   ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
-_PARALLEL_DEFAULT := $(if $(DETECTED_PARALLEL),$(DETECTED_PARALLEL),1)
-PARALLEL_pytorch    ?= $(_PARALLEL_DEFAULT)
-PARALLEL_tensorflow ?= $(_PARALLEL_DEFAULT)
-PARALLEL_jax        ?= $(_PARALLEL_DEFAULT)
-PARALLEL_mxnet      ?= $(_PARALLEL_DEFAULT)
+_GPU_SLOTS_DEFAULT := $(if $(DETECTED_GPU_SLOTS),$(DETECTED_GPU_SLOTS),1)
 
 # Per-notebook slot counts. Re-tuned for the post-Phase-1 build system:
 #   GPU_SLOTS = NUM_GPUS × workers_per_GPU  (≥11GB VRAM per worker → 24GB
@@ -67,11 +68,10 @@ PARALLEL_mxnet      ?= $(_PARALLEL_DEFAULT)
 #   CPU_SLOTS = max(1, cores / 16)          (≥16 cores per CPU notebook)
 # `make -j` should be at least GPU_SLOTS + CPU_SLOTS for full saturation.
 # Override either explicitly: `make GPU_SLOTS=8 CPU_SLOTS=4 ...`.
-GPU_SLOTS ?= $(_PARALLEL_DEFAULT)
+GPU_SLOTS ?= $(_GPU_SLOTS_DEFAULT)
 CPU_SLOTS ?= $(shell n=$$(nproc 2>/dev/null || echo 16); echo $$(( n / 16 < 1 ? 1 : n / 16 )))
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
-NB_FILES      ?= $(FILES)
 
 # Source files — the ultimate upstream for everything.
 # Includes top-level index.md (landing page), which d2l_preprocess.py
@@ -103,9 +103,9 @@ help:
 	@echo "  pdf                     Alias for pdf-pytorch"
 	@echo "  notebooks-<fw>         Generate notebooks for one framework"
 	@echo "  notebooks               Generate notebooks for all frameworks"
-	@echo "  run-notebooks-<fw>     Execute notebooks for one framework (GPU)"
-	@echo "  run-all-notebooks       Execute all frameworks sequentially (GPU)"
-	@echo "  slides-<fw>            Build slides for one framework (GPU)"
+	@echo "  run-notebooks-<fw>     Execute notebooks for one framework (CPU/GPU queues)"
+	@echo "  run-all-notebooks       Execute all frameworks (CPU/GPU queues)"
+	@echo "  slides-<fw>            Build slides for one framework (CPU)"
 	@echo "  slides                  Build slides for all frameworks"
 	@echo "  lib                     Build d2l Python package"
 	@echo "  venv-<fw>              Sync UV environment for one framework"
@@ -116,9 +116,8 @@ help:
 	@echo "  all-quick               Build html + pdfs + notebooks + slides + lib (no execution)"
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
-	@echo "           PARALLEL: pytorch=$(PARALLEL_pytorch) tf=$(PARALLEL_tensorflow) jax=$(PARALLEL_jax) mxnet=$(PARALLEL_mxnet)"
 	@echo "           GPU_SLOTS=$(GPU_SLOTS)  CPU_SLOTS=$(CPU_SLOTS)"
-	@echo "           FILES=$(FILES)  NB_FILES=$(NB_FILES)  SLIDES_FILTER=$(SLIDES_FILTER)"
+	@echo "           FILES=$(FILES)  SLIDES_FILTER=$(SLIDES_FILTER)"
 	@echo "Frameworks: $(FRAMEWORKS)"
 	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
 
@@ -161,6 +160,13 @@ QUARTO := .venv-build/bin/quarto
 
 venv-%: .venv-%/.synced
 	@echo "Venv .venv-$* is ready"
+
+.venv-mxnet/.runtime-deps: .venv-mxnet/.synced tools/check_runtime_deps.py
+	@echo "=== Checking MXNet native runtime deps ==="
+	@python3 tools/check_runtime_deps.py mxnet
+	@touch $@
+
+RUNTIME_DEPS_mxnet := .venv-mxnet/.runtime-deps
 
 # Pull the latest mxnet wheel URL from
 # https://github.com/smolix/mxnet/releases/latest into pyproject.toml.
@@ -300,20 +306,22 @@ $(foreach fw,$(FRAMEWORKS),$(eval $(call IPYNB_FROM_GEN,$(fw))))
 
 # ── Notebooks (execute) — per-notebook granularity ────────
 # Each .ipynb has its own .executed stamp. Editing one source .md (or one
-# d2l/<fw>.py block) only invalidates the affected notebook(s); make -j
-# parallelism is bounded by GPU-slot locking inside tools/run_one_notebook.py.
+# d2l/<fw>.py block) only invalidates the affected notebook(s). Aggregate
+# targets split those stamps into CPU, single-GPU, and multi-GPU queues so
+# Make admits work according to the resource it needs. The slot locks inside
+# tools/run_one_notebook.py remain as a backstop for direct stamp builds.
 
 define nvidia_ld_path
 $(shell find .venv-$(1)/lib -path "*/nvidia/*/lib" -type d 2>/dev/null | paste -sd: -)
 endef
 
 # Per-framework manifest lists every _notebooks/<fw>/<rel>.executed target
-# for that framework. We use a CHEAP textual scan (tools/scan_notebook_
-# manifests.py, ~1s for the whole tree) instead of the full gen_notebooks
-# pipeline (~30s per framework) so `-include` doesn't trigger expensive
-# work during Makefile parsing. The scan only looks at #@tab / %%tab
-# markers in each source .md, which is enough to know which (fw, src)
-# pairs produce a notebook.
+# for that framework, split by execution resource. We use a CHEAP textual scan
+# (tools/scan_notebook_manifests.py, ~1s for the whole tree) instead of the
+# full gen_notebooks pipeline (~30s per framework) so `-include` doesn't
+# trigger expensive work during Makefile parsing. The scan looks at #@tab /
+# %%tab markers to know which (fw, src) pairs produce a notebook, then scans
+# source text for GPU hints to classify the produced notebook.
 $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS))) &: \
         $(SRC_MDS) tools/scan_notebook_manifests.py
 	@mkdir -p $(addprefix _notebooks/,$(FRAMEWORKS))
@@ -351,7 +359,7 @@ $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
 # rebuilds — that's the .d's job).
 define EXEC_RULE
 _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
-        | d2l/$(1).py .venv-$(1)/.synced
+        | d2l/$(1).py .venv-$(1)/.synced $$(RUNTIME_DEPS_$(1))
 	@mkdir -p $$(@D) $(LOGDIR)
 	$$(eval NVIDIA_LIBS := $$(call nvidia_ld_path,$(1)))
 	@UV_PROJECT_ENVIRONMENT=.venv-$(1) \
@@ -366,25 +374,44 @@ _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
 endef
 $(foreach fw,$(FRAMEWORKS),$(eval $(call EXEC_RULE,$(fw))))
 
-# Aggregate per-framework target: depend on every per-notebook stamp listed
-# in the manifest. The first-ever build has no manifest, so we bootstrap by
-# generating notebooks first (which writes the manifest), then Make re-reads
-# it via the -include above.
-run-notebooks-%: _notebooks/%/.generated $$(EXECUTED_$$*)
-	@echo "Notebooks for $* up to date ($(words $(EXECUTED_$*)) total)"
+# Resource-specific aggregate targets. The public run-notebooks-* targets
+# below invoke these through sub-makes with resource-specific -j limits.
+run-notebooks-cpu-%: _notebooks/%/.generated $$(EXECUTED_CPU_$$*)
+	@echo "CPU notebooks for $* up to date ($(words $(EXECUTED_CPU_$*)) total)"
 
-# Backwards-compatible alias: NB_FILES=foo.ipynb still works. The pattern
-# rule already handles arbitrary file selection — just hit the stamp directly:
+run-notebooks-gpu-%: _notebooks/%/.generated $$(EXECUTED_GPU_$$*)
+	@echo "GPU notebooks for $* up to date ($(words $(EXECUTED_GPU_$*)) total)"
+
+run-notebooks-multigpu-%: _notebooks/%/.generated $$(EXECUTED_MULTI_GPU_$$*)
+	@echo "Multi-GPU notebooks for $* up to date ($(words $(EXECUTED_MULTI_GPU_$*)) total)"
+
+# Aggregate per-framework target. Generate notebooks before spawning resource
+# queues so CPU and GPU sub-makes cannot race on _notebooks/<fw>/.generated.
+run-notebooks-%: _notebooks/%/.generated
+	@echo "=== Running $* notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@cpu_rc=0; gpu_rc=0; \
+	$(MAKE) --no-print-directory -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
+	( $(MAKE) --no-print-directory -j$(GPU_SLOTS) run-notebooks-gpu-$* && \
+	  $(MAKE) --no-print-directory -j1 run-notebooks-multigpu-$* ) & gpu=$$!; \
+	wait $$gpu || gpu_rc=$$?; \
+	wait $$cpu || cpu_rc=$$?; \
+	exit $$((gpu_rc || cpu_rc))
+
+# For a single notebook, invoke the stamp target directly:
 #   make _notebooks/pytorch/chapter_x/foo.executed
 
-# Sequential execution of all frameworks. With per-notebook stamps each
-# framework is itself an idempotent target — calling it when nothing changed
-# is essentially free.
-run-all-notebooks:
-	$(MAKE) run-notebooks-pytorch
-	$(MAKE) run-notebooks-tensorflow
-	$(MAKE) run-notebooks-jax
-	$(MAKE) run-notebooks-mxnet
+# Execute all frameworks with one global CPU queue and one global GPU queue.
+# `notebooks` runs first so CPU/GPU sub-makes cannot generate the same
+# framework's notebooks concurrently.
+run-all-notebooks: notebooks
+	@echo "=== Running all notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@cpu_rc=0; gpu_rc=0; \
+	$(MAKE) --no-print-directory -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
+	( $(MAKE) --no-print-directory -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS) && \
+	  $(MAKE) --no-print-directory -j1 $(RUN_NOTEBOOK_MULTIGPU_TARGETS) ) & gpu=$$!; \
+	wait $$gpu || gpu_rc=$$?; \
+	wait $$cpu || cpu_rc=$$?; \
+	exit $$((gpu_rc || cpu_rc))
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 

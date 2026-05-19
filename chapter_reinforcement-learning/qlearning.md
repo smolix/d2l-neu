@@ -176,7 +176,7 @@ Q-learning is one of the most fundamental reinforcement-learning algorithms. It 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Q-Learning"}
 Value iteration needs the full MDP. Real RL has only
 *samples* from the environment. **Q-learning**
 (Watkins, 1989) replaces the Bellman backup with a

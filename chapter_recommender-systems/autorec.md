@@ -224,7 +224,7 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="AutoRec"}
 **AutoRec** (Sedhain et al., 2015) — recasts collaborative
 filtering as autoencoder reconstruction.
 
@@ -242,13 +242,18 @@ Adds the nonlinearity that pure MF lacks. Two variants:
 deck implements item-based.
 :::
 
-::: {.slide title="The model"}
-Encoder: linear → activation → bottleneck. Decoder: linear
-→ ratings. Train as an autoencoder over the item vectors:
+::: {.slide title="Setup Imports"}
+The setup cell selects the backend-specific `d2l` package and
+tensor library. The model itself is the same idea in both tabs:
+reconstruct an item rating vector with a masked loss.
 
 @autorec-model
+:::
 
-. . .
+::: {.slide title="The model"}
+Encoder: linear -> activation -> bottleneck. Decoder: linear
+-> ratings. During training, the forward pass masks unobserved
+entries so gradients come only from known ratings:
 
 @autorec-implementing-the-model
 :::
@@ -264,6 +269,10 @@ Standard SGD; the masked loss is the trick that turns
 autoencoder loss into a recommender:
 
 @autorec-training-and-evaluating-the-model
+
+Watch the plot for two signals: training loss should fall, and
+test RMSE should stabilize rather than diverge. Overfitting shows
+up when reconstruction keeps improving but held-out RMSE worsens.
 :::
 
 ::: {.slide title="Recap"}

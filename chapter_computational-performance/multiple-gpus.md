@@ -815,7 +815,7 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Scaling beyond one GPU"}
 A single GPU can train ResNet on ImageNet — slowly. Modern
 large models need *many* GPUs. Three ways to split work:
 
@@ -902,6 +902,9 @@ Forward + backward on each replica → all_reduce gradients
 
 ::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-training-3
+
+This gives the wall-clock reference point: one model copy,
+one minibatch stream, no gradient synchronization.
 :::
 
 ::: {.slide title="Two GPUs"}

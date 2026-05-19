@@ -947,7 +947,7 @@ It is reasonable to ask at this point, "Why can I not just write down matrix ver
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Calculus in Many Dimensions"}
 Generalize differentiation to many inputs. The **gradient**
 
 $$\nabla f(\mathbf{x}) = [\partial f/\partial x_1, \ldots, \partial f/\partial x_d]^\top$$
@@ -963,6 +963,9 @@ reverse-mode application of the multivariate chain rule.
 :::
 
 ::: {.slide title="Higher-dimensional differentiation"}
+Partial derivatives measure one coordinate at a time; the gradient
+bundles them into the vector pointing across level sets.
+
 @multivariable-calculus-higher-dimensional-differentiation
 :::
 

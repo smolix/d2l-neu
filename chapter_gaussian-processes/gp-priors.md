@@ -176,7 +176,7 @@ Gaussian processes are a relatively general model class, containing many example
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Gaussian Process Priors"}
 **Gaussian processes** = a probability distribution over
 *functions*. Pick any finite set of input points
 $\{x_1, \ldots, x_n\}$; the values $\{f(x_1), \ldots,

@@ -824,7 +824,7 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Modules as Building Blocks"}
 Modern networks aren't flat stacks. ResNet-152 has 152
 conv layers, organized into a handful of *repeating
 patterns*. Transformers stack 12, 24, 96 identical

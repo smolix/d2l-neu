@@ -282,7 +282,7 @@ We can pass data through the model to make the framework finally initialize para
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Lazy Initialization"}
 **Lazy initialization** lets you declare a layer's *output*
 size without specifying its *input* size:
 

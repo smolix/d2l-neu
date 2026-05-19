@@ -592,7 +592,7 @@ for downstream natural language processing applications.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Pretraining BERT"}
 With the model (last deck) and the data (deck before
 that), we can finally pretrain a small BERT end-to-end.
 This deck does it on a tiny scale: 2 layers, 128 hidden
@@ -601,14 +601,24 @@ dim, 2 heads. The recipe scales to BERT-Base (12 layers,
 config.
 :::
 
-::: {.slide title="Setup + tiny BERT"}
-@bert-pretraining-pretraining-bert-1
+::: {.slide title="Load pretraining data"}
+Each batch supplies tokens, segment IDs, valid lengths, masked
+positions/labels, MLM weights, and NSP labels:
 
-. . .
+@bert-pretraining-pretraining-bert-1
+:::
+
+::: {.slide title="Tiny BERT config"}
+The notebook uses a deliberately small encoder so the full
+pretraining loop is runnable in class:
 
 @bert-pretraining-pretraining-bert-2
+:::
 
-. . .
+::: {.slide title="Trainer setup"}
+Initialize the optimizer/trainer for this tiny BERT. Scaling to
+BERT-Base changes only the data size, model width/depth, and
+compute budget:
 
 @bert-pretraining-pretraining-bert-2-1
 :::
@@ -626,7 +636,9 @@ binary cross-entropy on the `<cls>` head:
 
 ::: {.slide title="Training loop"}
 Standard SGD with warmup; on this tiny corpus a few
-hundred steps is enough to see both losses drop:
+hundred steps is enough to see both losses drop. MLM loss stays
+higher than NSP because it predicts a large vocabulary rather
+than a binary label:
 
 @bert-pretraining-pretraining-bert-2-3
 
@@ -637,7 +649,8 @@ hundred steps is enough to see both losses drop:
 
 ::: {.slide title="Using the trained encoder"}
 After pretraining, the encoder is the *useful* part —
-turn token sequences into contextual representations:
+turn token sequences into contextual representations. The
+pretraining heads can be discarded for most downstream tasks:
 
 @bert-pretraining-representing-text-with-bert-1
 :::

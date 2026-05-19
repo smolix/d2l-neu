@@ -384,7 +384,7 @@ In the context of deep learning the main purpose of convex functions is to motiv
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why Convexity Matters"}
 Deep learning loss surfaces are *not* convex. So why a
 chapter on convexity? Two reasons:
 

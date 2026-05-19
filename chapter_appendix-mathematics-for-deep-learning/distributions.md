@@ -1014,7 +1014,7 @@ powerful family of distributions encountered frequently in machine learning.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Common Probability Distributions"}
 A reference tour of the distributions used throughout the
 book — what they look like, when they apply, and how to
 sample / evaluate them in code.
@@ -1032,6 +1032,9 @@ sample / evaluate them in code.
 :::
 
 ::: {.slide title="Setup"}
+Imports and plotting helpers are shared across the PMF, PDF, CDF,
+and sampling examples below.
+
 @distributions
 :::
 
@@ -1131,6 +1134,9 @@ everywhere:
 :::
 
 ::: {.slide title="Gaussian (cont.)"}
+Changing $\mu$ shifts the bell curve; changing $\sigma$ spreads it.
+Samples concentrate near the mean and thin out in the tails.
+
 @distributions-gaussian-3
 
 . . .

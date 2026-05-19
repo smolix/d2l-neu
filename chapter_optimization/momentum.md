@@ -379,7 +379,7 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why Momentum"}
 SGD on ill-conditioned problems is dreadful. In a steep
 narrow valley, gradients zigzag across the walls instead
 of moving along the floor. Drop $\eta$ to stop

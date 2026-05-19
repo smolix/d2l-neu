@@ -415,7 +415,7 @@ to ensure proper convergence.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Deep RNNs"}
 A single RNN layer is already deep *in time* — but within
 one time step, input-to-output is just one nonlinearity.
 

@@ -1530,7 +1530,7 @@ transforms the representation at all the sequence positions using the same MLP.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Transformer"}
 2017's *Attention is All You Need* threw out RNNs entirely
 and built sequence models from self-attention,
 positionwise MLPs, residuals, and layer norm.
@@ -1650,10 +1650,20 @@ Three sublayers, each wrapped in AddNorm:
 :::
 
 ::: {.slide title="Decoder shape check"}
+Run the decoder with fake encoder outputs and source
+`valid_lens`. The output is target-position logits; the state
+carries encoder outputs plus per-block caches used during
+autoregressive prediction:
+
 @transformer-decoder-2
 :::
 
 ::: {.slide title="Decoder stack"}
+Token embedding + positional encoding -> $N$ decoder blocks ->
+vocab projection. During training, causal masks are built from
+target positions; during prediction, the cache grows one token at
+a time.
+
 @transformer-decoder-3
 :::
 
@@ -1666,6 +1676,10 @@ hidden, 4 heads, dropout 0.2. Adam lr=0.001, gradient clip 1,
 :::
 
 ::: {.slide title="Translate four sentences"}
+This is a tiny model on a tiny dataset. Look for good short
+translations and BLEU differences across examples; errors are
+usually data/model-size limits, not a change in the architecture.
+
 @transformer-training-2
 :::
 
@@ -1681,18 +1695,24 @@ heads attend to different patterns:
 @transformer-training-4
 :::
 
-::: {.slide title="Decoder attention weights"}
+::: {.slide title="Decoder attention tensors"}
 The decoder has *two* attention sublayers per block —
 masked self-attention and encoder-decoder cross-attention.
-Pull both for visualization:
+Pull both from the prediction trace and reshape them into
+(blocks × heads × queries × keys):
 
 @transformer-training-5
 
 . . .
 
 @transformer-training-6
+:::
 
-. . .
+::: {.slide title="Decoder causal mask"}
+The self-attention heatmap must be lower triangular: query
+position $t$ can attend only to keys at positions $\le t$.
+That is what makes the decoder a language model during
+generation.
 
 @transformer-training-7
 :::

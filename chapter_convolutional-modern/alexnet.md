@@ -524,7 +524,7 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="AlexNet: scale changes vision"}
 **AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what
 made deep learning *the* approach to vision. Won ImageNet
 by a huge margin and started the modern era.

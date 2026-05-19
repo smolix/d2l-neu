@@ -212,7 +212,7 @@ the type of problems you may need to address.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="DataFrames to Tensors"}
 Real datasets rarely arrive as tensors. The usual path:
 
 1. **Read** raw rows (CSV, JSON, Parquet, …) → a `DataFrame`.

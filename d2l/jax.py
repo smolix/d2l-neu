@@ -1180,6 +1180,17 @@ class Seq2Seq(d2l.EncoderDecoder):
     tgt_pad: int
     lr: float
 
+    @partial(jax.jit, static_argnums=(0, 5))
+    def loss(self, params, X, Y, state, averaged=False):
+        Y_hat = state.apply_fn({'params': params}, *X, training=True,
+                               rngs={'dropout': state.dropout_rng})
+        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
+        Y = d2l.reshape(Y, (-1,))
+        fn = optax.softmax_cross_entropy_with_integer_labels
+        l = fn(Y_hat, Y)
+        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
+        return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask), {}
+
     def validation_step(self, params, batch, state):
         # Evaluate with dropout disabled (training=False); training=True path
         # is used by self.loss during fit.

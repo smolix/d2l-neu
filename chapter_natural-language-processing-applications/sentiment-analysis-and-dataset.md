@@ -323,7 +323,7 @@ into a fixed-length text category.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Sentiment Analysis Data"}
 **Sentiment analysis** — predict positive/negative from a
 movie review. Classic text-classification benchmark; the
 hello-world for applying deep learning to NLP.

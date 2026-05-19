@@ -170,7 +170,7 @@ in addition to becoming a better scientist.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Finding API Help"}
 Every framework has thousands of functions and classes. You
 won't memorize them — you'll **look them up**.
 

@@ -1118,7 +1118,7 @@ interval centered on the expectation.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Probability for Learning"}
 Most of machine learning is **inference under uncertainty**:
 
 - Models output **distributions** over labels, not labels.

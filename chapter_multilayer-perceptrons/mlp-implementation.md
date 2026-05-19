@@ -337,7 +337,7 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Implementing an MLP two ways"}
 The simplest **multilayer perceptron** — two affine layers
 with a ReLU between them — trained end-to-end on
 Fashion-MNIST (28×28 grayscale, 10 classes).

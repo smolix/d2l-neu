@@ -712,7 +712,7 @@ this degree of modularity pays dividends throughout the book in terms of concise
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Reusable training abstractions"}
 Three recurring abstractions appear in every model we'll build:
 
 - **`Module`** — the model: parameters, `forward`, `loss`,
@@ -724,14 +724,14 @@ This chapter builds the scaffolding once. The rest of the book
 just **subclasses** these three.
 :::
 
-::: {.slide title="The `add_to_class` trick"}
+::: {.slide title="The class shell"}
 Long class definitions don't fit one slide / one cell. Define the
 class **shell first**, then attach methods incrementally:
 
 @oo-design-utilities-1
+:::
 
-. . .
-
+::: {.slide title="The `add_to_class` trick"}
 @oo-design-utilities-2
 
 @oo-design-utilities-3

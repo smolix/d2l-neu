@@ -636,10 +636,30 @@ including prose, figures, mathematics, and code, all in one place.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="The D2L Code Foundation"}
+D2L notebooks use shared imports and helper functions from
+the `d2l` package. Blocks marked with `#@save` are exported
+there so later notebooks can focus on models instead of
+repeating setup code.
 
 @preface-code-1
+:::
+
+::: {.slide title="Framework-Specific Imports"}
+Each backend tab imports the tensor library, neural-network
+layers, data transforms, and utilities used throughout the
+book. The public `d2l` namespace stays consistent while the
+implementation switches by tab.
 
 @preface-code-2
 
+:::
+
+::: {.slide title="How to Read Later Notebooks"}
+- `#@save` means the code becomes part of the reusable `d2l`
+  library.
+- `#@tab` marks backend-specific code for MXNet, PyTorch,
+  TensorFlow, or JAX.
+- Most chapters teach algorithms; this preface explains where
+  the shared names and imports come from.
 :::

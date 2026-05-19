@@ -426,7 +426,7 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why initialization matters"}
 **Why was deep learning hard before 2012?** Nobody could
 *train* deep networks reliably — gradients either died at
 zero or blew up to infinity.

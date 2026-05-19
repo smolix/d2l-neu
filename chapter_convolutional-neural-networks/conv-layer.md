@@ -593,7 +593,7 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Why convolution works for images"}
 A fully-connected layer on a 1-megapixel RGB image needs
 roughly **3 million** weights *per output unit* — wildly
 wasteful, since pixel correlations are local and the same
@@ -624,18 +624,18 @@ direction — same shrinking we'll undo with padding next
 section.
 :::
 
-::: {.slide title="Implementing it"}
+::: {.slide title="Setup for implementation"}
 Two nested loops over output positions. Each cell is a
 slice multiplied elementwise with the kernel and summed:
 
 @conv-layer-convolutions-for-images
+:::
 
-. . .
-
+::: {.slide title="Implementing cross-correlation"}
 @conv-layer-the-cross-correlation-operation-1
+:::
 
-. . .
-
+::: {.slide title="Verify cross-correlation"}
 Verify against the figure — 3×3 input × 2×2 kernel →
 2×2 output with the worked-out values:
 

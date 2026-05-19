@@ -638,7 +638,7 @@ In the RNN encoder--decoder, the Bahdanau attention mechanism treats the decoder
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Bahdanau Attention"}
 Plain seq2seq jams the entire source into one fixed vector
 — a bottleneck. Early tokens get forgotten by the time the
 encoder finishes.
@@ -676,6 +676,12 @@ Per step: take the previous decoder hidden state, run
 additive attention against the encoder outputs (masked by
 source `valid_len`), concat the resulting context with the
 embedded input, run one GRU step, project to vocab.
+
+The score is learned:
+
+$$a(\mathbf{s}_{t'-1}, \mathbf{h}_t)
+  = \mathbf{w}_v^\top \tanh(\mathbf{W}_s \mathbf{s}_{t'-1}
+    + \mathbf{W}_h \mathbf{h}_t).$$
 
 @bahdanau-attention-defining-the-decoder-with-attention-2
 :::

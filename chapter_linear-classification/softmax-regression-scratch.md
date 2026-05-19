@@ -443,7 +443,7 @@ much more efficiently.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Softmax regression from scratch"}
 The same recipe as linear regression, with two new pieces:
 
 1. **Softmax** turns logits into a probability distribution.

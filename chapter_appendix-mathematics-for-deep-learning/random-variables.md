@@ -1007,7 +1007,7 @@ Indeed if we think of norms as being related to standard deviations, and correla
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Continuous Random Variables"}
 Continuous random variables and their summaries:
 
 - **PDF** $p(x)$ — probability density; $P(X \in A) = \int_A p$.
@@ -1023,14 +1023,24 @@ analysis in the book.
 :::
 
 ::: {.slide title="From discrete to continuous"}
+Discrete variables assign mass to points. Continuous variables
+assign density, and probabilities come from integrating over
+intervals.
+
 @random-variables-from-discrete-to-continuous
 :::
 
 ::: {.slide title="PDFs"}
+A PDF describes relative likelihood locally; only areas under the
+curve are probabilities, so the density itself can exceed 1.
+
 @random-variables-probability-density-functions
 :::
 
 ::: {.slide title="Standard deviation in code"}
+Standard deviation is the square root of variance; these snippets
+compute both so the scale of spread stays interpretable.
+
 @random-variables-standard-deviations-1
 
 . . .
@@ -1043,6 +1053,9 @@ analysis in the book.
 :::
 
 ::: {.slide title="Continuous mean and variance"}
+For continuous variables, sums become integrals: weight each value
+or squared deviation by its density.
+
 @random-variables-means-and-variances-in-the-continuum-1
 
 . . .
@@ -1051,6 +1064,9 @@ analysis in the book.
 :::
 
 ::: {.slide title="Covariance and correlation"}
+Covariance keeps the original units; correlation normalizes by
+standard deviations so the result lies between $-1$ and $1$.
+
 @random-variables-covariance
 
 . . .

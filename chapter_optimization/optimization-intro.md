@@ -260,7 +260,7 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Optimization vs. Learning"}
 **Optimization** and **deep learning** are not the same
 problem. Optimization minimizes the *training* loss; deep
 learning cares about the *generalization* loss.

@@ -1034,7 +1034,7 @@ train(net_D, net_G, data_iter, num_epochs, lr, latent_dim)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="DCGAN"}
 **DCGAN** (Radford, Metz, Chintala 2015) — the recipe that
 made image GANs work in practice. Architectural rules
 that became standard:
@@ -1066,6 +1066,10 @@ generator's `tanh` output range):
 :::
 
 ::: {.slide title="Inspecting samples"}
+Use these real images to calibrate the task: low resolution,
+centered objects, and normalized colors. The generator only has to
+match this sprite distribution, not produce arbitrary photographs.
+
 @!dcgan-the-pokemon-dataset-3
 :::
 
@@ -1134,6 +1138,11 @@ the target distribution moves every time either player improves.
 :::
 
 ::: {.slide title="Training trace"}
+Read the loss curves together with the generated samples. Healthy
+training usually shows neither player instantly winning forever;
+the more important sign is that generated sprites become sharper
+and more Pokemon-like over epochs.
+
 @!dcgan-training-2
 :::
 

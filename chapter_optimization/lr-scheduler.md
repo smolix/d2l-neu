@@ -667,7 +667,7 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Learning Rate Schedules"}
 The optimizer matters; the **learning rate schedule**
 often matters more. With a constant $\eta$ you trade off
 fast-but-unstable vs. slow-but-converged. A good schedule
@@ -703,6 +703,10 @@ effect is the only teaching variable.
 :::
 
 ::: {.slide title="Toy baseline"}
+Constant $\eta=0.3$ is the baseline. Watch for the usual
+pattern: fast early movement, then noisy late progress as
+the step size stays too large for fine tuning.
+
 @!lr-scheduler-toy-problem-2
 :::
 
@@ -725,6 +729,14 @@ It is simple and monotone, but modern practice usually prefers
 multi-step or cosine schedules.
 :::
 
+::: {.slide title="Square-root schedule training"}
+Apply the same $\eta_t = \eta_0(t+1)^{-1/2}$ policy during
+training. The curve should smooth out because late updates
+are smaller:
+
+@!lr-scheduler-schedulers-4
+:::
+
 ::: {.slide title="Polynomial / factor decay"}
 $\eta_t = \eta_0 \cdot (1 + \beta t)^{-\alpha}$ — gradual
 decay. The ML classic before step decay took over:
@@ -741,6 +753,10 @@ Drop $\eta$ by a fixed factor at preset epochs (e.g. 30, 60,
 
 ::: {.slide title="Multi-step training"}
 @!lr-scheduler-multi-factor-scheduler-2
+
+Notice the loss curve changes slope after each scheduled
+drop: high $\eta$ explores quickly, then lower $\eta$
+settles into a narrower basin.
 :::
 
 ::: {.slide title="Cosine annealing"}
@@ -754,6 +770,10 @@ restarts:
 
 ::: {.slide title="Cosine training"}
 @!lr-scheduler-cosine-scheduler-2
+
+Cosine avoids abrupt jumps. The tail becomes increasingly
+conservative, which often improves final accuracy without
+manual milestone tuning.
 :::
 
 ::: {.slide title="Warmup"}
@@ -767,6 +787,10 @@ first ~1k steps fixes it:
 
 ::: {.slide title="Warmup training"}
 @!lr-scheduler-warmup-2
+
+Warmup spends early epochs ramping up instead of taking a
+full-size first step. This protects unstable initial
+statistics, then hands off to the cosine decay.
 :::
 
 ::: {.slide title="Recap"}

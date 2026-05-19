@@ -412,7 +412,7 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Pooling summarizes local evidence"}
 **Pooling** is a parameter-free downsampling operation:
 slide a window, replace it with a single summary value
 (max or mean).

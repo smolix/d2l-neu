@@ -629,7 +629,7 @@ We will meet this integral again when we study continuous random variables in :n
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Integration"}
 Differentiation gives slopes; integration gives totals.
 
 $$\int_a^b f(x)\, dx = \text{signed area under } f \text{ on } [a, b].$$

@@ -400,7 +400,7 @@ algorithms, and potential pitfalls one needs to be aware of.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="The HPO API Pattern"}
 HPO algorithms have a common structure. The next two decks
 will swap out pieces (parallel scheduling, multi-fidelity).
 This deck factors out the common skeleton:
@@ -466,6 +466,11 @@ network width:
 :::
 
 ::: {.slide title="Run + results"}
+The incumbent curve reports the best validation error found so far
+as the tuner spends more wall-clock time. Downward steps mean a new
+configuration beat the previous best; flat regions mean the search
+is still evaluating but has not improved the incumbent.
+
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
 
 . . .

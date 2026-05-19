@@ -608,7 +608,7 @@ Taylor series have two primary applications:
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Single-Variable Calculus"}
 The single-variable calculus toolkit underlying gradient
 descent. The derivative
 
@@ -636,6 +636,9 @@ line is the tangent, its slope is $f'(x)$:
 :::
 
 ::: {.slide title="Zooming further"}
+As the view narrows around a smooth point, curvature becomes less
+visible and the tangent line becomes the right local model.
+
 @single-variable-calculus-differential-calculus-3
 
 . . .
@@ -652,6 +655,9 @@ foundation of GD analysis:
 :::
 
 ::: {.slide title="Higher-order derivatives"}
+The second derivative measures how the slope itself changes:
+$f''(x) > 0$ curves upward, $f''(x) < 0$ curves downward.
+
 @single-variable-calculus-higher-order-derivatives
 :::
 

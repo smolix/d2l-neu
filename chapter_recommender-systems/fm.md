@@ -177,7 +177,7 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Factorization Machines"}
 **Factorization Machines** (Rendle, 2010) — generalize MF
 to *arbitrary* feature pairs, not just (user, item).
 Predict from a sparse feature vector $\mathbf{x}$ via:

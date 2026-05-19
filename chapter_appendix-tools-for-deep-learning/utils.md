@@ -1392,7 +1392,7 @@ use `Trainer.validation_step` (or its return value) instead.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="The d2l Utility Layer"}
 The `d2l` package collects shared utility classes and
 functions reused across the book — `Trainer`, `Module`,
 `DataModule`, `Classifier`, plotting helpers, etc.

@@ -514,7 +514,7 @@ we can use $K$-fold cross-validation .
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="House prices: a full ML pipeline"}
 **House Prices: Advanced Regression Techniques** —
 predict sale prices of Ames, Iowa houses from 80 numeric
 and categorical features. A small but realistic end-to-end

@@ -1016,7 +1016,7 @@ net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="BERT for NLI"}
 Pretrained BERT does NLI off the shelf, near
 state-of-the-art, with one trick: feed
 `<cls> premise <sep> hypothesis <sep>` and stick a 3-way
@@ -1049,6 +1049,10 @@ the teaching contract:
 :::
 
 ::: {.slide title="Instantiate pretrained BERT"}
+The loaded encoder returns contextual token representations and
+the `<cls>` representation. Fine-tuning reuses that backbone and
+adds only a small task head.
+
 @!natural-language-inference-bert-loading-pretrained-bert-3
 :::
 
@@ -1079,7 +1083,9 @@ fine-tuned end-to-end:
 ::: {.slide title="Fine-tuning"}
 Standard cross-entropy + Adam, low learning rate (e.g.
 2e-5). Few epochs are enough — the model already knows
-language; we're just teaching it the specific task:
+language; we're just teaching it the specific task. Validation
+accuracy is the main signal, since training loss can keep falling
+after the classifier starts overfitting SNLI artifacts:
 
 @natural-language-inference-bert-fine-tuning-bert-3
 :::

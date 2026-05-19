@@ -197,7 +197,7 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Adadelta"}
 **Adadelta** (Zeiler, 2012) takes RMSProp further: adapt
 per-parameter step magnitudes *and* remove the global
 learning rate entirely.
@@ -237,6 +237,10 @@ Two state buffers per parameter (`s` and `delta`):
 
 ::: {.slide title="Training the airfoil model"}
 @adadelta-implementation-2
+
+The loss curve should be read as a scale-adaptation demo:
+Adadelta trains without the hand-picked global learning
+rate that earlier optimizers needed.
 :::
 
 ::: {.slide title="Concise: framework Adadelta"}

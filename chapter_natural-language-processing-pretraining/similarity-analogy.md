@@ -363,7 +363,7 @@ get_analogy('do', 'did', 'go', glove_6b50d)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Similarity and Analogy"}
 What does a trained word embedding actually capture? Two
 classical probes:
 
@@ -407,7 +407,8 @@ into a vocab + a tensor of vectors:
 
 ::: {.slide title="Word similarity"}
 $k$ nearest neighbors by cosine distance. Try seed words:
-synonyms, related concepts, named entities.
+synonyms, related concepts, named entities. The result is
+distributional similarity, not dictionary synonymy:
 
 @similarity-analogy-word-similarity-1
 
@@ -421,6 +422,10 @@ synonyms, related concepts, named entities.
 :::
 
 ::: {.slide title="Word similarity (more)"}
+Expect topical neighbors as well as true synonyms. Static
+vectors collapse all senses of a word into one point, so
+polysemous words can produce mixed neighborhoods.
+
 @similarity-analogy-word-similarity-4
 
 . . .
@@ -441,6 +446,10 @@ of the query vector to read out $D$.
 :::
 
 ::: {.slide title="More analogies"}
+Good analogy results mean the training corpus encoded a fairly
+linear relation. Bad results are still useful: they show the
+limits of one-vector-per-word embeddings.
+
 @similarity-analogy-word-analogy-3
 
 . . .

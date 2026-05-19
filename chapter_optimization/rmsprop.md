@@ -228,7 +228,7 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="From Adagrad to RMSProp"}
 Adagrad's accumulator $\mathbf{s}_t = \sum_{\tau \le t} \mathbf{g}_\tau^2$
 grows without bound. The effective learning rate
 $\eta / \sqrt{\mathbf{s}_t}$ collapses to zero — fine for

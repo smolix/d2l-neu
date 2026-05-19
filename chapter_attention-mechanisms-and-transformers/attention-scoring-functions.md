@@ -676,7 +676,7 @@ we can use the additive attention scoring function instead. Optimizing these lay
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Scoring Functions"}
 Attention pooling needs a *scoring function*
 $a(\mathbf{q}, \mathbf{k})$ that softmax turns into weights:
 

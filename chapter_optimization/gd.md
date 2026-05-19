@@ -391,7 +391,7 @@ This algorithm converges rapidly (for an analysis and proof see e.g., :citet:`Bo
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Gradient Descent"}
 Plain gradient descent isn't what trains deep nets — SGD
 and its descendants do — but every issue those methods
 hit shows up here first, in cleaner form: LR sensitivity,

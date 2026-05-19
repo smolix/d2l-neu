@@ -665,7 +665,7 @@ LSTMs can alleviate vanishing and exploding gradients.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Long Short-Term Memory"}
 Vanilla RNNs hit a ceiling: gradients vanish across long
 sequences. **LSTMs** (Hochreiter & Schmidhuber, 1997) fix
 this by giving each unit a *memory cell* with a self-loop

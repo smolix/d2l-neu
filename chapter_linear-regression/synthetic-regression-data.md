@@ -393,7 +393,7 @@ We will put this to good use in the next section.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Synthetic data with a known answer"}
 Before we train a model we need **data**. For pedagogy, we'll
 synthesize it — known weights, known noise, and a guaranteed
 correct answer to compare against:
@@ -409,16 +409,16 @@ This chapter:
   actually use).
 :::
 
-::: {.slide title="Generating the dataset"}
+::: {.slide title="Synthetic data module"}
 A `DataModule` subclass that draws features and computes labels
 in `__init__`:
 
 @synthetic-regression-data
 
 @synthetic-regression-data-generating-the-dataset-1
+:::
 
-. . .
-
+::: {.slide title="Known ground truth"}
 Instantiate with the true `w = [2, -3.4]`, `b = 4.2`:
 
 @synthetic-regression-data-generating-the-dataset-2

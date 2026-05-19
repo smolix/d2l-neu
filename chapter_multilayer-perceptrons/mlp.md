@@ -658,7 +658,7 @@ in many cases.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="MLPs add nonlinear hidden layers"}
 A **multilayer perceptron** (MLP) is a stack of
 fully-connected layers separated by elementwise
 nonlinearities. The simplest deep network — and the

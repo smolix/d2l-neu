@@ -625,17 +625,17 @@ Different sets of parameters can have different update behaviors within the same
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Weight decay limits overfitting"}
 The simplest **regularization** technique in the book —
 add a penalty on the squared norm of the weights:
 
 $$L_{\text{reg}}(\mathbf{w}, b) =
   L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2.$$
 
-The optimizer sees an extra $-\lambda\mathbf{w}$ in the
-gradient → weights *decay* toward zero each step. One
-hyperparameter $\lambda$ (`wd` in code) controls how
-much.
+The gradient gains a $+\lambda\mathbf{w}$ term, so the
+update subtracts $\eta\lambda\mathbf{w}$ and weights
+*decay* toward zero each step. One hyperparameter
+$\lambda$ (`wd` in code) controls how much.
 
 Why? An overparameterized model fit to a tiny dataset
 memorizes the noise. Capping how big the weights can grow
@@ -658,19 +658,17 @@ Far more parameters than data — perfect overfitting setup:
 @weight-decay-high-dimensional-linear-regression
 :::
 
-::: {.slide title="The penalty + the model"}
+::: {.slide title="The L2 penalty"}
 The penalty itself is one line:
 
 @weight-decay-defining-ell-2-norm-penalty
+:::
 
-. . .
-
+::: {.slide title="Adding weight decay to the model"}
 Subclass the from-scratch linear regression to add the penalty
 into the loss:
 
 @weight-decay-defining-the-model-1
-
-. . .
 
 @weight-decay-defining-the-model-2
 :::
@@ -710,8 +708,9 @@ via parameter groups.)
 ::: {.slide title="Recap"}
 - $\ell_2$-regularized loss = original loss + $\frac{\lambda}{2}
   \|\mathbf{w}\|_2^2$.
-- Per-step effect: an extra $-\lambda \mathbf{w}$ in the
-  gradient — weights are pulled toward zero each update.
+- Per-step effect: gradient gets $+\lambda \mathbf{w}$, so
+  the update shrinks weights by subtracting
+  $\eta\lambda\mathbf{w}$.
 - Hyperparameter $\lambda$ ("`wd`" in code) trades training
   fit for generalization. Tune it on a validation set.
 - Frameworks expose this as the optimizer's `weight_decay=` arg.

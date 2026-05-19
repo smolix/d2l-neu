@@ -554,7 +554,7 @@ applying DenseNet may require more memory-efficient implementations that may inc
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="DenseNet concatenates features"}
 **DenseNet** (Huang et al., 2017) takes the residual idea
 one step further: instead of *adding* skip connections,
 **concatenate** them.
@@ -573,16 +573,19 @@ ResNet for similar accuracy. Cons: memory grows linearly
 with depth within a block — handled by transitions.
 :::
 
-::: {.slide title="Conv block + dense block"}
+::: {.slide title="Conv block"}
 A small conv block (BN → ReLU → 3×3 conv) is the unit; a
-DenseBlock stacks several of them and concatenates outputs as
-it goes:
+DenseBlock will reuse it repeatedly.
 
 @densenet-densely-connected-networks-densenet
 
 @densenet-dense-blocks-1
+:::
 
-. . .
+::: {.slide title="Dense block"}
+Now stack the conv blocks. After each block, concatenate its new
+features onto the running input, so later blocks see everything
+computed so far.
 
 @densenet-dense-blocks-2
 :::

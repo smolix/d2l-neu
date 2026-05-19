@@ -61,7 +61,7 @@ The reinforcement learning problem is typically modeled using Markov Decision Pr
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Markov Decision Processes"}
 Reinforcement learning starts with an **agent-environment loop**.
 At time $t$:
 

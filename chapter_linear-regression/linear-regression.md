@@ -799,7 +799,7 @@ and ultimately, evaluation on previously unseen data.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Linear regression in one model"}
 The simplest predictive model: a **linear function** of the inputs
 plus a bias.
 

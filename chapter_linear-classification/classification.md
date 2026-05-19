@@ -254,7 +254,7 @@ Classification is a sufficiently common problem that it warrants its own conveni
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="The shared classifier base"}
 A small `Classifier` base class that every classification model
 in the book inherits from. Same role as `d2l.Module` for
 regression — but with classification-specific defaults:
@@ -285,13 +285,15 @@ Accuracy is what many benchmarks report, but it is not a useful
 gradient: one tiny score change usually leaves argmax unchanged.
 :::
 
-::: {.slide title="The `Classifier` class"}
+::: {.slide title="Base classifier imports"}
 @classification-the-base-classification-model
+:::
 
+::: {.slide title="The `Classifier` class"}
 @classification-the-classifier-class-1
+:::
 
-. . .
-
+::: {.slide title="Default optimizer hook"}
 A default `configure_optimizers` on `Module` so subclasses don't
 have to write it:
 

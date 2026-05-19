@@ -738,7 +738,7 @@ You can lose significant performance by moving data without care.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Working on GPUs"}
 GPUs are the reason modern deep learning works at scale. A
 single 4090 does ~80 TFLOPs of FP16 — about a thousand times
 faster than a CPU on the matmul-heavy ops convolutions and

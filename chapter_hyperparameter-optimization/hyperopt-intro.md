@@ -376,7 +376,7 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="What Is HPO?"}
 Hyperparameters are the knobs you tune *outside* gradient
 descent: learning rate, batch size, depth, dropout rate.
 Usually 5–20 of them; the validation loss is non-convex,

@@ -381,7 +381,7 @@ So far all padding that we discussed simply extended images with zeros. This has
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Padding and stride control resolution"}
 A plain convolution always **shrinks** its input. With an
 $n \times n$ image and a $k \times k$ kernel:
 
@@ -439,15 +439,15 @@ That's why every modern CNN you see uses 3×3 kernels with
 padding 1, or 5×5 with padding 2, or 7×7 with padding 3.
 :::
 
-::: {.slide title="Padding in code"}
+::: {.slide title="Padding helper"}
 Define a helper to wrap input/output reshaping, then ask the
 basic question: 8×8 input, 3×3 kernel, padding=1 — what's
 the output shape?
 
 @padding-and-strides-padding-and-stride
+:::
 
-. . .
-
+::: {.slide title="Shape-preserving padding"}
 @padding-and-strides-padding-1
 
 Same shape — the padded conv is "shape-preserving". With an

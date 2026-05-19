@@ -139,7 +139,7 @@ These two losses are interchangeable for personalized ranking in recommendation.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Personalized Ranking"}
 Most real-world recommender data is **implicit** —
 clicks, watches, purchases. There are no explicit ratings,
 and the unobserved (user, item) pairs are a *mix* of

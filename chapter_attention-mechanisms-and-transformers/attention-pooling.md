@@ -444,7 +444,7 @@ The attention weight is assigned according to the similarity (or distance) betwe
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Attention Pooling by Similarity"}
 A 1964 statistics paper hides a baby attention mechanism.
 The Nadaraya–Watson estimator computes
 
@@ -522,6 +522,10 @@ attention sharpness:
 :::
 
 ::: {.slide title="Heatmaps for varying width"}
+As the Gaussian bandwidth grows, attention spreads across more
+training points. Narrow bands memorize local neighborhoods;
+wide bands approach a smoother global average.
+
 @attention-pooling-adapting-attention-pooling-2
 :::
 

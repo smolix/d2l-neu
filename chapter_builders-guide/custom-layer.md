@@ -369,7 +369,7 @@ Layers can have local parameters, which can be created through built-in function
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Custom Layers"}
 `torch.nn` ships 100+ layers, but occasionally — a new
 architecture, an unusual normalization, a custom block —
 you need one the framework doesn't have.

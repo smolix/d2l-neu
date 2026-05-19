@@ -529,7 +529,7 @@ by adding positional encoding to the input representations.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Self-Attention"}
 Bahdanau attention links *two* sequences (decoder steps to
 encoder steps). What if we use the same trick *within* a
 single sequence — let every token query every other token?

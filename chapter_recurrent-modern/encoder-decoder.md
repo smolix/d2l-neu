@@ -292,7 +292,7 @@ to a variable-length sequence.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Encoder-Decoder"}
 Translation, summarization, dialogue — variable-length
 input mapped to variable-length output, no positional
 alignment between the two.

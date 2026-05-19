@@ -362,7 +362,7 @@ We conclude with an illustration of the computational graph and its dependencies
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Automatic Parallelism"}
 Once the framework runs asynchronously and tracks
 dependencies, two kinds of parallelism happen *for free*:
 

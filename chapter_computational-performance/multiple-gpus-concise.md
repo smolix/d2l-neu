@@ -576,7 +576,7 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Concise multi-GPU training"}
 The previous section did data-parallel training the hard
 way — manual `all_reduce`, manual replica management. In
 practice, every framework wraps it in a one-liner:
@@ -623,19 +623,31 @@ minibatch across replicas, gathers outputs:
 :::
 
 ::: {.slide title="Training loop"}
-Identical to single-GPU: forward, backward, step. The
-data-parallel wrapper does the gradient averaging
-behind the scenes:
+The loop looks like ordinary single-GPU training because
+the wrapper owns the distributed work:
 
-@multiple-gpus-concise-training-1
+- scatter each minibatch across devices;
+- run the same model replica on each shard;
+- average gradients across replicas;
+- step one synchronized set of parameters.
+
+The important lesson is the interface: after wrapping the
+model, most training code should not need to know how many
+GPUs are present.
 :::
 
 ::: {.slide title="Single-GPU baseline"}
 @multiple-gpus-concise-training-2
+
+Use this as the throughput baseline before the data-parallel
+wrapper adds replication and gradient averaging.
 :::
 
 ::: {.slide title="Two GPUs"}
 @multiple-gpus-concise-training-3
+
+The training loop is unchanged; the wrapper splits the
+minibatch and synchronizes gradients under the hood.
 :::
 
 ::: {.slide title="Recap"}

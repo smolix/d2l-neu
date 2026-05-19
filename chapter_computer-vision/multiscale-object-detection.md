@@ -292,7 +292,7 @@ in :numref:`sec_ssd`.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="Multiscale Detection"}
 A single feature map can't detect objects at all scales —
 small objects are tiny on the deep feature maps, large
 objects don't fit in the receptive field of the early
@@ -318,14 +318,17 @@ NMS prunes the result.
 
 ::: {.slide title="Anchors on a feature map"}
 Tile each pixel of the feature map with $n + m - 1$
-anchors. The pixel positions back-project to image coords:
+anchors. The pixel positions back-project to image coords,
+so a smaller feature map means fewer candidate centers but
+larger receptive fields:
 
 @multiscale-object-detection-multiscale-anchor-boxes-2
 :::
 
 ::: {.slide title="Small objects on a fine map"}
 $4 \times 4$ feature map, small anchor scale → dense
-coverage of small image regions:
+coverage of small image regions. Notice the many anchor
+centers: that density is what small objects need.
 
 @multiscale-object-detection-multiscale-anchor-boxes-3
 :::
@@ -339,7 +342,9 @@ anchors, each covering more area:
 
 ::: {.slide title="Large objects on the coarsest map"}
 $1 \times 1$ feature map, anchor scale 0.8 — the whole
-image as a single anchor, with several aspect ratios:
+image as a single anchor, with several aspect ratios. This
+level cannot localize tiny details, but it matches objects
+that occupy most of the image.
 
 @multiscale-object-detection-multiscale-anchor-boxes-5
 :::

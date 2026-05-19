@@ -412,7 +412,7 @@ in subsequent sections of this chapter.
 
 <!-- slides -->
 
-::: {.slide}
+::: {.slide title="The R-CNN Family"}
 SSD does it all in one forward pass. The **R-CNN family**
 takes a different approach: first propose regions of
 interest, then classify and refine each one. Slower per
@@ -455,12 +455,20 @@ batchable:
 ![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
 
 @rcnn-fast-r-cnn-1
+:::
 
-. . .
+::: {.slide title="RoI coordinates"}
+Each RoI row stores `(batch_id, x1, y1, x2, y2)` in input-image
+coordinates. `spatial_scale` maps those coordinates onto the
+shared feature map before pooling:
 
 @rcnn-fast-r-cnn-2
+:::
 
-. . .
+::: {.slide title="RoI pooling output"}
+No matter how large the proposal is, the result has fixed shape
+`(num_rois, channels, pooled_h, pooled_w)`. That fixed-size tensor
+is what lets Fast R-CNN batch all region heads:
 
 @rcnn-fast-r-cnn-3
 :::

@@ -58,7 +58,7 @@ def missing_libraries(binary, ld_library_path):
 
 def check_mxnet():
     venv = ROOT / ".venv-mxnet"
-    libmxnet = venv / "lib/python3.11/site-packages/mxnet/libmxnet.so"
+    libmxnet = venv / "lib/python3.12/site-packages/mxnet/libmxnet.so"
     if not libmxnet.is_file():
         sys.exit(f"MXNet runtime check failed: {libmxnet} not found")
     if shutil.which("ldd") is None:

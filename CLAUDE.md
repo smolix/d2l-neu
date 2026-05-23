@@ -105,7 +105,7 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 
 ## Environment
 
-- Python 3.11+, XeLaTeX + rsvg-convert (PDF only). Quarto is declared as
+- Python 3.12+, XeLaTeX + rsvg-convert (PDF only). Quarto is declared as
   a `build` extra (`uv sync --extra build` populates `.venv-build/bin/quarto`).
 - NVIDIA driver **590.48+** (CUDA 13.x driver line; backward-compatible
   with the CUDA 11.7/12.x pip toolkits the framework venvs install).

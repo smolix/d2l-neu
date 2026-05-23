@@ -2,10 +2,12 @@
 """Update pyproject.toml's mxnet wheel pin to the latest release.
 
 Queries `https://api.github.com/repos/smolix/mxnet/releases/latest` for
-the most recent published release, finds the cp311-cp311-linux_x86_64
+the most recent published release, finds the cp312-cp312-linux_x86_64
 wheel asset, and rewrites the `mxnet @ <url>` line in pyproject.toml in
 place. Idempotent: skips the write (and exits 0) when already on the
-latest wheel.
+latest wheel. The line being replaced may currently be either an
+`https://` URL (the usual case) or a `file://` URL (when a local build
+was pinned manually); both forms are recognised.
 
 Usage:
     python3 tools/update_mxnet_wheel.py            # update + report
@@ -26,18 +28,19 @@ import urllib.request
 from pathlib import Path
 
 REPO = 'smolix/mxnet'
-ASSET_SUFFIX = '-cp311-cp311-linux_x86_64.whl'
+ASSET_SUFFIX = '-cp312-cp312-linux_x86_64.whl'
 PYPROJECT = Path(__file__).resolve().parent.parent / 'pyproject.toml'
 # Matches the entire mxnet wheel line including the python_version marker:
-#   "mxnet @ https://… ; python_version == '3.11'"
+#   "mxnet @ https://… ; python_version == '3.12'"
+# Also accepts `file://` so a manually-pinned local wheel can be replaced.
 LINE_RE = re.compile(
-    r'"mxnet @ https://[^"]+'
-    r'(\s*;\s*python_version\s*==\s*\'3\.11\')?"',
+    r'"mxnet @ (?:https|file)://[^"]+'
+    r'(\s*;\s*python_version\s*==\s*\'3\.\d+\')?"',
     re.MULTILINE)
 
 
 def find_latest_wheel():
-    """Return (tag, wheel_name, wheel_url) for the latest cp311 wheel."""
+    """Return (tag, wheel_name, wheel_url) for the latest cp312 wheel."""
     api = f'https://api.github.com/repos/{REPO}/releases/latest'
     req = urllib.request.Request(api, headers={'Accept': 'application/vnd.github+json'})
     try:
@@ -73,7 +76,7 @@ def main():
     if not m:
         sys.exit(f'No `"mxnet @ https://…"` line found in {PYPROJECT}')
     current = m.group(0)
-    new_line = f'"mxnet @ {url} ; python_version == \'3.11\'"'
+    new_line = f'"mxnet @ {url} ; python_version == \'3.12\'"'
     if current == new_line:
         print('pyproject.toml already pinned to latest — no change.')
         return

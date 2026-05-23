@@ -29,7 +29,7 @@ def ensure_nvidia_ld_path():
         return
     site_roots = {
         Path(sysconfig.get_paths().get("purelib", "")),
-        Path(sys.executable).resolve().parent.parent / "lib/python3.11/site-packages",
+        Path(sys.executable).resolve().parent.parent / "lib/python3.12/site-packages",
     }
     lib_dirs: list[str] = []
     for site_root in site_roots:

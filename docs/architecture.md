@@ -465,7 +465,7 @@ uv sync --extra mxnet --extra run
 - TensorFlow and MXNet venvs install their own
   `nvidia-*-cu12` / `nvidia-*-cu11` runtime libs; the Makefile prepends
   those paths to `LD_LIBRARY_PATH` before launching notebooks.
-- uv.lock covers Python 3.11–3.14, linux x86_64 only.
+- uv.lock covers Python 3.12+, linux x86_64 only.
 - The `run` extra adds jupyter, nbconvert, ipykernel.
 
 ---

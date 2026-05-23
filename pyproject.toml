@@ -3,7 +3,7 @@ name = "d2l"
 version = "1.0.3"
 description = "Dive into Deep Learning"
 license = "MIT-0"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.13"
 authors = [{ name = "D2L Developers", email = "d2l.devs@gmail.com" }]
 
 dependencies = [
@@ -28,9 +28,12 @@ pytorch = [
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
     # Upstream MXNet 1.9.1 / cu117 has no Blackwell kernels and no PTX fallback.
-    # The wheel is cp311-only; constrain via marker so resolution succeeds on
-    # other supported Python versions too.
-    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260518.2/mxnet-2.0.0%2Bcu13.bw.20260518.2-cp311-cp311-linux_x86_64.whl ; python_version == '3.11'",
+    # The wheel is cp312-only; constrain via marker so resolution succeeds on
+    # other supported Python versions too. One-off pin to a locally-built wheel
+    # because the GitHub `release-wheel` action for tag v2.0.0+cu13.bw.20260522
+    # failed; run `tools/update_mxnet_wheel.py` once the release is published
+    # to switch back to the URL pin.
+    "mxnet @ file:///home/smola/mxnet/dist/mxnet-2.0.0+cu13.bw.20260522-cp312-cp312-linux_x86_64.whl ; python_version == '3.12'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,

@@ -30,11 +30,16 @@ FRAMEWORKS = ("pytorch", "tensorflow", "jax", "mxnet")
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def last_error(ipynb: Path) -> str | None:
-    """Return a one-line summary of the last error cell in *ipynb*, or None."""
+def _parse_nb(ipynb: Path):
     try:
-        nb = json.loads(ipynb.read_text())
+        return json.loads(ipynb.read_text())
     except Exception:
+        return None
+
+
+def last_error_from(nb: dict | None) -> str | None:
+    """One-line summary of the last error cell in *nb*, or None."""
+    if nb is None:
         return None
     for cell in reversed(nb.get("cells", [])):
         for output in reversed(cell.get("outputs", []) or []):
@@ -47,37 +52,69 @@ def last_error(ipynb: Path) -> str | None:
     return None
 
 
+def has_executed_cells(nb: dict | None) -> bool | None:
+    """True if *nb* contains code cells with a populated execution_count
+    (i.e. nbconvert --execute actually ran). False if all code cells have
+    execution_count=None (regenerated but never executed). None if the
+    notebook has no code cells or couldn't be parsed."""
+    if nb is None:
+        return None
+    has_code = False
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") != "code":
+            continue
+        has_code = True
+        if cell.get("execution_count") is not None:
+            return True
+    return False if has_code else None
+
+
 def scan(framework: str, include_errors: bool) -> dict:
     base = ROOT / "_notebooks" / framework
     notebooks = sorted(base.rglob("chapter_*/*.ipynb")) if base.exists() else []
     ok: list[Path] = []
+    stale: list[tuple[Path, str | None]] = []
     failed: list[tuple[Path, str | None]] = []
-    for nb in notebooks:
-        stamp = nb.with_suffix(".executed")
-        if stamp.exists():
-            ok.append(nb)
-        else:
-            err = last_error(nb) if include_errors else None
-            failed.append((nb, err))
-    return {"total": len(notebooks), "ok": ok, "failed": failed}
+    for nb_path in notebooks:
+        stamp = nb_path.with_suffix(".executed")
+        nb = _parse_nb(nb_path)
+        err = last_error_from(nb) if include_errors else None
+        executed = has_executed_cells(nb)
+        if not stamp.exists():
+            failed.append((nb_path, err))
+            continue
+        # A stamp without an actually-executed .ipynb is a leftover. nbconvert
+        # --execute populates execution_count on code cells; gen_notebooks
+        # writes them as None. So a stamp paired with all-None code cells
+        # means the last execution attempt failed (no `touch $@` ran) but the
+        # stamp from an earlier run is still on disk.
+        if executed is False:
+            stale.append((nb_path, err))
+            continue
+        ok.append(nb_path)
+    return {"total": len(notebooks), "ok": ok, "stale": stale, "failed": failed}
 
 
 def format_report(framework: str, result: dict) -> str:
     total = result["total"]
     n_ok = len(result["ok"])
+    n_stale = len(result["stale"])
     n_fail = len(result["failed"])
     if total == 0:
         return f"  {framework:10s}  no notebooks found under _notebooks/{framework}/"
-    line = f"  {framework:10s}  OK {n_ok:>3d} / {total:>3d}   FAILED {n_fail:>3d}"
-    if n_fail == 0:
-        return line
-    fail_lines = [line]
+    line = f"  {framework:10s}  OK {n_ok:>3d} / {total:>3d}   STALE {n_stale:>2d}   FAILED {n_fail:>3d}"
+    out = [line]
     for nb, err in result["failed"]:
         rel = nb.relative_to(ROOT / "_notebooks" / framework).with_suffix("")
-        fail_lines.append(f"      FAIL  {rel}")
+        out.append(f"      FAIL   {rel}")
         if err:
-            fail_lines.append(f"            └─ {err}")
-    return "\n".join(fail_lines)
+            out.append(f"             └─ {err}")
+    for nb, err in result["stale"]:
+        rel = nb.relative_to(ROOT / "_notebooks" / framework).with_suffix("")
+        out.append(f"      STALE  {rel}  (.ipynb has no executed cells — last run failed or notebook regenerated since)")
+        if err:
+            out.append(f"             └─ {err}")
+    return "\n".join(out)
 
 
 def main() -> int:

@@ -146,6 +146,18 @@ d2l/.built d2l/pytorch.py d2l/tensorflow.py d2l/jax.py d2l/mxnet.py &: \
 	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*-$(TS).log
 	@touch $@
 
+# TensorFlow venv needs an extra post-sync step: the TF 2.21 wheel's RUNPATH
+# omits nvidia/cusolver/lib, so TF silently falls back to CPU. Applying the
+# cusolver symlinks at sync time means a fresh `uv sync` doesn't leave the venv
+# in a CPU-only state. See tools/check_runtime_deps.py for the gory detail.
+.venv-tensorflow/.synced: pyproject.toml uv.lock tools/check_runtime_deps.py
+	@mkdir -p $(LOGDIR)
+	@echo "=== Syncing venv for tensorflow ==="
+	UV_PROJECT_ENVIRONMENT=.venv-tensorflow uv sync --extra tensorflow --extra run 2>&1 | tee $(LOGDIR)/venv-tensorflow-$(TS).log
+	@echo "=== Applying TF cusolver RUNPATH workaround ==="
+	@python3 tools/check_runtime_deps.py tensorflow
+	@touch $@
+
 # Dedicated venv that installs the Quarto CLI (via the quarto-cli PyPI package).
 # Used by HTML and PDF recipes so `quarto` is a real declared dependency rather
 # than an implicit system tool. Override-style rule for the `build` extra:
@@ -268,8 +280,15 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
 # ── Notebooks (generate) ──────────────────────────────────
+# d2l/.built is order-only (|) here: gen_notebooks.py doesn't import d2l,
+# so d2l/.built's mtime never needs to invalidate .generated. Making it a
+# hard prereq caused a re-run: after sub-makes spawned, $(wildcard
+# d2l/_blocks/*/MANIFEST.mk) resolved to a larger set than at the initial
+# parse (MANIFEST.mk files didn't exist yet), making d2l/.built appear stale
+# in sub-make evaluation. That advanced d2l/.built's mtime past .generated,
+# causing gen_notebooks to re-fire mid-execution and wipe completed notebooks.
 
-_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py d2l/.built | .venv-build/.synced
+_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py | d2l/.built .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating $* notebooks ==="
 	@PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
@@ -412,8 +431,12 @@ run-notebooks-%: _notebooks/%/.generated
 
 # Execute all frameworks with one global CPU queue and one global GPU queue.
 # `notebooks` runs first so CPU/GPU sub-makes cannot generate the same
-# framework's notebooks concurrently. -k on every sub-make keeps the queues
-# draining even after individual notebook failures.
+# framework's notebooks concurrently. `d2l/.built` is order-only in the
+# `.generated` rule so a mid-build mtime advance on d2l/.built (e.g. from
+# the MANIFEST.mk wildcard settling after the first lib build) never
+# invalidates an already-complete `.generated` stamp and re-runs gen_notebooks.
+# -k on every sub-make keeps the queues draining even after individual
+# notebook failures.
 run-all-notebooks: notebooks
 	@echo "=== Running all notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
 	@cpu_rc=0; gpu_rc=0; \

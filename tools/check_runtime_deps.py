@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Validate native runtime dependencies for framework venvs.
+"""Validate (and where possible repair) native runtime deps for framework venvs.
 
-This catches shared-library dependencies that Python package metadata cannot
-express. Today that mainly means the custom MXNet wheel, which links against
-system OpenCV 4.6 in addition to the CUDA/NCCL/cuDNN libraries installed in
-the venv.
+Two checks today:
+  - mxnet: the custom MXNet wheel links against system OpenCV 4.6, which the
+    Python package metadata cannot express. This branch reports missing libs
+    and points at the right `apt-get` packages.
+  - tensorflow: TF 2.21's `libtensorflow_framework.so.2` has a packaging bug —
+    its RUNPATH lists nvidia/cublas/lib, nvidia/cudnn/lib, etc. but NOT
+    nvidia/cusolver/lib. The cusolver wheel is installed, so TF can't dlopen
+    libcusolver.so.11 and silently falls back to CPU. We symlink the cusolver
+    libs into nvidia/cusparse/lib/ (which IS on the runpath). The symlinks are
+    re-created on every venv sync because `uv sync` wipes them.
 """
 import argparse
 import os
@@ -80,13 +86,86 @@ def check_mxnet():
     sys.exit(1)
 
 
+def fix_tensorflow():
+    """Symlink libcusolver.so.{11,Mg.11} from nvidia/cusolver/lib into
+    nvidia/cusparse/lib so TF's RUNPATH can find them. Idempotent."""
+    venv = ROOT / ".venv-tensorflow"
+    site = venv / "lib/python3.12/site-packages/nvidia"
+    cusolver_dir = site / "cusolver/lib"
+    cusparse_dir = site / "cusparse/lib"
+
+    if not cusolver_dir.is_dir():
+        sys.exit(
+            f"TensorFlow runtime fix: {cusolver_dir} not found "
+            "(nvidia-cusolver-cu12 wheel missing?)"
+        )
+    if not cusparse_dir.is_dir():
+        sys.exit(
+            f"TensorFlow runtime fix: {cusparse_dir} not found "
+            "(nvidia-cusparse-cu12 wheel missing?)"
+        )
+
+    for soname in ("libcusolver.so.11", "libcusolverMg.so.11"):
+        src = cusolver_dir / soname
+        dst = cusparse_dir / soname
+        if not src.is_file():
+            sys.exit(f"TensorFlow runtime fix: source {src} missing")
+        if dst.is_symlink() or dst.exists():
+            if dst.is_symlink() and dst.resolve() == src.resolve():
+                continue
+            dst.unlink()
+        dst.symlink_to(src)
+        print(f"  symlinked {dst} -> {src}")
+
+    # Smoke-test: ask TF for the GPU list. If empty, the symlink fix didn't
+    # actually unblock dlopen — bail loudly so the failure isn't silent.
+    py = venv / "bin/python"
+    if not py.is_file():
+        return
+    result = subprocess.run(
+        [
+            str(py),
+            "-c",
+            "import os; os.environ['TF_CPP_MIN_LOG_LEVEL']='2';"
+            "import tensorflow as tf;"
+            "gpus = tf.config.list_physical_devices('GPU');"
+            "print('GPUS:', len(gpus))",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(
+            "TensorFlow runtime fix: TF import failed:",
+            result.stderr.strip(),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    last = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else ""
+    if not last.startswith("GPUS:"):
+        print("TensorFlow runtime fix: unexpected smoke-test output:", result.stdout, file=sys.stderr)
+        sys.exit(1)
+    n = int(last.split(":", 1)[1].strip())
+    if n == 0:
+        print(
+            "TensorFlow runtime fix: symlinks placed but TF still reports 0 GPUs.\n"
+            "Re-run with TF_CPP_VMODULE='dso_loader=2' to find the next missing lib.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(f"  TF sees {n} GPU(s)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("framework", choices=["mxnet"])
+    parser.add_argument("framework", choices=["mxnet", "tensorflow"])
     args = parser.parse_args()
 
     if args.framework == "mxnet":
         check_mxnet()
+    elif args.framework == "tensorflow":
+        fix_tensorflow()
 
 
 if __name__ == "__main__":

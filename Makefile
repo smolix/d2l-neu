@@ -48,6 +48,7 @@ RUN_NOTEBOOK_TARGETS := $(addprefix run-notebooks-,$(FRAMEWORKS))
 RUN_NOTEBOOK_CPU_TARGETS := $(addprefix run-notebooks-cpu-,$(FRAMEWORKS))
 RUN_NOTEBOOK_GPU_TARGETS := $(addprefix run-notebooks-gpu-,$(FRAMEWORKS))
 RUN_NOTEBOOK_MULTIGPU_TARGETS := $(addprefix run-notebooks-multigpu-,$(FRAMEWORKS))
+SLIDE_STAMPS := $(addprefix _slides/,$(addsuffix /.built,$(FRAMEWORKS)))
 
 # Auto-detect GPU count and memory via nvidia-smi.
 # Rule of thumb: each notebook job needs ~11GB GPU memory, so a 24GB GPU
@@ -87,7 +88,7 @@ export PYTHONUNBUFFERED := 1
 
 # ── Phony targets ──────────────────────────────────────────
 
-.PHONY: help all all-quick html lib clean veryclean
+.PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides
 
@@ -387,14 +388,23 @@ run-notebooks-multigpu-%: _notebooks/%/.generated $$(EXECUTED_MULTI_GPU_$$*)
 
 # Aggregate per-framework target. Generate notebooks before spawning resource
 # queues so CPU and GPU sub-makes cannot race on _notebooks/<fw>/.generated.
+#
+# Each sub-make uses -k (--keep-going) so a single failing notebook does not
+# stop Make from attempting the rest. The multi-GPU queue runs after the
+# single-GPU queue drains regardless of single-GPU failures (`;` not `&&`).
+# The aggregate stamp recipe still exits non-zero if any notebook failed, so
+# `make all` propagates the failure to its caller. Use the post-run summary
+# printed by tools/notebook_run_summary.py to see which notebooks failed.
 run-notebooks-%: _notebooks/%/.generated
 	@echo "=== Running $* notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
-	@cpu_rc=0; gpu_rc=0; \
-	$(MAKE) --no-print-directory -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
-	( $(MAKE) --no-print-directory -j$(GPU_SLOTS) run-notebooks-gpu-$* && \
-	  $(MAKE) --no-print-directory -j1 run-notebooks-multigpu-$* ) & gpu=$$!; \
+	@cpu_rc=0; gpu_rc=0; mgpu_rc=0; \
+	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
+	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) run-notebooks-gpu-$*; rc=$$?; \
+	  $(MAKE) --no-print-directory -k -j1 run-notebooks-multigpu-$*; mrc=$$?; \
+	  exit $$((rc || mrc)) ) & gpu=$$!; \
 	wait $$gpu || gpu_rc=$$?; \
 	wait $$cpu || cpu_rc=$$?; \
+	python3 tools/notebook_run_summary.py --framework $* || true; \
 	exit $$((gpu_rc || cpu_rc))
 
 # For a single notebook, invoke the stamp target directly:
@@ -402,15 +412,18 @@ run-notebooks-%: _notebooks/%/.generated
 
 # Execute all frameworks with one global CPU queue and one global GPU queue.
 # `notebooks` runs first so CPU/GPU sub-makes cannot generate the same
-# framework's notebooks concurrently.
+# framework's notebooks concurrently. -k on every sub-make keeps the queues
+# draining even after individual notebook failures.
 run-all-notebooks: notebooks
 	@echo "=== Running all notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
 	@cpu_rc=0; gpu_rc=0; \
-	$(MAKE) --no-print-directory -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
-	( $(MAKE) --no-print-directory -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS) && \
-	  $(MAKE) --no-print-directory -j1 $(RUN_NOTEBOOK_MULTIGPU_TARGETS) ) & gpu=$$!; \
+	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
+	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS); rc=$$?; \
+	  $(MAKE) --no-print-directory -k -j1 $(RUN_NOTEBOOK_MULTIGPU_TARGETS); mrc=$$?; \
+	  exit $$((rc || mrc)) ) & gpu=$$!; \
 	wait $$gpu || gpu_rc=$$?; \
 	wait $$cpu || cpu_rc=$$?; \
+	python3 tools/notebook_run_summary.py || true; \
 	exit $$((gpu_rc || cpu_rc))
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
@@ -489,16 +502,35 @@ slides: $(addprefix slides-,$(FRAMEWORKS))
 all:
 	$(MAKE) lib
 	$(MAKE) notebooks
-	$(MAKE) run-all-notebooks
-	$(MAKE) slides
-	@echo "=== Rebuilding HTML and PDFs with notebook outputs ==="
+	@nb_rc=0; \
+	$(MAKE) run-all-notebooks || nb_rc=$$?; \
+	$(MAKE) rebuild-book-artifacts || exit $$?; \
+	if [ $$nb_rc -ne 0 ]; then \
+		echo "ERROR: notebook execution failed; rebuilt slides, HTML, and PDFs with available outputs."; \
+		exit $$nb_rc; \
+	fi
+
+rebuild-book-artifacts:
+	@echo "=== Rebuilding slides, HTML, and PDFs with current notebook outputs ==="
+	@rm -f $(SLIDE_STAMPS)
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
+	$(MAKE) slides
 	$(MAKE) html
 	$(MAKE) -j4 pdfs
+	$(MAKE) check-all-artifacts
 
 # Quick build without notebook execution
-all-quick: html pdfs notebooks slides lib
+all-quick:
+	$(MAKE) lib
+	$(MAKE) notebooks
+	$(MAKE) rebuild-book-artifacts
+
+check-all-artifacts:
+	@test -f _book/index.html || { echo "ERROR: missing _book/index.html"; exit 1; }
+	@test -f _slides/index.html || { echo "ERROR: missing _slides/index.html"; exit 1; }
+	@test -f _book/slides/index.html || { echo "ERROR: missing _book/slides/index.html"; exit 1; }
+	@echo "Verified full build artifacts: _book/index.html and _book/slides/index.html"
 
 # ── Clean ──────────────────────────────────────────────────
 

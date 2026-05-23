@@ -906,7 +906,8 @@ longer recipe in the exercises to assess model quality.
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab mxnet
-devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 0.02, 5e-4
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 0.00015625, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net(devices)
 net.hybridize()
 train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
@@ -915,7 +916,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab pytorch
-devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 5e-4, 5e-4
+devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 0.001, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net()
 net(next(iter(train_iter))[0])
 def init_weights(module):
@@ -928,7 +929,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab jax
-num_epochs, lr, wd = 20, 5e-4, 5e-4
+num_epochs, lr, wd = 20, 0.005, 5e-4
 lr_period, lr_decay = 4, 0.9
 net = get_net()
 variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
@@ -937,7 +938,7 @@ variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
 #@tab tensorflow
-num_epochs, lr, wd = 20, 2e-4, 5e-4
+num_epochs, lr, wd = 20, 0.001, 5e-4
 lr_period, lr_decay = 4, 0.9
 net = get_net()
 net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,

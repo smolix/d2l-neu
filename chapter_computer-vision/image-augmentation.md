@@ -700,8 +700,9 @@ def train_batch_ch13(net, features, labels, loss, trainer, devices,
     for l in ls:
         l.backward()
     # The `True` flag allows parameters with stale gradients, which is useful
-    # later (e.g., in fine-tuning BERT)
-    trainer.step(labels.shape[0], ignore_stale_grad=True)
+    # later (e.g., in fine-tuning BERT). `1` (not `labels.shape[0]`) so the raw
+    # sum-gradient is applied — matches PyTorch's `trainer.step()` semantics.
+    trainer.step(1, ignore_stale_grad=True)
     train_loss_sum = sum([float(l.sum()) for l in ls])
     train_acc_sum = sum(d2l.accuracy(pred_shard, y_shard)
                         for pred_shard, y_shard in zip(pred_shards, y_shards))
@@ -929,7 +930,8 @@ and finally calls the `train_ch13` function just defined to train and evaluate t
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
 net.initialize(init=init.Xavier(), ctx=devices)
 
-def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+def train_with_data_aug(train_augs, test_augs, net, lr=3.90625e-6):
     train_iter = load_cifar10(True, train_augs, batch_size)
     test_iter = load_cifar10(False, test_augs, batch_size)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()

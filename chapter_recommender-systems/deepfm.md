@@ -132,7 +132,8 @@ test_iter = gluon.data.DataLoader(
 devices = d2l.try_all_gpus()
 net = DeepFM(field_dims, num_factors=10, mlp_dims=[30, 20, 10])
 net.initialize(init.Xavier(), ctx=devices)
-lr, num_epochs, optimizer = 0.01, 30, 'adam'
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+lr, num_epochs, optimizer = 4.8828125e-6, 30, 'adam'
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {'learning_rate': lr})
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()

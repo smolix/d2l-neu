@@ -426,7 +426,8 @@ A common strategy for training deep networks is to keep the learning rate piecew
 ```{.python .input #lr-scheduler-multi-factor-scheduler-1}
 #@tab mxnet
 scheduler = lr_scheduler.MultiFactorScheduler(step=[15, 30], factor=0.5,
-                                              base_lr=0.5)
+                                              base_lr=0.5,
+                                              epoch_size=len(train_iter))
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
@@ -522,7 +523,8 @@ Here $\eta_0$ is the initial learning rate, $\eta_T$ is the target rate at time 
 ```{.python .input #lr-scheduler-cosine-scheduler-1}
 #@tab mxnet
 scheduler = lr_scheduler.CosineScheduler(max_update=20, base_lr=0.3,
-                                         final_lr=0.01)
+                                         final_lr=0.01,
+                                         epoch_size=len(train_iter))
 d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 
@@ -592,8 +594,10 @@ A rather simple fix for this dilemma is to use a warmup period during which the 
 
 ```{.python .input #lr-scheduler-warmup-1}
 #@tab mxnet
-scheduler = lr_scheduler.CosineScheduler(20, warmup_steps=5, base_lr=0.3,
-                                         final_lr=0.01)
+scheduler = lr_scheduler.CosineScheduler(20,
+                                         warmup_steps=5 * len(train_iter),
+                                         base_lr=0.3, final_lr=0.01,
+                                         epoch_size=len(train_iter))
 d2l.plot(np.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
 ```
 

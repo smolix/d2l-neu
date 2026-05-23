@@ -335,10 +335,8 @@ by specifying the value of `num_layers`.
 %%tab mxnet
 gru = GRU(num_hiddens=32, num_layers=2)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
-
-# Running takes > 1h (pending fix from MXNet)
-# trainer.fit(model, data)
-# model.predict('it has', 20, data.vocab, d2l.try_gpu())
+trainer.fit(model, data)
+model.predict('it has', 20, data.vocab, d2l.try_gpu())
 ```
 
 ```{.python .input #deep-rnn-concise-implementation-2}

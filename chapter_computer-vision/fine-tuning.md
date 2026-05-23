@@ -681,7 +681,8 @@ in order to *fine-tune* the model parameters obtained via pretraining. Based on 
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab mxnet
-train_fine_tuning(finetune_net, 0.01)
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+train_fine_tuning(finetune_net, 7.8125e-5)
 ```
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
@@ -706,7 +707,8 @@ For comparison, we define an identical model, but initialize all of its model pa
 #@tab mxnet
 scratch_net = gluon.model_zoo.vision.resnet18_v2(classes=2)
 scratch_net.initialize(init=init.Xavier())
-train_fine_tuning(scratch_net, 0.1)
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+train_fine_tuning(scratch_net, 7.8125e-4)
 ```
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-3}

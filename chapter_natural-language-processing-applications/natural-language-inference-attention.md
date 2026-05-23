@@ -611,7 +611,8 @@ Now we can train and evaluate the model on the SNLI dataset.
 
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-2}
 #@tab mxnet
-lr, num_epochs = 0.001, 4
+# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
+lr, num_epochs = 3.90625e-6, 4
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices,

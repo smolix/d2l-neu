@@ -81,6 +81,11 @@ class QmdCell:
 
 
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
+# Hidden cell-id marker emitted by d2l_preprocess.py just before each
+# non-primary (display-only) framework tab's code fence. Lets us match
+# tf/jax/mxnet tabs to their notebook outputs even though they carry no
+# `#| label:` (which would render as a Python comment).
+_CELL_ID_MARKER_RE = re.compile(r'^<!--\s*cell-id:\s*([a-z][a-z0-9-]*)\s*-->\s*$')
 
 # Suffix that gen_slides.py's `_dedupe_labels` adds to repeated cell
 # labels in a single deck (e.g. `foo-fig2`, `foo-fig3`). Strip when
@@ -120,9 +125,20 @@ def parse_qmd_cells(text):
     i = 0
     div_stack = []  # True = fw-tabset, False = other div
     current_fw = None
+    # Sticky cell-id from the most recent `<!-- cell-id: ... -->` marker,
+    # consumed by the next code fence. Reset on each non-blank/non-marker
+    # line so a stray marker can't leak into a downstream fence.
+    pending_cell_id = None
 
     while i < len(lines):
         line = lines[i]
+
+        # Cell-id marker (used to tag display-only framework tabs).
+        m = _CELL_ID_MARKER_RE.match(line.strip())
+        if m:
+            pending_cell_id = m.group(1)
+            i += 1
+            continue
 
         # Fenced div opener: ::: {.attrs}
         if re.match(r'^:{3,}\s*\{', line):
@@ -131,6 +147,7 @@ def parse_qmd_cells(text):
             div_stack.append(is_fw_tabset)
             if is_fw_tabset:
                 current_fw = None
+            pending_cell_id = None
             i += 1
             continue
 
@@ -139,6 +156,7 @@ def parse_qmd_cells(text):
             was_fw_tabset = div_stack.pop()
             if was_fw_tabset:
                 current_fw = None
+            pending_cell_id = None
             i += 1
             continue
 
@@ -147,6 +165,7 @@ def parse_qmd_cells(text):
             m = re.match(r'^##\s+(PyTorch|TensorFlow|JAX|MXNet)\s*$', line)
             if m and True in div_stack:
                 current_fw = DISPLAY_TO_FW[m.group(1)]
+                pending_cell_id = None
                 i += 1
                 continue
 
@@ -161,10 +180,15 @@ def parse_qmd_cells(text):
             end = i  # closing ```
 
             fw = current_fw if (True in div_stack) else None
-            cid = _extract_cell_id(code_lines)
+            cid = _extract_cell_id(code_lines) or pending_cell_id
             cells.append(QmdCell(start, end, '\n'.join(code_lines), fw, cid))
+            pending_cell_id = None
             i += 1
             continue
+
+        # Anything other than blank lines clears the pending marker.
+        if line.strip():
+            pending_cell_id = None
 
         # Skip non-Python code blocks
         if re.match(r'^```', line) and not line.startswith('````'):

@@ -14,6 +14,7 @@ import json
 import shutil
 import argparse
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -23,6 +24,63 @@ def _write_if_changed(path, content_bytes):
         return False
     path.write_bytes(content_bytes)
     return True
+
+
+def _normalize_source(src):
+    """Return cell source as a single string for stable code-equality
+    comparisons. nbformat stores source as either a list of lines or a
+    flat string."""
+    if isinstance(src, list):
+        return ''.join(src)
+    return src or ''
+
+
+def _merge_outputs_from_prev(ipynb_path, prev_nb):
+    """Restore executed outputs from `prev_nb` into the just-regenerated
+    notebook at `ipynb_path` for any code cell whose id and source still
+    match. Returns True if any cell's code changed (so the file genuinely
+    needs to be re-executed).
+
+    Why this exists: `quarto convert` always emits a fresh, never-executed
+    notebook, so a naive "byte-equal?" check after regeneration always
+    fails and downstream `.executed` stamps get invalidated — even when
+    the source .md didn't change a single character of code. By copying
+    outputs forward per cell we keep already-executed notebooks usable
+    across no-op regenerations and across regenerations that only edited
+    prose. Cells with edited code, or new cells, get no outputs back —
+    which is correct, since their outputs would be stale.
+    """
+    new_nb = json.loads(ipynb_path.read_text(encoding='utf-8'))
+    prev_by_id = {}
+    for cell in prev_nb.get('cells', []):
+        if cell.get('cell_type') != 'code':
+            continue
+        cid = cell.get('id') or cell.get('metadata', {}).get('id')
+        if cid:
+            prev_by_id[cid] = cell
+    any_code_changed = False
+    for cell in new_nb.get('cells', []):
+        if cell.get('cell_type') != 'code':
+            continue
+        cid = cell.get('id') or cell.get('metadata', {}).get('id')
+        prev = prev_by_id.get(cid) if cid else None
+        if prev is None:
+            # New cell or unidentifiable cell — no outputs to restore.
+            if _normalize_source(cell.get('source')).strip():
+                any_code_changed = True
+            continue
+        if _normalize_source(cell.get('source')) != _normalize_source(prev.get('source')):
+            any_code_changed = True
+            continue
+        # Code is unchanged → copy execution state forward.
+        if 'outputs' in prev:
+            cell['outputs'] = prev['outputs']
+        if 'execution_count' in prev:
+            cell['execution_count'] = prev['execution_count']
+    ipynb_path.write_text(
+        json.dumps(new_nb, indent=1, ensure_ascii=False),
+        encoding='utf-8')
+    return any_code_changed
 
 # Reuse the preprocessor's parsing and directive translation
 import sys
@@ -357,31 +415,60 @@ def main():
     src = args.source
     files = args.files or list(CHAPTER_NUMBERING.keys())
 
+    # In --files mode (per-notebook Make invocation), suppress the verbose
+    # batch-style banner / counts. Each per-notebook rebuild fires gen
+    # independently; the existing recipe `tee -a`s into one log per run, so
+    # without this gating the log would contain N copies of the same
+    # "=== PyTorch === / Generated 1 / Converting / Produced 1 / Done."
+    # block for an N-notebook rebuild. The batch path (no --files) keeps
+    # the original output.
+    quiet = args.files is not None
+
     for fw in args.frameworks:
         fw_dir = args.output / fw
-        print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} ===')
+        if not quiet:
+            print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} ===')
 
-        # Full generation wipes stale chapter output. Preserves per-notebook
-        # .executed stamps (Phase-1 build system) — without this, every full
-        # gen invalidates every passed notebook by wiping its stamp, even
-        # though gen_notebooks.py's content-aware write below would otherwise
-        # keep the .ipynb mtime unchanged.
+        # Cleanup pass: remove orphans (output .ipynb / .qmd / .executed
+        # whose source .md no longer exists) and any leftover .qmd files
+        # from previous runs (.qmd is a transient byproduct of `quarto
+        # convert`). We deliberately KEEP existing .ipynb files for files
+        # that are still part of the current source set, so the per-cell
+        # output-preserving merge below can copy executed outputs forward.
+        # Wiping them indiscriminately (as the previous full-gen path did)
+        # made every regen reset all executions to scratch.
         if fw_dir.exists() and args.files is None:
+            expected_stems = set()
+            for rel in files:
+                src_file = src / rel
+                if not src_file.exists():
+                    continue
+                if not file_supports_framework(src_file, fw):
+                    continue
+                expected_stems.add(str(Path(rel).with_suffix('')))
             for child in fw_dir.iterdir():
                 if child.is_symlink() or child.name in ('img', 'data'):
                     continue
                 if child.is_dir():
                     for sub in child.iterdir():
-                        if sub.suffix == '.executed':
-                            continue  # preserve per-notebook stamp
                         if sub.is_dir():
-                            shutil.rmtree(sub)
-                        else:
+                            # Sub-sub directories (unexpected) → leave alone.
+                            continue
+                        rel_stem = str(sub.relative_to(fw_dir).with_suffix(''))
+                        suf = sub.suffix
+                        # .qmd is always rebuilt from source; safe to nuke.
+                        if suf == '.qmd':
                             sub.unlink()
-                    # Don't rmtree the chapter dir itself either (may still
-                    # hold .executed stamps).
+                            continue
+                        # Drop output / stamp files whose source has gone.
+                        if suf in ('.ipynb', '.executed') \
+                                and rel_stem not in expected_stems:
+                            sub.unlink()
                 else:
-                    child.unlink()
+                    # Top-level transient files (e.g. .generated stamp from
+                    # an old layout). Keep MANIFEST.mk and dotfiles.
+                    if child.suffix == '.qmd':
+                        child.unlink()
 
         converted = 0
         skipped = 0
@@ -407,39 +494,86 @@ def main():
             _write_if_changed(dst_file, output.encode('utf-8'))
             converted += 1
 
-        print(f'  Generated {converted} .qmd files in {fw_dir}'
-              + (f' (skipped {skipped} files with no {fw} tabs)' if skipped else ''))
+        if not quiet:
+            print(f'  Generated {converted} .qmd files in {fw_dir}'
+                  + (f' (skipped {skipped} files with no {fw} tabs)' if skipped else ''))
 
         if args.convert:
-            print(f'  Converting to .ipynb...')
-            qmd_files = sorted(fw_dir.rglob('*.qmd'))
+            if not quiet:
+                print(f'  Converting to .ipynb...')
+            if args.files is not None:
+                # Per-file mode: convert only the qmds we just emitted for
+                # the requested sources. Without this, a per-notebook Make
+                # invocation would still re-convert every leftover qmd in
+                # the framework tree from a previous full run, defeating
+                # the granularity.
+                qmd_files = []
+                for rel in args.files:
+                    qmd = fw_dir / rel.replace('.md', '.qmd')
+                    if qmd.exists():
+                        qmd_files.append(qmd)
+            else:
+                qmd_files = sorted(fw_dir.rglob('*.qmd'))
 
             def convert_one(qmd):
+                ipynb = qmd.with_suffix('.ipynb')
                 try:
-                    # quarto writes .ipynb next to .qmd; if the .ipynb
-                    # already exists, snapshot its mtime so we can restore
-                    # it when content is unchanged.
-                    ipynb = qmd.with_suffix('.ipynb')
-                    prev_bytes = ipynb.read_bytes() if ipynb.exists() else None
-                    prev_stat = ipynb.stat() if ipynb.exists() else None
+                    # quarto writes .ipynb next to .qmd. quarto convert
+                    # produces a fresh notebook with no outputs, so a naive
+                    # byte-compare always sees the previously-executed file
+                    # as "different" and wipes outputs. Instead, snapshot
+                    # the old notebook and, after regen, copy outputs back
+                    # into any code cell whose id+source matches.
+                    prev_nb = None
+                    prev_stat = None
+                    if ipynb.exists():
+                        try:
+                            prev_nb = json.loads(ipynb.read_text(
+                                encoding='utf-8'))
+                            prev_stat = ipynb.stat()
+                        except Exception:
+                            prev_nb = None
                     result = subprocess.run(
                         ['quarto', 'convert', str(qmd)],
                         capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
+                        status = 'new' if prev_nb is None else 'updated'
                         if ipynb.exists():
                             patch_ipynb_ids(ipynb, fw)
-                            # If post-patch content equals previous content,
-                            # restore prev mtime so downstream stamps stay
-                            # valid. Otherwise leave the new mtime.
-                            if prev_bytes is not None and \
-                                    ipynb.read_bytes() == prev_bytes:
-                                os.utime(ipynb, ns=(prev_stat.st_atime_ns,
-                                                    prev_stat.st_mtime_ns))
+                            if prev_nb is not None:
+                                changed = _merge_outputs_from_prev(
+                                    ipynb, prev_nb)
+                                status = 'code-changed' if changed else 'unchanged'
+                                # Code cells unchanged → we just produced
+                                # an identical .ipynb. Advance BOTH the
+                                # .ipynb and its .executed sibling (if it
+                                # exists) to the same fresh mtime so:
+                                #   - make sees .ipynb as up-to-date wrt
+                                #     its source .md (no rebuild loop on
+                                #     prose-only or no-op edits),
+                                #   - any previously-valid .executed stamp
+                                #     stays at-or-above the .ipynb mtime
+                                #     so make doesn't re-execute.
+                                if not changed:
+                                    now_ns = time.time_ns()
+                                    os.utime(ipynb, ns=(now_ns, now_ns))
+                                    executed = ipynb.with_suffix('.executed')
+                                    if executed.exists():
+                                        os.utime(executed, ns=(now_ns, now_ns))
                         qmd.unlink()
+                        if quiet:
+                            rel = ipynb.relative_to(fw_dir)
+                            print(f'[{fw}] {rel}: {status}')
                         return True
                     else:
+                        if quiet:
+                            rel = ipynb.relative_to(fw_dir)
+                            print(f'[{fw}] {rel}: FAIL (quarto convert rc={result.returncode})')
                         return False
                 except subprocess.TimeoutExpired:
+                    if quiet:
+                        rel = ipynb.relative_to(args.output)
+                        print(f'[{fw}] {rel}: FAIL (timeout)')
                     return False
 
             from concurrent.futures import ThreadPoolExecutor
@@ -447,12 +581,14 @@ def main():
                 results = list(pool.map(convert_one, qmd_files))
 
             nb_count = sum(results)
-            print(f'  Produced {nb_count} .ipynb files')
+            if not quiet:
+                print(f'  Produced {nb_count} .ipynb files')
 
         # Note: per-framework MANIFEST.mk is written by
         # tools/scan_notebook_manifests.py at Make-parse time, not here.
 
-    print(f'\nDone. Notebooks in {args.output}/')
+    if not quiet:
+        print(f'\nDone. Notebooks in {args.output}/')
 
 
 if __name__ == '__main__':

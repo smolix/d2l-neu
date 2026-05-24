@@ -670,18 +670,27 @@ def emit_qmd(blocks, primary='pytorch'):
                 if fw in block.tabs:
                     display = FRAMEWORK_DISPLAY.get(fw, fw)
                     code = '\n'.join(block.tabs[fw])
+                    cid = block.ids.get(fw)
 
                     if fw == primary:
-                        cid = block.ids.get(fw)
+                        # Primary framework is executable; Quarto uses
+                        # `#| label:` as the cell tag.
                         id_prefix = f'#| label: {cid}\n' if cid else ''
                         parts.append(
                             f'\n## {display}\n\n'
                             f'```{{python}}\n{id_prefix}{code}\n```\n')
                     else:
-                        # Display-only: omit `#| label:` so it doesn't render
-                        # as a Python comment.
+                        # Non-primary tabs are display-only (Quarto doesn't
+                        # execute them), so `#| label:` would render as a
+                        # literal Python comment. Instead, emit a hidden HTML
+                        # comment before the fence so inject_outputs.py can
+                        # still pair this tab to its framework's notebook
+                        # cell by ID and inject its outputs into the right
+                        # tab.
+                        id_marker = f'<!-- cell-id: {cid} -->\n' if cid else ''
                         parts.append(
                             f'\n## {display}\n\n'
+                            f'{id_marker}'
                             f'```python\n{code}\n```\n')
 
             parts.append('\n:::\n')

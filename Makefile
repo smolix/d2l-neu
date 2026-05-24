@@ -50,27 +50,48 @@ RUN_NOTEBOOK_GPU_TARGETS := $(addprefix run-notebooks-gpu-,$(FRAMEWORKS))
 RUN_NOTEBOOK_MULTIGPU_TARGETS := $(addprefix run-notebooks-multigpu-,$(FRAMEWORKS))
 SLIDE_STAMPS := $(addprefix _slides/,$(addsuffix /.built,$(FRAMEWORKS)))
 
-# Auto-detect GPU count and memory via nvidia-smi.
-# Rule of thumb: each notebook job needs ~11GB GPU memory, so a 24GB GPU
-# runs 2 in parallel, a 48GB GPU runs 4, etc. We use the *minimum* memory
-# across detected GPUs (workers_per_gpu must be uniform — see run_one_notebook.py).
-# Falls back to "0 1" when no GPUs are visible (CPU-only host).
-# Override on the command line: `make NUM_GPUS=2 GPU_SLOTS=4 ...`.
-_GPU_QUERY := $(shell nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk 'BEGIN{n=0;m=0} {n++; if(n==1||$$1<m) m=$$1} END{per=int(m/11264); if(per<1) per=1; if(n==0) print "0 1"; else print n, n*per}')
+# Auto-detect GPU count and per-GPU memory via nvidia-smi.
+# Returns "<num_gpus> <min_mib>". We use the *minimum* memory across
+# detected GPUs (workers_per_gpu must be uniform — see run_one_notebook.py).
+# Falls back to "0 0" when no GPUs are visible (CPU-only host).
+_GPU_QUERY := $(shell nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk 'BEGIN{n=0;m=0} {n++; if(n==1||$$1<m) m=$$1} END{if(n==0) print "0 0"; else print n, m}')
 DETECTED_NUM_GPUS := $(word 1,$(_GPU_QUERY))
-DETECTED_GPU_SLOTS := $(word 2,$(_GPU_QUERY))
+DETECTED_GPU_MIB  := $(word 2,$(_GPU_QUERY))
 # If no GPU was detected, fall back to NUM_GPUS=1 for slot-to-device mapping.
-NUM_GPUS   ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
-_GPU_SLOTS_DEFAULT := $(if $(DETECTED_GPU_SLOTS),$(DETECTED_GPU_SLOTS),1)
+NUM_GPUS ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
 
-# Per-notebook slot counts. Re-tuned for the post-Phase-1 build system:
-#   GPU_SLOTS = NUM_GPUS × workers_per_GPU  (≥11GB VRAM per worker → 24GB
-#                                            GPU runs 2 jobs at once)
-#   CPU_SLOTS = max(1, cores / 16)          (≥16 cores per CPU notebook)
-# `make -j` should be at least GPU_SLOTS + CPU_SLOTS for full saturation.
-# Override either explicitly: `make GPU_SLOTS=8 CPU_SLOTS=4 ...`.
-GPU_SLOTS ?= $(_GPU_SLOTS_DEFAULT)
-CPU_SLOTS ?= $(shell n=$$(nproc 2>/dev/null || echo 16); echo $$(( n / 16 < 1 ? 1 : n / 16 )))
+# ── Per-framework resource footprint ──────────────────────────────────
+# How much of a GPU / how many CPU cores a single notebook of each
+# framework consumes at peak. Used to derive slot counts:
+#   GPU_SLOTS    = NUM_GPUS × (min_GPU_MiB / GPU_MIB_PER_LIGHT)
+#   CPU_SLOTS    = nproc / CPU_PER_LIGHT
+#   <FW>_*_SLOTS = ... using the framework's own footprint
+# All overridable on the command line: `make GPU_MIB_PER_jax=14000 ...`.
+#
+# PyTorch / TensorFlow / MXNet share the lighter 7.5 GiB / 10 cores
+# budget (their EXTRA_ENV_* tuning caps resident VRAM and threads).
+# JAX is heavier (~11.5 GiB / 15 cores) because every JAX process keeps
+# the CPU backend + XLAEigen pool alive — d2l.Module.plot calls
+# d2l.cpu() to host-transfer metrics, so we can't restrict to cuda only.
+GPU_MIB_PER_LIGHT  ?= 7680
+GPU_MIB_PER_jax    ?= 11776
+CPU_PER_LIGHT      ?= 10
+CPU_PER_jax        ?= 15
+
+# Slot helpers. Each evaluates to "max(1, n*m / per)" using shell arith,
+# falling back to 1 on CPU-only hosts where DETECTED_GPU_MIB=0.
+_gpu_slots = $(shell n=$(NUM_GPUS); m=$(DETECTED_GPU_MIB); per=$(1); \
+    if [ "$$m" -lt "$$per" ] || [ "$$per" -le 0 ]; then echo 1; \
+    else echo $$(( n * m / per )); fi)
+_cpu_slots = $(shell n=$$(nproc 2>/dev/null || echo 16); per=$(1); \
+    if [ "$$per" -le 0 ]; then echo 1; \
+    else x=$$(( n / per )); if [ "$$x" -lt 1 ]; then echo 1; else echo $$x; fi; fi)
+
+# Global pool sized for the lightest framework's footprint. `make -j`
+# should be at least GPU_SLOTS + CPU_SLOTS for full saturation.
+# On this 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=6.
+GPU_SLOTS ?= $(call _gpu_slots,$(GPU_MIB_PER_LIGHT))
+CPU_SLOTS ?= $(call _cpu_slots,$(CPU_PER_LIGHT))
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 
@@ -139,8 +160,14 @@ d2l/.built d2l/pytorch.py d2l/tensorflow.py d2l/jax.py d2l/mxnet.py &: \
 	@touch d2l/.built
 
 # ── UV venvs ───────────────────────────────────────────────
-
-.venv-%/.synced: pyproject.toml uv.lock
+#
+# Preflight runs before every `uv sync`: if pyproject pins the mxnet wheel
+# at a missing file path, `uv sync` for ANY framework fails during lock
+# validation (uv walks all path-direct sources, even those in conflicting
+# extras). The preflight is a fast no-op when the pin matches disk; when
+# the wheel is missing it auto-bumps the pin to the newest `../mxnet/dist/`
+# wheel and relocks. See tools/preflight_mxnet_pin.py for the trace.
+.venv-%/.synced: pyproject.toml uv.lock | .preflight.mxnet-pin
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing venv for $* ==="
 	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*-$(TS).log
@@ -150,13 +177,19 @@ d2l/.built d2l/pytorch.py d2l/tensorflow.py d2l/jax.py d2l/mxnet.py &: \
 # omits nvidia/cusolver/lib, so TF silently falls back to CPU. Applying the
 # cusolver symlinks at sync time means a fresh `uv sync` doesn't leave the venv
 # in a CPU-only state. See tools/check_runtime_deps.py for the gory detail.
-.venv-tensorflow/.synced: pyproject.toml uv.lock tools/check_runtime_deps.py
+.venv-tensorflow/.synced: pyproject.toml uv.lock tools/check_runtime_deps.py | .preflight.mxnet-pin
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing venv for tensorflow ==="
 	UV_PROJECT_ENVIRONMENT=.venv-tensorflow uv sync --extra tensorflow --extra run 2>&1 | tee $(LOGDIR)/venv-tensorflow-$(TS).log
 	@echo "=== Applying TF cusolver RUNPATH workaround ==="
 	@python3 tools/check_runtime_deps.py tensorflow
 	@touch $@
+
+# Order-only preflight target. Always runs, but only mutates the project
+# when the pinned mxnet wheel is missing on disk.
+.PHONY: .preflight.mxnet-pin
+.preflight.mxnet-pin:
+	@python3 tools/preflight_mxnet_pin.py
 
 # Dedicated venv that installs the Quarto CLI (via the quarto-cli PyPI package).
 # Used by HTML and PDF recipes so `quarto` is a real declared dependency rather
@@ -288,12 +321,11 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 # in sub-make evaluation. That advanced d2l/.built's mtime past .generated,
 # causing gen_notebooks to re-fire mid-execution and wipe completed notebooks.
 
-_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py | d2l/.built .venv-build/.synced
-	@mkdir -p $(LOGDIR)
-	@echo "=== Generating $* notebooks ==="
-	@PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
-	python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
-	@mkdir -p data
+# Per-framework symlinks (img/data) — one-time setup, decoupled from
+# notebook content gen. Was previously bundled into the .generated recipe,
+# which meant a forced .generated rebuild would re-do this no-op too.
+_notebooks/%/.symlinks:
+	@mkdir -p _notebooks/$* data
 	@[ -e _notebooks/$*/img ] || ln -s ../../img _notebooks/$*/img
 	@if [ -L _notebooks/$*/data ]; then :; \
 	elif [ -d _notebooks/$*/data ]; then \
@@ -303,26 +335,57 @@ _notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.
 	else \
 		ln -s $$(pwd)/data _notebooks/$*/data; \
 	fi
-	@# Per-notebook .executed stamps depend on each .ipynb directly, and
-	@# gen_notebooks.py preserves .ipynb mtime when content is unchanged
-	@# (so unchanged notebooks don't re-execute). The .generated stamp's
-	@# own mtime doesn't propagate to .executed targets via this chain.
 	@touch $@
 
-notebooks-%: _notebooks/%/.generated
-	@echo "Notebooks for $* in _notebooks/$*/"
+# Per-notebook .ipynb rule. A single source .md change rebuilds only the
+# matching `_notebooks/<fw>/<chapter>/<file>.ipynb` for each framework that
+# has that file in its MANIFEST — no per-framework batch wipe. gen_notebooks
+# is called with --files for just this source; the in-script per-cell output
+# merge restores outputs from the existing .ipynb when code is unchanged
+# (e.g. a prose-only edit doesn't invalidate execution).
+#
+# d2l/.built and .venv-build/.synced are order-only: their mtimes shouldn't
+# trigger a regen, but they must exist when the recipe runs.
+# Per-notebook .ipynb rule. Used for **direct** invocation:
+#   make _notebooks/pytorch/chapter_x/foo.ipynb
+# i.e. an incremental edit where the user wants just one notebook
+# regenerated. Each call spawns a ~0.5 s gen_notebooks startup; that's fine
+# for one file but death-by-1000-cuts when N files are stale. For full
+# rebuilds, the .generated batch rule below runs ONE gen_notebooks for the
+# entire framework (~5 s for 139 notebooks vs ~70 s per-file × -j8).
+#
+# d2l/.built and .venv-build/.synced are order-only: their mtimes shouldn't
+# trigger a regen, but they must exist when the recipe runs.
+define IPYNB_RULE
+_notebooks/$(1)/%.ipynb: %.md tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py | d2l/.built _notebooks/$(1)/.symlinks .venv-build/.synced
+	@mkdir -p $$(@D) $(LOGDIR)
+	@PATH="$(CURDIR)/.venv-build/bin:$$$$PATH" \
+	python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $(1) --files $$< 2>&1 | tee -a $(LOGDIR)/notebooks-$(1)-$(TS).log
+endef
+$(foreach fw,$(FRAMEWORKS),$(eval $(call IPYNB_RULE,$(fw))))
+
+# Batch path: a single gen_notebooks invocation rebuilds every stale
+# .ipynb for the framework. Touched as a stamp file `.generated`; when it
+# runs, every .ipynb it produces gets a fresh mtime so the per-file rule
+# (above) sees them as up-to-date and won't re-fire downstream.
+#
+# Used by `notebooks-<fw>` and as a transitive prereq of `run-notebooks-*`,
+# so a full build stays fast. The per-file rule is still the canonical
+# path for `make _notebooks/<fw>/foo.ipynb`-style direct invocations.
+_notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.py tools/build_lib.py | d2l/.built _notebooks/%/.symlinks .venv-build/.synced
+	@mkdir -p $(LOGDIR)
+	@echo "=== Generating $* notebooks (batch) ==="
+	@PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
+	python3 tools/gen_notebooks.py $(SOURCE) _notebooks --convert --frameworks $* 2>&1 | tee $(LOGDIR)/notebooks-$*-$(TS).log
+	@touch $@
+
+# `notebooks-<fw>` uses the batch path (fast) and also reaches each
+# per-notebook .ipynb so direct dependents see the same set Make would
+# build incrementally.
+notebooks-%: _notebooks/%/.generated _notebooks/%/.symlinks
+	@echo "Notebooks for $* in _notebooks/$*/ ($(words $(IPYNB_$*)) notebooks)"
 
 notebooks: $(addprefix notebooks-,$(FRAMEWORKS))
-
-# .ipynb files are written by tools/gen_notebooks.py as a side effect of
-# the .generated rule above. Per-framework pattern rule that connects any
-# .ipynb to its framework's batch generator so per-notebook targets can
-# list a real .ipynb prerequisite without "no rule to make target".
-define IPYNB_FROM_GEN
-_notebooks/$(1)/%.ipynb: _notebooks/$(1)/.generated
-	@:
-endef
-$(foreach fw,$(FRAMEWORKS),$(eval $(call IPYNB_FROM_GEN,$(fw))))
 
 # ── Notebooks (execute) — per-notebook granularity ────────
 # Each .ipynb has its own .executed stamp. Editing one source .md (or one
@@ -377,6 +440,59 @@ $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
 # tools/scan_d2l_usage.py). d2l/<fw>.py is order-only (must exist at run
 # time, since notebooks `import d2l`, but its mtime doesn't trigger
 # rebuilds — that's the .d's job).
+# ── Per-framework execution env ────────────────────────────────────────
+# Per-framework concurrency caps. Derived from each framework's footprint
+# (GPU_MIB_PER_<fw> / CPU_PER_<fw>) so a heavier framework gets fewer
+# slots than the global pool. Today only JAX is heavier than "light";
+# caps for other frameworks would just equal the global pool, which is
+# the same as "no cap" — `run_one_notebook.py` treats 0/unset as no cap.
+JAX_GPU_SLOTS ?= $(call _gpu_slots,$(GPU_MIB_PER_jax))
+JAX_CPU_SLOTS ?= $(call _cpu_slots,$(CPU_PER_jax))
+
+# Memory-and-thread-conservative defaults for JAX. PREALLOCATE=false: don't
+# grab 75 % of GPU on init (1.6 GiB instead of ~19 GiB resident). OMP/BLAS=2:
+# trims the unrelated "python" OpenMP pool by ~60 threads.
+#
+# We do NOT set JAX_PLATFORMS=cuda: nearly every JAX training notebook hits
+# d2l.Module.plot(), which calls d2l.cpu() / jax.devices('cpu') to move
+# metrics to host for matplotlib. Restricting to cuda makes those notebooks
+# fail with "Unknown backend cpu". Leaving the CPU backend in costs ~64
+# extra tf_XLAEigen threads (still well under the ulimit headroom).
+EXTRA_ENV_jax := XLA_PYTHON_CLIENT_PREALLOCATE=false \
+                 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                 D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS)
+
+# TensorFlow baseline is ~212 threads + ~22.5 GiB resident on the active GPU
+# (TF preallocates ~all of VRAM on first device init). The mitigations:
+#  * TF_FORCE_GPU_ALLOW_GROWTH=true   — allocate GPU memory on demand
+#                                        (23.7 → 1.6 GiB total across 4 GPUs)
+#  * TF_NUM_INTRAOP_THREADS / INTEROP_THREADS=2 — collapses the 64-thread
+#                                        tf_Compute Eigen pool to 2
+#  * OMP/BLAS/MKL=2                    — trims the ~62-thread "python" pool
+#  * TF_CPP_MIN_LOG_LEVEL=3            — silence the boot-time TF info logs
+# Combined: ~26 threads per TF process, 1.6 GiB GPU total. CPU device stays
+# visible and usable (auto-parallelism's CPU benchmark still works), so no
+# per-notebook split is needed.
+EXTRA_ENV_tensorflow := TF_FORCE_GPU_ALLOW_GROWTH=true \
+                        TF_NUM_INTRAOP_THREADS=2 TF_NUM_INTEROP_THREADS=2 \
+                        OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                        TF_CPP_MIN_LOG_LEVEL=3
+# PyTorch is already lean: ~67 threads default (vs JAX 294, MX 304, TF 212),
+# no GPU preallocation, lazy multi-device init, user-controlled allocator
+# cache (torch.cuda.empty_cache()). The only oversized pool is `at::Threads`
+# (32 OpenMP workers by default = nproc/2). Capping OMP/BLAS/MKL to 2 brings
+# the total to ~5 threads with no measurable perf cost on d2l workloads.
+EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+
+# MXNet 2.0 baseline is ~304 threads per process. Almost all of them come
+# from libopenblas / libopencv OpenMP pools pulled in by the custom wheel;
+# the `MXNET_*_NTHREADS` env vars empirically have NO effect on this build.
+# OMP/BLAS/MKL=2 drops the count to ~56 threads (82 % reduction) with no
+# measurable perf hit on tutorial workloads. GPU memory is fine by default
+# (no init-time preallocation; pool retention is per-process so it doesn't
+# bleed into the next notebook).
+EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+
 define EXEC_RULE
 _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
         | d2l/$(1).py .venv-$(1)/.synced $$(RUNTIME_DEPS_$(1))
@@ -388,6 +504,7 @@ _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
 	D2L_NUM_GPUS=$(NUM_GPUS) \
 	D2L_GPU_SLOTS=$(GPU_SLOTS) \
 	D2L_CPU_SLOTS=$(CPU_SLOTS) \
+	$$(EXTRA_ENV_$(1)) \
 	.venv-$(1)/bin/python tools/run_one_notebook.py $(1) $$< \
 		2>&1 | tee -a $(LOGDIR)/run-$(1)-$(TS).log
 	@touch $$@
@@ -416,6 +533,7 @@ run-notebooks-multigpu-%: _notebooks/%/.generated $$(EXECUTED_MULTI_GPU_$$*)
 # printed by tools/notebook_run_summary.py to see which notebooks failed.
 run-notebooks-%: _notebooks/%/.generated
 	@echo "=== Running $* notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@python3 tools/notebook_run_plan.py --framework $* || true
 	@cpu_rc=0; gpu_rc=0; mgpu_rc=0; \
 	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
 	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) run-notebooks-gpu-$*; rc=$$?; \
@@ -439,6 +557,7 @@ run-notebooks-%: _notebooks/%/.generated
 # notebook failures.
 run-all-notebooks: notebooks
 	@echo "=== Running all notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@python3 tools/notebook_run_plan.py || true
 	@cpu_rc=0; gpu_rc=0; \
 	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
 	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS); rc=$$?; \

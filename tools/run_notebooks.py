@@ -151,6 +151,49 @@ def find_notebooks(framework, glob_pattern=None, files=None):
 
 
 
+# Process-group tracking so a SIGTERM/SIGINT to this process kills the
+# nbconvert + ipykernel descendant tree, not just nbconvert. See
+# tools/run_one_notebook.py:install_signal_handlers() for the signal side.
+_active_pgids = set()
+
+
+def _register_pgid(pgid):
+    _active_pgids.add(pgid)
+
+
+def _unregister_pgid(pgid):
+    _active_pgids.discard(pgid)
+
+
+def kill_active_subprocesses(grace_sec=3):
+    """Kill every notebook subprocess group tracked in this process.
+    Called from signal handlers in run_one_notebook.py so a Ctrl-C / Make
+    kill can't leave orphan ipykernels."""
+    import signal as _signal
+    for pgid in list(_active_pgids):
+        try:
+            os.killpg(pgid, _signal.SIGTERM)
+        except ProcessLookupError:
+            _active_pgids.discard(pgid)
+    if not _active_pgids:
+        return
+    deadline = time.time() + grace_sec
+    while _active_pgids and time.time() < deadline:
+        time.sleep(0.2)
+        for pgid in list(_active_pgids):
+            try:
+                # signal 0: existence probe, no signal delivered
+                os.killpg(pgid, 0)
+            except ProcessLookupError:
+                _active_pgids.discard(pgid)
+    for pgid in list(_active_pgids):
+        try:
+            os.killpg(pgid, _signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        _active_pgids.discard(pgid)
+
+
 def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
                      cpu_affinity=None):
     """Execute a single notebook in-place via jupyter nbconvert.
@@ -158,7 +201,15 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
     cuda_devices: str or None.  If set, passed as CUDA_VISIBLE_DEVICES.
     cpu_affinity: set of CPU indices, or None for no restriction.
     Returns (success: bool, elapsed: float, stderr: str).
+
+    The nbconvert child runs in a new session (`start_new_session=True`),
+    so when this Python process dies we can `killpg` the whole nbconvert
+    + ipykernel tree at once. Each child also gets PR_SET_PDEATHSIG=SIGTERM
+    as a kernel-level fallback for the SIGKILL case.
     """
+    import signal as _signal
+    from runtime_env import make_subprocess_preexec_fn
+
     env = os.environ.copy()
     if cuda_devices is not None:
         env["CUDA_VISIBLE_DEVICES"] = cuda_devices
@@ -166,36 +217,66 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
             from runtime_env import CPU_ONLY_ENV
             env.update(CPU_ONLY_ENV)
 
+    cmd = [
+        sys.executable, "-m", "jupyter", "nbconvert",
+        "--to", "notebook",
+        "--execute",
+        "--inplace",
+        f"--ExecutePreprocessor.timeout={timeout}",
+        f"--ExecutePreprocessor.kernel_name={kernel}",
+        str(nb_path),
+    ]
+    preexec = make_subprocess_preexec_fn(
+        cpu_set=cpu_affinity, pdeathsig=_signal.SIGTERM)
+
     t0 = time.time()
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        preexec_fn=preexec,
+        start_new_session=True,
+    )
+    pgid = os.getpgid(proc.pid)
+    _register_pgid(pgid)
     try:
-        result = subprocess.run(
-            [
-                sys.executable, "-m", "jupyter", "nbconvert",
-                "--to", "notebook",
-                "--execute",
-                "--inplace",
-                f"--ExecutePreprocessor.timeout={timeout}",
-                f"--ExecutePreprocessor.kernel_name={kernel}",
-                str(nb_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout + 120,
-            env=env,
-            preexec_fn=make_cpu_affinity_fn(cpu_affinity),
-        )
-    except subprocess.TimeoutExpired as e:
-        elapsed = time.time() - t0
-        return False, elapsed, f"TIMEOUT after {elapsed:.0f}s: {e}"
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout + 120)
+            rc = proc.returncode
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(pgid, _signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                stdout, stderr = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(pgid, _signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                stdout, stderr = proc.communicate()
+            elapsed = time.time() - t0
+            return False, elapsed, f"TIMEOUT after {elapsed:.0f}s"
+    finally:
+        _unregister_pgid(pgid)
+        # Belt-and-suspenders: if anything in the group is still alive
+        # (e.g. nbconvert exited but ipykernel lagged), kill it.
+        try:
+            os.killpg(pgid, _signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
     elapsed = time.time() - t0
-    if result.returncode == 0:
+    if rc == 0:
         subprocess.run(
             [sys.executable, "-m", "jupyter", "trust", str(nb_path)],
             capture_output=True, timeout=30,
         )
-        return True, elapsed, result.stderr
-    err = result.stderr.strip() or result.stdout.strip()
+        return True, elapsed, stderr or ""
+    err = (stderr or "").strip() or (stdout or "").strip()
     return False, elapsed, err
 
 

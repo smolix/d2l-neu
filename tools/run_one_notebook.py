@@ -22,6 +22,7 @@ notebooks run at once (one per GPU). Multi-GPU notebooks claim all slots.
 import argparse
 import fcntl
 import os
+import signal
 import sys
 import time
 from contextlib import contextmanager
@@ -34,8 +35,33 @@ from runtime_env import (
 # Reuse functions defined in run_notebooks.py rather than duplicating them.
 from run_notebooks import (
     BEST_OF_N, NOTEBOOKS_DIR, execute_notebook, score_notebook,
-    _is_transient, _shorten_error,
+    _is_transient, _shorten_error, kill_active_subprocesses,
 )
+
+
+# Kill descendant nbconvert + ipykernel groups on Make/Ctrl-C kill, so the
+# user doesn't end up with orphan processes pinning GPU memory after every
+# interrupt. execute_notebook starts each child in its own session
+# (start_new_session=True) and registers the pgid; we kill that group here.
+_received_signal = None
+
+
+def _signal_handler(signo, frame):
+    global _received_signal
+    _received_signal = signo
+    kill_active_subprocesses(grace_sec=3)
+    # Exit with the conventional 128 + signo. Use os._exit so atexit /
+    # finalizers can't reanimate or block; we've already cleaned up our
+    # subprocess group.
+    os._exit(128 + signo)
+
+
+def install_signal_handlers():
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        try:
+            signal.signal(sig, _signal_handler)
+        except (ValueError, OSError):
+            pass
 
 
 SLOT_DIR = Path('/tmp/d2l-slots')
@@ -57,6 +83,90 @@ def _slot_to_gpu(slot_idx, gpu_slots, num_gpus):
     """
     workers_per_gpu = max(1, gpu_slots // max(1, num_gpus))
     return slot_idx // workers_per_gpu
+
+
+# MXNet 2.0's cuDNN loader races with itself when several mxnet processes
+# init the GPU backend in the same wall-clock window — we get
+# CUDNN_STATUS_SUBLIBRARY_LOADING_FAILED. With 3 mxnet jobs/GPU, the issue
+# pops up whenever multiple GPU slots free up together (e.g. a multi-GPU
+# job exits and the queue dumps several mxnet notebooks at once).
+#
+# Fix: serialize ONLY the brief cuDNN sub-library load window. Hold an
+# exclusive flock just long enough for `import mxnet` + first CUDA touch
+# to clear (~5 s heuristic, well under typical notebook runtimes), then
+# release so subsequent mxnet starts can stagger through. A background
+# timer thread releases the lock; the notebook proceeds independently.
+# If only ONE mxnet starts at a time, the lock is uncontended → no delay.
+_MXNET_CUDNN_INIT_HOLD_SEC = 5.0
+
+
+def serialize_mxnet_cudnn_init():
+    """Acquire the mxnet cuDNN init lock, schedule auto-release.
+
+    Returns a callable that releases early (safe to call multiple times).
+    Released automatically after _MXNET_CUDNN_INIT_HOLD_SEC, or when the
+    process exits (kernel cleans up flock).
+    """
+    import threading
+    lock_path = SLOT_DIR / 'mxnet-cudnn-init.lock'
+    SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path.touch()
+    fp = open(lock_path, 'w')
+    fcntl.flock(fp.fileno(), fcntl.LOCK_EX)
+
+    released = threading.Event()
+
+    def release():
+        if released.is_set():
+            return
+        released.set()
+        try:
+            fcntl.flock(fp.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        try:
+            fp.close()
+        except OSError:
+            pass
+
+    timer = threading.Timer(_MXNET_CUDNN_INIT_HOLD_SEC, release)
+    timer.daemon = True
+    timer.start()
+    return release
+
+
+# Per-framework concurrency cap, layered ON TOP OF the global GPU/CPU slot
+# pools. Today only JAX uses this: with the d2l.Module.plot path requiring
+# the CPU backend, every JAX process keeps the 64-thread tf_XLAEigen pool
+# alive, so we throttle JAX further than other frameworks to stay under
+# the user thread limit. Set D2L_<FW>_GPU_SLOTS / D2L_<FW>_CPU_SLOTS=0 (or
+# leave unset) to disable the cap for a framework.
+@contextmanager
+def acquire_fw_cap(framework, kind, count):
+    """Block until one of `count` framework-`kind` slots is free.
+    `kind` is 'gpu' or 'cpu'. No-op when count <= 0."""
+    if count <= 0:
+        yield
+        return
+    SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    paths = [SLOT_DIR / f'{framework}-{kind}-{i}.lock' for i in range(count)]
+    for p in paths:
+        p.touch()
+    while True:
+        for p in paths:
+            fp = open(p, 'w')
+            try:
+                fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                fp.close()
+                continue
+            try:
+                yield
+            finally:
+                fcntl.flock(fp, fcntl.LOCK_UN)
+                fp.close()
+            return
+        time.sleep(0.5)
 
 
 @contextmanager
@@ -176,27 +286,68 @@ def notebook_mode(nb_path, fw):
     return 'cpu'
 
 
+def _fw_cap(framework, kind):
+    """Read D2L_<FW>_<KIND>_SLOTS env (e.g. D2L_JAX_GPU_SLOTS). Returns
+    0 (= no cap) when unset or non-positive."""
+    key = f'D2L_{framework.upper()}_{kind.upper()}_SLOTS'
+    try:
+        return max(0, int(os.environ.get(key, '0')))
+    except ValueError:
+        return 0
+
+
+def _maybe_serialize_mxnet(fw):
+    """Return an early-release callable for mxnet (to be invoked once the
+    subprocess has had a chance to load cuDNN), or a no-op for everyone
+    else."""
+    if fw == 'mxnet':
+        return serialize_mxnet_cudnn_init()
+    return lambda: None
+
+
 def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label):
     """Single attempt; uses pre-computed mode and prints which slot we acquired.
 
     `mode` is 'multi-gpu', 'gpu', or 'cpu' (from notebook_mode()). `label`
     is the human-readable prefix for log lines (e.g. "[mxnet] chapter/foo:").
+
+    For frameworks with a tighter concurrency cap (today: JAX), acquires
+    the framework-specific slot FIRST, then the global pool slot, so a
+    capped framework can't tie up a global slot waiting on its own cap.
+    For mxnet, an additional cuDNN-init flock prevents the multi-process
+    library-loader race; held for a few seconds after exec_notebook
+    spawns the child, then released.
     """
     nb = Path(nb_path).resolve()
 
     if mode == 'multi-gpu':
-        with acquire_all_gpus(gpu_slots, num_gpus) as cuda:
-            print(f"{label}: [all GPUs] running", flush=True)
-            return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+        with acquire_fw_cap(fw, 'gpu', _fw_cap(fw, 'gpu')):
+            with acquire_all_gpus(gpu_slots, num_gpus) as cuda:
+                print(f"{label}: [all GPUs] running", flush=True)
+                release_init = _maybe_serialize_mxnet(fw)
+                try:
+                    return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+                finally:
+                    release_init()
     if mode == 'gpu':
-        with acquire_gpu_slot(gpu_slots, num_gpus) as i:
-            print(f"{label}: [GPU {i}] running", flush=True)
-            return execute_notebook(nb, timeout=timeout, cuda_devices=str(i))
+        with acquire_fw_cap(fw, 'gpu', _fw_cap(fw, 'gpu')):
+            with acquire_gpu_slot(gpu_slots, num_gpus) as i:
+                print(f"{label}: [GPU {i}] running", flush=True)
+                release_init = _maybe_serialize_mxnet(fw)
+                try:
+                    return execute_notebook(nb, timeout=timeout, cuda_devices=str(i))
+                finally:
+                    release_init()
     # CPU-only: bounded-pool acquisition so we don't oversubscribe cores
     # when many CPU notebooks are queued under `make -j`.
-    with acquire_cpu_slot(cpu_slots) as i:
-        print(f"{label}: [CPU {i}] running", flush=True)
-        return execute_notebook(nb, timeout=timeout, cuda_devices="")
+    with acquire_fw_cap(fw, 'cpu', _fw_cap(fw, 'cpu')):
+        with acquire_cpu_slot(cpu_slots) as i:
+            print(f"{label}: [CPU {i}] running", flush=True)
+            release_init = _maybe_serialize_mxnet(fw)
+            try:
+                return execute_notebook(nb, timeout=timeout, cuda_devices="")
+            finally:
+                release_init()
 
 
 def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
@@ -259,6 +410,10 @@ def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
 
 
 def main():
+    # Install before any subprocess is spawned so a Ctrl-C / Make kill at
+    # any point cleans up the nbconvert + ipykernel descendant tree.
+    install_signal_handlers()
+
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("framework",

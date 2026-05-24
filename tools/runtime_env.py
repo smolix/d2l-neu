@@ -178,6 +178,45 @@ def make_cpu_affinity_fn(cpu_set):
     return _set
 
 
+# Linux-specific belt-and-suspenders against orphan subprocesses: ask the
+# kernel to deliver a signal to a child when its parent dies. Combined with
+# start_new_session=True (so we can kill the whole group from the parent),
+# this guarantees nbconvert / ipykernel chains can't survive their parent
+# even on SIGKILL. See tools/run_one_notebook.py for the parent-side
+# install_signal_handlers().
+_PR_SET_PDEATHSIG = 1
+try:
+    _LIBC = __import__('ctypes').CDLL("libc.so.6", use_errno=True)
+except OSError:
+    _LIBC = None
+
+
+def _prctl_pdeathsig(sig):
+    if _LIBC is None:
+        return
+    try:
+        _LIBC.prctl(_PR_SET_PDEATHSIG, sig, 0, 0, 0)
+    except OSError:
+        pass
+
+
+def make_subprocess_preexec_fn(cpu_set=None, pdeathsig=None):
+    """Compose a subprocess preexec_fn: CPU affinity + PR_SET_PDEATHSIG.
+
+    `pdeathsig` is a signal number (e.g. signal.SIGTERM) to deliver to the
+    child when this Python process dies. None disables the prctl call.
+    """
+    cpu_fn = make_cpu_affinity_fn(cpu_set)
+    if cpu_fn is None and pdeathsig is None:
+        return None
+    def _setup():
+        if cpu_fn is not None:
+            cpu_fn()
+        if pdeathsig is not None:
+            _prctl_pdeathsig(pdeathsig)
+    return _setup
+
+
 def worker_cpu_set(worker_id, num_workers, max_cpus):
     """Return a set of CPU indices for *worker_id*.
 

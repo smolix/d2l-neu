@@ -388,7 +388,7 @@ requires-dist = [
     { name = "jupyter", marker = "extra == 'run'" },
     { name = "matplotlib" },
     { name = "matplotlib-inline" },
-    { name = "mxnet", marker = "python_full_version == '3.12.*' and extra == 'mxnet'", path = "/home/smola/mxnet/dist/mxnet-2.0.0+cu13.bw.20260523.8-cp312-cp312-linux_x86_64.whl" },
+    { name = "mxnet", marker = "python_full_version == '3.12.*' and extra == 'mxnet'", path = "/home/smola/mxnet/dist/mxnet-2.0.0+cu13.bw.20260523.10-cp312-cp312-linux_x86_64.whl" },
     { name = "nbconvert", marker = "extra == 'run'" },
     { name = "numpy" },
     { name = "optax", marker = "extra == 'jax'" },
@@ -1417,8 +1417,8 @@ wheels = [
 
 [[package]]
 name = "mxnet"
-version = "2.0.0+cu13.bw.20260523.8"
-source = { path = "/home/smola/mxnet/dist/mxnet-2.0.0+cu13.bw.20260523.8-cp312-cp312-linux_x86_64.whl" }
+version = "2.0.0+cu13.bw.20260523.10"
+source = { path = "/home/smola/mxnet/dist/mxnet-2.0.0+cu13.bw.20260523.10-cp312-cp312-linux_x86_64.whl" }
 dependencies = [
     { name = "graphviz", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
@@ -1429,7 +1429,7 @@ dependencies = [
     { name = "requests", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { filename = "mxnet-2.0.0+cu13.bw.20260523.8-cp312-cp312-linux_x86_64.whl", hash = "sha256:de3424e604a149ca55e8bbb25080f6163f87c600214a41289907d9c6a681aaa9" },
+    { filename = "mxnet-2.0.0+cu13.bw.20260523.10-cp312-cp312-linux_x86_64.whl", hash = "sha256:d05b8db2b3ab42062dd44c6cc8bae6a4e042509ce457b71f27d1af9c11344338" },
 ]
 
 [package.metadata]

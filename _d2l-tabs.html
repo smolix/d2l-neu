@@ -347,6 +347,14 @@
   }
 
   function init() {
+    // Idempotency guard: Cloudflare Rocket Loader fires a synthetic
+    // DOMContentLoaded after its `simulateStateAfterDeferScripts-
+    // Activation` pass, which re-invokes any DOMContentLoaded handler
+    // already registered. Without this check, init() runs twice and
+    // appends two ".d2l-toc-slides" buttons to the TOC.
+    if (window.__d2lTocSlidesInit) return;
+    window.__d2lTocSlidesInit = true;
+
     pageKey = getPageKey();
     if (!pageKey) return;
     var entry = window.D2L_SLIDES_MANIFEST[pageKey];

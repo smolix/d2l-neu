@@ -2309,7 +2309,8 @@
     "wikidata_id": "Q1194650",
     "logo_source": "web-verified",
     "logo_source_url": "https://home.iitd.ac.in/",
-    "logo_confidence": "high"
+    "logo_confidence": "high",
+    "invert": true
   },
   {
     "slug": "Indian-Institute-of-Technology-Gandhinagar",
@@ -8972,6 +8973,7 @@
     ],
     "logo_source": "web-verified",
     "logo_source_url": "https://www.zztrc.edu.cn/xxgk1/xxbs/xb.htm",
-    "logo_confidence": "high"
+    "logo_confidence": "high",
+    "invert": true
   }
 ]

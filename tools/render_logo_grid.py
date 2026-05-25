@@ -18,7 +18,7 @@ import json
 import re
 from pathlib import Path
 
-REPO = Path("/home/smola/d2l/d2l-neu")
+REPO = Path(__file__).resolve().parents[1]
 JSON_PATH = REPO / "tools" / "universities.json"
 LOGO_REL_DIR = "static/landing/universities"
 
@@ -61,6 +61,10 @@ def render_grid(entries: list) -> str:
             continue
         src = f"{LOGO_REL_DIR}/{e['logo']}"
         alt = html.escape(e["name"])
+        # Logos that are white-on-transparent disappear against the
+        # white landing page — universities.json carries an `invert`
+        # flag for those; emit a CSS hook here.
+        img_class = ' class="d2l-uni-logo-invert"' if e.get("invert") else ""
         link_ev = pick_link(e.get("evidence") or [])
         if link_ev:
             url = link_ev["url"]
@@ -75,10 +79,10 @@ def render_grid(entries: list) -> str:
             href = html.escape(url, quote=True)
             lines.append(
                 f'{INDENT}<a href="{href}" title="{title}" target="_blank" rel="noopener">'
-                f'<img src="{src}" alt="{alt}" loading="lazy"></a>'
+                f'<img src="{src}"{img_class} alt="{alt}" loading="lazy"></a>'
             )
         else:
-            lines.append(f'{INDENT}<img src="{src}" alt="{alt}" loading="lazy">')
+            lines.append(f'{INDENT}<img src="{src}"{img_class} alt="{alt}" loading="lazy">')
     lines.append(f"{INDENT}{END}")
     return "\n".join(lines)
 

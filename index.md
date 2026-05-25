@@ -1,13 +1,20 @@
 ---
-title: "Dive into Deep Learning"
 pagetitle: "Dive into Deep Learning"
 number-sections: false
 toc: false
 page-layout: full
+title-block-style: none
 ---
 
 ```{=html}
 <style>
+/* Suppress Quarto's auto title block on the landing page. Quarto emits
+   two `#title-block-header` headers when `title-block-style: none` is
+   set alongside the book-level author/date metadata in _quarto.yml; the
+   hero section below renders the title, author list, and date itself,
+   so hide both unconditionally. */
+#title-block-header { display: none !important; }
+
 /* ── Landing page styles (scoped to .d2l-landing) ─────────── */
 .d2l-landing {
   --d2l-blue: #2196F3;
@@ -29,10 +36,6 @@ page-layout: full
   color: var(--d2l-ink-2);
   line-height: 1.65;
 }
-
-/* Hide Quarto's auto-generated title block (h1, "Authors" meta box,
-   "Published" date) — the hero below supplies all of that. */
-.d2l-landing-suppress-title #title-block-header { display: none; }
 
 .d2l-landing h2 {
   font-size: 1.625rem;
@@ -115,10 +118,13 @@ page-layout: full
   max-width: 100%;
   width: 320px;
   height: auto;
-  border-radius: 4px;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.08),
-    0 12px 32px -8px rgba(15, 23, 42, 0.18);
+  /* The book cover PNG has a transparent border; a box-shadow renders
+     around the image *bounding box* (including the transparent margin),
+     which on a white page looks like a faint white frame. drop-shadow
+     follows the alpha channel and traces the actual book silhouette. */
+  filter:
+    drop-shadow(0 1px 2px rgba(15, 23, 42, 0.10))
+    drop-shadow(0 12px 32px rgba(15, 23, 42, 0.18));
 }
 
 @media (max-width: 820px) {
@@ -211,37 +217,53 @@ page-layout: full
   margin: 0;
 }
 
-/* ── Authors ──────────────────────────────────────────────── */
-.d2l-authors {
+/* ── Authors / contributors (shared layout) ────────────────── */
+.d2l-authors,
+.d2l-contributors {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 1.5rem;
+  justify-content: start;
 }
-.d2l-author {
-  text-align: center;
+.d2l-author,
+.d2l-contributor {
+  text-align: left;
+  margin: 0;
 }
-.d2l-author img {
+.d2l-author img,
+.d2l-contributor img {
   width: 128px; height: 128px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid #fff;
   box-shadow: 0 0 0 1px var(--d2l-line), 0 6px 18px -10px rgba(15, 23, 42, 0.25);
+  transition: box-shadow 150ms ease, transform 150ms ease;
 }
-.d2l-author .name {
+.d2l-author .name,
+.d2l-contributor .name {
   display: block;
   font-weight: 600;
   color: var(--d2l-ink);
   margin-top: 0.85rem;
   font-size: 1rem;
 }
-.d2l-author .affil {
+.d2l-author .affil,
+.d2l-contributor .affil {
   display: block;
   color: var(--d2l-ink-3);
   font-size: 0.875rem;
   margin-top: 0.15rem;
 }
+.d2l-contributor a {
+  text-decoration: none !important;
+  color: inherit !important;
+  display: block;
+}
+.d2l-contributor a:hover img {
+  box-shadow: 0 0 0 1px var(--d2l-blue-light), 0 6px 18px -6px rgba(33, 150, 243, 0.35);
+  transform: translateY(-1px);
+}
 
-/* ── Contributors (smaller grid for chapter & framework leads) ─ */
 .d2l-contrib-group {
   margin-top: 1.75rem;
 }
@@ -257,49 +279,10 @@ page-layout: full
   color: var(--d2l-ink-3);
   font-weight: 500;
 }
-.d2l-contributors {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1.25rem;
-}
-.d2l-contributor {
-  text-align: center;
-  margin: 0;
-}
-.d2l-contributor a {
-  text-decoration: none !important;
-  color: inherit !important;
-  display: block;
-}
-.d2l-contributor img {
-  width: 88px; height: 88px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px var(--d2l-line), 0 4px 12px -8px rgba(15, 23, 42, 0.2);
-  transition: box-shadow 150ms ease, transform 150ms ease;
-}
-.d2l-contributor a:hover img {
-  box-shadow: 0 0 0 1px var(--d2l-blue-light), 0 6px 18px -6px rgba(33, 150, 243, 0.35);
-  transform: translateY(-1px);
-}
-.d2l-contributor .name {
-  display: block;
-  font-weight: 600;
-  color: var(--d2l-ink);
-  margin-top: 0.6rem;
-  font-size: 0.9375rem;
-}
-.d2l-contributor .affil {
-  display: block;
-  color: var(--d2l-ink-3);
-  font-size: 0.8125rem;
-  margin-top: 0.1rem;
-}
 
 /* ── Universities ─────────────────────────────────────────── */
 .d2l-universities {
-  background: var(--d2l-bg-soft);
+  background: var(--d2l-bg);
   border: 1px solid var(--d2l-line);
   border-radius: 10px;
   padding: 1.75rem 2rem;
@@ -323,26 +306,41 @@ page-layout: full
   font-size: 1rem;
 }
 
-/* Logo grid: equal-height cells, logos centered, soft hover. */
+/* Logo grid: each cell is a fixed-aspect box with the logo centered.
+   Wider cells (140px min) keep wordmark logos readable; the cell uses
+   the full width and height of its track via object-fit: contain with
+   center-center positioning, so portrait/landscape/square logos all
+   look comparable instead of one being tiny in a corner. */
 .d2l-uni-logos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 0.6rem 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem 0.6rem;
+  align-items: stretch;
+  justify-items: stretch;
+}
+.d2l-uni-logos a,
+.d2l-uni-logos > img {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 64px;
+  padding: 0.25rem 0.4rem;
+  box-sizing: border-box;
+  text-decoration: none;
 }
 .d2l-uni-logos img,
 .d2l-uni-logos a img {
-  width: 100%;
-  height: 44px;
-  object-fit: contain;
   display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
   filter: grayscale(0.4);
   opacity: 0.85;
   transition: filter 150ms ease, opacity 150ms ease, transform 150ms ease;
-}
-.d2l-uni-logos a {
-  display: block;
-  text-decoration: none;
 }
 .d2l-uni-logos img:hover,
 .d2l-uni-logos a:hover img {
@@ -451,7 +449,7 @@ page-layout: full
 }
 </style>
 
-<div class="d2l-landing d2l-landing-suppress-title">
+<div class="d2l-landing">
 
 <section class="d2l-hero">
   <div>
@@ -793,7 +791,7 @@ page-layout: full
       <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="Indian Institute of Science Bangalore — Foundations of Deep Learning: Concepts and Applications — Sriram Ganapathy; Ashwini Kodipalli; Baishali Garai" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Science-Bangalore.jpg" alt="Indian Institute of Science Bangalore" loading="lazy"></a>
       <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="Indian Institute of Science IISc Bangalore — Foundations of Deep Learning: Concepts and Applications (NPTEL NOC26-CS01) — Prof. Sriram Ganapathy (IISc); Prof. Ashwini Kodipalli and Prof. Baishali Garai (RV University, Bengaluru)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Science-IISc-Bangalore.png" alt="Indian Institute of Science IISc Bangalore" loading="lazy"></a>
       <a href="https://www.cse.iitb.ac.in/~cs772/" title="Indian Institute of Technology Bombay — CS772 Deep Learning for Natural Language Processing — Pushpak Bhattacharyya" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Bombay.png" alt="Indian Institute of Technology Bombay" loading="lazy"></a>
-      <a href="https://www.csccm.in/courses/deep-learning-for-mechanics-23-24" title="Indian Institute of Technology Delhi — Deep Learning for Mechanics — Souvik Chakraborty; Rajdip Nayek" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Delhi.png" alt="Indian Institute of Technology Delhi" loading="lazy"></a>
+      <a href="https://www.csccm.in/courses/deep-learning-for-mechanics-23-24" title="Indian Institute of Technology Delhi — Deep Learning for Mechanics — Souvik Chakraborty; Rajdip Nayek" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Delhi.png" class="d2l-uni-logo-invert" alt="Indian Institute of Technology Delhi" loading="lazy"></a>
       <a href="https://sites.google.com/iitgn.ac.in/deep-learning-2023/home" title="Indian Institute of Technology Gandhinagar — ES 413 Deep Learning — Mayank Singh" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Gandhinagar.png" alt="Indian Institute of Technology Gandhinagar" loading="lazy"></a>
       <a href="https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html" title="Indian Institute of Technology Guwahati — DA322M Elements of Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Guwahati.png" alt="Indian Institute of Technology Guwahati" loading="lazy"></a>
       <img src="static/landing/universities/Indian-Institute-of-Technology-Hyderabad.png" alt="Indian Institute of Technology Hyderabad" loading="lazy">
@@ -1110,7 +1108,7 @@ page-layout: full
       <a href="https://yonseivnl.github.io/courses/dtp2022fall/" title="Yonsei University" target="_blank" rel="noopener"><img src="static/landing/universities/Yonsei-University.svg" alt="Yonsei University" loading="lazy"></a>
       <img src="static/landing/universities/Yunnan-University.png" alt="Yunnan University" loading="lazy">
       <a href="https://www.icourse163.org/course/ZJU-1206573810" title="Zhejiang University — 机器学习 (Machine Learning) — MOOC on icourse163.org — (unknown — 浙江大学)" target="_blank" rel="noopener"><img src="static/landing/universities/Zhejiang-University.svg" alt="Zhejiang University" loading="lazy"></a>
-      <a href="https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf" title="Zhengzhou Tourism College — PyTorch" target="_blank" rel="noopener"><img src="static/landing/universities/Zhengzhou-Tourism-College.png" alt="Zhengzhou Tourism College" loading="lazy"></a>
+      <a href="https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf" title="Zhengzhou Tourism College — PyTorch" target="_blank" rel="noopener"><img src="static/landing/universities/Zhengzhou-Tourism-College.png" class="d2l-uni-logo-invert" alt="Zhengzhou Tourism College" loading="lazy"></a>
       <!-- @universities-end -->
     </div>
     <p class="d2l-uni-note">Click a logo to see a course at that institution adopting the book.</p>
@@ -1162,7 +1160,6 @@ page-layout: full
   <h2>Global university adoption</h2>
   <figure>
     <img src="static/landing/universities-map-google.png" alt="World map showing universities teaching Dive into Deep Learning" loading="lazy">
-    <figcaption>Static map generated from university locations in <code>tools/universities.json</code>.</figcaption>
   </figure>
 </section>
 

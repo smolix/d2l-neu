@@ -45,9 +45,7 @@ import re
 import shutil
 import subprocess
 import sys
-import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -541,6 +539,18 @@ def main():
             if stale_root_cache.exists():
                 shutil.rmtree(stale_root_cache)
 
+            # Per-framework Quarto cache (xref/INDEX, idx/, cites/, …).
+            # Prior builds of this tool ran 16 parallel `quarto render`
+            # subprocesses that raced on INDEX without locking, producing
+            # a JSON document followed by an orphan tail fragment. Once
+            # corrupted, every subsequent render in the same project
+            # dies with `SyntaxError: Unexpected non-whitespace
+            # character after JSON …`. Wipe the cache so the new
+            # single-project render starts from a clean slate.
+            fw_cache = fw_dir / '.quarto'
+            if fw_cache.exists():
+                shutil.rmtree(fw_cache)
+
             # Inject executed notebook outputs into the slide qmds before
             # rendering, so the rendered HTML carries cached outputs.
             notebooks_dir = Path('_notebooks')
@@ -561,8 +571,6 @@ def main():
                     q for q in qmd_files
                     if q.relative_to(fw_dir).with_suffix('').as_posix()
                        in stems]
-            print(f'  Rendering {len(qmd_files)} deck(s) on '
-                  f'{args.workers} CPU worker(s)')
 
             # Quarto needs nbformat (Python) to parse code chunks even
             # with eval: false. Use any framework's venv that exists.
@@ -577,73 +585,88 @@ def main():
 
             error_dir = fw_dir.parent / 'errors' / fw
             error_dir.mkdir(parents=True, exist_ok=True)
-            print_lock = threading.Lock()
-            counter = [0]
+
+            # Render the framework as a single Quarto project. Quarto
+            # renders files sequentially within one process, so its
+            # writes to .quarto/xref/INDEX are not racing. Spawning N
+            # parallel `quarto render <single.qmd>` subprocesses (the
+            # previous design) was unsafe — the per-file workers all did
+            # read-modify-write on the shared INDEX without locking, and
+            # under contention a slow writer's bytes were truncated to
+            # the fast writer's length, leaving a valid JSON document
+            # followed by an orphan tail fragment. Subsequent renders
+            # then died with `SyntaxError: Unexpected non-whitespace
+            # character after JSON at position …` from
+            # `crossrefIndexForOutputFile`. --workers is preserved as a
+            # CLI knob for backwards compatibility but is now ignored.
             total = len(qmd_files)
+            print(f'  Rendering {total} deck(s) via single-project quarto')
+            rel_paths = [str(q.relative_to(fw_dir)) for q in qmd_files]
 
-            # Quarto's crossref / cites cache is shared across parallel
-            # renders; under contention, individual renders can fail with
-            # JSON-parse or stat-not-found errors. Retry once after a
-            # short jittered backoff.
-            def _is_transient(stderr):
-                return stderr and any(s in stderr for s in (
-                    'Unexpected end of JSON input',
-                    'Error opening book citations',
-                    'crossrefIndexForOutputFile',
-                    'NotFound:',
-                    'Kernel didn',           # "didn't respond"
-                    'Kernel died',           # "died before replying"
-                    'Address already in use',
-                    'KernelDied',
-                ))
+            cmd = ['quarto', 'render', *rel_paths, '--to', 'revealjs']
+            t0 = time.time()
+            proc = subprocess.Popen(
+                cmd, cwd=fw_dir, env=base_env,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1)
 
-            def _try_render(qmd):
-                t0 = time.time()
-                try:
-                    result = subprocess.run(
-                        ['quarto', 'render', str(qmd), '--to', 'revealjs'],
-                        capture_output=True, text=True,
-                        timeout=args.timeout, env=base_env)
-                    ok = result.returncode == 0
-                    stderr = (result.stderr or result.stdout).strip()
-                except subprocess.TimeoutExpired:
-                    ok = False
-                    stderr = f'TIMEOUT (>{args.timeout}s)'
-                return ok, stderr, time.time() - t0
+            current_file = None
+            current_buf = []
+            file_errors = {}
+            line_re = re.compile(r'^\s*\[\d+/\d+\]\s+(\S+\.qmd)\s*$')
+            fail_re = re.compile(r'^\s*FAIL\s+\([\d.]+s\)\s+(\S+\.qmd)\s*$')
 
-            def render_one(qmd):
-                with print_lock:
-                    counter[0] += 1
-                    idx = counter[0]
-                    rel_q = str(qmd.relative_to(fw_dir))
-                    print(f'  [{idx}/{total}] {rel_q}', flush=True)
-                ok, stderr, elapsed = _try_render(qmd)
-                if not ok and _is_transient(stderr):
-                    import random
-                    time.sleep(0.5 + random.random())
-                    ok2, stderr2, elapsed2 = _try_render(qmd)
-                    if ok2:
-                        with print_lock:
-                            print(f'  RETRY OK ({elapsed2:.1f}s) {qmd.relative_to(fw_dir)}',
-                                  flush=True)
-                        return qmd, True, None
-                    stderr, elapsed = stderr2, elapsed + elapsed2
-                if not ok:
-                    log_path = error_dir / qmd.relative_to(fw_dir).with_suffix('.log')
-                    log_path.parent.mkdir(parents=True, exist_ok=True)
-                    log_path.write_text(stderr or '')
-                    with print_lock:
-                        print(f'  FAIL ({elapsed:.1f}s) {qmd.relative_to(fw_dir)}',
-                              flush=True)
-                        for ln in (stderr or 'unknown').splitlines()[-15:]:
-                            print(f'    {ln}', flush=True)
-                return qmd, ok, stderr if not ok else None
+            def _flush():
+                if current_file and current_buf:
+                    file_errors.setdefault(current_file, []).extend(current_buf)
 
-            with ThreadPoolExecutor(max_workers=args.workers) as pool:
-                results = list(pool.map(render_one, qmd_files))
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                line = line.rstrip('\n')
+                print(f'  {line}', flush=True)
+                m = line_re.match(line)
+                if m:
+                    _flush()
+                    current_file = m.group(1)
+                    current_buf = []
+                    continue
+                m = fail_re.match(line)
+                if m:
+                    _flush()
+                    current_file = m.group(1)
+                    current_buf = [line]
+                    file_errors.setdefault(current_file, []).append(line)
+                    continue
+                if current_file:
+                    current_buf.append(line)
+            _flush()
+            rc = proc.wait()
+            elapsed = time.time() - t0
+
+            # Anything still in errors/* without a corresponding .html
+            # output is treated as a failure (Quarto sometimes emits
+            # FAIL without exiting non-zero on the first try).
+            failed_paths = set(file_errors.keys())
+            for rel in rel_paths:
+                html = fw_dir / Path(rel).with_suffix('.html')
+                if not html.exists():
+                    failed_paths.add(rel)
+
+            for rel in sorted(failed_paths):
+                log_path = error_dir / Path(rel).with_suffix('.log')
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text('\n'.join(file_errors.get(rel, [])) or
+                                    'no output written')
+
+            results = [
+                (fw_dir / rel, rel not in failed_paths,
+                 '\n'.join(file_errors.get(rel, [])) if rel in failed_paths
+                 else None)
+                for rel in rel_paths
+            ]
             failures = [(q, err) for q, ok, err in results if not ok]
-            print(f'  Rendered {len(results) - len(failures)} / {len(results)} '
-                  f'({len(failures)} failed)')
+            print(f'  Rendered {total - len(failures)} / {total} '
+                  f'({len(failures)} failed) in {elapsed:.0f}s (rc={rc})')
 
             # Dedupe per-deck `<deck>_files/libs/` into a shared
             # `_slides/libs/`. Quarto writes a full copy of revealjs +

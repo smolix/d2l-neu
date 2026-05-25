@@ -902,8 +902,7 @@ can be further improved: we leave its discussions in the exercises.
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab mxnet
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs = 1.953125e-7, 5
+lr, num_epochs = 1e-4, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices,

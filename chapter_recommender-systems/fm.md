@@ -132,8 +132,7 @@ Afterwards, we train the model. The learning rate is set to 0.02 and the embeddi
 devices = d2l.try_all_gpus()
 net = FM(train_data.field_dims, num_factors=20)
 net.initialize(init.Xavier(), ctx=devices)
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs, optimizer = 9.765625e-6, 30, 'adam'
+lr, num_epochs, optimizer = 0.02, 30, 'adam'
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {'learning_rate': lr})
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()

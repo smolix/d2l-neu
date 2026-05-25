@@ -337,8 +337,10 @@ Now we can train the bidirectional RNN for sentiment analysis.
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab mxnet
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs = 1.5625e-4, 5
+# Adam's per-step update is ~lr * normalized_step, so unlike SGD it
+# doesn't need a 1/batch_size rescale to match PyTorch's lr=0.01
+# under d2l.train_batch_ch13's trainer.step(1).
+lr, num_epochs = 0.01, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)

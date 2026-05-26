@@ -388,7 +388,7 @@ requires-dist = [
     { name = "jupyter", marker = "extra == 'run'" },
     { name = "matplotlib" },
     { name = "matplotlib-inline" },
-    { name = "mxnet", marker = "python_full_version == '3.12.*' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.1/mxnet-2.0.0%2Bcu13.bw.20260525.1-cp312-cp312-linux_x86_64.whl" },
+    { name = "mxnet", marker = "python_full_version == '3.12.*' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.3/mxnet-2.0.0%2Bcu13.bw.20260525.3-cp312-cp312-linux_x86_64.whl" },
     { name = "nbconvert", marker = "extra == 'run'" },
     { name = "numpy" },
     { name = "optax", marker = "extra == 'jax'" },
@@ -1417,8 +1417,8 @@ wheels = [
 
 [[package]]
 name = "mxnet"
-version = "2.0.0+cu13.bw.20260525.1"
-source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.1/mxnet-2.0.0%2Bcu13.bw.20260525.1-cp312-cp312-linux_x86_64.whl" }
+version = "2.0.0+cu13.bw.20260525.3"
+source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.3/mxnet-2.0.0%2Bcu13.bw.20260525.3-cp312-cp312-linux_x86_64.whl" }
 dependencies = [
     { name = "graphviz", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
@@ -1429,7 +1429,7 @@ dependencies = [
     { name = "requests", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.1/mxnet-2.0.0%2Bcu13.bw.20260525.1-cp312-cp312-linux_x86_64.whl", hash = "sha256:5887ba2b5671e619e15d30f25a436d08cbb73a2e92b18f394cb996d3eb546580" },
+    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260525.3/mxnet-2.0.0%2Bcu13.bw.20260525.3-cp312-cp312-linux_x86_64.whl", hash = "sha256:26adcf99dcaa4a1254e51c3d8ac36f709dc59f41516f9c1561bc19aa4992bfb0" },
 ]
 
 [package.metadata]

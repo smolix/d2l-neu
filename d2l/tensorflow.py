@@ -2933,7 +2933,8 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
         keras.layers.Dense(10),
     ])
     model.compile(
-        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
+        optimizer=keras.optimizers.SGD(learning_rate=learning_rate,
+                                       clipnorm=1.0),
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=['accuracy'],
     )

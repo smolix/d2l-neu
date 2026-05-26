@@ -1,18 +1,116 @@
 <!--
   Top navigation bar injected into every slide deck via Quarto's
-  `include-after-body`. CSS lives in `_d2l-slides.scss` (.d2l-deck-nav).
+  `include-after-body`. Mirrors the book's chrome:
+    - 280px white box on the left with the d2l logo
+    - blue navbar to the right with nav links
+  CSS lives in `_d2l-slides.scss` (.d2l-deck-nav) and is inlined here
+  so layout updates take effect even when the compiled theme bundle
+  is stale.
 
   Links are filled dynamically from the deployed path:
   `<prefix>/slides/<fw>/<chapter>/<file>.html`.
 -->
+<style>
+.d2l-deck-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: stretch;
+  font-family: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  height: 52px;
+  margin: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  background: #2196F3;
+}
+.d2l-deck-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280px;
+  background: #ffffff;
+  border-right: 1px solid #e9ecef;
+  text-decoration: none;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.d2l-deck-logo img {
+  max-height: 40px;
+  max-width: 100%;
+  width: auto;
+  display: block;
+}
+.d2l-deck-nav-links {
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0 1rem 0 0;
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.d2l-deck-nav-links a {
+  color: white;
+  text-decoration: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  font-weight: 500;
+  opacity: 0.92;
+  transition: opacity 0.1s, background 0.1s;
+}
+.d2l-deck-nav-links a:hover {
+  background: rgba(255,255,255,0.14);
+  opacity: 1;
+}
+.reveal .d2l-deck-logo,
+.reveal .d2l-deck-logo:visited,
+.reveal .d2l-deck-logo:hover,
+.reveal .d2l-deck-nav-links a,
+.reveal .d2l-deck-nav-links a:visited,
+.reveal .d2l-deck-nav-links a:hover { border-bottom: none; }
+
+/* Match the book's body font (Source Sans 3). The revealjs `simple`
+   theme defaults to a serif (Palatino) which is jarring next to the
+   sans-serif book chrome. */
+.reveal, .reveal .slides {
+  font-family: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-family: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+}
+/* Code must remain monospace (matches the book's notebook-cell rendering).
+   Override the inherited Source Sans 3 from .reveal. */
+.reveal pre, .reveal pre code, .reveal code,
+.reveal .sourceCode, .reveal .sourceCode code, .reveal .sourceCode pre,
+.reveal .cell-output pre, .reveal .cell-output-stdout pre,
+.reveal .cell-output code, .reveal .cell-output-stdout code {
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono',
+               Menlo, Consolas, 'Courier New', monospace !important;
+}
+
+/* Push deck content below the 52px bar with breathing room. */
+.reveal .slides { padding-top: 72px; }
+@media print {
+  .d2l-deck-nav { display: none; }
+  .reveal .slides { padding-top: 0; }
+}
+</style>
 <nav class="d2l-deck-nav">
   <a class="d2l-deck-logo" href="../../../index.html"
      title="Dive into Deep Learning — book home">
     <img src="../../../static/logo-with-text.png" alt="Dive into Deep Learning">
   </a>
   <ul class="d2l-deck-nav-links">
-    <li><a href="../../../index.html">Book</a></li>
+    <li><a href="../../../index.html">Book Chapter</a></li>
     <li><a href="../../index.html">Slides</a></li>
+    <li><a href="https://courses.d2l.ai">Courses</a></li>
+    <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
+    <li><a href="https://discuss.d2l.ai">Discuss</a></li>
   </ul>
 </nav>
 <script>

@@ -368,6 +368,7 @@ Now let's see how this plays out for training on Fashion-MNIST. We simply provid
 
 ```{.python .input #lr-scheduler-schedulers-4}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -489,6 +490,7 @@ The intuition behind this piecewise constant learning rate schedule is that one 
 
 ```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -562,6 +564,7 @@ In the context of computer vision this schedule *can* lead to improved results. 
 
 ```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -611,6 +614,7 @@ Note that the network converges better initially (in particular observe the perf
 
 ```{.python .input #lr-scheduler-warmup-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)

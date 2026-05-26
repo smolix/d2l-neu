@@ -1583,14 +1583,14 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
     n, timer = 0, d2l.Timer()
-    # JIT-fuse the per-batch step (grad + optimizer update) so we don't
-    # round-trip through Python on every minibatch.
+    # JIT only the grad computation; the optimizer update runs eagerly so
+    # that stateful optimizers can mutate `states` without triggering JAX
+    # tracer-leak errors from closure side-effects inside jit.
     @jax.jit
-    def step(w, b, X, y):
+    def compute_grads(w, b, X, y):
         def loss_fn(w, b):
             return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-        grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
-        return trainer_fn([w, b], list(grads), states, hyperparams)
+        return jax.grad(loss_fn, argnums=(0, 1))(w, b)
     # Pre-stack the full dataset on device so the periodic evaluate_loss
     # stays inside one compiled call instead of looping in Python.
     eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
@@ -1604,7 +1604,8 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     for _ in range(num_epochs):
         for X, y in data_iter:
             X, y = jnp.array(X), jnp.array(y)
-            w, b = step(w, b, X, y)
+            grads = compute_grads(w, b, X, y)
+            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
             n += X.shape[0]
             if n % 200 == 0:
                 timer.stop()

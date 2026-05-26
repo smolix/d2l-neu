@@ -28,25 +28,58 @@
     <li><a href="https://courses.d2l.ai">Courses</a></li>
     <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
     <li><a href="https://d2l.discourse.group">Discuss</a></li>
+    <li>
+      <a href="#" id="d2l-deck-presenter"
+         title="Open speaker / presenter view in a second window (shortcut: S)">
+        Presenter
+      </a>
+    </li>
   </ul>
 </nav>
 <script>
-// Rewrite the "Book Chapter" link to the corresponding book HTML
-// (e.g. /slides/pytorch/chapter_x/foo.html → /chapter_x/foo.html).
-// The logo link stays pointing at book home.
+// (1) Rewrite the "Book Chapter" link to the corresponding book HTML
+//     (e.g. /slides/pytorch/chapter_x/foo.html → /chapter_x/foo.html).
+//     The logo link stays pointing at book home.
+// (2) Wire the "Presenter" link to the reveal-notes plugin's open()
+//     API. This is the same call the reveal menu uses for its
+//     "Speaker View" tool item; doing it from a direct user click in
+//     the navbar keeps the popup-blocker happy and gives a visible
+//     affordance for the otherwise-undiscoverable `S` shortcut.
 (function() {
   function init() {
     var parts = window.location.pathname.split('/');
     var i = parts.lastIndexOf('slides');
-    if (i < 0 || i + 3 >= parts.length) return;
-    var prefix = parts.slice(0, i).join('/') + '/';
-    var framework = parts[i + 1];
-    var chapter = parts[i + 2];
-    var file = parts[i + 3];
-    var chapterUrl = prefix + chapter + '/' + file +
-                     '?framework=' + encodeURIComponent(framework);
-    var first = document.querySelector('.d2l-deck-nav-links a');
-    if (first) first.setAttribute('href', chapterUrl);
+    if (i >= 0 && i + 3 < parts.length) {
+      var prefix = parts.slice(0, i).join('/') + '/';
+      var framework = parts[i + 1];
+      var chapter = parts[i + 2];
+      var file = parts[i + 3];
+      var chapterUrl = prefix + chapter + '/' + file +
+                       '?framework=' + encodeURIComponent(framework);
+      var first = document.querySelector('.d2l-deck-nav-links a');
+      if (first) first.setAttribute('href', chapterUrl);
+    }
+    var presenter = document.getElementById('d2l-deck-presenter');
+    if (presenter) {
+      presenter.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        try {
+          var notes = window.Reveal && Reveal.getPlugin &&
+                      Reveal.getPlugin('notes');
+          if (notes && typeof notes.open === 'function') {
+            notes.open();
+            return;
+          }
+        } catch (e) { /* fall through to keyboard fallback */ }
+        // Fallback: synthesize the `S` keypress the notes plugin
+        // listens for. Works even if the plugin's `open` export is
+        // unavailable (older bundled reveal builds).
+        var ev2 = new KeyboardEvent('keydown',
+            { key: 'S', code: 'KeyS', keyCode: 83, which: 83,
+              bubbles: true, cancelable: true });
+        document.dispatchEvent(ev2);
+      });
+    }
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

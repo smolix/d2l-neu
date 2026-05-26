@@ -603,7 +603,14 @@ def main():
             print(f'  Rendering {total} deck(s) via single-project quarto')
             rel_paths = [str(q.relative_to(fw_dir)) for q in qmd_files]
 
-            cmd = ['quarto', 'render', *rel_paths, '--to', 'revealjs']
+            # --no-execute skips Quarto's per-deck Python-kernel startup
+            # (~3-5s × N decks). Code-cell outputs are already injected
+            # into the .qmd by inject_outputs.py before this render, so
+            # there's nothing to execute — kernel startup was pure
+            # overhead. eval: false in each deck's frontmatter is not
+            # enough; Quarto still spins up nbconvert.
+            cmd = ['quarto', 'render', *rel_paths,
+                   '--to', 'revealjs', '--no-execute']
             t0 = time.time()
             proc = subprocess.Popen(
                 cmd, cwd=fw_dir, env=base_env,
@@ -652,6 +659,21 @@ def main():
                 if not html.exists():
                     failed_paths.add(rel)
 
+            # A non-zero exit from quarto that didn't surface as a
+            # per-file FAIL means the project-level render failed
+            # before any file got re-rendered (typical cause: a theme
+            # SCSS compile error). The old .html files from a prior
+            # build still exist on disk, so the per-file existence
+            # check above would otherwise spuriously report 0 failures.
+            # Treat this as "every file failed" so the build is
+            # visibly broken.
+            if rc != 0 and not failed_paths:
+                for rel in rel_paths:
+                    failed_paths.add(rel)
+                    file_errors.setdefault(rel, []).append(
+                        f'quarto exited rc={rc} before any per-file render '
+                        f'completed (likely theme SCSS compile error)')
+
             for rel in sorted(failed_paths):
                 log_path = error_dir / Path(rel).with_suffix('.log')
                 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -686,7 +708,17 @@ def main():
                     continue
                 files_dir = deck_html.parent / f'{deck_html.stem}_files'
                 per_deck_libs = files_dir / 'libs'
-                if per_deck_libs.exists() and not shared_libs.exists():
+                # Merge per-deck libs into the shared tree on every
+                # deck (not just when shared doesn't exist). Quarto
+                # bakes a content-hash into the compiled theme CSS
+                # filename (e.g. `quarto-<sha>.css`), and different
+                # SCSS compiles across frameworks / across rebuilds
+                # produce different hashes. The HTML rewrite below
+                # only changes the *directory* prefix, so the
+                # filename has to exist in shared — otherwise the
+                # deck loads no theme CSS at all. Copy adds new
+                # hashed siblings without clobbering existing ones.
+                if per_deck_libs.exists():
                     shutil.copytree(per_deck_libs, shared_libs,
                                     dirs_exist_ok=True)
                 rel_libs = os.path.relpath(

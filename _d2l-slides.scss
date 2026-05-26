@@ -286,42 +286,45 @@ $code-block-padding:     0.45em 0.7em;
   }
 }
 
-// ── Top navigation bar (logo + Book/Slides links) ────────
-// Mirrors the book's chrome: 280px white box on the left holds the d2l
-// logo (matching the book's sidebar-header), blue bar to the right with
-// nav links. Persistent across all slides; the SCSS rules here are
-// duplicated inline in `_d2l-slides-overlay.html` so layout updates take
-// effect even when the compiled bundle is stale.
+// ── Top navigation bar — mirrors the book's chrome ───────
+// 280px white box on the left holds the d2l logo (matches the book's
+// `.sidebar-header`); blue bar on the right has the same nav links as
+// the book's navbar. Persistent across all slides.
 $d2l-deck-nav-height: 52px;
-$d2l-deck-nav-gap: 20px;
-$d2l-deck-logo-width: 280px;
+$d2l-deck-brand-width: 280px;
 
 .d2l-deck-nav {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 100;
+  z-index: 1060;  // above reveal's controls and chalkboard
   display: flex;
   align-items: stretch;
-  background: $blue;
-  color: white;
+  height: $d2l-deck-nav-height;
   font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
   font-size: 15px;
-  height: $d2l-deck-nav-height;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: $blue;
+  color: white;
   margin: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
-
+.d2l-deck-brand {
+  width: $d2l-deck-brand-width;
+  background: $bg;
+  border-right: 1px solid $line;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .d2l-deck-logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: $d2l-deck-logo-width;
-  background: $white;
-  border-right: 1px solid $line;
   text-decoration: none;
+  width: 100%;
+  height: 100%;
   padding: 0 0.75rem;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 .d2l-deck-logo img {
   max-height: 40px;
@@ -330,20 +333,10 @@ $d2l-deck-logo-width: 280px;
   display: block;
 }
 
-.d2l-deck-title {
-  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
-  font-weight: 500;
-  font-size: 1.05rem;
-  color: white;
-  letter-spacing: -0.005em;
-  margin: 0;
-  white-space: nowrap;
-}
-
 .d2l-deck-nav-links {
   list-style: none;
   margin: 0 0 0 auto;
-  padding: 0;
+  padding: 0 1rem 0 0;
   display: flex;
   gap: 0.25rem;
   align-items: center;
@@ -351,8 +344,8 @@ $d2l-deck-logo-width: 280px;
 .d2l-deck-nav-links a {
   color: white;
   text-decoration: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 3px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
   font-weight: 500;
   opacity: 0.92;
   transition: opacity 0.1s, background 0.1s;
@@ -370,12 +363,9 @@ $d2l-deck-logo-width: 280px;
 .reveal .d2l-deck-nav-links a:visited,
 .reveal .d2l-deck-nav-links a:hover { border-bottom: none; }
 
-// Push the deck content down so the nav doesn't overlap slide content.
-// Reveal centers slides in `.reveal .slides`, so add room equal to the
-// navbar height plus a comfortable gap below it.
-.reveal .slides {
-  padding-top: $d2l-deck-nav-height + $d2l-deck-nav-gap;
-}
+// Push the deck content down so the nav doesn't overlap slide titles.
+// 52px navbar + small breathing gap.
+.reveal .slides { padding-top: 60px; }
 
 @media print {
   .d2l-deck-nav { display: none; }

@@ -137,58 +137,89 @@ body {
    visually. The book's <header> already brings its own dark-blue
    Bootstrap navbar; we add a small wrapper to recreate the layout
    without the book's sidebar machinery. */
+/* Top chrome — mirrors the book: 280px white box on the left holds the
+   d2l logo (matches the book's `.sidebar-header`); blue bar on the
+   right has nav links. Both pinned at the top. */
 #quarto-header {
   position: sticky;
   top: 0;
   z-index: 1030;
-}
-
-#quarto-header .navbar {
-  background: var(--blue) !important;
+  display: flex;
+  align-items: stretch;
+  height: 52px;
+  background: var(--blue);
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 #quarto-header .navbar-brand-container {
+  width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   display: flex;
   align-items: center;
-  margin-right: auto;
+  justify-content: center;
+  flex-shrink: 0;
 }
 #quarto-header .navbar-brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.25rem 0.5rem;
+  justify-content: center;
+  text-decoration: none;
+  padding: 0 0.75rem;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 #quarto-header .navbar-brand img {
-  height: 36px;
+  max-height: 40px;
+  max-width: 100%;
   width: auto;
   display: block;
-  /* Logo art is dark on transparent; invert it so it reads on blue. */
-  filter: brightness(0) invert(1);
 }
-#quarto-header .navbar-title {
-  color: white;
-  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
-  font-weight: 500;
-  font-size: 1.15rem;
-  letter-spacing: -0.005em;
-  display: inline-flex !important;
+
+#quarto-header .navbar {
+  flex: 1;
+  background: var(--blue);
+  display: flex;
   align-items: center;
+  padding: 0 1rem;
+}
+
+#quarto-header .navbar-nav {
+  display: flex;
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  gap: 0.25rem;
+  align-items: center;
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
 }
 
 #quarto-header .navbar a.nav-link,
 #quarto-header .navbar .nav-link {
   color: white !important;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  text-decoration: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  font-weight: 500;
   opacity: 0.92;
+  transition: opacity 0.1s, background 0.1s;
 }
 #quarto-header .navbar a.nav-link:hover,
 #quarto-header .navbar .nav-link:hover {
+  background: rgba(255,255,255,0.14);
   opacity: 1;
 }
 
+#quarto-header .navbar .dropdown-menu {
+  background: var(--surface);
+}
 #quarto-header .navbar .dropdown-menu a {
   color: var(--text);
+}
+#quarto-header .navbar .dropdown-menu a:hover {
+  background: var(--bg);
 }
 
 /* Sub-bar holding the framework picker */
@@ -357,44 +388,37 @@ footer {
 <body class="quarto-light">
 
 <header id="quarto-header">
+  <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../index.html">
+      <img src="../static/logo-with-text.png" alt="Dive into Deep Learning" class="navbar-logo">
+    </a>
+  </div>
   <nav class="navbar navbar-expand-lg" data-bs-theme="dark">
-    <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container">
-        <a class="navbar-brand" href="../index.html">
-          <img src="../static/logo-with-text.png" alt="Dive into Deep Learning" class="navbar-logo">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link active" href="./index.html"><span class="menu-text">Slides</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://courses.d2l.ai"><span class="menu-text">Courses</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/smolix/d2l-neu"><i class="bi bi-github" role="img"></i> <span class="menu-text">GitHub</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://discuss.d2l.ai"><span class="menu-text">Discuss</span></a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="nav-menu-pdf" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="menu-text">PDF</span>
         </a>
-      </div>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarCollapse">
-        <ul class="navbar-nav navbar-nav-scroll ms-auto">
-          <li class="nav-item">
-            <a class="nav-link active" href="./index.html"><span class="menu-text">Slides</span></a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="https://courses.d2l.ai"><span class="menu-text">Courses</span></a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="https://github.com/smolix/d2l-neu"><i class="bi bi-github" role="img"></i> <span class="menu-text">GitHub</span></a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="https://discuss.d2l.ai"><span class="menu-text">Discuss</span></a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="nav-menu-pdf" role="link" data-bs-toggle="dropdown" aria-expanded="false">
-              <span class="menu-text">PDF</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-pdf">
-              <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-pytorch.pdf"><span class="dropdown-text">PyTorch</span></a></li>
-              <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-jax.pdf"><span class="dropdown-text">JAX</span></a></li>
-              <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-tensorflow.pdf"><span class="dropdown-text">TensorFlow</span></a></li>
-              <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-mxnet.pdf"><span class="dropdown-text">MXNet</span></a></li>
-            </ul>
-          </li>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-pdf">
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-pytorch.pdf"><span class="dropdown-text">PyTorch</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-jax.pdf"><span class="dropdown-text">JAX</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-tensorflow.pdf"><span class="dropdown-text">TensorFlow</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-mxnet.pdf"><span class="dropdown-text">MXNet</span></a></li>
         </ul>
-      </div>
-    </div>
+      </li>
+    </ul>
   </nav>
 </header>
 

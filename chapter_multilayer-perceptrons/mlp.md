@@ -641,19 +641,19 @@ in many cases.
 1. Provide an example where the gradients vanish for the sigmoid activation function.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/90)
+[Discussions](https://d2l.discourse.group/t/90)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/91)
+[Discussions](https://d2l.discourse.group/t/91)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/226)
+[Discussions](https://d2l.discourse.group/t/226)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17984)
+[Discussions](https://d2l.discourse.group/t/17984)
 :end_tab:
 
 <!-- slides -->

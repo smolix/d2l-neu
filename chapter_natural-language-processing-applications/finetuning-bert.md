@@ -191,4 +191,4 @@ and output the span with the highest score.
 1. How can we leverage BERT in training language models?
 1. Can we leverage BERT in machine translation?
 
-[Discussions](https://discuss.d2l.ai/t/396)
+[Discussions](https://d2l.discourse.group/t/396)

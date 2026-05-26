@@ -709,19 +709,19 @@ and *more efficiently* (using our GPUs to their full potential).
 1. Why do we need to reshuffle the dataset? Can you design a case where a maliciously constructed dataset would break the optimization algorithm otherwise?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/42)
+[Discussions](https://d2l.discourse.group/t/42)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/43)
+[Discussions](https://d2l.discourse.group/t/43)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/201)
+[Discussions](https://d2l.discourse.group/t/201)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17976)
+[Discussions](https://d2l.discourse.group/t/17976)
 :end_tab:
 
 <!-- slides -->

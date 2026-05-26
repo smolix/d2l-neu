@@ -320,19 +320,19 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/416)
+[Discussions](https://d2l.discourse.group/t/416)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1096)
+[Discussions](https://d2l.discourse.group/t/1096)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1097)
+[Discussions](https://d2l.discourse.group/t/1097)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1097)
+[Discussions](https://d2l.discourse.group/t/1097)
 :end_tab:
 
 <!-- slides -->

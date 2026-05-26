@@ -153,19 +153,19 @@ By doing this you will become a better engineer
 in addition to becoming a better scientist.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/38)
+[Discussions](https://d2l.discourse.group/t/38)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/39)
+[Discussions](https://d2l.discourse.group/t/39)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/199)
+[Discussions](https://d2l.discourse.group/t/199)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17972)
+[Discussions](https://d2l.discourse.group/t/17972)
 :end_tab:
 
 <!-- slides -->

@@ -464,17 +464,17 @@ We leave you with a few rules of thumb:
 1. Your manager gives you a difficult dataset on which your current algorithm does not perform so well. How would you justify to him that you need more data? Hint: you cannot increase the data but you can decrease it.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/96)
+[Discussions](https://d2l.discourse.group/t/96)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/97)
+[Discussions](https://d2l.discourse.group/t/97)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/234)
+[Discussions](https://d2l.discourse.group/t/234)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17978)
+[Discussions](https://d2l.discourse.group/t/17978)
 :end_tab:

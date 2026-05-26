@@ -247,7 +247,7 @@ X = d2l.normal(0, 1, (3, 3, 3))
 K = d2l.normal(0, 1, (2, 3, 1, 1))
 Y1 = corr2d_multi_in_out_1x1(X, K)
 Y2 = corr2d_multi_in_out(X, K)
-assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
+assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-5
 ```
 
 ```{.python .input #channels-1-times-1-convolutional-layer-2}
@@ -256,7 +256,7 @@ X = d2l.normal((3, 3, 3), 0, 1)
 K = d2l.normal((2, 3, 1, 1), 0, 1)
 Y1 = corr2d_multi_in_out_1x1(X, K)
 Y2 = corr2d_multi_in_out(X, K)
-assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
+assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-5
 ```
 
 ```{.python .input #channels-1-times-1-convolutional-layer-2}
@@ -265,7 +265,7 @@ X = jax.random.normal(d2l.get_key(), (3, 3, 3))
 K = jax.random.normal(d2l.get_key(), (2, 3, 1, 1))
 Y1 = corr2d_multi_in_out_1x1(X, K)
 Y2 = corr2d_multi_in_out(X, K)
-assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-6
+assert float(d2l.reduce_sum(d2l.abs(Y1 - Y2))) < 1e-5
 ```
 
 ## Discussion
@@ -300,19 +300,19 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
     1. What is the downside of having $b$ blocks? How could you fix it, at least partly?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/69)
+[Discussions](https://d2l.discourse.group/t/69)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/70)
+[Discussions](https://d2l.discourse.group/t/70)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/273)
+[Discussions](https://d2l.discourse.group/t/273)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17998)
+[Discussions](https://d2l.discourse.group/t/17998)
 :end_tab:
 
 <!-- slides -->

@@ -50,7 +50,7 @@ $code-bg:               $bg-code;
 
 /*-- scss:rules --*/
 
-$d2l-navbar-height: 62px;
+$d2l-navbar-height: 52px;
 
 // Pin the sidebar to a fixed 280px column at all desktop widths so
 // the navbar/sidebar-header/grid all agree on the same offset
@@ -123,24 +123,28 @@ $d2l-grid-cols-mobile:
   }
 
   .nav-link {
-    color: rgba($white, 0.88) !important;
-    // Match the h3 / subsubsection size ($h3-font-size = 1.1875rem)
-    // so the top nav reads at the same weight as in-body headings.
-    font-size: $h3-font-size;
+    color: $white !important;
+    // Match the slide-deck nav-links (matches `_d2l-slides.scss`).
+    // Smaller and tighter than the in-body h3 so the 52px navbar
+    // doesn't look chunky.
+    font-size: 15px;
     line-height: 1.2;
     font-weight: 500;
-    padding-top: 0.7rem;
-    padding-bottom: 0.7rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 4px;
+    opacity: 0.92;
+    transition: opacity 0.1s, background 0.1s;
 
     &:hover,
     &:focus {
-      background-color: transparent !important;
+      background-color: rgba($white, 0.14) !important;
       color: $white !important;
+      opacity: 1;
     }
   }
 
   .dropdown-item {
-    font-size: $h3-font-size;
+    font-size: 15px;
 
     &:hover,
     &:focus {
@@ -375,8 +379,8 @@ $d2l-grid-cols-mobile:
 #quarto-header .navbar #quarto-search svg.aa-SubmitIcon,
 #quarto-header .navbar #quarto-search .type-overlay svg.aa-SubmitIcon,
 #quarto-header .navbar #quarto-search.type-overlay svg.aa-SubmitIcon {
-  width: $h3-font-size !important;
-  height: $h3-font-size !important;
+  width: 18px !important;
+  height: 18px !important;
   color: $white !important;
   opacity: 1 !important;
 }

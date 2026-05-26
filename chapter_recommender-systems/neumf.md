@@ -454,11 +454,11 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 * Try to use hinge loss defined in the last section to optimize this model.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/403)
+[Discussions](https://d2l.discourse.group/t/403)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/403)
+[Discussions](https://d2l.discourse.group/t/403)
 :end_tab:
 
 <!-- slides -->

@@ -663,4 +663,4 @@ In some cases, the environment may remember automated actions and respond in sur
 1. Besides distribution shift, what else could affect how the empirical risk approximates the risk?
 
 
-[Discussions](https://discuss.d2l.ai/t/105)
+[Discussions](https://d2l.discourse.group/t/105)

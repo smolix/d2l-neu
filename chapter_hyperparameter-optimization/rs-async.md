@@ -233,7 +233,7 @@ modifications.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12093)
+[Discussions](https://d2l.discourse.group/t/12093)
 :end_tab:
 
 <!-- slides -->

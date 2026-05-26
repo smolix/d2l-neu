@@ -312,19 +312,19 @@ Sampling with replacement leads to an increased variance and decreased data effi
 1. Assume that $f(x) = x^2 (1 + \sin x)$. How many local minima does $f$ have? Can you change $f$ in such a way that to minimize it one needs to evaluate all the local minima?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/352)
+[Discussions](https://d2l.discourse.group/t/352)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/497)
+[Discussions](https://d2l.discourse.group/t/497)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1067)
+[Discussions](https://d2l.discourse.group/t/1067)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1067)
+[Discussions](https://d2l.discourse.group/t/1067)
 :end_tab:
 
 <!-- slides -->

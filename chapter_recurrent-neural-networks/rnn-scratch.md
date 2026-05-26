@@ -890,19 +890,19 @@ During training, gradient clipping can mitigate the problem of exploding gradien
    and repeat the experiments in this section. Do we still need gradient clipping? Why?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/336)
+[Discussions](https://d2l.discourse.group/t/336)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/486)
+[Discussions](https://d2l.discourse.group/t/486)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1052)
+[Discussions](https://d2l.discourse.group/t/1052)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18014)
+[Discussions](https://d2l.discourse.group/t/18014)
 :end_tab:
 
 <!-- slides -->

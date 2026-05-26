@@ -929,20 +929,20 @@ It is reasonable to ask at this point, "Why can I not just write down matrix ver
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/413)
+[Discussions](https://d2l.discourse.group/t/413)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1090)
+[Discussions](https://d2l.discourse.group/t/1090)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1091)
+[Discussions](https://d2l.discourse.group/t/1091)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1091)
+[Discussions](https://d2l.discourse.group/t/1091)
 :end_tab:
 
 <!-- slides -->

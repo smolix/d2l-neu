@@ -406,11 +406,11 @@ d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/404)
+[Discussions](https://d2l.discourse.group/t/404)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/404)
+[Discussions](https://d2l.discourse.group/t/404)
 :end_tab:
 
 :begin_tab:`tensorflow,jax`

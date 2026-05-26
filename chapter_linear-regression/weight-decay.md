@@ -608,19 +608,19 @@ Different sets of parameters can have different update behaviors within the same
 1. In Bayesian statistics we use the product of prior and likelihood to arrive at a posterior via $P(w \mid x) \propto P(x \mid w) P(w)$. How can you identify $P(w)$ with regularization?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/98)
+[Discussions](https://d2l.discourse.group/t/98)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/99)
+[Discussions](https://d2l.discourse.group/t/99)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/236)
+[Discussions](https://d2l.discourse.group/t/236)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17979)
+[Discussions](https://d2l.discourse.group/t/17979)
 :end_tab:
 
 <!-- slides -->

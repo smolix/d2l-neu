@@ -183,11 +183,11 @@ Compared with FM, DeepFM converges faster and achieves better performance.
 * Change the dataset to Criteo and compare it with the original FM model.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/407)
+[Discussions](https://d2l.discourse.group/t/407)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/407)
+[Discussions](https://d2l.discourse.group/t/407)
 :end_tab:
 
 <!-- slides -->

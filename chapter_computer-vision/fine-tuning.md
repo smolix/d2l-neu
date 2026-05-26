@@ -845,19 +845,19 @@ hotdog_w.shape
 ```
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/368)
+[Discussions](https://d2l.discourse.group/t/368)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 <!-- slides -->

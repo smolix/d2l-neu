@@ -195,19 +195,19 @@ the type of problems you may need to address.
 1. What alternatives to pandas can you think of? How about [loading NumPy tensors from a file](https://numpy.org/doc/stable/reference/generated/numpy.load.html)? Check out [Pillow](https://python-pillow.org/), the Python Imaging Library. 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/28)
+[Discussions](https://d2l.discourse.group/t/28)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/29)
+[Discussions](https://d2l.discourse.group/t/29)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/195)
+[Discussions](https://d2l.discourse.group/t/195)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17967)
+[Discussions](https://d2l.discourse.group/t/17967)
 :end_tab:
 
 <!-- slides -->

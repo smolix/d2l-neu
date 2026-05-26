@@ -184,5 +184,5 @@ A Gaussian process represents a distribution over functions by specifying a mult
 7. As we move away from the data, suppose the uncertainty in our predictive distribution increases to a point, then stops increasing. Why might that happen?
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12115)
+[Discussions](https://d2l.discourse.group/t/12115)
 :end_tab:

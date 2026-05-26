@@ -817,19 +817,19 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 1. An evil genie replicates your dataset without telling you (i.e., each observation occurs twice and your dataset grows to twice its original size, but nobody told you). How does the behavior of stochastic gradient descent, minibatch stochastic gradient descent and that of gradient descent change?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/353)
+[Discussions](https://d2l.discourse.group/t/353)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1068)
+[Discussions](https://d2l.discourse.group/t/1068)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1069)
+[Discussions](https://d2l.discourse.group/t/1069)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1069)
+[Discussions](https://d2l.discourse.group/t/1069)
 :end_tab:
 
 <!-- slides -->

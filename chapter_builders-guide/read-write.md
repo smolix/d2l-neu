@@ -350,19 +350,19 @@ Saving the architecture has to be done in code rather than in parameters.
 1. How would you go about saving the network architecture and parameters? What restrictions would you impose on the architecture?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/60)
+[Discussions](https://d2l.discourse.group/t/60)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/61)
+[Discussions](https://d2l.discourse.group/t/61)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/327)
+[Discussions](https://d2l.discourse.group/t/327)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17994)
+[Discussions](https://d2l.discourse.group/t/17994)
 :end_tab:
 
 <!-- slides -->

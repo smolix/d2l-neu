@@ -982,19 +982,19 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 1. Do you get better results if you use a deeper pretrained model? How do you tune hyperparameters? Can you further improve the results?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/380)
+[Discussions](https://d2l.discourse.group/t/380)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 <!-- slides -->

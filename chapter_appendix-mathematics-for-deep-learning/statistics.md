@@ -574,19 +574,19 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 1. Run the confidence interval code with $N=2$ and $\alpha = 0.5$ for $100$ independently generated dataset, and plot the resulting intervals (in this case `t_star = 1.0`).  You will see several very short intervals which are very far from containing the true mean $0$.  Does this contradict the interpretation of the confidence interval?  Do you feel comfortable using short intervals to indicate high precision estimates?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/419)
+[Discussions](https://d2l.discourse.group/t/419)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1102)
+[Discussions](https://d2l.discourse.group/t/1102)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1103)
+[Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1103)
+[Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
 <!-- slides -->

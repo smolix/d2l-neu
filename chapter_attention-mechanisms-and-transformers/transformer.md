@@ -1513,19 +1513,19 @@ transforms the representation at all the sequence positions using the same MLP.
 1. How would you improve the computational and memory efficiency of Transformers? Hint: you may refer to the survey paper by :citet:`Tay.Dehghani.Bahri.ea.2020`.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/348)
+[Discussions](https://d2l.discourse.group/t/348)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1066)
+[Discussions](https://d2l.discourse.group/t/1066)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3871)
+[Discussions](https://d2l.discourse.group/t/3871)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18031)
+[Discussions](https://d2l.discourse.group/t/18031)
 :end_tab:
 
 <!-- slides -->

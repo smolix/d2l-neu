@@ -405,7 +405,7 @@ footer {
         <a class="nav-link" href="https://github.com/smolix/d2l-neu"><i class="bi bi-github" role="img"></i> <span class="menu-text">GitHub</span></a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="https://discuss.d2l.ai"><span class="menu-text">Discuss</span></a>
+        <a class="nav-link" href="https://d2l.discourse.group"><span class="menu-text">Discuss</span></a>
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="nav-menu-pdf" role="link" data-bs-toggle="dropdown" aria-expanded="false">

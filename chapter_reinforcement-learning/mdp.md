@@ -56,7 +56,7 @@ The reinforcement learning problem is typically modeled using Markov Decision Pr
 2. How would you design an MDP for an Atari game like [Pong game](https://www.gymlibrary.dev/environments/atari/pong/)?
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12084)
+[Discussions](https://d2l.discourse.group/t/12084)
 :end_tab:
 
 <!-- slides -->

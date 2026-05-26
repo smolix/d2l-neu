@@ -1142,19 +1142,19 @@ To recap:
 1. Consider three matrices, say $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$. Construct a tensor with three axes by stacking $[\mathbf{A}, \mathbf{B}, \mathbf{C}]$. What is the dimensionality? Slice out the second coordinate of the third axis to recover $\mathbf{B}$. Check that your answer is correct.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/30)
+[Discussions](https://d2l.discourse.group/t/30)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/31)
+[Discussions](https://d2l.discourse.group/t/31)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/196)
+[Discussions](https://d2l.discourse.group/t/196)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17968)
+[Discussions](https://d2l.discourse.group/t/17968)
 :end_tab:
 
 <!-- slides -->

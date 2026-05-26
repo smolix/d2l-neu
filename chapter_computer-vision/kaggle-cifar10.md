@@ -1057,19 +1057,19 @@ is similar to that in :numref:`sec_kaggle_house`.
 1. What accuracy can you get when not using image augmentation?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/379)
+[Discussions](https://d2l.discourse.group/t/379)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1479)
+[Discussions](https://d2l.discourse.group/t/1479)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1479)
+[Discussions](https://d2l.discourse.group/t/1479)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1479)
+[Discussions](https://d2l.discourse.group/t/1479)
 :end_tab:
 
 <!-- slides -->

@@ -320,19 +320,19 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 1. Is there a difference between weight initializations of the network? Does it matter?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/92)
+[Discussions](https://d2l.discourse.group/t/92)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/93)
+[Discussions](https://d2l.discourse.group/t/93)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/227)
+[Discussions](https://d2l.discourse.group/t/227)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17985)
+[Discussions](https://d2l.discourse.group/t/17985)
 :end_tab:
 
 <!-- slides -->

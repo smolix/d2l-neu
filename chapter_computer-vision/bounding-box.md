@@ -178,15 +178,15 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/369)
+[Discussions](https://d2l.discourse.group/t/369)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1527)
+[Discussions](https://d2l.discourse.group/t/1527)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1527)
+[Discussions](https://d2l.discourse.group/t/1527)
 :end_tab:
 
 <!-- slides -->

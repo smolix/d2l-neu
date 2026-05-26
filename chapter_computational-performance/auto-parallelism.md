@@ -345,19 +345,19 @@ We conclude with an illustration of the computational graph and its dependencies
 1. Designing computation tasks that include more complex data dependencies, and run experiments to see if you can obtain the correct results while improving performance.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/362)
+[Discussions](https://d2l.discourse.group/t/362)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1681)
+[Discussions](https://d2l.discourse.group/t/1681)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1681)
+[Discussions](https://d2l.discourse.group/t/1681)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1681)
+[Discussions](https://d2l.discourse.group/t/1681)
 :end_tab:
 
 <!-- slides -->

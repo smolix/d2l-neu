@@ -380,7 +380,7 @@ In the context of deep learning the main purpose of convex functions is to motiv
 1. Given a convex set $\mathcal{X}$ and two vectors $\mathbf{x}$ and $\mathbf{y}$, prove that projections never increase distances, i.e., $\|\mathbf{x} - \mathbf{y}\| \geq \|\textrm{Proj}_\mathcal{X}(\mathbf{x}) - \textrm{Proj}_\mathcal{X}(\mathbf{y})\|$.
 
 
-[Discussions](https://discuss.d2l.ai/t/350)
+[Discussions](https://d2l.discourse.group/t/350)
 
 <!-- slides -->
 

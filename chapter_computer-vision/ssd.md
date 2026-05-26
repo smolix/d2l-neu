@@ -1651,19 +1651,19 @@ d2l.plt.legend();
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/373)
+[Discussions](https://d2l.discourse.group/t/373)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1604)
+[Discussions](https://d2l.discourse.group/t/1604)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1604)
+[Discussions](https://d2l.discourse.group/t/1604)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1604)
+[Discussions](https://d2l.discourse.group/t/1604)
 :end_tab:
 
 <!-- slides -->

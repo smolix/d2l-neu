@@ -395,19 +395,19 @@ in subsequent sections of this chapter.
 1. Compare single shot multibox detection with the methods introduced in this section. What are their major differences? You may refer to Figure 2 of :citet:`Zhao.Zheng.Xu.ea.2019`.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/374)
+[Discussions](https://d2l.discourse.group/t/374)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1409)
+[Discussions](https://d2l.discourse.group/t/1409)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1409)
+[Discussions](https://d2l.discourse.group/t/1409)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1409)
+[Discussions](https://d2l.discourse.group/t/1409)
 :end_tab:
 
 <!-- slides -->

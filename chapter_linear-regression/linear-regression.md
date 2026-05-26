@@ -786,15 +786,15 @@ and ultimately, evaluation on previously unseen data.
     1. Design a loss function for estimating $\log \lambda$ instead.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/40)
+[Discussions](https://d2l.discourse.group/t/40)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/258)
+[Discussions](https://d2l.discourse.group/t/258)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/259)
+[Discussions](https://d2l.discourse.group/t/259)
 :end_tab:
 
 <!-- slides -->

@@ -721,19 +721,19 @@ You can lose significant performance by moving data without care.
    on one GPU. Hint: you should see almost linear scaling.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/62)
+[Discussions](https://d2l.discourse.group/t/62)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/63)
+[Discussions](https://d2l.discourse.group/t/63)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/270)
+[Discussions](https://d2l.discourse.group/t/270)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17995)
+[Discussions](https://d2l.discourse.group/t/17995)
 :end_tab:
 
 <!-- slides -->

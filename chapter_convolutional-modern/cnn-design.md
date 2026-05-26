@@ -381,19 +381,19 @@ This includes pretraining large-scale Transformers (:numref:`sec_large-pretraini
 1. Your goal is to design the "perfect" MLP. Can you use the design principles introduced above to find good architectures? Is it possible to extrapolate from small to large networks?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/7462)
+[Discussions](https://d2l.discourse.group/t/7462)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/7463)
+[Discussions](https://d2l.discourse.group/t/7463)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8738)
+[Discussions](https://d2l.discourse.group/t/8738)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18009)
+[Discussions](https://d2l.discourse.group/t/18009)
 :end_tab:
 
 <!-- slides -->

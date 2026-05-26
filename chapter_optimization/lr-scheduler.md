@@ -658,19 +658,19 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 1. Can you connect optimization and sampling? Start by using results from :citet:`Welling.Teh.2011` on Stochastic Gradient Langevin Dynamics.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/359)
+[Discussions](https://d2l.discourse.group/t/359)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1080)
+[Discussions](https://d2l.discourse.group/t/1080)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1081)
+[Discussions](https://d2l.discourse.group/t/1081)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1081)
+[Discussions](https://d2l.discourse.group/t/1081)
 :end_tab:
 
 <!-- slides -->

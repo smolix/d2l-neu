@@ -1876,4 +1876,4 @@ and this is a key component in obtaining high performance.
 1. Describe the relationships between algorithms, data, and computation. How do characteristics of the data and the current available computational resources influence the appropriateness of various algorithms?
 1. Name some settings where end-to-end training is not currently the default approach but where it might be useful.
 
-[Discussions](https://discuss.d2l.ai/t/22)
+[Discussions](https://d2l.discourse.group/t/22)

@@ -346,19 +346,19 @@ get_analogy('do', 'did', 'go', glove_6b50d)
 1. When the vocabulary is extremely large, how can we find similar words or complete a word analogy faster?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/387)
+[Discussions](https://d2l.discourse.group/t/387)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1336)
+[Discussions](https://d2l.discourse.group/t/1336)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1336)
+[Discussions](https://d2l.discourse.group/t/1336)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1336)
+[Discussions](https://d2l.discourse.group/t/1336)
 :end_tab:
 
 <!-- slides -->

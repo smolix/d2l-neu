@@ -576,19 +576,19 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 1. How do you represent a cross-correlation operation as a matrix multiplication by changing the input and kernel tensors?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/65)
+[Discussions](https://d2l.discourse.group/t/65)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/66)
+[Discussions](https://d2l.discourse.group/t/66)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/271)
+[Discussions](https://d2l.discourse.group/t/271)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17996)
+[Discussions](https://d2l.discourse.group/t/17996)
 :end_tab:
 
 <!-- slides -->

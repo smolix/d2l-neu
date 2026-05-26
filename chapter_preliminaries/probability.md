@@ -1101,19 +1101,19 @@ interval centered on the expectation.
     1. Formulate an optimization problem of maximizing the return while keeping the variance constrained to an upper bound. This is the Nobel-Prize winning [Markovitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model) :cite:`Mangram.2013`. To solve it you will need a quadratic programming solver, something way beyond the scope of this book.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/36)
+[Discussions](https://d2l.discourse.group/t/36)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/37)
+[Discussions](https://d2l.discourse.group/t/37)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/198)
+[Discussions](https://d2l.discourse.group/t/198)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17971)
+[Discussions](https://d2l.discourse.group/t/17971)
 :end_tab:
 
 <!-- slides -->

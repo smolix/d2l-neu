@@ -388,15 +388,15 @@ algorithms, and potential pitfalls one needs to be aware of.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 <!-- slides -->

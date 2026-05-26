@@ -667,19 +667,19 @@ often dramatically.
    might be needed to capture the dynamic of the data.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/113)
+[Discussions](https://d2l.discourse.group/t/113)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/114)
+[Discussions](https://d2l.discourse.group/t/114)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1048)
+[Discussions](https://d2l.discourse.group/t/1048)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18010)
+[Discussions](https://d2l.discourse.group/t/18010)
 :end_tab:
 
 <!-- slides -->

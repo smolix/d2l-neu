@@ -233,7 +233,7 @@ than the loss of the suboptimal decision making.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12101)
+[Discussions](https://d2l.discourse.group/t/12101)
 :end_tab:
 
 <!-- slides -->

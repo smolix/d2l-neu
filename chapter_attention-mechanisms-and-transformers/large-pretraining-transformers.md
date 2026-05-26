@@ -460,4 +460,4 @@ a larger Parti is more capable of high-fidelity image generation and content-ric
 1. Consider sequence-to-sequence problems (e.g., machine translation) where the input sequence is always available throughout the target sequence prediction. What could be limitations of modeling with decoder-only Transformers? Why?
 
 
-[Discussions](https://discuss.d2l.ai/t/9232)
+[Discussions](https://d2l.discourse.group/t/9232)

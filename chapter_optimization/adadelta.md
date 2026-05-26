@@ -179,20 +179,20 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 1. Compare Adadelta to Adagrad and RMS prop to discuss their convergence behavior.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/357)
+[Discussions](https://d2l.discourse.group/t/357)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1076)
+[Discussions](https://d2l.discourse.group/t/1076)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1077)
+[Discussions](https://d2l.discourse.group/t/1077)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1077)
+[Discussions](https://d2l.discourse.group/t/1077)
 :end_tab:
 
 <!-- slides -->

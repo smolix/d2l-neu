@@ -651,19 +651,19 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 1. Add positional encoding in the input representations. Does it improve the classification accuracy?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/393)
+[Discussions](https://d2l.discourse.group/t/393)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 <!-- slides -->

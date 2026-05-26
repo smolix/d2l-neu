@@ -171,7 +171,7 @@ Q-learning is one of the most fundamental reinforcement-learning algorithms. It 
 1. Run the Q-learning algorithm again with $\epsilon$ (i.e. "epsilon" in the above code) when it equals to $0$, $0.5$, and $1$ and analyze its results.
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12103)
+[Discussions](https://d2l.discourse.group/t/12103)
 :end_tab:
 
 <!-- slides -->

@@ -299,15 +299,15 @@ Choosing fewer convolutions with wide kernels and replacing them by $1 \times 1$
 1. Use the structural design decisions in VGG that led to VGG-11, VGG-16, and VGG-19 to design a family of NiN-like networks.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/79)
+[Discussions](https://d2l.discourse.group/t/79)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/80)
+[Discussions](https://d2l.discourse.group/t/80)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18003)
+[Discussions](https://d2l.discourse.group/t/18003)
 :end_tab:
 
 <!-- slides -->

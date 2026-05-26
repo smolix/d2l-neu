@@ -507,19 +507,19 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 1. Can you make AlexNet overfit? Which feature do you need to remove or change to break training?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/75)
+[Discussions](https://d2l.discourse.group/t/75)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/76)
+[Discussions](https://d2l.discourse.group/t/76)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/276)
+[Discussions](https://d2l.discourse.group/t/276)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18001)
+[Discussions](https://d2l.discourse.group/t/18001)
 :end_tab:
 
 <!-- slides -->

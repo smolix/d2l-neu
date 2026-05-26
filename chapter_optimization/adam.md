@@ -280,20 +280,20 @@ d2l.train_ch11(yogi, init_adam_states(feature_dim),
 1. Try to construct a case for which Adam diverges and Yogi converges?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/358)
+[Discussions](https://d2l.discourse.group/t/358)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1078)
+[Discussions](https://d2l.discourse.group/t/1078)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1079)
+[Discussions](https://d2l.discourse.group/t/1079)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1079)
+[Discussions](https://d2l.discourse.group/t/1079)
 :end_tab:
 
 <!-- slides -->

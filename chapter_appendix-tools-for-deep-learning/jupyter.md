@@ -154,4 +154,4 @@ jupyter nbextension enable execute_time/ExecuteTime
 1. Compare the running time of the operations $\mathbf{A}^\top \mathbf{B}$ and $\mathbf{A} \mathbf{B}$ for two square matrices in $\mathbb{R}^{1024 \times 1024}$. Which one is faster?
 
 
-[Discussions](https://discuss.d2l.ai/t/421)
+[Discussions](https://d2l.discourse.group/t/421)

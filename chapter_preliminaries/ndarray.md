@@ -883,19 +883,19 @@ Tensors provide a variety of functionalities including construction routines; in
 1. Replace the two tensors that operate by element in the broadcasting mechanism with other shapes, e.g., 3-dimensional tensors. Is the result the same as expected?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/26)
+[Discussions](https://d2l.discourse.group/t/26)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/27)
+[Discussions](https://d2l.discourse.group/t/27)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/187)
+[Discussions](https://d2l.discourse.group/t/187)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17966)
+[Discussions](https://d2l.discourse.group/t/17966)
 :end_tab:
 
 <!-- slides -->

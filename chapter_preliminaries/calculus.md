@@ -433,19 +433,19 @@ throughout this book will require calculating the gradient.
    Hint: use these properties in your derivation. 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/32)
+[Discussions](https://d2l.discourse.group/t/32)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/33)
+[Discussions](https://d2l.discourse.group/t/33)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/197)
+[Discussions](https://d2l.discourse.group/t/197)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17969)
+[Discussions](https://d2l.discourse.group/t/17969)
 :end_tab:
 
 <!-- slides -->

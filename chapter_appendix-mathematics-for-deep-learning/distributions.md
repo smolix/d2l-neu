@@ -997,19 +997,19 @@ powerful family of distributions encountered frequently in machine learning.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/417)
+[Discussions](https://d2l.discourse.group/t/417)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1098)
+[Discussions](https://d2l.discourse.group/t/1098)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1099)
+[Discussions](https://d2l.discourse.group/t/1099)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1099)
+[Discussions](https://d2l.discourse.group/t/1099)
 :end_tab:
 
 <!-- slides -->

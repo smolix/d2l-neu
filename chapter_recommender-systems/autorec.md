@@ -215,11 +215,11 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 * Can you find a better combination of decoder and encoder activation functions?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/401)
+[Discussions](https://d2l.discourse.group/t/401)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/401)
+[Discussions](https://d2l.discourse.group/t/401)
 :end_tab:
 
 <!-- slides -->

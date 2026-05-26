@@ -461,19 +461,19 @@ proper tensor manipulation is needed.
 1. Suppose that we have a trained model based on multi-head attention and we want to prune less important attention heads to increase the prediction speed. How can we design experiments to measure the importance of an attention head?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/1634)
+[Discussions](https://d2l.discourse.group/t/1634)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1635)
+[Discussions](https://d2l.discourse.group/t/1635)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3869)
+[Discussions](https://d2l.discourse.group/t/3869)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18029)
+[Discussions](https://d2l.discourse.group/t/18029)
 :end_tab:
 
 <!-- slides -->

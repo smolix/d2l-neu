@@ -496,19 +496,19 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 1. Can we improve the classification accuracy by using the spaCy tokenization? You need to install spaCy (`pip install spacy`) and install the English package (`python -m spacy download en_core_web_sm`). In the code, first, import spaCy (`import spacy`). Then, load the spaCy English package (`spacy_en = spacy.load('en_core_web_sm')`). Finally, define the function `def tokenizer(text): return [tok.text for tok in spacy_en.tokenizer(text)]` and replace the original `tokenizer` function. Note the different forms of phrase tokens in GloVe and spaCy. For example, the phrase token "new york" takes the form of "new-york" in GloVe and the form of "new york" after the spaCy tokenization.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/392)
+[Discussions](https://d2l.discourse.group/t/392)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 <!-- slides -->

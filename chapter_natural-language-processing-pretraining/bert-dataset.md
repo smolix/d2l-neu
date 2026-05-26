@@ -634,19 +634,19 @@ len(vocab)
 1. What is the vocabulary size if we do not filter out any infrequent token?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/389)
+[Discussions](https://d2l.discourse.group/t/389)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1496)
+[Discussions](https://d2l.discourse.group/t/1496)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1496)
+[Discussions](https://d2l.discourse.group/t/1496)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1496)
+[Discussions](https://d2l.discourse.group/t/1496)
 :end_tab:
 
 <!-- slides -->

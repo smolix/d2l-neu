@@ -334,4 +334,4 @@ generating hyperspectral images instead. They report data on many different wave
 1. What happens with convolutions when an object is at the boundary of an image?
 1. Prove that the convolution is symmetric, i.e., $f * g = g * f$.
 
-[Discussions](https://discuss.d2l.ai/t/64)
+[Discussions](https://d2l.discourse.group/t/64)

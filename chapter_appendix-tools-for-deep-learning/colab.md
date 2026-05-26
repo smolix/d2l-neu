@@ -43,4 +43,4 @@ present when only a single notebook is uploaded.
 1. Edit and run any section that requires a GPU using Google Colab.
 
 
-[Discussions](https://discuss.d2l.ai/t/424)
+[Discussions](https://d2l.discourse.group/t/424)

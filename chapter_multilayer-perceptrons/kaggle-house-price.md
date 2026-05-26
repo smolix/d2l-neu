@@ -497,19 +497,19 @@ we can use $K$-fold cross-validation .
 1. What happens if we do not standardize the continuous numerical features as we have done in this section?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/106)
+[Discussions](https://d2l.discourse.group/t/106)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/107)
+[Discussions](https://d2l.discourse.group/t/107)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/237)
+[Discussions](https://d2l.discourse.group/t/237)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17988)
+[Discussions](https://d2l.discourse.group/t/17988)
 :end_tab:
 
 <!-- slides -->

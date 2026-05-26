@@ -784,19 +784,19 @@ A common feature of the designs we have discussed so far is that the network des
 1. Why can't we just increase the complexity of functions without bound, even if the function classes are nested?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/85)
+[Discussions](https://d2l.discourse.group/t/85)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/86)
+[Discussions](https://d2l.discourse.group/t/86)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8737)
+[Discussions](https://d2l.discourse.group/t/8737)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18006)
+[Discussions](https://d2l.discourse.group/t/18006)
 :end_tab:
 
 <!-- slides -->

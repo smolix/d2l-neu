@@ -944,19 +944,19 @@ class BERTModel(keras.Model):
 1. In the original implementation of BERT, the positionwise feed-forward network in `BERTEncoder` (via `d2l.TransformerEncoderBlock`) and the fully connected layer in `MaskLM` both use the Gaussian error linear unit (GELU) :cite:`Hendrycks.Gimpel.2016` as the activation function. Research into the difference between GELU and ReLU.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/388)
+[Discussions](https://d2l.discourse.group/t/388)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 <!-- slides -->

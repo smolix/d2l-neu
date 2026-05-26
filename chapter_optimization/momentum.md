@@ -362,19 +362,19 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 1. What changes when we perform stochastic gradient descent with momentum? What happens when we use minibatch stochastic gradient descent with momentum? Experiment with the parameters?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/354)
+[Discussions](https://d2l.discourse.group/t/354)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1070)
+[Discussions](https://d2l.discourse.group/t/1070)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1071)
+[Discussions](https://d2l.discourse.group/t/1071)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1071)
+[Discussions](https://d2l.discourse.group/t/1071)
 :end_tab:
 
 <!-- slides -->

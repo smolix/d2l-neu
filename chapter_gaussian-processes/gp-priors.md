@@ -171,7 +171,7 @@ Gaussian processes are a relatively general model class, containing many example
 5. Suppose we form $u(x) = f(x)g(x)$, where $f(x) \sim \mathcal{GP}(m_1,k_1)$ and $g(x) \sim \mathcal{GP}(m_2,k_2)$. Is $u(x)$ a Gaussian process, and if so, what is its mean and covariance function?
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12116)
+[Discussions](https://d2l.discourse.group/t/12116)
 :end_tab:
 
 <!-- slides -->

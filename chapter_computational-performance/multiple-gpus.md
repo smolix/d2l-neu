@@ -798,19 +798,19 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 1. Implement multi-GPU test accuracy computation.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/364)
+[Discussions](https://d2l.discourse.group/t/364)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 <!-- slides -->

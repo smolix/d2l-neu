@@ -999,19 +999,19 @@ net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
 1. How to truncate a pair of sequences according to their ratio of length? Compare this pair truncation method and the one used in the `SNLIBERTDataset` class. What are their pros and cons?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/397)
+[Discussions](https://d2l.discourse.group/t/397)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1526)
+[Discussions](https://d2l.discourse.group/t/1526)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1526)
+[Discussions](https://d2l.discourse.group/t/1526)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1526)
+[Discussions](https://d2l.discourse.group/t/1526)
 :end_tab:
 
 <!-- slides -->

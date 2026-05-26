@@ -407,19 +407,19 @@ for ax, label in zip(axes, batch[1][:10]):
 1. Say that we want to apply data augmentation, such as random cropping, to object detection. How can it be different from that in image classification? Hint: what if a cropped image only contains a small portion of an object?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/372)
+[Discussions](https://d2l.discourse.group/t/372)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1608)
+[Discussions](https://d2l.discourse.group/t/1608)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1608)
+[Discussions](https://d2l.discourse.group/t/1608)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1608)
+[Discussions](https://d2l.discourse.group/t/1608)
 :end_tab:
 
 <!-- slides -->

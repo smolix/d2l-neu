@@ -287,11 +287,11 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 * Go through the [https://movielens.org/](https://movielens.org/) site for more information about MovieLens.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/399)
+[Discussions](https://d2l.discourse.group/t/399)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/399)
+[Discussions](https://d2l.discourse.group/t/399)
 :end_tab:
 
 <!-- slides -->

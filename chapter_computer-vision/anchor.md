@@ -1404,19 +1404,19 @@ in the final output.
 1. Rather than being hand-crafted, can non-maximum suppression be learned?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/370)
+[Discussions](https://d2l.discourse.group/t/370)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1603)
+[Discussions](https://d2l.discourse.group/t/1603)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1603)
+[Discussions](https://d2l.discourse.group/t/1603)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1603)
+[Discussions](https://d2l.discourse.group/t/1603)
 :end_tab:
 
 <!-- slides -->

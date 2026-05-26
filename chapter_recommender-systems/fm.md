@@ -168,11 +168,11 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 * Vary the embedding size to check its impact on performance, can you observe a similar pattern as that of matrix factorization?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/406)
+[Discussions](https://d2l.discourse.group/t/406)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/406)
+[Discussions](https://d2l.discourse.group/t/406)
 :end_tab:
 
 <!-- slides -->

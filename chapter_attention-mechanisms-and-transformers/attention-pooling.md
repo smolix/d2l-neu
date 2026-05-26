@@ -427,19 +427,19 @@ The attention weight is assigned according to the similarity (or distance) betwe
 1. Recall that :citet:`mack1982weak` proved that Nadaraya--Watson estimation is consistent. How quickly should you reduce the scale for the attention mechanism as you get more data? Provide some intuition for your answer. Does it depend on the dimensionality of the data? How?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/1598)
+[Discussions](https://d2l.discourse.group/t/1598)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1599)
+[Discussions](https://d2l.discourse.group/t/1599)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3866)
+[Discussions](https://d2l.discourse.group/t/3866)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18026)
+[Discussions](https://d2l.discourse.group/t/18026)
 :end_tab:
 
 <!-- slides -->

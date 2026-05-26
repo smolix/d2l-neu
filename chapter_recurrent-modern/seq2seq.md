@@ -1118,19 +1118,19 @@ BLEU is a popular measure that matches $n$-grams between the predicted sequence 
 1. Are there any other ways to design the output layer of the decoder?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/345)
+[Discussions](https://d2l.discourse.group/t/345)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1062)
+[Discussions](https://d2l.discourse.group/t/1062)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3865)
+[Discussions](https://d2l.discourse.group/t/3865)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18022)
+[Discussions](https://d2l.discourse.group/t/18022)
 :end_tab:
 
 <!-- slides -->

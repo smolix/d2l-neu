@@ -460,7 +460,7 @@ title-block-style: none
       <a class="d2l-btn d2l-btn-primary" href="chapter_preface/index.html">Get started</a>
       <a class="d2l-btn d2l-btn-secondary" href="https://d2l.ai/d2l-en.pdf">Free PDF</a>
       <a class="d2l-btn d2l-btn-secondary" href="https://github.com/d2l-ai/d2l-en">GitHub</a>
-      <a class="d2l-btn d2l-btn-secondary" href="https://discuss.d2l.ai">Discuss</a>
+      <a class="d2l-btn d2l-btn-secondary" href="https://d2l.discourse.group">Discuss</a>
     </div>
   </div>
   <div class="d2l-hero-cover">
@@ -1146,7 +1146,7 @@ title-block-style: none
     <a href="https://d2l.ai/d2l-en.pdf">PDF (PyTorch)<small>Single-file download</small></a>
     <a href="https://github.com/d2l-ai/d2l-en">Source on GitHub<small>Notebooks &amp; library</small></a>
     <a href="https://courses.d2l.ai">Courses<small>Slides &amp; videos</small></a>
-    <a href="https://discuss.d2l.ai">Discussion forum<small>Per-chapter Q&amp;A</small></a>
+    <a href="https://d2l.discourse.group">Discussion forum<small>Per-chapter Q&amp;A</small></a>
     <a href="https://zh.d2l.ai">Chinese edition<small>中文版</small></a>
   </div>
 </section>

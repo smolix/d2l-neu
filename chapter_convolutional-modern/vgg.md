@@ -335,19 +335,19 @@ More recently ParNet :cite:`Goyal.Bochkovskiy.Deng.ea.2021` demonstrated that it
 1. Upsampling the resolution in Fashion-MNIST eight-fold from $28 \times 28$ to $224 \times 224$ dimensions is very wasteful. Try modifying the network architecture and resolution conversion, e.g., to 56 or to 84 dimensions for its input instead. Can you do so without reducing the accuracy of the network? Consult the VGG paper :cite:`Simonyan.Zisserman.2014` for ideas on adding more nonlinearities prior to downsampling.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/77)
+[Discussions](https://d2l.discourse.group/t/77)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/78)
+[Discussions](https://d2l.discourse.group/t/78)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/277)
+[Discussions](https://d2l.discourse.group/t/277)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18002)
+[Discussions](https://d2l.discourse.group/t/18002)
 :end_tab:
 
 <!-- slides -->

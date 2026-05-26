@@ -814,19 +814,19 @@ loss
 1. What is the KL Divergence between the two Gaussian distributions $\mathcal{N}(\mu_1, \sigma_1^2)$ and $\mathcal{N}(\mu_2, \sigma_2^2)$?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/420)
+[Discussions](https://d2l.discourse.group/t/420)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1104)
+[Discussions](https://d2l.discourse.group/t/1104)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1105)
+[Discussions](https://d2l.discourse.group/t/1105)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1105)
+[Discussions](https://d2l.discourse.group/t/1105)
 :end_tab:
 
 <!-- slides -->

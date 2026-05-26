@@ -362,19 +362,19 @@ We have several ways of accessing and tying model parameters.
 1. Why is sharing parameters a good idea?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/56)
+[Discussions](https://d2l.discourse.group/t/56)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/57)
+[Discussions](https://d2l.discourse.group/t/57)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/269)
+[Discussions](https://d2l.discourse.group/t/269)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17990)
+[Discussions](https://d2l.discourse.group/t/17990)
 :end_tab:
 
 <!-- slides -->

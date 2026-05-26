@@ -426,19 +426,19 @@ much more efficiently.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/50)
+[Discussions](https://d2l.discourse.group/t/50)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/51)
+[Discussions](https://d2l.discourse.group/t/51)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/225)
+[Discussions](https://d2l.discourse.group/t/225)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17982)
+[Discussions](https://d2l.discourse.group/t/17982)
 :end_tab:
 
 <!-- slides -->

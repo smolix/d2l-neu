@@ -1043,19 +1043,19 @@ train_with_data_aug(train_augs, test_augs, net)
 1. Refer to the online documentation of the deep learning framework. What other image augmentation methods does it also provide?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/367)
+[Discussions](https://d2l.discourse.group/t/367)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 <!-- slides -->

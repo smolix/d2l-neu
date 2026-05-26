@@ -547,15 +547,15 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 1. Can you modify hyperparameters to improve the accuracy of the vision Transformer?
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/8943)
+[Discussions](https://d2l.discourse.group/t/8943)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8943)
+[Discussions](https://d2l.discourse.group/t/8943)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18032)
+[Discussions](https://d2l.discourse.group/t/18032)
 :end_tab:
 
 <!-- slides -->

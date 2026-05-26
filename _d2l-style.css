@@ -152,38 +152,46 @@ h1 code, h2 code, h3 code, h4 code {
   line-height: 1;
 }
 
-/* (A) — sidebar block */
+/* (A) — sidebar block. 4 icons in one row, sized to span the full
+   width of the right-TOC column. */
 .d2l-share-block {
-  margin: 0.85rem 0 0.5rem 0;
-  padding-top: 0.75rem;
+  margin: 1rem 0 0.5rem 0;
+  padding-top: 0.85rem;
   border-top: 1px solid #E7E9EC;
 }
-.d2l-share-block .d2l-share-label { margin-bottom: 0.45rem; }
+.d2l-share-block .d2l-share-label { margin-bottom: 0.55rem; }
 .d2l-share-block .d2l-share-icons {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.35rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
 }
 .d2l-share-block .d2l-share-icon {
-  height: 30px;
-  border-radius: 4px;
+  aspect-ratio: 1 / 1;
+  border-radius: 5px;
   border: 1px solid #E7E9EC;
+  background: #fff;
 }
-.d2l-share-block .d2l-share-icon .bi { font-size: 1rem; }
-@media (min-width: 1400px) {
-  .d2l-share-block .d2l-share-icons { grid-template-columns: repeat(3, 1fr); }
+.d2l-share-block .d2l-share-icon:hover {
+  background: #E8F3FD;
+  border-color: #BBDEFB;
 }
+.d2l-share-block .d2l-share-icon .bi { font-size: 1.1rem; }
 
-/* (C) — bottom-of-article row */
+/* (C) — bottom-of-article row. Roomy chip icons, generous label
+   gap so "Share" doesn't collide with the icons. */
 .d2l-share-bottom {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.85rem;
   margin: 2rem 0 1rem 0;
   padding-top: 1rem;
   border-top: 1px solid #E7E9EC;
 }
-.d2l-share-bottom .d2l-share-label { margin-right: 0.25rem; }
+.d2l-share-bottom .d2l-share-label {
+  margin: 0 0.85rem 0 0;
+  /* Tweak font-size up to match the icon scale. */
+  font-size: 0.78rem;
+}
 .d2l-share-bottom .d2l-share-icon {
   width: 36px;
   height: 36px;

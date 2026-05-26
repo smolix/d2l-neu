@@ -452,6 +452,13 @@
   }
 
   function init() {
+    // Cloudflare Rocket Loader emits a synthetic DOMContentLoaded
+    // after script activation, which would otherwise inject the
+    // share blocks twice. Same pattern as `__d2lTocSlidesInit` and
+    // `__d2lQuartoSearchInit`.
+    if (window.__d2lShareInit) return;
+    window.__d2lShareInit = true;
+
     if (skip()) return;
     var urls = buildUrls();
 

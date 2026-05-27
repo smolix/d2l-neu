@@ -76,7 +76,9 @@ Trial-5) on rung 0.
 ```{.python .input #sh-async-asynchronous-successive-halving}
 from d2l import torch as d2l
 import logging
-logging.basicConfig(level=logging.INFO)
+# Use INFO level so the periodic Syne Tune tuning-status table appears,
+# but use a clean format that drops the "INFO:syne_tune.tuner:" prefix.
+logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
 import matplotlib.pyplot as plt
 # Silence Syne Tune's import-time chatter about optional AWS dependencies
 # (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
@@ -94,6 +96,23 @@ try:
         from syne_tune.experiments import load_experiment
 finally:
     _root.setLevel(_prev_level)
+
+# Silence the per-trial subprocess-command spam from local_backend and
+# drop the per-trial scheduling / completion lines from the tuner logger.
+# Keep the periodic "tuning status (last metric is reported)" updates so
+# the reader can still see progress over time.
+class _DropPerTrialNoise(logging.Filter):
+    _DROP = (
+        "results of trials will be saved",
+        "scheduled ",
+        "Trial trial_id ",
+    )
+    def filter(self, record):
+        msg = record.getMessage()
+        return not any(s in msg for s in self._DROP)
+
+logging.getLogger("syne_tune.backend.local_backend").setLevel(logging.WARNING)
+logging.getLogger("syne_tune.tuner").addFilter(_DropPerTrialNoise())
 ```
 
 ## Objective Function

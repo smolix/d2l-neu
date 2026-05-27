@@ -189,7 +189,11 @@ for epoch in range(num_epochs):
         values = values.to(devices[0])
         optimizer.zero_grad()
         preds = net(values)
-        l = loss(preds, values * torch.sign(values))
+        # The model already zeros out predictions where the input rating is
+        # 0 (unobserved). Comparing against `values` directly therefore
+        # gives a loss that only penalizes observed entries, matching the
+        # masked-loss formulation used in the MXNet branch.
+        l = loss(preds, values)
         l.backward()
         optimizer.step()
         total_loss += l.item()

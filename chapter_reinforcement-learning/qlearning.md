@@ -36,7 +36,7 @@ where $\alpha$ is the learning rate. Typically in real problems, when the robot 
 
 $$Q(s_t^i, a_t^i) =(1 - \alpha) Q(s_t^i,a_t^i) + \alpha \Big( r(s_t^i, a_t^i) + \gamma (1 - \mathbb{1}_{s_{t+1}^i \textrm{ is terminal}} )\max_{a'} Q(s_{t+1}^i, a') \Big).$$
 
-where $\mathbb{1}_{s_{t+1}^i \textrm{ is terminal}}$ is an indicator variable that is one if $s_{t+1}^i$ is a terminal state and zero otherwise. The value of state-action tuples $(s, a)$ that are not a part of the dataset is set to $-\infty$. This algorithm is known as Q-Learning.
+where $\mathbb{1}_{s_{t+1}^i \textrm{ is terminal}}$ is an indicator variable that is one if $s_{t+1}^i$ is a terminal state and zero otherwise. The value of state-action tuples $(s, a)$ that are not a part of the dataset is initialized to zero. This algorithm is known as Q-Learning.
 
 Given the solution of these updates $\hat{Q}$, which is an approximation of the optimal value function $Q^*$, we can obtain the optimal deterministic policy corresponding to this value function easily using
 
@@ -57,9 +57,9 @@ $$\pi_e(a \mid s) = \begin{cases}\mathrm{argmax}_{a'} \hat{Q}(s, a') & \textrm{w
 
 where $\epsilon$ is called the "exploration parameter" and is chosen by the user. The policy $\pi_e$ is called an exploration policy. This particular $\pi_e$ is called an $\epsilon$-greedy exploration policy because it chooses the optimal action (under the current estimate $\hat{Q}$) with probability $1-\epsilon$ but explores randomly with the remainder probability $\epsilon$. We can also use the so-called softmax exploration policy
 
-$$\pi_e(a \mid s) = \frac{e^{\hat{Q}(s, a)/T}}{\sum_{a'} e^{\hat{Q}(s, a')/T}};$$
+$$\pi_e(a \mid s) = \frac{e^{\hat{Q}(s, a)/\tau}}{\sum_{a'} e^{\hat{Q}(s, a')/\tau}};$$
 
-where the hyper-parameter $T$ is called temperature. A large value of $\epsilon$ in $\epsilon$-greedy policy functions similarly to a large value of temperature $T$ for the softmax policy.
+where the hyper-parameter $\tau$ is called temperature (we use $\tau$ to avoid clashing with the trajectory length $T$ introduced above). A large value of $\epsilon$ in $\epsilon$-greedy policy functions similarly to a large value of temperature $\tau$ for the softmax policy.
 
 It is important to note that when we pick an exploration that depends upon the current estimate of the action-value function $\hat{Q}$, we need to resolve the optimization problem periodically. Typical implementations of Q-Learning make one mini-batch update using a few state-action pairs in the collected dataset (typically the ones collected from the previous timestep of the robot) after taking every action using $\pi_e$.
 
@@ -168,7 +168,7 @@ Q-learning is one of the most fundamental reinforcement-learning algorithms. It 
 
 1. Try increasing the grid size to $8 \times 8$. Compared with $4 \times 4$ grid, how many iterations does it take to find the optimal value function?
 1. Run the Q-learning algorithm again with $\gamma$ (i.e. "gamma" in the above code) when it equals to $0$, $0.5$, and $1$ and analyze its results.
-1. Run the Q-learning algorithm again with $\epsilon$ (i.e. "epsilon" in the above code) when it equals to $0$, $0.5$, and $1$ and analyze its results.
+1. Experiment with different values of `epsilon_start`, `epsilon_end`, and the epsilon decay rate (the schedule that anneals $\epsilon$ during training). For example, try `epsilon_start=epsilon_end=0` (pure greedy), `epsilon_start=epsilon_end=0.5`, `epsilon_start=epsilon_end=1` (pure random), and contrast each with a slow-decay schedule. Analyze how the exploration schedule affects convergence speed and the quality of the learned policy.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/12103)

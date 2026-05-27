@@ -180,7 +180,7 @@ class Attend(nn.Block):
         self.f = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B):
-        # Shape of `A`/`B`: (b`atch_size`, no. of tokens in sequence A/B,
+        # Shape of `A`/`B`: (`batch_size`, no. of tokens in sequence A/B,
         # `embed_size`)
         # Shape of `f_A`/`f_B`: (`batch_size`, no. of tokens in sequence A/B,
         # `num_hiddens`)

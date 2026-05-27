@@ -274,7 +274,7 @@ If the model is unable to reduce the training error,
 that could mean that our model is too simple
 (i.e., insufficiently expressive)
 to capture the pattern that we are trying to model.
-Moreover, since the *generalization gap* ($R_\textrm{emp} - R$)
+Moreover, since the *generalization gap* ($R - R_\textrm{emp}$)
 between our training and generalization errors is small,
 we have reason to believe that we could get away with a more complex model.
 This phenomenon is known as *underfitting*.

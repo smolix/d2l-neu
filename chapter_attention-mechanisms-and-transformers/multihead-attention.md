@@ -199,8 +199,7 @@ class MultiHeadAttention(d2l.Module):  #@save
 %%tab tensorflow
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
-    def __init__(self, key_size, query_size, value_size, num_hiddens,
-                 num_heads, dropout, bias=False, **kwargs):
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
@@ -412,8 +411,7 @@ attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```{.python .input #multihead-attention-implementation-3}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
-                               num_hiddens, num_heads, 0.5)
+attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
 ```{.python .input #multihead-attention-implementation-4}

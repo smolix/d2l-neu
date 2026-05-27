@@ -249,7 +249,7 @@ With the fourth bullet point, note that this would not be true if $X$ were discr
 $$
 F(x) = \begin{cases}
 0 & x < 0, \\
-\frac{1}{2} & x < 1, \\
+\frac{1}{2} & 0 \le x < 1, \\
 1 & x \ge 1.
 \end{cases}
 $$
@@ -544,7 +544,7 @@ $$
 #@tab mxnet
 # Plot the Cauchy distribution p.d.f.
 x = np.arange(-5, 5, 0.01)
-p = 1 / (1 + x**2)
+p = 1 / (np.pi * (1 + x**2))
 
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
@@ -553,7 +553,7 @@ d2l.plot(x, p, 'x', 'p.d.f.')
 #@tab pytorch
 # Plot the Cauchy distribution p.d.f.
 x = torch.arange(-5, 5, 0.01)
-p = 1 / (1 + x**2)
+p = 1 / (torch.pi * (1 + x**2))
 
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
@@ -562,7 +562,7 @@ d2l.plot(x, p, 'x', 'p.d.f.')
 #@tab tensorflow
 # Plot the Cauchy distribution p.d.f.
 x = tf.range(-5, 5, 0.01)
-p = 1 / (1 + x**2)
+p = 1 / (tf.pi * (1 + x**2))
 
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```
@@ -571,7 +571,7 @@ d2l.plot(x, p, 'x', 'p.d.f.')
 #@tab jax
 # Plot the Cauchy distribution p.d.f.
 x = jnp.arange(-5, 5, 0.01)
-p = 1 / (1 + x**2)
+p = 1 / (jnp.pi * (1 + x**2))
 
 d2l.plot(x, p, 'x', 'p.d.f.')
 ```

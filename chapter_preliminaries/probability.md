@@ -920,7 +920,7 @@ and the utilities associated with returns of $1$, $2$, and $10$
 were $1$, $2$ and $4$, respectively,
 then the expected happiness of investing
 would be $0.5 \cdot (-1) + 0.4 \cdot 2 + 0.1 \cdot 4 = 0.7$
-(an expected loss of utility of 30%).
+(an expected utility of $0.7$, i.e., $0.3$ below the utility of $1$ you would get from a guaranteed return of $1$).
 If indeed this were your utility function,
 you might be best off keeping the money in the bank.
 

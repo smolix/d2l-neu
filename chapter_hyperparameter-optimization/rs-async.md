@@ -21,13 +21,13 @@ before we start the next batch. Consider configuration spaces that contain
 hyperparameters such as the number of filters or number of layers of a deep
 neural network. Hyperparameter configurations that contain a larger number of 
 layers of filters will naturally take more time to finish, and all other trials
-in the same batch will have to wait at synchronisation points (grey area in
+in the same batch will have to wait at synchronization points (grey area in
 :numref:`distributed_scheduling`) before we can continue the optimization
 process.
 
 In the asynchronous setting we immediately schedule a new trial as soon as resources
 become available. This will optimally exploit our resources, since we can avoid any
-synchronisation overhead. For random search, each new hyperparameter configuration
+synchronization overhead. For random search, each new hyperparameter configuration
 is chosen independently of all others, and in particular without exploiting
 observations from any prior evaluation. This means we can trivially parallelize random
 search asynchronously. This is not straightforward with more sophisticated methods
@@ -96,7 +96,7 @@ upper limit on the total wall-clock time.
 ```{.python .input #rs-async-asynchronous-scheduler-1  n=37}
 n_workers = 2  # Needs to be <= the number of available GPUs
 
-max_wallclock_time = 2 * 60  # 2 minutes
+max_wallclock_time = 30 * 60  # 30 minutes
 ```
 
 Next, we state which metric we want to optimize and whether we want to minimize or
@@ -166,7 +166,7 @@ tuner = Tuner(
 ```
 
 Let us run our distributed HPO experiment. According to our stopping criterion,
-it will run for a few minutes.
+it will run for about half an hour.
 
 ```{.python .input #rs-async-asynchronous-scheduler-7  n=43}
 tuner.run()

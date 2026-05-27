@@ -17,9 +17,9 @@ In regression, we often assume the outputs are given by a latent noise-free func
 $$y(x) = f(x) + \epsilon(x),$$
 :eqlabel:`eq_gp-regression`
 
-with $\epsilon(x) \sim \mathcal{N}(0,\sigma^2)$. Let $\mathbf{y} = y(X) = (y(x_1),\dots,y(x_n))^{\top}$ be a vector of our training observations, and $\textbf{f} = (f(x_1),\dots,f(x_n))^{\top}$ be a vector of the latent noise-free function values, queried at the training inputs $X = {x_1, \dots, x_n}$.
+with $\epsilon(x) \sim \mathcal{N}(0,\sigma^2)$. Let $\mathbf{y} = y(X) = (y(x_1),\dots,y(x_n))^{\top}$ be a vector of our training observations, and $\mathbf{f} = (f(x_1),\dots,f(x_n))^{\top}$ be a vector of the latent noise-free function values, queried at the training inputs $X = {x_1, \dots, x_n}$.
 
-We will assume $f(x) \sim \mathcal{GP}(m,k)$, which means that any collection of function values $\textbf{f}$ has a joint multivariate Gaussian distribution, with mean vector $\mu_i = m(x_i)$ and covariance matrix $K_{ij} = k(x_i,x_j)$. The RBF kernel $k(x_i,x_j) = a^2 \exp\left(-\frac{1}{2\ell^2}||x_i-x_j||^2\right)$ would be a standard choice of covariance function. For notational simplicity, we will assume the mean function $m(x)=0$; our derivations can easily be generalized later on.
+We will assume $f(x) \sim \mathcal{GP}(m,k)$, which means that any collection of function values $\mathbf{f}$ has a joint multivariate Gaussian distribution, with mean vector $\mu_i = m(x_i)$ and covariance matrix $K_{ij} = k(x_i,x_j)$. The RBF kernel $k(x_i,x_j) = a^2 \exp\left(-\frac{1}{2\ell^2}||x_i-x_j||^2\right)$ would be a standard choice of covariance function. For notational simplicity, we will assume the mean function $m(x)=0$; our derivations can easily be generalized later on.
 
 Suppose we want to make predictions at a set of inputs $$X_* = x_{*1},x_{*2},\dots,x_{*m}.$$ Then we want to find $p(\mathbf{f}_* | \mathbf{y}, X)$. In the regression setting, we can conveniently find this distribution by using Gaussian identities, after finding the joint distribution over $\mathbf{f}_* = f(X_*)$ and $\mathbf{y}$. 
 
@@ -40,11 +40,11 @@ K(X_*,X) & K(X_*,X_*)
 $$
 
 We can then use standard Gaussian identities to find the conditional distribution from the joint distribution (see, e.g., Bishop Chapter 2), 
-$\mathbf{f}_* | \mathbf{y}, X, X_* \sim \mathcal{N}(m_*,S)$, where $m_* = K(X_*,X)[K(X,X)+\sigma^2I]^{-1}\textbf{y}$, and $S = K(X_*,X_*) - K(X_*,X)[K(X,X)+\sigma^2I]^{-1}K(X,X_*)$.
+$\mathbf{f}_* | \mathbf{y}, X, X_* \sim \mathcal{N}(m_*,S)$, where $m_* = K(X_*,X)[K(X,X)+\sigma^2I]^{-1}\mathbf{y}$, and $S = K(X_*,X_*) - K(X_*,X)[K(X,X)+\sigma^2I]^{-1}K(X,X_*)$.
 
 Typically, we do not need to make use of the full predictive covariance matrix $S$, and instead use the diagonal of $S$ for uncertainty about each prediction. Often for this reason we write the predictive distribution for a single test point $x_*$, rather than a collection of test points. 
 
-The kernel matrix has parameters $\theta$ that we also wish to estimate, such the amplitude $a$ and lengthscale $\ell$ of the RBF kernel above. For these purposes we use the _marginal likelihood_, $p(\textbf{y} | \theta, X)$, which we already derived in working out the marginal distributions to find the joint distribution over $\textbf{y},\textbf{f}_*$. As we will see, the marginal likelihood compartmentalizes into model fit and model complexity terms, and automatically encodes a notion of Occam's razor for learning hyperparameters. For a full discussion, see MacKay Ch. 28 :cite:`mackay2003information`, and Rasmussen and Williams Ch. 5 :cite:`rasmussen2006gaussian`.
+The kernel matrix has parameters $\theta$ that we also wish to estimate, such the amplitude $a$ and lengthscale $\ell$ of the RBF kernel above. For these purposes we use the _marginal likelihood_, $p(\mathbf{y} | \theta, X)$, which we already derived in working out the marginal distributions to find the joint distribution over $\mathbf{y},\mathbf{f}_*$. As we will see, the marginal likelihood compartmentalizes into model fit and model complexity terms, and automatically encodes a notion of Occam's razor for learning hyperparameters. For a full discussion, see MacKay Ch. 28 :cite:`mackay2003information`, and Rasmussen and Williams Ch. 5 :cite:`rasmussen2006gaussian`.
 
 ```{.python .input #gp-inference-posterior-inference-for-regression}
 from d2l import torch as d2l
@@ -57,24 +57,29 @@ import torch
 import gpytorch
 import os
 
+# Seed RNGs so the from-scratch fit and the GPyTorch optimization land
+# at reproducible values for the prose numbers below.
+np.random.seed(2)
+torch.manual_seed(2)
+
 d2l.set_figsize()
 ```
 
 ## Equations for Making Predictions and Learning Kernel Hyperparameters in GP Regression
 
-We list here the equations you will use for learning hyperparameters and making predictions in Gaussian process regression. Again, we assume a vector of regression targets $\textbf{y}$, indexed by inputs $X = \{x_1,\dots,x_n\}$, and we wish to make a prediction at a test input $x_*$. We assume i.i.d. additive zero-mean Gaussian noise with variance $\sigma^2$. We use a Gaussian process prior $f(x) \sim \mathcal{GP}(m,k)$ for the latent noise-free function, with mean function $m$ and kernel function $k$. The kernel itself has parameters $\theta$ that we want to learn. For example, if we use an RBF kernel, $k(x_i,x_j) = a^2\exp\left(-\frac{1}{2\ell^2}||x-x'||^2\right)$, we want to learn $\theta = \{a^2, \ell^2\}$. Let $K(X,X)$ represent an $n \times n$ matrix corresponding to evaluating the kernel for all possible pairs of $n$ training inputs. Let $K(x_*,X)$ represent a $1 \times n$ vector formed by evaluating $k(x_*, x_i)$, $i=1,\dots,n$. Let $\mu$ be a mean vector formed by evaluating the mean function $m(x)$ at every training point $x$.
+We list here the equations you will use for learning hyperparameters and making predictions in Gaussian process regression. Again, we assume a vector of regression targets $\mathbf{y}$, indexed by inputs $X = \{x_1,\dots,x_n\}$, and we wish to make a prediction at a test input $x_*$. We assume i.i.d. additive zero-mean Gaussian noise with variance $\sigma^2$. We use a Gaussian process prior $f(x) \sim \mathcal{GP}(m,k)$ for the latent noise-free function, with mean function $m$ and kernel function $k$. The kernel itself has parameters $\theta$ that we want to learn. For example, if we use an RBF kernel, $k(x_i,x_j) = a^2\exp\left(-\frac{1}{2\ell^2}||x-x'||^2\right)$, we want to learn $\theta = \{a^2, \ell^2\}$. Let $K(X,X)$ represent an $n \times n$ matrix corresponding to evaluating the kernel for all possible pairs of $n$ training inputs. Let $K(x_*,X)$ represent a $1 \times n$ vector formed by evaluating $k(x_*, x_i)$, $i=1,\dots,n$. Let $\mu$ be a mean vector formed by evaluating the mean function $m(x)$ at every training point $x$.
 
 Typically in working with Gaussian processes, we follow a two-step procedure. 
 1. Learn kernel hyperparameters $\hat{\theta}$ by maximizing the marginal likelihood with respect to these hyperparameters.
 2. Use the predictive mean as a point predictor, and 2 times the predictive standard deviation to form a 95\% credible set, conditioning on these learned hyperparameters $\hat{\theta}$.
 
 The log marginal likelihood is simply a log Gaussian density, which has the form:
-$$\log p(\textbf{y} | \theta, X) = -\frac{1}{2}\textbf{y}^{\top}[K_{\theta}(X,X) + \sigma^2I]^{-1}\textbf{y} - \frac{1}{2}\log|K_{\theta}(X,X) + \sigma^2I| + c$$
+$$\log p(\mathbf{y} | \theta, X) = -\frac{1}{2}\mathbf{y}^{\top}[K_{\theta}(X,X) + \sigma^2I]^{-1}\mathbf{y} - \frac{1}{2}\log|K_{\theta}(X,X) + \sigma^2I| + c$$
 
 The predictive distribution has the form:
-$$p(y_* | x_*, \textbf{y}, \theta) = \mathcal{N}(a_*,v_*)$$
-$$a_* = k_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}(\textbf{y}-\mu) + \mu$$
-$$v_* = k_{\theta}(x_*,x_*) - K_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}k_{\theta}(X,x_*)$$
+$$p(y_* | x_*, \mathbf{y}, \theta) = \mathcal{N}(a_*,v_*)$$
+$$a_* = K_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}(\mathbf{y}-\mu) + \mu$$
+$$v_* = k_{\theta}(x_*,x_*) - K_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}K_{\theta}(X,x_*)$$
 
 ## Interpreting Equations for Learning and Predictions
 
@@ -82,9 +87,9 @@ There are some key points to note about the predictive distributions for Gaussia
 
 * Despite the flexibility of the model class, it is possible to do _exact_ Bayesian inference for GP regression in _closed form_. Aside from learning the kernel hyperparameters, there is no _training_. We can write down exactly what equations we want to use to make predictions. Gaussian processes are relatively exceptional in this respect, and it has greatly contributed to their convenience, versatility, and continued popularity. 
 
-* The predictive mean $a_*$ is a linear combination of the training targets $\textbf{y}$, weighted by the kernel $k_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}$. As we will see, the kernel (and its hyperparameters) thus plays a crucial role in the generalization properties of the model.
+* The predictive mean $a_*$ is a linear combination of the training targets $\mathbf{y}$, weighted by the kernel $K_{\theta}(x_*,X)[K_{\theta}(X,X)+\sigma^2I]^{-1}$. As we will see, the kernel (and its hyperparameters) thus plays a crucial role in the generalization properties of the model.
 
-* The predictive mean explicitly depends on the target values $\textbf{y}$ but the predictive variance does not. The predictive uncertainty instead grows as the test input $x_*$ moves away from the target locations $X$, as governed by the kernel function. However, uncertainty will implicitly depend on the values of the targets $\textbf{y}$ through the kernel hyperparameters $\theta$, which are learned from the data.
+* The predictive mean explicitly depends on the target values $\mathbf{y}$ but the predictive variance does not. The predictive uncertainty instead grows as the test input $x_*$ moves away from the target locations $X$, as governed by the kernel function. However, uncertainty will implicitly depend on the values of the targets $\mathbf{y}$ through the kernel hyperparameters $\theta$, which are learned from the data.
 
 * The marginal likelihood compartmentalizes into model fit and model complexity (log determinant) terms. The marginal likelihood tends to select for hyperparameters that provide the simplest fits that are still consistent with the data. 
 
@@ -183,7 +188,7 @@ ell = learned_hypers.x[0]
 post_sig_est = learned_hypers.x[1]
 ```
 
-In this instance, we learn a length-scale of 0.299, and a noise standard deviation of 0.24. Note that the learned noise is extremely close to the true noise, which helps indicate that our GP is a very well-specified to this problem. 
+In this instance, we learn a length-scale of 0.325, and a noise standard deviation of 0.275. Note that the learned noise is reasonably close to the true noise (0.25), which helps indicate that our GP is well-specified to this problem. 
 
 In general, it is crucial to put careful thought into selecting the kernel and initializing the hyperparameters. While marginal likelihood optimization can be relatively robust to initialization, it is not immune to poor initializations. Try running the above script with a variety of initializations and see what results you find.
 
@@ -269,7 +274,7 @@ class ExactGPModel(gpytorch.models.ExactGP):
 
 This code block puts the data in the right format for GPyTorch, and specifies that we are using exact inference, as well
 the mean function (zero) and kernel function (RBF) that we want to use. We can use any other kernel very easily, by 
-calling, for instance, gpytorch.kernels.matern_kernel(), or gpytorch.kernels.spectral_mixture_kernel(). So far, we have
+calling, for instance, `gpytorch.kernels.MaternKernel()`, or `gpytorch.kernels.SpectralMixtureKernel()`. So far, we have
 only discussed exact inference, where it is possible to infer a predictive distribution without making any approximations.
 For Gaussian processes, we can only perform exact inference when we have a Gaussian likelihood; more specifically, when we
 assume that our observations are generated as a noise-free function represented by a Gaussian process, plus Gaussian noise.
@@ -337,7 +342,7 @@ with torch.no_grad():
 
 Finally, we plot the fit.
 
-We see the fits are virtually identical. A few things to note: GPyTorch is working with _squared_ length-scales and observation noise. For example, our learned noise standard deviation in the from-scratch code is about 0.283. The noise variance found by GPyTorch is $0.08 \approx 0.283^2$. In the GPyTorch plot, we also show the credible set in the _observation space_ rather than the latent function space, to demonstrate that they indeed cover the observed datapoints.
+We see the fits are virtually identical. A few things to note: GPyTorch is working with _squared_ length-scales and observation noise. For example, our learned noise standard deviation in the from-scratch code is about 0.275. The noise variance found by GPyTorch is $0.078 \approx 0.279^2$. In the GPyTorch plot, we also show the credible set in the _observation space_ rather than the latent function space, to demonstrate that they indeed cover the observed datapoints.
 
 ## Summary
 

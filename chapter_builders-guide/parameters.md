@@ -4,6 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Parameter Management
+:label:`sec_parameters`
 
 Once we have chosen an architecture
 and set our hyperparameters,

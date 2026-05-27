@@ -146,13 +146,13 @@ def net():
     return tf.keras.models.Sequential([
         tf.keras.layers.Conv2D(filters=6, kernel_size=5, activation='relu',
                                padding='same'),
-        tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+        tf.keras.layers.MaxPool2D(pool_size=2, strides=2),
         tf.keras.layers.Conv2D(filters=16, kernel_size=5,
                                activation='relu'),
-        tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+        tf.keras.layers.MaxPool2D(pool_size=2, strides=2),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(120, activation='relu'),
-        tf.keras.layers.Dense(84, activation='sigmoid'),
+        tf.keras.layers.Dense(84, activation='relu'),
         tf.keras.layers.Dense(10)])
 
 

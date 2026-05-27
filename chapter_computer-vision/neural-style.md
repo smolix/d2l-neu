@@ -1,4 +1,5 @@
 # Neural Style Transfer
+:label:`sec_neural_style`
 
 If you are a photography enthusiast,
 you may be familiar with filters.

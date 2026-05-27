@@ -49,6 +49,7 @@ import tensorflow as tf
 %%tab jax
 from d2l import jax as d2l
 from flax import linen as nn
+import jax
 from jax import numpy as jnp
 ```
 
@@ -129,7 +130,7 @@ class RNN(nn.Module):  #@save
     num_hiddens: int
 
     @nn.compact
-    def __call__(self, inputs, H=None):
+    def __call__(self, inputs, H=None, training=False):
         if H is None:
             batch_size = inputs.shape[1]
             H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(
@@ -229,6 +230,13 @@ model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 model.predict('it has', 20, data.vocab)
 ```
 
+```{.python .input #rnn-concise-training-and-predicting-1}
+%%tab jax
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+rnn = RNN(num_hiddens=32)
+model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
+```
+
 Next, we train our model, leveraging the high-level API.
 
 ```{.python .input #rnn-concise-training-and-predicting-2}
@@ -250,6 +258,12 @@ with d2l.try_gpu():
 trainer.fit(model, data)
 ```
 
+```{.python .input #rnn-concise-training-and-predicting-2}
+%%tab jax
+trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+```
+
 Compared with :numref:`sec_rnn-scratch`,
 this model achieves comparable perplexity,
 but runs faster due to the optimized implementations.
@@ -267,6 +281,13 @@ print(f'perplexity {ppl:.1f}, {pred!r}')
 %%tab tensorflow
 ppl = float(model.board.data['val_ppl'][-1].y)
 pred = model.predict('time traveller', 20, data.vocab)
+print(f'perplexity {ppl:.1f}, {pred!r}')
+```
+
+```{.python .input #rnn-concise-training-and-predicting-3}
+%%tab jax
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('time traveller', 20, data.vocab, trainer.state.params)
 print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 

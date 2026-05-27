@@ -579,8 +579,9 @@ tensors, not DataFrames — preprocessing is mandatory.
 :::
 
 ::: {.slide title="Three preprocessing transforms"}
-Apply on **train + test together** so train statistics
-match what we'll see at test time:
+**Fit statistics on train**, then apply the same transform
+to train and test — so test data is mapped with the
+training-time statistics (no test-set leakage):
 
 1. **Numeric NaN → mean.** Simple imputation; median or
    zero are alternatives.

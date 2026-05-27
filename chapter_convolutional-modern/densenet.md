@@ -120,7 +120,6 @@ class ConvBlock(tf.keras.layers.Layer):
         y = x
         for layer in self.listLayers:
             y = layer(y)
-        y = tf.keras.layers.concatenate([x,y], axis=-1)
         return y
 ```
 
@@ -134,7 +133,6 @@ class ConvBlock(nn.Module):
     def __call__(self, X):
         Y = nn.relu(nn.BatchNorm(not self.training)(X))
         Y = nn.Conv(self.num_channels, kernel_size=(3, 3), padding=(1, 1))(Y)
-        Y = jnp.concatenate((X, Y), axis=-1)
         return Y
 ```
 
@@ -186,7 +184,9 @@ class DenseBlock(tf.keras.layers.Layer):
 
     def call(self, x):
         for layer in self.listLayers:
-            x = layer(x)
+            y = layer(x)
+            # Concatenate input and output of each block along the channels
+            x = tf.keras.layers.concatenate([x, y], axis=-1)
         return x
 ```
 
@@ -198,13 +198,15 @@ class DenseBlock(nn.Module):
     training: bool = True
 
     def setup(self):
-        layer = []
-        for i in range(self.num_convs):
-            layer.append(ConvBlock(self.num_channels, self.training))
-        self.net = nn.Sequential(layer)
+        self.layers = [ConvBlock(self.num_channels, self.training)
+                       for _ in range(self.num_convs)]
 
     def __call__(self, X):
-        return self.net(X)
+        for layer in self.layers:
+            Y = layer(X)
+            # Concatenate input and output of each block along the channels
+            X = jnp.concatenate((X, Y), axis=-1)
+        return X
 ```
 
 In the following example,

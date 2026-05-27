@@ -720,13 +720,15 @@ $$ y_{ij} = \begin{cases}1 & j \in J; \\ 0 &\textrm{otherwise.}\end{cases}$$
 For instance, if a multi-class classification problem contains three classes $A$, $B$, and $C$, then the labels $\mathbf{y}_i$ can be encoded in {$A: (1, 0, 0); B: (0, 1, 0); C: (0, 0, 1)$}.
 
 
-Assume that our neural network is parametrized by $\theta$. For true label vectors $\mathbf{y}_i$ and predictions $$\hat{\mathbf{y}}_i= p_{\theta}(\mathbf{y}_i \mid \mathbf{x}_i) = \sum_{j=1}^k y_{ij} p_{\theta} (y_{ij}  \mid  \mathbf{x}_i).$$
+Assume that our neural network is parametrized by $\theta$. For true label vectors $\mathbf{y}_i$, the network outputs a predicted probability vector $\hat{\mathbf{y}}_i = (\hat{y}_{i1}, \ldots, \hat{y}_{ik})$ whose $j$-th component is the model's predicted probability that example $i$ belongs to class $j$:
+
+$$\hat{y}_{ij} = p_{\theta}(j \mid \mathbf{x}_i).$$
 
 Hence, the *cross-entropy loss* would be
 
 $$
-\textrm{CE}(\mathbf{y}, \hat{\mathbf{y}}) = - \sum_{i=1}^n \mathbf{y}_i \log \hat{\mathbf{y}}_i
- = - \sum_{i=1}^n \sum_{j=1}^k y_{ij} \log{p_{\theta} (y_{ij}  \mid  \mathbf{x}_i)}.\\
+\textrm{CE}(\mathbf{y}, \hat{\mathbf{y}}) = - \sum_{i=1}^n \mathbf{y}_i \cdot \log \hat{\mathbf{y}}_i
+ = - \sum_{i=1}^n \sum_{j=1}^k y_{ij} \log{p_{\theta} (j  \mid  \mathbf{x}_i)}.\\
 $$
 
 On the other side, we can also approach the problem through maximum likelihood estimation. To begin with, let's quickly introduce a $k$-class multinoulli distribution. It is an extension of the Bernoulli distribution from binary class to multi-class. If a random variable $\mathbf{z} = (z_{1}, \ldots, z_{k})$ follows a $k$-class *multinoulli distribution* with probabilities $\mathbf{p} =$ ($p_{1}, \ldots, p_{k}$), i.e., $$p(\mathbf{z}) = p(z_1, \ldots, z_k) = \textrm{Multi} (p_1, \ldots, p_k), \textrm{ where } \sum_{i=1}^k p_i = 1,$$ then the joint probability mass function(p.m.f.) of $\mathbf{z}$ is
@@ -746,7 +748,7 @@ l(\theta)
 \end{aligned}
 $$
 
-Since in maximum likelihood estimation, we maximizing the objective function $l(\theta)$ by having $\pi_{j} = p_{\theta} (y_{ij}  \mid  \mathbf{x}_i)$. Therefore, for any multi-class classification, maximizing the above log-likelihood function $l(\theta)$ is equivalent to minimizing the CE loss $\textrm{CE}(y, \hat{y})$.
+Since in maximum likelihood estimation, we maximizing the objective function $l(\theta)$ by having $\pi_{j} = p_{\theta} (j  \mid  \mathbf{x}_i)$. Therefore, for any multi-class classification, maximizing the above log-likelihood function $l(\theta)$ is equivalent to minimizing the CE loss $\textrm{CE}(y, \hat{y})$.
 
 
 To test the above proof, let's apply the built-in `CrossEntropy` metric (the negative-log-likelihood under softmax probabilities). Using the same `labels` and `preds` as in the earlier example, we will get the same numerical loss as the previous example up to the 5 decimal place.

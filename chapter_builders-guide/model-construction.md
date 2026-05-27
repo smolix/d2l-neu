@@ -422,9 +422,10 @@ class MySequential(nn.Block):
         self.register_child(block)
 
     def forward(self, X):
-        # _children.values() yields weakrefs; call them to dereference.
-        for block in self._children.values():
-            X = block()(X)
+        # Iterate self._layers (strong refs); _children holds weakrefs in
+        # Gluon 2.0 which would need dereferencing.
+        for block in self._layers:
+            X = block(X)
         return X
 ```
 

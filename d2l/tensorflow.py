@@ -1132,8 +1132,7 @@ class MultiHeadAttention(d2l.Module):
     """Multi-head attention.
 
     Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, key_size, query_size, value_size, num_hiddens,
-                 num_heads, dropout, bias=False, **kwargs):
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
@@ -1242,15 +1241,14 @@ class TransformerEncoderBlock(tf.keras.layers.Layer):
     """The Transformer encoder block.
 
     Defined in :numref:`sec_transformer`"""
-    def __init__(self, key_size, query_size, value_size, num_hiddens,
-                 norm_shape, ffn_num_hiddens, num_heads, dropout, bias=False):
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 bias=False):
         super().__init__()
-        self.attention = d2l.MultiHeadAttention(
-            key_size, query_size, value_size, num_hiddens, num_heads, dropout,
-            bias)
-        self.addnorm1 = AddNorm(norm_shape, dropout)
+        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                dropout, bias)
+        self.addnorm1 = AddNorm([num_hiddens], dropout)
         self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm(norm_shape, dropout)
+        self.addnorm2 = AddNorm([num_hiddens], dropout)
 
     def call(self, X, valid_lens, training=False, **kwargs):
         Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
@@ -1261,17 +1259,15 @@ class TransformerEncoder(d2l.Encoder):
     """The Transformer encoder.
 
     Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, key_size, query_size, value_size,
-                 num_hiddens, norm_shape, ffn_num_hiddens, num_heads,
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
                  num_blks, dropout, bias=False):
         super().__init__()
         self.num_hiddens = num_hiddens
         self.embedding = tf.keras.layers.Embedding(vocab_size, num_hiddens)
         self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
         self.blks = [TransformerEncoderBlock(
-            key_size, query_size, value_size, num_hiddens, norm_shape,
-            ffn_num_hiddens, num_heads, dropout, bias) for _ in range(
-            num_blks)]
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias)
+            for _ in range(num_blks)]
 
     def call(self, X, valid_lens, training=False, **kwargs):
         # Since positional encoding values are between -1 and 1, the embedding
@@ -2435,12 +2431,10 @@ class BERTEncoder(keras.layers.Layer):
         self.pos_embedding = self.add_weight(
             name='pos_embedding', shape=(1, max_len, num_hiddens),
             initializer='random_normal', trainable=True)
-        norm_shape = [num_hiddens]
         # BERT's attention sublayers use biased projections; the default for
         # `TransformerEncoderBlock` is `bias=False`, so override here.
         self.blks = [d2l.TransformerEncoderBlock(
-            num_hiddens, num_hiddens, num_hiddens, num_hiddens, norm_shape,
-            ffn_num_hiddens, num_heads, dropout, bias=True)
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
             for _ in range(num_blks)]
 
     def call(self, tokens, segments, valid_lens, training=False, **kwargs):
@@ -2920,31 +2914,12 @@ class HPOTuner(d2l.HyperParameters):
         self.cumulative_runtime.append(self.current_runtime)
 
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
-    import keras
-    model = keras.Sequential([
-        keras.layers.Input(shape=(28, 28, 1)),
-        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu'),
-        keras.layers.MaxPooling2D(pool_size=2, strides=2),
-        keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
-        keras.layers.MaxPooling2D(pool_size=2, strides=2),
-        keras.layers.Flatten(),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(84, activation='relu'),
-        keras.layers.Dense(10),
-    ])
-    model.compile(
-        optimizer=keras.optimizers.SGD(learning_rate=learning_rate,
-                                       clipnorm=1.0),
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy'],
-    )
+    model = d2l.LeNet(lr=learning_rate, num_classes=10)
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs)
     data = d2l.FashionMNIST(batch_size=batch_size)
-    train_ds = data.get_dataloader(True)
-    val_ds = data.get_dataloader(False)
-    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
-                        verbose=0)
-    val_acc = history.history['val_accuracy'][-1]
-    return 1 - val_acc
+    trainer.fit(model=model, data=data)
+    validation_error = trainer.validation_error()
+    return float(validation_error)
 
 class SuccessiveHalvingScheduler(d2l.HPOScheduler):
     def __init__(self, searcher, eta, r_min, r_max, prefact=1):

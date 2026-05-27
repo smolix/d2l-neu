@@ -298,25 +298,25 @@ The following matrix is symmetric:
 ```{.python .input #linear-algebra-matrices-3}
 %%tab mxnet
 A = np.array([[1, 2, 3], [2, 0, 4], [3, 4, 5]])
-A == A.T
+(A == A.T).all()
 ```
 
 ```{.python .input #linear-algebra-matrices-3}
 %%tab pytorch
 A = torch.tensor([[1, 2, 3], [2, 0, 4], [3, 4, 5]])
-A == A.T
+(A == A.T).all()
 ```
 
 ```{.python .input #linear-algebra-matrices-3}
 %%tab tensorflow
 A = tf.constant([[1, 2, 3], [2, 0, 4], [3, 4, 5]])
-A == tf.transpose(A)
+tf.reduce_all(A == tf.transpose(A))
 ```
 
 ```{.python .input #linear-algebra-matrices-3}
 %%tab jax
 A = jnp.array([[1, 2, 3], [2, 0, 4], [3, 4, 5]])
-A == A.T
+(A == A.T).all()
 ```
 
 Matrices are useful for representing datasets.

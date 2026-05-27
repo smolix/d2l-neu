@@ -129,7 +129,7 @@ def adadelta(params, grads, states, hyperparams):
     return params[0], params[1]
 ```
 
-Choosing $\rho = 0.9$ amounts to a half-life time of 10 for each parameter update. This tends to work quite well. We get the following behavior.
+Choosing $\rho = 0.9$ amounts to an effective averaging window of 10 for each parameter update. This tends to work quite well. We get the following behavior.
 
 ```{.python .input #adadelta-implementation-2}
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)

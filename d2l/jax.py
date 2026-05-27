@@ -937,7 +937,7 @@ class RNN(nn.Module):
     num_hiddens: int
 
     @nn.compact
-    def __call__(self, inputs, H=None):
+    def __call__(self, inputs, H=None, training=False):
         if H is None:
             batch_size = inputs.shape[1]
             H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(

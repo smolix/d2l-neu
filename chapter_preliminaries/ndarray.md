@@ -795,6 +795,15 @@ def computation(X, Y):
 computation(X, Y)
 ```
 
+```{.python .input #ndarray-saving-memory-3}
+%%tab jax
+# JAX arrays are immutable, so functional updates return new arrays.
+# Use the `.at[...].set(...)` syntax; under JIT, XLA can fuse these
+# updates and reuse buffers, recovering most of the in-place benefit.
+X_new = X.at[:].set(X + Y)
+id(X_new) == id(X)
+```
+
 ## Conversion to Other Python Objects
 
 :begin_tab:`mxnet, tensorflow`

@@ -114,7 +114,7 @@ in :eqref:`eq_bptt_ht_ot`,
 $h_t$ depends on both $h_{t-1}$ and $w_\textrm{h}$,
 where computation of $h_{t-1}$
 also depends on $w_\textrm{h}$.
-Thus, evaluating the total derivate of $h_t$ 
+Thus, evaluating the total derivative of $h_t$ 
 with respect to $w_\textrm{h}$ using the chain rule yields
 
 $$\frac{\partial h_t}{\partial w_\textrm{h}}= \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}} +\frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial h_{t-1}} \frac{\partial h_{t-1}}{\partial w_\textrm{h}}.$$

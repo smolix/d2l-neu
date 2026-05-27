@@ -136,7 +136,7 @@ upper limit on the total wall-clock time.
 
 ```{.python .input #sh-async-asynchronous-scheduler-1  n=56}
 n_workers = 2  # Needs to be <= the number of available GPUs
-max_wallclock_time = 2 * 60  # 2 minutes
+max_wallclock_time = 30 * 60  # 30 minutes
 ```
 
 The code for running ASHA is a simple variation of what we did for asynchronous
@@ -163,7 +163,7 @@ Here, `metric` and `resource_attr` specify the key names used with the `report`
 callback, and `max_resource_attr` denotes which input to the objective function
 corresponds to $r_{\mathrm{max}}$. Moreover, `grace_period` provides $r_{\mathrm{min}}$, and
 `reduction_factor` is $\eta$. We can run Syne Tune as before (this will
-take a few minutes):
+take about half an hour):
 
 ```{.python .input #sh-async-asynchronous-scheduler-3  n=57}
 trial_backend = PythonBackend(
@@ -225,7 +225,7 @@ d2l.plt.ylabel("objective function")
 ## Summary
 
 Compared to random search, successive halving is not quite as trivial to run in
-an asynchronous distributed setting. To avoid synchronisation points, we promote
+an asynchronous distributed setting. To avoid synchronization points, we promote
 configurations as quickly as possible to the next rung level, even if this means
 promoting some wrong ones. In practice, this usually does not hurt much, and the
 gains of asynchronous versus synchronous scheduling are usually much higher

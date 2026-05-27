@@ -700,7 +700,6 @@ and *more efficiently* (using our GPUs to their full potential).
 1. Why is the `reshape` method needed in the `loss` function?
 1. Experiment using different learning rates to find out how quickly the loss function value drops. Can you reduce the
    error by increasing the number of epochs of training?
-1. If the number of examples cannot be divided by the batch size, what happens to `data_iter` at the end of an epoch?
 1. Try implementing a different loss function, such as the absolute value loss `(y_hat - d2l.reshape(y, y_hat.shape)).abs().sum()`.
     1. Check what happens for regular data.
     1. Check whether there is a difference in behavior if you actively perturb some entries, such as $y_5 = 10000$, of $\mathbf{y}$.

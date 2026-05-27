@@ -340,7 +340,7 @@ Consequently, whenever we are in a region of bounded $\left|f'''(\xi^{(k)})\righ
 $$\left|e^{(k+1)}\right| \leq c (e^{(k)})^2.$$
 
 
-As an aside, optimization researchers call this *linear* convergence, whereas a condition such as $\left|e^{(k+1)}\right| \leq \alpha \left|e^{(k)}\right|$ would be called a *constant* rate of convergence.
+As an aside, optimization researchers call this *quadratic* convergence, whereas a condition such as $\left|e^{(k+1)}\right| \leq \alpha \left|e^{(k)}\right|$ would be called a *linear* rate of convergence.
 Note that this analysis comes with a number of caveats.
 First, we do not really have much of a guarantee when we will reach the region of rapid convergence. Instead, we only know that once we reach it, convergence will be very quick. Second, this analysis requires that $f$ is well-behaved up to higher-order derivatives. It comes down to ensuring that $f$ does not have any "surprising" properties in terms of how it might change its values.
 

@@ -2624,7 +2624,9 @@ class HPOTuner(d2l.HyperParameters):
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
             error = self.objective(**config)
-            error = float(d2l.numpy(error.cpu()))
+            if hasattr(error, 'cpu'):
+                error = error.cpu()
+            error = float(d2l.numpy(error))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)

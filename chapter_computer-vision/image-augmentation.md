@@ -74,7 +74,7 @@ import numpy as np
 
 ## Common Image Augmentation Methods
 
-In our investigation of common image augmentation methods, we will use the following $400\times 500$ image an example.
+In our investigation of common image augmentation methods, we will use the following $400\times 500$ image as an example.
 
 ```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab mxnet

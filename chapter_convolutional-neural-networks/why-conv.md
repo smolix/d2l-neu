@@ -97,7 +97,11 @@ of a neural network architecture suitable for computer vision:
 
 1. In the earliest layers, our network
    should respond similarly to the same patch,
-   regardless of where it appears in the image. This principle is called *translation invariance* (or *translation equivariance*).
+   regardless of where it appears in the image: if the input is translated, the
+   feature map produced by these layers should translate by the same amount.
+   This property is called *translation equivariance*. Later in the network,
+   pooling followed by classification can turn equivariant features into
+   *translation-invariant* predictions.
 1. The earliest layers of the network should focus on local regions,
    without regard for the contents of the image in distant regions. This is the *locality* principle.
    Eventually, these local representations can be aggregated

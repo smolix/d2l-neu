@@ -87,6 +87,29 @@ $$f(x) = \sum_{i=1}^J w_i \phi_i(x), w_i  \sim \mathcal{N}\left(0,\frac{\sigma^2
 
 $f(x)$ is a sum of radial basis functions, with width $\ell$, centred at the points $c_i$, as shown in the following figure.
 
+```{.python .input #gp-priors-rbf-basis-figure}
+# Plot a handful of radial basis functions phi_i(x) centred at points c_i,
+# and a sample f(x) = sum_i w_i phi_i(x) with w_i ~ N(0, sigma^2/J).
+ell = 0.4
+centres = np.linspace(-2, 2, 9)
+xs = np.linspace(-3, 3, 400)
+basis = np.exp(-((xs[:, None] - centres[None, :]) ** 2) / (2 * ell ** 2))
+
+rng = np.random.default_rng(0)
+w = rng.normal(0., 1. / np.sqrt(len(centres)), size=len(centres))
+f = basis @ w
+
+fig, ax = d2l.plt.subplots(1, 2, figsize=(7, 2.6))
+ax[0].plot(xs, basis, alpha=0.7)
+ax[0].set_title(r"Basis functions $\phi_i(x)$")
+ax[0].set_xlabel("x")
+ax[1].plot(xs, f, color="C3")
+ax[1].set_title(r"$f(x) = \sum_i w_i \phi_i(x)$")
+ax[1].set_xlabel("x")
+d2l.plt.tight_layout()
+d2l.plt.show()
+```
+:label:`fig_gp_priors_rbf_basis`
 
 We can recognize $f(x)$ as having the form $w^{\top} \phi(x)$, where $w = (w_1,\dots,w_J)^{\top}$ and $\phi(x)$ is a vector containing each of the radial basis functions. The covariance function of this Gaussian process is then
 
@@ -144,7 +167,7 @@ $$m(x) = E[f(x)] = 0$$
 
 $$k(x,x') = \textrm{cov}[f(x),f(x')] = E[f(x)f(x')] = \sigma_b^2 + \frac{1}{J} \sum_{i=1}^{J} \sigma_v^2 E[h_i(x; u_i)h_i(x'; u_i)]$$
 
-In some cases, we can essentially evaluate this covariance function in closed form. Let $h(x; u) = \textrm{erf}(u_0 + \sum_{j=1}^{P} u_j x_j)$, where $\textrm{erf}(z) = \frac{2}{\sqrt{\pi}} \int_{0}^{z} e^{-t^2} dt$, and $u \sim \mathcal{N}(0,\Sigma)$. Then $k(x,x') = \frac{2}{\pi} \arcsin\left(\frac{2 \tilde{x}^{\top} \Sigma \tilde{x}'}{\sqrt{(1 + 2 \tilde{x}^{\top} \Sigma \tilde{x})(1 + 2 \tilde{x}'^{\top} \Sigma \tilde{x}')}}\right)$.
+In some cases, we can essentially evaluate this covariance function in closed form. Let $h(x; u) = \textrm{erf}(u_0 + \sum_{j=1}^{P} u_j x_j)$, where $\textrm{erf}(z) = \frac{2}{\sqrt{\pi}} \int_{0}^{z} e^{-t^2} dt$, and $u \sim \mathcal{N}(0,\Sigma)$. Let $\tilde{x} = (1, x_1, \dots, x_P)^{\top}$ denote the input $x$ augmented with a leading $1$ to absorb the bias $u_0$. Then $k(x,x') = \frac{2}{\pi} \arcsin\left(\frac{2 \tilde{x}^{\top} \Sigma \tilde{x}'}{\sqrt{(1 + 2 \tilde{x}^{\top} \Sigma \tilde{x})(1 + 2 \tilde{x}'^{\top} \Sigma \tilde{x}')}}\right)$.
 
 The RBF kernel is _stationary_, meaning that it is _translation invariant_, and therefore can be written as a function of $\tau = x-x'$. Intuitively, stationarity means that the high-level properties of the function, such as rate of variation, do not change as we move in input space. The neural network kernel, however, is _non-stationary_. Below, we show sample functions from a Gaussian process with this kernel. We can see that the function looks qualitatively different near the origin.
 

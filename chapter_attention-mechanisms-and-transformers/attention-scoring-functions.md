@@ -89,7 +89,7 @@ Hello world <blank> <blank>
 
 Since we do not want blanks in our attention model we simply need to limit $\sum_{i=1}^n \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i$ to $\sum_{i=1}^l \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i$ for however long, $l \leq n$, the actual sentence is. Since it is such a common problem, it has a name: the *masked softmax operation*. 
 
-Let's implement it. Actually, the implementation cheats ever so slightly by setting the values of $\mathbf{v}_i$, for $i > l$, to zero. Moreover, it sets the attention weights to a large negative number, such as $-10^{6}$, in order to make their contribution to gradients and values vanish in practice. This is done since linear algebra kernels and operators are heavily optimized for GPUs and it is faster to be slightly wasteful in computation rather than to have code with conditional (if then else) statements.
+Let's implement it. Actually, the implementation cheats ever so slightly by setting the attention weights $\alpha(\mathbf{q}, \mathbf{k}_i)$, for $i > l$, to zero. It does so by replacing the corresponding pre-softmax scores with a large negative number, such as $-10^{6}$, so that their contribution to gradients and values vanishes in practice. This is done since linear algebra kernels and operators are heavily optimized for GPUs and it is faster to be slightly wasteful in computation rather than to have code with conditional (if then else) statements.
 
 ```{.python .input #attention-scoring-functions-masked-softmax-operation-1}
 %%tab mxnet

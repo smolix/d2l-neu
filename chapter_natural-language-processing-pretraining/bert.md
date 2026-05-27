@@ -313,12 +313,10 @@ class BERTEncoder(keras.layers.Layer):
         self.pos_embedding = self.add_weight(
             name='pos_embedding', shape=(1, max_len, num_hiddens),
             initializer='random_normal', trainable=True)
-        norm_shape = [num_hiddens]
         # BERT's attention sublayers use biased projections; the default for
         # `TransformerEncoderBlock` is `bias=False`, so override here.
         self.blks = [d2l.TransformerEncoderBlock(
-            num_hiddens, num_hiddens, num_hiddens, num_hiddens, norm_shape,
-            ffn_num_hiddens, num_heads, dropout, bias=True)
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
             for _ in range(num_blks)]
 
     def call(self, tokens, segments, valid_lens, training=False, **kwargs):

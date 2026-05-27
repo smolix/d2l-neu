@@ -6,6 +6,10 @@ tab.interact_select('pytorch', 'tensorflow', 'jax')
 # Transformers for Vision
 :label:`sec_vision-transformer`
 
+:begin_tab:`mxnet`
+This section is intentionally not implemented in MXNet. The model relies on building blocks (e.g., learnable positional embeddings with the new patch-based pipeline) that are not portable to the MXNet 2.0 wheel used by this book. See the PyTorch, TensorFlow, and JAX tabs.
+:end_tab:
+
 The Transformer architecture was initially proposed
 for sequence-to-sequence learning,
 with a focus on machine translation.

@@ -138,11 +138,11 @@ It should be noted that the `cpu` device
 means all physical CPUs and memory.
 This means that PyTorch's calculations
 will try to use all CPU cores.
-However, a `gpu` device only represents one card
+However, a `cuda` device only represents one card
 and the corresponding memory.
 If there are multiple GPUs, we use `torch.device(f'cuda:{i}')`
 to represent the $i^\textrm{th}$ GPU ($i$ starts at 0).
-Also, `gpu:0` and `gpu` are equivalent.
+Also, `'cuda:0'` and `'cuda'` are equivalent.
 :end_tab:
 
 ```{.python .input #use-gpu-computing-devices-1}

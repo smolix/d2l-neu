@@ -1,4 +1,5 @@
 # Dog Breed Identification (ImageNet Dogs) on Kaggle
+:label:`sec_kaggle_dog`
 
 In this section, we will practice
 the dog breed identification problem on

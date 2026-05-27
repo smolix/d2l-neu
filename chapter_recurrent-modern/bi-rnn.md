@@ -232,6 +232,10 @@ In bidirectional RNNs, the hidden state for each time step is simultaneously det
 [Discussions](https://d2l.discourse.group/t/1059)
 :end_tab:
 
+:begin_tab:`tensorflow`
+[Discussions](https://d2l.discourse.group/t/3866)
+:end_tab:
+
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/18019)
 :end_tab:

@@ -10,7 +10,7 @@ of the regions so as to predict the
 of the objects more accurately.
 Different models may adopt
 different region sampling schemes. 
-Here we introduce one of such methods:
+Here we introduce one such method:
 it generates multiple bounding boxes with varying scales and aspect ratios centered on each pixel. 
 These bounding boxes are called *anchor boxes*.
 We will design an object detection model

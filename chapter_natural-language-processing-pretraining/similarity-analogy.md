@@ -373,7 +373,7 @@ classical probes:
   should land near $\mathbf{v}_\text{queen}$. The famous
   word2vec result.
 
-This deck loads pretrained GloVe vectors (300-dim, trained
+This deck loads pretrained GloVe vectors (50-dim, trained
 on a 6B-token Wikipedia corpus) and exercises both
 properties.
 :::
@@ -383,7 +383,7 @@ properties.
 :::
 
 ::: {.slide title="Loading GloVe"}
-GloVe ships as text — `<word> <300 floats>` per line. Parse
+GloVe ships as text — `<word> <50 floats>` per line. Parse
 into a vocab + a tensor of vectors:
 
 @similarity-analogy-loading-pretrained-word-vectors-1

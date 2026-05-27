@@ -182,7 +182,7 @@ where $\textbf{1}$ denotes an indicator function that is equal to one if the gro
 The definition of AUC is as follows:
 
 $$
-\textrm{AUC} = \frac{1}{m} \sum_{u \in \mathcal{U}} \frac{1}{|\mathcal{I} \backslash S_u|} \sum_{j \in I \backslash S_u} \textbf{1}(rank_{u, g_u} < rank_{u, j}),
+\textrm{AUC} = \frac{1}{m} \sum_{u \in \mathcal{U}} \frac{1}{|\mathcal{I} \backslash S_u|} \sum_{j \in \mathcal{I} \backslash S_u} \textbf{1}(rank_{u, g_u} < rank_{u, j}),
 $$
 
 where $\mathcal{I}$ is the item set and $S_u$ is the set of items user $u$ has already interacted with, so $\mathcal{I} \setminus S_u$ denotes the user's unobserved items that are ranked at evaluation time. Note that many other evaluation protocols such as precision, recall and normalized discounted cumulative gain (NDCG) can also be used.

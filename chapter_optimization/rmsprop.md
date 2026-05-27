@@ -22,11 +22,11 @@ The constant $\epsilon > 0$ is typically set to $10^{-6}$ to ensure that we do n
 $$
 \begin{aligned}
 \mathbf{s}_t & = (1 - \gamma) \mathbf{g}_t^2 + \gamma \mathbf{s}_{t-1} \\
-& = (1 - \gamma) \left(\mathbf{g}_t^2 + \gamma \mathbf{g}_{t-1}^2 + \gamma^2 \mathbf{g}_{t-2} + \ldots, \right).
+& = (1 - \gamma) \left(\mathbf{g}_t^2 + \gamma \mathbf{g}_{t-1}^2 + \gamma^2 \mathbf{g}_{t-2}^2 + \ldots, \right).
 \end{aligned}
 $$
 
-As before in :numref:`sec_momentum` we use $1 + \gamma + \gamma^2 + \ldots, = \frac{1}{1-\gamma}$. Hence the sum of weights is normalized to $1$ with a half-life time of an observation of $\gamma^{-1}$. Let's visualize the weights for the past 40 time steps for various choices of $\gamma$.
+As before in :numref:`sec_momentum` we use $1 + \gamma + \gamma^2 + \ldots, = \frac{1}{1-\gamma}$. Hence the sum of weights is normalized to $1$ with an effective averaging window of $(1-\gamma)^{-1}$ observations. Let's visualize the weights for the past 40 time steps for various choices of $\gamma$.
 
 ```{.python .input #rmsprop-the-algorithm-1}
 #@tab mxnet

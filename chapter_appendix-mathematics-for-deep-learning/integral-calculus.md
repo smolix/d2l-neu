@@ -149,7 +149,7 @@ x = np.arange(a, b, epsilon)
 f = x / (1 + x**2)
 
 approx = np.sum(epsilon*f)
-true = np.log(2) / 2
+true = np.log(5) / 2
 
 d2l.set_figsize()
 d2l.plt.bar(x.asnumpy(), f.asnumpy(), width=epsilon, align='edge')

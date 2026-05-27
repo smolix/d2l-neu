@@ -603,7 +603,7 @@ x, y = np.meshgrid(np.linspace(-2, 2, 101),
                    np.linspace(-2, 2, 101), indexing='ij')
 z = x*np.exp(- x**2 - y**2)
 
-# Compute approximating quadratic with gradient and Hessian at (1, 0)
+# Compute approximating quadratic with gradient and Hessian at (-1, 0)
 w = np.exp(-1)*(-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
@@ -629,7 +629,7 @@ x, y = torch.meshgrid(torch.linspace(-2, 2, 101),
 
 z = x*torch.exp(- x**2 - y**2)
 
-# Compute approximating quadratic with gradient and Hessian at (1, 0)
+# Compute approximating quadratic with gradient and Hessian at (-1, 0)
 w = torch.exp(torch.tensor([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
@@ -655,7 +655,7 @@ x, y = tf.meshgrid(tf.linspace(-2., 2., 101),
 
 z = x*tf.exp(- x**2 - y**2)
 
-# Compute approximating quadratic with gradient and Hessian at (1, 0)
+# Compute approximating quadratic with gradient and Hessian at (-1, 0)
 w = tf.exp(tf.constant([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function
@@ -681,7 +681,7 @@ x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101),
 
 z = x * jnp.exp(- x**2 - y**2)
 
-# Compute approximating quadratic with gradient and Hessian at (1, 0)
+# Compute approximating quadratic with gradient and Hessian at (-1, 0)
 w = jnp.exp(jnp.array([-1.])) * (-1 - (x + 1) + (x + 1)**2 + y**2)
 
 # Plot function

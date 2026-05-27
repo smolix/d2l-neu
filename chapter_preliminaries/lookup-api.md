@@ -29,6 +29,14 @@ provide such documentation.
 This section provides some guidance for how to explore the TensorFlow API.
 :end_tab:
 
+:begin_tab:`jax`
+While we cannot possibly introduce every single JAX function and class
+(and the information might become outdated quickly),
+the [API documentation](https://jax.readthedocs.io/en/latest/) and additional [tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) and examples
+provide such documentation.
+This section provides some guidance for how to explore the JAX API.
+:end_tab:
+
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np

@@ -52,11 +52,22 @@ distributed HPO.
 from d2l import torch as d2l
 import logging
 logging.basicConfig(level=logging.INFO)
-from syne_tune.config_space import loguniform, randint
-from syne_tune.backend.python_backend.python_backend import PythonBackend
-from syne_tune.optimizer.baselines import RandomSearch
-from syne_tune import Tuner, StoppingCriterion
-from syne_tune.experiments import load_experiment
+# Silence Syne Tune's import-time chatter about optional AWS dependencies
+# (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
+# are not needed. Suppress both print() and logging.info() during imports.
+import contextlib, io
+_root = logging.getLogger()
+_prev_level = _root.level
+_root.setLevel(logging.WARNING)
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        from syne_tune.config_space import loguniform, randint
+        from syne_tune.backend.python_backend.python_backend import PythonBackend
+        from syne_tune.optimizer.baselines import RandomSearch
+        from syne_tune import Tuner, StoppingCriterion
+        from syne_tune.experiments import load_experiment
+finally:
+    _root.setLevel(_prev_level)
 ```
 
 ## Objective Function
@@ -94,9 +105,20 @@ also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
 ```{.python .input #rs-async-asynchronous-scheduler-1  n=37}
-n_workers = 2  # Needs to be <= the number of available GPUs
+# Each LeNet trial fits in well under 7 GB of GPU memory, so we can pack
+# multiple trials per device. `PythonBackend(rotate_gpus=True)` (the
+# default) round-robins trials across detected GPUs and falls back to
+# sharing when `n_workers > num_gpus`. Allocate 7 GB per slot — this
+# yields 3 slots on a 24 GB card and 4 slots on a 32 GB card after
+# driver overhead, e.g. 4×24 GB → 12 slots; 2×32 GB → 8.
+import torch
+_GB = 1024 ** 3
+n_workers = sum(
+    torch.cuda.get_device_properties(i).total_memory // (7 * _GB)
+    for i in range(torch.cuda.device_count())
+) or 1
 
-max_wallclock_time = 30 * 60  # 30 minutes
+max_wallclock_time = 15 * 60  # 15 minutes
 ```
 
 Next, we state which metric we want to optimize and whether we want to minimize or
@@ -166,7 +188,7 @@ tuner = Tuner(
 ```
 
 Let us run our distributed HPO experiment. According to our stopping criterion,
-it will run for about half an hour.
+it will run for about 15 minutes.
 
 ```{.python .input #rs-async-asynchronous-scheduler-7  n=43}
 tuner.run()

@@ -78,11 +78,22 @@ from d2l import torch as d2l
 import logging
 logging.basicConfig(level=logging.INFO)
 import matplotlib.pyplot as plt
-from syne_tune.config_space import loguniform, randint
-from syne_tune.backend.python_backend.python_backend import PythonBackend
-from syne_tune.optimizer.baselines import ASHA
-from syne_tune import Tuner, StoppingCriterion
-from syne_tune.experiments import load_experiment
+# Silence Syne Tune's import-time chatter about optional AWS dependencies
+# (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
+# are not needed. Suppress both print() and logging.info() during imports.
+import contextlib, io
+_root = logging.getLogger()
+_prev_level = _root.level
+_root.setLevel(logging.WARNING)
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        from syne_tune.config_space import loguniform, randint
+        from syne_tune.backend.python_backend.python_backend import PythonBackend
+        from syne_tune.optimizer.baselines import ASHA
+        from syne_tune import Tuner, StoppingCriterion
+        from syne_tune.experiments import load_experiment
+finally:
+    _root.setLevel(_prev_level)
 ```
 
 ## Objective Function
@@ -135,8 +146,19 @@ also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
 ```{.python .input #sh-async-asynchronous-scheduler-1  n=56}
-n_workers = 2  # Needs to be <= the number of available GPUs
-max_wallclock_time = 30 * 60  # 30 minutes
+# Each LeNet trial fits in well under 7 GB of GPU memory, so we can pack
+# multiple trials per device. `PythonBackend(rotate_gpus=True)` (the
+# default) round-robins trials across detected GPUs and falls back to
+# sharing when `n_workers > num_gpus`. Allocate 7 GB per slot — this
+# yields 3 slots on a 24 GB card and 4 slots on a 32 GB card after
+# driver overhead, e.g. 4×24 GB → 12 slots; 2×32 GB → 8.
+import torch
+_GB = 1024 ** 3
+n_workers = sum(
+    torch.cuda.get_device_properties(i).total_memory // (7 * _GB)
+    for i in range(torch.cuda.device_count())
+) or 1
+max_wallclock_time = 15 * 60  # 15 minutes
 ```
 
 The code for running ASHA is a simple variation of what we did for asynchronous
@@ -163,7 +185,7 @@ Here, `metric` and `resource_attr` specify the key names used with the `report`
 callback, and `max_resource_attr` denotes which input to the objective function
 corresponds to $r_{\mathrm{max}}$. Moreover, `grace_period` provides $r_{\mathrm{min}}$, and
 `reduction_factor` is $\eta$. We can run Syne Tune as before (this will
-take about half an hour):
+take about 15 minutes):
 
 ```{.python .input #sh-async-asynchronous-scheduler-3  n=57}
 trial_backend = PythonBackend(

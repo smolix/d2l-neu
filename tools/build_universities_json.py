@@ -28,7 +28,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-REPO = Path("/home/smola/d2l/d2l-neu")
+REPO = Path(__file__).resolve().parents[1]
 EVIDENCE = Path("/home/smola/d2l/data/uni_evidence")
 LOGOS_DIR = REPO / "static" / "landing" / "universities"
 OUT = REPO / "tools" / "universities.json"
@@ -110,8 +110,27 @@ def load_evidence_rows() -> list:
     return rows
 
 
+def load_existing_overrides() -> dict:
+    """Read the on-disk universities.json (if any) and return slug → fields
+    we want to preserve across regeneration: currently just `invert`
+    (manual annotation for logos that are white-on-transparent and need
+    a CSS filter to be readable on the white landing page)."""
+    if not OUT.exists():
+        return {}
+    try:
+        prev = json.loads(OUT.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out = {}
+    for e in prev:
+        if e.get("invert"):
+            out[e["slug"]] = {"invert": bool(e["invert"])}
+    return out
+
+
 def main():
     existing_logos = load_existing_logos()  # slug → filename
+    existing_overrides = load_existing_overrides()  # slug → {invert}
     listed_norm_to_display = load_listed_names()
     rows = load_evidence_rows()
 
@@ -161,13 +180,16 @@ def main():
             # Sort: most recent year first; entries without year go last
             evidence_list.sort(key=lambda e: (e["year"] or "0000"), reverse=True)
         country = by_norm_meta.get(n, ("", ""))[1]
-        entries.append({
+        entry = {
             "slug": slug,
             "name": display,
             "country": country,
             "logo": fname,
             "evidence": evidence_list,
-        })
+        }
+        if existing_overrides.get(slug, {}).get("invert"):
+            entry["invert"] = True
+        entries.append(entry)
 
     # Now add NEW universities from evidence that don't already have a logo
     for n, ev_list in sorted(by_norm.items()):

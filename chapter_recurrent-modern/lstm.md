@@ -648,19 +648,19 @@ LSTMs can alleviate vanishing and exploding gradients.
 1. Implement an LSTM model for time series prediction rather than character sequence prediction.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/343)
+[Discussions](https://d2l.discourse.group/t/343)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1057)
+[Discussions](https://d2l.discourse.group/t/1057)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3861)
+[Discussions](https://d2l.discourse.group/t/3861)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18016)
+[Discussions](https://d2l.discourse.group/t/18016)
 :end_tab:
 
 <!-- slides -->

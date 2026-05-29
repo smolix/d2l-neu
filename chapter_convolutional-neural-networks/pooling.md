@@ -395,19 +395,19 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 1. We could use the softmax operation for pooling. Why might it not be so popular?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/71)
+[Discussions](https://d2l.discourse.group/t/71)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/72)
+[Discussions](https://d2l.discourse.group/t/72)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/274)
+[Discussions](https://d2l.discourse.group/t/274)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17999)
+[Discussions](https://d2l.discourse.group/t/17999)
 :end_tab:
 
 <!-- slides -->

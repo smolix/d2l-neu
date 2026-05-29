@@ -306,19 +306,19 @@ into a fixed-length text category.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/391)
+[Discussions](https://d2l.discourse.group/t/391)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1387)
+[Discussions](https://d2l.discourse.group/t/1387)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1387)
+[Discussions](https://d2l.discourse.group/t/1387)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1387)
+[Discussions](https://d2l.discourse.group/t/1387)
 :end_tab:
 
 <!-- slides -->

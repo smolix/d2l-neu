@@ -33,7 +33,7 @@ mxnet = [
     # because the GitHub `release-wheel` action for tag v2.0.0+cu13.bw.20260522
     # failed; run `tools/update_mxnet_wheel.py` once the release is published
     # to switch back to the URL pin.
-    "mxnet @ file:///home/smola/mxnet/dist/mxnet-2.0.0%2Bcu13.bw.20260523.10-cp312-cp312-linux_x86_64.whl ; python_version == '3.12'",
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529/mxnet-2.0.0%2Bcu13.bw.20260529-cp312-cp312-linux_x86_64.whl ; python_version == '3.12'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,

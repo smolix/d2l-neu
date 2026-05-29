@@ -236,4 +236,4 @@ without approximate training.
 1. Verify that :eqref:`eq_hi-softmax-sum-one` holds.
 1. How to train the continuous bag of words model using negative sampling and hierarchical softmax, respectively?
 
-[Discussions](https://discuss.d2l.ai/t/382)
+[Discussions](https://d2l.discourse.group/t/382)

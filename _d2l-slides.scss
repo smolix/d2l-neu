@@ -286,43 +286,57 @@ $code-block-padding:     0.45em 0.7em;
   }
 }
 
-// ── Top navigation bar (logo + Book/Slides links) ────────
-// Persistent across all slides; deliberately small + translucent
-// so it doesn't distract from the deck content.
+// ── Top navigation bar — mirrors the book's chrome ───────
+// 280px white box on the left holds the d2l logo (matches the book's
+// `.sidebar-header`); blue bar on the right has the same nav links as
+// the book's navbar. Persistent across all slides.
+$d2l-deck-nav-height: 52px;
+$d2l-deck-brand-width: 280px;
+
 .d2l-deck-nav {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 100;
+  z-index: 1060;  // above reveal's controls and chalkboard
+  display: flex;
+  align-items: stretch;
+  height: $d2l-deck-nav-height;
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  background: $blue;
+  color: white;
+  margin: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.d2l-deck-brand {
+  width: $d2l-deck-brand-width;
+  background: $bg;
+  border-right: 1px solid $line;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 6px 14px;
-  background: rgba(33, 150, 243, 0.92);
-  font-family: 'Source Sans 3', system-ui, sans-serif;
-  font-size: 0.85rem;
-  height: 36px;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-  margin: 0;
+  justify-content: center;
+  flex-shrink: 0;
 }
-.d2l-deck-nav:hover { opacity: 1; }
-
 .d2l-deck-logo {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   text-decoration: none;
+  width: 100%;
+  height: 100%;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
 }
 .d2l-deck-logo img {
-  height: 22px;
+  max-height: 40px;
+  max-width: 100%;
   width: auto;
   display: block;
-  filter: brightness(0) invert(1);  // show the dark logo as white on blue
 }
 
 .d2l-deck-nav-links {
   list-style: none;
   margin: 0 0 0 auto;
-  padding: 0;
+  padding: 0 1rem 0 0;
   display: flex;
   gap: 0.25rem;
   align-items: center;
@@ -330,14 +344,14 @@ $code-block-padding:     0.45em 0.7em;
 .d2l-deck-nav-links a {
   color: white;
   text-decoration: none;
-  padding: 4px 10px;
-  border-radius: 3px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
   font-weight: 500;
-  opacity: 0.9;
-  transition: background 0.1s, opacity 0.1s;
+  opacity: 0.92;
+  transition: opacity 0.1s, background 0.1s;
 }
 .d2l-deck-nav-links a:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
   opacity: 1;
 }
 
@@ -350,7 +364,8 @@ $code-block-padding:     0.45em 0.7em;
 .reveal .d2l-deck-nav-links a:hover { border-bottom: none; }
 
 // Push the deck content down so the nav doesn't overlap slide titles.
-.reveal .slides { padding-top: 28px; }
+// 52px navbar + small breathing gap.
+.reveal .slides { padding-top: 60px; }
 
 @media print {
   .d2l-deck-nav { display: none; }

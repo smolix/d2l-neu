@@ -76,13 +76,43 @@ Trial-5) on rung 0.
 ```{.python .input #sh-async-asynchronous-successive-halving}
 from d2l import torch as d2l
 import logging
-logging.basicConfig(level=logging.INFO)
+# Use INFO level so the periodic Syne Tune tuning-status table appears,
+# but use a clean format that drops the "INFO:syne_tune.tuner:" prefix.
+logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
 import matplotlib.pyplot as plt
-from syne_tune.config_space import loguniform, randint
-from syne_tune.backend.python_backend.python_backend import PythonBackend
-from syne_tune.optimizer.baselines import ASHA
-from syne_tune import Tuner, StoppingCriterion
-from syne_tune.experiments import load_experiment
+# Silence Syne Tune's import-time chatter about optional AWS dependencies
+# (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
+# are not needed. Suppress both print() and logging.info() during imports.
+import contextlib, io
+_root = logging.getLogger()
+_prev_level = _root.level
+_root.setLevel(logging.WARNING)
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        from syne_tune.config_space import loguniform, randint
+        from syne_tune.backend.python_backend.python_backend import PythonBackend
+        from syne_tune.optimizer.baselines import ASHA
+        from syne_tune import Tuner, StoppingCriterion
+        from syne_tune.experiments import load_experiment
+finally:
+    _root.setLevel(_prev_level)
+
+# Silence the per-trial subprocess-command spam from local_backend and
+# drop the per-trial scheduling / completion lines from the tuner logger.
+# Keep the periodic "tuning status (last metric is reported)" updates so
+# the reader can still see progress over time.
+class _DropPerTrialNoise(logging.Filter):
+    _DROP = (
+        "results of trials will be saved",
+        "scheduled ",
+        "Trial trial_id ",
+    )
+    def filter(self, record):
+        msg = record.getMessage()
+        return not any(s in msg for s in self._DROP)
+
+logging.getLogger("syne_tune.backend.local_backend").setLevel(logging.WARNING)
+logging.getLogger("syne_tune.tuner").addFilter(_DropPerTrialNoise())
 ```
 
 ## Objective Function
@@ -135,8 +165,19 @@ also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
 ```{.python .input #sh-async-asynchronous-scheduler-1  n=56}
-n_workers = 2  # Needs to be <= the number of available GPUs
-max_wallclock_time = 2 * 60  # 2 minutes
+# Each LeNet trial fits in well under 7 GB of GPU memory, so we can pack
+# multiple trials per device. `PythonBackend(rotate_gpus=True)` (the
+# default) round-robins trials across detected GPUs and falls back to
+# sharing when `n_workers > num_gpus`. Allocate 7 GB per slot — this
+# yields 3 slots on a 24 GB card and 4 slots on a 32 GB card after
+# driver overhead, e.g. 4×24 GB → 12 slots; 2×32 GB → 8.
+import torch
+_GB = 1024 ** 3
+n_workers = sum(
+    torch.cuda.get_device_properties(i).total_memory // (7 * _GB)
+    for i in range(torch.cuda.device_count())
+) or 1
+max_wallclock_time = 15 * 60  # 15 minutes
 ```
 
 The code for running ASHA is a simple variation of what we did for asynchronous
@@ -163,7 +204,7 @@ Here, `metric` and `resource_attr` specify the key names used with the `report`
 callback, and `max_resource_attr` denotes which input to the objective function
 corresponds to $r_{\mathrm{max}}$. Moreover, `grace_period` provides $r_{\mathrm{min}}$, and
 `reduction_factor` is $\eta$. We can run Syne Tune as before (this will
-take a few minutes):
+take about 15 minutes):
 
 ```{.python .input #sh-async-asynchronous-scheduler-3  n=57}
 trial_backend = PythonBackend(
@@ -225,7 +266,7 @@ d2l.plt.ylabel("objective function")
 ## Summary
 
 Compared to random search, successive halving is not quite as trivial to run in
-an asynchronous distributed setting. To avoid synchronisation points, we promote
+an asynchronous distributed setting. To avoid synchronization points, we promote
 configurations as quickly as possible to the next rung level, even if this means
 promoting some wrong ones. In practice, this usually does not hurt much, and the
 gains of asynchronous versus synchronous scheduling are usually much higher
@@ -233,7 +274,7 @@ than the loss of the suboptimal decision making.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12101)
+[Discussions](https://d2l.discourse.group/t/12101)
 :end_tab:
 
 <!-- slides -->

@@ -264,4 +264,4 @@ environments.
 1. Experiment with multi-GPU servers. How well can you scale things up?
 
 
-[Discussions](https://discuss.d2l.ai/t/423)
+[Discussions](https://d2l.discourse.group/t/423)

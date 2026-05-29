@@ -107,6 +107,10 @@ LANDING_TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Slides — Dive into Deep Learning</title>
+<!-- Match the book exactly: load the same Bootstrap/Quarto bundles + d2l overrides. -->
+<link rel="stylesheet" href="../site_libs/bootstrap/bootstrap-icons.css">
+<link rel="stylesheet" href="__BOOTSTRAP_CSS__">
+<link rel="stylesheet" href="../_d2l-style.css">
 <style>
 :root {
   --blue: #2196F3;
@@ -125,131 +129,97 @@ LANDING_TEMPLATE = """<!DOCTYPE html>
 
 body {
   margin: 0;
-  font-family: 'Source Serif 4', Georgia, serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
 }
 
-/* Navbar — matches the book's Quarto navbar (cosmo + custom blue).
-   Bootstrap's .navbar uses 1rem text and 0.5rem 1rem padding; we
-   mirror those numbers so the bar reads identically across the site. */
-.d2l-navbar {
+/* Mirror the book's fixed-top headroom navbar so the slabs align
+   visually. The book's <header> already brings its own dark-blue
+   Bootstrap navbar; we add a small wrapper to recreate the layout
+   without the book's sidebar machinery. */
+/* Top chrome — mirrors the book: 280px white box on the left holds the
+   d2l logo (matches the book's `.sidebar-header`); blue bar on the
+   right has nav links. Both pinned at the top. */
+#quarto-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  align-items: stretch;
+  height: 52px;
   background: var(--blue);
-  color: white;
-  padding: 0.5rem 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
-  font-size: 1.1rem;
+}
+
+#quarto-header .navbar-brand-container {
+  width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
 }
-
-.d2l-navbar-logo {
-  display: inline-flex;
+#quarto-header .navbar-brand {
+  display: flex;
   align-items: center;
-  margin-right: 0.5rem;
+  justify-content: center;
+  text-decoration: none;
+  padding: 0 0.75rem;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
-.d2l-navbar-logo img {
-  height: 32px;
+#quarto-header .navbar-brand img {
+  max-height: 40px;
+  max-width: 100%;
   width: auto;
   display: block;
 }
 
-.d2l-navbar-brand {
-  display: inline-flex;
+#quarto-header .navbar {
+  flex: 1;
+  background: var(--blue);
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: white;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 1.1rem;
-  letter-spacing: -0.005em;
-}
-.d2l-navbar-brand:hover { color: white; opacity: 0.92; }
-.d2l-navbar-brand .navbar-subtitle {
-  font-weight: 300;
-  opacity: 0.85;
-  font-size: 1rem;
+  padding: 0 1rem;
 }
 
-.d2l-navbar-nav {
+#quarto-header .navbar-nav {
   display: flex;
-  gap: 0.25rem;
-  align-items: center;
   list-style: none;
   margin: 0 0 0 auto;
   padding: 0;
+  gap: 0.25rem;
+  align-items: center;
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
 }
 
-.d2l-navbar-nav a {
-  color: white;
+#quarto-header .navbar a.nav-link,
+#quarto-header .navbar .nav-link {
+  color: white !important;
   text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 3px;
-  font-size: 1.1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  font-weight: 500;
   opacity: 0.92;
+  transition: opacity 0.1s, background 0.1s;
 }
-.d2l-navbar-nav a:hover {
-  color: white;
-  background: transparent;
+#quarto-header .navbar a.nav-link:hover,
+#quarto-header .navbar .nav-link:hover {
+  background: rgba(255,255,255,0.14);
   opacity: 1;
 }
 
-.d2l-navbar-nav a.active {
-  background: transparent;
-  font-weight: 500;
-  opacity: 1;
+#quarto-header .navbar .dropdown-menu {
+  background: var(--surface);
 }
-.d2l-nav-menu {
-  position: relative;
-}
-.d2l-nav-menu > span {
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 3px;
-  font-size: 1.1rem;
-  display: inline-flex;
-  align-items: center;
-  cursor: default;
-  opacity: 0.92;
-}
-.d2l-nav-menu:hover > span {
-  color: white;
-  background: transparent;
-  opacity: 1;
-}
-.d2l-nav-menu .d2l-nav-submenu {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: 100%;
-  min-width: 12rem;
-  background: white;
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: 4px;
-  box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.35);
-  padding: 0.35rem;
-  z-index: 20;
-}
-.d2l-nav-menu:hover .d2l-nav-submenu,
-.d2l-nav-menu:focus-within .d2l-nav-submenu {
-  display: block;
-}
-.d2l-navbar-nav .d2l-nav-submenu a {
-  display: block;
+#quarto-header .navbar .dropdown-menu a {
   color: var(--text);
-  white-space: nowrap;
-  font-size: 1.1rem;
 }
-.d2l-navbar-nav .d2l-nav-submenu a:hover {
-  color: var(--blue);
-  background: transparent;
+#quarto-header .navbar .dropdown-menu a:hover {
+  background: var(--bg);
 }
 
 /* Sub-bar holding the framework picker */
@@ -410,39 +380,47 @@ footer {
 }
 
 @media (max-width: 720px) {
-  .d2l-navbar { gap: 0.5rem; }
-  .d2l-navbar-brand { margin: 0; flex-grow: 1; }
-  .d2l-navbar-nav { width: 100%; justify-content: center; flex-wrap: wrap; }
   main { padding: 0 1rem; }
   .deck-main { padding: 0.55rem 0.6rem; }
 }
 </style>
 </head>
-<body>
-<nav class="d2l-navbar">
-  <a class="d2l-navbar-logo" href="../index.html" aria-label="Dive into Deep Learning — back to book">
-    <img src="../static/logo-with-text.png" alt="Dive into Deep Learning">
-  </a>
-  <a class="d2l-navbar-brand" href="../index.html">
-    <span class="navbar-subtitle">Slides</span>
-  </a>
-  <ul class="d2l-navbar-nav">
-    <li><a href="../index.html">Book</a></li>
-    <li><a href="./index.html" class="active">Slides</a></li>
-    <li><a href="https://courses.d2l.ai">Courses</a></li>
-    <li><a href="https://github.com/d2l-ai/d2l-en" title="GitHub">GitHub</a></li>
-    <li><a href="https://discuss.d2l.ai">Discuss</a></li>
-    <li class="d2l-nav-menu">
-      <span>PDF</span>
-      <div class="d2l-nav-submenu">
-        <a href="/pdf/Dive-into-Deep-Learning-pytorch.pdf">PyTorch</a>
-        <a href="/pdf/Dive-into-Deep-Learning-jax.pdf">JAX</a>
-        <a href="/pdf/Dive-into-Deep-Learning-tensorflow.pdf">TensorFlow</a>
-        <a href="/pdf/Dive-into-Deep-Learning-mxnet.pdf">MXNet</a>
-      </div>
-    </li>
-  </ul>
-</nav>
+<body class="quarto-light">
+
+<header id="quarto-header">
+  <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../index.html">
+      <img src="../static/logo-with-text.png" alt="Dive into Deep Learning" class="navbar-logo">
+    </a>
+  </div>
+  <nav class="navbar navbar-expand-lg" data-bs-theme="dark">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link active" href="./index.html"><span class="menu-text">Slides</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://courses.d2l.ai"><span class="menu-text">Courses</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/smolix/d2l-neu"><i class="bi bi-github" role="img"></i> <span class="menu-text">GitHub</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://d2l.discourse.group"><span class="menu-text">Discuss</span></a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="nav-menu-pdf" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="menu-text">PDF</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-pdf">
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-pytorch.pdf"><span class="dropdown-text">PyTorch</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-jax.pdf"><span class="dropdown-text">JAX</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-tensorflow.pdf"><span class="dropdown-text">TensorFlow</span></a></li>
+          <li><a class="dropdown-item" href="/pdf/Dive-into-Deep-Learning-mxnet.pdf"><span class="dropdown-text">MXNet</span></a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</header>
 
 <div class="d2l-subbar">
   <label for="fw">Framework:</label>
@@ -510,6 +488,7 @@ fwSelect.value = initial;
 applyFramework(initial);
 fwSelect.addEventListener('change', e => applyFramework(e.target.value));
 </script>
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 </body>
 </html>
 """
@@ -606,7 +585,21 @@ def main():
         return
 
     body = render_html(idx)
+    # Quarto rebuilds Bootstrap with a content hash in the filename
+    # (`bootstrap-<sha>.min.css`) on every render, and there are
+    # sometimes multiple sibling hashes left over from prior builds.
+    # Pick the newest file in _book/site_libs/bootstrap/ so the slides
+    # index keeps tracking the version the book actually loads.
+    book_bs_dir = Path('_book/site_libs/bootstrap')
+    candidates = sorted(
+        book_bs_dir.glob('bootstrap-*.min.css'),
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    ) if book_bs_dir.exists() else []
+    bootstrap_css = (
+        f'../site_libs/bootstrap/{candidates[0].name}' if candidates
+        else '../site_libs/bootstrap/bootstrap.min.css')
     html = (LANDING_TEMPLATE
+            .replace('__BOOTSTRAP_CSS__', bootstrap_css)
             .replace('__CONTENT__', body)
             .replace('__DATA__', json.dumps(idx, ensure_ascii=False)))
     out = args.slides_dir / 'index.html'

@@ -244,19 +244,19 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.1}, data_iter)
 1. How would you need to modify Adagrad to achieve a less aggressive decay in learning rate?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/355)
+[Discussions](https://d2l.discourse.group/t/355)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1072)
+[Discussions](https://d2l.discourse.group/t/1072)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1073)
+[Discussions](https://d2l.discourse.group/t/1073)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1073)
+[Discussions](https://d2l.discourse.group/t/1073)
 :end_tab:
 
 <!-- slides -->

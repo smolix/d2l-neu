@@ -22,11 +22,11 @@ The constant $\epsilon > 0$ is typically set to $10^{-6}$ to ensure that we do n
 $$
 \begin{aligned}
 \mathbf{s}_t & = (1 - \gamma) \mathbf{g}_t^2 + \gamma \mathbf{s}_{t-1} \\
-& = (1 - \gamma) \left(\mathbf{g}_t^2 + \gamma \mathbf{g}_{t-1}^2 + \gamma^2 \mathbf{g}_{t-2} + \ldots, \right).
+& = (1 - \gamma) \left(\mathbf{g}_t^2 + \gamma \mathbf{g}_{t-1}^2 + \gamma^2 \mathbf{g}_{t-2}^2 + \ldots, \right).
 \end{aligned}
 $$
 
-As before in :numref:`sec_momentum` we use $1 + \gamma + \gamma^2 + \ldots, = \frac{1}{1-\gamma}$. Hence the sum of weights is normalized to $1$ with a half-life time of an observation of $\gamma^{-1}$. Let's visualize the weights for the past 40 time steps for various choices of $\gamma$.
+As before in :numref:`sec_momentum` we use $1 + \gamma + \gamma^2 + \ldots, = \frac{1}{1-\gamma}$. Hence the sum of weights is normalized to $1$ with an effective averaging window of $(1-\gamma)^{-1}$ observations. Let's visualize the weights for the past 40 time steps for various choices of $\gamma$.
 
 ```{.python .input #rmsprop-the-algorithm-1}
 #@tab mxnet
@@ -211,19 +211,19 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.01, 'decay': 0.9},
 1. Would you want to adjust $\gamma$ as optimization progresses? How sensitive is RMSProp to this?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/356)
+[Discussions](https://d2l.discourse.group/t/356)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1074)
+[Discussions](https://d2l.discourse.group/t/1074)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1075)
+[Discussions](https://d2l.discourse.group/t/1075)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1075)
+[Discussions](https://d2l.discourse.group/t/1075)
 :end_tab:
 
 <!-- slides -->

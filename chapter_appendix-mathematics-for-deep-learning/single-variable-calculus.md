@@ -590,20 +590,20 @@ Taylor series have two primary applications:
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/412)
+[Discussions](https://d2l.discourse.group/t/412)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1088)
+[Discussions](https://d2l.discourse.group/t/1088)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1089)
+[Discussions](https://d2l.discourse.group/t/1089)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1089)
+[Discussions](https://d2l.discourse.group/t/1089)
 :end_tab:
 
 <!-- slides -->

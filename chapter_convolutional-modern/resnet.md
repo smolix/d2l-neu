@@ -240,7 +240,7 @@ class Residual(nn.Module):  #@save
         return nn.relu(Y)
 ```
 
-This code generates two types of networks: one where we add the input to the output before applying the ReLU nonlinearity whenever `use_1x1conv=False`; and one where we adjust channels and resolution by means of a $1 \times 1$ convolution before adding. :numref:`fig_resnet_block` illustrates this.
+This code generates two types of networks: one where we add the input directly to the output before applying the ReLU nonlinearity whenever `use_1x1conv=False` and the stride is `1`; and one where we adjust channels and resolution by means of a $1 \times 1$ convolution before adding, which the block enables automatically whenever `use_1x1conv=True` or the stride is not `1`. :numref:`fig_resnet_block` illustrates this.
 
 ![ResNet block with and without $1 \times 1$ convolution, which transforms the input into the desired shape for the addition operation.](../img/resnet-block.svg)
 :label:`fig_resnet_block`
@@ -784,19 +784,19 @@ A common feature of the designs we have discussed so far is that the network des
 1. Why can't we just increase the complexity of functions without bound, even if the function classes are nested?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/85)
+[Discussions](https://d2l.discourse.group/t/85)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/86)
+[Discussions](https://d2l.discourse.group/t/86)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8737)
+[Discussions](https://d2l.discourse.group/t/8737)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18006)
+[Discussions](https://d2l.discourse.group/t/18006)
 :end_tab:
 
 <!-- slides -->

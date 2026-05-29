@@ -466,15 +466,15 @@ If we synchronize after *every* op (the `.numpy()` barrier loop), the total cost
 :end_tab:
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/361)
+[Discussions](https://d2l.discourse.group/t/361)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/2564)
+[Discussions](https://d2l.discourse.group/t/2564)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/2564)
+[Discussions](https://d2l.discourse.group/t/2564)
 :end_tab:
 
 <!-- slides -->

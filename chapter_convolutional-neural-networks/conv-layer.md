@@ -282,7 +282,7 @@ Next, we construct a kernel `K` with a height of 1 and a width of 2.
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
-Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction. After all, for a function $f(i,j)$ its derivative $-\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j) - f(i,j+\epsilon)}{\epsilon}$. Let's see how this works in practice.
+Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is $\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon}$, so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
 K = d2l.tensor([[1.0, -1.0]])
@@ -576,19 +576,19 @@ In terms of convolutions themselves, they can be used for many purposes, for exa
 1. How do you represent a cross-correlation operation as a matrix multiplication by changing the input and kernel tensors?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/65)
+[Discussions](https://d2l.discourse.group/t/65)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/66)
+[Discussions](https://d2l.discourse.group/t/66)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/271)
+[Discussions](https://d2l.discourse.group/t/271)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17996)
+[Discussions](https://d2l.discourse.group/t/17996)
 :end_tab:
 
 <!-- slides -->

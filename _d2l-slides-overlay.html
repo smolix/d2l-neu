@@ -1,68 +1,88 @@
 <!--
   Top navigation bar injected into every slide deck via Quarto's
-  `include-after-body`. CSS lives in `_d2l-slides.scss` (.d2l-deck-nav).
+  `include-after-body`. Mirrors the book's chrome:
+    - 280px white box on the left with the d2l logo
+    - blue navbar on the right with Book Chapter / Slides / Courses /
+      GitHub / Discuss links
+  Same visual treatment as `_book/index.html` and `_book/slides/index.html`.
 
-  Links are filled dynamically from the deployed path:
-  `<prefix>/slides/<fw>/<chapter>/<file>.html`.
+  Path math, with the deck deployed at
+  `_book/slides/<fw>/<chapter>/<file>.html`:
+    ../../../../index.html             → _book/index.html
+    ../../../index.html                → _book/slides/index.html
+    ../../../../static/logo-with-text.png → _book/static/logo-with-text.png
+  The "Book Chapter" link is rewritten by JS to the corresponding book
+  chapter URL (e.g. /chapter_x/foo.html), and the logo + chapter labels
+  are kept in sync with the framework the deck belongs to.
 -->
 <nav class="d2l-deck-nav">
-  <a class="d2l-deck-logo" href="../../../index.html"
-     title="Dive into Deep Learning — book home">
-    <img src="../../../static/logo-with-text.png" alt="Dive into Deep Learning">
-  </a>
+  <div class="d2l-deck-brand">
+    <a class="d2l-deck-logo" href="../../../../index.html"
+       title="Dive into Deep Learning — book home">
+      <img src="../../../../static/logo-with-text.png" alt="Dive into Deep Learning">
+    </a>
+  </div>
   <ul class="d2l-deck-nav-links">
-    <li><a href="../../../index.html">Book</a></li>
-    <li><a href="../../index.html">Slides</a></li>
+    <li><a href="../../../../index.html">Book Chapter</a></li>
+    <li><a href="../../../index.html">Slides</a></li>
+    <li><a href="https://courses.d2l.ai">Courses</a></li>
+    <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
+    <li><a href="https://d2l.discourse.group">Discuss</a></li>
+    <li>
+      <a href="#" id="d2l-deck-presenter"
+         title="Open speaker / presenter view in a second window (shortcut: S)">
+        Presenter
+      </a>
+    </li>
   </ul>
 </nav>
 <script>
+// (1) Rewrite the "Book Chapter" link to the corresponding book HTML
+//     (e.g. /slides/pytorch/chapter_x/foo.html → /chapter_x/foo.html).
+//     The logo link stays pointing at book home.
+// (2) Wire the "Presenter" link to the reveal-notes plugin's open()
+//     API. This is the same call the reveal menu uses for its
+//     "Speaker View" tool item; doing it from a direct user click in
+//     the navbar keeps the popup-blocker happy and gives a visible
+//     affordance for the otherwise-undiscoverable `S` shortcut.
 (function() {
-  var FW_TO_DISPLAY = {
-    pytorch: 'PyTorch',
-    tensorflow: 'TensorFlow',
-    jax: 'JAX',
-    mxnet: 'MXNet'
-  };
-
   function init() {
-    var nav = document.querySelector('.d2l-deck-nav');
-    if (!nav) return;
     var parts = window.location.pathname.split('/');
     var i = parts.lastIndexOf('slides');
-    if (i < 0 || i + 3 >= parts.length) return;
-
-    var prefix = parts.slice(0, i).join('/') + '/';
-    var framework = parts[i + 1];
-    var frameworkLabel = FW_TO_DISPLAY[framework] || framework;
-    var chapter = parts[i + 2];
-    var file = parts[i + 3];
-    var bookUrl = prefix + chapter + '/' + file + '?framework=' +
-      encodeURIComponent(framework);
-    var slidesUrl = prefix + 'slides/index.html';
-    var homeUrl = prefix + 'index.html';
-    var logoUrl = prefix + 'static/logo-with-text.png';
-
-    var logo = nav.querySelector('.d2l-deck-logo');
-    if (logo) logo.setAttribute('href', homeUrl);
-    var logoImg = nav.querySelector('.d2l-deck-logo img');
-    if (logoImg) logoImg.setAttribute('src', logoUrl);
-
-    var links = nav.querySelectorAll('.d2l-deck-nav-links a');
-    if (links[0]) {
-      links[0].setAttribute('href', bookUrl);
-      links[0].addEventListener('click', function() {
+    if (i >= 0 && i + 3 < parts.length) {
+      var prefix = parts.slice(0, i).join('/') + '/';
+      var framework = parts[i + 1];
+      var chapter = parts[i + 2];
+      var file = parts[i + 3];
+      var chapterUrl = prefix + chapter + '/' + file +
+                       '?framework=' + encodeURIComponent(framework);
+      var first = document.querySelector('.d2l-deck-nav-links a');
+      if (first) first.setAttribute('href', chapterUrl);
+    }
+    var presenter = document.getElementById('d2l-deck-presenter');
+    if (presenter) {
+      presenter.addEventListener('click', function(ev) {
+        ev.preventDefault();
         try {
-          localStorage.setItem('quarto-persistent-tabsets-data',
-            JSON.stringify({framework: frameworkLabel}));
-        } catch(e) {}
+          var notes = window.Reveal && Reveal.getPlugin &&
+                      Reveal.getPlugin('notes');
+          if (notes && typeof notes.open === 'function') {
+            notes.open();
+            return;
+          }
+        } catch (e) { /* fall through to keyboard fallback */ }
+        // Fallback: synthesize the `S` keypress the notes plugin
+        // listens for. Works even if the plugin's `open` export is
+        // unavailable (older bundled reveal builds).
+        var ev2 = new KeyboardEvent('keydown',
+            { key: 'S', code: 'KeyS', keyCode: 83, which: 83,
+              bubbles: true, cancelable: true });
+        document.dispatchEvent(ev2);
       });
     }
-    if (links[1]) links[1].setAttribute('href', slidesUrl);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  } else { init(); }
 })();
 </script>

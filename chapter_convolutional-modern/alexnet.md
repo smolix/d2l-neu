@@ -328,7 +328,7 @@ class AlexNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.Sequential(
-            nn.LazyConv2d(96, kernel_size=11, stride=4, padding=1),
+            nn.LazyConv2d(96, kernel_size=11, stride=4),
             nn.ReLU(), nn.MaxPool2d(kernel_size=3, stride=2),
             nn.LazyConv2d(256, kernel_size=5, padding=2), nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -403,7 +403,7 @@ class AlexNet(d2l.Classifier):
 
     def setup(self):
         self.net = nn.Sequential([
-            nn.Conv(features=96, kernel_size=(11, 11), strides=4, padding=1),
+            nn.Conv(features=96, kernel_size=(11, 11), strides=4, padding='VALID'),
             nn.relu,
             lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
             nn.Conv(features=256, kernel_size=(5, 5)),
@@ -507,19 +507,19 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 1. Can you make AlexNet overfit? Which feature do you need to remove or change to break training?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/75)
+[Discussions](https://d2l.discourse.group/t/75)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/76)
+[Discussions](https://d2l.discourse.group/t/76)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/276)
+[Discussions](https://d2l.discourse.group/t/276)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18001)
+[Discussions](https://d2l.discourse.group/t/18001)
 :end_tab:
 
 <!-- slides -->

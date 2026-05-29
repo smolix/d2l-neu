@@ -67,4 +67,4 @@ We can see a number of things:
 * Use FP16 or lower precision for high efficiency.
 
 
-[Discussions](https://discuss.d2l.ai/t/425)
+[Discussions](https://d2l.discourse.group/t/425)

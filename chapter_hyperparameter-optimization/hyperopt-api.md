@@ -34,7 +34,6 @@ import time
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
 from d2l import tensorflow as d2l
-import keras
 import numpy as np
 from scipy import stats
 ```
@@ -161,7 +160,9 @@ class HPOTuner(d2l.HyperParameters):  #@save
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
             error = self.objective(**config)
-            error = float(d2l.numpy(error.cpu()))
+            if hasattr(error, 'cpu'):
+                error = error.cpu()
+            error = float(d2l.numpy(error))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
@@ -271,30 +272,12 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
 ```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1  n=9}
 %%tab tensorflow
 def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
-    import keras
-    model = keras.Sequential([
-        keras.layers.Input(shape=(28, 28, 1)),
-        keras.layers.Conv2D(6, kernel_size=5, padding='same', activation='relu'),
-        keras.layers.MaxPooling2D(pool_size=2, strides=2),
-        keras.layers.Conv2D(16, kernel_size=5, activation='relu'),
-        keras.layers.MaxPooling2D(pool_size=2, strides=2),
-        keras.layers.Flatten(),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(84, activation='relu'),
-        keras.layers.Dense(10),
-    ])
-    model.compile(
-        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy'],
-    )
+    model = d2l.LeNet(lr=learning_rate, num_classes=10)
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs)
     data = d2l.FashionMNIST(batch_size=batch_size)
-    train_ds = data.get_dataloader(True)
-    val_ds = data.get_dataloader(False)
-    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
-                        verbose=0)
-    val_acc = history.history['val_accuracy'][-1]
-    return 1 - val_acc
+    trainer.fit(model=model, data=data)
+    validation_error = trainer.validation_error()
+    return float(validation_error)
 ```
 
 ```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1  n=9}
@@ -387,15 +370,15 @@ algorithms, and potential pitfalls one needs to be aware of.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/12092)
+[Discussions](https://d2l.discourse.group/t/12092)
 :end_tab:
 
 <!-- slides -->

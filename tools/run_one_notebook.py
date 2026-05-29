@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
-    MULTI_GPU_NOTEBOOKS, setup_framework_env, file_uses_gpu,
+    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS, setup_framework_env, file_uses_gpu,
 )
 # Reuse functions defined in run_notebooks.py rather than duplicating them.
 from run_notebooks import (
@@ -227,6 +227,70 @@ def acquire_cpu_slot(cpu_slots):
 
 
 @contextmanager
+def acquire_n_gpu_slots(n, gpu_slots, num_gpus):
+    """Acquire `n` adjacent slots on a single GPU; yield that GPU's
+    physical device index.
+
+    Used for memory-heavy single-GPU notebooks (HEAVY_GPU_NOTEBOOKS):
+    locking n adjacent flocks in the same per-GPU range reduces the
+    parallelism on that GPU from workers_per_gpu to (workers_per_gpu /
+    n) for the duration of this notebook, giving it an n× share of
+    GPU VRAM. Falls back to acquire_gpu_slot's behavior if n <= 1 or
+    workers_per_gpu < n.
+    """
+    if n <= 1:
+        with acquire_gpu_slot(gpu_slots, num_gpus) as i:
+            yield i
+        return
+    _ensure_slots(gpu_slots, 0)
+    workers_per_gpu = max(1, gpu_slots // max(1, num_gpus))
+    if workers_per_gpu < n:
+        # Not enough slots/GPU to satisfy the request — fall back to a
+        # single slot rather than deadlocking against ourselves.
+        with acquire_gpu_slot(gpu_slots, num_gpus) as i:
+            yield i
+        return
+    # Try each GPU's slot range. Slots cluster per GPU: GPU 0 owns
+    # 0..workers_per_gpu-1, GPU 1 owns workers_per_gpu..2*workers_per_gpu-1,
+    # etc. Within one GPU's range we attempt to non-blocking-flock n
+    # slots; if we can't get all n, release everything and try the
+    # next GPU. Loops until we succeed (≈ acquire_gpu_slot's polling
+    # loop).
+    while True:
+        for gpu_idx in range(max(1, num_gpus)):
+            start = gpu_idx * workers_per_gpu
+            paths = [SLOT_DIR / f'gpu-{start + j}.lock' for j in range(n)]
+            held = []
+            for p in paths:
+                fp = open(p, 'w')
+                try:
+                    fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    fp.close()
+                    break
+                held.append(fp)
+            if len(held) == n:
+                try:
+                    yield gpu_idx
+                finally:
+                    for fp in held:
+                        try:
+                            fcntl.flock(fp, fcntl.LOCK_UN)
+                            fp.close()
+                        except Exception:
+                            pass
+                return
+            # Couldn't get all n on this GPU; release partial holds.
+            for fp in held:
+                try:
+                    fcntl.flock(fp, fcntl.LOCK_UN)
+                    fp.close()
+                except Exception:
+                    pass
+        time.sleep(0.5)
+
+
+@contextmanager
 def acquire_all_gpus(gpu_slots, num_gpus):
     """Block until ALL slots are free; yield comma-separated GPU index list.
 
@@ -330,9 +394,12 @@ def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label)
                 finally:
                     release_init()
     if mode == 'gpu':
+        rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
+        heavy_n = HEAVY_GPU_NOTEBOOKS.get((fw, rel), 1)
         with acquire_fw_cap(fw, 'gpu', _fw_cap(fw, 'gpu')):
-            with acquire_gpu_slot(gpu_slots, num_gpus) as i:
-                print(f"{label}: [GPU {i}] running", flush=True)
+            with acquire_n_gpu_slots(heavy_n, gpu_slots, num_gpus) as i:
+                tag = f"GPU {i}" if heavy_n == 1 else f"GPU {i} ×{heavy_n}"
+                print(f"{label}: [{tag}] running", flush=True)
                 release_init = _maybe_serialize_mxnet(fw)
                 try:
                     return execute_notebook(nb, timeout=timeout, cuda_devices=str(i))

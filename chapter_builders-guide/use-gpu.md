@@ -138,11 +138,11 @@ It should be noted that the `cpu` device
 means all physical CPUs and memory.
 This means that PyTorch's calculations
 will try to use all CPU cores.
-However, a `gpu` device only represents one card
+However, a `cuda` device only represents one card
 and the corresponding memory.
 If there are multiple GPUs, we use `torch.device(f'cuda:{i}')`
 to represent the $i^\textrm{th}$ GPU ($i$ starts at 0).
-Also, `gpu:0` and `gpu` are equivalent.
+Also, `'cuda:0'` and `'cuda'` are equivalent.
 :end_tab:
 
 ```{.python .input #use-gpu-computing-devices-1}
@@ -721,19 +721,19 @@ You can lose significant performance by moving data without care.
    on one GPU. Hint: you should see almost linear scaling.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/62)
+[Discussions](https://d2l.discourse.group/t/62)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/63)
+[Discussions](https://d2l.discourse.group/t/63)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/270)
+[Discussions](https://d2l.discourse.group/t/270)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17995)
+[Discussions](https://d2l.discourse.group/t/17995)
 :end_tab:
 
 <!-- slides -->

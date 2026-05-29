@@ -1152,19 +1152,19 @@ $$
 7. How can you write $\textrm{tr}(\mathbf{A}^4)$ in Einstein notation for an arbitrary matrix $A$?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/410)
+[Discussions](https://d2l.discourse.group/t/410)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1084)
+[Discussions](https://d2l.discourse.group/t/1084)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1085)
+[Discussions](https://d2l.discourse.group/t/1085)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1085)
+[Discussions](https://d2l.discourse.group/t/1085)
 :end_tab:
 
 <!-- slides -->

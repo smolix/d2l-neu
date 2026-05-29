@@ -435,19 +435,19 @@ for premises, hypotheses, labels in train_iter:
 1. How can we change hyperparameters to reduce the vocabulary size?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/394)
+[Discussions](https://d2l.discourse.group/t/394)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1388)
+[Discussions](https://d2l.discourse.group/t/1388)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1388)
+[Discussions](https://d2l.discourse.group/t/1388)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1388)
+[Discussions](https://d2l.discourse.group/t/1388)
 :end_tab:
 
 <!-- slides -->

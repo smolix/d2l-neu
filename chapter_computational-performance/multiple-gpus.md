@@ -759,9 +759,15 @@ train(num_gpus=1, batch_size=256, lr=0.2)
 ```
 
 By keeping the batch size and learning rate unchanged and increasing the number of GPUs to 2, we can see that the test accuracy roughly stays the same compared with
-the previous experiment.
-In terms of the optimization algorithms, they are identical. Unfortunately there is no meaningful speedup to be gained here: the model is simply too small; moreover we only have a small dataset, where our slightly unsophisticated approach to implementing multi-GPU training suffered from significant Python overhead. We will encounter more complex models and more sophisticated ways of parallelization going forward.
-Let's see what happens nonetheless for Fashion-MNIST.
+the previous experiment. In terms of the optimization algorithms, they are identical.
+
+The wall-clock picture, however, is *worse* on two GPUs than on one. On the captured run (two RTX 4090s, PyTorch eager mode, the from-scratch `split_batch`/`allreduce` glue in this section), the single-GPU loop completes an epoch in roughly 1.7 s while the two-GPU loop takes about 2.2 s — i.e., a ~30% regression rather than the textbook ~2× speedup. Several effects pile up:
+
+* **The model is too small to amortize synchronization.** LeNet on Fashion-MNIST runs each minibatch in microseconds; the cost of `allreduce` (every step copies all parameters to one GPU, sums them, and broadcasts the result back) and of the Python orchestration around it now dominates compute.
+* **The dataset is small and CPU-side data loading is the bottleneck.** Both GPUs draw from the same DataLoader, so they spend most of their time waiting for the next minibatch — adding a second GPU just doubles the synchronization overhead without doubling the useful work.
+* **Our `allreduce` is hand-rolled and naive.** It does a star-pattern gather on `gpu(0)` and broadcasts via Python loops; production libraries (`torch.distributed`, NCCL ring-allreduce) are an order of magnitude faster and overlap communication with backward computation.
+
+In short: this is *the worst case* for data-parallel training, and the slowdown here is real, not a measurement artifact. With a meatier model (ResNet on ImageNet, see the next section) and a non-trivial dataloader, the picture flips and the second GPU pays for itself. Let's see what happens nonetheless for Fashion-MNIST.
 
 ```{.python .input #multiple-gpus-training-4}
 #@tab mxnet
@@ -798,19 +804,19 @@ train(num_gpus=2, batch_size=256, lr=0.2)
 1. Implement multi-GPU test accuracy computation.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/364)
+[Discussions](https://d2l.discourse.group/t/364)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1669)
+[Discussions](https://d2l.discourse.group/t/1669)
 :end_tab:
 
 <!-- slides -->

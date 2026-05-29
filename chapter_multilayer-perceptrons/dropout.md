@@ -515,19 +515,19 @@ it replaces an activation $h$ with a random variable with expected value $h$.
 1. Invent another technique for injecting random noise at each layer that is different from the standard dropout technique. Can you develop a method that outperforms dropout on the Fashion-MNIST dataset (for a fixed architecture)?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/100)
+[Discussions](https://d2l.discourse.group/t/100)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/101)
+[Discussions](https://d2l.discourse.group/t/101)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/261)
+[Discussions](https://d2l.discourse.group/t/261)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17987)
+[Discussions](https://d2l.discourse.group/t/17987)
 :end_tab:
 
 <!-- slides -->

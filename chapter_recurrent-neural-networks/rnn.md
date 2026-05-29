@@ -244,19 +244,19 @@ The hidden state of an RNN can capture historical information of the sequence up
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/337)
+[Discussions](https://d2l.discourse.group/t/337)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1050)
+[Discussions](https://d2l.discourse.group/t/1050)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1051)
+[Discussions](https://d2l.discourse.group/t/1051)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18013)
+[Discussions](https://d2l.discourse.group/t/18013)
 :end_tab:
 
 <!-- slides -->

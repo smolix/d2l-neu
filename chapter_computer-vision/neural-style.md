@@ -1,4 +1,5 @@
 # Neural Style Transfer
+:label:`sec_neural_style`
 
 If you are a photography enthusiast,
 you may be familiar with filters.
@@ -929,19 +930,19 @@ Some of these blocks even have the subtle texture of brush strokes.
 1. Can we apply style transfer for text? Hint: you may refer to the survey paper by :citet:`10.1145/3544903.3544906`.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/378)
+[Discussions](https://d2l.discourse.group/t/378)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1476)
+[Discussions](https://d2l.discourse.group/t/1476)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1476)
+[Discussions](https://d2l.discourse.group/t/1476)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1476)
+[Discussions](https://d2l.discourse.group/t/1476)
 :end_tab:
 
 <!-- slides -->

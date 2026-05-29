@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Manipulation — Dive into Deep Learning §2.1</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --blue:#2196F3; --link:#1976D2; --purple:#7D12BA; --ink:#3A4049; --head:#15181C;
+  --amber:#FB8C00; --green:#43A047; --border:#e4e9ef; --soft:#f7f9fb;
+}
+
+/* ---------- base typography (override white theme) ---------- */
+html,body{background:#fff;}
+.reveal-viewport{background:#fff;}
+.reveal{
+  font-family:"Source Sans 3",-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink); font-size:30px; font-weight:400;
+}
+.reveal h1,.reveal h2,.reveal h3{
+  font-family:inherit; color:var(--head); font-weight:600;
+  letter-spacing:-0.01em; text-transform:none; margin:0 0 .45em; line-height:1.1;
+}
+.reveal h1{font-size:2em;}
+.reveal h2{font-size:1.32em; position:relative; padding-bottom:.16em; margin-bottom:.5em;}
+.reveal h2::after{content:""; position:absolute; left:0; bottom:0; width:62px; height:4px; background:var(--blue); border-radius:2px;}
+.reveal h3{font-size:1.02em;}
+.reveal a{color:var(--link); text-decoration:none;}
+.reveal strong,.reveal b{color:var(--head); font-weight:700;}
+.reveal p{line-height:1.4; margin:.35em 0;}
+
+/* ---------- slide layout: top-aligned, clear of the navbar ---------- */
+.reveal .slides{text-align:left;}
+.reveal .slides > section{
+  box-sizing:border-box;
+  padding:62px 56px 28px;
+}
+.reveal .slides section.cover{padding-top:184px; text-align:center;}
+.reveal .slides section.divider{padding-top:208px; text-align:center;}
+
+/* ---------- kicker / labels ---------- */
+.kicker{
+  color:var(--blue); font-family:"JetBrains Mono",monospace; font-size:.56em;
+  font-weight:600; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.4em;
+}
+
+/* ---------- cover ---------- */
+.cover .kicker{display:inline-block;}
+.cover .lead{font-size:1.05em; color:#55606c; margin-top:.2em;}
+
+/* ---------- divider ---------- */
+.divider .dnum{font-family:"JetBrains Mono",monospace; font-size:4.6em; font-weight:700; color:var(--blue); line-height:.9; opacity:.16;}
+.divider .dtitle{font-size:1.8em; margin:.05em 0 .12em;}
+.divider .dtitle::after{display:none;}
+.divider .dsub{color:#6B7280; font-size:.92em;}
+
+/* ---------- notebook cells ---------- */
+.cell{
+  margin:.45em 0; border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; background:#fff; box-shadow:0 1px 2px rgba(16,24,40,.04);
+}
+.cell .io{display:flex; align-items:flex-start; gap:.55em; padding:.4em .6em;}
+.cell .in{background:#f7f9fb;}
+.cell .out{background:#fff; border-top:1px solid var(--border);}
+.cell .tag{
+  flex:0 0 auto; font-family:"JetBrains Mono",monospace; font-size:.5em; font-weight:700;
+  letter-spacing:.05em; padding:.34em .55em; border-radius:6px; margin-top:.35em; line-height:1;
+}
+.cell .in  .tag{color:#1565C0; background:#E3F2FD;}
+.cell .out .tag{color:#6A1B9A; background:#F3E5F5;}
+.cell pre{
+  margin:0; width:100%; background:none; box-shadow:none; padding:.15em 0;
+  font-family:"JetBrains Mono",monospace; font-size:.6em; line-height:1.5;
+  white-space:pre; overflow-x:auto;
+}
+.cell .out pre{color:#455a64;}
+.cell code{font-family:"JetBrains Mono",monospace; background:none;}
+
+/* compact variant for side-by-side */
+.cell.sm pre{font-size:.56em;}
+
+/* ---------- highlight.js token colours (d2l-flavoured) ---------- */
+.reveal .hljs{background:none; color:var(--ink); padding:0;}
+.hljs-keyword{color:#1976D2;}
+.hljs-built_in{color:#1565C0;}
+.hljs-title.function_,.hljs-title{color:var(--purple);}
+.hljs-number{color:#C0341D;}
+.hljs-string{color:#2E7D32;}
+.hljs-comment{color:#90A4AE; font-style:italic;}
+.hljs-operator,.hljs-punctuation{color:#546e7a;}
+
+/* ---------- callouts & notes ---------- */
+.callout{
+  border-left:4px solid var(--blue); background:#F2F8FE; padding:.5em .8em;
+  border-radius:0 9px 9px 0; font-size:.74em; line-height:1.42; margin:.4em 0; color:#33414d;
+}
+.callout.warn{border-left-color:var(--amber); background:#FFF7EC;}
+.callout.rule{border-left-color:var(--purple); background:#FAF1FD;}
+.callout b{color:var(--head);}
+.note{color:#5B6470; font-size:.7em; line-height:1.4;}
+.mono{font-family:"JetBrains Mono",monospace;}
+code.inl{font-family:"JetBrains Mono",monospace; color:var(--purple); background:#f4f1f8; padding:.06em .35em; border-radius:5px; font-size:.85em;}
+
+/* ---------- columns ---------- */
+.cols{display:flex; gap:1.2em; align-items:flex-start;}
+.cols > .col{flex:1 1 0; min-width:0;}
+.cols.vc{align-items:center;}
+
+/* ---------- lists ---------- */
+.reveal ul{margin:.2em 0 .2em 1.05em;}
+.reveal li{line-height:1.46; margin:.28em 0; font-size:.84em;}
+.reveal li::marker{color:var(--blue);}
+ul.tight li{margin:.18em 0;}
+
+/* ---------- diagrams ---------- */
+.dgm{width:100%; text-align:center;}
+.dgm-svg{width:100%; height:auto; display:block; margin:0 auto;}
+.dgm-cap{font-size:.62em; color:#6B7280; margin-top:.2em;}
+
+/* ---------- fixed d2l navbar ---------- */
+.d2l-nav{
+  position:fixed; top:0; left:0; right:0; height:44px; z-index:60;
+  background:var(--blue); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 8px rgba(0,0,0,.14);
+}
+.d2l-nav .brand{color:#fff; font-family:"Source Sans 3",-apple-system,"Segoe UI",sans-serif; font-size:18.5px; font-weight:500; letter-spacing:.005em;}
+.d2l-nav .meta{
+  position:absolute; right:16px; top:0; height:44px; display:flex; align-items:center;
+  color:rgba(255,255,255,.82); font-size:12.5px; font-family:"JetBrains Mono",monospace;
+}
+
+/* ---------- reveal chrome ---------- */
+.reveal .progress{color:var(--blue); height:4px;}
+.reveal .slide-number{background:transparent; color:#9aa5b1; font-family:"JetBrains Mono",monospace; font-size:13px; right:14px; bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="d2l-nav">
+  <span class="brand">Dive into Deep Learning</span>
+  <span class="meta">§2.1 · Data Manipulation</span>
+</div>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- 1 · TITLE -->
+<section class="cover">
+  <div class="kicker">Dive into Deep Learning · §2.1 · PyTorch</div>
+  <h1>Data&nbsp;Manipulation</h1>
+  <p class="lead">Storing &amp; transforming data with <b>tensors</b></p>
+  <aside class="notes">
+    The very first thing we need before any learning happens: a way to get data into the machine and push it around.
+    This whole section is about the tensor — the n-dimensional array that every deep-learning framework is built on.
+    We'll do it in PyTorch. By the end you can create, reshape, index, combine, and broadcast tensors, and you'll know
+    the one memory trick that matters for big models.
+  </aside>
+</section>
+
+<!-- 2 · WHY TENSORS -->
+<section>
+  <div class="kicker">Motivation</div>
+  <h2>The tensor: our basic data structure</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 38%">
+      <ul class="tight">
+        <li>An <b>n-dimensional array</b> of numbers — generalises the NumPy <span class="mono">ndarray</span>.</li>
+        <li>Runs on <b>GPUs / accelerators</b>, not just the CPU.</li>
+        <li>Records operations for <b>automatic differentiation</b> — the engine behind training.</li>
+      </ul>
+      <div class="callout">The <b>rank</b> (number of axes) and <b>shape</b> (size per axis) describe every tensor.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="rank"></div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    A tensor is "just" an n-dimensional array, but two superpowers separate it from NumPy: it lives on the GPU, and it
+    remembers how it was computed so we can differentiate through it. Rank = how many axes; shape = how big each axis is.
+    A scalar has rank 0, a vector rank 1, a matrix rank 2, and we stack from there. Keep this ladder in mind — every
+    object we touch today is a point on it.
+  </aside>
+</section>
+
+<!-- 3 · DIVIDER: GETTING STARTED -->
+<section class="divider">
+  <div class="dnum">01</div>
+  <h2 class="dtitle">Getting Started</h2>
+  <p class="dsub">creating &amp; inspecting tensors</p>
+  <aside class="notes">First, how do we make tensors and ask them about themselves?</aside>
+</section>
+
+<!-- 4 · CREATE A VECTOR -->
+<section>
+  <div class="kicker">Getting Started</div>
+  <h2>Create a vector, then inspect it</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">import torch
+
+x = torch.arange(12, dtype=torch.float32)
+x</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([ 0.,  1.,  2.,  3.,  4.,  5.,
+         6.,  7.,  8.,  9., 10., 11.])</pre></div>
+      </div>
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">x.numel(), x.shape</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>(12, torch.Size([12]))</pre></div>
+      </div>
+    </div>
+    <div class="col" style="flex:0 0 36%">
+      <div class="callout">
+        <b>arange(12)</b> → evenly spaced values 0…11.<br>
+        <b>numel()</b> → total number of elements.<br>
+        <b>shape</b> → size along each axis.
+      </div>
+      <p class="note"><span class="mono">dtype=torch.float32</span> asks for floats; deep learning lives in floating point.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    arange is the tensor version of Python's range — here a length-12 vector of floats. Two ways to interrogate it:
+    numel() gives the element count (12), and shape gives the size along every axis as a torch.Size, here just (12,).
+    We force float32 because nearly all neural-net math is in floating point.
+  </aside>
+</section>
+
+<!-- 5 · RESHAPE -->
+<section>
+  <div class="kicker">Getting Started</div>
+  <h2>Reshape: same data, new layout</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 40%">
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">X = x.reshape(3, 4)
+X</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[ 0.,  1.,  2.,  3.],
+        [ 4.,  5.,  6.,  7.],
+        [ 8.,  9., 10., 11.]])</pre></div>
+      </div>
+      <div class="callout">Same 12 values, no copy. Use <code class="inl">-1</code> to infer an axis: <span class="mono">x.reshape(3, -1)</span>.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="reshape"></div>
+        <div class="dgm-cap">Elements fill <b>row by row</b> (row-major order).</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    reshape gives the data a new shape without touching the numbers — the 12 values are laid out row by row into a 3×4
+    grid. Nothing is copied; it's a new view. The handy trick: pass -1 for one axis and PyTorch solves for it, so
+    reshape(3, -1) and reshape(-1, 4) both give the 3×4 here.
+  </aside>
+</section>
+
+<!-- 6 · INITIALISERS -->
+<section>
+  <div class="kicker">Getting Started</div>
+  <h2>Other ways to build tensors</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">torch.randn(3, 4)   # standard normal</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[ 0.29, -0.25,  0.41, -0.64],
+        [-0.72,  1.46, -0.84, -0.23],
+        [-0.33,  0.32, -1.88, -0.27]])</pre></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">torch.tensor([[2, 1, 4, 3],
+              [1, 2, 3, 4],
+              [4, 3, 2, 1]])</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[2, 1, 4, 3],
+        [1, 2, 3, 4],
+        [4, 3, 2, 1]])</pre></div>
+      </div>
+    </div>
+  </div>
+  <div class="callout">Also <span class="mono">torch.zeros((2,3,4))</span>, <span class="mono">torch.ones(...)</span>, <span class="mono">torch.full(...)</span>. <b>Random</b> values break symmetry when initialising network weights; <b>explicit lists</b> let you type a tensor by hand.</div>
+  <aside class="notes">
+    Beyond arange, the everyday constructors: zeros and ones for placeholders, randn for samples from a standard normal —
+    that's how we typically seed weight matrices, because random breaks the symmetry between neurons. And torch.tensor
+    builds a tensor directly from nested Python lists when you want exact values. The outer shape of the list becomes the
+    shape of the tensor.
+  </aside>
+</section>
+
+<!-- 7 · DIVIDER: INDEXING -->
+<section class="divider">
+  <div class="dnum">02</div>
+  <h2 class="dtitle">Indexing &amp; Slicing</h2>
+  <p class="dsub">reading and writing elements</p>
+  <aside class="notes">Now that we can make tensors, let's reach inside them.</aside>
+</section>
+
+<!-- 8 · READ -->
+<section>
+  <div class="kicker">Indexing &amp; Slicing</div>
+  <h2>Reading: elements, rows, ranges</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 42%">
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">X[-1], X[1:3]</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>(tensor([ 8.,  9., 10., 11.]),
+ tensor([[ 4.,  5.,  6.,  7.],
+         [ 8.,  9., 10., 11.]]))</pre></div>
+      </div>
+      <div class="callout">Indexing is <b>0-based</b>. Negative counts from the end. A range <code class="inl">a:b</code> is <b>half-open</b> — <code class="inl">b</code> is excluded.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="iread"></div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    Same rules as Python lists, extended to multiple axes. X[-1] grabs the last row. X[1:3] is a half-open range: rows 1
+    and 2, but not 3. Selecting along the first axis (rows) is the common case; you can add commas to index further axes.
+  </aside>
+</section>
+
+<!-- 9 · WRITE -->
+<section>
+  <div class="kicker">Indexing &amp; Slicing</div>
+  <h2>Writing: one cell or a whole region</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 42%">
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">X[1, 2] = 17      # one element
+X[:2, :] = 12     # whole region
+X</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[12., 12., 12., 12.],
+        [12., 12., 12., 12.],
+        [ 8.,  9., 10., 11.]])</pre></div>
+      </div>
+      <div class="callout">Assign to a single position, or broadcast a scalar across an <b>entire slice</b> at once.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="iwrite"></div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    The same index syntax works on the left of an equals sign. X[1, 2] = 17 writes a single element. X[:2, :] = 12 writes
+    to a whole sub-block — the first two rows, all columns — in one statement. The final 12 in the second assignment
+    overwrites the 17 we just set, which is why it's gone in the output.
+  </aside>
+</section>
+
+<!-- 10 · DIVIDER: OPERATIONS -->
+<section class="divider">
+  <div class="dnum">03</div>
+  <h2 class="dtitle">Operations</h2>
+  <p class="dsub">elementwise math, concatenation, reductions</p>
+  <aside class="notes">Tensors are useful because of what we can compute with them.</aside>
+</section>
+
+<!-- 11 · ELEMENTWISE -->
+<section>
+  <div class="kicker">Operations</div>
+  <h2>Elementwise arithmetic &amp; functions</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">x = torch.tensor([1.0, 2, 4, 8])
+y = torch.tensor([2, 2, 2, 2])
+x + y, x - y, x * y, x / y, x ** y</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>(tensor([ 3.,  4.,  6., 10.]),
+ tensor([-1.,  0.,  2.,  6.]),
+ tensor([ 2.,  4.,  8., 16.]),
+ tensor([0.5, 1., 2., 4.]),
+ tensor([ 1.,  4., 16., 64.]))</pre></div>
+      </div>
+    </div>
+    <div class="col" style="flex:0 0 40%">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">torch.exp(x)</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([2.72e0, 7.39e0,
+        5.46e1, 2.98e3])</pre></div>
+      </div>
+      <div class="callout">The five operators <span class="mono">+ − * / **</span> and unary functions like <span class="mono">exp</span>, <span class="mono">sin</span>, <span class="mono">log</span> all act <b>elementwise</b> on matching shapes.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    The standard arithmetic operators apply position-by-position to tensors of the same shape — add, subtract, multiply,
+    divide, and power, all elementwise. The same is true of unary math functions: torch.exp raises e to each element.
+    "Elementwise" is the mental default for tensor math; the next slide is the one important exception.
+  </aside>
+</section>
+
+<!-- 12 · CONCATENATE -->
+<section>
+  <div class="kicker">Operations</div>
+  <h2>Concatenate along an axis</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 44%">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python"># X and Y are both 3x4 tensors
+torch.cat((X, Y), dim=0).shape   # rows
+torch.cat((X, Y), dim=1).shape   # cols</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>torch.Size([6, 4])
+torch.Size([3, 8])</pre></div>
+      </div>
+      <div class="callout"><span class="mono">cat</span> joins tensors along an <b>existing</b> axis. Every <b>other</b> axis must already match.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="cat"></div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    Concatenation glues tensors end-to-end along one chosen axis. dim=0 stacks rows, giving 6×4; dim=1 stacks columns,
+    giving 3×8. The rule: the axis you concatenate along can differ, but all the other axes must already agree, or the
+    pieces wouldn't fit together.
+  </aside>
+</section>
+
+<!-- 13 · LOGICAL & REDUCE -->
+<section>
+  <div class="kicker">Operations</div>
+  <h2>Comparisons &amp; reductions</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python"># Y = tensor([[2,1,4,3], [1,2,3,4], [4,3,2,1]])
+X == Y</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[False,  True, False,  True],
+        [False, False, False, False],
+        [False, False, False, False]])</pre></div>
+      </div>
+    </div>
+    <div class="col" style="flex:0 0 34%">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">X.sum()</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor(66.)</pre></div>
+      </div>
+    </div>
+  </div>
+  <div class="callout">Comparisons (<span class="mono">==, &lt;, &gt;</span>) give a <b>boolean tensor</b> — perfect as a mask. Reductions (<span class="mono">sum, mean, max</span>) collapse axes; add <code class="inl">dim=</code> to reduce just one.</div>
+  <aside class="notes">
+    Two more families. Comparisons produce boolean tensors elementwise — X == Y is True exactly where the two agree.
+    These booleans are how we build masks for filtering. Reductions go the other way and collapse values: sum() with no
+    arguments adds every element to a single scalar (66 here). Pass dim= to reduce along just one axis and keep the rest.
+  </aside>
+</section>
+
+<!-- 14 · BROADCASTING -->
+<section>
+  <div class="kicker">Operations · the exception</div>
+  <h2>Broadcasting: combining mismatched shapes</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 40%">
+      <div class="cell">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">a = torch.arange(3).reshape(3, 1)
+b = torch.arange(2).reshape(1, 2)
+a + b</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>tensor([[0, 1],
+        [1, 2],
+        [2, 3]])</pre></div>
+      </div>
+      <div class="callout rule">Any axis of size <b>1</b> is virtually <b>stretched</b> to match the other tensor — no data is copied.</div>
+      <div class="callout warn">Shapes are compatible only if each axis is <b>equal</b> or <b>1</b>.</div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="bcast"></div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    Broadcasting is the one time shapes don't have to match. a is 3×1, b is 1×2. PyTorch stretches each size-1 axis to fit
+    the other: a's single column is repeated to width 2, b's single row is repeated to height 3, and now both are 3×2 and
+    add elementwise. No memory is actually duplicated — it's done lazily. The compatibility rule: walking the axes,
+    each pair must be equal or one of them must be 1. This is everywhere in practice — e.g. adding a per-column bias to a
+    whole batch.
+  </aside>
+</section>
+
+<!-- 15 · SAVING MEMORY -->
+<section>
+  <div class="kicker">Performance</div>
+  <h2>Saving memory with in-place ops</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 40%">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">before = id(Y)
+Y = Y + X
+id(Y) == before</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>False   # new tensor!</pre></div>
+      </div>
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">before = id(X)
+X += Y
+id(X) == before</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>True    # in place</pre></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="mem"></div></div>
+      <div class="callout"><span class="mono">Y = Y + X</span> allocates fresh memory. Prefer <span class="mono">Y[:] = X + Y</span> or <span class="mono">Y += X</span> to write <b>in place</b>.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    id() returns an object's memory address — our probe. Y = Y + X builds a brand-new tensor and rebinds Y to it, so the
+    id changes: False. That's wasteful when tensors are hundreds of megabytes, and dangerous if other variables still
+    point at the old buffer. The fix is in-place writes: X += Y, or Y[:] = X + Y, reuse the same storage, so the id stays
+    the same: True. Get in the habit early — it matters a lot during training.
+  </aside>
+</section>
+
+<!-- 16 · CONVERSION -->
+<section>
+  <div class="kicker">Interop</div>
+  <h2>Converting to other Python objects</h2>
+  <div class="cols vc">
+    <div class="col" style="flex:0 0 44%">
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">A = X.numpy()
+B = torch.from_numpy(A)
+type(A), type(B)</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>(numpy.ndarray, torch.Tensor)</pre></div>
+      </div>
+      <div class="cell sm">
+        <div class="io in"><span class="tag">In</span><pre><code class="language-python">a = torch.tensor([3.5])
+a.item(), float(a), int(a)</code></pre></div>
+        <div class="io out"><span class="tag">Out</span><pre>(3.5, 3.5, 3)</pre></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="dgm"><div data-dgm="np"></div></div>
+      <div class="callout"><span class="mono">numpy()</span> / <span class="mono">from_numpy()</span> <b>share memory</b> (no copy). <span class="mono">.item()</span> pulls a Python scalar from a size-1 tensor.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    Tensors interoperate cleanly with the rest of Python. numpy() and from_numpy() convert to and from NumPy and, crucially,
+    share the same underlying buffer — change one and the other sees it. And when you've reduced down to a single value,
+    .item() (or float()/int()) hands you back a plain Python number, which you need for logging losses, printing, and so on.
+  </aside>
+</section>
+
+<!-- 17 · SUMMARY -->
+<section>
+  <div class="kicker">Wrap-up</div>
+  <h2>Summary</h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="tight">
+        <li><b>Tensor</b> = n-d array; the core data structure (GPU + autodiff).</li>
+        <li><b>Create:</b> <span class="mono">arange, zeros, ones, randn, tensor([…])</span>.</li>
+        <li><b>Inspect &amp; restructure:</b> <span class="mono">.shape, .numel(), .reshape()</span>.</li>
+        <li><b>Index / slice</b> to read <i>and</i> write — negatives, ranges, whole regions.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <ul class="tight">
+        <li><b>Elementwise</b> math, <b>comparisons</b> (masks), <b>reductions</b>, <b>cat</b>.</li>
+        <li><b>Broadcasting</b> stretches size-1 axes to combine shapes.</li>
+        <li><b>Save memory</b> with in-place ops: <span class="mono">X[:] = …</span>, <span class="mono">+=</span>.</li>
+        <li><b>Interop:</b> tensor ↔ NumPy (shared memory), <span class="mono">.item()</span> for scalars.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout">The tensor is the interface for all data in a deep-learning library — everything later builds on these moves.</div>
+  <aside class="notes">
+    The whole toolkit on one slide. Creation, inspection, reshaping; indexing for reading and writing; the operation
+    families — elementwise, comparisons, reductions, concatenation; broadcasting as the shape-mismatch escape hatch;
+    in-place writes for memory; and conversion to NumPy and Python scalars. Everything in the rest of the book — linear
+    algebra, autograd, whole networks — is expressed in exactly these moves.
+  </aside>
+</section>
+
+<!-- 18 · EXERCISES -->
+<section>
+  <div class="kicker">Your turn</div>
+  <h2>Exercises</h2>
+  <ol>
+    <li>Replace <code class="inl">X == Y</code> with <code class="inl">X &lt; Y</code> and <code class="inl">X &gt; Y</code>. What kind of tensor comes back, and what could you do with it?</li>
+    <li>Take two tensors with <b>three</b> axes — say shapes <span class="mono">(2,1,4)</span> and <span class="mono">(1,3,1)</span>. Predict the broadcast result shape, then check with <code class="inl">a + b</code>.</li>
+  </ol>
+  <div class="callout">Full chapter &amp; runnable notebook: <b>d2l.smola.org</b> → Preliminaries → Data Manipulation.</div>
+  <aside class="notes">
+    Two things to try. First, swap the comparison operator and confirm you still get a boolean tensor — that's the raw
+    material for masking and filtering. Second, stress-test broadcasting in 3-D: line up the axes from the right, apply
+    the "equal or 1" rule to each, and predict the output shape before you run it. The full interactive notebook is on
+    d2l.smola.org.
+  </aside>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script>
+Reveal.initialize({
+  width: 1280, height: 720, margin: 0.045,
+  center: false, hash: true,
+  slideNumber: 'c/t',
+  transition: 'fade', transitionSpeed: 'fast',
+  plugins: [ RevealHighlight, RevealNotes ]
+});
+
+/* ----------------------- inline-SVG diagram engine ----------------------- */
+(function(){
+  const C = {
+    blue:'#2196F3', lblue:'#E3F2FD', amber:'#FB8C00', lamber:'#FFE7C7',
+    green:'#43A047', lgreen:'#D7EFD8', purple:'#7D12BA', gray:'#90A4AE',
+    lgray:'#ECEFF1', ink:'#15181C', muted:'#6B7280'
+  };
+  const FM = 'JetBrains Mono, monospace', FS = 'Source Sans 3, sans-serif';
+
+  function rc(x,y,s,f,st,dash){
+    return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="6" fill="${f}" stroke="${st}" stroke-width="2"${dash?' stroke-dasharray="5 4"':''}/>`;
+  }
+  function tx(x,y,t,o){
+    o=o||{};
+    return `<text x="${x}" y="${y}" font-family="${o.mono?FM:FS}" font-size="${o.fs||15}" font-weight="${o.fw||600}" fill="${o.fill||C.ink}" text-anchor="${o.anchor||'middle'}" dominant-baseline="${o.base||'central'}">${t}</text>`;
+  }
+  // data: 2D array; opt.fill(r,c,v) -> [fillColor, strokeColor, dashBool, textColor]
+  function grid(data,x0,y0,s,gap,opt){
+    opt=opt||{}; let o='';
+    for(let r=0;r<data.length;r++) for(let c=0;c<data[r].length;c++){
+      const v=data[r][c];
+      const fc = opt.fill ? opt.fill(r,c,v) : [C.lblue,C.blue,false,C.ink];
+      const x=x0+c*(s+gap), y=y0+r*(s+gap);
+      o+=rc(x,y,s,fc[0],fc[1],fc[2]);
+      if(opt.showVal!==false && v!=null && v!=='')
+        o+=tx(x+s/2,y+s/2,v,{mono:true,fs:opt.fs||15,fill:fc[3]||C.ink});
+    }
+    return o;
+  }
+  function arrow(x1,y1,x2,y2,color,dash){
+    const ang=Math.atan2(y2-y1,x2-x1), h=8;
+    const a1=ang+Math.PI-0.42, a2=ang+Math.PI+0.42;
+    const hx1=x2+h*Math.cos(a1), hy1=y2+h*Math.sin(a1);
+    const hx2=x2+h*Math.cos(a2), hy2=y2+h*Math.sin(a2);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.3"${dash?' stroke-dasharray="5 4"':''}/>`
+         + `<path d="M${x2},${y2} L${hx1},${hy1} L${hx2},${hy2} Z" fill="${color}"/>`;
+  }
+  function block(x,y,title,sub,faded,accent){
+    const w=178,h=54, op=faded?0.42:1; accent=accent||C.blue;
+    return `<g opacity="${op}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="#fff" stroke="${accent}" stroke-width="2"/>`
+      + `<rect x="${x}" y="${y}" width="6" height="${h}" rx="3" fill="${accent}"/>`
+      + tx(x+w/2+3,y+19,title,{mono:true,fs:13.5,fw:700,fill:'#37474F'})
+      + tx(x+w/2+3,y+38,sub,{mono:true,fs:11.5,fw:500,fill:'#78909C'}) + `</g>`;
+  }
+  function chip(cx,cy,t){
+    const s=46;
+    return rc(cx-s/2,cy-s/2,s,'#F3E5F5',C.purple,false)
+      + tx(cx,cy,t,{mono:true,fs:20,fw:700,fill:C.purple});
+  }
+  const svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" class="dgm-svg">${inner}</svg>`;
+
+  // ---- 1. rank ladder ----
+  function rank(){
+    const s=46,g=4,base=212; let o='';
+    // scalar
+    let x=66; o+=grid([['5']],x,base-s,s,g);
+    o+=tx(x+s/2,base+28,'scalar',{fw:700,fs:16}); o+=tx(x+s/2,base+49,'shape ( )',{mono:true,fs:12.5,fill:C.muted});
+    // vector
+    x=196; const vw=4*s+3*g; o+=grid([[0,1,2,3]],x,base-s,s,g);
+    o+=tx(x+vw/2,base+28,'vector',{fw:700,fs:16}); o+=tx(x+vw/2,base+49,'(4,)',{mono:true,fs:12.5,fill:C.muted});
+    // matrix
+    x=470; const mw=4*s+3*g, mh=3*s+2*g; o+=grid([[0,1,2,3],[4,5,6,7],[8,9,10,11]],x,base-mh,s,g);
+    o+=tx(x+mw/2,base+28,'matrix',{fw:700,fs:16}); o+=tx(x+mw/2,base+49,'(3, 4)',{mono:true,fs:12.5,fill:C.muted});
+    // 3-D
+    x=800; const off=15;
+    o+=grid([['','','',''],['','','',''],['','','','']],x+off,base-mh-off,s,g,{showVal:false,fill:()=>['#EAF4FE','#90CAF9',false]});
+    o+=grid([[0,1,2,3],[4,5,6,7],[8,9,10,11]],x,base-mh,s,g);
+    o+=tx(x+mw/2,base+28,'3-D tensor',{fw:700,fs:16}); o+=tx(x+mw/2,base+49,'(2, 3, 4)',{mono:true,fs:12.5,fill:C.muted});
+    return svg(1060,272,o);
+  }
+
+  // ---- 2. reshape ----
+  function reshape(){
+    const s=44,g=4,W=900; let o='';
+    const tint=(r,c,v)=>{const k=Math.floor(v/4);return [[C.lblue,C.blue],[C.lgreen,C.green],[C.lamber,C.amber]][k].concat([false,C.ink]);};
+    const vw=12*s+11*g, vx=(W-vw)/2, vy=34;
+    o+=tx(vx-14,vy+s/2,'x',{anchor:'end',mono:true,fs:18,fill:C.muted});
+    o+=grid([[0,1,2,3,4,5,6,7,8,9,10,11]],vx,vy,s,g,{fill:tint});
+    o+=arrow(W/2,vy+s+12,W/2,vy+s+58,C.purple,false);
+    o+=tx(W/2+14,vy+s+36,'reshape(3, 4)',{anchor:'start',mono:true,fs:15,fill:C.purple});
+    const mw=4*s+3*g, mx=(W-mw)/2, my=vy+s+74;
+    o+=tx(mx-14,my+(3*s+2*g)/2,'X',{anchor:'end',mono:true,fs:18,fill:C.muted});
+    o+=grid([[0,1,2,3],[4,5,6,7],[8,9,10,11]],mx,my,s,g,{fill:tint});
+    return svg(W,my+3*s+2*g+14,o);
+  }
+
+  // ---- 3. index read ----
+  function iread(){
+    const s=42,g=5,W=880,y=88; let o='';
+    const d=[[0,1,2,3],[4,5,6,7],[8,9,10,11]], gw=4*s+3*g, gh=3*s+2*g;
+    let x=80;
+    o+=tx(x+gw/2,y-24,'X[-1]',{mono:true,fs:18,fw:700,fill:C.amber});
+    o+=grid(d,x,y,s,g,{fill:(r)=> r===2?[C.lamber,C.amber,false,C.ink]:[C.lblue,C.blue,false,C.ink]});
+    o+=tx(x+gw/2,y+gh+26,'last row',{fs:13.5,fill:C.muted});
+    x=500;
+    o+=tx(x+gw/2,y-24,'X[1:3]',{mono:true,fs:18,fw:700,fill:C.green});
+    o+=grid(d,x,y,s,g,{fill:(r)=> (r===1||r===2)?[C.lgreen,C.green,false,C.ink]:[C.lblue,C.blue,false,C.ink]});
+    o+=tx(x+gw/2,y+gh+26,'rows 1–2  (3 excluded)',{fs:13.5,fill:C.muted});
+    return svg(W,y+gh+44,o);
+  }
+
+  // ---- 4. index write ----
+  function iwrite(){
+    const s=42,g=5,W=880,y=86; let o='';
+    const gw=4*s+3*g, gh=3*s+2*g;
+    let x=110;
+    o+=tx(x+gw/2,y-24,'X[1, 2] = 17',{mono:true,fs:15.5,fw:700,fill:C.amber});
+    o+=grid([[0,1,2,3],[4,5,17,7],[8,9,10,11]],x,y,s,g,{fill:(r,c)=>(r===1&&c===2)?[C.lamber,C.amber,false,C.ink]:[C.lblue,C.blue,false,C.ink]});
+    const ay=y+gh/2;
+    o+=arrow(x+gw+16,ay,x+gw+74,ay,C.purple,false);
+    x=x+gw+106;
+    o+=tx(x+gw/2,y-24,'X[:2, :] = 12',{mono:true,fs:15.5,fw:700,fill:C.green});
+    o+=grid([[12,12,12,12],[12,12,12,12],[8,9,10,11]],x,y,s,g,{fill:(r)=>r<2?[C.lgreen,C.green,false,C.ink]:[C.lblue,C.blue,false,C.ink]});
+    return svg(W,y+gh+30,o);
+  }
+
+  // ---- 5. concatenate ----
+  function cat(){
+    const s=24,g=3,W=1000; let o='';
+    const m=[['','','',''],['','','',''],['','','','']], gw=4*s+3*g, gh=3*s+2*g;
+    const blue=()=>[C.lblue,C.blue,false], amber=()=>[C.lamber,C.amber,false];
+    // dim 0
+    let ax=130, ay=58;
+    o+=tx(ax+gw/2,ay-22,'dim = 0',{mono:true,fs:15,fw:700,fill:C.purple});
+    o+=grid(m,ax,ay,s,g,{showVal:false,fill:blue}); o+=tx(ax+gw/2,ay+gh/2,'X',{fw:700,fs:18});
+    let by=ay+gh+g;
+    o+=grid(m,ax,by,s,g,{showVal:false,fill:amber}); o+=tx(ax+gw/2,by+gh/2,'Y',{fw:700,fs:18});
+    o+=tx(ax+gw/2,by+gh+26,'(6, 4)',{mono:true,fs:13.5,fill:C.muted});
+    // dim 1
+    let cx=560, cy=110;
+    o+=tx(cx+gw,cy-22,'dim = 1',{mono:true,fs:15,fw:700,fill:C.purple});
+    o+=grid(m,cx,cy,s,g,{showVal:false,fill:blue}); o+=tx(cx+gw/2,cy+gh/2,'X',{fw:700,fs:18});
+    let dx=cx+gw+g;
+    o+=grid(m,dx,cy,s,g,{showVal:false,fill:amber}); o+=tx(dx+gw/2,cy+gh/2,'Y',{fw:700,fs:18});
+    o+=tx(cx+gw,cy+gh+26,'(3, 8)',{mono:true,fs:13.5,fill:C.muted});
+    return svg(W,300,o);
+  }
+
+  // ---- 6. broadcasting ----
+  function bcast(){
+    const s=40,g=6,W=700,H=358; let o='';
+    const sB=[C.lblue,C.blue,false,C.ink], gB=['#EBF5FE','#90CAF9',true,'#90A4AE'];
+    const sA=[C.lamber,C.amber,false,C.ink], gA=['#FFF3E2','#FFCC80',true,'#B0A48F'];
+    const sG=[C.lgreen,C.green,false,C.ink];
+    const col=2*s+g, row3=3*s+2*g;
+    // a (3x1)
+    let ax=46, ay=30;
+    o+=tx(ax+s/2,ay-13,'a (3×1)',{fs:13,fill:C.muted});
+    o+=grid([[0],[1],[2]],ax,ay,s,g,{fill:()=>sB});
+    // a' (3x2)
+    let apx=196;
+    o+=tx(apx+col/2,ay-13,'(3×2)',{fs:13,fill:C.muted});
+    o+=grid([[0,0],[1,1],[2,2]],apx,ay,s,g,{fill:(r,c)=> c===0?sB:gB});
+    o+=arrow(ax+s+8,ay+row3/2,apx-8,ay+row3/2,C.gray,false);
+    // b (1x2)
+    let bx=46, by=242;
+    o+=tx(bx+col/2,by-13,'b (1×2)',{fs:13,fill:C.muted});
+    o+=grid([[0,1]],bx,by,s,g,{fill:()=>sA});
+    // b' (3x2)
+    let bpx=196, bpy=190;
+    o+=tx(bpx+col/2,bpy-13,'(3×2)',{fs:13,fill:C.muted});
+    o+=grid([[0,1],[0,1],[0,1]],bpx,bpy,s,g,{fill:(r)=> r===0?sA:gA});
+    o+=arrow(bx+col+8,by+s/2,bpx-8,by+s/2,C.gray,false);
+    // plus & equals
+    const midY=(ay+row3+bpy)/2;
+    o+=tx(apx+col+34,midY,'+',{fs:30,fw:700,fill:C.muted});
+    o+=tx(apx+col+96,midY,'=',{fs:30,fw:700,fill:C.muted});
+    // result (3x2)
+    let rx=apx+col+128, ry=midY-row3/2;
+    o+=tx(rx+col/2,ry-13,'result (3×2)',{fs:13,fill:C.green});
+    o+=grid([[0,1],[1,2],[2,3]],rx,ry,s,g,{fill:()=>sG});
+    return svg(W,H,o);
+  }
+
+  // ---- 7. memory ----
+  function mem(){
+    const W=960,H=300; let o='';
+    o+=`<line x1="480" y1="46" x2="480" y2="268" stroke="#E0E0E0" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    // LEFT — new allocation
+    o+=tx(232,40,'Y = Y + X',{mono:true,fs:17,fw:700,fill:'#C0341D'});
+    o+=chip(92,150,'Y');
+    o+=block(196,78,'addr #1','old buffer',true,C.gray);
+    o+=block(196,170,'addr #2','Y + X',false,C.green);
+    o+=arrow(118,150,196,197,C.purple,false);
+    o+=arrow(118,150,196,104,'#C9CDD2',true);
+    o+=tx(232,262,'id(Y) changed → False',{fs:14,fw:700,fill:'#C0341D'});
+    // RIGHT — in place
+    o+=tx(728,40,'Y[:] = X + Y',{mono:true,fs:17,fw:700,fill:'#2E7D32'});
+    o+=chip(584,150,'Y');
+    o+=block(700,123,'addr #1','overwritten',false,'#2E7D32');
+    o+=arrow(610,150,700,150,C.purple,false);
+    o+=tx(770,262,'id(Y) same → True',{fs:14,fw:700,fill:'#2E7D32'});
+    return svg(W,H,o);
+  }
+
+  // ---- 8. numpy sharing ----
+  function np(){
+    const W=820,H=246,s=40,g=4; let o='';
+    o+=block(118,38,'torch.Tensor','B = from_numpy(A)',false,C.blue);
+    o+=block(500,38,'numpy.ndarray','A = X.numpy()',false,C.amber);
+    const vals=['12.','12.','12.','8.','9.','10.','11.','…'];
+    const bw=vals.length*s+(vals.length-1)*g, bx=(W-bw)/2, by=150;
+    o+=grid([vals],bx,by,s,g,{fill:()=>['#ECEFF1','#90A4AE',false,'#37474F'],fs:12.5});
+    o+=tx(W/2,by+s+24,'one shared memory buffer',{fs:14,fw:700,fill:C.muted});
+    o+=arrow(207,94,bx+58,by-8,C.blue,false);
+    o+=arrow(589,94,bx+bw-58,by-8,C.amber,false);
+    return svg(W,H,o);
+  }
+
+  const D={rank,reshape,iread,iwrite,cat,bcast,mem,np};
+  document.querySelectorAll('[data-dgm]').forEach(el=>{
+    const f=D[el.getAttribute('data-dgm')];
+    if(f) el.innerHTML=f();
+  });
+})();
+</script>
+</body>
+</html>

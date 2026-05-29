@@ -146,13 +146,13 @@ def net():
     return tf.keras.models.Sequential([
         tf.keras.layers.Conv2D(filters=6, kernel_size=5, activation='relu',
                                padding='same'),
-        tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+        tf.keras.layers.MaxPool2D(pool_size=2, strides=2),
         tf.keras.layers.Conv2D(filters=16, kernel_size=5,
                                activation='relu'),
-        tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
+        tf.keras.layers.MaxPool2D(pool_size=2, strides=2),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(120, activation='relu'),
-        tf.keras.layers.Dense(84, activation='sigmoid'),
+        tf.keras.layers.Dense(84, activation='relu'),
         tf.keras.layers.Dense(10)])
 
 
@@ -368,6 +368,7 @@ Now let's see how this plays out for training on Fashion-MNIST. We simply provid
 
 ```{.python .input #lr-scheduler-schedulers-4}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -489,6 +490,7 @@ The intuition behind this piecewise constant learning rate schedule is that one 
 
 ```{.python .input #lr-scheduler-multi-factor-scheduler-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -562,6 +564,7 @@ In the context of computer vision this schedule *can* lead to improved results. 
 
 ```{.python .input #lr-scheduler-cosine-scheduler-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -611,6 +614,7 @@ Note that the network converges better initially (in particular observe the perf
 
 ```{.python .input #lr-scheduler-warmup-2}
 #@tab mxnet
+net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'lr_scheduler': scheduler})
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -654,19 +658,19 @@ Warmup can be applied to any scheduler (not just cosine). For a more detailed di
 1. Can you connect optimization and sampling? Start by using results from :citet:`Welling.Teh.2011` on Stochastic Gradient Langevin Dynamics.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/359)
+[Discussions](https://d2l.discourse.group/t/359)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1080)
+[Discussions](https://d2l.discourse.group/t/1080)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1081)
+[Discussions](https://d2l.discourse.group/t/1081)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1081)
+[Discussions](https://d2l.discourse.group/t/1081)
 :end_tab:
 
 <!-- slides -->

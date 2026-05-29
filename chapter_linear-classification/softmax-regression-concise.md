@@ -274,19 +274,19 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 1. What happens as you increase the learning rate? Compare the loss curves for several learning rates. Which one works better? When?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/52)
+[Discussions](https://d2l.discourse.group/t/52)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/53)
+[Discussions](https://d2l.discourse.group/t/53)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/260)
+[Discussions](https://d2l.discourse.group/t/260)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17983)
+[Discussions](https://d2l.discourse.group/t/17983)
 :end_tab:
 
 <!-- slides -->

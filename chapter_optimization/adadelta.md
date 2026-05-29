@@ -129,7 +129,7 @@ def adadelta(params, grads, states, hyperparams):
     return params[0], params[1]
 ```
 
-Choosing $\rho = 0.9$ amounts to a half-life time of 10 for each parameter update. This tends to work quite well. We get the following behavior.
+Choosing $\rho = 0.9$ amounts to an effective averaging window of 10 for each parameter update. This tends to work quite well. We get the following behavior.
 
 ```{.python .input #adadelta-implementation-2}
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
@@ -179,20 +179,20 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.9}, data_iter)
 1. Compare Adadelta to Adagrad and RMS prop to discuss their convergence behavior.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/357)
+[Discussions](https://d2l.discourse.group/t/357)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1076)
+[Discussions](https://d2l.discourse.group/t/1076)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1077)
+[Discussions](https://d2l.discourse.group/t/1077)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1077)
+[Discussions](https://d2l.discourse.group/t/1077)
 :end_tab:
 
 <!-- slides -->

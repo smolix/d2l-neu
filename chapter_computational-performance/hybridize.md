@@ -479,15 +479,15 @@ This is quite different from what we saw previously. All print statements, as de
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/360)
+[Discussions](https://d2l.discourse.group/t/360)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/2490)
+[Discussions](https://d2l.discourse.group/t/2490)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/2492)
+[Discussions](https://d2l.discourse.group/t/2492)
 :end_tab:
 
 <!-- slides -->

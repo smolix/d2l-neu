@@ -1,4 +1,5 @@
 # Dog Breed Identification (ImageNet Dogs) on Kaggle
+:label:`sec_kaggle_dog`
 
 In this section, we will practice
 the dog breed identification problem on
@@ -700,11 +701,9 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
                             legend=legend)
 
-    # Pre-extract features for the full training set ONCE using the frozen
-    # TF backbone, then iterate the tiny classifier head over the cached
-    # JAX arrays. This mirrors how PyTorch / MXNet keep the heavy backbone
-    # forward pass out of the per-step JAX dispatch and avoids a TF<->JAX
-    # round trip on every minibatch.
+    # Run the frozen TF backbone over the training set once to determine
+    # n_train and num_batches, which are needed to configure the LR schedule
+    # before the epoch loop starts.
     print('Pre-extracting train features...')
     train_feats, train_labels = precompute_features(features_net, train_iter)
     if valid_iter is not None:
@@ -733,7 +732,12 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
             logits = output_net.apply({'params': params}, feats,
                                       training=True)
             l = loss_fn(logits, y)
-            return l.mean(), l.sum()
+            # Backprop on the per-batch *sum* (not mean) to match the PT/TF
+            # tabs, which use reduction='none' + .sum(). Otherwise the
+            # effective learning rate here is 1/batch_size smaller and the
+            # head barely moves.
+            s = l.sum()
+            return s, s
         grads, l_sum = jax.grad(
             compute_loss, has_aux=True)(variables['params'])
         updates, new_opt_state = tx.update(grads, opt_state,
@@ -745,6 +749,12 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     rng = np.random.default_rng(0)
     for epoch in range(num_epochs):
         metric = d2l.Accumulator(2)
+        # Re-extract train features each epoch so each epoch sees freshly
+        # augmented images (random crop/flip/jitter from the tf.data pipeline).
+        # This matches PyTorch, which runs augmentation + backbone forward on
+        # every batch in every epoch rather than caching a single augmented pass.
+        train_feats, train_labels = precompute_features(features_net,
+                                                        train_iter)
         # Shuffle indices each epoch
         perm = rng.permutation(n_train)
         for i in range(num_batches):
@@ -973,19 +983,19 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 1. Do you get better results if you use a deeper pretrained model? How do you tune hyperparameters? Can you further improve the results?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/380)
+[Discussions](https://d2l.discourse.group/t/380)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1481)
+[Discussions](https://d2l.discourse.group/t/1481)
 :end_tab:
 
 <!-- slides -->

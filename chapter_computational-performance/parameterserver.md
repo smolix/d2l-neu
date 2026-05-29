@@ -118,4 +118,4 @@ By hiding all the complexity about synchronization behind a simple push and pull
 1. What if we lost a server during a long-running computation? How can we design a *fault tolerance* mechanism to avoid restarting the computation fully?
 
 
-[Discussions](https://discuss.d2l.ai/t/366)
+[Discussions](https://d2l.discourse.group/t/366)

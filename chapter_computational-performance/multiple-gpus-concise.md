@@ -559,19 +559,19 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/365)
+[Discussions](https://d2l.discourse.group/t/365)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1403)
+[Discussions](https://d2l.discourse.group/t/1403)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1403)
+[Discussions](https://d2l.discourse.group/t/1403)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1403)
+[Discussions](https://d2l.discourse.group/t/1403)
 :end_tab:
 
 <!-- slides -->

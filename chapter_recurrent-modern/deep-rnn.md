@@ -67,7 +67,7 @@ is calculated as follows:
 $$\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)} \mathbf{W}_{\textrm{xh}}^{(l)} + \mathbf{H}_{t-1}^{(l)} \mathbf{W}_{\textrm{hh}}^{(l)}  + \mathbf{b}_\textrm{h}^{(l)}),$$
 :eqlabel:`eq_deep_rnn_H`
 
-where the weights $\mathbf{W}_{\textrm{xh}}^{(l)} \in \mathbb{R}^{h \times h}$ and $\mathbf{W}_{\textrm{hh}}^{(l)} \in \mathbb{R}^{h \times h}$, together with
+where the weights $\mathbf{W}_{\textrm{xh}}^{(1)} \in \mathbb{R}^{d \times h}$ (for the first layer, whose input is $\mathbf{X}_t$), $\mathbf{W}_{\textrm{xh}}^{(l)} \in \mathbb{R}^{h \times h}$ for $l > 1$, and $\mathbf{W}_{\textrm{hh}}^{(l)} \in \mathbb{R}^{h \times h}$, together with
 the bias $\mathbf{b}_\textrm{h}^{(l)} \in \mathbb{R}^{1 \times h}$, 
 are the model parameters of the $l^\textrm{th}$ hidden layer.
 
@@ -396,19 +396,19 @@ to ensure proper convergence.
 1. Would you want to combine sources of different authors when modeling text? Why is this a good idea? What could go wrong?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/340)
+[Discussions](https://d2l.discourse.group/t/340)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1058)
+[Discussions](https://d2l.discourse.group/t/1058)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3862)
+[Discussions](https://d2l.discourse.group/t/3862)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18018)
+[Discussions](https://d2l.discourse.group/t/18018)
 :end_tab:
 
 <!-- slides -->

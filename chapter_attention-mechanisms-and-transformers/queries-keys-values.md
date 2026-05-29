@@ -1,6 +1,6 @@
 ```{.python .input  n=1}
 %load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow')
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Queries, Keys, and Values
@@ -188,19 +188,19 @@ by which a neural network can select elements from a set and to construct an ass
 1. Review the design of the Squeeze and Excitation Networks :cite:`Hu.Shen.Sun.2018` and interpret them through the lens of the attention mechanism. 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/1596)
+[Discussions](https://d2l.discourse.group/t/1596)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1592)
+[Discussions](https://d2l.discourse.group/t/1592)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1710)
+[Discussions](https://d2l.discourse.group/t/1710)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18024)
+[Discussions](https://d2l.discourse.group/t/18024)
 :end_tab:
 
 <!-- slides -->

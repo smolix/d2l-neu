@@ -389,7 +389,7 @@ PaLM (Pathway Language Model) :cite:`chowdhery2022palm`, a 540-billion-parameter
 Other large language models, such as Minerva  :cite:`lewkowycz2022solving` that further trains a generalist (PaLM) and Galactica :cite:`taylor2022galactica` that is not trained on a general corpus, have shown promising quantitative and scientific reasoning capabilities.
 
 
-Open-sourced releases, such as OPT (Open Pretrained Transformers) :cite:`zhang2022opt`, BLOOM :cite:` scao2022bloom`, and FALCON :cite:`penedo2023refinedweb`,
+Open-sourced releases, such as OPT (Open Pretrained Transformers) :cite:`zhang2022opt`, BLOOM :cite:`scao2022bloom`, and FALCON :cite:`penedo2023refinedweb`,
 democratized research and use of large language models.
 Focusing on computational efficiency at inference time,
 the open-sourced Llama 1 :cite:`touvron2023llama` outperformed much larger models by training on more tokens than had been typically used. The updated Llama 2 :cite:`touvron2023llama2` further increased the pretraining corpus by 40%, leading to product models that may match the performance of competitive close-sourced models. 
@@ -460,4 +460,4 @@ a larger Parti is more capable of high-fidelity image generation and content-ric
 1. Consider sequence-to-sequence problems (e.g., machine translation) where the input sequence is always available throughout the target sequence prediction. What could be limitations of modeling with decoder-only Transformers? Why?
 
 
-[Discussions](https://discuss.d2l.ai/t/9232)
+[Discussions](https://d2l.discourse.group/t/9232)

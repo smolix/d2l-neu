@@ -98,4 +98,4 @@ refers specifically to the symbol $\mathbb{Z}$.
 
 
 
-[Discussions](https://discuss.d2l.ai/t/25)
+[Discussions](https://d2l.discourse.group/t/25)

@@ -700,7 +700,6 @@ and *more efficiently* (using our GPUs to their full potential).
 1. Why is the `reshape` method needed in the `loss` function?
 1. Experiment using different learning rates to find out how quickly the loss function value drops. Can you reduce the
    error by increasing the number of epochs of training?
-1. If the number of examples cannot be divided by the batch size, what happens to `data_iter` at the end of an epoch?
 1. Try implementing a different loss function, such as the absolute value loss `(y_hat - d2l.reshape(y, y_hat.shape)).abs().sum()`.
     1. Check what happens for regular data.
     1. Check whether there is a difference in behavior if you actively perturb some entries, such as $y_5 = 10000$, of $\mathbf{y}$.
@@ -709,19 +708,19 @@ and *more efficiently* (using our GPUs to their full potential).
 1. Why do we need to reshuffle the dataset? Can you design a case where a maliciously constructed dataset would break the optimization algorithm otherwise?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/42)
+[Discussions](https://d2l.discourse.group/t/42)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/43)
+[Discussions](https://d2l.discourse.group/t/43)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/201)
+[Discussions](https://d2l.discourse.group/t/201)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17976)
+[Discussions](https://d2l.discourse.group/t/17976)
 :end_tab:
 
 <!-- slides -->

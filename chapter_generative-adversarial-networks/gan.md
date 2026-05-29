@@ -27,7 +27,7 @@ In other words, for a given discriminator $D$, we update the parameters of the g
 
 $$ \max_G \{ - (1-y) \log(1-D(G(\mathbf z))) \} = \max_G \{ - \log(1-D(G(\mathbf z))) \}.$$
 
-Early in training, when the generator is weak, the discriminator easily classifies fakes as fake, so $D(\mathbf x')\approx 0$. Then $-\log(1-D(\mathbf x'))\approx 0$ and, because $D$ is saturated in this regime, its gradient with respect to the generator's parameters is close to zero as well. As a result, the generator receives almost no learning signal and makes little progress. To avoid this vanishing-gradient issue, we commonly minimize the following equivalent loss instead, which yields larger gradients precisely when $D(\mathbf x')$ is small:
+Early in training, when the generator is weak, the discriminator easily classifies fakes as fake, so $D(\mathbf x')\approx 0$. Then $-\log(1-D(\mathbf x'))\approx 0$ and, because $D$ is saturated in this regime, its gradient with respect to the generator's parameters is close to zero as well. As a result, the generator receives almost no learning signal and makes little progress. To avoid this vanishing-gradient issue, we commonly minimize the following non-saturating surrogate loss instead. It shares the same global optimum as the original loss but yields much larger gradients precisely when $D(\mathbf x')$ is small, where the saturating loss vanishes:
 
 $$ \min_G \{ - y \log(D(G(\mathbf z))) \} = \min_G \{ - \log(D(G(\mathbf z))) \}, $$
 
@@ -36,7 +36,7 @@ which is just feeding $\mathbf x'=G(\mathbf z)$ into the discriminator but givin
 
 To sum up, $D$ and $G$ are playing a "minimax" game with the comprehensive objective function:
 
-$$\min_D \max_G \{ -E_{x \sim \textrm{Data}} \log D(\mathbf x) - E_{z \sim \textrm{Noise}} \log(1 - D(G(\mathbf z))) \}.$$
+$$\min_G \max_D \{ E_{x \sim \textrm{Data}} \log D(\mathbf x) + E_{z \sim \textrm{Noise}} \log(1 - D(G(\mathbf z))) \}.$$
 
 
 
@@ -592,15 +592,15 @@ train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G,
 * Does an equilibrium exist where the generator wins, *i.e.* the discriminator ends up unable to distinguish the two distributions on finite samples?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/408)
+[Discussions](https://d2l.discourse.group/t/408)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1082)
+[Discussions](https://d2l.discourse.group/t/1082)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1082)
+[Discussions](https://d2l.discourse.group/t/1082)
 :end_tab:
 
 <!-- slides -->

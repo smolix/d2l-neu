@@ -265,19 +265,19 @@ We can pass data through the model to make the framework finally initialize para
 1. What would you need to do if you have input of varying dimensionality? Hint: look at the parameter tying.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/280)
+[Discussions](https://d2l.discourse.group/t/280)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/8092)
+[Discussions](https://d2l.discourse.group/t/8092)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/281)
+[Discussions](https://d2l.discourse.group/t/281)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17992)
+[Discussions](https://d2l.discourse.group/t/17992)
 :end_tab:
 
 <!-- slides -->

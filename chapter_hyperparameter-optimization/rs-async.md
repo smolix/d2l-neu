@@ -21,13 +21,13 @@ before we start the next batch. Consider configuration spaces that contain
 hyperparameters such as the number of filters or number of layers of a deep
 neural network. Hyperparameter configurations that contain a larger number of 
 layers of filters will naturally take more time to finish, and all other trials
-in the same batch will have to wait at synchronisation points (grey area in
+in the same batch will have to wait at synchronization points (grey area in
 :numref:`distributed_scheduling`) before we can continue the optimization
 process.
 
 In the asynchronous setting we immediately schedule a new trial as soon as resources
 become available. This will optimally exploit our resources, since we can avoid any
-synchronisation overhead. For random search, each new hyperparameter configuration
+synchronization overhead. For random search, each new hyperparameter configuration
 is chosen independently of all others, and in particular without exploiting
 observations from any prior evaluation. This means we can trivially parallelize random
 search asynchronously. This is not straightforward with more sophisticated methods
@@ -51,12 +51,42 @@ distributed HPO.
 ```{.python .input #rs-async-asynchronous-random-search}
 from d2l import torch as d2l
 import logging
-logging.basicConfig(level=logging.INFO)
-from syne_tune.config_space import loguniform, randint
-from syne_tune.backend.python_backend.python_backend import PythonBackend
-from syne_tune.optimizer.baselines import RandomSearch
-from syne_tune import Tuner, StoppingCriterion
-from syne_tune.experiments import load_experiment
+# Use INFO level so the periodic Syne Tune tuning-status table appears,
+# but use a clean format that drops the "INFO:syne_tune.tuner:" prefix.
+logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
+# Silence Syne Tune's import-time chatter about optional AWS dependencies
+# (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
+# are not needed. Suppress both print() and logging.info() during imports.
+import contextlib, io
+_root = logging.getLogger()
+_prev_level = _root.level
+_root.setLevel(logging.WARNING)
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        from syne_tune.config_space import loguniform, randint
+        from syne_tune.backend.python_backend.python_backend import PythonBackend
+        from syne_tune.optimizer.baselines import RandomSearch
+        from syne_tune import Tuner, StoppingCriterion
+        from syne_tune.experiments import load_experiment
+finally:
+    _root.setLevel(_prev_level)
+
+# Silence the per-trial subprocess-command spam from local_backend and
+# drop the per-trial scheduling / completion lines from the tuner logger.
+# Keep the periodic "tuning status (last metric is reported)" updates so
+# the reader can still see progress over time.
+class _DropPerTrialNoise(logging.Filter):
+    _DROP = (
+        "results of trials will be saved",
+        "scheduled ",
+        "Trial trial_id ",
+    )
+    def filter(self, record):
+        msg = record.getMessage()
+        return not any(s in msg for s in self._DROP)
+
+logging.getLogger("syne_tune.backend.local_backend").setLevel(logging.WARNING)
+logging.getLogger("syne_tune.tuner").addFilter(_DropPerTrialNoise())
 ```
 
 ## Objective Function
@@ -94,9 +124,20 @@ also need to specify how long we want to run random search, by defining an
 upper limit on the total wall-clock time.
 
 ```{.python .input #rs-async-asynchronous-scheduler-1  n=37}
-n_workers = 2  # Needs to be <= the number of available GPUs
+# Each LeNet trial fits in well under 7 GB of GPU memory, so we can pack
+# multiple trials per device. `PythonBackend(rotate_gpus=True)` (the
+# default) round-robins trials across detected GPUs and falls back to
+# sharing when `n_workers > num_gpus`. Allocate 7 GB per slot — this
+# yields 3 slots on a 24 GB card and 4 slots on a 32 GB card after
+# driver overhead, e.g. 4×24 GB → 12 slots; 2×32 GB → 8.
+import torch
+_GB = 1024 ** 3
+n_workers = sum(
+    torch.cuda.get_device_properties(i).total_memory // (7 * _GB)
+    for i in range(torch.cuda.device_count())
+) or 1
 
-max_wallclock_time = 2 * 60  # 2 minutes
+max_wallclock_time = 15 * 60  # 15 minutes
 ```
 
 Next, we state which metric we want to optimize and whether we want to minimize or
@@ -166,7 +207,7 @@ tuner = Tuner(
 ```
 
 Let us run our distributed HPO experiment. According to our stopping criterion,
-it will run for a few minutes.
+it will run for about 15 minutes.
 
 ```{.python .input #rs-async-asynchronous-scheduler-7  n=43}
 tuner.run()
@@ -233,7 +274,7 @@ modifications.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12093)
+[Discussions](https://d2l.discourse.group/t/12093)
 :end_tab:
 
 <!-- slides -->

@@ -347,6 +347,14 @@
   }
 
   function init() {
+    // Idempotency guard: Cloudflare Rocket Loader fires a synthetic
+    // DOMContentLoaded after its `simulateStateAfterDeferScripts-
+    // Activation` pass, which re-invokes any DOMContentLoaded handler
+    // already registered. Without this check, init() runs twice and
+    // appends two ".d2l-toc-slides" buttons to the TOC.
+    if (window.__d2lTocSlidesInit) return;
+    window.__d2lTocSlidesInit = true;
+
     pageKey = getPageKey();
     if (!pageKey) return;
     var entry = window.D2L_SLIDES_MANIFEST[pageKey];
@@ -391,11 +399,121 @@
 </script>
 
 <script>
+// Social share buttons — Twitter/X, Facebook, Threads, LinkedIn.
+// Two locations, mutually exclusive (per viewport):
+//   (A) right-TOC, under the Slides button — visible at ≥1200px when
+//       the TOC is shown; hidden on narrow viewports.
+//   (C) bottom of the article body — visible whenever (A) isn't
+//       (mobile, narrow desktop, or pages without a right TOC).
+// CSS in `_d2l-theme.scss` (`.d2l-share-block`, `.d2l-share-bottom`)
+// handles the visibility toggle. Both blocks read window.location.href
+// + document.title at click time, so the same code drives both.
+(function() {
+  function buildUrls() {
+    var url = encodeURIComponent(location.href);
+    var title = encodeURIComponent(
+      document.title.replace(/\s*[—-]\s*Dive into Deep Learning.*$/, '')
+    );
+    return {
+      twitter:  'https://twitter.com/intent/tweet?url=' + url + '&text=' + title,
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + url,
+      threads:  'https://www.threads.net/intent/post?text=' + title + '%20' + url,
+      linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + url
+    };
+  }
+
+  // Skip on landing / framework-selector / slides-index pages — those
+  // aren't a single "page worth sharing".
+  function skip() {
+    var p = location.pathname;
+    return /\/(index)\.html$/.test(p) ||
+           /\/slides\/(index\.html)?$/.test(p);
+  }
+
+  var ICONS = [
+    {key: 'twitter',  cls: 'bi-twitter-x', label: 'Share on X (Twitter)'},
+    {key: 'facebook', cls: 'bi-facebook',  label: 'Share on Facebook'},
+    {key: 'threads',  cls: 'bi-threads',   label: 'Share on Threads'},
+    {key: 'linkedin', cls: 'bi-linkedin',  label: 'Share on LinkedIn'}
+  ];
+
+  function makeAnchors(urls) {
+    return ICONS.map(function(ic) {
+      var a = document.createElement('a');
+      a.className = 'd2l-share-icon';
+      a.href = urls[ic.key];
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.title = ic.label;
+      a.setAttribute('aria-label', ic.label);
+      a.innerHTML = '<i class="bi ' + ic.cls + '" aria-hidden="true"></i>';
+      return a;
+    });
+  }
+
+  function init() {
+    // Cloudflare Rocket Loader emits a synthetic DOMContentLoaded
+    // after script activation, which would otherwise inject the
+    // share blocks twice. Same pattern as `__d2lTocSlidesInit` and
+    // `__d2lQuartoSearchInit`.
+    if (window.__d2lShareInit) return;
+    window.__d2lShareInit = true;
+
+    if (skip()) return;
+    var urls = buildUrls();
+
+    // (C) — bottom of article. Inserted before any Discourse embed
+    // container the next script appends, so the order on-page is:
+    //   …article body…
+    //   share buttons
+    //   discourse comments
+    var main = document.querySelector('main.content');
+    if (main) {
+      var bottom = document.createElement('div');
+      bottom.className = 'd2l-share-bottom';
+      var label = document.createElement('span');
+      label.className = 'd2l-share-label';
+      label.textContent = 'Share';
+      bottom.appendChild(label);
+      makeAnchors(urls).forEach(function(a) { bottom.appendChild(a); });
+      main.appendChild(bottom);
+    }
+
+    // (A) — right TOC, under the Slides button (or at the TOC bottom
+    // if there's no slides button for this page).
+    var toc = document.getElementById('TOC');
+    if (toc) {
+      var block = document.createElement('div');
+      block.className = 'd2l-share-block';
+      var label2 = document.createElement('div');
+      label2.className = 'd2l-share-label';
+      label2.textContent = 'Share';
+      block.appendChild(label2);
+      var icons = document.createElement('div');
+      icons.className = 'd2l-share-icons';
+      makeAnchors(urls).forEach(function(a) { icons.appendChild(a); });
+      block.appendChild(icons);
+      toc.appendChild(block);
+      // Mark the body so the bottom row knows it can hide itself when
+      // the TOC is visible at desktop widths.
+      document.body.classList.add('has-d2l-toc-share');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<script>
 // Discourse discussion embed
-// Replaces plain discuss.d2l.ai links with inline Discourse comment streams.
+// Replaces plain d2l.discourse.group links with inline Discourse comment streams.
 // When framework tabs switch, the embed reloads with the new topic.
 (function() {
-  var DISCOURSE_URL = 'https://discuss.d2l.ai/';
+  var DISCOURSE_URL = 'https://d2l.discourse.group/';
   var LINK_RE = /^https:\/\/discuss\.d2l\.ai\/t\/(\d+)/;
 
   function createEmbed(topicId) {
@@ -433,13 +551,13 @@
       '.panel-tabset[data-group="framework"] .tab-pane.active'
     );
     if (activePanel) {
-      var link = activePanel.querySelector('a[href*="discuss.d2l.ai/t/"]');
+      var link = activePanel.querySelector('a[href*="d2l.discourse.group/t/"]');
       if (link) {
         var m = link.href.match(LINK_RE);
         if (m) return m[1];
       }
     }
-    var links = document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]');
+    var links = document.querySelectorAll('a[href*="d2l.discourse.group/t/"]');
     for (var i = 0; i < links.length; i++) {
       var m = links[i].href.match(LINK_RE);
       if (m) return m[1];
@@ -448,7 +566,7 @@
   }
 
   function hideDiscussionLinks() {
-    document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]').forEach(function(link) {
+    document.querySelectorAll('a[href*="d2l.discourse.group/t/"]').forEach(function(link) {
       var p = link.closest('p') || link;
       p.style.display = 'none';
     });
@@ -463,7 +581,7 @@
   }
 
   function init() {
-    var links = document.querySelectorAll('a[href*="discuss.d2l.ai/t/"]');
+    var links = document.querySelectorAll('a[href*="d2l.discourse.group/t/"]');
     if (links.length === 0) return;
 
     loadEmbed();

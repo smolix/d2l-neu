@@ -312,19 +312,19 @@ large language models form the basis of state-of-the-art systems across diverse 
 1. If we want a sequence example to be a complete sentence, what kind of problem does this introduce in minibatch sampling? How can we fix it?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/117)
+[Discussions](https://d2l.discourse.group/t/117)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/118)
+[Discussions](https://d2l.discourse.group/t/118)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1049)
+[Discussions](https://d2l.discourse.group/t/1049)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18012)
+[Discussions](https://d2l.discourse.group/t/18012)
 :end_tab:
 
 <!-- slides -->

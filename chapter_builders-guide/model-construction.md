@@ -422,9 +422,10 @@ class MySequential(nn.Block):
         self.register_child(block)
 
     def forward(self, X):
-        # _children.values() yields weakrefs; call them to dereference.
-        for block in self._children.values():
-            X = block()(X)
+        # Iterate self._layers (strong refs); _children holds weakrefs in
+        # Gluon 2.0 which would need dereferencing.
+        for block in self._layers:
+            X = block(X)
         return X
 ```
 
@@ -807,19 +808,19 @@ Sequential concatenations of layers and modules are handled by the `Sequential` 
 1. Assume that you want to concatenate multiple instances of the same network. Implement a factory function that generates multiple instances of the same module and build a larger network from it.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/54)
+[Discussions](https://d2l.discourse.group/t/54)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/55)
+[Discussions](https://d2l.discourse.group/t/55)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/264)
+[Discussions](https://d2l.discourse.group/t/264)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17989)
+[Discussions](https://d2l.discourse.group/t/17989)
 :end_tab:
 
 <!-- slides -->

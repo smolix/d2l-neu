@@ -3,7 +3,7 @@
     "slug": "Abasyn-University-Islamabad-Campus",
     "name": "Abasyn University Islamabad Campus",
     "country": "Pakistan",
-    "logo": "Abasyn-University-Islamabad-Campus.jpg",
+    "logo": "Abasyn-University-Islamabad-Campus.png",
     "evidence": [
       {
         "url": "https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum",
@@ -26,7 +26,7 @@
     "slug": "Ain-Shams-University",
     "name": "Ain Shams University",
     "country": "Egypt",
-    "logo": "Ain-Shams-University.jpg",
+    "logo": "Ain-Shams-University.png",
     "location": {
       "lat": 30.077022,
       "lon": 31.285017,
@@ -50,7 +50,7 @@
     "slug": "Alexandria-University",
     "name": "Alexandria University",
     "country": "Egypt",
-    "logo": "Alexandria-University.svg",
+    "logo": "Alexandria-University.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -150,7 +150,7 @@
     "slug": "Australian-Catholic-University",
     "name": "Australian Catholic University",
     "country": "Australia",
-    "logo": "Australian-Catholic-University.svg",
+    "logo": "Australian-Catholic-University.png",
     "location": {
       "lat": -27.378056,
       "lon": 153.088889,
@@ -205,7 +205,7 @@
     "slug": "Bar-Ilan-University",
     "name": "Bar Ilan University",
     "country": "Israel",
-    "logo": "Bar-Ilan-University.svg",
+    "logo": "Bar-Ilan-University.png",
     "evidence": [
       {
         "url": "https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/",
@@ -228,7 +228,7 @@
     "slug": "Barnard-College",
     "name": "Barnard College",
     "country": "",
-    "logo": "Barnard-College.svg",
+    "logo": "Barnard-College.png",
     "evidence": [],
     "wikidata_id": "Q167733",
     "location": {
@@ -266,7 +266,7 @@
     "slug": "Beykoz-University",
     "name": "Beykoz University",
     "country": "Turkey",
-    "logo": "Beykoz-University.svg",
+    "logo": "Beykoz-University.png",
     "location": {
       "lat": 41.094,
       "lon": 29.089,
@@ -287,29 +287,6 @@
     "logo_source": "agent-verified"
   },
   {
-    "slug": "Birla-Institute-of-Technology-and-Science,-Hyderabad",
-    "name": "Birla Institute of Technology and Science, Hyderabad",
-    "country": "India",
-    "logo": "Birla-Institute-of-Technology-and-Science,-Hyderabad.svg",
-    "evidence": [
-      {
-        "url": "https://www.studocu.com/in/document/birla-institute-of-technology-and-science-pilani/deep-learning/deep-learning-ss-zg529-course-handout/80885828",
-        "course": "SS ZG529 — Deep Learning",
-        "instructor": "(not confirmed; BITS WILP online program)",
-        "snippet": "Search engine snippet confirms course handout for SS ZG529 at BITS Pilani references \"Dive into Deep Learning\" by Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola as reference R3. (Studocu page requires login to read full text.)",
-        "source_file": "verified_chunk_07_IN.md",
-        "year": ""
-      }
-    ],
-    "location": {
-      "lat": 17.385,
-      "lon": 78.4867,
-      "source": "city-name-inference",
-      "source_url": "https://www.openstreetmap.org/search?query=Hyderabad%2C%20Telangana%2C%20India",
-      "precision": "city"
-    }
-  },
-  {
     "slug": "Birla-Institute-of-Technology-and-Science-Pilani",
     "name": "Birla Institute of Technology and Science Pilani",
     "country": "India",
@@ -321,29 +298,6 @@
         "instructor": "",
         "snippet": "From the repository README (CS F425 Deep Learning, BITS Pilani Goa Campus): *\"Primary textbooks: 1. A. Zhang, Z.C. Lipton, M. Li, A.J. Smola, [Dive into Deep Learning](https://d2l.ai/index.html).\"* The README also links directly to d2l.ai chapter pages for multiple lectures (e.g., Lecture 14: Modern CNNs links to `d2l.ai/chapter_convolutional-modern/index.html`; Lecture 16: Sequence Learning links to `d2l.ai/chapter_recurrent-neural-networks/index.html`), and lab materials reference `\"Section 2.1-2.3 of d2l.ai\"`, `\"Section 6 from d2l.ai\"`. Additionally, a BITS Pilani WILP DSECLZG (Deep Learning) course handout lists \"Dive into Deep Learning\" by Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola as reference R3.",
         "source_file": "asia_meaf_la_verified.md",
-        "year": ""
-      }
-    ],
-    "wikidata_id": "Q2648311",
-    "location": {
-      "lat": 28.363878,
-      "lon": 75.587017,
-      "source": "wikidata",
-      "wikidata_id": "Q2648311"
-    }
-  },
-  {
-    "slug": "BITS-Pilani",
-    "name": "BITS Pilani",
-    "country": "India",
-    "logo": "BITS-Pilani.png",
-    "evidence": [
-      {
-        "url": "https://github.com/tirtharajdash/CS-F425_Deep-Learning",
-        "course": "CS F425 — Deep Learning",
-        "instructor": "Tirtharaj Dash",
-        "snippet": "\"Listed as the first primary textbook by A. Zhang, Z.C. Lipton, M. Li, and A.J. Smola … Linked as 'd2l.ai' in multiple lab reading materials; students directed to specific chapters (2.1–2.3, 4.4–4.6, 6, 8)\"",
-        "source_file": "south_asia.md",
         "year": ""
       }
     ],
@@ -382,7 +336,7 @@
     "slug": "Boston-College",
     "name": "Boston College",
     "country": "United States",
-    "logo": "Boston-College.svg",
+    "logo": "Boston-College.png",
     "location": {
       "lat": 42.335083,
       "lon": -71.170361,
@@ -406,7 +360,7 @@
     "slug": "Boston-University",
     "name": "Boston University",
     "country": "United States",
-    "logo": "Boston-University.svg",
+    "logo": "Boston-University.png",
     "evidence": [
       {
         "url": "https://www.bu.edu/csmet/files/2025/01/CS_767_General_Information_2025.pdf",
@@ -452,7 +406,7 @@
     "slug": "Brandeis-University",
     "name": "Brandeis University",
     "country": "USA",
-    "logo": "Brandeis-University.svg",
+    "logo": "Brandeis-University.png",
     "evidence": [
       {
         "url": "https://chuxuzhang.github.io/course/COSI165B.html",
@@ -506,7 +460,7 @@
     "slug": "Bursa-Uludag-University",
     "name": "Bursa Uludag University",
     "country": "Turkey",
-    "logo": "Bursa-Uludag-University.svg",
+    "logo": "Bursa-Uludag-University.png",
     "location": {
       "lat": 40.218913,
       "lon": 28.869956,
@@ -608,7 +562,7 @@
     "slug": "Chennai-Mathematical-Institute",
     "name": "Chennai Mathematical Institute",
     "country": "India",
-    "logo": "Chennai-Mathematical-Institute.jpg",
+    "logo": "Chennai-Mathematical-Institute.png",
     "evidence": [
       {
         "url": "https://www.cmi.ac.in/~pranabendu/aml23/",
@@ -706,7 +660,7 @@
     "slug": "Chongqing-University-of-Science-and-Technology",
     "name": "Chongqing University of Science and Technology",
     "country": "Mainland China",
-    "logo": "Chongqing-University-of-Science-and-Technology.svg",
+    "logo": "Chongqing-University-of-Science-and-Technology.png",
     "evidence": [
       {
         "url": "https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf",
@@ -811,7 +765,7 @@
     "slug": "Colorado-State-University",
     "name": "Colorado State University",
     "country": "United States",
-    "logo": "Colorado-State-University.svg",
+    "logo": "Colorado-State-University.png",
     "location": {
       "lat": 40.574836,
       "lon": -105.080978,
@@ -881,7 +835,7 @@
     "slug": "Cornell-University",
     "name": "Cornell University",
     "country": "USA",
-    "logo": "Cornell-University.svg",
+    "logo": "Cornell-University.png",
     "evidence": [
       {
         "url": "https://www.cs.cornell.edu/courses/cs4782/2024sp/",
@@ -1036,7 +990,7 @@
     "slug": "Duke-University",
     "name": "Duke University",
     "country": "United States",
-    "logo": "Duke-University.svg",
+    "logo": "Duke-University.png",
     "evidence": [
       {
         "url": "https://www2.stat.duke.edu/~sayan/561/2020/index_pre.html",
@@ -1169,7 +1123,7 @@
     "slug": "EPFL",
     "name": "EPFL",
     "country": "",
-    "logo": "EPFL.svg",
+    "logo": "EPFL.png",
     "evidence": [],
     "wikidata_id": "Q29861806",
     "location": {
@@ -1275,7 +1229,7 @@
     "slug": "Fenerbahce-University",
     "name": "Fenerbahce University",
     "country": "Turkey",
-    "logo": "Fenerbahce-University.svg",
+    "logo": "Fenerbahce-University.png",
     "location": {
       "lat": 40.994861,
       "lon": 29.120694,
@@ -1322,7 +1276,7 @@
     "slug": "FPT-University",
     "name": "FPT University",
     "country": "Vietnam",
-    "logo": "FPT-University.jpg",
+    "logo": "FPT-University.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -1345,7 +1299,7 @@
     "slug": "Fudan-University",
     "name": "Fudan University",
     "country": "",
-    "logo": "Fudan-University.svg",
+    "logo": "Fudan-University.png",
     "evidence": [],
     "wikidata_id": "Q495015",
     "location": {
@@ -1388,7 +1342,7 @@
     "slug": "George-Mason-University",
     "name": "George Mason University",
     "country": "United States",
-    "logo": "George-Mason-University.svg",
+    "logo": "George-Mason-University.png",
     "evidence": [
       {
         "url": "https://cs.gmu.edu/media/syllabi/Fall2023/CS_747BarbaraD001.html",
@@ -1411,7 +1365,7 @@
     "slug": "Georgetown-University",
     "name": "Georgetown University",
     "country": "",
-    "logo": "Georgetown-University.svg",
+    "logo": "Georgetown-University.png",
     "evidence": [],
     "wikidata_id": "Q333886",
     "location": {
@@ -1425,7 +1379,7 @@
     "slug": "Georgia-Institute-of-Technology",
     "name": "Georgia Institute of Technology",
     "country": "",
-    "logo": "Georgia-Institute-of-Technology.svg",
+    "logo": "Georgia-Institute-of-Technology.png",
     "evidence": [],
     "wikidata_id": "Q864855",
     "location": {
@@ -1479,7 +1433,7 @@
     "slug": "Great-Lakes-Institute-of-Management",
     "name": "Great Lakes Institute of Management",
     "country": "India",
-    "logo": "Great-Lakes-Institute-of-Management.jpg",
+    "logo": "Great-Lakes-Institute-of-Management.png",
     "evidence": [
       {
         "url": "https://www.greatlakes.edu.in/e-learning-programs/",
@@ -1502,7 +1456,7 @@
     "slug": "Guangdong-University-of-Technology",
     "name": "Guangdong University of Technology",
     "country": "Mainland China",
-    "logo": "Guangdong-University-of-Technology.svg",
+    "logo": "Guangdong-University-of-Technology.png",
     "evidence": [
       {
         "url": "https://courses.gdut.edu.cn/course/view.php?id=1381",
@@ -1525,7 +1479,7 @@
     "slug": "Gwangju-Institute-of-Science-and-Technology",
     "name": "Gwangju Institute of Science and Technology",
     "country": "South Korea",
-    "logo": "Gwangju-Institute-of-Science-and-Technology.jpg",
+    "logo": "Gwangju-Institute-of-Science-and-Technology.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -1780,7 +1734,7 @@
     "slug": "Heinrich-Heine-Universitat-Dusseldorf",
     "name": "Heinrich Heine Universitat Dusseldorf",
     "country": "",
-    "logo": "Heinrich-Heine-Universitat-Dusseldorf.svg",
+    "logo": "Heinrich-Heine-Universitat-Dusseldorf.png",
     "evidence": [],
     "wikidata_id": "Q317032",
     "location": {
@@ -1850,7 +1804,7 @@
     "slug": "Hochschule-fur-Technik-und-Wirtschaft",
     "name": "Hochschule fur Technik und Wirtschaft",
     "country": "",
-    "logo": "Hochschule-fur-Technik-und-Wirtschaft.svg",
+    "logo": "Hochschule-fur-Technik-und-Wirtschaft.png",
     "evidence": [],
     "wikidata_id": "Q875138",
     "location": {
@@ -1864,7 +1818,7 @@
     "slug": "Hong-Kong-Polytechnic-University",
     "name": "Hong Kong Polytechnic University",
     "country": "Hong Kong",
-    "logo": "Hong-Kong-Polytechnic-University.svg",
+    "logo": "Hong-Kong-Polytechnic-University.png",
     "evidence": [
       {
         "url": "https://www.polyu.edu.hk/dsai/-/media/department/dsai/programme/sdfs/dsai5206.pdf",
@@ -2093,7 +2047,7 @@
     "slug": "IIT-Madras",
     "name": "IIT Madras",
     "country": "India",
-    "logo": "IIT-Madras.svg",
+    "logo": "IIT-Madras.png",
     "evidence": [
       {
         "url": "https://www.cse.iitm.ac.in/~miteshk/CS6910.html",
@@ -2124,7 +2078,7 @@
     "slug": "Imperial-College-London",
     "name": "Imperial College London",
     "country": "UK",
-    "logo": "Imperial-College-London.svg",
+    "logo": "Imperial-College-London.png",
     "evidence": [
       {
         "url": "https://wp.doc.ic.ac.uk/bkainz/teaching/70010-deep-learning-from-2023/",
@@ -2212,7 +2166,7 @@
     "slug": "Indian-Institute-of-Science-Bangalore",
     "name": "Indian Institute of Science Bangalore",
     "country": "India",
-    "logo": "Indian-Institute-of-Science-Bangalore.jpg",
+    "logo": "Indian-Institute-of-Science-Bangalore.png",
     "location": {
       "lat": 13.01978,
       "lon": 77.56605,
@@ -2309,7 +2263,8 @@
     "wikidata_id": "Q1194650",
     "logo_source": "web-verified",
     "logo_source_url": "https://home.iitd.ac.in/",
-    "logo_confidence": "high"
+    "logo_confidence": "high",
+    "invert": true
   },
   {
     "slug": "Indian-Institute-of-Technology-Gandhinagar",
@@ -2400,7 +2355,7 @@
     "slug": "Indian-Institute-of-Technology-Kanpur",
     "name": "Indian Institute of Technology Kanpur",
     "country": "India",
-    "logo": "Indian-Institute-of-Technology-Kanpur.svg",
+    "logo": "Indian-Institute-of-Technology-Kanpur.png",
     "evidence": [
       {
         "url": "https://www.cse.iitk.ac.in/users/piyush/courses/ml-autumn23/index.html",
@@ -2423,7 +2378,7 @@
     "slug": "Indian-Institute-of-Technology-Kharagpur",
     "name": "Indian Institute of Technology Kharagpur",
     "country": "",
-    "logo": "Indian-Institute-of-Technology-Kharagpur.svg",
+    "logo": "Indian-Institute-of-Technology-Kharagpur.png",
     "evidence": [],
     "wikidata_id": "Q1661243",
     "location": {
@@ -2437,7 +2392,7 @@
     "slug": "Indian-Institute-of-Technology-Madras",
     "name": "Indian Institute of Technology Madras",
     "country": "India",
-    "logo": "Indian-Institute-of-Technology-Madras.svg",
+    "logo": "Indian-Institute-of-Technology-Madras.png",
     "location": {
       "lat": 12.991667,
       "lon": 80.233889,
@@ -2524,7 +2479,7 @@
     "slug": "Indira-Gandhi-National-Open-University",
     "name": "Indira Gandhi National Open University",
     "country": "",
-    "logo": "Indira-Gandhi-National-Open-University.svg",
+    "logo": "Indira-Gandhi-National-Open-University.png",
     "evidence": [],
     "wikidata_id": "Q2028659",
     "location": {
@@ -2575,7 +2530,7 @@
     "slug": "Institut-catholique-d'arts-et-metiers-(ICAM)",
     "name": "Institut catholique d'arts et metiers (ICAM)",
     "country": "",
-    "logo": "Institut-catholique-d'arts-et-metiers-(ICAM).svg",
+    "logo": "Institut-catholique-d'arts-et-metiers-(ICAM).png",
     "evidence": [],
     "location": {
       "lat": 50.6302458,
@@ -2588,7 +2543,7 @@
     "slug": "Institut-de-recherche-en-informatique-de-Toulouse",
     "name": "Institut de recherche en informatique de Toulouse",
     "country": "",
-    "logo": "Institut-de-recherche-en-informatique-de-Toulouse.svg",
+    "logo": "Institut-de-recherche-en-informatique-de-Toulouse.png",
     "evidence": [],
     "wikidata_id": "Q128063459",
     "location": {
@@ -2630,7 +2585,7 @@
     "slug": "Institut-Teknologi-Bandung",
     "name": "Institut Teknologi Bandung",
     "country": "",
-    "logo": "Institut-Teknologi-Bandung.svg",
+    "logo": "Institut-Teknologi-Bandung.png",
     "evidence": [],
     "wikidata_id": "Q1579397",
     "location": {
@@ -2644,7 +2599,7 @@
     "slug": "Instituto-Polit-cnico-Nacional",
     "name": "Instituto Politécnico Nacional",
     "country": "Mexico",
-    "logo": "Instituto-Polit-cnico-Nacional.svg",
+    "logo": "Instituto-Polit-cnico-Nacional.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -2760,7 +2715,7 @@
     "slug": "Istanbul-Teknik-Universitesi",
     "name": "Istanbul Teknik Universitesi",
     "country": "",
-    "logo": "Istanbul-Teknik-Universitesi.svg",
+    "logo": "Istanbul-Teknik-Universitesi.png",
     "evidence": [],
     "wikidata_id": "Q344334",
     "location": {
@@ -2774,7 +2729,7 @@
     "slug": "Istinye-University",
     "name": "Istinye University",
     "country": "Turkey",
-    "logo": "Istinye-University.svg",
+    "logo": "Istinye-University.png",
     "location": {
       "lat": 41.1067,
       "lon": 28.9897,
@@ -2798,7 +2753,7 @@
     "slug": "IT-Universitetet-i-Kobenhavn",
     "name": "IT Universitetet i Kobenhavn",
     "country": "",
-    "logo": "IT-Universitetet-i-Kobenhavn.svg",
+    "logo": "IT-Universitetet-i-Kobenhavn.png",
     "evidence": [],
     "wikidata_id": "Q124882",
     "location": {
@@ -2858,7 +2813,7 @@
     "slug": "Kansas-State-University",
     "name": "Kansas State University",
     "country": "United States",
-    "logo": "Kansas-State-University.svg",
+    "logo": "Kansas-State-University.png",
     "location": {
       "lat": 39.191667,
       "lon": -96.580833,
@@ -2896,7 +2851,7 @@
     "slug": "Kennesaw-State-University",
     "name": "Kennesaw State University",
     "country": "United States",
-    "logo": "Kennesaw-State-University.svg",
+    "logo": "Kennesaw-State-University.png",
     "location": {
       "lat": 34.037876,
       "lon": -84.58102,
@@ -2920,7 +2875,7 @@
     "slug": "King-Abdullah-University-of-Science-and-Technology",
     "name": "King Abdullah University of Science and Technology",
     "country": "Saudi Arabia",
-    "logo": "King-Abdullah-University-of-Science-and-Technology.svg",
+    "logo": "King-Abdullah-University-of-Science-and-Technology.png",
     "evidence": [
       {
         "url": "https://ml.kaust.edu.sa/courses.html",
@@ -2943,7 +2898,7 @@
     "slug": "King-Fahd-University-of-Petroleum-and-Minerals",
     "name": "King Fahd University of Petroleum and Minerals",
     "country": "Saudi Arabia",
-    "logo": "King-Fahd-University-of-Petroleum-and-Minerals.svg",
+    "logo": "King-Fahd-University-of-Petroleum-and-Minerals.png",
     "evidence": [
       {
         "url": "https://faculty.kfupm.edu.sa/ICS/hluqman/courses/221-ICS471.html",
@@ -3011,7 +2966,7 @@
     "slug": "Korea-Aerospace-University",
     "name": "Korea Aerospace University",
     "country": "South Korea",
-    "logo": "Korea-Aerospace-University.jpg",
+    "logo": "Korea-Aerospace-University.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -3312,7 +3267,7 @@
     "slug": "Marmara-University",
     "name": "Marmara University",
     "country": "Turkey",
-    "logo": "Marmara-University.svg",
+    "logo": "Marmara-University.png",
     "location": {
       "lat": 40.986111,
       "lon": 29.053611,
@@ -3336,7 +3291,7 @@
     "slug": "Masaryk-University",
     "name": "Masaryk University",
     "country": "",
-    "logo": "Masaryk-University.svg",
+    "logo": "Masaryk-University.png",
     "evidence": [],
     "wikidata_id": "Q763586",
     "location": {
@@ -3350,7 +3305,7 @@
     "slug": "Massachusetts-Institute-of-Technology",
     "name": "Massachusetts Institute of Technology",
     "country": "USA",
-    "logo": "Massachusetts-Institute-of-Technology.svg",
+    "logo": "Massachusetts-Institute-of-Technology.png",
     "evidence": [
       {
         "url": "https://dcai.csail.mit.edu/",
@@ -3490,7 +3445,7 @@
     "slug": "Milwaukee-School-of-Engineering",
     "name": "Milwaukee School of Engineering",
     "country": "United States",
-    "logo": "Milwaukee-School-of-Engineering.svg",
+    "logo": "Milwaukee-School-of-Engineering.png",
     "evidence": [
       {
         "url": "https://faculty-web.msoe.edu/yoder/cs3450/",
@@ -3601,7 +3556,7 @@
     "slug": "Nagoya-University",
     "name": "Nagoya University",
     "country": "Japan",
-    "logo": "Nagoya-University.svg",
+    "logo": "Nagoya-University.png",
     "location": {
       "lat": 35.1525,
       "lon": 136.968611,
@@ -3792,7 +3747,7 @@
     "slug": "National-Institute-of-Technology-Delhi",
     "name": "National Institute of Technology Delhi",
     "country": "India",
-    "logo": "National-Institute-of-Technology-Delhi.svg",
+    "logo": "National-Institute-of-Technology-Delhi.png",
     "location": {
       "lat": 28.5826,
       "lon": 77.0621,
@@ -3933,7 +3888,7 @@
     "slug": "National-United-University",
     "name": "National United University",
     "country": "",
-    "logo": "National-United-University.svg",
+    "logo": "National-United-University.png",
     "evidence": [],
     "wikidata_id": "Q6145842",
     "location": {
@@ -3947,7 +3902,7 @@
     "slug": "National-University-of-Sciences-and-Technology",
     "name": "National University of Sciences and Technology",
     "country": "Pakistan",
-    "logo": "National-University-of-Sciences-and-Technology.jpg",
+    "logo": "National-University-of-Sciences-and-Technology.png",
     "evidence": [
       {
         "url": "https://nust.edu.pk/wp-content/uploads/course_content_files/858234879_BI-430%20%2CDeep%20Learning%20in%20Life%20Sciences.pdf",
@@ -4083,7 +4038,7 @@
     "slug": "Noida-Institute-of-Engineering-and-Technology",
     "name": "Noida Institute of Engineering and Technology",
     "country": "India",
-    "logo": "Noida-Institute-of-Engineering-and-Technology.svg",
+    "logo": "Noida-Institute-of-Engineering-and-Technology.png",
     "location": {
       "lat": 28.457778,
       "lon": 77.485278,
@@ -4108,7 +4063,7 @@
     "slug": "North-Carolina-State-University",
     "name": "North Carolina State University",
     "country": "United States",
-    "logo": "North-Carolina-State-University.svg",
+    "logo": "North-Carolina-State-University.png",
     "location": {
       "lat": 35.787222,
       "lon": -78.670556,
@@ -4146,7 +4101,7 @@
     "slug": "Northeastern-University",
     "name": "Northeastern University",
     "country": "USA",
-    "logo": "Northeastern-University.svg",
+    "logo": "Northeastern-University.png",
     "evidence": [
       {
         "url": "https://course.ccs.neu.edu/ds4440f24/",
@@ -4216,7 +4171,7 @@
     "slug": "Ohio-University",
     "name": "Ohio University",
     "country": "",
-    "logo": "Ohio-University.svg",
+    "logo": "Ohio-University.png",
     "evidence": [],
     "wikidata_id": "Q1075339",
     "location": {
@@ -4230,7 +4185,7 @@
     "slug": "Oita-University",
     "name": "Oita University",
     "country": "Japan",
-    "logo": "Oita-University.svg",
+    "logo": "Oita-University.png",
     "location": {
       "lat": 33.175456,
       "lon": 131.61325,
@@ -4254,7 +4209,7 @@
     "slug": "Ontario-Tech-University",
     "name": "Ontario Tech University",
     "country": "Canada",
-    "logo": "Ontario-Tech-University.svg",
+    "logo": "Ontario-Tech-University.png",
     "location": {
       "lat": 43.944847,
       "lon": -78.891703,
@@ -4292,7 +4247,7 @@
     "slug": "Peking-University",
     "name": "Peking University",
     "country": "",
-    "logo": "Peking-University.svg",
+    "logo": "Peking-University.png",
     "evidence": [],
     "wikidata_id": "Q16952",
     "location": {
@@ -4398,7 +4353,7 @@
     "slug": "Pontificia-Universidad-Catolica-de-Chile",
     "name": "Pontificia Universidad Catolica de Chile",
     "country": "Chile",
-    "logo": "Pontificia-Universidad-Catolica-de-Chile.svg",
+    "logo": "Pontificia-Universidad-Catolica-de-Chile.png",
     "evidence": [
       {
         "url": "https://catalogo.uc.cl/index.php?tmpl=component&option=com_catalogo&view=programa&sigla=INF3812):",
@@ -4444,7 +4399,7 @@
     "slug": "Portland-State-University",
     "name": "Portland State University",
     "country": "USA",
-    "logo": "Portland-State-University.svg",
+    "logo": "Portland-State-University.png",
     "evidence": [
       {
         "url": "https://web.cecs.pdx.edu/~lipor/courses/519/",
@@ -4467,7 +4422,7 @@
     "slug": "Prasad-V-Potluri-Siddhartha-Institute-of-Technology",
     "name": "Prasad V. Potluri Siddhartha Institute of Technology",
     "country": "India",
-    "logo": "Prasad-V-Potluri-Siddhartha-Institute-of-Technology.jpg",
+    "logo": "Prasad-V-Potluri-Siddhartha-Institute-of-Technology.png",
     "location": {
       "lat": 16.487847,
       "lon": 80.694043,
@@ -4493,7 +4448,7 @@
     "slug": "Purdue-University",
     "name": "Purdue University",
     "country": "USA",
-    "logo": "Purdue-University.svg",
+    "logo": "Purdue-University.png",
     "evidence": [
       {
         "url": "https://www.cs.purdue.edu/homes/rayyeh/courses/cs59300cvd/fa2025/",
@@ -4589,7 +4544,7 @@
     "slug": "Rikkyo-University",
     "name": "Rikkyo University",
     "country": "Japan",
-    "logo": "Rikkyo-University.svg",
+    "logo": "Rikkyo-University.png",
     "location": {
       "lat": 35.730517,
       "lon": 139.703953,
@@ -4613,7 +4568,7 @@
     "slug": "Rowan-University",
     "name": "Rowan University",
     "country": "",
-    "logo": "Rowan-University.svg",
+    "logo": "Rowan-University.png",
     "evidence": [],
     "wikidata_id": "Q1799872",
     "location": {
@@ -4627,7 +4582,7 @@
     "slug": "Rutgers,-The-State-University-of-New-Jersey",
     "name": "Rutgers, The State University of New Jersey",
     "country": "USA",
-    "logo": "Rutgers,-The-State-University-of-New-Jersey.svg",
+    "logo": "Rutgers,-The-State-University-of-New-Jersey.png",
     "evidence": [
       {
         "url": "https://datascience.sas.rutgers.edu/images/data-science/sample_syllabi/CS462__Introduction_to_Deep_Learning.pdf",
@@ -4695,7 +4650,7 @@
     "slug": "Santa-Clara-University",
     "name": "Santa Clara University",
     "country": "United States",
-    "logo": "Santa-Clara-University.svg",
+    "logo": "Santa-Clara-University.png",
     "evidence": [
       {
         "url": "https://webpages.scu.edu/ftp/msamorani/syllabi/MSIS%202634_Das%20Sanjiv%20R_Fall%202020.pdf",
@@ -4718,7 +4673,7 @@
     "slug": "Sanya-University",
     "name": "Sanya University",
     "country": "Mainland China",
-    "logo": "Sanya-University.svg",
+    "logo": "Sanya-University.png",
     "location": {
       "lat": 18.334,
       "lon": 109.566,
@@ -4758,7 +4713,7 @@
     "slug": "Seoul-National-University",
     "name": "Seoul National University",
     "country": "South Korea",
-    "logo": "Seoul-National-University.svg",
+    "logo": "Seoul-National-University.png",
     "evidence": [
       {
         "url": "https://gsds.snu.ac.kr/course/m3239-002300003/",
@@ -4818,7 +4773,7 @@
     "slug": "Shandong-University",
     "name": "Shandong University",
     "country": "Mainland China",
-    "logo": "Shandong-University.svg",
+    "logo": "Shandong-University.png",
     "evidence": [
       {
         "url": "https://splab.sdu.edu.cn/zryycl1.htm",
@@ -4902,7 +4857,7 @@
     "slug": "ShanghaiTech-University",
     "name": "ShanghaiTech University",
     "country": "Mainland China",
-    "logo": "ShanghaiTech-University.svg",
+    "logo": "ShanghaiTech-University.png",
     "location": {
       "lat": 31.186667,
       "lon": 121.596389,
@@ -4926,7 +4881,7 @@
     "slug": "Sharif-University-of-Technology",
     "name": "Sharif University of Technology",
     "country": "Iran",
-    "logo": "Sharif-University-of-Technology.svg",
+    "logo": "Sharif-University-of-Technology.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -4949,7 +4904,7 @@
     "slug": "Shenzhen-University",
     "name": "Shenzhen University",
     "country": "",
-    "logo": "Shenzhen-University.svg",
+    "logo": "Shenzhen-University.png",
     "evidence": [],
     "wikidata_id": "Q1945756",
     "location": {
@@ -4963,7 +4918,7 @@
     "slug": "Shivaji-University-Kolhapur",
     "name": "Shivaji University Kolhapur",
     "country": "India",
-    "logo": "Shivaji-University-Kolhapur.jpg",
+    "logo": "Shivaji-University-Kolhapur.png",
     "evidence": [
       {
         "url": "https://www.unishivaji.ac.in/syllabusnew/",
@@ -5030,7 +4985,7 @@
     "slug": "Skolkovo-Institute-of-Science-and-Technology",
     "name": "Skolkovo Institute of Science and Technology",
     "country": "Russia",
-    "logo": "Skolkovo-Institute-of-Science-and-Technology.jpg",
+    "logo": "Skolkovo-Institute-of-Science-and-Technology.png",
     "location": {
       "lat": 55.7,
       "lon": 37.36,
@@ -5091,7 +5046,7 @@
     "slug": "Southern-New-Hampshire-University",
     "name": "Southern New Hampshire University",
     "country": "",
-    "logo": "Southern-New-Hampshire-University.svg",
+    "logo": "Southern-New-Hampshire-University.png",
     "evidence": [],
     "wikidata_id": "Q3445256",
     "location": {
@@ -5105,7 +5060,7 @@
     "slug": "Southern-Utah-University",
     "name": "Southern Utah University",
     "country": "United States",
-    "logo": "Southern-Utah-University.webp",
+    "logo": "Southern-Utah-University.png",
     "location": {
       "lat": 37.6754,
       "lon": -113.072,
@@ -5129,7 +5084,7 @@
     "slug": "St.-Polten-University-of-Applied-Sciences",
     "name": "St. Polten University of Applied Sciences",
     "country": "",
-    "logo": "St.-Polten-University-of-Applied-Sciences.svg",
+    "logo": "St.-Polten-University-of-Applied-Sciences.png",
     "evidence": [],
     "wikidata_id": "Q1391228",
     "location": {
@@ -5171,7 +5126,7 @@
     "slug": "Stellenbosch-University",
     "name": "Stellenbosch University",
     "country": "South Africa",
-    "logo": "Stellenbosch-University.jpg",
+    "logo": "Stellenbosch-University.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -5194,7 +5149,7 @@
     "slug": "Stevens-Institute-of-Technology",
     "name": "Stevens Institute of Technology",
     "country": "USA",
-    "logo": "Stevens-Institute-of-Technology.svg",
+    "logo": "Stevens-Institute-of-Technology.png",
     "evidence": [
       {
         "url": "https://github.com/sergulaydore/EE-628-Spring-2020",
@@ -5217,7 +5172,7 @@
     "slug": "Stony-Brook-University",
     "name": "Stony Brook University",
     "country": "United States",
-    "logo": "Stony-Brook-University.svg",
+    "logo": "Stony-Brook-University.png",
     "location": {
       "lat": 40.917321,
       "lon": -73.124554,
@@ -5241,7 +5196,7 @@
     "slug": "Sungkyunkwan-University",
     "name": "Sungkyunkwan University",
     "country": "South Korea",
-    "logo": "Sungkyunkwan-University.svg",
+    "logo": "Sungkyunkwan-University.png",
     "evidence": [
       {
         "url": "https://bmi.skku.edu/?page_id=2531",
@@ -5264,7 +5219,7 @@
     "slug": "Technion---Israel-Institute-of-Technology",
     "name": "Technion   Israel Institute of Technology",
     "country": "Israel",
-    "logo": "Technion---Israel-Institute-of-Technology.svg",
+    "logo": "Technion---Israel-Institute-of-Technology.png",
     "evidence": [
       {
         "url": "https://keshet.technion.ac.il/ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco/",
@@ -5295,7 +5250,7 @@
     "slug": "Technische-Universitat-Berlin",
     "name": "Technische Universitat Berlin",
     "country": "",
-    "logo": "Technische-Universitat-Berlin.svg",
+    "logo": "Technische-Universitat-Berlin.png",
     "evidence": [],
     "wikidata_id": "Q51985",
     "location": {
@@ -5383,7 +5338,7 @@
     "slug": "Texas-Christian-University",
     "name": "Texas Christian University",
     "country": "USA",
-    "logo": "Texas-Christian-University.svg",
+    "logo": "Texas-Christian-University.png",
     "evidence": [
       {
         "url": "https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf",
@@ -5443,7 +5398,7 @@
     "slug": "Tufts-University",
     "name": "Tufts University",
     "country": "",
-    "logo": "Tufts-University.svg",
+    "logo": "Tufts-University.png",
     "evidence": [],
     "wikidata_id": "Q49120",
     "location": {
@@ -5494,7 +5449,7 @@
     "slug": "United-International-University",
     "name": "United International University",
     "country": "Bangladesh",
-    "logo": "United-International-University.svg",
+    "logo": "United-International-University.png",
     "location": {
       "lat": 23.798056,
       "lon": 90.449722,
@@ -5520,7 +5475,7 @@
     "slug": "Universidad-Carlos-III-de-Madrid",
     "name": "Universidad Carlos III de Madrid",
     "country": "Spain",
-    "logo": "Universidad-Carlos-III-de-Madrid.svg",
+    "logo": "Universidad-Carlos-III-de-Madrid.png",
     "evidence": [
       {
         "url": "https://aplicaciones.uc3m.es/cpa/generaFicha?est=378&asig=19203&idioma=2",
@@ -5543,7 +5498,7 @@
     "slug": "Universidad-de-Chile",
     "name": "Universidad de Chile",
     "country": "Chile",
-    "logo": "Universidad-de-Chile.svg",
+    "logo": "Universidad-de-Chile.png",
     "evidence": [
       {
         "url": "https://github.com/dccuchile/CC6204",
@@ -5566,7 +5521,7 @@
     "slug": "Universidad-de-Ibagu",
     "name": "Universidad de Ibagué",
     "country": "Colombia",
-    "logo": "Universidad-de-Ibagu.jpg",
+    "logo": "Universidad-de-Ibagu.png",
     "evidence": [
       {
         "url": "https://classic.d2l.ai/ (adopters list)",
@@ -5658,7 +5613,7 @@
     "slug": "Universidad-del-Norte",
     "name": "Universidad del Norte",
     "country": "Colombia",
-    "logo": "Universidad-del-Norte.svg",
+    "logo": "Universidad-del-Norte.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -5681,7 +5636,7 @@
     "slug": "Universidad-Icesi",
     "name": "Universidad Icesi",
     "country": "Colombia",
-    "logo": "Universidad-Icesi.jpg",
+    "logo": "Universidad-Icesi.png",
     "evidence": [
       {
         "url": "https://classic.d2l.ai/ (adopters list)",
@@ -5704,7 +5659,7 @@
     "slug": "Universidad-Militar-Nueva-Granada",
     "name": "Universidad Militar Nueva Granada",
     "country": "Colombia",
-    "logo": "Universidad-Militar-Nueva-Granada.svg",
+    "logo": "Universidad-Militar-Nueva-Granada.png",
     "evidence": [
       {
         "url": "https://catalogo.umng.edu.co/cgi-bin/koha/opac-detail.pl?biblionumber=37154",
@@ -5741,7 +5696,7 @@
     "slug": "Universidad-Nacional-Autonoma-de-Mexico",
     "name": "Universidad Nacional Autonoma de Mexico",
     "country": "Mexico",
-    "logo": "Universidad-Nacional-Autonoma-de-Mexico.svg",
+    "logo": "Universidad-Nacional-Autonoma-de-Mexico.png",
     "evidence": [
       {
         "url": "https://turing.iimas.unam.mx/~ricardoml/course/iap/",
@@ -5801,7 +5756,7 @@
     "slug": "Universidad-Polit-cnica-Salesiana-Cuenca",
     "name": "Universidad Politécnica Salesiana, Cuenca",
     "country": "Ecuador",
-    "logo": "Universidad-Polit-cnica-Salesiana-Cuenca.jpg",
+    "logo": "Universidad-Polit-cnica-Salesiana-Cuenca.png",
     "evidence": [
       {
         "url": "https://d2l.ai/",
@@ -5966,7 +5921,7 @@
     "slug": "Universidade-Estadual-de-Campinas",
     "name": "Universidade Estadual de Campinas",
     "country": "Brazil",
-    "logo": "Universidade-Estadual-de-Campinas.svg",
+    "logo": "Universidade-Estadual-de-Campinas.png",
     "evidence": [
       {
         "url": "https://www.ic.unicamp.br/historico-ic/graduacao/plano-desenvolvimento-disciplinas/1s2025/MC934A.pdf",
@@ -6020,7 +5975,7 @@
     "slug": "Universidade-Federal-de-Minas-Gerais",
     "name": "Universidade Federal de Minas Gerais",
     "country": "Brazil",
-    "logo": "Universidade-Federal-de-Minas-Gerais.jpg",
+    "logo": "Universidade-Federal-de-Minas-Gerais.png",
     "evidence": [
       {
         "url": "https://deep-ufmg.github.io/",
@@ -6112,7 +6067,7 @@
     "slug": "Universidade-Federal-de-Vi-osa",
     "name": "Universidade Federal de Viçosa",
     "country": "Brazil",
-    "logo": "Universidade-Federal-de-Vi-osa.jpg",
+    "logo": "Universidade-Federal-de-Vi-osa.png",
     "evidence": [
       {
         "url": "https://ufv-inf721-2024-2.lucasnferreira.com/",
@@ -6174,7 +6129,7 @@
     "slug": "Universidade-Federal-do-Rio-Grande",
     "name": "Universidade Federal do Rio Grande",
     "country": "Brazil",
-    "logo": "Universidade-Federal-do-Rio-Grande.svg",
+    "logo": "Universidade-Federal-do-Rio-Grande.png",
     "evidence": [
       {
         "url": "https://classic.d2l.ai/ (adopters list)",
@@ -6197,7 +6152,7 @@
     "slug": "Universidade-Lus-fona",
     "name": "Universidade Lusófona",
     "country": "Portugal",
-    "logo": "Universidade-Lus-fona.svg",
+    "logo": "Universidade-Lus-fona.png",
     "evidence": [
       {
         "url": "https://www.ulusofona.pt/en/lisboa/bachelor/computation-and-applied-mathematics/ULHT6638-24450",
@@ -6266,7 +6221,7 @@
     "slug": "Universidade-Tecnol-gica-Federal-do-Paran",
     "name": "Universidade Tecnológica Federal do Paraná",
     "country": "Brazil",
-    "logo": "Universidade-Tecnol-gica-Federal-do-Paran.jpg",
+    "logo": "Universidade-Tecnol-gica-Federal-do-Paran.png",
     "evidence": [
       {
         "url": "https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001",
@@ -6283,29 +6238,6 @@
       "lon": -49.268833,
       "source": "wikidata",
       "wikidata_id": "Q1131055"
-    }
-  },
-  {
-    "slug": "Universit-degli-Studi-di-Firenze",
-    "name": "Università degli Studi di Firenze",
-    "country": "Italy",
-    "logo": "Universit-degli-Studi-di-Firenze.png",
-    "evidence": [
-      {
-        "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
-        "course": "B031278 — Deep Learning (Fall 2025)",
-        "instructor": "Paolo Frasconi",
-        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2023). Dive into Deep Learning. Cambridge University Press. Freely available from the website.\"",
-        "source_file": "europe.md",
-        "year": "2025"
-      }
-    ],
-    "wikidata_id": "Q131906813",
-    "location": {
-      "lat": 43.7735739,
-      "lon": 11.2833208,
-      "source": "openstreetmap-nominatim",
-      "source_url": "https://www.openstreetmap.org/search?query=Universit%C3%A0%20degli%20Studi%20di%20Firenze"
     }
   },
   {
@@ -6335,7 +6267,7 @@
     "slug": "Universita-Bocconi",
     "name": "Universita Bocconi",
     "country": "",
-    "logo": "Universita-Bocconi.svg",
+    "logo": "Universita-Bocconi.png",
     "evidence": [],
     "wikidata_id": "Q959524",
     "location": {
@@ -6363,7 +6295,7 @@
     "slug": "Universita-degli-Studi-di-Brescia",
     "name": "Universita degli Studi di Brescia",
     "country": "",
-    "logo": "Universita-degli-Studi-di-Brescia.svg",
+    "logo": "Universita-degli-Studi-di-Brescia.png",
     "evidence": [],
     "wikidata_id": "Q1781263",
     "location": {
@@ -6374,33 +6306,10 @@
     }
   },
   {
-    "slug": "Universita-degli-Studi-di-Catania",
-    "name": "Universita degli Studi di Catania",
-    "country": "Italy",
-    "logo": "Universita-degli-Studi-di-Catania.png",
-    "evidence": [
-      {
-        "url": "https://syllabus.unict.it/insegnamento.php?id=16349",
-        "course": "Deep Learning (Laurea Magistrale in Informatica / Data Science)",
-        "instructor": "(DMI Department, UNICT)",
-        "snippet": "\"Dive into Deep Learning (2020) https://d2l.ai/d2l-en.pdf\" — appears in \"Testi di riferimento\" (Reference Texts) section and is cited in the course schedule under topic 5 (Convolutional Neural Networks).",
-        "source_file": "verified_chunk_04_EU.md",
-        "year": ""
-      }
-    ],
-    "wikidata_id": "Q1248821",
-    "location": {
-      "lat": 37.5036,
-      "lon": 15.0867,
-      "source": "wikidata",
-      "wikidata_id": "Q1248821"
-    }
-  },
-  {
     "slug": "Universita-degli-Studi-di-Padova",
     "name": "Universita degli Studi di Padova",
     "country": "",
-    "logo": "Universita-degli-Studi-di-Padova.svg",
+    "logo": "Universita-degli-Studi-di-Padova.png",
     "evidence": [],
     "wikidata_id": "Q193510",
     "location": {
@@ -6414,7 +6323,7 @@
     "slug": "Universita-degli-Studi-di-Roma-Tor-Vergata",
     "name": "Università degli Studi di Roma Tor Vergata",
     "country": "Italy",
-    "logo": "Universita-degli-Studi-di-Roma-Tor-Vergata.svg",
+    "logo": "Universita-degli-Studi-di-Roma-Tor-Vergata.png",
     "evidence": [
       {
         "url": "http://www.ce.uniroma2.it/courses/ml2425/",
@@ -6445,7 +6354,7 @@
     "slug": "Universita-di-Bologna",
     "name": "Università degli Studi di Bologna",
     "country": "Italy",
-    "logo": "Universita-di-Bologna.svg",
+    "logo": "Universita-di-Bologna.png",
     "evidence": [
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/455807",
@@ -6516,7 +6425,7 @@
     "slug": "Universitas-Andalas,-Padang",
     "name": "Universitas Andalas, Padang",
     "country": "",
-    "logo": "Universitas-Andalas,-Padang.svg",
+    "logo": "Universitas-Andalas,-Padang.png",
     "evidence": [],
     "location": {
       "lat": -0.9148733,
@@ -6626,7 +6535,7 @@
     "slug": "Universitat-Politecnica-de-Catalunya",
     "name": "Universitat Politecnica de Catalunya",
     "country": "Spain",
-    "logo": "Universitat-Politecnica-de-Catalunya.svg",
+    "logo": "Universitat-Politecnica-de-Catalunya.png",
     "evidence": [
       {
         "url": "https://telecombcn-dl.github.io/dlai-2020/",
@@ -6649,7 +6558,7 @@
     "slug": "Universitat-Tubingen",
     "name": "Universitat Tubingen",
     "country": "Germany",
-    "logo": "Universitat-Tubingen.svg",
+    "logo": "Universitat-Tubingen.png",
     "evidence": [
       {
         "url": "https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/autonomous-vision/lectures/deep-learning/",
@@ -6736,7 +6645,7 @@
     "slug": "Universite-Paris-Saclay",
     "name": "Universite Paris Saclay",
     "country": "",
-    "logo": "Universite-Paris-Saclay.svg",
+    "logo": "Universite-Paris-Saclay.png",
     "evidence": [],
     "wikidata_id": "Q65225634",
     "location": {
@@ -6773,7 +6682,7 @@
     "slug": "Universiteit-van-Amsterdam",
     "name": "Universiteit van Amsterdam",
     "country": "",
-    "logo": "Universiteit-van-Amsterdam.svg",
+    "logo": "Universiteit-van-Amsterdam.png",
     "evidence": [],
     "wikidata_id": "Q214341",
     "location": {
@@ -6787,7 +6696,7 @@
     "slug": "University-of-Arkansas",
     "name": "University of Arkansas",
     "country": "USA",
-    "logo": "University-of-Arkansas.svg",
+    "logo": "University-of-Arkansas.png",
     "evidence": [
       {
         "url": "https://csce.uark.edu/~lz006/course/2021fall/5063.html",
@@ -6810,7 +6719,7 @@
     "slug": "University-of-Augsburg",
     "name": "University of Augsburg",
     "country": "",
-    "logo": "University-of-Augsburg.svg",
+    "logo": "University-of-Augsburg.png",
     "evidence": [],
     "wikidata_id": "Q616905",
     "location": {
@@ -6847,7 +6756,7 @@
     "slug": "University-of-Bamberg",
     "name": "University of Bamberg",
     "country": "Germany",
-    "logo": "University-of-Bamberg.webp",
+    "logo": "University-of-Bamberg.png",
     "location": {
       "lat": 49.893889,
       "lon": 10.886667,
@@ -6896,7 +6805,7 @@
     "slug": "University-of-Cagliari",
     "name": "University of Cagliari",
     "country": "Italy",
-    "logo": "University-of-Cagliari.jpg",
+    "logo": "University-of-Cagliari.png",
     "evidence": [
       {
         "url": "https://unica-ml.github.io/ml",
@@ -6950,7 +6859,7 @@
     "slug": "University-of-California,-Irvine",
     "name": "University of California, Irvine",
     "country": "",
-    "logo": "University-of-California,-Irvine.svg",
+    "logo": "University-of-California,-Irvine.png",
     "evidence": [],
     "wikidata_id": "Q868421",
     "location": {
@@ -7033,7 +6942,7 @@
     "slug": "University-of-California,-Santa-Cruz",
     "name": "University of California, Santa Cruz",
     "country": "",
-    "logo": "University-of-California,-Santa-Cruz.svg",
+    "logo": "University-of-California,-Santa-Cruz.png",
     "evidence": [],
     "wikidata_id": "Q1047293",
     "location": {
@@ -7139,7 +7048,7 @@
     "slug": "University-of-Chinese-Academy-of-Sciences",
     "name": "University of Chinese Academy of Sciences",
     "country": "Mainland China",
-    "logo": "University-of-Chinese-Academy-of-Sciences.svg",
+    "logo": "University-of-Chinese-Academy-of-Sciences.png",
     "location": {
       "lat": 39.907225,
       "lon": 116.244622,
@@ -7179,7 +7088,7 @@
     "slug": "University-of-Colorado-Denver",
     "name": "University of Colorado Denver",
     "country": "USA",
-    "logo": "University-of-Colorado-Denver.svg",
+    "logo": "University-of-Colorado-Denver.png",
     "evidence": [
       {
         "url": "https://cse.ucdenver.edu/~biswasa/teaching/2023-spring-DL-5931/",
@@ -7202,7 +7111,7 @@
     "slug": "University-of-Connecticut",
     "name": "University of Connecticut",
     "country": "",
-    "logo": "University-of-Connecticut.svg",
+    "logo": "University-of-Connecticut.png",
     "evidence": [],
     "wikidata_id": "Q49206",
     "location": {
@@ -7216,7 +7125,7 @@
     "slug": "University-of-Copenhagen",
     "name": "University of Copenhagen",
     "country": "",
-    "logo": "University-of-Copenhagen.svg",
+    "logo": "University-of-Copenhagen.png",
     "evidence": [],
     "wikidata_id": "Q186285",
     "location": {
@@ -7230,7 +7139,7 @@
     "slug": "University-of-Florence",
     "name": "University of Florence",
     "country": "Italy",
-    "logo": "University-of-Florence.svg",
+    "logo": "University-of-Florence.png",
     "location": {
       "lat": 43.777769,
       "lon": 11.259511,
@@ -7245,6 +7154,14 @@
         "snippet": "Suggested readings include Dive into Deep Learning.",
         "year": "Fall 2024",
         "source_file": "d2l_adoption_research_2026-05-08"
+      },
+      {
+        "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
+        "course": "B031278 — Deep Learning (Fall 2025)",
+        "instructor": "Paolo Frasconi",
+        "snippet": "\"Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2023). Dive into Deep Learning. Cambridge University Press. Freely available from the website.\"",
+        "source_file": "europe.md",
+        "year": "2025"
       }
     ],
     "wikidata_id": "Q820887",
@@ -7254,7 +7171,7 @@
     "slug": "University-of-Florida",
     "name": "University of Florida",
     "country": "USA",
-    "logo": "University-of-Florida.svg",
+    "logo": "University-of-Florida.png",
     "evidence": [
       {
         "url": "https://github.com/AIBiology/aibiology.github.io/blob/main/index.md (course site at aibiology.github.io)",
@@ -7314,7 +7231,7 @@
     "slug": "University-of-Hamburg",
     "name": "University of Hamburg",
     "country": "Germany",
-    "logo": "University-of-Hamburg.svg",
+    "logo": "University-of-Hamburg.png",
     "evidence": [
       {
         "url": "https://www.stine.uni-hamburg.de/scripts/mgrqispi.dll?APPNAME=CampusNet&ARGUMENTS=-N000000000000002%2C-N000718%2C-N0%2C-N392533957706676%2C-N392533957711677%2C-N0%2C-N0%2C-N0&PRGNAME=COURSEDETAILS",
@@ -7337,7 +7254,7 @@
     "slug": "University-of-Hull",
     "name": "University of Hull",
     "country": "",
-    "logo": "University-of-Hull.svg",
+    "logo": "University-of-Hull.png",
     "evidence": [],
     "wikidata_id": "Q1474019",
     "location": {
@@ -7351,7 +7268,7 @@
     "slug": "University-of-Iceland",
     "name": "University of Iceland",
     "country": "",
-    "logo": "University-of-Iceland.svg",
+    "logo": "University-of-Iceland.png",
     "evidence": [],
     "wikidata_id": "Q196559",
     "location": {
@@ -7365,7 +7282,7 @@
     "slug": "University-of-Idaho",
     "name": "University of Idaho",
     "country": "",
-    "logo": "University-of-Idaho.svg",
+    "logo": "University-of-Idaho.png",
     "evidence": [],
     "wikidata_id": "Q1854488",
     "location": {
@@ -7399,29 +7316,6 @@
     }
   },
   {
-    "slug": "University-of-Illinois-at-Urbana-Champaign",
-    "name": "University of Illinois at Urbana Champaign",
-    "country": "USA",
-    "logo": "University-of-Illinois-at-Urbana-Champaign.png",
-    "evidence": [
-      {
-        "url": "https://slazebni.cs.illinois.edu/spring21/",
-        "course": "CS 498 Introduction to Deep Learning, Spring 2021 (Svetlana Lazebnik, UIUC)",
-        "instructor": "",
-        "snippet": "Resources section lists: \"[Dive into Deep Learning](http://en.diveintodeeplearning.org/index.html) -- an interactive online book by A. Zhang, Z. Lipton, M. Li and A. Smola from Amazon\" under \"Useful textbooks available online.\"",
-        "source_file": "verified_chunk_14_NA.md",
-        "year": "2021"
-      }
-    ],
-    "wikidata_id": "Q457281",
-    "location": {
-      "lat": 40.110539,
-      "lon": -88.228411,
-      "source": "wikidata",
-      "wikidata_id": "Q457281"
-    }
-  },
-  {
     "slug": "University-of-Illinois-Urbana-Champaign",
     "name": "University of Illinois Urbana Champaign",
     "country": "USA",
@@ -7434,6 +7328,14 @@
         "snippet": "\"Dive into Deep Learning -- an interactive online book by A. Zhang, Z. Lipton, M. Li and A. Smola from Amazon\" listed under \"Useful textbooks available online\" on the course page.",
         "source_file": "north_america.md",
         "year": "2024"
+      },
+      {
+        "url": "https://slazebni.cs.illinois.edu/spring21/",
+        "course": "CS 498 Introduction to Deep Learning, Spring 2021 (Svetlana Lazebnik, UIUC)",
+        "instructor": "",
+        "snippet": "Resources section lists: \"[Dive into Deep Learning](http://en.diveintodeeplearning.org/index.html) -- an interactive online book by A. Zhang, Z. Lipton, M. Li and A. Smola from Amazon\" under \"Useful textbooks available online.\"",
+        "source_file": "verified_chunk_14_NA.md",
+        "year": "2021"
       }
     ],
     "wikidata_id": "Q457281",
@@ -7485,7 +7387,7 @@
     "slug": "University-of-Jyv-skyl",
     "name": "University of Jyväskylä",
     "country": "Finland",
-    "logo": "University-of-Jyv-skyl.jpg",
+    "logo": "University-of-Jyv-skyl.png",
     "evidence": [
       {
         "url": "https://studyguide.jyu.fi/2025/en/courseunit/ties4700/",
@@ -7508,7 +7410,7 @@
     "slug": "University-of-Kentucky",
     "name": "University of Kentucky",
     "country": "United States",
-    "logo": "University-of-Kentucky.svg",
+    "logo": "University-of-Kentucky.png",
     "location": {
       "lat": 38.0325,
       "lon": -84.5025,
@@ -7563,7 +7465,7 @@
     "slug": "University-of-Liege",
     "name": "University of Liege",
     "country": "Belgium",
-    "logo": "University-of-Liege.svg",
+    "logo": "University-of-Liege.png",
     "evidence": [
       {
         "url": "https://github.com/glouppe/info8010-deep-learning/blob/master/lecture4.md",
@@ -7610,7 +7512,7 @@
     "slug": "University-of-Maryland",
     "name": "University of Maryland",
     "country": "USA",
-    "logo": "University-of-Maryland.svg",
+    "logo": "University-of-Maryland.png",
     "evidence": [
       {
         "url": "https://www.cs.umd.edu/class/fall2024/cmsc472/",
@@ -7734,7 +7636,7 @@
     "slug": "University-of-Milano-Bicocca",
     "name": "Università degli Studi di Milano-Bicocca",
     "country": "Italy",
-    "logo": "University-of-Milano-Bicocca.jpg",
+    "logo": "University-of-Milano-Bicocca.png",
     "evidence": [
       {
         "url": "https://elearning.unimib.it/course/info.php?id=51006",
@@ -7773,7 +7675,7 @@
     "slug": "University-of-Minnesota,-Twin-Cities",
     "name": "University of Minnesota, Twin Cities",
     "country": "USA",
-    "logo": "University-of-Minnesota,-Twin-Cities.svg",
+    "logo": "University-of-Minnesota,-Twin-Cities.png",
     "evidence": [
       {
         "url": "https://sunju.org/teach/DL-Fall-2022/DL.pdf (course syllabus PDF)",
@@ -7834,7 +7736,7 @@
     "slug": "University-of-Nebraska-Lincoln",
     "name": "University of Nebraska-Lincoln",
     "country": "United States",
-    "logo": "University-of-Nebraska-Lincoln.svg",
+    "logo": "University-of-Nebraska-Lincoln.png",
     "location": {
       "lat": 40.8175,
       "lon": -96.701389,
@@ -7858,7 +7760,7 @@
     "slug": "University-of-Nevada-Reno",
     "name": "University of Nevada, Reno",
     "country": "United States",
-    "logo": "University-of-Nevada-Reno.svg",
+    "logo": "University-of-Nevada-Reno.png",
     "location": {
       "lat": 39.545833,
       "lon": -119.816667,
@@ -7942,7 +7844,7 @@
     "slug": "University-of-North-Carolina-at-Chapel-Hill",
     "name": "University of North Carolina at Chapel Hill",
     "country": "",
-    "logo": "University-of-North-Carolina-at-Chapel-Hill.svg",
+    "logo": "University-of-North-Carolina-at-Chapel-Hill.png",
     "evidence": [
       {
         "url": "https://github.com/craffel/comp664-deep-learning-spring-2023",
@@ -8032,7 +7934,7 @@
     "slug": "University-of-Oklahoma",
     "name": "University of Oklahoma",
     "country": "United States",
-    "logo": "University-of-Oklahoma.svg",
+    "logo": "University-of-Oklahoma.png",
     "location": {
       "lat": 35.208611,
       "lon": -97.445833,
@@ -8093,7 +7995,7 @@
     "slug": "University-of-Pittsburgh",
     "name": "University of Pittsburgh",
     "country": "USA",
-    "logo": "University-of-Pittsburgh.svg",
+    "logo": "University-of-Pittsburgh.png",
     "evidence": [
       {
         "url": "https://people.cs.pitt.edu/~kovashka/cs1678_sp24/",
@@ -8116,7 +8018,7 @@
     "slug": "University-of-Rhode-Island",
     "name": "University of Rhode Island",
     "country": "United States",
-    "logo": "University-of-Rhode-Island.svg",
+    "logo": "University-of-Rhode-Island.png",
     "location": {
       "lat": 41.4807,
       "lon": -71.5258,
@@ -8186,7 +8088,7 @@
     "slug": "University-of-Science-and-Technology-of-China",
     "name": "University of Science and Technology of China",
     "country": "",
-    "logo": "University-of-Science-and-Technology-of-China.svg",
+    "logo": "University-of-Science-and-Technology-of-China.png",
     "evidence": [],
     "wikidata_id": "Q1074103",
     "location": {
@@ -8200,7 +8102,7 @@
     "slug": "University-of-South-Australia",
     "name": "University of South Australia",
     "country": "Australia",
-    "logo": "University-of-South-Australia.svg",
+    "logo": "University-of-South-Australia.png",
     "location": {
       "lat": -34.9205,
       "lon": 138.607,
@@ -8249,7 +8151,7 @@
     "slug": "University-of-Southern-Maine",
     "name": "University of Southern Maine",
     "country": "USA",
-    "logo": "University-of-Southern-Maine.svg",
+    "logo": "University-of-Southern-Maine.png",
     "evidence": [
       {
         "url": "https://usm.maine.edu/department-computer-science/cos-432-deep-learning/",
@@ -8280,7 +8182,7 @@
     "slug": "University-of-St-Andrews",
     "name": "University of St Andrews",
     "country": "",
-    "logo": "University-of-St-Andrews.svg",
+    "logo": "University-of-St-Andrews.png",
     "evidence": [],
     "wikidata_id": "Q216273",
     "location": {
@@ -8345,7 +8247,7 @@
     "slug": "University-of-Tehran",
     "name": "University of Tehran",
     "country": "Iran",
-    "logo": "University-of-Tehran.svg",
+    "logo": "University-of-Tehran.png",
     "evidence": [
       {
         "url": "https://hhaji.github.io/Deep-Learning/",
@@ -8368,7 +8270,7 @@
     "slug": "University-of-Texas-at-Austin",
     "name": "University of Texas at Austin",
     "country": "",
-    "logo": "University-of-Texas-at-Austin.svg",
+    "logo": "University-of-Texas-at-Austin.png",
     "evidence": [],
     "wikidata_id": "Q49213",
     "location": {
@@ -8382,7 +8284,7 @@
     "slug": "University-of-Texas-at-Dallas",
     "name": "University of Texas at Dallas",
     "country": "United States",
-    "logo": "University-of-Texas-at-Dallas.svg",
+    "logo": "University-of-Texas-at-Dallas.png",
     "location": {
       "lat": 32.985,
       "lon": -96.75,
@@ -8437,7 +8339,7 @@
     "slug": "University-of-Virginia",
     "name": "University of Virginia",
     "country": "United States",
-    "logo": "University-of-Virginia.svg",
+    "logo": "University-of-Virginia.png",
     "location": {
       "lat": 38.035556,
       "lon": -78.503333,
@@ -8663,7 +8565,7 @@
     "slug": "Virginia-Tech",
     "name": "Virginia Tech",
     "country": "USA",
-    "logo": "Virginia-Tech.svg",
+    "logo": "Virginia-Tech.png",
     "evidence": [
       {
         "url": "https://xuanwang91.github.io/teaching/2023-Spring-CS5814-Intro-DL",
@@ -8762,7 +8664,7 @@
     "slug": "West-Virginia-University",
     "name": "West Virginia University",
     "country": "",
-    "logo": "West-Virginia-University.svg",
+    "logo": "West-Virginia-University.png",
     "evidence": [],
     "wikidata_id": "Q115376",
     "location": {
@@ -8827,7 +8729,7 @@
     "slug": "Xiamen-University",
     "name": "Xiamen University",
     "country": "",
-    "logo": "Xiamen-University.svg",
+    "logo": "Xiamen-University.png",
     "evidence": [],
     "wikidata_id": "Q1153539",
     "location": {
@@ -8841,7 +8743,7 @@
     "slug": "Yale-University",
     "name": "Yale University",
     "country": "",
-    "logo": "Yale-University.svg",
+    "logo": "Yale-University.png",
     "evidence": [],
     "wikidata_id": "Q49112",
     "location": {
@@ -8869,7 +8771,7 @@
     "slug": "Yildiz-Technical-University",
     "name": "Yildiz Technical University",
     "country": "Turkey",
-    "logo": "Yildiz-Technical-University.svg",
+    "logo": "Yildiz-Technical-University.png",
     "location": {
       "lat": 41.05,
       "lon": 29.01,
@@ -8893,7 +8795,7 @@
     "slug": "Yonsei-University",
     "name": "Yonsei University",
     "country": "South Korea",
-    "logo": "Yonsei-University.svg",
+    "logo": "Yonsei-University.png",
     "evidence": [
       {
         "url": "https://yonseivnl.github.io/courses/dtp2022fall/",
@@ -8930,7 +8832,7 @@
     "slug": "Zhejiang-University",
     "name": "Zhejiang University",
     "country": "Mainland China",
-    "logo": "Zhejiang-University.svg",
+    "logo": "Zhejiang-University.png",
     "evidence": [
       {
         "url": "https://www.icourse163.org/course/ZJU-1206573810",
@@ -8972,6 +8874,7 @@
     ],
     "logo_source": "web-verified",
     "logo_source_url": "https://www.zztrc.edu.cn/xxgk1/xxbs/xb.htm",
-    "logo_confidence": "high"
+    "logo_confidence": "high",
+    "invert": true
   }
 ]

@@ -546,4 +546,4 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
     1. What happens if we let the temperature approach $0$?
     1. What happens if we let the temperature approach $\infty$?
 
-[Discussions](https://discuss.d2l.ai/t/46)
+[Discussions](https://d2l.discourse.group/t/46)

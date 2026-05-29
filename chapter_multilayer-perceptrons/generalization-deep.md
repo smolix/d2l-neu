@@ -1,4 +1,5 @@
 # Generalization in Deep Learning
+:label:`sec_generalization_deep`
 
 
 In :numref:`chap_regression` and :numref:`chap_classification`,
@@ -222,7 +223,7 @@ and thus behave, in some ways, more like nonparametric models.
 More recent theoretical research has established
 deep connection between large neural networks
 and nonparametric methods, notably kernel methods.
-In particular, :citet:`Jacot.Grabriel.Hongler.2018`
+In particular, :citet:`Jacot.Gabriel.Hongler.2018`
 demonstrated that in the limit, as multilayer perceptrons
 with randomly initialized weights grow infinitely wide,
 they become equivalent to (nonparametric) kernel methods
@@ -369,4 +370,4 @@ despite the concerted efforts of many brilliant researchers.
 1. What important factor seems to differentiate cases when early stopping leads to big improvements in generalization?
 1. Beyond generalization, describe another benefit of early stopping.
 
-[Discussions](https://discuss.d2l.ai/t/7473)
+[Discussions](https://d2l.discourse.group/t/7473)

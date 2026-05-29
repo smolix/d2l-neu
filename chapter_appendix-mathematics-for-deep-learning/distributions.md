@@ -216,22 +216,22 @@ We can sample an array of arbitrary shape from a discrete uniform random variabl
 
 ```{.python .input #distributions-discrete-uniform-3}
 #@tab mxnet
-np.random.randint(1, n, size=(10, 10))
+np.random.randint(1, n + 1, size=(10, 10))
 ```
 
 ```{.python .input #distributions-discrete-uniform-3}
 #@tab pytorch
-torch.randint(1, n, size=(10, 10))
+torch.randint(1, n + 1, size=(10, 10))
 ```
 
 ```{.python .input #distributions-discrete-uniform-3}
 #@tab tensorflow
-tf.random.uniform((10, 10), 1, n, dtype=tf.int32)
+tf.random.uniform((10, 10), 1, n + 1, dtype=tf.int32)
 ```
 
 ```{.python .input #distributions-discrete-uniform-3}
 #@tab jax
-jax.random.randint(jax.random.PRNGKey(0), (10, 10), 1, n)
+jax.random.randint(jax.random.PRNGKey(0), (10, 10), 1, n + 1)
 ```
 
 ## Continuous Uniform
@@ -997,19 +997,19 @@ powerful family of distributions encountered frequently in machine learning.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/417)
+[Discussions](https://d2l.discourse.group/t/417)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1098)
+[Discussions](https://d2l.discourse.group/t/1098)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1099)
+[Discussions](https://d2l.discourse.group/t/1099)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1099)
+[Discussions](https://d2l.discourse.group/t/1099)
 :end_tab:
 
 <!-- slides -->

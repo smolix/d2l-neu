@@ -137,7 +137,7 @@ to actually becoming an applied machine learning scientist;
 *how* to solve problems in practice;
 (iv) allow for rapid updates, both by us
 and also by the community at large;
-and (v) be complemented by a [forum](https://discuss.d2l.ai/c/5)
+and (v) be complemented by a [forum](https://d2l.discourse.group/c/5)
 for interactive discussion of technical details and to answer questions.
 
 These goals were often in conflict.
@@ -521,7 +521,7 @@ All our notebooks can be downloaded
 from the [D2L.ai website](https://d2l.ai)
 and from [GitHub](https://github.com/d2l-ai/d2l-en).
 Associated with this book we have launched a discussion forum
-at [discuss.d2l.ai](https://discuss.d2l.ai/c/5).
+at [d2l.discourse.group](https://d2l.discourse.group/c/5).
 Whenever you have questions on any section of the book,
 you can find a link to the associated discussion page
 at the end of each notebook.
@@ -614,24 +614,24 @@ including prose, figures, mathematics, and code, all in one place.
 
 ## Exercises
 
-1. Register an account on the discussion forum of this book [discuss.d2l.ai](https://discuss.d2l.ai/).
+1. Register an account on the discussion forum of this book [d2l.discourse.group](https://d2l.discourse.group/).
 1. Install Python on your computer.
 1. Follow the links at the bottom of the section to the forum, where you will be able to seek out help and discuss the book and find answers to your questions by engaging the authors and broader community.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/18)
+[Discussions](https://d2l.discourse.group/t/18)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/20)
+[Discussions](https://d2l.discourse.group/t/20)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/186)
+[Discussions](https://d2l.discourse.group/t/186)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17963)
+[Discussions](https://d2l.discourse.group/t/17963)
 :end_tab:
 
 <!-- slides -->

@@ -146,7 +146,7 @@ We can prove it by contradiction as follows.
 
 Consider a convex function $f$ defined on a convex set $\mathcal{X}$.
 Suppose that $x^{\ast} \in \mathcal{X}$ is a local minimum:
-there exists a small positive value $p$ so that for $x \in \mathcal{X}$ that satisfies $0 < |x - x^{\ast}| \leq p$ we have $f(x^{\ast}) < f(x)$.
+there exists a small positive value $p$ so that for $x \in \mathcal{X}$ that satisfies $0 < |x - x^{\ast}| \leq p$ we have $f(x^{\ast}) \leq f(x)$.
 
 Assume that the local minimum $x^{\ast}$
 is not the global minimum of $f$:
@@ -207,7 +207,7 @@ All we need to do is check whether the Hessian of $f$ is positive semidefinite: 
 denoting the Hessian matrix $\nabla^2f$ by $\mathbf{H}$,
 $\mathbf{x}^\top \mathbf{H} \mathbf{x} \geq 0$
 for all $\mathbf{x} \in \mathbb{R}^n$.
-For instance, the function $f(\mathbf{x}) = \frac{1}{2} \|\mathbf{x}\|^2$ is convex since $\nabla^2 f = \mathbf{1}$, i.e., its Hessian is an identity matrix.
+For instance, the function $f(\mathbf{x}) = \frac{1}{2} \|\mathbf{x}\|^2$ is convex since $\nabla^2 f = \mathbf{I}$, i.e., its Hessian is an identity matrix.
 
 
 Formally, a twice-differentiable one-dimensional function $f: \mathbb{R} \rightarrow \mathbb{R}$ is convex
@@ -380,7 +380,7 @@ In the context of deep learning the main purpose of convex functions is to motiv
 1. Given a convex set $\mathcal{X}$ and two vectors $\mathbf{x}$ and $\mathbf{y}$, prove that projections never increase distances, i.e., $\|\mathbf{x} - \mathbf{y}\| \geq \|\textrm{Proj}_\mathcal{X}(\mathbf{x}) - \textrm{Proj}_\mathcal{X}(\mathbf{y})\|$.
 
 
-[Discussions](https://discuss.d2l.ai/t/350)
+[Discussions](https://d2l.discourse.group/t/350)
 
 <!-- slides -->
 

@@ -295,4 +295,4 @@ and training requires significantly more memory than prediction.
     1. Can you partition it over more than one GPU?
     1. What are the advantages and disadvantages over training on a smaller minibatch?
 
-[Discussions](https://discuss.d2l.ai/t/102)
+[Discussions](https://d2l.discourse.group/t/102)

@@ -426,19 +426,19 @@ much more efficiently.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/50)
+[Discussions](https://d2l.discourse.group/t/50)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/51)
+[Discussions](https://d2l.discourse.group/t/51)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/225)
+[Discussions](https://d2l.discourse.group/t/225)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17982)
+[Discussions](https://d2l.discourse.group/t/17982)
 :end_tab:
 
 <!-- slides -->
@@ -479,7 +479,7 @@ probability distribution over classes:
 :::
 
 ::: {.slide title="The model"}
-Flatten each 32×32 image into a 1024-vector, hit one linear layer
+Flatten each 28×28 image into a 784-vector, hit one linear layer
 that outputs 10 logits — one per class:
 
 @softmax-regression-scratch-the-model-1

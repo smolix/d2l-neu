@@ -189,7 +189,11 @@ for epoch in range(num_epochs):
         values = values.to(devices[0])
         optimizer.zero_grad()
         preds = net(values)
-        l = loss(preds, values * torch.sign(values))
+        # The model already zeros out predictions where the input rating is
+        # 0 (unobserved). Comparing against `values` directly therefore
+        # gives a loss that only penalizes observed entries, matching the
+        # masked-loss formulation used in the MXNet branch.
+        l = loss(preds, values)
         l.backward()
         optimizer.step()
         total_loss += l.item()
@@ -215,11 +219,11 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 * Can you find a better combination of decoder and encoder activation functions?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/401)
+[Discussions](https://d2l.discourse.group/t/401)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/401)
+[Discussions](https://d2l.discourse.group/t/401)
 :end_tab:
 
 <!-- slides -->

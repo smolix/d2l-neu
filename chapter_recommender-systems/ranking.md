@@ -130,11 +130,11 @@ These two losses are interchangeable for personalized ranking in recommendation.
 - Can you find any recommendation models that use BPR or hinge loss?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/402)
+[Discussions](https://d2l.discourse.group/t/402)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/402)
+[Discussions](https://d2l.discourse.group/t/402)
 :end_tab:
 
 <!-- slides -->

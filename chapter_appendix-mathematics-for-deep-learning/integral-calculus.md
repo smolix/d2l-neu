@@ -149,7 +149,7 @@ x = np.arange(a, b, epsilon)
 f = x / (1 + x**2)
 
 approx = np.sum(epsilon*f)
-true = np.log(2) / 2
+true = np.log(5) / 2
 
 d2l.set_figsize()
 d2l.plt.bar(x.asnumpy(), f.asnumpy(), width=epsilon, align='edge')
@@ -611,20 +611,20 @@ We will meet this integral again when we study continuous random variables in :n
 4. Let $f(x, y) = xy(x^2-y^2)/(x^2+y^2)^3$. Use the change of variables formula to compute $\int_0^2\int_0^1 f(x, y)\;dy\;dx$ and $\int_0^1\int_0^2 f(x, y)\;dx\;dy$ to see that they are different.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/414)
+[Discussions](https://d2l.discourse.group/t/414)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1092)
+[Discussions](https://d2l.discourse.group/t/1092)
 :end_tab:
 
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1093)
+[Discussions](https://d2l.discourse.group/t/1093)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1093)
+[Discussions](https://d2l.discourse.group/t/1093)
 :end_tab:
 
 <!-- slides -->

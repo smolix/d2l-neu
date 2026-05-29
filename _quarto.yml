@@ -20,9 +20,9 @@ book:
         href: https://courses.d2l.ai
       - text: GitHub
         icon: github
-        href: https://github.com/d2l-ai/d2l-en
+        href: https://github.com/smolix/d2l-neu
       - text: Discuss
-        href: https://discuss.d2l.ai
+        href: https://d2l.discourse.group
       - text: PDF
         menu:
           - text: PyTorch

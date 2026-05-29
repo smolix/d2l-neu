@@ -337,8 +337,10 @@ Now we can train the bidirectional RNN for sentiment analysis.
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab mxnet
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs = 1.5625e-4, 5
+# Adam's per-step update is ~lr * normalized_step, so unlike SGD it
+# doesn't need a 1/batch_size rescale to match PyTorch's lr=0.01
+# under d2l.train_batch_ch13's trainer.step(1).
+lr, num_epochs = 0.01, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
@@ -494,19 +496,19 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 1. Can we improve the classification accuracy by using the spaCy tokenization? You need to install spaCy (`pip install spacy`) and install the English package (`python -m spacy download en_core_web_sm`). In the code, first, import spaCy (`import spacy`). Then, load the spaCy English package (`spacy_en = spacy.load('en_core_web_sm')`). Finally, define the function `def tokenizer(text): return [tok.text for tok in spacy_en.tokenizer(text)]` and replace the original `tokenizer` function. Note the different forms of phrase tokens in GloVe and spaCy. For example, the phrase token "new york" takes the form of "new-york" in GloVe and the form of "new york" after the spaCy tokenization.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/392)
+[Discussions](https://d2l.discourse.group/t/392)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1424)
+[Discussions](https://d2l.discourse.group/t/1424)
 :end_tab:
 
 <!-- slides -->

@@ -287,4 +287,4 @@ the GloVe loss function in
 1. For any word, are its center word bias and context word bias mathematically equivalent in GloVe? Why?
 
 
-[Discussions](https://discuss.d2l.ai/t/385)
+[Discussions](https://d2l.discourse.group/t/385)

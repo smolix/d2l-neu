@@ -546,14 +546,14 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
     n, timer = 0, d2l.Timer()
-    # JIT-fuse the per-batch step (grad + optimizer update) so we don't
-    # round-trip through Python on every minibatch.
+    # JIT only the grad computation; the optimizer update runs eagerly so
+    # that stateful optimizers can mutate `states` without triggering JAX
+    # tracer-leak errors from closure side-effects inside jit.
     @jax.jit
-    def step(w, b, X, y):
+    def compute_grads(w, b, X, y):
         def loss_fn(w, b):
             return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-        grads = jax.grad(loss_fn, argnums=(0, 1))(w, b)
-        return trainer_fn([w, b], list(grads), states, hyperparams)
+        return jax.grad(loss_fn, argnums=(0, 1))(w, b)
     # Pre-stack the full dataset on device so the periodic evaluate_loss
     # stays inside one compiled call instead of looping in Python.
     eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
@@ -567,7 +567,8 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     for _ in range(num_epochs):
         for X, y in data_iter:
             X, y = jnp.array(X), jnp.array(y)
-            w, b = step(w, b, X, y)
+            grads = compute_grads(w, b, X, y)
+            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
             n += X.shape[0]
             if n % 200 == 0:
                 timer.stop()
@@ -816,19 +817,19 @@ train_concise_ch11(trainer, {'learning_rate': 0.05}, data_iter)
 1. An evil genie replicates your dataset without telling you (i.e., each observation occurs twice and your dataset grows to twice its original size, but nobody told you). How does the behavior of stochastic gradient descent, minibatch stochastic gradient descent and that of gradient descent change?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/353)
+[Discussions](https://d2l.discourse.group/t/353)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1068)
+[Discussions](https://d2l.discourse.group/t/1068)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1069)
+[Discussions](https://d2l.discourse.group/t/1069)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1069)
+[Discussions](https://d2l.discourse.group/t/1069)
 :end_tab:
 
 <!-- slides -->

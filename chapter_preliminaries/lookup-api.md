@@ -29,6 +29,14 @@ provide such documentation.
 This section provides some guidance for how to explore the TensorFlow API.
 :end_tab:
 
+:begin_tab:`jax`
+While we cannot possibly introduce every single JAX function and class
+(and the information might become outdated quickly),
+the [API documentation](https://jax.readthedocs.io/en/latest/) and additional [tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) and examples
+provide such documentation.
+This section provides some guidance for how to explore the JAX API.
+:end_tab:
+
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
@@ -153,19 +161,19 @@ By doing this you will become a better engineer
 in addition to becoming a better scientist.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/38)
+[Discussions](https://d2l.discourse.group/t/38)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/39)
+[Discussions](https://d2l.discourse.group/t/39)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/199)
+[Discussions](https://d2l.discourse.group/t/199)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17972)
+[Discussions](https://d2l.discourse.group/t/17972)
 :end_tab:
 
 <!-- slides -->

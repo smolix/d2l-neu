@@ -612,13 +612,12 @@ def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
     return ds
 
 # If `param_group=True`, the head (classifier Dense) is updated with a
-# learning rate ten times larger than the pretrained backbone; otherwise
-# all parameters are trained at the same rate. We use a custom training
-# loop with two SGD optimizers so the backbone stays trainable, matching
-# the PyTorch fine-tuning recipe (plain SGD + weight_decay=0.001, no
-# momentum).
+# learning rate ten times larger than the backbone, mirroring the PyTorch
+# fine-tuning recipe. `momentum` is forwarded to both SGD optimizers; the
+# from-scratch baseline uses momentum=0.9 because plain SGD cannot train a
+# randomly-initialised ResNet-50 on 2 000 images in five epochs.
 def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
-                      param_group=True):
+                      param_group=True, momentum=0.0):
     train_ds = _make_tf_dataset(os.path.join(data_dir, 'train'),
                                 train_augs, batch_size, shuffle=True)
     test_ds  = _make_tf_dataset(os.path.join(data_dir, 'test'),
@@ -632,9 +631,10 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
 
     opt_head = keras.optimizers.SGD(
         learning_rate=learning_rate * (10 if param_group else 1),
-        weight_decay=0.001)
+        momentum=momentum, weight_decay=0.001)
     opt_base = keras.optimizers.SGD(
-        learning_rate=learning_rate, weight_decay=0.001)
+        learning_rate=learning_rate,
+        momentum=momentum, weight_decay=0.001)
     loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     acc_metric = keras.metrics.SparseCategoricalAccuracy()
     val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
@@ -698,7 +698,7 @@ finetune_vars = train_fine_tuning(finetune_net, finetune_vars, 1e-4)
 
 ```{.python .input #fine-tuning-fine-tuning-the-model-2}
 #@tab tensorflow
-train_fine_tuning(finetune_net, 5e-5)
+train_fine_tuning(finetune_net, 5e-5, momentum=0.9)
 ```
 
 For comparison, we define an identical model, but initialize all of its model parameters to random values. Since the entire model needs to be trained from scratch, we can use a larger learning rate.
@@ -743,14 +743,28 @@ scratch_vars = train_fine_tuning(scratch_net, scratch_vars, 5e-4,
 ```{.python .input #fine-tuning-fine-tuning-the-model-3}
 #@tab tensorflow
 # Train from scratch: same architecture but with random (no-pretrain) weights.
+scratch_base = keras.applications.ResNet50(
+    weights=None, include_top=False, pooling='avg',
+    input_shape=(IMG_SIZE, IMG_SIZE, 3))
+# Keras' default BatchNormalization momentum (0.99) means the moving
+# mean/variance never catch up to the actual activation statistics within
+# five epochs of ~15 batches each, so the from-scratch model would look
+# like random noise at evaluation time (train acc rises, test acc stays
+# ~0.5). Lowering momentum to 0.5 lets the running stats track the small
+# dataset; the pretrained fine-tuning path keeps the default because its
+# moving stats are already calibrated on ImageNet.
+for layer in scratch_base.layers:
+    if isinstance(layer, keras.layers.BatchNormalization):
+        layer.momentum = 0.5
 scratch_net = keras.Sequential([
-    keras.applications.ResNet50(weights=None, include_top=False,
-                                pooling='avg',
-                                input_shape=(IMG_SIZE, IMG_SIZE, 3)),
+    scratch_base,
     keras.layers.Dense(2, kernel_initializer='glorot_uniform',
                        name='classifier'),
 ])
-train_fine_tuning(scratch_net, 5e-4, param_group=False)
+# Plain SGD (momentum=0) cannot train a randomly-initialised ResNet-50 on
+# 2 000 images in five epochs, so we use SGD with momentum=0.9 and a single
+# uniform learning rate (no head/backbone split) for the from-scratch run.
+train_fine_tuning(scratch_net, 1e-3, param_group=False, momentum=0.9)
 ```
 
 As we can see, the fine-tuned model tends to perform better for the same epoch
@@ -831,19 +845,19 @@ hotdog_w.shape
 ```
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/368)
+[Discussions](https://d2l.discourse.group/t/368)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1439)
+[Discussions](https://d2l.discourse.group/t/1439)
 :end_tab:
 
 <!-- slides -->

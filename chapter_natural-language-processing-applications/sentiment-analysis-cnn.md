@@ -533,8 +533,7 @@ Now we can train the textCNN model for sentiment analysis.
 
 ```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab mxnet
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs = 1.5625e-5, 5
+lr, num_epochs = 0.001, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
@@ -652,19 +651,19 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 1. Add positional encoding in the input representations. Does it improve the classification accuracy?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/393)
+[Discussions](https://d2l.discourse.group/t/393)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1425)
+[Discussions](https://d2l.discourse.group/t/1425)
 :end_tab:
 
 <!-- slides -->

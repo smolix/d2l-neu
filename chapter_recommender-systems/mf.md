@@ -285,11 +285,11 @@ scores
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/400)
+[Discussions](https://d2l.discourse.group/t/400)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/400)
+[Discussions](https://d2l.discourse.group/t/400)
 :end_tab:
 
 <!-- slides -->

@@ -474,19 +474,19 @@ Dimensionality and storage for networks are automatically inferred
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/44)
+[Discussions](https://d2l.discourse.group/t/44)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/45)
+[Discussions](https://d2l.discourse.group/t/45)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/204)
+[Discussions](https://d2l.discourse.group/t/204)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17977)
+[Discussions](https://d2l.discourse.group/t/17977)
 :end_tab:
 
 <!-- slides -->

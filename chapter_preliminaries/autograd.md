@@ -685,19 +685,19 @@ For now, try to remember these basics:
 1. When might you want to use forward, and when backward, differentiation? Hint: consider the amount of intermediate data needed, the ability to parallelize steps, and the size of matrices and vectors involved. 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/34)
+[Discussions](https://d2l.discourse.group/t/34)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/35)
+[Discussions](https://d2l.discourse.group/t/35)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/200)
+[Discussions](https://d2l.discourse.group/t/200)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17970)
+[Discussions](https://d2l.discourse.group/t/17970)
 :end_tab:
 
 <!-- slides -->

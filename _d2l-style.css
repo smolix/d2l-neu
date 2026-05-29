@@ -115,3 +115,101 @@ h1 code, h2 code, h3 code, h4 code {
   opacity: 0.85;
   font-size: 0.8rem;
 }
+
+/* ── Social share buttons ───────────────────────────────────
+   Two locations, mutually exclusive:
+     (A) `.d2l-share-block` — right-TOC, under the Slides button
+     (C) `.d2l-share-bottom` — bottom of the article body
+   (C) is hidden when (A) is present AND the viewport is wide
+   enough for the right TOC to be visible (≥1200px, matching the
+   theme's `body.floating #quarto-margin-sidebar` breakpoint).
+   All icons are shaded book-blue regardless of network. */
+
+.d2l-share-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6A717B;
+}
+
+.d2l-share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976D2;
+  background: transparent;
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s, transform 0.1s;
+}
+.d2l-share-icon:hover {
+  color: #2196F3;
+  background: #E8F3FD;
+  transform: translateY(-1px);
+}
+.d2l-share-icon .bi {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* (A) — sidebar block. 4 icons in one row, sized to span the full
+   width of the right-TOC column. */
+.d2l-share-block {
+  margin: 1rem 0 0.5rem 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid #E7E9EC;
+}
+.d2l-share-block .d2l-share-label { margin-bottom: 0.55rem; }
+.d2l-share-block .d2l-share-icons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+.d2l-share-block .d2l-share-icon {
+  aspect-ratio: 1 / 1;
+  border-radius: 5px;
+  border: 1px solid #E7E9EC;
+  background: #fff;
+}
+.d2l-share-block .d2l-share-icon:hover {
+  background: #E8F3FD;
+  border-color: #BBDEFB;
+}
+.d2l-share-block .d2l-share-icon .bi { font-size: 1.1rem; }
+
+/* (C) — bottom-of-article row. Roomy chip icons, generous label
+   gap so "Share" doesn't collide with the icons. */
+.d2l-share-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 2rem 0 1rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid #E7E9EC;
+}
+.d2l-share-bottom .d2l-share-label {
+  margin: 0 0.85rem 0 0;
+  /* Tweak font-size up to match the icon scale. */
+  font-size: 0.78rem;
+}
+.d2l-share-bottom .d2l-share-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #E8F3FD;
+}
+.d2l-share-bottom .d2l-share-icon .bi { font-size: 1.05rem; }
+
+/* (C) hides when (A) is rendered AND the right TOC is showing.
+   The body class `has-d2l-toc-share` is set by the share-init JS
+   when `#TOC` exists and (A) was appended. The 1200px breakpoint
+   matches `_d2l-theme.scss` where the right margin-sidebar becomes
+   visible. */
+@media (min-width: 1200px) {
+  body.has-d2l-toc-share .d2l-share-bottom { display: none; }
+}
+
+@media print {
+  .d2l-share-block,
+  .d2l-share-bottom { display: none !important; }
+}

@@ -199,8 +199,7 @@ class MultiHeadAttention(d2l.Module):  #@save
 %%tab tensorflow
 class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
-    def __init__(self, key_size, query_size, value_size, num_hiddens,
-                 num_heads, dropout, bias=False, **kwargs):
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
@@ -412,8 +411,7 @@ attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```{.python .input #multihead-attention-implementation-3}
 %%tab tensorflow
 num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
-                               num_hiddens, num_heads, 0.5)
+attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
 ```
 
 ```{.python .input #multihead-attention-implementation-4}
@@ -461,19 +459,19 @@ proper tensor manipulation is needed.
 1. Suppose that we have a trained model based on multi-head attention and we want to prune less important attention heads to increase the prediction speed. How can we design experiments to measure the importance of an attention head?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/1634)
+[Discussions](https://d2l.discourse.group/t/1634)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1635)
+[Discussions](https://d2l.discourse.group/t/1635)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3869)
+[Discussions](https://d2l.discourse.group/t/3869)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18029)
+[Discussions](https://d2l.discourse.group/t/18029)
 :end_tab:
 
 <!-- slides -->

@@ -307,19 +307,19 @@ Lastly, data iterators are a key component for efficient performance. For instan
 1. Check out the framework's online API documentation. Which other datasets are available?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/48)
+[Discussions](https://d2l.discourse.group/t/48)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/49)
+[Discussions](https://d2l.discourse.group/t/49)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/224)
+[Discussions](https://d2l.discourse.group/t/224)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17980)
+[Discussions](https://d2l.discourse.group/t/17980)
 :end_tab:
 
 <!-- slides -->

@@ -601,19 +601,19 @@ for batch in data_iter:
 1. What other hyperparameters in the code of this section may affect the data loading speed?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/383)
+[Discussions](https://d2l.discourse.group/t/383)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1330)
+[Discussions](https://d2l.discourse.group/t/1330)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1330)
+[Discussions](https://d2l.discourse.group/t/1330)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1330)
+[Discussions](https://d2l.discourse.group/t/1330)
 :end_tab:
 
 <!-- slides -->

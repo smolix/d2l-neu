@@ -406,19 +406,19 @@ We can initialize parameters using built-in and custom initializers.
 Look up the online documentation for more built-in initializers.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/8089)
+[Discussions](https://d2l.discourse.group/t/8089)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/8090)
+[Discussions](https://d2l.discourse.group/t/8090)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8091)
+[Discussions](https://d2l.discourse.group/t/8091)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17991)
+[Discussions](https://d2l.discourse.group/t/17991)
 :end_tab:
 
 <!-- slides -->

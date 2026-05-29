@@ -6,6 +6,10 @@ tab.interact_select('pytorch', 'tensorflow', 'jax')
 # Transformers for Vision
 :label:`sec_vision-transformer`
 
+:begin_tab:`mxnet`
+This section is intentionally not implemented in MXNet. The model relies on building blocks (e.g., learnable positional embeddings with the new patch-based pipeline) that are not portable to the MXNet 2.0 wheel used by this book. See the PyTorch, TensorFlow, and JAX tabs.
+:end_tab:
+
 The Transformer architecture was initially proposed
 for sequence-to-sequence learning,
 with a focus on machine translation.
@@ -547,15 +551,15 @@ beyond image classification with state-of-the-art results :cite:`liu2021swin`.
 1. Can you modify hyperparameters to improve the accuracy of the vision Transformer?
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/8943)
+[Discussions](https://d2l.discourse.group/t/8943)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/8943)
+[Discussions](https://d2l.discourse.group/t/8943)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18032)
+[Discussions](https://d2l.discourse.group/t/18032)
 :end_tab:
 
 <!-- slides -->

@@ -612,19 +612,19 @@ Modern deep networks achieve error rates of less than $0.01$. The relatively poo
 1. The naive Bayes classifier is a specific example of a Bayesian network, where the dependence of random variables are encoded with a graph structure.  While the full theory is beyond the scope of this section (see :citet:`Koller.Friedman.2009` for full details), explain why allowing explicit dependence between the two input variables in the XOR model allows for the creation of a successful classifier.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/418)
+[Discussions](https://d2l.discourse.group/t/418)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1100)
+[Discussions](https://d2l.discourse.group/t/1100)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1101)
+[Discussions](https://d2l.discourse.group/t/1101)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1101)
+[Discussions](https://d2l.discourse.group/t/1101)
 :end_tab:
 
 <!-- slides -->

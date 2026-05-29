@@ -305,25 +305,34 @@ Next, we calculate $\textrm{Var} (\hat{\theta}_n) + [\textrm{bias} (\hat{\theta}
 ```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab mxnet
 bias = stat_bias(theta_true, theta_est)
-np.square(samples.std()) + np.square(bias)
+# Pass ddof=1 explicitly so the variance estimate is unbiased and matches
+# across all four frameworks (defaults differ: NumPy/MXNet/TF/JAX use ddof=0,
+# PyTorch uses ddof=1).
+np.square(samples.std(ddof=1)) + np.square(bias)
 ```
 
 ```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab pytorch
 bias = stat_bias(theta_true, theta_est)
-torch.square(samples.std(unbiased=False)) + torch.square(bias)
+# unbiased=True corresponds to ddof=1; see the mxnet tab for context.
+torch.square(samples.std(unbiased=True)) + torch.square(bias)
 ```
 
 ```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab tensorflow
 bias = stat_bias(theta_true, theta_est)
-tf.square(tf.math.reduce_std(samples)) + tf.square(bias)
+# tf.math.reduce_std has no ddof argument, so we compute the unbiased
+# variance manually: sum of squared deviations / (n - 1).
+n = tf.cast(tf.size(samples), samples.dtype)
+mean = tf.reduce_mean(samples)
+var_unbiased = tf.reduce_sum(tf.square(samples - mean)) / (n - 1)
+var_unbiased + tf.square(bias)
 ```
 
 ```{.python .input #statistics-evaluating-estimators-in-code-4}
 #@tab jax
 bias = stat_bias(theta_true, theta_est)
-jnp.square(jnp.std(samples)) + jnp.square(bias)
+jnp.square(jnp.std(samples, ddof=1)) + jnp.square(bias)
 ```
 
 ## Conducting Hypothesis Tests
@@ -527,9 +536,11 @@ samples = tf.random.normal((N,), 0, 1)
 # Lookup Students's t-distribution c.d.f.
 t_star = 1.96
 
-# Construct interval
+# Construct interval. tf.math.reduce_std uses ddof=0; compute the
+# unbiased (ddof=1) standard deviation manually to match the other tabs.
 mu_hat = tf.reduce_mean(samples)
-sigma_hat = tf.math.reduce_std(samples)
+n = tf.cast(tf.size(samples), samples.dtype)
+sigma_hat = tf.sqrt(tf.reduce_sum(tf.square(samples - mu_hat)) / (n - 1))
 (mu_hat - t_star*sigma_hat/tf.sqrt(tf.constant(N, dtype=tf.float32)), \
  mu_hat + t_star*sigma_hat/tf.sqrt(tf.constant(N, dtype=tf.float32)))
 ```
@@ -574,19 +585,19 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 1. Run the confidence interval code with $N=2$ and $\alpha = 0.5$ for $100$ independently generated dataset, and plot the resulting intervals (in this case `t_star = 1.0`).  You will see several very short intervals which are very far from containing the true mean $0$.  Does this contradict the interpretation of the confidence interval?  Do you feel comfortable using short intervals to indicate high precision estimates?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/419)
+[Discussions](https://d2l.discourse.group/t/419)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1102)
+[Discussions](https://d2l.discourse.group/t/1102)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1103)
+[Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1103)
+[Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
 <!-- slides -->

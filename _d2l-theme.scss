@@ -24,7 +24,7 @@ $primary:               $blue;
 $link-color:            $blue-dark;
 $link-hover-color:      $blue;
 $body-color:            $ink-2;
-$body-bg:               $bg-soft;
+$body-bg:               $bg;
 $headings-color:        $ink;
 $border-color:          $line;
 
@@ -50,7 +50,7 @@ $code-bg:               $bg-code;
 
 /*-- scss:rules --*/
 
-$d2l-navbar-height: 62px;
+$d2l-navbar-height: 52px;
 
 // Pin the sidebar to a fixed 280px column at all desktop widths so
 // the navbar/sidebar-header/grid all agree on the same offset
@@ -123,22 +123,28 @@ $d2l-grid-cols-mobile:
   }
 
   .nav-link {
-    color: rgba($white, 0.88) !important;
-    font-size: 17px;
+    color: $white !important;
+    // Match the slide-deck nav-links (matches `_d2l-slides.scss`).
+    // Smaller and tighter than the in-body h3 so the 52px navbar
+    // doesn't look chunky.
+    font-size: 15px;
     line-height: 1.2;
     font-weight: 500;
-    padding-top: 0.7rem;
-    padding-bottom: 0.7rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 4px;
+    opacity: 0.92;
+    transition: opacity 0.1s, background 0.1s;
 
     &:hover,
     &:focus {
-      background-color: transparent !important;
+      background-color: rgba($white, 0.14) !important;
       color: $white !important;
+      opacity: 1;
     }
   }
 
   .dropdown-item {
-    font-size: 17px;
+    font-size: 15px;
 
     &:hover,
     &:focus {
@@ -187,8 +193,20 @@ $d2l-grid-cols-mobile:
     grid-template-columns: $d2l-grid-cols-with-toc;
   }
 
+  // Confine the whole #quarto-header (not just the inner .navbar) to
+  // start at the sidebar's right edge. Otherwise #quarto-header
+  // (.fixed-top → left:0 right:0) still spans the leftmost 280px above
+  // the sidebar-header and — even though it's transparent — intercepts
+  // clicks on the D2L logo until you scroll the page (which triggers
+  // headroom to retract the navbar and frees the click target).
+  body.nav-sidebar #quarto-header {
+    left: $d2l-sidebar-width !important;
+    right: 0;
+    width: auto !important;
+  }
+
   body.nav-sidebar #quarto-header .navbar {
-    left: $d2l-sidebar-width;
+    left: 0;
     right: 0;
     width: auto !important;
     min-height: $d2l-navbar-height;
@@ -227,20 +245,42 @@ $d2l-grid-cols-mobile:
   }
 
   body.nav-sidebar #quarto-sidebar .sidebar-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1041;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    // Higher than #quarto-header's stacking context (set up by the
+    // headroom `will-change: transform`). In Safari, siblings of a
+    // will-change/transform ancestor can paint *behind* the main
+    // content until a repaint triggers; forcing this element into its
+    // own composited layer (translateZ + will-change) and raising z
+    // pins it to the top from initial paint.
+    z-index: 1060;
     width: $d2l-sidebar-width;
     height: $d2l-navbar-height;
     min-height: $d2l-navbar-height;
     background: $white !important;
     border-right: 1px solid $line;
     border-bottom: none;
+    margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box;
     align-items: stretch;
     justify-content: stretch;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+    isolation: isolate;
+  }
+
+  // Ensure the logo link spans the whole header and is the topmost
+  // hit target so clicking the logo always navigates home.
+  body.nav-sidebar #quarto-sidebar .sidebar-header .sidebar-logo-link {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: auto;
   }
 
   body.nav-sidebar #quarto-sidebar .sidebar-logo-link {
@@ -297,6 +337,57 @@ $d2l-grid-cols-mobile:
 // Hide first chapter under each part (duplicates part title)
 .sidebar-item-section > .sidebar-item-container > li:first-child {
   display: none;
+}
+
+// Hide the very first top-level sidebar item (index.qmd → "Dive into
+// Deep Learning"). The sidebar logo at the top already links to the
+// landing page; having a duplicate sidebar item with the book title
+// is redundant noise.
+#quarto-sidebar .sidebar-menu-container > ul.list-unstyled > li.sidebar-item:first-child {
+  display: none;
+}
+
+// ── Navbar search (Quarto) ──────────────────────────────
+// Plain white magnifier on the blue navbar — no chip / pill. Size is
+// matched to the nav-link text (h3-equivalent) so the icon sits at the
+// same optical weight as "Slides", "Courses", etc.
+#quarto-header .navbar #quarto-search {
+  display: flex;
+  align-items: center;
+  height: $d2l-navbar-height;
+}
+#quarto-header .navbar #quarto-search .aa-DetachedSearchButton {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0;
+  padding: 0 0.4rem !important;
+  color: $white !important;
+}
+#quarto-header .navbar #quarto-search .aa-DetachedSearchButton:hover {
+  background: transparent !important;
+  color: $white !important;
+  opacity: 0.85;
+}
+#quarto-header .navbar #quarto-search .aa-DetachedSearchButtonIcon,
+#quarto-header .navbar #quarto-search .aa-DetachedSearchButtonIcon svg {
+  color: $white !important;
+  fill: $white !important;
+}
+// Override Quarto's default 26px overlay-icon and 16px fallback. The
+// magnifier is the only visible element of the button, so make it
+// readable at the navbar text size.
+#quarto-header .navbar #quarto-search svg.aa-SubmitIcon,
+#quarto-header .navbar #quarto-search .type-overlay svg.aa-SubmitIcon,
+#quarto-header .navbar #quarto-search.type-overlay svg.aa-SubmitIcon {
+  width: 18px !important;
+  height: 18px !important;
+  color: $white !important;
+  opacity: 1 !important;
+}
+// Hide the "Search" placeholder text — the icon alone is the
+// affordance, matching the user's request.
+#quarto-header .navbar #quarto-search .aa-DetachedSearchButtonPlaceholder {
+  display: none !important;
 }
 
 // ── Links ────────────────────────────────────────────────
@@ -368,4 +459,16 @@ caption {
 
 .content {
   background: $bg;
+}
+
+// ── Landing page: invert white-on-transparent logos ─────
+// A few institution logos are pure white on transparent and disappear
+// on the white page background. Inverting brings them to black; we
+// apply only to images explicitly tagged in tools/universities.json.
+.d2l-uni-logos img.d2l-uni-logo-invert {
+  filter: invert(1) grayscale(0.4) !important;
+}
+.d2l-uni-logos a:hover img.d2l-uni-logo-invert,
+.d2l-uni-logos img.d2l-uni-logo-invert:hover {
+  filter: invert(1) !important;
 }

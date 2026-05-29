@@ -259,17 +259,17 @@ run `conda deactivate`.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/23)
+[Discussions](https://d2l.discourse.group/t/23)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/24)
+[Discussions](https://d2l.discourse.group/t/24)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/436)
+[Discussions](https://d2l.discourse.group/t/436)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17964)
+[Discussions](https://d2l.discourse.group/t/17964)
 :end_tab:

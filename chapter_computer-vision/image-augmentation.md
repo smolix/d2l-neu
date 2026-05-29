@@ -74,7 +74,7 @@ import numpy as np
 
 ## Common Image Augmentation Methods
 
-In our investigation of common image augmentation methods, we will use the following $400\times 500$ image an example.
+In our investigation of common image augmentation methods, we will use the following $400\times 500$ image as an example.
 
 ```{.python .input #image-augmentation-common-image-augmentation-methods-1}
 #@tab mxnet
@@ -930,8 +930,7 @@ and finally calls the `train_ch13` function just defined to train and evaluate t
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
 net.initialize(init=init.Xavier(), ctx=devices)
 
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-def train_with_data_aug(train_augs, test_augs, net, lr=3.90625e-6):
+def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
     test_iter = load_cifar10(False, test_augs, batch_size)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -1044,19 +1043,19 @@ train_with_data_aug(train_augs, test_augs, net)
 1. Refer to the online documentation of the deep learning framework. What other image augmentation methods does it also provide?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/367)
+[Discussions](https://d2l.discourse.group/t/367)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1404)
+[Discussions](https://d2l.discourse.group/t/1404)
 :end_tab:
 
 <!-- slides -->

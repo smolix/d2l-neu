@@ -168,4 +168,4 @@ git pull
 1. Open a terminal to access the local directory that hosts all the notebooks of this book.
 
 
-[Discussions](https://discuss.d2l.ai/t/422)
+[Discussions](https://d2l.discourse.group/t/422)

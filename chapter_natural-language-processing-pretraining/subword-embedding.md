@@ -1,6 +1,11 @@
 # Subword Embedding
 :label:`sec_fasttext`
 
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 In English,
 words such as
 "helps", "helped", and "helping" are 
@@ -231,11 +236,15 @@ print(segment_BPE(tokens, symbols))
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/386)
+[Discussions](https://d2l.discourse.group/t/386)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/4587)
+[Discussions](https://d2l.discourse.group/t/4587)
+:end_tab:
+
+:begin_tab:`tensorflow,jax`
+[Discussions](https://d2l.discourse.group/t/4587)
 :end_tab:
 
 <!-- slides -->

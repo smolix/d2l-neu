@@ -440,15 +440,15 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 1. Is it efficient to use matrix multiplications to implement convolutions? Why?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/376)
+[Discussions](https://d2l.discourse.group/t/376)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1450)
+[Discussions](https://d2l.discourse.group/t/1450)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1450)
+[Discussions](https://d2l.discourse.group/t/1450)
 :end_tab:
 
 <!-- slides -->

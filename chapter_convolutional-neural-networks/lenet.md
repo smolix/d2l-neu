@@ -391,19 +391,19 @@ A second difference is the relative ease with which we were able to implement Le
 1. What happens to the activations when you feed significantly different images into the network (e.g., cats, cars, or even random noise)?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/73)
+[Discussions](https://d2l.discourse.group/t/73)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/74)
+[Discussions](https://d2l.discourse.group/t/74)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/275)
+[Discussions](https://d2l.discourse.group/t/275)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18000)
+[Discussions](https://d2l.discourse.group/t/18000)
 :end_tab:
 
 <!-- slides -->

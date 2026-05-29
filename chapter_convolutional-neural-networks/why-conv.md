@@ -97,7 +97,11 @@ of a neural network architecture suitable for computer vision:
 
 1. In the earliest layers, our network
    should respond similarly to the same patch,
-   regardless of where it appears in the image. This principle is called *translation invariance* (or *translation equivariance*).
+   regardless of where it appears in the image: if the input is translated, the
+   feature map produced by these layers should translate by the same amount.
+   This property is called *translation equivariance*. Later in the network,
+   pooling followed by classification can turn equivariant features into
+   *translation-invariant* predictions.
 1. The earliest layers of the network should focus on local regions,
    without regard for the contents of the image in distant regions. This is the *locality* principle.
    Eventually, these local representations can be aggregated
@@ -334,4 +338,4 @@ generating hyperspectral images instead. They report data on many different wave
 1. What happens with convolutions when an object is at the boundary of an image?
 1. Prove that the convolution is symmetric, i.e., $f * g = g * f$.
 
-[Discussions](https://discuss.d2l.ai/t/64)
+[Discussions](https://d2l.discourse.group/t/64)

@@ -74,6 +74,25 @@ MULTI_GPU_NOTEBOOKS = {
     "chapter_optimization/minibatch-sgd.ipynb",
 }
 
+# (framework, relative-path) → number of global GPU slots to hold for
+# this single notebook. Used for notebooks that overflow the standard
+# per-process VRAM budget. Each entry causes run_one_notebook to flock
+# N adjacent slots on a single GPU instead of 1, so the notebook gets
+# N × GPU_MIB_PER_LIGHT MiB of headroom.
+#
+# tensorflow/chapter_computer-vision/ssd.ipynb: anchor-box generation
+# stacks ~1000 tensors via tf.stack/Pack and OOMs with the default 8 GB
+# budget; 2 slots (~16 GB) is enough.
+HEAVY_GPU_NOTEBOOKS = {
+    ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
+    # bert-pretraining: hidden=128, seq=64, batch=512 lands a
+    # BatchMatMulV2 of ~512×64×128×128 that OOMs the 8 GB budget.
+    ("tensorflow", "chapter_natural-language-processing-pretraining/bert-pretraining.ipynb"): 2,
+    # fine-tuning: ResNet18 features at 224×224, batch=128, XLA-fused
+    # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.
+    ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,
+}
+
 
 def _text_has_gpu_keywords(text):
     """Return True if text contains any GPU-related keywords."""

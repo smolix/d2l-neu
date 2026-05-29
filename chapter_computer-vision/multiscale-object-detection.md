@@ -275,19 +275,19 @@ in :numref:`sec_ssd`.
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/371)
+[Discussions](https://d2l.discourse.group/t/371)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1607)
+[Discussions](https://d2l.discourse.group/t/1607)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1607)
+[Discussions](https://d2l.discourse.group/t/1607)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1607)
+[Discussions](https://d2l.discourse.group/t/1607)
 :end_tab:
 
 <!-- slides -->

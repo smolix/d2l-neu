@@ -158,7 +158,7 @@ def bbox_to_rect(bbox, color):
 ```
 
 After adding the bounding boxes on the image,
-we can see that the main outline of the two objects are basically inside the two boxes.
+we can see that the main outline of the two objects is basically inside the two boxes.
 
 ```{.python .input #bounding-box-bounding-boxes-5}
 fig = d2l.plt.imshow(img)
@@ -178,15 +178,15 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/369)
+[Discussions](https://d2l.discourse.group/t/369)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1527)
+[Discussions](https://d2l.discourse.group/t/1527)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1527)
+[Discussions](https://d2l.discourse.group/t/1527)
 :end_tab:
 
 <!-- slides -->

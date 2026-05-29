@@ -976,19 +976,19 @@ On a more practical note, there are a number of aspects worth remembering about 
     1. Are there other projections (e.g., convex cone, symmetry group-specific transforms) that you can use?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/83)
+[Discussions](https://d2l.discourse.group/t/83)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/84)
+[Discussions](https://d2l.discourse.group/t/84)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/330)
+[Discussions](https://d2l.discourse.group/t/330)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18005)
+[Discussions](https://d2l.discourse.group/t/18005)
 :end_tab:
 
 <!-- slides -->

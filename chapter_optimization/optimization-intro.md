@@ -243,19 +243,19 @@ As we saw, optimization for deep learning is full of challenges. Fortunately the
     1. Can you exploit this effect also for optimization algorithms?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/349)
+[Discussions](https://d2l.discourse.group/t/349)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/487)
+[Discussions](https://d2l.discourse.group/t/487)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/489)
+[Discussions](https://d2l.discourse.group/t/489)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/489)
+[Discussions](https://d2l.discourse.group/t/489)
 :end_tab:
 
 <!-- slides -->

@@ -313,12 +313,10 @@ class BERTEncoder(keras.layers.Layer):
         self.pos_embedding = self.add_weight(
             name='pos_embedding', shape=(1, max_len, num_hiddens),
             initializer='random_normal', trainable=True)
-        norm_shape = [num_hiddens]
         # BERT's attention sublayers use biased projections; the default for
         # `TransformerEncoderBlock` is `bias=False`, so override here.
         self.blks = [d2l.TransformerEncoderBlock(
-            num_hiddens, num_hiddens, num_hiddens, num_hiddens, norm_shape,
-            ffn_num_hiddens, num_heads, dropout, bias=True)
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
             for _ in range(num_blks)]
 
     def call(self, tokens, segments, valid_lens, training=False, **kwargs):
@@ -944,19 +942,19 @@ class BERTModel(keras.Model):
 1. In the original implementation of BERT, the positionwise feed-forward network in `BERTEncoder` (via `d2l.TransformerEncoderBlock`) and the fully connected layer in `MaskLM` both use the Gaussian error linear unit (GELU) :cite:`Hendrycks.Gimpel.2016` as the activation function. Research into the difference between GELU and ReLU.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/388)
+[Discussions](https://d2l.discourse.group/t/388)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1490)
+[Discussions](https://d2l.discourse.group/t/1490)
 :end_tab:
 
 <!-- slides -->

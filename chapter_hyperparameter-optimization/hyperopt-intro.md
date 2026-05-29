@@ -81,7 +81,6 @@ from scipy import stats
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
 from d2l import tensorflow as d2l
-import keras
 import numpy as np
 from scipy import stats
 ```
@@ -197,23 +196,11 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
 %%tab tensorflow
 def hpo_objective_softmax_classification(config, max_epochs=8):
     learning_rate = config["learning_rate"]
-    import keras
-    model = keras.Sequential([
-        keras.layers.Flatten(),
-        keras.layers.Dense(10),
-    ])
-    model.compile(
-        optimizer=keras.optimizers.SGD(learning_rate=learning_rate),
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy'],
-    )
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs)
     data = d2l.FashionMNIST(batch_size=16)
-    train_ds = data.get_dataloader(True)
-    val_ds = data.get_dataloader(False)
-    history = model.fit(train_ds, epochs=max_epochs, validation_data=val_ds,
-                        verbose=0)
-    val_acc = history.history['val_accuracy'][-1]
-    return 1 - val_acc
+    model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
+    trainer.fit(model=model, data=data)
+    return float(trainer.validation_error())
 ```
 
 ```{.python .input #hyperopt-intro-the-objective-function-2  n=5}
@@ -357,21 +344,21 @@ depends on a small subset of the hyperparameters :cite:`bergstra-jmlr12a`.
     2. Sketch (roughly) the computational graph of the validation metric after training for one epoch. You may assume that initial weights and hyperparameters (such as learning rate) are input nodes to this graph. Hint: Re-read about computational graphs in :numref:`sec_backprop`.
     3. Give a rough estimate of the number of floating point values you need to store during a forward pass on this graph. Hint: FashionMNIST has 60000 cases. Assume the required memory is dominated by the activations after each layer, and look up the layer widths in :numref:`sec_mlp-implementation`.
     4. Apart from the sheer amount of compute and storage required, what other issues would gradient-based hyperparameter optimization run into? Hint: Re-read about vanishing and exploding gradients in :numref:`sec_numerical_stability`.
-    6. *Advanced*: Read :cite:`maclaurin-icml15` for an elegant (yet still somewhat unpractical) approach to gradient-based HPO.
+    5. *Advanced*: Read :cite:`maclaurin-icml15` for an elegant (yet still somewhat unpractical) approach to gradient-based HPO.
 3. Grid search is another HPO baseline, where we define an equispaced grid for each hyperparameter, then iterate over the (combinatorial) Cartesian product in order to suggest configurations.
     1. We stated above that random search can be much more efficient than grid search for HPO on a sizable number of hyperparameters, if the criterion most strongly depends on a small subset of the hyperparameters. Why is this? Hint: Read :citet:`bergstra-jmlr12a`.
 
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/12090)
+[Discussions](https://d2l.discourse.group/t/12090)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/12090)
+[Discussions](https://d2l.discourse.group/t/12090)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/12090)
+[Discussions](https://d2l.discourse.group/t/12090)
 :end_tab:
 
 <!-- slides -->

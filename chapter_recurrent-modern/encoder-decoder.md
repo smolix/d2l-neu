@@ -275,19 +275,19 @@ to a variable-length sequence.
 1. Besides machine translation, can you think of another application where the encoder--decoder architecture can be applied?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/341)
+[Discussions](https://d2l.discourse.group/t/341)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1061)
+[Discussions](https://d2l.discourse.group/t/1061)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/3864)
+[Discussions](https://d2l.discourse.group/t/3864)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/18021)
+[Discussions](https://d2l.discourse.group/t/18021)
 :end_tab:
 
 <!-- slides -->

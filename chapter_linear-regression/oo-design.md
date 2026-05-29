@@ -695,19 +695,19 @@ this degree of modularity pays dividends throughout the book in terms of concise
 1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have dived into the full implementation of the `HyperParameters` class, can you explain why?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/6645)
+[Discussions](https://d2l.discourse.group/t/6645)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/6646)
+[Discussions](https://d2l.discourse.group/t/6646)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/6647)
+[Discussions](https://d2l.discourse.group/t/6647)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17974)
+[Discussions](https://d2l.discourse.group/t/17974)
 :end_tab:
 
 <!-- slides -->

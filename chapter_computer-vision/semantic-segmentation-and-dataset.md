@@ -779,19 +779,19 @@ def load_data_voc(batch_size, crop_size):
 
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/375)
+[Discussions](https://d2l.discourse.group/t/375)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1480)
+[Discussions](https://d2l.discourse.group/t/1480)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1480)
+[Discussions](https://d2l.discourse.group/t/1480)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1480)
+[Discussions](https://d2l.discourse.group/t/1480)
 :end_tab:
 
 <!-- slides -->

@@ -112,7 +112,7 @@ For example,
 according to the Penn Treebank II tag set,
 the sentence "John Smith 's car is new"
 should be tagged as
-"NNP (noun, proper singular) NNP POS (possessive ending) NN (noun, singular or mass) VB (verb, base form) JJ (adjective)".
+"NNP (noun, proper singular) NNP POS (possessive ending) NN (noun, singular or mass) VBZ (verb, third-person singular present) JJ (adjective)".
 
 ![Fine-tuning BERT for text tagging applications, such as part-of-speech tagging. Suppose that the input single text has six tokens.](../img/bert-tagging.svg)
 :label:`fig_bert-tagging`
@@ -191,4 +191,4 @@ and output the span with the highest score.
 1. How can we leverage BERT in training language models?
 1. Can we leverage BERT in machine translation?
 
-[Discussions](https://discuss.d2l.ai/t/396)
+[Discussions](https://d2l.discourse.group/t/396)

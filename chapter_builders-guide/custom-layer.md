@@ -352,19 +352,19 @@ Layers can have local parameters, which can be created through built-in function
 1. Design a layer that returns the leading half of the Fourier coefficients of the data.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/58)
+[Discussions](https://d2l.discourse.group/t/58)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/59)
+[Discussions](https://d2l.discourse.group/t/59)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/279)
+[Discussions](https://d2l.discourse.group/t/279)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/17993)
+[Discussions](https://d2l.discourse.group/t/17993)
 :end_tab:
 
 <!-- slides -->

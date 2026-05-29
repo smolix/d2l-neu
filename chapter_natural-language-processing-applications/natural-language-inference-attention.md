@@ -180,7 +180,7 @@ class Attend(nn.Block):
         self.f = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B):
-        # Shape of `A`/`B`: (b`atch_size`, no. of tokens in sequence A/B,
+        # Shape of `A`/`B`: (`batch_size`, no. of tokens in sequence A/B,
         # `embed_size`)
         # Shape of `f_A`/`f_B`: (`batch_size`, no. of tokens in sequence A/B,
         # `num_hiddens`)
@@ -611,8 +611,7 @@ Now we can train and evaluate the model on the SNLI dataset.
 
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-2}
 #@tab mxnet
-# lr divided by batch_size: gluon Trainer no longer rescales (issue 7 fix in d2l.train_batch_ch13)
-lr, num_epochs = 3.90625e-6, 4
+lr, num_epochs = 0.001, 4
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices,
@@ -785,19 +784,19 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 1. Suppose that we want to get the level of semantical similarity (e.g., a continuous value between 0 and 1) for any pair of sentences. How shall we collect and label the dataset? Can you design a model with attention mechanisms?
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/395)
+[Discussions](https://d2l.discourse.group/t/395)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1530)
+[Discussions](https://d2l.discourse.group/t/1530)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1530)
+[Discussions](https://d2l.discourse.group/t/1530)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1530)
+[Discussions](https://d2l.discourse.group/t/1530)
 :end_tab:
 
 <!-- slides -->

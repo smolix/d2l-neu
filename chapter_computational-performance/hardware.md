@@ -229,4 +229,4 @@ The summary in :numref:`table_latency_numbers` and :numref:`table_latency_number
 1. What is the shortest time it should take for a packet on a round trip between San Francisco and Amsterdam? Hint: you can assume that the distance is 10,000 km.
 
 
-[Discussions](https://discuss.d2l.ai/t/363)
+[Discussions](https://d2l.discourse.group/t/363)

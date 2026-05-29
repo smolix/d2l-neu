@@ -182,11 +182,45 @@ print('Feature extractor output shape:',
 
 ```{.python .input #fcn-the-model-1}
 #@tab tensorflow
-# Use ResNet-50 pretrained on ImageNet as the backbone.
-# include_top=False removes the global avg pool and dense head.
-pretrained_net = keras.applications.ResNet50(
-    include_top=False, weights='imagenet')
-# Show the last few layers to understand the feature map shape
+# Note: keras.applications does not bundle a ResNet-18; it only ships
+# ResNet-50/101/152. To match the PT/MX tabs (and the prose), we build a
+# ResNet-18 from scratch as a Functional model. Conceptually treat its
+# weights as if they had been initialized from ImageNet pretraining; in
+# practice you would port pretrained weights from PyTorch.
+def _resnet_block(x, num_channels, strides=1, use_1x1conv=False):
+    y = keras.layers.Conv2D(num_channels, 3, strides=strides,
+                            padding='same', use_bias=False)(x)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.ReLU()(y)
+    y = keras.layers.Conv2D(num_channels, 3, strides=1,
+                            padding='same', use_bias=False)(y)
+    y = keras.layers.BatchNormalization()(y)
+    if use_1x1conv:
+        x = keras.layers.Conv2D(num_channels, 1, strides=strides,
+                                use_bias=False)(x)
+        x = keras.layers.BatchNormalization()(x)
+    return keras.layers.ReLU()(y + x)
+
+inputs = keras.Input(shape=(None, None, 3))
+x = keras.layers.Conv2D(64, 7, strides=2, padding='same',
+                        use_bias=False)(inputs)
+x = keras.layers.BatchNormalization()(x)
+x = keras.layers.ReLU()(x)
+x = keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(x)
+x = _resnet_block(x, 64)
+x = _resnet_block(x, 64)
+x = _resnet_block(x, 128, strides=2, use_1x1conv=True)
+x = _resnet_block(x, 128)
+x = _resnet_block(x, 256, strides=2, use_1x1conv=True)
+x = _resnet_block(x, 256)
+x = _resnet_block(x, 512, strides=2, use_1x1conv=True)
+features = _resnet_block(x, 512)
+# Mirror the structure of torchvision.models.resnet18: include the global
+# avg pool + dense head so we can slice them off below.
+pooled = keras.layers.GlobalAveragePooling2D()(features)
+logits = keras.layers.Dense(1000)(pooled)
+pretrained_net = keras.Model(inputs=inputs, outputs=logits)
+# Show the last few layers (matches the spirit of the PT/MX displays)
 pretrained_net.layers[-3:]
 ```
 
@@ -218,8 +252,9 @@ net = nn.Sequential(*list(pretrained_net.children())[:-2])
 #@tab tensorflow
 # Build the FCN feature extractor: all layers up to (but not including)
 # the global average pooling and dense head — i.e., the full conv body.
-net = keras.Model(inputs=pretrained_net.input,
-                  outputs=pretrained_net.output)
+# The last conv-block output (`features`) is the 1/32-resolution feature
+# map; we use it as the new model output, dropping GAP + Dense.
+net = keras.Model(inputs=pretrained_net.input, outputs=features)
 ```
 
 Given an input with height and width of 320 and 480 respectively,
@@ -883,19 +918,19 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 1. The original fully convolutional network paper also uses outputs of some intermediate CNN layers :cite:`Long.Shelhamer.Darrell.2015`. Try to implement this idea.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/377)
+[Discussions](https://d2l.discourse.group/t/377)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/1582)
+[Discussions](https://d2l.discourse.group/t/1582)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/1582)
+[Discussions](https://d2l.discourse.group/t/1582)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/1582)
+[Discussions](https://d2l.discourse.group/t/1582)
 :end_tab:
 
 <!-- slides -->

@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/model-construction.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "model-construction-layers-and-modules-1": {
+      "code_fingerprint": "sha256:c3b617502bedddfb22f51258d1adf6da3684ea9a262a2011706048e6ccb5677b",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-layers-and-modules-2": {
+      "code_fingerprint": "sha256:41c363f3a21202b323d452410bf169bed41c51beda1262181da88c2092d0b835",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "model-construction-a-custom-module-1": {
+      "code_fingerprint": "sha256:21a54221c2c7ab48a3743f52d944fed70ce9e9ddaffd0be30319247b11057ca5",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-a-custom-module-2": {
+      "code_fingerprint": "sha256:4751e4b335c1ac041b0aaebaa93987418f65f971bc182ec4a51675d5338bf6c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "model-construction-the-sequential-module-1": {
+      "code_fingerprint": "sha256:570de79b12da7cb461ab2377230b574f61de063192417b373ebf78919047d63a",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-the-sequential-module-2": {
+      "code_fingerprint": "sha256:2bf022ad6d9972fd4ad3672fad8229eefb642050969186e91dd86543937de06d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-1": {
+      "code_fingerprint": "sha256:5d22ff9a1e879bc5caa6f5bd1ed7ab7351629b38e361b48f3f8e1d89f0aa8e6b",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-2": {
+      "code_fingerprint": "sha256:e7f21925f61c5eacaa4599998ef8a6efc5e7e076bf48ded83784a30a26c8d00c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(0.98189294)"
+        }
+      ]
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-3": {
+      "code_fingerprint": "sha256:28d000884c81c0c34268d4dd453fa6d70acc2e4b354b37ed4ce19386c0d94026",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(0.7572548)"
+        }
+      ]
+    }
+  }
+}

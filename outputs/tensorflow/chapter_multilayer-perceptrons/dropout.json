@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/dropout.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:d8a09b534ab541350ba44d25f64231424c161d0227958e6911be8f22b8919473",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dropout": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:431861d8520ce3f6ccadf3aa3100071d266ec8a16c76c1ded6c3c312603c2830",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:0ff339c9acfbf1baa4052dd582ad3357156bf3911f7d20512fa7f1cc955a6504",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  0.  0.  0.  0.  0. 12. 14.]\n [ 0.  0.  0.  0.  0.  0.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+        }
+      ]
+    },
+    "dropout-defining-the-model": {
+      "code_fingerprint": "sha256:5b131f8b0cd73a110274a97b9a9be930ec45de1fc23cd6d61c2ba94eaaf3a01a",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-training": {
+      "code_fingerprint": "sha256:b5d57589b25793cb94d3c30ca23812833dafa27c4ffcd3cc8042e34bf3074d79",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-training-1.svg",
+          "bytes": 58666,
+          "sha256": "sha256:fe8584c1d994f579d436e5715df46b9f18883bad2cc2d5c06165c5e3d6835fe6"
+        }
+      ]
+    },
+    "dropout-concise-implementation-1": {
+      "code_fingerprint": "sha256:113e3541a284f6fb2248c53a31ef7a78d75d716578b588ab322ca333a8d634e0",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-concise-implementation-3": {
+      "code_fingerprint": "sha256:f5fb8ef267817fedc2d8d538229d1666bdc425b0eee2dcba3f51075a3c70cc7e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-concise-implementation-3-1.svg",
+          "bytes": 59585,
+          "sha256": "sha256:31fbaf71bda2cedef1fe8f48dbeb094fa2ef6214fe1013e1e8e859634abe90ec"
+        }
+      ]
+    }
+  }
+}

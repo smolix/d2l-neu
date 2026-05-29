@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/hybridize.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:3855f8afdcdceac59e4aa46cbb0551bc6f4a1a475cf138d8e78f847f7afb05ac",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hybridize-compilers-and-interpreters": {
+      "code_fingerprint": "sha256:d0cfebf498fa1d723b0b93c51b3e000510f27f29a3a4974ae7854924c84bbe47",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "10\n"
+        }
+      ]
+    },
+    "hybridize-symbolic-programming": {
+      "code_fingerprint": "sha256:7dfb1bceeee0ceb43de588da0c84fa09c491c955294d2d94ffbd2028a097331d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\ndef add(a, b):\n    return a + b\n\ndef fancy_func(a, b, c, d):\n    e = add(a, b)\n    f = add(c, d)\n    g = add(e, f)\n    return g\nprint(fancy_func(1, 2, 3, 4))\n10\n"
+        }
+      ]
+    },
+    "hybridize-hybridizing-the-sequential-class-1": {
+      "code_fingerprint": "sha256:6ac3e6558fe1447fbfc990845ee12e2d22e3a1dde22d19bd482f107703b44fc4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.26228547, -0.9876649 ]], dtype=float32)>"
+        }
+      ]
+    },
+    "hybridize-hybridizing-the-sequential-class-2": {
+      "code_fingerprint": "sha256:060743dbd630e966b9e8614bb9fb05896f3835f049faad5477bfeb2f2e67fe72",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.2622856 , -0.98766506]], dtype=float32)>"
+        }
+      ]
+    },
+    "hybridize-acceleration-by-hybridization-1": {
+      "code_fingerprint": "sha256:c786bf55d5c084ba40ce82ac0859faa1d67e3cb82f67b58ebcce94f7c3ed292e",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybridize-acceleration-by-hybridization-2": {
+      "code_fingerprint": "sha256:2acee44cd4f2d639136d02a3f64a3fbfb2605bc03d9a921a575385ec60187db6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Eager Mode: 3.4441 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Graph Mode: 0.7988 sec\n"
+        }
+      ]
+    },
+    "hybridize-serialization-1": {
+      "code_fingerprint": "sha256:21a68a76d420504814381a8cda85c1fb0cd4cbd9ede5371e4de7f4c6252f1bdc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Assets written to: my_mlp/assets\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "INFO:tensorflow:Assets written to: my_mlp/assets\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total 44K\r\ndrwx------ 2 smola smola   6 May 29 06:56 assets\r\n-rw------- 1 smola smola  96 May 29 06:56 fingerprint.pb\r\n-rw------- 1 smola smola 39K May 29 06:56 saved_model.pb\r\ndrwx------ 2 smola smola  66 May 29 06:56 variables\r\n"
+        }
+      ]
+    }
+  }
+}

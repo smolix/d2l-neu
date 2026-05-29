@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/statistics.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "statistics-evaluating-and-comparing-estimators": {
+      "code_fingerprint": "sha256:e042157d9f8fe36f3c548cae67ee94ee548c40516d25def35406dc361afcc45e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "statistics/statistics-evaluating-and-comparing-estimators-1.svg",
+          "bytes": 54211,
+          "sha256": "sha256:51ea66786f0496679beb68074e3733c47c255cd956117ecbfb68a817138a92b9"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-1": {
+      "code_fingerprint": "sha256:37577e02ea8d84d0ef39c7643bbabd9e9da19b2a6b26c4bae47e3e0ae9cdfa9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-evaluating-estimators-in-code-2": {
+      "code_fingerprint": "sha256:eff365122c85a63126101def72447f89f63f945aff525879a8292304af8bb6a1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(0.98958063, dtype=float32)"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-3": {
+      "code_fingerprint": "sha256:03d702b77b5fb7bb12bda10acadedd3be6323952d410e2b9e63c831d2cb15aba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(16.385305, dtype=float32)"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-4": {
+      "code_fingerprint": "sha256:b02d154e7a54d4ce0b130610dd79a9f474c7cc23515991f29906f38bc58b84f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(16.386944, dtype=float32)"
+        }
+      ]
+    },
+    "statistics-a-gaussian-example": {
+      "code_fingerprint": "sha256:f5c35b0d415f74534626bffadc205d807e5c83f5c5610d618de955031955ff2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(-0.06360511, dtype=float32), Array(0.05844307, dtype=float32))"
+        }
+      ]
+    }
+  }
+}

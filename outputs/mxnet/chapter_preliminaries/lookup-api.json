@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/lookup-api.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lookup-api-documentation": {
+      "code_fingerprint": "sha256:6acee91e29ea8d5b08e5396152fd5e2c5c845b71ec8787c96d405351780a6376",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-functions-and-classes-in-a-module": {
+      "code_fingerprint": "sha256:14a76ed74aee2db023490a356bafa1539e60627833339f39f9304a9750c1360a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['beta', 'chisquare', 'choice', 'exponential', 'f', 'gamma', 'gumbel', 'laplace', 'logistic', 'lognormal', 'multinomial', 'multivariate_normal', 'normal', 'pareto', 'power', 'rand', 'randint', 'randn', 'rayleigh', 'seed']\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-1": {
+      "code_fingerprint": "sha256:e85c741f6a43c1fdccadd581cf6bce5f7c731feb13bbbdc8a0492c483afd1a9a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Help on function ones in module mxnet.numpy:\n\nones(shape, dtype=None, order='C', device=None)\n    Return a new array of given shape and type, filled with ones.\n    This function currently only supports storing multi-dimensional data\n    in row-major (C-style).\n\n    Parameters\n    ----------\n    shape : int or tuple of int\n        The shape of the empty array.\n    dtype : str or numpy.dtype, optional\n        An optional value type. Default is depend on your current default dtype.\n        When npx.is_np_default_dtype() returns False, default dtype is float32;\n        When npx.is_np_default_dtype() returns True, default dtype is float64.\n        Note that this behavior is different from NumPy's `ones` function where\n        `float64` is the default value.\n    order : {'C'}, optional, default: 'C'\n        How to store multi-dimensional data in memory, currently only row-major\n        (C-style) is supported.\n    device : Device, optional\n        Device context on which the memory is allocated. Default is\n        `mxnet.device.current_device()`.\n\n    Returns\n    -------\n    out : ndarray\n        Array of ones with the given shape, dtype, and device.\n\n    Examples\n    --------\n    >>> np.ones(5)\n    array([1., 1., 1., 1., 1.])\n\n    >>> np.ones((5,), dtype=int)\n    array([1, 1, 1, 1, 1], dtype=int64)\n\n    >>> np.ones((2, 1))\n    array([[1.],\n           [1.]])\n\n    >>> s = (2,2)\n    >>> np.ones(s)\n    array([[1., 1.],\n           [1., 1.]])\n\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-2": {
+      "code_fingerprint": "sha256:2387e880d690eb0f2d935fdcd0722d708c259bceca74c7164efc0b7420d65921",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([1., 1., 1., 1.])"
+        }
+      ]
+    }
+  }
+}

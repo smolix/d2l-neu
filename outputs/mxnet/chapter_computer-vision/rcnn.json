@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/rcnn.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rcnn-fast-r-cnn-1": {
+      "code_fingerprint": "sha256:4f290ada01c1aa1d95c0586eb4475eb7cec54eaca511a366aa6ba2fe60366576",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]]]])"
+        }
+      ]
+    },
+    "rcnn-fast-r-cnn-2": {
+      "code_fingerprint": "sha256:343cf401ab41d7a0e02fe12c80002658136bacd5c74f7cfb7c30a921668c53a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "rcnn-fast-r-cnn-3": {
+      "code_fingerprint": "sha256:92475b2d127ee00cdf346cb2c98b7070575f265576266c630ddc74cb5c6bae3b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 5.,  6.],\n         [ 9., 10.]]],\n\n\n       [[[ 9., 11.],\n         [13., 15.]]]])"
+        }
+      ]
+    }
+  }
+}

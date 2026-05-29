@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/linear-algebra.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-algebra": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-algebra-scalars": {
+      "code_fingerprint": "sha256:104230c214c8b0e9f7488d3f5460099b1d4ae7d2f0d6343369b0d7bcf8ba8de6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=5.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=6.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=1.5>,\n <tf.Tensor: shape=(), dtype=float32, numpy=9.0>)"
+        }
+      ]
+    },
+    "linear-algebra-vectors-1": {
+      "code_fingerprint": "sha256:7ee01a4acf58e404882b8c4d86f87d58d0fb2375c542cb5113e5b7be73888be0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3,), dtype=int32, numpy=array([0, 1, 2], dtype=int32)>"
+        }
+      ]
+    },
+    "linear-algebra-vectors-2": {
+      "code_fingerprint": "sha256:ead940808d7049fd0afb23a027c38b05affa66e7a124d0078b590b312536948e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=int32, numpy=2>"
+        }
+      ]
+    },
+    "linear-algebra-vectors-3": {
+      "code_fingerprint": "sha256:fc3578e354cdb754af5756fc1e24835c1838632f7b3e57d863daa5c93f97d638",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3"
+        }
+      ]
+    },
+    "linear-algebra-vectors-4": {
+      "code_fingerprint": "sha256:29a70ceaf35d66f9daeff74f479cb6f1072f3bf24e14ab1cdc721e7ad5728a34",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([3])"
+        }
+      ]
+    },
+    "linear-algebra-matrices-1": {
+      "code_fingerprint": "sha256:892012f6081a32df7e5f3d195cb9c2f24a3477631bdaa5468456b45389185866",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 2), dtype=int32, numpy=\narray([[0, 1],\n       [2, 3],\n       [4, 5]], dtype=int32)>"
+        }
+      ]
+    },
+    "linear-algebra-matrices-2": {
+      "code_fingerprint": "sha256:d3b843c7982f5df84168f27a565b52b7efcb3b3c040c14134be01614a7d1fe2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=int32, numpy=\narray([[0, 2, 4],\n       [1, 3, 5]], dtype=int32)>"
+        }
+      ]
+    },
+    "linear-algebra-matrices-3": {
+      "code_fingerprint": "sha256:ba5af09b1f67555f74984005efec62634d26811857903923ffcc2e944a58f331",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=True>"
+        }
+      ]
+    },
+    "linear-algebra-tensors": {
+      "code_fingerprint": "sha256:e6c0317211491ae39cb7cbb72b0dd87cff9b65b0dcb4aba8548bace9e52437cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=int32, numpy=\narray([[[ 0,  1,  2,  3],\n        [ 4,  5,  6,  7],\n        [ 8,  9, 10, 11]],\n\n       [[12, 13, 14, 15],\n        [16, 17, 18, 19],\n        [20, 21, 22, 23]]], dtype=int32)>"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-1": {
+      "code_fingerprint": "sha256:ae04f6d5db425e851ab3c01de716a20b099f5ae921692272fb8c32cec0e653ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\n array([[0., 1., 2.],\n        [3., 4., 5.]], dtype=float32)>,\n <tf.Tensor: shape=(2, 3), dtype=float32, numpy=\n array([[ 0.,  2.,  4.],\n        [ 6.,  8., 10.]], dtype=float32)>)"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-2": {
+      "code_fingerprint": "sha256:90bf194c81dd420682a61074fcb64845b8c3c99c11275f7b98123ee0e6101ad4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[ 0.,  1.,  4.],\n       [ 9., 16., 25.]], dtype=float32)>"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-3": {
+      "code_fingerprint": "sha256:e1ef26ea7ae2006654b2f5ddd5f2e3e59dd7e1e6d718f2731f480f75a4a9e255",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2, 3, 4), dtype=int32, numpy=\n array([[[ 2,  3,  4,  5],\n         [ 6,  7,  8,  9],\n         [10, 11, 12, 13]],\n \n        [[14, 15, 16, 17],\n         [18, 19, 20, 21],\n         [22, 23, 24, 25]]], dtype=int32)>,\n TensorShape([2, 3, 4]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-1": {
+      "code_fingerprint": "sha256:4960d457dbe34d187b4c0ac0ff5e87c83d5b06b2bff0145935abaf90e084bcbe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(3,), dtype=float32, numpy=array([0., 1., 2.], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=3.0>)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-2": {
+      "code_fingerprint": "sha256:415cda156961d04f34660cc7600dee1d63c200355fd2de394c4777c1ba4554a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 3]), <tf.Tensor: shape=(), dtype=float32, numpy=15.0>)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-3": {
+      "code_fingerprint": "sha256:cda397f075c13f54309881af94907d191188bfa7e0ed68f51177e3501f23e6fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 3]), TensorShape([3]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-4": {
+      "code_fingerprint": "sha256:1299efc87b72abeb7167c8fcc9afc9bb76f888addefa0177cbab9df11eb6fa6a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 3]), TensorShape([2]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-5": {
+      "code_fingerprint": "sha256:484f8fdc9338d1800eee660728edb7b8e7b1da8083421468dd0492eb582ac4b2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=15.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=15.0>)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-6": {
+      "code_fingerprint": "sha256:05e67414f4440fe14b920c2224570a757c02a61ee1a76276826b6a8cd9bdc145",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.5>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.5>)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-7": {
+      "code_fingerprint": "sha256:77f2e8bf20aa0b059628bdc3fcd806a4df800234d02d2da4c97eb862edf2731f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(3,), dtype=float32, numpy=array([1.5, 2.5, 3.5], dtype=float32)>,\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([1.5, 2.5, 3.5], dtype=float32)>)"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-1": {
+      "code_fingerprint": "sha256:cd896b9b2173bc5343c9a4ae583120881c4354e01c5b005210077e67bcd78de4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\n array([[ 3.],\n        [12.]], dtype=float32)>,\n TensorShape([2, 1]))"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-2": {
+      "code_fingerprint": "sha256:1e03540e888b8a62e03a1813dbbaa4fc6f67575c1498c93554b01e38ab675b75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.        , 0.33333334, 0.6666667 ],\n       [0.25      , 0.33333334, 0.41666666]], dtype=float32)>"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-3": {
+      "code_fingerprint": "sha256:b9c52df2faf1f5b25c5b1cdea315cb51a6d1ca78cbd6fcdb82ad81bcd567e0c4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0., 1., 2.],\n       [3., 5., 7.]], dtype=float32)>"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-1": {
+      "code_fingerprint": "sha256:b8b1ac0cb814c43df701036d41d96ada978ab2b2674116d6f7dd1e32055ce642",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(3,), dtype=float32, numpy=array([0., 1., 2.], dtype=float32)>,\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([1., 1., 1.], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=3.0>)"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-2": {
+      "code_fingerprint": "sha256:a393908462262abe9c216adac9e386dbd523e66357390f4f24f84795fbe8306e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=3.0>"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products": {
+      "code_fingerprint": "sha256:0000c5b7d956bc14ecf551216293d8a6c0a5f4a3e698ed31b7bcae7bd2105ecf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 3]),\n TensorShape([3]),\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([ 5., 14.], dtype=float32)>)"
+        }
+      ]
+    },
+    "linear-algebra-matrix-matrix-multiplication": {
+      "code_fingerprint": "sha256:c6726448aaa1f285b9e7ffe86e42cca6fdb19b118318934a6b0e426116717d85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 4), dtype=float32, numpy=\narray([[ 3.,  3.,  3.,  3.],\n       [12., 12., 12., 12.]], dtype=float32)>"
+        }
+      ]
+    },
+    "linear-algebra-norms-1": {
+      "code_fingerprint": "sha256:514b05a3a70cf2103e99cf581dac699b9e03849ffa9455d82da6643dfe99d8e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=5.0>"
+        }
+      ]
+    },
+    "linear-algebra-norms-2": {
+      "code_fingerprint": "sha256:c35b98b419771b3bdff05baa5e493f154b57fbbcd5ebafd72a87e3e1e3713eba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=7.0>"
+        }
+      ]
+    },
+    "linear-algebra-norms-3": {
+      "code_fingerprint": "sha256:b34983f22eb1a405cbf77bbabc0fd7911bb5c971e6dd53ef37a53b8fb9962217",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=6.0>"
+        }
+      ]
+    }
+  }
+}

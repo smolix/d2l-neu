@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init-param.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-param-parameter-initialization-1": {
+      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-param-parameter-initialization-2": {
+      "code_fingerprint": "sha256:95c4a2c036e15e9fc77b0d2661be7669ba464e9394fdbac8f3ebb554c460b498",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 1])"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-1": {
+      "code_fingerprint": "sha256:fc26068b6148c8c592c42b1c7f25753b4630cd9cdd6d6546a76014af94515f52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([-0.0013,  0.0098,  0.0037, -0.0125]), tensor(0.))"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-2": {
+      "code_fingerprint": "sha256:0d2e3033ff0b591051e4da78a92f86479e91854cc3329fbf95662e295631ed52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([1., 1., 1., 1.]), tensor(0.))"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-3": {
+      "code_fingerprint": "sha256:c7051d75695e7cd93c674cf437d6832791c82fb6bd1085b67da82afbe29996f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tensor([-0.1192, -0.1065,  0.0884, -0.1809])\ntensor([[42., 42., 42., 42., 42., 42., 42., 42.]])\n"
+        }
+      ]
+    },
+    "init-param-custom-initialization-1": {
+      "code_fingerprint": "sha256:761c69248a2326853633765779c0221b2c265aa65d98ba7a71252801289e8b8a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Init weight torch.Size([8, 4])\nInit weight torch.Size([1, 8])\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "tensor([[-0.0000, -9.4692,  6.4917, -9.0826],\n        [-0.0000,  0.0000,  5.7718, -0.0000]], grad_fn=<SliceBackward0>)"
+        }
+      ]
+    },
+    "init-param-custom-initialization-2": {
+      "code_fingerprint": "sha256:a436fec16aa70507cc11c3ab5f5920b4694b5322d77961504f6b4f28d8914701",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([42.0000, -8.4692,  7.4917, -8.0826])"
+        }
+      ]
+    }
+  }
+}

@@ -221,6 +221,66 @@ def index_ipynb_by_id(path):
     return ids, count
 
 
+def _reconstruct_store_output(o, manifest_dir):
+    """Rebuild one nbformat-style output dict from a manifest output entry.
+
+    The reconstruction is shaped so the existing format_cell_output() /
+    _output_fingerprint() code paths are byte-identical to the _notebooks/ path:
+      - stream  → {'output_type':'stream','text':[<str>]}
+      - inline  → {'output_type':..,'data':{'text/plain':<str>}}
+      - asset   → re-read the file and re-encode into data{mime} (png→base64,
+                  svg→text), exactly as it appeared in the .ipynb.
+    """
+    if o.get('type') == 'stream':
+        return {'output_type': 'stream',
+                'name': o.get('name', 'stdout'),
+                'text': [o.get('text', '')]}
+    mime = o.get('mime')
+    if mime:
+        asset = Path(manifest_dir) / o['asset']
+        if mime == 'image/svg+xml':
+            data = asset.read_text(encoding='utf-8')
+        else:
+            data = base64.b64encode(asset.read_bytes()).decode('ascii')
+        return {'output_type': o.get('type', 'display_data'),
+                'data': {mime: data}, 'metadata': {}}
+    # inline text/plain
+    return {'output_type': o.get('type', 'execute_result'),
+            'data': {'text/plain': o.get('text', '')}, 'metadata': {}}
+
+
+def index_store_by_id(store_dir, fw, chapter, stem):
+    """Load a committed outputs manifest → (ids, count), same shape as
+    index_ipynb_by_id. Returns None if no manifest exists for this notebook."""
+    manifest_path = Path(store_dir) / fw / chapter / f'{stem}.json'
+    if not manifest_path.exists():
+        return None
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    manifest_dir = manifest_path.parent
+    ids = {}
+    for cid, entry in manifest.get('cells', {}).items():
+        ids[cid] = [_reconstruct_store_output(o, manifest_dir)
+                    for o in entry.get('outputs', [])]
+    return ids, len(ids)
+
+
+def resolve_id_outputs(notebooks_dir, store_dir, fw, chapter, stem):
+    """Prefer the committed outputs store; fall back to the executed notebook.
+
+    This is the seam that decouples rendering from execution: with the store
+    present, no _notebooks/ tree (and no framework venv / GPU) is needed.
+    Returns (ids, count) or None if neither source has this notebook.
+    """
+    if store_dir:
+        res = index_store_by_id(store_dir, fw, chapter, stem)
+        if res is not None:
+            return res
+    nb_path = Path(notebooks_dir) / fw / chapter / f'{stem}.ipynb'
+    if nb_path.exists():
+        return index_ipynb_by_id(nb_path)
+    return None
+
+
 def build_cell_map(cells, framework):
     """Map qmd cell index → ipynb cell index for a given framework.
 
@@ -454,7 +514,7 @@ def strip_outputs(text):
 # ── HTML Injection ───────────────────────────────────────────
 
 def inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
-                      warnings):
+                      warnings, store_dir=None):
     """Inject all-framework outputs into one multi-framework .qmd file.
 
     Cells are matched to executed notebook cells by their `#| label: <id>`
@@ -471,16 +531,13 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
 
     chapter = qmd_path.parent.name
     stem = qmd_path.stem
-    rel_nb = Path(chapter) / f'{stem}.ipynb'
 
-    # Per-framework: id → outputs
+    # Per-framework: id → outputs (committed store preferred, _notebooks fallback)
     fw_id_outputs = {}
     for fw in FRAMEWORKS:
-        nb_path = Path(notebooks_dir) / fw / rel_nb
-        if nb_path.exists():
-            ids, _ = index_ipynb_by_id(nb_path)
-            if ids:
-                fw_id_outputs[fw] = ids
+        res = resolve_id_outputs(notebooks_dir, store_dir, fw, chapter, stem)
+        if res and res[0]:
+            fw_id_outputs[fw] = res[0]
 
     if not fw_id_outputs:
         return 0
@@ -553,11 +610,13 @@ def inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
     return len(injections)
 
 
-def inject_html(project_root, notebooks_dir, img_base):
+def inject_html(project_root, notebooks_dir, img_base, store_dir=None):
     """Inject outputs into all HTML .qmd files."""
     project_root = Path(project_root).resolve()
     notebooks_dir = Path(notebooks_dir).resolve()
     img_base = Path(img_base).resolve()
+    if store_dir:
+        store_dir = Path(store_dir).resolve()
 
     qmd_files = sorted(project_root.glob('chapter_*/*.qmd'))
     total_files = 0
@@ -566,7 +625,7 @@ def inject_html(project_root, notebooks_dir, img_base):
 
     for qmd_path in qmd_files:
         n = inject_file_html(qmd_path, notebooks_dir, img_base, project_root,
-                              warnings)
+                              warnings, store_dir=store_dir)
         if n:
             rel = qmd_path.relative_to(project_root)
             print(f'  {rel}: {n} outputs')
@@ -587,11 +646,12 @@ def inject_html(project_root, notebooks_dir, img_base):
 # ── PDF Injection ────────────────────────────────────────────
 
 def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
-                       mode, fallback=True, warnings=None):
+                       mode, fallback=True, warnings=None, store_dir=None):
     """Shared helper for pdf and slides modes.
 
     Single-framework qmd → injects outputs from the matching framework's
-    notebook by `#| label: <id>`. Cells without IDs are skipped.
+    notebook by `#| label: <id>`. Cells without IDs are skipped. Outputs come
+    from the committed store when present, else the executed notebook.
 
     `fallback`: pdf mode falls back through FALLBACK_ORDER if the target
     framework has no notebook for this file. slides mode does not.
@@ -606,25 +666,20 @@ def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
 
     chapter = qmd_path.parent.name
     stem = qmd_path.stem
-    rel_nb = Path(chapter) / f'{stem}.ipynb'
 
     fw_order = [framework]
     if fallback:
         fw_order += [f for f in FALLBACK_ORDER if f != framework]
 
-    nb_path = None
+    id_outputs = None
     actual_fw = None
     for fw in fw_order:
-        candidate = Path(notebooks_dir) / fw / rel_nb
-        if candidate.exists():
-            nb_path = candidate
+        res = resolve_id_outputs(notebooks_dir, store_dir, fw, chapter, stem)
+        if res and res[0]:
+            id_outputs = res[0]
             actual_fw = fw
             break
 
-    if not nb_path:
-        return 0
-
-    id_outputs, _ = index_ipynb_by_id(nb_path)
     if not id_outputs:
         return 0
 
@@ -658,15 +713,19 @@ def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
 
 
 def inject_file_pdf(qmd_path, framework, notebooks_dir, img_base,
-                    project_root, warnings):
+                    project_root, warnings, store_dir=None):
     return _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
-                              mode='pdf', fallback=True, warnings=warnings)
+                              mode='pdf', fallback=True, warnings=warnings,
+                              store_dir=store_dir)
 
 
-def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
+def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root,
+               store_dir=None):
     pdf_dir = Path(pdf_dir).resolve()
     notebooks_dir = Path(notebooks_dir).resolve()
     img_base = Path(img_base).resolve()
+    if store_dir:
+        store_dir = Path(store_dir).resolve()
 
     qmd_files = sorted(pdf_dir.glob('chapter_*/*.qmd'))
     total_files = 0
@@ -676,7 +735,7 @@ def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
     for qmd_path in qmd_files:
         n = inject_file_pdf(
             qmd_path, framework, notebooks_dir, img_base, project_root,
-            warnings)
+            warnings, store_dir=store_dir)
         if n:
             rel = qmd_path.relative_to(pdf_dir)
             print(f'  {rel}: {n} outputs')
@@ -692,16 +751,20 @@ def inject_pdf(pdf_dir, framework, notebooks_dir, img_base, project_root):
 
 # ── Slides Injection ─────────────────────────────────────────
 
-def inject_slides(slides_root, framework, notebooks_dir, img_base):
+def inject_slides(slides_root, framework, notebooks_dir, img_base,
+                  store_dir=None):
     """Inject outputs into all slide .qmd files for one framework.
 
-    Slide qmd lives at `_slides/<fw>/<chapter>/<file>.qmd`. Outputs come
-    from `_notebooks/<fw>/<chapter>/<file>.ipynb`. No fallback — if the
-    framework's notebook doesn't exist, the deck has no outputs.
+    Slide qmd lives at `_slides/<fw>/<chapter>/<file>.qmd`. Outputs come from
+    the committed store (`outputs/<fw>/...`) when present, else the executed
+    `_notebooks/<fw>/<chapter>/<file>.ipynb`. No fallback across frameworks — if
+    this framework has no outputs for a file, the deck has no outputs.
     """
     fw_dir = Path(slides_root).resolve() / framework
     notebooks_dir = Path(notebooks_dir).resolve()
     img_base = Path(img_base).resolve()
+    if store_dir:
+        store_dir = Path(store_dir).resolve()
 
     if not fw_dir.exists():
         print(f'  No slides directory for {framework}')
@@ -715,7 +778,7 @@ def inject_slides(slides_root, framework, notebooks_dir, img_base):
     for qmd_path in qmd_files:
         n = _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
                                mode='slides', fallback=False,
-                               warnings=warnings)
+                               warnings=warnings, store_dir=store_dir)
         if n:
             rel = qmd_path.relative_to(fw_dir)
             print(f'  {rel}: {n} outputs')
@@ -742,7 +805,10 @@ def main():
     p_html.add_argument('--project-dir', default='.',
         help='Project root (default: .)')
     p_html.add_argument('--notebooks-dir', default='_notebooks',
-        help='Executed notebooks directory (default: _notebooks)')
+        help='Executed notebooks fallback directory (default: _notebooks)')
+    p_html.add_argument('--store-dir', default='outputs',
+        help='Committed outputs store, preferred source (default: outputs; '
+             '"" to force _notebooks)')
     p_html.add_argument('--img-dir', default='img/outputs',
         help='Directory for extracted images (default: img/outputs)')
 
@@ -756,7 +822,9 @@ def main():
     p_pdf.add_argument('--project-dir', default='.',
         help='Project root (default: .)')
     p_pdf.add_argument('--notebooks-dir', default='_notebooks',
-        help='Executed notebooks directory (default: _notebooks)')
+        help='Executed notebooks fallback directory (default: _notebooks)')
+    p_pdf.add_argument('--store-dir', default='outputs',
+        help='Committed outputs store, preferred source (default: outputs)')
     p_pdf.add_argument('--img-dir', default='img/outputs',
         help='Directory for extracted images (default: img/outputs)')
 
@@ -768,23 +836,27 @@ def main():
     p_sl.add_argument('--slides-dir', default='_slides',
         help='Slides root directory (default: _slides)')
     p_sl.add_argument('--notebooks-dir', default='_notebooks',
-        help='Executed notebooks directory (default: _notebooks)')
+        help='Executed notebooks fallback directory (default: _notebooks)')
+    p_sl.add_argument('--store-dir', default='outputs',
+        help='Committed outputs store, preferred source (default: outputs)')
     p_sl.add_argument('--img-dir', default='_slides/img/outputs',
         help='Directory for extracted images (default: _slides/img/outputs)')
 
     args = parser.parse_args()
+    store_dir = args.store_dir or None
 
     if args.mode == 'html':
         print('=== Injecting notebook outputs (HTML) ===')
-        inject_html(args.project_dir, args.notebooks_dir, args.img_dir)
+        inject_html(args.project_dir, args.notebooks_dir, args.img_dir,
+                    store_dir=store_dir)
     elif args.mode == 'pdf':
         print(f'=== Injecting notebook outputs (PDF: {args.framework}) ===')
         inject_pdf(args.pdf_dir, args.framework, args.notebooks_dir,
-                   args.img_dir, args.project_dir)
+                   args.img_dir, args.project_dir, store_dir=store_dir)
     elif args.mode == 'slides':
         print(f'=== Injecting notebook outputs (slides: {args.framework}) ===')
         inject_slides(args.slides_dir, args.framework,
-                       args.notebooks_dir, args.img_dir)
+                       args.notebooks_dir, args.img_dir, store_dir=store_dir)
 
 
 if __name__ == '__main__':

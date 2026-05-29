@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layer.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layer-custom-layers": {
+      "code_fingerprint": "sha256:ed8a6f56d5898c1ec83d5c44dcb459e7b8c627dc8fd6e67e0d2b1d4c860e832e",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:b7264f9fac75b26d6b0d572f5085d6487ce1c01975af5ef6fe5c9ffa9431bc59",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:583e22722a45465243b029117ab86790f70e7dd55570fcf3ad39cc10d013d61a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([-2., -1.,  0.,  1.,  2.])"
+        }
+      ]
+    },
+    "custom-layer-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:4212a587b797d4bec7059fba97c99bef04ee8a3245a90bb3c1c985304ab63c4f",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-4": {
+      "code_fingerprint": "sha256:61123f4226af259f5cd24e97818d3d44f58548f61c9e05b029994a5d23c7180f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(-2.3283064e-09)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-1": {
+      "code_fingerprint": "sha256:f8ea7d61d346e0b480c53ecfcf2dd9b156cabe7d5141e4b2bca2467726a689c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-with-parameters-2": {
+      "code_fingerprint": "sha256:17a3858d605b040a31fd0548f9d01465e2a82096113caf06d85fc76e792d6d2e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'weight': Parameter (shape=(5, 3), dtype=<class 'numpy.float32'>),\n 'bias': Parameter (shape=(3,), dtype=<class 'numpy.float32'>)}"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-3": {
+      "code_fingerprint": "sha256:e27e96839fdbe39ef0655b81a500986701c93b99252e8fc9320e76720944840e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0.        , 0.        , 0.05976065],\n       [0.        , 0.        , 0.06217354]])"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-4": {
+      "code_fingerprint": "sha256:1b348ae080afa475685d6f62251e053f1d457596e3c5f10d20518a9d6cdac3ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0.],\n       [0.]])"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/bert-dataset.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:632a56f1be257ab610fc3569ab5877f0f84d604c21f54b9367732fd2d027c698",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-dataset-the-dataset-for-pretraining-bert-1": {
+      "code_fingerprint": "sha256:35e963113fa248f0e6b8c20ced93d23ad75cef15f3a3432b3a597f1ddb2c1843",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-the-dataset-for-pretraining-bert-2": {
+      "code_fingerprint": "sha256:709733b91ba38b76b7c26ba316e88ab6c6eeab4b8d6e12fdaeae820dd38a506b",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-generating-the-next-sentence-prediction-task-1": {
+      "code_fingerprint": "sha256:e06dd3a155ddd226fa9582c9db22f7d18eefcc955c11d655e0e41165e8f9dfff",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-generating-the-next-sentence-prediction-task-2": {
+      "code_fingerprint": "sha256:b968e4a3255f1a3b2e293a355b405fc6f1f6952e05095b063b7310b07b3f92d7",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-generating-the-masked-language-modeling-task-1": {
+      "code_fingerprint": "sha256:987b2fd47f546b219e216ca48478ae2e1a14d1e5ad3761abfa62bb5818f3ab3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-generating-the-masked-language-modeling-task-2": {
+      "code_fingerprint": "sha256:641e5f5018e24a20c074c4fe04fb7640db6e783940f5e80bc9e9f6072f75df13",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-transforming-text-into-the-pretraining-dataset-1": {
+      "code_fingerprint": "sha256:47580224e9692ce1e242d3e299d32a0981a4c7891dc9377a77beba3ba3f8aed5",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-transforming-text-into-the-pretraining-dataset-2": {
+      "code_fingerprint": "sha256:78276387b84681db44436ef6c19b33b99ae18966104c0e8bf54a2663b33add7d",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-transforming-text-into-the-pretraining-dataset-3": {
+      "code_fingerprint": "sha256:48df640c23ff0a2c7b540b645f209642611e83a81ab644f764ed01b0b7af98a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-transforming-text-into-the-pretraining-dataset-4": {
+      "code_fingerprint": "sha256:65b7710c5dc86c90cb600527556711e5ff38ae79d35216cfa22bccbe2ac95720",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "torch.Size([512, 64]) torch.Size([512, 64]) torch.Size([512]) torch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512])\n"
+        }
+      ]
+    },
+    "bert-dataset-transforming-text-into-the-pretraining-dataset-5": {
+      "code_fingerprint": "sha256:7eff44665ce21fd3fd8998be68e26806c6bf462902e7e5db5c2346f1ce3c2f26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "20257"
+        }
+      ]
+    }
+  }
+}

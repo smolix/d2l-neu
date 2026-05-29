@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/linear-algebra.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-algebra": {
+      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-algebra-scalars": {
+      "code_fingerprint": "sha256:9856064cd7878addc705d793cbf1c3bdce6e01b068750e75d87a4a8187b5385b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(5.), tensor(6.), tensor(1.5000), tensor(9.))"
+        }
+      ]
+    },
+    "linear-algebra-vectors-1": {
+      "code_fingerprint": "sha256:bf54b1663a83ff1089b109fc43614bf6db11f54c2c2a34983b2efa0195a0ec24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0, 1, 2])"
+        }
+      ]
+    },
+    "linear-algebra-vectors-2": {
+      "code_fingerprint": "sha256:22c147da14bd2bb5fd30055bad8d6566ea2e4d65f5e08d4b24da55eb833b5a8e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(2)"
+        }
+      ]
+    },
+    "linear-algebra-vectors-3": {
+      "code_fingerprint": "sha256:467bb3925af4af6fa9b71f11bebd25412e26d0e2fac2d9db14e07f06f4362b2d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3"
+        }
+      ]
+    },
+    "linear-algebra-vectors-4": {
+      "code_fingerprint": "sha256:886039534ac26e415ba1521f527a574e3b8166e3db5363fe1b38b9207889db48",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([3])"
+        }
+      ]
+    },
+    "linear-algebra-matrices-1": {
+      "code_fingerprint": "sha256:1fedb33301e15fbfd158a5dc4463251182e408e656b68026e7430541e2617d61",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0, 1],\n        [2, 3],\n        [4, 5]])"
+        }
+      ]
+    },
+    "linear-algebra-matrices-2": {
+      "code_fingerprint": "sha256:135b8cb23134effef170bcaebcf8f38959ee2a0a31bf763ab560ec3b51592a5d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0, 2, 4],\n        [1, 3, 5]])"
+        }
+      ]
+    },
+    "linear-algebra-matrices-3": {
+      "code_fingerprint": "sha256:518dc160301d9d6d3b52537b02cf1eee63a3316d024eb9c4b0eb9eae932ded94",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(True)"
+        }
+      ]
+    },
+    "linear-algebra-tensors": {
+      "code_fingerprint": "sha256:6ae9a7fb6afe521ebf96e7c1e713569eb520ef09ff1b9b0a73c1e8e7f5604d1b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[ 0,  1,  2,  3],\n         [ 4,  5,  6,  7],\n         [ 8,  9, 10, 11]],\n\n        [[12, 13, 14, 15],\n         [16, 17, 18, 19],\n         [20, 21, 22, 23]]])"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-1": {
+      "code_fingerprint": "sha256:394746e9f87c8dca92d7bfc8ee1ca589372e3dd85a6f51e2190552edbf251218",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[0., 1., 2.],\n         [3., 4., 5.]]),\n tensor([[ 0.,  2.,  4.],\n         [ 6.,  8., 10.]]))"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-2": {
+      "code_fingerprint": "sha256:972215e7d116c91769dda8968588ea16d93e2f11190e52ecde530411ed83bb9c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 0.,  1.,  4.],\n        [ 9., 16., 25.]])"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-3": {
+      "code_fingerprint": "sha256:df44026070cc46dce52ea05c8ce4d4748a28d59748e1d65670933bc4b3a5d4e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[[ 2,  3,  4,  5],\n          [ 6,  7,  8,  9],\n          [10, 11, 12, 13]],\n \n         [[14, 15, 16, 17],\n          [18, 19, 20, 21],\n          [22, 23, 24, 25]]]),\n torch.Size([2, 3, 4]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-1": {
+      "code_fingerprint": "sha256:51ac03b400e38424e5985c7a45e3b13bdbe4da5c609ade7023e84860a7477890",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([0., 1., 2.]), tensor(3.))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-2": {
+      "code_fingerprint": "sha256:0ac5cbb38b0b5f60bcf139efa1d5c0bdbd08124f1af70fdc97c4028561b26867",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([2, 3]), tensor(15.))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-3": {
+      "code_fingerprint": "sha256:adc33623acd8f88a8bdf8da7a77633b2a5cac6a7b6af349b394a35848f90b064",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([2, 3]), torch.Size([3]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-4": {
+      "code_fingerprint": "sha256:b791762ec2ae84fe2037ae55507f4291c2f3b98476432e2bc2d42516d24d9c41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([2, 3]), torch.Size([2]))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-5": {
+      "code_fingerprint": "sha256:ec45cfb06d5a02be0bc2faf4516a5476a353f9f749fc864f427f51dc0e7ac5d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(True)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-6": {
+      "code_fingerprint": "sha256:047a39f9053c1561de6691d94f5783e3bcb25131ab6edbb30591f17cb6ccd6eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(2.5000), tensor(2.5000))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-7": {
+      "code_fingerprint": "sha256:62ef0e44e3b047ad1f750a7de53c155896221a0ca39a012e0c45785e36f8bf67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([1.5000, 2.5000, 3.5000]), tensor([1.5000, 2.5000, 3.5000]))"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-1": {
+      "code_fingerprint": "sha256:a9156ddbcf334c4fa27e7fbe7e39f5a96250816f3e393cb2756f818dc836161a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[ 3.],\n         [12.]]),\n torch.Size([2, 1]))"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-2": {
+      "code_fingerprint": "sha256:45cb4a144957236b4837232b0411007dcf0ebcef27663a8b7a5e415e888f1b95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0.0000, 0.3333, 0.6667],\n        [0.2500, 0.3333, 0.4167]])"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-3": {
+      "code_fingerprint": "sha256:b82e27dc9986237a3ed29aa91794ca523f2b2908961d457658cbf4137d678f69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0., 1., 2.],\n        [3., 5., 7.]])"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-1": {
+      "code_fingerprint": "sha256:45c412743d82f95019c7d7badfed84319f09281e4dfd895d05931d9e401caf61",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([0., 1., 2.]), tensor([1., 1., 1.]), tensor(3.))"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-2": {
+      "code_fingerprint": "sha256:1b7d0d5d9be7c1ee9616f5a598ea7b0e9b199ccb2f072f4c704cc966d702e068",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(3.)"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products": {
+      "code_fingerprint": "sha256:073a5c537ff10d9978266c1915b497b45c6dffc91d37d7b0b3711a548a4688ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([2, 3]), torch.Size([3]), tensor([ 5., 14.]), tensor([ 5., 14.]))"
+        }
+      ]
+    },
+    "linear-algebra-matrix-matrix-multiplication": {
+      "code_fingerprint": "sha256:3adfd293b310a2d14b42897e0a3bbdf51adc22cdf7b317691306e2cc85b8d7ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[ 3.,  3.,  3.,  3.],\n         [12., 12., 12., 12.]]),\n tensor([[ 3.,  3.,  3.,  3.],\n         [12., 12., 12., 12.]]))"
+        }
+      ]
+    },
+    "linear-algebra-norms-1": {
+      "code_fingerprint": "sha256:d78493a48da7f4106a0aada5a4544396e58865ff1d596f409fa7a83a3f8d796e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(5.)"
+        }
+      ]
+    },
+    "linear-algebra-norms-2": {
+      "code_fingerprint": "sha256:0abb8e8de3a04af61f40c7abd2f4dd2d5f2e65dc5fc01d172800f224906eddfc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(7.)"
+        }
+      ]
+    },
+    "linear-algebra-norms-3": {
+      "code_fingerprint": "sha256:1fcf2ebb9f2940b58231525a4f1000c289b23ed306d5d61b9cc0e205524d1981",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(6.)"
+        }
+      ]
+    }
+  }
+}

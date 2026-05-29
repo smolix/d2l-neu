@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/pandas.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "pandas-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:81d3a98d9393d2c75a1378c7cdee50d7bf5ca155e8406e651f40fd00070bb3ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "pandas-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:32690f35c70c1cb98475367304f7b48fbe23bfb7e057ad0911c98e60617937b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   NumRooms RoofType   Price\n0       NaN      NaN  127500\n1       2.0      NaN  106000\n2       4.0    Slate  178100\n3       NaN      NaN  140000\n"
+        }
+      ]
+    },
+    "pandas-data-preparation-1": {
+      "code_fingerprint": "sha256:958b7e30fa19b352ed5e6e3363310923c0b959846f2ad0c86ffd830f95884e6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   NumRooms  RoofType_Slate  RoofType_nan\n0       NaN           False          True\n1       2.0           False          True\n2       4.0            True         False\n3       NaN           False          True\n"
+        }
+      ]
+    },
+    "pandas-data-preparation-2": {
+      "code_fingerprint": "sha256:071fac8552d607ae510925df7c61ae9518373f3013a4ac169ff24ce2a803c550",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   NumRooms  RoofType_Slate  RoofType_nan\n0       3.0           False          True\n1       2.0           False          True\n2       4.0            True         False\n3       3.0           False          True\n"
+        }
+      ]
+    },
+    "pandas-conversion-to-the-tensor-format": {
+      "code_fingerprint": "sha256:94040737abf0c380e919c185f27c27d4c84e3c9b8a73ad3dd388b2c0429524b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([[3., 0., 1.],\n        [2., 0., 1.],\n        [4., 1., 0.],\n        [3., 0., 1.]], dtype=float32),\n Array([127500., 106000., 178100., 140000.], dtype=float32))"
+        }
+      ]
+    }
+  }
+}

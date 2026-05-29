@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init-param.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-param-parameter-initialization-1": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-param-parameter-initialization-2": {
+      "code_fingerprint": "sha256:35f0ef92fa680f9f72c1b45f1c5cda7741294ab74e93a6eecd48d26624d30c69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 1])"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-1": {
+      "code_fingerprint": "sha256:3da82546bea9afbed9d6f59bae13085ffb29734091adeb5164da37c1ff341b1f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<Variable path=sequential_1/dense_2/kernel, shape=(4, 4), dtype=float32, value=[[ 0.01351649 -0.01893514  0.00400103  0.01071155]\n  [-0.01155291 -0.01346976  0.01258854 -0.01595419]\n  [ 0.00490116  0.01213251 -0.0040374   0.00524947]\n  [ 0.01690177 -0.01160192  0.0070013  -0.01185552]]>,\n <Variable path=sequential_1/dense_2/bias, shape=(4,), dtype=float32, value=[0. 0. 0. 0.]>)"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-2": {
+      "code_fingerprint": "sha256:6dbd31fb0aacbc14dcd69957709fd6b25ad845e8eb415915a59bc8d956426259",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<Variable path=sequential_2/dense_4/kernel, shape=(4, 4), dtype=float32, value=[[1. 1. 1. 1.]\n  [1. 1. 1. 1.]\n  [1. 1. 1. 1.]\n  [1. 1. 1. 1.]]>,\n <Variable path=sequential_2/dense_4/bias, shape=(4,), dtype=float32, value=[0. 0. 0. 0.]>)"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-3": {
+      "code_fingerprint": "sha256:64c4e4f2c888a527758c01158ec9913db0ebad378701b004206d7f963bae03da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "<Variable path=sequential_3/dense_6/kernel, shape=(4, 4), dtype=float32, value=[[ 0.45649034 -0.2112422  -0.3388276  -0.42810598]\n [ 0.50334996  0.51424485 -0.14520895  0.7002807 ]\n [ 0.6495134  -0.07530838  0.21155852 -0.46688908]\n [ 0.37942833 -0.69026655 -0.3907903  -0.80395174]]>\n<Variable path=sequential_3/dense_7/kernel, shape=(4, 1), dtype=float32, value=[[42.]\n [42.]\n [42.]\n [42.]]>\n"
+        }
+      ]
+    },
+    "init-param-custom-initialization-1": {
+      "code_fingerprint": "sha256:ecb21e8c952e2b14241fc3e7a3d20992492d89e959d724e5b24b8e206815e1a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[-5.642619   5.672825  -0.        -8.760483 ]\n [-0.        -0.        -0.        -9.942968 ]\n [-5.921049  -0.         0.         0.       ]\n [-0.        -8.601568  -0.        -5.7857013]]>\n"
+        }
+      ]
+    },
+    "init-param-custom-initialization-2": {
+      "code_fingerprint": "sha256:239a51f8cd9a534d13721c9bc27768951a7c21092a6d519c8cba5eff5014c763",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[42.         6.672825   1.        -7.760483 ]\n [ 1.         1.         1.        -8.942968 ]\n [-4.921049   1.         1.         1.       ]\n [ 1.        -7.601568   1.        -4.7857013]]>"
+        }
+      ]
+    }
+  }
+}

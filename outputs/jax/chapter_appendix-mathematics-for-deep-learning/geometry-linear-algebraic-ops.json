@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/geometry-linear-algebraic-ops.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "geometry-linear-algebraic-ops-geometry-of-vectors": {
+      "code_fingerprint": "sha256:97ebc02feeda38d3892c125899c942593add71e168b5fcfd0df6fe618f9b39d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "geometry-linear-algebraic-ops-dot-products-and-angles": {
+      "code_fingerprint": "sha256:0439e0240a94639f518a2eb89b106b27bb3bbff10c8e5bf9217a33995a589fbf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(0.41899002, dtype=float32)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-1": {
+      "code_fingerprint": "sha256:5898a4336a27b6a93b24f59edc3bc4b3017d069fe24992ab7e5c3a8abd623b1b",
+      "kind": "text",
+      "outputs": []
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-2": {
+      "code_fingerprint": "sha256:aabc655ad0b5e7b6a2302a2046f0e8e3f0a02d0b869ccdbd09f614f53ec1835c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
+          "bytes": 11090,
+          "sha256": "sha256:9248ae4740b44932dd49251e253724550dcfb50d7b9b55e76eeaa94b5a842a15"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-3": {
+      "code_fingerprint": "sha256:3e2de48693f4ac1892ee1335fcee6b3a96a54f3bb3e8f1ee9b7abb61f7b50cf0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-3-1.svg",
+          "bytes": 10566,
+          "sha256": "sha256:af48104c0832e3b7d743f3fd871a2aa779527c82ddc9c52c9836b770e4f2cf52"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-4": {
+      "code_fingerprint": "sha256:a0b27d0406d8c3eea39228a473677c0ef2505be163cf61b846a648993f35ce01",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(0.892, dtype=float32)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-invertibility": {
+      "code_fingerprint": "sha256:326243e6935048c6ec2083a1b22fda4eb9b8d9e426f03efc9683bd9534786477",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[1., 0.],\n       [0., 1.]], dtype=float32)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-determinant": {
+      "code_fingerprint": "sha256:495f619273e903c146db9b52652daaf04ba66d39eebc2c2746e23f2ba6e27d90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(5., dtype=float32)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-1": {
+      "code_fingerprint": "sha256:40e0ff37dc883b4b274aaa31808af36c7e771255094a3fd6d7877b8925679095",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 2), (2, 2, 3), (2,))"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-2": {
+      "code_fingerprint": "sha256:48fc414028663ad80d44b9efdc1a4f219ad6e522ceeceae4936d056582bfc8d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([ 5, 11], dtype=int32), Array([ 5, 11], dtype=int32))"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-3": {
+      "code_fingerprint": "sha256:c21513c1a504b4429a85f5c948d8df0f99c73791d92f2fda68ce6b44fa662e15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 90, 126],\n       [102, 144],\n       [114, 162]], dtype=int32)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-4": {
+      "code_fingerprint": "sha256:a9f7b37d9dcf1ef80661af2e778c18c816c9f7a32600cd2b4ee8492df310953b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 90, 126],\n       [102, 144],\n       [114, 162]], dtype=int32)"
+        }
+      ]
+    }
+  }
+}

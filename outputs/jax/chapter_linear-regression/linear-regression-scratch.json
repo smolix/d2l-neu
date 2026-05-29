@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression-scratch.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:1928208cf687430773ccdb31d4a0ff5834a6264f54cd48b65f5600abbfcf917d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression-scratch-linear-regression-implementation-from-scratch": {
+      "code_fingerprint": "sha256:56ad2fb3dd2226a03fb8130ff35136bf6d95bce7d18dce2dca775135e9f16669",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-defining-the-model-1": {
+      "code_fingerprint": "sha256:486cd04dd7442f75c8f882c2aebe9493022287bdc18b0ac91f0536e244123e39",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-defining-the-model-2": {
+      "code_fingerprint": "sha256:ca739542dcabcd8bf54ecd73ea5edcb90ab1940c8526d41c348b9165af2a85ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-defining-the-loss-function": {
+      "code_fingerprint": "sha256:af9468bbc3f9812df4ea55c43b3e535b37b90c2f7ef7aa1153ed40560f8b4802",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-defining-the-optimization-algorithm-1": {
+      "code_fingerprint": "sha256:8d703c9a0fed0a919106299a8400001143c896ca8a28d0f4f3536caf13df6715",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-defining-the-optimization-algorithm-2": {
+      "code_fingerprint": "sha256:051af4b3af4e9df19d5fa0a0870618a17cef31274c88575b799d58b90009502a",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-training-1": {
+      "code_fingerprint": "sha256:4581d0af152f893dc4e77ea8c58d0fa2fd74bdabe49c18ca0360d01fb8a12969",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-training-2": {
+      "code_fingerprint": "sha256:5d04f3d0fd8d99d28342d8895a4bf9b98d1a90da400eb0ebf0987df67722227c",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-training-3": {
+      "code_fingerprint": "sha256:bc47fe51df139ead48c7c9f56b65ee96906683b89ca9ce9bc2d42af1b224605e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
+          "bytes": 24146,
+          "sha256": "sha256:0cece3cacafdf5e8a7513b310ed0d84f3d8ae998979c63f6b27de6899831d0ac"
+        }
+      ]
+    },
+    "linear-regression-scratch-training-4": {
+      "code_fingerprint": "sha256:74cefddc6bb5f110f8ac02a821ebdac6013c98a02dff358ad058d5b0800c09ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error in estimating w: [ 0.0005703  -0.00063848]\nerror in estimating b: [0.0009346]\n"
+        }
+      ]
+    }
+  }
+}

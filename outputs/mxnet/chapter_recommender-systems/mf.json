@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/mf.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:dd69724b66c48ae880a06901322fc0ac8232eb630389a93db523c87b0b0b0213",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mf-the-matrix-factorization-model": {
+      "code_fingerprint": "sha256:603bd3bdb3c05cb6b9d1a33e60f21b16c3266f612739d495f19135bed9b917b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-model-implementation": {
+      "code_fingerprint": "sha256:552dc85bffd15693419c97bbae166cdb2722b2b26d118e4330edff96a081cd64",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-evaluation-measures": {
+      "code_fingerprint": "sha256:c29466a6d21a3297029c8024e0153ef5632cf0d371ad3f7f04a1216b467874bb",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-training-and-evaluating-the-model-1": {
+      "code_fingerprint": "sha256:b484f9a659a9285e66c60df90d7cb7eb2140900b6e3e7dd3d83ed2c4b6e05428",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-training-and-evaluating-the-model-2": {
+      "code_fingerprint": "sha256:441e73b394254cf782e96f168c7c038a75fd8bdcb581e43f9e1a4fb4d4299345",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.130, test RMSE 1.054\n148689.8 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
+          "bytes": 21536,
+          "sha256": "sha256:c98a9baedee6a65b4531549f8e6a4727913eb624efda95018b326fef4253063d"
+        }
+      ]
+    },
+    "mf-training-and-evaluating-the-model-3": {
+      "code_fingerprint": "sha256:24e2559b6ec4acd6c90d9474e635baaa1513030d228299569ca8708c10155d29",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([3.0695462], device=gpu(0))"
+        }
+      ]
+    }
+  }
+}

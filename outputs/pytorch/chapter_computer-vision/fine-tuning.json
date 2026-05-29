@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/fine-tuning.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:52f6df4cb27d843ceb56ca8bf81637e721450558c88276400fdc5f0f8348901a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fine-tuning-hot-dog-recognition": {
+      "code_fingerprint": "sha256:40550d7b80b37a28017a3e0a2f7f0cbd189640ff05f56c358df5b19a3b13967c",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:eac3ada3d5b4c0054b80cb5fa60270a8cb8495904fda056f36ec26bb197f2f31",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:a2d99e1827590c4ec3234a15e15a9a9d69b2dafa5bf1a89763975237d0b9fdc4",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:f4109eb399a78d91b5cd2e7b6f2fc440aaaccd1c39abe407ba10348e0f51b8a1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "fine-tuning/fine-tuning-reading-the-dataset-3-1.png",
+          "bytes": 230491,
+          "sha256": "sha256:a5c6b85d4c4745eb1acdcaca56e31252ce7dfb5a4ed2cdba68254a8c96eb71a2"
+        }
+      ]
+    },
+    "fine-tuning-reading-the-dataset-4": {
+      "code_fingerprint": "sha256:0dd46d25d49c9ca616e619c8b1eef804717f77f0737b05f284b2c1abf4c7d653",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-defining-and-initializing-the-model-1": {
+      "code_fingerprint": "sha256:b1e7e6e614de82e012a959e8aad761ab46040a3fb249aaeca207c286806b3dc8",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-defining-and-initializing-the-model-2": {
+      "code_fingerprint": "sha256:03cff2b9af96a3b9c873a0c6aa5f89e6118a831ac5db062daa6ffae1f0f3f638",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Linear(in_features=512, out_features=1000, bias=True)"
+        }
+      ]
+    },
+    "fine-tuning-defining-and-initializing-the-model-3": {
+      "code_fingerprint": "sha256:8d88163e9bd7dc7ca3e8b0f42c4fb1166006c911a49edd3aeb75664123e4cdf8",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-fine-tuning-the-model-1": {
+      "code_fingerprint": "sha256:27c0264287e8341e83dfe080e641d7e55f01908265aa13755af22326045b63d0",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-fine-tuning-the-model-2": {
+      "code_fingerprint": "sha256:33b3aedf418d9245b71b12385354d87744adaa6c5f5007ee9d98507925cfdf8f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.205, train acc 0.921, test acc 0.924\n1426.6 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
+          "bytes": 25099,
+          "sha256": "sha256:7bce2f2ced377033763656ea09c30d679f652d0a74c5527d6e556859898f3218"
+        }
+      ]
+    },
+    "fine-tuning-fine-tuning-the-model-3": {
+      "code_fingerprint": "sha256:f1f460ad809f5f0ddb13a0131b144f5cac6ee8d37471b43f5b3530bb9a6e776f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.375, train acc 0.833, test acc 0.866\n1208.2 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
+          "bytes": 25063,
+          "sha256": "sha256:fea39cc2f6cecd55cc8da8a4a245ae929e16a6f5f3864cd6feb0c2c3fd047b4a"
+        }
+      ]
+    },
+    "fine-tuning-exercises-1": {
+      "code_fingerprint": "sha256:0244694caf03ba4c58a8cfc445809b15e0ebc4ffd117289dd11d7d5e650ed0ee",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-exercises-2": {
+      "code_fingerprint": "sha256:80f3d8d6a1189d7e9127989c46cbedc263372bb06105f693fb57903edfe4bf6c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([1, 512])"
+        }
+      ]
+    }
+  }
+}

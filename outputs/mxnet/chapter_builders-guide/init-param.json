@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init-param.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-param-parameter-initialization-1": {
+      "code_fingerprint": "sha256:1889cbf1eed34400d62ec6dd20d3cd9265da4a5aa19cd7f8b2604aef58f67932",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-param-parameter-initialization-2": {
+      "code_fingerprint": "sha256:99543f21b7c2af60f2b8506d8e663dc2739a33e16620a86c482673adb989cf20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 1)"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-1": {
+      "code_fingerprint": "sha256:be9ed513e05fec9ab18eac140da2a80fe441f4674d0fe4a33545f8c52b83fa28",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([-0.00435475, -0.00346633,  0.00200728, -0.00116359])"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-2": {
+      "code_fingerprint": "sha256:0fe2997a4e08a86cbf7dbddb9b4d6ec99d605120ef16d0b074a44b708b3f7797",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([1., 1., 1., 1.])"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-3": {
+      "code_fingerprint": "sha256:77e0f6786a515e177be0796d4fe13617c79a3ed2cdeeea429ac598175ead09b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[ 0.00414437  0.18567836 -0.2961563  -0.4164026 ]\n[[42. 42. 42. 42. 42. 42. 42. 42.]]\n"
+        }
+      ]
+    },
+    "init-param-custom-initialization-1": {
+      "code_fingerprint": "sha256:33bee0170bc8017775985ca3b54f42fd0ee1a89cb9aa8e85e1c080b2d953f697",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Init weight (8, 4)\nInit weight (1, 8)\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([[ 0.       , -6.1812973, -5.429499 ,  6.1682873],\n       [-9.820163 , -8.121389 , -6.660104 , -7.625551 ]])"
+        }
+      ]
+    },
+    "init-param-custom-initialization-2": {
+      "code_fingerprint": "sha256:2ceff946b5bc0be6f617fe3e3d7edb097800aebb1a2290b9060824de11f22e90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([42.       , -5.1812973, -4.429499 ,  7.1682873])"
+        }
+      ]
+    }
+  }
+}

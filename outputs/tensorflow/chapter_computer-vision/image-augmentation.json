@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/image-augmentation.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:c5294cba6574ab930471c6a62525857c288c696ce435e8285031c0d891e54f8c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "image-augmentation": {
+      "code_fingerprint": "sha256:e6c2982ee022817b5d30e0baf5851bd7ca73c0ad437105aebce4362f43aed6a9",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-common-image-augmentation-methods-1": {
+      "code_fingerprint": "sha256:cd837e3cc515ac07a44acf56a68398f3c7464bb3b05711c9065441f729873e44",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-common-image-augmentation-methods-1-1.svg",
+          "bytes": 123026,
+          "sha256": "sha256:4764b4efa870f9606837ec9aa8590a6db234b21dd07e4d6435685af95ece4503"
+        }
+      ]
+    },
+    "image-augmentation-common-image-augmentation-methods-2": {
+      "code_fingerprint": "sha256:efa44c2f96487f3c325d20155a63daa46d4d7e71eaa59176dc286efb081f03cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-flipping-and-cropping-1": {
+      "code_fingerprint": "sha256:052f8664a63c935e46e0a761954d319080232d5b2cf31a10825ee61f79cf676a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-flipping-and-cropping-1-1.svg",
+          "bytes": 196740,
+          "sha256": "sha256:9f6a5edcad34e13150bb2748d722c942d5177e031378122a3911262087e9fc70"
+        }
+      ]
+    },
+    "image-augmentation-flipping-and-cropping-2": {
+      "code_fingerprint": "sha256:58242f7411fd1caa383ed35130522ef44192ae025a947d6b1894d0d9d5e7aba8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-flipping-and-cropping-2-1.svg",
+          "bytes": 196488,
+          "sha256": "sha256:892bac0da75cf5ca99610bb0ed1284fc773e8361eb552b3407ccf41d7d6beb4c"
+        }
+      ]
+    },
+    "image-augmentation-flipping-and-cropping-3": {
+      "code_fingerprint": "sha256:9b209dd881a917a10431882bad3820201ee5276a5f65b536758f79615c16f3dd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-flipping-and-cropping-3-1.svg",
+          "bytes": 235388,
+          "sha256": "sha256:0ddddb43019be7e2b12281cdf13b60dd976842dbc9b03d61fa6689c0d0db2696"
+        }
+      ]
+    },
+    "image-augmentation-changing-colors-1": {
+      "code_fingerprint": "sha256:fb2b7b191d50bc8e20a633f92a99fff2aa1ec4480f193d7ac6d15fc4bc87ea7a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-changing-colors-1-1.svg",
+          "bytes": 144116,
+          "sha256": "sha256:e1f7d2177e4d165ac4932041e7c30b58292f4c84fd57a516bd159558b352d7eb"
+        }
+      ]
+    },
+    "image-augmentation-changing-colors-2": {
+      "code_fingerprint": "sha256:a07a7c3deb0578a6d16b0bef9b3b3752ae98a6a201a41d452e874cafdc34e885",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-changing-colors-2-1.svg",
+          "bytes": 198336,
+          "sha256": "sha256:db3f862ae2782895e0bb552d0658a4cdebfa31576a366ade637630abd7bd6b09"
+        }
+      ]
+    },
+    "image-augmentation-changing-colors-3": {
+      "code_fingerprint": "sha256:16f76e40b99f5df7562f1975f7737dbfce85573075ce8958b5739e01511159ef",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-changing-colors-3-1.svg",
+          "bytes": 157876,
+          "sha256": "sha256:22786ea53f32403bf31027621f596ad4215f94ed0ce0f86192af0da3ec488de8"
+        }
+      ]
+    },
+    "image-augmentation-combining-multiple-image-augmentation-methods": {
+      "code_fingerprint": "sha256:74ab1bca0263c8fe4c0431a8b3dc1b42cb94a7b19e098f603eb2f13624f92e30",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-combining-multiple-image-augmentation-methods-1.svg",
+          "bytes": 177896,
+          "sha256": "sha256:2145cb20b4af352b0d90cd338ebace6bfd0ba46aac3b456d40fe1563d6e30154"
+        }
+      ]
+    },
+    "image-augmentation-training-with-image-augmentation-1": {
+      "code_fingerprint": "sha256:fabdf73fa64daec566580d87616e62ba939463b97d70034f7edb7fe38eb8e80f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/datasets/cifar.py:18: VisibleDeprecationWarning: dtype(): align should be passed as Python or NumPy boolean but got `align=0`. Did you mean to pass a tuple to create a subarray type? (Deprecated NumPy 2.4)\n  d = cPickle.load(f, encoding=\"bytes\")\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-training-with-image-augmentation-1-1.svg",
+          "bytes": 278185,
+          "sha256": "sha256:8a8f2b08854b9e86fc7d1afbfc9f96f890dcc0ea4613de6f7abd42648900e269"
+        }
+      ]
+    },
+    "image-augmentation-training-with-image-augmentation-2": {
+      "code_fingerprint": "sha256:8d8ea8f1cd0cd1721c35e585668cf2adb835f35a74527172e3f2aa9ddf392324",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-training-with-image-augmentation-3": {
+      "code_fingerprint": "sha256:ef375fc8902059e36e3314b1281206a9e00b8d0afed5eebf05fa07a82e0f0216",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-multi-gpu-training-1": {
+      "code_fingerprint": "sha256:bc67c5f9c3f637b2ac1dd8f28c340f8eddd8f9f9b7cd96115b09c33f572a5a91",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-multi-gpu-training-2": {
+      "code_fingerprint": "sha256:81feb36a99952e9668eae444068e14421d028565576dc17b840af5351358e561",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-multi-gpu-training-3": {
+      "code_fingerprint": "sha256:936211cdba5b5459489fc16192848d3b3c495484a62339fb9a9690af59a8bdf3",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-multi-gpu-training-4": {
+      "code_fingerprint": "sha256:24c440617fb622864956e24d6f2650777c2fc1961abad0af379fd8cef48ae497",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.173, train acc 0.940, test acc 0.810\n638.5 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-augmentation/image-augmentation-multi-gpu-training-4-1.svg",
+          "bytes": 25493,
+          "sha256": "sha256:d684f06d6c7ce7bc8e518164870b73a79998351113b4329b609a39290f4fd764"
+        }
+      ]
+    }
+  }
+}

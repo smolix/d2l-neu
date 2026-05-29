@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/kaggle-dog.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:2f35cf3f35074975157246dc0c47ff6f1fd83f257dd7dc9f2570bfcb1978aafe",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle": {
+      "code_fingerprint": "sha256:3b6ad8d9e5c2cc9af32d6b9ef39c1b22b4c5741c6a0b3b3efaaccd96c4912430",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-downloading-the-dataset": {
+      "code_fingerprint": "sha256:4fde77eaa0cf70d60176868c54a0ed0203b200444a8efa0a06d86fe6a122f807",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-organizing-the-dataset": {
+      "code_fingerprint": "sha256:588fa2ca14d5379e2301c8a9592b3835c88098d51ba99b48e30520a252b60019",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-image-augmentation-1": {
+      "code_fingerprint": "sha256:56691a3e6c3efb424b300123787a0f59e2c17986d5c4737a549b9e076eb25ea7",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-image-augmentation-2": {
+      "code_fingerprint": "sha256:3c96097d1772baf502fa5ec0ade72e15b31f93a5f736c4c38f1cc01585b69bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:fb4011f5f9582c14f59b9680ad118f4becaea97f0d65c9f38e2d083415ce75c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 880 files belonging to 120 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 1000 files belonging to 120 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 120 files belonging to 120 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 10 files belonging to 1 classes.\n"
+        }
+      ]
+    },
+    "kaggle-dog-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:10e92b8955554ff85530a7c29312cfd6d76d3b412625e93d8f63e99fa574374b",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-fine-tuning-a-pretrained-model-1": {
+      "code_fingerprint": "sha256:394cf931d5b27af6c0e389cb16754c18b4b101753238b87ac16298c5064444f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-fine-tuning-a-pretrained-model-2": {
+      "code_fingerprint": "sha256:e84db71154a73166a5bc6fdbbca4014afea039cd9acdc574d273d7a5fc89ffbc",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-defining-the-training-function": {
+      "code_fingerprint": "sha256:a5a032a194c67ef28624115aa7a2af161aa9f9a8a961409124425c7ea2b9f3ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-training-and-validating-the-model": {
+      "code_fingerprint": "sha256:9bf4c29394aa1d112fa60afb014766c0706e3f6a0005140f2ec00aaf4fd9289a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.304, valid loss 1.354\n78.9 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
+          "bytes": 21991,
+          "sha256": "sha256:df1ab06bcd4c2bbfad17f58dee41312cd6a6a8262558ee3347f79491e2af232a"
+        }
+      ]
+    },
+    "kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle": {
+      "code_fingerprint": "sha256:2eff79c42ab3e00c172e83bccdd79f40113d51ad3970afc8e86248968ef05eab",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.309\n85.1 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
+          "bytes": 19013,
+          "sha256": "sha256:1fcc11f9f27d0810bdc61263f96bd95084ee4d977e28a15a1d21e8f18d2819d6"
+        }
+      ]
+    }
+  }
+}

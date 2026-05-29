@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multiple-gpus.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:d98db643eedc65d2de41bd1b401a79aa2181756c81d0ac4d8726d1d95b95d917",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiple-gpus-data-parallelism": {
+      "code_fingerprint": "sha256:261aed907482f4ddbbffbd451a3f0c240923dcee6b369b37a3ac8c68c4bf3e19",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-a-toy-network": {
+      "code_fingerprint": "sha256:a778182f6bb105aec5edd2ce56e2a893deb29a56b7b12fb76053d714b5e14df7",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-synchronization-1": {
+      "code_fingerprint": "sha256:7f17bc823f2c29dcf56e7fffbe19c337f07d4b195f89ae21a800b7e63c0f70d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-synchronization-2": {
+      "code_fingerprint": "sha256:b219b9d7a5e4e61a6857609b2db1e4f04d89a2db42b697ddfc8bc87f9d9de71f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b1 weight: [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]\nb1 grad: <tf.Variable 'Variable:0' shape=(20,) dtype=float32, numpy=\narray([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,\n       0., 0., 0.], dtype=float32)>\n"
+        }
+      ]
+    },
+    "multiple-gpus-data-synchronization-4": {
+      "code_fingerprint": "sha256:b7d123e28e92ac58f689a1e86c6ae3832bc16d17519f6b8307186bc58f7d27d3",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-synchronization-5": {
+      "code_fingerprint": "sha256:2bde8974867e08ac86ddef9c04c3c8ff07557dbf0731e9598b22deb46c23a06b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "before allreduce:\n [[1. 1.]] \n [[2. 2.]]\nafter allreduce:\n [[3. 3.]] \n [[3. 3.]]\n"
+        }
+      ]
+    },
+    "multiple-gpus-distributing-data-1": {
+      "code_fingerprint": "sha256:ae4462b2bb33f58ca7b42dc9d97137acafa9258e2b23f49a0664db6ad3717560",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "input : [[ 0.  1.  2.  3.  4.]\n [ 5.  6.  7.  8.  9.]\n [10. 11. 12. 13. 14.]\n [15. 16. 17. 18. 19.]]\nload into ['/device:GPU:0', '/device:GPU:1', '/device:GPU:2', '/device:GPU:3']\noutput: [array([[0., 1., 2., 3., 4.]], dtype=float32), array([[5., 6., 7., 8., 9.]], dtype=float32), array([[10., 11., 12., 13., 14.]], dtype=float32), array([[15., 16., 17., 18., 19.]], dtype=float32)]\n"
+        }
+      ]
+    },
+    "multiple-gpus-distributing-data-2": {
+      "code_fingerprint": "sha256:e304fc7a3b92074773759e4d4021e57d82dcb117881d1d13d53497875b0dfd97",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-training-1": {
+      "code_fingerprint": "sha256:b0657c971c507735cd8c742d509b882f473b6a2c581b4f4466173dbd6a5c17dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-training-2": {
+      "code_fingerprint": "sha256:b5cbeaed535394311dd4df1bc7c76bb809be6d8a0b5da7a17efccd244c2769ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-training-3": {
+      "code_fingerprint": "sha256:41d5cdf5c5241cac18d3e0e60969a360f3f36a8f405b42af5bc031d82ec3c5b7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.83, 2.5 sec/epoch on ['/device:GPU:0']\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
+          "bytes": 16965,
+          "sha256": "sha256:30f1bb268017d2816106ae03b634a71ee03e777115393349f445b5606dcde5f0"
+        }
+      ]
+    },
+    "multiple-gpus-training-4": {
+      "code_fingerprint": "sha256:fa7ea7124980ada4fd61943990e90a4a06be36d8ba660a5b387365bfcd1dda1a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.84, 5.2 sec/epoch on ['/device:GPU:0', '/device:GPU:1']\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
+          "bytes": 16961,
+          "sha256": "sha256:d98d55c2f0f1c98321f9dec57817d707da76c0297c1d0b3638a4753b19ad6e47"
+        }
+      ]
+    }
+  }
+}

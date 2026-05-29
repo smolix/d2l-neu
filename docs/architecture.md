@@ -4,6 +4,16 @@ Quarto-based rebuild of *Dive into Deep Learning* (d2l.ai), replacing the
 custom d2l-book/Sphinx pipeline. Source content originates from the d2l-en
 repository; the `.md` files now live in-tree under `chapter_*/`.
 
+> **Note — build model in transition.** This document describes the *current*
+> pipeline, in which site rendering (HTML/slides/PDF) reads executed notebook
+> outputs from the on-disk `_notebooks/` tree. That coupling is being replaced
+> by the **decoupled build** specified in **`build-system.md`**: a committed,
+> cell-ID-keyed notebook-output store (text in git, image assets in Git LFS) so
+> rendering runs CPU-only, with no notebook execution and no framework venvs, and
+> notebooks re-execute only when their *code* changes. Read `build-system.md` for
+> the capture/bless workflow, the randomness-immune freshness model, and how
+> partial re-execution keeps every index correct.
+
 ## Content scale
 
 | Artifact        | Count |

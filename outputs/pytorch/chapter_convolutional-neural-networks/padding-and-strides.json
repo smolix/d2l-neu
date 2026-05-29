@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/padding-and-strides.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "padding-and-strides-padding-and-stride": {
+      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "kind": "text",
+      "outputs": []
+    },
+    "padding-and-strides-padding-1": {
+      "code_fingerprint": "sha256:1f40abd30ff5b7a118b184f61c6a9e10d3052c5ee1d555a57fa3a73797fe0a2e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([8, 8])"
+        }
+      ]
+    },
+    "padding-and-strides-padding-2": {
+      "code_fingerprint": "sha256:e9680fcab57bb0b7966c9bf4e75e2a4da3b2c6d050217084cb964b2efcb48911",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([8, 8])"
+        }
+      ]
+    },
+    "padding-and-strides-stride-1": {
+      "code_fingerprint": "sha256:ea16bc9ceb9e07e2c585d1bec0eea83960fd4ba2aa8970f60d348f17239b47ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 4])"
+        }
+      ]
+    },
+    "padding-and-strides-stride-2": {
+      "code_fingerprint": "sha256:e1dbca92135620a731683b8c1561eda9ef357579f22ac78c4e4e30c6bb9afd50",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 2])"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/classification.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e1f8e1a41ff8818b0155e5a437b5bcec55a32feaa8d3f91ce13029ad2d6684f9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "classification-the-base-classification-model": {
+      "code_fingerprint": "sha256:703bb453901c3833eba31afc0d96fc5cc9c292e711e20d3f60ea0a59b87c290e",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-1": {
+      "code_fingerprint": "sha256:fa476bdafe11b29da1709c2b837670f8fa6cb92510335f1ec659f5d4a7bef84d",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:61846de21864d5120fa6358a29e625980f703a0c3b4c3bb4738aa057a214fe49",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-accuracy-1": {
+      "code_fingerprint": "sha256:0f0115aaa113f69e3210b32b962d5c76e6ea5d09066c39b0d1f24d5d0762a0ac",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

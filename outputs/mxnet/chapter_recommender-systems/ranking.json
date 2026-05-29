@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/ranking.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ranking-bayesian-personalized-ranking-loss-and-its-implementation-1": {
+      "code_fingerprint": "sha256:5d49bbe611b1c53db71c2cc9fa3cea35658f685d7e08fa5004a0c0af1756f4a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "ranking-bayesian-personalized-ranking-loss-and-its-implementation-2": {
+      "code_fingerprint": "sha256:8c776728845dd4a2f9852d64d038ed01a3599be6c80b0d0bbc1b0f953217044a",
+      "kind": "text",
+      "outputs": []
+    },
+    "ranking-hinge-loss-and-its-implementation": {
+      "code_fingerprint": "sha256:42b196515efb572d53fc6455346667bd39d74401a2bd005ccdeeb6012f979d00",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

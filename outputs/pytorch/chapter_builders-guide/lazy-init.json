@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/lazy-init.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:08d1944ca612209c388cfeae4d530be5dc5c64f2afab48567e03de085d00685d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lazy-init-lazy-initialization-1": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lazy-init-lazy-initialization-2": {
+      "code_fingerprint": "sha256:36aa5420ea08068b4dc86fb91da24a5344b5bc8d082a5feb791afac945c82c9c",
+      "kind": "text",
+      "outputs": []
+    },
+    "lazy-init-lazy-initialization-3": {
+      "code_fingerprint": "sha256:f7940745a4d7851186113b5416a4df08a70c0f4ea20baa573aee324ad9ad204d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<UninitializedParameter>"
+        }
+      ]
+    },
+    "lazy-init-lazy-initialization-5": {
+      "code_fingerprint": "sha256:f25ec88e3f828a4b74a81d6df066af06b68a4bbf961c9d7b5573ef9392f8919d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([256, 20])"
+        }
+      ]
+    },
+    "lazy-init-lazy-initialization-6": {
+      "code_fingerprint": "sha256:1e5ff68f9589655a867c16f38854039b9cc573a33cba4c8f5b0b414ec419060a",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

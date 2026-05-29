@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/dropout.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:6c550fd224299b55eca26f6a8bef32a147af1d82b04c5f307c59cded91009a18",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dropout": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:5a69830c3f64d45d0ef5510e586b070182b305edff5e250b2eb5da9540dacd3c",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:3ad61fa44b44bae8736c6bb4b8bbae9117fd50516939880da245a4080e35c32c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  0.,  0.,  0., 14.],\n        [16., 18.,  0., 22.,  0.,  0.,  0.,  0.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
+        }
+      ]
+    },
+    "dropout-defining-the-model": {
+      "code_fingerprint": "sha256:3c547656c4238bf585c5c7aec36391bc2f41f683cc08b867d985bec9a857b290",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-training": {
+      "code_fingerprint": "sha256:9338beb4cb81e5ac29cc505f1d55567cbd3a9e4f7fc77af77b6cbc822ff0568d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-training-1.svg",
+          "bytes": 59706,
+          "sha256": "sha256:ea199d1d7e8bf1199bb7cfcbf52a5ebe4747aede6e2cf7aaf3b97e041e79c5f3"
+        }
+      ]
+    },
+    "dropout-concise-implementation-1": {
+      "code_fingerprint": "sha256:72e931c6d3d5682b891ac86ab12ad106576b7f477a4d7c2520214253b522cbdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-concise-implementation-3": {
+      "code_fingerprint": "sha256:f32700b7dcca569b98aaa88d49bd5180d8bfb86c5c5590f6879a16679765adb3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-concise-implementation-3-1.svg",
+          "bytes": 59623,
+          "sha256": "sha256:17ef8c3ca23dfd0437a8c3bfc023bd1de982d719ec8ddac549e382ec261469e2"
+        }
+      ]
+    }
+  }
+}

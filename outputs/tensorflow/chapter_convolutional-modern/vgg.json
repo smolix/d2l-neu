@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/vgg.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:5bc747a03ad9e8512ac133effa8361878215edaccd486bd7755c85fa76b263e3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vgg-networks-using-blocks-vgg": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-blocks": {
+      "code_fingerprint": "sha256:ece891ec83d9f9f74e9f50d3e0c211adfddeb783e8290846168e01c3f8ee82a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-1": {
+      "code_fingerprint": "sha256:df4d512c463c9f4b4b9992e4b98d72c6cfd983252fd5d205ff4a4390ecd23b2f",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-2": {
+      "code_fingerprint": "sha256:ced7fe82804851ad88bad29285c9ae46d29ea84bd3faa691f34a1d723fa660ea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 112, 112, 64)\nSequential output shape:\t (1, 56, 56, 128)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "vgg-training": {
+      "code_fingerprint": "sha256:b66c3b241cf870958b27f5be456eb4d6d4caad06b916af56c1428053645205ab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vgg/vgg-training-1.svg",
+          "bytes": 58694,
+          "sha256": "sha256:9ace45ea4affd2722f85408d0225931219b2525417a8bca55377bcda3eb9c4d6"
+        }
+      ]
+    }
+  }
+}

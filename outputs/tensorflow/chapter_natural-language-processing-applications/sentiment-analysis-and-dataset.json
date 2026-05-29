@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:4dc491c485696928a2eba28c8708499e3d20c1b4ef99dae133c062d8894c0053",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset": {
+      "code_fingerprint": "sha256:760d21b575e350da2a58d1ae4f5e59077612353774874cf0f6f7150e1573eb58",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:8215bc78cfcbccb3b09bab7b4458a84ab5dc9209015e6b8404b3ef815ea86fc7",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:21044c726f56ff22c13d3ebf02ad54b0da191eb2983864afa8405556b2a2b5f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "# training examples: 25000\nlabel: 1 review: Zentropa has much in common with The Third Man, another noir\nlabel: 1 review: Zentropa is the most original movie I've seen in years. If y\nlabel: 1 review: Lars Von Trier is never backward in trying out new technique\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-1": {
+      "code_fingerprint": "sha256:d3cd814855c0dcae516704ed99a08526f66e594de669a5c011c0a254c3ba2809",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-2": {
+      "code_fingerprint": "sha256:2c131f0cc09288c97a4a843896cb4123e2ce58cad7a4e27b84892fd66151c814",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
+          "bytes": 20893,
+          "sha256": "sha256:c89abebcaa951b480524c8ce9ea791b79c3d8ed82fb7279caf944cdb55d8bdf9"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-3": {
+      "code_fingerprint": "sha256:34b65f668fad7462744e60d7ae6c3df015a8d1ba63beab241ac6ecdfe9aa12c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(25000, 500)\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-creating-data-iterators": {
+      "code_fingerprint": "sha256:2b4c2ad43b7a4992f2d91ff60cb0428bd251c9bf5da0a2c26b1229f430f28466",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: (64, 500) , y: (64,)\n# batches: 391\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-putting-it-all-together": {
+      "code_fingerprint": "sha256:672150e2d2e1f0bbf22b88c5a502d02642ee5fe8e2b33eb59759a2f3e015d98c",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

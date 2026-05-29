@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression": {
+      "code_fingerprint": "sha256:644b49d8bd10ecda7f4e779078e8f114fc1c76f8299d932456e28a777da12ba6",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-1": {
+      "code_fingerprint": "sha256:b297717cae370858ad34bcfce0ed2671e3a9e8473cf8291102b11bec0f0e6c7c",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-2": {
+      "code_fingerprint": "sha256:92ea7a57be40af2b41506b795b2f086321772adf3236152242c73fcf10de19a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'11.88510 sec'"
+        }
+      ]
+    },
+    "linear-regression-vectorization-for-speed-3": {
+      "code_fingerprint": "sha256:016f8465bf98a81e45682b1e2a60dc1306a95a8fd667eed20a87a0f9085f21f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.00039 sec'"
+        }
+      ]
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-1": {
+      "code_fingerprint": "sha256:9daa4b7077fb5f9e8f49c0d3f43e9c1e3eb568a3b56e95c7fb9d6f2858a6b5ac",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-2": {
+      "code_fingerprint": "sha256:4d204a2b36ba6ad039d63b9ffdb16e5c1f1e5931e2b6850788fcbc6700cab093",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
+          "bytes": 28703,
+          "sha256": "sha256:4f3b6e78a1e6c8f805ca6214a02e83d205465508a5809db364d7ba3e5f8ee28d"
+        }
+      ]
+    }
+  }
+}

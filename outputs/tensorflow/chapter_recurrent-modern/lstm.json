@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/lstm.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:561fbbffffd30bea1860f099849bc30e5796590905291ded6a9285e6b692f3fd",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lstm-long-short-term-memory-lstm": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-1": {
+      "code_fingerprint": "sha256:a6ed714dd9f33726d3695df0c99ffef92d2c9f684be5081e9e11cf109100e9b2",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-2": {
+      "code_fingerprint": "sha256:8b98dd237f2c7c5feb0e3a4294eecea035581d91d3dbb9e4a751b1ab5cad40f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-and-prediction": {
+      "code_fingerprint": "sha256:1780be8791f3664ef3300fbbb082c3ad55a2467292fef4b2f224c0149c26e77a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-training-and-prediction-1.svg",
+          "bytes": 308171,
+          "sha256": "sha256:10f7e4ba0e05fb6286a104e2bfe2af01d11b192b900adccaf0d6cfa5cd9eee30"
+        }
+      ]
+    },
+    "lstm-concise-implementation-1": {
+      "code_fingerprint": "sha256:767ec4bb19d674f5267eb0fefee951bc7d9108c4dd19f810527c7d7a68d49afc",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-concise-implementation-2": {
+      "code_fingerprint": "sha256:dfb57022c6904589d34ec6a16106b3866c5e595d5b6c4e7e3b94cb8b2bb06635",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-concise-implementation-2-1.svg",
+          "bytes": 310614,
+          "sha256": "sha256:f4149422bc185402b36960d86bd7a448c8f8e43085cdb848baab77d7bb3a728a"
+        }
+      ]
+    },
+    "lstm-concise-implementation-3": {
+      "code_fingerprint": "sha256:5f07090bda6ae8127eacec0f38b09c74bcdfb8da058507e3c8c143611f2834fa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has in the time travell'"
+        }
+      ]
+    }
+  }
+}

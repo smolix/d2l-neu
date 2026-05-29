@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/model-construction.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "model-construction-layers-and-modules-1": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-layers-and-modules-2": {
+      "code_fingerprint": "sha256:83bfecd0fd720b913d01bdb73909c3722d3de70adda1871b0209ac9f30dab39c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 10])"
+        }
+      ]
+    },
+    "model-construction-a-custom-module-1": {
+      "code_fingerprint": "sha256:b6d86fb2cffd6b002e1ec602a6c3e7fef39f10ebabb202766c595f3d6491aea5",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-a-custom-module-2": {
+      "code_fingerprint": "sha256:363d3041d33f479c4f0fe9e33a1542b4a95324a744df1606af739fa637e196ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 10])"
+        }
+      ]
+    },
+    "model-construction-the-sequential-module-1": {
+      "code_fingerprint": "sha256:f5b4c754d9d457b031afb3cdb1ce2fabe31daa275f864c9bbb1e0de9ea3baed8",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-the-sequential-module-2": {
+      "code_fingerprint": "sha256:45d092c315719db089fe403f68249db3189c71cc0f078f89952b894075b4f2ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 10])"
+        }
+      ]
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-1": {
+      "code_fingerprint": "sha256:dbc21da0d5ffe1ac0007f0f40676c94e0baf28ff48af1af282bad3d154f1a664",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-2": {
+      "code_fingerprint": "sha256:f18d8c1d53481467bdca3c69df1afb9703e9f0878a4789d116de80e435a1dfd2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.6550171375274658>"
+        }
+      ]
+    },
+    "model-construction-executing-code-in-the-forward-propagation-method-3": {
+      "code_fingerprint": "sha256:7fc2d69727fca9433700b8b444c7a2fe9d664f5c2ef74856d7beb02263b0bfbf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.5022469162940979>"
+        }
+      ]
+    }
+  }
+}

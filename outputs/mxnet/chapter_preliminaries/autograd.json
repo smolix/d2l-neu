@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/autograd.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autograd-automatic-differentiation": {
+      "code_fingerprint": "sha256:a4bac8ccc140298ae8526ae34fe9b3ad8da9791b1f1fbf0140798db4a9c3b5dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-1": {
+      "code_fingerprint": "sha256:0879465dfaf9bcfa4eab1321c35a4bb4faaf1d9d59ba29dfa79035cfa1e1502e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 1., 2., 3.])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-2": {
+      "code_fingerprint": "sha256:ce6bc4cf4341285069e75ac598ebf2f59dc9d81faf081ebaa7f8215d3a875572",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 0., 0., 0.])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-3": {
+      "code_fingerprint": "sha256:2d00a223fa0b41ac84450074ab0fd802bb8f605dbb5e26e11052feac12bbffed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(28.)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-4": {
+      "code_fingerprint": "sha256:25e030855048a1eff712e839773b38b8439ff647b77f1f60625d90d693e62970",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:57:34] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([ 0.,  4.,  8., 12.])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-5": {
+      "code_fingerprint": "sha256:45c4051e42ea509401563c2e0381d8cbae05d61c2a335da854bd24d3c085c085",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([ True,  True,  True,  True])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-6": {
+      "code_fingerprint": "sha256:2545f03a2e3d5435fd3554f7df072ffd02505c7c6d9d629492807df4c9381908",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([1., 1., 1., 1.])"
+        }
+      ]
+    },
+    "autograd-backward-for-non-scalar-variables": {
+      "code_fingerprint": "sha256:b0ccd98cdcd5d5f9bdafdfd9b759730fda65f886beb28475a587fd967d48b6ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 2., 4., 6.])"
+        }
+      ]
+    },
+    "autograd-detaching-computation-1": {
+      "code_fingerprint": "sha256:dda5685d0d43fb3fb3b90a0ddcdcaf33331a6012eeadde9bebd8708e5ee3faf6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([ True,  True,  True,  True])"
+        }
+      ]
+    },
+    "autograd-detaching-computation-2": {
+      "code_fingerprint": "sha256:7cdc512a7c6bc347286a1538ef83ee9d93a74c730011f3956882d075cee2108a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([ True,  True,  True,  True])"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-1": {
+      "code_fingerprint": "sha256:4ee97bfa67bf24de82f8d581e4960b0d92af7cafd755a61a964e26aff83cfae0",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-2": {
+      "code_fingerprint": "sha256:0957be61045c4716f49f0c459fdba8925013eb0f8e0bcb5c653b6c6479038f8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-3": {
+      "code_fingerprint": "sha256:59e177d195fe7d733c487e1f552faba270e2f6823d99bc90fd50b85a10d9bc6a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(True)"
+        }
+      ]
+    }
+  }
+}

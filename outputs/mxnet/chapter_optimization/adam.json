@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adam.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:54f6921be5c59e6720a1d21a5e9c4549db67eecabce4771a315639f7ed2176b5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adam-implementation-1": {
+      "code_fingerprint": "sha256:b4e77a5945bc9c6d2cd2a9f7ed194c6c97d6bc181e78af627f2076f4061caeaa",
+      "kind": "text",
+      "outputs": []
+    },
+    "adam-implementation-2": {
+      "code_fingerprint": "sha256:3dd15325cce98bf6a894f467dbf3cf598e36da8abfbcfa30a803e0b0618d97b1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 0.367 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adam/adam-implementation-2-1.svg",
+          "bytes": 18775,
+          "sha256": "sha256:f00065f5faf775e25fde3b01103ce902cb604d32c722c036597f4aa26ee07ebe"
+        }
+      ]
+    },
+    "adam-implementation-3": {
+      "code_fingerprint": "sha256:d1b55d9c82f8a3f36bf72f6a8fe23bd8f9420e27581f6e09800abca6155beb36",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 0.208 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adam/adam-implementation-3-1.svg",
+          "bytes": 18774,
+          "sha256": "sha256:ef24fe1f281424da60479d6aba95a8247b9e1c32cc57318350237f0801d9d23c"
+        }
+      ]
+    },
+    "adam-yogi": {
+      "code_fingerprint": "sha256:52b6903862ded62dddad8bac63bd2dff0cb2015d5959a9ee7678f623ebbbe7b8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 0.414 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adam/adam-yogi-1.svg",
+          "bytes": 18773,
+          "sha256": "sha256:4107a1c6a5d2d887a28b9c6a7b185ea38a3c624de36125b6452d16085711d9ba"
+        }
+      ]
+    }
+  }
+}

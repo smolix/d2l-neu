@@ -1,0 +1,248 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/ndarray.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ndarray-getting-started-1": {
+      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "kind": "text",
+      "outputs": []
+    },
+    "ndarray-getting-started-2": {
+      "code_fingerprint": "sha256:58ebf67470141ef80aaba03136256e1d1b3008dc46c55412f080c104f7baadda",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])"
+        }
+      ]
+    },
+    "ndarray-getting-started-3": {
+      "code_fingerprint": "sha256:e41ef155f3a1a7d24cffa93cf5d672964a3f61dc87f32cb1d65d204ff784b991",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "12"
+        }
+      ]
+    },
+    "ndarray-getting-started-4": {
+      "code_fingerprint": "sha256:4b74328ac0f81771283ee71f1d065aac8dcab90d4b6792893bca1ee5c7493f5c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([12])"
+        }
+      ]
+    },
+    "ndarray-getting-started-5": {
+      "code_fingerprint": "sha256:04440de9c54eb5c8cc9fd173b1153e3714efedbbbb6b03784cb0da3c474340d1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 0.,  1.,  2.,  3.],\n        [ 4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11.]])"
+        }
+      ]
+    },
+    "ndarray-getting-started-6": {
+      "code_fingerprint": "sha256:f49be5742f45c0db0fabac175290d8d8ff921bdc087528103bb1f9bc9df7626a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[0., 0., 0., 0.],\n         [0., 0., 0., 0.],\n         [0., 0., 0., 0.]],\n\n        [[0., 0., 0., 0.],\n         [0., 0., 0., 0.],\n         [0., 0., 0., 0.]]])"
+        }
+      ]
+    },
+    "ndarray-getting-started-7": {
+      "code_fingerprint": "sha256:4d143599635ca17b6f9428b7aa39fca40fc10e1fe8806a1b16b4590c7c320096",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[1., 1., 1., 1.],\n         [1., 1., 1., 1.],\n         [1., 1., 1., 1.]],\n\n        [[1., 1., 1., 1.],\n         [1., 1., 1., 1.],\n         [1., 1., 1., 1.]]])"
+        }
+      ]
+    },
+    "ndarray-getting-started-8": {
+      "code_fingerprint": "sha256:7ea0338dbc0c3a77b430a9221ab92cfdcf69a0e6d483589b6eae066d7e3c1a63",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[-1.5866,  0.3727, -0.5981, -0.1036],\n        [-1.3765, -0.4576,  0.6870,  1.8337],\n        [ 0.9081, -0.1825,  1.4939,  0.8758]])"
+        }
+      ]
+    },
+    "ndarray-getting-started-9": {
+      "code_fingerprint": "sha256:4012149a849e138feae39db4131c586b68f99433339deb4222eba26e3738d903",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[2, 1, 4, 3],\n        [1, 2, 3, 4],\n        [4, 3, 2, 1]])"
+        }
+      ]
+    },
+    "ndarray-indexing-and-slicing-1": {
+      "code_fingerprint": "sha256:9e428abe26c3dcdf9cbc66eaf83714a61cb18721c2d596d12c726f1091f28198",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([ 8.,  9., 10., 11.]),\n tensor([[ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.]]))"
+        }
+      ]
+    },
+    "ndarray-indexing-and-slicing-2": {
+      "code_fingerprint": "sha256:9cd5f2c207f88ea820811c90b3e0eb92f32ed2d825f2eb301838339288b9c6f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 0.,  1.,  2.,  3.],\n        [ 4.,  5., 17.,  7.],\n        [ 8.,  9., 10., 11.]])"
+        }
+      ]
+    },
+    "ndarray-indexing-and-slicing-3": {
+      "code_fingerprint": "sha256:b582af8c73f961958830b465d015d764226be2a74921267a43ce01add3ab688e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[12., 12., 12., 12.],\n        [12., 12., 12., 12.],\n        [ 8.,  9., 10., 11.]])"
+        }
+      ]
+    },
+    "ndarray-operations-1": {
+      "code_fingerprint": "sha256:5b99e53ecff6d70001cd9404ed21256e25a6d363872f7203285b697790e936c4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([162754.7969, 162754.7969, 162754.7969, 162754.7969, 162754.7969,\n        162754.7969, 162754.7969, 162754.7969,   2980.9580,   8103.0840,\n         22026.4648,  59874.1406])"
+        }
+      ]
+    },
+    "ndarray-operations-2": {
+      "code_fingerprint": "sha256:ab5b3c6492bda6b15422f0233c1f261f2009eb3d486eef8c8fe6dd176fcd4e4f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([ 3.,  4.,  6., 10.]),\n tensor([-1.,  0.,  2.,  6.]),\n tensor([ 2.,  4.,  8., 16.]),\n tensor([0.5000, 1.0000, 2.0000, 4.0000]),\n tensor([ 1.,  4., 16., 64.]))"
+        }
+      ]
+    },
+    "ndarray-operations-3": {
+      "code_fingerprint": "sha256:8c4a3e17923f4e6ab79ddbbbf766f66f69fba6366c44d4308bd577ba7f2c5ae5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [ 2.,  1.,  4.,  3.],\n         [ 1.,  2.,  3.,  4.],\n         [ 4.,  3.,  2.,  1.]]),\n tensor([[ 0.,  1.,  2.,  3.,  2.,  1.,  4.,  3.],\n         [ 4.,  5.,  6.,  7.,  1.,  2.,  3.,  4.],\n         [ 8.,  9., 10., 11.,  4.,  3.,  2.,  1.]]))"
+        }
+      ]
+    },
+    "ndarray-operations-4": {
+      "code_fingerprint": "sha256:bef0e9d3b1fae9eb20bed8e4354c201ae0ea944cc6a4ea2b93a2023eb6379789",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[False,  True, False,  True],\n        [False, False, False, False],\n        [False, False, False, False]])"
+        }
+      ]
+    },
+    "ndarray-operations-5": {
+      "code_fingerprint": "sha256:af0c262dcfde55afd8c4b5c84fbb3b1af724576e1c421ec62d7085c72d7e5c83",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(66.)"
+        }
+      ]
+    },
+    "ndarray-broadcasting-1": {
+      "code_fingerprint": "sha256:50bfd870f18787cf1ce3ba37a0c6a42273cb76f4a59254c95a45d6d5421bbab9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[0],\n         [1],\n         [2]]),\n tensor([[0, 1]]))"
+        }
+      ]
+    },
+    "ndarray-broadcasting-2": {
+      "code_fingerprint": "sha256:b9fbef6a64a81ced74f0aba64543571c5aed3a23786daabe69fcb3777c5fe347",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0, 1],\n        [1, 2],\n        [2, 3]])"
+        }
+      ]
+    },
+    "ndarray-saving-memory-1": {
+      "code_fingerprint": "sha256:e726d030e89dbbe0ae12e2f7b1ef721d29fbc7462230f7f1eb5da400ef8c3c8c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    },
+    "ndarray-saving-memory-2": {
+      "code_fingerprint": "sha256:ac0e9dd19f93514421101860228f4f02cb31ce5e08102d7b35bd684a9a429fcd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "id(Z): 134060911742880\nid(Z): 134060911742880\n"
+        }
+      ]
+    },
+    "ndarray-saving-memory-3": {
+      "code_fingerprint": "sha256:cd47421f19c683ae72c5babc83f01bd9137b86ceebb5a81b12feca89092f4888",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "ndarray-conversion-to-other-python-objects-1": {
+      "code_fingerprint": "sha256:3db402a31b42b8ec50dae3ac6430c31acc8c7ef0f3dbe5d5d4f7931e84bc9d2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(numpy.ndarray, torch.Tensor)"
+        }
+      ]
+    },
+    "ndarray-conversion-to-other-python-objects-2": {
+      "code_fingerprint": "sha256:80a5faaaa9d72090a0bdfa2a39b92d9746b3c9edbdb74b1881d5d437bad2220e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([3.5000]), 3.5, 3.5, 3)"
+        }
+      ]
+    }
+  }
+}

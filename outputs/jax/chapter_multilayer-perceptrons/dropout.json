@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/dropout.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dropout": {
+      "code_fingerprint": "sha256:3e06b9a63c5deb0197c1569d1b7c5ff04065d33474dd51b0545fe0af2ba47cad",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:c3067b7d33f2d26dcbedd1bad9ecea4495b1b8bf3d77633f19d14d3e4b6f4d22",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:59bfc8f27c23302f384c356578b1f84d70d1f923dbd12053f4b89d63480e2c65",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  0.  6.  0. 10. 12.  0.]\n [ 0. 18.  0.  0. 24.  0. 28. 30.]]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+        }
+      ]
+    },
+    "dropout-defining-the-model": {
+      "code_fingerprint": "sha256:0005fb0bad029f181d811c87ee0c9d433649f9c0c95a06103632b0ab5d05c0bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-training": {
+      "code_fingerprint": "sha256:271fd72443ede531b5132b31a469ee72f58e24a668a0e2ffc6d7e742197e7e01",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-training-1.svg",
+          "bytes": 32377,
+          "sha256": "sha256:f1c9b1d4742aae30d36177c25eb3a28da741065cbc3860cd9daf9fe78d64348f"
+        }
+      ]
+    },
+    "dropout-concise-implementation-1": {
+      "code_fingerprint": "sha256:492d561e2d5219ad432229e9935a22d7b62edaa3c1165e6b29de98c6bba0734e",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-concise-implementation-2": {
+      "code_fingerprint": "sha256:dd98dba799ccf20559069bffd4a8049cd800264acfa96309937485a34e9aeb42",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-concise-implementation-3": {
+      "code_fingerprint": "sha256:cc82f21a1151ccadadbec75bed5528e1dca619b7bc71b36adf4b2eb881777ee9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-concise-implementation-3-1.svg",
+          "bytes": 32394,
+          "sha256": "sha256:939aa1b9c90daa8d331750bb7c7186ef34ec167e5558f71923e54de1aea20a26"
+        }
+      ]
+    }
+  }
+}

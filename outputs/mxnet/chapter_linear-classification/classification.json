@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/classification.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:a0237310aee486231d4e5053ba1a79b15fea379175cc68b121623a6229321d65",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "classification-the-base-classification-model": {
+      "code_fingerprint": "sha256:06f4e6fd864c63a5f98af02d27e21b6dafcd0ef323e38f3f4b731d4bf159664f",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-1": {
+      "code_fingerprint": "sha256:40d9da8391f145516604ac5111dfda84cc3e7789ae3a049653f8f92815253270",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:512a61faf7245b90fa3e327d60c57a3c13978346c4db5a970fcf63a205f552e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-accuracy-1": {
+      "code_fingerprint": "sha256:8b8d46b507e44da8d518aaf9d0db353a8563141f272d0f13af9cd273b1ace66b",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-accuracy-2": {
+      "code_fingerprint": "sha256:f5236df0f4ee77106594b337bc20ae8b5d8007d1c4f067c0bf144236ee6c5a73",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

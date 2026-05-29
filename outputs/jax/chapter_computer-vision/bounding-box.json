@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/bounding-box.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bounding-box-object-detection-and-bounding-boxes-1": {
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-object-detection-and-bounding-boxes-2": {
+      "code_fingerprint": "sha256:e14f6ede9412108a5bb4db99e569923d2d20f459d58a5e8ea35435e2c0bdc6ff",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
+          "bytes": 87007,
+          "sha256": "sha256:51aeeacace78c7b4a555c133274efcc955241c5b3defdef61040079408e6f421"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-1": {
+      "code_fingerprint": "sha256:0c6b789130c7a4346663795bd20931d81003bea1ae5eabcdcff7c851fe49c6b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-2": {
+      "code_fingerprint": "sha256:87e4d9422d7c7da22dcf19f3660fb6a9e291c74aedcc47fa8ce49465433d6e52",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-3": {
+      "code_fingerprint": "sha256:96fe93fa5b7f591e16acb6dc467864d6a5bde35210d1072af20809522870314b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ True,  True,  True,  True],\n       [ True,  True,  True,  True]], dtype=bool)"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-4": {
+      "code_fingerprint": "sha256:83563b9fa7f546791d7a95a94d107880270948fad2e87dd70f3300c4b7af81cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-5": {
+      "code_fingerprint": "sha256:39203aee02c258bb382396f9c09a15f61af7d05fbba765608d5c5d6773fca2d5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
+          "bytes": 87556,
+          "sha256": "sha256:df04f6a2dda949b377c0180f6cfecaa536aa27767488d034c4b0269dac5ff50a"
+        }
+      ]
+    }
+  }
+}

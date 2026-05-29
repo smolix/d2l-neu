@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/object-detection-dataset.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:323d6ba6760cff6c7b1e69cf778d6da88eb79bd518ca4a18f2d31a645bb1d999",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "object-detection-dataset-downloading-the-dataset-1": {
+      "code_fingerprint": "sha256:913f46f2f28fb997667daf08d4cc682ebaf718ec3a4a79023888ca559f66d36d",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-downloading-the-dataset-2": {
+      "code_fingerprint": "sha256:4a086c4c14b9c53744cf9f5264754d12676b033078926bedffffac2a4e083536",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:53ad09adf60c9a62ccf9f7af3dd83125260ce3b4c518526f1b6bd199fb3a3a26",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:b27bc4f52d2ccc7e6cac27308d0a2a9784019a7c7c2c253ae42acdd06b255a61",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:4c06079c7e7717da3f226bb40160828f90855c8a79d85b72f3317e403bc2d85b",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-4": {
+      "code_fingerprint": "sha256:a037c3c54c98daafbb692e1c38b3be27b4b6c61be61773f46767d5f98f7b0530",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1000 training examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 100 validation examples\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([32, 256, 256, 3]), TensorShape([32, 1, 5]))"
+        }
+      ]
+    },
+    "object-detection-dataset-demonstration": {
+      "code_fingerprint": "sha256:f3edfff70491452b0a15a58d4f2b0819037ba23c132b2a61a648169a78b80d2e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
+          "bytes": 457220,
+          "sha256": "sha256:95d89f2f8c03dfc1fadc7395ee09ce29c68b4fb4d418c99156d0ac1214af4bb9"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/anchor.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:16f8343167d56bceabee5a66fdbe44ccc1589577db05e17890535e7c2eeadcdb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "anchor-anchor-boxes": {
+      "code_fingerprint": "sha256:43c607dfbec278af5dcb19475666d014b5789cd3d225faf89266fcba7c3cd988",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-1": {
+      "code_fingerprint": "sha256:d4cf28a6902e984665dd035d688a038ee37974cf201e6605c2d84fb4ad2450b5",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-2": {
+      "code_fingerprint": "sha256:beb78973cd3107bd5a99da55f46e0bb390c737671043079540d865e5bd6d6f0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "561 728\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "torch.Size([1, 2042040, 4])"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-3": {
+      "code_fingerprint": "sha256:ec9577567786341ffb75db4f3b75009009c03cbbbc0557978945f29cb4e3ce09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0.06, 0.07, 0.63, 0.82])"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-4": {
+      "code_fingerprint": "sha256:5c4ec2e053b0ac851edb7c18ca128ccea3b86d1cfa5ff2d45be1d216858c9b58",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-5": {
+      "code_fingerprint": "sha256:970c66b5bf17f40bde19cc9ffbee91f9e284b843baad33410e6cc8facb9a3772",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
+          "bytes": 95750,
+          "sha256": "sha256:87fe81ca8e57626fad689ffa4f690bee2d98f9b09c3d4798bb36651b7517ae5d"
+        }
+      ]
+    },
+    "anchor-intersection-over-union-iou": {
+      "code_fingerprint": "sha256:1fdf00cf47a34331b9de7c5f58eed88494de805fc76347db9c298b3fb3bf2079",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes": {
+      "code_fingerprint": "sha256:e6902fd87483eeccb8e62e00e015aab889a90a1081475624b929474426b4e142",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-1": {
+      "code_fingerprint": "sha256:f1e89db11ab7baac36a13b414f76c47b3aa5d8d5635bb8911c81519b2daf3163",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-2": {
+      "code_fingerprint": "sha256:b486898692ae4523d98d725d7a7f7e11748249076de306ac7df1791596101d11",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-1": {
+      "code_fingerprint": "sha256:b916ae93f47cfef1f36fd09c6d0ba667668874cc57efe43a536d9612b5e31bc3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-an-example-1-1.svg",
+          "bytes": 94721,
+          "sha256": "sha256:78e0ef0eba68b94a222486548e42ba46b3b87aec68060fbc96db4e96de007678"
+        }
+      ]
+    },
+    "anchor-an-example-2": {
+      "code_fingerprint": "sha256:8efa9add8bf2dd6e0498c8b760e0e6b57d0ca5b9f1fa198c202d9b06dde94adc",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-3": {
+      "code_fingerprint": "sha256:b0b8e49fae412f14ee501ad177b5656cba3d17fa3e4fbb9e9e7b1c2838f0a9a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0, 1, 2, 0, 2]])"
+        }
+      ]
+    },
+    "anchor-an-example-4": {
+      "code_fingerprint": "sha256:91fc3c364220e9a8bb3c708092c38d6110399c60526ddcf687442d39963e9a5a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0., 0., 0., 1., 1.,\n         1., 1.]])"
+        }
+      ]
+    },
+    "anchor-an-example-5": {
+      "code_fingerprint": "sha256:662eef1dfd89f504383061b56c31a67666c15b47e0d6e0355982f05dca7897e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[-0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00,  1.40e+00,  1.00e+01,\n          2.59e+00,  7.18e+00, -1.20e+00,  2.69e-01,  1.68e+00, -1.57e+00,\n         -0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00, -5.71e-01, -1.00e+00,\n          4.17e-06,  6.26e-01]])"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-1": {
+      "code_fingerprint": "sha256:7cd25bf4ae0970da137019df325efe88b8186e12c008b4665d0e8107452b9274",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-2": {
+      "code_fingerprint": "sha256:5f093cf6c9266e27a422ce87ef6f1f85b64e191295a5eb735b68c2737569552f",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-3": {
+      "code_fingerprint": "sha256:05ff85cf29f349a0aff08ba6b7b0316cafc50b2de8188e8db357ff45076a51af",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-4": {
+      "code_fingerprint": "sha256:208d5ec4bd3cd96b19986a81dba0f3a224087fcf55bdc5f39129d34f5bf2bf27",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-5": {
+      "code_fingerprint": "sha256:f999e75560d37735b4ce80a45e73774414fcc3a220fc70e2ad26cec179271315",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
+          "bytes": 96403,
+          "sha256": "sha256:7c67290ecc95faeb17347bcee0bb0dfa397d12a77421555313b6b174bfbea952"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-6": {
+      "code_fingerprint": "sha256:25d79d7f96cd5f7cfee12d791d8364d7ca9307ed60784907fa42468ab8907bf4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[ 0.00,  0.90,  0.10,  0.08,  0.52,  0.92],\n         [ 1.00,  0.90,  0.55,  0.20,  0.90,  0.88],\n         [-1.00,  0.80,  0.08,  0.20,  0.56,  0.95],\n         [-1.00,  0.70,  0.15,  0.30,  0.62,  0.91]]])"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-7": {
+      "code_fingerprint": "sha256:71a0548e9eafb8f386ce2dc5d0ae7e912b4083343bffe3ebdd8fa338a7604ac8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
+          "bytes": 93212,
+          "sha256": "sha256:6c9f9896115ff3e2a8b0484fe2daae31a25f9a0acf46030b62ffb036a9a7c7ce"
+        }
+      ]
+    }
+  }
+}

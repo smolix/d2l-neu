@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/seq2seq.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:9ef861426fb4fd7aa77ddf7edf80ddaa60fc2828354604bbebc812a8f526bada",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seq2seq-sequence-to-sequence-learning-for-machine-translation": {
+      "code_fingerprint": "sha256:e0ca26df167425f57d766a8111a02f98ca6b7b0eb21909f6cddd8e61614ef54b",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-2": {
+      "code_fingerprint": "sha256:ba98c3e96d7c869b6774225d0b85328eff6e935dda19e08b2df3c00fe788e5e7",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-3": {
+      "code_fingerprint": "sha256:3862c181171a730ec25bc846a47efe2adda11f94b58ac6d32186df71c6689ddb",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-4": {
+      "code_fingerprint": "sha256:05bc519a23ba59e1c2ad77c63cfde3e56e06b69c4797c0088e29cd68657bbe8c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-1": {
+      "code_fingerprint": "sha256:0a8e4064658104e14e187493779c9f0c476a39c51d673aa304bdc90e61df78f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-2": {
+      "code_fingerprint": "sha256:37faa6d7589208036f2b2a1eb4ca94e9532f1616a5922ee39230174b3930c4d7",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
+      "code_fingerprint": "sha256:389c8f0fe02b7261c1b450681f21285e623b3ef5ed216b1774ccfd000914d034",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-loss-function-with-masking": {
+      "code_fingerprint": "sha256:24c945053d2434d102960b3bf778af2bb8fa294d838cf3523e3b0dad70767202",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-training": {
+      "code_fingerprint": "sha256:07d80681766deccf676c3c7d60f41d544b3e44eab379fca553f5e6657cf9da2a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-training-1.svg",
+          "bytes": 242087,
+          "sha256": "sha256:2402fabe8020eea472987374cd502139e0317cddfe288074f2159de7c7da1d5c"
+        }
+      ]
+    },
+    "seq2seq-prediction": {
+      "code_fingerprint": "sha256:db4ee948ecbad00204bbf4c9b02efda3c38b46fa6a493f83013e28c3a489967e",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-evaluation-of-predicted-sequences-1": {
+      "code_fingerprint": "sha256:ed9dbc5c38d8468e31a7eee98c59ea5bdff774c241b3abe92e73668b78d49939",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-evaluation-of-predicted-sequences-2": {
+      "code_fingerprint": "sha256:dcc5ab4a70a325f8a1232945f04b9fa4be0c88c4ba2fe6373c6d0b46853bbbf5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => [\"j'ai\", 'compris', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'certain', '.'], bleu,0.512\n"
+        }
+      ]
+    }
+  }
+}

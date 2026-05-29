@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/rnn-concise.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:27fd31b5b737fb7f4cc8808916aa83367aa606437b36989a31e65aa1f83965e0",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rnn-concise-concise-implementation-of-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-defining-the-model-1": {
+      "code_fingerprint": "sha256:5b9133602e7326e591f3389c769e6d7fb1535fe45d1e6589634e9396a126f625",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-defining-the-model-2": {
+      "code_fingerprint": "sha256:740e07b40d7db8151bfad8c953d0a989ba84e6072471ee1442ad07bd498b675a",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-training-and-predicting-1": {
+      "code_fingerprint": "sha256:d5917b385d7a39adaad98d605003dbba23600278ae0a1aeadfa7634dc550390e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it hasuguguggggggggggggggg'"
+        }
+      ]
+    },
+    "rnn-concise-training-and-predicting-2": {
+      "code_fingerprint": "sha256:bc0b7aca9cbeb28da5e4b02cf437bf3fef5eceb9b47015ccff47165afb674cb0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
+          "bytes": 1064042,
+          "sha256": "sha256:862e828532c1b15b95b8bd4ec7a8da84ddf45c3dae37040b04939314781ea264"
+        }
+      ]
+    },
+    "rnn-concise-training-and-predicting-3": {
+      "code_fingerprint": "sha256:9ecc7cedf2501be4177d7f2edc3712f010d305a89ba2c6c615f9cc5a07a3e1da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "perplexity 7.3, 'time traveller and the pravell the'\n"
+        }
+      ]
+    }
+  }
+}

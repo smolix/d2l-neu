@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/lstm.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:372e1c175de1dbf27facdc799adffd3d5d264c57aec7cce018e7c48dd7fa5d96",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lstm-long-short-term-memory-lstm": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-1": {
+      "code_fingerprint": "sha256:8f101aa1e55d4b7ded605e768adbe82f89b1d7cf6bdfd064d2afc5c1d484ef29",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-2": {
+      "code_fingerprint": "sha256:f679a0042290e99d35f2bf91e8106e1ca939ea0d1c49808788356773e8b1e2e1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-and-prediction": {
+      "code_fingerprint": "sha256:ed00c93f3b6114ed936b5884cfcdffbcd6b26a5e11531798f1068a9c52301048",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-training-and-prediction-1.svg",
+          "bytes": 308886,
+          "sha256": "sha256:3f1f89a3cc32845e37d44a2ed13c0998ce8243f44ead75048c9c1a24e7e1ec57"
+        }
+      ]
+    },
+    "lstm-concise-implementation-1": {
+      "code_fingerprint": "sha256:6d4acd9dcc3c8d5d8d4f3fc1dc52454263398e2d58d6be54b725999e282b3197",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-concise-implementation-2": {
+      "code_fingerprint": "sha256:75989d64d813b8a1a9db2d122b42e592b607f58c25b899884fd865cc033724ae",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-concise-implementation-2-1.svg",
+          "bytes": 310805,
+          "sha256": "sha256:d09edda6563a799bca816be9990900b6305aca15782499d4493213c6998cfc44"
+        }
+      ]
+    },
+    "lstm-concise-implementation-3": {
+      "code_fingerprint": "sha256:20a7facc610fd6da1f98072a505afd38884b7c8ec445e0a612c3ba8eb5d7057e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has a dimention a four '"
+        }
+      ]
+    }
+  }
+}

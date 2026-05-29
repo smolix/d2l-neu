@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerical-stability-and-init-numerical-stability-and-initialization": {
+      "code_fingerprint": "sha256:d0231af3630a799671c9fe5f4c9f8174b62ae291774f09d65ef3bfee51528a45",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-vanishing-gradients": {
+      "code_fingerprint": "sha256:edfdb7bc3493cab468410131032feec9fac764510f565be62bc0b59e5b80d05e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:56:44] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
+          "bytes": 26187,
+          "sha256": "sha256:74180d0337af4bca9dc895d1d60efe79627e6e22bbaca4195144530c258821b7"
+        }
+      ]
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:6798690574826a8d10fb69675f3bf08184847911097e5b3e131ef379ed6c92d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a single matrix [[ 0.9691438  -0.58003026  1.4641818   0.7388741 ]\n [-1.4183844   0.26703835 -0.01505547  0.9019568 ]\n [-0.38692597  0.2376973   0.47373858 -0.8646684 ]\n [-1.6764781   0.66892415 -0.866102   -1.5460656 ]]\nafter multiplying 100 matrices [[-2.0943128e+25  4.8895585e+25 -3.4581408e+25 -3.0860201e+25]\n [ 7.8994308e+24 -1.8442674e+25  1.3043583e+25  1.1639992e+25]\n [-3.8176696e+24  8.9130511e+24 -6.3037569e+24 -5.6254257e+24]\n [ 1.5821473e+25 -3.6938127e+25  2.6124498e+25  2.3313300e+25]]\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multiple-gpus-concise.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:1d0139b1ae4dd35a48b22a8c8314ff333ab9136e33733459958495e8a32352a3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiple-gpus-concise-concise-implementation-for-multiple-gpus": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-a-toy-network": {
+      "code_fingerprint": "sha256:980af46e6f9e758f42da470d77d42fa543551ad170d048940a5df084ce899636",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-network-initialization-1": {
+      "code_fingerprint": "sha256:a8c1657f34ec98f0a89c7d4c2bcdeb79ed17b9c4dbb1c1789a5e4cb22233f17c",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-1": {
+      "code_fingerprint": "sha256:e573e743f72df0cd5ed8cefa99dfce1e3d9ab0a2e8dbbc5241be1c3d6d9f68e9",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-2": {
+      "code_fingerprint": "sha256:6c62a11428834857d3ad034a3402eff97fba25237fb3d1e404ae3d7ea9597566",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.86, 29.3 sec/epoch on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
+          "bytes": 16429,
+          "sha256": "sha256:ab388e925397a5fc9a524bd11463cd8249c7d354fe48d51f729325e2006db8dd"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-3": {
+      "code_fingerprint": "sha256:d18cd946c70eacfb025452b3234eb88ed04311e6ebdf785360ac6387374f9fc6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.88, 17.0 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
+          "bytes": 16236,
+          "sha256": "sha256:295a21189fcb297a619790fde1383a55f3943bc3fa88b9df62735dfa366bf631"
+        }
+      ]
+    }
+  }
+}

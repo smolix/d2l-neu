@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/deep-rnn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:696396db6fcd6324a5a0c29981d989e2af8d23d57fdfd3e8f3bc560bd15e0017",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deep-rnn-deep-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:9c01b131c6c4f404e7b700e9d2b3c3d8fac55fb50eb5ac24c74f02bb28259fc7",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:46189c10de3a6d481c02b57d0dcaf02d5dce03f0a9fccbfb30a708b9766ee7a7",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:ae5c57803c5bf2efc696804e08d55df39920c225bc0c4ccac6a08a9aa106ea00",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
+          "bytes": 322493,
+          "sha256": "sha256:6628fd6d87b5834011cab6be09afc95f9c822280bbdb6781d125708b8ee04282"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-1": {
+      "code_fingerprint": "sha256:26e5ba6077153625b5c98f6e61885b810e092bd80d1b37937795a71fa0c29a7e",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-concise-implementation-2": {
+      "code_fingerprint": "sha256:cd763e5da6df0d46f1bb92a5fa5f44c3e89dd8554e4aaaa6f00d19ff0d9260f7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
+          "bytes": 325512,
+          "sha256": "sha256:e7a91bacb89d0f4b3647204a068c4ab9c26291c391edbf96c0a639419b755884"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-3": {
+      "code_fingerprint": "sha256:f8dfeba7febbec46b6b5b888dd3a3b036e6a4d106cd67b408e258dd374e3f846",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has no has no has no ha'"
+        }
+      ]
+    }
+  }
+}

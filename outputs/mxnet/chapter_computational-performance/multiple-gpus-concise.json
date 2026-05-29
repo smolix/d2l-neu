@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multiple-gpus-concise.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:1ca43ee75b3c6bda57ddb3a40f3d8903a2b974699949d3e1599600ec1f8c6810",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiple-gpus-concise-concise-implementation-for-multiple-gpus": {
+      "code_fingerprint": "sha256:31d5a794ca1c2dd7cb4c5765925dabf00ea2561d3915e2d1ad4e76466c6dfe51",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-a-toy-network": {
+      "code_fingerprint": "sha256:4d7a5e9b0b61b8c124b31638c0eea34ae0899c28440c551937a66eb8aca4507c",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-network-initialization-1": {
+      "code_fingerprint": "sha256:b87b943b546a355cfe8aaa600eea52030ed6aadf9c85353d1327f575a1de44fb",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-network-initialization-2": {
+      "code_fingerprint": "sha256:ab858c240c2a5f94fdb4268f0e01a478bfee3568c74f804c10c831ea6e89841d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[08:23:42] /home/smola/work/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n[08:23:42] /home/smola/work/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[08:23:43] /home/smola/work/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(array([[-1.6913706e-06, -3.3299682e-07,  3.2456953e-06,  8.5748559e-07,\n         -8.3201428e-07,  1.6754944e-06,  3.3749980e-06, -4.7647296e-07,\n         -1.4629386e-06,  3.4452457e-06]], device=gpu(0)),\n array([[-1.8566260e-06, -1.9174227e-07,  3.5465632e-06,  4.4656593e-07,\n         -1.0667318e-06,  1.1820920e-06,  2.4978142e-06, -8.9250881e-07,\n         -1.3675515e-06,  2.8102877e-06]], device=gpu(1)))"
+        }
+      ]
+    },
+    "multiple-gpus-concise-network-initialization-3": {
+      "code_fingerprint": "sha256:09fae6dd8c88fecc1d730033ef33f33e65c55a92277c5144bd4fbce409bb274c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "not initialized on cpu\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(array([[[-0.01436822,  0.01038243,  0.00300101],\n         [-0.01740939,  0.00871122,  0.00883894],\n         [ 0.00611191, -0.00513928,  0.00487985]]], device=gpu(0)),\n array([[[-0.01436822,  0.01038243,  0.00300101],\n         [-0.01740939,  0.00871122,  0.00883894],\n         [ 0.00611191, -0.00513928,  0.00487985]]], device=gpu(1)))"
+        }
+      ]
+    },
+    "multiple-gpus-concise-network-initialization-4": {
+      "code_fingerprint": "sha256:952b9f800296ae222ba8d888b1afda5caa53ff4df6223b43161f529480b472bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-1": {
+      "code_fingerprint": "sha256:b4030fc15b1e52912eceaee5c85446aa97e6b5c8aa514a14574ad36bbc5f0a5c",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-2": {
+      "code_fingerprint": "sha256:ff9467a3a053a6912dc593c53c5aa70fa4178a1bdcddf19798cc964055f53fa8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.93, 20.5 sec/epoch on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
+          "bytes": 20279,
+          "sha256": "sha256:b0c459660fdc212fa5637e642722904d3b66f4e05088fe14f55405e60d2dcecb"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-3": {
+      "code_fingerprint": "sha256:fa42ff462ab6f036b1d112fa58aec6384d699c27eaa53f1560c20310e0ef9e7e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.94, 20.9 sec/epoch on [gpu(0), gpu(1)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
+          "bytes": 20757,
+          "sha256": "sha256:e798235195039283071756ee33f9c9e28d9e95404400328b40099098be81273b"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/vgg.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:3ac00049c77d231f5a64852b45a0d66cb36c227c977233237be61b84f1a5d802",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vgg-networks-using-blocks-vgg": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-blocks": {
+      "code_fingerprint": "sha256:2429d009486547d8a747a75d9bf6af517b17ea5ddb56b13da3fa166063391194",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-1": {
+      "code_fingerprint": "sha256:8f2b7910435e90038a45e56cdb45d256685f104c663654d2a57ed199c4a2fbb6",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-2": {
+      "code_fingerprint": "sha256:c22466db4a8d060d6581101257af5367d4516e83adae1fb3fe3e1fe222cb547d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\nSequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "vgg-training": {
+      "code_fingerprint": "sha256:3f968e156f3441088bbd5cc43f3be10111dbb8d4859db6b6c1dabbbadb382f88",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vgg/vgg-training-1.svg",
+          "bytes": 59345,
+          "sha256": "sha256:5448d9a30a41bdda53cba041b3765ecab0087344bccb909162f703baba152cef"
+        }
+      ]
+    }
+  }
+}

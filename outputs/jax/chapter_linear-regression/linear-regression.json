@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression": {
+      "code_fingerprint": "sha256:88a0732202d2bbacbcbd8372a7797054adacccac5d7092c3b6a89e9ae1a55bc9",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-1": {
+      "code_fingerprint": "sha256:2ae1cfb021712b82e9b00b92824145cf530b8df89dcef151a23380d4d30989b4",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-2": {
+      "code_fingerprint": "sha256:81012d2342cb7c8735d2207f0de2d3529d29cdd15227d046a143a09595df3728",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'7.79764 sec'"
+        }
+      ]
+    },
+    "linear-regression-vectorization-for-speed-3": {
+      "code_fingerprint": "sha256:85a8a24c6f2aab30b5cc1de6e22d9109827d4d78f58fa89e11b3329944e60334",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.04704 sec'"
+        }
+      ]
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-1": {
+      "code_fingerprint": "sha256:e1b982b7c80b03d1ee685126fde9777e1a3f9b9c9472057ef094d24c865cd8bf",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-2": {
+      "code_fingerprint": "sha256:eb7431cf8b7492028609ded3964c29b92c99031a445adc5dfb90c1ecc98d21ae",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
+          "bytes": 28697,
+          "sha256": "sha256:a899dd9022d67bd544300b511532af0681e96cc76a9f58e76ceb0a340b57d65f"
+        }
+      ]
+    }
+  }
+}

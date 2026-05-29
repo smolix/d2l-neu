@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/queries-keys-values.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:f5d7090a5b7d03e006d515e58a4c2391432249930c336617e4ae7426e0d892ad",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "queries-keys-values-queries-keys-and-values": {
+      "code_fingerprint": "sha256:5cfb8cd1e4f8bcd8167db469f4c0e14d5e0290de23b9905ede34a21f0a7b86f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "queries-keys-values-visualization-1": {
+      "code_fingerprint": "sha256:f6bd96cb2ba457f2b4de8c555a2480b06963a3459470e39b7ef183d1913da629",
+      "kind": "text",
+      "outputs": []
+    },
+    "queries-keys-values-visualization-2": {
+      "code_fingerprint": "sha256:28c32a5f93c9db0dc59fffdc185772830035062deaacd39c2b8fb8233cea014a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "queries-keys-values/queries-keys-values-visualization-2-1.svg",
+          "bytes": 18256,
+          "sha256": "sha256:d6e18bdea7180735f3e074720cc4fc39be113cbcafab543b4368df2d29b29135"
+        }
+      ]
+    }
+  }
+}

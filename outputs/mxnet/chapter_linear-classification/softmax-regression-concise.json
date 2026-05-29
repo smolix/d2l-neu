@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/softmax-regression-concise.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "softmax-regression-concise-concise-implementation-of-softmax-regression": {
+      "code_fingerprint": "sha256:632344ea07cf4001b097f73bdc20545edd6e2b2b65c5af0680f8244748085073",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-defining-the-model": {
+      "code_fingerprint": "sha256:17697916b22bf05744d4fa20577698cfe1fb19b7f73333ef41f1747814af3b1c",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-softmax-revisited": {
+      "code_fingerprint": "sha256:234a51205582e0f32af1ff5a21ef73438595083392044b502275c5fe4b1fe7c7",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-training": {
+      "code_fingerprint": "sha256:8257089d7e982e4e52b49e666d829a08cc8ca067176a682ae9aaec387f9aca3b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
+          "bytes": 60459,
+          "sha256": "sha256:6ee7701e3f1e1fef0e44db8a6e76334f908c5d4ea59c3bf92132595c3c972680"
+        }
+      ]
+    }
+  }
+}

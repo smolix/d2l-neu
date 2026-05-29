@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "source": "chapter_hyperparameter-optimization/rs-async.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3c1759ffb328d9ce7562124a2a1c01a74b52ac1fd23b7c613ef643f76c0c564",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rs-async-asynchronous-random-search": {
+      "code_fingerprint": "sha256:ca12db1670fa1e875cea7ddf6f2a1d863c85281d5abcb4234410f87c8da18e2a",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-objective-function": {
+      "code_fingerprint": "sha256:fda816b31876c13e7271dcc0975a3a2ec36c64f17fc1cfb26f1b59fe5eb27cbf",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-1": {
+      "code_fingerprint": "sha256:7f1fd109065991581ff6f71ecbd86bba41ccad277e082bbddc40b8600d6c831f",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-2": {
+      "code_fingerprint": "sha256:34c11df69dbb21658b46a809b000b8d0542f3d45338690ef8eafb426f87a13cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-3": {
+      "code_fingerprint": "sha256:5c978915898779f0c9239de684a35a6ac502e901510ecb274c208b965b29308b",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-4": {
+      "code_fingerprint": "sha256:ad4620fdad30452fe903f9a32205dcd249168ab69ffa14e2baa80a0898aaa2b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-5": {
+      "code_fingerprint": "sha256:dfe18c3a084b4ac47c395420722f72a90a84c42d7e605aadafa93fd5fbc7ccff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "max_resource_level = 10, as inferred from config_space\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "Master random_seed = 579809840\n"
+        }
+      ]
+    },
+    "rs-async-asynchronous-scheduler-6": {
+      "code_fingerprint": "sha256:273244fb4cd40d6aa086ca5ec32ba6e87231e36f322812a204d83cbfd281fb04",
+      "kind": "text",
+      "outputs": []
+    },
+    "rs-async-asynchronous-scheduler-7": {
+      "code_fingerprint": "sha256:523b514979bcad00ac082742514c26dbbfd7ddae12317d713de6c43adf6ed260",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "tuning status (last metric is reported)\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10     10          0.285107    98.598318\n        1  Completed    10       0.927558         213          10     10          0.175292    48.687502\n        2  Completed    10       0.261410          79          10     10          0.171224   102.127063\n        3  Completed    10       0.027751         207          10     10          0.899427    50.111556\n        4  Completed    10       0.028218          96          10     10          0.455555    90.218069\n        5  Completed    10       0.055836         235          10     10          0.681057    50.190378\n        6  Completed    10       0.241637         248          10     10          0.258822    50.151471\n        7  Completed    10       0.189239         183          10     10          0.277538    52.483123\n        8  Completed    10       0.015643         231          10     10          0.900650    49.753582\n        9  Completed    10       0.050149         195          10     10          0.719509    53.923839\n       10  Completed    10       0.654340         166          10     10          0.169796    52.047157\n       11  Completed    10       0.196912         208          10     10          0.256279    48.158016\n       12  Completed    10       0.278789         195          10     10          0.255980    65.193701\n       13  Completed    10       0.777324          52          10     10          0.136434    80.931059\n       14  Completed    10       0.059809         195          10     10          0.458822    49.394933\n       15  Completed    10       0.026179         148          10     10          0.819034    48.329445\n       16  Completed    10       0.838033         107          10     10          0.143389    74.720103\n       17  Completed    10       0.180923         175          10     10          0.250837    47.311936\n       18  Completed    10       0.120634         252          10     10          0.359766    44.728930\n       19  Completed    10       0.151979          77          10     10          0.247991    59.981470\n       20 InProgress     5       0.332356          37          10      5          0.172633    79.546920\n       21  Completed    10       0.523953         182          10     10          0.197377    45.722476\n       22 InProgress     4       0.014384         184          10      4          0.899704    16.676438\n       23 InProgress     2       0.948317         237          10      2          0.536616     8.236613\n3 trials running, 21 finished (21 until the end), 541.42s wallclock-time\n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "reaching max wallclock time (900), stopping there.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "Stopping trials that may still be running.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "Tuning finished, results of trials can be found on /home/smola/syne-tune/python-entrypoint-2026-05-29-06-46-29-251\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "--------------------\nResource summary (last result is reported):\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10     10          0.285107    98.598318\n        1  Completed    10       0.927558         213          10     10          0.175292    48.687502\n        2  Completed    10       0.261410          79          10     10          0.171224   102.127063\n        3  Completed    10       0.027751         207          10     10          0.899427    50.111556\n        4  Completed    10       0.028218          96          10     10          0.455555    90.218069\n        5  Completed    10       0.055836         235          10     10          0.681057    50.190378\n        6  Completed    10       0.241637         248          10     10          0.258822    50.151471\n        7  Completed    10       0.189239         183          10     10          0.277538    52.483123\n        8  Completed    10       0.015643         231          10     10          0.900650    49.753582\n        9  Completed    10       0.050149         195          10     10          0.719509    53.923839\n       10  Completed    10       0.654340         166          10     10          0.169796    52.047157\n       11  Completed    10       0.196912         208          10     10          0.256279    48.158016\n       12  Completed    10       0.278789         195          10     10          0.255980    65.193701\n       13  Completed    10       0.777324          52          10     10          0.136434    80.931059\n       14  Completed    10       0.059809         195          10     10          0.458822    49.394933\n       15  Completed    10       0.026179         148          10     10          0.819034    48.329445\n       16  Completed    10       0.838033         107          10     10          0.143389    74.720103\n       17  Completed    10       0.180923         175          10     10          0.250837    47.311936\n       18  Completed    10       0.120634         252          10     10          0.359766    44.728930\n       19  Completed    10       0.151979          77          10     10          0.247991    59.981470\n       20  Completed    10       0.332356          37          10     10          0.135134   143.412845\n       21  Completed    10       0.523953         182          10     10          0.197377    45.722476\n       22  Completed    10       0.014384         184          10     10          0.899518    42.707140\n       23  Completed    10       0.948317         237          10     10          0.212395    41.831344\n       24  Completed    10       0.037034          60          10     10          0.302745    69.012326\n       25  Completed    10       0.015374         113          10     10          0.900162    50.496191\n       26  Completed    10       0.066641         225          10     10          0.443852    44.392061\n       27  Completed    10       0.473543          99          10     10          0.167558    53.726965\n       28  Completed    10       0.202776         223          10     10          0.424311    43.993744\n       29  Completed    10       0.116756         171          10     10          0.276600    44.330304\n       30  Completed    10       0.024328         135          10     10          0.898765    59.906499\n       31  Completed    10       0.854034          35          10     10          0.126493   103.431047\n       32  Completed    10       0.019597         100          10     10          0.900000    52.067908\n       33  Completed    10       0.015829          65          10     10          0.785069    75.519685\n       34  Completed    10       0.018161         101          10     10          0.900990    48.880284\n       35  Completed    10       0.021319         148          10     10          0.895384    44.106524\n       36  Completed    10       0.506371         125          10     10          0.167100    45.832689\n       37 InProgress     8       0.069827         158          10      8          0.521980    36.526255\n       38 InProgress     6       0.143741         117          10      6          0.283719    27.503478\n       39 InProgress     1       0.117888         218          10      1          0.900000     4.476891\n3 trials running, 37 finished (37 until the end), 903.11s wallclock-time\n\nvalidation_error: best 0.12649327516555786 for trial-id 31\n--------------------\n"
+        }
+      ]
+    },
+    "rs-async-asynchronous-scheduler-8": {
+      "code_fingerprint": "sha256:9fe1aecc5f25c98af8886bd9858177fc248b6d6efc2c1a3c80f2a0aa5d9c5b7a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rs-async/rs-async-asynchronous-scheduler-8-1.svg",
+          "bytes": 29254,
+          "sha256": "sha256:1b9e0224e7fdd17193335637706e57180eaf65da981db3717f7046434424d130"
+        }
+      ]
+    },
+    "rs-async-visualize-the-asynchronous-optimization-process": {
+      "code_fingerprint": "sha256:e6585b85b05936e050989394cf3de9de32a96cf14dedce1211ed40ecb159fbcd",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Text(0, 0.5, 'objective function')"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rs-async/rs-async-visualize-the-asynchronous-optimization-process-1.svg",
+          "bytes": 81294,
+          "sha256": "sha256:34af8f31c46c656a80b07d2741f53ed667897e2517df8d59f6314c3e6832470b"
+        }
+      ]
+    }
+  }
+}

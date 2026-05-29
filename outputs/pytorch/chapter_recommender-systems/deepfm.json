@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/deepfm.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:1a6dd0425b7d550df76ad6b9e6250838d9cbec1425598cd61c1f09d27954d04f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deepfm-model-architectures": {
+      "code_fingerprint": "sha256:e160636f8ff6242b057030af3debdd551a6f1c79830494c98cbb08f5ffb18227",
+      "kind": "text",
+      "outputs": []
+    },
+    "deepfm-implementation-of-deepfm": {
+      "code_fingerprint": "sha256:67626a1168307cee5fe485eab9f40e7089bcf17d1dcbda52fe572dbf115253e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "deepfm-training-and-evaluating-the-model": {
+      "code_fingerprint": "sha256:7001cdd2ba803cfc702061c1565c023f6824906fa9b343fa0f8449c7c148209d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.010, train acc 0.997, test acc 0.937\n241550.9 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
+          "bytes": 32190,
+          "sha256": "sha256:c25d0eeab9435ca597c72a04431ce3f8de6d07bf539b8e13da40154e9d9c00c9"
+        }
+      ]
+    }
+  }
+}

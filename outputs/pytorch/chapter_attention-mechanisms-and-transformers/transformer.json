@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/transformer.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:9bb0e4de16dc141478f062eb792e70b550cc1884bf1b7551a3bbe8f804ae2117",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transformer-the-transformer-architecture": {
+      "code_fingerprint": "sha256:4d3ee14a25100a6e0cc59c6c3ec04546410c998ed6edfa4e349b870d8d6743ac",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-positionwise-feed-forward-networks-1": {
+      "code_fingerprint": "sha256:1296cabdfc98ebb122f423265b9e023b1b35a261d7e310e3416df8d9dea59c27",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-positionwise-feed-forward-networks-2": {
+      "code_fingerprint": "sha256:a458901603dbefc7ca0e2ffeb4a59728fdb23a5c2d602812a081c95187889753",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251],\n        [ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251],\n        [ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251]],\n       grad_fn=<SelectBackward0>)"
+        }
+      ]
+    },
+    "transformer-residual-connection-and-layer-normalization-1": {
+      "code_fingerprint": "sha256:2c7e8778f0ada0eeceb3936b5fe0d493eaaa9870884e45c9007aeef5836260df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "layer norm: tensor([[-1.0000,  1.0000],\n        [-1.0000,  1.0000]], grad_fn=<NativeLayerNormBackward0>) \nbatch norm: tensor([[-1.0000, -1.0000],\n        [ 1.0000,  1.0000]], grad_fn=<NativeBatchNormBackward0>)\n"
+        }
+      ]
+    },
+    "transformer-residual-connection-and-layer-normalization-2": {
+      "code_fingerprint": "sha256:995f53903ac8f9d603f9980fa91cb274f7f30c78855921e43222b985aa9f34a6",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-residual-connection-and-layer-normalization-3": {
+      "code_fingerprint": "sha256:4e640c8c46caa9a04903b4909a98d5795b2215bae371c80f7bb7b6ad8cc9c9cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-encoder-1": {
+      "code_fingerprint": "sha256:2793e92c77c36d9e5bd4f65c5fa73ef4d748462917f71ac0eb1ed387730195a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-encoder-2": {
+      "code_fingerprint": "sha256:c7ced5ac2a9c67f3ec9437575f3885c63ed6d07695ca14b0b21fc07460e06082",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-encoder-3": {
+      "code_fingerprint": "sha256:edcb2f351c7611dc555eec3f90f94f7f5eee60e9ede97ee800097536cff533f0",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-encoder-4": {
+      "code_fingerprint": "sha256:f807719f7dc86fc1b385123673e130d4e0fdf2715bcefc41de21129cb4697cbf",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-decoder-1": {
+      "code_fingerprint": "sha256:efe32f4b83d8d7205456900e259c58348ff7e0120d6339ec5ce7913aeecbfd67",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-decoder-2": {
+      "code_fingerprint": "sha256:14f52a273899a14ef394ed3bf9b2de7010c8154bf206b286578d75e2c24c09af",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-decoder-3": {
+      "code_fingerprint": "sha256:44b1c2bd7017e8a6d03a350499f04845940cee33a8baa994087e4abf0b193fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-training-1": {
+      "code_fingerprint": "sha256:1e8cde7f659b8c4646ddfd9f37a9ccb8dd2f37d9c53e816a8f725f14fb7c2ff3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer/transformer-training-1-1.svg",
+          "bytes": 139750,
+          "sha256": "sha256:c260acd95a7e4bae4a4f029b07f9064390daaf4518df259972300233888df11a"
+        }
+      ]
+    },
+    "transformer-training-2": {
+      "code_fingerprint": "sha256:ce47ed1b13c2b0dc26bc26704d415a3b0ea76514118a738ee1443649eae6557c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+        }
+      ]
+    },
+    "transformer-training-3": {
+      "code_fingerprint": "sha256:ea6f4c10d71638840d63acd1f2145c2e6c4e835848ebdd00e461cd74b381cc0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-training-4": {
+      "code_fingerprint": "sha256:b55c71ac7bd59109ba0c9b2624ea6489ff96443d079a70376929bbdc868a3354",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer/transformer-training-4-1.svg",
+          "bytes": 50952,
+          "sha256": "sha256:3a9d3b7d4fc853c427439b9b2aa79cdab5a2056b113a99b151db0ff10b3596f7"
+        }
+      ]
+    },
+    "transformer-training-5": {
+      "code_fingerprint": "sha256:bf4c7c363bd9333ad94dccb6ee9100b3bc1a310a123ceaac545de2f8c6dcb6cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-training-6": {
+      "code_fingerprint": "sha256:2368b66873de6f20ef2a48392636a9febad23843c02ce01564cd542dfa2919cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-training-7": {
+      "code_fingerprint": "sha256:528d00eed0f9ac529a5342eb52acc19c03bfa0d7a3f613b5476d0b5a793a8874",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer/transformer-training-7-1.svg",
+          "bytes": 51872,
+          "sha256": "sha256:3e34a95bc10cdbf329f27a7f7285bf47fb19fdf5cf0f2ae314810f25f3be924c"
+        }
+      ]
+    },
+    "transformer-training-8": {
+      "code_fingerprint": "sha256:314e5a624bc0ba4cfbc01dae1466431fffebb65edd40d9e57a0cbe671962b44d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer/transformer-training-8-1.svg",
+          "bytes": 52026,
+          "sha256": "sha256:b8f71ae57d5848f27e4f7f8233abae6e9a688cf769c91e2de0a3753df8e5a839"
+        }
+      ]
+    }
+  }
+}

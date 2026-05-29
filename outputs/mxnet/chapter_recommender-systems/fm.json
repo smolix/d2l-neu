@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/fm.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:68ddfa4df2a01247b7da097bb85302cecc86aea3d69e6b009b9a29cbde6c11c0",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fm-an-efficient-optimization-criterion": {
+      "code_fingerprint": "sha256:3bc9a16f4674ea6475dc2dda590e146cf86ac7d1036964ef11d0e7d7a1caa79c",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-model-implementation": {
+      "code_fingerprint": "sha256:00803b37381029251dc84d9c889966007a4f5ec527aeb540ba86344f2749a50d",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-load-the-advertising-dataset": {
+      "code_fingerprint": "sha256:238bc40528ef4ca5600e99ca77c4d63d86affeb2a976ffac955b045834dee279",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-train-the-model": {
+      "code_fingerprint": "sha256:a69aab0ef353e46c2f4ab5a10209b6ad2cdf847f996da0adcbac5dcec9baccb1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.002, train acc 1.000, test acc 0.921\n122007.4 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fm/fm-train-the-model-1.svg",
+          "bytes": 29479,
+          "sha256": "sha256:8c90b5a7f46b3921ac7f4c79c061aff3e61c7d0fa2303c111e55a0315d43628a"
+        }
+      ]
+    }
+  }
+}

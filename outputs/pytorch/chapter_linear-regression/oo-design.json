@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/oo-design.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:7cb51e8ac9b436f7ba840f035952b5937b3dd511dbd1b6fa7433466137e228c7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "oo-design-object-oriented-design-for-implementation": {
+      "code_fingerprint": "sha256:0eecff464c2cda2cd44cdec74f37271f3fd532e4461ab2c69a458e9e2c3c4d8a",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-1": {
+      "code_fingerprint": "sha256:ee7f0359a6022bd73e05a2b5f5d031a7b25e2ea4d762e9b1056eba40128159b4",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-2": {
+      "code_fingerprint": "sha256:0ddf1a3e1c1e2f5e49d56442f52f2851b46fa4431633c0c4a9c04bc48f7bbd49",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-3": {
+      "code_fingerprint": "sha256:3fd4cebf9db81bd2dafebf480cc368c01b9a9dd1c56cad687f528bbe941c4c25",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Class attribute \"b\" is 1\n"
+        }
+      ]
+    },
+    "oo-design-utilities-4": {
+      "code_fingerprint": "sha256:80a6b4050e6e6dd6d167b60132ac54347486f38723cd472fe3ca3a15855c85d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-5": {
+      "code_fingerprint": "sha256:f545a3659bf07d84746c14076cb2df7b6dce2dd3e8ef87725c84e87f896db1c1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "self.a = 1 self.b = 2\nThere is no self.c = True\n"
+        }
+      ]
+    },
+    "oo-design-utilities-6": {
+      "code_fingerprint": "sha256:189bf94d9b9c73a6271cf00d44c89dfff70abcd0ec791334e06a4ccf712b2e40",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-7": {
+      "code_fingerprint": "sha256:287916b98fe083ff1974620164f622c5ba765a64c2110ac58eedf7523c8d5f4f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "oo-design/oo-design-utilities-7-1.svg",
+          "bytes": 78046,
+          "sha256": "sha256:792486e3a62605740cb97c93df4ac3db2c0ce6cfd2c6f74214d187ef07f0b700"
+        }
+      ]
+    },
+    "oo-design-models": {
+      "code_fingerprint": "sha256:8f456efeb530abb46856196d43424c8be457809582e16502039e3d07ff1f608b",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-data": {
+      "code_fingerprint": "sha256:47d9eb3aafc333cabb56d447ea959334721674a47ec617ea9e0623346fc33687",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-training": {
+      "code_fingerprint": "sha256:30023bb70838d43b5c8d89454f191ce45e47226ab743d36d7337eede88c674c7",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

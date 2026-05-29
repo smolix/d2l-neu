@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/lazy-init.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lazy-init-lazy-initialization-1": {
+      "code_fingerprint": "sha256:c3b617502bedddfb22f51258d1adf6da3684ea9a262a2011706048e6ccb5677b",
+      "kind": "text",
+      "outputs": []
+    },
+    "lazy-init-lazy-initialization-2": {
+      "code_fingerprint": "sha256:14f3dce5e7b57f18d104d1850c5d9f6b2d33a0613e2731c274a9880ac2e1dfee",
+      "kind": "text",
+      "outputs": []
+    },
+    "lazy-init-lazy-initialization-3": {
+      "code_fingerprint": "sha256:048860e91c847a293f4607a3f763e6a749ddff26abbbcc65c53d0d24667a62f5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "<bound method Block.collect_params of Sequential(\n  (0): Dense(-1 -> 256, Activation(relu))\n  (1): Dense(-1 -> 10, linear)\n)>\n{'0.weight': Parameter (shape=(256, -1), dtype=float32), '0.bias': Parameter (shape=(256,), dtype=float32), '1.weight': Parameter (shape=(10, -1), dtype=float32), '1.bias': Parameter (shape=(10,), dtype=float32)}\n"
+        }
+      ]
+    },
+    "lazy-init-lazy-initialization-4": {
+      "code_fingerprint": "sha256:55ebb4d50cffa5789e65ca3b9563a8f2cdef258e8c4c89f482e9f4e37507ded0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'0.weight': Parameter (shape=(256, -1), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, -1), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+        }
+      ]
+    },
+    "lazy-init-lazy-initialization-5": {
+      "code_fingerprint": "sha256:131e8e40935c0a4ce1673c876c4e20ba0d6107eac4d4a7bab7d4c692160ea69c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'0.weight': Parameter (shape=(256, 20), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, 256), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+        }
+      ]
+    }
+  }
+}

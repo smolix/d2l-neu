@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/eigendecomposition.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "eigendecomposition-an-example": {
+      "code_fingerprint": "sha256:eaf22b2b5498c9dac8e4c938234ef58c9383648afd2696175b645d183beab9da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_5173/2168837570.py:7: UserWarning: Explicitly requested dtype float64 requested in array is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  jnp.linalg.eig(jnp.array([[2, 1], [2, 3]], dtype=jnp.float64))\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "EigResult(eigenvalues=Array([1.0000001+0.j, 4.       +0.j], dtype=complex64), eigenvectors=Array([[-0.70710677+0.j, -0.4472136 +0.j],\n       [ 0.70710677+0.j, -0.89442724+0.j]], dtype=complex64))"
+        }
+      ]
+    },
+    "eigendecomposition-gershgorin-circle-theorem": {
+      "code_fingerprint": "sha256:1e5e3f3526d8af3635ba65e080b5baaea8f804d1141761d0160c49282f0465c9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([9.080341  +0.j, 0.99228513+0.j, 4.95394   +0.j, 2.9734364 +0.j],      dtype=complex64)"
+        }
+      ]
+    },
+    "eigendecomposition-eigenvectors-as-long-term-behavior": {
+      "code_fingerprint": "sha256:807ce62942a16dd862e3e5eaf45f6846243e0ddeb822bd28408498cdb5ddfe16",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_5173/2219628907.py:2: UserWarning: Explicitly requested dtype float64 is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  A = jax.random.normal(jax.random.PRNGKey(42), (k, k), dtype=jnp.float64)\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[-0.02830462,  0.46713185,  0.29570296,  0.15354592, -0.12403282],\n       [ 0.21692315, -1.440879  ,  0.7558599 ,  0.52140963,  0.9101704 ],\n       [-0.3844966 ,  1.1398233 ,  1.4457862 ,  1.0809066 , -0.05629321],\n       [ 0.9095945 ,  0.55734617,  0.21905719, -1.4485087 ,  0.7641875 ],\n       [-0.24154697, -1.179381  , -1.9389184 ,  0.35626462, -0.24111967]],      dtype=float32)"
+        }
+      ]
+    },
+    "eigendecomposition-behavior-on-random-data-1": {
+      "code_fingerprint": "sha256:5b0b1ea0abf7c6de90a304b157fe391fa989a354159d1a43bca224c3d47659f8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_5173/1027899972.py:2: UserWarning: Explicitly requested dtype float64 is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  v_in = jax.random.normal(jax.random.PRNGKey(1), (k, 1), dtype=jnp.float64)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-behavior-on-random-data-1-1.svg",
+          "bytes": 20084,
+          "sha256": "sha256:d64266d25544787844630b5114bb9ecb237ed221b3fab7fc0f549d7e20ac42ea"
+        }
+      ]
+    },
+    "eigendecomposition-behavior-on-random-data-2": {
+      "code_fingerprint": "sha256:b284b0620e11d24ec1717638810ac32088e2870ba642b433ab9fdd9554aabdb1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-behavior-on-random-data-2-1.svg",
+          "bytes": 18314,
+          "sha256": "sha256:9ca24ddf764270aae0b6f6238f69809c371386e5473954e98bf90bf645cabc0b"
+        }
+      ]
+    },
+    "eigendecomposition-relating-back-to-eigenvectors": {
+      "code_fingerprint": "sha256:c0e732c9480ccf58dc584b23dca97ec17b5b2a0eb4c36719d162604db399aa44",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "norms of eigenvalues: [0.0797363817691803, 1.085721558445927, 1.085721558445927, 1.867778381089393, 1.867778381089393]\n"
+        }
+      ]
+    },
+    "eigendecomposition-fixing-the-normalization-1": {
+      "code_fingerprint": "sha256:a6649ce654a483b8737a7cbf11301ed47395e48a78b0d4b1aeecf344d1c721fd",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_5173/4111189517.py:5: UserWarning: Explicitly requested dtype float64 is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  v_in = jax.random.normal(jax.random.PRNGKey(2), (k, 1), dtype=jnp.float64)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-fixing-the-normalization-1-1.svg",
+          "bytes": 20578,
+          "sha256": "sha256:d5677a251f0629896ad57aa5c277fad405df4e903906c0e55e01f1f10652fe02"
+        }
+      ]
+    },
+    "eigendecomposition-fixing-the-normalization-2": {
+      "code_fingerprint": "sha256:5e0f4d65edf74f500838250e4dabc05d11ed8ba1d837d41f9ef3b56e75768f77",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-fixing-the-normalization-2-1.svg",
+          "bytes": 20307,
+          "sha256": "sha256:99e9a0a73664b991c10cc27f9b0abf8f76b0ae7f87a2e4ec75c83d3d0c82bde4"
+        }
+      ]
+    }
+  }
+}

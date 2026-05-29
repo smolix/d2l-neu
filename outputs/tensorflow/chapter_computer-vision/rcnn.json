@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/rcnn.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rcnn-fast-r-cnn-1": {
+      "code_fingerprint": "sha256:7ce427f0b284dfb229e556b7d8562a7538d3fac7e5a72ab2efbaac1b0f913822",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 4, 4, 1), dtype=float32, numpy=\narray([[[[ 0.],\n         [ 1.],\n         [ 2.],\n         [ 3.]],\n\n        [[ 4.],\n         [ 5.],\n         [ 6.],\n         [ 7.]],\n\n        [[ 8.],\n         [ 9.],\n         [10.],\n         [11.]],\n\n        [[12.],\n         [13.],\n         [14.],\n         [15.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "rcnn-fast-r-cnn-2": {
+      "code_fingerprint": "sha256:3c6ce5dca99d62078f13fa69e1d9b9d5a45793aeb6eb1348fc9ca6835fd66eb5",
+      "kind": "text",
+      "outputs": []
+    },
+    "rcnn-fast-r-cnn-3": {
+      "code_fingerprint": "sha256:c4264436f378fd4c2144f3457cc07adbb0ddf28b1c3c35cbe83a5545f6a076d5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 0.],\n         [ 1.]],\n\n        [[ 4.],\n         [ 5.]]],\n\n\n       [[[ 4.],\n         [ 6.]],\n\n        [[ 8.],\n         [10.]]]], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

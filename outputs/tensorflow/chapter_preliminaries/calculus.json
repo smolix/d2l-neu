@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/calculus.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "calculus": {
+      "code_fingerprint": "sha256:5e7cc9a5d9a1dc49aa7992fb1f9cbc8c4f36ea384a2f9535d4b3fab897503ebc",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-derivatives-and-differentiation-1": {
+      "code_fingerprint": "sha256:91d0f33b68e5b24e8bdee2c67575dbf246806592d0e00010dc22334baf413b8d",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-derivatives-and-differentiation-2": {
+      "code_fingerprint": "sha256:c0bfde4b6137110125097fc3ea7c5998aba962af8183f9e732ce2be7db5e7697",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "h=0.10000, numerical limit=2.30000\nh=0.01000, numerical limit=2.03000\nh=0.00100, numerical limit=2.00300\nh=0.00010, numerical limit=2.00030\nh=0.00001, numerical limit=2.00003\n"
+        }
+      ]
+    },
+    "calculus-visualization-utilities-1": {
+      "code_fingerprint": "sha256:11cda95347929cc395c85ed87cf108b6bf601540cbc35ef17c83ed4b7be1f43a",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-2": {
+      "code_fingerprint": "sha256:69d0e9495a863fb12e9b401b76487280cfa2d3ebea960e2c08fd16608758cf89",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-3": {
+      "code_fingerprint": "sha256:4e741be7c967edb7f271cc5bb512ef1af528c93370e04c92a606b557caa84f95",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-4": {
+      "code_fingerprint": "sha256:33d79ad6e83cd419f318e50270f4f5c583189ec90ab64b328b2bac44a390da5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-5": {
+      "code_fingerprint": "sha256:558dfd3f0f04a583658533d1baeb66e9df075b0e806fdc520865e9600d7d5944",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "calculus/calculus-visualization-utilities-5-1.svg",
+          "bytes": 18533,
+          "sha256": "sha256:1a8792f1fa1006bc4f6d8bf6f81bdbf4ac12c42730e7679410b7eb74f8fbd92d"
+        }
+      ]
+    }
+  }
+}

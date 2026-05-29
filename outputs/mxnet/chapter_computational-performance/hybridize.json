@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/hybridize.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:62da3ca7febfadb7a75b1d4ba0c3c470aa04bac87215460a0aa44b106a43add3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hybridize-compilers-and-interpreters": {
+      "code_fingerprint": "sha256:d0cfebf498fa1d723b0b93c51b3e000510f27f29a3a4974ae7854924c84bbe47",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "10\n"
+        }
+      ]
+    },
+    "hybridize-symbolic-programming": {
+      "code_fingerprint": "sha256:7dfb1bceeee0ceb43de588da0c84fa09c491c955294d2d94ffbd2028a097331d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\ndef add(a, b):\n    return a + b\n\ndef fancy_func(a, b, c, d):\n    e = add(a, b)\n    f = add(c, d)\n    g = add(e, f)\n    return g\nprint(fancy_func(1, 2, 3, 4))\n10\n"
+        }
+      ]
+    },
+    "hybridize-hybridizing-the-sequential-class-1": {
+      "code_fingerprint": "sha256:2b0bb4437922c93a75db8b0bd59c1654eca228085edf16b5442eea5f9aeffc55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[-0.12180391, -0.1829783 ]])"
+        }
+      ]
+    },
+    "hybridize-hybridizing-the-sequential-class-2": {
+      "code_fingerprint": "sha256:b009e5a1e5e3a499ad493fd9e2834caa87dcd083f8e0d7f54c95689883780818",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[-0.12180391, -0.1829783 ]])"
+        }
+      ]
+    },
+    "hybridize-acceleration-by-hybridization-1": {
+      "code_fingerprint": "sha256:67782072929da6aaf061b0e0d894428ecae958d4ea92990db935ac18319ec6cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybridize-acceleration-by-hybridization-2": {
+      "code_fingerprint": "sha256:44b0b6f74a8e5375c22bd0058e57b1f7a2987769c32407d2d11112f40cf0591a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Without hybridization: 0.3886 sec\nWith hybridization: 0.1365 sec\n"
+        }
+      ]
+    },
+    "hybridize-serialization-1": {
+      "code_fingerprint": "sha256:c0e1b4346fd9eb5e2c7528a19229cd6d4f70edb328549e946303428c08a76554",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-rw------- 1 smola smola 644K May 29 07:35 my_mlp-0000.params\r\n-rw------- 1 smola smola 3.2K May 29 07:35 my_mlp-symbol.json\r\n"
+        }
+      ]
+    },
+    "hybridize-serialization-2": {
+      "code_fingerprint": "sha256:e1f633c709a86b7ab6a0d7a38589aee717a6205fbd05246b4cafd2f5075cf094",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{\r\n  \"nodes\": [\r\n    {\r\n      \"op\": \"null\", \r\n      \"name\": \"data\", \r\n      \"attrs\": {\"__profiler_scope__\": \"<unk>:\"}, \r\n      \"inputs\": []\r\n    }, \r\n    {\r\n      \"op\": \"null\", \r\n"
+        }
+      ]
+    },
+    "hybridize-serialization-3": {
+      "code_fingerprint": "sha256:022c0e718e961c58bab3cc2335ce1f4958dd560f4348340e5dee318b5bd04192",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybridize-serialization-4": {
+      "code_fingerprint": "sha256:269429e06d843a7987cb15a8420a693e1c4d6debd91f164a5cda19983279328f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "value  x:  [[ 0.6991747  -0.03699835  0.51506144]]\nresult  :  [[0.05669826 0.00078876 0.         0.        ]]\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([[-0.00394582, -0.00255334]])"
+        }
+      ]
+    },
+    "hybridize-serialization-5": {
+      "code_fingerprint": "sha256:955c411ed53c47e19dcfcea7bc73831edce3819662c5aa7e7734c823ad8c1409",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "value  x:  [[ 0.6991747  -0.03699835  0.51506144]]\nresult  :  [[0.05669826 0.00078876 0.         0.        ]]\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([[-0.00394582, -0.00255334]])"
+        }
+      ]
+    },
+    "hybridize-serialization-6": {
+      "code_fingerprint": "sha256:0ba17bd0e60f9cceda2a00d175ff83a17bd366cc6c565370bae4e1f41602436a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[-0.00394582, -0.00255334]])"
+        }
+      ]
+    }
+  }
+}

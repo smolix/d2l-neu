@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/neural-style.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:1810fc717f7c1029ee0214e9978fd890f3455a8c6c6a1ae4ceab6d44c60a0a30",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "neural-style-reading-the-content-and-style-images-1": {
+      "code_fingerprint": "sha256:c437e90003f77652832c2d5eea09f8780772b05b20f5de425ed52a6e38e69081",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
+          "bytes": 142658,
+          "sha256": "sha256:1e8f8936649fbc7df4f6d0ef9d18b2cd0fa53bf089b304d61345e3be98ed4dc2"
+        }
+      ]
+    },
+    "neural-style-reading-the-content-and-style-images-2": {
+      "code_fingerprint": "sha256:4142973550cdd6cb1e731d45282fe415e7822e11bb43f51689de6cd6c48556c3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
+          "bytes": 196603,
+          "sha256": "sha256:1ff73331605bb4327646b7cefbce256ea7942fc76a86a45995e4bd7242b0f285"
+        }
+      ]
+    },
+    "neural-style-preprocessing-and-postprocessing": {
+      "code_fingerprint": "sha256:4e5f1f67e556de599476173f968fc13a2cdcb0976be37bc60d87b040b446f0fd",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-extracting-features-1": {
+      "code_fingerprint": "sha256:d59db37140f7ef34e8219680366847258742ad0106852013da85e31c9f301745",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-extracting-features-2": {
+      "code_fingerprint": "sha256:f002aa81b7f25c217cbf13a143c98b47ba20804067ae38e81ec4d3f9e27e67ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-extracting-features-3": {
+      "code_fingerprint": "sha256:ccba3b26056a2360e398ba7674fc0b5661f9649f0b271f93b8caff3db984ea9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-extracting-features-4": {
+      "code_fingerprint": "sha256:7cdc2a81fd94f99960f2ab1e123e2e99f1e8d431b2235d8c812bdfb53122b755",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-extracting-features-5": {
+      "code_fingerprint": "sha256:8df194133add4747346c622de4fcae41462783d52fb264755c180ce9f7fbdeb0",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-content-loss": {
+      "code_fingerprint": "sha256:198cd60e226aa77f8a79a057515e6f8fb923c2a397cb197847764121cb102c7c",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-style-loss-1": {
+      "code_fingerprint": "sha256:59cea1ae0b319937cc58c0486e6f560da44cb3d91c88e62c559912dde089cf89",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-style-loss-2": {
+      "code_fingerprint": "sha256:79a3a6adac94bb50b4d977c18de9b21c7497bbede846d5328b4cd6c73270c2d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-total-variation-loss": {
+      "code_fingerprint": "sha256:b294fb7657ff25bd27251d089c843900fc1aeef82bc3ac98ed00d98860b6985a",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-loss-function": {
+      "code_fingerprint": "sha256:8581f177e293c34bdbdb1b2b2ab1c7b1384c82c076974c71aae582ab9a050805",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-initializing-the-synthesized-image-1": {
+      "code_fingerprint": "sha256:35eed213e0cd30afc9727ebe8d06968d15e2dc2c57968924702bd82a26ddc3cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-initializing-the-synthesized-image-2": {
+      "code_fingerprint": "sha256:b16d98bc0aaa2e135d15876e0188d87b9c6c32fe333ac027df4cd4d4e5a86900",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-training-1": {
+      "code_fingerprint": "sha256:c9e1a39dade5581e5e43663c48cf6d895310078d2a853f542f5826da2fb99651",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-training-2": {
+      "code_fingerprint": "sha256:5701cdf05247b1dfc17058152ea885d5746988de4e6033717e231077a21daab8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "neural-style/neural-style-training-2-1.svg",
+          "bytes": 146328,
+          "sha256": "sha256:01cff8e0298882f608869379b62b62366b69185a9096e875ea0ceb8c51fee294"
+        }
+      ]
+    }
+  }
+}

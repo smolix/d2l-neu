@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/rcnn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rcnn-fast-r-cnn-1": {
+      "code_fingerprint": "sha256:9e770f1927b7f82ecdafdb960b150d72ecde3f123dfb38bebcb6dc63066786e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "rcnn-fast-r-cnn-2": {
+      "code_fingerprint": "sha256:3a903dcdc4de13619fb2c98080fdc39f752c4d290ba3f2ef09a2ebeef5b56a99",
+      "kind": "text",
+      "outputs": []
+    },
+    "rcnn-fast-r-cnn-3": {
+      "code_fingerprint": "sha256:146e2daece0265bd9042cf55c2be3619306126ced219543792b3eb9456d7c2f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 0.,  1.],\n         [ 4.,  5.]]],\n\n\n       [[[ 4.,  6.],\n         [ 8., 10.]]]], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

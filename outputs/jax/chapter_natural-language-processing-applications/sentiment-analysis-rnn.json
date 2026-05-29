@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/sentiment-analysis-rnn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:64618d378226b3201d4d09ee0366028ef1f1191f55bcd745a448e0c0879624f8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:a6a883681f4b1ce6b750ea21f1e9e1bc9134f8b3f2dbe0307c95442698722708",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-representing-single-text-with-rnns-1": {
+      "code_fingerprint": "sha256:8d3ef109392dafebdcbc21faa7bf473f617fd4fa5c9e6bb465797c4feadea619",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-representing-single-text-with-rnns-2": {
+      "code_fingerprint": "sha256:00d55487d365e244679a3375b20118f764cc42c23899b507596262508d4803a7",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-representing-single-text-with-rnns-3": {
+      "code_fingerprint": "sha256:3eb032d2a82a14b05b29813d3be615690bbd88c0ce4955b5d1ef3d71b306712c",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-loading-pretrained-word-vectors-1": {
+      "code_fingerprint": "sha256:f44348c5f5a770debf489625688709bb1afb48050c9984cd78437608f1f53974",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-loading-pretrained-word-vectors-2": {
+      "code_fingerprint": "sha256:2f49b8adf4bb888a638d42ff29179c1d04dce6ef59d3dfca119c5085e9b70c35",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(49346, 100)"
+        }
+      ]
+    },
+    "sentiment-analysis-rnn-loading-pretrained-word-vectors-3": {
+      "code_fingerprint": "sha256:5d63426ca059847b425c62401cdaf78380111542a8c3fca7ce6e6dcf6e78a18e",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-training-and-evaluating-the-model-1": {
+      "code_fingerprint": "sha256:d20620fc4b37d710938884007db926d93776605d81fc3cb42e7a5726b3af00b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1, loss 0.695, train acc 0.503, test acc 0.505\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 0.685, train acc 0.513, test acc 0.500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 3, loss 0.557, train acc 0.697, test acc 0.771\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 4, loss 0.329, train acc 0.864, test acc 0.793\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 5, loss 0.208, train acc 0.920, test acc 0.799\n"
+        }
+      ]
+    },
+    "sentiment-analysis-rnn-training-and-evaluating-the-model-2": {
+      "code_fingerprint": "sha256:6411c1c1a620f7cda479b7904c1ec9db856f0362f468735d6309065ea83c1e3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-training-and-evaluating-the-model-3": {
+      "code_fingerprint": "sha256:56b9839649889bf5b332a3d82bb97064f1de8d703526cbf178c0abb3f30f94f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'negative'"
+        }
+      ]
+    },
+    "sentiment-analysis-rnn-training-and-evaluating-the-model-4": {
+      "code_fingerprint": "sha256:7311d0247a7403c9013d7194dad23c789a0f8f409595ee5c0ac0635d78d8f505",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'negative'"
+        }
+      ]
+    }
+  }
+}

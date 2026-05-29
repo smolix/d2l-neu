@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/alexnet.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:5bc747a03ad9e8512ac133effa8361878215edaccd486bd7755c85fa76b263e3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "alexnet-deep-convolutional-neural-networks-alexnet": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-1": {
+      "code_fingerprint": "sha256:e04b5d2f3dbfa244b3e72b15ed46d421368b3dca560eb200d4ed97c8641daa1e",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-2": {
+      "code_fingerprint": "sha256:c729adecf91fb8fd35c3d6666e301ec10f75ac6284b7a847b1ed502f98b90923",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nConv2D output shape:\t (1, 12, 12, 384)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "alexnet-training": {
+      "code_fingerprint": "sha256:5ffc38e1a6464197a6953397c838217b56037b47646a67c824125d7ef034d5b6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "alexnet/alexnet-training-1.svg",
+          "bytes": 58278,
+          "sha256": "sha256:7160d8380cb97905c12fdab9d196d5c46ed2b2161a8714ef4db0149a43178a6a"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/attention-scoring-functions.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:df2adfff0b7f4f782f110f663ea3fd4fc21704053db7a4a2d2a68b71245f7faa",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-scoring-functions": {
+      "code_fingerprint": "sha256:c300cb7caa408dc7ccf57efc672503edaa3feca7c3ff5bcdf5d9df44c9ad7dd8",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-1": {
+      "code_fingerprint": "sha256:6096e895a75b9c60fea57950df4916ca2a546032acc229699d479c770d80efbc",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-2": {
+      "code_fingerprint": "sha256:20a0864dea0b77ecd6db241795f063f6653a31aa17c0144c2ab7c81d6f0d3835",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[0.5252, 0.4748, 0.0000, 0.0000],\n         [0.6647, 0.3353, 0.0000, 0.0000]],\n\n        [[0.2488, 0.3472, 0.4040, 0.0000],\n         [0.3420, 0.3194, 0.3386, 0.0000]]])"
+        }
+      ]
+    },
+    "attention-scoring-functions-masked-softmax-operation-3": {
+      "code_fingerprint": "sha256:0f7754e2427113fd1a7daf1f9bd8e7e3d22effa9055df07a1892d7821efb338c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.2842, 0.4260, 0.2899, 0.0000]],\n\n        [[0.4256, 0.5744, 0.0000, 0.0000],\n         [0.1961, 0.3384, 0.2924, 0.1731]]])"
+        }
+      ]
+    },
+    "attention-scoring-functions-batch-matrix-multiplication": {
+      "code_fingerprint": "sha256:d8c9414211075c911edf5947e58b589681f0d280d9b617b11ae0f3ea7f8e7219",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-1": {
+      "code_fingerprint": "sha256:60b5d99a99ec944f13eb51464b4b97729e74ce6e2356a3bb9e7ce436467a25e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-2": {
+      "code_fingerprint": "sha256:9a98dc5e59ffe82435b52b520d127336d70ee2768e4143ab61761a6518c046ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-3": {
+      "code_fingerprint": "sha256:cd37d1c70635806ebb65aa6593e394331d64f9667c11aecce304859df563f5f6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
+          "bytes": 13612,
+          "sha256": "sha256:077a759ce2f0f2acf9f44797eeca092593fcfd548219681a7b76209af237f518"
+        }
+      ]
+    },
+    "attention-scoring-functions-additive-attention-1": {
+      "code_fingerprint": "sha256:21ab02a97fb486234e20b09ee156a9b68ee49a0e985b8363794107fa25f8a3e0",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-additive-attention-2": {
+      "code_fingerprint": "sha256:c1a8e812eca6ea6bc219a7029d7a2b406254b5e24e56cc1f5c7ced50658bea38",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-additive-attention-3": {
+      "code_fingerprint": "sha256:5de02ff1fb407dcc75809197391da791fded1cb7d89f0336662f14c14b934d75",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
+          "bytes": 13608,
+          "sha256": "sha256:1abe722a53886f89a98764807cfac58c475b50074897e737a59ff06598956d3e"
+        }
+      ]
+    }
+  }
+}

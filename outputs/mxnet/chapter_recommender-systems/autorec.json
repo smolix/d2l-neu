@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/autorec.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:4d8dc7dd660097a373bf968d008f85ce286e6c4fe9b8d065f50382690875a8db",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autorec-model": {
+      "code_fingerprint": "sha256:c79f3481f227e794eb893ca61044a05ab017db4185be40ca65048985e7f65ade",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-implementing-the-model": {
+      "code_fingerprint": "sha256:b78a92891a14ad16118a54a854e611f4985e202f4b2e81514a4efb5e4e73271e",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-reimplementing-the-evaluator": {
+      "code_fingerprint": "sha256:1bbe01589eec25781fcb47b26ea8232e2cd76ebd461f324b2d4199c1f363752b",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-training-and-evaluating-the-model": {
+      "code_fingerprint": "sha256:36b983301560ddeca74225bd493ff350613b67825b10b691a9b0e0b4ded5ad6b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.000, test RMSE 0.903\n31370102.7 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
+          "bytes": 22465,
+          "sha256": "sha256:5d40841d41fb848930e146cdd3f1f48480e90c329f38ed0ca3c8436ed5414250"
+        }
+      ]
+    }
+  }
+}

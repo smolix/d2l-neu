@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/word-embedding-dataset.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:8eaf6298a2df06ccf808bf014ff0036c617a9bf75c66d0f265009527864e1025",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "word-embedding-dataset-the-dataset-for-pretraining-word-embeddings": {
+      "code_fingerprint": "sha256:0cf56dc147d79cb9cfcab39bc842f2b966a25df38098d1a3cab611f203e507cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:ed8bc1ede79461afc7c86075593f609a53d99e7cb7378e3c8527e4dbd7d2b4bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'# sentences: 42069'"
+        }
+      ]
+    },
+    "word-embedding-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:8649fcb62e8e0a58b65409f7c2968e0a632420ba8d15cc2222bc1e303cce7584",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'vocab size: 6720'"
+        }
+      ]
+    },
+    "word-embedding-dataset-subsampling-1": {
+      "code_fingerprint": "sha256:11611e88cfdadd5c97cee2252c4850ae03b8f1549bc19a82dfee3a950ed850d0",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-subsampling-2": {
+      "code_fingerprint": "sha256:6a89897a033c7a485233429757526727b300d87ca81a9aff4a2fa15d2390f40e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "word-embedding-dataset/word-embedding-dataset-subsampling-2-1.svg",
+          "bytes": 28954,
+          "sha256": "sha256:04cde1f5e65f515e630de61664e9b9af37aa4afbea64f5b1433d974e229885f9"
+        }
+      ]
+    },
+    "word-embedding-dataset-subsampling-3": {
+      "code_fingerprint": "sha256:5d9093683d20978e7068fcd92298fcea3520f5966b14253eab4cdf4ffa246bd7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'# of \"the\": before=50770, after=2072'"
+        }
+      ]
+    },
+    "word-embedding-dataset-subsampling-4": {
+      "code_fingerprint": "sha256:68c0471c4925b276a27ac2fad3eb77a38f60c45c3ff4b2d3c2baf3072e2013e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'# of \"join\": before=45, after=45'"
+        }
+      ]
+    },
+    "word-embedding-dataset-subsampling-5": {
+      "code_fingerprint": "sha256:003693556d74d3385191a4c93ef887473e0064ea93392141c5a9fb13b03c487e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[[], [2116], [5278, 3055, 1581]]"
+        }
+      ]
+    },
+    "word-embedding-dataset-extracting-center-words-and-context-words-1": {
+      "code_fingerprint": "sha256:31718ed25166b790469b5b40e09dba752f59ef25266b37734ccdce1bb2553bd8",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-extracting-center-words-and-context-words-2": {
+      "code_fingerprint": "sha256:fb1d04774d40fe9cf39a84eb3e4dc23bca1ad79211a4540a1083eae6605900ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2]\ncenter 2 has contexts [0, 1, 3, 4]\ncenter 3 has contexts [2, 4]\ncenter 4 has contexts [3, 5]\ncenter 5 has contexts [3, 4, 6]\ncenter 6 has contexts [5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [7, 8]\n"
+        }
+      ]
+    },
+    "word-embedding-dataset-extracting-center-words-and-context-words-3": {
+      "code_fingerprint": "sha256:f127bf03990c08562df9bba6fb134a755006b5dcedb6b88d34f1feac510e0c85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'# center-context pairs: 1500690'"
+        }
+      ]
+    },
+    "word-embedding-dataset-negative-sampling-1": {
+      "code_fingerprint": "sha256:3691a42cbd037439fa3441693f333d8b21961ba0f5f73d56bd2664c92d3ec677",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-negative-sampling-2": {
+      "code_fingerprint": "sha256:60c0b0ff45800717a560071cde30ca865b2236814b212051370ea6a4654c1ef3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[3, 1, 3, 2, 3, 3, 2, 1, 2, 3]"
+        }
+      ]
+    },
+    "word-embedding-dataset-negative-sampling-3": {
+      "code_fingerprint": "sha256:1812a8d6fd0f43a2f7706cbc19744c00a3a382beeec8942fcd428b122d35e430",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-loading-training-examples-in-minibatches-1": {
+      "code_fingerprint": "sha256:8b60e5ce7494f21d154dc64a187c84b9bb5c5ea4901cf1d770c8ba5dda699f2e",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-loading-training-examples-in-minibatches-2": {
+      "code_fingerprint": "sha256:088792aeb3bf79fa3d3805863080b19b7d368885eddc4570931f0d59faf58246",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "centers = [[1.]\n [1.]]\ncontexts_negatives = [[2. 2. 3. 3. 3. 3.]\n [2. 2. 2. 3. 3. 0.]]\nmasks = [[1. 1. 1. 1. 1. 1.]\n [1. 1. 1. 1. 1. 0.]]\nlabels = [[1. 1. 0. 0. 0. 0.]\n [1. 1. 1. 0. 0. 0.]]\n"
+        }
+      ]
+    },
+    "word-embedding-dataset-putting-it-all-together-1": {
+      "code_fingerprint": "sha256:64700306afbfc86653ce75139534e66e926c0c682713258f03b1fed288dd26e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-putting-it-all-together-2": {
+      "code_fingerprint": "sha256:ad4790f648ae505bdd14806e18032d797d10bd70befd13270ef783daccddb0ca",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-putting-it-all-together-3": {
+      "code_fingerprint": "sha256:12a6ef1db67c3116d6e0ad9543b39cb43cbaad3919b38ce1d06f446543d7b1cf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "centers shape: (512, 1)\ncontexts_negatives shape: (512, 60)\nmasks shape: (512, 60)\nlabels shape: (512, 60)\n"
+        }
+      ]
+    }
+  }
+}

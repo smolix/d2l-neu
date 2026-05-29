@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/lookup-api.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lookup-api-documentation": {
+      "code_fingerprint": "sha256:4b94a2431e4ba6b55c4ba65fa05215a35a14c03cfd37215bc430d50a76d05613",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-functions-and-classes-in-a-module": {
+      "code_fingerprint": "sha256:1dad46479a06fcf4ee9660b70fd1d96fbc1d7011691bcb919f76627f25cc8235",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['PRNGKey', 'ball', 'bernoulli', 'beta', 'binomial', 'bits', 'categorical', 'cauchy', 'chisquare', 'choice', 'clone', 'dirichlet', 'double_sided_maxwell', 'exponential', 'f', 'fold_in', 'gamma', 'generalized_normal', 'geometric', 'gumbel']\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-1": {
+      "code_fingerprint": "sha256:08d5cadc2e273b8fd5ebd22ea1b0ad869f9b82b495bec622720c2b2e513c8055",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Help on function ones in module jax.numpy:\n\nones(shape: Any, dtype: Union[str, type[Any], numpy.dtype, jax._src.typing.SupportsDType, NoneType] = None, *, device: jaxlib._jax.Device | jaxlib._jax.Sharding | None = None, out_sharding: jax.sharding.NamedSharding | jax.sharding.PartitionSpec | None = None) -> jax.Array\n    Create an array full of ones.\n\n    JAX implementation of :func:`numpy.ones`.\n\n    Args:\n      shape: int or sequence of ints specifying the shape of the created array.\n      dtype: optional dtype for the created array; defaults to float32 or float64\n        depending on the X64 configuration (see :ref:`default-dtypes`).\n      device: (optional) :class:`~jax.Device` or :class:`~jax.sharding.Sharding`\n        to which the created array will be committed. This argument exists for\n        compatibility with the :ref:`python-array-api`.\n      out_sharding: (optional) :class:`~jax.sharding.PartitionSpec` or :class:`~jax.NamedSharding`\n        representing the sharding of the created array (see `explicit sharding`_ for more details).\n        This argument exists for consistency with other array creation routines across JAX.\n        Specifying both ``out_sharding`` and ``device`` will result in an error.\n\n    Returns:\n      Array of the specified shape and dtype, with the given device/sharding if specified.\n\n    See also:\n      - :func:`jax.numpy.ones_like`\n      - :func:`jax.numpy.empty`\n      - :func:`jax.numpy.zeros`\n      - :func:`jax.numpy.full`\n\n    Examples:\n      >>> jnp.ones(4)\n      Array([1., 1., 1., 1.], dtype=float32)\n      >>> jnp.ones((2, 3), dtype=bool)\n      Array([[ True,  True,  True],\n             [ True,  True,  True]], dtype=bool)\n\n    .. _explicit sharding: https://docs.jax.dev/en/latest/parallel.html\n\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-2": {
+      "code_fingerprint": "sha256:55c1df13672ab762c10f0c2e5e862813bde423e8343601e0348df1c8095ede85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([1., 1., 1., 1.], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

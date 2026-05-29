@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/bi-rnn.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:f4d17debd88ffcbe8dc156450cd9fcd86990750170347ca59595b2efcbe05e9e",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bi-rnn-bidirectional-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "bi-rnn-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:83c0814b6d06e859da5eb8eb50189185f7d11e60c2858c2f6d7f0b67cf294c3f",
+      "kind": "text",
+      "outputs": []
+    },
+    "bi-rnn-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:6f744333be5581178f4c1724ab7e056d9355687990f4c72b26a7c770a7884bb7",
+      "kind": "text",
+      "outputs": []
+    },
+    "bi-rnn-concise-implementation": {
+      "code_fingerprint": "sha256:b28ec4387546de4c24fe6a61ec1312cbfbe003e84fd8e142ef3e0711b6ba59a8",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

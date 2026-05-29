@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/attention-scoring-functions.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:f1decee624f5c8519ba582993b5ca270b4737cf5a95d74a3d1f59c3a8ddb08ee",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-scoring-functions": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-1": {
+      "code_fingerprint": "sha256:577596d6c1db0b23f55b53ac7751a28c9cf774a348f46a6d7180492fe985f079",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-2": {
+      "code_fingerprint": "sha256:1c27365d078d4399452824f56efb42c11da79e33fb5cfdb44f1a4d7ada7c9ceb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[0.6224394 , 0.3775606 , 0.        , 0.        ],\n        [0.43266475, 0.56733525, 0.        , 0.        ]],\n\n       [[0.2759768 , 0.2643211 , 0.4597021 , 0.        ],\n        [0.42453766, 0.278009  , 0.29745328, 0.        ]]], dtype=float32)>"
+        }
+      ]
+    },
+    "attention-scoring-functions-masked-softmax-operation-3": {
+      "code_fingerprint": "sha256:f8a9d89f3682f0866e4af179dbcf34f394ece655ab80e8801db37881d8bb18b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[1.        , 0.        , 0.        , 0.        ],\n        [0.39651868, 0.33157605, 0.2719053 , 0.        ]],\n\n       [[0.4936647 , 0.50633526, 0.        , 0.        ],\n        [0.30664587, 0.2639355 , 0.2119152 , 0.21750343]]], dtype=float32)>"
+        }
+      ]
+    },
+    "attention-scoring-functions-batch-matrix-multiplication": {
+      "code_fingerprint": "sha256:ee89eecf17d1166af08efcf3ee5a9e1d57967dd06f7e1ce7d8747133f55d626a",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-1": {
+      "code_fingerprint": "sha256:a054aaa7793adb95d3c3f2705190868a0a47c477a7dfdf6ab835ca6246e90534",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-2": {
+      "code_fingerprint": "sha256:f346770cd83ead006c94c8c492c06883554b48a1112db7e3a349404d8fbfb379",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-3": {
+      "code_fingerprint": "sha256:26dc41b8704c72c4fb8d80c5ee3acb479b22d36529870d992153dfcedcbce3c8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
+          "bytes": 13617,
+          "sha256": "sha256:40fda293d1e237e117c0f2e9e6de2014d02a27f013fb3304c956d1e71273c694"
+        }
+      ]
+    },
+    "attention-scoring-functions-additive-attention-1": {
+      "code_fingerprint": "sha256:57c620feb6faf4c3182463f959078c0287a95ce7e399dfe457f15f59d5721b12",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-additive-attention-2": {
+      "code_fingerprint": "sha256:7399c71251f66990cd42e2949a4b801f059994fc7a2d30608beb9201aecc1507",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-additive-attention-3": {
+      "code_fingerprint": "sha256:0e4e3ea4b3506669fbc432c6b7a912a6e1358cc21ed4d988527137c1b306ba6a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
+          "bytes": 13600,
+          "sha256": "sha256:e4d2f4ca01b67b4ea999d0ecb4a0910802a28a755aba59aea73539daab4c1ff9"
+        }
+      ]
+    }
+  }
+}

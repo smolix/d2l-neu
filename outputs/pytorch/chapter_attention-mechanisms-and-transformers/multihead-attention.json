@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/multihead-attention.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:d9eced77a48b3a43a8034c83c113d25eda694d6fc90c12ca4185690ba83203f5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multihead-attention-multi-head-attention": {
+      "code_fingerprint": "sha256:c300cb7caa408dc7ccf57efc672503edaa3feca7c3ff5bcdf5d9df44c9ad7dd8",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-1": {
+      "code_fingerprint": "sha256:8a43b07933bf6a73a4a6bf2f90fa39682764d9690b7ea8389cc9f2552a90b9fd",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-2": {
+      "code_fingerprint": "sha256:8dcc5e8dfd82c2af44e6bea35cbd61f89c2c59065b22402178e3e2f04865e58f",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-3": {
+      "code_fingerprint": "sha256:1844c5702100d15cfb0d0b48027c3f2b21c6e49827d7754439bf33fb8dc6046f",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

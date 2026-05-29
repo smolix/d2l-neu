@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/conv-layer.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "conv-layer-convolutions-for-images": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-1": {
+      "code_fingerprint": "sha256:5f88db89c7bffe038b78bb1b70080f27f8b03d0d8779ed62abd41fa5756670dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-2": {
+      "code_fingerprint": "sha256:6374872d6ceb69c1432a70344da3e071773287617381ae91f926e723306db8a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[19., 25.],\n       [37., 43.]], dtype=float32)>"
+        }
+      ]
+    },
+    "conv-layer-convolutional-layers": {
+      "code_fingerprint": "sha256:de5bcf85739aad95269821a1a616845c5a0003a63547fa6d24c5af90846a2592",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-1": {
+      "code_fingerprint": "sha256:170e00a68c124d1c4ed3b574fc01faa4f0a03ac6624de88654e59019628cd2b4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(6, 8) dtype=float32, numpy=\narray([[1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.]], dtype=float32)>"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-2": {
+      "code_fingerprint": "sha256:3aa910362adc0da34a519ee910c5d79c156c4ae2ae52b8b2fc2c220e04c8e5e1",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-3": {
+      "code_fingerprint": "sha256:2c7efd02cb2b90a07e8b3ba284dcfb605f6306d15185caa709a7e87a77e1aebd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(6, 7) dtype=float32, numpy=\narray([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]], dtype=float32)>"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-4": {
+      "code_fingerprint": "sha256:72b3925c8e2a4fe992eb660d21477f15eb471488c8a4f53ebe646ecfa5a01808",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(8, 5) dtype=float32, numpy=\narray([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]], dtype=float32)>"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-1": {
+      "code_fingerprint": "sha256:8f85500c92e9e906714591f446709ea0f178d8c2becb7228f2ce187bec676bc3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 13.231\nepoch 4, loss 4.033\nepoch 6, loss 1.419\nepoch 8, loss 0.542\nepoch 10, loss 0.216\n"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-2": {
+      "code_fingerprint": "sha256:a0cb20656f0e78d56a89e0f7cb14eac1d49b6d2f6bfa1a07944b62854962b6ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 1.0349996 , -0.94009894]], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

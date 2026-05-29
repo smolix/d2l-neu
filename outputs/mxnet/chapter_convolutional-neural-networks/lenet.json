@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/lenet.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lenet-convolutional-neural-networks-lenet": {
+      "code_fingerprint": "sha256:31d5a794ca1c2dd7cb4c5765925dabf00ea2561d3915e2d1ad4e76466c6dfe51",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-2": {
+      "code_fingerprint": "sha256:0bec2a2dcab8db135dff0c4ca2b90a87db4ccf295ce677c2459832c81a5ed192",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-3": {
+      "code_fingerprint": "sha256:368beb5802b0faaa392f5034bfaa3fbb3b83bed2acbfa9514109c9b4d7797837",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 6, 28, 28)\nAvgPool2D output shape:\t (1, 6, 14, 14)\nConv2D output shape:\t (1, 16, 10, 10)\nAvgPool2D output shape:\t (1, 16, 5, 5)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "lenet-training": {
+      "code_fingerprint": "sha256:20a9de42c0c8940960653c7aa2d15cb965615e87c6cd500e069aa5ec04a1eda9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-training-1.svg",
+          "bytes": 59249,
+          "sha256": "sha256:2a1f7201f6958409b1e1b4bdbd93053f73cf25387ff3630957106d1e037d1d15"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/deep-rnn.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:f869460d097686e549031238b8a5110987aa7a8967dfa860eb74277aff1b209b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deep-rnn-deep-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:14d48d941887f17c5ae08696616a2be2b8ee4734b2f144cc998eeacb7af412c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:be34f83062c972647b3b6b7ea374d937425894c8ae0ff88bb221eee7aeb3c41f",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:2d24715ca60c5b3eab0bd9a7f49726b0f2b7a3d67f7f355eece023c3bc0758bd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
+          "bytes": 1055908,
+          "sha256": "sha256:9993a5c265f9bcf23d324aba790de4dedb318a2f9cbd602b84f3a5f5fd595f90"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-1": {
+      "code_fingerprint": "sha256:4471a149473e7489d262b94432431963c1f84c1d7f4303a0a158a0406a3b869a",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-concise-implementation-2": {
+      "code_fingerprint": "sha256:f4b347074afa76b124e94f58230bf050326850c8c1810835758380b4a347c947",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
+          "bytes": 1060359,
+          "sha256": "sha256:8a288729212ae14a2c8987c319bd8340dcd0f7108868bf7c21521810bb315a45"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-3": {
+      "code_fingerprint": "sha256:c687b02e2991b8c8268abd054e3a304be4099846077b8d56957d1df303e645f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has space the time trav'"
+        }
+      ]
+    }
+  }
+}

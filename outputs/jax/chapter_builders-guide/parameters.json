@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-parameter-management-1": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-parameter-management-2": {
+      "code_fingerprint": "sha256:40769c693b96bf0503f5af988c0294a442433c51f7bac908050732e749b62376",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 1)"
+        }
+      ]
+    },
+    "parameters-parameter-access": {
+      "code_fingerprint": "sha256:07a2632413de7452dece92bc294ac6e6ce79e2e2d7265a93affb4b3c5ff26f61",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'kernel': Array([[ 0.39065108],\n        [-0.47905394],\n        [ 0.17323323],\n        [ 0.22871736],\n        [ 0.46032798],\n        [-0.22263312],\n        [ 0.19490093],\n        [-0.21752292]], dtype=float32),\n 'bias': Array([0.], dtype=float32)}"
+        }
+      ]
+    },
+    "parameters-targeted-parameters-1": {
+      "code_fingerprint": "sha256:5031562f927073b31272a6f2714b11b6a25f46c6bbf949160bf2156da2520f2a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(jaxlib._jax.ArrayImpl, Array([0.], dtype=float32))"
+        }
+      ]
+    },
+    "parameters-all-parameters-at-once": {
+      "code_fingerprint": "sha256:d149425329fedd917ff60ab1431d4b50d6e302f029b48554e8bbf29b4e263348",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'params': {'layers_0': {'bias': (8,), 'kernel': (4, 8)},\n  'layers_2': {'bias': (1,), 'kernel': (8, 1)}}}"
+        }
+      ]
+    },
+    "parameters-tied-parameters": {
+      "code_fingerprint": "sha256:feb7f128c011583bc6bf1cd03cae2ade4bd1fbdee77f77184850fa10d7d42049",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    }
+  }
+}

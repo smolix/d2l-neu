@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/naive-bayes.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:40278f4132e8c5b273ad8108c7f82de338defd43178b3913bc71e3e75790a0c7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "naive-bayes": {
+      "code_fingerprint": "sha256:b47583a382c57a90ccc5b74a8fb54ac90dbdc4fa1c3fee3d7403c7f3772fc9e7",
+      "kind": "text",
+      "outputs": []
+    },
+    "naive-bayes-optical-character-recognition-1": {
+      "code_fingerprint": "sha256:25b104aa49d6ed1ef141286162cf975313127cc3afed936287e03f312603d479",
+      "kind": "text",
+      "outputs": []
+    },
+    "naive-bayes-optical-character-recognition-2": {
+      "code_fingerprint": "sha256:2b0f1f5b839451d34d0a2fbf7d726780d5ec17192f9fb4aa7310203aa75d7868",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((28, 28), array(4, dtype=int32))"
+        }
+      ]
+    },
+    "naive-bayes-optical-character-recognition-3": {
+      "code_fingerprint": "sha256:3fbf430b2a43d3060cbdb17fe1ff04e7b1a94737e086cec1cc340191145197e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((28, 28), dtype('float32'))"
+        }
+      ]
+    },
+    "naive-bayes-optical-character-recognition-4": {
+      "code_fingerprint": "sha256:bc64438407b8c1ac76b053ab3cb8f081bdc8b204f41ed3c71ae0b6e8a1cc2b98",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array(4, dtype=int32), mxnet.numpy.ndarray, dtype('int32'))"
+        }
+      ]
+    },
+    "naive-bayes-optical-character-recognition-5": {
+      "code_fingerprint": "sha256:1a75a5b43f49b36815074affdaf8e848c69ca22d01ffc8f117f0776917e34d97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((28, 28, 28), (28,))"
+        }
+      ]
+    },
+    "naive-bayes-optical-character-recognition-6": {
+      "code_fingerprint": "sha256:92a8cc8679f9a8003ff7e43cbcaf2bcd03c0e85b262a6909b62326c23e810fb1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "naive-bayes/naive-bayes-optical-character-recognition-6-1.svg",
+          "bytes": 35630,
+          "sha256": "sha256:c32bdc0319870d201da7c06466a14654642f48f464bb1e90086f629c5eb33bd4"
+        }
+      ]
+    },
+    "naive-bayes-training-1": {
+      "code_fingerprint": "sha256:4b2b3385506a0ae4ac977b43c9e1d888fdf25f475e828700ea2797befd5df84b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.09871667, 0.11236667, 0.0993    , 0.10218333, 0.09736667,\n       0.09035   , 0.09863333, 0.10441667, 0.09751666, 0.09915   ])"
+        }
+      ]
+    },
+    "naive-bayes-training-2": {
+      "code_fingerprint": "sha256:01bfac5c4d18d2754f7e70bcf87662d9e452fef7dea0ca6a97ba0f7527d54bb1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "naive-bayes/naive-bayes-training-2-1.svg",
+          "bytes": 40842,
+          "sha256": "sha256:c0587c4ae77d645ff1de664d08ff6a0cdcf358f6d28aa886ba3cc1a24e60ad4c"
+        }
+      ]
+    },
+    "naive-bayes-training-3": {
+      "code_fingerprint": "sha256:139126d5967336d3f983dd3272324678bb4bf218cd669d3787715a97c40b5eac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])"
+        }
+      ]
+    },
+    "naive-bayes-training-4": {
+      "code_fingerprint": "sha256:37c8562e71e26045d445d020dcc5d92e0ce891b672ea9978b5d31ab30dffe174",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "underflow: 0.0\nlogarithm is normal: -1805.2267129073316\n"
+        }
+      ]
+    },
+    "naive-bayes-training-5": {
+      "code_fingerprint": "sha256:777fb68ee6b046781916236da123c1598f7f05a51978a1834c1bce4a2697c1bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([-268.97256, -301.70447, -245.19518, -218.87395, -193.45708,\n       -206.0909 , -292.52267, -114.62564, -220.33139, -163.1784 ])"
+        }
+      ]
+    },
+    "naive-bayes-training-6": {
+      "code_fingerprint": "sha256:d87e5ffd9208193e3700e9a3a6789d7a8ae9ca9f20ae4ff17b910a595185593e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(True)"
+        }
+      ]
+    },
+    "naive-bayes-training-7": {
+      "code_fingerprint": "sha256:ab8d2ab2db72f8636c8509b7e88d5c1ef60ce00d67adc80e09f5a652bc314ad0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "naive-bayes/naive-bayes-training-7-1.svg",
+          "bytes": 42872,
+          "sha256": "sha256:40a77fc9c12794766c916686ace959edcf5a6b1cba1e77312b3d7cbf3bfe5424"
+        }
+      ]
+    },
+    "naive-bayes-training-8": {
+      "code_fingerprint": "sha256:989d7ae2f517b43db09794d9975318bb2e069ec0d09a2cbc3fec8a81a18bc23b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8427"
+        }
+      ]
+    }
+  }
+}

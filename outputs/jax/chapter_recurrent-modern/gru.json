@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/gru.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:49cb308545a8137b7003c2d1c599d77a204688528c533a1304d94226f85d6eea",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gru-gated-recurrent-units-gru": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-initializing-model-parameters": {
+      "code_fingerprint": "sha256:efd989a0a51e06d749c170b497e5459466b313a437f2f38b5f875a86a88123e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-defining-the-model": {
+      "code_fingerprint": "sha256:91d5196c7a81192be146d372caa2045f1d051e379c736db9450cda8aad104904",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-training": {
+      "code_fingerprint": "sha256:c1956d2c2047babad52248fec8b97d4ae250f71344e806ef388adfe2fb23d752",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gru/gru-training-1.svg",
+          "bytes": 106299,
+          "sha256": "sha256:d692a0a520d1249024336fb0a383b4a75c694b41ea3df4fe502f2c353d063de5"
+        }
+      ]
+    },
+    "gru-concise-implementation-1": {
+      "code_fingerprint": "sha256:2a79b0d574170f1344086dff238fcb1b33c2051ddb85aea3ae45af11cc46f5db",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-concise-implementation-2": {
+      "code_fingerprint": "sha256:972030665c2030d4b66e9b1522329fad7bd704de7f690b00049e6ffdaec13dfa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gru/gru-concise-implementation-2-1.svg",
+          "bytes": 107170,
+          "sha256": "sha256:768c60eae5b55d04ac0213b265cf9e48c5431b8f922a6da0e08c6be3dd99e507"
+        }
+      ]
+    },
+    "gru-concise-implementation-3": {
+      "code_fingerprint": "sha256:72cdb1678b3cde78d2d6fd51828244e26703ce8bb59381e2693bb344a5ae0297",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has of the provell the '"
+        }
+      ]
+    }
+  }
+}

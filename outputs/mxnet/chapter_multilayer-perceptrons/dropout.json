@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/dropout.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:abf06d54538478c1060edf28289fd79d29c11329126dcd6a431339ae45795465",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dropout": {
+      "code_fingerprint": "sha256:31d5a794ca1c2dd7cb4c5765925dabf00ea2561d3915e2d1ad4e76466c6dfe51",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:28ef745fd81fb8dc4307acab75233818ce9516a37c1e268405b8d0324f4fa328",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:87558383363390850c305cd3cc745ecf635a7aeaa07e103106c85b9c99907442",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  2.  4.  0.  8.  0.  0.  0.]\n [ 0. 18. 20.  0. 24.  0.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+        }
+      ]
+    },
+    "dropout-defining-the-model": {
+      "code_fingerprint": "sha256:ce628731cbb752a7e40353d092748613a73858d235301bd341bcd95aa654f58b",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-training": {
+      "code_fingerprint": "sha256:dd162057b583505eb80a3b3447a2271679d3a15e45def1ed341b8a426e44b34d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-training-1.svg",
+          "bytes": 59136,
+          "sha256": "sha256:9ef2176cebc1de5dc5abc278df0edf875fecba509f3f2b3e24dce385f342bf30"
+        }
+      ]
+    },
+    "dropout-concise-implementation-1": {
+      "code_fingerprint": "sha256:741058e3bdcca213d10a65e30dab70a6f320a02d15acc6b40079910df538f131",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-concise-implementation-3": {
+      "code_fingerprint": "sha256:45d34090a0e9ac11e109da62af4c206d8badfc53b43bef6f148bd8fb0338ab65",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-concise-implementation-3-1.svg",
+          "bytes": 59064,
+          "sha256": "sha256:b776fa4457144d107c4b8e00fbeb9bcabade8a7cc1f811fdee94a260c5210331"
+        }
+      ]
+    }
+  }
+}

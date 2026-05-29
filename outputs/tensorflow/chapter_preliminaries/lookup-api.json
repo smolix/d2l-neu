@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/lookup-api.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lookup-api-documentation": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-functions-and-classes-in-a-module": {
+      "code_fingerprint": "sha256:96eb144b6fcefd579d6f92778184a0480df88abb98ab84c2e173e1865f60e055",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['Algorithm', 'Generator', 'all_candidate_sampler', 'categorical', 'create_rng_state', 'experimental', 'fixed_unigram_candidate_sampler', 'fold_in', 'gamma', 'get_global_generator', 'learned_unigram_candidate_sampler', 'log_uniform_candidate_sampler', 'normal', 'poisson', 'set_global_generator', 'set_seed', 'shuffle', 'split', 'stateless_binomial', 'stateless_categorical']\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-1": {
+      "code_fingerprint": "sha256:7618b5171b5ec1bec1c1e5500df8e9a8381f1c4593302c00355d8dc9c22c5262",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Help on function ones in module tensorflow.python.ops.array_ops:\n\nones(shape, dtype=tf.float32, name=None, layout=None)\n    Creates a tensor with all elements set to one (1).\n\n    See also `tf.ones_like`, `tf.zeros`, `tf.fill`, `tf.eye`.\n\n    This operation returns a tensor of type `dtype` with shape `shape` and\n    all elements set to one.\n\n    >>> tf.ones([3, 4], tf.int32)\n    <tf.Tensor: shape=(3, 4), dtype=int32, numpy=\n    array([[1, 1, 1, 1],\n           [1, 1, 1, 1],\n           [1, 1, 1, 1]], dtype=int32)>\n\n    Args:\n      shape: A `list` of integers, a `tuple` of integers, or a 1-D `Tensor` of\n        type `int32`.\n      dtype: Optional DType of an element in the resulting `Tensor`. Default is\n        `tf.float32`.\n      name: Optional string. A name for the operation.\n      layout: Optional, `tf.experimental.dtensor.Layout`. If provided, the result\n        is a [DTensor](https://www.tensorflow.org/guide/dtensor_overview) with the\n        provided layout.\n\n    Returns:\n      A `Tensor` with all elements set to one (1).\n\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-2": {
+      "code_fingerprint": "sha256:ba9034d8768707f0108fede7555d05544ec6277327b123772045489d12578964",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([1., 1., 1., 1.], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

@@ -1,7 +1,12 @@
 # D2L-Neu Project Context
 
 Rebuild of "Dive into Deep Learning" (d2l.ai) using Quarto.
-See **architecture.md** for full build system documentation.
+See **docs/architecture.md** for the component inventory and the current build
+flow. See **docs/build-system.md** for the *decoupled* build model (committed
+notebook-output store, capture/bless workflow, CPU-only rendering, freshness
+audit) — the design that lets site/slide rendering run without re-executing
+notebooks. The decoupled model is the target; `architecture.md` describes what
+the repo does until it lands.
 
 ## Rules
 

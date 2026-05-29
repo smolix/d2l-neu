@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/read-write.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "read-write-file-i-o": {
+      "code_fingerprint": "sha256:b01fce34931d9ea891a257ccb4239a8d9bd34aea0e775ba0c817fabc00bd3be9",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-tensors-1": {
+      "code_fingerprint": "sha256:eb2c3e92d5c5412f335b7cdebf5b1ccd790e4665ee3a15611f11b88dd225bc47",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-tensors-2": {
+      "code_fingerprint": "sha256:9547779132d4aad8381f615db3ab3d2bd4deafc55afd1425c8e1310a45f5f169",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0, 1, 2, 3], dtype=int32)"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-tensors-3": {
+      "code_fingerprint": "sha256:3e1f84f45ee20f1bd32b32b034b4f160323210ef2cdbf0f1047a439f72de702f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([0., 1., 2., 3.]), array([0., 0., 0., 0.]))"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-tensors-4": {
+      "code_fingerprint": "sha256:fe50a29035a5642f7bc0cb96f5a5618150a97e52df7361dc482d43e55dc2cf67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array({'x': <tf.Tensor: shape=(4,), dtype=int32, numpy=array([0, 1, 2, 3], dtype=int32)>, 'y': <tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 0., 0., 0.], dtype=float32)>},\n      dtype=object)"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-model-parameters-1": {
+      "code_fingerprint": "sha256:848d96454000853a3db10ee82be4e38eac68eae8dbb2465d83fdbb9563eff970",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-model-parameters-2": {
+      "code_fingerprint": "sha256:1343e4996c74db98b661d10bdfe60bbb6239d0f9bbe3c0530c53fec0bcad8aca",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-model-parameters-3": {
+      "code_fingerprint": "sha256:54142f6f2bcb2954122c161451318ee4a4991d41e26d3d0f072e7923648491a1",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-model-parameters-4": {
+      "code_fingerprint": "sha256:d55876f972b7f122138612d5edc4a5b292a8657ee8e90c383332613a3d61e9e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 10), dtype=bool, numpy=\narray([[ True,  True,  True,  True,  True,  True,  True,  True,  True,\n         True],\n       [ True,  True,  True,  True,  True,  True,  True,  True,  True,\n         True]])>"
+        }
+      ]
+    }
+  }
+}

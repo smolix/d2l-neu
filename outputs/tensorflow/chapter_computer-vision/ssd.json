@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/ssd.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:89906b69bf13c7aeebcf54bf388c2ca4abbbfcea8657a5515a1cb4fa778f7c7f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ssd-class-prediction-layer": {
+      "code_fingerprint": "sha256:1270fe32e0a6c0f2e15cbdae4584dbe217d06395ee694f97181894f9ed0f1348",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-bounding-box-prediction-layer": {
+      "code_fingerprint": "sha256:5427df2d0244217e29f3d02723f0da1d896f54ca59fe1cfc7b678825ada8f79f",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-concatenating-predictions-for-multiple-scales-1": {
+      "code_fingerprint": "sha256:f736c42730bb18ed5f23da96df757433f9d0fb61f9a83cb4633f51b8bc30725f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 20, 20, 55]), TensorShape([2, 10, 10, 33]))"
+        }
+      ]
+    },
+    "ssd-concatenating-predictions-for-multiple-scales-2": {
+      "code_fingerprint": "sha256:8c3526c228588afa2d3b9531e3f6d9e90aaae5e95a3e3de8e38cb9229f56bb64",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-concatenating-predictions-for-multiple-scales-3": {
+      "code_fingerprint": "sha256:abde5861bed56164aa6a63d98434bd3462247412c18d316574cab7b5fb0e8184",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 25300])"
+        }
+      ]
+    },
+    "ssd-downsampling-block-1": {
+      "code_fingerprint": "sha256:96786f2433f3f5555400a57d70b84203fe1984a3c528ac7dd6582891203d804a",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-downsampling-block-2": {
+      "code_fingerprint": "sha256:6001e394187946fd92a7b00e4648f951a2e63c32248f1a19a151280cab1150f3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 10, 10, 10])"
+        }
+      ]
+    },
+    "ssd-base-network-block": {
+      "code_fingerprint": "sha256:b585375b198278cf531b31690079077aa8cec466646c09ec1ab79e90ac002541",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 32, 32, 64])"
+        }
+      ]
+    },
+    "ssd-the-complete-model-1": {
+      "code_fingerprint": "sha256:b384ce22d7efe5c00fe40f16515d6d2dfbc2a6183dce904e9e8790fe61e3f69a",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-the-complete-model-2": {
+      "code_fingerprint": "sha256:06a6a8564ce6d297c19289e628e7ab42634a6cc11aa4d090eda61c2b66cf64db",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-the-complete-model-3": {
+      "code_fingerprint": "sha256:a7f1da18301715211a32f36c333dbe61f4da45417fbb857f1687eeaa27fe3692",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-the-complete-model-4": {
+      "code_fingerprint": "sha256:c4d1ac15db317673fa39f0b433f520dbcb8feb8f63b9df6a98b1ee66021ea3d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-the-complete-model-5": {
+      "code_fingerprint": "sha256:e4d06fbef0efc9e4a3c8193dd0c029909aded14100b196906d5eb6f3258fa9c1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "output anchors: (1, 5444, 4)\noutput class preds: (32, 5444, 2)\noutput bbox preds: (32, 21776)\n"
+        }
+      ]
+    },
+    "ssd-reading-the-dataset-and-initializing-the-model-1": {
+      "code_fingerprint": "sha256:e6937dbec4e3e1cff4983acf92e3a590bef4235ac7dc980de560ff6d11df527f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1000 training examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 100 validation examples\n"
+        }
+      ]
+    },
+    "ssd-reading-the-dataset-and-initializing-the-model-2": {
+      "code_fingerprint": "sha256:d419f571d7147d616dd13db4cce4bc25f9cf9b79e5e28ef28daae81293f3241a",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-defining-loss-and-evaluation-functions-1": {
+      "code_fingerprint": "sha256:59bfea95ffc78a9fd565377391872800f8ec9cf3173006a34bdb6364fd82e359",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-defining-loss-and-evaluation-functions-2": {
+      "code_fingerprint": "sha256:a6335a330852d451ce5316bcd992bbde60a197d6cc6851c4612ac37c9e3ba3c3",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-training-the-model": {
+      "code_fingerprint": "sha256:276ca77f00a7f92fbb113952d3af6f12ad5738e09c8398a7ea0dc4ae4f0249b3",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "class err 3.48e-03, bbox mae 3.70e-03\n1783.1 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssd/ssd-training-the-model-1.svg",
+          "bytes": 20098,
+          "sha256": "sha256:a936dc5b640fafe7c1e74bd2c9df3b518489fdcfdb45bfbbbc8251401a49cb3c"
+        }
+      ]
+    },
+    "ssd-prediction-1": {
+      "code_fingerprint": "sha256:0c84e13ef17273a202fc887c861d0375a5741cd2f0faa8305fb61f7075a0f26a",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-prediction-2": {
+      "code_fingerprint": "sha256:acd0317d5e12e71e48c39e026e07ea2e26fad49005c3409cbade094740718344",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssd-prediction-3": {
+      "code_fingerprint": "sha256:78a722e576ca2bedd17419e05678b56ab83ef2dc8fda9779a321f7ed80a44ca8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssd/ssd-prediction-3-1.svg",
+          "bytes": 417855,
+          "sha256": "sha256:5d5858db771054ee648a5bef8b31e746299d16c3b6fbb55cc164849d7e3e2257"
+        }
+      ]
+    },
+    "ssd-exercises-1": {
+      "code_fingerprint": "sha256:7ff76fb3891e5577c37e1f969e44704f03247047239fa3855d4042e99991dd6f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssd/ssd-exercises-1-1.svg",
+          "bytes": 18952,
+          "sha256": "sha256:e6918baf859afdd49f3c5daa1cc19020c405e8a88869280ec0975cd648b705bb"
+        }
+      ]
+    },
+    "ssd-exercises-2": {
+      "code_fingerprint": "sha256:0d92e298044ea36557021253d8efa8d0adf847721a1ea446e7b0aba4365c51b0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssd/ssd-exercises-2-1.svg",
+          "bytes": 24985,
+          "sha256": "sha256:9a5e2dfff8cebb4e7998033b52a0ddac2e4ec7743e7fc8c5521cee6dfc4fb926"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/mlp-implementation.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mlp-implementation-implementation-of-multilayer-perceptrons": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-initializing-model-parameters": {
+      "code_fingerprint": "sha256:044cb037f41b4e562a0cadb65af74e9bd760f0181ce0e12944c8b5dd96d967ac",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-model-1": {
+      "code_fingerprint": "sha256:c38f413211a9897302d3e0f151ddca31af85194b5343780357f47995ff754139",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-model-2": {
+      "code_fingerprint": "sha256:cee4df78ee76002951b3a86735a2d4a8428ff6721f41bb3f6257dc784dd24788",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-training": {
+      "code_fingerprint": "sha256:16aa3ec2bec2bac0e0e8ca5e0d24962ee8a981cced6db64c899f81ffc2187890",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp-implementation/mlp-implementation-training-1.svg",
+          "bytes": 32408,
+          "sha256": "sha256:1b803e4a604ad633417cea5917dc7be7cbdbabbb7823736d4627203d284a3fb4"
+        }
+      ]
+    },
+    "mlp-implementation-model-2-2": {
+      "code_fingerprint": "sha256:43a972fb523684a0f55a668321e21c30300fb6f3bf048ffcfb856098eb20c6b8",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-training-2": {
+      "code_fingerprint": "sha256:9162ebfa4fd2b6173ad068e7d71c74e73723a96ed6c305fe0d9e39d71ac8a188",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
+          "bytes": 32975,
+          "sha256": "sha256:3759245505acde033a6c5a4d7fa58c37deceece66dc2d04088f5c590ce9de821"
+        }
+      ]
+    }
+  }
+}

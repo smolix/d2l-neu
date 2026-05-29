@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/kaggle-house-price.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:b8e3b51e8c7272a813f62d1117c4dfe7dda5c9bdf725a75221028aa1c2b20114",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "kaggle-house-price-predicting-house-prices-on-kaggle": {
+      "code_fingerprint": "sha256:91e404406e8463f55d75e38bd58991060a7462f5e136cab9c60ed69bbc4fb7ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-downloading-data": {
+      "code_fingerprint": "sha256:85681e128a9fd40de469227c48fd07a0cffd5eb72dfac5faed3c5dc5a4827ecb",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-accessing-and-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:0db685b4b892be3a9e88a036098a6984a8d11f0a53df9a65250796e3682312e2",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-accessing-and-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:55c96015746e30d9d31406e890ad5ed26cc915f75c219229a69dec93006323d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(1460, 81)\n(1459, 80)\n"
+        }
+      ]
+    },
+    "kaggle-house-price-data-preprocessing-1": {
+      "code_fingerprint": "sha256:9a9cb29e386eb52f51f09d6519686450dfd9649f109af58b949582f9fffca2cf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   Id  MSSubClass MSZoning  LotFrontage SaleType SaleCondition  SalePrice\n0   1          60       RL         65.0       WD        Normal     208500\n1   2          20       RL         80.0       WD        Normal     181500\n2   3          60       RL         68.0       WD        Normal     223500\n3   4          70       RL         60.0       WD       Abnorml     140000\n"
+        }
+      ]
+    },
+    "kaggle-house-price-data-preprocessing-2": {
+      "code_fingerprint": "sha256:db920b1668f01f880e842647676df612158cb8252f2abcc5bab027f536ed14bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-data-preprocessing-3": {
+      "code_fingerprint": "sha256:5f34d9f1176b8da4bb5ce47bf20ae46688c433dd1fd763355995a22cf792d958",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1460, 331)"
+        }
+      ]
+    },
+    "kaggle-house-price-error-measure": {
+      "code_fingerprint": "sha256:1c2fb15108bfc8d92252f01cf0cad72df12fb32102fc8d9a8b254840bdb65de6",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-k-fold-cross-validation-1": {
+      "code_fingerprint": "sha256:10e2b9f0a480fa1ef3f5e7db7d27250ab29697caeeeff7487eb61dddcebfb002",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-k-fold-cross-validation-2": {
+      "code_fingerprint": "sha256:4c4619b37cee207789101fc0fcd08771691f43ebdc949360781ee8bd45846473",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-model-selection": {
+      "code_fingerprint": "sha256:b8164066bba060b29956583d9155ab4dce91c86e2ec1a1868366509dced7865a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "average validation log mse = 0.176268008351326\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-house-price/kaggle-house-price-model-selection-1.svg",
+          "bytes": 41687,
+          "sha256": "sha256:e16c0f4a43c146ad01d64e850afe3ce3ce639a32255c2fbf7ccb5b9a636f262e"
+        }
+      ]
+    },
+    "kaggle-house-price-submitting-predictions-on-kaggle": {
+      "code_fingerprint": "sha256:4e8d332fa430619eb36fd5e2669c6dbabdf59ed90cbb52d88a9127703bcfe342",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

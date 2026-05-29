@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/bahdanau-attention.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:8bae596c6a7b33353ae865d288df98523469358ebb585904ec825015dc53ba61",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bahdanau-attention-the-bahdanau-attention-mechanism": {
+      "code_fingerprint": "sha256:df34a8d380ad4395e9ca17848802aaa495e78579ed51629074c3ab8f33c766e5",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-1": {
+      "code_fingerprint": "sha256:c92e39f5f604aa7b81b4d2a9c3372354cfa3086ca2e1ee2890fc5e723a6409bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-2": {
+      "code_fingerprint": "sha256:82a970e75d7c8253c7fce55b9d8450ab33b145f85382e617cd297c5b48fd2c93",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-3": {
+      "code_fingerprint": "sha256:edbb613645e4d1f3dce782259fb795713917977f2e65f8c1030526362a3c7ccf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-jax/lib/python3.12/site-packages/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype int64 requested in astype is not available, and will be truncated to dtype int32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  return lax_numpy.astype(self, dtype, copy=copy, device=device)\n"
+        }
+      ]
+    },
+    "bahdanau-attention-training-1": {
+      "code_fingerprint": "sha256:1435b75490dc9ae2a16078928e5a1735299286c4277d2f05c154dc2c6ffd2e83",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
+          "bytes": 75071,
+          "sha256": "sha256:027d6f13baf0368c95f5dc35ab43b8e1f3b2274b40ce777b34ed6884f38d4c85"
+        }
+      ]
+    },
+    "bahdanau-attention-training-2": {
+      "code_fingerprint": "sha256:722a5315e2de0ec8c36f088db4f11edfc2a30a48986d8f7234799d20f21485d6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'calme', '.'], bleu,0.512\n"
+        }
+      ]
+    },
+    "bahdanau-attention-training-3": {
+      "code_fingerprint": "sha256:2d83615be7ff366362533ee774b78fb703e7c1eca27a76bb2fd47d8149492d66",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-training-4": {
+      "code_fingerprint": "sha256:30d273684ba4ec97f9140e78006866f2b97d3cdf92542a09a4dcf01c0d8c7172",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
+          "bytes": 19865,
+          "sha256": "sha256:40bdc2b33535391a9483d11f7e67c0d30758b83a1c4567c38bf3230485e29557"
+        }
+      ]
+    }
+  }
+}

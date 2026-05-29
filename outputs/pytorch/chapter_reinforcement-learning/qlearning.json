@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/qlearning.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:0c7a1029c6afe776d2a246c7afbf742a750641a7602a7b748d06d2b593dbd886",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "qlearning-implementation-of-q-learning-1": {
+      "code_fingerprint": "sha256:1695372f93a1b166c4e3eb6d532f122be4d15a213f5ae8faccd6d1d427e3859e",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-implementation-of-q-learning-2": {
+      "code_fingerprint": "sha256:1655c1e2bbfbb61e7e580ea5a40b3a4f353319d8cead5519504e4810d570533b",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-implementation-of-q-learning-3": {
+      "code_fingerprint": "sha256:bb2e8eebe0954a4b5bbc9d5ab189742804a0f97067ef0b3f8e4986ae9af18191",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "qlearning/qlearning-implementation-of-q-learning-3-1.png",
+          "bytes": 72909,
+          "sha256": "sha256:40a082a129d9422eada8e0d7aeafc4798e44c3b9cbf12a78f3f61ad450f501b8"
+        }
+      ]
+    }
+  }
+}

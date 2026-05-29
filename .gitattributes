@@ -1,0 +1,11 @@
+# Notebook-output image/binary assets → Git LFS.
+# The committed outputs store (see docs/build-system.md) keeps text outputs
+# inline in the per-notebook *.json manifests (plain git, reviewable diffs) and
+# image/binary outputs as asset files under outputs/<fw>/<chapter>/<stem>/.
+# Those churn every re-run (training nondeterminism), so they live in LFS to
+# keep the packfile lean. Manifests (*.json) deliberately stay plain git.
+outputs/**/*.png  filter=lfs diff=lfs merge=lfs -text
+outputs/**/*.jpg  filter=lfs diff=lfs merge=lfs -text
+outputs/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+outputs/**/*.svg  filter=lfs diff=lfs merge=lfs -text
+outputs/**/*.gif  filter=lfs diff=lfs merge=lfs -text

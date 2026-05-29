@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/maximum-likelihood.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "maximum-likelihood-a-concrete-example": {
+      "code_fingerprint": "sha256:923fd6e0b6b8a0450032b01362ab09f5d11e46f02d1b20c904b13f8600656327",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
+          "bytes": 20953,
+          "sha256": "sha256:8afb249af69793c0aa3a1da3a53253f862a6e5da4d9f3040cdfca6c68c89f299"
+        }
+      ]
+    },
+    "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
+      "code_fingerprint": "sha256:2244132aac195ad1778790b4d0c3e8c39cb0e9dfbf417285bb905905d0338894",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Variable 'Variable:0' shape=() dtype=float32, numpy=0.9713100790977478>,\n 0.9713101437890875)"
+        }
+      ]
+    }
+  }
+}

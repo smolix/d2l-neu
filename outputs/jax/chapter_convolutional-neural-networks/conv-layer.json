@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/conv-layer.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "conv-layer-convolutions-for-images": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-1": {
+      "code_fingerprint": "sha256:3299e4509b5319f04b6d82501a37e37a1361eca7e43b44e99e842c2dd2a604ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-2": {
+      "code_fingerprint": "sha256:da81f83fec530ff5eaf9bfc5ca894e974147a50f072ff7d1a940b6bfd052d00b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[19., 25.],\n       [37., 43.]], dtype=float32)"
+        }
+      ]
+    },
+    "conv-layer-convolutional-layers": {
+      "code_fingerprint": "sha256:aa00a01e4e9e68a50c4f7ea080706bb35f5728fe27837f20713dfc502412760e",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-1": {
+      "code_fingerprint": "sha256:1f97eb2652e6e1dad0b9e9f614f43b794637129472d435f7383fac0aad3a5442",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.]], dtype=float32)"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-2": {
+      "code_fingerprint": "sha256:ed8f9684f85fcdf2833c2ae6438fa3a1cb215f0f3ffb3c9ae9f8cd65abd7738d",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-3": {
+      "code_fingerprint": "sha256:c31796993ec5b7cf906f86479d1161b7174916540a4b5691f065d9f6883ed6d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]], dtype=float32)"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-4": {
+      "code_fingerprint": "sha256:bce5df9dfad4e9a7634e49381e50b25e84a3e2475261f5807b778121bd057656",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]], dtype=float32)"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-1": {
+      "code_fingerprint": "sha256:5c6b4a0869c175033b40e1e3ea9785b2a80008b31de4f06872b206a2e7966b84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 5.003\nepoch 4, loss 0.842\nepoch 6, loss 0.142\nepoch 8, loss 0.024\nepoch 10, loss 0.004\n"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-2": {
+      "code_fingerprint": "sha256:d21b2c32b988308c1d24bf9d4f7af0eea021c84ab1b00098017b43f2bdcc5a02",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 0.99009037, -0.986668  ]], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

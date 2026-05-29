@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/batch-norm.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:5bc747a03ad9e8512ac133effa8361878215edaccd486bd7755c85fa76b263e3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "batch-norm-batch-normalization": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:823e4ca3508e0b5d9d3e8c41d4a185f2d7d1339e2f45c2729d854e1027ecea01",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:5452b95f98f6e1862dc12ac38d81e2bbd74e912244e9d6f94d2f9b799a9dd1a1",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-lenet-with-batch-normalization-1": {
+      "code_fingerprint": "sha256:242e1287a3f7963ec9c5249f342b0399970c1d78112b0a51f59b6a9cfdb769c7",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-lenet-with-batch-normalization-3": {
+      "code_fingerprint": "sha256:bd19f290b85b7dbc17329c058d161fe15798af4e5fcf1ab246a601d884a8d2b1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
+          "bytes": 57868,
+          "sha256": "sha256:f1a20a03517d1deb28c5ff79e911c689696bf22afc690819755522f67e93dc1f"
+        }
+      ]
+    },
+    "batch-norm-lenet-with-batch-normalization-4": {
+      "code_fingerprint": "sha256:fc14b715c5a634daff7da7b597be7be5dbed087471fa8957fabc52ebab659eb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.6405852, 2.5346386, 4.4909935, 2.0466583, 2.5389442, 2.3539135],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 0.3217615, -2.7100601,  2.4613204, -1.5031106,  1.255107 ,\n         2.7647116], dtype=float32)>)"
+        }
+      ]
+    },
+    "batch-norm-concise-implementation-1": {
+      "code_fingerprint": "sha256:14e3f9423fabc86fc8ed63648d064cba8eec998c3afad51949183648fddeb152",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-concise-implementation-2": {
+      "code_fingerprint": "sha256:222377428895127e4665abfb83175e4510c4106697722ae3134898c34c47ff07",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
+          "bytes": 57772,
+          "sha256": "sha256:37ebef50aa8613f3f1ab7d8ca2ce82cac3733402d6fd8aa1a6bc86c64f7803eb"
+        }
+      ]
+    }
+  }
+}

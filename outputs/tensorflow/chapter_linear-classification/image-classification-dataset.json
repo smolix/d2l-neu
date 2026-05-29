@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/image-classification-dataset.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:f7f2410e801c4cc20ac7ec43721fb1aade8f88eb816edee66b66c9ee0149d008",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "image-classification-dataset-the-image-classification-dataset": {
+      "code_fingerprint": "sha256:2951453204154eaf85ba8a5fb7eb934372097c2aae3d49a574f26d87d11fffbe",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-loading-the-dataset-1": {
+      "code_fingerprint": "sha256:793165035f4f4dc9e74759064d460cf6f3debdfc1fb00c1108ec9cc1b06145f7",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-loading-the-dataset-2": {
+      "code_fingerprint": "sha256:29040619b755d71f5e197c69a4c41e32821aab0e5eb5179303f5ed2fd600d588",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(60000, 10000)"
+        }
+      ]
+    },
+    "image-classification-dataset-loading-the-dataset-3": {
+      "code_fingerprint": "sha256:5c3f07e2b1ee7ea88ff8d612cabfb67529030e452911c9cc76784c2eb8980996",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(28, 28)"
+        }
+      ]
+    },
+    "image-classification-dataset-loading-the-dataset-4": {
+      "code_fingerprint": "sha256:8a1ec451e188fe59821af4c4c7b6b4356b72673ae0e5555234ef916000504b19",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-reading-a-minibatch-1": {
+      "code_fingerprint": "sha256:6d29237ea8a10e47f22ee5f9657cb10f011986005a4ba383d71283de75424751",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-reading-a-minibatch-2": {
+      "code_fingerprint": "sha256:4ce2fb0bb715bd9edaefec9cd8ff2eebb2df65be4b45c24499c04fa9b17d5f84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(64, 32, 32, 1) <dtype: 'float32'> (64,) <dtype: 'int32'>\n"
+        }
+      ]
+    },
+    "image-classification-dataset-reading-a-minibatch-3": {
+      "code_fingerprint": "sha256:1145cdb0ba477de6a856cfd258de0892164c167e60e06db3bc98e8c4cf10cf38",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.65 sec'"
+        }
+      ]
+    },
+    "image-classification-dataset-visualization-1": {
+      "code_fingerprint": "sha256:080c7e2e4f1520574a817693de59c474f564637cfd2bac7037365f39571681b2",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-visualization-2": {
+      "code_fingerprint": "sha256:a825b9b41957076ddb05eaf3ce1324d1d2e6a20e7b8ec54e33eb466ce7403ac6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
+          "bytes": 49046,
+          "sha256": "sha256:b33cde09481cad690219b343ded91242299071ae773bd65d72248557c36c2691"
+        }
+      ]
+    }
+  }
+}

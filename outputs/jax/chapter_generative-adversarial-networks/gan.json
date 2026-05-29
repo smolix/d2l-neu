@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/gan.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:d13c7a5a3bd1952fcbdbb7318b7e0321683403fe14540457021d481145a83fca",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gan-generative-adversarial-networks": {
+      "code_fingerprint": "sha256:f0c4ae999917d432b6d5c91028d4e7cede5f3f4183b8d5c50cc6ebcb4ffb3a04",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-generate-some-real-data-1": {
+      "code_fingerprint": "sha256:bef09c64c6917bb0c3c01f810cbed1d8fb5266d64a2a3a564ad67104e63f0a4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-generate-some-real-data-2": {
+      "code_fingerprint": "sha256:49235e5d0fe2e7d128bf36ca1f48d3066f54d17640fbeccf6ed9b3fe66b913cc",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The covariance matrix is\n[[1.01 1.95]\n [1.95 4.25]]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gan/gan-generate-some-real-data-2-1.svg",
+          "bytes": 20415,
+          "sha256": "sha256:3606ab19c815429f23cd0dacce2ff47197bcba42838bb699d4d20d7871c960c3"
+        }
+      ]
+    },
+    "gan-generate-some-real-data-3": {
+      "code_fingerprint": "sha256:032cc4493d11c14a161e33e4b58a395d2f8bdc26d3edc1b743669a7e0212892d",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-generator": {
+      "code_fingerprint": "sha256:4eb79bf9b86479f50426718b68306b663cfef4c0c77f261894733b8875943c5b",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-discriminator": {
+      "code_fingerprint": "sha256:e2866179a8f8a2679ac5ed78a85fd5c52b646caa588b352b96dd6ffe26cb8aef",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-training-1": {
+      "code_fingerprint": "sha256:96a4efd33e36665520f191351c653aa1c699f4f545050d202192111c0d3d9f6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-training-2": {
+      "code_fingerprint": "sha256:f06dbd80dd93868fa240a4a8f5ce57f3c9f38b1653a06fa014b3b1ab08eb13bf",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-training-3": {
+      "code_fingerprint": "sha256:d32fdcabcf92795511c7fa6e01e750cad5f75caa394b7436d463a6ffed3fb5c4",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-training-4": {
+      "code_fingerprint": "sha256:bae835a49b4c57564d7ace821ab017b810128c1237644c9251dd69620908ae43",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss_D 0.693, loss_G 0.693, 1486.2 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gan/gan-training-4-1.svg",
+          "bytes": 59272,
+          "sha256": "sha256:593397578efdd093d0c479ab14311fa157d149e1d88fc9ed87ef2d547528e95a"
+        }
+      ]
+    }
+  }
+}

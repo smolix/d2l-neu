@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/padding-and-strides.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "padding-and-strides-padding-and-stride": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "padding-and-strides-padding-1": {
+      "code_fingerprint": "sha256:b5b5cccd99ed170fac10cac4f102205ac0690c24d282471a0ad9216f7f1df8f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([8, 8])"
+        }
+      ]
+    },
+    "padding-and-strides-padding-2": {
+      "code_fingerprint": "sha256:9b1a2d59346d5ea67f1905b0465c2a47ea08ab2cbe0f1efcded2775f709b3e95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([8, 8])"
+        }
+      ]
+    },
+    "padding-and-strides-stride-1": {
+      "code_fingerprint": "sha256:552ac322ca2e310c7d81d846f0e78fab7417e66b55dfcf9812507b972fae89c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 4])"
+        }
+      ]
+    },
+    "padding-and-strides-stride-2": {
+      "code_fingerprint": "sha256:3a383d08d25feacdeeb6a5c398b4d13134bc977d2bf531f11e12894063bd45d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 2])"
+        }
+      ]
+    }
+  }
+}

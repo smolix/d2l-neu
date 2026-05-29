@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/utils.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:ee0322208ebd202875e780fa2604d58c8e34e441ab11f49a4d6bf21e64ee43e5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "utils-utility-functions-and-classes-1": {
+      "code_fingerprint": "sha256:ddc5e53f062dfff6943bc924c253911a192903baa1770ded6d1715b27a126804",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-2": {
+      "code_fingerprint": "sha256:85bde01169c987209511733ae0ed213c4b132a392d7097b1aeffb1427c9513b0",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-3": {
+      "code_fingerprint": "sha256:b90fc1173d4e540c2009077face2faf70911b6c4bdf396105195ddc85ef1cbb0",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-8": {
+      "code_fingerprint": "sha256:c6937a5e36dbc68fda92732cd06ae0f24a521493253fad9a830aac55bd363f6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-10": {
+      "code_fingerprint": "sha256:345762d27e3803673fc97bd661eafb0f5a95ba8db52aaf038ba58567534d0e80",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-12": {
+      "code_fingerprint": "sha256:a66207ea44864e6b768273a5ec9299b7392b5d7d8d0c886be5a4f55f3b6a2e31",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

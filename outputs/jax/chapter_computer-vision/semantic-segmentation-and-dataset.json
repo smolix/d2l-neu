@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/semantic-segmentation-and-dataset.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:bf3203d36f7e08c733bcc81b8c33a7b6dc9c836ae257939f760b9e073b67ed1b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1": {
+      "code_fingerprint": "sha256:01a2ced14a2d006648b9ba241f779b735fed070d5b3a48c4482d171d2c4f9c8f",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2": {
+      "code_fingerprint": "sha256:c214b819f15253effab2cdaaff06dc7bd0eb45f60c623878a39c16d856fc48ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3": {
+      "code_fingerprint": "sha256:258ca22f544e762ea53b8df0c2e274ffb4b2a5db89bcf4ad77a6eb7f8b8ba2c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4": {
+      "code_fingerprint": "sha256:ba8d95755d940339b3c6b1322a332f4f28396c5b3a9e43318b7da062f791aac8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4-1.png",
+          "bytes": 85851,
+          "sha256": "sha256:1639419ab915ec86a8a9da76de89c98a7be7f6a74bb5b62c8e5b25d97e99f950"
+        }
+      ]
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5": {
+      "code_fingerprint": "sha256:de8233886f58b48254fecffdf06bf380fe6d0e3b78ad24b8405a2ba60b885107",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6": {
+      "code_fingerprint": "sha256:e10f63c15a52244310b3bfec217ee8b30e0ce78ff4c45328d7bb32e7ddb27731",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7": {
+      "code_fingerprint": "sha256:16b196105f4aadcc4a34ba3b6e9bd8a5683c853804a8b03118c7332df1bfddce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1],\n        [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],\n        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],\n        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1]], dtype=int32),\n 'aeroplane')"
+        }
+      ]
+    },
+    "semantic-segmentation-and-dataset-data-preprocessing-1": {
+      "code_fingerprint": "sha256:b7de4f352cab535bc0e72d074d1139db87cd9066db086a54b23ffa05a1d8d77f",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-data-preprocessing-2": {
+      "code_fingerprint": "sha256:bf55a069ef2acd845c193f3866de3f6443fabe0eac66716271a9bf63438dcde0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
+          "bytes": 78261,
+          "sha256": "sha256:ea5f1a2944f98ac77fddb1e413f7016ab56b7d9cfdc922ec1ab974c391c0234c"
+        }
+      ]
+    },
+    "semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class": {
+      "code_fingerprint": "sha256:1104caa87ae11750252bb8fb75a9800dc9241abc23917f6e2728e10a20115f44",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:0b817fccef2ab840f5b7d549e70f0249f7c6a2ca85ef606f7cbb343a69fbc5b4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1114 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1078 examples\n"
+        }
+      ]
+    },
+    "semantic-segmentation-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:fd581f570e670f193b26e676ab183e6f66c3229264906185782a286cf8045601",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(64, 3, 320, 480)\n(64, 320, 480)\n"
+        }
+      ]
+    },
+    "semantic-segmentation-and-dataset-putting-it-all-together": {
+      "code_fingerprint": "sha256:7b764f9302627f3ea430e714e07e64befa65e45463a3ff4cc81d4b27eba7eefc",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

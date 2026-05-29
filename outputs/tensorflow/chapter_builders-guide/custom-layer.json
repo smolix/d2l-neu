@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layer.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layer-custom-layers": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:f4970c115d8552356c2aa35380cd4e6927b2ac51b7fe2bc2644fbc4d94737db9",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:be9752f8454a6ff12263e2f9730679cba23aecb2ec7efa18fef7b116fdc82ff5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(5,), dtype=float32, numpy=array([-2., -1.,  0.,  1.,  2.], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layer-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:4929db110ff23442c7eb180d760d2a326c11c2b8375bd399b82499dd9e7e0c24",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-4": {
+      "code_fingerprint": "sha256:9e54cbf2ad3d24fa7c9decf5dcbf810d8bf8a47b68dbe42c97f2ab57dd9287d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=-1.862645149230957e-09>"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-1": {
+      "code_fingerprint": "sha256:81e7b8e0cb336da0ce1ad850dfe0bf32451dd7bf032929f874abd7f64a26489e",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-with-parameters-2": {
+      "code_fingerprint": "sha256:72d7c603d56cc2a805248e31a8b796e83d423fe42d1aae50a21a6e238b2718d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[array([[-0.02981234,  0.06581987, -0.02802711],\n        [ 0.01659943,  0.08301885,  0.0077129 ],\n        [-0.03931068, -0.03950224,  0.05766534],\n        [ 0.05838446, -0.04463514, -0.00333703],\n        [-0.0137264 ,  0.0143978 ,  0.01267848]], dtype=float32),\n array([0., 0., 0.], dtype=float32)]"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-3": {
+      "code_fingerprint": "sha256:3c0b221bed9973d9f9c1c148ff94c5a83b5761701e20b02dabb5c2a3aa14d67c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.        , 0.05000819, 0.00728776],\n       [0.        , 0.        , 0.05399862]], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-4": {
+      "code_fingerprint": "sha256:86ab4d960f7b93edafcf2b91686c0d5ecaf46e0d9c8c92cdcdcccc01a525fc12",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[0.0096109],\n       [0.       ]], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

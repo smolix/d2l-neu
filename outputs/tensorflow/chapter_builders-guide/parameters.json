@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-parameter-management-1": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-parameter-management-2": {
+      "code_fingerprint": "sha256:611e3315b8f9d18ae6f94d23fbc31fe2d6da09962f69492e776f8ceebc483f0c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 1])"
+        }
+      ]
+    },
+    "parameters-parameter-access": {
+      "code_fingerprint": "sha256:aaf524aa1792c842b1e367b733089240563e0b24635099ab4ebb64097697b552",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[<Variable path=sequential/dense_1/kernel, shape=(8, 1), dtype=float32, value=[[ 0.50792205]\n  [ 0.7055774 ]\n  [-0.5775164 ]\n  [ 0.42094803]\n  [-0.31613553]\n  [-0.5494715 ]\n  [-0.46378183]\n  [ 0.49509704]]>,\n <Variable path=sequential/dense_1/bias, shape=(1,), dtype=float32, value=[0.]>]"
+        }
+      ]
+    },
+    "parameters-targeted-parameters-1": {
+      "code_fingerprint": "sha256:5379d3ebc34ba5c31e6c8ebd6a0a8210baa33773bfc4a25805c7e0eab36bf362",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(keras.src.backend.Variable,\n <tf.Tensor: shape=(1,), dtype=float32, numpy=array([0.], dtype=float32)>)"
+        }
+      ]
+    },
+    "parameters-all-parameters-at-once": {
+      "code_fingerprint": "sha256:e8e8d55aa70aa2cd5a8b79937efe6dfd7c98ec9c5802af13d28ce97cc9c11107",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[array([[ 0.6315729 ,  0.26831424, -0.6684861 , -0.46036023,  0.26252192,\n          0.55503625,  0.05863589, -0.47742432],\n        [-0.1878534 ,  0.70680267, -0.20297855,  0.40268677,  0.18880689,\n         -0.46389216,  0.27969426, -0.0129509 ],\n        [-0.3260792 , -0.26136357, -0.05479628, -0.34503636, -0.49738437,\n          0.0321604 ,  0.266082  , -0.35057342],\n        [ 0.36179632, -0.20616537, -0.21309748,  0.1743313 , -0.138242  ,\n         -0.6324777 , -0.18574065, -0.17901957]], dtype=float32),\n array([0., 0., 0., 0., 0., 0., 0., 0.], dtype=float32),\n array([[ 0.50792205],\n        [ 0.7055774 ],\n        [-0.5775164 ],\n        [ 0.42094803],\n        [-0.31613553],\n        [-0.5494715 ],\n        [-0.46378183],\n        [ 0.49509704]], dtype=float32),\n array([0.], dtype=float32)]"
+        }
+      ]
+    },
+    "parameters-tied-parameters": {
+      "code_fingerprint": "sha256:652e505c923e96f9a9c8c8428777ba0dd36b0a0fcf0c2b9aa32a98716d8b18b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    }
+  }
+}

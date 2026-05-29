@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/googlenet.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "googlenet-multi-branch-networks-googlenet": {
+      "code_fingerprint": "sha256:b25dd8f75e0a6ba2a9240211d4a2c81591f28878b8455fc5bcca955ced7d918c",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-inception-blocks": {
+      "code_fingerprint": "sha256:8728a1c60790d97e96c8741daacecc05d2d3772909ecf164ce3aa5753d77bfad",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-1": {
+      "code_fingerprint": "sha256:67fc4458560f2f81a8f9f17a1e3d7abeee9b4a74892a3d876d3f1af2ee07d089",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-2": {
+      "code_fingerprint": "sha256:3028d80597adbc3f227d01004349f62945fa404c0bca37b1e54168f9a60e5d59",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-3": {
+      "code_fingerprint": "sha256:a33aa9d84f7299ef4ee7b0c1eca0a70155d4deed88608c7a0255d726d61ffd03",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-4": {
+      "code_fingerprint": "sha256:95540deb71519a1d1ff982a0a0553762b5b693b1d4752b64b3c1ae54a2b4ef9e",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-5": {
+      "code_fingerprint": "sha256:827817211cfb2c2adb873c533e6663de30036e409d82f6b8bad4f6ffda569287",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-6": {
+      "code_fingerprint": "sha256:86c61746090b2d49f920a328f3179d8cd8bb7a6d8be355fc43ff828a18adb405",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-7": {
+      "code_fingerprint": "sha256:3b5311c03e9eef9973a4933ff4506c3d6602e979d1f9bf12d46ffdd740cb1f89",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 64, 24, 24)\nSequential output shape:\t (1, 192, 12, 12)\nSequential output shape:\t (1, 480, 6, 6)\nSequential output shape:\t (1, 832, 3, 3)\nSequential output shape:\t (1, 1024, 1, 1)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "googlenet-training": {
+      "code_fingerprint": "sha256:4d1649dd035719f49aa7a50e47aba4f59387414d0e210b674146faab82d17c87",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "googlenet/googlenet-training-1.svg",
+          "bytes": 58927,
+          "sha256": "sha256:2e8c1645c61042110a58339c819ffa03af0b9d59df261228e51a391a622749d5"
+        }
+      ]
+    }
+  }
+}

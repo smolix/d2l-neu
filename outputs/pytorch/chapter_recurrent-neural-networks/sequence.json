@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/sequence.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:df55c5a08d711053e86080b4bf894049d4f3609d51d22ebdb0ab2f135d8ebfbe",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sequence-working-with-sequences": {
+      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-1": {
+      "code_fingerprint": "sha256:996e64d631176cbda5667364581cb64d7636e380599145a51bcc2019ac16e64c",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-2": {
+      "code_fingerprint": "sha256:4ff76c64a3712c463040aa999ea199ffbfd783bc071720868289809d0185da74",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-2-1.svg",
+          "bytes": 40317,
+          "sha256": "sha256:a25b46dfb66aa0bceb822b8f31fee1ed65f2df7543a65a55a9096dc6e46d0d73"
+        }
+      ]
+    },
+    "sequence-training-3": {
+      "code_fingerprint": "sha256:dc57678ea07570fde582c349e7d5c2f0320b103abaa85fb74d8c3cd4bb3e73b8",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-4": {
+      "code_fingerprint": "sha256:585ebecc9dcd52d71c0a5ce9b867e61a2a4dfe45a9ca816eddeb7ba8b4ed0caa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-4-1.svg",
+          "bytes": 27925,
+          "sha256": "sha256:d235f1732ba037596e96efb23e28fc6ef79577df055ddc62ed13893c6b4f8e1b"
+        }
+      ]
+    },
+    "sequence-prediction-1": {
+      "code_fingerprint": "sha256:237d0911990e4894162d49c1d45908a057bd1850c90eca692fea952c00b17d5d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-1-1.svg",
+          "bytes": 68968,
+          "sha256": "sha256:0c42e5fa7c9db493351e9876199f5c01a4d5b0154a3b0d8a786b13158ad978e8"
+        }
+      ]
+    },
+    "sequence-prediction-2": {
+      "code_fingerprint": "sha256:326d1152e6724ca1bb5c817a7b4383ea2cef63755e2313d197645733aa457238",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-3": {
+      "code_fingerprint": "sha256:884446039171ffda03c3a4585d595fc81bda980d95355c7775fbb25ae8dd9e3d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-3-1.svg",
+          "bytes": 45691,
+          "sha256": "sha256:4e46fd843bec10d1e04e59ce953f4de1385375279411e38269239859d63ff1d1"
+        }
+      ]
+    },
+    "sequence-prediction-4": {
+      "code_fingerprint": "sha256:6a2d5ca427553975d2e9d1bb747a89005b40c6e4e35f1cb93bfd04ea6e79e537",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-5": {
+      "code_fingerprint": "sha256:c7191e59de2ac618fee2db976c81a8ad39d7c2e180ac0852df06a296695bbb44",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-5-1.svg",
+          "bytes": 108170,
+          "sha256": "sha256:83c688391ec75dd4ea07c9b24da03c270f5b99d449c206aa59015a843e442044"
+        }
+      ]
+    }
+  }
+}

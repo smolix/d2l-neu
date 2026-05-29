@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/vgg.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:50c92e8da63a21a1fe2fc3f51ccf3b9ed1e7a5bbe367bc0f79131da726f367ce",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vgg-networks-using-blocks-vgg": {
+      "code_fingerprint": "sha256:0b1653a63242762a0ccbb54d3b2d1029a4ca08012ce8b7fb33fea866f2717480",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-blocks": {
+      "code_fingerprint": "sha256:19761a7841d921f3e0cd761cf8799b72c1b6a6b50776247b047f54890ba8cda4",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-1": {
+      "code_fingerprint": "sha256:068f0c02dc32a16244670de33727cdfcd2755e601444cd651aff52d17e9ff897",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-2": {
+      "code_fingerprint": "sha256:17f02688ba1de5e477bb0f5629699b4c8a3341a5155ff858be872b59bc047b00",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 112, 112, 64)\nSequential output shape:\t (1, 56, 56, 128)\nSequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\nfunction output shape:\t (1, 25088)\nDense output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "vgg-training": {
+      "code_fingerprint": "sha256:5f2db031505693988baf1fc60d86ad02f0ac358bbdf170af29cee314edb62f9c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vgg/vgg-training-1.svg",
+          "bytes": 31226,
+          "sha256": "sha256:831031fcc0a44cdfe99dbe8146320048286a8edd5e4cb5d77b249d3fb9145317"
+        }
+      ]
+    }
+  }
+}

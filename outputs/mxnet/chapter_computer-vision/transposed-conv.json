@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/transposed-conv.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:6f968f9b9b6c0c1e7fa640275128e8d23aea0c605947e33a247aadfbf9a1cc5a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transposed-conv-transposed-convolution": {
+      "code_fingerprint": "sha256:ddbb052140b2251225dc9fc555bb9b8778d5b71bbb0a9c0649e9e395f58dff4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-1": {
+      "code_fingerprint": "sha256:9523b19453546953d0a3f38390ae3351a43229a3e0e2acf127b7984cda5b0167",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-2": {
+      "code_fingerprint": "sha256:a00c88a33153c46354fd3dd2dbb2416030f41579cdc4326a443cccc3844dc49e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 0.,  0.,  1.],\n       [ 0.,  4.,  6.],\n       [ 4., 12.,  9.]])"
+        }
+      ]
+    },
+    "transposed-conv-basic-operation-3": {
+      "code_fingerprint": "sha256:b2bc8599ea42bf498e06c473087b2a35c8a6351c673f81ad4492641967bbab90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 0.,  0.,  1.],\n         [ 0.,  4.,  6.],\n         [ 4., 12.,  9.]]]])"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-1": {
+      "code_fingerprint": "sha256:21aa26341bfadec0f4c04eef72e716e9e27581227c06433123cc084caf204abe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[4.]]]])"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-2": {
+      "code_fingerprint": "sha256:f67ad5ea1d4253063f00b9a41a6ae9107c8ef723bfc8783506282f83b57d9fad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[0., 0., 0., 1.],\n         [0., 0., 2., 3.],\n         [0., 2., 0., 3.],\n         [4., 6., 6., 9.]]]])"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-3": {
+      "code_fingerprint": "sha256:2921f0a37213e301019587c8cc6775c315a97bea62a6a53067f5d07409e31cf1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-1": {
+      "code_fingerprint": "sha256:066d3780d05df71732986f3b9a414ebd529929ebcae21d4398fa02a3f75c6466",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[27., 37.],\n       [57., 67.]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-2": {
+      "code_fingerprint": "sha256:f505caa4d73b11f3cf8e38100adbc68f6ab21cf4c5de63e84fc4958a230252d7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[1., 2., 0., 3., 4., 0., 0., 0., 0.],\n       [0., 1., 2., 0., 3., 4., 0., 0., 0.],\n       [0., 0., 0., 1., 2., 0., 3., 4., 0.],\n       [0., 0., 0., 0., 1., 2., 0., 3., 4.]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-3": {
+      "code_fingerprint": "sha256:a8682bd35cfb8d03a84ea75ad47497b63f584ad30d62f73a21a48e083ffe505f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ True,  True],\n       [ True,  True]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-4": {
+      "code_fingerprint": "sha256:a2ed6562486ca55f2a88460995c7b231d7878165580aebc23bec6dbb96cc068a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ True,  True,  True],\n       [ True,  True,  True],\n       [ True,  True,  True]])"
+        }
+      ]
+    }
+  }
+}

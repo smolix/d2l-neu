@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/statistics.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "statistics-evaluating-and-comparing-estimators": {
+      "code_fingerprint": "sha256:6f245c2acdb786741efa015ed414dfc9ff1ef68a1ba0ca23263327e40c22459c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "statistics/statistics-evaluating-and-comparing-estimators-1.svg",
+          "bytes": 52625,
+          "sha256": "sha256:0a12a335edaa0e061e9f9ec97a149c0cf6a64a835b8871d767f4817e74454cce"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-1": {
+      "code_fingerprint": "sha256:1d226f3b2a7348a1307f5d5759707141b9d5997a4d010c33a247359a40038200",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-evaluating-estimators-in-code-2": {
+      "code_fingerprint": "sha256:6cacd52a99043453f0c4ce65e209d135d0c7ed64dc0f590d1358cb2c16e4a74b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(1.0170)"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-3": {
+      "code_fingerprint": "sha256:696d1b381d9c9facd43dee88950cb9db4b7fc9108f136cdc9fe288c57adc05f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(16.0298)"
+        }
+      ]
+    },
+    "statistics-evaluating-estimators-in-code-4": {
+      "code_fingerprint": "sha256:5e5a1641b1bd203dc0462c6f539ec06527ebb175f90c58feb316ea9877856fd8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(16.0314)"
+        }
+      ]
+    },
+    "statistics-a-gaussian-example": {
+      "code_fingerprint": "sha256:b948fe84fe021856f7652393a6beac02d86ca565a22eaba1d17b56053f9129ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(-0.0568), tensor(0.0704))"
+        }
+      ]
+    }
+  }
+}

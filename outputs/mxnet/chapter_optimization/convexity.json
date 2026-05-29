@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/convexity.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:3fe10b6c9d55819491a772519e022a7ef6bd98e12c641c0a27c8b32ac4210072",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convexity": {
+      "code_fingerprint": "sha256:bbfab3fddaef035b0d8dcac807a04534901b73f4f42a1977c9c5aa1a2e4b1abe",
+      "kind": "text",
+      "outputs": []
+    },
+    "convexity-convex-functions": {
+      "code_fingerprint": "sha256:b0f382d498585da3fdcef9447768889ca03df03b5e5a052d304abb641901d93f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convexity/convexity-convex-functions-1.svg",
+          "bytes": 28647,
+          "sha256": "sha256:ce6131776702fad784678bb3c516d600cda8cce2bce120d34d4e2519bedb8f3d"
+        }
+      ]
+    },
+    "convexity-local-minima-are-global-minima": {
+      "code_fingerprint": "sha256:62fd5118879d31712fe3893f82ffbc795a57570632fd938bf550782e63cb1fb4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convexity/convexity-local-minima-are-global-minima-1.svg",
+          "bytes": 14563,
+          "sha256": "sha256:afa5d92eade17ad5b4d484a140487c5de56ae0eb08ab50a1565021367d20054f"
+        }
+      ]
+    }
+  }
+}

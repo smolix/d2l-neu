@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/eigendecomposition.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "eigendecomposition-an-example": {
+      "code_fingerprint": "sha256:fa34c3329408d2ad8cc3d1804372a1bffcf77c8dcf95c9889c48f4c8c91adcbe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
+        }
+      ]
+    },
+    "eigendecomposition-gershgorin-circle-theorem": {
+      "code_fingerprint": "sha256:c3553593943340676bcd9e2e6d1aeb13bd93234e88cbfed16618712636c92897",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
+        }
+      ]
+    },
+    "eigendecomposition-eigenvectors-as-long-term-behavior": {
+      "code_fingerprint": "sha256:667e0795b4d7e18d3d3c102aa0b87f4fe706f73f35e94926f6dc8075900877be",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 0.58902366,  0.73311856, -1.1621888 , -0.55681601, -0.77248843],\n       [-0.16822143, -0.41650391, -1.37843129,  0.74925588,  0.17888446],\n       [ 0.69401121, -1.9780535 , -0.83381434,  0.56437344,  0.31201299],\n       [-0.87334496,  0.15601291, -0.38710108, -0.23920821,  0.88850104],\n       [ 1.29385371, -0.76774106,  0.20131613,  0.91800842,  0.38974115]])"
+        }
+      ]
+    },
+    "eigendecomposition-behavior-on-random-data-1": {
+      "code_fingerprint": "sha256:fac4429bdc27b43790c9cc86064826bc7656b0281005958f2e678fb62a34488a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-behavior-on-random-data-1-1.svg",
+          "bytes": 21114,
+          "sha256": "sha256:f846a0fd78c080ff5850b0835d9946622c1498c6f26ecc86d431ecd40e8a37f7"
+        }
+      ]
+    },
+    "eigendecomposition-behavior-on-random-data-2": {
+      "code_fingerprint": "sha256:edc30c525c38749e59ea336c88a8e688c792059ba60d9df21b6ec38b84fcb075",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-behavior-on-random-data-2-1.svg",
+          "bytes": 21049,
+          "sha256": "sha256:dbb81b90b4772cf5a455e00c915f87d6e796348193011b2096c62d3ddd5cde59"
+        }
+      ]
+    },
+    "eigendecomposition-relating-back-to-eigenvectors": {
+      "code_fingerprint": "sha256:1034cc3d3a5ff0459d3a62dabc7dac9330fbf9b5908728929cd2dfb16fdbb4bc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "norms of eigenvalues: [0.8786205280381857, 1.2757952665062624, 1.4983381517710657, 1.4983381517710657, 1.974459321485074]\n"
+        }
+      ]
+    },
+    "eigendecomposition-fixing-the-normalization-1": {
+      "code_fingerprint": "sha256:47dd6c326e5ab5790170948fcdc4a47cc90c12441dbec24191084e5e730ede71",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-fixing-the-normalization-1-1.svg",
+          "bytes": 19173,
+          "sha256": "sha256:d44801254a5506addb294975f7d604231e61a33a9ba9f12b5dc5463edd9d1465"
+        }
+      ]
+    },
+    "eigendecomposition-fixing-the-normalization-2": {
+      "code_fingerprint": "sha256:07eaf6f4e326cc0209916168f7721e6becfe6a29740fb0f10ff97819beeca48e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "eigendecomposition/eigendecomposition-fixing-the-normalization-2-1.svg",
+          "bytes": 21939,
+          "sha256": "sha256:96d8346df67d4eda2cd566bc7dd2ca5072e4c174b3a846ae916c36cca54b8675"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/softmax-regression-scratch.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:a77ee271ee6b78595d9d86abc06fa4973ac4424564cabbc21618dc03fe5e91a7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "softmax-regression-scratch-softmax-regression-implementation-from-scratch": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-1": {
+      "code_fingerprint": "sha256:7dc8d5d138be096806ad5108bf2f22e4875602d9321c8a43182e358f1b18d915",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(1, 3), dtype=float32, numpy=array([[5., 7., 9.]], dtype=float32)>,\n <tf.Tensor: shape=(2, 1), dtype=float32, numpy=\n array([[ 6.],\n        [15.]], dtype=float32)>)"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-softmax-2": {
+      "code_fingerprint": "sha256:464c7d8da8da7b15aeb4e9f1201b4bbeef6dec4b9739a2ccdf5cf9b9214f2acf",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-3": {
+      "code_fingerprint": "sha256:14335fd797f176dee58abeec9cdd4c8821653fcf8b47cb3b5e97a63fb3f9ad86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.14585224, 0.2988133 , 0.12653475, 0.14161904, 0.28718063],\n        [0.14257015, 0.2471806 , 0.14910138, 0.21412344, 0.24702439]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-model-1": {
+      "code_fingerprint": "sha256:91c7c6c0712b3005ab9a7b7da43ae94b34f166c343019df72fef71135c939020",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-model-2": {
+      "code_fingerprint": "sha256:17c4a87be6aa61c62d852456a03321c7a4d94e110dfa27e4e9393a419de06def",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-1": {
+      "code_fingerprint": "sha256:af96a1075c9c6c5c5677d01985613ab7ce5be3772cf79a627ab4b897c0e891e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.1, 0.5], dtype=float32)>"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-2": {
+      "code_fingerprint": "sha256:469ca8fbb76a3c4dc1d59e3ff25460fe822b98f8f2155433444e9a18f78ca05b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=1.497866153717041>"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-3": {
+      "code_fingerprint": "sha256:2c60e976b799c775073708808a96287d624d409bdf9b7d9c725ec21a448909e4",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-training": {
+      "code_fingerprint": "sha256:eaf3feb43bf7c974974a644afd1bd28ae5c834238bcbc95d4111580ddb529aa5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
+          "bytes": 60611,
+          "sha256": "sha256:ca9dbd5fea22d5c9f4f49e16ca22a86bacb7435f7e6d274314d816c457e7138a"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-1": {
+      "code_fingerprint": "sha256:386185d231796b76eb17f8acca8ceeb5fe19418cf714dffcf471c943099659a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([256])"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-2": {
+      "code_fingerprint": "sha256:14c9f2ec93030b63210020709cffcc24a57a68b62547ce292359f41d7b5fbd29",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
+          "bytes": 50738,
+          "sha256": "sha256:56439f88cdaa69fb50de06634addf8cc31e38b650e0e71497dcee1ffcb214d31"
+        }
+      ]
+    }
+  }
+}

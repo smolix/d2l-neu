@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/resnet.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "resnet-residual-networks-resnet-and-resnext": {
+      "code_fingerprint": "sha256:b25dd8f75e0a6ba2a9240211d4a2c81591f28878b8455fc5bcca955ced7d918c",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-1": {
+      "code_fingerprint": "sha256:73e23686306bd6192c66a3b6f98b5cef774c837acfe2eb315cb6cc0058f6d8df",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-2": {
+      "code_fingerprint": "sha256:65ca4b41d8f4481406772f393a22c5b1ad03f51b34d17f1eb4bb66d3fe494109",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 3, 6, 6)"
+        }
+      ]
+    },
+    "resnet-residual-blocks-3": {
+      "code_fingerprint": "sha256:de0910c3b078a9827f4b3f068eae0186f349326fcc5b286a825cada990664c41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 6, 3, 3)"
+        }
+      ]
+    },
+    "resnet-resnet-model-1": {
+      "code_fingerprint": "sha256:79bf8b605ba38e6fa39053b5f09e13dfeb4b223ef1ae05db852712a8426de008",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-2": {
+      "code_fingerprint": "sha256:ce95dfc0d9afa740c38dad8e7bf57d4eb9bc57238b8975f1c4f2cff9ae6515b4",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-3": {
+      "code_fingerprint": "sha256:86c9ddd5bae2ce6eab97686fdda685aa79258f55a6e4ca1ff30d708b6ff5fbbd",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-4": {
+      "code_fingerprint": "sha256:dc1183f98057823c67134957e5a0f3dc4b648e7068ce95abe17b38784c11df68",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-5": {
+      "code_fingerprint": "sha256:b0231ced1444ba56679a8fc6ee1a5dc5c9bcdf1ac9cb8fa179638f5a97e1a28a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 64, 24, 24)\nSequential output shape:\t (1, 64, 24, 24)\nSequential output shape:\t (1, 128, 12, 12)\nSequential output shape:\t (1, 256, 6, 6)\nSequential output shape:\t (1, 512, 3, 3)\nGlobalAvgPool2D output shape:\t (1, 512, 1, 1)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "resnet-training": {
+      "code_fingerprint": "sha256:c6b7c7c2dc59f86837858ffbbcacf2193b2dbe276c6f0c586fe18a796b8547a5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "resnet/resnet-training-1.svg",
+          "bytes": 59119,
+          "sha256": "sha256:879fd6cc895c08eccc5734dcba4d4270a2a8b51a856e630b3987130ceea358f9"
+        }
+      ]
+    },
+    "resnet-resnext-1": {
+      "code_fingerprint": "sha256:bcbaf97481eb5fae458baf90bdfc6b336cd126343c938e05fe85568c057f0671",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnext-2": {
+      "code_fingerprint": "sha256:3eb911a5a03e695aac2b258e8c7db94419226406873e705c7c8ff61074ccd2ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 32, 96, 96)"
+        }
+      ]
+    }
+  }
+}

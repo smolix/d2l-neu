@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/seqrec.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:9eecf71ffaeb571d8bd50ddb9cdabd958c2d002ffadfea4f69ce3ad5c453c0eb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seqrec-model-architectures": {
+      "code_fingerprint": "sha256:9b2315739b824670acca02387097daed28e710242ecb52d945cb78c38a2ec2d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-model-implementation": {
+      "code_fingerprint": "sha256:40bba6a2d8af29cfd96aef3da6853fd513ff27f9ff0ac9d59efdabf95cb88f62",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-sequential-dataset-with-negative-sampling": {
+      "code_fingerprint": "sha256:1b7b86dfaeb8cb920decd37216207b7573f654ed84e79d840e58d5859bd88aca",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-load-the-movielens-100k-dataset": {
+      "code_fingerprint": "sha256:51a083adb7df3bcabf246517c3b4f1e6d8934784191b233f1f56bddae27f8085",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 997)"
+        }
+      ]
+    },
+    "seqrec-train-the-model": {
+      "code_fingerprint": "sha256:681b26d4abc9ab4e7424fde9a1e6b62607473d801d6b08c815971478c48ae6b5",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.152, test hit rate 0.380, test AUC 0.882\n252.4 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seqrec/seqrec-train-the-model-1.svg",
+          "bytes": 21503,
+          "sha256": "sha256:f3c6d4222a630e3999759aa8e2fe18c5ed04aa22119557324fb62a0e21fec76b"
+        }
+      ]
+    }
+  }
+}

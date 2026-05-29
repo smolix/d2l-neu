@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/sgd.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:0ce1cbe08f5b98a6177ec7332e4c59ca5617eb147aba922b98df7b4957f2dee9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sgd-stochastic-gradient-descent": {
+      "code_fingerprint": "sha256:b07c40b0faacadeff66197c7f8be309a8397eed6a0f26043ed1c209d7b505151",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-stochastic-gradient-updates-1": {
+      "code_fingerprint": "sha256:dfa35e4c7c7caf9b925e4724b1d641ef5a2fa727f5365b897d8aac4a52bb3f18",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-stochastic-gradient-updates-2": {
+      "code_fingerprint": "sha256:da7311113f7d6cbbd5c3467471a9775a1c6a5e5148cebbcef21d17bbc4712772",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-stochastic-gradient-updates-3": {
+      "code_fingerprint": "sha256:4f0bd0a331621d1bc553aa1beef0f567d22cd710b8052e52c381614a859c65f5",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 50, x1: 0.024977, x2: -0.064726\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
+          "bytes": 23442,
+          "sha256": "sha256:d9de250af7d88eb47507eab9e8741e160ef5765bb802567fdfd3a6dd78f2157d"
+        }
+      ]
+    },
+    "sgd-dynamic-learning-rate-1": {
+      "code_fingerprint": "sha256:c3791f60e9628dbd27e72c56b42871c77fb4f2322048fc8dd0dd5997cb75ce92",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1000, x1: -0.940682, x2: -0.028139\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
+          "bytes": 123618,
+          "sha256": "sha256:03f7ce2097fab3548332a93e02f204fad366a0476e23e3ec4e4d205e57970845"
+        }
+      ]
+    },
+    "sgd-dynamic-learning-rate-2": {
+      "code_fingerprint": "sha256:42dc10e8c0220e4cae90302cbf97cd29bced25508267379bbb197d9d04b9110a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 50, x1: 0.085579, x2: -0.060430\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
+          "bytes": 23442,
+          "sha256": "sha256:dc22e3375b4999188336ff44be4ce9537487683d1cf70ba11e4de7990a5ed03b"
+        }
+      ]
+    }
+  }
+}

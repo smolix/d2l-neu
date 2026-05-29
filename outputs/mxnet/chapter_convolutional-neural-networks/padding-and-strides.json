@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/padding-and-strides.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "padding-and-strides-padding-and-stride": {
+      "code_fingerprint": "sha256:c3b617502bedddfb22f51258d1adf6da3684ea9a262a2011706048e6ccb5677b",
+      "kind": "text",
+      "outputs": []
+    },
+    "padding-and-strides-padding-1": {
+      "code_fingerprint": "sha256:fccfc8f6e4ffac77565931d708c85513548ceee35be8b1c05d31140f11e39fd4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(8, 8)"
+        }
+      ]
+    },
+    "padding-and-strides-padding-2": {
+      "code_fingerprint": "sha256:83f8bf862abbc646d88804b0b8a10a542126ce4f0b7447e5271527f87ff8ffaa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(8, 8)"
+        }
+      ]
+    },
+    "padding-and-strides-stride-1": {
+      "code_fingerprint": "sha256:421b4c6c19ba30f60fb728c20340b54e6327203adefede6c1a320cfc878010fd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 4)"
+        }
+      ]
+    },
+    "padding-and-strides-stride-2": {
+      "code_fingerprint": "sha256:b52a2db6900bc894a5bb2cb16272fbf43e4e821c0f53b0cb71dde44a2dc044b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 2)"
+        }
+      ]
+    }
+  }
+}

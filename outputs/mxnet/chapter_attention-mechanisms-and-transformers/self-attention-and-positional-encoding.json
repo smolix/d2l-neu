@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:b3e9e9dbd675ff201db1d8b2be84cb740dc2b6c2ac81c1128bf68a7ea4edd07e",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "self-attention-and-positional-encoding": {
+      "code_fingerprint": "sha256:a4aba926edd1ee4241131d424aa860c9013bde5419ee5e0c70ab34ff7122a1bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "self-attention-and-positional-encoding-self-attention-1": {
+      "code_fingerprint": "sha256:5c63f76e39747f683ed1ee52287685942f39c31b4401b21f12611d1410236e0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "self-attention-and-positional-encoding-self-attention-2": {
+      "code_fingerprint": "sha256:8f935879deddd3595619024e651bab23f6e450f128f0f22222d50373a96b5bb4",
+      "kind": "text",
+      "outputs": []
+    },
+    "self-attention-and-positional-encoding-positional-encoding-1": {
+      "code_fingerprint": "sha256:5dc97a0fb5db3356606a71fc61d3e4a986ca658a744d3a848d23a25c22268232",
+      "kind": "text",
+      "outputs": []
+    },
+    "self-attention-and-positional-encoding-positional-encoding-2": {
+      "code_fingerprint": "sha256:6b6eeea54d1d366b49885a5d514b9313c39fe7d3f686eb5da8a01ff80e059a39",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-positional-encoding-2-1.svg",
+          "bytes": 31362,
+          "sha256": "sha256:cee2e3aa7a7e2a7cdaf9c1461c40f714a0f28612a2ba3dd100d1cc8de88781b2"
+        }
+      ]
+    },
+    "self-attention-and-positional-encoding-absolute-positional-information-1": {
+      "code_fingerprint": "sha256:73b6554806002d37c543a29646552751b9a578171f6af34ef492389e3e5a211f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0 in binary is 000\n1 in binary is 001\n2 in binary is 010\n3 in binary is 011\n4 in binary is 100\n5 in binary is 101\n6 in binary is 110\n7 in binary is 111\n"
+        }
+      ]
+    },
+    "self-attention-and-positional-encoding-absolute-positional-information-2": {
+      "code_fingerprint": "sha256:0d8caf3b1810c2725f85f9bff49be0cbd1e7c05020d12d47589ce4109023fcc4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-absolute-positional-information-2-1.svg",
+          "bytes": 31325,
+          "sha256": "sha256:cbf3c892008695364a8b567fca39f907c544bd76bb8d296e4c8fbcedf1a41038"
+        }
+      ]
+    }
+  }
+}

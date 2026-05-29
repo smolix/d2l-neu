@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression": {
+      "code_fingerprint": "sha256:778bf9a21ab6a8a346ce82d287a87a95783469207db6ea94d92d3896c417085d",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-1": {
+      "code_fingerprint": "sha256:14296f371fbc0ad8ef0322323eba0fe63b6c3da6c0b0107793b34078d9a3d84b",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-2": {
+      "code_fingerprint": "sha256:31303cd1a6d0b59f5020a044ee2dc9f696d90f6e3a2b5223d38fb811c98f4973",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.10273 sec'"
+        }
+      ]
+    },
+    "linear-regression-vectorization-for-speed-3": {
+      "code_fingerprint": "sha256:e3e8e41a452952c8dd77b2b1bb835ca69af64b2d0f5e320a3f99e3f0e3fcf57a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.00027 sec'"
+        }
+      ]
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-1": {
+      "code_fingerprint": "sha256:12e4631fbb72c3dedb76c1827bad418fbdbf03a07fb00c8f5b12c3eded3bdec4",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-2": {
+      "code_fingerprint": "sha256:9120b80ea442f77f1c9ebdeaecd4d803ecfb26c7e5927fb5f305af7c941945a4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
+          "bytes": 28703,
+          "sha256": "sha256:cd734237d95a1a7361d4398a85eb2dfa375885875a31568d9c33ecde99685753"
+        }
+      ]
+    }
+  }
+}

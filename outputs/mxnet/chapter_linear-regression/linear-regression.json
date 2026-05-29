@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression": {
+      "code_fingerprint": "sha256:512389b5c376caf497ba14f9bcdac11883854c687e67f211ab75e547702786cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-1": {
+      "code_fingerprint": "sha256:f956f0e0dbe655b0903604349df8bc947fd1cabbbfacf6f5f81e983aa785ebc0",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-vectorization-for-speed-2": {
+      "code_fingerprint": "sha256:21e1b2a75722e6ea588a1c9c59686e33dff8c796f0a8eceaabaaacc679c2682b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'3.90735 sec'"
+        }
+      ]
+    },
+    "linear-regression-vectorization-for-speed-3": {
+      "code_fingerprint": "sha256:fa9a21df2e065dc9b368ce82dad1a6205a90c94f1a54f116ee69b3dee8006d67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0.00025 sec'"
+        }
+      ]
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-1": {
+      "code_fingerprint": "sha256:c90dfcce63bf3e1de1afc1600787e5b01cca7a7f208b00e5db0d6c8a44eb7520",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-the-normal-distribution-and-squared-loss-2": {
+      "code_fingerprint": "sha256:443cf0ce7ec0cf79d3e69dec4ebfad47cfbc1f19d5edb7b1f31eedee02b953ae",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
+          "bytes": 28707,
+          "sha256": "sha256:9aab77c15e30296ddbfd76041423197db69268fb11e9d3d4498f8a1e5bc8cf04"
+        }
+      ]
+    }
+  }
+}

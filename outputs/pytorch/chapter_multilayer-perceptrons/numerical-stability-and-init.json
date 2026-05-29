@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerical-stability-and-init-numerical-stability-and-initialization": {
+      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-vanishing-gradients": {
+      "code_fingerprint": "sha256:69c1091f1ba0d31e57681e7e855d142f88a19f6ee850bd963a963928dbc4d8f6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
+          "bytes": 26193,
+          "sha256": "sha256:b8ca3764b7b17217350db3c92ce39991c06a6d0641df8c5b3ebb258004f74efa"
+        }
+      ]
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:f7002ee79f1974ca7a35ceee819b47cdc5e026958842e9e6b1c91e68d251faf5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a single matrix \n tensor([[ 0.0099, -1.1882, -1.2529, -0.6950],\n        [-2.1248, -3.2917, -1.4673,  0.1034],\n        [-1.0885,  0.8568,  0.9642, -0.3951],\n        [ 0.2331, -2.0332, -0.8175, -0.2957]])\nafter multiplying 100 matrices\n tensor([[ 1.0391e+25, -4.9455e+24,  1.0402e+25, -7.9391e+23],\n        [ 3.5795e+25, -1.7036e+25,  3.5835e+25, -2.7349e+24],\n        [ 4.8167e+24, -2.2925e+24,  4.8220e+24, -3.6801e+23],\n        [ 3.1067e+24, -1.4786e+24,  3.1101e+24, -2.3736e+23]])\n"
+        }
+      ]
+    }
+  }
+}

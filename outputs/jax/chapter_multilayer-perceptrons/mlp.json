@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/mlp.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mlp-multilayer-perceptrons": {
+      "code_fingerprint": "sha256:883b0b706c9858bad6fdd53194cb0ac0cd8ae1371762abd66038277c1c96fecc",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-relu-function-1": {
+      "code_fingerprint": "sha256:7adb25270c4aa2f9a66a74cfff4fea99a218bfd48b6ab7d577854f23e662edc2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-1-1.svg",
+          "bytes": 16908,
+          "sha256": "sha256:bbadb9b2a00a5a242501369044684eacff9c5c7e9b79d4a7160c74df3eaf5b8e"
+        }
+      ]
+    },
+    "mlp-relu-function-2": {
+      "code_fingerprint": "sha256:7e5a9dc9b1b9a4b952265a07a0aff26f195ec520793efe72b49b556937f8d513",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-2-1.svg",
+          "bytes": 21200,
+          "sha256": "sha256:08f20fda8cef207e1d352b214228f26eecea1cb5a996a25d8a743e76aa2f34e3"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-1": {
+      "code_fingerprint": "sha256:8eea7b5413851e36e5cbf0886f6fd760b9d856a3b652ec63b0d76f4ccce85a37",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-1-1.svg",
+          "bytes": 21781,
+          "sha256": "sha256:1917a890c01d118ab6b60fe5be40b1ccd090ae1fcf495290b06acd8eaec6d191"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-2": {
+      "code_fingerprint": "sha256:4f33f25b179b3474b91e1b9f91906f2570b76fe859a11b57f9e46a5af40b205c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-2-1.svg",
+          "bytes": 24512,
+          "sha256": "sha256:6c89bda6d0b66f64674412748560ee6b725293bed169075072a82d57f316f120"
+        }
+      ]
+    },
+    "mlp-tanh-function-1": {
+      "code_fingerprint": "sha256:efedab49390cd7e4ceeb6feb9c90985092e4446fc5faae2f8a629b0fb68331aa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-1-1.svg",
+          "bytes": 20169,
+          "sha256": "sha256:211c05a51a59203847d4268030e49bf0189d471a22df471b10a3230a4e75e04d"
+        }
+      ]
+    },
+    "mlp-tanh-function-2": {
+      "code_fingerprint": "sha256:aa25da733f18bd6bc36a0a06d6aa6f5d50909ad82421ec29c9b820aa901fc18f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-2-1.svg",
+          "bytes": 22667,
+          "sha256": "sha256:6400ddb333d203184347295cde2c39795f68bb856e7737a49682ede3b550a1dd"
+        }
+      ]
+    }
+  }
+}

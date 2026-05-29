@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/cnn-design.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:d58efbc69b19759f06b088fed8914361c4c661ae9fde4e472f8d4749180866f2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "cnn-design-designing-convolutional-network-architectures": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-1": {
+      "code_fingerprint": "sha256:13d8034dba3fae595b7c6e47796a32c5120a643b6879ddf9bd0004d31ea67dc3",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-2": {
+      "code_fingerprint": "sha256:38580d17587075cbade05f33b8251c963c78f06a44388ad67f8462ee8e5c8317",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-3": {
+      "code_fingerprint": "sha256:cdfb2caf835f697666fa7ad30b2388a3d9901007ed4ef74548be1534a82f8965",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnet-1": {
+      "code_fingerprint": "sha256:e49a1ad97821516a08731523eaf117484ce56a52d7bb6e1322be6752bc95049e",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnet-2": {
+      "code_fingerprint": "sha256:889f847b1f584dbf2a628f7c89c6e07d3507ccd834a58ca5cf81909f36b1216c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\nActivation output shape:\t (1, 48, 48, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 80)\nSequential output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "cnn-design-training": {
+      "code_fingerprint": "sha256:198d2cd97e34ea3b1598b6b29bf938dc1876b908b6f172e0440f0da43d4b3a0c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-training-1.svg",
+          "bytes": 58014,
+          "sha256": "sha256:d4a616036e65ab605088de9ce378f7f85f4a23f695995b6d9869c06312e7d327"
+        }
+      ]
+    }
+  }
+}

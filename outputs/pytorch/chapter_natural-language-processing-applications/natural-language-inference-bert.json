@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/natural-language-inference-bert.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:80bb7d518fcc82a9dabc5d66d8ab8a8605565896e0f49df69020b37053cfc89b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "natural-language-inference-bert-natural-language-inference-fine-tuning-bert": {
+      "code_fingerprint": "sha256:4faf336517dd0d0e4df2a8ebf1bb2d4be007548e7fb658d2dc130235ee030d94",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-loading-pretrained-bert-1": {
+      "code_fingerprint": "sha256:dd97f4da901a6d287a40d03b8868c460b8d48cf00662602af9cd1326196c3652",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-loading-pretrained-bert-2": {
+      "code_fingerprint": "sha256:dc07286a5b0cc730918d703a32c1d2a15b9d8e683f6954a2c50e920207961a71",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-loading-pretrained-bert-3": {
+      "code_fingerprint": "sha256:a88e75087e79fbe3058e2d58eb3fa43cca00cc48837b7f4ef4fdf742243d4e5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1": {
+      "code_fingerprint": "sha256:fea801848996d150ed8047a1c7c539293c08e866d4685cbe2a6a5da972cfb8a1",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2": {
+      "code_fingerprint": "sha256:a73abbb4903f6a4b716af862966608d28f35fd31140af45b294c4a7f0256e053",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 549367 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 9824 examples\n"
+        }
+      ]
+    },
+    "natural-language-inference-bert-fine-tuning-bert-1": {
+      "code_fingerprint": "sha256:e84411b1d9d1673a1ad8c7e7c61c0336a559f5d7dad872bd4809b9ce8606771a",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-fine-tuning-bert-2": {
+      "code_fingerprint": "sha256:5a4ab68c4e5f386be2874fb17a15e1d5e5e25d4260b8d2f2e1ae0b7e7fbd76dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-fine-tuning-bert-3": {
+      "code_fingerprint": "sha256:0eb7c1a6a45f6fbbcffa2492b96af8ae7ae1a2fb4ea8dabce9f0a5af91c70b27",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.476, train acc 0.811, test acc 0.792\n9529.0 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
+          "bytes": 25195,
+          "sha256": "sha256:4517738d7568f5684d99cce465ad43b4c67462c4ca118eaabe9d3a5f4e037011"
+        }
+      ]
+    }
+  }
+}

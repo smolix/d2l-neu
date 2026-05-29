@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "source": "chapter_gaussian-processes/gp-inference.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:cd5c4312c4b71802bcf6a717c9c1269ca990e31e0e4663b23d92df94bc632691",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gp-inference-posterior-inference-for-regression": {
+      "code_fingerprint": "sha256:87f76f5285e63a32a8748d3372da3053e31c665aa7cd3d55ef845d8c6a3cb69b",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-worked-example-from-scratch-1": {
+      "code_fingerprint": "sha256:34ce6607ef8cda55cc49593e080bf37ffa692d4ab47ab61103f097e038afbea9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-inference/gp-inference-worked-example-from-scratch-1-1.svg",
+          "bytes": 24274,
+          "sha256": "sha256:a9e22084b35267fcdf695735f030191ff4bfd4fce51aa4b8c6fed73585e62491"
+        }
+      ]
+    },
+    "gp-inference-worked-example-from-scratch-2": {
+      "code_fingerprint": "sha256:11f492584183abeafceffdbd6f53b0539eac4d40cd8a26c948f76da6faeae911",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-worked-example-from-scratch-3": {
+      "code_fingerprint": "sha256:af019876e2dc9de9c735100a7065c64045cf9e18c389ff324f3f6fc8364395a5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-inference/gp-inference-worked-example-from-scratch-3-1.svg",
+          "bytes": 55479,
+          "sha256": "sha256:2b7e035e6c4b43ef687703caf275367c3ada651ac80d7192e3cd934775b42db2"
+        }
+      ]
+    },
+    "gp-inference-worked-example-from-scratch-4": {
+      "code_fingerprint": "sha256:d4a0ccf070a6a85b6364be2d3db1f20059aa52fab93493fc1b8b4bea5f7a637a",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-worked-example-from-scratch-5": {
+      "code_fingerprint": "sha256:36524b6bd45dc01340284380e635d88c1a277e4f3f62dbea0fafcc2b38c5294b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-inference/gp-inference-worked-example-from-scratch-5-1.svg",
+          "bytes": 59860,
+          "sha256": "sha256:b47a956edb3106fae19c43b910e02036359eb099cecc76823fce1fd67456e902"
+        }
+      ]
+    },
+    "gp-inference-worked-example-from-scratch-6": {
+      "code_fingerprint": "sha256:ed5e3e2e5c072469111d804a2ed5b7653c974a785650906302416a8f7d31e421",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-worked-example-from-scratch-7": {
+      "code_fingerprint": "sha256:303bb289fd276d5fa2483ea4c62f3a6e763acdbe91ae10274817257eee06db47",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-inference/gp-inference-worked-example-from-scratch-7-1.svg",
+          "bytes": 112704,
+          "sha256": "sha256:11d4e88ee44ac732ab1457490ea2d2f316c0905ee82e1622cca66257fb65143d"
+        }
+      ]
+    },
+    "gp-inference-making-life-easy-with-gpytorch-1": {
+      "code_fingerprint": "sha256:f1352019073f9c1a6aaa9a581f9eec6ef97eb2d9136727d119b644c4e81ad107",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-making-life-easy-with-gpytorch-2": {
+      "code_fingerprint": "sha256:3bb2c3ddbf353c265e0adcd41a20a21ac942118431a1c2c194923188f4990e9b",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-making-life-easy-with-gpytorch-3": {
+      "code_fingerprint": "sha256:c2ca3bd8b619a357d38843fa9b4f2f3dd6758aa07af3d744082c7ac53222a6d3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Iter 1/50 - Loss: 0.993 squared lengthscale: 0.693 noise variance: 0.693\nIter 11/50 - Loss: 0.720 squared lengthscale: 0.518 noise variance: 0.313\nIter 21/50 - Loss: 0.505 squared lengthscale: 0.513 noise variance: 0.130\nIter 31/50 - Loss: 0.463 squared lengthscale: 0.532 noise variance: 0.065\nIter 41/50 - Loss: 0.468 squared lengthscale: 0.519 noise variance: 0.061\n"
+        }
+      ]
+    },
+    "gp-inference-making-life-easy-with-gpytorch-4": {
+      "code_fingerprint": "sha256:340bb16820775f30686d2ee40675fae16b2529931a403a25cbd2bbad8e250ba9",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-inference-making-life-easy-with-gpytorch-5": {
+      "code_fingerprint": "sha256:f831fad1d0d274ea9ab094ae4210aaa986ba6913a8a5129cc2344c7d2b9d3b3f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-inference/gp-inference-making-life-easy-with-gpytorch-5-1.svg",
+          "bytes": 63810,
+          "sha256": "sha256:3bf4d0452a2bcca11890099f72b34572dad3e372b18cf143cd1c2f1e4401e037"
+        }
+      ]
+    }
+  }
+}

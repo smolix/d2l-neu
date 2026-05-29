@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/single-variable-calculus.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "single-variable-calculus-differential-calculus-1": {
+      "code_fingerprint": "sha256:1af8b123b342c72f27fda8bf3cd4b06d22b73ace7f22993b36fa7819472df5f0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-differential-calculus-1-1.svg",
+          "bytes": 16059,
+          "sha256": "sha256:386dcf5a7e18a56fae16d3aea9424bdc7c22221186200f91763636629c114765"
+        }
+      ]
+    },
+    "single-variable-calculus-differential-calculus-2": {
+      "code_fingerprint": "sha256:0a9c5575cf29b7f7d542f1754ba27cb539d444a54d62a1c9edadfc2c64e60938",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-differential-calculus-2-1.svg",
+          "bytes": 15820,
+          "sha256": "sha256:0aa229d9f7b5a457fc3c0dfd4ceef3f99d1ec48ea6d536c1266fd75b2d261075"
+        }
+      ]
+    },
+    "single-variable-calculus-differential-calculus-3": {
+      "code_fingerprint": "sha256:2636550e29cb6db4b56fb3fef29577ccd6ba54d47a578ee2cb198192c2540523",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-differential-calculus-3-1.svg",
+          "bytes": 20645,
+          "sha256": "sha256:08fc186c3bb15cd9128080ab8e20754bf2d65b6444acaaf3613838f2ed29df2e"
+        }
+      ]
+    },
+    "single-variable-calculus-differential-calculus-4": {
+      "code_fingerprint": "sha256:d128ebb8a0c74f777088589819170923392f42dcf86ca808b83db7cacb1e1fa9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.10000 -> 25.11000\nepsilon = 0.00100 -> 8.00270\nepsilon = 0.00010 -> 8.00012\nepsilon = 0.00001 -> 8.00001\n"
+        }
+      ]
+    },
+    "single-variable-calculus-linear-approximation": {
+      "code_fingerprint": "sha256:c4bea36363a418fbf40ff057e4d879be70f0cedbeac9c924043543d4e8c7967a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
+          "bytes": 15837,
+          "sha256": "sha256:2b1455d1bd5034d1af56579e3d0365ec8f0afe8d466bed8008177796d208dbc1"
+        }
+      ]
+    },
+    "single-variable-calculus-higher-order-derivatives": {
+      "code_fingerprint": "sha256:9c5b3bdb384dd77eaa4405eab62fe69d62089d825586b1b0be841477e8a51306",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
+          "bytes": 17888,
+          "sha256": "sha256:1fee6390ebc9d924c305d134ef674ac4ec8e211ddc85806f1a48485d672d5295"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-series": {
+      "code_fingerprint": "sha256:ff232aa1e7c96ab57f3d76c8ead1a07ac635573c5a3fe3f722ef7c505dee11e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
+          "bytes": 28556,
+          "sha256": "sha256:38143bbc6f6fc6ca489545f90364643c4c2bf823f14a650f9d35c8e048ee5190"
+        }
+      ]
+    }
+  }
+}

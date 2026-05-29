@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/rnn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rnn-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:109b8040c7fc82aef50157690ccb67feb642457581560f36590473ee6973d5f5",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-recurrent-neural-networks-with-hidden-states-1": {
+      "code_fingerprint": "sha256:cdbf38d3b466422ff24cf301006c6b4714f5ff4c359e0325ef5a2abe1618640b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 4.384239  , -5.8578386 , -2.01427   ,  0.28860188],\n       [ 0.36385813,  0.1319584 , -0.2936549 , -0.6778386 ],\n       [ 2.647139  , -1.2814481 , -1.1859436 , -1.3897879 ]],      dtype=float32)"
+        }
+      ]
+    },
+    "rnn-recurrent-neural-networks-with-hidden-states-2": {
+      "code_fingerprint": "sha256:8c7a504e5d112119f15c285a3d13c68417ab94476f25c2b82a0147552ffc5b2a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 4.384239  , -5.8578386 , -2.01427   ,  0.28860193],\n       [ 0.3638581 ,  0.1319584 , -0.2936549 , -0.6778386 ],\n       [ 2.647139  , -1.2814481 , -1.1859436 , -1.3897878 ]],      dtype=float32)"
+        }
+      ]
+    }
+  }
+}

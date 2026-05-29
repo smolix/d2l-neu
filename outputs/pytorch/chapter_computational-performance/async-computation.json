@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/async-computation.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:b6d5345d62800e8290fd63233fe96a1ed0a0d81c9232eec0f50918df43cdb8ac",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "async-computation-asynchronous-computation": {
+      "code_fingerprint": "sha256:5f7cc6b06b7ac61283dc8fc1e4c10c452d4c582b5704ebe01243b46b50347d43",
+      "kind": "text",
+      "outputs": []
+    },
+    "async-computation-asynchrony-via-backend-1": {
+      "code_fingerprint": "sha256:70402f875f7d2bc359dacc0b450c8f7d793d108f4cca6cf2c35eddb05d1abccf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "numpy: 0.4893 sec\ntorch: 0.0006 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-2": {
+      "code_fingerprint": "sha256:850dc87407815ec617239cb71628001e12cc3bf16bddc4763a9ed3b17df9b762",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Done: 0.0015 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-3": {
+      "code_fingerprint": "sha256:cd1170d363923d3da5039a4075fc8edab5f7153121dbf571a1a93717d8e089ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[3., 3.]], device='cuda:0')"
+        }
+      ]
+    }
+  }
+}

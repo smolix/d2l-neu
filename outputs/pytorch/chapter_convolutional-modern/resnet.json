@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/resnet.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:d1bcf869611aaf5f7743cc599a9fdec8b7b157c36cdb2607b832d680ba44fdb5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "resnet-residual-networks-resnet-and-resnext": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-1": {
+      "code_fingerprint": "sha256:6a097cb54e78362d888d2091623f18f678dedff72a86605fc158145d11e587ef",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-2": {
+      "code_fingerprint": "sha256:ff910d4edc2ada7ce310fd564e8277fbb58c78ca3114784ab21d880922198183",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 3, 6, 6])"
+        }
+      ]
+    },
+    "resnet-residual-blocks-3": {
+      "code_fingerprint": "sha256:8782739ab788086056e3c624a37549d0a021081abd71e5f616e12a8f79e765e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 6, 3, 3])"
+        }
+      ]
+    },
+    "resnet-resnet-model-1": {
+      "code_fingerprint": "sha256:cb14aa09c1f50dbaadc55d50e7c3c14d497e1d8a7c90ccca9314498b4bdb6e6a",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-2": {
+      "code_fingerprint": "sha256:30f75d56b88870761a46c7217110f81028b0794ddddd61330e8877274e25caf3",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-3": {
+      "code_fingerprint": "sha256:26c18720953436291f853ee653c6e5e9ab0180c095c2b2a9803a08da0e0b54ca",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-4": {
+      "code_fingerprint": "sha256:605fcfd79f2cda63a23fec32d168d4a51c04835990fe157e784ac86a02a14402",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-5": {
+      "code_fingerprint": "sha256:486ea125c5a10c821474c3ccb8b561e3faccd295625e5c82e8097d7e58896e52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 64, 24, 24])\nSequential output shape:\t torch.Size([1, 64, 24, 24])\nSequential output shape:\t torch.Size([1, 128, 12, 12])\nSequential output shape:\t torch.Size([1, 256, 6, 6])\nSequential output shape:\t torch.Size([1, 512, 3, 3])\nSequential output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "resnet-training": {
+      "code_fingerprint": "sha256:51281db4641577f49367b923d0f58c8e33a410d204e2cb66d666b514f93c5902",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "resnet/resnet-training-1.svg",
+          "bytes": 59156,
+          "sha256": "sha256:d486adc20d1fb47ea2f298e766173b08e43b3ae5f759feba5701323f95be8c91"
+        }
+      ]
+    },
+    "resnet-resnext-1": {
+      "code_fingerprint": "sha256:1fc7f68a694f04d9fa0f96434c142662b7b312ffe5899edeaadb5937d8ebb2d0",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnext-2": {
+      "code_fingerprint": "sha256:ebef29e69dbc9f459ce4f29b71aecab4599431befff195618d9af63e59f12191",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 32, 96, 96])"
+        }
+      ]
+    }
+  }
+}

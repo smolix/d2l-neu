@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/bert.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:fe293a44ee19b22ba6f7edb4a761ff9cde49f562b8a8c2ee71c5d698d8aab874",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-bert-combining-the-best-of-both-worlds": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-1": {
+      "code_fingerprint": "sha256:d2a51596aca3077cc89ccc110a382e76025a0682db4d510e33d77356a61ac2a7",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-2": {
+      "code_fingerprint": "sha256:4d25f9209e7d38850708b6468bb71bfdfd32c0fc44f45e4ae268e79a02d80e81",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-3": {
+      "code_fingerprint": "sha256:e657326558bcd03dc276580da3ac56fa503eeae0fc27d0e2506258239621c6d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-4": {
+      "code_fingerprint": "sha256:7dea9f3f311be837f9d493fa93e0780ade68a008c1c61761f15ee61bd60ddacb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 8, 768])"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-1": {
+      "code_fingerprint": "sha256:62df412b8b4e48053c91dbad77057aff49bbdeaaa76a0a20603bcd5464ccb974",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-masked-language-modeling-2": {
+      "code_fingerprint": "sha256:1d98b2f644969ad51a9bbd47e1161015342a5e68586583d7e0bbab24eb450ecd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 3, 10000])"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-3": {
+      "code_fingerprint": "sha256:81c73f6141edde1ee570c163b6c74825c8731273104289a3f0dc4501e82a4eb0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([6])"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-1": {
+      "code_fingerprint": "sha256:cee2d36cfbed9b9337982b80f2c0960a7a8b9199feb8f753bc8087d886a4c162",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-next-sentence-prediction-2": {
+      "code_fingerprint": "sha256:82fe7180982009669d5dcda33ce9fd6f7b85cce09a4c1e2404930f0c4dda84e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 2])"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-3": {
+      "code_fingerprint": "sha256:a6462dfe19598cca80540986c27734dc21e81b65410d1acbe9a4d0e68432867a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2])"
+        }
+      ]
+    },
+    "bert-putting-it-all-together": {
+      "code_fingerprint": "sha256:a81e9cbbf317e069fa8806c466c16789a1ba0518a996093b3933663c9f3b3d5d",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "source": "chapter_preface/index.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "preface-code-1": {
+      "code_fingerprint": "sha256:7d7f9a112c1dff4294a2ede29248f51eade6b12318fcb46214c236716d56df4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "preface-code-2": {
+      "code_fingerprint": "sha256:c7009180e607ca986c8c49d6fe994a58dab7904ad45f36041f2ef208e27248c8",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/fm.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:1a6dd0425b7d550df76ad6b9e6250838d9cbec1425598cd61c1f09d27954d04f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fm-an-efficient-optimization-criterion": {
+      "code_fingerprint": "sha256:e160636f8ff6242b057030af3debdd551a6f1c79830494c98cbb08f5ffb18227",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-model-implementation": {
+      "code_fingerprint": "sha256:3f314f49e074e83b4fa759a126faef8c729d84029c135cdb88bd86a0c021dae4",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-load-the-advertising-dataset": {
+      "code_fingerprint": "sha256:1041e65ce0495776341975af6e3e6459474f68a7dd1eb57ff5ec3490010027fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-train-the-model": {
+      "code_fingerprint": "sha256:734ecf40995e6597260fe4e10ec8a94dd42a3e99f7a316cbe3a87c009c1f791c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.006, train acc 1.000, test acc 0.924\n212472.8 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fm/fm-train-the-model-1.svg",
+          "bytes": 30572,
+          "sha256": "sha256:6b126ee7ecb269d4873cca08a4db945853e8f5a6b402aa781328081690dc0dda"
+        }
+      ]
+    }
+  }
+}

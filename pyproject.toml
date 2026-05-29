@@ -18,38 +18,46 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# The four framework extras are GPU/CUDA builds with no macOS counterparts
+# (pytorch-cu128 index, tensorflow[and-cuda], jax[cuda12], a custom linux_x86_64
+# MXNet wheel), so every requirement in them is gated to linux-x86_64. This
+# keeps the *universal* lock resolvable on macOS too (see [tool.uv].environments
+# below): on a Mac these extras resolve to nothing, while the base deps + the
+# `build`/`run` extras — which is all the CPU-only render path needs — install
+# fine. Executing notebooks still happens on the linux-x86_64 GPU box.
 pytorch = [
-    "torch",
-    "torchvision",
-    "gymnasium[toy-text]",
-    "gpytorch",
-    "syne-tune[gpsearchers]",
+    "torch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "torchvision ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "gymnasium[toy-text] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "gpytorch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "syne-tune[gpsearchers] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
     # Upstream MXNet 1.9.1 / cu117 has no Blackwell kernels and no PTX fallback.
-    # The wheel is cp312-only; constrain via marker so resolution succeeds on
-    # other supported Python versions too. One-off pin to a locally-built wheel
+    # The wheel is cp312 + linux_x86_64 only; the marker constrains resolution
+    # so the universal lock still solves on other Python versions and on macOS
+    # (where this extra is simply empty). One-off pin to a locally-built wheel
     # because the GitHub `release-wheel` action for tag v2.0.0+cu13.bw.20260522
     # failed; run `tools/update_mxnet_wheel.py` once the release is published
     # to switch back to the URL pin.
-    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529/mxnet-2.0.0%2Bcu13.bw.20260529-cp312-cp312-linux_x86_64.whl ; python_version == '3.12'",
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529/mxnet-2.0.0%2Bcu13.bw.20260529-cp312-cp312-linux_x86_64.whl ; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,
     # cudnn>=9.3, etc.). Without it, uv resolves nccl to 2.21.5, which has
     # no sm_120 kernels — every collective aborts with "unhandled cuda error".
-    "tensorflow[and-cuda]",
-    "tensorflow-datasets",
-    "tensorflow-probability[tf]",
+    "tensorflow[and-cuda] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tensorflow-probability[tf] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 jax = [
-    "jax[cuda12]>=0.10.0",
-    "flax",
-    "optax",
-    "tensorflow",
-    "tensorflow-datasets",
-    "flaxmodels",
+    "jax[cuda12]>=0.10.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "flax ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "optax ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tensorflow ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "flaxmodels ; sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 run = [
     "jupyter",
@@ -74,7 +82,14 @@ packages = ["d2l"]
 allow-direct-references = true
 
 [tool.uv]
-environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+# linux-x86_64 is the GPU/execution box; darwin is the CPU-only render/author
+# host (slides, PDF, HTML from the committed outputs/ store — no framework, no
+# CUDA). The framework extras above are marker-gated to linux-x86_64, so they
+# resolve to nothing on darwin and the universal lock stays solvable on both.
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin'",
+]
 conflicts = [[{ extra = "pytorch" }, { extra = "jax" }, { extra = "mxnet" }, { extra = "tensorflow" }]]
 
 [[tool.uv.index]]

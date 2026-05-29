@@ -16,9 +16,19 @@
 #                             needs the per-framework GPU venvs (~20 GB CUDA
 #                             wheels), synced on first use.
 #
-# Idempotent: skips steps already done. Needs sudo for apt installs.
+# Idempotent: skips steps already done. System-package installs need sudo and
+# use the host's package manager (apt-get on Debian/Ubuntu, MacPorts `port` on
+# macOS); anything already on PATH is left alone.
 set -euo pipefail
-cd "$(dirname "$(readlink -f "$0")")"
+# cd to repo root (this script's directory). BSD readlink lacks -f, so prefer
+# GNU greadlink when present and fall back to a pwd-based resolve otherwise.
+if command -v greadlink >/dev/null 2>&1; then
+    cd "$(dirname "$(greadlink -f "$0")")"
+elif readlink -f "$0" >/dev/null 2>&1; then
+    cd "$(dirname "$(readlink -f "$0")")"
+else
+    cd "$(dirname "$0")"
+fi
 
 MODE=doc
 case "${1:-}" in
@@ -33,6 +43,31 @@ step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 SUDO=""; [ "$EUID" -ne 0 ] && SUDO="sudo"
 
+# The Makefile uses grouped-target rules (`targets &: prereqs`), a GNU Make
+# >= 4.3 feature. Apple ships GNU Make 3.81 as `make`, which mis-parses `&` as
+# a literal target ("overriding commands for target `&`") and breaks grouped
+# output. MacPorts/Homebrew provide `gmake` (4.x); prefer it when `make` is too
+# old. Exported so the printed next-step commands name the right binary.
+make_ge_43() {
+    local v maj min
+    v="$("$1" --version 2>/dev/null | sed -n '1s/.*GNU Make //p')"
+    [ -n "$v" ] || return 1
+    maj=${v%%.*}; min=${v#*.}; min=${min%%.*}
+    [ "${maj:-0}" -gt 4 ] 2>/dev/null && return 0
+    [ "${maj:-0}" -eq 4 ] 2>/dev/null && [ "${min:-0}" -ge 3 ] 2>/dev/null
+}
+MAKE=make
+if ! make_ge_43 make; then
+    if have gmake && make_ge_43 gmake; then
+        MAKE=gmake
+    else
+        echo "WARNING: GNU Make >= 4.3 not found ('$(make --version 2>/dev/null | sed -n 1p)')." >&2
+        echo "  The Makefile's grouped-target rules ('&:') need >= 4.3." >&2
+        echo "  macOS: 'sudo port install gmake' (MacPorts) and use 'gmake' for build targets." >&2
+    fi
+fi
+export MAKE
+
 # ── 1. uv ─────────────────────────────────────────────────────────────
 if have uv; then
     step "uv already installed: $(uv --version)"
@@ -45,30 +80,68 @@ else
 fi
 
 # ── 2. System packages ────────────────────────────────────────────────
-# git-lfs is REQUIRED in every mode: the committed outputs/ store keeps its
-# image assets in Git LFS (see docs/build-system.md §2.2). Without it, a fresh
-# checkout has pointer files instead of images and the rendered book/slides
-# show broken figures.
-# nodejs is for the slide diagram engine (diagrams/*.mjs → img/auto/*.svg).
-# TeX Live + librsvg are PDF-only (modes --pdf / --full).
-APT_PKGS=(git-lfs nodejs)
+# These are *capabilities* we need, probed by the binary they put on PATH —
+# not distro-specific package names. We never install something already on
+# PATH, and we never invoke a package manager the host doesn't have.
+#
+#   git-lfs       REQUIRED, every mode — the committed outputs/ store keeps its
+#                 image assets in Git LFS (docs/build-system.md §2.2). Without
+#                 it a fresh checkout has pointer stubs, not images, and the
+#                 rendered book/slides show broken figures.
+#   node          slide diagram engine (diagrams/*.mjs → img/auto/*.svg).
+#   xelatex       PDF builds only (modes --pdf / --full).
+#   rsvg-convert  PDF builds only.
+NEED_BINS=(git-lfs node)
 if [ "$MODE" != doc ]; then
-    APT_PKGS+=(texlive-xetex texlive-latex-extra texlive-latex-recommended
-               texlive-fonts-extra librsvg2-bin)
+    NEED_BINS+=(xelatex rsvg-convert)
 fi
-missing=()
-for p in "${APT_PKGS[@]}"; do
-    dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p")
+
+missing_bins=()
+for b in "${NEED_BINS[@]}"; do
+    have "$b" || missing_bins+=("$b")
 done
-if [ "${#missing[@]}" -eq 0 ]; then
-    step "All required apt packages already installed (mode: $MODE)"
+
+if [ "${#missing_bins[@]}" -eq 0 ]; then
+    step "All required system tools already present (mode: $MODE): ${NEED_BINS[*]}"
 else
-    step "Installing apt packages: ${missing[*]}"
-    if [ -z "$SUDO" ] && [ "$EUID" -ne 0 ]; then
-        echo "Need sudo or root to install: ${missing[*]}" >&2; exit 1
+    # Map each missing capability to its package name on the host's manager.
+    # (TeX needs several sub-packages beyond xelatex itself for the LaTeX
+    # classes the book uses; they share the same names on apt and MacPorts.)
+    TEX_PKGS="texlive-xetex texlive-latex-extra texlive-latex-recommended texlive-fonts-extra"
+    declare -A APT_PKG=(
+        [git-lfs]=git-lfs [node]=nodejs
+        [xelatex]="$TEX_PKGS" [rsvg-convert]=librsvg2-bin
+    )
+    declare -A PORT_PKG=(
+        [git-lfs]=git-lfs [node]=nodejs22
+        [xelatex]="$TEX_PKGS" [rsvg-convert]=librsvg
+    )
+
+    pkgs=()
+    if [ "$(uname -s)" = Darwin ] && have port; then
+        for b in "${missing_bins[@]}"; do pkgs+=(${PORT_PKG[$b]}); done
+        step "Installing MacPorts packages for missing tools (${missing_bins[*]}): ${pkgs[*]}"
+        $SUDO port install "${pkgs[@]}"
+    elif have apt-get; then
+        for b in "${missing_bins[@]}"; do pkgs+=(${APT_PKG[$b]}); done
+        # dpkg check trims TeX sub-packages already present (no probe binary).
+        need=()
+        for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || need+=("$p"); done
+        if [ "${#need[@]}" -eq 0 ]; then
+            step "Required apt packages already installed (mode: $MODE)"
+        else
+            step "Installing apt packages: ${need[*]}"
+            $SUDO apt-get update
+            $SUDO apt-get install -y "${need[@]}"
+        fi
+    else
+        step "Missing required tools: ${missing_bins[*]}"
+        echo "No supported package manager found (need apt-get on Debian/Ubuntu" >&2
+        echo "or MacPorts 'port' on macOS). Install these tools manually, then" >&2
+        echo "re-run ./bootstrap.sh:" >&2
+        echo "    ${missing_bins[*]}" >&2
+        exit 1
     fi
-    $SUDO apt-get update
-    $SUDO apt-get install -y "${missing[@]}"
 fi
 
 # ── 3. Git LFS: hooks + materialize the outputs/ store ────────────────
@@ -108,17 +181,18 @@ UV_PROJECT_ENVIRONMENT=.venv-build uv sync --extra build
 # ── 6. d2l library (CPU-only; enables .md → .qmd preprocessing) ────────
 # build_lib.py just parses #@save blocks from the source .md — no framework
 # import — so this works on a render-only host and lets `make html` run.
-step "Building d2l library (make lib)"
-make lib
+step "Building d2l library ($MAKE lib)"
+"$MAKE" lib
 
 # ── 7. Sanity check ───────────────────────────────────────────────────
 step "Sanity check (mode: $MODE)"
 echo "  uv          : $(uv --version)"
 echo "  git-lfs     : $(git lfs version 2>/dev/null | head -1)"
 echo "  node        : $(node --version 2>/dev/null || echo MISSING)"
+echo "  make        : $("$MAKE" --version 2>/dev/null | sed -n 1p) (using '$MAKE')"
 echo "  quarto      : $(.venv-build/bin/quarto --version 2>/dev/null)"
 echo "  store       : $(find outputs -name '*.json' 2>/dev/null | wc -l) manifests, $(find outputs -type f \( -name '*.png' -o -name '*.svg' \) 2>/dev/null | wc -l) assets"
-echo "  LFS pointers left unsmudged: $(git lfs ls-files 2>/dev/null | grep -c ' - ' || echo 0)  (should be 0)"
+echo "  LFS pointers left unsmudged: $(git lfs ls-files 2>/dev/null | grep -c ' - ' || true)  (should be 0)"
 if [ "$MODE" != doc ]; then
     echo "  xelatex     : $(xelatex --version 2>/dev/null | head -1)"
     echo "  rsvg-convert: $(rsvg-convert --version 2>/dev/null)"
@@ -130,23 +204,23 @@ cat <<NEXT
 ==> Bootstrap complete (mode: $MODE).
 
 DOCUMENT WORK — CPU-only, reads the committed outputs/ store, no GPU:
-    make html                                  # render the book
-    make -j4 slides                            # render all slide decks
-    make -B slides-pytorch SLIDES_FILTER=chapter_preliminaries/ndarray.md   # one deck
+    $MAKE html                                  # render the book
+    $MAKE -j4 slides                            # render all slide decks
+    $MAKE -B slides-pytorch SLIDES_FILTER=chapter_preliminaries/ndarray.md   # one deck
     # edit prose / <!-- slides --> blocks / _d2l-*.scss / _quarto.yml, then re-render
-    node diagrams/render.mjs --out img/auto    # regenerate slide diagrams
+    node diagrams/render.mjs --out img/auto     # regenerate slide diagrams
 NEXT
 if [ "$MODE" != doc ]; then
 cat <<NEXT
-    make -j4 pdfs                              # render PDFs (needs the TeX you just installed)
+    $MAKE -j4 pdfs                              # render PDFs (needs the TeX you just installed)
 NEXT
 fi
 cat <<NEXT
 
 CHANGING A NOTEBOOK'S OUTPUTS — needs the per-framework GPU venv (synced on
 first use, ~20 GB CUDA wheels) and a GPU:
-    make -B _notebooks/<fw>/<chapter>/<file>.executed   # re-execute one notebook
-    make capture-outputs FILES=<chapter>/<file>.md      # bless into the store
-    make audit-outputs                                  # what's stale + integrity
+    $MAKE -B _notebooks/<fw>/<chapter>/<file>.executed   # re-execute one notebook
+    $MAKE capture-outputs FILES=<chapter>/<file>.md      # bless into the store
+    $MAKE audit-outputs                                  # what's stale + integrity
 See docs/build-system.md for the full model and the four canonical flows.
 NEXT

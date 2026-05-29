@@ -181,7 +181,14 @@ def setup_framework_env(framework, venv_root=None):
 MAX_CPUS_PER_GPU_WORKER = 32
 MAX_CPUS_PER_CPU_WORKER = 16
 
-_HOST_CPUS = sorted(os.sched_getaffinity(0))
+# os.sched_getaffinity is Linux-only. Off Linux (macOS/Windows) CPU pinning is
+# a no-op — make_cpu_affinity_fn is only ever called with a non-None cpu_set on
+# the Linux execution box — so fall back to the full CPU set just to keep this
+# module importable for the CPU-only render/scan path.
+try:
+    _HOST_CPUS = sorted(os.sched_getaffinity(0))
+except AttributeError:
+    _HOST_CPUS = list(range(os.cpu_count() or 1))
 
 
 def make_cpu_affinity_fn(cpu_set):
@@ -192,7 +199,7 @@ def make_cpu_affinity_fn(cpu_set):
     def _set():
         try:
             os.sched_setaffinity(0, frozen)
-        except OSError:
+        except (OSError, AttributeError):  # AttributeError: not Linux
             pass
     return _set
 

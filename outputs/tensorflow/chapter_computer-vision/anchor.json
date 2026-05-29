@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/anchor.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:09c6ec3caf3efd96764269d6f1cce8182b28b1a2f9b0e951a67a328ecd1696d8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "anchor-anchor-boxes": {
+      "code_fingerprint": "sha256:d6f2eb51e99b3e2a1620340e7bfca81252810124a1f3497717c1229d1cbb6345",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-1": {
+      "code_fingerprint": "sha256:8d2d7ab0ca9ed66aebd1940ad1fbb9042589469b64ee144a8f7107c3e94175ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-2": {
+      "code_fingerprint": "sha256:9a5d84891d0e3fc97abc537cc7b5a70f887bda10c945cf9bc32bb14c698cd851",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "561 728\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "TensorShape([1, 2042040, 4])"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-3": {
+      "code_fingerprint": "sha256:43639008fcab544dc0d4724f9182dccdfd231c0cb4d1229b46abc43594fc446c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0.06, 0.07, 0.63, 0.82], dtype=float32)>"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-4": {
+      "code_fingerprint": "sha256:67a901b9f049b621049cbea1b7ca87160dd30f09736016f19768d7fe23bd4e03",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-5": {
+      "code_fingerprint": "sha256:85a7e7717f83b21076a0037545de075bf854410597caf79fb04452351939a55a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
+          "bytes": 95779,
+          "sha256": "sha256:b7e9c2ec3b016b6d672fe5bba8b168b2f65e0cd6e8ee13a462419859ac733056"
+        }
+      ]
+    },
+    "anchor-intersection-over-union-iou": {
+      "code_fingerprint": "sha256:68d42bfb7ebe042c320449cfe3818517ff6c763b5b2b62b9cb3064a69c394c44",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes": {
+      "code_fingerprint": "sha256:2ad6aa5061ce16209d17871faf53021618a6cee815bb67f58dde5862c1135a16",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-1": {
+      "code_fingerprint": "sha256:d640be4da9c38e61f0f1e861b7a056cc64b6695357a9a5c8d4bbcd0f3d4c48f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-2": {
+      "code_fingerprint": "sha256:978973adf010cf7cbb60e5cb4764635bac034b817715db4973cfbb139a5a13c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-1": {
+      "code_fingerprint": "sha256:e07d8bb3024e84b885c283255cc7a167f68f9cf331f1149c8ecc8b15888f9def",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-an-example-1-1.svg",
+          "bytes": 94721,
+          "sha256": "sha256:7989c6481ee9cf2bff7c5e3d20b8bee4e8b9725a8867f0c464a2fa61ee4876da"
+        }
+      ]
+    },
+    "anchor-an-example-2": {
+      "code_fingerprint": "sha256:8a602b01bc8fe81c94be6ffb47e31b5b9b4971b3b475b46712d57c13f8fa8416",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-3": {
+      "code_fingerprint": "sha256:c41af92c0db72cc6ce61b0731b155aeaef6a5ee704121334b426a26d6339c373",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 5), dtype=int32, numpy=array([[0, 1, 2, 0, 2]], dtype=int32)>"
+        }
+      ]
+    },
+    "anchor-an-example-4": {
+      "code_fingerprint": "sha256:f231daaedfd7243634fa73e156e7bfa7101cd472f9eeb0981b84622ce427aed4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 20), dtype=float32, numpy=\narray([[0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0., 0., 0.,\n        1., 1., 1., 1.]], dtype=float32)>"
+        }
+      ]
+    },
+    "anchor-an-example-5": {
+      "code_fingerprint": "sha256:12a3d8131edf3c067826144f837bcc0117bc8754852815547791553286935040",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 20), dtype=float32, numpy=\narray([[-0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00,  1.40e+00,  1.00e+01,\n         2.59e+00,  7.18e+00, -1.20e+00,  2.69e-01,  1.68e+00, -1.57e+00,\n        -0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00, -5.71e-01, -1.00e+00,\n         4.17e-06,  6.26e-01]], dtype=float32)>"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-1": {
+      "code_fingerprint": "sha256:8cc73fa3f03a16c73a6da4d5c5bd4b63cd3cde6d962e9590730a75216df65485",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-2": {
+      "code_fingerprint": "sha256:8433d90034986cfb0b2b94b7408b371647787481f7aee537b8ba3104833f2dab",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-3": {
+      "code_fingerprint": "sha256:22d38dcd862d2ad15a93e2778bb11b25f4e724d069eaf02d98a61790c930998f",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-4": {
+      "code_fingerprint": "sha256:e6e8209df875fe490a940ed20e2a4ea46e4e9ec6d3c8920c92252a0bb908a743",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-5": {
+      "code_fingerprint": "sha256:bd8d8fa8d048c8d8f8fab892d9fc013ed51a5ebae84999673c01dc52702224b5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
+          "bytes": 96403,
+          "sha256": "sha256:9b289aa10f511084be57ca1729397cef644b328bd97c3cbc27abdaefd9bf920a"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-6": {
+      "code_fingerprint": "sha256:1a8409ad03e9fa820091fe3a10899f65a4aa9b52059b88276c2e1aeb25253aed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 4, 6), dtype=float32, numpy=\narray([[[ 0.  ,  0.9 ,  0.1 ,  0.08,  0.52,  0.92],\n        [ 1.  ,  0.9 ,  0.55,  0.2 ,  0.9 ,  0.88],\n        [-1.  ,  0.8 ,  0.08,  0.2 ,  0.56,  0.95],\n        [-1.  ,  0.7 ,  0.15,  0.3 ,  0.62,  0.91]]], dtype=float32)>"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-7": {
+      "code_fingerprint": "sha256:54f9cd14d354b42ff4045ce49ff27fc31e7cbd596ad70a52f78b98c1a4ca2961",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
+          "bytes": 93212,
+          "sha256": "sha256:d38e06721466143d39dc0b85ddff2f44567809f7ee0fd6e9f221ade3f4e9aec2"
+        }
+      ]
+    }
+  }
+}

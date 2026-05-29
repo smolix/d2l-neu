@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/attention-pooling.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:bc3f5cb3b3f1f9f99a1a067c1a738da69263344af887aab1e098aac31aff8eca",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-pooling-attention-pooling-by-similarity": {
+      "code_fingerprint": "sha256:03164978950dd4295bba12bd034fba471f363b4e749ba6f39e537d8225edb2f8",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-kernels-and-data-1": {
+      "code_fingerprint": "sha256:cd33cf748f03c361a06b4595aa2dd6bcc27832c6e084cbbbb42d017fcd09130e",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-kernels-and-data-2": {
+      "code_fingerprint": "sha256:5bae68e706cbaffe0440cd0a0470dbe1488ae92d32823d35a1efe0de27ec07e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-pooling/attention-pooling-kernels-and-data-2-1.svg",
+          "bytes": 34844,
+          "sha256": "sha256:0706deca2c6b1a9f6bc9bf9d3f03dd6155e8ffdec7437b71f00b6e9ccf5a03f4"
+        }
+      ]
+    },
+    "attention-pooling-kernels-and-data-3": {
+      "code_fingerprint": "sha256:3177a0e544d9c82c056d87d87fe133acf08b3970eaaa0303fe25dd56f2f40ec7",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-1": {
+      "code_fingerprint": "sha256:72a0f57e3e26dcb3637edde1f9eeb296c872b63b3657ba94d63eeced9770ece8",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-2": {
+      "code_fingerprint": "sha256:1e300e3f79dae98475fd732e8cb0fbe732d36874f4e7e4175a59b09ef37a1b19",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-3": {
+      "code_fingerprint": "sha256:e491e2acf5d1512ea50a1d462965b4197554a26d5c9ece063ad5fb1fe439ee23",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-3-1.svg",
+          "bytes": 72227,
+          "sha256": "sha256:3c0269a886fbe773900a686f65c4c3aecc3699a98000b20e945764205325d4ac"
+        }
+      ]
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-4": {
+      "code_fingerprint": "sha256:df0f5447787523746b3ca1fe452c5ba7abcb606d8648bdb6fd7c211bc94e5193",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-4-1.svg",
+          "bytes": 40281,
+          "sha256": "sha256:949739b57ccf84ebfcb412437c5e9df60821272a9bcc61a5582eebfacff727ed"
+        }
+      ]
+    },
+    "attention-pooling-adapting-attention-pooling-1": {
+      "code_fingerprint": "sha256:899ac4a16f4bf4b48cb8968e03f3e1ab2bfbe89c062590829b5ceb6191591f84",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-1-1.svg",
+          "bytes": 68989,
+          "sha256": "sha256:3c6e4ea094e67193b97a2409dc96405c198764eb27bc74789732d444aca18127"
+        }
+      ]
+    },
+    "attention-pooling-adapting-attention-pooling-2": {
+      "code_fingerprint": "sha256:3a3b4a637f5a2c55e13692abbe91703808782cf6b96397c94f9e96a2260fec69",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-2-1.svg",
+          "bytes": 39973,
+          "sha256": "sha256:165609dc73cb8fc73f10f5a9926736b629937645ab69d85934da44f762b11a01"
+        }
+      ]
+    }
+  }
+}

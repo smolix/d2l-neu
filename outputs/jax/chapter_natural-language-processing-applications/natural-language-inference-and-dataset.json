@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/natural-language-inference-and-dataset.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:55a5fc72989640a91ef3270a99c882bd66adb9abd05698eb3734d4935e8e4797",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset": {
+      "code_fingerprint": "sha256:bf79511d991a6c12bd4c1a6ac4bd95e8e2c102b3ace5608f8341c7dff9b17424",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:d6bc0534dba9a8aec941b84441e95395adf5209becee8f2b2e9029f7d821f008",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:02b35f50991f9fb969922c76189afcffc77437ea9351ebaebc9599a8e94b2511",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "premise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is training his horse for a competition .\nlabel: 2\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is at a diner , ordering an omelette .\nlabel: 1\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is outdoors , on a horse .\nlabel: 0\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:2780bad7fbd664f1253fb68244e122c8c4264bc149ff6760da1100d6c85bae69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[183416, 183187, 182764]\n[3368, 3237, 3219]\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset": {
+      "code_fingerprint": "sha256:027aa3a74c9c0160ad81b517fe0ced446eca8a95e6c2daa358a32256d45b82f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-1": {
+      "code_fingerprint": "sha256:fd29d8f16c474411deed1aa9f03924ee26a612d2a519996872b27f51469e4026",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-2": {
+      "code_fingerprint": "sha256:92aebce6d28c7df4b38aebf33a0ad887f344b0b46d86f1ec9b44609406891e53",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 549367 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 9824 examples\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "18678"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-3": {
+      "code_fingerprint": "sha256:933da0e37783cf6e538414e9c9f1828b9a99862eabb1c21466d77b67516ed032",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(128, 50)\n(128, 50)\n(128,)\n"
+        }
+      ]
+    }
+  }
+}

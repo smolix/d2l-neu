@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multiple-gpus-concise.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:dc752f190ad6701aefdf949522198025ceb4fa28cbac65b8ba1ec0a7fc0decb8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiple-gpus-concise-concise-implementation-for-multiple-gpus": {
+      "code_fingerprint": "sha256:e7e4ec67e6d0f1ff832141b5163c8e739c9d305234ccd381435438096ac39651",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-a-toy-network": {
+      "code_fingerprint": "sha256:a5de76c17a0240aabf08d3ff1101a01842660b3f4484cd33c1a17272583c68a3",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-network-initialization-1": {
+      "code_fingerprint": "sha256:9ba624e44ce72f5f43676ced4bb2abbb1a5dd40076a4825d778b4d052440def5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0', '/job:localhost/replica:0/task:0/device:GPU:1', '/job:localhost/replica:0/task:0/device:GPU:2', '/job:localhost/replica:0/task:0/device:GPU:3')\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Number of devices: 4\n"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-1": {
+      "code_fingerprint": "sha256:fcb9a6bfba566534ccbf56bb6bab0c36942fe78b33cd896c6096848392cba4ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-2": {
+      "code_fingerprint": "sha256:03f594cd077f41180221cdb123353fff501ff93238ff60344799d7b73e0d2f8a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0',)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.93, 102.7 sec total on ['/device:GPU:0']\n"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-3": {
+      "code_fingerprint": "sha256:a206530065bbd6dd18a20d414bbe5cf6dea52a94a3d6ca4e01fc45358472d5f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0', '/job:localhost/replica:0/task:0/device:GPU:1')\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Collective all_reduce tensors: 76 all_reduces, num_devices = 2, group_size = 2, implementation = CommunicationImplementation.NCCL, num_packs = 1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.90, 89.8 sec total on ['/device:GPU:0', '/device:GPU:1']\n"
+        }
+      ]
+    }
+  }
+}

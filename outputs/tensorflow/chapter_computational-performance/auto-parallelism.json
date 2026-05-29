@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/auto-parallelism.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:0372b520c47be4a950ed5c40b50b012d1df440d128012a1f7ee99b80566aa267",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "auto-parallelism-automatic-parallelism": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "auto-parallelism-parallel-computation-on-gpus-1": {
+      "code_fingerprint": "sha256:4dd2a9b597fabee3ace1d000ad0d087d9185f541472b12a18f5c5755e5e9d870",
+      "kind": "text",
+      "outputs": []
+    },
+    "auto-parallelism-parallel-computation-on-gpus-2": {
+      "code_fingerprint": "sha256:aeac20b5cec952b66d41364d049663a94ddf1e204136eb0def43ea748ff7429e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPU1 time: 0.1009 sec\nGPU2 time: 0.1036 sec\n"
+        }
+      ]
+    },
+    "auto-parallelism-parallel-computation-on-gpus-3": {
+      "code_fingerprint": "sha256:49cfe382f2fb06fb816fa0536e44160393ff46e974e6665071268de0c4410286",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPU1 & GPU2: 0.1215 sec\n"
+        }
+      ]
+    },
+    "auto-parallelism-parallel-computation-and-communication-1": {
+      "code_fingerprint": "sha256:848d5ce694d0ecc729b0fdd84cda751baaff9e42dfecde758a806f8a366f6e3e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Run on GPU1: 0.0907 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Copy to CPU: 2.1925 sec\n"
+        }
+      ]
+    },
+    "auto-parallelism-parallel-computation-and-communication-2": {
+      "code_fingerprint": "sha256:f55921e4733c25e7c183a2998c083daf5ff0e90c0c44ff613cb273394e22f784",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Run on GPU1 and copy to CPU: 2.6776 sec\n"
+        }
+      ]
+    }
+  }
+}

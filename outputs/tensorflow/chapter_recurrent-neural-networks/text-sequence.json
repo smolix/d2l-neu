@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/text-sequence.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:621eeaf803f67761775c95898265c316649bbd78c4025f2d89d1b60afe7bc031",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "text-sequence-converting-raw-text-into-sequence-data": {
+      "code_fingerprint": "sha256:32d6a85c6c52581b96fe449a40015bfe3147ccd2aec29875e709ff08f4b877a6",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:1d9f1b9c951dbed6369ed05c5714e82b93bdb4055d642835fe4a24543ca7db69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'The Time Machine, by H. G. Wells [1898]\\n\\n\\n\\n\\nI\\n\\n\\nThe Time Tra'"
+        }
+      ]
+    },
+    "text-sequence-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:8e29c671d9f2d3bfb523b9ba138ef25dc04e3a465c464f26cb689c1ee83ca2b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'the time machine by h g wells i the time traveller for so it'"
+        }
+      ]
+    },
+    "text-sequence-tokenization": {
+      "code_fingerprint": "sha256:31038d3235bc166d1e07f16c073bcba9e6f4da83073fa7733ed7f31bceec5c9a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'t,h,e, ,t,i,m,e, ,m,a,c,h,i,n,e, ,b,y, ,h, ,g, ,w,e,l,l,s, '"
+        }
+      ]
+    },
+    "text-sequence-vocabulary-1": {
+      "code_fingerprint": "sha256:7055febc17d9505a12df358de85e7db55bd7937189537bfe0b66318b90b3afc7",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-vocabulary-2": {
+      "code_fingerprint": "sha256:f83f03ac47092912ea08e387e7cb2173aad153a9afcc2302ad686cd5a70315cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "indices: [3, 9, 2, 1, 3, 5, 13, 2, 1, 13]\nwords: ['t', 'h', 'e', ' ', 't', 'i', 'm', 'e', ' ', 'm']\n"
+        }
+      ]
+    },
+    "text-sequence-putting-it-all-together": {
+      "code_fingerprint": "sha256:26e4b70f2fdc9116a9614931f465a4bb8c1dd3ff5079e47ebf209291416b7948",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(173428, 28)"
+        }
+      ]
+    },
+    "text-sequence-exploratory-language-statistics-1": {
+      "code_fingerprint": "sha256:d58d40b7de53e9978a23407ecb7712eca332bfaf1b8a2a89ccd518cc856af789",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('the', 2261),\n ('i', 1267),\n ('and', 1245),\n ('of', 1155),\n ('a', 816),\n ('to', 695),\n ('was', 552),\n ('in', 541),\n ('that', 443),\n ('my', 440)]"
+        }
+      ]
+    },
+    "text-sequence-exploratory-language-statistics-2": {
+      "code_fingerprint": "sha256:815dc72de943933305b62e8c6821a1053a8cec97fddf34a02fe91bde387f6b67",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
+          "bytes": 33996,
+          "sha256": "sha256:e6217dd456aa71e7cbea2ee6e26ca622afd224d32014da4cf381d22f8b817fd0"
+        }
+      ]
+    },
+    "text-sequence-exploratory-language-statistics-3": {
+      "code_fingerprint": "sha256:02c9b6bf5584a6f0a40f1988a281cd4712fbcc3d89edeb30c98267d9bb5abcea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('of--the', 309),\n ('in--the', 169),\n ('i--had', 130),\n ('i--was', 112),\n ('and--the', 109),\n ('the--time', 102),\n ('it--was', 99),\n ('to--the', 85),\n ('as--i', 78),\n ('of--a', 73)]"
+        }
+      ]
+    },
+    "text-sequence-exploratory-language-statistics-4": {
+      "code_fingerprint": "sha256:d729aad6581feb2ffad440b2f5cfd40e699940991ac8ef4cee26d05c985f2384",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('the--time--traveller', 59),\n ('the--time--machine', 30),\n ('the--medical--man', 24),\n ('it--seemed--to', 16),\n ('it--was--a', 15),\n ('here--and--there', 15),\n ('seemed--to--me', 14),\n ('i--did--not', 14),\n ('i--saw--the', 13),\n ('i--began--to', 13)]"
+        }
+      ]
+    },
+    "text-sequence-exploratory-language-statistics-5": {
+      "code_fingerprint": "sha256:71e0581eed9ff4b6aa016a726b308d58191a96ba7d609b2d1db56bc164d65bfb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
+          "bytes": 45605,
+          "sha256": "sha256:40bbb98cc4ad3a3ec4069e28c1b77029071f83947518940e883bad720ccc5066"
+        }
+      ]
+    }
+  }
+}

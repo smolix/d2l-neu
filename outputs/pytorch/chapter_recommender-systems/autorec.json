@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/autorec.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:b5de4bd3bb2677190e74fc75fe0bb607fe64a98fc2336c9fb76081ef6030ebcb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autorec-model": {
+      "code_fingerprint": "sha256:070894a86a108063e7e518fa5141edbff4d05ef3f145021dc453374855c2ccae",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-implementing-the-model": {
+      "code_fingerprint": "sha256:0c3c071b2efa62d5e22543d1be86137cf93741b9fb785a8a9c9cb6d3d470248c",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-reimplementing-the-evaluator": {
+      "code_fingerprint": "sha256:1d7ddbf73c8e5edbbbc4405f233a0be9435d28f0688f8bafa0b2ca337e99290c",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-training-and-evaluating-the-model": {
+      "code_fingerprint": "sha256:52dd97e02e7efde6234f968ce5e405b547572e0bde0922bf705d914561ac974b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 39.922, test RMSE 0.907\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
+          "bytes": 21850,
+          "sha256": "sha256:f5fed3357985d7cad238a549b7610107d8091bfc188afaa2588da0b5b8e95d3f"
+        }
+      ]
+    }
+  }
+}

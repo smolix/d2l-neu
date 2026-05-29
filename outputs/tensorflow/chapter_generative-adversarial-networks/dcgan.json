@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/dcgan.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:2584fbd05c65a4c14b1f396419c66d4ba4984985e1a433ed3a706ab72c62c1cc",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dcgan-deep-convolutional-generative-adversarial-networks": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-pokemon-dataset-1": {
+      "code_fingerprint": "sha256:c08babd3bff4c48d7fda5cf93f0e9f0503bc88e6b6ded2c650ee908734a576c4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 40597 files belonging to 721 classes.\n"
+        }
+      ]
+    },
+    "dcgan-the-pokemon-dataset-2": {
+      "code_fingerprint": "sha256:eccc99b6e1c8912b44bb468d4256e166cb2ea72200e79ab29938e2bb6f2ecbcf",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-pokemon-dataset-3": {
+      "code_fingerprint": "sha256:cf9a60ece13c86c5837b18101539dc5ff22404e17fab688495db66d603f89003",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
+          "bytes": 395364,
+          "sha256": "sha256:6a1894abb2bdb6e8cc42544059b2ef25f824e20ec30b02a0f79d4f9ad36c65c0"
+        }
+      ]
+    },
+    "dcgan-the-generator-1": {
+      "code_fingerprint": "sha256:469369c639298233d73155d1382f0550ad072c03fee5ab6d25caef398a59f8cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-generator-2": {
+      "code_fingerprint": "sha256:d79d223924e96d26c13becce9fddac4de9b32a67e0160fd1c52b2911de17b30f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 32, 32, 20])"
+        }
+      ]
+    },
+    "dcgan-the-generator-3": {
+      "code_fingerprint": "sha256:646c1db5b8317b530a1911e377aec6b27082536949ea4b99b90fbf966b839674",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 4, 4, 20])"
+        }
+      ]
+    },
+    "dcgan-the-generator-4": {
+      "code_fingerprint": "sha256:be782094e5778a9307fce0e7702a1f786caa05869ca991b08391280256e84d2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-generator-5": {
+      "code_fingerprint": "sha256:95125806fb4cc0d4b3c8f7ba64e4684ed1a7f8e68813aebea13893459c6006c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([1, 64, 64, 3])"
+        }
+      ]
+    },
+    "dcgan-discriminator-1": {
+      "code_fingerprint": "sha256:72f9d508ab8f66d89fa8498a23c33c17b88d46faff27912a7b1f6300e7d029a3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-discriminator-1-1.svg",
+          "bytes": 18824,
+          "sha256": "sha256:0fa9531aa42d46daac77500ec187aaa11cff829dd3484dbcac8d1004e5d5d7c9"
+        }
+      ]
+    },
+    "dcgan-discriminator-2": {
+      "code_fingerprint": "sha256:c392ba2e9da25917b695deb1848731d0b7429e8680966ab1a4a2da260621d599",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-discriminator-3": {
+      "code_fingerprint": "sha256:08917a1cfd47e98c85d52a7a635ac8d897e020a475bd13da037a98ad4a3a0998",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 8, 8, 20])"
+        }
+      ]
+    },
+    "dcgan-discriminator-4": {
+      "code_fingerprint": "sha256:41614a9995a6dde170c3379b7e30c2c355ca5783a607fe8c1f150d65e92fa290",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-discriminator-5": {
+      "code_fingerprint": "sha256:5eac59f80eba67e6d77a18d0dd0c1ba2228df958e8b87f6db0bcae8bae10277f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([1, 1, 1, 1])"
+        }
+      ]
+    },
+    "dcgan-training-1": {
+      "code_fingerprint": "sha256:7449c1267fdf76163938479acff2fef1a9d907bfdf754d44c9f794b7637da03f",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-training-2": {
+      "code_fingerprint": "sha256:6089e2f1b8fd52b65c7592ef65e37b5b8ccc7017d5823d09d58e829ae646caec",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss_D 0.533, loss_G 1.237, 6004.0 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-training-2-1.svg",
+          "bytes": 234141,
+          "sha256": "sha256:f2e6a9bc91051d53c2865448848c4d5d5e98812a4d3190e087da5d518a434f2c"
+        }
+      ]
+    }
+  }
+}

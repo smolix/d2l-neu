@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/lenet.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:cb2af27d34b0e2b5d7073aec5287e97975696293cda0fab83eb616a486855b63",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lenet-convolutional-neural-networks-lenet": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-2": {
+      "code_fingerprint": "sha256:9d6c3c60b3f8a41a3c9f9ebbf670f66ee12692696fff1b3f41ac69d4f99f3804",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-3": {
+      "code_fingerprint": "sha256:4a2ab0f006abb4c2bbcca1d69cedbc824fbcd38f0fe2ebcade1362be2d2cb1f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 28, 28, 6)\nAveragePooling2D output shape:\t (1, 14, 14, 6)\nConv2D output shape:\t (1, 10, 10, 16)\nAveragePooling2D output shape:\t (1, 5, 5, 16)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "lenet-training": {
+      "code_fingerprint": "sha256:70ed8f1ee5761ef5f97fb5266760cee52ce79fc423adfce4c855995b70facb0b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-training-1.svg",
+          "bytes": 58699,
+          "sha256": "sha256:c43066185c5fcd706c11f820232bee12809667ae9057d7f6a05327fd382cc62b"
+        }
+      ]
+    }
+  }
+}

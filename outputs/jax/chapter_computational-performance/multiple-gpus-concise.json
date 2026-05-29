@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multiple-gpus-concise.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:10d508f2f06179d0755ae41db07397a464d8a5d6d5c7d36fe9bd61f9d01c97f9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiple-gpus-concise-concise-implementation-for-multiple-gpus": {
+      "code_fingerprint": "sha256:34e3348ece5cdb383fd08753ecb1ef93f27b685b9f73b8a3e9842446aa626526",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-a-toy-network": {
+      "code_fingerprint": "sha256:efab0e5b7e14710e7ff85f7ad7d84b276c6acd62c98598431df9d34a90e2bc98",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-network-initialization-1": {
+      "code_fingerprint": "sha256:9d0c654d02cd2a3214d2d33103ddb3ea77882b9ae8f94edf38d74918c4c35ecc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Using 4 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]\n"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-1": {
+      "code_fingerprint": "sha256:4b17de5924e4c35b5163e480b9d0e3f0fb397b18284344906de69e6b4ccbd124",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-concise-training-2": {
+      "code_fingerprint": "sha256:d7aa3c94519ffacec91cc741bf1eaf262a957f5a02f100134796af931c6cf0a9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.92, 9.2 sec/epoch on 4 devices\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
+          "bytes": 17952,
+          "sha256": "sha256:d015a260d3551f347384aea4353a1709231df1118ec50a0a9d2a9f4f826d9d07"
+        }
+      ]
+    },
+    "multiple-gpus-concise-training-3": {
+      "code_fingerprint": "sha256:a7839c036d8b1ea04767c5e7470ffc9cb3e5dfaeae95ecfff3a2c708c4a6b213",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc: 0.92, 5.8 sec/epoch on 4 devices\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
+          "bytes": 17874,
+          "sha256": "sha256:f745a8c4bc1c53ff18e757d1301e9e421cc97d1cda0e9f6932c31ff4b8e3b60a"
+        }
+      ]
+    }
+  }
+}

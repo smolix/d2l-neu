@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/seqrec.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:15f26f4ce22ea6570350343c9d8ec986c60a62b94987730d003a19d1145a75ce",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seqrec-model-architectures": {
+      "code_fingerprint": "sha256:cee06cb9c1c55bb087f073397bb02606043a2ee338f1a0576c493e3be30ec1e5",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-model-implementation": {
+      "code_fingerprint": "sha256:4edca42645bf44a2de5e5b594472ee627ba129a8cb547f863c808d00b03dc701",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-sequential-dataset-with-negative-sampling": {
+      "code_fingerprint": "sha256:1f2f3ee07ebf1381ba51aa16a1c2e67fb056e00f1edc1b265b60b699e96d9c6a",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-load-the-movielens-100k-dataset": {
+      "code_fingerprint": "sha256:43806a438d43185c1a232907d9f164fc484cb78e0fd271a280dc796c106c8588",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 953)"
+        }
+      ]
+    },
+    "seqrec-train-the-model": {
+      "code_fingerprint": "sha256:9de1c2b3b74031cc63a36d67329a6e56a65dd02652826e05446595f779cf9105",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.136, test hit rate 0.397, test AUC 0.891\n655.3 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seqrec/seqrec-train-the-model-1.svg",
+          "bytes": 21502,
+          "sha256": "sha256:d6ce3d54b0c89107ace457972920f0105d68988bf5ea437670d1fb1f9b5c4d16"
+        }
+      ]
+    }
+  }
+}

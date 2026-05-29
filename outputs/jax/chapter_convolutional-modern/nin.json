@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/nin.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:50c92e8da63a21a1fe2fc3f51ccf3b9ed1e7a5bbe367bc0f79131da726f367ce",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "nin-network-in-network-nin": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-nin-blocks": {
+      "code_fingerprint": "sha256:2e6f4df1b68e2ef31e92d99583ce001ad03b44fba3146b78244de32317df5dcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-nin-model-1": {
+      "code_fingerprint": "sha256:6ee93925adc1e5439e7e890b0d3fddd6fee02ae50bb0943e7228ab1a690bd602",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-nin-model-2": {
+      "code_fingerprint": "sha256:54122ee4017d2b591825f19ed9785679487876d8a7d6d8b1324f5fa38642ce0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nfunction output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nfunction output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nfunction output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nfunction output shape:\t (1, 1, 1, 10)\nfunction output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "nin-training": {
+      "code_fingerprint": "sha256:6d446cc939ab88855bd9ec18985759e9ae93b8ae8df563c105bb8e3e65d53813",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "nin/nin-training-1.svg",
+          "bytes": 31514,
+          "sha256": "sha256:f6e773c7620e14ea20377808efbf7ee4b0cfb989a28f2d11dbb9cb19ce9b1e36"
+        }
+      ]
+    }
+  }
+}

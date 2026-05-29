@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adagrad.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:41beadcc1492534c156901ecc8338e2e1f0314bfdced1f4c97351b0b90e99658",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adagrad-the-algorithm-1": {
+      "code_fingerprint": "sha256:97066eb7b6956426aab52ed16977a979b5f9b7d98042202710d9f1d26f73e08c",
+      "kind": "text",
+      "outputs": []
+    },
+    "adagrad-the-algorithm-2": {
+      "code_fingerprint": "sha256:b8063a60f2565ac146a8826fe0f457f0a181637c425084f4c4e2825a36517000",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: -2.382563, x2: -0.158591\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adagrad/adagrad-the-algorithm-2-1.svg",
+          "bytes": 23686,
+          "sha256": "sha256:18129078c7943286845b6f59345e7b5617f093b1579c73665d32ab089a537436"
+        }
+      ]
+    },
+    "adagrad-the-algorithm-3": {
+      "code_fingerprint": "sha256:5b459fe9c1797b79652848bc94a6846e37e614eff614141ec050eaf3c2b3be00",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: -0.002295, x2: -0.000000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adagrad/adagrad-the-algorithm-3-1.svg",
+          "bytes": 23700,
+          "sha256": "sha256:dd832939397dd7cdcbb32e15ad1fb121d112b06591574baad5e0be109aea62cc"
+        }
+      ]
+    },
+    "adagrad-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:162620bc5706ed70fc75614c525a55d734f8e4a764544c5431a9c4da975d6646",
+      "kind": "text",
+      "outputs": []
+    },
+    "adagrad-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:a8b6731635949cb19d24b2876e085b434bd6ece8c36d8b4ac0ccff7d199d839b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.242, 1.569 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adagrad/adagrad-implementation-from-scratch-2-1.svg",
+          "bytes": 18784,
+          "sha256": "sha256:db1b322e84f7b6b63c282e4c7284b222b2c4a5f35d0fba9c5b0cea6a21b210d3"
+        }
+      ]
+    },
+    "adagrad-concise-implementation": {
+      "code_fingerprint": "sha256:ab26d0266bea05a4f7e9ed1872f6375ad3dd86d6363afa28502a92871cb665ac",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 0.683 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adagrad/adagrad-concise-implementation-1.svg",
+          "bytes": 18781,
+          "sha256": "sha256:c9d3857f1606451a45bf7f59ba5f78ac5f5d8c2faf08705ddcef5b65eea4cb14"
+        }
+      ]
+    }
+  }
+}

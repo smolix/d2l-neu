@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/read-write.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "read-write-file-i-o": {
+      "code_fingerprint": "sha256:f769779caadf2f63f21c497bd9611f171beeffe28da78b8de020af0ca5311b4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-tensors-1": {
+      "code_fingerprint": "sha256:a7a4b887e7e8848843da01d3ae41f0fc7ba3657307053032dd2761c150335bbc",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-tensors-2": {
+      "code_fingerprint": "sha256:c68065b05d4809e9902d535b411cc84a032e08f60a4f5ef8dcc66b09bb2af1f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0, 1, 2, 3])"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-tensors-3": {
+      "code_fingerprint": "sha256:cc4b1f92c081568986e1d314a723f36dd9d69fea07795ed3a12fe1a8a42961d1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([0, 1, 2, 3]), tensor([0., 0., 0., 0.]))"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-tensors-4": {
+      "code_fingerprint": "sha256:72159ea126739328c2b559d3a3fe7e5de312475b5d535fd944be218acb4000a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'x': tensor([0, 1, 2, 3]), 'y': tensor([0., 0., 0., 0.])}"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-model-parameters-1": {
+      "code_fingerprint": "sha256:4b29285b50aaee5541859b0298b9ffd54a441778041b97e57d02ece7a09a4f2d",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-model-parameters-2": {
+      "code_fingerprint": "sha256:eb8e6745428ad26f9241936906919c5bd35b4b715439a3cdf903ee172eff41d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "read-write-loading-and-saving-model-parameters-3": {
+      "code_fingerprint": "sha256:51926580b539eec1848b087d5d1477e71caa29348e4f16c057f3b6b75abf2616",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "MLP(\n  (hidden): LazyLinear(in_features=0, out_features=256, bias=True)\n  (output): LazyLinear(in_features=0, out_features=10, bias=True)\n)"
+        }
+      ]
+    },
+    "read-write-loading-and-saving-model-parameters-4": {
+      "code_fingerprint": "sha256:787ce4d3d347c773d7fec6d1d3a53c4aa18cb93492de4afd0a95b5a17388c2ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[True, True, True, True, True, True, True, True, True, True],\n        [True, True, True, True, True, True, True, True, True, True]])"
+        }
+      ]
+    }
+  }
+}

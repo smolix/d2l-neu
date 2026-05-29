@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/attention-pooling.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-pooling-attention-pooling-by-similarity": {
+      "code_fingerprint": "sha256:291730bf8b7e4b411e6a9fd0d6ffe84533bc7953fefc7f6d608e8a00a823c460",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-kernels-and-data-1": {
+      "code_fingerprint": "sha256:5f781f725a96158859d249b77f7a0169d424e4965f5c0187f858080ee96b5c0b",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-kernels-and-data-2": {
+      "code_fingerprint": "sha256:17889b7eb08c08616aebfa954fa570e566b2c795b841e2b8966cb8e9b4942fcd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "attention-pooling/attention-pooling-kernels-and-data-2-1.png",
+          "bytes": 24774,
+          "sha256": "sha256:91ab509d6bcf1fb7336cf9ac45177fcc92019db3f788629f47ae24465f8f78a7"
+        }
+      ]
+    },
+    "attention-pooling-kernels-and-data-3": {
+      "code_fingerprint": "sha256:031eb7798b955eacc6d8c535f4b335a3aa7963b095d69a47e88fdd28d3951f86",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-1": {
+      "code_fingerprint": "sha256:b7f934a1f944aec74a16ec8073337959264ef8f08347124c2e91005c65f6a0f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-2": {
+      "code_fingerprint": "sha256:550743e6e2d0e93b158b26aa739ccf9fd6c7879a702d4dfb6aec91ec9361a2b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-3": {
+      "code_fingerprint": "sha256:2aa0bb3602c133d0ea27262bbdd21f538df6dac0a704db7579af67d9dc7b1f77",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-3-1.png",
+          "bytes": 41850,
+          "sha256": "sha256:2f1e8412ea0da929ef516b32384bb423edb550996632e7b0506c04adee7608ce"
+        }
+      ]
+    },
+    "attention-pooling-attention-pooling-via-nadaraya-watson-regression-4": {
+      "code_fingerprint": "sha256:89fa0cb061be14fcb496e531b02bb5b65bf58bbdc1a8f243cc104c6aafb783fa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-4-1.png",
+          "bytes": 18957,
+          "sha256": "sha256:efb7b67b74693d0315c993b47419d190ac46241ac38724ea18e080e8307e69ca"
+        }
+      ]
+    },
+    "attention-pooling-adapting-attention-pooling-1": {
+      "code_fingerprint": "sha256:ad02c1c8042c60659987545903571c51c96183c263bb9e6e20826ab657e1851b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-1-1.png",
+          "bytes": 46191,
+          "sha256": "sha256:7b944ab50ecb1ade6ac24925e04fc0c0200f89807132fb2c6fa754fe956d2f14"
+        }
+      ]
+    },
+    "attention-pooling-adapting-attention-pooling-2": {
+      "code_fingerprint": "sha256:6398db05fde477d03fd8c02f1435cfeaa921365c9f2f5d7ead9ebb6bf87aed88",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-2-1.png",
+          "bytes": 21441,
+          "sha256": "sha256:717a0940cca886ba3ab3c7337950f5dcfa03b673a4b01eee456af7a08710ab92"
+        }
+      ]
+    }
+  }
+}

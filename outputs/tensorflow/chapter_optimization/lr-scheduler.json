@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/lr-scheduler.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:ec047f86ca55deed0b22be487f13861e5cb919de1ee37d7b964552c14972113e",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lr-scheduler-toy-problem-1": {
+      "code_fingerprint": "sha256:80c62d64e7270078201dfca34431e39d05361f6af67912d41952877de9aa3dd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "lr-scheduler-toy-problem-2": {
+      "code_fingerprint": "sha256:232df8975c25b2287e64e91247c10e23226426f934b118ed475b66cb7845f5df",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.124, train acc 0.952, test acc 0.900\n29043.5 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Sequential name=sequential, built=True>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-toy-problem-2-1.svg",
+          "bytes": 25157,
+          "sha256": "sha256:5a6cdb892ac67ac31cc576df8bd8af9f79d10ea2c7b3a96c82f10930e48dca2b"
+        }
+      ]
+    },
+    "lr-scheduler-schedulers-1": {
+      "code_fingerprint": "sha256:7150ff56e9e86a800a56d2b068455b98ef5b02627c148ce40eb0f0d717d01167",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learning rate is now , 0.1\n"
+        }
+      ]
+    },
+    "lr-scheduler-schedulers-2": {
+      "code_fingerprint": "sha256:37c0d9d7f96cf5577b7bf166272c315fac011ce89d8f1ea056b15edb0768720f",
+      "kind": "text",
+      "outputs": []
+    },
+    "lr-scheduler-schedulers-3": {
+      "code_fingerprint": "sha256:e178b95f8261d25775a790dc468524d4ccef702dc8c7c909cd2fdcef721db8ab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-schedulers-3-1.svg",
+          "bytes": 13762,
+          "sha256": "sha256:1af8578167bac98108dc9efb296b78094ae356f91c1577f46df7262fdb4fdf96"
+        }
+      ]
+    },
+    "lr-scheduler-schedulers-4": {
+      "code_fingerprint": "sha256:6603136c92ced738c4800a6a990c219a329cfc30d32facd1c77e881f2b5c5092",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.260, train acc 0.904, test acc 0.888\n38780.0 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Sequential name=sequential_2, built=True>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-schedulers-4-1.svg",
+          "bytes": 25125,
+          "sha256": "sha256:6167cdddad8553c96c38b865f73c75d563f8c5a4b304e36711a02f793171411d"
+        }
+      ]
+    },
+    "lr-scheduler-factor-scheduler": {
+      "code_fingerprint": "sha256:d2817afe02dfe231167a5dfd583680c59030ef0ec055505e0739f364f8f66a13",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-factor-scheduler-1.svg",
+          "bytes": 13420,
+          "sha256": "sha256:ab724a538beeb649024bf59b791a9f076c5c8c06fd4e171f003e8f7c6e6f1f11"
+        }
+      ]
+    },
+    "lr-scheduler-multi-factor-scheduler-1": {
+      "code_fingerprint": "sha256:a1b8646dd738d28bdba194269789e421815360d800350ba46acf28f779033e9a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-multi-factor-scheduler-1-1.svg",
+          "bytes": 13325,
+          "sha256": "sha256:9c9d380dc8bf2043bf12b81d58244dabe5f76bcd0fe4c559c21d6b6ce0332468"
+        }
+      ]
+    },
+    "lr-scheduler-multi-factor-scheduler-2": {
+      "code_fingerprint": "sha256:acd7ec08b9338d8416ef3078fa5fc448bb8379d8b013a8a9f6e1e31641cf63eb",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.164, train acc 0.938, test acc 0.896\n39641.5 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Sequential name=sequential_3, built=True>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-multi-factor-scheduler-2-1.svg",
+          "bytes": 25157,
+          "sha256": "sha256:a817a47d8ac41611f56368ce7fe471725288812f9e2cea44bb42c9fc7d21ce66"
+        }
+      ]
+    },
+    "lr-scheduler-cosine-scheduler-1": {
+      "code_fingerprint": "sha256:ff3d233628cf594625452fc49676e6acbdca68a9d17650319a35909a6717fdab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-cosine-scheduler-1-1.svg",
+          "bytes": 10760,
+          "sha256": "sha256:516a5edacb7f4abf9f12d9ac2c2e07cf47a1d53d034c2169e53709cec5acfd21"
+        }
+      ]
+    },
+    "lr-scheduler-cosine-scheduler-2": {
+      "code_fingerprint": "sha256:9066fd98416adf9077015662865d1368414fce1ab80c65aa557416f6795e200f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.188, train acc 0.929, test acc 0.891\n38281.4 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Sequential name=sequential_4, built=True>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-cosine-scheduler-2-1.svg",
+          "bytes": 26575,
+          "sha256": "sha256:6cf135ef9db9a2d9974483bc35f002330785d8ebece0a5323bf5e2b4f9792f4d"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-1": {
+      "code_fingerprint": "sha256:2a57e9e1181306dac996dffc17e7db681eeaf55bdc1908761c406bc0ee39cb83",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
+          "bytes": 10685,
+          "sha256": "sha256:8111f75fbdd9a06718b1105e5cef5725f11fb1bd772f0f7173021b13603b7183"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-2": {
+      "code_fingerprint": "sha256:16e99cf62b68e2adb38f117b3e345cf6b11e8d9aa458999ada2ef1df80d81d7c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.196, train acc 0.927, test acc 0.897\n32339.7 examples/sec on /GPU:0\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Sequential name=sequential_5, built=True>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-2-1.svg",
+          "bytes": 24032,
+          "sha256": "sha256:d4dfbd71b927ade3503c24fc6934707e0f7b9e55ecaa3fc144e6765ad74b55f8"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/rmsprop.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:23b8c93cbd2239295c9f2cc3409b7dd8130f7bde69712f2d3d05bd5c179ae507",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rmsprop-the-algorithm-1": {
+      "code_fingerprint": "sha256:318a2c9d5071d62191cbe67b9d703298893788927c303cd2e0aec394bb6e2e2f",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-the-algorithm-2": {
+      "code_fingerprint": "sha256:7f8b4590b01eed9c8c5c1595008328bbefacc19d5e3c2311bf96647dd6af4324",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-the-algorithm-2-1.svg",
+          "bytes": 15568,
+          "sha256": "sha256:41a8e7cc2c9d85b28fb6f6c152aac40cbee8d76a272d9e85c8b9ab439313f1a8"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:9afcb40937995132725b0ed1eb14e53a5af9f7eefc234e069f0e20647e01946f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: -0.010599, x2: 0.000000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-1-1.svg",
+          "bytes": 23535,
+          "sha256": "sha256:ab3b6383e2c0c803ba74c4aa7f47dcee3e2f193f60df7e87b7b56d4f84004b57"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:d34be191c6594fa5ee092fa5ab9b13c215f337fcb4e0293416e20e7ed61e1c6a",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:316b0fa57576441ac10ad2811b83bca47986822d9e48e85b61896cf16a14b0f8",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-4": {
+      "code_fingerprint": "sha256:e82c69e4218a1a17b9d8fcf8f133f821a493208dd03b106d66220f5462612926",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.246, 1.208 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-4-1.svg",
+          "bytes": 18781,
+          "sha256": "sha256:f3857ff2501302c240ec99534af470869336d3c8144c9c3bafd52a91caac0cc3"
+        }
+      ]
+    },
+    "rmsprop-concise-implementation": {
+      "code_fingerprint": "sha256:a5c70f42abfe11e010fb16a57af9097460af3b8345595513280a9f753dce3ff4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 1.377 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-concise-implementation-1.svg",
+          "bytes": 18775,
+          "sha256": "sha256:2076183da90e41454f3d57f3cc055f6f0e5e78db3ae72e8dbae9dc57dd009f40"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/movielens.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:229e8d8d62abb8daacb809438bfdd11a05b1b0a9466fa9abfd8f35ad6448778d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "movielens-getting-the-data-1": {
+      "code_fingerprint": "sha256:3bbc7b288373c74004ad1b57fd6aceb7f288a9e694495fa7bce78a6565acf4cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-getting-the-data-2": {
+      "code_fingerprint": "sha256:46936282112637e186d322ff877cb3c9fcc562e4f7140c995a3a91e22f1c34c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-statistics-of-the-dataset-1": {
+      "code_fingerprint": "sha256:e8e38a335501d53be2e6bb65ddca3b459a4911a5638736844d0c43f91e496028",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "number of users: 943, number of items: 1682\nmatrix sparsity: 0.936953\n   user_id  item_id  rating  timestamp\n0      196      242       3  881250949\n1      186      302       3  891717742\n2       22      377       1  878887116\n3      244       51       2  880606923\n4      166      346       1  886397596\n"
+        }
+      ]
+    },
+    "movielens-statistics-of-the-dataset-2": {
+      "code_fingerprint": "sha256:5f730421087178eb6dc278b739315c3a54e83688296eb8a11fe6f95018c98a0d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "movielens/movielens-statistics-of-the-dataset-2-1.png",
+          "bytes": 20776,
+          "sha256": "sha256:0bbb3cb4eec9f19958539767abde59bcf12b0cb66f5d96e85ca8ff9f248dbe93"
+        }
+      ]
+    },
+    "movielens-splitting-the-dataset": {
+      "code_fingerprint": "sha256:c48c91fbae7057c90c2334647c879034d13fb2ade7b1dded09fac6f00f704d77",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-loading-the-data-1": {
+      "code_fingerprint": "sha256:0d1626e2f0c120e81e788e15b365090925f2ed25f8c93935304fe7343047986b",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-loading-the-data-2": {
+      "code_fingerprint": "sha256:0730f16127d0ae81f35d1c7f17c597dc9b75539065f569566deada6e09826018",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

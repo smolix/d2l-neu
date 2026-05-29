@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/kaggle-dog.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:524660703f8a4ee03aa2aa0bed95781d3d0dc3a24f5e10bfad98dfc7493f4b13",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle": {
+      "code_fingerprint": "sha256:e49112dc20ee5b92b4f1ee194f38f051717687c74977f34490059450f09e7de8",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-downloading-the-dataset": {
+      "code_fingerprint": "sha256:8b07d636f4f5e29c488872b19735c4c47ffbf31b958d6f9677f3677fb63412d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-organizing-the-dataset": {
+      "code_fingerprint": "sha256:d4ff17711c12d0b6a41ebc66008ad6e723c8d3e6b3c73b96c3acec9e3c628251",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-image-augmentation-1": {
+      "code_fingerprint": "sha256:c12940ed0ba81f43a832b1324f9cdb6df66fd8c0fe358688f74966c4013adfd3",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-image-augmentation-2": {
+      "code_fingerprint": "sha256:0b2a29b5b4812e1f6638cd6bd1d5562adca3138901b56c1d8b6e1c89ffc4776f",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:2e50eb89ae413945b3685bbbf8fbc42d70e100eda14c07a61b0e39891a7d328c",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:b18959b93b32e64bb1cc375c42b59835e101d9d211701ccf7ad23c4a00a86dc3",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-fine-tuning-a-pretrained-model-1": {
+      "code_fingerprint": "sha256:b5d99ecea61544f394fa47d49a1747882f30f4a4d28725820b00e610f9c9a508",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-fine-tuning-a-pretrained-model-2": {
+      "code_fingerprint": "sha256:e72d42e77e01ef61b1182d2d1dda9237b1798330844ef1cf7591d9ca11652735",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-defining-the-training-function": {
+      "code_fingerprint": "sha256:64a8be03659420f34610dea3337a1c7d01f3298c240337ccbc1489590ec7f893",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-training-and-validating-the-model": {
+      "code_fingerprint": "sha256:1e5ad3179ebb5ece2491942b6c2fc7dd8eec62b85b30589674944cef2031bf44",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.969, valid loss 0.905\n349.0 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
+          "bytes": 23061,
+          "sha256": "sha256:25a7fb6d5b4ce2aaa33c3023a01a709a0e245a36c91b36fc41ec288165a9289d"
+        }
+      ]
+    },
+    "kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle": {
+      "code_fingerprint": "sha256:a551541701b09d1bf1a8ad83d503ec2344d2bc2b5188cfee3b72182aa500a398",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.836\n363.9 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[17:45:08] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
+          "bytes": 20807,
+          "sha256": "sha256:77dbdb3ef5e48ca5d86f5aff56c70d000cff3c84fdc7e77985c16efbb88c3ad7"
+        }
+      ]
+    }
+  }
+}

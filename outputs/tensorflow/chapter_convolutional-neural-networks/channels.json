@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/channels.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:1039a3dcd6d6575eaf0896e2720bfdcbe64aaf2b9ca4c6d98ff6dd48f879fc92",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "channels-multiple-input-and-multiple-output-channels": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-1": {
+      "code_fingerprint": "sha256:4c10847144e2f3ea1a8457831d282d918b0fa6be68fa1504a75c25547d78bf17",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-2": {
+      "code_fingerprint": "sha256:8ebf0d704e43765f8966f465f2562e9df822db2d55ff6113a815d1a02019b8ed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[ 56.,  72.],\n       [104., 120.]], dtype=float32)>"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-1": {
+      "code_fingerprint": "sha256:060a03f505604de6e6823359a229043fe54cea0509b9dac7d2250439faa24eb1",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-output-channels-2": {
+      "code_fingerprint": "sha256:e82dd2ca183037fd699ad0a5a5e41bd2878d784db0fe977b58ec46f2d3e66105",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([3, 2, 2, 2])"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-3": {
+      "code_fingerprint": "sha256:04df23e0133abd38cc24ee21f6bbcd2b4c0fc80341d79f954d5fe527fb617755",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 2, 2), dtype=float32, numpy=\narray([[[ 56.,  72.],\n        [104., 120.]],\n\n       [[ 76., 100.],\n        [148., 172.]],\n\n       [[ 96., 128.],\n        [192., 224.]]], dtype=float32)>"
+        }
+      ]
+    },
+    "channels-1-times-1-convolutional-layer-1": {
+      "code_fingerprint": "sha256:fb75c8180db3cd62087aa0def236ec773037fa801343e1c8ea7c16a32ed2aa44",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-1-times-1-convolutional-layer-2": {
+      "code_fingerprint": "sha256:f51245ab4e5f03b6603568a91123478998bd93118e423b46ffae341d017eb988",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

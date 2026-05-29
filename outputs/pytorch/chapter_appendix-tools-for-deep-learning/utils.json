@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/utils.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:faaaae173a14325fb0a4af5c54355bdfb227b3038791fa29e8a20dc4b43ab62d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "utils-utility-functions-and-classes-1": {
+      "code_fingerprint": "sha256:5cfd8ac64b44b46fbd1952882e80123b84cf42894944100f0c827df5da56fe0e",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-2": {
+      "code_fingerprint": "sha256:6652fffc9b5554db27122b7c89c74442dd4b7361479711e989da83af4407a336",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-3": {
+      "code_fingerprint": "sha256:d33b775c6c29dc1239dac08798993aee9e4fa7c21855e0fcfac9f8b385adba14",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-4": {
+      "code_fingerprint": "sha256:d717e328aa082f0c76c97c834a83e43f8e411f4f54b6e9ad151b73068636b705",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-5": {
+      "code_fingerprint": "sha256:9065e19c29ffb33a628b10d7a8be9014c83c0d07b747481ce9a13bf7c404e42b",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-6": {
+      "code_fingerprint": "sha256:12140a571c6397459f823023e29e972eb01d88b99892e9f9d4445f579fcabc96",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-7": {
+      "code_fingerprint": "sha256:0e9d7749b7aeba6198dcef078ef0f89133d0dc06e87d7230d644aa3247b29792",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-8": {
+      "code_fingerprint": "sha256:16511b9913e52827854fadcddccaac17a18faa691e3ffa32683a6ff551ee6ec3",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-10": {
+      "code_fingerprint": "sha256:6f8c653662e8efd9baf9850ae83f413df343e3f0bdcec7f6538d6a256ff75e34",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-11": {
+      "code_fingerprint": "sha256:827f6b8773bf30fe683f7d4441c50c6812e524ce897b84350b391e8ace893c2c",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-12": {
+      "code_fingerprint": "sha256:76079b36703a151a41e8d6ecbe0cf75daf8557648842ea9849b4be80ef05dc93",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-13": {
+      "code_fingerprint": "sha256:ba9216f9109fbd43fa22195488204c144844234ca9788384ae83399a4e858092",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-14": {
+      "code_fingerprint": "sha256:d0a7f13c09c6b5992c62040d27683ba28d02cba17a59316f56ab56b3b2f8f1bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-15": {
+      "code_fingerprint": "sha256:23736428c98c15d5f373ca3711c5ae34937bc4a689e6011257faa7037cb23d20",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-16": {
+      "code_fingerprint": "sha256:d49be2db0ac66a3cc81dbe9ea6b6276ce90f35cf77f6bcb405bf88203ed8c120",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-17": {
+      "code_fingerprint": "sha256:480707665390b971a7f5a99bfccdf6a06ee5a834fb8f707b5b499e4986fdb9da",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/rnn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rnn-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-recurrent-neural-networks-with-hidden-states-1": {
+      "code_fingerprint": "sha256:0f2ad91a57a9010c8630c1e4c43be946621297020e2eee76be5f3eb08dc1ce92",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 1.8229, -2.4221,  0.1913,  0.5651],\n        [-0.3683,  3.8560, -2.3881, -3.4875],\n        [-2.4086,  2.3848,  0.2664, -0.4066]])"
+        }
+      ]
+    },
+    "rnn-recurrent-neural-networks-with-hidden-states-2": {
+      "code_fingerprint": "sha256:afa556081768b572721a1b43056673735691c31d62c0bac8450405fed57c6612",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 1.8229, -2.4221,  0.1913,  0.5651],\n        [-0.3683,  3.8560, -2.3881, -3.4875],\n        [-2.4086,  2.3848,  0.2664, -0.4066]])"
+        }
+      ]
+    }
+  }
+}

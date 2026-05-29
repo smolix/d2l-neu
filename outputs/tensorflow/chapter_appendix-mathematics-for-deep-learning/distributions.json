@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/distributions.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "distributions": {
+      "code_fingerprint": "sha256:dbc5695b7a9a7bb33f5ccce619551f438a2bf1c33d9e676b0ec2b61e960527cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "distributions-bernoulli-1": {
+      "code_fingerprint": "sha256:31ce9700784a80c32c2d18190783093da0c2a9d722d49efcbc38dfb8558b1126",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-bernoulli-1-1.svg",
+          "bytes": 14489,
+          "sha256": "sha256:74574791c88b245e8dbf4097df69906a5a025b6f12e2d35f9dbd01df309d9c26"
+        }
+      ]
+    },
+    "distributions-bernoulli-2": {
+      "code_fingerprint": "sha256:6ee1ed7da7103c9ae728a3a12bd1677625618de7793145dbcf359f872a81f827",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-bernoulli-2-1.svg",
+          "bytes": 15020,
+          "sha256": "sha256:ce5bd78038be1e28d02458adda7e09e068f4015fbd5021d5ca42e114da229410"
+        }
+      ]
+    },
+    "distributions-bernoulli-3": {
+      "code_fingerprint": "sha256:bca0d593b68d62f60fa638f227c42235a934caa58f7b5364d5eb97a1a9de6b20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=float32, numpy=\narray([[1., 1., 1., 1., 0., 1., 0., 0., 0., 1.],\n       [0., 0., 1., 0., 0., 0., 0., 0., 1., 0.],\n       [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],\n       [0., 1., 1., 0., 1., 1., 0., 0., 0., 0.],\n       [0., 0., 1., 1., 0., 1., 0., 1., 0., 1.],\n       [1., 0., 0., 0., 0., 1., 0., 1., 1., 0.],\n       [0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],\n       [1., 1., 1., 0., 0., 0., 1., 0., 0., 1.],\n       [1., 0., 1., 0., 0., 0., 1., 1., 1., 0.],\n       [0., 0., 0., 0., 1., 1., 0., 0., 1., 0.]], dtype=float32)>"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-1": {
+      "code_fingerprint": "sha256:5829cb6e2664b9f5ada4eed6d80c1a4691081de1d3dc36bc1458567cf33df3c7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-discrete-uniform-1-1.svg",
+          "bytes": 14529,
+          "sha256": "sha256:adedf84c4cafd30481f4dbfe93c8a6c6c69c98cd8b0a6a1d894485a164418aab"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-2": {
+      "code_fingerprint": "sha256:f2c53e06b30c0695332d1d6219385db5d6b3f4986596a6340f544818cbd8d3a0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-discrete-uniform-2-1.svg",
+          "bytes": 14939,
+          "sha256": "sha256:55c588cac60f8c12909ec3fa4cd3ed5d6433efa2e263b69dbaa0e8ca2ab9b3dd"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-3": {
+      "code_fingerprint": "sha256:1e3e881d7bb341be69e08c2ba66b8ed3abc648c359cc9d170ef6a9ef762aec03",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=int32, numpy=\narray([[1, 3, 4, 2, 4, 4, 4, 1, 5, 1],\n       [2, 1, 4, 4, 1, 5, 2, 2, 3, 2],\n       [1, 4, 4, 5, 1, 1, 3, 2, 1, 2],\n       [5, 1, 5, 4, 5, 2, 3, 5, 1, 1],\n       [5, 2, 3, 4, 4, 1, 4, 2, 3, 2],\n       [3, 2, 5, 1, 4, 2, 5, 2, 4, 4],\n       [1, 3, 3, 2, 5, 3, 3, 5, 1, 3],\n       [1, 2, 2, 5, 5, 4, 5, 4, 3, 4],\n       [1, 5, 4, 3, 3, 1, 3, 3, 4, 1],\n       [5, 5, 3, 4, 4, 2, 5, 1, 5, 3]], dtype=int32)>"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-1": {
+      "code_fingerprint": "sha256:874e09057e2ae396d7ef3ab84cb8d00823fc248bd12c8e199d6da17230259279",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-continuous-uniform-1-1.svg",
+          "bytes": 15126,
+          "sha256": "sha256:d956db7fb6bd5261b22efd066da38f6967931ff5f8d80b4dbb347cc991b1bf20"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-2": {
+      "code_fingerprint": "sha256:f367ef69b3dcbbe98602b0179221018e832e77f51e7afc4f50b7584c3ae21dc3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-continuous-uniform-2-1.svg",
+          "bytes": 16016,
+          "sha256": "sha256:9e86afed94c1d4cabb88ea812f194a58a46a9645dc7c71397c33f3b968400aa4"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-3": {
+      "code_fingerprint": "sha256:ba070bb09b0c101d36fb35121257c63f1ffb9735aa1616db02dc25e3014fdf8e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=float32, numpy=\narray([[2.5524712, 2.3239782, 2.3567483, 1.8190975, 2.31478  , 1.6124613,\n        1.2955093, 1.760442 , 2.1651614, 1.648741 ],\n       [1.8272934, 2.6983807, 1.3764315, 2.8482268, 2.371426 , 1.7164135,\n        1.3768587, 1.526284 , 1.6946123, 2.0199363],\n       [1.6898575, 2.0304542, 2.1864023, 2.5429032, 1.4456806, 2.6899645,\n        1.6265895, 1.9196336, 2.0171301, 1.3051798],\n       [2.6799073, 1.4727769, 1.3176899, 1.6062808, 2.4309158, 1.5486171,\n        2.8966448, 1.2056563, 1.0900161, 2.9980078],\n       [1.1978874, 1.5695357, 1.707135 , 2.5708332, 1.534801 , 1.4601319,\n        1.4513955, 1.8374481, 2.4563715, 1.5996082],\n       [1.7391477, 2.5100517, 1.1358597, 2.1862442, 1.9421601, 2.8327403,\n        1.0652726, 2.2268538, 1.6909881, 1.5325215],\n       [1.5514417, 2.4270227, 2.5327325, 2.3131304, 1.8842254, 1.276866 ,\n        1.2953525, 2.1123004, 1.6715877, 1.8679059],\n       [1.839406 , 1.014127 , 2.923118 , 2.6734593, 1.2635822, 2.0393543,\n        1.6858349, 2.5483165, 2.1313062, 1.2815363],\n       [1.9964225, 1.363589 , 2.5918186, 1.8919976, 2.9188528, 1.48104  ,\n        1.9893167, 2.6055105, 1.1365399, 2.5324872],\n       [2.3588283, 2.646125 , 1.1517484, 2.5531645, 1.4869962, 1.9626865,\n        2.704361 , 1.8540876, 2.6230724, 2.8042889]], dtype=float32)>"
+        }
+      ]
+    },
+    "distributions-binomial-1": {
+      "code_fingerprint": "sha256:5e1e68df212b8e43ef235b81d48f3b2ecb688d10050a314ffe405091f7cc4690",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-binomial-1-1.svg",
+          "bytes": 16656,
+          "sha256": "sha256:601290c594b1042c9271bc2bc245d772671bc39ac99b5892a2fd44a68becdb35"
+        }
+      ]
+    },
+    "distributions-binomial-2": {
+      "code_fingerprint": "sha256:359f463bda9a73a378c60e01fd11a38a7142672cc9da379d8873f48526efef9e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-binomial-2-1.svg",
+          "bytes": 17137,
+          "sha256": "sha256:639d01dbf151a362edd3c694adb7f66576af56d310a1f69a78d7a526f95643d6"
+        }
+      ]
+    },
+    "distributions-binomial-3": {
+      "code_fingerprint": "sha256:a2a688f9800e08f880bfdd6dd87c2ab1dc3272ee9c11cb11298e4063ff880208",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=float32, numpy=\narray([[5., 7., 8., 3., 5., 6., 5., 5., 4., 9.],\n       [6., 2., 6., 4., 6., 7., 7., 3., 5., 5.],\n       [7., 7., 5., 5., 9., 6., 5., 8., 7., 9.],\n       [4., 7., 3., 6., 6., 4., 3., 7., 6., 9.],\n       [3., 7., 6., 4., 5., 3., 4., 5., 7., 5.],\n       [5., 5., 4., 5., 4., 4., 4., 4., 6., 7.],\n       [3., 7., 9., 5., 4., 5., 7., 5., 8., 5.],\n       [6., 6., 6., 8., 7., 3., 7., 7., 7., 4.],\n       [5., 7., 4., 6., 5., 7., 5., 3., 5., 4.],\n       [8., 5., 2., 7., 7., 6., 7., 6., 7., 6.]], dtype=float32)>"
+        }
+      ]
+    },
+    "distributions-poisson-1": {
+      "code_fingerprint": "sha256:511c06626750d57b01b53615112dda8e13f91f8f0d60397a1004f3c4be43d9d1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-poisson-1-1.svg",
+          "bytes": 16070,
+          "sha256": "sha256:009024d813576c48c883ed7d9ada7012a0611532bf297e51f779d2381f69095e"
+        }
+      ]
+    },
+    "distributions-poisson-2": {
+      "code_fingerprint": "sha256:ad57c2e032bde8901faa38a4b079476e6668333998cf21b1b699c3d347512ee4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-poisson-2-1.svg",
+          "bytes": 16698,
+          "sha256": "sha256:33650548d17ccfe7b38cd44bf44f70035a0c66dc281d477316e538b6e872edb5"
+        }
+      ]
+    },
+    "distributions-poisson-3": {
+      "code_fingerprint": "sha256:0774359cc1195e33be7a913661d1ab77685db3e1c67fc9310544103ea269f0a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=float32, numpy=\narray([[ 2.,  5.,  7.,  6.,  7.,  2.,  3.,  2.,  1.,  3.],\n       [10.,  5.,  4.,  4.,  3.,  2.,  6.,  4.,  5.,  2.],\n       [ 3.,  1.,  2.,  2.,  7.,  6.,  3.,  9.,  7.,  6.],\n       [ 7.,  2.,  3.,  6.,  6.,  5.,  6.,  2.,  6.,  4.],\n       [ 2.,  4.,  6.,  6.,  7.,  7.,  8.,  5.,  6.,  3.],\n       [ 3.,  6.,  3.,  5., 10.,  3.,  3.,  5.,  9.,  3.],\n       [ 3.,  5.,  7.,  3.,  3.,  7.,  3.,  8.,  4.,  8.],\n       [ 7.,  2.,  4.,  4.,  1.,  8.,  7.,  6.,  4.,  4.],\n       [ 8.,  8.,  9.,  4.,  7.,  5.,  6.,  8.,  5.,  5.],\n       [ 8.,  4., 10.,  5.,  6.,  5.,  7.,  3.,  7.,  3.]], dtype=float32)>"
+        }
+      ]
+    },
+    "distributions-gaussian-1": {
+      "code_fingerprint": "sha256:c1f3edb3820604a534f57930f47bbab74bf31a7474b18b5dd1caf3925dfa6bbb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-gaussian-1-1.svg",
+          "bytes": 193772,
+          "sha256": "sha256:6142056dcdf1da662a60be0e1619858a7112d79903773d7ffbf626dad430b28d"
+        }
+      ]
+    },
+    "distributions-gaussian-2": {
+      "code_fingerprint": "sha256:87df4a173a7fccdf06f4e46bfb4486d1248ef3d5b22d52c7b6f9828263d0248b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-gaussian-2-1.svg",
+          "bytes": 14552,
+          "sha256": "sha256:eea00fe32b8654bae4282febf00d1ed60ed9d403fd96971dca83fcb6d63fc0a7"
+        }
+      ]
+    },
+    "distributions-gaussian-3": {
+      "code_fingerprint": "sha256:07b2784735810febbd7a342c191cfc44a6dcd11c31d38c3f465b845b227d8937",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "distributions/distributions-gaussian-3-1.svg",
+          "bytes": 15439,
+          "sha256": "sha256:5fec7d897e1db24c7ecece0308ebddf0ab0b5354b6bff1b8dab368422501ecc4"
+        }
+      ]
+    },
+    "distributions-gaussian-4": {
+      "code_fingerprint": "sha256:936b2b81678f5cf0fb1ab47039fb037529a6052f96febf34f741fbdeb8eebb5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(10, 10), dtype=float32, numpy=\narray([[-1.1242847e+00,  1.3373771e-01,  8.2104784e-01, -9.7662783e-01,\n         7.7635932e-01,  3.8278186e-01, -1.7387007e+00, -1.5135201e+00,\n         8.8637996e-01,  6.4331353e-01],\n       [ 8.4089398e-01,  4.5641077e-01, -1.5514669e+00,  1.0229003e+00,\n        -7.9453111e-02, -1.1575329e+00,  3.9288402e-01, -1.1935226e+00,\n        -7.4434161e-01,  1.1795841e-01],\n       [ 7.2611398e-01,  2.7557087e-01, -3.2951054e-01, -5.6037885e-01,\n         3.0870360e-01,  1.3576654e+00, -1.7708411e-02, -5.1321185e-01,\n        -1.6539813e+00, -1.1829447e+00],\n       [-6.8843478e-01,  2.0111449e+00,  3.9590308e-01,  1.1559820e+00,\n        -7.4345607e-01, -1.0150993e-01,  5.6567568e-01, -1.1903834e-01,\n        -2.1051277e-01, -1.4111863e+00],\n       [ 3.2372692e-01,  4.0504709e-01,  1.2984556e-03,  1.8247925e+00,\n         1.6809299e+00, -7.6818514e-01,  5.6122667e-01, -5.8571929e-01,\n        -8.4582877e-01,  9.0985215e-01],\n       [-1.4896380e+00, -7.6225954e-01, -2.5412539e-02, -5.7531220e-01,\n         9.4358325e-01, -5.5576116e-01,  1.8140160e+00,  1.3414780e+00,\n        -5.0089318e-01, -1.3250504e-01],\n       [-7.8149951e-01, -1.4862314e+00,  2.0330925e+00,  1.3888284e-02,\n        -2.3720818e+00, -1.8920349e-01,  1.2613701e+00,  1.0570738e+00,\n         1.0522960e+00, -1.0264515e+00],\n       [-1.6776816e+00, -1.2433308e+00, -3.7931305e-01,  7.9315817e-01,\n         4.0054548e-01, -2.8498533e-01, -4.2278650e-01,  3.0415869e-01,\n        -1.2820834e-01,  8.4648055e-01],\n       [-2.0690515e+00, -3.5622740e-01, -1.9589297e+00,  7.5098604e-01,\n         4.4544968e-01, -2.4284642e+00,  4.3707949e-01, -8.2573020e-01,\n        -2.1631303e+00,  1.2688541e+00],\n       [ 8.9888763e-01,  6.2222552e-01,  1.6060464e-01,  1.4381021e+00,\n        -7.1382600e-01, -5.2875066e-01,  4.0072048e-01,  8.7392354e-01,\n         1.9426810e+00,  7.6205152e-01]], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

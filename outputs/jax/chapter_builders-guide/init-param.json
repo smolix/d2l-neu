@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init-param.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-param-parameter-initialization-1": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-param-parameter-initialization-2": {
+      "code_fingerprint": "sha256:0b65fb5834dc5d3c0ce41e337eded39f5e37f93e7099ec343adff75cd376d948",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 1)"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-1": {
+      "code_fingerprint": "sha256:a05f2377b8efb505516bbaf46014e3e38596702b0232248464bbad11e57d907d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([ 0.00390247, -0.00536502,  0.01318502,  0.01437083], dtype=float32),\n Array(0., dtype=float32))"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-2": {
+      "code_fingerprint": "sha256:a83189cdbaf0fc27094ed4e854feb69a8f56547320673de936dea21badb0133a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([1., 1., 1., 1.], dtype=float32), Array(0., dtype=float32))"
+        }
+      ]
+    },
+    "init-param-built-in-initialization-3": {
+      "code_fingerprint": "sha256:fb076dc619193ea3eaabfc4eaaa20d41d25fb536e239b7609b47644e8a0fea6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([ 0.29768014, -0.38261548,  0.50331783,  0.34027493], dtype=float32),\n Array([[42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.]], dtype=float32))"
+        }
+      ]
+    },
+    "init-param-custom-initialization-1": {
+      "code_fingerprint": "sha256:b49d8c5d8fc2ec555332e91cea8852ff83891079df52d7ceb188f7b12ef201cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[0.        5.5548573]\n [0.        8.096008 ]\n [7.2521663 5.118685 ]\n [0.        0.       ]]\n"
+        }
+      ]
+    }
+  }
+}

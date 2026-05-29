@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/bounding-box.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bounding-box-object-detection-and-bounding-boxes-1": {
+      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-object-detection-and-bounding-boxes-2": {
+      "code_fingerprint": "sha256:90cc773527934c873e682a3fd542c39d31b0783e7323daf8a2b4a55d109ffea2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
+          "bytes": 87007,
+          "sha256": "sha256:61b6e98e0975c9eb098549d95bd61a49ee3e2d51217c681364cc43acfab65fb1"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-1": {
+      "code_fingerprint": "sha256:f534ff7ab87d9ce03e4beceb601290ab0939bc5b117d76e829397ec6e7236775",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-2": {
+      "code_fingerprint": "sha256:43be03cced2fd6e615f580888cca98f1dfdf726f7a0c570495b062a645bba6a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-3": {
+      "code_fingerprint": "sha256:dc142358127128714f90ad778084d33c3dcaa559f3021c29b268096b0422e483",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 4), dtype=bool, numpy=\narray([[ True,  True,  True,  True],\n       [ True,  True,  True,  True]])>"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-4": {
+      "code_fingerprint": "sha256:f85949513cf08c1eeccd2003712d0adbfe7540a1f5d35299cbaf18ba3c09641d",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-5": {
+      "code_fingerprint": "sha256:60b31f3e9e701ed3cc63e2355c3601f4007ced79d764578a0cc4b5e21d6f68a6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
+          "bytes": 87556,
+          "sha256": "sha256:7080e11b4471d25eb9ed4c2b8ef4ff43c7461ed7a8ebefbfeb9c925dbb712fee"
+        }
+      ]
+    }
+  }
+}

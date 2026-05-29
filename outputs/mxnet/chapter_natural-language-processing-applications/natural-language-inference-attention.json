@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/natural-language-inference-attention.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:d01a0a0653f0c08f4c8a42e4fd8d9343c4b43086b717032ef9ebce79fec32103",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "natural-language-inference-attention-the-model": {
+      "code_fingerprint": "sha256:ac3df8a3fe2cfb84f5cdc16654e42629d58e2095b8e425f8a727b197aab9b642",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-attending-1": {
+      "code_fingerprint": "sha256:82f66c3174ec55fec9cd58cd58889bbcdfc135ea7f38c15352e1847fd13b4e71",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-attending-2": {
+      "code_fingerprint": "sha256:6e5db195704d720196ac8c4bfd0e98fac6a1cea57c22c83a95cb7131031fbd69",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-comparing": {
+      "code_fingerprint": "sha256:c608de5aad3fc9ad14bafed84409ae64e15079bd3af368851b181a0ca5e0f5be",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-aggregating": {
+      "code_fingerprint": "sha256:885228341b45211a81732dbe1c032fcdfea59531d656851b178c9b077d59f29e",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-putting-it-all-together": {
+      "code_fingerprint": "sha256:99ebcad7ec78900544faa083c1a463f0a7662af77275aa7d9a21dc5ae652a086",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-reading-the-dataset": {
+      "code_fingerprint": "sha256:7a48c4abd91ada1481fb45053356453568372787c77113eb36118166ab75a005",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 549367 examples\nread 9824 examples\n"
+        }
+      ]
+    },
+    "natural-language-inference-attention-creating-the-model": {
+      "code_fingerprint": "sha256:49a71e274c1b11c484dff17a9fb6eb68c60cc9647869b339cdbd038244b2f368",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-training-and-evaluating-the-model-2-1": {
+      "code_fingerprint": "sha256:9c7fe8b683305de6583d6bcfa2bcb546c9a6ef6897568ff2760dfd789f29fc3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-training-and-evaluating-the-model-2-2": {
+      "code_fingerprint": "sha256:12d1a78680fc9c8d1cd5efa63a3ad527f468f30adc5c51bcabd637e1d689f15a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.513, train acc 0.797, test acc 0.822\n6555.6 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
+          "bytes": 27072,
+          "sha256": "sha256:ab12ddbff55a23a58cdabf3c7d3627b9ca275bd2ad704eb511a53d6b2e8cd4ce"
+        }
+      ]
+    },
+    "natural-language-inference-attention-using-the-model-1": {
+      "code_fingerprint": "sha256:46599527e64c22f8b0f2a9975d9e2d0160c12d52d0a2a155a00e3cf13f7cbc0f",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-attention-using-the-model-2": {
+      "code_fingerprint": "sha256:3e49c416526f0027741266a7801a3e35892a1ac8d1aa4471e4f0e838a339d5a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'contradiction'"
+        }
+      ]
+    }
+  }
+}

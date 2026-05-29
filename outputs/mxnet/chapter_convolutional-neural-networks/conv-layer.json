@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/conv-layer.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "conv-layer-convolutions-for-images": {
+      "code_fingerprint": "sha256:f93e5ffc8456065f12615992f6db46454aa823e93cfbbb9a85b8f131e653a8fa",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-1": {
+      "code_fingerprint": "sha256:996e60392e9ea5c151ea654a494a2314918cdb76196e6a4146beae33aa5eda57",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-the-cross-correlation-operation-2": {
+      "code_fingerprint": "sha256:94989a23d18585c5bb0c94652c7d51a848cce86255ab5fea9456013084ea69b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[19., 25.],\n       [37., 43.]])"
+        }
+      ]
+    },
+    "conv-layer-convolutional-layers": {
+      "code_fingerprint": "sha256:4e8bab616a9b7b5bcae0e07dce2a783ab0f243b8124bd33a774cd465c79bb6f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-1": {
+      "code_fingerprint": "sha256:ed81b9893b991abce60451e5bbd9a8aa8987d85d4412e19da8f23e8da8347a84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.]])"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-2": {
+      "code_fingerprint": "sha256:5a132fa8b54447f4567b1cca9b62523b3bfd9bf19067da1b696966b684e26e36",
+      "kind": "text",
+      "outputs": []
+    },
+    "conv-layer-object-edge-detection-in-images-3": {
+      "code_fingerprint": "sha256:f2fa9201ae77e70a2d8f5b695bd80e8731237434ca6bfa95a515f9a7adf83754",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]])"
+        }
+      ]
+    },
+    "conv-layer-object-edge-detection-in-images-4": {
+      "code_fingerprint": "sha256:35d4138937e53e564649486bd7c384962ec51603c313939642dca184de18933f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]])"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-1": {
+      "code_fingerprint": "sha256:2c8bef38ab1df580a0e7eaba026232499ee98638ae3a4982615339966c88e26d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 4.671\nepoch 4, loss 0.786\nepoch 6, loss 0.133\nepoch 8, loss 0.023\nepoch 10, loss 0.004\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:56:14] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        }
+      ]
+    },
+    "conv-layer-learning-a-kernel-2": {
+      "code_fingerprint": "sha256:f907624ddb2144fc4a9fa1ab1635cc1b51b959ab601057e7e9ae22823cc3e896",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 0.9905812 , -0.98696756]])"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/autograd.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autograd-automatic-differentiation": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-1": {
+      "code_fingerprint": "sha256:32b5e4cd9799a958a25d3d69e13233a9a836ee6fc448e9440ced4c8b14b8d047",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 1., 2., 3.], dtype=float32)>"
+        }
+      ]
+    },
+    "autograd-a-simple-function-2": {
+      "code_fingerprint": "sha256:74bbeb0c048317a08bb8d58b0024b5ebdc81418c9c4a79b32690711f9e614c74",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-3": {
+      "code_fingerprint": "sha256:89118cb3f7b4c9e9533ce60d1480906a133b44134a7605ab50f159c22c177486",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=28.0>"
+        }
+      ]
+    },
+    "autograd-a-simple-function-4": {
+      "code_fingerprint": "sha256:18309752eb87fe8c02b6112d277461a418ae68fa0f0b2683a4b28ff83a7e3368",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.,  4.,  8., 12.], dtype=float32)>"
+        }
+      ]
+    },
+    "autograd-a-simple-function-5": {
+      "code_fingerprint": "sha256:9ba4732655b91aa1e098b537786bbd68ea557995a6d72de912d961da2b0bae03",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+        }
+      ]
+    },
+    "autograd-a-simple-function-6": {
+      "code_fingerprint": "sha256:2de4407fec41a5e35f5c086af036be2bed77c2b01d2242f99d3c4515846e3e67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([1., 1., 1., 1.], dtype=float32)>"
+        }
+      ]
+    },
+    "autograd-backward-for-non-scalar-variables": {
+      "code_fingerprint": "sha256:c8bebe1dbb9f37106cc1c960be871c62d7758521a5ce43c74bc87ee5b765e5e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 2., 4., 6.], dtype=float32)>"
+        }
+      ]
+    },
+    "autograd-detaching-computation-1": {
+      "code_fingerprint": "sha256:ab4273e9e0c75bb61281433e8debf820ae1c3031cde82b447111b8f902e2aee8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+        }
+      ]
+    },
+    "autograd-detaching-computation-2": {
+      "code_fingerprint": "sha256:0b245eb70552d04d31b07700cc98895487a521656159acca9defec86d480a903",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-1": {
+      "code_fingerprint": "sha256:5c372f33389abbee1108d0e04cbbf8ba9d9bd6f2d2c52b1236c283c180b71a7b",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-2": {
+      "code_fingerprint": "sha256:5f00405a1e07874cb9b099007464d17329546c98d284d83e0f5cc5c4d7b21e20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=3276800.0>"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-3": {
+      "code_fingerprint": "sha256:b8eafe0e0ca7792b2dd4df9600440237a3e18ebeca6df7efcea7d410f6ef8147",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=False>"
+        }
+      ]
+    }
+  }
+}

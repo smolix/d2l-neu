@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/gru.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:561fbbffffd30bea1860f099849bc30e5796590905291ded6a9285e6b692f3fd",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gru-gated-recurrent-units-gru": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-initializing-model-parameters": {
+      "code_fingerprint": "sha256:84b9f2a4ce158f3a5f0039c784b32bf33f95f6211af5f4ead2cec5307c9a93ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-defining-the-model": {
+      "code_fingerprint": "sha256:ac56e82d9646f98ff4825cf4c5838c72d7088d3214a25cf01d432ca4f30262ff",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-training": {
+      "code_fingerprint": "sha256:7b862505257e4f49518e45951a6a645139b76a51647394a6a671b3cd3b834470",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gru/gru-training-1.svg",
+          "bytes": 311254,
+          "sha256": "sha256:61d2175b36ae9fd60f4a0f823140537def8048f79a4af6231046d94c7a353d9a"
+        }
+      ]
+    },
+    "gru-concise-implementation-1": {
+      "code_fingerprint": "sha256:9c7285d6340f4b66c888c1d44710c6a1a3592f281eddaac6a7bc3a11d8ce9dd8",
+      "kind": "text",
+      "outputs": []
+    },
+    "gru-concise-implementation-2": {
+      "code_fingerprint": "sha256:e9587a8c802f3a14cacd7ffca550103cb978acde651d1b8df66e882bae5c69ad",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gru/gru-concise-implementation-2-1.svg",
+          "bytes": 312142,
+          "sha256": "sha256:212725233d11d2bc5fd312f1776ec6e2ef04656c3501481d1d7f439c95d80e1f"
+        }
+      ]
+    },
+    "gru-concise-implementation-3": {
+      "code_fingerprint": "sha256:abc1b19a5f33766c6f78adff4c5b74446eaf19f283c0c5a5ac0dda93a6eecf5e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has a move to the the t'"
+        }
+      ]
+    }
+  }
+}

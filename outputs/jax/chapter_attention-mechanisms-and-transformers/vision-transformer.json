@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/vision-transformer.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:5ed6252d1ffc514014b2402226d8371e48fea3710a3aa11b31870329c33e6d42",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vision-transformer-transformers-for-vision": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patch-embedding-1": {
+      "code_fingerprint": "sha256:2166f19d00b97460a991300eeaba4efa6ef1e00254072f5b25b51634605d5aca",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patch-embedding-2": {
+      "code_fingerprint": "sha256:fc0ba9f42299d4ccc38914b99d646ab32c9beda5646ac23725610b5c906eefe8",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-vision-transformer-encoder-1": {
+      "code_fingerprint": "sha256:acac121a7fc0294c68ed81db2112fd3af33259038844bbebbd2c41704a2a9ff7",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-vision-transformer-encoder-3": {
+      "code_fingerprint": "sha256:3d7ad7265abb1417661e53fd7b0bb4fddd4a4afffb79fc7108a02b7e86bb4eb7",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-vision-transformer-encoder-4": {
+      "code_fingerprint": "sha256:e0c32f251aed51d171392e51f9daba6348426a14f1bc1cb09365e8ec83797d1e",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-putting-it-all-together": {
+      "code_fingerprint": "sha256:a5ea2c845fbe38da42920451496f15a2280857f224c15d804a557ea8ac0ee85f",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-training": {
+      "code_fingerprint": "sha256:f470fbfce23db8f3c322f75d17efa8016897f8c1c5f263e4146a10e432cc9642",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-training-1.svg",
+          "bytes": 32960,
+          "sha256": "sha256:78c5c571a32d15ec16710dfd7778fede36980990dc27370a6e38a648d3e70d9e"
+        }
+      ]
+    }
+  }
+}

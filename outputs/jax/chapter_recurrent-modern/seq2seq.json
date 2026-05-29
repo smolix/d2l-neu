@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/seq2seq.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:feba1e173b07c069a2475269096e6e52c079906b69dadbd7a91df0a5b23d5a57",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seq2seq-sequence-to-sequence-learning-for-machine-translation": {
+      "code_fingerprint": "sha256:6fc71cc9b242fb451887fc580bd37e323f291c673f723ca99d574a05733d1f94",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-2": {
+      "code_fingerprint": "sha256:599395c4a82746d1bdab45e310ac5cd58dc5a314bba4ab63da109a5ea6eaaadd",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-3": {
+      "code_fingerprint": "sha256:701373593172555748012a69cdbdc6fcd89171c865053af750320d7d2d1b0057",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-jax/lib/python3.12/site-packages/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype int64 requested in astype is not available, and will be truncated to dtype int32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  return lax_numpy.astype(self, dtype, copy=copy, device=device)\n"
+        }
+      ]
+    },
+    "seq2seq-encoder-4": {
+      "code_fingerprint": "sha256:142031f947f5f22abb24a106d1bfb06710f583cd239d81872b8f16dda728a339",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-1": {
+      "code_fingerprint": "sha256:695d49089e0aad20beec7b0f10185cbf3c87b6b255c09f430a13551e8040335b",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-2": {
+      "code_fingerprint": "sha256:1ab19958af75e5255c532d1a2c35f276e68d0d9b201d48f8f6951e0d3c2442d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
+      "code_fingerprint": "sha256:08f3ecaabb4c03b91334985e3bf962818374241216e33ab04c1b30aa664cf2d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-loss-function-with-masking": {
+      "code_fingerprint": "sha256:9d2f3d6793c97663ea02b4ce0ada618a13ef87322d7c9f050cc3465712faf5f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-training": {
+      "code_fingerprint": "sha256:c129af2b5827547cb74df004c4eb50f816b7c8425e68ab8f0ec8fbc2be2e1251",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-training-1.svg",
+          "bytes": 74805,
+          "sha256": "sha256:ef5b70f659d6ab45ef1a0ab04a165651feec6e368258871994e39241aed39059"
+        }
+      ]
+    },
+    "seq2seq-prediction": {
+      "code_fingerprint": "sha256:dde395fc69f3839cf412970367a12d4f0e866e5124ba4255338c0e0746204b4c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-evaluation-of-predicted-sequences-1": {
+      "code_fingerprint": "sha256:a86b9290209268fa54ab19d656c1145a8eab0c8a3adc144cacdca1229e700252",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-evaluation-of-predicted-sequences-2": {
+      "code_fingerprint": "sha256:6c290521bd20f29b0c285370b275821c1aa68099841e15513701a6ef0bb00356",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'vais', 'bien', '.'], bleu,0.000\n"
+        }
+      ]
+    }
+  }
+}

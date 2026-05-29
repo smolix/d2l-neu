@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/natural-language-inference-and-dataset.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:d5b5620c1958971948c4ff20afac1bc52790918315b7c43dadb00a02df3ac03c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset": {
+      "code_fingerprint": "sha256:5069cdcf8232b498598c2ad3ca79a33d6f416c11c0cce4c6b2d7776e0aa65d66",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:2d8c4e7f1e32ae76030055c9e95d2553d550bb7af1f12a059c05e5955dfb711a",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:a7105cf823606dc2cf9371e2f8d07d13749f35f23075e807141eaa417c9091d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "premise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is training his horse for a competition .\nlabel: 2\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is at a diner , ordering an omelette .\nlabel: 1\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is outdoors , on a horse .\nlabel: 0\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:6d3d9ac4985196b772835a10277bb08106dc87e46a09044b62c7b3d54b1a95f6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[183416, 183187, 182764]\n[3368, 3237, 3219]\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset": {
+      "code_fingerprint": "sha256:876117ca459a20e1322f8d2f551cb4df256e4a5b92f26e3887828f3e6f69fa66",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-1": {
+      "code_fingerprint": "sha256:aa4d6ac196eb4a774d56d479ade92b63edd54c6cb77c9a8a2cc058c1e3f2c838",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-2": {
+      "code_fingerprint": "sha256:813d88b24310af2fa511d8c6844f5c4f3e8bcf8b662f84d79bc2540ce183c7df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 549367 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 9824 examples\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "18678"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-3": {
+      "code_fingerprint": "sha256:143604ff200432e399f4717f4d0d09e927a81ae55191e2345e1c515ba1c3cc3b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "torch.Size([128, 50])\ntorch.Size([128, 50])\ntorch.Size([128])\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/kaggle-cifar10.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:32110618a0307c50dcccc625208069cb3e69b96ca6a99f12702f8d4154683f41",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "kaggle-cifar10-image-classification-cifar-10-on-kaggle": {
+      "code_fingerprint": "sha256:61313170e93bb2bc8879bde4ac05957e032cbb7b2c1888337b47ad37cd9496c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-downloading-the-dataset": {
+      "code_fingerprint": "sha256:87377c4736b654d5cd65eb404a359b708a764fe6dc3cf2c7814edb1fd097bd98",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-organizing-the-dataset-1": {
+      "code_fingerprint": "sha256:f2d81c9db4faabfeb5ecc2621056508c5e968cddd1ecca7b9e56d440d1dabf35",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "# training examples: 1000\n# classes: 10\n"
+        }
+      ]
+    },
+    "kaggle-cifar10-organizing-the-dataset-2": {
+      "code_fingerprint": "sha256:e26d4a278345cb7dfdcfcc705dbb3baf69ee10fccc5c1e81ae06fab315f2052a",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-organizing-the-dataset-3": {
+      "code_fingerprint": "sha256:3f75e7a2d56163fc22f97d6368371ec7e5490d666c10c6d36f014e0ade6980bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-organizing-the-dataset-4": {
+      "code_fingerprint": "sha256:79439ee4225e47b4b2b23c660b0ba42d18b7d7e3b5c3aeed2acf4a3850cf3c55",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-organizing-the-dataset-5": {
+      "code_fingerprint": "sha256:320f571390801b544ed9165f6bbb6c529a236b9c06409686e4e806812fe5b52f",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-image-augmentation-1": {
+      "code_fingerprint": "sha256:af7a0db287f4a6558b10f7969aa960c2cbd5fb58fdd2e1a38abb66e1422df23a",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-image-augmentation-2": {
+      "code_fingerprint": "sha256:e0bd2ffe93322a2f77f6dad6cb73337be31a9ef992c45ff9c2f66d8ff6b17614",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:89abba8995db0712f814a943cc4aad222d77b9105bd06e11d1dd4ddb71c04456",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:cc22ddb42b3bbde1a0e8cd1a0d456d282f7514bb63ad35af16cec31c1f1747a7",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-defining-the-model-1": {
+      "code_fingerprint": "sha256:0079c3a51e1116d939949a055968149d8e20a50594e185cb2e717abf442c1664",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-defining-the-model-2": {
+      "code_fingerprint": "sha256:5bb3aa1965477343ab3bbb5fbc9f679499a610280be71b07051bffebd2c9c6e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-defining-the-model-3": {
+      "code_fingerprint": "sha256:415d9a6e0e1a386b38cf815b271a554c71b1a6060806d0fdd40600539e42030c",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-defining-the-training-function": {
+      "code_fingerprint": "sha256:3d0b9424bbe810d1c944da6aaea7bd93f6a95105111e6c649d7c392405dd291c",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-training-and-validating-the-model": {
+      "code_fingerprint": "sha256:1a474d1cc973233038ef6082b55a9a3cb2262c9712587baa390bfcfa1d3d3dca",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.267, train acc 0.915, valid acc 0.453\n932.3 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
+          "bytes": 26966,
+          "sha256": "sha256:e729b2fc80e45515c7d9eb77bf330a29611e40a204d98a8552b8aa535210b7e3"
+        }
+      ]
+    },
+    "kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle": {
+      "code_fingerprint": "sha256:99454057d82d86ad9106599dbd036ab461ddb616d4eeca9044f96d486b5d6e45",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.307, train acc 0.900\n468.2 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
+          "bytes": 24568,
+          "sha256": "sha256:6402137191668e0e1b1332f3c97d3f2185e7f582ab8b9a06e28129b56a38538f"
+        }
+      ]
+    }
+  }
+}

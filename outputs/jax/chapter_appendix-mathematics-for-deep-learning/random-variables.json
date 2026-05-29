@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/random-variables.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "random-variables-from-discrete-to-continuous": {
+      "code_fingerprint": "sha256:c2f548b6cab9a43560a798caee87d7330090bd6ec6f3eeebbd51d33e783bd421",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-from-discrete-to-continuous-1.svg",
+          "bytes": 16894,
+          "sha256": "sha256:da54cf82531a7f92ecaa7ef2636233472041de638f623192cbfa367352fc9f2b"
+        }
+      ]
+    },
+    "random-variables-probability-density-functions": {
+      "code_fingerprint": "sha256:f2ba77643d4dd7ae5dede87837717dd799b312a728b5e472523cdd777906c696",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-probability-density-functions-1.svg",
+          "bytes": 33468,
+          "sha256": "sha256:6a1ca84e97cb1fd7b94a1202ea4429177e546aa5c26aa38bca90dfb46e162511"
+        },
+        {
+          "type": "execute_result",
+          "text": "'approximate Probability: 0.7736172676086426'"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-1": {
+      "code_fingerprint": "sha256:a8e59ab57fb7e4915f5f6f80d0d08c3d49f9585641312d37ed7a4661fa1c17b0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-standard-deviations-1-1.svg",
+          "bytes": 14381,
+          "sha256": "sha256:35399cd33964e23a9bfb75705ae5fe82df33fdd69b8590dfe19ab552554c9154"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-2": {
+      "code_fingerprint": "sha256:693d6a919889c1e671d95e7eb323ca3323544a063d2750a608e84da5585e497b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-standard-deviations-2-1.svg",
+          "bytes": 15086,
+          "sha256": "sha256:d8a8832ed99f280182b1619c5ac4fa2a75d9979a7f691ea9085efd2d812634b2"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-3": {
+      "code_fingerprint": "sha256:34aa6085e6de1e6c3001512f3e8d973d57d964526e7b855a9c61cc6eaa259764",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-standard-deviations-3-1.svg",
+          "bytes": 16262,
+          "sha256": "sha256:54e400ebe72bf4a55e87bb96a45eba2cfdaf389cc4bd70d34c80acefd8b466f6"
+        }
+      ]
+    },
+    "random-variables-means-and-variances-in-the-continuum-1": {
+      "code_fingerprint": "sha256:da7e99632325cdf05a8e6718325c60cb3cf7e2e12de1d34348327af49a396704",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-means-and-variances-in-the-continuum-1-1.svg",
+          "bytes": 15069,
+          "sha256": "sha256:a06321cb1d271360eee7f2b1aee7b05f54e78ec2d09441da6eeaf474e04f5b77"
+        }
+      ]
+    },
+    "random-variables-means-and-variances-in-the-continuum-2": {
+      "code_fingerprint": "sha256:ac729c90b53f67d54c6b4f185613c89452ad5c684966d6b76d8ecfa6c205459d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-means-and-variances-in-the-continuum-2-1.svg",
+          "bytes": 19823,
+          "sha256": "sha256:9b1556917a01d8d8dd43a5796e53b7ae64d4abd9cd295751e0009d8a20846024"
+        }
+      ]
+    },
+    "random-variables-covariance": {
+      "code_fingerprint": "sha256:8872c6f9c8117c78a3a683deaae780628b7cffa078074fb70e8413946faa7fbb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-covariance-1.svg",
+          "bytes": 183507,
+          "sha256": "sha256:36ba5bf7053270431af2ac9ce5a826dd2a3a37557672747332db078ef5ef210c"
+        }
+      ]
+    },
+    "random-variables-correlation": {
+      "code_fingerprint": "sha256:7ffde0f79b2b2c9c23ff22b2587159b9ea77c88a5b53662213f04e49e622fa15",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "random-variables/random-variables-correlation-1.svg",
+          "bytes": 186216,
+          "sha256": "sha256:db37e45043359ba2c3688cd91f5e83f85f451e4a2305c949db01579a07d18a50"
+        }
+      ]
+    }
+  }
+}

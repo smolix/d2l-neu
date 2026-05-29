@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/vgg.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:abf06d54538478c1060edf28289fd79d29c11329126dcd6a431339ae45795465",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vgg-networks-using-blocks-vgg": {
+      "code_fingerprint": "sha256:b25dd8f75e0a6ba2a9240211d4a2c81591f28878b8455fc5bcca955ced7d918c",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-blocks": {
+      "code_fingerprint": "sha256:dffba1cdada8cc0466506114f0db706e153a1681ed5ac712db6ecfe0a1cdebe9",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-1": {
+      "code_fingerprint": "sha256:8f6a53181fe714eef1f7d8ffe41eaac01ba254572b7887c88af962cdec457234",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-2": {
+      "code_fingerprint": "sha256:091ceb1c798efb5b9581d96fba0a23e27e2d9bde6847fb28cced4364e09b17c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 64, 112, 112)\nSequential output shape:\t (1, 128, 56, 56)\nSequential output shape:\t (1, 256, 28, 28)\nSequential output shape:\t (1, 512, 14, 14)\nSequential output shape:\t (1, 512, 7, 7)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "vgg-training": {
+      "code_fingerprint": "sha256:f729a61765641a5223164304d01e4deba1466cabcdf6a00dfa9a70d88be3efea",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vgg/vgg-training-1.svg",
+          "bytes": 59311,
+          "sha256": "sha256:396e1d0cde7f86d99b72a351f0981f5010021bfcb0561859d236feddf1b6e32a"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/mlp.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mlp-multilayer-perceptrons": {
+      "code_fingerprint": "sha256:d0231af3630a799671c9fe5f4c9f8174b62ae291774f09d65ef3bfee51528a45",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-relu-function-1": {
+      "code_fingerprint": "sha256:ad8f0ba95f140a79d648a766d00e6f6e3feb7be8b7a9a04daba1e05f9ecb537e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-1-1.svg",
+          "bytes": 16908,
+          "sha256": "sha256:599af8faa1773db6494c1a385db7d9a9c9406f0fa88c4fa19600d63cba8e077c"
+        }
+      ]
+    },
+    "mlp-relu-function-2": {
+      "code_fingerprint": "sha256:e741914a6ab4b1c0c50dae2566c4d7ff2d2b960434687e285cb340586ffe843e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:56:34] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-2-1.svg",
+          "bytes": 21200,
+          "sha256": "sha256:976f1523a86b5075c11626ee8096a1ad571e5aad5e454604d86a79ceb1a8cf94"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-1": {
+      "code_fingerprint": "sha256:8411a860c348b3bff5437861c53d13e2ec32e6ebe9e65df1349a02920ab97065",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-1-1.svg",
+          "bytes": 21781,
+          "sha256": "sha256:28154217d21eaf564302d8c14056e1920ed61c5b7e0cf8003dd6855bc6069cf3"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-2": {
+      "code_fingerprint": "sha256:7311390e547a55456705088b260a84ac352c4c0db660e194f0df28891b93453a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-2-1.svg",
+          "bytes": 24513,
+          "sha256": "sha256:3eff878150c1f665f91c27ce8346e6bd3fa39e1e5b4dff38a52bdf399e1af009"
+        }
+      ]
+    },
+    "mlp-tanh-function-1": {
+      "code_fingerprint": "sha256:c38626e44e7656a708cda2e2f25b495a299441f7e1ca7f0dd1dbc1110cc17cd9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-1-1.svg",
+          "bytes": 20176,
+          "sha256": "sha256:47f802696581f9c2c15509a23647c944ad3bbf3f41582e7af2aeaca562c12ae4"
+        }
+      ]
+    },
+    "mlp-tanh-function-2": {
+      "code_fingerprint": "sha256:9263a329df8f79ab36ff0cf6661bdb40eebeb42cacebfe11283fc61d4d77f7d3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-2-1.svg",
+          "bytes": 22737,
+          "sha256": "sha256:c0d16221376a06fb4a85238fc8ad36a6e2dd856ec6425b34ca034d4887e78ec2"
+        }
+      ]
+    }
+  }
+}

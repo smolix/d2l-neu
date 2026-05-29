@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/neumf.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:168081dc95b97cd0a1be9001dc53dd084cc39eba92f1db871ca2c676fd2bc7d5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "neumf-the-neumf-model": {
+      "code_fingerprint": "sha256:12d0f7f4b954e1e514023d4789cc949687b328a09eff329d9da3903b410c8e9a",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-model-implementation": {
+      "code_fingerprint": "sha256:9151b2afa336f2f3e2face969e7733d64adf43d3fe29deb2f50eafd7418f9839",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-customized-dataset-with-negative-sampling": {
+      "code_fingerprint": "sha256:f4bd1fb2bda51b7fcec61b65cf95947bd9f8dbcb0ecd989adb0c6fb4ee4237d2",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-evaluator-1": {
+      "code_fingerprint": "sha256:d04ef8b148a09bf385254516cd1999bd3de621a6aa1f8ae73f44f7d16f23f25e",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-evaluator-2": {
+      "code_fingerprint": "sha256:33745d690a7a2b0f71b208a870cbeb2ff728815c909c747069b0e0a773218169",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-training-and-evaluating-the-model-1": {
+      "code_fingerprint": "sha256:5cc36fb5831579adf9bb7d66ad5df4f90eecb4b5d3f8ee12a4a160d9f6b71026",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-training-and-evaluating-the-model-2": {
+      "code_fingerprint": "sha256:72b5010ca653da98ee463c9bf6e3c065b1a5a928467145fa3a664b3b37cc29b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-training-and-evaluating-the-model-3": {
+      "code_fingerprint": "sha256:f9c1adeca2de99db80d9d50311adb6b40e825be20aa990f28a220271b4def8b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-training-and-evaluating-the-model-4": {
+      "code_fingerprint": "sha256:6d7551145fc37ef3f332051a2a82c77b7870a3cda7b6512ac30eae4feb196752",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.154, test hit rate 0.350, test AUC 0.880\n11.4 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
+          "bytes": 22215,
+          "sha256": "sha256:060c7836e4023b93b92b75853082ad871c6c46d1d1dfa89a811802f19cfa969f"
+        }
+      ]
+    }
+  }
+}

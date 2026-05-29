@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/optimization-intro.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "optimization-intro-goal-of-optimization-1": {
+      "code_fingerprint": "sha256:9228eb7efcde378417667bdfd8c288c26279cf35645a1f809e42470e8949af78",
+      "kind": "text",
+      "outputs": []
+    },
+    "optimization-intro-goal-of-optimization-2": {
+      "code_fingerprint": "sha256:f0b67641ccff54f2e09e41bb985b84082c93f36cef5968152a162d54d1f2c8c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "optimization-intro-goal-of-optimization-3": {
+      "code_fingerprint": "sha256:e99bf7613fce57e41d14beb8214c21ad5cace17df903b8bc8b723eb10cfb3ee6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
+          "bytes": 30007,
+          "sha256": "sha256:eaaf49dadaf5950d6db0eb544967cde4de12ceb0e3943e104ac98d4a1f56cc49"
+        }
+      ]
+    },
+    "optimization-intro-local-minima": {
+      "code_fingerprint": "sha256:1482c4d99a8aac2354216dd5b0028d01784ed408d83f67b0d07043823bddb1f7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
+          "bytes": 19689,
+          "sha256": "sha256:b381528fa4d2c3bee1df9adda37eb6b70d03562268a7ab7860d2c86fd961a2ae"
+        }
+      ]
+    },
+    "optimization-intro-saddle-points-1": {
+      "code_fingerprint": "sha256:35b569b1b0ee4eb88d41995a34a1fb10a8c08742437c63af83544457bba1be2f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
+          "bytes": 17872,
+          "sha256": "sha256:24d91d6490691bee2577a08d7b75eb4a2752a3adbc8884321d76db94d32cf690"
+        }
+      ]
+    },
+    "optimization-intro-saddle-points-2": {
+      "code_fingerprint": "sha256:d6b18087f086d79bc5ceae35ae9b0120a9a488f4f8db1ea81bfab9853e839bb2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
+          "bytes": 63302,
+          "sha256": "sha256:f52d2701d43c2463312abffb8bf496ce4f470052dea776c9202c64de36282bd9"
+        }
+      ]
+    },
+    "optimization-intro-vanishing-gradients": {
+      "code_fingerprint": "sha256:6abdc62186234557b400888ea2a5724c352b6d6d2cc04f3013a1617e6b4a8d88",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
+          "bytes": 20456,
+          "sha256": "sha256:c0c5f39c04ed10d4ac1047fa0bdea49a1d70cc2705f6b9c567c396f16d931d76"
+        }
+      ]
+    }
+  }
+}

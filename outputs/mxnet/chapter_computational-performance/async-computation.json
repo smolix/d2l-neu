@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/async-computation.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:d9ab6c53ac0f51d32cef0a41a8d26f6ef49f87ec2572e5110bd212213c5dff13",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "async-computation-asynchronous-computation": {
+      "code_fingerprint": "sha256:a61a622d3f2659ee23971cca07dc921882bb7f4f3a3342d997421c4ac971f985",
+      "kind": "text",
+      "outputs": []
+    },
+    "async-computation-asynchrony-via-backend-1": {
+      "code_fingerprint": "sha256:9d8086c0add8bc69d620415ce5d77e73abe104a74e67faf9a2a3ec3b61a15ed7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "numpy: 0.5083 sec\nmxnet.np: 0.0026 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-2": {
+      "code_fingerprint": "sha256:c2a48eb6d550ebc04acba4a0d78fde84c0f1850418bcbc23cb96b9f1d647fb9e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Done: 0.3378 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-3": {
+      "code_fingerprint": "sha256:9f36f870a314ed39cc1da7180d44d739f8740d704860b8a4f31b16e77d715579",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[3., 3.]])"
+        }
+      ]
+    },
+    "async-computation-barriers-and-blockers-1": {
+      "code_fingerprint": "sha256:dfbbf37eab617008ddd4c6dbab6cc289d7cf177113e024e4cf79f828975e4bc9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "waitall: 0.0256 sec\nwait_to_read: 0.0329 sec\n"
+        }
+      ]
+    },
+    "async-computation-barriers-and-blockers-2": {
+      "code_fingerprint": "sha256:2cc0e5bff2731eb0a74ba0563ed6ec09bdee9a135337012f052f995b20bd210d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "numpy conversion: 0.0144 sec\nscalar conversion: 0.0180 sec\n"
+        }
+      ]
+    },
+    "async-computation-improving-computation": {
+      "code_fingerprint": "sha256:6dacb5cde025d0e6184ac416dedfe36d5eefd92d32a2dc397800b104deb42b56",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "synchronous: 0.6358 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "asynchronous: 0.2256 sec\n"
+        }
+      ]
+    }
+  }
+}

@@ -551,14 +551,20 @@ def main():
             if fw_cache.exists():
                 shutil.rmtree(fw_cache)
 
-            # Inject executed notebook outputs into the slide qmds before
-            # rendering, so the rendered HTML carries cached outputs.
+            # Inject notebook outputs into the slide qmds before rendering, so
+            # the rendered HTML carries cached outputs. Source is the committed
+            # outputs/ store when present (CPU-only, no execution), falling back
+            # to executed _notebooks/. See docs/build-system.md.
+            store_dir = Path('outputs')
             notebooks_dir = Path('_notebooks')
-            if notebooks_dir.exists() and (notebooks_dir / fw).exists():
+            has_store = (store_dir / fw).exists()
+            has_nb = notebooks_dir.exists() and (notebooks_dir / fw).exists()
+            if has_store or has_nb:
                 from inject_outputs import inject_slides
                 img_outputs_dir = args.output / 'img' / 'outputs'
                 inject_slides(str(args.output), fw, str(notebooks_dir),
-                               str(img_outputs_dir))
+                               str(img_outputs_dir),
+                               store_dir=str(store_dir) if has_store else None)
 
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
             # Honor the --files filter at render time too, so a one-shot
@@ -577,7 +583,7 @@ def main():
             base_env = {**os.environ}
             for candidate in (Path(f'.venv-{fw}'), Path('.venv-pytorch'),
                               Path('.venv-jax'), Path('.venv-mxnet'),
-                              Path('.venv-tensorflow')):
+                              Path('.venv-tensorflow'), Path('.venv-build')):
                 py = candidate.absolute() / 'bin' / 'python'
                 if py.exists():
                     base_env['QUARTO_PYTHON'] = str(py)

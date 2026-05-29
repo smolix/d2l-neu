@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/softmax-regression-scratch.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:9171ba36e4a48cc47e3225e8b3a91deca4c017e2172fc7d50ca374fe7458608a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "softmax-regression-scratch-softmax-regression-implementation-from-scratch": {
+      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-1": {
+      "code_fingerprint": "sha256:8bebc00255cdcdddc4425e1e3b564e0c399b7bcbf9295f8cb89fa70167f95e38",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[5., 7., 9.]]),\n tensor([[ 6.],\n         [15.]]))"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-softmax-2": {
+      "code_fingerprint": "sha256:2fd717d2312c528f7016c585f558be88458c54b4106ae4516f05a6aeb252ab56",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-3": {
+      "code_fingerprint": "sha256:8c4647be3d3a1aa7c34e088a1d7207e33069587ccc3f42857c339eb2dfdac597",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[0.2301, 0.1338, 0.1965, 0.2430, 0.1965],\n         [0.2897, 0.1703, 0.2620, 0.1475, 0.1305]]),\n tensor([1., 1.]))"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-model-1": {
+      "code_fingerprint": "sha256:b5091e4d1c95dfa410fea9b6a6cfbb3e634bc425917fc11589670c126f11c768",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-model-2": {
+      "code_fingerprint": "sha256:b33c1eae16b42b8f11af49cae94b966ea2924eed9e6d844b1bd486aa379bf683",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-1": {
+      "code_fingerprint": "sha256:0e1cae9e7e4e55bebe45cc9debe082f7d987dcaf4c35b8ad14a7a8961117d66d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0.1000, 0.5000])"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-2": {
+      "code_fingerprint": "sha256:eb5e3f97716984a8e7ef20b68c70a288aabb40da37a3f79eff7aebeb66c45d99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(1.4979)"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-3": {
+      "code_fingerprint": "sha256:3a0d76b688ece4654a6bef86d8626c2beddd6cefd8cab7ae9e7502a2ac0d8cc5",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-training": {
+      "code_fingerprint": "sha256:99c35f2ab2154f158313509bbada4aa9cbad6d073f8a5978cd54d8df98bbd346",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
+          "bytes": 60514,
+          "sha256": "sha256:126ec1ba52dc049f4d28ab23fdef746e9092e013afa4132f16fe51d7cd79b4ef"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-1": {
+      "code_fingerprint": "sha256:a615047856fe8a7897b896399bdc60b03d7975cf27bc683cf8b6a9ed18d5f231",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([256])"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-2": {
+      "code_fingerprint": "sha256:03a3f6093ba27b34aae5055c41988ab152272ecb13a1e10d4f0a9b0939456d40",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
+          "bytes": 50289,
+          "sha256": "sha256:01236c10faa2cfc09272252a2692daf3818a3739ba611a655e5393fa25d67342"
+        }
+      ]
+    }
+  }
+}

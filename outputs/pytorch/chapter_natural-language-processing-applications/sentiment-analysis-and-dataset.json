@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:a03b7a79654c13b15b3b97ccebccc1c755f26a117eeb915f8ee4995532350169",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset": {
+      "code_fingerprint": "sha256:e160636f8ff6242b057030af3debdd551a6f1c79830494c98cbb08f5ffb18227",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:47585697b8274d8a23c043700a8f6f80201847ffe24515cf934462d5c8a87ad5",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:20dc391647e59e97127a0ae28fead9d06d91add579fdb5bda0ec20a3b6261cf4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "# training examples: 25000\nlabel: 1 review: Zentropa has much in common with The Third Man, another noir\nlabel: 1 review: Zentropa is the most original movie I've seen in years. If y\nlabel: 1 review: Lars Von Trier is never backward in trying out new technique\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-1": {
+      "code_fingerprint": "sha256:7dde2a584a31abc76e0423598b2ab00a49d064d660b771b8d93cfa60ed54db25",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-2": {
+      "code_fingerprint": "sha256:fd40f3159f92b55da4ce9d62537e03d4f1f60dedb378d0d9d663927bd842b839",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
+          "bytes": 20893,
+          "sha256": "sha256:76aa897f1588d66a0de8fcfcf7de87cfcdb86dc498482fc960df635d2c7dcc9b"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-preprocessing-the-dataset-3": {
+      "code_fingerprint": "sha256:fe6bfe93ba75dbcf14c7d1afc2aa7e80b87d03f4877007f5a6b126ef249814ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "torch.Size([25000, 500])\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-creating-data-iterators": {
+      "code_fingerprint": "sha256:7f848bd6c70d707d1c525efdefe6a5f444acc996a18748a542bef9076b477806",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: torch.Size([64, 500]) , y: torch.Size([64])\n# batches: 391\n"
+        }
+      ]
+    },
+    "sentiment-analysis-and-dataset-putting-it-all-together": {
+      "code_fingerprint": "sha256:23f97c82b814c633e4432499bbfac592e9472d6b33c78b7835458f0193d18431",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

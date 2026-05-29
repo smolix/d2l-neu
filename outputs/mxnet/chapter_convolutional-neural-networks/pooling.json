@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/pooling.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "pooling": {
+      "code_fingerprint": "sha256:ed8a6f56d5898c1ec83d5c44dcb459e7b8c627dc8fd6e67e0d2b1d4c860e832e",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-1": {
+      "code_fingerprint": "sha256:cda2b86b05ba328531d1f94d071cb8f74b640ac8b48b2178cb39719906bf940b",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-2": {
+      "code_fingerprint": "sha256:6da1d77b609596712425b744814df253900290b206453a010be7f46d027cd983",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[4., 5.],\n       [7., 8.]])"
+        }
+      ]
+    },
+    "pooling-maximum-pooling-and-average-pooling-3": {
+      "code_fingerprint": "sha256:813a37b98d25175b2e6783da8acae2faa774d76b43c940c90d5b22679b4846e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[2., 3.],\n       [5., 6.]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-1": {
+      "code_fingerprint": "sha256:57c7b3e7a35759c1832a6de1312e70cdd3353e242115bf0f7f00e34eae205e32",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-2": {
+      "code_fingerprint": "sha256:dfc57d2fea5daa143f811e4a395f852f3a08a64b5643989383c3b36fce3facc7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[10.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-3": {
+      "code_fingerprint": "sha256:60bd7ac4f77c8ce82bdd0946f383c715bc5edb5398a5e4dd574776f6a8092cb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 5.,  7.],\n         [13., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-4": {
+      "code_fingerprint": "sha256:01b6f7f9d471adcab66cd443d17135bde26d1b2425c626410a705576fa955d99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 5.,  7.],\n         [13., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-multiple-channels-1": {
+      "code_fingerprint": "sha256:15be1af5a19237a226bbc365729b0400f4ee9214dd1b342706b0346c1394d9e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]],\n\n        [[ 1.,  2.,  3.,  4.],\n         [ 5.,  6.,  7.,  8.],\n         [ 9., 10., 11., 12.],\n         [13., 14., 15., 16.]]]])"
+        }
+      ]
+    },
+    "pooling-multiple-channels-2": {
+      "code_fingerprint": "sha256:8a66d441652752dede7a3da1eadc6acd7d23ae0ac316eec39078cf582bc82df3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[ 5.,  7.],\n         [13., 15.]],\n\n        [[ 6.,  8.],\n         [14., 16.]]]])"
+        }
+      ]
+    }
+  }
+}

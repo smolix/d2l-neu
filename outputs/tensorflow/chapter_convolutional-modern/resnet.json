@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/resnet.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:cb2af27d34b0e2b5d7073aec5287e97975696293cda0fab83eb616a486855b63",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "resnet-residual-networks-resnet-and-resnext": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-1": {
+      "code_fingerprint": "sha256:99889fea8cde0673a53368adaa11ddfb73f0cce9169e5ee0a763bf1fc8548cf9",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-residual-blocks-2": {
+      "code_fingerprint": "sha256:e48bc5aa9dd2c6dc1b7218682746c5410c12bf040884504bfa8cdb23e76c931d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 6, 6, 3])"
+        }
+      ]
+    },
+    "resnet-residual-blocks-3": {
+      "code_fingerprint": "sha256:4af620e3273bb43e399ba46cc75d8ec1c5da28d10d31b01e58dcb5ecad52ec77",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 3, 3, 6])"
+        }
+      ]
+    },
+    "resnet-resnet-model-1": {
+      "code_fingerprint": "sha256:a234efd33e31b8b966553f93915989d1d02c8dd43aa0aadbb6339995f4679e07",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-2": {
+      "code_fingerprint": "sha256:8bcba68254d1c37cabc8daa5af45144c070bc9069e20a99fe6bb9f4e093ea12e",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-3": {
+      "code_fingerprint": "sha256:87f46ff8c33f965b619c7b8311e35cc7e6a6ed6d4302d6bd292019809ed2fd5b",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-4": {
+      "code_fingerprint": "sha256:d52037b7ef3e6ac8ec60702c96ec89f3e4c2f839108ceaa87e7c69369ba5dcac",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnet-model-5": {
+      "code_fingerprint": "sha256:8cb1669e8ec2b64ca941a9d6c6c6a7d0a44fb0c8edde6043fda9b8958829cefc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 128)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 6, 6, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 3, 3, 512)\nSequential output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "resnet-training": {
+      "code_fingerprint": "sha256:6025f3d0287eb46df0a1723c6a9636e266108550b97c87e2ae4bd9f57072333c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "resnet/resnet-training-1.svg",
+          "bytes": 60445,
+          "sha256": "sha256:f6de45a1a28878db4b6d91d35bda89a760ff20491be83ed827c345bdec8f3ec7"
+        }
+      ]
+    },
+    "resnet-resnext-1": {
+      "code_fingerprint": "sha256:9ab08a84ff8b65350b51c10843896f9267d10af1bc1178547ce9470ca12a82d3",
+      "kind": "text",
+      "outputs": []
+    },
+    "resnet-resnext-2": {
+      "code_fingerprint": "sha256:0301c2070becd36775a2bb66b1a8d0845faee617f90a776a499d15c7dd8d74ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 96, 96, 32])"
+        }
+      ]
+    }
+  }
+}

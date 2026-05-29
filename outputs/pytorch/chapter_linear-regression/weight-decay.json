@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/weight-decay.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:0a47cc34bc23ed7d6c777a682575cd59479b4eddda56c0f1161f6ab14aa8767a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "weight-decay": {
+      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-high-dimensional-linear-regression": {
+      "code_fingerprint": "sha256:3f2b2c901c257490deb95928af33a58766cfd30120da3613c5e1b2f8bc7f8d01",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-defining-ell-2-norm-penalty": {
+      "code_fingerprint": "sha256:b33ee6c156671f77f16424e66f283b229a8d70cdea60915e0f2b5e4ce7ad8d8f",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-defining-the-model-1": {
+      "code_fingerprint": "sha256:735e3f92598201e084958916cc474306b278c50b1d764bd85658c3fcb1000263",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-defining-the-model-2": {
+      "code_fingerprint": "sha256:24160f481c7c2ea7c47a8913549bf3c7e36a304b4d65ef4476c017f0c11963c0",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-training-without-regularization": {
+      "code_fingerprint": "sha256:449258462b0382a8dc9d7b962a6846f1f2e1ff4422026631463f90155a48c1b8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_7983/2946282728.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L2 norm of w: 0.01173823606222868\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
+          "bytes": 45994,
+          "sha256": "sha256:6e39bcbda1bd2339bcabf4b047c95e7e3b4d37822889e3f098602069a2beb52d"
+        }
+      ]
+    },
+    "weight-decay-using-weight-decay": {
+      "code_fingerprint": "sha256:0ac69735eb89446a47fbcd8d8255fd2958c867bd9d8731822f48a2900f632eb0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L2 norm of w: 0.0012526926584541798\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
+          "bytes": 38483,
+          "sha256": "sha256:a34329d4e18f4987166264dd3ffae31c41e3c5f47722939d00df5b28093c9624"
+        }
+      ]
+    },
+    "weight-decay-concise-implementation-1": {
+      "code_fingerprint": "sha256:8a350eb6aec2151874c7ea0237f6b73dd9b4a1c3be6ff6a113340bc568a158b0",
+      "kind": "text",
+      "outputs": []
+    },
+    "weight-decay-concise-implementation-2": {
+      "code_fingerprint": "sha256:e15fefab74d14057b43735e8387d77aa8696cca3f7a6fc3705006c1eae2fcf68",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L2 norm of w: 0.014780995436012745\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
+          "bytes": 45028,
+          "sha256": "sha256:f1a9e7a9f9a40fa428db4d758d53c39b829975e89b7e66c36647ad3228cf5c38"
+        }
+      ]
+    }
+  }
+}

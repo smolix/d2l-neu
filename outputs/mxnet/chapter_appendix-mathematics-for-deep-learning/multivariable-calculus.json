@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/multivariable-calculus.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multivariable-calculus-higher-dimensional-differentiation": {
+      "code_fingerprint": "sha256:44d877045a5802d032f9cd0d0dff05b30e554171ea74cafa356802eecf111a5a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'approximation: 1.0819456577301025, true Value: 1.0821242332458496'"
+        }
+      ]
+    },
+    "multivariable-calculus-a-note-on-mathematical-optimization": {
+      "code_fingerprint": "sha256:f54bda5e0cef824eda7445f5f2bd91cb3c7e65ad8964c48700ba69496d40da87",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
+          "bytes": 13741,
+          "sha256": "sha256:bd9b5ec252871a85048778692058cc9f81baa4d32bfc3525f18fb831f9196953"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-1": {
+      "code_fingerprint": "sha256:c5514bc6203e327f3b4046df52743d61fcae421d017e7874335f0931cfc47f38",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-2": {
+      "code_fingerprint": "sha256:dd9281b86a67982ff6fb8db9d0377da20ad3a3a0d4e4447b7f44cf1a2b93b475",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\ndf/dx at -1, 0, -2, 1 is -4096\ndf/dy at -1, 0, -2, 1 is -4096\ndf/dz at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-3": {
+      "code_fingerprint": "sha256:8c48303a4ef6fbbd3216e21ec8c1a5d50561ca874f1da71b498721759d8c1e60",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "df/dw at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dx at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dy at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dz at -1.0, 0.0, -2.0, 1.0 is -4096.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:54:39] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        }
+      ]
+    },
+    "multivariable-calculus-hessians": {
+      "code_fingerprint": "sha256:d39ea48d7708225087caa0c6d99fe65bd840c11c413812d8057f87d9f219e9cb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multivariable-calculus/multivariable-calculus-hessians-1.svg",
+          "bytes": 120553,
+          "sha256": "sha256:1ee596ce2b00aa0a56eeb202845e92a478a388b5ee8f31aa483848c86e888798"
+        }
+      ]
+    }
+  }
+}

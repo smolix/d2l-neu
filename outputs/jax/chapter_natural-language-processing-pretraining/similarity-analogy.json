@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/similarity-analogy.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:f5d6979dbab3a7871536ee4849f6f82aaf77136f950480a424873a83d93e707a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "similarity-analogy-word-similarity-and-analogy": {
+      "code_fingerprint": "sha256:13d082b8e49176f420ef89bed942fee674b0a64fd07c37d40eafac4fca8910fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-loading-pretrained-word-vectors-1": {
+      "code_fingerprint": "sha256:0326452d71876782a8a36fd4cb0e86b3c756ddecb0103b3381dee721c73d52da",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-loading-pretrained-word-vectors-2": {
+      "code_fingerprint": "sha256:b265f692529581a2a0b083f7866998310766c14de4ca19848fe2f75d80ee167d",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-loading-pretrained-word-vectors-3": {
+      "code_fingerprint": "sha256:dbae7babd9b097d54ed82d230aad9c776c4d0effab60d7df95a4dc7e1ebd86cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-loading-pretrained-word-vectors-4": {
+      "code_fingerprint": "sha256:87126303438d0b4535c5b0e0bb6e93a549b5103c2712dab549efa991ecdc0a70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "400001"
+        }
+      ]
+    },
+    "similarity-analogy-loading-pretrained-word-vectors-5": {
+      "code_fingerprint": "sha256:bd18e9d2eb302cad0928d648cddfd218a002f6c81cd06b2c798db888716c9796",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(3367, 'beautiful')"
+        }
+      ]
+    },
+    "similarity-analogy-word-similarity-1": {
+      "code_fingerprint": "sha256:bfda6e741da23d1f4948771f8592ebd6a23c9c0d5266fb4f1898ad0cb30e2e38",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-word-similarity-2": {
+      "code_fingerprint": "sha256:c5010ef4243f08f1e41b579d95fc2964828c5e30bc31bdbd83576a32e0ca7167",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-word-similarity-3": {
+      "code_fingerprint": "sha256:3e0e2a52327b5ee3db63d31c78e0f08b63c48829dc12097f9b4309d6c3a1b7e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine sim=0.856: chips\ncosine sim=0.749: intel\ncosine sim=0.749: electronics\n"
+        }
+      ]
+    },
+    "similarity-analogy-word-similarity-4": {
+      "code_fingerprint": "sha256:b311113361a39a2d6a45b9a29c5c28edf6425706b6c2d298a0aadb91cecc2a5d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine sim=0.839: babies\ncosine sim=0.800: boy\ncosine sim=0.792: girl\n"
+        }
+      ]
+    },
+    "similarity-analogy-word-similarity-5": {
+      "code_fingerprint": "sha256:23b5ae3f4ad738f48943fd5ec4037c3ae51fc30ba2076a0133b8cd4e14e8a6f3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine sim=0.921: lovely\ncosine sim=0.893: gorgeous\ncosine sim=0.830: wonderful\n"
+        }
+      ]
+    },
+    "similarity-analogy-word-analogy-1": {
+      "code_fingerprint": "sha256:5710e45d2d5723dba062cae481e66956832096a1164efe57438b6c60be015f0b",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-word-analogy-2": {
+      "code_fingerprint": "sha256:c90525618f5d45fb2ed02340da2d7c7cb0e069b3587d36fdaabf85e510f2b7fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'daughter'"
+        }
+      ]
+    },
+    "similarity-analogy-word-analogy-3": {
+      "code_fingerprint": "sha256:c2ef32f106ab57ccd63e4f111056fe5364ba5fa3a9179bc8d494265bf64808c3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'japan'"
+        }
+      ]
+    },
+    "similarity-analogy-word-analogy-4": {
+      "code_fingerprint": "sha256:b4b9df130aaa2d1cb73bb214800011669427b5bcb75c000d52150eb1be60a829",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'biggest'"
+        }
+      ]
+    },
+    "similarity-analogy-word-analogy-5": {
+      "code_fingerprint": "sha256:c20da53cdc9dbead06073e3214c54c36d75ed7494cdf02c39f1ec022ef57a832",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'went'"
+        }
+      ]
+    }
+  }
+}

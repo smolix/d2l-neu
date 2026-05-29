@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/movielens.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e4518aa664dfb2c89d40e5db3dc4354ea7982b7db3db52331c57e0a738632062",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "movielens-getting-the-data-1": {
+      "code_fingerprint": "sha256:a3971aa1a2e8bcffdbf5fb90c92f30e5741403651bbe96d61270c48b33a02e0a",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-getting-the-data-2": {
+      "code_fingerprint": "sha256:4b77d9bba62d355db29418224a6866ff1170b7cda9bbaf8e8c57f0e1c67853db",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-statistics-of-the-dataset-1": {
+      "code_fingerprint": "sha256:4cc7df765de1fe5666a9a68e705b6f0046db589dda59ba43c06834192e6c9a82",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "number of users: 943, number of items: 1682\nmatrix sparsity: 0.936953\n   user_id  item_id  rating  timestamp\n0      196      242       3  881250949\n1      186      302       3  891717742\n2       22      377       1  878887116\n3      244       51       2  880606923\n4      166      346       1  886397596\n"
+        }
+      ]
+    },
+    "movielens-statistics-of-the-dataset-2": {
+      "code_fingerprint": "sha256:dc8d6dcc718ccac260a97a08388d5073b8196090d8eed15b6bb3099e1d33a132",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "movielens/movielens-statistics-of-the-dataset-2-1.png",
+          "bytes": 20776,
+          "sha256": "sha256:0bbb3cb4eec9f19958539767abde59bcf12b0cb66f5d96e85ca8ff9f248dbe93"
+        }
+      ]
+    },
+    "movielens-splitting-the-dataset": {
+      "code_fingerprint": "sha256:09fd97f62436b238a24dfb78e010af57c590814231a16a39735f8e2f1a665bee",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-loading-the-data-1": {
+      "code_fingerprint": "sha256:3ab9ceb819b9a629c2d6e4ac7aebb5f1088f1d079f8f198bf002fafef6dd1724",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-loading-the-data-2": {
+      "code_fingerprint": "sha256:0ed53515f865f889cef2059ce55037dd293e8a17455ababe6bcfbe28ecb0a810",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

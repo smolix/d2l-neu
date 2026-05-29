@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/object-detection-dataset.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:dcb0e54f287d2565e33226b4a81543522d82a3139e03d1486ed8240ff006a6b9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "object-detection-dataset-downloading-the-dataset-1": {
+      "code_fingerprint": "sha256:fed6083d50ef96c3c7dd2ea5f802cbbf92fca338062516ccdfa2db910e1dc662",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-downloading-the-dataset-2": {
+      "code_fingerprint": "sha256:588d4bbceaefe4a6e411596ffb9af474548a2403599a3f09171a2a7815ec1650",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:026b4fff85ea0306a25131deb3d813a1a3641ea06e535d508cb3bfb54ef5401a",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:6ffa2cc6ebf2525486affdcd03aa4c66bdbb19b24a0c88ae92aba85bee2a88b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:8f24af970c291e853cb8e506e59024a0d64448c4ca8a2d461d113489b1e06481",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-reading-the-dataset-4": {
+      "code_fingerprint": "sha256:e3b46683fbab53883b4261dc007d080a3a651188c48048adb771d0e15aa8a9b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1000 training examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 100 validation examples\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "((32, 3, 256, 256), (32, 1, 5))"
+        }
+      ]
+    },
+    "object-detection-dataset-demonstration": {
+      "code_fingerprint": "sha256:20e74c4379a2928dfd428630953d6fbd37cb4f4fdbb55e219636c200d036d785",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
+          "bytes": 400900,
+          "sha256": "sha256:f75c0dea458cab998980cbb08b04f076270454fdd30ed524c3b937259ed19bbb"
+        }
+      ]
+    }
+  }
+}

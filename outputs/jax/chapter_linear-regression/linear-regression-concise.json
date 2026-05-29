@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression-concise.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:ab31daf895dd316d6f9cb3057254e6eb93ea2f2626040559a2cf0163267082da",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression-concise-concise-implementation-of-linear-regression": {
+      "code_fingerprint": "sha256:8c060599d06e85a27ceb24de151ee6d039f3948b38b9860ac25b8684466df8ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-model-1": {
+      "code_fingerprint": "sha256:14e8ae99d491e01de98799a4163a1393dab06997e5b9d4297b41343230f32bca",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-model-2": {
+      "code_fingerprint": "sha256:911cb0ebba5a6738867051c9a299d2448f78d4d137970d508ffa057cf7b2aae9",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-loss-function": {
+      "code_fingerprint": "sha256:7e14d80c5e59d97967610cca761c5335a1b06995b9c5b0233cc26b937ac40162",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-optimization-algorithm": {
+      "code_fingerprint": "sha256:4f90c5961de01a905a901333a693bf9b1279dc692e7841bb02c8deac7fd562b6",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-1": {
+      "code_fingerprint": "sha256:7a5a278d281590baa83fdd59179ab6dfa9cb87297d1f92ab62543b4e1e328361",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
+          "bytes": 21963,
+          "sha256": "sha256:6abe3de13a9a95f6c8655fe3537ab730f9973881603262568347765b6be5bbfc"
+        }
+      ]
+    },
+    "linear-regression-concise-training-2": {
+      "code_fingerprint": "sha256:3f2016508250dc24f96c2d3ecdfd10863a6391e5b9a2305c229f95baff83d6ba",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-3": {
+      "code_fingerprint": "sha256:652949ae8f2818f4c129f3ce767d6d0af700ef133aee91bc38d51151ace17c52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error in estimating w: [ 0.01216841 -0.01037049]\nerror in estimating b: [0.01969719]\n"
+        }
+      ]
+    }
+  }
+}

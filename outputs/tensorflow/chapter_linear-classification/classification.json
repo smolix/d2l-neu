@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/classification.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:be61016e90e851715e31264108da5412d89044c30ed51361572d5a79109d21eb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "classification-the-base-classification-model": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-1": {
+      "code_fingerprint": "sha256:c3c54b70166ebe8b64c796dd9115cdf934762952d90cefad901d8f4f59cdd208",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:f7ca4d36f3b8de28cf5a86a66a9ed83fba7191f87daa6cfea0acb7dbccae5c81",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-accuracy-1": {
+      "code_fingerprint": "sha256:b56d9134f3c72c34ef114a7b8a013e241f9ac63e0fad71bb8d75cc7ebb35d5c6",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

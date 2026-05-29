@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/channels.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:4732c37083649ac6ce48f627c2881a720816d713309102f37f660ab81c95bfc3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "channels-multiple-input-and-multiple-output-channels": {
+      "code_fingerprint": "sha256:109b8040c7fc82aef50157690ccb67feb642457581560f36590473ee6973d5f5",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-1": {
+      "code_fingerprint": "sha256:06906f110da26a46cdf15da055b0842612fc48487b85fe54ae35035711a2528b",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-2": {
+      "code_fingerprint": "sha256:330b7a27230f663dd0a1cc97e18430539ce905cc94fadb14b6af76e5842e7d7c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 56.,  72.],\n       [104., 120.]], dtype=float32)"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-1": {
+      "code_fingerprint": "sha256:25966407134bb9c1cca6df255022f1e267b16966bb8dd5d8acb43b7deab06ce6",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-output-channels-2": {
+      "code_fingerprint": "sha256:730ee694e34357a8c3b182a7bca0c82c4ef4d5f7f63098c27b7d762cd41d8fc6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(3, 2, 2, 2)"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-3": {
+      "code_fingerprint": "sha256:8a021bb09a7b65b695a6cf3762306c0ec24d66e254b1b41f640fb61c0279ea1a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[ 56.,  72.],\n        [104., 120.]],\n\n       [[ 76., 100.],\n        [148., 172.]],\n\n       [[ 96., 128.],\n        [192., 224.]]], dtype=float32)"
+        }
+      ]
+    },
+    "channels-1-times-1-convolutional-layer-1": {
+      "code_fingerprint": "sha256:f17c358576655d403be17804c5f723362a58432cca26447c114ce651f496da90",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-1-times-1-convolutional-layer-2": {
+      "code_fingerprint": "sha256:759365c1cbad899ede4983cc38f778674530137a98d7fa8487c586732d4e2591",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

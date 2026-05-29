@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/softmax-regression-scratch.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "softmax-regression-scratch-softmax-regression-implementation-from-scratch": {
+      "code_fingerprint": "sha256:06f4e6fd864c63a5f98af02d27e21b6dafcd0ef323e38f3f4b731d4bf159664f",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-1": {
+      "code_fingerprint": "sha256:2346cb7b2dad5f59972b637edd4aac4283165d8a133f569ad366678e76ca4274",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([[5., 7., 9.]]),\n array([[ 6.],\n        [15.]]))"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-softmax-2": {
+      "code_fingerprint": "sha256:168f708a3fab8fd2cbc2cd31fd0c23f97d6970956f94c35502c76efc7757af01",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-softmax-3": {
+      "code_fingerprint": "sha256:a620aee6e124d1a80fb9b200b1aae4709773a7bd00403e11d081cda92caa55bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([[0.2631697 , 0.12643167, 0.14026026, 0.18599582, 0.2841426 ],\n        [0.14643963, 0.20861411, 0.16800398, 0.24138248, 0.23555982]]),\n array([1., 1.]))"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-model-1": {
+      "code_fingerprint": "sha256:e71614fd0cc6172daa4b7365dbd7fcf3e7d369eba7cfd6fa1a021898d6339f0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-model-2": {
+      "code_fingerprint": "sha256:0478c02f12ad9a8757e02d075180500380586ec50f2ab78cafd971097e1e18da",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-1": {
+      "code_fingerprint": "sha256:2d83b15b345210809b9b0d0f2fc0607408f3ed8f5a4a473ecc0dd762e483fc5f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.1, 0.5])"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-2": {
+      "code_fingerprint": "sha256:58584141e14f83dfac3aa7b15e0d92dd628f03f01c48b2f52835971afd13dca2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(1.4978662)"
+        }
+      ]
+    },
+    "softmax-regression-scratch-the-cross-entropy-loss-3": {
+      "code_fingerprint": "sha256:a3155b7dd9985e3e100d44c89c687c0bdfbadd0f86bbc237970478b204702852",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-scratch-training": {
+      "code_fingerprint": "sha256:eab1fce2e96d5a77025ec4bcaabecdf4ce6d6abe0ebaeea94028e3e85169ed79",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
+          "bytes": 60529,
+          "sha256": "sha256:2c2777896dd6ae36aa8462dce1666d83d59a2f76e1ed592fa1ef28f65df5170c"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-1": {
+      "code_fingerprint": "sha256:c25803766476075fcc8461cd4529c8c6b12b7a9387cdb1f779a70d62df587ab7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[17:46:14] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[17:46:14] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[17:46:14] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[17:46:14] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(256,)"
+        }
+      ]
+    },
+    "softmax-regression-scratch-prediction-2": {
+      "code_fingerprint": "sha256:09d9f750e9e2ed92e7d05de296ccbb0b2c237df3b7c2a6f6c90032c43ad8deee",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
+          "bytes": 53028,
+          "sha256": "sha256:ab496dbc9f4612c2e40c90d8cdd23f2b97ebfb5adecbb98596d49f4e5dbc514f"
+        }
+      ]
+    }
+  }
+}

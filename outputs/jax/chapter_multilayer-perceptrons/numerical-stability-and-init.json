@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerical-stability-and-init-numerical-stability-and-initialization": {
+      "code_fingerprint": "sha256:883b0b706c9858bad6fdd53194cb0ac0cd8ae1371762abd66038277c1c96fecc",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-vanishing-gradients": {
+      "code_fingerprint": "sha256:b17f282122aa925d23ae7eb63f1ec42bfba1aff6b1a1871e49c1f3c3668abfb7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
+          "bytes": 26188,
+          "sha256": "sha256:cde772104f633d7f1ac2dc730efe60c0b7544b72c33151a28f54797ff1e601d5"
+        }
+      ]
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:526d707d831f8efdda346a67e88db6ab32c25f12e5a6305dfdb6dad2b9d0d439",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a single matrix \n [[-1.2574776  -0.4016044  -1.1213601   0.87837774]\n [-0.86175495  0.34651348  0.9404431  -0.12234341]\n [-1.1891836   0.07152013 -1.7588533  -1.0268484 ]\n [ 1.0308878  -0.00312373  0.01677057  0.04222   ]]\nafter multiplying 100 matrices\n [[-1.3234898e+23  2.3477504e+22 -1.3833368e+23 -1.0161722e+23]\n [-2.1248584e+22  3.7692705e+21 -2.2209315e+22 -1.6314578e+22]\n [-1.6165937e+23  2.8676842e+22 -1.6896933e+23 -1.2412165e+23]\n [ 7.9361379e+22 -1.4077955e+22  8.2949937e+22  6.0933451e+22]]\n"
+        }
+      ]
+    }
+  }
+}

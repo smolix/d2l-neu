@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/word2vec-pretraining.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:bd6adac143a2b584d6fbadf88482fc1c3728ad915db76303bbebcc04b1312a94",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "word2vec-pretraining-pretraining-word2vec": {
+      "code_fingerprint": "sha256:d969be5160f42015197649378dfd17ef0d9d2bec629527bf6470419f429acfcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-embedding-layer-1": {
+      "code_fingerprint": "sha256:88e085a3b29f2da27b7be0b90eca6425785ce019cd6618208a1e015a6a365784",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Parameter embeddings ((20, 4), dtype=float32)\n"
+        }
+      ]
+    },
+    "word2vec-pretraining-embedding-layer-2": {
+      "code_fingerprint": "sha256:d97ad7852cf1310a3aa8b05fd27f268e4bebb756b094afdd4cbd0fe9d0a1dcf1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[-0.03110558, -0.04773474,  0.01383934, -0.00105197],\n        [-0.0450362 , -0.00578558,  0.01830475,  0.00511928],\n        [ 0.02101139, -0.04946297, -0.00036541,  0.00634863]],\n\n       [[ 0.04641633,  0.02471114, -0.04684628,  0.04540631],\n        [-0.00985569, -0.04213702, -0.02032608,  0.00789586],\n        [-0.03894933, -0.00087675,  0.04394114,  0.02551872]]],\n      dtype=float32)>"
+        }
+      ]
+    },
+    "word2vec-pretraining-defining-the-forward-propagation-1": {
+      "code_fingerprint": "sha256:9d1090a8f027ad5c4d2065d64e50246dbb5dc439be49ddf0af987fde8dcd9c83",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-forward-propagation-2": {
+      "code_fingerprint": "sha256:4ed6766cfb715e9f6235b049b3267bc2fe8fda5424414bee4bc4744c157438b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 1, 4])"
+        }
+      ]
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-1": {
+      "code_fingerprint": "sha256:88ebf74a33ff68fafa05bd67b53933d342a026bc2a5f191dc70db375f9570f53",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-2": {
+      "code_fingerprint": "sha256:b81693960aaec973184bf0ec415fde1779ac6c1cd294f150dcf8b41a0bcf1392",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.9352101, 1.8462093], dtype=float32)>"
+        }
+      ]
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-3": {
+      "code_fingerprint": "sha256:e1aff5282db44e7312a1bbdaf3c3fea5bfdd85d496e66fbaf3c481fe9f1fef86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.9352\n1.8462\n"
+        }
+      ]
+    },
+    "word2vec-pretraining-initializing-model-parameters": {
+      "code_fingerprint": "sha256:d1355bb475cf0b34a94ca05b200731f5b72e28b47d91c317e9cd9e2bd239c62f",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-training-loop-1": {
+      "code_fingerprint": "sha256:63f0e6364cdea4574ea9ffeb65b17537234554ee40475290defe6f9211a4cc99",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-training-loop-2": {
+      "code_fingerprint": "sha256:4491f2728dbd14bef24085536d4543499bf9e2272545bdd44be0c78097be5366",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.406, 115768.8 tokens/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
+          "bytes": 17682,
+          "sha256": "sha256:b6a8c6aa415c346411b3cd9e1c43ef4f26b712aacc2c7965e38f4794f983512f"
+        }
+      ]
+    },
+    "word2vec-pretraining-applying-word-embeddings": {
+      "code_fingerprint": "sha256:bd88d80b77eb9b34530eadaae23469d4f39cace8aa1c53bea14a257584a7daa2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine sim=0.641: intel\ncosine sim=0.605: microprocessor\ncosine sim=0.577: computers\n"
+        }
+      ]
+    }
+  }
+}

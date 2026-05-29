@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/classification.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:08d1944ca612209c388cfeae4d530be5dc5c64f2afab48567e03de085d00685d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "classification-the-base-classification-model": {
+      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-1": {
+      "code_fingerprint": "sha256:145b769a0ca3e4a45d492e41c96962c80a49a32e643173715963fd85942583db",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:a7f5509c71964d5d103da0ea483644d2022633ad874b73fdef7630883a6eff97",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-accuracy-1": {
+      "code_fingerprint": "sha256:f42bbb76ce3fd42f1b719406881906edeaa0c2677a0d65177faee7682d12a8c6",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

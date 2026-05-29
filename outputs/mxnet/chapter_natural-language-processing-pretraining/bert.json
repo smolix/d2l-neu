@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/bert.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:1ec550c1ffd63285aba483780f40447209eb3d8675d292cb3da3061b80aa1cbd",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-bert-combining-the-best-of-both-worlds": {
+      "code_fingerprint": "sha256:853f10a6ef43f374c61486d4339c4f2134f1179b1fcac613a67a15cec6f9b1ff",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-1": {
+      "code_fingerprint": "sha256:b2a1b0ebbb742cbba0a102362a09b268cfadeaf19a14b3404da18a324f354159",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-2": {
+      "code_fingerprint": "sha256:f7f86b04ef0b8007fdcf4523c44b6b24aa04adb4241c0908de81fec97a675ff6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-3": {
+      "code_fingerprint": "sha256:0b70c2046695978718082a619c604bdfb8d08d387f5c78b1b72bec4d296806d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-4": {
+      "code_fingerprint": "sha256:08588044993fb8f20f0605f4dcce145a584af0c05062fd40d47ee44b3e5bcf20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 8, 768)"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-1": {
+      "code_fingerprint": "sha256:46c47d3a6629796156e375968bbaab3a1bebb00003f3aa6f5bfb974726c62c64",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-masked-language-modeling-2": {
+      "code_fingerprint": "sha256:9bb7965c00261195126a34869a46659226ad4c392154068e8304835a8b8c70a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 3, 10000)"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-3": {
+      "code_fingerprint": "sha256:d60e0d22c9db4bd94156c99f05907733095cb7007568e2429005b1c1da6fb09a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(6,)"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-1": {
+      "code_fingerprint": "sha256:cda3c988889ea1c215c547e011b07f5b49557d52b6d1194f76d8c9ed22e85a8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-next-sentence-prediction-2": {
+      "code_fingerprint": "sha256:af34d5ea47216151f13695772dcaf85cb3f4b6abc3ef306d5ad4e7398abeb3d1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 2)"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-3": {
+      "code_fingerprint": "sha256:2153feff3dd0fe74529dbc4bc8ab0e0270ed3165d6a87055a60b0aefc82b98cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2,)"
+        }
+      ]
+    },
+    "bert-putting-it-all-together": {
+      "code_fingerprint": "sha256:01b26c8192bd44b0b7b2a883201cf45cef98a84862bc86379f2bc2b3e4c9873a",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

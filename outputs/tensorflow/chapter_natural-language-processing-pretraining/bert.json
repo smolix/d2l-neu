@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/bert.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:d6b15ce5845fcacdbe314b56101c661a27222bd1a707272f2894315fb47766ac",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-bert-combining-the-best-of-both-worlds": {
+      "code_fingerprint": "sha256:7cc4061e49d9c9f1dedf00070d7205b2e6fad7b88a4f34ac1f479ab6a4544af1",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-1": {
+      "code_fingerprint": "sha256:1c7181ecb2f60c50b3e834d8aba0397ebd0fc6131b659cd3dfa356d24654b3de",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-2": {
+      "code_fingerprint": "sha256:1808307c4ddca1e1063e6331189edb1640f9edaa9be1b92f7f74172d01b2a62b",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-3": {
+      "code_fingerprint": "sha256:d7c877eb00aa1d7e643a4ffd7905d27f31f8509df7468908f66f1b061deebfa9",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-input-representation-4": {
+      "code_fingerprint": "sha256:b9e3ff38c0c0bf0b4688891bf1870b8465e1329a6d24c7bac89dea5b1ef93829",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 8, 768])"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-1": {
+      "code_fingerprint": "sha256:dba78754278cfff007b73a409e8e1264b5c616ca3cc84cb0763868466935886f",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-masked-language-modeling-2": {
+      "code_fingerprint": "sha256:e6df8debaae82767ac1bcbdab46474f052810a1fe4e353f52bb77109bf4025d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 3, 10000])"
+        }
+      ]
+    },
+    "bert-masked-language-modeling-3": {
+      "code_fingerprint": "sha256:937ad16892181f4769d8a7735fb0f9861722b65af179579f09d63f576ac83d5d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([6])"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-1": {
+      "code_fingerprint": "sha256:6e7dfe33f69030495fe0b531a0c3cd09efc898b13a433d1819d632e0bf09beba",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-next-sentence-prediction-2": {
+      "code_fingerprint": "sha256:75cc5b282829ae273a263e445d1513bd37816be3559e0341276c7c35fe1692e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 2])"
+        }
+      ]
+    },
+    "bert-next-sentence-prediction-3": {
+      "code_fingerprint": "sha256:d2fb9c4f970ecb0c5a0e814d02b510267490dbab1e0f284bcd48c8efee889725",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2])"
+        }
+      ]
+    },
+    "bert-putting-it-all-together": {
+      "code_fingerprint": "sha256:ed2e73bc80e00a2011d2a5cfe4edccd434bda7312db181ef78e284092d3538bf",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

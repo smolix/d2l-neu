@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/densenet.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "densenet-densely-connected-networks-densenet": {
+      "code_fingerprint": "sha256:df34a8d380ad4395e9ca17848802aaa495e78579ed51629074c3ab8f33c766e5",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-1": {
+      "code_fingerprint": "sha256:0131c3fcc9a9add264064bd755deebb5b746f4e33f0fd32eaa329d1f69079f87",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-2": {
+      "code_fingerprint": "sha256:2631ea180ba9df821b9fc4a1f533a5088d55b17f9fe2b81e1269b5a72f25b4dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-3": {
+      "code_fingerprint": "sha256:b6b3fdb894da048eff50b284695e8f4f33494e60852735f4c0ff143d23fdaf0a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 8, 8, 23)"
+        }
+      ]
+    },
+    "densenet-transition-layers-1": {
+      "code_fingerprint": "sha256:fe634a59c2a527eb106e584cc71d4e8548f04819ab7e44a8a993942724fcd49b",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-transition-layers-2": {
+      "code_fingerprint": "sha256:722d80e61bef6e4dd2211779df82fa0f1eebb6986011ebcaaeac607aedb71943",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 4, 4, 10)"
+        }
+      ]
+    },
+    "densenet-densenet-model-1": {
+      "code_fingerprint": "sha256:65ae576e8aabf1ea389d0079ec66830ef109fee5740c455848e344e49e9d9629",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-densenet-model-2": {
+      "code_fingerprint": "sha256:f4bbf8b356cd93260b12fa1c8bdd8fc3bc8a30ef48dffbd36c9905d4a2aee710",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-training": {
+      "code_fingerprint": "sha256:9347456372aaa23e3c7e6a9b4d0517bd6a8041392072a0b34db9e779e406cbbd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "densenet/densenet-training-1.svg",
+          "bytes": 31202,
+          "sha256": "sha256:17843b9465ae1066d64230f69a7a8cccdabdd39661a95885aa496dc8dc843c36"
+        }
+      ]
+    }
+  }
+}

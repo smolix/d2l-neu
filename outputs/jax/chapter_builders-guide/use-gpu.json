@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/use-gpu.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e2ffeec1d4aea7dabeef81ce4564188a2aa24a9eabad967cea85398427cce699",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "use-gpu-gpus": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "use-gpu-computing-devices-1": {
+      "code_fingerprint": "sha256:33feb912affdefa67ec5e2b1d20953afbd64c87c8f794db055f6052d389e8470",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(CpuDevice(id=0), CudaDevice(id=0), CudaDevice(id=1))"
+        }
+      ]
+    },
+    "use-gpu-computing-devices-2": {
+      "code_fingerprint": "sha256:711fa9e558452e1c89193aecf988f8c3753a4c342f2092ccf343ac29b9a9be88",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "4"
+        }
+      ]
+    },
+    "use-gpu-computing-devices-3": {
+      "code_fingerprint": "sha256:f98c50bba2ecc3ad0896a3178f9334c0984cb23a91af13a4117c41a3d7edcb93",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(CudaDevice(id=0),\n CpuDevice(id=0),\n [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)])"
+        }
+      ]
+    },
+    "use-gpu-tensors-and-gpus": {
+      "code_fingerprint": "sha256:52cdd3012ab8ca0e797d478673c056780bd4dd84a4a78cb4e77e1bf7772b4c41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "CudaDevice(id=0)"
+        }
+      ]
+    },
+    "use-gpu-storage-on-the-gpu-1": {
+      "code_fingerprint": "sha256:872d716f12f2bbe128fd2661d004865d5c053d9ca47f3c70c7b39398005a8bed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[1., 1., 1.],\n       [1., 1., 1.]], dtype=float32)"
+        }
+      ]
+    },
+    "use-gpu-storage-on-the-gpu-2": {
+      "code_fingerprint": "sha256:1173b4727e2d83b7a5c0a8b129a0c03c432c9bcec243e20cee71f982dfa24147",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0.947667  , 0.9785799 , 0.33229148],\n       [0.46866846, 0.5698887 , 0.16550303]], dtype=float32)"
+        }
+      ]
+    },
+    "use-gpu-copying-1": {
+      "code_fingerprint": "sha256:b5ecfabafa2f0c102b510567e0cab626f872db04d34ebe4cbc2748ffad9998b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[1. 1. 1.]\n [1. 1. 1.]]\n[[1. 1. 1.]\n [1. 1. 1.]]\n"
+        }
+      ]
+    },
+    "use-gpu-copying-2": {
+      "code_fingerprint": "sha256:70fe23a73d7cd6085f852997fc70cd161305d53795876dfe46ed0edc1cdd421a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[1.947667 , 1.9785799, 1.3322915],\n       [1.4686685, 1.5698887, 1.165503 ]], dtype=float32)"
+        }
+      ]
+    },
+    "use-gpu-copying-3": {
+      "code_fingerprint": "sha256:b84b04916e8db883d3ede6754a6e68f2c5d584df103810320b564718e5bc6633",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-1": {
+      "code_fingerprint": "sha256:9c9e230c4e8a787d7edfc1e4ed0d8124c754b047aff48bf198ccdbd8f196447c",
+      "kind": "text",
+      "outputs": []
+    },
+    "use-gpu-neural-networks-and-gpus-2": {
+      "code_fingerprint": "sha256:45cce4b1b846bf17c48bcae5e7d1b82b527a8046708241140f473a44cc9addc7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([-0.3464166], dtype=float32)"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-3": {
+      "code_fingerprint": "sha256:24e75c5b6a0e38491126a1b4a090717b01ac7559e19f1970bb5dc3e12654bdb3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'params': {'layers_0': {'bias': CudaDevice(id=0), 'kernel': CudaDevice(id=0)}}}\n"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-5": {
+      "code_fingerprint": "sha256:f6c1f2594ecbea5de3ae5c3cca02e5f3d55d72c920de841f15fa7929192aed44",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

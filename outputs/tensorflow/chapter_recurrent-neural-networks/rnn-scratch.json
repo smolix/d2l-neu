@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/rnn-scratch.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:d8ca2d4326825a728b8b6a8674fd1f4959725913cd2257fec02636d3d9d14332",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rnn-scratch-recurrent-neural-network-implementation-from-scratch": {
+      "code_fingerprint": "sha256:06cd5740b70e88683e88e4a7cff45d219bf59f4564e6efb2aef7e2966df1abc3",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-rnn-model-1": {
+      "code_fingerprint": "sha256:7546cb6b8821f03df536a27385ef3ef851e5c91c9769c3d4d931d6c9fc698526",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-rnn-model-2": {
+      "code_fingerprint": "sha256:99dce3ee77862b72be0abf6c06834e26ab5688d050a7ba678b8ea36e02b77e84",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-rnn-model-3": {
+      "code_fingerprint": "sha256:eeafc1ca307df4246aa65c4b651e5432fff1198e7012677ba53c39d8d3ce07ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-rnn-model-4": {
+      "code_fingerprint": "sha256:5e07bad75d8c5e84062e818931c27534c51d7f17bf15a6f691f6e5b3be6cea8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-rnn-based-language-model": {
+      "code_fingerprint": "sha256:8ebeb92d0150129b2e3d8139b08647fde3bb8dd838d74bb758a70488752b9ba0",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-one-hot-encoding-1": {
+      "code_fingerprint": "sha256:0654ccb50a76dcb8ecefe475423814c7726c828859dc245cfbb7660e2d556130",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\narray([[1., 0., 0., 0., 0.],\n       [0., 0., 1., 0., 0.]], dtype=float32)>"
+        }
+      ]
+    },
+    "rnn-scratch-one-hot-encoding-2": {
+      "code_fingerprint": "sha256:f13e623021ed189b138b8f09c02163f5d8bacb1f4cd62c36140e7e23eb5f9b18",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-transforming-rnn-outputs-1": {
+      "code_fingerprint": "sha256:9e3fbca89abe59dd7cfb96140d7950194b39bbdfea041dafed139918d03e20ee",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-transforming-rnn-outputs-2": {
+      "code_fingerprint": "sha256:bae9438cd438354a0d1fe2fbf260fabc3423fda22dc8386e89a737b2c50ebbfc",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-gradient-clipping": {
+      "code_fingerprint": "sha256:848c3012d3cdfc7d59ca515cf3a1bca6c895b6bae0e0cd3e0b3b6731d839109e",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-training": {
+      "code_fingerprint": "sha256:ba1eb132998b0e4619e96a2e1b2953f1cef410c0d5b9f46bb777be1a1d4b9c7c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rnn-scratch/rnn-scratch-training-1.svg",
+          "bytes": 1046939,
+          "sha256": "sha256:0c713c276b8f34ee2bab87ed87db16b22c5a6a5506573b313607ac21bd725fa2"
+        }
+      ]
+    },
+    "rnn-scratch-decoding-1": {
+      "code_fingerprint": "sha256:118d908b01e84888c55ab9a55ffa49e5c5d3c4c52f7153d3056a5403542cdcb2",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-scratch-decoding-2": {
+      "code_fingerprint": "sha256:d957a09aed133b8704e2289c944c2a2e6d1a6b3ed9b1c6bed28349b75f601e95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "perplexity 7.2, 'time traveller and the pratere wha'\n"
+        }
+      ]
+    }
+  }
+}

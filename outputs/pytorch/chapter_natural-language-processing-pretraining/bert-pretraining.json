@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/bert-pretraining.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:13df15987a4559f7960937d93d461b2586c5f0a3f1e5e8b991b74ae47e9a3a94",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bert-pretraining-pretraining-bert-1": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-2": {
+      "code_fingerprint": "sha256:8ce854fcb129a82a0791536f2d2f570def88c7e2f9263793bf70bc74f4bcbab9",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-2-1": {
+      "code_fingerprint": "sha256:ac341929bc1e2285b8d117f164c2463d82c56090c5e4a083e828dc203a83566b",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-2-2": {
+      "code_fingerprint": "sha256:b4ebac13e5f6b6e79380adbe32e40fca07c86162efa072c47c5e03c0b521ab65",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-2-3": {
+      "code_fingerprint": "sha256:608bd60896b06dd2db62ff137ff643b37529ca6a3de889058c8b32307ebec94d",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-2-4": {
+      "code_fingerprint": "sha256:ca2df011e625dc82563cb2652e6637bd2189b017e96e3756d049f4fe50c8e4fa",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MLM loss 9.577, NSP loss 0.706\n15025.1 sentence pairs/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
+          "bytes": 21558,
+          "sha256": "sha256:960d85d0843b555e7113d5357884c41fd58877bfc0e86474a903963af4e340cb"
+        }
+      ]
+    },
+    "bert-pretraining-representing-text-with-bert-1": {
+      "code_fingerprint": "sha256:db2e93cec8fc74896f36aa64e0af639a2493f09e94958d22a34c64312cde6230",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-representing-text-with-bert-2": {
+      "code_fingerprint": "sha256:464f48ea4df25ebdb6747e846a2645665249f78590c97ae46b6d9924f9c992de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([ 0.7069, -0.4908, -0.6667], device='cuda:0', grad_fn=<SliceBackward0>))"
+        }
+      ]
+    },
+    "bert-pretraining-representing-text-with-bert-3": {
+      "code_fingerprint": "sha256:6b80218e6d68feb4dbea0c62d2b5df85b99db86e41ec129e3ae76a6e14442369",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 1.2599, -0.5104, -0.4680], device='cuda:0', grad_fn=<SliceBackward0>))"
+        }
+      ]
+    }
+  }
+}

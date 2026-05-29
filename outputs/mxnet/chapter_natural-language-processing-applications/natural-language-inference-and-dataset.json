@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-applications/natural-language-inference-and-dataset.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:da4d933172f9838c0ea3b799a8cad7987bd35d9a072d36f1088a51385bea8939",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset": {
+      "code_fingerprint": "sha256:098d29744bfcd2a20a91d748d01f34b454ed254181cfc496fdf5ef90f90102da",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:d1d52b0f8ad24af1a8bc63ff0da2cb04ac844ba7f7acd7a0da36edd49aa64d37",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:4eb9aa42b4b3d7e5e5a9d4a623054d1d08bb8bd56b2cd981e6fe9036f9961725",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "premise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is training his horse for a competition .\nlabel: 2\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is at a diner , ordering an omelette .\nlabel: 1\npremise: A person on a horse jumps over a broken down airplane .\nhypothesis: A person is outdoors , on a horse .\nlabel: 0\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:d6a151a4fcafc26179af248e174e1418793a9d5c455092b50c91f7365942f39e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[183416, 183187, 182764]\n[3368, 3237, 3219]\n"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset": {
+      "code_fingerprint": "sha256:fdc93705861ccaad3be5a7b4d96a9642dc60a9a95174923c1d124dc5533400e9",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-1": {
+      "code_fingerprint": "sha256:e4325a7622e487745165b79c1e4de577bbec2193e92a2d121b05c3762fff03da",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-2": {
+      "code_fingerprint": "sha256:76569e9ce6789dfc915b9af6db2bc5dc226a7a7aaf2706457c5e5ed3e08ceba8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 549367 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 9824 examples\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "18678"
+        }
+      ]
+    },
+    "natural-language-inference-and-dataset-putting-it-all-together-3": {
+      "code_fingerprint": "sha256:4a71e427ff87b5dbf85cd18dda85f8ca14b6d312b547e0c36a4efa4bce2982eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(128, 50)\n(128, 50)\n(128,)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[06:57:35] /home/smola/work/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[06:57:35] /home/smola/work/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[06:57:35] /home/smola/work/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[06:57:35] /home/smola/work/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n"
+        }
+      ]
+    }
+  }
+}

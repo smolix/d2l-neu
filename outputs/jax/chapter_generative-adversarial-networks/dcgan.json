@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/dcgan.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:6cfe691e6fa44489ee873236cb47c09f9f127e3c675a0be16a24373c4667f369",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dcgan-deep-convolutional-generative-adversarial-networks": {
+      "code_fingerprint": "sha256:2714675bab2e54b22e085339247525734c8c67fa09acb2e08d9e16617eddbb5c",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-pokemon-dataset-1": {
+      "code_fingerprint": "sha256:143155eb8a682ceac4190a51d1e5406b11a21527f21aff6145e330dfbd72ee9b",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-pokemon-dataset-2": {
+      "code_fingerprint": "sha256:3c9cf966c313ed8909f07948f99aba26b4caccab3316350ec84dd2a3fdb1c96b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-jax/lib/python3.12/site-packages/PIL/Image.py:1137: UserWarning: Palette images with Transparency expressed in bytes should be converted to RGBA images\n  warnings.warn(\n"
+        }
+      ]
+    },
+    "dcgan-the-pokemon-dataset-3": {
+      "code_fingerprint": "sha256:2c18a772c8cb08a96a872288fa386a280cd8c9b06624eb10641f699cb10f0e43",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
+          "bytes": 418696,
+          "sha256": "sha256:7d4e8a3912233cb87af9ffef91b6b895573264bb7b34fa2a4ba9a07891170957"
+        }
+      ]
+    },
+    "dcgan-the-generator-1": {
+      "code_fingerprint": "sha256:1c8ae7f3c5ac92378e96402ea6e6c19503be04df1764c56a5837a09c368bbe23",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-generator-2": {
+      "code_fingerprint": "sha256:b1fc64fa09ad9066c1ea1c70e1177922ae10db03d93ea136e42298e8b6feaf12",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 32, 32, 20)"
+        }
+      ]
+    },
+    "dcgan-the-generator-3": {
+      "code_fingerprint": "sha256:6010520e04d806eb4cc84de068077d540dc3de693a4e370ae02a219cd9b9589c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 4, 4, 20)"
+        }
+      ]
+    },
+    "dcgan-the-generator-4": {
+      "code_fingerprint": "sha256:6767f51b1d0534b627b655cb75f6d2d0b5913bca5d1e2709ace28ff4685a873b",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-the-generator-5": {
+      "code_fingerprint": "sha256:b517963e65a02513260551c73b0f3bd8ec7e14c24ff663631b982d040acd84a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1, 64, 64, 3)"
+        }
+      ]
+    },
+    "dcgan-discriminator-1": {
+      "code_fingerprint": "sha256:3ebb82da38036838e8a031653a8feb928987cabd527f6da993cc71dc09ca4f93",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-discriminator-1-1.svg",
+          "bytes": 18839,
+          "sha256": "sha256:23f0d90aa516026c5a6d05e94c8573719a89e6f07d3619c6f35f558404691f04"
+        }
+      ]
+    },
+    "dcgan-discriminator-2": {
+      "code_fingerprint": "sha256:0a48c602b45e85fce5f375b973b433f1432cfb1f5ffed8f658c1f8126960ae91",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-discriminator-3": {
+      "code_fingerprint": "sha256:e5939d577eac8a84d216b2cfc825c61cabba8244520c17d1a4c3dc76d2b98b1d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 8, 8, 20)"
+        }
+      ]
+    },
+    "dcgan-discriminator-4": {
+      "code_fingerprint": "sha256:9f7359a85f74ab5b65d5dbb50f3266235c5027f40a1ff38bcb42d841ebb07631",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-discriminator-5": {
+      "code_fingerprint": "sha256:b94389a52c5fefd3fd806c78058db60e2a8f85ab6b7e7b9fc136394db2207956",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1, 1, 1, 1)"
+        }
+      ]
+    },
+    "dcgan-training-1": {
+      "code_fingerprint": "sha256:db46e927be8225787632ef394d65b8762bcf083d3fe42de9f4fbbbe877484cb8",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-training-2": {
+      "code_fingerprint": "sha256:b4e3d32084fafbcbcc42195b2c0bd746d1fb38946c57d13d2b121edf1de1791a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss_D 0.124, loss_G 4.438, 6997.1 examples/sec\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-training-2-1.svg",
+          "bytes": 214389,
+          "sha256": "sha256:a5dc3525f458be3416e5771dd6a36f9bef41883c2278fd50af9494d1a8f03c98"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/mlp.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mlp-multilayer-perceptrons": {
+      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-relu-function-1": {
+      "code_fingerprint": "sha256:5a64af075856b8b7e98c28372766d9d5c55ee34080d9ffb7d8132a3c158ea40f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-1-1.svg",
+          "bytes": 16908,
+          "sha256": "sha256:a2b1d699d169f56c4db991156f8ff0a7c416e4e4a3fe29e9a31583dd8a3acd33"
+        }
+      ]
+    },
+    "mlp-relu-function-2": {
+      "code_fingerprint": "sha256:f08e70cabcf04f5eafdaf355ca91e39383148b1b0b234a3489a9d07fd368ba15",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-relu-function-2-1.svg",
+          "bytes": 21200,
+          "sha256": "sha256:90bf5076cfc2ba4c5638e594fa362da60ac8989dfacdb8eb8123490625ddfa41"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-1": {
+      "code_fingerprint": "sha256:cd0d49d4a6f5d5a34dfff8508e5ae9dda63385a1e0e1d7131647560cb08d2039",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-1-1.svg",
+          "bytes": 21780,
+          "sha256": "sha256:01188ddf3b3433e6032730d7680dbbc243743120b19f4ab2108ade4f6d14023c"
+        }
+      ]
+    },
+    "mlp-sigmoid-function-2": {
+      "code_fingerprint": "sha256:9b1201106df52e125a76d92e0cf6b4da78897c0e21ae327a1cd8b42fb9fa4515",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-sigmoid-function-2-1.svg",
+          "bytes": 24513,
+          "sha256": "sha256:51eda64545529f013b6a8ad67b2279497c845f5836584f99ddd2b044c9149416"
+        }
+      ]
+    },
+    "mlp-tanh-function-1": {
+      "code_fingerprint": "sha256:e3975c8aab0dfbbb4c0ed04f8378b65d989deb191791d65e8379c0864106066c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-1-1.svg",
+          "bytes": 20163,
+          "sha256": "sha256:ce1c3e0c3baba31533439dc33cb2ac38453326490cbd087479dfdd52758a34c2"
+        }
+      ]
+    },
+    "mlp-tanh-function-2": {
+      "code_fingerprint": "sha256:6b1ec77354b43cc7c4a1a49908851daa88c0b372416869a47d840b4c7485a00b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp/mlp-tanh-function-2-1.svg",
+          "bytes": 22666,
+          "sha256": "sha256:bac9b3245d268883f024169fee0dc91d1a58d947d1065035eaf0e753cd851709"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/word2vec-pretraining.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:11b6eeddbc059a3c165ce9467f428c9147eba3dc8e829503cab6ddfa4ecba80d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "word2vec-pretraining-pretraining-word2vec": {
+      "code_fingerprint": "sha256:0d5d0a995c5f0e35499fa27234e42add2da7081318ed3373ed463119ad9d5d99",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-embedding-layer-1": {
+      "code_fingerprint": "sha256:a2f9c20bbe177c6948a406ff938f08ad71befeda8db87fd5db51d58a26302ff7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Parameter (shape=(20, 4), dtype=float32)"
+        }
+      ]
+    },
+    "word2vec-pretraining-embedding-layer-2": {
+      "code_fingerprint": "sha256:d2cb8803d881c0d0e8e2fcdbb03216f92d635bcdb32c6fbdfbb8b9ec31235ac8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[ 0.05420889,  0.05137677, -0.01580331,  0.00029405],\n        [-0.00063882,  0.0453654 ,  0.05350208,  0.02731892],\n        [ 0.01668914,  0.01789143,  0.05927321, -0.0271509 ]],\n\n       [[-0.02084802, -0.04419554, -0.02120254,  0.06979033],\n        [-0.05824137,  0.01857951, -0.01785785,  0.00955272],\n        [ 0.03942686,  0.03035271,  0.01175872,  0.01171747]]])"
+        }
+      ]
+    },
+    "word2vec-pretraining-defining-the-forward-propagation-1": {
+      "code_fingerprint": "sha256:1d4771680b9c3b6183f317aca90f23ebd51ec805b100377f6cb7dfe9533ac241",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-forward-propagation-2": {
+      "code_fingerprint": "sha256:cc4386e0786a0f441d4d460c17828a4ef605d223a8cb7ebf43c083983120652f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 1, 4)"
+        }
+      ]
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-1": {
+      "code_fingerprint": "sha256:e12e2cc6e47d785bf24625f2f81a3b3f409df833e883aff62ba3caaac9f26e62",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-2": {
+      "code_fingerprint": "sha256:9fe51bcf3fac0f53ac36f9f2bc1c18a5103999a5a1ccf588187d715b2372afac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.93521017, 1.8462095 ])"
+        }
+      ]
+    },
+    "word2vec-pretraining-binary-cross-entropy-loss-3": {
+      "code_fingerprint": "sha256:8bf49ad6ece05aed821b992cbe284f83e05409e348ae51647bcf884f5ffc3687",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.9352\n1.8462\n"
+        }
+      ]
+    },
+    "word2vec-pretraining-initializing-model-parameters": {
+      "code_fingerprint": "sha256:407c2fd628e288ad8d14dbfdc3a44c14b435a429f33680b7e10a7cf91f0d2ae6",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-training-loop-1": {
+      "code_fingerprint": "sha256:44a18ede30364171f4e05104803ef4fb4fc7f01ddc0aeac97e8d110913b39102",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-defining-the-training-loop-2": {
+      "code_fingerprint": "sha256:e79740b7e56305f6133cf13383a5a4adf6cd0480c68f352a0a070294eb701aa7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.407, 38212.6 tokens/sec on gpu(0)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
+          "bytes": 18346,
+          "sha256": "sha256:7d3dc6171e9bac5605eab40ee4ec3fdc0eb1cbd0497849b89a22c4f1126d7573"
+        }
+      ]
+    },
+    "word2vec-pretraining-applying-word-embeddings": {
+      "code_fingerprint": "sha256:e6621f8b0dd5cc6e42aa804cc9144be73a35462cc72dc73635a10a750e9fc19a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine sim=0.635: intel\ncosine sim=0.574: dell\ncosine sim=0.573: graphics\n"
+        }
+      ]
+    }
+  }
+}

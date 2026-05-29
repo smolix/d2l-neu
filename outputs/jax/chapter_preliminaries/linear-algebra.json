@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/linear-algebra.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-algebra": {
+      "code_fingerprint": "sha256:10bd93d1f581082f85121b0741bb86b86ce2346eca677de2f52b3dd7a7034c29",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-algebra-scalars": {
+      "code_fingerprint": "sha256:fa2e9d90decafbd29edd0ad5d8cd590085dc1996c9238140b034b48a27c1c9df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(5., dtype=float32, weak_type=True),\n Array(6., dtype=float32, weak_type=True),\n Array(1.5, dtype=float32, weak_type=True),\n Array(9., dtype=float32, weak_type=True))"
+        }
+      ]
+    },
+    "linear-algebra-vectors-1": {
+      "code_fingerprint": "sha256:3cc02c4dca356a13f703267fec2150fd8f9e7576d1db73f107cee207012ae279",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([0, 1, 2], dtype=int32)"
+        }
+      ]
+    },
+    "linear-algebra-vectors-2": {
+      "code_fingerprint": "sha256:c5d7ee8154484f4f373133245c09f12257367311efc860b0653d4d99222fae55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(2, dtype=int32)"
+        }
+      ]
+    },
+    "linear-algebra-vectors-3": {
+      "code_fingerprint": "sha256:2bbf48124641af9bd246d92c8c08ccbf4381410532868e46be405424f579ad37",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3"
+        }
+      ]
+    },
+    "linear-algebra-vectors-4": {
+      "code_fingerprint": "sha256:fd09d1ee37ee1407ddbd0b95a97705e4e3564d262beb11e83901c4943a832467",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(3,)"
+        }
+      ]
+    },
+    "linear-algebra-matrices-1": {
+      "code_fingerprint": "sha256:020a3b21faafbe40e6383dd6d3067777676d923dba98656159021f184c44d977",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0, 1],\n       [2, 3],\n       [4, 5]], dtype=int32)"
+        }
+      ]
+    },
+    "linear-algebra-matrices-2": {
+      "code_fingerprint": "sha256:339d753680c3a0d5eee090081792ae717ced7fe85849205572b3b9ec5ad33157",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0, 2, 4],\n       [1, 3, 5]], dtype=int32)"
+        }
+      ]
+    },
+    "linear-algebra-matrices-3": {
+      "code_fingerprint": "sha256:590b0774b32c2a5409bb586eeded3335be013c1aee0f4b097a630fa5e48e657d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(True, dtype=bool)"
+        }
+      ]
+    },
+    "linear-algebra-tensors": {
+      "code_fingerprint": "sha256:feb2baea98ded2d4ba5414dec7c51cebf9bd892593819bed25d5f322ecde6183",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[ 0,  1,  2,  3],\n        [ 4,  5,  6,  7],\n        [ 8,  9, 10, 11]],\n\n       [[12, 13, 14, 15],\n        [16, 17, 18, 19],\n        [20, 21, 22, 23]]], dtype=int32)"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-1": {
+      "code_fingerprint": "sha256:4c0ee641ed0191036abd718058bd4993c2cc16d29d9a1aba0174de086255d0a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([[0., 1., 2.],\n        [3., 4., 5.]], dtype=float32),\n Array([[ 0.,  2.,  4.],\n        [ 6.,  8., 10.]], dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-2": {
+      "code_fingerprint": "sha256:3e105b269074954bce3de13f63bb10ffe65979f8e768607968950be28372fff1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 0.,  1.,  4.],\n       [ 9., 16., 25.]], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-basic-properties-of-tensor-arithmetic-3": {
+      "code_fingerprint": "sha256:71a244515d4c7fedbc16a061646b7ed3333d84a276a24eea8e2a2a2fb2517598",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([[[ 2,  3,  4,  5],\n         [ 6,  7,  8,  9],\n         [10, 11, 12, 13]],\n \n        [[14, 15, 16, 17],\n         [18, 19, 20, 21],\n         [22, 23, 24, 25]]], dtype=int32),\n (2, 3, 4))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-1": {
+      "code_fingerprint": "sha256:2436671a91e0e818a40e8b74f058c6627a062482da12e8020c7c765f6df31086",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([0., 1., 2.], dtype=float32), Array(3., dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-2": {
+      "code_fingerprint": "sha256:d1e9fbf2aa6f3280d46e26456799e4580515fe9d3b7fe32d07f7e5567a241eb0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 3), Array(15., dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-3": {
+      "code_fingerprint": "sha256:7d41fac9d5f3914ee3fe09ff76df7952ed5829e42b96385d00980c4ec9e62825",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 3), (3,))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-4": {
+      "code_fingerprint": "sha256:822f3d26c57718a88bd3de549f08a4f08fee5ef9f756c517a0d3cb52e93ba8eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 3), (2,))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-5": {
+      "code_fingerprint": "sha256:c39876414b137356b4dbabb8bca27d3286cc68b039420f587c882d1db855f2cd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(True, dtype=bool)"
+        }
+      ]
+    },
+    "linear-algebra-reduction-6": {
+      "code_fingerprint": "sha256:89cb5e917b89ed688558cdf331f3cda5f1fb79a779da0848de8302ee947f2b6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(2.5, dtype=float32), Array(2.5, dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-reduction-7": {
+      "code_fingerprint": "sha256:e30e611d7b95fa3073d2853cd42a1a9a075080e06bc610801031e75265592d91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([1.5, 2.5, 3.5], dtype=float32), Array([1.5, 2.5, 3.5], dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-1": {
+      "code_fingerprint": "sha256:cfba79baecc2772c44db56554d1eb4bd203f9b1fb098cdf8045ea42969d4e7a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([[ 3.],\n        [12.]], dtype=float32),\n (2, 1))"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-2": {
+      "code_fingerprint": "sha256:eb2343e439aab9c19dff85a32a677e797faaf7b7db1444cafd23f70a7605cf59",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0.        , 0.33333334, 0.6666667 ],\n       [0.25      , 0.33333334, 0.41666666]], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-non-reduction-sum-3": {
+      "code_fingerprint": "sha256:288aa4b6a2698efcbd01ac7994edfbc3b6c5cb9b3127ead6e04932d296414f22",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0., 1., 2.],\n       [3., 5., 7.]], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-1": {
+      "code_fingerprint": "sha256:ca79e4ec7d15706a5cd3d4c2048eec4a1b8c1c345f7f668eca8c9392d05ed5e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([0., 1., 2.], dtype=float32),\n Array([1., 1., 1.], dtype=float32),\n Array(3., dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-dot-products-2": {
+      "code_fingerprint": "sha256:d7d4622dd5aad1ecb9e39ed8c423e4cd30ac0a1c1290925cfc4d45cf93f99122",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(3., dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products": {
+      "code_fingerprint": "sha256:8f73d24c4b8ebb84176e3b12cfabc2a658a04a977326e18e2cc3730193551e70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 3), (3,), Array([ 5., 14.], dtype=float32))"
+        }
+      ]
+    },
+    "linear-algebra-matrix-matrix-multiplication": {
+      "code_fingerprint": "sha256:7e69190dcc53698b35f9626be1f8c2c5c8325ecf71b01e3bc951541243ad6f2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 3.,  3.,  3.,  3.],\n       [12., 12., 12., 12.]], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-norms-1": {
+      "code_fingerprint": "sha256:4eab1cec4f362796f552ef1bdac1d79e65c5bdb654865f3ce6f161b1133b8502",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(5., dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-norms-2": {
+      "code_fingerprint": "sha256:5bc9b9cad589cc9ffab00a2815033124239baff6bb768b9d081529a1ae6265d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(7., dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-norms-3": {
+      "code_fingerprint": "sha256:24b1c822c85fd35e0cb1c07cd3a43aff2a45e30c62e6f135b260658a5c6ec437",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(6., dtype=float32)"
+        }
+      ]
+    }
+  }
+}

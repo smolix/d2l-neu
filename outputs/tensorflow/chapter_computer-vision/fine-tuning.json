@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/fine-tuning.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:323d6ba6760cff6c7b1e69cf778d6da88eb79bd518ca4a18f2d31a645bb1d999",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fine-tuning-hot-dog-recognition": {
+      "code_fingerprint": "sha256:e2eb572dfa9754e1fe8fb4006e6b810b1d39160a2bb9c4d2866fe87c5b9a8963",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:e59864bcfb48700da2db3a92c6811044110166d8230809b34380b34c5760b572",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:39590a19bcfb183332795dd4950bd873148d045cc5c3451e631c6e5c9c994ffe",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:c70b50047d39b5d3996c20b5986d35a529e9b2051f9cd2f07deb23511ad58ebf",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "fine-tuning/fine-tuning-reading-the-dataset-3-1.png",
+          "bytes": 230491,
+          "sha256": "sha256:a5c6b85d4c4745eb1acdcaca56e31252ce7dfb5a4ed2cdba68254a8c96eb71a2"
+        }
+      ]
+    },
+    "fine-tuning-reading-the-dataset-4": {
+      "code_fingerprint": "sha256:0a4a74396326d7aa7e8a0ea84176376e0b12dbe7fb3bb6f83a45d21db1db9c1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-defining-and-initializing-the-model-1": {
+      "code_fingerprint": "sha256:84df04879651f70e5f75a6de6670ae2541216f52efc430781378f41cc89ddba6",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-defining-and-initializing-the-model-2": {
+      "code_fingerprint": "sha256:2839e0af9413c96189d4cb978f3f64246b45bc89f00150d1fbd34f1ca829719b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<Dense name=predictions, built=True>"
+        }
+      ]
+    },
+    "fine-tuning-defining-and-initializing-the-model-3": {
+      "code_fingerprint": "sha256:9bddad4345260f351870c0f7b116a4e6cdf1fa6b5e185d4f63f953a5a4787a11",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-fine-tuning-the-model-1": {
+      "code_fingerprint": "sha256:b3a26df43e51ced1eaade8b4f0cbe74dad8d2d8d8940370e7fc07b13ccabc619",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-fine-tuning-the-model-2": {
+      "code_fingerprint": "sha256:596357f955e8a657803478b987556dbb21a968d59154ff21dafd8f48f30d4df4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 2000 files belonging to 2 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 800 files belonging to 2 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1, loss 0.646, train acc 0.641, test acc 0.826\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 0.376, train acc 0.852, test acc 0.891\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 3, loss 0.277, train acc 0.892, test acc 0.901\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 4, loss 0.241, train acc 0.916, test acc 0.910\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 5, loss 0.208, train acc 0.923, test acc 0.915\n"
+        }
+      ]
+    },
+    "fine-tuning-fine-tuning-the-model-3": {
+      "code_fingerprint": "sha256:c1d9164cc00983063f8016192fe894d7116aeed7966115d6c1ed9d821fdf1204",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 2000 files belonging to 2 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found 800 files belonging to 2 classes.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1, loss 0.776, train acc 0.516, test acc 0.590\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 2, loss 0.681, train acc 0.579, test acc 0.650\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 3, loss 0.613, train acc 0.667, test acc 0.607\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 4, loss 0.567, train acc 0.715, test acc 0.733\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 5, loss 0.445, train acc 0.791, test acc 0.810\n"
+        }
+      ]
+    },
+    "fine-tuning-exercises-1": {
+      "code_fingerprint": "sha256:76e85d40a7bb3114db7bb747ce74528a1d21b58c9a9c3d795d59a30b7f6a8901",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-exercises-2": {
+      "code_fingerprint": "sha256:1d49e0b959f9b8faf10e1e2aa8396145787774c913c18826382267faddab35a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2048,)"
+        }
+      ]
+    }
+  }
+}

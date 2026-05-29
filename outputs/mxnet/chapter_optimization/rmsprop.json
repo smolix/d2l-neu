@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/rmsprop.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:33c73c6dfa72b127b324e3115b469e3ed481052180f14726351021cdd72454fb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rmsprop-the-algorithm-1": {
+      "code_fingerprint": "sha256:48ea4cf9a15ac7e2f7c7033ebb92f0418116bc1232c4f9f110434d9b0449f261",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-the-algorithm-2": {
+      "code_fingerprint": "sha256:54b9fcd9cd0a0e77cee99f10cf343bf7c9ee1726dacc98e539c276fd7f520529",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-the-algorithm-2-1.svg",
+          "bytes": 15576,
+          "sha256": "sha256:3452074d281a9e199814fda4673709eaf31359d330d0aa24cdff5462299768b0"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:e9cc75cfe28891e8748384f249d684189747ec39ffcc6bebf4b1ef4a4d1443fb",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: -0.010599, x2: 0.000000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-1-1.svg",
+          "bytes": 26336,
+          "sha256": "sha256:72ae983a6aa3d74346c99926e88f03a66a85528af4ef9cc20b35e72fe8669cf8"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:5afdd25ef81ca1d15523aa2aaf366a4eb28ba18bd656d4af9f7475f9939cd661",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:2868c30f61519d4e6fd79b30f76a2b17f62eeee99a1610d80face59fa92e9b2f",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-4": {
+      "code_fingerprint": "sha256:b809b880cfc0c54efc1954f02c3fefe739571a65e13fc8f83f61419137e3d7a7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.249, 0.316 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-4-1.svg",
+          "bytes": 18780,
+          "sha256": "sha256:647b0ed17cb017c98833af32f9b18573de565c29bc10168c91823e04b0c8321a"
+        }
+      ]
+    },
+    "rmsprop-concise-implementation": {
+      "code_fingerprint": "sha256:baa39eb4434d3d3334edcc3fd4a59ffb553d70a0de5a913cc9473a84f4599c13",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.246, 0.212 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-concise-implementation-1.svg",
+          "bytes": 18775,
+          "sha256": "sha256:207ad16ba10097c5d41560bf0e586ce0cca479f72860d00790f8d01b23869467"
+        }
+      ]
+    }
+  }
+}

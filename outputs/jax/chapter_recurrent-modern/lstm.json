@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/lstm.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:49cb308545a8137b7003c2d1c599d77a204688528c533a1304d94226f85d6eea",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lstm-long-short-term-memory-lstm": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-1": {
+      "code_fingerprint": "sha256:8a71c2fe031a6225fc7390abbcf74b968e742172a76e693d1091d4a75151b0bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-2": {
+      "code_fingerprint": "sha256:dcb745ae3ecd8b68a2439bde52ad1af68fa032ba1ed5f125af8091fc9462a9ba",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-and-prediction": {
+      "code_fingerprint": "sha256:70a67f53f0cc5044f25db03b49d80d85b04635926e8b97e52c5a30289082c7ee",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-training-and-prediction-1.svg",
+          "bytes": 106217,
+          "sha256": "sha256:bb0defb24dc670cb867a1547b6ce232e4902e9258693b2924d6aff45dd39feb7"
+        }
+      ]
+    },
+    "lstm-concise-implementation-1": {
+      "code_fingerprint": "sha256:061c100e0de70a3dce745cea6d29f3249b1e5197f3fc4b9501fe025f738205ba",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-concise-implementation-2": {
+      "code_fingerprint": "sha256:39ff3c67cf718172210413bd882e7ded3fc090b62055e49b9f70689cc7752d7f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-concise-implementation-2-1.svg",
+          "bytes": 106784,
+          "sha256": "sha256:618243f8549c75331ea1a306596c02c9bfc2efab3d3829ca01a4bbdb9ba0e194"
+        }
+      ]
+    },
+    "lstm-concise-implementation-3": {
+      "code_fingerprint": "sha256:fd03e436220cc60b681cee8a2a9f6627bff098d81cd097e052a6578445a35997",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has the the the prace t'"
+        }
+      ]
+    }
+  }
+}

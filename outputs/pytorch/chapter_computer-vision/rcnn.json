@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/rcnn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rcnn-fast-r-cnn-1": {
+      "code_fingerprint": "sha256:5dfa4f00217d4aefa18010a330246441e69dae75a0a54f8931fc010c4532eea7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 0.,  1.,  2.,  3.],\n          [ 4.,  5.,  6.,  7.],\n          [ 8.,  9., 10., 11.],\n          [12., 13., 14., 15.]]]])"
+        }
+      ]
+    },
+    "rcnn-fast-r-cnn-2": {
+      "code_fingerprint": "sha256:e8d310f1af2ebc4cf7f8c9fb522d4af8a2e8c7598360b95f15196a2d6bfc3667",
+      "kind": "text",
+      "outputs": []
+    },
+    "rcnn-fast-r-cnn-3": {
+      "code_fingerprint": "sha256:ae4dd064d6d9a71b9159bda0a7625ac2e71e242b04cdf631dc84ff71771fd6c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 5.,  6.],\n          [ 9., 10.]]],\n\n\n        [[[ 9., 11.],\n          [13., 15.]]]])"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/multihead-attention.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:4a9a880069c34c4c15f8b2a075af19b87f2ebf5d17fe190fbf2ae35181bd1cef",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multihead-attention-multi-head-attention": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-1": {
+      "code_fingerprint": "sha256:3dcea3dc8c8e7b42c44d166e89a65733cc923be22258562314d8c7928b5e1ba7",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-2": {
+      "code_fingerprint": "sha256:50b6f51ef34155c4c9a239867c4c170d0d109e7e9646e1ccedddc6aa78ca08b5",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-3": {
+      "code_fingerprint": "sha256:e81e44e11f7f1fccaad885b1597b7eeb15842df131e8d717edfbe31db11aba53",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-4": {
+      "code_fingerprint": "sha256:7cad45888b7cb0f8db451270c2173d570a9eb0defeea886e1391996df8863b9d",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

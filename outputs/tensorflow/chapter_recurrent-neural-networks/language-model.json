@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/language-model.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:7d17ef5ac67c29c17941379364c06baea2887f78edd3c697932e5ab6c350ed23",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "language-model-language-models": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:4ef35dd55a829e2aa8e8cd8b3683ecc23d209d1a6483e4dc1824b24fd393e746",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:0b8342a84966be1c33a4babeb270ca20b32a6f95b11f2c4c954f87b10702f663",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:7cea73d4d72391c6debc1c7c7e8fa92118ebed099b1312eb893b9dba01472bce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: tf.Tensor(\n[[ 1  6  7 17  1  9  2  1  8  4]\n [17  5  3  9  1 13 19  1 16  5]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 6  7 17  1  9  2  1  8  4  5]\n [ 5  3  9  1 13 19  1 16  5  6]], shape=(2, 10), dtype=int32)\n"
+        }
+      ]
+    }
+  }
+}

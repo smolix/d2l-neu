@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/lstm.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:6a2f6e3d623f7de4d429d50546892b9d6804a4414266bf096dd328430552b13a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lstm-long-short-term-memory-lstm": {
+      "code_fingerprint": "sha256:6721d82f14999fb526568539e244e3a324b25c5ce6f6dbdbd3f22742af6e7ca8",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-1": {
+      "code_fingerprint": "sha256:0b1116591a0c19231f9bbd4a38e11e86cae88cfcea3b1f9ab1f1e0f93be34036",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-initializing-model-parameters-2": {
+      "code_fingerprint": "sha256:26edd6ae525ddb1f7d07b5993936260e59d45282f190404a53cea7dd75c175bb",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-and-prediction": {
+      "code_fingerprint": "sha256:65a8f0958f0375838708e3d77b165e138472fd0db39bec78ccd1dee1888cdd0e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-training-and-prediction-1.svg",
+          "bytes": 308351,
+          "sha256": "sha256:80013b594069c408ca9f334428afec195f5f35b02825a6baf26cfb63d32dfa75"
+        }
+      ]
+    },
+    "lstm-concise-implementation-1": {
+      "code_fingerprint": "sha256:344d9657b08012b71777a3d0bc98723e399b5d8facf0db1030ebe1119c216906",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-concise-implementation-2": {
+      "code_fingerprint": "sha256:7ad62e49447da237c4b2cbc89c198088202644b30d59dab9c4a31c08b7624914",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-concise-implementation-2-1.svg",
+          "bytes": 310049,
+          "sha256": "sha256:1626939ccfc87102ec3912470810ad8535543b7b5d4b0b59afee000ef230d64a"
+        }
+      ]
+    },
+    "lstm-concise-implementation-3": {
+      "code_fingerprint": "sha256:937cc500520e70d7c09092ec0941b52af5a8786e902c11a9493bbc5c42298c60",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has the time traveller '"
+        }
+      ]
+    }
+  }
+}

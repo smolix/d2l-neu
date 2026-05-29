@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/async-computation.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:0372b520c47be4a950ed5c40b50b012d1df440d128012a1f7ee99b80566aa267",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "async-computation-asynchronous-computation": {
+      "code_fingerprint": "sha256:bbef22cfa457a435605a740ec6d9fac2b32011836224c0639d5937a6107a4019",
+      "kind": "text",
+      "outputs": []
+    },
+    "async-computation-asynchrony-via-backend-1": {
+      "code_fingerprint": "sha256:e38bfde0b3c7698aa8e96e805919b4dcee31f0e59a6cf13ce83ff4e2fc31dacf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "numpy: 0.4874 sec\ntensorflow: 0.0074 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-2": {
+      "code_fingerprint": "sha256:4b05688246d22af56aaa412600be20c79bdea5bd6014c5bb16bb1df731777f25",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Done: 0.0110 sec\n"
+        }
+      ]
+    },
+    "async-computation-asynchrony-via-backend-3": {
+      "code_fingerprint": "sha256:62d736ac7954e7cff467bfdf27c0a0b4dff91c120a70d798f2e5426d9c117e1f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[3., 3.]], dtype=float32)>"
+        }
+      ]
+    },
+    "async-computation-barriers-and-blockers-2": {
+      "code_fingerprint": "sha256:bf9d497926a9b5d033a057bd04de0c55df21d9deba5534d164d67327829fd0f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "numpy conversion: 0.0042 sec\nscalar conversion: 0.0065 sec\n"
+        }
+      ]
+    },
+    "async-computation-improving-computation": {
+      "code_fingerprint": "sha256:44a2539a88df1ef56bc5bdc8dda658dd3b472c233146cdf008edc5ba1b88f890",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "synchronous (eager + .numpy() barrier): 1.5396 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "asynchronous (eager, single sync at end): 0.6781 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.function (compiled graph): 0.8713 sec\n"
+        }
+      ]
+    }
+  }
+}

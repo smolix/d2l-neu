@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/transposed-conv.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:846228dd97ebfacae7c46f9cc44454a4945c8dfeb9e70ff4f9bcd6c265d11986",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transposed-conv-transposed-convolution": {
+      "code_fingerprint": "sha256:9b62cdea7b88feee82d60414a9a5535d4cfdc0422cb408b755f7b6829ef807c4",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-1": {
+      "code_fingerprint": "sha256:5caf4a497a7bdf7b0b6a83f12ea3d0e0f757fb611d344e2698671b0940f79802",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-2": {
+      "code_fingerprint": "sha256:22d31a7225d76b9aa75e43e0801fd7d49b770b914def59f00800d61806ad7bbf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 0.,  0.,  1.],\n        [ 0.,  4.,  6.],\n        [ 4., 12.,  9.]])"
+        }
+      ]
+    },
+    "transposed-conv-basic-operation-3": {
+      "code_fingerprint": "sha256:af6862fd26c79eff538fe4f05f065aab5d723355c8c52e87935aa2d9320e8ec1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 0.,  0.,  1.],\n          [ 0.,  4.,  6.],\n          [ 4., 12.,  9.]]]], grad_fn=<ConvolutionBackward0>)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-1": {
+      "code_fingerprint": "sha256:1f6ca28add9fe060ecb16df70e8c30bda90e5cea72f53a6b1e4226dd8919e680",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[4.]]]], grad_fn=<ConvolutionBackward0>)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-2": {
+      "code_fingerprint": "sha256:85a6ff22396aeb4b3775fee4690e21884b5acbe4b032267abcf1f57a49e814c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[0., 0., 0., 1.],\n          [0., 0., 2., 3.],\n          [0., 2., 0., 3.],\n          [4., 6., 6., 9.]]]], grad_fn=<ConvolutionBackward0>)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-3": {
+      "code_fingerprint": "sha256:4b6738e10964bf4a088948f6435cb4c9152b9d6f112c528d4a5c6986c1705c4f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-1": {
+      "code_fingerprint": "sha256:81d3e8146b3d65a87d874b156437c64be58e6490fe8633aa66098f34ba1b0fff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[27., 37.],\n        [57., 67.]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-2": {
+      "code_fingerprint": "sha256:0944d865d47f5f17bca263a5b67419a79136b4ad1310508776946bbe64669e6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[1., 2., 0., 3., 4., 0., 0., 0., 0.],\n        [0., 1., 2., 0., 3., 4., 0., 0., 0.],\n        [0., 0., 0., 1., 2., 0., 3., 4., 0.],\n        [0., 0., 0., 0., 1., 2., 0., 3., 4.]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-3": {
+      "code_fingerprint": "sha256:d8d0c0dfafd8d06b7018a21f6326210e12c693ad28846e630d244ac875875e98",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[True, True],\n        [True, True]])"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-4": {
+      "code_fingerprint": "sha256:97277a5118aee7d793c0bba5c8da3e407d89b88b390ad13ec74f51e35d287f9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[True, True, True],\n        [True, True, True],\n        [True, True, True]])"
+        }
+      ]
+    }
+  }
+}

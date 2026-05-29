@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/alexnet.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:abf06d54538478c1060edf28289fd79d29c11329126dcd6a431339ae45795465",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "alexnet-deep-convolutional-neural-networks-alexnet": {
+      "code_fingerprint": "sha256:8408f15e1356b9baf8e39a49cbf12ceb6727122a0d9258a51dd68e545ee6875a",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-1": {
+      "code_fingerprint": "sha256:b0fcf669068332bbe36583a5bf536a1b49bcc93eefc22c070e6331422f8119f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-2": {
+      "code_fingerprint": "sha256:e80463cecdc806f901c4f644afc7d07b6315966f80442b9c798ae220bed0636b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 96, 54, 54)\nMaxPool2D output shape:\t (1, 96, 26, 26)\nConv2D output shape:\t (1, 256, 26, 26)\nMaxPool2D output shape:\t (1, 256, 12, 12)\nConv2D output shape:\t (1, 384, 12, 12)\nConv2D output shape:\t (1, 384, 12, 12)\nConv2D output shape:\t (1, 256, 12, 12)\nMaxPool2D output shape:\t (1, 256, 5, 5)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "alexnet-training": {
+      "code_fingerprint": "sha256:b0005fca7f1b0bab692769783a1d4dc2b48dbbfa7f537786af8f476104f2ffda",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "alexnet/alexnet-training-1.svg",
+          "bytes": 58591,
+          "sha256": "sha256:266ff832280a7e82e5941110d060e93aebd1cac61e6d93333667591b29bc0f44"
+        }
+      ]
+    }
+  }
+}

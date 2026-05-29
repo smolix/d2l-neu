@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/sequence.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:34198b27b8958d40e709863d7f470cad52e9f29149a7aa42274906ec1c87c59a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sequence-working-with-sequences": {
+      "code_fingerprint": "sha256:41018dee8471bb9b00bb0d38833144092327c5f036ac4f7ac1d9ad3b97e61752",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-1": {
+      "code_fingerprint": "sha256:b41fe784bf639a5e8c074acb59000688d2eae67d2a575571cc5801c11207074f",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-2": {
+      "code_fingerprint": "sha256:a4e2021198d900243b4e7ad26f3317b5e7f73ecbdfefed024004bdb62e9c2b67",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-2-1.svg",
+          "bytes": 40444,
+          "sha256": "sha256:83b789d593979b73ca2f55b63ec1a45a816ad99127cb279f735d4eef4237ecb4"
+        }
+      ]
+    },
+    "sequence-training-3": {
+      "code_fingerprint": "sha256:5256dea9afaf8498d561b0616de76d0d678acea5e0eca31192059bcbd2c2c3ca",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-4": {
+      "code_fingerprint": "sha256:81a73bfd31bebe0d87d4c39f9508f421f98f413434e19cbaf84c9caab5e35dc1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-4-1.svg",
+          "bytes": 26779,
+          "sha256": "sha256:a1c5d533c65b9a7fb3cdfe40dad394477f6bb6eefdc1e0fe4e77fad0c99939a6"
+        }
+      ]
+    },
+    "sequence-prediction-1": {
+      "code_fingerprint": "sha256:a14bde5801d714de1456d2988ec1d42833460e4587335e4cc57616ce634b1ffc",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-1-1.svg",
+          "bytes": 67634,
+          "sha256": "sha256:43cf34c8f9fb366ff11e4d2c29c3ec2061e1adc9826a0f2342abb2aa0fd2ba26"
+        }
+      ]
+    },
+    "sequence-prediction-2": {
+      "code_fingerprint": "sha256:7ac40c67bf7eed8cadeed2a4cc32a2b345effdea70fa617dd2834af09833b5cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-3": {
+      "code_fingerprint": "sha256:c7ce1fa9b36ca0bfadd7141e964debf4e689923ed2b6da33d48fb1a75bbafb3d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-3-1.svg",
+          "bytes": 44323,
+          "sha256": "sha256:71bb958a4101e668528dea32b615667522642aab7628008cd7968608be1ba10c"
+        }
+      ]
+    },
+    "sequence-prediction-4": {
+      "code_fingerprint": "sha256:e66f6e9b3d352bf86a7ab1270937b0cca4748a9b5fc3ca177d5b523a12263d55",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-5": {
+      "code_fingerprint": "sha256:999527d43c731949fea45ecfa45ef30352f40754fec3b56822e989fd2c6b5fc1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-5-1.svg",
+          "bytes": 104631,
+          "sha256": "sha256:7349f8d9637525b36716d09956d297bf7b93662cbf41557c113a5be0c92c383d"
+        }
+      ]
+    }
+  }
+}

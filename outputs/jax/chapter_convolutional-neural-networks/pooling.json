@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/pooling.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "pooling": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-1": {
+      "code_fingerprint": "sha256:5816dd52031ba97628bca640b5f4bf219762bc1a0d5ede8c83443680ea97b2d0",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-2": {
+      "code_fingerprint": "sha256:9aa9af8082cdf1f7d3ecad0ec9a0f373d63866cec7ba672fb865dc639f739b84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[4., 5.],\n       [7., 8.]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-maximum-pooling-and-average-pooling-3": {
+      "code_fingerprint": "sha256:fe3b913547c05147916978ab7df990509cc34ea14a18205c90c6e4b4f33827d5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[2., 3.],\n       [5., 6.]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-1": {
+      "code_fingerprint": "sha256:df455b29c49ba3243fdf43c700a4995f2998a628ff32a0a5dff35b6e550c9fed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 0.],\n         [ 1.],\n         [ 2.],\n         [ 3.]],\n\n        [[ 4.],\n         [ 5.],\n         [ 6.],\n         [ 7.]],\n\n        [[ 8.],\n         [ 9.],\n         [10.],\n         [11.]],\n\n        [[12.],\n         [13.],\n         [14.],\n         [15.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-2": {
+      "code_fingerprint": "sha256:44cb7b55301d31431924ef2468a407b6f057d574164b89d736d7dce91ca730b2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[10.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-3": {
+      "code_fingerprint": "sha256:70359184d94d9ccbe4442b719b4ff029f4256d6c76e64065bd4cb06082726e49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 5.],\n         [ 7.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-4": {
+      "code_fingerprint": "sha256:4e716311ab1474c4be9b7de652b0fa0656a798bbe02c570ecc53cabc77dff7a7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 5.],\n         [ 7.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-multiple-channels-1": {
+      "code_fingerprint": "sha256:35aa19109dcbf204aac8f6285a0bb6f9870edee433cfc1832fafee28eadc0aad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 0.,  1.],\n         [ 1.,  2.],\n         [ 2.,  3.],\n         [ 3.,  4.]],\n\n        [[ 4.,  5.],\n         [ 5.,  6.],\n         [ 6.,  7.],\n         [ 7.,  8.]],\n\n        [[ 8.,  9.],\n         [ 9., 10.],\n         [10., 11.],\n         [11., 12.]],\n\n        [[12., 13.],\n         [13., 14.],\n         [14., 15.],\n         [15., 16.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "pooling-multiple-channels-2": {
+      "code_fingerprint": "sha256:9bba8fc44f664879607a8212877a8d68b83b75f5c7c481a47aaf7653062a7acf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 5.,  6.],\n         [ 7.,  8.]],\n\n        [[13., 14.],\n         [15., 16.]]]], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

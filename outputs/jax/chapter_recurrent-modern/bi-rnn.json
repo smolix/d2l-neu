@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/bi-rnn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:9e3f8685dbe9296e6efab86b0ad11aab1f65cc98a8d8b27d482a846e78842fe8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bi-rnn-bidirectional-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:5cfb8cd1e4f8bcd8167db469f4c0e14d5e0290de23b9905ede34a21f0a7b86f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "bi-rnn-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:c540d70ed6c3e58a430e1eeaff5b3931f9cb13a38405b970d1c98d25ad807bce",
+      "kind": "text",
+      "outputs": []
+    },
+    "bi-rnn-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:6da9a36841aac45abc477be5cf7c773a07b3af29617f0c59656db304f2699256",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

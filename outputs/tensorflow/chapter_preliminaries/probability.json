@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/probability.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "probability-probability-and-statistics": {
+      "code_fingerprint": "sha256:ba381fc95aefe8f0f1a3cde54fa0903b6eff8a53b5d6b89ed1487e0c26845352",
+      "kind": "text",
+      "outputs": []
+    },
+    "probability-a-simple-example-tossing-coins-1": {
+      "code_fingerprint": "sha256:097500f907f80718d99c3ff6ab5788984c9cdf4d3b9a269fdcec414dc75d93ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "heads, tails:  [52, 48]\n"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-2": {
+      "code_fingerprint": "sha256:7a3b927c94004dd5e7bf330c1e7e31ce8b65743a11335d7b77540f5bbd720677",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([46., 54.], dtype=float32)>"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-3": {
+      "code_fingerprint": "sha256:4c150d0da6e18eb1799c45eebf7be1f3f2002e770e0c33b86ccc21979af7e791",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.52, 0.48], dtype=float32)>"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-4": {
+      "code_fingerprint": "sha256:bb706013c3a6c4d9b3416239e0108ac13afde7808b1f18ccac1387fc1bedce8d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.489, 0.511], dtype=float32)>"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-5": {
+      "code_fingerprint": "sha256:15de774bb90c0d2b9d9ffbd6b9f6ebd76403b02a6a270a14d0edbfaa856666b5",
+      "kind": "text",
+      "outputs": []
+    },
+    "probability-a-simple-example-tossing-coins-6": {
+      "code_fingerprint": "sha256:08b268fe3117249fe860d88b439ab2bb4f2888e609dfb766dff23125aded9c52",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
+          "bytes": 104005,
+          "sha256": "sha256:8083f596ea28bb980b9e954ac9d44ec855db1382c62f27b76fa38036ea72e19d"
+        }
+      ]
+    }
+  }
+}

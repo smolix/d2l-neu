@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/transposed-conv.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:4732c37083649ac6ce48f627c2881a720816d713309102f37f660ab81c95bfc3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transposed-conv-transposed-convolution": {
+      "code_fingerprint": "sha256:870bf7c6c1e91511374f6607db2d33648c6487cd8f27f06fdb079d8f2dd3fc97",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-1": {
+      "code_fingerprint": "sha256:f2dbc411b5f5a1f94fa79c306c159bd32c4c28b75d2df28484d402f113398776",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-2": {
+      "code_fingerprint": "sha256:f7aafa2950fa693c6aff56b09a0232da8159e3b363b1be1c4214cd940159dd3d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 0.,  0.,  1.],\n       [ 0.,  4.,  6.],\n       [ 4., 12.,  9.]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-basic-operation-3": {
+      "code_fingerprint": "sha256:bb04f528d446eeb200d6999e9ddbe86c75ea8b3ebf9da15faa9d9d3dfde1b249",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[ 0.],\n         [ 3.]],\n\n        [[ 6.],\n         [14.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-1": {
+      "code_fingerprint": "sha256:dfb732c6d845479b4ce4b8d85487edebf72d42a80428a63eeaad5aa6d1071a60",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[14.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-2": {
+      "code_fingerprint": "sha256:d6f189d3e298865e32254db3fe716661253e97e0e9118b1d35550e4d08cc12e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[[0.],\n         [0.],\n         [3.],\n         [2.]],\n\n        [[0.],\n         [0.],\n         [1.],\n         [0.]],\n\n        [[6.],\n         [4.],\n         [9.],\n         [6.]],\n\n        [[2.],\n         [0.],\n         [3.],\n         [0.]]]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-3": {
+      "code_fingerprint": "sha256:7bb5a7d2b04c0f3d5d2118f07219251a40af74c4e1a8c69d25a2afe33e8d1134",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-1": {
+      "code_fingerprint": "sha256:11a3142dfbf3879d9ffdcc9dbf5056f4c8940ccaca1e19459ae3907c0af252ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[27., 37.],\n       [57., 67.]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-2": {
+      "code_fingerprint": "sha256:093ed9c7b7eb5333702dd9fd472fdc2f63c4884d0189a38a5c4f709a9ec819f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[1., 2., 0., 3., 4., 0., 0., 0., 0.],\n       [0., 1., 2., 0., 3., 4., 0., 0., 0.],\n       [0., 0., 0., 1., 2., 0., 3., 4., 0.],\n       [0., 0., 0., 0., 1., 2., 0., 3., 4.]], dtype=float32)"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-3": {
+      "code_fingerprint": "sha256:00034b4e891c598e85e58426a6a06f61b92ecb54f2e2ec231dcdff6697fb9379",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ True,  True],\n       [ True,  True]], dtype=bool)"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-4": {
+      "code_fingerprint": "sha256:19b9e78b25231325f5b4a50175d0d199f5e9eaf57b599a7bdd3b418ea23530ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ True,  True,  True],\n       [ True,  True,  True],\n       [ True,  True,  True]], dtype=bool)"
+        }
+      ]
+    }
+  }
+}

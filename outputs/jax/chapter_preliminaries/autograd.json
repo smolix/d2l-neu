@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/autograd.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autograd-automatic-differentiation": {
+      "code_fingerprint": "sha256:10bd93d1f581082f85121b0741bb86b86ce2346eca677de2f52b3dd7a7034c29",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-1": {
+      "code_fingerprint": "sha256:6395e0af2387b2f25b650b6f0f8d59ee118add215b088be72ea740a0e470f4da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([0., 1., 2., 3.], dtype=float32)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-3": {
+      "code_fingerprint": "sha256:21b82e97ba6bd0a8aca4dd04f85c1d97b2fe9bad684ef94cc7995bcb9d5c6c1e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(28., dtype=float32)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-4": {
+      "code_fingerprint": "sha256:91a13241bd8d0bae3ddf7a71ed25e8d445387e3cc981aba2bb4e09ee55f6d30c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([ 0.,  4.,  8., 12.], dtype=float32)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-5": {
+      "code_fingerprint": "sha256:9c42621c090536d0c2f0a252effc4cdc01fa0af959b6978dcd2e04644e07da8e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([ True,  True,  True,  True], dtype=bool)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-6": {
+      "code_fingerprint": "sha256:d01f4ca44e4e5a36542bd45ae461d4cd089bfc437ebe9fc280966365e935b115",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([1., 1., 1., 1.], dtype=float32)"
+        }
+      ]
+    },
+    "autograd-backward-for-non-scalar-variables": {
+      "code_fingerprint": "sha256:5eaf95a395883e75193bb7d46afa83be78c5ef598e8d479eae4f4296a1279fa1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([0., 2., 4., 6.], dtype=float32)"
+        }
+      ]
+    },
+    "autograd-detaching-computation-1": {
+      "code_fingerprint": "sha256:c5dd206b7583b11a768daa9cc5d3ba09baa57830e07fa354cce51a13948b5a2e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([ True,  True,  True,  True], dtype=bool)"
+        }
+      ]
+    },
+    "autograd-detaching-computation-2": {
+      "code_fingerprint": "sha256:d3c187e71cc1c17832175e8fd96fbdb1183fba73930ae78146d891767499de93",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([ True,  True,  True,  True], dtype=bool)"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-1": {
+      "code_fingerprint": "sha256:e733f6e375d0cf39df3c1c24cee490c2ba13bb370ad1db0c14bac7bc5e0aa263",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-2": {
+      "code_fingerprint": "sha256:6e8cf6b04d1c62e112e9838cdc889ba04d52e3624ca436132c395db131282e4f",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-3": {
+      "code_fingerprint": "sha256:cb12a44d01dbecfc897834e1c807a2a4bd90687867e3448d25ae85f5d860f38e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(True, dtype=bool)"
+        }
+      ]
+    }
+  }
+}

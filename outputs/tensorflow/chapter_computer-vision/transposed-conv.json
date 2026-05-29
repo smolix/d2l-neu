@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/transposed-conv.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:1039a3dcd6d6575eaf0896e2720bfdcbe64aaf2b9ca4c6d98ff6dd48f879fc92",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transposed-conv-transposed-convolution": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-1": {
+      "code_fingerprint": "sha256:b5d129619cac2602c7c6400ca41c8036aadf3c59ec01722efc17d013542746f8",
+      "kind": "text",
+      "outputs": []
+    },
+    "transposed-conv-basic-operation-2": {
+      "code_fingerprint": "sha256:a58bb7e28e9f988f0c5f1a0eeec5f39ab35871321f7bc3a016276d28d6d6eddb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[ 0.,  0.,  1.],\n       [ 0.,  4.,  6.],\n       [ 4., 12.,  9.]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-1": {
+      "code_fingerprint": "sha256:f10b645289984d1ecf7e9691842846ed8a26ae68c1482e2605acb115289f0605",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[27., 37.],\n       [57., 67.]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-2": {
+      "code_fingerprint": "sha256:593ecc6c5e26cd2d56500d4e69fb3be942d89f4265bf19545ab1160b8b979396",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4, 9), dtype=float32, numpy=\narray([[1., 2., 0., 3., 4., 0., 0., 0., 0.],\n       [0., 1., 2., 0., 3., 4., 0., 0., 0.],\n       [0., 0., 0., 1., 2., 0., 3., 4., 0.],\n       [0., 0., 0., 0., 1., 2., 0., 3., 4.]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-3": {
+      "code_fingerprint": "sha256:a87bd0ce35faf63b9d857010bb8e7ed435759681447cfc422e39180579b3d75c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2), dtype=bool, numpy=\narray([[ True,  True],\n       [ True,  True]])>"
+        }
+      ]
+    },
+    "transposed-conv-connection-to-matrix-transposition-4": {
+      "code_fingerprint": "sha256:124fe23c1e49637ef62dc155d53abca3522851e2ca22df79c016e23a519b70d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 3), dtype=bool, numpy=\narray([[ True,  True,  True],\n       [ True,  True,  True],\n       [ True,  True,  True]])>"
+        }
+      ]
+    }
+  }
+}

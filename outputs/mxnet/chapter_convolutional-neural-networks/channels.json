@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/channels.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:6f968f9b9b6c0c1e7fa640275128e8d23aea0c605947e33a247aadfbf9a1cc5a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "channels-multiple-input-and-multiple-output-channels": {
+      "code_fingerprint": "sha256:a442d00c171620e27eea4777e28fb6fdc1592e7d51d6543e9bed334015577ed3",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-1": {
+      "code_fingerprint": "sha256:bb7b495eaf04b0644311acccfd629952c396a1762d1dbad14e11d82b5c9b28fd",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-input-channels-2": {
+      "code_fingerprint": "sha256:fc8b5e2758147a0f8922f2b819ed2b90d6b57ae8aa8c03a22872c79fde04fc1b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 56.,  72.],\n       [104., 120.]])"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-1": {
+      "code_fingerprint": "sha256:8e7f61110bc24111424622fea0e902963045437041b34a6fca6f39c1fed5a0d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-multiple-output-channels-2": {
+      "code_fingerprint": "sha256:7d4a69bcae838423761928726574c956ac24ced63b5ecb57b7695840fb2b137a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(3, 2, 2, 2)"
+        }
+      ]
+    },
+    "channels-multiple-output-channels-3": {
+      "code_fingerprint": "sha256:6b02635f54edd5136474bf9c7db9f46476558967e88861362bd683515c491bc4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[ 56.,  72.],\n        [104., 120.]],\n\n       [[ 76., 100.],\n        [148., 172.]],\n\n       [[ 96., 128.],\n        [192., 224.]]])"
+        }
+      ]
+    },
+    "channels-1-times-1-convolutional-layer-1": {
+      "code_fingerprint": "sha256:ea127254af6f80849db30c157c8408d69fd5aee65f7a529c20cf5f5ab803f7a4",
+      "kind": "text",
+      "outputs": []
+    },
+    "channels-1-times-1-convolutional-layer-2": {
+      "code_fingerprint": "sha256:2744daba2fad6364be236b3fec2591637213f7eb5ee2b38aa3852cce4153c8df",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

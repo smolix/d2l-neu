@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/lenet.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:9171ba36e4a48cc47e3225e8b3a91deca4c017e2172fc7d50ca374fe7458608a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lenet-convolutional-neural-networks-lenet": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-1": {
+      "code_fingerprint": "sha256:bc525f636b508e27a1e6af3294f9f5bba1d80a98eeed42cbf47febae95b7b500",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-2": {
+      "code_fingerprint": "sha256:d47062e72ced00c84c3a2f0423c35bce61f37514f37e48ecace228bf41a5bce9",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-3": {
+      "code_fingerprint": "sha256:740f398b964eca08851e79c49a1ac3c716dfc91971067bf8c8c1564df97d2c9f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2d output shape:\t torch.Size([1, 6, 28, 28])\nSigmoid output shape:\t torch.Size([1, 6, 28, 28])\nAvgPool2d output shape:\t torch.Size([1, 6, 14, 14])\nConv2d output shape:\t torch.Size([1, 16, 10, 10])\nSigmoid output shape:\t torch.Size([1, 16, 10, 10])\nAvgPool2d output shape:\t torch.Size([1, 16, 5, 5])\nFlatten output shape:\t torch.Size([1, 400])\nLinear output shape:\t torch.Size([1, 120])\nSigmoid output shape:\t torch.Size([1, 120])\nLinear output shape:\t torch.Size([1, 84])\nSigmoid output shape:\t torch.Size([1, 84])\nLinear output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "lenet-training": {
+      "code_fingerprint": "sha256:f61c0c97d2f79d7dc4d711a34843e38c897e5730db2e0a5f86d58482f3c4766d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-training-1.svg",
+          "bytes": 59036,
+          "sha256": "sha256:891ce31731254915f6919d5e1d22cd705c60a580308ef25f8d5a43d8b52e083d"
+        }
+      ]
+    }
+  }
+}

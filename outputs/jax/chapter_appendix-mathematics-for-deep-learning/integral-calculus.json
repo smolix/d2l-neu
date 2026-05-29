@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-mathematics-for-deep-learning/integral-calculus.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "integral-calculus-geometric-interpretation-1": {
+      "code_fingerprint": "sha256:53bea0cf40200cdc74c5a4dc8b280dad4ea5299426988af6a1c3915ea36514cb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "integral-calculus/integral-calculus-geometric-interpretation-1-1.svg",
+          "bytes": 30113,
+          "sha256": "sha256:aeb879bb25d0de31ec2ab5ca47f1a19fb33b53002ba8cb33f551bc2ef2b0022a"
+        }
+      ]
+    },
+    "integral-calculus-geometric-interpretation-2": {
+      "code_fingerprint": "sha256:096514447b58acf21ca2be0df9d1b1be954a098f7e1310cef2190ea2cba4d6ed",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "integral-calculus/integral-calculus-geometric-interpretation-2-1.svg",
+          "bytes": 21341,
+          "sha256": "sha256:3a009f8a75fd30dd4098f42b063aca2fd4059d6486d08f07f1683abee48ed744"
+        }
+      ]
+    },
+    "integral-calculus-geometric-interpretation-3": {
+      "code_fingerprint": "sha256:e7cd3fb038067e9694382ab81dadd9040a8bdb31b793c74b4cd0b2b78f800720",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "integral-calculus/integral-calculus-geometric-interpretation-3-1.svg",
+          "bytes": 20938,
+          "sha256": "sha256:518abc5f1809c4e9be12a15ff1c259e01c371cafd48e44474eb16742a35e44cc"
+        },
+        {
+          "type": "execute_result",
+          "text": "'approximation: 0.7944856882095337, truth: [0.804719]'"
+        }
+      ]
+    },
+    "integral-calculus-multiple-integrals": {
+      "code_fingerprint": "sha256:a0ca7ada41a55b763bb46b9870cc756e96a6eeb22451ab459401741995d5f152",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "integral-calculus/integral-calculus-multiple-integrals-1.svg",
+          "bytes": 188022,
+          "sha256": "sha256:8140af913fc154b945d8b1ca7661fa6896e3eadab914d1f3ae96ba618217197a"
+        }
+      ]
+    }
+  }
+}

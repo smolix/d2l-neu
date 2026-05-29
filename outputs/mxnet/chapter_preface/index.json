@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "source": "chapter_preface/index.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "preface-code-1": {
+      "code_fingerprint": "sha256:7d7f9a112c1dff4294a2ede29248f51eade6b12318fcb46214c236716d56df4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "preface-code-2": {
+      "code_fingerprint": "sha256:ef9625206c32fabc704a2dfb42e1afe8a214a7f3ea82bf850e8005597b4e11d5",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

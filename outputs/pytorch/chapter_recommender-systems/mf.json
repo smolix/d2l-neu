@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/mf.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:2f15d615b6cdb4b829a0f5cc1a554487ccb92a98157d230ed5f7f25f2a9f2242",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mf-the-matrix-factorization-model": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-model-implementation": {
+      "code_fingerprint": "sha256:525cb00bf7e3732c1e6dc2ef802cbf1995bb5e2c642fb0c44696946f0655db81",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-evaluation-measures": {
+      "code_fingerprint": "sha256:bcffb5585597db23ec76e29eb8b7648a7741483892c86d0dd789266c20ba6552",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-training-and-evaluating-the-model-1": {
+      "code_fingerprint": "sha256:62eada992bfd4def473317a38c903be8d2e51fbc9cfebdd32bcb8b8084a267be",
+      "kind": "text",
+      "outputs": []
+    },
+    "mf-training-and-evaluating-the-model-2": {
+      "code_fingerprint": "sha256:a800cd32fe189318e5b78000053d97db21c8d8794ae6636f5c06eb1403d871dc",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.678, test RMSE 1.039\n244671.9 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
+          "bytes": 21537,
+          "sha256": "sha256:e8a7e96d4ca89b0a546729dff50dcb89a1a7b49efa2de998dedfc75249a993e8"
+        }
+      ]
+    },
+    "mf-training-and-evaluating-the-model-3": {
+      "code_fingerprint": "sha256:227df874f5ba3a1c63841f2d2a44de672365e72fcf49c51aa5dd332c9061861a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([2.9758], device='cuda:0', grad_fn=<AddBackward0>)"
+        }
+      ]
+    }
+  }
+}

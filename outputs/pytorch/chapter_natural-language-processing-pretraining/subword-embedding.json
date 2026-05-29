@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/subword-embedding.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "subword-embedding-byte-pair-encoding-1": {
+      "code_fingerprint": "sha256:7c0b3fce6bc6d7e99e99c80e4b1746ccd585c695e2ad5f596b83ea9286ddd438",
+      "kind": "text",
+      "outputs": []
+    },
+    "subword-embedding-byte-pair-encoding-2": {
+      "code_fingerprint": "sha256:12c058681b3266936945c3729f8a6e5f20231f67ee270c13fb5407aae1c70554",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'f a s t _': 4, 'f a s t e r _': 3, 't a l l _': 5, 't a l l e r _': 4}"
+        }
+      ]
+    },
+    "subword-embedding-byte-pair-encoding-3": {
+      "code_fingerprint": "sha256:869aae58bea51545b88be5c51c27ad708d233af11d63de6bf5c1edaf48b050e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "subword-embedding-byte-pair-encoding-4": {
+      "code_fingerprint": "sha256:f7e575a536c47a1199d953bf20d6a0bdf82fa5c68be5cf5781471eaffd830855",
+      "kind": "text",
+      "outputs": []
+    },
+    "subword-embedding-byte-pair-encoding-5": {
+      "code_fingerprint": "sha256:12d2f1b5d9b963c185149178dfd9f0cc494902b19567aba7d18815d2d65fba00",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "merge #1: ('t', 'a')\nmerge #2: ('ta', 'l')\nmerge #3: ('tal', 'l')\nmerge #4: ('f', 'a')\nmerge #5: ('fa', 's')\nmerge #6: ('fas', 't')\nmerge #7: ('e', 'r')\nmerge #8: ('er', '_')\nmerge #9: ('tall', '_')\nmerge #10: ('fast', '_')\n"
+        }
+      ]
+    },
+    "subword-embedding-byte-pair-encoding-6": {
+      "code_fingerprint": "sha256:9e90aedcb6130a12b54d1e0d09a543576cd5af8595107b4410ee7ddd830d0a87",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '[UNK]', 'ta', 'tal', 'tall', 'fa', 'fas', 'fast', 'er', 'er_', 'tall_', 'fast_']\n"
+        }
+      ]
+    },
+    "subword-embedding-byte-pair-encoding-7": {
+      "code_fingerprint": "sha256:1032b1b1af1d9f3b66b1abd5c2a3c8b773587942b9d832df4e6b37ddb2ae6ff3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['fast_', 'fast er_', 'tall_', 'tall er_']\n"
+        }
+      ]
+    },
+    "subword-embedding-byte-pair-encoding-8": {
+      "code_fingerprint": "sha256:2dc20363e316f175b6ff792a8060b2de41ea6747890da7195bd0501ec1692a71",
+      "kind": "text",
+      "outputs": []
+    },
+    "subword-embedding-byte-pair-encoding-9": {
+      "code_fingerprint": "sha256:b69bfb53f9563681fe185a6e8d84cb718bf9ff56df194f5a66d20568c209c2a7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['tall e s t _', 'fa t t er_']\n"
+        }
+      ]
+    }
+  }
+}

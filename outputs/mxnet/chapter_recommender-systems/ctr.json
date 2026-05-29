@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/ctr.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:e4518aa664dfb2c89d40e5db3dc4354ea7982b7db3db52331c57e0a738632062",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ctr-feature-rich-recommender-systems": {
+      "code_fingerprint": "sha256:e0d822ae21cc9c7eea109e1e296f7d658f49312c906f493e88aaf47e669b7fa8",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-an-online-advertising-dataset": {
+      "code_fingerprint": "sha256:40cc949da15195836b20325acfeb846e086c3fa59d7c045a6b158d32ea7720f2",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-dataset-wrapper-1": {
+      "code_fingerprint": "sha256:f8c368096813636d864019cca037f1de17622c0d352aa339395a21d0c3499f1f",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-dataset-wrapper-2": {
+      "code_fingerprint": "sha256:d8965851a3ae8f088bdadc8df57dbcccabfb6c432a14dd308452c0d9970e589f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([ 143.,  144.,  227.,  231.,  957., 1250., 1471., 1566., 1624.,\n        1736., 2008., 2061., 2225., 2304., 2305., 2360., 2745., 2746.,\n        2747., 2748., 2892., 2988., 3165., 3182., 3194., 3195., 3279.,\n        3651., 3687., 3708., 3722., 3751., 3786., 3801.]),\n array([1.]))"
+        }
+      ]
+    }
+  }
+}

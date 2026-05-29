@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/fcn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:6fbe40e6d908300482df1316985abe8f965031733233b00ef5d480600e1ae18b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fcn-fully-convolutional-networks": {
+      "code_fingerprint": "sha256:d49c767c237dcc2c977fae952c928c20130dd1e624e0228fa9f14e55f72097cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-the-model-1": {
+      "code_fingerprint": "sha256:4bb39c62d748cb6a1af3b6b503a3bfcf708d2000520315ad3304ba6cbc888d49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[Sequential(\n   (0): BasicBlock(\n     (conv1): Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)\n     (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n     (relu): ReLU(inplace=True)\n     (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)\n     (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n     (downsample): Sequential(\n       (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)\n       (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n     )\n   )\n   (1): BasicBlock(\n     (conv1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)\n     (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n     (relu): ReLU(inplace=True)\n     (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)\n     (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n   )\n ),\n AdaptiveAvgPool2d(output_size=(1, 1)),\n Linear(in_features=512, out_features=1000, bias=True)]"
+        }
+      ]
+    },
+    "fcn-the-model-2": {
+      "code_fingerprint": "sha256:7593df895b8598c6c6f6aaf4d86af7ff46f7be849362ee93bcb45ce2627f6b7f",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-the-model-3": {
+      "code_fingerprint": "sha256:b322afcf8995ec49f599367a9684dc6430a35a809096d5057c050c863ee9d2f6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([1, 512, 10, 15])"
+        }
+      ]
+    },
+    "fcn-the-model-4": {
+      "code_fingerprint": "sha256:d56854ea32ecb1c630540a2001e6f5de2a604e2e621e021ded36b13f244f0756",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-1": {
+      "code_fingerprint": "sha256:7d364c5fd993e8929de7743521b1c2d9a234a8d7d3ebd4861ed1db6e3180a6ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-2": {
+      "code_fingerprint": "sha256:b512995bf650d768c3a8be23a463b513737cc8c8bff3c649f0f76cf18f7666cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-3": {
+      "code_fingerprint": "sha256:0a6868ac80ba7f444db2404312e10028c921bcbde204df34e4ae34544f5b5380",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-4": {
+      "code_fingerprint": "sha256:91de3fe5b6799c8b399138b53e4eafa898bb2636863ba0125e726cc04937116b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "input image shape: torch.Size([561, 728, 3])\noutput image shape: torch.Size([1122, 1456, 3])\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
+          "bytes": 86064,
+          "sha256": "sha256:3f318d9bcf2385c91643d33f390030c74bd5cda6d1072cf4d529788f39ea788e"
+        }
+      ]
+    },
+    "fcn-initializing-transposed-convolutional-layers-5": {
+      "code_fingerprint": "sha256:fd550d766e6a9c9216d77d823ee8542db9d33fdacb0a9d2505530d2c6a075398",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-reading-the-dataset": {
+      "code_fingerprint": "sha256:226ec7bfe06fd4bf18a26385c27dc1cba30dbfcb95bc670a99a43421190ba3eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1114 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1078 examples\n"
+        }
+      ]
+    },
+    "fcn-training": {
+      "code_fingerprint": "sha256:d59973703ed4699d26ac56655f5d0187159da9886ef311053af32d47f0aac537",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.418, train acc 0.869, test acc 0.850\n316.4 examples/sec on [device(type='cuda', index=0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-training-1.svg",
+          "bytes": 25061,
+          "sha256": "sha256:e83059e564f7c2b55a3b1223909013752ed85c5e3919a0f53056fa02b0d8682f"
+        }
+      ]
+    },
+    "fcn-prediction-1": {
+      "code_fingerprint": "sha256:c937b28166070fa5026579a4a5198c7805005da13748d3ff520620edaec15e83",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-prediction-2": {
+      "code_fingerprint": "sha256:50b5ae262aa5ea78a37f0110878dea0a4dfbbf5c20c645b556daf93a75027b09",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-prediction-3": {
+      "code_fingerprint": "sha256:31504ab1546657b44bf19faa6b2a1b8b8b32437fb4d76c248699d229f9fef52d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-prediction-3-1.svg",
+          "bytes": 154905,
+          "sha256": "sha256:39dba43ebee5b7edaeef9522efdbe9f69f3f6da94a99d0b78c2228c66cce159b"
+        }
+      ]
+    }
+  }
+}

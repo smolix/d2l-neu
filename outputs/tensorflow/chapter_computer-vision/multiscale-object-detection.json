@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/multiscale-object-detection.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:bfbbd0352013ec9ea06fe9864a4c07ed403121e71503bc6160f579d3bb7babeb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multiscale-object-detection-multiscale-anchor-boxes-1": {
+      "code_fingerprint": "sha256:d6d3bddc65a047f167ad7aff035ef4714a291691e6dd68d831494c9e43793cbc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(561, 728)"
+        }
+      ]
+    },
+    "multiscale-object-detection-multiscale-anchor-boxes-2": {
+      "code_fingerprint": "sha256:0b31b4b159c08ea080f55f5a47c3d80a28e3c4871712a66a123f368830de8dbf",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiscale-object-detection-multiscale-anchor-boxes-3": {
+      "code_fingerprint": "sha256:ffdab3966707761cd7ba16d5b36f8f4a867003b86a1bef5af2be8576ab217084",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
+          "bytes": 100148,
+          "sha256": "sha256:ed3ac0bb3e4caea7239792705505a9110022f9ef02a731e35e07bed23eda4faf"
+        }
+      ]
+    },
+    "multiscale-object-detection-multiscale-anchor-boxes-4": {
+      "code_fingerprint": "sha256:20b389e17fea90968a3e3602490905ae25ba969078163414bcdfea6b83a7789a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
+          "bytes": 90278,
+          "sha256": "sha256:f0b3583a2ee884e9fc49f0943da0c0ea88c1585eaca2d73163262e7bfc43f7a2"
+        }
+      ]
+    },
+    "multiscale-object-detection-multiscale-anchor-boxes-5": {
+      "code_fingerprint": "sha256:79127b1e1b2c40fd5251b0bbf8952fe3d8107c43e51fb617753c2e650c012a5c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
+          "bytes": 87821,
+          "sha256": "sha256:4e73a43c2c97bddabd42bcd7c4b92072b0559f3e69a5cf82f439f4c3a299a51e"
+        }
+      ]
+    }
+  }
+}

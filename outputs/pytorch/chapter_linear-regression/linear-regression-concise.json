@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/linear-regression-concise.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:d4b8cdf3dde00fc5c9c1f1fc252f3eec6fcdc83b846082c75a540869bf7867da",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-regression-concise-concise-implementation-of-linear-regression": {
+      "code_fingerprint": "sha256:f8f7c169b0f675fa1e7bed3680e4772a14dfe434a903638bf11fceba2d9f51e1",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-model-1": {
+      "code_fingerprint": "sha256:660fe71802e22fb45bf38e277e309bad2e449049f36b013d8be969af06fcde1d",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-model-2": {
+      "code_fingerprint": "sha256:8db9465780b84052709b97cf175d5975e70ee089fa990ba071c41a4ddbcc03aa",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-loss-function": {
+      "code_fingerprint": "sha256:d7cd581f70976527eb5879134965877fc1fdb412b9d46bbac2f0afa1e46de32d",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-optimization-algorithm": {
+      "code_fingerprint": "sha256:db7d0d5914894dcc6f46d41b66f75a80170bb830d2ac877cc8f099ec8ed4739c",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-1": {
+      "code_fingerprint": "sha256:9ffefc98b5f8746b46c66f010987b37f21d4ea6d74c82a02849200d9b907b67e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
+          "bytes": 23997,
+          "sha256": "sha256:3b42e2201397a0390de282395023679c15035954f0eed5551e88cf81aeba4a4c"
+        }
+      ]
+    },
+    "linear-regression-concise-training-2": {
+      "code_fingerprint": "sha256:5291315d296cc8030b62cd46599f1e06a70be5572025b310af4cd9e4376d2cd2",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-3": {
+      "code_fingerprint": "sha256:3b42fd623bfdfd34d167981d64bfaa40e667834146bfbefd641f977e40f87d24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error in estimating w: tensor([ 0.0071, -0.0074])\nerror in estimating b: tensor([0.0081])\n"
+        }
+      ]
+    }
+  }
+}

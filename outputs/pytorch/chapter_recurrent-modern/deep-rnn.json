@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/deep-rnn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:a127074e1b2a6575613486340a4f6048ded5180d2379706a60d75c03e3e1bede",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deep-rnn-deep-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:33e15c35630a325a59820301cdfad07a7f7cb3c80f7539ef2271d82c51d27b2d",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:1dbb8decf13787aa18613168a6882f4c54c3dc374c9cece37c65095b201fb1b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:48085e28a32c5910368e28be65c41b06acc7407a5c933b7e3c25ba20d47cb3be",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
+          "bytes": 1067855,
+          "sha256": "sha256:5523739a0bc9ee3ec150c10f7f5f9ff667cc1b78039f64863f1ac4912333d49e"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-1": {
+      "code_fingerprint": "sha256:161c6b98a1af5a154406a4ca47911eaf0d87c20915d4b46973b444d41d690618",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rnn-concise-implementation-2": {
+      "code_fingerprint": "sha256:e636ce1a8bd8d3a01a58e42549e5404c6e91e4297f2a4bb2c8b2bcf4c81ce645",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
+          "bytes": 1072155,
+          "sha256": "sha256:270555145d813e145e699f9d500f1334c8a71e8bf22b96d0bd325f4617edad74"
+        }
+      ]
+    },
+    "deep-rnn-concise-implementation-3": {
+      "code_fingerprint": "sha256:3dbdfef364cd15b8014749065592e6243454f0bba9c603e8855e15241aebe873",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it has the time traveller '"
+        }
+      ]
+    }
+  }
+}

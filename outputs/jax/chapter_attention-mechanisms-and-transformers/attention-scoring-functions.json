@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/attention-scoring-functions.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:8fba838af99ab2ed69ddead318168bcf32433c5849dbe6ca2434d53232af043b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-scoring-functions": {
+      "code_fingerprint": "sha256:6bc67256f17e5aeb9b3e704d195afb148f2d7af1f2b9b1bfa0311f29dc78b112",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-1": {
+      "code_fingerprint": "sha256:4eae250b6957f12b441948c21ae6d0f4d3f341f3f8aebd75904492cdbb00a876",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-masked-softmax-operation-2": {
+      "code_fingerprint": "sha256:e61b79f6dd462751a4e072385d843ec93d7f43d8dbcaeeeb748e83da038b3562",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[0.44036096, 0.55963904, 0.        , 0.        ],\n        [0.3914764 , 0.60852355, 0.        , 0.        ]],\n\n       [[0.2912151 , 0.43938962, 0.26939523, 0.        ],\n        [0.41406792, 0.29180348, 0.29412857, 0.        ]]], dtype=float32)"
+        }
+      ]
+    },
+    "attention-scoring-functions-masked-softmax-operation-3": {
+      "code_fingerprint": "sha256:5c079569637ae81f2eddfb60d1f0132c97d9f4d9b1eb1b46d5dcc11172a3f798",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.30580992, 0.3106621 , 0.383528  , 0.        ]],\n\n       [[0.39127716, 0.6087228 , 0.        , 0.        ],\n        [0.19169618, 0.283323  , 0.25459105, 0.27038974]]], dtype=float32)"
+        }
+      ]
+    },
+    "attention-scoring-functions-batch-matrix-multiplication": {
+      "code_fingerprint": "sha256:70e6d4d598c7e283e7793c54fc200af212ba69dfd678676ecdeca3326e71d071",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-1": {
+      "code_fingerprint": "sha256:8ede549743ebf2f467a0aa65c69d542ab752e490ca9ede77819b509b9971b5f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-2": {
+      "code_fingerprint": "sha256:33b1db3a64c253335d837df904184faa96502e46935322bb05b7cde8cd7f7695",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[[-0.04701408  0.61414313 -1.0031724  -0.661477  ]]\n\n [[ 0.83954984  0.3183016   0.52048445  0.48648867]]]\n"
+        }
+      ]
+    },
+    "attention-scoring-functions-scaled-dot-product-attention-3": {
+      "code_fingerprint": "sha256:f97871fa66e864335faf3a3237de5b2195a09bcf739351a6eece3c4a740ec01f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
+          "bytes": 14339,
+          "sha256": "sha256:d8bda624655d0ec7402dbd7c2bc2f824966b7bd0dc12591d85647e7e4eb0b37a"
+        }
+      ]
+    },
+    "attention-scoring-functions-additive-attention-1": {
+      "code_fingerprint": "sha256:b9b7db648505572069de22eb421d3c13760f271fad35f09136be0c52e835fbc9",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-functions-additive-attention-2": {
+      "code_fingerprint": "sha256:393f2bb8654b6c86708dea76ea2d93d181ccd7d4d813fb6ea3d832e35e497bad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[[ 0.37564147  0.10681814 -0.39052612  0.30577394]]\n\n [[ 0.45246756  0.02368876  0.20076841  0.56524944]]]\n"
+        }
+      ]
+    },
+    "attention-scoring-functions-additive-attention-3": {
+      "code_fingerprint": "sha256:d2076b067ca8c2891e40902826164a31763224c10c853653534e7ed764b6b3f7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
+          "bytes": 13604,
+          "sha256": "sha256:1bd05632240fd98305295968b6cb3ed9281da2726adb992a74d5d273bd19d076"
+        }
+      ]
+    }
+  }
+}

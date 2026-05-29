@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/bounding-box.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bounding-box-object-detection-and-bounding-boxes-1": {
+      "code_fingerprint": "sha256:76f980c6903c0a8bf5e3abf7751ede27b2b1cf783df4b5baea2a22fff9d3715c",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-object-detection-and-bounding-boxes-2": {
+      "code_fingerprint": "sha256:8be49458751d2a0e504c1ce371dca72e78e551abac588cb7bf0390f637404161",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
+          "bytes": 87007,
+          "sha256": "sha256:b73ae7776f8bb8fb6619c92a5f7b8c3c940d8e1fdc5543cb7fc697a9161164eb"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-1": {
+      "code_fingerprint": "sha256:dc4adc42fda7b1ed9e1fd18b764e85b895bc980f6c3b2dcaead06a915cf1e3d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-2": {
+      "code_fingerprint": "sha256:1ec42ca6c83fe304771ed7b43f033b81760aec44178c2f83268eddb9333cecd6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-3": {
+      "code_fingerprint": "sha256:32d9a1cc66362592f309cbff5309339dee64304a1bb557cb46d9163413ddbdfb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ True,  True,  True,  True],\n       [ True,  True,  True,  True]])"
+        }
+      ]
+    },
+    "bounding-box-bounding-boxes-4": {
+      "code_fingerprint": "sha256:9841f5a3492257bdd48fab64b8c7efae95450162fb7bbf42b67fb24c06af1e97",
+      "kind": "text",
+      "outputs": []
+    },
+    "bounding-box-bounding-boxes-5": {
+      "code_fingerprint": "sha256:f710ccb3eff35a65b8b473c1f5061dd2c3921afce5aa4999262774194cf8c818",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
+          "bytes": 87556,
+          "sha256": "sha256:aeb5196432eb41c56913cb029d726dafb6caeda553a6f99a93d105297ee2332a"
+        }
+      ]
+    }
+  }
+}

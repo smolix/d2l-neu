@@ -112,6 +112,7 @@ export PYTHONUNBUFFERED := 1
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides
+.PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh
 
 # ── Help ───────────────────────────────────────────────────
 
@@ -127,6 +128,11 @@ help:
 	@echo "  notebooks               Generate notebooks for all frameworks"
 	@echo "  run-notebooks-<fw>     Execute notebooks for one framework (CPU/GPU queues)"
 	@echo "  run-all-notebooks       Execute all frameworks (CPU/GPU queues)"
+	@echo "  capture-outputs         Bless executed _notebooks/ → committed outputs/ store [FILES=...]"
+	@echo "  audit-outputs           Report stale notebooks (code drift) + store integrity"
+	@echo "  verify-outputs-fresh    Render gate: fail on stale inline outputs / orphaned ids"
+	@echo "  refresh-stale           Re-execute only stale notebooks, then re-capture"
+	@echo "  render-fresh            refresh-stale, then rebuild slides + html + pdfs"
 	@echo "  slides-<fw>            Build slides for one framework (CPU)"
 	@echo "  slides                  Build slides for all frameworks"
 	@echo "  lib                     Build d2l Python package"
@@ -146,6 +152,43 @@ help:
 # ── d2l library ────────────────────────────────────────────
 
 lib: d2l/.built
+
+# ── Committed outputs store (decoupled build; see docs/build-system.md) ──
+# capture-outputs   distill executed _notebooks/ → committed outputs/ store
+# audit-outputs     report stale notebooks (code-provenance drift) + integrity
+# verify-outputs-fresh  render gate: fail on stale INLINE outputs / orphaned ids
+# refresh-stale     re-execute ONLY stale notebooks, then re-capture
+# render-fresh      refresh-stale, then rebuild slides + html + pdfs
+
+capture-outputs:
+	@mkdir -p $(LOGDIR)
+	python3 tools/capture_outputs.py $(if $(FILES),FILES=$(FILES)) \
+		2>&1 | tee $(LOGDIR)/capture-outputs-$(TS).log
+
+audit-outputs:
+	@python3 tools/audit_outputs.py
+
+verify-outputs-fresh:
+	@python3 tools/audit_outputs.py --verify-fresh
+
+# Re-execute only what the audit reports stale, then re-capture those files.
+refresh-stale:
+	@stale="$$(python3 tools/audit_outputs.py --stale)"; \
+	if [ -z "$$stale" ]; then echo "Nothing stale — store is fresh."; exit 0; fi; \
+	echo "Stale (will re-execute + capture):"; echo "$$stale" | sed 's/^/  /'; \
+	for f in $$stale; do \
+		ch=$$(dirname $$f); st=$$(basename $$f .md); \
+		for fw in $(FRAMEWORKS); do \
+			nb="_notebooks/$$fw/$$ch/$$st.ipynb"; \
+			[ -f "$$nb" ] && $(MAKE) -B "_notebooks/$$fw/$$ch/$$st.executed" || true; \
+		done; \
+		$(MAKE) capture-outputs FILES="$$f"; \
+	done
+
+render-fresh: refresh-stale
+	$(MAKE) slides
+	$(MAKE) html
+	$(MAKE) -j4 pdfs
 
 # Grouped target (GNU Make 4.3+ `&:`): one invocation produces all four
 # d2l/<fw>.py files plus the d2l/.built stamp. build_lib.py is content-
@@ -278,10 +321,13 @@ html: _book/index.html
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
 _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
+	@echo "=== Verifying committed outputs are fresh ==="
+	@python3 tools/audit_outputs.py --verify-fresh || \
+		{ echo "Outputs stale — re-run + 'make capture-outputs', or 'make render-fresh'."; exit 1; }
 	@echo "=== Building HTML book ==="
 	@{ \
-		if [ -d _notebooks ]; then \
-			echo "Injecting notebook outputs..."; \
+		if [ -d outputs ] || [ -d _notebooks ]; then \
+			echo "Injecting notebook outputs (store preferred, _notebooks fallback)..."; \
 			python3 tools/inject_outputs.py html; \
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \

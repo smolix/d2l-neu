@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/language-model.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:ff16f873e9e046b0cd29f159fd46d48fbfcf9c9fd6fcfe6c56f8bd95f874277f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "language-model-language-models": {
+      "code_fingerprint": "sha256:5cfb8cd1e4f8bcd8167db469f4c0e14d5e0290de23b9905ede34a21f0a7b86f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:2d4427c2d4accf7f8f5e7a28a0ad777ba635f99d8bdbc85cbc81c793a0f58701",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:8592d4764d27fd256ae18c42d630331b7b146f059baa303a1fbd2989760a2ce5",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:603157156bba3596f396681f92f6eda1479016949d659adac9865881013cbdf2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: [[ 1  7 16  1 22  2 10  3  5 15]\n [ 7  6  1  8  4  5 11  1  3  9]] \nY: [[ 7 16  1 22  2 10  3  5 15  4]\n [ 6  1  8  4  5 11  1  3  9  2]]\n"
+        }
+      ]
+    }
+  }
+}

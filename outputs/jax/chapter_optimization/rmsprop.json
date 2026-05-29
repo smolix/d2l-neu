@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/rmsprop.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:bab3be65c3edc41732f4958cd968f32aa093088a728513b0138c309a42e00ed9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rmsprop-the-algorithm-1": {
+      "code_fingerprint": "sha256:23066e25260237be1aa84534c9fa2d99c84d4e9cd971533fc6c2500e9185c1f0",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-the-algorithm-2": {
+      "code_fingerprint": "sha256:8bcba8871af5ce7494e0eec8fa386ce3fd05b14c4cdb58a6126d060a50318098",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-the-algorithm-2-1.svg",
+          "bytes": 15568,
+          "sha256": "sha256:76b5cf28530a8e040f0e30e8e64feac8aba77135d907b915b32300f5594b6ac2"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:3aa0427295f7cbc549e5698165302fd2da24282090bfda38d7c2372376a25517",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: -0.010599, x2: 0.000000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-1-1.svg",
+          "bytes": 23700,
+          "sha256": "sha256:819e09f9264f8354c4d92a6f62ec81dad0d4deb584513bc8434dab7e966c3965"
+        }
+      ]
+    },
+    "rmsprop-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:f19902160df0d791bd4cd4ff459df66712b3b86e6778e78621af81e7f0e8ab56",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:186b60fd36e51843e7c166a3d66de0f248a1a0d9cd1862189de540431c8d6c84",
+      "kind": "text",
+      "outputs": []
+    },
+    "rmsprop-implementation-from-scratch-4": {
+      "code_fingerprint": "sha256:f9368e0f7624fdaf154b395cb0b953e904b6dfa64e5dbe2356ca12fe1adbfa93",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 1.737 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-implementation-from-scratch-4-1.svg",
+          "bytes": 18782,
+          "sha256": "sha256:b0a8a1880a6d8b9b9920f0ec17a8924369e5f00e8e5056d2cef27e89c664403d"
+        }
+      ]
+    },
+    "rmsprop-concise-implementation": {
+      "code_fingerprint": "sha256:3008f37bf29cc7c626c5a51e1bc0069d1638f608fd8390e396a850d58a859ee8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.245, 0.788 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rmsprop/rmsprop-concise-implementation-1.svg",
+          "bytes": 18774,
+          "sha256": "sha256:d87d95e1b4c6913ccf77d54fbecfae8f485cc72f88b5111654869981e366accd"
+        }
+      ]
+    }
+  }
+}

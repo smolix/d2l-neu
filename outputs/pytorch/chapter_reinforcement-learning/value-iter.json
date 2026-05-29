@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/value-iter.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:60b54ceb8a95fc45ac2513a73f4579bc45bf4ba78de59d87cbd1c0c78ec9e508",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "value-iter-implementation-of-value-iteration-1": {
+      "code_fingerprint": "sha256:6517663031fcf8dac9d083221d2ea051e2423470d4d3f90085b9931bed2dc08c",
+      "kind": "text",
+      "outputs": []
+    },
+    "value-iter-implementation-of-value-iteration-2": {
+      "code_fingerprint": "sha256:6eae430f5e7d6a4d93cd1cf38e8898286160717930041b73d3cbbe60c0a62e3c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "value-iter/value-iter-implementation-of-value-iteration-2-1.png",
+          "bytes": 73361,
+          "sha256": "sha256:75780499dc0be490d0da90946b14a3f036491ab6fc24b0e821fb112f0e4e4e69"
+        }
+      ]
+    }
+  }
+}

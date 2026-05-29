@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_recommender-systems/ctr.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:229e8d8d62abb8daacb809438bfdd11a05b1b0a9466fa9abfd8f35ad6448778d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ctr-feature-rich-recommender-systems": {
+      "code_fingerprint": "sha256:8639c7bcee8a0ed464674067fa796f99077856fc942087e9f37187126e5057ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-an-online-advertising-dataset": {
+      "code_fingerprint": "sha256:53d26435d1d82a0905e0bc62609b022317cf531be673087cfa7e64e0b83a082e",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-dataset-wrapper-1": {
+      "code_fingerprint": "sha256:3840bdee932fe6c7a13497d80f48ea5a18a273c7d0e41253fabe58296c69c597",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-dataset-wrapper-2": {
+      "code_fingerprint": "sha256:b9bbc80c6bb24ca4a0e74483edc6244a7dc532ebea9409fedeb2e147d5821421",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([ 143,  144,  227,  231,  957, 1250, 1471, 1566, 1624, 1736, 2008, 2061,\n         2225, 2304, 2305, 2360, 2745, 2746, 2747, 2748, 2892, 2988, 3165, 3182,\n         3194, 3195, 3279, 3651, 3687, 3708, 3722, 3751, 3786, 3801]),\n tensor([1.]))"
+        }
+      ]
+    }
+  }
+}

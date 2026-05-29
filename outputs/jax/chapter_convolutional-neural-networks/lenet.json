@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/lenet.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lenet-convolutional-neural-networks-lenet": {
+      "code_fingerprint": "sha256:269843c3a6cd5b55f224e80df9bb7b0c1efc12aed51af260e699499639a423c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-2": {
+      "code_fingerprint": "sha256:5b15717e1f55d3d27d417747c573b405ca9ea55826fe7ac1d64e6a187018c2a1",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-3": {
+      "code_fingerprint": "sha256:edd8fa74c2903933815d5b376f924a0b65dba3f0fbca1846b7a8d9710cf4a260",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\nConv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\nfunction output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nPjitFunction output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nPjitFunction output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "lenet-training": {
+      "code_fingerprint": "sha256:227cf3dbd3c84bc8edd64c4ce6cc7626e72e04656a3e9cd85e5841606a3f3580",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-training-1.svg",
+          "bytes": 32483,
+          "sha256": "sha256:a10ff802c8966068848b3bdbe1d2f21c39f3af81dbaf2d5155d6292ba6e3138c"
+        }
+      ]
+    }
+  }
+}

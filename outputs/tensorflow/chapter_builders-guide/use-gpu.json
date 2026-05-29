@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/use-gpu.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:df07c9d71b2ce5afec74b58f21ad0f407f557902db7558c8792a24d4ad37fd57",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "use-gpu-gpus": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "use-gpu-computing-devices-1": {
+      "code_fingerprint": "sha256:93c9199a422e0e86a2bc175430185391ed15d9643709a891127737df44ff9348",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf74bd2c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7c807ecf40>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ede100>)"
+        }
+      ]
+    },
+    "use-gpu-computing-devices-2": {
+      "code_fingerprint": "sha256:596048d916b2fe54e8520fc01fc03a875c4481d3480f6fb2c85da29b3cfae371",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "4"
+        }
+      ]
+    },
+    "use-gpu-computing-devices-3": {
+      "code_fingerprint": "sha256:0b7136aabbe810574ee2312d1e8dc05390be7c82e4a363ac9028cc78ef6b2bca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef55c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5300>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef52c0>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5280>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5240>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5200>])"
+        }
+      ]
+    },
+    "use-gpu-tensors-and-gpus": {
+      "code_fingerprint": "sha256:b14174ae85a1b2de336420db554536f8ab02772d77da9614757de34f22f6361c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'/job:localhost/replica:0/task:0/device:GPU:0'"
+        }
+      ]
+    },
+    "use-gpu-storage-on-the-gpu-1": {
+      "code_fingerprint": "sha256:cc9cfd60ca9e9766370951f3ed33539f3ad872740d155114fd182f068732a05c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1., 1., 1.],\n       [1., 1., 1.]], dtype=float32)>"
+        }
+      ]
+    },
+    "use-gpu-storage-on-the-gpu-2": {
+      "code_fingerprint": "sha256:9beefea76f82db4803b678de0b128507a287664b4956f4545bdc5c3480408bb0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.584556  , 0.67113423, 0.00837564],\n       [0.03477895, 0.2866397 , 0.3940568 ]], dtype=float32)>"
+        }
+      ]
+    },
+    "use-gpu-copying-1": {
+      "code_fingerprint": "sha256:208cd1215b67c566aaa3c114787dfd9a0d2dd07b3624972477d4eddfe75adca5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.Tensor(\n[[1. 1. 1.]\n [1. 1. 1.]], shape=(2, 3), dtype=float32)\ntf.Tensor(\n[[1. 1. 1.]\n [1. 1. 1.]], shape=(2, 3), dtype=float32)\n"
+        }
+      ]
+    },
+    "use-gpu-copying-2": {
+      "code_fingerprint": "sha256:7f7b2b9bf967fa0a0663327e60cb4f12259b4aebb2ff1956cdfca7824a444b1c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.584556 , 1.6711342, 1.0083756],\n       [1.034779 , 1.2866397, 1.3940568]], dtype=float32)>"
+        }
+      ]
+    },
+    "use-gpu-copying-3": {
+      "code_fingerprint": "sha256:fa01897543b59e5a276ba48911d4f1b24c07667fcff7c979413515c282527233",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-1": {
+      "code_fingerprint": "sha256:e00ee22dc8b49e02d1862c607e67a6830f763ac5f5226b0fd85655e36bfe5d1a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0', '/job:localhost/replica:0/task:0/device:GPU:1', '/job:localhost/replica:0/task:0/device:GPU:2', '/job:localhost/replica:0/task:0/device:GPU:3')\n"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-2": {
+      "code_fingerprint": "sha256:da566f1db13e28e9abbf1e3b751cb89a9c812643dcd2df4dd442353b09dc037f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.7608571],\n       [1.7608571]], dtype=float32)>"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-3": {
+      "code_fingerprint": "sha256:3f101d031c139034dfaba555fe8801dbceb6dd7d32251dea760ea7ed236a7187",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "('/job:localhost/replica:0/task:0/device:GPU:0',\n '/job:localhost/replica:0/task:0/device:GPU:0')"
+        }
+      ]
+    },
+    "use-gpu-neural-networks-and-gpus-5": {
+      "code_fingerprint": "sha256:146051539367d95c9d970c3014e188dab20683136c2da6ce1fa902854192d8f3",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

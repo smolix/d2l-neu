@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/pooling.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "pooling": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-1": {
+      "code_fingerprint": "sha256:887a2fa32274b2f226bb4939b24e93952e31a627ae139ec9225096fc13b172e5",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-2": {
+      "code_fingerprint": "sha256:07fbc467fe22eb6b45a601d1251710a8cdd19e8d83727697e7b40c69441147e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[4., 5.],\n       [7., 8.]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-maximum-pooling-and-average-pooling-3": {
+      "code_fingerprint": "sha256:09a56560cb8c05a7b09164f17d8f8056c54e92d287ec01ab5779056a64210ec1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[2., 3.],\n       [5., 6.]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-1": {
+      "code_fingerprint": "sha256:b58c6e804581e3a0b5bf450e9bb7f79bee59f04096f82979f680da83f012314d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 4, 4, 1), dtype=float32, numpy=\narray([[[[ 0.],\n         [ 1.],\n         [ 2.],\n         [ 3.]],\n\n        [[ 4.],\n         [ 5.],\n         [ 6.],\n         [ 7.]],\n\n        [[ 8.],\n         [ 9.],\n         [10.],\n         [11.]],\n\n        [[12.],\n         [13.],\n         [14.],\n         [15.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-2": {
+      "code_fingerprint": "sha256:4a2d8e18c2e354dedde01a090b63d0e621b76003bce63ce8d93fd19b997ca3ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 1, 1, 1), dtype=float32, numpy=array([[[[10.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-3": {
+      "code_fingerprint": "sha256:6e85a0c322cb74ee3450976c876b0498c6efad763a79353f99b9aa457e9ed354",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 5.],\n         [ 7.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-4": {
+      "code_fingerprint": "sha256:eea3d72ce859dc236256905540ec636404d639f908295a383935263ac9b89b62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 5.],\n         [ 7.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-multiple-channels-1": {
+      "code_fingerprint": "sha256:691cf8f6cb2600a7169b4db8cc94ccffbc7e6578704b1f0f5daa20c606c4ad0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 4, 4, 2), dtype=float32, numpy=\narray([[[[ 0.,  1.],\n         [ 1.,  2.],\n         [ 2.,  3.],\n         [ 3.,  4.]],\n\n        [[ 4.,  5.],\n         [ 5.,  6.],\n         [ 6.,  7.],\n         [ 7.,  8.]],\n\n        [[ 8.,  9.],\n         [ 9., 10.],\n         [10., 11.],\n         [11., 12.]],\n\n        [[12., 13.],\n         [13., 14.],\n         [14., 15.],\n         [15., 16.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "pooling-multiple-channels-2": {
+      "code_fingerprint": "sha256:4f3ff85982f84b484927de67fcaff5b3e3971307f5bd947dae8d38bc758b468c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2, 2, 2), dtype=float32, numpy=\narray([[[[ 5.,  6.],\n         [ 7.,  8.]],\n\n        [[13., 14.],\n         [15., 16.]]]], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

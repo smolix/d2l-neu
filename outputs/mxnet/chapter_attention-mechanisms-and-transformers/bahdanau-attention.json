@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "source": "chapter_attention-mechanisms-and-transformers/bahdanau-attention.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:7eb062d4adf5c4f95d11f26df438c2c58c0aae3a0e974f943ff76cf98725d9eb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bahdanau-attention-the-bahdanau-attention-mechanism": {
+      "code_fingerprint": "sha256:5101a0b1b89b8b31ac1e0a69aaa164b1df4f1f6f4cf5f22301befd2805827208",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-1": {
+      "code_fingerprint": "sha256:051fbd2961e578109b96ac1b185ce1dd63294a8be6cd1ec0701cadb371251b49",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-2": {
+      "code_fingerprint": "sha256:cf478c29701f7c0f17614b63fe2cc1280117655241c89ae5dbba1ab88afa9fa9",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-defining-the-decoder-with-attention-3": {
+      "code_fingerprint": "sha256:f56a957c679dd5e686475b3cc497659b1a6df42d1a94efe4ad7c2ca170f7993d",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-training-1": {
+      "code_fingerprint": "sha256:53262b2a012dd74c08559af0ee3afd1a279839a7f603ea9d0b6b9e4e0559b50a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
+          "bytes": 140198,
+          "sha256": "sha256:c84f4002c04d46c94a164c1f566f1b3fdcd75326c10887677f9055798bfa3c0d"
+        }
+      ]
+    },
+    "bahdanau-attention-training-2": {
+      "code_fingerprint": "sha256:ff3da7662ba5aaf2b076cb956a56a3a30af5e6ad7b4eb474911faa685e5cd0b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+        }
+      ]
+    },
+    "bahdanau-attention-training-3": {
+      "code_fingerprint": "sha256:299851f5e0fcae581d201d2f678000215f9605143faa049142bd7f6c3edcc4c4",
+      "kind": "text",
+      "outputs": []
+    },
+    "bahdanau-attention-training-4": {
+      "code_fingerprint": "sha256:8daab7b728ebb79f670eb5177efb169ba7c9380e84049e0637dd0cf78a94ad96",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
+          "bytes": 19149,
+          "sha256": "sha256:6f7944c7771ba7ce19db527c1e2edb628c31ea7b59aabf3202aaf95e34174e9d"
+        }
+      ]
+    }
+  }
+}

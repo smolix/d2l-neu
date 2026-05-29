@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/fcn.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:755b39af3ea6b57005a33423557bec097c973c12fc90a0d1953cccc682ddddaf",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fcn-fully-convolutional-networks": {
+      "code_fingerprint": "sha256:4d5551db8dfa96985c773f09a41b743230b14ac9bc4793dd7133dd19437a2ae2",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-the-model-1": {
+      "code_fingerprint": "sha256:9acb7e66352b3c7945bbc1b57ecbee3f99504eee26a6b65221d235b12ac99b0b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(HybridSequential(\n   (0): Activation(relu)\n   (1): GlobalAvgPool2D(size=(1, 1), stride=(1, 1), padding=(0, 0), ceil_mode=True, global_pool=True, pool_type=avg, layout=NCHW)\n   (2): Flatten\n ),\n Dense(512 -> 1000, linear))"
+        }
+      ]
+    },
+    "fcn-the-model-2": {
+      "code_fingerprint": "sha256:592652aec7e2607271b64a5cdb392edf006a9c62cad8f2e3c48433bd4b5b465f",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-the-model-3": {
+      "code_fingerprint": "sha256:d0f0d8e3eb005b596792189542867b7627e68fd6185e8c7531ae2374712b00a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1, 512, 10, 15)"
+        }
+      ]
+    },
+    "fcn-the-model-4": {
+      "code_fingerprint": "sha256:f0bb7e6663902f34c3604b5b7b130326236fd991cd536870ac2a8507871e973d",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-1": {
+      "code_fingerprint": "sha256:592c1127849505a80e8dc1ff08aca69fe8e89d6c8c4e25e37c48a805331d88e0",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-2": {
+      "code_fingerprint": "sha256:ddf258ddb2bd574f81e3fea24f5ef8a46295200e0d76a8949821867bd796100f",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-3": {
+      "code_fingerprint": "sha256:b36861243923d03992d5c978b5064bb3d042ade3bb51073b8b872ecee13996da",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-initializing-transposed-convolutional-layers-4": {
+      "code_fingerprint": "sha256:2d4140d69a6ff13c3c195a9523c73520ba2079620850e942fd0276e213bb514b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "input image shape: (561, 728, 3)\noutput image shape: (1122, 1456, 3)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
+          "bytes": 86064,
+          "sha256": "sha256:f8a01c8ca25755c32d8ac4a1028a08100224b60b0d12bc022c13f091908d3b00"
+        }
+      ]
+    },
+    "fcn-initializing-transposed-convolutional-layers-5": {
+      "code_fingerprint": "sha256:b140de8e033f93f05292d2789d9413de41790e2f357e76d39ebd580d40b68c7e",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-reading-the-dataset": {
+      "code_fingerprint": "sha256:bbdce149beed1adabd6cc4bc09362c8a3a7779fd41a041d7ae584d177f16221a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1114 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 1078 examples\n"
+        }
+      ]
+    },
+    "fcn-training": {
+      "code_fingerprint": "sha256:f48eccf24b29e99a9a8ccf52b0c7aa4b3d6ade459797e368a57bc392acc2c476",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 0.367, train acc 0.882, test acc 0.844\n84.7 examples/sec on [gpu(0)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-training-1.svg",
+          "bytes": 25063,
+          "sha256": "sha256:48bb8b0b632911e03c5536dd00e1c2ff4e6e4b27b653613e72ad518dae777cbb"
+        }
+      ]
+    },
+    "fcn-prediction-1": {
+      "code_fingerprint": "sha256:7be67260ab38e4a863008b518bd9b16b7abc49ccbb3768caa16eca3677ec0abf",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-prediction-2": {
+      "code_fingerprint": "sha256:37dfc5c4690ca78651bd80b0ff7bce1a989fc61aaf43f4d549fc1bca3c64cd35",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-prediction-3": {
+      "code_fingerprint": "sha256:493660221e5345cd99f1c6accff00df074673b2da4e54ab59fa250efe7fc8120",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "fcn/fcn-prediction-3-1.svg",
+          "bytes": 156621,
+          "sha256": "sha256:7cce98ab5b01f62c51e52ab6ec7ba256966621bc3a703d0bbe28e6d6934f7e5b"
+        }
+      ]
+    }
+  }
+}

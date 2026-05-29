@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/language-model.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:51b626cf7034803b7527b7ab337df36ae735c25cdaff0a7e3d3a6e0f1a446723",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "language-model-language-models": {
+      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:3c75bbcca8993f2c9b0c765811dcb3d6b1adbb13d7f168262abb8583c04fcffb",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:d172b89bd0a497bf4697819b652171a77d631dd13f8ed4de03d6e490b268360b",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:b7d28db72d9041b92b259da3c35f553924495fc599332d9761d842c65f7e0737",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: tensor([[ 1, 17,  4,  8,  1, 16, 12, 14,  8,  9],\n        [ 5, 11,  1,  3,  9,  2,  1, 13,  2, 11]]) \nY: tensor([[17,  4,  8,  1, 16, 12, 14,  8,  9,  2],\n        [11,  1,  3,  9,  2,  1, 13,  2, 11,  5]])\n"
+        }
+      ]
+    }
+  }
+}

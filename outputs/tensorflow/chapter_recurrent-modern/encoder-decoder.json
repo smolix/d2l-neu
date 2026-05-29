@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/encoder-decoder.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:fab56dd7a95b2783f19f336381503fd3bfae8d23f51aa0196edd40ba7797ff13",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "encoder-decoder-the-encoder-decoder-architecture": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoder-decoder-encoder": {
+      "code_fingerprint": "sha256:97fd4b85a86d58f40a7e49e060e96d0a70201d31144150696dbc08c3cb8cf6f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoder-decoder-decoder": {
+      "code_fingerprint": "sha256:22eeb96fbb3e3f39527cd74d560f07d014e37c121581670a1f0c6afff17ef3b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoder-decoder-putting-the-encoder-and-decoder-together": {
+      "code_fingerprint": "sha256:b7c33d989e3f2a85ca70258b8ac6742f2919aa31f6207193c5bb51be02c2a29d",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

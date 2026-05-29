@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adadelta.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:66060d4fd85bd08424a5583c5b03bf3def536546479b580e66be40c95bce740a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adadelta-implementation-1": {
+      "code_fingerprint": "sha256:f4b239afcc72d1709ba6fc7f8f726b91a34e0ca226603fe896bc4022cb193e71",
+      "kind": "text",
+      "outputs": []
+    },
+    "adadelta-implementation-2": {
+      "code_fingerprint": "sha256:2eb0be01b4202793bad56ac8a307f48cfe0dde7144f87d43c57fdfde4e327272",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 2.355 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adadelta/adadelta-implementation-2-1.svg",
+          "bytes": 18752,
+          "sha256": "sha256:82c21df2c97b8f04ecafc43d48e9970c551efd280ce74a7fb9b50dbffb192b86"
+        }
+      ]
+    },
+    "adadelta-implementation-3": {
+      "code_fingerprint": "sha256:3adfd23cfc57de1a50e0d8665dc1bb5b227798beb65683028ca8d05ec78e0c1f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 1.759 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adadelta/adadelta-implementation-3-1.svg",
+          "bytes": 18723,
+          "sha256": "sha256:df069b9a8c5889e79e29e22ba20d5b34377349ecffa3e50cb179c1b5e37dd182"
+        }
+      ]
+    }
+  }
+}

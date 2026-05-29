@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/machine-translation-and-dataset.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:429619fb560a68cec1e790b659f26397f6a3368e7f3c9d46ff2c9a53d0dd51e5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "machine-translation-and-dataset-machine-translation-and-the-dataset": {
+      "code_fingerprint": "sha256:241321497e87ef3740a2cb7d646bc3dd541a8efafd04838b25878635f3a477ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-1": {
+      "code_fingerprint": "sha256:7187c0e00dab6dca191a2350d8717edd8f364797582cd51bc06f457f01cce1fe",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-2": {
+      "code_fingerprint": "sha256:e607bbcdce090147519b4b0d67e4cf7d81d5d14a9a24406921653d15c058572e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Go.\tVa !\nHi.\tSalut !\nRun!\tCours !\nRun!\tCourez !\nWho?\tQui ?\nWow!\tÇa alors !\n\n"
+        }
+      ]
+    },
+    "machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-3": {
+      "code_fingerprint": "sha256:02829a66dec1eb2393c83919a6a7f9ae230696b1eb4c93575617a9461d3ec16e",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-downloading-and-preprocessing-the-dataset-4": {
+      "code_fingerprint": "sha256:8b0726996d73bcab4dbba65acbd70d160923e908d02f7f4d30151c755eb47e88",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "go .\tva !\nhi .\tsalut !\nrun !\tcours !\nrun !\tcourez !\nwho ?\tqui ?\nwow !\tça alors !\n"
+        }
+      ]
+    },
+    "machine-translation-and-dataset-tokenization-1": {
+      "code_fingerprint": "sha256:a7802a30b88a243d1ebe75975d3a4bf6748b8a132ff823b91830ea4517f2fbc1",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-tokenization-2": {
+      "code_fingerprint": "sha256:b560f5abee620f61fecf99ba29418b3c221959f74f8fbe85440106869e644e95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "([['go', '.', '<eos>'],\n  ['hi', '.', '<eos>'],\n  ['run', '!', '<eos>'],\n  ['run', '!', '<eos>'],\n  ['who', '?', '<eos>'],\n  ['wow', '!', '<eos>']],\n [['va', '!', '<eos>'],\n  ['salut', '!', '<eos>'],\n  ['cours', '!', '<eos>'],\n  ['courez', '!', '<eos>'],\n  ['qui', '?', '<eos>'],\n  ['ça', 'alors', '!', '<eos>']])"
+        }
+      ]
+    },
+    "machine-translation-and-dataset-tokenization-3": {
+      "code_fingerprint": "sha256:8d58a4b1fcc3740ab66f8c6450cea55df459b55e8d5496cf6f20e8285ec987eb",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-tokenization-4": {
+      "code_fingerprint": "sha256:539c3800f36f7b05d95efde46455defc7a32d33d2b14fc2df4ab90097b13cfaa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
+          "bytes": 25569,
+          "sha256": "sha256:14c1138f87dc4ff89b0a3dad400ee53e00167f6f5ca4adc91e19759e9ee00b5d"
+        }
+      ]
+    },
+    "machine-translation-and-dataset-loading-sequences-of-fixed-length-1": {
+      "code_fingerprint": "sha256:76f8467b19e22af16722ec042475593b69b24e06e6e08fc9d88a29705ef31259",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-loading-sequences-of-fixed-length-2": {
+      "code_fingerprint": "sha256:b763f4be0a2e571c794d3cdab0638559880c11e786c0b2476925604757c45bb8",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:ebb444e7d217ab9c38e383ccf61d249fa6efcb57217c1912929e8f5aa4992b92",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:c2985a9937a3bc92ddc292b4aaaab4d20d919a39b0b4e3e713df8a8b416f874f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: [[ 32   7   5   2   1   1   1   1   1]\n [168  13   5   2   1   1   1   1   1]\n [  4   0   3   2   1   1   1   1   1]]\ndecoder input: [[  2  10 108   5   3   1   1   1   1]\n [  2   0  53 179   5   3   1   1   1]\n [  2  10   0   4   3   1   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 10 108   5   3   1   1   1   1   1]\n [  0  53 179   5   3   1   1   1   1]\n [ 10   0   4   3   1   1   1   1   1]]\n"
+        }
+      ]
+    },
+    "machine-translation-and-dataset-reading-the-dataset-3": {
+      "code_fingerprint": "sha256:d8cd7c9dac6e0422ec17d3fc14238ab0ffdaa23b596942181383ccd105f35fd9",
+      "kind": "text",
+      "outputs": []
+    },
+    "machine-translation-and-dataset-reading-the-dataset-4": {
+      "code_fingerprint": "sha256:7f3c741a9b595533d913954aef5ceb6ad44ec240dfd6653af102f654402ee547",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: ['hi', '.', '<eos>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>']\ntarget: ['<bos>', 'salut', '.', '<eos>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>']\n"
+        }
+      ]
+    }
+  }
+}

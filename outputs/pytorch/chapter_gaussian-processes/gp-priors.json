@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "source": "chapter_gaussian-processes/gp-priors.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gp-priors-gaussian-process-priors": {
+      "code_fingerprint": "sha256:96cedb6466c66fc5fe5f1202561ea97c287ba30acd477fc8d4096426635a8fc2",
+      "kind": "text",
+      "outputs": []
+    },
+    "gp-priors-a-simple-gaussian-process": {
+      "code_fingerprint": "sha256:1353f86c9bdecfa5e1790b9ea4a1ca3783f21c07e84b81698be835774c03d5f2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-priors/gp-priors-a-simple-gaussian-process-1.svg",
+          "bytes": 27858,
+          "sha256": "sha256:dbfd2b681337c0a8a83fee143a320cec4b62678ae0f43b30ba6c80a1b2de9591"
+        }
+      ]
+    },
+    "gp-priors-rbf-basis-figure": {
+      "code_fingerprint": "sha256:a1a94ca118cd41355a4b6528e1f67bc59798a23a731d0ca5718557e102782b9c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-priors/gp-priors-rbf-basis-figure-1.svg",
+          "bytes": 45894,
+          "sha256": "sha256:a10720cf7bdab73529fe822a1fbdbba798ff3f61c711d742fdc55e9193c9c970"
+        }
+      ]
+    },
+    "gp-priors-the-radial-basis-function-rbf-kernel": {
+      "code_fingerprint": "sha256:e02036fc58e3f5f8e77d084d06c47e8aba693116f15675f8e5c5b961afa3da30",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gp-priors/gp-priors-the-radial-basis-function-rbf-kernel-1.svg",
+          "bytes": 16826,
+          "sha256": "sha256:2acb84f5cff3185cb18d6137d89c7ac5af01c56ff8ae9c65c670a0da73828211"
+        }
+      ]
+    }
+  }
+}

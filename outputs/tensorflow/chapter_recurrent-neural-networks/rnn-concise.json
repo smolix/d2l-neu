@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/rnn-concise.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:a100babcc061c9478f2ea1cfdd249f0dc95a35799b655c187cc299d6374a3cef",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rnn-concise-concise-implementation-of-recurrent-neural-networks": {
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-defining-the-model-1": {
+      "code_fingerprint": "sha256:8189dd5c85b73b27f02b5f762f67849648b911af761e88b83c37386ac3964639",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-defining-the-model-2": {
+      "code_fingerprint": "sha256:8a54b7736b8409f7b5e6cc18d6b62835b194898c38085a54a5eb72c4ea2a039c",
+      "kind": "text",
+      "outputs": []
+    },
+    "rnn-concise-training-and-predicting-1": {
+      "code_fingerprint": "sha256:82636ab2212c932abf767bdd9ac339c0b6929ac3d0c806db09f94e19e1b0f1e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'it hasmhmqxrzwlgvdayadiyay'"
+        }
+      ]
+    },
+    "rnn-concise-training-and-predicting-2": {
+      "code_fingerprint": "sha256:8a07e15de882c4ef1bc531791c8fd6aef9ec8d0b46bc2f359b51c31271f7b2fe",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
+          "bytes": 1062515,
+          "sha256": "sha256:995db5649f9aee286b6f54de37928a37b0c6fdde81e060c12b690eeb91e8226b"
+        }
+      ]
+    },
+    "rnn-concise-training-and-predicting-3": {
+      "code_fingerprint": "sha256:f4dd375a68a66a9540aa3e15455bd56f0c85aa071a6235b3f9db425c74c3803d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "perplexity 7.3, 'time traveller that is the thing t'\n"
+        }
+      ]
+    }
+  }
+}

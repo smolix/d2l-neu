@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/lookup-api.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "lookup-api-documentation": {
+      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-functions-and-classes-in-a-module": {
+      "code_fingerprint": "sha256:2a48a9c390db6a3291e8a29011cd8a0b0b764b314091994fb920aa0e9bcee073",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['AbsTransform', 'AffineTransform', 'Bernoulli', 'Beta', 'Binomial', 'CatTransform', 'Categorical', 'Cauchy', 'Chi2', 'ComposeTransform', 'ContinuousBernoulli', 'CorrCholeskyTransform', 'CumulativeDistributionTransform', 'Dirichlet', 'Distribution', 'ExpTransform', 'Exponential', 'ExponentialFamily', 'FisherSnedecor', 'Gamma']\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-1": {
+      "code_fingerprint": "sha256:00a21f9be58e4fb559d933b0ee300a6cf627ee351eae94290dcf913ad2e81297",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Help on built-in function ones in module torch:\n\nones(...)\n    ones(*size, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False) -> Tensor\n\n    Returns a tensor filled with the scalar value `1`, with the shape defined\n    by the variable argument :attr:`size`.\n\n    Args:\n        size (int...): a sequence of integers defining the shape of the output tensor.\n            Can be a variable number of arguments or a collection like a list or tuple.\n\n    Keyword arguments:\n        out (Tensor, optional): the output tensor.\n        dtype (:class:`torch.dtype`, optional): the desired data type of returned tensor.\n            Default: if ``None``, uses a global default (see :func:`torch.set_default_dtype`).\n        layout (:class:`torch.layout`, optional): the desired layout of returned Tensor.\n            Default: ``torch.strided``.\n        device (:class:`torch.device`, optional): the desired device of returned tensor.\n            Default: if ``None``, uses the current device for the default tensor type\n            (see :func:`torch.set_default_device`). :attr:`device` will be the CPU\n            for CPU tensor types and the current CUDA device for CUDA tensor types.\n        requires_grad (bool, optional): If autograd should record operations on the\n            returned tensor. Default: ``False``.\n\n    Example::\n\n        >>> torch.ones(2, 3)\n        tensor([[ 1.,  1.,  1.],\n                [ 1.,  1.,  1.]])\n\n        >>> torch.ones(5)\n        tensor([ 1.,  1.,  1.,  1.,  1.])\n\n"
+        }
+      ]
+    },
+    "lookup-api-specific-functions-and-classes-2": {
+      "code_fingerprint": "sha256:679e409da80cdec3807ba39dfb384ac51263e6174e0429fc59528740e67bda42",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([1., 1., 1., 1.])"
+        }
+      ]
+    }
+  }
+}

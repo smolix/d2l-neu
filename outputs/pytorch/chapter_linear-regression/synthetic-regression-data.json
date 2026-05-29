@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/synthetic-regression-data.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:4fa9930146eb92f7e2374c1085ae24e7640e3ea1805d2db5cd0da1be8672f89a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "synthetic-regression-data": {
+      "code_fingerprint": "sha256:9ba4aeeb1b5d8ea567c7f31d4c4d22f69961dfcc500effa0205e9be5d8879dd1",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-generating-the-dataset-1": {
+      "code_fingerprint": "sha256:fea123d016717cc1beb4d0826fb96600db64b841e488fa461877f55b5ff1df3b",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-generating-the-dataset-2": {
+      "code_fingerprint": "sha256:8bb84722a2bd2217cd0d50bbc6efc549e10cbc36fd503035cb2b8f37e61d4640",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-generating-the-dataset-3": {
+      "code_fingerprint": "sha256:4fed61e301644b3d4a6452ab479692e65cd598cf63e0fd12477f298684a42f86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "features: tensor([0.7043, 0.0611]) \nlabel: tensor([5.4010])\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-reading-the-dataset-1": {
+      "code_fingerprint": "sha256:f372cfecd6ec5e5144103145c09c931355dd71b7ee8afa76bde56f2f88884803",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-reading-the-dataset-2": {
+      "code_fingerprint": "sha256:22d2490004835c152ae1070bc7691923183df2a66f8194de49d9eac649e228a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X shape: torch.Size([32, 2]) \ny shape: torch.Size([32, 1])\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-concise-implementation-of-the-data-loader-1": {
+      "code_fingerprint": "sha256:174ee5e1e10683e9c33c2755ae45c94c40e9d204cad34aefa839b2471b446a32",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-concise-implementation-of-the-data-loader-2": {
+      "code_fingerprint": "sha256:54cdfc2dc86dd246a90fe2dc63c82b8b452297e1daa07366125d65e52ee63b5d",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-concise-implementation-of-the-data-loader-3": {
+      "code_fingerprint": "sha256:b2a94b3dbbce4f370f2e7296f870a0f3c4beacf65f289974757c9116c2554c81",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X shape: torch.Size([32, 2]) \ny shape: torch.Size([32, 1])\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-concise-implementation-of-the-data-loader-4": {
+      "code_fingerprint": "sha256:4e35c5835a5ada7f01851997d90df7109e5b24a44cd096b77118f21c79421707",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "32"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layer.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layer-custom-layers": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:5f9d99828884a7fc6c10ca5b311380e9ce97c6fbbb1f93b1cf959953f96fe9c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:c0f668c9ba23232c7d26aef59fad5dd02a78b408f96400f71e7f2b8d7b9cbe84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([-2., -1.,  0.,  1.,  2.], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layer-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:dbf4f42e3cd9fd9141d55af6a5d27414ae8d0fd268b703ebb1ec5ecfb8d6955d",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-4": {
+      "code_fingerprint": "sha256:3f1f106b715e7a5f52cf1cc178c112d0ba88ee0267d3afbccad9388fb8f75ef4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(3.7252903e-09, dtype=float32)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-1": {
+      "code_fingerprint": "sha256:17554fa571cde11fe542ee5b4bae13da833fc19bba05830e8ea4b4016f4c7c27",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-with-parameters-2": {
+      "code_fingerprint": "sha256:26acc7e58a701177d3817ad1da7c94c0c829bf5b8c84a3de80d76933ed0623fa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'params': {'weight': Array([[-0.2730784 , -2.0026138 ,  1.2090734 ],\n         [-0.24928978,  1.4607671 ,  0.9950771 ],\n         [ 0.00302258, -0.63909173,  0.6674626 ],\n         [-0.02182669,  0.961296  ,  0.26424628],\n         [-0.6597475 ,  0.4217269 , -0.09541126]], dtype=float32),\n  'bias': Array([0., 0., 0.], dtype=float32)}}"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-3": {
+      "code_fingerprint": "sha256:d15d45e028c0da8c7e7507b85cfd1c18d91897a69db6c34b3b3cea097089690e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0.        , 1.2433242 , 1.4437162 ],\n       [0.        , 0.4386982 , 0.80651015]], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-4": {
+      "code_fingerprint": "sha256:cc1609ce65ac6c81920c5ce71d7ee13b6abec5e3f028abdf75b27fd3b38c2beb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0.      ],\n       [2.143576]], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

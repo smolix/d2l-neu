@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/googlenet.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:d1bcf869611aaf5f7743cc599a9fdec8b7b157c36cdb2607b832d680ba44fdb5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "googlenet-multi-branch-networks-googlenet": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-inception-blocks": {
+      "code_fingerprint": "sha256:ef24346a09ed5f34df88dfdda07a6cd8d2836833b9fc44f2c38b7e728d3644cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-1": {
+      "code_fingerprint": "sha256:0fe6e700564a08822ee59a12668a34576cb657b1a34128ead806e3f1eabb7552",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-2": {
+      "code_fingerprint": "sha256:731710616dfcd083bb5e53ebb921e7287d5f2b2d150f895a18a097f12e59c36f",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-3": {
+      "code_fingerprint": "sha256:ba3dd44c49bb9c94d74e7acea4b1bcc2a021388b036725210d44147234cee129",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-4": {
+      "code_fingerprint": "sha256:d1120d8b0b65a42536fd018d9b8af83d245ab1ba5496880a18bd0170e66f7d0f",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-5": {
+      "code_fingerprint": "sha256:1af6dfa142a762408572e5688b3dc519a125e0671fa39a4694ffe781119d2939",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-6": {
+      "code_fingerprint": "sha256:c5d60b83790ccde6645d5e4be513faea4d9a4a6e61292c2d891005f3be87c7cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-7": {
+      "code_fingerprint": "sha256:519c7d1ebcbaf8bb95a491d829faa963170568c4bb16807b2f95a576bbe63de1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 64, 24, 24])\nSequential output shape:\t torch.Size([1, 192, 12, 12])\nSequential output shape:\t torch.Size([1, 480, 6, 6])\nSequential output shape:\t torch.Size([1, 832, 3, 3])\nSequential output shape:\t torch.Size([1, 1024])\nLinear output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "googlenet-training": {
+      "code_fingerprint": "sha256:0df25dc5738680ae8a93c161e3cee3a156ed3be2b5a6064dfd814b3d9505866d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "googlenet/googlenet-training-1.svg",
+          "bytes": 58762,
+          "sha256": "sha256:f088e45807681e8c96a90910b5e347ab1d6b6b30b170856671edae6c12b42e7c"
+        }
+      ]
+    }
+  }
+}

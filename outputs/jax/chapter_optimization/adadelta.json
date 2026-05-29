@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adadelta.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:def55e87fc7ba5a1a4e68de13e7018d33b9c213f6a63c65485b85f14f961c941",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adadelta-implementation-1": {
+      "code_fingerprint": "sha256:32a1604480989647ac79d18cdb8bee798b03e91cc6101ff58464a1977d040386",
+      "kind": "text",
+      "outputs": []
+    },
+    "adadelta-implementation-2": {
+      "code_fingerprint": "sha256:8dede7d9b958895f54d66afe6b98107e18389dde70464963056ee5ef045849df",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 1.990 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adadelta/adadelta-implementation-2-1.svg",
+          "bytes": 18772,
+          "sha256": "sha256:1fe09739082b278e60ef50004a6309aab8d960dbf2c43711a4a1afbaf202306f"
+        }
+      ]
+    },
+    "adadelta-implementation-3": {
+      "code_fingerprint": "sha256:8306b5024e740e377cb7230d0cf58441872c71ff80ccaa3194612fc3a30c1f8e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.303, 0.730 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adadelta/adadelta-implementation-3-1.svg",
+          "bytes": 18605,
+          "sha256": "sha256:d7cf1fd4b42daf69b8dbd8d423f02b3189a2ccbef79d9d4c7722d2d65f741e79"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/alexnet.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:50c92e8da63a21a1fe2fc3f51ccf3b9ed1e7a5bbe367bc0f79131da726f367ce",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "alexnet-deep-convolutional-neural-networks-alexnet": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-1": {
+      "code_fingerprint": "sha256:4855dc990797dfaeea960ec852e61774bf4646f1f0cb13447bbf435797b365a6",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-capacity-control-and-preprocessing-2": {
+      "code_fingerprint": "sha256:be4259414e157ee17cb677420caab3e486ab47c455f1c40eb816dac643d28dac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv output shape:\t (1, 54, 54, 96)\ncustom_jvp output shape:\t (1, 54, 54, 96)\nfunction output shape:\t (1, 26, 26, 96)\nConv output shape:\t (1, 26, 26, 256)\ncustom_jvp output shape:\t (1, 26, 26, 256)\nfunction output shape:\t (1, 12, 12, 256)\nConv output shape:\t (1, 12, 12, 384)\ncustom_jvp output shape:\t (1, 12, 12, 384)\nConv output shape:\t (1, 12, 12, 384)\ncustom_jvp output shape:\t (1, 12, 12, 384)\nConv output shape:\t (1, 12, 12, 256)\ncustom_jvp output shape:\t (1, 12, 12, 256)\nfunction output shape:\t (1, 5, 5, 256)\nfunction output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+        }
+      ]
+    },
+    "alexnet-training": {
+      "code_fingerprint": "sha256:9897a2abf70f9acd3beff3dce0c8b3c12454fcc430f86d18aeffbc9c85d58dda",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "alexnet/alexnet-training-1.svg",
+          "bytes": 31182,
+          "sha256": "sha256:de2427601d17c338c6d2135c0b9efd132aff6e8d7a00dcc98bd7941e215bcae2"
+        }
+      ]
+    }
+  }
+}

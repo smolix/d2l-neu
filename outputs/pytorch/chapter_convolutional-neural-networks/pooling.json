@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-neural-networks/pooling.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "pooling": {
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-1": {
+      "code_fingerprint": "sha256:1100d3560c29e21d9beb0ceb085bd4f5e0fd4f0bcb21f541cebece53224e2078",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-maximum-pooling-and-average-pooling-2": {
+      "code_fingerprint": "sha256:26865084acdfddcedeef56fc1d69af67bc24f9c9554e3fefa75bbe3466cabc9e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[4., 5.],\n        [7., 8.]])"
+        }
+      ]
+    },
+    "pooling-maximum-pooling-and-average-pooling-3": {
+      "code_fingerprint": "sha256:2ff8a35ea208ac2b2b0e3d8eef98e71883cf830c338f8d19cfadbda592786468",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[2., 3.],\n        [5., 6.]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-1": {
+      "code_fingerprint": "sha256:3eb99d957b549a2d254bd0d3148aa98b3a374afd657594a36f2dc9ec7a00dbd7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 0.,  1.,  2.,  3.],\n          [ 4.,  5.,  6.,  7.],\n          [ 8.,  9., 10., 11.],\n          [12., 13., 14., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-2": {
+      "code_fingerprint": "sha256:8a12ec5ae613f6650acc913ef2a465d1666fbb17f84c676f157acc66bb07c0ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[10.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-3": {
+      "code_fingerprint": "sha256:044f705fa386505def5117105c5cfb62deb56c6400d7d11c4f66a4ac3c56fbe9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 5.,  7.],\n          [13., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-padding-and-stride-4": {
+      "code_fingerprint": "sha256:31a29c2bc3a4bde10bccc4b71c1cc357958a45a49f957d25e83aa5194efe3cc0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 5.,  7.],\n          [13., 15.]]]])"
+        }
+      ]
+    },
+    "pooling-multiple-channels-1": {
+      "code_fingerprint": "sha256:4b320f6cf5ac0b4bd9f4558dca5dbae423f014335226fcab6f2615e923581e58",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 0.,  1.,  2.,  3.],\n          [ 4.,  5.,  6.,  7.],\n          [ 8.,  9., 10., 11.],\n          [12., 13., 14., 15.]],\n\n         [[ 1.,  2.,  3.,  4.],\n          [ 5.,  6.,  7.,  8.],\n          [ 9., 10., 11., 12.],\n          [13., 14., 15., 16.]]]])"
+        }
+      ]
+    },
+    "pooling-multiple-channels-2": {
+      "code_fingerprint": "sha256:8807734b7e699e6214a94922db8c198df73acedba013c26453e688f526024800",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[ 5.,  7.],\n          [13., 15.]],\n\n         [[ 6.,  8.],\n          [14., 16.]]]])"
+        }
+      ]
+    }
+  }
+}

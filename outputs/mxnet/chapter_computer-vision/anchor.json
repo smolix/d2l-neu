@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "source": "chapter_computer-vision/anchor.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "d2l_lib_fingerprint": "sha256:8d7cf1ea2c39a4f65533e5a29580965ca4e5b0bd8295980a98b2a504de78db49",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "anchor-anchor-boxes": {
+      "code_fingerprint": "sha256:bf8f0a49b865d685c122a8879e0c96247374a7c69a6d5d197cba96bc4132b901",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-1": {
+      "code_fingerprint": "sha256:540557113ad3ce66a14667723a4a5e78b08d684c19b6644726cd454ffd0c9002",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-2": {
+      "code_fingerprint": "sha256:1f15d32bd7ce9c7d7aee2a833f6be2a6fb03ff8731ed0d78231a379408fa7832",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "561 728\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(1, 2042040, 4)"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-3": {
+      "code_fingerprint": "sha256:7973d5f6338c3d07a401e18eaa274765afb6593780a891c78c6eaf323165418a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.06, 0.07, 0.63, 0.82])"
+        }
+      ]
+    },
+    "anchor-generating-multiple-anchor-boxes-4": {
+      "code_fingerprint": "sha256:7ed0c6581251eb20eee1cf1175f572e8a50602ac54a96cf34b47d326ac513647",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-generating-multiple-anchor-boxes-5": {
+      "code_fingerprint": "sha256:17f4f05a6a0060b873b6254e4bab9daaf45c4f9ddb83cf6968b6cfe2e528a776",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
+          "bytes": 95767,
+          "sha256": "sha256:5b106067b9ecb4d88a86b0e96678fa23b0e1d42c6e49491223d40132d823db1a"
+        }
+      ]
+    },
+    "anchor-intersection-over-union-iou": {
+      "code_fingerprint": "sha256:4aabc7b30190202602ef12d718285046bf1b7bb8df47a94c9eb3508e19c46903",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes": {
+      "code_fingerprint": "sha256:306bb9e6abb3eaf734e00ace7c1d34c85eaa7ddf264eb872043acc3b3780bf1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-1": {
+      "code_fingerprint": "sha256:09b117c4da2d2bb6c93bf07a37b1b9152925f40a515d62e865c76ef7193e4af2",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-labeling-classes-and-offsets-2": {
+      "code_fingerprint": "sha256:9b7cdb806b34480f0101f3b994fa9aefadc0276afa5bff7f0a0705a647f23756",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-1": {
+      "code_fingerprint": "sha256:5687cb5ade6c4927c4a2ebda11201c59a2206e286aa39f0aa13d1bb207085036",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-an-example-1-1.svg",
+          "bytes": 94721,
+          "sha256": "sha256:eab8f036d370617ebb6fbb93b048cffb6cf6771eecc898bc363f44ba59971d8c"
+        }
+      ]
+    },
+    "anchor-an-example-2": {
+      "code_fingerprint": "sha256:689d2cf6aefcf81d94d7844b3be36915b6a2e881f5c2a054164ac0e3defe90e0",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-an-example-3": {
+      "code_fingerprint": "sha256:77d23a1b18fbfec3e1edfb53dd7eb8a4a6d8aae251af220f404e9aac93bd6dcd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0, 1, 2, 0, 2]], dtype=int32)"
+        }
+      ]
+    },
+    "anchor-an-example-4": {
+      "code_fingerprint": "sha256:790d06a9dc93094cd74f8dc32245b230b43eb6adc933a979b2a3ce56d8a10fb7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]],\n      dtype=int32)"
+        }
+      ]
+    },
+    "anchor-an-example-5": {
+      "code_fingerprint": "sha256:03d0d946083c34d3cdd153f57d4cde2ded04cfe49f45e5a34267816b5e9fd725",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[-0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00,  1.40e+00,  1.00e+01,\n         2.59e+00,  7.18e+00, -1.20e+00,  2.69e-01,  1.68e+00, -1.57e+00,\n        -0.00e+00, -0.00e+00, -0.00e+00, -0.00e+00, -5.71e-01, -1.00e+00,\n         4.17e-06,  6.26e-01]])"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-1": {
+      "code_fingerprint": "sha256:d3ca02e11e6531e37f1f9c60b3dff613f024e8b7344ef2d2e83ffb755b7ea3e4",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-2": {
+      "code_fingerprint": "sha256:787ea3657b8181e9a6f7ce4350d9d64554f91ee3eb104b7c6d6a4e58edd48dc9",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-3": {
+      "code_fingerprint": "sha256:3f3d1820fadadb785252a84b3890f78fe36608d4372a10e1d8010bbc260fa29e",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-4": {
+      "code_fingerprint": "sha256:08a1818b8890cffe35b1977c1d7336d4c0b47c0dc655717753f6a4d75e747c78",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-5": {
+      "code_fingerprint": "sha256:427195523fa0a368f677ec1a9fe65078eb7c7186f918cc273783a3f305ea4baf",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
+          "bytes": 96403,
+          "sha256": "sha256:b1ebb82d6ef99efb43f807d804c1e6c495b680622c7638c0b9423ba5cae4d6ab"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-6": {
+      "code_fingerprint": "sha256:9e659bbc41ea6a95a55385007b0089f7bef0b801e0fb6de424a5f17ab68a87e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6088: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([[[ 1.  ,  0.9 ,  0.55,  0.2 ,  0.9 ,  0.88],\n        [ 0.  ,  0.9 ,  0.1 ,  0.08,  0.52,  0.92],\n        [-1.  ,  0.8 ,  0.08,  0.2 ,  0.56,  0.95],\n        [-1.  ,  0.7 ,  0.15,  0.3 ,  0.62,  0.91]]])"
+        }
+      ]
+    },
+    "anchor-predicting-bounding-boxes-with-non-maximum-suppression-7": {
+      "code_fingerprint": "sha256:2b476574eeaf200438642543528b41574c73e077dc2227a5f418013abac444d1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
+          "bytes": 93212,
+          "sha256": "sha256:1415b73a1fdfdc180975b1bc7ae21b2b967948d6b16f76e7b1fc577439172528"
+        }
+      ]
+    }
+  }
+}

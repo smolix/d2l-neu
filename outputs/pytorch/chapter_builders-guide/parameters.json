@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-parameter-management-1": {
+      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-parameter-management-2": {
+      "code_fingerprint": "sha256:6e7823834182353ba4e1322116ad347ad50833f307a134d7185162627b5ff06c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 1])"
+        }
+      ]
+    },
+    "parameters-parameter-access": {
+      "code_fingerprint": "sha256:127a61fa1e1af3451619b3e8171912fac66cbdcdeb345d9f2a2e29757652ec55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "OrderedDict([('weight',\n              tensor([[-0.1834, -0.1948, -0.0750, -0.2811, -0.3219, -0.2577,  0.3450,  0.0698]])),\n             ('bias', tensor([-0.3068]))])"
+        }
+      ]
+    },
+    "parameters-targeted-parameters-1": {
+      "code_fingerprint": "sha256:b3095ee32a579f510fea74b498422030b10146dfaaf92e882a25189d02d63e82",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.nn.parameter.Parameter, tensor([-0.3068]))"
+        }
+      ]
+    },
+    "parameters-targeted-parameters-2": {
+      "code_fingerprint": "sha256:766cd7c7c767101affd5d9c1ad3ed982d8e6d1fa1b9cfef3b7043428d32acc80",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-all-parameters-at-once": {
+      "code_fingerprint": "sha256:bbe395e913ddb39dd56c1b9062675e517d56b95b2c01bda79aef735370917a09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('0.weight', torch.Size([8, 4])),\n ('0.bias', torch.Size([8])),\n ('2.weight', torch.Size([1, 8])),\n ('2.bias', torch.Size([1]))]"
+        }
+      ]
+    },
+    "parameters-tied-parameters": {
+      "code_fingerprint": "sha256:5f8f438147ccf275846c1b7b87dba26b67416ac23cec6a50b1fd53092a0a04f5",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

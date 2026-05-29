@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/cnn-design.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:23cd77c62719590374620b9b8dc26ebf97fe352ecee6b1ded5b821028452233d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "cnn-design-designing-convolutional-network-architectures": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-1": {
+      "code_fingerprint": "sha256:dbc81cc38f4e27c0a1049476ac5c5a83c92903c7793525a48a65369294a291cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-2": {
+      "code_fingerprint": "sha256:895caf95b431414e830ce485bf1d013d4f421bedfb5054ccb1de42c23c74b82c",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-the-anynet-design-space-3": {
+      "code_fingerprint": "sha256:26849e0e718c3171ccce797c9da43609e07c78112a3b95eeb5fd4cf759212f76",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnet-1": {
+      "code_fingerprint": "sha256:d0beb714c90e532bc1f556f767baa27b7a601fe3288e97e9a9fec6fbd874b40b",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnet-2": {
+      "code_fingerprint": "sha256:78988a092c01651b7395e6f234b9c06ef3cb2fb647c7c15d8821af941fb4fc59",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 32, 48, 48])\nSequential output shape:\t torch.Size([1, 32, 24, 24])\nSequential output shape:\t torch.Size([1, 80, 12, 12])\nSequential output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "cnn-design-training": {
+      "code_fingerprint": "sha256:c88ba0a2e234f1f365d4ae5f00e2b182c46fb2ab202293009799a8a15a75159c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-training-1.svg",
+          "bytes": 59097,
+          "sha256": "sha256:15315ada438976638e4b067954bb1affee99b12dfa0fe3f3d8976f248cc0a860"
+        }
+      ]
+    }
+  }
+}

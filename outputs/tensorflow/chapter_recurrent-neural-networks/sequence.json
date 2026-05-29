@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/sequence.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:845fc7a804c662cce418474d7c3858aa9874f3aef9fce1307adc0aa82e16d9a8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sequence-working-with-sequences": {
+      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-1": {
+      "code_fingerprint": "sha256:20d3f6da9c9b396816eb85b91f4953c4fa5e41587200ec1d9528970fc429e705",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-2": {
+      "code_fingerprint": "sha256:134b024e6e72f588df610c37fafabfbc26d4d5c6b28c38f30e520f9a4add3e1b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-2-1.svg",
+          "bytes": 40503,
+          "sha256": "sha256:53d0a10f082a6416751188fc5f4f78d5fa3b11d60aa4ff3eadbd34ecf9f1a2ec"
+        }
+      ]
+    },
+    "sequence-training-3": {
+      "code_fingerprint": "sha256:5b097c4016df140e8b5b1a4a4f088548c613f85ae3d9a5e0fd291a0cfb372d4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-training-4": {
+      "code_fingerprint": "sha256:aad95d7026abaaddeda5a38af2838abdab2057724e120028934709446a8db398",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-training-4-1.svg",
+          "bytes": 26755,
+          "sha256": "sha256:d45fee37abf9ad604dfd9a0b891aab9ddfa930c786d6b5d04e27d73799860a5a"
+        }
+      ]
+    },
+    "sequence-prediction-1": {
+      "code_fingerprint": "sha256:b57367a6a0ef61f2480d37d01638c9435652d7f1c6df131fe36e646022b1a79c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-1-1.svg",
+          "bytes": 68053,
+          "sha256": "sha256:9674ba620e6bc59374bce9b3930598b567fd28bd75771e8acb7034155fb96cec"
+        }
+      ]
+    },
+    "sequence-prediction-2": {
+      "code_fingerprint": "sha256:61bde54e5f83bb83afada25dc25a551065b73516d4b53632ca7481f835b18408",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-3": {
+      "code_fingerprint": "sha256:ff692897e41af54d7c94b850c069ba986cb8974ca2bb8a521ff18d5a41a8c98c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-3-1.svg",
+          "bytes": 44750,
+          "sha256": "sha256:5399bad8c28bffdfbb5156d657497f49fdc90224c789b82949dcc3fa8e39dbe2"
+        }
+      ]
+    },
+    "sequence-prediction-4": {
+      "code_fingerprint": "sha256:d91c6b7b018edc09ccccbb6fe5e5f8876485fc043d1d4d380696c710f485a3d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-prediction-5": {
+      "code_fingerprint": "sha256:c454200201b2f104fb2c18aac0fa5774bb993d2b7865ccb76fa233fe4b7fb557",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sequence/sequence-prediction-5-1.svg",
+          "bytes": 105899,
+          "sha256": "sha256:cb8545343db4c6230501fc30455888ef50f97390e2ae05e4e29c12ef6dffad61"
+        }
+      ]
+    }
+  }
+}

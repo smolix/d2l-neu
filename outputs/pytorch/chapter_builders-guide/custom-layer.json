@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layer.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layer-custom-layers": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:6e5bd1d05fb72cefb3b21b2b9eb9de9634b9983149f32086b408ea7ad4b114f5",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:759f2bd1cd9e53fe153113ffdb48330433a148d588896b6e30a4c0074d71b468",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([-2., -1.,  0.,  1.,  2.])"
+        }
+      ]
+    },
+    "custom-layer-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:0953cf02593068512dbfef36bfc98427768a6fc205ec884429b88c6986d4d75a",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-without-parameters-4": {
+      "code_fingerprint": "sha256:e7bf6711d2402d9bd68ca67d09e59d0faf1cc203c2c9f671645fcb58e91e112b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(-4.6566e-10, grad_fn=<MeanBackward0>)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-1": {
+      "code_fingerprint": "sha256:bdb8d4f29eab553a57ef91c7b6d8a144affbd52bad588c79c6c55a55521f9724",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layer-layers-with-parameters-2": {
+      "code_fingerprint": "sha256:df2d4b3dc573a19d5d4a78251d73a57b501517680f62f4f0e9d5f2deca8cfa85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Parameter containing:\ntensor([[ 0.9968,  0.4079, -0.6461],\n        [ 0.4299, -0.1453, -0.1494],\n        [-0.5362, -0.2446,  0.2429],\n        [ 0.8106,  0.0746, -0.3746],\n        [-0.5771, -0.0904, -0.3942]], requires_grad=True)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-3": {
+      "code_fingerprint": "sha256:35e43c2d3d55b41345382ef0587e8410b94b1d7148aedfaa6674f4be551f2fe0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0.6714, 0.1017, 0.0000],\n        [0.2084, 0.0000, 0.0000]], grad_fn=<ReluBackward0>)"
+        }
+      ]
+    },
+    "custom-layer-layers-with-parameters-4": {
+      "code_fingerprint": "sha256:b1f141009ad7dd1caa20cac84edc78b32c931c665e47b442f74632f0be6f1163",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0.0139],\n        [0.0000]], grad_fn=<ReluBackward0>)"
+        }
+      ]
+    }
+  }
+}

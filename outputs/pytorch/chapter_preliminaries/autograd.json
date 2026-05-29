@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "source": "chapter_preliminaries/autograd.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0+cu128",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "autograd-automatic-differentiation": {
+      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-1": {
+      "code_fingerprint": "sha256:9a447e16013963630c11cb1cfc6a842bcc27017b0774b1f97ca4b0c2cfa6d3f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0., 1., 2., 3.])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-2": {
+      "code_fingerprint": "sha256:5532062aba7987f14e54b8d5641fdf2a419ee77bf6aff85256417d7c95143013",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-a-simple-function-3": {
+      "code_fingerprint": "sha256:294eefb6965d99c86f0e6377066b016aed12087665b07d53ee59771512030e99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(28., grad_fn=<MulBackward0>)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-4": {
+      "code_fingerprint": "sha256:e669df9f187369bcc9e0ea9d3aeb259529c8bd4326258ea69c0227109b4ecaeb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([ 0.,  4.,  8., 12.])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-5": {
+      "code_fingerprint": "sha256:5371717073ce20599b516bf37eec7302a60b3b5078ec85f3daeeab0399990f5f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([True, True, True, True])"
+        }
+      ]
+    },
+    "autograd-a-simple-function-6": {
+      "code_fingerprint": "sha256:4339b6d1f01973441bc025b2f8c01ac9cddb034ea62c73d0021daa20192f2e30",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([1., 1., 1., 1.])"
+        }
+      ]
+    },
+    "autograd-backward-for-non-scalar-variables": {
+      "code_fingerprint": "sha256:ff73a434fcd5b199d4b5b23ac93f7866a0e5cb05d4761646a8567dffe8609b3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0., 2., 4., 6.])"
+        }
+      ]
+    },
+    "autograd-detaching-computation-1": {
+      "code_fingerprint": "sha256:d80522c8e415157732fd14c0f92b82fee393223bc93b0444ab9760637a60d807",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([True, True, True, True])"
+        }
+      ]
+    },
+    "autograd-detaching-computation-2": {
+      "code_fingerprint": "sha256:34c97da27b16ef0685c04bb6af4f5ba37f6d0499781c80ab46e699f2ff4c3e0c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([True, True, True, True])"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-1": {
+      "code_fingerprint": "sha256:f3a26dbc890cb8ac6c9821d06ec8dd59732f2e79a3260455e354851a6aa7596e",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-2": {
+      "code_fingerprint": "sha256:680c62e910b0ebd37cb59d755e6cf28abd43d70d92eb6d938f2280ba611d0f59",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-3": {
+      "code_fingerprint": "sha256:710a9e5c77958a51c162a3d9e44277893ddb9a46e3b22dd256b63c1c4fef7d39",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(True)"
+        }
+      ]
+    }
+  }
+}

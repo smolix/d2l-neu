@@ -81,8 +81,27 @@ _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
 #                           cover/teaser slides where the figure
 #                           matters but the code doesn't
 #   @!cell-id@pytorch     → output-only with framework override
+#   @-cell-id             → CODE-only (no output injected) — for setup
+#                           cells whose verbose output would overflow;
+#                           emitted without a `#| label:` so
+#                           inject_outputs.py skips it
+#   @fig:diagram-id       → inline a committed SVG diagram (img/auto/<id>.svg)
+#                           so it inherits the page's loaded fonts (HANDOFF §5.3)
+#   @fig:diagram-id@jax   → prefer a fw variant (img/auto/<id>-jax.svg), else
+#                           fall back to img/auto/<id>.svg
 _PLACEHOLDER_RE = re.compile(
-    r'^@(?P<echo>!)?(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?\s*$')
+    r'^@(?P<echo>!)?(?P<codeonly>-)?(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?\s*$')
+
+# `@fig:<id>` / `@fig:<id>@<fw>` — inline a static diagram SVG. Checked
+# before _PLACEHOLDER_RE in _resolve_body (the `fig:` colon means a fig line
+# never matches the cell-placeholder regex anyway, but order keeps it clear).
+_FIG_RE = re.compile(
+    r'^@fig:(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?\s*$')
+
+# Directory of committed diagram SVGs (img/auto/<id>.svg), set from the
+# source root in main(). Diagrams are inlined into the deck at gen time, so
+# this is a build-time filesystem lookup, not a runtime href.
+DIAGRAM_DIR = Path('img/auto')
 
 # Match @d2l.add_to_class(...) decorator on its own line.
 _ADD_TO_CLASS_RE = re.compile(r'^@d2l\.add_to_class\([^)]*\)\s*$')
@@ -290,14 +309,88 @@ def _emit_attrs(attrs):
     return parts
 
 
+def _slide_applies(attrs, framework):
+    """Per-framework slide scoping: `only="jax"` / `except="jax,tf"`.
+
+    A slide with `only=` renders only for the listed frameworks; one with
+    `except=` renders for all but the listed ones. Used when a concept's
+    *framing* (not just its code) differs by framework — e.g. JAX
+    immutability vs. PyTorch in-place writes (HANDOFF §6). Comma-separated.
+    """
+    only = attrs.get('only')
+    if only is not None:
+        allowed = {t.strip() for t in only.split(',') if t.strip()}
+        if framework not in allowed:
+            return False
+    excluded = attrs.get('except')
+    if excluded is not None:
+        denied = {t.strip() for t in excluded.split(',') if t.strip()}
+        if framework in denied:
+            return False
+    return True
+
+
+def _inline_diagram(fig_id, forced_fw, framework, slide_path, warnings):
+    """Return raw-HTML lines inlining a committed diagram SVG, or [].
+
+    Resolution: `@fig:<id>@<fw>` prefers `img/auto/<id>-<fw>.svg` and falls
+    back to `img/auto/<id>.svg`; `@fig:<id>` uses `img/auto/<id>.svg`
+    directly. The SVG is inlined (not `<img>`-referenced) so its text
+    inherits the page's Source Sans 3 / JetBrains Mono (HANDOFF §5.3/§5.4).
+    """
+    candidates = []
+    if forced_fw:
+        candidates.append(DIAGRAM_DIR / f'{fig_id}-{forced_fw}.svg')
+    candidates.append(DIAGRAM_DIR / f'{fig_id}.svg')
+    svg_path = next((p for p in candidates if p.is_file()), None)
+    if svg_path is None:
+        warnings.append(
+            f'{slide_path}: @fig:{fig_id}'
+            + (f'@{forced_fw}' if forced_fw else '')
+            + f' → no SVG at {DIAGRAM_DIR}/{fig_id}.svg')
+        return []
+    raw = svg_path.read_text(encoding='utf-8')
+    # Drop the XML prolog and the standalone font-@import <style> (the deck
+    # already loads the fonts); keep only the <svg>…</svg> markup.
+    start = raw.find('<svg')
+    if start < 0:
+        warnings.append(f'{slide_path}: {svg_path} has no <svg> root')
+        return []
+    svg = raw[start:].rstrip()
+    svg = re.sub(r'<style>.*?</style>', '', svg, count=1, flags=re.S)
+
+    # Add `class="dgm-svg"` and drop the fixed width/height on the root so
+    # CSS (width:100%; height:auto) controls scaling; viewBox keeps aspect.
+    def _fix_open(m):
+        tag = m.group(0)
+        tag = re.sub(r'\s+width="[^"]*"', '', tag)
+        tag = re.sub(r'\s+height="[^"]*"', '', tag)
+        if 'class=' not in tag:
+            tag = tag[:-1] + ' class="dgm-svg">'
+        return tag
+    svg = re.sub(r'^<svg[^>]*>', _fix_open, svg, count=1)
+    # Emit inside a pandoc `{=html}` raw block. A bare HTML block would let
+    # pandoc parse markdown *inside* the SVG — `[...]` in labels like
+    # `X.at[:].set` become spans and `'` becomes a smart quote, mangling the
+    # tag nesting. A raw block passes the SVG through verbatim.
+    return ['', '```{=html}', '<div class="dgm">', svg, '</div>', '```', '']
+
+
 def _resolve_body(body_lines, source_cells, framework, slide_path,
                   warnings):
-    """Replace `@<id>` and `@<id>@<fw>` placeholder lines with code fences.
+    """Replace `@<id>` / `@<id>@<fw>` / `@fig:<id>` placeholder lines.
 
-    Other lines pass through verbatim. Returns a list of output lines.
+    Code placeholders become Quarto python fences; `@fig:` lines inline a
+    diagram SVG. Other lines pass through verbatim. Returns output lines.
     """
     out = []
     for line in body_lines:
+        fig = _FIG_RE.match(line)
+        if fig:
+            out.extend(_inline_diagram(
+                fig.group('id'), fig.group('fw'), framework,
+                slide_path, warnings))
+            continue
         m = _PLACEHOLDER_RE.match(line)
         if not m:
             out.append(line)
@@ -305,6 +398,7 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
         cid = m.group('id')
         forced_fw = m.group('fw')
         echo_off = bool(m.group('echo'))
+        code_only = bool(m.group('codeonly'))
         variants = source_cells.get(cid)
         if not variants:
             warnings.append(f'{slide_path}: unknown @{cid}')
@@ -321,7 +415,10 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
         if not code.strip():
             continue
         out.append('```{python}')
-        out.append(f'#| label: {cid}')
+        # Code-only cells carry no label, so inject_outputs.py finds no
+        # match and leaves them output-free.
+        if not code_only:
+            out.append(f'#| label: {cid}')
         if echo_off:
             out.append('#| echo: false')
         out.append(code)
@@ -361,6 +458,8 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
                               slide_path, warnings))
     # Subslides (vertical sub-slides under the current slide)
     for ss in slide.subslides:
+        if not _slide_applies(ss.attrs, framework):
+            continue
         out.append('')
         ss_title = ss.attrs.get('title', '')
         ss_extras = _emit_attrs(ss.attrs)
@@ -386,6 +485,12 @@ def generate_slides_qmd(src_path, framework, warnings):
     if not slides:
         return None
 
+    # Drop slides scoped out of this framework (only=/except=). Done before
+    # emission so is_first / `---` separators reflect the surviving set.
+    slides = [s for s in slides if _slide_applies(s.attrs, framework)]
+    if not slides:
+        return None
+
     source_cells = index_source_cells(text)
 
     # File-level title from H1
@@ -403,10 +508,12 @@ def generate_slides_qmd(src_path, framework, warnings):
     out.append('    theme: [simple, ../../../_d2l-slides.scss]')
     out.append('    width: 1280')
     out.append('    height: 720')
-    out.append('    margin: 0.06')
+    out.append('    margin: 0.045')
     out.append('    slide-number: true')
     out.append('    chalkboard: true')
-    out.append('    scrollable: true')
+    # No `scrollable:` — it wraps marginally-tall slides in per-slide scroll
+    # containers (the "scroll windows") that fight reveal's fit-to-window
+    # scaling. Content is authored to fit 720px, so scaling alone suffices.
     out.append('    code-line-numbers: false')
     out.append('    include-after-body: ../../../_d2l-slides-overlay.html')
     # KaTeX renders math with bundled fonts (reliable for `\mathcal`,
@@ -483,6 +590,8 @@ def main():
     args = parser.parse_args()
 
     src = args.source
+    global DIAGRAM_DIR
+    DIAGRAM_DIR = src / 'img' / 'auto'
     file_filter = set(args.files) if args.files else None
     files = list(CHAPTER_NUMBERING.keys())
 

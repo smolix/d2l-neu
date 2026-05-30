@@ -399,7 +399,7 @@ X
 ```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab tensorflow
 X_var = tf.Variable(X)
-X_var[1, 2].assign(9)
+X_var[1, 2].assign(17)
 X_var
 ```
 
@@ -909,192 +909,484 @@ Tensors provide a variety of functionalities including construction routines; in
 
 <!-- slides -->
 
-::: {.slide title="Tensor Basics"}
-A **tensor** is an *n*-dimensional array of numbers — the
-fundamental data structure for everything that follows in this book.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.1]{.kicker}
 
-- Like a NumPy `ndarray`, but **GPU-accelerated** and
-  **differentiable**.
-- 1-D tensor → vector, 2-D → matrix, *n*-D → general tensor.
-- All four frameworks expose nearly identical tensor APIs.
-
-In this section: how to **create**, **reshape**, **index**,
-**operate on**, and **share memory with** tensors.
+Storing & transforming data with **tensors**<br>The *n*-dimensional arrays that every model in this book is built on.
+:::
 :::
 
-::: {.slide title="Getting Started"}
-A single import wires up the framework's tensor library:
+::: {.slide title="The tensor: our basic data structure"}
+[Motivation]{.kicker}
 
-@ndarray-getting-started-1
+::: {.cols .vc}
+::: {.col}
+- An ***n*-dimensional array** of numbers<br>generalizes the NumPy `ndarray`.
+- Runs on **GPUs / accelerators**, not just the CPU.
+- Records operations for **automatic differentiation**.
 
-. . .
+::: {.d2l-note}
+**Rank** = number of axes; **shape** = size per axis.
+:::
+:::
 
-A 1-D tensor of `n` evenly spaced floats — our running example:
+::: {.col .fig .big}
+@fig:ndarray-rank-ladder
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Getting Started]{.dtitle}
+
+[creating & inspecting tensors]{.dsub}
+:::
+:::
+
+::: {.slide title="Create a vector, then inspect it"}
+[Getting Started]{.kicker}
+
+::: {.cols}
+::: {.col}
+`arange(n)` builds a 1-D tensor of evenly spaced values:
 
 @ndarray-getting-started-2
-:::
-
-::: {.slide title="Shape and size"}
-Two attributes you'll reach for constantly:
-
-- `.numel()` — the total number of elements
-- `.shape` — the size along each axis (a tuple)
-
-@ndarray-getting-started-3
 
 @ndarray-getting-started-4
 :::
 
-::: {.slide title="Reshaping"}
-`reshape` rearranges the same elements into a different shape — the
-total `numel` is preserved.
-
-@ndarray-getting-started-5
-
-A 12-element vector becomes a $3\times 4$ matrix. No data is copied;
-only the **stride metadata** changes.
+::: {.col .narrow}
+::: {.d2l-note}
+`numel()` → total elements. `shape` → size along each axis. We ask for
+**float32** because nearly all neural-net math is in floating point.
+:::
+:::
+:::
 :::
 
-::: {.slide title="Filled and random tensors"}
-Constant fills take a shape tuple — any rank, any size:
+::: {.slide title="Other ways to build tensors"}
+[Getting Started]{.kicker}
 
-@ndarray-getting-started-6
-
-. . .
-
-For weight initialization, `randn` draws from $\mathcal{N}(0, 1)$
-(elements sampled independently):
+::: {.cols}
+::: {.col}
+For weight init, `randn` draws from $\mathcal{N}(0, 1)$:
 
 @ndarray-getting-started-8
-
-`ones`, `full(shape, value)`, `eye(n)`, `empty` (uninitialized,
-fastest), and `*_like(x)` round out the family.
 :::
 
-::: {.slide title="Tensors from Python lists"}
-For exact control, pass a (nested) list literal — same row-major
-convention as NumPy:
+::: {.col .narrow}
+Or type exact values as a list:
 
 @ndarray-getting-started-9
 :::
-
-::: {.slide title="Reading"}
-Standard NumPy-style indexing:
-
-- `X[-1]` — the **last row**
-- `X[1:3]` — rows **1 and 2** (3 is exclusive)
-
-@ndarray-indexing-and-slicing-1
 :::
 
-::: {.slide title="Writing"}
-Assignment works the same way:
+::: {.d2l-note}
+Also `zeros`, `ones`, `full(shape, value)`, `eye(n)`. **Random** values
+break symmetry when initializing network weights; **lists** let you type
+a tensor by hand.
+:::
+:::
+
+::: {.slide title="Reshape: same data, new layout"}
+[Getting Started]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Same elements, a new shape — `numel` is preserved:
+
+@ndarray-getting-started-5
+
+::: {.d2l-note}
+No copy — only the **stride metadata** changes. Use `-1` to infer an
+axis: `x.reshape(3, -1)`.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:ndarray-reshape
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Indexing & Slicing]{.dtitle}
+
+[reading & writing elements, rows, ranges]{.dsub}
+:::
+:::
+
+::: {.slide title="Reading: elements, rows, ranges"}
+[Indexing & Slicing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`X[-1]` is the last row;<br>`X[1:3]` is rows 1–2:
+
+@ndarray-indexing-and-slicing-1
+
+::: {.d2l-note}
+**0-based**; negatives count from the end; a range `a:b` is **half-open**
+(`b` excluded).
+:::
+:::
+
+::: {.col .fig .big}
+@fig:ndarray-index-read
+:::
+:::
+:::
+
+::: {.slide title="Writing: one cell or a whole region" except="jax,tensorflow"}
+[Indexing & Slicing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Assignment writes **in place**.<br>One element, or a whole slice:
 
 @ndarray-indexing-and-slicing-2
-
-. . .
-
-A slice on the **left** sets multiple elements at once:
 
 @ndarray-indexing-and-slicing-3
 :::
 
-::: {.slide title="Elementwise"}
-Most common math is applied **elementwise** — same shape in,
-same shape out.
+::: {.col .fig .big}
+@fig:ndarray-index-write
+:::
+:::
+:::
 
-@ndarray-operations-1
+::: {.slide title="Writing: arrays are immutable" only="jax"}
+[Indexing & Slicing]{.kicker}
 
-. . .
+::: {.cols .vc}
+::: {.col}
+JAX arrays **can't** be mutated.<br>`.at[i].set(v)` returns a **new** array:
 
-The arithmetic operators are overloaded — `+`, `-`, `*`, `/`, `**`
-all run elementwise:
+@ndarray-indexing-and-slicing-2
+:::
+
+::: {.col .fig}
+@fig:ndarray-index-write
+:::
+:::
+:::
+
+::: {.slide title="Writing: updates chain" only="jax"}
+[Indexing & Slicing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Each `.at[...].set(...)` returns a new array, so updates **chain**:
+
+@ndarray-indexing-and-slicing-3
+:::
+
+::: {.col .fig}
+@fig:ndarray-index-write
+:::
+:::
+:::
+
+::: {.slide title="Writing: assign through a Variable" only="tensorflow"}
+[Indexing & Slicing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A `Tensor` is immutable; wrap it in a **`tf.Variable`**, then assign one
+element:
+
+@ndarray-indexing-and-slicing-2
+:::
+
+::: {.col .fig}
+@fig:ndarray-index-write
+:::
+:::
+:::
+
+::: {.slide title="Writing: a whole region" only="tensorflow"}
+[Indexing & Slicing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A slice on the left assigns to a **whole region** at once:
+
+@ndarray-indexing-and-slicing-3
+:::
+
+::: {.col .fig}
+@fig:ndarray-index-write
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Operations]{.dtitle}
+
+[elementwise math, joins, comparisons, broadcasting]{.dsub}
+:::
+:::
+
+::: {.slide title="Elementwise arithmetic & functions"}
+[Operations]{.kicker}
+
+::: {.cols}
+::: {.col}
+The operators `+ - * / **` act **elementwise** on matching shapes:
 
 @ndarray-operations-2
 :::
 
-::: {.slide title="Concatenation"}
-`cat` glues tensors along an existing axis. Pick the axis with `dim`:
+::: {.col .narrow}
+Unary functions like `exp` map each element:
 
-- `dim=0` → stack rows (more rows out)
-- `dim=1` → stack columns (wider matrix out)
-
-@ndarray-operations-3
+@ndarray-operations-1
+:::
 :::
 
-::: {.slide title="Comparisons and reductions"}
-Comparison operators broadcast and return a **boolean tensor** of
-the same shape — useful for masking entries that satisfy a
-condition:
+::: {.d2l-note}
+Any scalar→scalar map (`exp`, `sin`, `log`) extends to a whole tensor.
+:::
+:::
+
+::: {.slide title="Concatenate along an axis"}
+[Operations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`cat` joins along an **existing** axis<br>`dim=0` adds rows, `dim=1`
+widens:
+
+@-ndarray-operations-3
+
+::: {.d2l-note}
+Every *other* axis must already match.
+:::
+:::
+
+::: {.col .fig}
+@fig:ndarray-concat
+:::
+:::
+:::
+
+::: {.slide title="Comparisons & reductions"}
+[Operations]{.kicker}
+
+::: {.cols}
+::: {.col}
+Comparisons return a **boolean tensor**.<br>A ready-made mask:
 
 @ndarray-operations-4
+:::
 
-. . .
-
-`sum`, `mean`, `max`, … collapse one or more axes. Without a
-`dim=` argument the whole tensor reduces to a scalar:
+::: {.col .narrow}
+Reductions collapse axes<br>no `dim=` gives a scalar:
 
 @ndarray-operations-5
 :::
+:::
 
-::: {.slide title="Broadcasting" layout="2col"}
-When tensors of different shapes meet, the smaller one is
-**virtually expanded** along missing dimensions — no data copy.
+::: {.d2l-note}
+`==, <, >` build masks; `sum, mean, max` collapse axes — add `dim=` to
+reduce just one.
+:::
+:::
 
-The rule: dimensions of size 1 stretch; everything else must match.
+::: {.slide title="Broadcasting: combining mismatched shapes"}
+[Operations · the exception]{.kicker}
 
-@ndarray-broadcasting-1
+::: {.cols .vc}
+::: {.col}
+Size-1 axes are **virtually stretched**<br>a $3\times1$ plus a $1\times2$
+gives a $3\times2$:
 
-. . .
+@-ndarray-broadcasting-1
 
 @ndarray-broadcasting-2
 
-A $3\times 1$ + $1\times 2$ becomes a $3\times 2$ matrix.
+::: {.d2l-note .rule}
+Any axis of size **1** stretches to match the other tensor — no copy.
+:::
+
+::: {.d2l-note .warn}
+Compatible only if each axis is **equal** or **1**.
+:::
+:::
+
+::: {.col .narrow}
+@fig:ndarray-broadcasting
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Memory & Interop]{.dtitle}
+
+[in-place updates and leaving the tensor world]{.dsub}
+:::
 :::
 
 ::: {.slide title="The hidden cost of `Y = Y + X`"}
-Every assignment of an arithmetic expression **allocates a new
-tensor**. Matters a lot when `Y` is gigabytes:
+[Performance]{.kicker}
+
+Every arithmetic expression **allocates a new tensor**<br>costly when `Y`
+is gigabytes and updated many times per second:
 
 @ndarray-saving-memory-1
 
-`id(Y) == before` is `False`: `Y` now points at a brand-new buffer.
+::: {.d2l-note}
+`id(Y)` changed → `Y` now points at a brand-new buffer.
+:::
 :::
 
-::: {.slide title="In-place operations"}
-Pre-allocate the output and write into it with `Z[:] = ...`:
+::: {.slide title="Saving memory with in-place ops" except="jax,tensorflow"}
+[Performance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Write into pre-allocated storage with<br>`Z[:] = ...` — the address holds:
 
 @ndarray-saving-memory-2
 
-. . .
-
-If the original value of `X` isn't needed afterward, the most
-ergonomic forms are `X[:] = X + Y` or `X += Y`:
+If `X` isn't needed afterward, `X += Y` is cheapest:
 
 @ndarray-saving-memory-3
 :::
 
-::: {.slide title="NumPy round-trip"}
-Tensors and NumPy `ndarray`s convert cheaply — most frameworks
-share storage with NumPy when possible:
+::: {.col .fig}
+@fig:ndarray-saving-memory
+:::
+:::
+:::
+
+::: {.slide title="Saving memory through a Variable" only="tensorflow"}
+[Performance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A `Variable.assign` writes in place — its `id` is unchanged:
+
+@ndarray-saving-memory-2
+:::
+
+::: {.col .fig}
+@fig:ndarray-saving-memory
+:::
+:::
+:::
+
+::: {.slide title="Reusing allocations with `tf.function`" only="tensorflow"}
+[Performance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`Tensor`s themselves are immutable. Wrap a computation in **`tf.function`**
+so the graph compiler prunes and reuses allocations:
+
+@ndarray-saving-memory-3
+:::
+
+::: {.col .fig}
+@fig:ndarray-saving-memory
+:::
+:::
+:::
+
+::: {.slide title="Memory under immutability" only="jax"}
+[Performance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+JAX has **no in-place write** — a functional update returns a *new*
+array, so `id` changes:
+
+@ndarray-saving-memory-3
+
+::: {.d2l-note .rule}
+Wrap in `jit` with `donate_argnums`: XLA fuses the update and **donates**
+the input buffer, recovering the in-place benefit.
+:::
+:::
+
+::: {.col .fig}
+@fig:ndarray-saving-memory-jax
+:::
+:::
+:::
+
+::: {.slide title="NumPy round-trip: shared storage" only="pytorch"}
+[Interop]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`numpy()` / `from_numpy()` convert cheaply and **share memory**:
 
 @ndarray-conversion-to-other-python-objects-1
 
-. . .
-
-A size-1 tensor unwraps to a Python scalar with `.item()`,
-`float(x)`, or `int(x)`:
+A size-1 tensor unwraps to a Python scalar:
 
 @ndarray-conversion-to-other-python-objects-2
 :::
 
-::: {.slide title="Recap"}
-- `arange / zeros / ones / randn / tensor(list)` — create.
-- `.shape`, `.numel()`, `reshape` — inspect / reorganize.
-- `[i, j]`, `[a:b, c:d]` — read and write slices.
-- `+ - * / **`, `cat`, `==`, `sum` — element-wise ops, joins,
-  comparisons, reductions.
-- **Broadcasting** stretches mismatched shapes; **in-place** ops
-  avoid copying for large tensors.
-- `.numpy()` / `.item()` — leave the tensor world.
+::: {.col .fig .big}
+@fig:ndarray-numpy-share
+:::
+:::
+:::
+
+::: {.slide title="Converting to other Python objects" except="pytorch"}
+[Interop]{.kicker}
+
+::: {.cols}
+::: {.col}
+Convert to / from a NumPy `ndarray`:
+
+@ndarray-conversion-to-other-python-objects-1
+
+::: {.d2l-note .warn}
+The result is a **copy** — host/device arrays don't share storage here.
+:::
+:::
+
+::: {.col .narrow}
+A size-1 tensor unwraps to a Python scalar with `.item()`:
+
+@ndarray-conversion-to-other-python-objects-2
+:::
+:::
+:::
+
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Tensor** = *n*-d array; the core data structure (GPU + autodiff).
+- **Create:** `arange, zeros, ones, randn, tensor([…])`.
+- **Inspect / restructure:** `.shape`, `.numel()`, `reshape`.
+- **Index / slice** to read *and* write — negatives, ranges, regions.
+:::
+
+::: {.col}
+- **Elementwise** math, **comparisons** (masks), **reductions**, `cat`.
+- **Broadcasting** stretches size-1 axes to combine shapes.
+- **Save memory** with in-place ops (`X[:] = …`, `+=`) — or, in JAX,
+  `jit` buffer donation.
+- **Interop:** tensor ↔ NumPy, `.item()` for scalars.
+:::
+:::
 :::

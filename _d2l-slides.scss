@@ -290,7 +290,7 @@ $code-block-padding:     0.45em 0.7em;
 // 280px white box on the left holds the d2l logo (matches the book's
 // `.sidebar-header`); blue bar on the right has the same nav links as
 // the book's navbar. Persistent across all slides.
-$d2l-deck-nav-height: 52px;
+$d2l-deck-nav-height: 48px;
 $d2l-deck-brand-width: 280px;
 
 .d2l-deck-nav {
@@ -363,15 +363,224 @@ $d2l-deck-brand-width: 280px;
 .reveal .d2l-deck-nav-links a:visited,
 .reveal .d2l-deck-nav-links a:hover { border-bottom: none; }
 
-// Push the deck content down so the nav doesn't overlap slide titles.
-// 52px navbar + small breathing gap.
-.reveal .slides { padding-top: 60px; }
+// Presenter / speaker-view button — bottom-left, beside reveal's menu
+// (left 8–43) and chalkboard (left 54–128) icons.
+.d2l-presenter-btn {
+  position: fixed;
+  left: 136px;
+  bottom: 8px;
+  z-index: 1061;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: $blue;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.12s, color 0.12s;
+}
+.d2l-presenter-btn:hover { opacity: 1; color: $blue-dark; }
+@media print { .d2l-presenter-btn { display: none; } }
+
+// Layout per SECTION, not on `.slides` (north-star §42–47). Reveal
+// vertically centers the `.slides` block via translate(-50%,-50%), so
+// padding on `.slides` doesn't reliably clear the fixed navbar and leaves
+// content hugging the left. Padding each section instead gives balanced
+// side margins and a constant top gap below the 48px navbar at any scale.
+.reveal .slides { text-align: left; }
+.reveal .slides section:not(.stack) {
+  box-sizing: border-box;
+  padding: 68px 60px 30px;
+}
+// Cover & divider: push the block to roughly the vertical middle. (Reveal
+// gives center:false sections only content-height and ignores min-height,
+// so flex-centering won't work — a deterministic top pad does, like
+// north-star's `section.divider{padding-top:208px}`.) These override the
+// 68px from the general per-section padding above.
+.reveal .slides section:has(> .cover)   { padding-top: 205px; }
+.reveal .slides section:has(> .divider) { padding-top: 235px; }
+// Center the deck title on the cover (it's the auto-emitted H1, outside
+// the centered `.cover` div).
+.reveal section.title-slide h1 { text-align: center; }
 
 @media print {
   .d2l-deck-nav { display: none; }
-  .reveal .slides { padding-top: 0; }
+  .reveal .slides section:not(.stack) { padding-top: 30px; }
 }
 
 // ── Speaker notes / overview view tweaks ─────────────────
 .reveal .pause-fragment { transition: opacity 0.15s; }
 .reveal-viewport { background: $bg; }
+
+// ════════════════════════════════════════════════════════════════════
+// North-star slide vocabulary — mirrors docs/slides/north-star.html.
+// Authored in the <!-- slides --> block via spans / fenced divs:
+//   [text]{.kicker}              eyebrow section label
+//   ::: {.cover}                 title-slide treatment
+//   ::: {.divider}  + .dnum/.dtitle/.dsub   section divider
+//   ::: {.cols} / ::: {.col}     two-column body (NOT Quarto's .columns)
+//   ::: {.d2l-note} / .warn / .rule         callouts (avoids Quarto's
+//                                            reserved .callout component)
+//   @fig:<id>                    inlines a diagram SVG into ::: {.dgm}
+// ════════════════════════════════════════════════════════════════════
+$purple:    #7D12BA;
+$amber:     #FB8C00;
+$green:     #43A047;
+$purple-bg: #FAF1FD;
+$amber-bg:  #FFF7EC;
+$note-bg:   #F2F8FE;
+
+// Kicker eyebrow (small uppercase mono label, under the h2 title)
+.reveal .kicker {
+  display: block;
+  color: $blue;
+  font-family: $code-font;
+  font-size: 0.5em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: -0.15em 0 0.55em;
+}
+
+// Cover slide
+.reveal .cover {
+  text-align: center;
+  margin-top: 1.1em;
+  .kicker { display: inline-block; }
+  p { font-size: 1.02em; color: $ink-3; }
+}
+
+// Section divider slide
+.reveal .divider {
+  text-align: center;
+  margin-top: 1.3em;
+  .dnum   { display: block; font-family: $code-font; font-size: 4.6em;
+            font-weight: 700; color: $blue; line-height: 0.9; opacity: 0.16; }
+  .dtitle { display: block; font-size: 1.8em; font-weight: 600; color: $ink;
+            margin: 0.05em 0 0.12em; }
+  .dsub   { display: block; color: $ink-3; font-size: 0.92em; }
+}
+
+// Callout notes (base + warn / rule variants)
+.reveal .d2l-note {
+  border-left: 4px solid $blue;
+  background: $note-bg;
+  padding: 0.5em 0.8em;
+  border-radius: 0 9px 9px 0;
+  font-size: 0.74em;
+  line-height: 1.42;
+  margin: 0.45em 0;
+  color: $ink-2;
+  strong, b { color: $ink; }
+  code { font-size: 0.92em; }
+}
+.reveal .d2l-note.warn { border-left-color: $amber;  background: $amber-bg; }
+.reveal .d2l-note.rule { border-left-color: $purple; background: $purple-bg; }
+
+// Two-column body layout (north-star .cols / .col — distinct from
+// Quarto's .columns/.column so it passes through as a plain div)
+.reveal .cols {
+  display: flex;
+  gap: 1.2em;
+  align-items: flex-start;
+  margin: 0.2em 0;
+}
+.reveal .cols.vc { align-items: center; }
+.reveal .cols > .col { flex: 1 1 0; min-width: 0; }
+// Column intro prose is smaller than the 30px root so it doesn't wrap into
+// orphaned words inside a narrow (figure-paired) column. Targets only the
+// direct intro paragraph, not callouts/bullets nested deeper.
+.reveal .cols > .col > p { font-size: 0.82em; line-height: 1.35; }
+// A diagram column sits on the right; the paired content column (plain
+// `.col`) takes the remainder so code doesn't wrap and callouts stay
+// short. `.fig.big` is for content-light slides where the figure should
+// dominate; `.narrow` is a deliberately small content column.
+.reveal .cols > .col.fig     { flex: 0 0 44%; }  // content-heavy: keep left wide
+.reveal .cols > .col.fig.big { flex: 0 0 54%; }  // figure-emphasis slides
+.reveal .cols > .col.narrow  { flex: 0 0 36%; }  // short text/scalar column
+
+// Inlined diagrams (@fig: → ::: {.dgm} <svg class="dgm-svg">)
+.reveal .dgm { width: 100%; text-align: center; }
+// width:100% fills the column; max-height caps portrait diagrams (e.g. the
+// stacked saving-memory figure) so they don't blow past the slide — wide
+// figures never hit it, tall ones shrink-to-fit and center.
+.reveal .dgm-svg { width: 100%; height: auto; max-height: 470px; display: block; margin: 0 auto; }
+.reveal .dgm-cap { font-size: 0.62em; color: $ink-3; margin-top: 0.2em; }
+
+// In/Out card chrome. Quarto emits the input and its injected output as
+// SIBLINGS, not nested:
+//   .cell  > .code-copy-outer-scaffold > div.sourceCode.cell-code > pre   (In)
+//   .cell-output                                                          (Out)
+// Style each as a card with a small pill tag in the left gutter, then join
+// an adjacent In→Out pair into one rounded card (north-star §65–88).
+.reveal .cell,
+.reveal .cell-output {
+  position: relative;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  margin: 0.32em 0;
+}
+.reveal .cell { background: $bg-soft; }
+.reveal .cell-output { max-height: 30vh; overflow: auto; }
+
+// The pill tag sits in a left gutter; pad the content past it.
+.reveal .cell .sourceCode.cell-code,
+.reveal .cell-output {
+  padding: 0.18em 0.6em 0.18em 2.7em;
+}
+.reveal .cell .sourceCode.cell-code::before,
+.reveal .cell-output::before {
+  position: absolute;
+  left: 0.5em;
+  top: 0.5em;
+  font-family: $code-font;
+  font-size: 0.5em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.4em 0.5em;
+  border-radius: 6px;
+  line-height: 1;
+}
+.reveal .cell .sourceCode.cell-code::before { content: "In";  color: $blue-darker; background: $blue-50; }
+.reveal .cell-output::before                { content: "Out"; color: $purple;      background: $purple-bg; }
+
+.reveal .cell pre,
+.reveal .cell-output pre {
+  border-left: none;
+  border-radius: 0;
+  margin: 0;
+  background: transparent;
+  font-size: 0.62em;
+  line-height: 1.45;
+}
+// Wrap long source lines (verbose comments, full tensor literals) instead
+// of showing a horizontal scrollbar — avoids the scroll affordances that
+// clutter dense cells. Indentation is preserved; continuations soft-wrap.
+.reveal .cell pre code { white-space: pre-wrap; word-break: break-word; }
+.reveal .cell-output pre { color: #455a64; }
+
+// Merge an In card immediately followed by its Out card into one unit.
+.reveal .cell:has(+ .cell-output) {
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  margin-bottom: 0;
+}
+.reveal .cell + .cell-output {
+  border-radius: 0 0 10px 10px;
+  margin-top: 0;
+}
+
+// Hide the per-cell copy button on slides (decorative noise in a deck).
+.reveal .cell .code-copy-button { display: none; }
+
+// In a two-column body, code is denser still so it sits beside a diagram.
+.reveal .cols .cell pre,
+.reveal .cols .cell-output pre { font-size: 0.56em; }

@@ -12,7 +12,8 @@ from pathlib import Path
 SLIDE_OPEN_RE = re.compile(r"^(:{3,4})\s*\{\.slide\b([^}]*)\}")
 TITLE_RE = re.compile(r'title="([^"]*)"')
 CODE_OPEN_RE = re.compile(r"^```\{\.python\b.*#([A-Za-z0-9][A-Za-z0-9_-]*)")
-PLACEHOLDER_RE = re.compile(r"^@(!?)([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[A-Za-z]+)?\s*$")
+PLACEHOLDER_RE = re.compile(r"^@([!-]?)([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[A-Za-z]+)?\s*$")
+FIG_RE = re.compile(r"^@fig:([a-z0-9][a-z0-9-]*)(?:@[A-Za-z]+)?\s*$")
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 INLINE_MATH_RE = re.compile(r"(?<!\\)\$[^$\n]{2,160}(?<!\\)\$")
 
@@ -88,12 +89,16 @@ def enrich_slide(slide: dict, code_cells: dict[str, dict[str, int]]) -> None:
     prose: list[str] = []
     math_markers = 0
     bullets = 0
+    figures = 0
     for line in slide["body"]:
         stripped = line.strip()
+        if FIG_RE.match(stripped):
+            figures += 1
+            continue
         match = PLACEHOLDER_RE.match(stripped)
         if match:
             placeholders.append(match.group(2))
-            if match.group(1):
+            if match.group(1) == "!":      # output-only
                 output_placeholders.append(match.group(2))
             continue
         if "$" in line or r"\[" in line or r"\(" in line:
@@ -129,6 +134,7 @@ def enrich_slide(slide: dict, code_cells: dict[str, dict[str, int]]) -> None:
         {
             "placeholders": placeholders,
             "output_placeholders": output_placeholders,
+            "figures": figures,
             "word_count": len(WORD_RE.findall(" ".join(prose))),
             "math_markers": math_markers,
             "bullets": bullets,

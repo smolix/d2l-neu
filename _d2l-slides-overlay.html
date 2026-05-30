@@ -28,14 +28,24 @@
     <li><a href="https://courses.d2l.ai">Courses</a></li>
     <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
     <li><a href="https://d2l.discourse.group">Discuss</a></li>
-    <li>
-      <a href="#" id="d2l-deck-presenter"
-         title="Open speaker / presenter view in a second window (shortcut: S)">
-        Presenter
-      </a>
-    </li>
   </ul>
 </nav>
+<!-- Presenter / speaker-view toggle, parked in the bottom-left control
+     cluster next to reveal's menu + chalkboard icons (not the top navbar). -->
+<button id="d2l-deck-presenter" class="d2l-presenter-btn"
+        title="Open speaker / presenter view in a second window (shortcut: S)"
+        aria-label="Presenter view">
+  <!-- Inline SVG (Quarto's revealjs doesn't load the bootstrap-icons font):
+       a presentation screen with a speaker figure. -->
+  <svg viewBox="0 0 16 16" width="21" height="21" fill="none"
+       stroke="currentColor" stroke-width="1.2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="1.1" y="1.7" width="13.8" height="9.2" rx="1.2"/>
+    <path d="M5.6 13.4h4.8M8 10.9v2.5"/>
+    <circle cx="8" cy="5" r="1.35" fill="currentColor" stroke="none"/>
+    <path d="M5.5 8.7a2.5 2.5 0 0 1 5 0z" fill="currentColor" stroke="none"/>
+  </svg>
+</button>
 <script>
 // (1) Rewrite the "Book Chapter" link to the corresponding book HTML
 //     (e.g. /slides/pytorch/chapter_x/foo.html → /chapter_x/foo.html).
@@ -79,6 +89,32 @@
               bubbles: true, cancelable: true });
         document.dispatchEvent(ev2);
       });
+    }
+    attachChrome();
+  }
+
+  // (3) Scale the fixed navbar by the SAME factor reveal scales the slides,
+  //     so the whole deck resizes as one unit (otherwise the px-sized navbar
+  //     stays huge while the content shrinks). Anchored top-left; width is
+  //     pre-divided by the scale so it still spans the viewport after scaling.
+  function syncChrome() {
+    if (!window.Reveal || typeof Reveal.getScale !== 'function') return;
+    var s = Reveal.getScale() || 1;
+    var nav = document.querySelector('.d2l-deck-nav');
+    if (nav) {
+      nav.style.transformOrigin = 'top left';
+      nav.style.right = 'auto';
+      nav.style.width = (100 / s) + 'vw';
+      nav.style.transform = 'scale(' + s + ')';
+    }
+  }
+  function attachChrome() {
+    if (window.Reveal && typeof Reveal.on === 'function') {
+      Reveal.on('ready', syncChrome);
+      Reveal.on('resize', syncChrome);
+      if (typeof Reveal.isReady === 'function' && Reveal.isReady()) syncChrome();
+    } else {
+      setTimeout(attachChrome, 60);
     }
   }
   if (document.readyState === 'loading') {

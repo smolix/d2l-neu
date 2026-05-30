@@ -166,6 +166,19 @@ y = lambda x: 2 * jnp.dot(x, x)
 y(x)
 ```
 
+Recording the operations gives the framework a *computational graph*,
+shown in :numref:`fig_autograd_graph`. Its nodes are operations and its
+edges carry intermediate values.
+
+![The computational graph for $y = 2\mathbf{x}^\top\mathbf{x}$. The forward pass (black) flows from $\mathbf{x}$ to $y$; reverse-mode automatic differentiation walks the same graph backward (blue), multiplying the local derivative at each node via the chain rule to accumulate $\partial y / \partial \mathbf{x} = 4\mathbf{x}$.](../img/autograd-comp-graph.svg)
+:label:`fig_autograd_graph`
+
+The forward pass evaluates the graph from $\mathbf{x}$ to $y$; to obtain
+the gradient, automatic differentiation then traverses it in reverse,
+multiplying the local derivatives along the way. We unpack computational
+graphs and backpropagation in full in :numref:`sec_backprop`; for now we
+simply use the resulting gradients.
+
 :begin_tab:`mxnet`
 We can now take the gradient of `y`
 with respect to `x` by calling 
@@ -499,6 +512,68 @@ t.gradient(y, x) == 2 * x
 grad(lambda x: y(x).sum())(x) == 2 * x
 ```
 
+## Turning Off Gradient Tracking
+
+Recording operations for a backward pass costs time and memory. When we
+only need a value — at prediction time, or while updating parameters by
+hand — we can skip the bookkeeping entirely.
+
+:begin_tab:`mxnet`
+MXNet only builds a graph inside an `autograd.record()` block, so ordinary
+computation already carries no gradient bookkeeping. To suspend tracking
+*within* a recording scope, wrap the code in `autograd.pause()`.
+:end_tab:
+
+:begin_tab:`pytorch`
+Wrap the computation in a `torch.no_grad()` block (or decorate a function
+with `@torch.no_grad()`). The result still shares data with `x`, but it is
+not attached to the graph, so no gradient can flow through it.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow only records operations executed inside a `tf.GradientTape`, so
+any computation outside a tape is already untracked. To pause recording
+*within* a tape, use `tape.stop_recording()`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX never records gradients implicitly: nothing is tracked until you apply
+a transform such as `grad`. There is simply nothing to switch off — you
+opt *in* to differentiation rather than out of it.
+:end_tab:
+
+```{.python .input #autograd-turning-off-gradient-tracking-1}
+%%tab mxnet
+with autograd.record():
+    with autograd.pause():
+        y = 2 * np.dot(x, x)  # not recorded: no gradient will flow through y
+y
+```
+
+```{.python .input #autograd-turning-off-gradient-tracking-1}
+%%tab pytorch
+with torch.no_grad():
+    y = 2 * torch.dot(x, x)
+y.requires_grad  # False: y is detached from the graph
+```
+
+```{.python .input #autograd-turning-off-gradient-tracking-1}
+%%tab tensorflow
+# Outside any GradientTape, nothing is recorded
+y = 2 * tf.tensordot(x, x, axes=1)
+y
+```
+
+```{.python .input #autograd-turning-off-gradient-tracking-1}
+%%tab jax
+# No graph is built unless we ask for it via a transform like `grad`
+y = 2 * jnp.dot(x, x)
+y
+```
+
+This untracked mode is the default for inference and evaluation
+throughout the rest of the book.
+
 ## Gradients and Python Control Flow
 
 So far we reviewed cases where the path from input to output 
@@ -644,6 +719,76 @@ depends on the length of the input.
 In these cases, automatic differentiation 
 becomes vital for statistical modeling 
 since it is impossible to compute the gradient *a priori*. 
+
+## Higher-Order Derivatives
+
+Occasionally we need the derivative of a derivative — the curvature of a
+function, or the Hessian--vector products used by some optimizers. Several
+frameworks can differentiate *through* a gradient computation. Take
+$f(x) = x^3$, for which $f'(x) = 3x^2$ and $f''(x) = 6x$.
+
+:begin_tab:`mxnet`
+Higher-order gradients in MXNet require explicitly retaining the graph of
+the first derivative, which is beyond the scope of this introduction.
+:end_tab:
+
+:begin_tab:`pytorch`
+Pass `create_graph=True` so the first gradient is itself a differentiable
+function of `x`, then differentiate again.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Nest two `GradientTape`s: the outer tape differentiates the gradient
+computed under the inner tape.
+:end_tab:
+
+:begin_tab:`jax`
+`grad` returns a function, so we just apply it twice.
+:end_tab:
+
+```{.python .input #autograd-higher-order-derivatives-1}
+%%tab pytorch
+x3 = torch.tensor(2.0, requires_grad=True)
+dy = torch.autograd.grad(x3 ** 3, x3, create_graph=True)[0]  # 3x^2 = 12
+d2y = torch.autograd.grad(dy, x3)[0]                          # 6x  = 12
+dy, d2y
+```
+
+```{.python .input #autograd-higher-order-derivatives-1}
+%%tab tensorflow
+x3 = tf.Variable(2.0)
+with tf.GradientTape() as outer:
+    with tf.GradientTape() as inner:
+        y = x3 ** 3
+    dy = inner.gradient(y, x3)   # 3x^2 = 12
+d2y = outer.gradient(dy, x3)     # 6x  = 12
+dy, d2y
+```
+
+```{.python .input #autograd-higher-order-derivatives-1}
+%%tab jax
+f = lambda x: x ** 3
+dy = grad(f)(2.0)            # 3x^2 = 12
+d2y = grad(grad(f))(2.0)    # 6x  = 12
+dy, d2y
+```
+
+## Forward versus Reverse Mode
+
+Automatic differentiation can traverse the computational graph in either
+direction. *Reverse mode* — what we have used so far, and the engine
+behind backpropagation — sweeps from the output back to the inputs,
+yielding the gradient of a single scalar with respect to *all* inputs in
+one pass. *Forward mode* sweeps the other way, propagating derivatives
+from one input outward to every output.
+
+The choice is about cost. Reverse mode is cheap when there are many inputs
+and few outputs — exactly the deep learning setting, where a scalar loss
+depends on millions of parameters. Forward mode wins in the opposite
+regime (few inputs, many outputs). Some frameworks expose both: JAX offers
+`jacfwd`/`jacrev` (and `jvp`/`vjp`), PyTorch provides forward-mode autodiff
+through `torch.func.jvp`, and TensorFlow has `tf.autodiff.ForwardAccumulator`.
+The exercises explore this trade-off further.
 
 ## Discussion
 

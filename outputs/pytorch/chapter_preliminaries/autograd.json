@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/autograd.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.12.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -98,23 +98,43 @@
         }
       ]
     },
-    "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:f3a26dbc890cb8ac6c9821d06ec8dd59732f2e79a3260455e354851a6aa7596e",
-      "kind": "text",
-      "outputs": []
-    },
-    "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:680c62e910b0ebd37cb59d755e6cf28abd43d70d92eb6d938f2280ba611d0f59",
-      "kind": "text",
-      "outputs": []
-    },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:710a9e5c77958a51c162a3d9e44277893ddb9a46e3b22dd256b63c1c4fef7d39",
+    "autograd-turning-off-gradient-tracking-1": {
+      "code_fingerprint": "sha256:6c610919166662a7798d39e17b54708ae74279ee6998993fbb57f4efc394969b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(True)"
+          "text": "False"
+        }
+      ]
+    },
+    "autograd-gradients-and-python-control-flow-1": {
+      "code_fingerprint": "sha256:c41818309c9b9fdd26f315fc98b8cb52d0e080878a9117084553aa8c5b7997fa",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-2": {
+      "code_fingerprint": "sha256:8a4a7622afce28ca91e3929eeb943b82a70567209dda98cf7252edeebb740369",
+      "kind": "text",
+      "outputs": []
+    },
+    "autograd-gradients-and-python-control-flow-3": {
+      "code_fingerprint": "sha256:e949d9fa78840c45369e0c6d3ff635f28a688935fec27e2d24ce995ddf861117",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(False)"
+        }
+      ]
+    },
+    "autograd-higher-order-derivatives-1": {
+      "code_fingerprint": "sha256:30d7d15b7ccea57df3bc8d11f72e9410f0f4b331b3bd42b35da757c333da918b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(12., grad_fn=<MulBackward0>), tensor(12.))"
         }
       ]
     }

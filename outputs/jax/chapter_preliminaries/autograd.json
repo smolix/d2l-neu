@@ -93,23 +93,43 @@
         }
       ]
     },
+    "autograd-turning-off-gradient-tracking-1": {
+      "code_fingerprint": "sha256:6c6d17b23d79ba8552b403a6e672775e5f8f2ba7757e6d9b5e90224ad1419e04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(28., dtype=float32)"
+        }
+      ]
+    },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:e733f6e375d0cf39df3c1c24cee490c2ba13bb370ad1db0c14bac7bc5e0aa263",
+      "code_fingerprint": "sha256:cb7998a3816d9cbe9d745db9a07f8c5a8d7c19b9f9fd57537b0a9d10cc880623",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:6e8cf6b04d1c62e112e9838cdc889ba04d52e3624ca436132c395db131282e4f",
+      "code_fingerprint": "sha256:8d3e1d59ec5b64acc9e6881fdff60138049e266de572e292a4fb765b3e3fcfb5",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:cb12a44d01dbecfc897834e1c807a2a4bd90687867e3448d25ae85f5d860f38e",
+      "code_fingerprint": "sha256:023fdd03894a6b61ed346de07dcdf90049d1a65a5288265f568932f29b7ab185",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "Array(True, dtype=bool)"
+        }
+      ]
+    },
+    "autograd-higher-order-derivatives-1": {
+      "code_fingerprint": "sha256:051e8ac6cff9a28df586719cb190336dc1da31ab7f18e1396571e917171f1725",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(12., dtype=float32, weak_type=True),\n Array(12., dtype=float32, weak_type=True))"
         }
       ]
     }

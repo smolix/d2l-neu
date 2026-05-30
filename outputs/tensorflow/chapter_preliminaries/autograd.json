@@ -98,28 +98,48 @@
         }
       ]
     },
+    "autograd-turning-off-gradient-tracking-1": {
+      "code_fingerprint": "sha256:12f75c25b9ccc1feade94216328c7f2b6a3d1cf25e9aea40c84db747086fd7e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=28.0>"
+        }
+      ]
+    },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:5c372f33389abbee1108d0e04cbbf8ba9d9bd6f2d2c52b1236c283c180b71a7b",
+      "code_fingerprint": "sha256:5ae790e93e32b5f025c204f5c69cdc063aa498bd16795a285d106745f733e48f",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:5f00405a1e07874cb9b099007464d17329546c98d284d83e0f5cc5c4d7b21e20",
+      "code_fingerprint": "sha256:02a06eb30a8a927a62decf14af19fe54eb1869a7ba453c8a1b0f1910ea16e152",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=3276800.0>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=4096.0>"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:b8eafe0e0ca7792b2dd4df9600440237a3e18ebeca6df7efcea7d410f6ef8147",
+      "code_fingerprint": "sha256:4c84465e8ecc1c932646520e74a7215dc918e70f6f24b4b156fcbc785013d38b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=False>"
+          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=True>"
+        }
+      ]
+    },
+    "autograd-higher-order-derivatives-1": {
+      "code_fingerprint": "sha256:936dc9be7531c4370cdd62e2edd6d0fc35117f37b6a8f87da509c95fe55a2896",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=12.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=12.0>)"
         }
       ]
     }

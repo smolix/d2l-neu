@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/autograd.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0+macos.arm64.20260529",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -47,11 +47,6 @@
       "code_fingerprint": "sha256:25e030855048a1eff712e839773b38b8439ff647b77f1f60625d90d693e62970",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[06:57:34] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
         {
           "type": "execute_result",
           "text": "array([ 0.,  4.,  8., 12.])"
@@ -108,18 +103,28 @@
         }
       ]
     },
+    "autograd-turning-off-gradient-tracking-1": {
+      "code_fingerprint": "sha256:9ea9fc36e22538c5314d29847d13aac3b3d8eb13a870e59e4f96b30fcadea738",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(28.)"
+        }
+      ]
+    },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:4ee97bfa67bf24de82f8d581e4960b0d92af7cafd755a61a964e26aff83cfae0",
+      "code_fingerprint": "sha256:5357a43d4b02da8890118dbbaeb49cdf6800febbdb82aca5ec421ebf99a1ca89",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:0957be61045c4716f49f0c459fdba8925013eb0f8e0bcb5c653b6c6479038f8b",
+      "code_fingerprint": "sha256:e0b1d3ee0cc22d9caa18b57da68e207afbb9928b009db8632c90ee1d4c881a98",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:59e177d195fe7d733c487e1f552faba270e2f6823d99bc90fd50b85a10d9bc6a",
+      "code_fingerprint": "sha256:ed665b80773b7f908671c4fe8a997c77932f773329c076e8e0895451295e27ee",
       "kind": "text",
       "outputs": [
         {

@@ -40,7 +40,10 @@ function standalone(inner) {
   const body = inner.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
   return `<?xml version="1.0" encoding="UTF-8"?>\n`
     + `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`
-    + `<style>${FONT_IMPORT}</style>`
+    // CDATA so the `&` in the font-import URL stays valid XML — otherwise
+    // the file is unparseable as a standalone SVG (e.g. an <img> book
+    // figure, or rsvg-convert). Inlined-into-slides decks strip <style>.
+    + `<style><![CDATA[${FONT_IMPORT}]]></style>`
     + body + `</svg>\n`;
 }
 

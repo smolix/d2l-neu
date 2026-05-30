@@ -79,11 +79,19 @@ Attributes:
 | Attribute              | Purpose                                                |
 |------------------------|--------------------------------------------------------|
 | `title="…"`            | Optional. Renders as a `## Title` slide heading.       |
-| `layout="…"`           | One of `2col`, `figure`, `code`. Adds a `.slide-<L>` class for SCSS rules in `_d2l-slides.scss`. |
+| `only="fw[,fw]"`       | Render this slide **only** for the listed framework decks. For sections whose *framing* (not just code) differs per framework. |
+| `except="fw[,fw]"`     | Render for all decks **except** the listed frameworks. |
+| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). |
 | `transition="…"`       | Reveal.js transition. `fade`, `slide`, `convex`, `concave`, `zoom`, `none`. |
 | `data-background-color="#…"`   | Slide background color.                        |
 | `data-background-image="…"`    | Slide background image.                        |
 | `output-lines="N"`     | Override the per-deck text-output cap (default 12) for cells injected into this slide. |
+
+`only=` / `except=` let one shared `<!-- slides -->` block emit *different
+slides per framework* where the concept itself diverges (e.g. JAX arrays
+are immutable, so its "writing" slide is genuinely different code **and**
+prose, not just a code swap). Most cells differ only in code/output and
+need no scoping — the `#@tab` mechanism handles those automatically.
 
 Slides without a `title=` attribute render with a `---` separator and
 no heading — useful for continuation slides under the same section.
@@ -132,34 +140,60 @@ Third point fades up.
 
 Snippets (`frag` in VS Code) cover the common cases.
 
-### Layouts
+### Visual vocabulary (the north-star building blocks)
+
+The §2.1 (`ndarray`) and §2.3 (`linear-algebra`) decks established a small
+set of authored classes, all styled in `_d2l-slides.scss`. Compose them
+in the `<!-- slides -->` block:
+
+| Markup | Renders as | Use |
+|--------|-----------|-----|
+| `[Section]{.kicker}` | small uppercase eyebrow label | one per content slide, under the title |
+| `::: {.cover}` … `:::` | centered title-slide treatment | the first slide (deck H1 supplies the title) |
+| `::: {.divider}` + `[01]{.dnum}` `[Title]{.dtitle}` `[sub]{.dsub}` | centered section divider | between section groups |
+| `::: {.cols}` / `::: {.col}` | flex two-column row | code/prose beside a figure |
+| `::: {.d2l-note}` / `{.d2l-note .rule}` / `{.d2l-note .warn}` | callout (blue / purple / amber) | a rule or warning, sparingly |
+
+**Two-column layout.** Use nested divs, *not* `layout="2col"`:
 
 ```markdown
-::: {.slide layout="2col" title="Two columns"}
-Prose on the left.
+::: {.cols .vc}
+::: {.col}
+Prose / `@code-cell` on the left.
+:::
 
-@some-figure
+::: {.col .fig}
+@fig:my-diagram
+:::
 :::
 ```
 
-Out of the box:
+- `.cols` is a flex row; add `.vc` to vertically center the columns.
+- A plain `.col` flex-grows; the **figure** column takes a fixed width:
+  `.fig` (≈44 %, content-heavy slides), `.fig .big` (≈54 %, figure-led),
+  or `.narrow` (≈36 %, a short text/scalar column).
+- **Don't** use Quarto's reserved `.callout` (it becomes a Quarto callout
+  component) or `.columns`/`.column` (Quarto's own grid) — hence the
+  `.d2l-note` and `.cols`/`.col` names.
 
-- `layout="2col"` — CSS grid, prose left / code-or-figure right.
-- `layout="figure"` — centered figure, large.
-- `layout="code"` — code dominant, smaller font, scrollable output cap
-  at 30vh.
-
-The CSS lives in `_d2l-slides.scss` at the repo root. Add or tweak
-classes there if you need new layouts; the slide deck pulls the file
-in via the YAML `theme:` entry.
+Add or tweak classes in `_d2l-slides.scss` (pulled in via the deck's
+`theme:` entry); never inline CSS in a deck.
 
 ---
 
 ## Code-cell placeholders
 
-A line that is just `@<id>` (or `@<id>@<framework>`) inside a slide
-div is a placeholder. The slide builder replaces it with the matching
-code cell from the source.
+A line that is just a placeholder inside a slide div is replaced by the
+slide builder. The forms:
+
+| Placeholder | Emits |
+|-------------|-------|
+| `@<id>` | the code cell **and** its injected output |
+| `@<id>@<fw>` | force a specific framework's variant (regardless of the deck) |
+| `@!<id>` | **output only** — no code echo (cover/teaser figures) |
+| `@-<id>` | **code only** — no output (verbose setup cells whose output would overflow; emitted without a label so `inject_outputs.py` skips it) |
+| `@fig:<id>` | inline a committed **diagram** SVG (`img/auto/<id>.svg`) — see *Diagrams* below |
+| `@fig:<id>@<fw>` | prefer a framework variant (`img/auto/<id>-<fw>.svg`), else fall back to `<id>.svg` |
 
 ```markdown
 ::: {.slide}
@@ -225,6 +259,51 @@ stripped too.
 `tab.selected()` branches are flattened per the deck's framework, so
 a multi-framework cell shows only the relevant code in any given
 deck.
+
+---
+
+## Diagrams
+
+Structural and geometric figures live in `diagrams/` as DOM-free SVG
+builders, are rendered to `img/auto/<id>.svg`, and committed. Reference
+one from a slide with `@fig:<id>`.
+
+### The engine
+
+```
+diagrams/engine.mjs    helpers (grid, tx, arrow, block, chip, svg) + color tokens C
+diagrams/<chapter>.mjs one function per diagram, keyed by a stable `<chapter>-<concept>` id
+diagrams/registry.mjs  imports + spreads each chapter module
+diagrams/render.mjs     node CLI → standalone img/auto/<id>.svg
+```
+
+```bash
+node diagrams/render.mjs --out img/auto                 # all
+node diagrams/render.mjs --out img/auto ndarray-reshape # one
+node diagrams/render.mjs --list                         # known ids
+```
+
+Add a chapter: create `diagrams/<file>.mjs` exporting `diagrams`, import
+it in `registry.mjs`, render, and **commit the SVGs** (reviewable diffs,
+no reader build step). Ids are global and **immutable** (same rule as
+cell ids). `gen_slides.py` inlines the SVG into the deck via a pandoc
+`{=html}` raw block, so it inherits the page fonts.
+
+### Authoring diagrams — what we learned
+
+- **Match the cell.** Draw the actual shapes/values the executed cell
+  shows (read `outputs/<fw>/<chapter>/<file>.json`), so figure and the
+  In/Out card agree (e.g. `transpose` uses the cell's real 3×2 matrix).
+- **Portrait, not wide.** A wide-short figure is tiny in a column.
+  Design column-friendly aspects — stack panels vertically (the
+  `saving-memory` and `concat` figures became portrait this way). A
+  `max-height` on `.dgm-svg` caps tall figures.
+- **Geometric intuition pays off.** Arrows, angles, projections, lengths
+  (e.g. `linear-algebra-dot`, `linear-algebra-norms`) carry meaning text
+  can't. Use them generously.
+- **Subscripts:** the unicode subscript `j` (ⱼ) is missing in many fonts
+  and renders full-size — use SVG `<tspan baseline-shift="sub">` instead.
+- **Colors:** use the `C` tokens only; keep them in sync with the scss.
 
 ---
 
@@ -404,6 +483,52 @@ Open one in a browser to view. For batch sharing, copy the whole
 
 ## Authoring patterns
 
+### Quality rules (learned building §2.1 and §2.3)
+
+`chapter_preliminaries/ndarray.md` and `linear-algebra.md` are the
+reference decks; `docs/slides/north-star.html` is the visual bar. When
+authoring or regenerating a deck:
+
+1. **Build fresh to the bar.** A pre-existing `<!-- slides -->` block is a
+   *source of ideas*, not a target — the north-star rewrite is markedly
+   better than what it replaced. Cover, dividers, kickers, In/Out cards,
+   2-col diagram pairings, callouts.
+2. **One idea per slide; curate.** Follow the notebook's teaching order
+   but drop cells that don't teach (e.g. an `axis=[0,1]` cell redundant
+   with the per-axis slide). Trim noisy output.
+3. **Check per-framework *framing*, not just code.** Inspect all four
+   `outputs/<fw>/…json` and the `#@tab` source. Where a concept itself
+   differs (JAX immutability; TF `Variable`/`tf.function`; NumPy
+   shared-vs-copy) write `only=`/`except=` scoped slides — and a
+   framework diagram variant if needed. Where only code/output differ,
+   one shared slide suffices. (Linear algebra needed *zero* scoped
+   slides; ndarray needed several.)
+4. **`. . .` fragments work only at slide top level — never inside a
+   `::: {.col}`** (they render as a literal "..."). In a two-column
+   slide, stack the cells or show one; put progressive reveals on
+   full-width slides.
+5. **Fit 720 px.** Verify with the overflow sweep (below) — no slide's
+   `scrollHeight` should exceed the deck height. If a slide is too tall:
+   shorten the intro, make a verbose setup cell `@-` (code-only), split
+   it into two slides (`only=`-scoped continuations), or widen the
+   content column. Don't rely on per-slide scrollbars.
+6. **Mind column width.** Cells with matrix/verbose output and long code
+   need a *wide* content column; column **prose** is shrunk so it doesn't
+   wrap to orphaned words. Wide-short diagrams should be redesigned
+   portrait rather than squeezed.
+7. **Verify across all four frameworks**, then hand to a human and
+   iterate.
+
+Overflow / scroll sweep (run in the rendered deck's console, or via
+Playwright):
+
+```js
+const H = Reveal.getConfig().height;
+[...document.querySelectorAll('.reveal .slides section.slide, .title-slide')]
+  .filter(s => s.scrollHeight > H + 4)
+  .map(s => s.querySelector('h2')?.textContent);   // → [] when clean
+```
+
 ### Convert an existing slide deck to the new format
 
 Inline `[**…**]` / `(**…**)` / `[~~…~~]` / `(~~…~~)` markers were
@@ -452,6 +577,31 @@ notebook, but doesn't appear in slides.
 ---
 
 ## Troubleshooting
+
+### A callout renders without its `.warn` / `.rule` color
+
+You used `::: {.callout}` — Quarto reserves that class and converts the
+div into its own callout component, dropping your modifiers. Use
+`::: {.d2l-note}` / `{.d2l-note .warn}` / `{.d2l-note .rule}` instead.
+
+### A diagram renders as scrambled text / stray tags
+
+The SVG was parsed as Markdown (so `[…]` in labels became links and `'`
+a smart quote). `@fig:` already wraps the SVG in a `{=html}` raw block to
+prevent this — only an issue if you hand-place a raw `<svg>` in a deck;
+wrap it in a ` ```{=html} ` block.
+
+### A `. . .` shows up as a literal "..."
+
+It's inside a `::: {.col}` — fragment pauses work only at the slide's top
+level. Move it out of the column, or restructure the slide.
+
+### Slides don't rescale with the window
+
+Reveal scales the slide canvas to fit; the **navbar** is scaled to match
+by `_d2l-slides-overlay.html`. Don't set `scrollable: true` (per-slide
+scroll containers fight the fit-to-window scaling), and don't pin a
+`height`/`min-height` on `.reveal .slides` or a section.
 
 ### "@cell-id has no variant for `<fw>`"
 
@@ -514,7 +664,12 @@ the notebook, click the kernel selector in the top-right, and pick
 
 ```
 chapter_*/<file>.md                Source: book content + <!-- slides --> section
-_d2l-slides.scss                   Slide layout SCSS (root of repo)
+_d2l-slides.scss                   Slide styling/layout SCSS (root of repo)
+_d2l-slides-overlay.html           Navbar + presenter button + nav-scale hook
+docs/slides/north-star.html        The visual exemplar (the bar)
+diagrams/<chapter>.mjs             DOM-free SVG diagram builders
+diagrams/{engine,registry,render}.mjs   helpers · id→fn map · render CLI
+img/auto/<id>.svg                  Rendered diagrams (committed)
 _slides/<fw>/<chapter>/<file>.qmd  Generated slide source (gitignored)
 _slides/<fw>/<chapter>/<file>.html Rendered deck (gitignored)
 _slides/<fw>/img/outputs/          Injected output images (gitignored)
@@ -522,8 +677,9 @@ _slides/<fw>/img/outputs/          Injected output images (gitignored)
 tools/add_cell_ids.py              Assigns/maintains #<id> on code fences
 tools/migrate_slide_markers.py     One-shot: inline markers → slide divs
 tools/strip_tab_all.py             One-shot: removes #@tab all / %%tab all
-tools/gen_slides.py                Generates and renders slide .qmd
+tools/gen_slides.py                Generates and renders slide .qmd (@fig/@-/@!, only=/except=)
 tools/inject_outputs.py            Injects notebook outputs (slides mode)
+tools/audit_slides.py              Teachability/overflow audit (@fig/@-/@! aware)
 tools/watch_slides.py              Live preview daemon
 tools/lint_source.py               Source linter
 tools/sync_back.py                 Notebook → source sync

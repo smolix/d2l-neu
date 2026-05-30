@@ -8,6 +8,19 @@ built for **§2.1 Data Manipulation** (`chapter_preliminaries/ndarray.md`).
 
 This packet is the brief. Read it fully before generating anything.
 
+> **Status (updated).** The pipeline features this packet describes as
+> "to-be-added" have **landed**, and two reference decks are built:
+> **§2.1 `ndarray`** and **§2.3 `linear-algebra`**. The diagram engine now
+> lives in the repo at `diagrams/` (not just this packet), rendered SVGs in
+> `img/auto/`. `gen_slides.py` supports `@fig:<id>` (inline diagram),
+> `@-<id>` (code-only), `@!<id>` (output-only), and `only=`/`except=`
+> per-slide framework scoping. **`docs/slides.md` is now the living
+> reference** for the placeholder grammar, the visual vocabulary
+> (`.kicker`/`.cover`/`.divider`/`.d2l-note`/`.cols`/`.fig`/`.narrow`), the
+> diagram workflow, and the quality rules + overflow sweep. This packet
+> remains useful for the *conceptual* brief (§3) and the per-section
+> workflow (§7); cross-check specifics against `docs/slides.md`.
+
 ---
 
 ## 0. The north star (read/look at these first)
@@ -28,12 +41,17 @@ diagrams** — wiring those in is the main new work.
 
 ## 1. Decisions already made (do not relitigate)
 
-- **Diagram engine = plain JS, run under Node.** The engine in `diagrams/` is
-  pure string-building — *no DOM, no browser*. `node render.mjs` writes SVG
-  files directly. (We considered headless-browser rendering; it's unnecessary.)
-- **Diagrams live in `img/auto/<id>.svg`**, regenerated as needed. They are
+- **Diagram engine = plain JS, run under Node.** The engine (now at the repo
+  root `diagrams/`) is pure string-building — *no DOM, no browser*.
+  `node diagrams/render.mjs --out img/auto` writes SVG files directly.
+- **Diagrams live in `img/auto/<id>.svg`** and are **committed**. They are
   intended to also upgrade the **HTML book and PDF** figures later, so they must
-  be real rendered files (not runtime-only).
+  be real rendered files (not runtime-only). `@fig:<id>` inlines them into a
+  deck via a pandoc `{=html}` raw block.
+- **Design diagrams portrait, and match the cell.** Wide-short figures are tiny
+  in a column — stack panels vertically (see `concat`, `saving-memory`). Draw
+  the actual values the executed cell shows. Geometric figures (arrows, angles,
+  lengths) are encouraged.
 - **Slides-only for now.** Do **not** touch the chapter body prose, the book
   figures, or `_quarto.yml` page layout in this phase. (A separate later pass on
   another server handles book/PDF integration and page-layout fixes.)
@@ -233,19 +251,24 @@ The decks are generated **per framework** from one shared slide block; code and
 output swap by cell id. Most differences are already handled by the existing
 `#@tab`/`@<id>@<fw>` mechanism. Watch for cases where the *framing* differs:
 
-- **JAX immutability.** No in-place writes; `x.at[idx].set(...)` returns a new
-  array. The *Writing*, *hidden cost*, and *in-place* slides — and the
-  `ndarray-saving-memory` diagram — need a JAX variant. Scope a whole slide with
-  a (to-be-added) `.only="jax"` / `.except="jax"` attribute (parse it in
-  `gen_slides.py`'s `_parse_attrs`, which already exists), and give the diagram
-  an fw-keyed variant.
-- **Randomness.** JAX needs an explicit PRNG key; reflect that in the relevant
-  slide/caption.
-- **Eager vs graph (TF), import idioms, dtype defaults** differ — keep captions
-  framework-neutral where possible; scope where not.
+Scope a divergent slide with `only="fw[,fw]"` / `except="fw[,fw]"` (now
+implemented) and give the diagram an fw variant. Worked example in
+`ndarray.md`:
 
-Per-framework **prose** inside a slide: confirm whether `:begin_tab:` tabs are
-processed in the slide render path; if not, that's a small addition to make.
+- **JAX immutability.** No in-place writes; `x.at[idx].set(...)` returns a new
+  array, and `saving-memory-2` has *no output* (a comment-only cell). The
+  *Writing* and *Saving-memory* slides are `only="jax"` with their own framing
+  and the `ndarray-saving-memory-jax` diagram.
+- **TensorFlow** uses `tf.Variable` + `tf.function` for the in-place story, and
+  `Tensor`s are immutable — `only="tensorflow"` slides.
+- **NumPy round-trip** shares memory in PyTorch but **copies** in MXNet/TF/JAX —
+  scoped, since the "one shared buffer" framing (and diagram) is PyTorch-only.
+- **Randomness** (JAX PRNG key), **eager vs graph**, **dtype defaults** — keep
+  captions neutral where possible; scope only where the *concept* changes.
+
+Decks that are pure code/output swaps need **no** scoping (e.g.
+`linear-algebra` used zero `only=`/`except=` slides). Always check by reading
+all four `outputs/<fw>/<chapter>/<file>.json` before deciding.
 
 ---
 
@@ -277,13 +300,18 @@ processed in the slide render path; if not, that's a small addition to make.
 - [ ] Code cells appear in notebook order; non-teaching cells dropped.
 - [ ] Shown outputs match the executed notebook; noisy outputs trimmed.
 - [ ] Captions are original and concise — no pasted chapter prose.
-- [ ] Every structural concept has a diagram; diagrams use engine tokens.
-- [ ] Fragments (`. . .`) used where a slide builds in steps.
-- [ ] Opener + recap present.
-- [ ] Renders cleanly in **all four** frameworks; framework-specific slides
-      correct (esp. JAX immutability).
-- [ ] Fits 16:9 without overflow (note, don't fix, layout issues this phase).
-- [ ] `audit_slides.py` clean.
+- [ ] Every structural/geometric concept has a diagram; diagrams use engine
+      tokens and **match the cell's values**.
+- [ ] Fragments (`. . .`) used where a slide builds in steps — and **never
+      inside a `::: {.col}`** (they render as a literal "...").
+- [ ] Cover, section dividers, kickers, In/Out cards present.
+- [ ] Per-framework *framing* checked across all four `outputs/<fw>/…json`;
+      divergent sections use `only=`/`except=` (esp. JAX immutability, TF
+      `Variable`/`tf.function`, NumPy shared-vs-copy).
+- [ ] **No slide overflows 720 px** — run the overflow sweep
+      (`docs/slides.md` → *Quality rules*); fix by trimming / `@-` code-only /
+      splitting / widening, not per-slide scrollbars.
+- [ ] Renders cleanly in **all four** frameworks; `audit_slides.py` clean.
 - [ ] Visually consistent with `north-star.html`.
 
 ---
@@ -314,11 +342,22 @@ Two things to mind:
 - The diagram engine is **DOM-free**: `node render.mjs` needs no browser. Don't
   add Playwright for diagrams.
 - Keep `diagrams/engine.mjs` `C` in sync with the scss palette tokens.
-- **Self-review screenshots** (if you preview a rendered deck in a browser):
-  drive reveal with `Reveal.slide(n, 0)` and `Reveal.configure({transition:'none'})`
-  rather than URL hashes — navigating by hash alone doesn't reload after edits;
-  use a `?v=N` cache-buster. (A missing `favicon.ico` 404 in the console is
-  harmless.)
+- **Reserved class names:** don't author `::: {.callout}` (Quarto turns it into
+  its own callout component) or `.columns`/`.column` (Quarto's grid). Use
+  `.d2l-note` and `.cols`/`.col`.
+- **`. . .` is top-level only** — inside a `::: {.col}` it renders as text.
+- **Inline SVGs need a `{=html}` raw block** or markdown parses `[…]`/quotes
+  inside them; `@fig:` already does this.
+- **Subscripts:** unicode `ⱼ` is missing in many fonts — use SVG
+  `<tspan baseline-shift="sub">` for true subscripts.
+- **Don't add `scrollable: true`** to the deck config, and don't pin a
+  `height`/`min-height` on `.slides`/sections — both fight reveal's
+  fit-to-window scaling. The navbar is scaled to match in the overlay.
+- **Self-review screenshots** (Playwright): set
+  `Reveal.configure({transition:'none', fragments:false})` and navigate with
+  `Reveal.slide(0, v)` — our decks are one vertical stack (the deck H1 wraps the
+  `##` slides), so the horizontal index is always 0. Use a `?v=N` cache-buster;
+  a missing `favicon.ico` 404 is harmless.
 - Generation is token-expensive → the outline checkpoint in §7.3 is not
   optional.
 

@@ -31,6 +31,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import CHAPTER_NUMBERING, FRAMEWORK_DISPLAY
+from northstar_slides import is_northstar
 
 
 FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
@@ -78,10 +79,12 @@ def build_index(slides_dir: Path, source: Path):
         if not available:
             continue
         title = extract_h1(source / rel)
+        northstar = is_northstar(source / rel)
         chapters[chap].append({
             'stem': stem,
             'title': title,
             'frameworks': available,
+            'northstar': northstar,
         })
         manifest[f'{chap}/{stem}'] = available
 
@@ -338,6 +341,23 @@ main {
   flex-shrink: 0;
 }
 .deck-title { flex-grow: 1; }
+/* "new" badge marks a deck redesigned to the north-star system. Legacy
+   decks carry no badge; the migration is gradual and source-driven. */
+.badge-new {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.02rem 0.4rem;
+  border-radius: 2px;
+  background: var(--blue);
+  color: #fff;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  transform: translateY(-1px);
+}
 
 .fw-badges {
   display: flex;
@@ -521,13 +541,18 @@ def render_html(idx: dict) -> str:
                         f'<span class="badge absent" data-fw="{fw}" '
                         f'title="No {title} deck for this section">'
                         f'{short}</span>')
+            ns = deck.get('northstar')
+            ns_attr = ' data-northstar="1"' if ns else ''
+            ns_badge = ('<span class="badge-new" title="Redesigned '
+                        'north-star deck">new</span>') if ns else ''
             parts.append(
-                f'      <li class="deck" '
+                f'      <li class="deck"{ns_attr} '
                 f'data-dir="{chap_dir}" data-stem="{stem}" '
                 f'data-fws="{fws_attr}">'
                 f'<a class="deck-main" href="#">'
                 f'<span class="deck-num">{i}.</span>'
-                f'<span class="deck-title">{html_escape(deck["title"])}</span>'
+                f'<span class="deck-title">{html_escape(deck["title"])}'
+                f'{ns_badge}</span>'
                 f'</a>'
                 f'<span class="fw-badges">{"".join(badges)}</span>'
                 f'</li>')

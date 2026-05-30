@@ -4,11 +4,13 @@
 // prefix convention to avoid collisions.
 
 import { diagrams as ndarray } from './ndarray.mjs';
-// import { diagrams as linearAlgebra } from './linear-algebra.mjs';
+import { diagrams as linearAlgebra } from './linear-algebra.mjs';
+import { diagrams as calculus } from './calculus.mjs';
 // import { diagrams as autograd } from './autograd.mjs';
 
 export const diagrams = {
   ...ndarray,
-  // ...linearAlgebra,
+  ...linearAlgebra,
+  ...calculus,
   // ...autograd,
 };

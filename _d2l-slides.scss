@@ -529,7 +529,7 @@ $note-bg:   #F2F8FE;
   margin: 0.32em 0;
 }
 .reveal .cell { background: $bg-soft; }
-.reveal .cell-output { max-height: 30vh; overflow: auto; }
+.reveal .cell-output { max-height: 44vh; overflow: auto; }
 
 // The pill tag sits in a left gutter; pad the content past it.
 .reveal .cell .sourceCode.cell-code,

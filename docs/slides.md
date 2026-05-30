@@ -17,6 +17,16 @@ This doc covers:
 For the design rationale, see `PLAN-slides-and-notebook-editing.md`.
 For the source-directive reference, see `docs/syntax.md`.
 
+> **Teaching first — intuition and diagrams before walls of words or code.**
+> This is the governing rule for every deck. Each slide teaches *one* idea
+> and leads with a picture of it: a diagram beats a paragraph, one
+> illustrative line of code beats a dump, and the output you show is the
+> point (not a log). If a slide is mostly prose or mostly code, find the
+> figure and cut the rest — the deck teaches the *idea*, the notebook holds
+> the full code. The reference decks (§2.1 `ndarray`, §2.3 `linear-algebra`,
+> §2.4 `calculus`; §2.5 `autograd` next) and the diagram-led *Quality rules*
+> below are how this gets applied.
+
 ---
 
 ## Quick start
@@ -299,11 +309,21 @@ cell ids). `gen_slides.py` inlines the SVG into the deck via a pandoc
   `saving-memory` and `concat` figures became portrait this way). A
   `max-height` on `.dgm-svg` caps tall figures.
 - **Geometric intuition pays off.** Arrows, angles, projections, lengths
-  (e.g. `linear-algebra-dot`, `linear-algebra-norms`) carry meaning text
-  can't. Use them generously.
+  (e.g. `linear-algebra-dot`, `linear-algebra-norms`, `calculus-secant-tangent`,
+  `calculus-gradient-field`) carry meaning text can't. Use them generously.
+- **Process & flow diagrams too.** Not only static shapes — a *mechanism*
+  (forward build + reverse sweep in `autograd-comp-graph`, the descent path
+  in `calculus-gradient-descent`) is itself a teaching figure. Annotate the
+  two directions / steps directly on the graph.
 - **Subscripts:** the unicode subscript `j` (ⱼ) is missing in many fonts
   and renders full-size — use SVG `<tspan baseline-shift="sub">` instead.
 - **Colors:** use the `C` tokens only; keep them in sync with the scss.
+- **Standalone SVGs must be valid XML.** `render.mjs` wraps the font-import
+  `<style>` in `<![CDATA[…]]>` so the committed SVG parses as an `<img>`
+  (book figures) and via rsvg→PDF. The *slide* path inlines the SVG and
+  strips `<style>`, so it never hit this — but a diagram reused as a book
+  figure (e.g. `autograd-comp-graph` is `fig_autograd_graph` in the
+  chapter) needs the valid-XML form.
 
 ---
 
@@ -479,44 +499,105 @@ _slides/<fw>/img/outputs/              # injected output images
 Open one in a browser to view. For batch sharing, copy the whole
 `_slides/<fw>/` tree.
 
+### Executing notebooks locally (Apple Silicon)
+
+Slide *rendering* is CPU-only and needs no framework. But the outputs a
+deck shows come from **executed** notebooks (the committed `outputs/`
+store), and execution now also works on a Mac: all four frameworks have
+arm64 CPU builds wired into UV (`pyproject.toml` darwin extras + the macOS
+mxnet wheel from the smolix/mxnet release). So one laptop can run a section
+end-to-end:
+
+```bash
+make venv-pytorch venv-jax venv-tensorflow venv-mxnet   # one-time, per fw
+# execute one notebook per framework (CPU; force the slots so no GPU is assumed):
+make -B _notebooks/pytorch/chapter_x/foo.executed NUM_GPUS=0 GPU_SLOTS=0 CPU_SLOTS=2
+# … repeat for jax/tensorflow/mxnet, then bless into the committed store:
+make capture-outputs FILES=chapter_x/foo.md
+```
+
+After capture, `make slides` (or the book render) picks the new outputs up
+by cell id. This means a deck built from freshly-edited cells no longer
+needs the GPU box just to refresh outputs — author, execute, capture, and
+build all on the Mac. (`tools/check_runtime_deps.py` has a darwin branch:
+no CUDA/`ldd`, just an import smoke-test.)
+
+---
+
+## Migration & deploy (north-star rollout)
+
+The switch from the old decks to north-star is **gradual and
+source-driven**: a deck goes live in its north-star form only when one
+exists; every other deck stays as the old deck, frozen, until upgraded.
+
+- **What counts as north-star is auto-detected.** `tools/northstar_slides.py`
+  flags a deck as north-star iff its `<!-- slides -->` block uses the
+  vocabulary (`.cover`/`.divider`/`.kicker`/`@fig:`/`.cols`/`.d2l-note`).
+  Rewrite a block → the deck becomes eligible automatically; no allowlist.
+  `python tools/northstar_slides.py . ` prints the migration count.
+- **The landing page badges them.** `build_slides_index.py` marks
+  north-star decks "new" on `slides/index.html`.
+- **Deploy substitutes only the north-star decks.**
+  `tools/stage_northstar_slides.sh` overlays just those decks (+ the
+  refreshed index, the new content-hashed theme CSS, and any plot assets
+  they reference) onto `_book/slides/`, leaving the legacy decks untouched;
+  `tools/upload_northstar_r2.sh` then pushes *only* that staged set to the
+  `staging-d2l` R2 bucket (region `auto`). Legacy decks on the bucket are
+  never overwritten.
+- **One-off legacy fix:** `tools/patch_slides_navlink_r2.sh` patches the
+  in-deck navbar "Slides" link on already-live legacy decks in place
+  (byte-precise, idempotent) — the source overlay is fixed, but frozen
+  decks need the in-place touch.
+
+The in-deck chrome (`_d2l-slides-overlay.html`) uses paths relative to a
+deck at `slides/<fw>/<chapter>/<file>.html` (3 dirs under root): the slides
+landing is `../../index.html`, book home `../../../index.html`. Keep that
+depth correct when editing the overlay.
+
 ---
 
 ## Authoring patterns
 
-### Quality rules (learned building §2.1 and §2.3)
+### Quality rules (learned building §2.1, §2.3, §2.4)
 
-`chapter_preliminaries/ndarray.md` and `linear-algebra.md` are the
-reference decks; `docs/slides/north-star.html` is the visual bar. When
-authoring or regenerating a deck:
+`ndarray.md`, `linear-algebra.md`, and `calculus.md` are the reference
+decks; `docs/slides/north-star.html` is the visual bar. When authoring or
+regenerating a deck:
 
-1. **Build fresh to the bar.** A pre-existing `<!-- slides -->` block is a
+1. **Teach the idea — diagram first.** Lead each slide with the picture of
+   its one idea (a shape, a region, a tangent, a computational graph),
+   then a minimal cell and a one-line caption. A slide that is mostly text
+   or mostly code is wrong. Calculus is the model: 6 geometric diagrams
+   carry the chapter; code is incidental.
+2. **Build fresh to the bar.** A pre-existing `<!-- slides -->` block is a
    *source of ideas*, not a target — the north-star rewrite is markedly
    better than what it replaced. Cover, dividers, kickers, In/Out cards,
    2-col diagram pairings, callouts.
-2. **One idea per slide; curate.** Follow the notebook's teaching order
+3. **Curate; one idea per slide.** Follow the notebook's teaching order
    but drop cells that don't teach (e.g. an `axis=[0,1]` cell redundant
    with the per-axis slide). Trim noisy output.
-3. **Check per-framework *framing*, not just code.** Inspect all four
+4. **Check per-framework *framing*, not just code.** Inspect all four
    `outputs/<fw>/…json` and the `#@tab` source. Where a concept itself
    differs (JAX immutability; TF `Variable`/`tf.function`; NumPy
-   shared-vs-copy) write `only=`/`except=` scoped slides — and a
-   framework diagram variant if needed. Where only code/output differ,
-   one shared slide suffices. (Linear algebra needed *zero* scoped
-   slides; ndarray needed several.)
-4. **`. . .` fragments work only at slide top level — never inside a
+   shared-vs-copy; **PyTorch gradient accumulation vs reset elsewhere**)
+   write `only=`/`except=` scoped slides — and a framework diagram variant
+   if needed. Where only code/output differ, one shared slide suffices.
+   (Linear algebra and calculus needed *zero* scoped slides; ndarray
+   needed several; autograd will too.)
+5. **`. . .` fragments work only at slide top level — never inside a
    `::: {.col}`** (they render as a literal "..."). In a two-column
    slide, stack the cells or show one; put progressive reveals on
    full-width slides.
-5. **Fit 720 px.** Verify with the overflow sweep (below) — no slide's
+6. **Fit 720 px.** Verify with the overflow sweep (below) — no slide's
    `scrollHeight` should exceed the deck height. If a slide is too tall:
    shorten the intro, make a verbose setup cell `@-` (code-only), split
    it into two slides (`only=`-scoped continuations), or widen the
    content column. Don't rely on per-slide scrollbars.
-6. **Mind column width.** Cells with matrix/verbose output and long code
+7. **Mind column width.** Cells with matrix/verbose output and long code
    need a *wide* content column; column **prose** is shrunk so it doesn't
    wrap to orphaned words. Wide-short diagrams should be redesigned
    portrait rather than squeezed.
-7. **Verify across all four frameworks**, then hand to a human and
+8. **Verify across all four frameworks**, then hand to a human and
    iterate.
 
 Overflow / scroll sweep (run in the rendered deck's console, or via
@@ -683,6 +764,11 @@ tools/audit_slides.py              Teachability/overflow audit (@fig/@-/@! aware
 tools/watch_slides.py              Live preview daemon
 tools/lint_source.py               Source linter
 tools/sync_back.py                 Notebook → source sync
+tools/northstar_slides.py          Auto-detects which decks are north-star (migration gate)
+tools/stage_northstar_slides.sh    Overlays only north-star decks → _book/slides/
+tools/upload_northstar_r2.sh       Surgical R2 upload of the staged north-star set
+tools/patch_slides_navlink_r2.sh   One-off: fix in-deck Slides nav link on live legacy decks
+tools/build_slides_index.py        Slides landing page + manifest (badges north-star decks)
 
 .vscode/                           Workspace settings, keybindings, snippets
 .vscode-extension/                 d2l-tools VS Code extension source

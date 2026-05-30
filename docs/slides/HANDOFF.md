@@ -8,18 +8,32 @@ built for **§2.1 Data Manipulation** (`chapter_preliminaries/ndarray.md`).
 
 This packet is the brief. Read it fully before generating anything.
 
-> **Status (updated).** The pipeline features this packet describes as
-> "to-be-added" have **landed**, and two reference decks are built:
-> **§2.1 `ndarray`** and **§2.3 `linear-algebra`**. The diagram engine now
-> lives in the repo at `diagrams/` (not just this packet), rendered SVGs in
-> `img/auto/`. `gen_slides.py` supports `@fig:<id>` (inline diagram),
-> `@-<id>` (code-only), `@!<id>` (output-only), and `only=`/`except=`
-> per-slide framework scoping. **`docs/slides.md` is now the living
-> reference** for the placeholder grammar, the visual vocabulary
-> (`.kicker`/`.cover`/`.divider`/`.d2l-note`/`.cols`/`.fig`/`.narrow`), the
-> diagram workflow, and the quality rules + overflow sweep. This packet
-> remains useful for the *conceptual* brief (§3) and the per-section
-> workflow (§7); cross-check specifics against `docs/slides.md`.
+> **Status (current).** Everything this packet once called "to-be-added"
+> has **landed**, plus more. Where we are:
+>
+> - **Three reference decks built:** §2.1 `ndarray`, §2.3 `linear-algebra`,
+>   §2.4 `calculus`. **§2.5 `autograd` is next** — its notebook is updated
+>   (no-grad, higher-order, forward/reverse, a compute-graph figure) and its
+>   `autograd-comp-graph` diagram exists; the deck outline awaits sign-off.
+> - **The diagram engine lives in the repo** at `diagrams/` (modules:
+>   `ndarray`, `linear-algebra`, `calculus`, `autograd`), rendered SVGs in
+>   `img/auto/`. `gen_slides.py` supports `@fig:<id>` (inline diagram),
+>   `@-<id>` (code-only), `@!<id>` (output-only), and `only=`/`except=`
+>   per-slide framework scoping.
+> - **Execution now runs on the laptop too.** All four frameworks have CPU
+>   builds on Apple Silicon (UV darwin extras + the macOS mxnet wheel), so a
+>   single Mac can now *execute → capture → render* a section end-to-end —
+>   you no longer need the GPU box just to refresh one chapter's outputs.
+> - **Gradual migration is mechanized.** A deck goes live in its north-star
+>   form only when one exists; the rest stay as the old deck.
+>   `tools/northstar_slides.py` auto-detects which decks are north-star (by
+>   the vocabulary in their slides block); `build_slides_index.py` badges
+>   them "new"; `stage_northstar_slides.sh` + `upload_northstar_r2.sh` push
+>   only the north-star decks to R2, untouched legacy decks frozen.
+> - **`docs/slides.md` is the living reference** for grammar, visual
+>   vocabulary, the diagram + deploy workflow, and the quality rules /
+>   overflow sweep. This packet is the *conceptual* brief (§3) and the
+>   per-section workflow (§7); cross-check specifics against `docs/slides.md`.
 
 ---
 
@@ -129,26 +143,37 @@ top bar). **Put visual changes there, never in a per-deck stylesheet.**
 
 ## 3. Conceptual style (what makes a deck good)
 
-The reference deck and §2.1 block embody these rules. Apply them:
+> **The governing principle: teach. Intuition and diagrams before walls of
+> words or code.** Every slide carries *one* idea, and leads with the
+> picture of it. A diagram beats a paragraph; one illustrative line of code
+> beats a dump; the output you show is the *point*, not a log. If a slide is
+> mostly prose or mostly code, it is wrong — find the figure, cut the rest.
+> The deck teaches the *idea*; the notebook holds the full code.
 
-1. **One idea per slide.** No walls of text, no walls of code.
-2. **Follow the notebook's teaching sequence**, but **curate**: skip cells that
-   don't teach; you are not re-telling the whole chapter.
-3. **Trim noisy output.** Prefer the clean illustrative example over a literal
-   dump (e.g. show `randn(3,4)` not a 24-number `zeros((2,3,4))`; show `exp` on a
-   small vector, not an overflow). Outputs you *do* show must match the executed
-   notebook faithfully.
-4. **Write your own concise captions.** Never paste chapter-body paragraphs into
-   a slide. One or two lines that frame the cell.
-5. **Stage with fragments (`. . .`)** when a slide builds in steps (e.g. show
-   code, then its consequence).
-6. **Give every structural/spatial idea a diagram** (shapes, indexing regions,
-   broadcasting, memory aliasing, data flow). Text can't carry these well.
-7. **Bookend the deck:** a "basics/why" opener and a "recap" closer (the §2.1
-   block calls them *Tensor Basics* and *Recap*).
-8. **Callouts** (blockquotes) for rules and warnings — sparingly.
-9. **Audience: strong undergrad.** Assume programming maturity; explain the ML-
-   specific intuition.
+The reference decks (§2.1, §2.3, §2.4) embody this. Apply these rules:
+
+1. **One idea per slide — lead with the diagram.** Give every structural,
+   spatial, or geometric idea (shapes, indexing regions, broadcasting,
+   memory aliasing, data flow, a function and its tangent, a computational
+   graph) a **figure**, and build the slide around it. Text and code are
+   support. No walls of either.
+2. **Code is illustrative, not exhaustive.** Show the *minimal* cell that
+   makes the point; push verbose setup to `@-` (code-only) or omit it.
+   You are teaching, not re-typing the notebook.
+3. **Follow the notebook's teaching sequence**, but **curate**: skip cells
+   that don't teach; you are not re-telling the whole chapter.
+4. **Trim noisy output.** Prefer the clean illustrative example over a
+   literal dump (e.g. `randn(3,4)` not a 24-number `zeros((2,3,4))`). The
+   output you *do* show must match the executed notebook faithfully.
+5. **Write your own concise captions.** Never paste chapter-body paragraphs.
+   One or two lines that frame the idea.
+6. **Stage with fragments (`. . .`)** when a slide builds in steps (show the
+   idea, then its consequence) — top-level only, never inside a `.col`.
+7. **Bookend the deck:** a cover + a "why/what" opener, section dividers,
+   and a recap closer.
+8. **Callouts** (`.d2l-note`) for rules and warnings — sparingly.
+9. **Audience: strong undergrad.** Assume programming maturity; spend the
+   slide on the ML-specific *intuition*, not the syntax.
 
 ---
 

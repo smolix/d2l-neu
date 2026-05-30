@@ -6,32 +6,34 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Preprocessing
 :label:`sec_pandas`
 
-So far, we have been working with synthetic data
+So far we have worked with synthetic data
 that arrived in ready-made tensors.
-However, to apply deep learning in the wild
-we must extract messy data 
-stored in arbitrary formats,
-and preprocess it to suit our needs.
-Fortunately, the *pandas* [library](https://pandas.pydata.org/) 
-can do much of the heavy lifting.
-This section, while no substitute 
-for a proper *pandas* [tutorial](https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html),
-will give you a crash course
-on some of the most common routines.
+In the wild, data shows up as messy files
+in arbitrary formats, and the path from a raw file
+to a model-ready tensor is paved with decisions:
+which values are missing and how to fill them,
+how to turn categories into numbers,
+whether features need rescaling.
+Get these wrong and even a perfect model learns nothing useful.
+The *pandas* [library](https://pandas.pydata.org/)
+does the heavy lifting; this section is a crash course
+on the routines you will reach for most —
+not a substitute for a proper
+[tutorial](https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html),
+but enough to load, clean, and encode a tabular dataset,
+and to understand *why* each step matters.
 
 ## Reading the Dataset
 
-Comma-separated values (CSV) files are ubiquitous 
-for the storing of tabular (spreadsheet-like) data.
-In them, each line corresponds to one record
-and consists of several (comma-separated) fields, e.g.,
-"Albert Einstein,March 14 1879,Ulm,Federal polytechnic school,field of gravitational physics".
-To demonstrate how to load CSV files with `pandas`, 
-we create a CSV file below `../data/house_tiny.csv`. 
-This file represents a dataset of homes,
-where each row corresponds to a distinct home
-and the columns correspond to the number of rooms (`NumRooms`),
-the roof type (`RoofType`), and the price (`Price`).
+Comma-separated values (CSV) files are ubiquitous
+for storing tabular (spreadsheet-like) data.
+Each line is one record of several comma-separated fields, e.g.,
+"Albert Einstein,March 14 1879,Ulm,Federal polytechnic school".
+To demonstrate, we write a small dataset of homes to
+`../data/house_tiny.csv`. Each row is a home;
+the columns are the number of rooms (`NumRooms`),
+the roof type (`RoofType`), the floor area in square feet (`Area`),
+and the sale price (`Price`). An empty field denotes a missing entry.
 
 ```{.python .input #pandas-reading-the-dataset-1}
 import os
@@ -39,87 +41,177 @@ import os
 os.makedirs(os.path.join('..', 'data'), exist_ok=True)
 data_file = os.path.join('..', 'data', 'house_tiny.csv')
 with open(data_file, 'w') as f:
-    f.write('''NumRooms,RoofType,Price
-NA,NA,127500
-2,NA,106000
-4,Slate,178100
-NA,NA,140000''')
+    f.write('''NumRooms,RoofType,Area,Price
+3,Slate,1500,210000
+,Tile,2100,290000
+2,,850,127500
+4,Slate,1940,258000
+,,1200,168000
+3,Tile,1650,225000
+5,Slate,2600,375000
+2,,900,142000
+,Tile,1750,240000
+4,,2050,295000''')
 ```
 
-Now let's import `pandas` and load the dataset with `read_csv`.
+Now we import `pandas` and load the dataset with `read_csv`.
 
 ```{.python .input #pandas-reading-the-dataset-2}
 import pandas as pd
 
 data = pd.read_csv(data_file)
-print(data)
+data
 ```
 
-## Data Preparation
+Notice that `pandas` has replaced the empty fields
+with a special `NaN` (*not a number*) marker.
+These are *missing values*, and dealing with them
+is one of the central chores of data preprocessing.
 
-In supervised learning, we train models
-to predict a designated *target* value,
-given some set of *input* values. 
-Our first step in processing the dataset
-is to separate out columns corresponding
-to input versus target values. 
-We can select columns either by name or
-via integer-location based indexing (`iloc`).
+## Knowing Your Data
 
-You might have noticed that `pandas` replaced
-all CSV entries with value `NA`
-with a special `NaN` (*not a number*) value. 
-This can also happen whenever an entry is empty,
-e.g., "3,,,270000".
-These are called *missing values* 
-and they are the "bed bugs" of data science,
-a persistent menace that you will confront
-throughout your career. 
-Depending upon the context, 
-missing values might be handled
-either via *imputation* or *deletion*.
-Imputation replaces missing values 
-with estimates of their values
-while deletion simply discards 
-either those rows or those columns
-that contain missing values. 
+Before transforming anything, look at it.
+A few one-liners save hours of debugging downstream.
+The **shape** tells you how much data you have;
+the **dtypes** tell you how `pandas` interpreted each column —
+numeric (`int64`/`float64`) versus non-numeric strings (`str`/`object`,
+i.e. categorical or text); and **`describe`** summarizes the numeric columns,
+surfacing ranges and obvious outliers at a glance.
 
-Here are some common imputation heuristics.
-For categorical input fields, 
-we can treat `NaN` as a category.
-Since the `RoofType` column takes values `Slate` and `NaN`,
-`pandas` can convert this column 
-into two columns `RoofType_Slate` and `RoofType_nan`.
-A row whose roof type is `Slate` will set values 
-of `RoofType_Slate` and `RoofType_nan` to 1 and 0, respectively.
-The converse holds for a row with a missing `RoofType` value.
-
-```{.python .input #pandas-data-preparation-1}
-inputs, targets = data.iloc[:, 0:2], data.iloc[:, 2]
-inputs = pd.get_dummies(inputs, dummy_na=True)
-print(inputs)
+```{.python .input #pandas-knowing-your-data-1}
+data.dtypes
 ```
 
-For missing numerical values, 
-one common heuristic is to 
-replace the `NaN` entries with 
-the mean value of the corresponding column.
+`NumRooms` came in as `float64` (not `int`) precisely because it
+contains a `NaN`; `RoofType` is a string column, our cue that it is
+categorical and will need encoding. The numeric summary:
 
-```{.python .input #pandas-data-preparation-2}
+```{.python .input #pandas-knowing-your-data-2}
+data.describe()
+```
+
+The three numeric columns live on wildly different scales —
+rooms in the single digits, area in the thousands,
+price in the hundred-thousands. Keep that in mind; it returns below.
+
+## Separating Inputs and Targets
+
+In supervised learning we predict a *target* from a set of *inputs*.
+The first step is to split the columns accordingly so that we only
+ever preprocess the inputs — never peek at or transform the target as
+if it were a feature. Here the last column, `Price`, is the target;
+the rest are inputs. We select by integer position with `iloc`
+(selecting by column *name* works too, and is often clearer):
+
+```{.python .input #pandas-separating-inputs-and-targets-1}
+inputs, targets = data.iloc[:, :3], data.iloc[:, 3]
+inputs
+```
+
+## Handling Missing Values
+
+Missing values are the bed bugs of data science: a persistent menace
+you will confront throughout your career. First, *measure* the problem —
+how many values are missing, and where:
+
+```{.python .input #pandas-handling-missing-values-1}
+inputs.isna().sum()
+```
+
+There are three broad ways to respond, each with a cost:
+
+* **Deletion** — drop rows (or columns) that contain a `NaN`. Simple,
+  but it throws data away and can bias the result if values are not
+  missing at random.
+* **Imputation** — fill each `NaN` with an estimate (a column statistic,
+  or a model's prediction). Keeps every row, but injects assumptions and
+  shrinks the data's variance.
+* **Indicator** — add a boolean "was-missing" column so the model can
+  learn from the *fact* that a value was absent.
+
+Deletion is tempting but expensive on small data. Dropping every row
+with any missing entry here leaves us with a fraction of the dataset:
+
+```{.python .input #pandas-handling-missing-values-2}
+len(inputs.dropna()), len(inputs)
+```
+
+Only four of ten rows survive — too wasteful. We will instead **impute**,
+treating categorical and numeric columns differently in the next two
+sections.
+
+## Encoding Categorical Features
+
+Models consume numbers, so the `RoofType` strings must be encoded.
+The standard choice for a *nominal* category (one with no inherent
+order) is **one-hot encoding**: one new 0/1 column per category. We
+avoid mapping categories to integers like `Slate=0, Tile=1`, because
+that invents a false ordering and magnitude the model would wrongly
+exploit. `pd.get_dummies` does the conversion; `dummy_na=True` adds a
+column for the missing category — which is exactly the *indicator*
+strategy from the previous section, applied to a categorical column:
+
+```{.python .input #pandas-encoding-categorical-features-1}
+inputs = pd.get_dummies(inputs, dummy_na=True, dtype=float)
+inputs
+```
+
+`RoofType` has become three columns (`Slate`, `Tile`, and `nan`); the
+numeric columns pass through untouched (still carrying their `NaN`s).
+
+One caveat: one-hot encoding a *high-cardinality* column — thousands of
+distinct values, or an identifier unique to each row — explodes the
+feature count and is rarely useful. Such columns call for embeddings,
+which we meet in later chapters.
+
+## Numeric Features
+
+For the numeric columns, a common imputation is to fill each `NaN` with
+the column **mean** (use the median instead when a column is skewed).
+The one-hot columns have no missing values, so they are unaffected:
+
+```{.python .input #pandas-numeric-features-1}
 inputs = inputs.fillna(inputs.mean())
-print(inputs)
+inputs
 ```
+
+Now every entry is numeric and present — but the continuous columns
+still span very different scales (`NumRooms` ≈ 3, `Area` ≈ 1700). Left
+as-is, the large-magnitude feature dominates distances and gradients,
+making optimization ill-conditioned. The standard fix is
+**standardization**: subtract the mean and divide by the standard
+deviation, so each continuous feature has roughly zero mean and unit
+variance. (We leave the one-hot columns alone — they are already 0/1.)
+
+```{.python .input #pandas-numeric-features-2}
+continuous = ['NumRooms', 'Area']
+inputs[continuous] = (inputs[continuous] - inputs[continuous].mean()) \
+                     / inputs[continuous].std()
+inputs
+```
+
+One subtlety to flag now and revisit later: the mean and standard
+deviation used for imputation and scaling must be computed on the
+**training** data only, then reused for validation and test data.
+Computing them over the whole dataset leaks information about the test
+set into training and inflates your reported performance. We return to
+training/validation/test splits in a later chapter.
 
 ## Conversion to the Tensor Format
 
-Now that all the entries in `inputs` and `targets` are numerical,
-we can load them into a tensor (recall :numref:`sec_ndarray`).
+Now that `inputs` and `targets` are entirely numeric, we can load them
+into tensors (recall :numref:`sec_ndarray`). Pandas hands off to NumPy
+via `to_numpy`, and each framework wraps that array. Deep learning
+typically uses 32-bit floats; `to_numpy(dtype=float)` gives 64-bit, so
+in real pipelines you would cast down to `float32` to save memory and
+match the framework defaults.
 
 ```{.python .input #pandas-conversion-to-the-tensor-format}
 %%tab mxnet
 from mxnet import np
 
-X, y = np.array(inputs.to_numpy(dtype=float)), np.array(targets.to_numpy(dtype=float))
+X = np.array(inputs.to_numpy(dtype=float))
+y = np.array(targets.to_numpy(dtype=float))
 X, y
 ```
 
@@ -150,49 +242,43 @@ y = jnp.array(targets.to_numpy(dtype=float))
 X, y
 ```
 
+From here on we live in tensor-land — gradients, GPUs, the works.
+
 ## Discussion
 
-You now know how to partition data columns, 
-impute missing variables, 
-and load `pandas` data into tensors. 
-In :numref:`sec_kaggle_house`, you will
-pick up some more data processing skills. 
-While this crash course kept things simple,
-data processing can get hairy.
-For example, rather than arriving in a single CSV file,
-our dataset might be spread across multiple files
-extracted from a relational database.
-For instance, in an e-commerce application,
-customer addresses might live in one table
-and purchase data in another.
-Moreover, practitioners face myriad data types
-beyond categorical and numeric, for example,
-text strings, images,
-audio data, and point clouds. 
-Oftentimes, advanced tools and efficient algorithms 
-are required in order to prevent data processing from becoming
-the biggest bottleneck in the machine learning pipeline. 
-These problems will arise when we get to 
-computer vision and natural language processing. 
-Finally, we must pay attention to data quality.
-Real-world datasets are often plagued 
-by outliers, faulty measurements from sensors, and recording errors, 
-which must be addressed before 
-feeding the data into any model. 
-Data visualization tools such as [seaborn](https://seaborn.pydata.org/), 
-[Bokeh](https://docs.bokeh.org/), or [matplotlib](https://matplotlib.org/)
-can help you to manually inspect the data 
-and develop intuitions about 
-the type of problems you may need to address.
+You now know the core path: inspect a dataset, separate inputs from
+targets, handle missing values, encode categoricals, scale numerics, and
+hand the result to a framework. You will pick up more data-processing
+skills in :numref:`sec_kaggle_house`. This crash course kept things
+deliberately simple, but real preprocessing gets hairy.
 
+Rather than a single CSV, a dataset may be spread across many files
+pulled from a relational database — customer addresses in one table,
+purchases in another — to be joined first. Beyond categorical and
+numeric fields, practitioners face text, images, audio, and point
+clouds, each needing its own pipeline (we meet these in the computer
+vision and natural language processing chapters). For data that does
+not fit in memory, pandas is the wrong tool — columnar formats like
+Parquet and out-of-core engines take over. And throughout, watch data
+*quality*: outliers, faulty sensors, and recording errors must be
+caught before training. Visualization libraries such as
+[seaborn](https://seaborn.pydata.org/),
+[Bokeh](https://docs.bokeh.org/), or
+[matplotlib](https://matplotlib.org/) help you inspect data and build
+intuition about the problems you will need to address. For the standard
+preprocessing transforms — imputation, encoding, scaling, and chaining
+them into reproducible pipelines — `sklearn.impute` and
+`sklearn.preprocessing` are the workhorses.
 
 ## Exercises
 
-1. Try loading datasets, e.g., Abalone from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets) and inspect their properties. What fraction of them has missing values? What fraction of the variables is numerical, categorical, or text?
-1. Try indexing and selecting data columns by name rather than by column number. The pandas documentation on [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html) has further details on how to do this.
-1. How large a dataset do you think you could load this way? What might be the limitations? Hint: consider the time to read the data, representation, processing, and memory footprint. Try this out on your laptop. What happens if you try it out on a server? 
-1. How would you deal with data that has a very large number of categories? What if the category labels are all unique? Should you include the latter?
-1. What alternatives to pandas can you think of? How about [loading NumPy tensors from a file](https://numpy.org/doc/stable/reference/generated/numpy.load.html)? Check out [Pillow](https://python-pillow.org/), the Python Imaging Library. 
+1. Load a real dataset, e.g., Abalone from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets), and inspect its properties. What fraction of values are missing? What fraction of the columns are numerical, categorical, or text?
+1. Select data columns by *name* rather than by integer position. The pandas docs on [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html) describe the options.
+1. Compare imputation strategies on `NumRooms`: mean, median, and adding a "was-missing" indicator column. Which assumptions does each make? When would you prefer one over another?
+1. We standardized using statistics from the whole dataset. Why is that a form of information leakage, and how should you compute the mean and standard deviation instead? What goes wrong if a feature has zero variance?
+1. How large a dataset could you load this way? Consider read time, in-memory representation, and processing. Try it on your laptop, then on a larger machine. What breaks first?
+1. How would you handle a categorical column with a very large number of categories? What if every label is unique — should you include the column at all?
+1. What alternatives to pandas can you think of? Consider [loading NumPy arrays from a file](https://numpy.org/doc/stable/reference/generated/numpy.load.html) and the image library [Pillow](https://python-pillow.org/).
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)
@@ -209,70 +295,3 @@ the type of problems you may need to address.
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17967)
 :end_tab:
-
-<!-- slides -->
-
-::: {.slide title="DataFrames to Tensors"}
-Real datasets rarely arrive as tensors. The usual path:
-
-1. **Read** raw rows (CSV, JSON, Parquet, …) → a `DataFrame`.
-2. **Preprocess** — fill missing values, encode categoricals.
-3. **Split** into inputs and targets.
-4. **Convert** the numeric columns into a tensor.
-
-This whole chapter walks through that pipeline on a tiny toy
-dataset.
-:::
-
-::: {.slide title="Reading the data"}
-First, dump a CSV to disk so we have something to load:
-
-@pandas-reading-the-dataset-1
-
-. . .
-
-`pandas` reads CSVs into a `DataFrame`. Note the `NaN`s — pandas's
-sentinel for missing values:
-
-@pandas-reading-the-dataset-2
-:::
-
-::: {.slide title="Splitting inputs and targets"}
-Conventionally the **last column** is the target (`y`); the rest
-are inputs (`X`). `iloc` slices by integer position:
-
-@pandas-data-preparation-1
-
-Categorical columns with missing values often benefit from
-treating `NaN` as its own category — `pd.get_dummies` does that
-when `dummy_na=True`.
-:::
-
-::: {.slide title="Imputing missing numbers"}
-For numeric columns, the simplest fill is the column **mean**:
-
-@pandas-data-preparation-2
-
-This is **mean imputation** — fast and assumption-free, but biases
-the variance downward. More principled fills (median, KNN,
-model-based) live in `sklearn.impute`.
-:::
-
-::: {.slide title="Conversion to a tensor"}
-Once every entry is numeric, hand the DataFrame's `.to_numpy()`
-view to the framework's tensor constructor:
-
-@pandas-conversion-to-the-tensor-format
-
-From here on we live in tensor-land — gradients, GPUs, the works.
-:::
-
-::: {.slide title="Recap"}
-- `pd.read_csv` → DataFrame.
-- `iloc[:, …]` to slice columns into inputs and targets.
-- `fillna(mean)` for numeric; `get_dummies(dummy_na=True)` for
-  categorical.
-- `.to_numpy()` then `tensor(...)` to leave pandas.
-- For anything beyond toy CSVs, reach for `sklearn.preprocessing`
-  and `sklearn.impute`.
-:::

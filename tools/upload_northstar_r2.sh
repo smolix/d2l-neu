@@ -50,7 +50,9 @@ while IFS= read -r rel; do
     *.js)   ct="application/javascript; charset=utf-8" ;;
     *)      ct="" ;;
   esac
-  args=(--endpoint-url "$ENDPOINT")
+  # R2's S3 API requires region "auto" (the local aws config may default
+  # to a real AWS region, which R2 rejects).
+  args=(--endpoint-url "$ENDPOINT" --region "${R2_REGION:-auto}")
   [[ -n "$ct" ]] && args+=(--content-type "$ct")
   [[ -n "$DRY" ]] && args+=("$DRY")
   echo "  → $rel"

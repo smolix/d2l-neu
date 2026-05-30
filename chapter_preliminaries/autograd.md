@@ -847,120 +847,260 @@ For now, try to remember these basics:
 
 <!-- slides -->
 
-::: {.slide title="Automatic Differentiation"}
-Hand-deriving gradients for a 100-million-parameter network is a
-non-starter. Every modern framework ships an **automatic
-differentiation** engine that:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.5]{.kicker}
 
-- Records each operation onto a computational graph.
-- Walks the graph in **reverse** to apply the chain rule.
-- Returns the gradient with respect to *every* input you asked
-  about — typically the model parameters.
+From the chain rule to **backpropagation**<br>the engine that differentiates a whole network for you.
+:::
+:::
 
-This chapter teaches the API; the rest of the book leans on it.
+::: {.slide title="Why automatic differentiation"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Hand-deriving gradients for a million-parameter network is hopeless.
+Instead the framework **records** each operation as you run the forward
+pass, then **replays it in reverse** — the chain rule of §2.4, applied
+mechanically — to get the gradient w.r.t. *every* input at once.
+
+::: {.d2l-note}
+Every training step in this book is one forward pass and one backward
+pass over this graph.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:autograd-workflow
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The mechanics]{.dtitle}
+
+[record forward · sweep backward]{.dsub}
+:::
 :::
 
 ::: {.slide title="A worked example"}
-We'll differentiate
+[Mechanics]{.kicker}
 
-$$y = 2\,\mathbf{x}^\top \mathbf{x}$$
-
-with respect to the column vector $\mathbf{x}$. The analytic
-gradient is $\nabla_\mathbf{x} y = 4\mathbf{x}$ — a useful
-sanity-check target.
-
-@autograd-automatic-differentiation
+::: {.cols .vc}
+::: {.col}
+Differentiate $y = 2\,\mathbf{x}^\top\mathbf{x}$ w.r.t. the vector
+$\mathbf{x}$. The analytic answer, $\nabla_\mathbf{x} y = 4\mathbf{x}$,
+is our sanity check.
 
 @autograd-a-simple-function-1
 :::
 
-::: {.slide title="Tracking gradients"}
-We tell the framework to track operations on `x` and reserve a
-slot for its gradient:
+::: {.col .fig .big}
+@fig:autograd-comp-graph
+:::
+:::
+:::
+
+::: {.slide title="Record, then run forward" except="jax"}
+[Mechanics]{.kicker}
+
+First tell the framework to **track** `x` (reserve a slot for its
+gradient), then run the forward pass — `y` is now built on a recorded
+graph:
 
 @autograd-a-simple-function-2
-
-. . .
-
-Then run the forward pass — `y` is built from `x`, so the engine
-records the dependency:
 
 @autograd-a-simple-function-3
 :::
 
-::: {.slide title="Backward pass"}
-A single call walks the recorded graph backwards:
+::: {.slide title="No setup — just differentiate" only="jax"}
+[Mechanics]{.kicker}
+
+JAX is **functional**: there is nothing to attach. You write the
+function, and `grad` transforms it into its derivative. The forward
+pass is an ordinary call:
+
+@autograd-a-simple-function-3
+:::
+
+::: {.slide title="The backward pass"}
+[Mechanics]{.kicker}
+
+One call sweeps the graph in reverse and returns the gradient — which
+matches the analytic $4\mathbf{x}$:
 
 @autograd-a-simple-function-4
 
-. . .
-
-The result lands in `x.grad`. Compare with the analytic answer,
-$4\mathbf{x}$:
-
 @autograd-a-simple-function-5
+
+::: {.d2l-note}
+That reverse sweep **is** the §2.4 chain rule, run from output to input.
+:::
 :::
 
-::: {.slide title="Resetting & re-using"}
-Gradients **accumulate** by default — call `.zero_()` (or its
-equivalent) before computing a fresh gradient:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Working with gradients]{.dtitle}
+
+[accumulation · non-scalar · detaching · inference]{.dsub}
+:::
+:::
+
+::: {.slide title="Gradients accumulate — reset first" only="pytorch"}
+[Gradients]{.kicker}
+
+PyTorch **adds** each new gradient into `x.grad` rather than replacing
+it (handy for summing losses). So zero it before a fresh computation:
 
 @autograd-a-simple-function-6
 
-. . .
+::: {.d2l-note .warn}
+Forgetting `.zero_()` between iterations is a classic training bug.
+:::
+:::
 
-For non-scalar `y`, the engine sums up gradients computed for each
-output element (or you supply weights):
+::: {.slide title="Each gradient starts fresh" except="pytorch"}
+[Gradients]{.kicker}
+
+Recording a new computation overwrites the previous gradient — there is
+no buffer to reset:
+
+@autograd-a-simple-function-6
+:::
+
+::: {.slide title="Non-scalar outputs"}
+[Gradients]{.kicker}
+
+Gradients are defined for a **scalar** loss. For a vector `y`, the
+engine differentiates the **sum** of its components (a
+vector–Jacobian product) — exactly what a per-example batch loss needs:
 
 @autograd-backward-for-non-scalar-variables
 :::
 
 ::: {.slide title="Detaching from the graph"}
-Sometimes we want a value treated as a **constant** in the
-backward pass — e.g., the auxiliary `u` below should not propagate
-gradients into `x`:
+[Gradients]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Sometimes a value should count as a **constant** — gradients must not
+flow through it. `detach` (or `stop_gradient`) severs the graph above
+it, so here $\partial z/\partial x = u$, **not** $3x^2$:
 
 @autograd-detaching-computation-1
+:::
 
-. . .
+::: {.col .fig}
+@fig:autograd-detach
+:::
+:::
+:::
 
-After `detach()` (or `stop_gradient` / `lax.stop_gradient`), the
-gradient flows around the detached tensor, not through it:
+::: {.slide title="Turning tracking off"}
+[Gradients]{.kicker}
 
-@autograd-detaching-computation-2
+When we only need the value — prediction, evaluation, manual updates —
+we skip the bookkeeping entirely. This is the default mode for
+inference throughout the book:
+
+@autograd-turning-off-gradient-tracking-1
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Dynamic graphs]{.dtitle}
+
+[the graph is built at runtime]{.dsub}
+:::
 :::
 
 ::: {.slide title="Gradients through control flow"}
-Autograd doesn't care about Python `if`s and `while`s — it
-records whichever ops actually executed. Here's a function whose
-behavior depends on its input:
+[Dynamic graphs]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Autograd ignores Python `if`s and `while`s — it records whichever ops
+*actually ran*. This function's loop count and branch both depend on
+its input:
 
 @autograd-gradients-and-python-control-flow-1
-
-The number of `while` iterations and the branch taken both depend
-on the value of `a`.
 :::
 
-::: {.slide title="…it just works"}
-Run the function on a random scalar and ask for the gradient:
+::: {.col .fig}
+@fig:autograd-dynamic
+:::
+:::
+:::
+
+::: {.slide title="…and it just works"}
+[Dynamic graphs]{.kicker}
+
+Each call realizes a concrete graph that `backward` can walk. Here
+`f(a)` is linear in `a` along whichever branch ran, so the gradient
+must equal $f(a)/a$ — and it does:
 
 @autograd-gradients-and-python-control-flow-2
-
-. . .
-
-The gradient is correct even though the path through the function
-is data-dependent. Here `f(a)` ends up linear in `a` along
-whichever branch ran, so $f'(a) = f(a) / a$:
 
 @autograd-gradients-and-python-control-flow-3
 :::
 
+::: {.slide title="Forward vs reverse mode"}
+[Wrap-up]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Autodiff can sweep the graph either way. **Reverse mode** (backprop)
+gets the gradient of one scalar w.r.t. *all* inputs in a single pass —
+exactly the deep-learning case. **Forward mode** wins the opposite
+regime (few inputs, many outputs).
+
+::: {.d2l-note}
+A scalar loss over millions of parameters ⇒ reverse mode.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:autograd-fwd-vs-rev
+:::
+:::
+:::
+
+::: {.slide title="Higher-order derivatives" except="mxnet"}
+[Wrap-up]{.kicker}
+
+Because the gradient is itself a function on the graph, we can
+differentiate *it* — second derivatives, Hessian–vector products. For
+$f(x)=x^3$: $f'(2)=12$, $f''(2)=12$.
+
+@autograd-higher-order-derivatives-1
+:::
+
 ::: {.slide title="Recap"}
-- Mark inputs as needing gradients.
-- Run the forward pass — the engine records ops.
-- `backward()` (or `grad()`) walks the graph in reverse via the
-  chain rule.
-- Gradients accumulate; reset between iterations.
-- `detach` / `stop_gradient` to break the graph.
-- Works through arbitrary Python control flow.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Record** the forward pass; **sweep backward** for the gradient — the chain rule, automated.
+- Reverse mode returns $\nabla$ w.r.t. every input in one pass.
+- `detach` / no-grad to keep values out of the graph.
+:::
+
+::: {.col}
+- Mind per-framework gradient handling (PyTorch accumulates).
+- The graph is built **at runtime** — control flow is fine.
+- Next: we build on this for every optimizer in the book.
+:::
+:::
+
+::: {.d2l-note}
+Backpropagation gets the full treatment in the backpropagation chapter.
+:::
 :::

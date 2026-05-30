@@ -7,24 +7,24 @@
   Same visual treatment as `_book/index.html` and `_book/slides/index.html`.
 
   Path math, with the deck deployed at
-  `_book/slides/<fw>/<chapter>/<file>.html`:
-    ../../../../index.html             → _book/index.html
-    ../../../index.html                → _book/slides/index.html
-    ../../../../static/logo-with-text.png → _book/static/logo-with-text.png
+  `<root>/slides/<fw>/<chapter>/<file>.html` (3 dirs deep under root):
+    ../../../index.html                → <root>/index.html        (book home)
+    ../../index.html                   → <root>/slides/index.html (slides landing)
+    ../../../static/logo-with-text.png → <root>/static/logo-with-text.png
   The "Book Chapter" link is rewritten by JS to the corresponding book
   chapter URL (e.g. /chapter_x/foo.html), and the logo + chapter labels
   are kept in sync with the framework the deck belongs to.
 -->
 <nav class="d2l-deck-nav">
   <div class="d2l-deck-brand">
-    <a class="d2l-deck-logo" href="../../../../index.html"
+    <a class="d2l-deck-logo" href="../../../index.html"
        title="Dive into Deep Learning — book home">
-      <img src="../../../../static/logo-with-text.png" alt="Dive into Deep Learning">
+      <img src="../../../static/logo-with-text.png" alt="Dive into Deep Learning">
     </a>
   </div>
   <ul class="d2l-deck-nav-links">
-    <li><a href="../../../../index.html">Book Chapter</a></li>
-    <li><a href="../../../index.html">Slides</a></li>
+    <li><a href="../../../index.html">Book Chapter</a></li>
+    <li><a href="../../index.html">Slides</a></li>
     <li><a href="https://courses.d2l.ai">Courses</a></li>
     <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
     <li><a href="https://d2l.discourse.group">Discuss</a></li>

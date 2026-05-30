@@ -666,9 +666,13 @@ pdf: pdf-pytorch
 pdfs: $(addprefix pdf-,$(FRAMEWORKS))
 
 # ── Slides (per-framework) ────────────────────────────────
-# WARNING: do not run multiple slides-* targets with -j (GPU contention)
+# CPU-only: gen_slides.py renders with --no-execute and injects code outputs
+# from the committed store, so it needs only Quarto + nbformat (.venv-build) —
+# never a framework/CUDA venv (it falls back to .venv-build for QUARTO_PYTHON).
+# This is why slides build on a render-only host (e.g. macOS) and are
+# parallel-safe across frameworks (see `slides:` below).
 
-_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-%/.synced .venv-build/.synced
+_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \

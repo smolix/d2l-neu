@@ -202,9 +202,16 @@ the hash. This signal pinpoints *which* cells drifted.
   paths). A `#@save` change therefore marks *precisely* the notebooks that use
   the changed symbol stale — replacing CLAUDE.md's "when in doubt rerun all
   frameworks."
-- **`framework_version`** — the installed framework/wheel version
-  (`.venv-<fw>/bin/python -c "import <pkg>; print(<pkg>.__version__)"`). A MXNet-
-  wheel rebuild bumps this and invalidates MXNet outputs (and nothing else).
+- **`framework_version`** — the installed framework version, keyed on the
+  PEP 440 **public** version only (`tools/capture_outputs.py:public_version`
+  strips the local build segment, e.g. `torch==2.11.0+cu128` → `torch==2.11.0`).
+  The local segment names the *platform wheel*, not the version: torch 2.11.0 is
+  torch 2.11.0 whether it's the Linux CUDA-12.8 build or the macOS arm64 CPU/MPS
+  build, and the same code produces the same results either way. Keying on the
+  full wheel string would hard-stale the *entire* store the instant you audit
+  from a different machine — defeating portability. A genuine version change
+  (`2.11.0 → 2.12.0`, or a MXNet-wheel rebuild) still invalidates. The audit
+  also normalizes legacy `+cu128` manifests on read, so old captures match.
 
 ### 3.2 Stale ⟺ code or provenance drift
 
@@ -230,6 +237,37 @@ A *stale* output means different things for the two storage classes:
 - **Asset (`kind: "asset"`) → SOFT gate.** A stale plot is an old-but-valid
   sample; the render **warns** but proceeds. You refresh it on a deliberate
   bless.
+
+### 3.3a Host-capability-aware gate: render anywhere
+
+The HARD gate of §3.3 only makes sense where the author could *act* on it. A
+stale **GPU** notebook on a GPU-less Mac, or a stale **multi-GPU** notebook on a
+single-GPU box, cannot be re-executed there — hard-failing the render would
+block a machine from building the book over a notebook it could never fix,
+defeating the portable-store promise (a CPU box should render the whole book and
+re-run only what its hardware supports).
+
+So `verify-fresh` is **capability-tiered**. Each notebook's resource class
+(`cpu` / `gpu` / `multi-gpu`, from `tools/scan_notebook_manifests.py:source_execution_class`,
+which keys off `runtime_env.MULTI_GPU_NOTEBOOKS` + GPU keyword scan) implies a
+GPU floor — `cpu`=0, `gpu`=1, `multi-gpu`=2. `tools/audit_outputs.py` counts the
+host's GPUs (`nvidia-smi -L`; 0 if absent) and, for each HARD-stale notebook:
+
+- host GPUs **<** the class floor → the host *can't* run it → **deferred to a
+  WARNING**, rendered from the committed store;
+- host GPUs **≥** the floor → the host *can* run it → still **hard-fails**.
+
+This tiers cleanly:
+
+| Host | Renders | Hard-fails on stale… |
+|------|---------|----------------------|
+| CPU only (0 GPU, e.g. Apple Silicon) | everything | nothing (cpu notebooks are runnable → still block) |
+| Single-GPU | everything | `cpu` + `gpu` stale (defers only `multi-gpu`) |
+| Multi-GPU (≥2) | everything | all (the strict canonical gate) |
+
+The canonical green build runs on the multi-GPU box, where the gate is strict
+and refreshes whatever drifted; CPU/single-GPU authors still get a loud warning
+listing the deferred notebooks and render from the store meanwhile.
 
 ### 3.4 The d2l `#@save` ripple, made precise
 
@@ -347,6 +385,14 @@ make -j4 pdfs
 A fresh clone with only `.venv-build` renders the whole book. (LFS assets are
 fetched on clone; `GIT_LFS_SKIP_SMUDGE=1` gives a text-only checkout if you only
 need to edit prose/slides and don't care about plot images yet.)
+
+This holds on *any* host, including one that has framework venvs and so can
+detect staleness: per §3.3a the gate is capability-tiered, so a CPU or
+single-GPU box renders the whole book — deferring (with a warning) only the
+stale notebooks it lacks the GPUs to re-execute, which the multi-GPU box
+refreshes on the canonical build. To re-run a CPU notebook locally without a
+full rebuild: `make -B _notebooks/<fw>/<chapter>/<file>.executed` then
+`make capture-outputs FILES=<chapter>/<file>.md`.
 
 ### 5.3 Partial / selective refresh (convenience)
 

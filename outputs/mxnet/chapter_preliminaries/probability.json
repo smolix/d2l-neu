@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/probability.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0+macos.arm64.20260529",
     "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [56, 44]\n"
+          "text": "heads, tails:  [47, 53]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([49, 51], dtype=int64)"
+          "text": "array([53, 47], dtype=int64)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.53, 0.47])"
+          "text": "array([0.47, 0.53])"
         }
       ]
     },
@@ -50,25 +50,20 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.4947, 0.5053])"
+          "text": "array([0.4894, 0.5106])"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:d2041e626bba281375639a510b37c4731308aaa623db2eb4f75901bbb32cc8f7",
-      "kind": "text",
-      "outputs": []
-    },
-    "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:c168eba606b8d2570feff069b2ea561954775dc48e2e906fb4f90e80bb6b7ae1",
+      "code_fingerprint": "sha256:f19a4b464cbb862b37bcac598530b828723d64816e7fbb921dca3eac37d278bb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 105028,
-          "sha256": "sha256:a51a699c47357efdcc317ddd1ca5269c10e7505ed0eddf378e4fd1c11f49c68f"
+          "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
+          "bytes": 106765,
+          "sha256": "sha256:6035b2da28c781335111b3ebeeb64faa67987c4e2f5d0d20f66e8d5ed3617e77"
         }
       ]
     }

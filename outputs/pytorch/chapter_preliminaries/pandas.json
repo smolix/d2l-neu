@@ -3,56 +3,113 @@
   "source": "chapter_preliminaries/pandas.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.12.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "pandas-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:81d3a98d9393d2c75a1378c7cdee50d7bf5ca155e8406e651f40fd00070bb3ec",
+      "code_fingerprint": "sha256:a2284e3bdbfb6e545d0db8a9d6be6a2d26df4b4af78bcf59b4ba5c3010048e3c",
       "kind": "text",
       "outputs": []
     },
     "pandas-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:32690f35c70c1cb98475367304f7b48fbe23bfb7e057ad0911c98e60617937b6",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   NumRooms RoofType   Price\n0       NaN      NaN  127500\n1       2.0      NaN  106000\n2       4.0    Slate  178100\n3       NaN      NaN  140000\n"
-        }
-      ]
-    },
-    "pandas-data-preparation-1": {
-      "code_fingerprint": "sha256:958b7e30fa19b352ed5e6e3363310923c0b959846f2ad0c86ffd830f95884e6d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   NumRooms  RoofType_Slate  RoofType_nan\n0       NaN           False          True\n1       2.0           False          True\n2       4.0            True         False\n3       NaN           False          True\n"
-        }
-      ]
-    },
-    "pandas-data-preparation-2": {
-      "code_fingerprint": "sha256:071fac8552d607ae510925df7c61ae9518373f3013a4ac169ff24ce2a803c550",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   NumRooms  RoofType_Slate  RoofType_nan\n0       3.0           False          True\n1       2.0           False          True\n2       4.0            True         False\n3       3.0           False          True\n"
-        }
-      ]
-    },
-    "pandas-conversion-to-the-tensor-format": {
-      "code_fingerprint": "sha256:8c687aad33ff547cc74bc5e3c77e1c463f0178918c9686c11a69b078e4edb155",
+      "code_fingerprint": "sha256:94c603ffd5e6eb976a7db3b0514b1dcc0e3a6861e35a604b5654d6ce7e86994e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[3., 0., 1.],\n         [2., 0., 1.],\n         [4., 1., 0.],\n         [3., 0., 1.]], dtype=torch.float64),\n tensor([127500., 106000., 178100., 140000.], dtype=torch.float64))"
+          "text": "   NumRooms RoofType  Area   Price\n0       3.0    Slate  1500  210000\n1       NaN     Tile  2100  290000\n2       2.0      NaN   850  127500\n3       4.0    Slate  1940  258000\n4       NaN      NaN  1200  168000\n5       3.0     Tile  1650  225000\n6       5.0    Slate  2600  375000\n7       2.0      NaN   900  142000\n8       NaN     Tile  1750  240000\n9       4.0      NaN  2050  295000"
+        }
+      ]
+    },
+    "pandas-knowing-your-data-1": {
+      "code_fingerprint": "sha256:d4489bc4f63f5a34acb4fe59be2cddb3208fe2f07cfb5bceee82753589ca48be",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "NumRooms    float64\nRoofType        str\nArea          int64\nPrice         int64\ndtype: object"
+        }
+      ]
+    },
+    "pandas-knowing-your-data-2": {
+      "code_fingerprint": "sha256:81f280942afc36f5b85bb398bd605fcaa6f44065b4e33801935e982adbd0ab57",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "       NumRooms         Area          Price\ncount  7.000000    10.000000      10.000000\nmean   3.285714  1654.000000  233050.000000\nstd    1.112697   556.421104   76128.710455\nmin    2.000000   850.000000  127500.000000\n25%    2.500000  1275.000000  178500.000000\n50%    3.000000  1700.000000  232500.000000\n75%    4.000000  2022.500000  282000.000000\nmax    5.000000  2600.000000  375000.000000"
+        }
+      ]
+    },
+    "pandas-separating-inputs-and-targets-1": {
+      "code_fingerprint": "sha256:f1c85b672786be0294186e19e54889e5c6d9b2aaa4b7b67c9220af12f40997e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "   NumRooms RoofType  Area\n0       3.0    Slate  1500\n1       NaN     Tile  2100\n2       2.0      NaN   850\n3       4.0    Slate  1940\n4       NaN      NaN  1200\n5       3.0     Tile  1650\n6       5.0    Slate  2600\n7       2.0      NaN   900\n8       NaN     Tile  1750\n9       4.0      NaN  2050"
+        }
+      ]
+    },
+    "pandas-handling-missing-values-1": {
+      "code_fingerprint": "sha256:6b470fe5713126fd4e7100de496358b2cba3bc7f4401491aca10ac1b8a74a58e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "NumRooms    3\nRoofType    4\nArea        0\ndtype: int64"
+        }
+      ]
+    },
+    "pandas-handling-missing-values-2": {
+      "code_fingerprint": "sha256:8f3702ba71e10d228950fc0d7f1391ac19fd9fea089dd646ecb001cf939b42e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 10)"
+        }
+      ]
+    },
+    "pandas-handling-missing-values-3": {
+      "code_fingerprint": "sha256:e0b1eb39ffb09af8eba869bc56d9db93ea79572ed0a3ffad0d9be418802dd1d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "   NumRooms RoofType  Area\n0  3.000000    Slate  1500\n1  3.285714     Tile  2100\n2  2.000000      NaN   850\n3  4.000000    Slate  1940\n4  3.285714      NaN  1200\n5  3.000000     Tile  1650\n6  5.000000    Slate  2600\n7  2.000000      NaN   900\n8  3.285714     Tile  1750\n9  4.000000      NaN  2050"
+        }
+      ]
+    },
+    "pandas-encoding-categorical-features-1": {
+      "code_fingerprint": "sha256:253d1326b137fc1f65e8ccdf7e52b1520f480a0c14fd608e5b7c50b3536dd8d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "   NumRooms  Area  RoofType_Slate  RoofType_Tile  RoofType_nan\n0  3.000000  1500             1.0            0.0           0.0\n1  3.285714  2100             0.0            1.0           0.0\n2  2.000000   850             0.0            0.0           1.0\n3  4.000000  1940             1.0            0.0           0.0\n4  3.285714  1200             0.0            0.0           1.0\n5  3.000000  1650             0.0            1.0           0.0\n6  5.000000  2600             1.0            0.0           0.0\n7  2.000000   900             0.0            0.0           1.0\n8  3.285714  1750             0.0            1.0           0.0\n9  4.000000  2050             0.0            0.0           1.0"
+        }
+      ]
+    },
+    "pandas-numerical-features-1": {
+      "code_fingerprint": "sha256:f17996df46ab982306c8c91742b8375f72410b9c6c8992e084a894f0961a9746",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "   NumRooms      Area  RoofType_Slate  RoofType_Tile  RoofType_nan\n0 -0.314485 -0.276769             1.0            0.0           0.0\n1  0.000000  0.801551             0.0            1.0           0.0\n2 -1.415185 -1.444949             0.0            0.0           1.0\n3  0.786214  0.513999             1.0            0.0           0.0\n4  0.000000 -0.815929             0.0            0.0           1.0\n5 -0.314485 -0.007189             0.0            1.0           0.0\n6  1.886913  1.700151             1.0            0.0           0.0\n7 -1.415185 -1.355089             0.0            0.0           1.0\n8  0.000000  0.172531             0.0            1.0           0.0\n9  0.786214  0.711691             0.0            0.0           1.0"
+        }
+      ]
+    },
+    "pandas-conversion-to-tensor-format": {
+      "code_fingerprint": "sha256:35dcdfde7da0b14f491b42571c9653dd53941c946d0ca6841fcb0584473d37f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[-0.3145, -0.2768,  1.0000,  0.0000,  0.0000],\n         [ 0.0000,  0.8016,  0.0000,  1.0000,  0.0000],\n         [-1.4152, -1.4449,  0.0000,  0.0000,  1.0000],\n         [ 0.7862,  0.5140,  1.0000,  0.0000,  0.0000],\n         [ 0.0000, -0.8159,  0.0000,  0.0000,  1.0000],\n         [-0.3145, -0.0072,  0.0000,  1.0000,  0.0000],\n         [ 1.8869,  1.7002,  1.0000,  0.0000,  0.0000],\n         [-1.4152, -1.3551,  0.0000,  0.0000,  1.0000],\n         [ 0.0000,  0.1725,  0.0000,  1.0000,  0.0000],\n         [ 0.7862,  0.7117,  0.0000,  0.0000,  1.0000]], dtype=torch.float64),\n tensor([210000., 290000., 127500., 258000., 168000., 225000., 375000., 142000.,\n         240000., 295000.], dtype=torch.float64))"
         }
       ]
     }

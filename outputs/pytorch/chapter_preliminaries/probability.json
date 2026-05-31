@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/probability.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.12.0",
     "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [45, 55]\n"
+          "text": "heads, tails:  [65, 35]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([45., 55.])"
+          "text": "tensor([49., 51.])"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4100, 0.5900])"
+          "text": "tensor([0.4600, 0.5400])"
         }
       ]
     },
@@ -50,20 +50,20 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4944, 0.5056])"
+          "text": "tensor([0.4942, 0.5058])"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:f109cd4afcb67cfd52f88146c47c8b3efe78a1ab4b1d9b2eb6cfc6243978f468",
+      "code_fingerprint": "sha256:f6571f9078828351a38609c6a01c3fcf93167f5a32eb2a61f4be2f704c77b26c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 105237,
-          "sha256": "sha256:4315dde7051f862c0c95be87b1073ab3f1e49c98faf881a16514f42eb78c93b7"
+          "bytes": 107586,
+          "sha256": "sha256:1d439f14609b2d26033f3f61fb58c3c030e578b97b6aa91ca74049c3599c5333"
         }
       ]
     }

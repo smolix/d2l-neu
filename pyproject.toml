@@ -31,6 +31,13 @@ pytorch = [
     "gymnasium[toy-text] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "gpytorch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "syne-tune[gpsearchers] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Apple Silicon CPU/MPS: PyPI ships native arm64 wheels (CPU-only render
+    # host can now also *execute* notebooks). torch source is gated to the
+    # cu128 index for linux only (see [tool.uv.sources]), so darwin resolves
+    # torch from the default index.
+    "torch ; sys_platform == 'darwin'",
+    "torchvision ; sys_platform == 'darwin'",
+    "gymnasium[toy-text] ; sys_platform == 'darwin'",
 ]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
@@ -42,6 +49,9 @@ mxnet = [
     # failed; run `tools/update_mxnet_wheel.py` once the release is published
     # to switch back to the URL pin.
     "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529/mxnet-2.0.0%2Bcu13.bw.20260529-cp312-cp312-linux_x86_64.whl ; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Apple Silicon CPU build — sibling release asset (smolix/mxnet, not
+    # apache/mxnet). Pulls opencv-python + numpy<2 as the wheel declares.
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529.3/mxnet-2.0.0%2Bmacos.arm64.20260529-cp312-cp312-macosx_11_0_arm64.whl ; python_version == '3.12' and sys_platform == 'darwin'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,
@@ -50,6 +60,11 @@ tensorflow = [
     "tensorflow[and-cuda] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-probability[tf] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Apple Silicon: plain `tensorflow` (>=2.16 ships native arm64 macOS
+    # wheels, CPU). No `[and-cuda]` — that's a linux-only metapackage.
+    "tensorflow ; sys_platform == 'darwin'",
+    "tensorflow-datasets ; sys_platform == 'darwin'",
+    "tensorflow-probability[tf] ; sys_platform == 'darwin'",
 ]
 jax = [
     "jax[cuda12]>=0.10.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
@@ -58,6 +73,14 @@ jax = [
     "tensorflow ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "flaxmodels ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Apple Silicon: plain `jax` resolves the CPU jaxlib arm64 macOS wheel.
+    # tensorflow(+datasets) come along because d2l/jax.py imports tf for its
+    # data utilities (mirrors the linux jax extra).
+    "jax>=0.10.0 ; sys_platform == 'darwin'",
+    "flax ; sys_platform == 'darwin'",
+    "optax ; sys_platform == 'darwin'",
+    "tensorflow ; sys_platform == 'darwin'",
+    "tensorflow-datasets ; sys_platform == 'darwin'",
 ]
 run = [
     "jupyter",
@@ -98,8 +121,10 @@ url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu128" }
-torchvision = { index = "pytorch-cu128" }
+# The CUDA index only has linux-x86_64 wheels. Gate it to that platform so
+# darwin resolves torch/torchvision from the default index (arm64 CPU/MPS).
+torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" }]
+torchvision = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" }]
 
 [dependency-groups]
 dev = [

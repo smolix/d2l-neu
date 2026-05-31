@@ -1159,230 +1159,381 @@ To recap:
 
 <!-- slides -->
 
-::: {.slide title="Linear Algebra Toolkit"}
-The minimum linear-algebra vocabulary every chapter that follows
-assumes:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.3]{.kicker}
 
-- **Scalars / vectors / matrices / tensors** — the four ranks.
+The vocabulary every later chapter assumes<br>**vectors, matrices, reductions, products, norms**.
+:::
+:::
+
+::: {.slide title="The building blocks"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Scalars · vectors · matrices · tensors** — ranks 0, 1, 2, *n*.
 - **Arithmetic** — element-wise, with broadcasting.
-- **Reductions** — sum, mean, along chosen axes.
-- **Products** — dot, matrix-vector, matrix-matrix.
-- **Norms** — $\ell_1$, $\ell_2$, Frobenius.
+- **Reductions** — `sum`, `mean`, along chosen axes.
+- **Products** — dot, matrix–vector, matrix–matrix.
+- **Norms** — measures of size.
 
-Each piece comes with a one-liner of code so you can see the API.
+::: {.d2l-note}
+**Rank** = number of axes; **shape** = size per axis.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:ndarray-rank-ladder
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The objects]{.dtitle}
+
+[scalars, vectors, matrices, tensors]{.dsub}
+:::
 :::
 
 ::: {.slide title="Scalars"}
-Scalars are rank-0 tensors — a single number with all the usual
-arithmetic operators:
+[The objects]{.kicker}
+
+A **scalar** is a rank-0 tensor — a single number. Ordinary arithmetic
+carries over unchanged:
 
 @linear-algebra-scalars
 :::
 
 ::: {.slide title="Vectors"}
-A **vector** is a 1-D array of scalars:
+[The objects]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A **vector** is a rank-1 tensor — an ordered list of numbers, i.e. a
+point (or arrow) in space:
 
 @linear-algebra-vectors-1
 
-. . .
-
-Element access uses standard indexing:
+Index a single element with `[i]`:
 
 @linear-algebra-vectors-2
 :::
 
+::: {.col .fig .big}
+@fig:linear-algebra-vector
+:::
+:::
+:::
+
 ::: {.slide title="Length and shape"}
-The **length** of a vector is its number of elements:
+[The objects]{.kicker}
+
+`len(x)` is a vector's element count:
 
 @linear-algebra-vectors-3
 
 . . .
 
-For higher-rank tensors `len()` is just `shape[0]`. Use `.shape`
-when you need every axis:
+For any rank, `.shape` lists the size of **every** axis:
 
 @linear-algebra-vectors-4
 :::
 
-::: {.slide title="Matrices"}
-A **matrix** is a rank-2 tensor — `m` rows × `n` columns:
+::: {.slide title="Matrices & the transpose"}
+[The objects]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A **matrix** is a rank-2 tensor — *m* rows × *n* columns:
 
 @linear-algebra-matrices-1
 
-. . .
-
-The **transpose** flips rows and columns; the same data, axes
-swapped:
+The **transpose** swaps rows and columns ($\mathbf{A}^\top$):
 
 @linear-algebra-matrices-2
 :::
 
-::: {.slide title="Symmetric matrices"}
-A matrix is **symmetric** when it equals its own transpose:
+::: {.col .fig}
+@fig:linear-algebra-transpose
+:::
+:::
+:::
 
-$$\mathbf{A} = \mathbf{A}^\top.$$
+::: {.slide title="Symmetric matrices"}
+[The objects]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A matrix is **symmetric** when it equals its own transpose,
+$\mathbf{A} = \mathbf{A}^\top$:
 
 @linear-algebra-matrices-3
 
-Useful: the input to many losses (covariance, Gram matrix) is
-symmetric.
+::: {.d2l-note}
+Covariance and Gram matrices are symmetric — a structure many methods
+exploit.
+:::
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-symmetric
+:::
+:::
 :::
 
 ::: {.slide title="Higher-rank tensors"}
-The naming generalizes — a rank-$n$ tensor has $n$ axes.
-A 3-D tensor is the shape of a stack of matrices (think batched
-RGB images: batch × height × width × channels in TF, batch ×
-channels × height × width in PyTorch):
+[The objects]{.kicker}
 
-@linear-algebra-tensors
+::: {.cols .vc}
+::: {.col .narrow}
+Stack matrices and the naming continues — a rank-*n* tensor has *n* axes.
+A batch of images is rank-4 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
+
+@-linear-algebra-tensors
+:::
+
+::: {.col}
+@fig:linear-algebra-tensor4d
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Arithmetic & reduction]{.dtitle}
+
+[element-wise ops, sums, means, axes]{.dsub}
+:::
 :::
 
 ::: {.slide title="Element-wise arithmetic"}
+[Arithmetic]{.kicker}
+
 Two tensors of the same shape combine **element-wise**:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-1
 
 . . .
 
-The element-wise product of matrices is the **Hadamard product**
+The element-wise *product* is the **Hadamard product**
 $\mathbf{A} \odot \mathbf{B}$:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-2
 :::
 
 ::: {.slide title="Scalar–tensor arithmetic"}
-A scalar broadcasts to every element of a tensor:
+[Arithmetic]{.kicker}
+
+A scalar **broadcasts** across every element:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-3
 :::
 
 ::: {.slide title="Reductions: sum"}
-The **sum** $\sum_i x_i$ collapses every element into one scalar:
+[Reduction]{.kicker}
+
+A **reduction** folds many values into fewer. `sum()` over everything
+gives a scalar:
 
 @linear-algebra-reduction-1
 
 . . .
 
-Same call works for any rank — it folds across **all** axes by
-default:
+Same call, any rank — it folds across **all** axes by default:
 
 @linear-algebra-reduction-2
 :::
 
 ::: {.slide title="Reducing along an axis"}
-To collapse only one or some axes, pass `axis=`:
+[Reduction]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Pass `axis=` to collapse just one dimension; the output **loses** that
+axis:
 
 @linear-algebra-reduction-3
 
-. . .
-
 @linear-algebra-reduction-4
 
-`axis=0` collapses rows (output rank drops by one along that axis),
-`axis=1` collapses columns.
+::: {.d2l-note}
+`axis=0` sums down the columns; `axis=1` sums across the rows.
+:::
 :::
 
-::: {.slide title="Reducing all axes"}
-A list of axes reduces over each:
-
-@linear-algebra-reduction-5
-
-`axis=[0,1]` is identical to the default `sum()` for a rank-2 tensor.
+::: {.col .fig .big}
+@fig:linear-algebra-reduce-axes
+:::
+:::
 :::
 
 ::: {.slide title="Mean"}
-$\bar x = \frac{1}{n} \sum_i x_i$. Either built-in `mean()` or
-`sum() / numel()`:
+[Reduction]{.kicker}
+
+The **mean** is `sum / count` — available directly as `mean()`, and it
+reduces along an axis just like `sum`:
 
 @linear-algebra-reduction-6
-
-. . .
-
-And along a single axis:
-
-@linear-algebra-reduction-7
 :::
 
 ::: {.slide title="Non-reducing sum (`keepdims`)"}
-Set `keepdims=True` to preserve the reduced axis (size 1) so
-broadcasting still works:
+[Reduction]{.kicker}
+
+`keepdims=True` keeps the reduced axis at size 1, so the result still
+**broadcasts** against the original:
 
 @linear-algebra-non-reduction-sum-1
 
 . . .
 
-Now `A / sum_A` divides every row by its sum — common
-normalization:
+…which lets you normalize each row by its own sum:
 
 @linear-algebra-non-reduction-sum-2
 :::
 
 ::: {.slide title="Cumulative sum"}
-`cumsum(axis=k)` keeps the axis but reports a running total —
-useful for time-series and prefix sums:
+[Reduction]{.kicker}
+
+`cumsum` keeps the axis and reports a **running total** — a prefix sum,
+not a reduction:
 
 @linear-algebra-non-reduction-sum-3
 :::
 
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Products]{.dtitle}
+
+[dot, matrix–vector, matrix–matrix]{.dsub}
+:::
+:::
+
 ::: {.slide title="Dot product"}
-$\mathbf{x}^\top \mathbf{y} = \sum_i x_i y_i$ — element-wise
-multiply, then sum:
+[Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The **dot product** multiplies element-wise, then sums:
 
 @linear-algebra-dot-products-1
 
-. . .
-
-Two equivalent ways to compute it:
+Equivalently, `dot(x, y)` or `sum(x * y)`:
 
 @linear-algebra-dot-products-2
 :::
 
-::: {.slide title="Matrix products"}
-$\mathbf{A}\mathbf{x}$ is a length-$m$ vector — one dot product
-per row of `A`. The most ubiquitous operation in deep learning:
-a fully-connected layer's forward pass.
+::: {.col .fig .big}
+@fig:linear-algebra-dot
+:::
+:::
+:::
+
+::: {.slide title="Matrix–vector products"}
+[Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\mathbf{A}\mathbf{x}$ is **one dot product per row** of $\mathbf{A}$ —
+the core of a fully-connected layer (much more on that later):
 
 @linear-algebra-matrix-vector-products
+:::
 
-. . .
+::: {.col .fig}
+@fig:linear-algebra-matvec
+:::
+:::
+:::
 
-$\mathbf{AB}$ is $m$ matrix-vector products stitched into a matrix
-(equivalently, $m \cdot n$ row-by-column dot products):
+::: {.slide title="Matrix–matrix products"}
+[Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\mathbf{A}\mathbf{B}$ stitches $m \times n$ row-by-column dot products
+into one matrix:
 
 @linear-algebra-matrix-matrix-multiplication
 :::
 
-::: {.slide title="Norms"}
-The **$\ell_2$** norm — Euclidean length, the workhorse of
-optimization:
+::: {.col .fig .big}
+@fig:linear-algebra-matmul
+:::
+:::
+:::
 
-$$\|\mathbf{x}\|_2 = \sqrt{\sum_i x_i^2}.\qquad
-  \|\mathbf{x}\|_1 = \sum_i |x_i|.\qquad
-  \|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}.$$
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Norms]{.dtitle}
+
+[measuring the size of vectors & matrices]{.dsub}
+:::
+:::
+
+::: {.slide title="Vector norms: ℓ₂ and ℓ₁"}
+[Norms]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The **$\ell_2$** norm is Euclidean length — the workhorse of
+optimization:
 
 @linear-algebra-norms-1
 
-. . .
-
-**$\ell_1$** is less sensitive to outliers and promotes sparsity:
+The **$\ell_1$** norm sums absolute values; it is less sensitive to
+outliers:
 
 @linear-algebra-norms-2
 
-. . .
+::: {.d2l-note .rule}
+$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}$,
+$\quad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$.
+:::
+:::
 
-For matrices, **Frobenius** is the $\ell_2$ of the flattened
-matrix:
+::: {.col .fig .big}
+@fig:linear-algebra-norms
+:::
+:::
+:::
+
+::: {.slide title="Frobenius norm"}
+[Norms]{.kicker}
+
+For matrices, the **Frobenius** norm is the $\ell_2$ of all entries
+flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
 
 @linear-algebra-norms-3
 :::
 
 ::: {.slide title="Recap"}
-- Scalars / vectors / matrices / tensors are ranks 0 / 1 / 2 / *n*.
-- Element-wise ops, scalar broadcasting, Hadamard product
-  (`*`).
-- Reductions: `sum`, `mean`, with `axis=` and `keepdims=`.
-- Products: `dot`, `mv`, `mm` / `@`.
-- Norms: $\ell_1$, $\ell_2$, Frobenius.
+[Wrap-up]{.kicker}
 
-Most deep-learning math compiles down to this short list.
+::: {.cols}
+::: {.col}
+- **Ranks 0–*n*:** scalar, vector, matrix, tensor.
+- **Element-wise** ops + scalar broadcasting; **Hadamard** `*`.
+- **Reductions:** `sum`, `mean`, with `axis=` and `keepdims=`.
+:::
+
+::: {.col}
+- **Products:** `dot`, matrix–vector, matrix–matrix (`@`).
+- **Norms:** $\ell_2$, $\ell_1$, Frobenius.
+- Geometry — arrows, angles, lengths — underlies all of it.
+:::
+:::
+
+::: {.d2l-note}
+Almost every computation in this book compiles down to this short list.
+:::
 :::

@@ -157,10 +157,30 @@ def fix_tensorflow():
     print(f"  TF sees {n} GPU(s)")
 
 
+def check_darwin(framework):
+    """macOS arm64 CPU builds carry no CUDA libs and link native code as
+    .dylib bundled in the wheel — `ldd`/cusolver checks don't apply. The
+    meaningful runtime check here is simply that the module imports."""
+    venv = ROOT / f".venv-{framework}"
+    py = venv / "bin/python"
+    if not py.is_file():
+        sys.exit(f"{framework} runtime check failed (darwin): {py} not found")
+    result = subprocess.run([str(py), "-c", f"import {framework}"],
+                            text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        sys.exit(f"{framework} runtime check failed (darwin): "
+                 f"{result.stderr.strip()}")
+    print(f"  {framework} imports OK (darwin CPU build)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("framework", choices=["mxnet", "tensorflow"])
     args = parser.parse_args()
+
+    if sys.platform == "darwin":
+        check_darwin(args.framework)
+        return
 
     if args.framework == "mxnet":
         check_mxnet()

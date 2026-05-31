@@ -450,64 +450,314 @@ throughout this book will require calculating the gradient.
 
 <!-- slides -->
 
-::: {.slide title="Calculus for Optimization"}
-Training a neural net = **minimizing a loss**. Calculus tells us
-which way to step:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.4]{.kicker}
 
-- The **derivative** measures the slope — how fast the loss
-  changes when we nudge a parameter.
-- For multi-parameter models, the gradient $\nabla_\theta L$ is
-  the vector of partial derivatives.
-- Optimizers follow $-\nabla_\theta L$ downhill.
-
-The geometric picture: a function and its tangent line at a point.
-The tangent's slope **is** the derivative.
-
-@!calculus-visualization-utilities-5
+How a loss changes when we nudge a parameter<br>**limits · derivatives · gradients · the chain rule**.
+:::
 :::
 
-::: {.slide title="Derivatives, by definition"}
-The derivative of $f$ at $x$ is
+::: {.slide title="Calculus for optimization"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Training a model = **minimizing a loss**. Calculus tells us which way to step.
+
+- The **derivative** measures slope — how fast the loss moves when we nudge a parameter.
+- The **gradient** $\nabla_\theta L$ stacks one partial derivative per parameter.
+- Optimizers walk **downhill**, along $-\nabla_\theta L$.
+- The **chain rule** differentiates a network's nested functions — the engine of backprop.
+:::
+
+::: {.col .fig}
+@fig:calculus-gradient-descent
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Derivatives]{.dtitle}
+
+[limits, slopes, and the tangent line]{.dsub}
+:::
+:::
+
+::: {.slide title="It begins with a limit"}
+[Derivatives]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Archimedes found a circle's area with inscribed polygons. With $n$ sides
+the polygon splits into $n$ triangles whose areas sum to
+
+$$n \cdot \tfrac{1}{2}\bigl(\tfrac{2\pi r}{n}\bigr)\, r = \pi r^2.$$
+
+Taking $n \to \infty$ is a **limit** — the idea at the root of all calculus.
+:::
+
+::: {.col .fig .big}
+@fig:calculus-circle-limit
+:::
+:::
+:::
+
+::: {.slide title="The derivative, by definition"}
+[Derivatives]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The **derivative** of $f$ at $x$ is the limit of the difference quotient:
+
 $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
 
-Take a concrete example, $u = f(x) = 3x^2 - 4x$ (analytic
-derivative: $f'(x) = 6x - 4$, so $f'(1) = 2$):
+Geometrically, $\tfrac{f(x+h)-f(x)}{h}$ is the slope of the **secant**
+through two points. As $h \to 0$ the secant pivots into the **tangent**
+— and its slope *is* $f'(x)$.
+:::
 
-@calculus
+::: {.col .fig}
+@fig:calculus-secant-tangent
+:::
+:::
+:::
 
-@calculus-derivatives-and-differentiation-1
+::: {.slide title="A concrete example"}
+[Derivatives]{.kicker}
+
+Let $u = f(x) = 3x^2 - 4x$. The rules below give $f'(x) = 6x - 4$, so
+$f'(1) = 2$:
+
+@-calculus-derivatives-and-differentiation-1
+
+::: {.d2l-note}
+We'll verify this numerically, then see it as a slope — and from the
+next chapter on, let **autograd** do it for us.
+:::
 :::
 
 ::: {.slide title="Verifying numerically"}
-At $x = 1$, the difference quotient
-$\frac{f(x+h) - f(x)}{h}$ should approach $f'(1) = 2$ as $h \to 0$:
+[Derivatives]{.kicker}
+
+At $x = 1$, the difference quotient should approach $f'(1) = 2$ as
+$h \to 0$:
 
 @calculus-derivatives-and-differentiation-2
 
 . . .
 
-It does — but small `h` runs into floating-point cancellation,
-which is exactly the problem **autograd** sidesteps in the next
-chapter.
+It does. Push $h$ far smaller and floating-point **cancellation**
+eventually corrupts the quotient — a reason **autograd** (next chapter)
+computes derivatives analytically instead.
 :::
 
 ::: {.slide title="Function and tangent line"}
-Plot $u = f(x)$ alongside its tangent at $x=1$, $y = 2x - 3$:
+[Derivatives]{.kicker}
 
-@calculus-visualization-utilities-5
+::: {.cols .vc}
+::: {.col}
+Plotting $u = f(x)$ with its tangent $y = 2x - 3$ at $x = 1$ makes it
+visual: the tangent's slope **is** $f'(1) = 2$.
 
-The tangent's slope **is** $f'(1) = 2$ — derivatives are slopes,
-made geometric. (The d2l package wraps a few matplotlib helpers
-— `set_figsize`, `plot`, `set_axes` — used throughout the book.
-See the source if you're curious.)
+::: {.d2l-note}
+The d2l package wraps a few matplotlib helpers — `set_figsize`, `plot`,
+`set_axes` — reused throughout the book.
+:::
+:::
+
+::: {.col .fig .big}
+@!calculus-visualization-utilities-5
+:::
+:::
+:::
+
+::: {.slide title="Rules of differentiation"}
+[Derivatives]{.kicker}
+
+::: {.cols}
+::: {.col}
+**Common derivatives**
+
+::: {.d2l-note .rule}
+$\dfrac{d}{dx} C = 0, \quad \dfrac{d}{dx} x^n = n\,x^{n-1},$
+
+$\dfrac{d}{dx} e^x = e^x, \quad \dfrac{d}{dx}\ln x = \dfrac{1}{x}.$
+:::
+:::
+
+::: {.col}
+**Combining functions**
+
+::: {.d2l-note .rule}
+Sum: $(f+g)' = f' + g'$
+
+Product: $(fg)' = f g' + g f'$
+
+Quotient: $\left(\dfrac{f}{g}\right)' = \dfrac{g f' - f g'}{g^2}$
+:::
+:::
+:::
+
+Apply them to $3x^2 - 4x$ and you recover $6x - 4$ — matching the limit.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Partial derivatives & gradients]{.dtitle}
+
+[many inputs, one slope each]{.dsub}
+:::
+:::
+
+::: {.slide title="Functions of many variables"}
+[Gradients]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For $y = f(x_1, \ldots, x_n)$, the **partial derivative**
+$\dfrac{\partial y}{\partial x_i}$ treats every other variable as a
+constant and differentiates in one direction:
+
+$$\frac{\partial y}{\partial x_i} = \lim_{h \to 0}
+\frac{f(\ldots, x_i + h, \ldots) - f(\ldots, x_i, \ldots)}{h}.$$
+
+It is the slope of a **1-D slice** through the surface.
+:::
+
+::: {.col .fig}
+@fig:calculus-partial-slices
+:::
+:::
+:::
+
+::: {.slide title="The gradient"}
+[Gradients]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Stack all $n$ partials into one vector — the **gradient**:
+
+$$\nabla_{\mathbf{x}} f = \left[\frac{\partial f}{\partial x_1}, \ldots,
+\frac{\partial f}{\partial x_n}\right]^\top.$$
+
+It points in the direction of **steepest ascent**, perpendicular to the
+level sets.
+
+::: {.d2l-note}
+$-\nabla f$ points downhill — the direction every optimizer follows.
+:::
+:::
+
+::: {.col .fig}
+@fig:calculus-gradient-field
+:::
+:::
+:::
+
+::: {.slide title="Gradient identities"}
+[Gradients]{.kicker}
+
+A few vector rules recur constantly — and they are exactly the §2.3
+linear-algebra operations:
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .rule}
+$\nabla_{\mathbf{x}}\, \mathbf{A}\mathbf{x} = \mathbf{A}^\top$
+
+$\nabla_{\mathbf{x}}\, \mathbf{x}^\top\mathbf{A} = \mathbf{A}$
+
+$\nabla_{\mathbf{x}}\, \mathbf{x}^\top\mathbf{A}\mathbf{x} = (\mathbf{A} + \mathbf{A}^\top)\,\mathbf{x}$
+:::
+:::
+
+::: {.col}
+::: {.d2l-note .rule}
+$\nabla_{\mathbf{x}}\, \|\mathbf{x}\|^2 = 2\mathbf{x}$
+
+$\nabla_{\mathbf{X}}\, \|\mathbf{X}\|_\textrm{F}^2 = 2\mathbf{X}$
+:::
+:::
+:::
+
+Gradients are built from matrix–vector products — calculus and linear
+algebra meet here.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The chain rule]{.dtitle}
+
+[differentiating compositions]{.dsub}
+:::
+:::
+
+::: {.slide title="The chain rule"}
+[Chain rule]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Deep networks are functions of functions of functions. The **chain
+rule** differentiates them by multiplying along the path. For
+$y = f(g(x))$ with $u = g(x)$:
+
+$$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dx}.$$
+
+Evaluate **forward** ($x \to u \to y$); accumulate derivatives
+**backward**.
+:::
+
+::: {.col .fig .big}
+@fig:calculus-chain-graph
+:::
+:::
+:::
+
+::: {.slide title="From chain rule to backprop"}
+[Chain rule]{.kicker}
+
+With many variables $u_1, \ldots, u_m$, each depending on
+$x_1, \ldots, x_n$, the chain rule becomes a **vector–matrix product**:
+
+$$\nabla_{\mathbf{x}} y = \mathbf{A}\, \nabla_{\mathbf{u}} y,
+\qquad \mathbf{A} \in \mathbb{R}^{n \times m}\ \text{(the Jacobian).}$$
+
+::: {.d2l-note}
+A network's gradient is a chain of such products. Traversed **forward**
+it evaluates the function; traversed **backward** it computes gradients
+— this backward pass is **backpropagation**, formalized in a later
+chapter.
+:::
+
+This is a core reason linear algebra is the backbone of deep learning.
 :::
 
 ::: {.slide title="Recap"}
-- Derivative = limit of the difference quotient.
-- Multi-variable functions have **partial derivatives**, one per
-  input; the gradient bundles them into a vector.
-- The **chain rule** lets you differentiate compositions —
-  the engine inside backprop.
-- We won't compute derivatives by hand for long: the next chapter
-  shows how autograd handles it automatically.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Derivative** = limit of the difference quotient = slope of the tangent.
+- **Partial derivatives** give one slope per input; the **gradient** bundles them into a vector.
+- $-\nabla f$ points downhill — every optimizer follows it.
+:::
+
+::: {.col}
+- The **chain rule** differentiates compositions by multiplying along the path.
+- Multivariate, that is a **vector–matrix product** — the link to linear algebra and the heart of backprop.
+- Next: **autograd** computes all of this for us, automatically.
+:::
+:::
+
+::: {.d2l-note}
+Every optimization step in this book reduces to evaluating a gradient.
+:::
 :::

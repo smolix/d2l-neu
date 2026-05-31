@@ -4,38 +4,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Documentation
-:begin_tab:`mxnet`
-While we cannot possibly introduce every single MXNet function and class 
-(and the information might become outdated quickly), 
-the [API documentation](https://mxnet.apache.org/versions/1.8.0/api) 
-and additional [tutorials](https://mxnet.apache.org/versions/1.8.0/api/python/docs/tutorials/) and examples 
-provide such documentation. 
-This section provides some guidance for how to explore the MXNet API.
-:end_tab:
 
-:begin_tab:`pytorch`
-While we cannot possibly introduce every single PyTorch function and class 
-(and the information might become outdated quickly), 
-the [API documentation](https://pytorch.org/docs/stable/index.html) and additional [tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html) and examples 
-provide such documentation.
-This section provides some guidance for how to explore the PyTorch API.
-:end_tab:
+No matter how much of a framework's API we cover here,
+there will always be functions, classes, and arguments
+we never reach---and the libraries keep changing under us.
+So rather than try to memorize the API,
+the durable skill is getting good at *looking things up*:
+finding what exists, reading how it works,
+and confirming that it does what you think.
+This short section lays out a small, repeatable loop for exactly that,
+using tools built into Python and your notebook.
 
-:begin_tab:`tensorflow`
-While we cannot possibly introduce every single TensorFlow function and class 
-(and the information might become outdated quickly), 
-the [API documentation](https://www.tensorflow.org/api_docs) and additional [tutorials](https://www.tensorflow.org/tutorials) and examples 
-provide such documentation. 
-This section provides some guidance for how to explore the TensorFlow API.
-:end_tab:
+The official documentation is always the source of truth,
+and it is worth bookmarking the reference and tutorial pages
+for the framework you use:
 
-:begin_tab:`jax`
-While we cannot possibly introduce every single JAX function and class
-(and the information might become outdated quickly),
-the [API documentation](https://jax.readthedocs.io/en/latest/) and additional [tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) and examples
-provide such documentation.
-This section provides some guidance for how to explore the JAX API.
-:end_tab:
+| Framework | API reference | Tutorials |
+|:--|:--|:--|
+| PyTorch | [pytorch.org/docs](https://pytorch.org/docs/stable/index.html) | [pytorch.org/tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html) |
+| JAX | [jax.readthedocs.io](https://jax.readthedocs.io/en/latest/) | [JAX tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) |
+| TensorFlow | [tensorflow.org/api_docs](https://www.tensorflow.org/api_docs) | [tensorflow.org/tutorials](https://www.tensorflow.org/tutorials) |
+| MXNet | [API reference](https://mxnet.apache.org/versions/1.8.0/api) | [tutorials](https://mxnet.apache.org/versions/1.8.0/api/python/docs/tutorials/) |
+
+For most day-to-day questions, though, you do not need to leave your
+notebook. Four moves, repeated until the call behaves, cover almost
+everything.
+
+![Four moves, repeated until the call does what you want: **discover** the names that exist, **inspect** a candidate's signature, **read** the docs or source when you need the *why*, and **verify** with a quick run.](../img/lookup-api-discovery-loop.svg)
+:label:`fig_lookup_loop`
+
+The examples below use each framework's standard import:
 
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
@@ -57,11 +55,11 @@ import tensorflow as tf
 import jax
 ```
 
-## Functions and Classes in a Module
+## Discovering What Exists: `dir`
 
-To know which functions and classes can be called in a module,
-we invoke the `dir` function. For instance, we can
-query all properties in the module for generating random numbers:
+When you know roughly *where* a tool should live but not what it is called,
+the `dir` function lists everything defined in a module.
+For instance, to see what is on offer for generating random numbers:
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
@@ -84,19 +82,22 @@ print([name for name in dir(tf.random) if not name.startswith('_')][:20])
 print([name for name in dir(jax.random) if not name.startswith('_')][:20])
 ```
 
-Generally, we can ignore functions that start and end with `__` (special objects in Python) 
-or functions that start with a single `_`(usually internal functions). 
-Based on the remaining function or attribute names, 
-we might hazard a guess that this module offers 
-various methods for generating random numbers, 
-including sampling from the uniform distribution (`uniform`), 
-normal distribution (`normal`), and multinomial distribution (`multinomial`).
+We can usually ignore names that begin and end with `__`
+(Python's special objects) or that start with a single `_`
+(internal helpers). The remaining names already hint at what the module
+offers---here, routines for sampling from the uniform distribution
+(`uniform`), the normal distribution (`normal`),
+and the multinomial distribution (`multinomial`).
+In a notebook you can get the same list interactively, filtered as you
+type, by writing the module name followed by a dot and pressing `Tab`---
+usually the fastest way to turn up a name.
 
-## Specific Functions and Classes
+## Reading the Signature: `help`, `?`, and `??`
 
-For specific instructions on how to use a given function or class,
-we can invoke the  `help` function. As an example, let's
-explore the usage instructions for tensors' `ones` function.
+Once you have a name, `help` prints its docstring:
+the arguments it takes, their defaults, what it returns,
+and often a short example. Let us look up the `ones` function,
+which we have used to build tensors:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab mxnet
@@ -118,11 +119,20 @@ help(tf.ones)
 help(jax.numpy.ones)
 ```
 
-From the documentation, we can see that the `ones` function 
-creates a new tensor with the specified shape 
-and sets all the elements to the value of 1. 
-Whenever possible, you should run a quick test 
-to confirm your interpretation:
+The docstring tells us that `ones` creates a new tensor of the requested
+shape with every element set to 1.
+In a Jupyter notebook, two shortcuts make this quicker still:
+`ones?` opens the same docstring in a side pane,
+and `ones??` additionally displays the function's *source code*.
+The source is the final word when a docstring is terse or ambiguous,
+and reading it is one of the better ways to pick up idioms
+from high-quality libraries.
+
+## Verifying With a Quick Run
+
+Docstrings can be terse, and they occasionally drift out of date.
+The fastest way to be certain is to run a tiny example
+and look at the result:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
@@ -144,21 +154,21 @@ tf.ones(4)
 jax.numpy.ones(4)
 ```
 
-In the Jupyter notebook, we can use `?` to display the document in another
-window. For example, `list?` will create content
-that is almost identical to `help(list)`,
-displaying it in a new browser window.
-In addition, if we use two question marks, such as `list??`,
-the Python code implementing the function will also be displayed.
+The shape and values are exactly what the docstring promised.
+Making this `discover → inspect → read → verify` loop a habit
+will carry you through the unfamiliar corners of any library,
+long after the specific functions in this book have changed.
 
-The official documentation provides plenty of descriptions and examples that are beyond this book. 
-We emphasize important use cases 
-that will get you started quickly with practical problems, 
-rather than completeness of coverage. 
-We also encourage you to study the source code of the libraries 
-to see examples of high-quality implementations of production code. 
-By doing this you will become a better engineer 
-in addition to becoming a better scientist.
+Coding assistants are often the quickest route to a first answer:
+ask "how do I sample from a normal distribution in this framework?"
+and you will usually get a function and a working call in seconds---and
+they keep getting better at it.
+Treat a suggestion the way you would a knowledgeable colleague's:
+an excellent starting point, well worth a quick check before you build on it.
+The same two habits do the checking and cost almost nothing---glance at the
+signature with `help` or `?`, and run a small example.
+A suggestion that survives both is one you can rely on,
+and the loop above is how you run that check.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/38)
@@ -175,53 +185,3 @@ in addition to becoming a better scientist.
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17972)
 :end_tab:
-
-<!-- slides -->
-
-::: {.slide title="Finding API Help"}
-Every framework has thousands of functions and classes. You
-won't memorize them — you'll **look them up**.
-
-Two Python builtins do most of the work:
-
-- `dir(module)` — what's in here?
-- `help(thing)` (or `?thing` in Jupyter) — how do I use it?
-
-Plus the official docs: pytorch.org, jax.dev, tensorflow.org,
-mxnet.apache.org.
-:::
-
-::: {.slide title="`dir`: discovering the API"}
-Standard import:
-
-@lookup-api-documentation
-
-. . .
-
-`dir(...)` lists names in a module. Filter private names and
-show a small prefix on slides; in a notebook you can inspect
-the full list interactively:
-
-@lookup-api-functions-and-classes-in-a-module
-:::
-
-::: {.slide title="`help`: usage details"}
-Once you have the name, `help(...)` prints the docstring with
-arguments, defaults, and a usage example:
-
-@lookup-api-specific-functions-and-classes-1
-
-. . .
-
-Then run a one-liner to confirm the call:
-
-@lookup-api-specific-functions-and-classes-2
-:::
-
-::: {.slide title="Recap"}
-- `dir(module)` — list contents.
-- `help(symbol)` (or `symbol?` in Jupyter) — show the docstring.
-- Notebook autocomplete (`Tab`) is your fastest discovery tool.
-- For prose-heavy explanations, deep links into the framework's
-  official documentation beat the inline help.
-:::

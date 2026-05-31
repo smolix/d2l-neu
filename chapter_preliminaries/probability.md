@@ -353,11 +353,17 @@ estimates = cum_counts / cum_counts.sum(dim=1, keepdims=True)
 estimates = estimates.numpy()
 
 d2l.set_figsize((4.5, 3.5))
-d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
-d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
 d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
-d2l.plt.gca().set_xlabel('Samples')
-d2l.plt.gca().set_ylabel('Estimated probability')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
 d2l.plt.legend();
 ```
 
@@ -366,6 +372,20 @@ d2l.plt.legend();
 counts = multinomial(1, fair_probs, size=10000)
 cum_counts = counts.astype(np.float32).cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
+
+d2l.set_figsize((4.5, 3.5))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
+d2l.plt.legend();
 ```
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
@@ -374,6 +394,20 @@ counts = tfd.Multinomial(1, fair_probs).sample(10000)
 cum_counts = tf.cumsum(counts, axis=0)
 estimates = cum_counts / tf.reduce_sum(cum_counts, axis=1, keepdims=True)
 estimates = estimates.numpy()
+
+d2l.set_figsize((4.5, 3.5))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
+d2l.plt.legend();
 ```
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
@@ -381,16 +415,19 @@ estimates = estimates.numpy()
 counts = np.random.multinomial(1, fair_probs, size=10000).astype(np.float32)
 cum_counts = counts.cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
-```
 
-```{.python .input #probability-a-simple-example-tossing-coins-6}
-%%tab mxnet, tensorflow, jax
 d2l.set_figsize((4.5, 3.5))
-d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
-d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
 d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
-d2l.plt.gca().set_xlabel('Samples')
-d2l.plt.gca().set_ylabel('Estimated probability')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
 d2l.plt.legend();
 ```
 
@@ -468,6 +505,9 @@ Consequently, the probability of any event $\mathcal{A}$
 is $P(\mathcal{A} \cap \mathcal{A}') = 0$.
 Informally, this tells us that impossible events
 have zero probability of occurring.
+
+![Events are subsets of a sample space $\mathcal{S}$, and the axioms give the *inclusion–exclusion* rule for their union.](../img/probability-venn.svg)
+:label:`fig_prob_venn`
 
 
 
@@ -635,6 +675,10 @@ as restricting attention only to the subset
 of the sample space associated with $A=a$
 and then renormalizing so that
 all probabilities sum to 1.
+
+![The joint distribution $P(A,B)$ determines everything: summing a row or column gives a *marginal* ($P(A)$ or $P(B)$), and renormalizing one row by its sum gives a *conditional* $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
+:label:`fig_prob_joint`
+
 Conditional probabilities
 are in fact just ordinary probabilities
 and thus respect all of the axioms,
@@ -654,11 +698,6 @@ Combining both equations yields
 $P(B\mid A) P(A) = P(A\mid B) P(B)$ and hence
 
 $$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$
-
-
-
-
-
 
 This simple equation has profound implications because
 it allows us to reverse the order of conditioning.
@@ -758,6 +797,9 @@ Shoe size and reading level are highly correlated
 among elementary school students,
 but this correlation disappears if we condition on age.
 
+![Conditioning can both destroy and create dependence. A *common cause* makes $A$ and $B$ dependent until we condition on $C$; a *collider* (common effect) makes independent causes dependent once $C$ is observed — *explaining away*.](../img/probability-explaining-away.svg)
+:label:`fig_prob_explaining_away`
+
 
 
 ## An Example
@@ -773,10 +815,10 @@ We use $D_1 \in \{0, 1\}$ to indicate the diagnosis
 ($0$ if negative and $1$ if positive)
 and $H \in \{0, 1\}$ to denote the HIV status.
 
-| Conditional probability | $H=1$ | $H=0$ |
-|:------------------------|------:|------:|
-| $P(D_1 = 1 \mid H)$        |     1 |  0.01 |
-| $P(D_1 = 0 \mid H)$        |     0 |  0.99 |
+| $P(D_1 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_1 = 1$ | 1.00 | 0.01 |
+| test negative, $D_1 = 0$ | 0.00 | 0.99 |
 
 Note that the column sums are all 1 (but the row sums do not),
 since they are conditional probabilities.
@@ -803,6 +845,10 @@ $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = 0.1306.$$
 In other words, there is only a 13.06% chance
 that the patient actually has HIV,
 despite the test being pretty accurate.
+
+![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives — of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
+:label:`fig_prob_natural_freq`
+
 As we can see, probability can be counterintuitive.
 What should a patient do upon receiving such terrifying news?
 Likely, the patient would ask the physician
@@ -810,10 +856,10 @@ to administer another test to get clarity.
 The second test has different characteristics
 and it is not as good as the first one.
 
-| Conditional probability | $H=1$ | $H=0$ |
-|:------------------------|------:|------:|
-| $P(D_2 = 1 \mid H)$          |  0.98 |  0.03 |
-| $P(D_2 = 0 \mid H)$          |  0.02 |  0.97 |
+| $P(D_2 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_2 = 1$ | 0.98 | 0.03 |
+| test negative, $D_2 = 0$ | 0.02 | 0.97 |
 
 Unfortunately, the second test comes back positive, too.
 Let's calculate the requisite probabilities to invoke Bayes' theorem
@@ -847,6 +893,10 @@ $$P(H = 1 \mid D_1 = 1, D_2 = 1)
 That is, the second test allowed us to gain much higher confidence that not all is well.
 Despite the second test being considerably less accurate than the first one,
 it still significantly improved our estimate.
+
+![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
+:label:`fig_prob_update`
+
 The assumption of both tests being conditionally independent of each other
 was crucial for our ability to generate a more accurate estimate.
 Take the extreme case where we run the same test twice.
@@ -1118,83 +1168,413 @@ interval centered on the expectation.
 
 <!-- slides -->
 
-::: {.slide title="Probability for Learning"}
-Most of machine learning is **inference under uncertainty**:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.6]{.kicker}
 
-- Models output **distributions** over labels, not labels.
-- Losses are negative log-likelihoods.
-- Generalization, regularization, and Bayesian methods all rest
-  on probability.
-
-The chapter's running example: **tossing a fair coin**. As the
-sample count grows, empirical frequencies converge to the true
-$P = 0.5$:
-
-@!probability-a-simple-example-tossing-coins-5
-
-@!probability-a-simple-example-tossing-coins-6
+Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectation**
+:::
 :::
 
-::: {.slide title="A fair coin, 100 tosses"}
-The standard d2l prelude (plus a multinomial distribution we'll
-use shortly):
+::: {.slide title="Machine learning is inference under uncertainty"}
+[Motivation]{.kicker}
 
-@probability-probability-and-statistics
+- A model rarely returns one answer — it returns a **distribution** over
+  answers.
+- Training **maximizes likelihood**; most losses are negative
+  log-likelihoods.
+- Generalization, regularization, and the Bayesian view all rest on the
+  same handful of rules.
 
-. . .
+::: {.d2l-note}
+**Probability** reasons *forward*: model → data. **Statistics** reasons
+*backward*: data → model. We build both, on one running example.
+:::
+:::
 
-We can simulate coin flips with `random.random()`:
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[From data to a probability]{.dtitle}
+
+[sampling, frequencies, the law of large numbers]{.dsub}
+:::
+:::
+
+::: {.slide title="A coin of unknown bias"}
+[Estimating from data]{.kicker}
+
+We find a coin and want $P(\text{heads})$ — but nobody tells us its value.
+The plan: **toss it many times and count**.
+
+A single batch of 100 tosses with `random.random()` already lands **near**
+50/50 — but never exactly, because sampling has variance:
 
 @probability-a-simple-example-tossing-coins-1
-
-The split is **near** 50/50 but not exactly — sampling has
-variance.
 :::
 
 ::: {.slide title="Sampling from a distribution"}
-A cleaner abstraction: a `Multinomial` over the categories
-`{heads, tails}` with probabilities `[0.5, 0.5]`. One call returns
-the count vector for 100 tosses:
+[Estimating from data]{.kicker}
+
+A cleaner tool: a `Multinomial` over `{heads, tails}` with probabilities
+`[0.5, 0.5]` returns the **count vector** for 100 tosses in one call:
 
 @probability-a-simple-example-tossing-coins-2
 
 . . .
 
-Divide by the trial count to get **empirical frequencies** —
+Dividing by the number of tosses gives **empirical frequencies** — our
 estimates of $P(\text{heads})$ and $P(\text{tails})$:
 
 @probability-a-simple-example-tossing-coins-3
 :::
 
-::: {.slide title="More tosses, tighter estimate"}
-With 10 000 tosses, the empirical frequencies sit much closer to
-$0.5$:
+::: {.slide title="More data, tighter estimate"}
+[Estimating from data]{.kicker}
+
+With **10,000** tosses the frequencies sit far closer to the true
+$\tfrac{1}{2}$:
 
 @probability-a-simple-example-tossing-coins-4
 
-This is the **law of large numbers**: as $n \to \infty$ the
-empirical mean converges to the true mean.
+::: {.d2l-note}
+The **law of large numbers**: as the number of trials $n \to \infty$, the
+empirical frequency converges to the true probability.
+:::
 :::
 
-::: {.slide title="Convergence in pictures"}
-Plot the running estimate of $P(\text{heads})$ and
-$P(\text{tails})$ vs. sample count — the curves zigzag toward
+::: {.slide title="How fast does it converge?"}
+[Estimating from data]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The running estimate vs. sample count zig-zags inward and locks onto
 $0.5$:
 
-@probability-a-simple-example-tossing-coins-5
+@!probability-a-simple-example-tossing-coins-5
+:::
 
-@probability-a-simple-example-tossing-coins-6
+::: {.col .narrow}
+::: {.d2l-note .rule}
+The error shrinks like $1/\sqrt{n}$ — to **halve** it you need **4×** the
+data.
+:::
 
-The variance of the estimate shrinks like $1/\sqrt{n}$ — doubling
-accuracy means **quadrupling** the sample budget.
+A first glimpse of the real question of statistics: not just *what* we
+estimate, but *how sure* we are.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The formal language]{.dtitle}
+
+[sample spaces, events, random variables]{.dsub}
+:::
+:::
+
+::: {.slide title="Sample space, events, three axioms"}
+[Formal treatment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is a
+subset. A probability assigns each event a number in $[0,1]$ obeying three
+rules (Kolmogorov):
+
+- $P(\mathcal{A}) \ge 0$;
+- $P(\mathcal{S}) = 1$;
+- disjoint events **add**.
+
+::: {.d2l-note .rule}
+Everything else follows, e.g. $P(\mathcal{A}\cup\mathcal{B}) =
+P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:probability-venn
+:::
+:::
+:::
+
+::: {.slide title="Random variables: mass vs. density"}
+[Formal treatment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A **random variable** maps outcomes to values. Discrete ones (a die) place
+**mass** on points; continuous ones (a height) spread **density** along
+the line.
+
+::: {.d2l-note}
+For a continuous variable an *exact* value has probability **zero** — only
+intervals carry probability, obtained by **integrating** the density.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:probability-density
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Joint, marginal, conditional]{.dtitle}
+
+[how two variables relate — and Bayes' theorem]{.dsub}
+:::
+:::
+
+::: {.slide title="One table holds everything"}
+[Multiple variables]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The **joint** $P(A,B)$ lists every combination. From it:
+
+- **sum** a row or column → a **marginal** $P(A)$ or $P(B)$;
+- **renormalize** one row → a **conditional**
+  $P(B \mid A{=}a) = \dfrac{P(A{=}a,\, B)}{P(A{=}a)}$.
+
+::: {.d2l-note}
+Conditioning = restrict to the slice where $A{=}a$, then rescale so it
+sums to 1.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:probability-joint-grid
+:::
+:::
+:::
+
+::: {.slide title="Bayes' theorem: reversing the conditioning"}
+[Multiple variables]{.kicker}
+
+Write the joint two ways, $P(A,B) = P(B\mid A)\,P(A) = P(A\mid B)\,P(B)$,
+and equate:
+
+$$P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}.$$
+
+. . .
+
+This **flips** a hard direction into an easy one — inferring a cause $A$
+from an effect $B$ when only $P(B \mid A)$ is known.
+
+::: {.d2l-note .rule}
+posterior $\propto$ likelihood $\times$ prior:
+$\;P(H \mid E) \propto P(E \mid H)\,P(H)$.
+:::
+:::
+
+::: {.slide title="Independence — and explaining away"}
+[Multiple variables]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But **conditioning
+changes dependence**: a common cause links two variables until you
+condition on it; a collider (common effect) makes independent causes
+dependent once you do — *explaining away*.
+:::
+
+::: {.col .fig .big}
+@fig:probability-explaining-away
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Bayes in action: the HIV test]{.dtitle}
+
+[why a "99% accurate" test can still mislead]{.dsub}
+:::
+:::
+
+::: {.slide title="A worrying diagnosis"}
+[Worked example]{.kicker}
+
+A test **never misses** true HIV but has a **1% false-positive** rate, and
+the disease is **rare**:
+
+$$\begin{aligned}
+P(D{=}1 \mid H{=}1) &= 1.00 \\
+P(D{=}1 \mid H{=}0) &= 0.01 \\
+\text{prior } P(H{=}1) &= 0.0015
+\end{aligned}$$
+
+We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
+certainly sick" — but Bayes disagrees. Let us count.
+:::
+
+::: {.slide title="Why a positive test is usually a false alarm"}
+[Worked example]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Among 10,000 people only ~15 truly have HIV — but ~100 healthy people also
+test positive. Of **~115 positives, only 15 are real**:
+
+$$P(H{=}1 \mid D{=}1) \approx \tfrac{15}{115} \approx 13\%.$$
+
+The **base rate** dominates a rare-disease test.
+:::
+
+::: {.col .fig .big}
+@fig:probability-natural-frequencies
+:::
+:::
+:::
+
+::: {.slide title="Evidence accumulates"}
+[Worked example]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A *second*, independent positive test multiplies the evidence. Applying
+Bayes again drives the posterior from the 0.15% prior to 13%, then to
+**83%**:
+:::
+
+::: {.col .fig .big}
+@fig:probability-bayes-update
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Summarizing a distribution]{.dtitle}
+
+[expectation, variance, covariance]{.dsub}
+:::
+:::
+
+::: {.slide title="Expectation: the probability-weighted average"}
+[Summaries]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$E[X] = \sum_x x\,P(X{=}x).$$
+
+It is the **balance point** of the distribution. For an investment paying
+$0$, $2\times$, or $10\times$ with probabilities $0.5, 0.4, 0.1$, the
+expected return is $1.8\times$.
+:::
+
+::: {.col .fig .big}
+@fig:probability-expectation
+:::
+:::
+:::
+
+::: {.slide title="Variance: spread is risk"}
+[Summaries]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Var}[X] = E\big[(X - E[X])^2\big] = E[X^2] - E[X]^2.$$
+
+Two investments can share a mean yet differ wildly in **spread**. The
+standard deviation $\sigma = \sqrt{\textrm{Var}[X]}$ reports it in the
+original units.
+:::
+
+::: {.col .fig .big}
+@fig:probability-spread
+:::
+:::
+:::
+
+::: {.slide title="Covariance: do two variables move together?"}
+[Summaries]{.kicker}
+
+Covariance is the expected product of the two centered variables; its
+**sign** tells the story. Stacked over a vector, it becomes the
+**covariance matrix** $\boldsymbol{\Sigma}$ — symmetric, and a workhorse
+of the chapters ahead:
+
+@fig:probability-covariance
+:::
+
+::: {.slide}
+::: {.divider}
+[06]{.dnum}
+
+[Uncertainty & guarantees]{.dtitle}
+
+[what kind, and how far can it stray?]{.dsub}
+:::
+:::
+
+::: {.slide title="Two kinds of uncertainty"}
+[Discussion]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin flip
+stays 50/50 no matter how much data you gather. **Epistemic** uncertainty
+is about *unknown parameters*, and it **shrinks** as data accumulates.
+:::
+
+::: {.col .fig .big}
+@fig:probability-uncertainty
+:::
+:::
+:::
+
+::: {.slide title="Tail bounds: guarantees without the distribution"}
+[Discussion]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Even *without* knowing the distribution, we can bound how often a
+nonnegative variable lands far out. **Markov:**
+$$P(X \ge a) \le \frac{E[X]}{a}.$$
+
+::: {.d2l-note .rule}
+Apply it to $(X-\mu)^2$ to get **Chebyshev**; **Hoeffding** and
+**Bernstein** sharpen it for sums.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:probability-markov
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- A probability distribution assigns mass to events.
-- **Sampling** + **counting** = empirical frequencies.
-- The law of large numbers connects the two: estimates converge
-  to the true probabilities at rate $O(1/\sqrt{n})$.
-- The rest of the chapter formalizes random variables,
-  expectations, and joint / conditional / marginal distributions
-  — the vocabulary for everything that follows.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Sample → count → estimate**; the LLN converges at $1/\sqrt{n}$.
+- **Axioms** generate every rule; events combine by inclusion–exclusion.
+- The **joint** yields marginals (sum) and conditionals (renormalize).
+- **Bayes** reverses conditioning: posterior $\propto$ likelihood $\times$
+  prior.
+:::
+
+::: {.col}
+- **Base rates** make a rare-disease positive usually a false alarm;
+  evidence compounds.
+- **Expectation / variance / covariance** summarize a distribution.
+- **Tail bounds** guarantee concentration even when the distribution is
+  unknown.
+:::
+:::
 :::

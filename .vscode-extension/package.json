@@ -52,6 +52,26 @@
         "category": "D2L"
       }
     ],
+    "keybindings": [
+      {
+        "command": "d2l.editFrameworkView",
+        "key": "ctrl+e ctrl+j",
+        "mac": "cmd+e cmd+j",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "d2l.switchFramework",
+        "key": "ctrl+e ctrl+s",
+        "mac": "cmd+e cmd+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "d2l.watchSlides",
+        "key": "ctrl+e ctrl+w",
+        "mac": "cmd+e cmd+w",
+        "when": "editorTextFocus && editorLangId == markdown"
+      }
+    ],
     "configuration": {
       "title": "D2L Tools",
       "properties": {

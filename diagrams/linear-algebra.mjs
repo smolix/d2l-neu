@@ -8,7 +8,7 @@
 // Stable ids use the `linear-algebra-<concept>` prefix (abbreviated `la-`
 // in slide refs is NOT used — full id is the filename). Never rename.
 
-import { C, grid, tx, arrow, svg } from './engine.mjs';
+import { C, FS, grid, tx, arrow, svg } from './engine.mjs';
 
 // plain stroked line (no arrowhead)
 const line = (x1, y1, x2, y2, color, w = 1.5, dash = false) =>
@@ -151,7 +151,7 @@ function matmul() {
   // True subscripts via tspans (the unicode ⱼ glyph is missing in many
   // fonts, so it rendered un-subscripted); larger than before.
   const sub = `baseline-shift="sub" font-size="11"`;
-  o += `<text x="${bx + Bw + 20}" y="${by + 6}" font-family="Source Sans 3, sans-serif" `
+  o += `<text x="${bx + Bw + 20}" y="${by + 6}" font-family="${FS}" `
     + `font-size="15" font-weight="700" fill="#3A4049" text-anchor="start">`
     + `C<tspan ${sub}>ij</tspan> = row<tspan ${sub}>i</tspan> · col<tspan ${sub}>j</tspan></text>`;
   return svg(bx + Bw + 168, ay + Ah + 34, o);

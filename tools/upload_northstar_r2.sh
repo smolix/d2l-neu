@@ -54,6 +54,10 @@ while IFS= read -r rel; do
   # to a real AWS region, which R2 rejects).
   args=(--endpoint-url "$ENDPOINT" --region "${R2_REGION:-auto}")
   [[ -n "$ct" ]] && args+=(--content-type "$ct")
+  # staging is served from pub-*.r2.dev (no purgeable CF cache); no-cache
+  # makes browsers revalidate via ETag so re-uploads show without a hard
+  # refresh. Override CACHE_CONTROL=... for a cacheable prod domain.
+  args+=(--cache-control "${CACHE_CONTROL:-no-cache}")
   [[ -n "$DRY" ]] && args+=("$DRY")
   echo "  → $rel"
   aws s3 cp "$local_path" "s3://${BUCKET}/${rel}" "${args[@]}" >/dev/null

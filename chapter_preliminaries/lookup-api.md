@@ -159,8 +159,6 @@ Making this `discover → inspect → read → verify` loop a habit
 will carry you through the unfamiliar corners of any library,
 long after the specific functions in this book have changed.
 
-## A Note on AI Assistants
-
 Coding assistants are often the quickest route to a first answer:
 ask "how do I sample from a normal distribution in this framework?"
 and you will usually get a function and a working call in seconds---and

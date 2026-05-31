@@ -53,6 +53,42 @@ the repo does until it lands.
   `tools/inject_outputs.py slides`, matched by cell ID against
   `_notebooks/<fw>/...`. Slides need no GPU.
 
+## Content authoring (how to write a chapter)
+
+Conventions for writing/revising chapter `.md` content. Model the density and
+shape on the **preliminaries** and **linear-neural-networks** chapters.
+
+- **Code teaches; it does not draw.** Every notebook code cell must *compute or
+  demonstrate* something the prose discusses (fit a model, decompose a matrix,
+  verify an identity, classify data). Code whose only purpose is to draw an
+  illustrative figure does NOT belong in the notebook — it is a wall of
+  matplotlib plumbing that teaches nothing. Keep teaching code compact and
+  elegant.
+- **Illustrative figures are pre-generated, never drawn inline.** Conceptual /
+  schematic / illustrative figures are produced by a committed matplotlib
+  generator (`tools/gen_mdl_figures.py` → `img/<id>.svg`) and included as
+  `![caption](../img/<id>.svg)` + `:label:`fig_…`` with **no drawing code** in
+  the notebook — exactly like the slide SVGs. To change a figure, edit the
+  generator and re-run it; commit the `.svg`. (Data plots that *teach* a
+  computed result, e.g. a loss curve, may stay as a short `d2l.plot(...)` cell.)
+- **One figure style per chapter.** Use a single consistent look (the
+  generator's shared style). Do not mix hand-drawn SVGs, inline matplotlib, and
+  generated plots in the same chapter — reproduce stragglers in the chosen style.
+- **One imports cell.** Import each library exactly once, in a single
+  per-framework imports cell near the top; never re-import inside later cells.
+  Prefer d2l helpers (`d2l.plot`, `d2l.plt`, `d2l.set_figsize`, …) over raw
+  matplotlib.
+- **Hierarchical structure.** Group content into **3–5 top-level `##`
+  sections**, each with `###` (and occasional `####`) subsections — not a long
+  flat run of `##` headings.
+- **Proofs, intuition-first.** Foundations chapters favour short, *elegant*
+  proofs (`**Proposition.**` / `**Proof.**` … `$\blacksquare$`) over assertion,
+  led by a picture or intuition.
+- **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
+  and closing lines with `:eqlabel:` on the next line, or the label fails to
+  attach. Never put a `]` in an image caption (it truncates the alt-text); write
+  matrices in captions with `\begin{smallmatrix}…\end{smallmatrix}`, not `[[…]]`.
+
 ## Landing-page university adopters
 
 The "Adopted at universities worldwide" grid on the landing page is data-driven.

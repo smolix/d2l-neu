@@ -1405,15 +1405,17 @@ dependent once you do — *explaining away*.
 ::: {.slide title="A worrying diagnosis"}
 [Worked example]{.kicker}
 
-A test never misses true HIV but has a **1% false-positive** rate; the
-disease is **rare**. A patient tests positive — how worried should they be?
+A test **never misses** true HIV but has a **1% false-positive** rate, and
+the disease is **rare**:
 
-::: {.d2l-note}
-$P(D{=}1 \mid H{=}1) = 1.00$, $\quad P(D{=}1 \mid H{=}0) = 0.01$,
-$\quad$ prior $P(H{=}1) = 0.0015$. We want $P(H{=}1 \mid D{=}1)$.
-:::
+$$\begin{aligned}
+P(D{=}1 \mid H{=}1) &= 1.00 \\
+P(D{=}1 \mid H{=}0) &= 0.01 \\
+\text{prior } P(H{=}1) &= 0.0015
+\end{aligned}$$
 
-Intuition says "almost certainly sick." Bayes disagrees — let us count.
+We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
+certainly sick" — but Bayes disagrees. Let us count.
 :::
 
 ::: {.slide title="Why a positive test is usually a false alarm"}

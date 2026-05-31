@@ -20,7 +20,10 @@ stability, PCA, and Hessians; and the *singular value decomposition*
 (:numref:`sec_mdl-svd-low-rank`), the tool behind low-rank
 approximation, conditioning, and LoRA.
 
-## Geometry of Vectors
+## Vectors and Their Geometry
+
+### Points and Directions
+
 First, we need to discuss the two common geometric interpretations of vectors,
 as either points or directions in space.
 Fundamentally, a vector is a list of numbers such as the Python list below.
@@ -29,43 +32,42 @@ Fundamentally, a vector is a list of numbers such as the Python list below.
 v = [1, 7, 0, 1]
 ```
 
-Throughout this section we use a few standard libraries; the figures below are
-drawn with NumPy and Matplotlib.
+We rely on a single set of imports throughout the section; the few code
+examples below use the framework's own tensor library and the d2l plotting
+helpers.
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
-from IPython import display
-import numpy as np
+from mxnet import gluon, np, npx
+npx.set_np()
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-from IPython import display
 import torch
-import numpy as np
+import torchvision
+from torchvision import transforms
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
-from IPython import display
 import tensorflow as tf
-import numpy as np
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from IPython import display
 import jax
 from jax import numpy as jnp
 import numpy as np
+import tensorflow as tf
 ```
 
 Mathematicians most often write this as either a *column* or *row* vector, which is to say either as
@@ -96,10 +98,17 @@ that we should give it is as a point in space.
 In two or three dimensions, we can visualize these points
 by using the components of the vectors to define
 the location of the points in space compared
-to a fixed reference called the *origin*.  This can be seen in :numref:`fig_mdl-grid`.
+to a fixed reference called the *origin*.
+In parallel, there is a second point of view
+that people often take of vectors: as directions in space.
+Not only can we think of the vector $\mathbf{v} = [3,2]^\top$
+as the location $3$ units to the right and $2$ units up from the origin,
+we can also think of it as the direction itself
+to take $3$ steps to the right and $2$ steps up.
+In this way, we consider all the parallel arrows in :numref:`fig_mdl-la-vectors` the same.
 
-![An illustration of visualizing vectors as points in the plane.  The first component of the vector gives the $\mathit{x}$-coordinate, the second component gives the $\mathit{y}$-coordinate.  Higher dimensions are analogous, although much harder to visualize.](../img/grid-points.svg)
-:label:`fig_mdl-grid`
+![A vector can be read two ways: as a *point* whose first component is the $x$-coordinate and second is the $y$-coordinate (left), or as a *direction*---an arrow that can start anywhere, so every arrow shown is the same vector $(3,2)^\top$ (right).](../img/mdl-la-vectors.svg)
+:label:`fig_mdl-la-vectors`
 
 This geometric point of view allows us to consider the problem on a more abstract level.
 No longer faced with some insurmountable seeming problem
@@ -108,24 +117,13 @@ we can start considering tasks abstractly
 as collections of points in space and picturing the task
 as discovering how to separate two distinct clusters of points.
 
-In parallel, there is a second point of view
-that people often take of vectors: as directions in space.
-Not only can we think of the vector $\mathbf{v} = [3,2]^\top$
-as the location $3$ units to the right and $2$ units up from the origin,
-we can also think of it as the direction itself
-to take $3$ steps to the right and $2$ steps up.
-In this way, we consider all the vectors in figure :numref:`fig_mdl-arrow` the same.
-
-![Any vector can be visualized as an arrow in the plane.  In this case, every vector drawn is a representation of the vector $(3,2)^\top$.](../img/par-vec.svg)
-:label:`fig_mdl-arrow`
-
-One of the benefits of this shift is that
+One of the benefits of the direction view is that
 we can make visual sense of the act of vector addition.
 In particular, we follow the directions given by one vector,
-and then follow the directions given by the other, as is seen in :numref:`fig_mdl-add-vec`.
+and then follow the directions given by the other, as is seen in :numref:`fig_mdl-la-vector-add`.
 
-![We can visualize vector addition by first following one vector, and then another.](../img/vec-add.svg)
-:label:`fig_mdl-add-vec`
+![We can visualize vector addition by first following one vector, and then another, placing them tip to tail.](../img/mdl-la-vector-add.svg)
+:label:`fig_mdl-la-vector-add`
 
 Vector subtraction has a similar interpretation.
 By considering the identity that $\mathbf{u} = \mathbf{v} + (\mathbf{u}-\mathbf{v})$,
@@ -133,7 +131,7 @@ we see that the vector $\mathbf{u}-\mathbf{v}$ is the direction
 that takes us from the point $\mathbf{v}$ to the point $\mathbf{u}$.
 
 
-## Dot Products and Angles
+### Dot Products and Angles
 As we saw in :numref:`sec_linear-algebra`,
 if we take two column vectors $\mathbf{u}$ and $\mathbf{v}$,
 we can form their dot product by computing:
@@ -150,10 +148,10 @@ $$
 
 to highlight the fact that exchanging the order of the vectors will yield the same answer.
 
-The dot product :eqref:`eq_mdl-dot_def` also admits a geometric interpretation: it is closely related to the angle between two vectors.  Consider the angle shown in :numref:`fig_mdl-angle`.
+The dot product :eqref:`eq_mdl-dot_def` also admits a geometric interpretation: it is closely related to the angle between two vectors.  Consider the angle shown in :numref:`fig_mdl-la-angle`.
 
-![Between any two vectors in the plane there is a well defined angle $\theta$.  We will see this angle is intimately tied to the dot product.](../img/vec-angle.svg)
-:label:`fig_mdl-angle`
+![Between any two vectors in the plane there is a well defined angle $\theta$.  We will see this angle is intimately tied to the dot product.](../img/mdl-la-angle.svg)
+:label:`fig_mdl-la-angle`
 
 To start, let's consider two specific vectors:
 
@@ -271,66 +269,19 @@ when the vectors point the same way, and $\cos\theta = -1$ ($\theta = \pi$)
 when they point in opposite directions — precisely the collinear cases of the
 proposition.
 
-Cauchy–Schwarz has a one-picture explanation, drawn in the figure below. On the
-left, the projection of $\mathbf{v}$ onto $\mathbf{w}$ has signed length
-$\|\mathbf{v}\|\cos\theta$, and the residual $\mathbf{r} = \mathbf{v} -
-\operatorname{proj}_{\mathbf{w}}\mathbf{v}$ meets $\mathbf{w}$ at a right angle
-(we prove both facts in the next section). Because the right triangle's
-hypotenuse $\mathbf{v}$ can be no shorter than its leg, $\|\mathbf{v}\|\,|\cos\theta|
-\le \|\mathbf{v}\|$, which is exactly $|\mathbf{v}\cdot\mathbf{w}| \le
-\|\mathbf{v}\|\|\mathbf{w}\|$. On the right is the equality case: when
-$\mathbf{v}$ is collinear with $\mathbf{w}$ the residual vanishes and the
-inequality becomes an equality.
+Cauchy–Schwarz has a one-picture explanation, shown in
+:numref:`fig_mdl-la-projection`. On the left, the projection of $\mathbf{v}$
+onto $\mathbf{w}$ has signed length $\|\mathbf{v}\|\cos\theta$, and the residual
+$\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v}$ meets
+$\mathbf{w}$ at a right angle (we prove both facts in the next section). Because
+the right triangle's hypotenuse $\mathbf{v}$ can be no shorter than its leg,
+$\|\mathbf{v}\|\,|\cos\theta| \le \|\mathbf{v}\|$, which is exactly
+$|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\|\mathbf{w}\|$. On the right is
+the equality case: when $\mathbf{v}$ is collinear with $\mathbf{w}$ the residual
+vanishes and the inequality becomes an equality.
 
-```{.python .input #geometry-linear-algebraic-ops-fig-projection}
-import numpy as np
-
-def plot_proj_cauchy_schwarz():
-    d2l.set_figsize((7.6, 3.6))
-    fig, ax = d2l.plt.subplots(1, 2, figsize=(7.6, 3.6))
-
-    def arrow(a, tail, head, color, lw=2.0, style='->'):
-        a.annotate('', xy=head, xytext=tail,
-                   arrowprops=dict(arrowstyle=style, color=color, lw=lw))
-
-    # Left panel: generic case, v projected onto w, orthogonal residual.
-    w = np.array([3.0, 0.0])
-    v = np.array([2.2, 1.8])
-    proj = (v @ w) / (w @ w) * w            # orthogonal projection of v onto w
-    arrow(ax[0], (0, 0), w, 'C0')
-    arrow(ax[0], (0, 0), v, 'C3')
-    arrow(ax[0], proj, v, 'C2', lw=1.4, style='->')   # residual r = v - proj
-    ax[0].plot([proj[0], proj[0]], [0, 0], 'o', color='C0')
-    # Small right-angle marker where the residual meets w.
-    m = 0.18
-    ax[0].plot([proj[0] - m, proj[0] - m, proj[0]],
-               [0, m, m], color='gray', lw=1)
-    ax[0].text(w[0] * 1.02, -0.18, r'$\mathbf{w}$', color='C0', fontsize=11)
-    ax[0].text(v[0] + 0.05, v[1] + 0.05, r'$\mathbf{v}$', color='C3', fontsize=11)
-    ax[0].text((proj[0] + v[0]) / 2 + 0.08, (proj[1] + v[1]) / 2,
-               r'$\mathbf{r}$', color='C2', fontsize=11)
-    ax[0].text(proj[0] / 2 - 0.1, -0.32, r'$\|\mathbf{v}\|\cos\theta$',
-               color='C0', fontsize=10, ha='center')
-    ax[0].set_title('generic case', fontsize=10)
-
-    # Right panel: equality case, v collinear with w, residual is zero.
-    w2 = np.array([3.0, 0.0])
-    v2 = 0.7 * w2                           # collinear: v = t w
-    arrow(ax[1], (0, 0), w2, 'C0')
-    arrow(ax[1], (0, 0), v2 + np.array([0.0, 0.12]), 'C3')  # nudged up to show both
-    ax[1].text(w2[0] * 1.02, -0.18, r'$\mathbf{w}$', color='C0', fontsize=11)
-    ax[1].text(v2[0] - 0.1, 0.32, r'$\mathbf{v}$', color='C3', fontsize=11)
-    ax[1].text(1.5, -0.55, r'$\mathbf{r}=\mathbf{0}$', color='C2',
-               fontsize=10, ha='center')
-    ax[1].set_title('equality (collinear)', fontsize=10)
-
-    for a in ax:
-        a.set_aspect('equal'); a.grid(alpha=.3)
-        a.set_xlim(-0.6, 4.0); a.set_ylim(-0.9, 2.4)
-    d2l.plt.tight_layout()
-
-plot_proj_cauchy_schwarz()
-```
+![Left: the orthogonal projection of $\mathbf{v}$ onto $\mathbf{w}$ has signed length $\|\mathbf{v}\|\cos\theta$, and the residual $\mathbf{r}$ meets $\mathbf{w}$ at a right angle, so $\mathbf{v}$ is the hypotenuse of a right triangle. Right: the Cauchy–Schwarz equality case, where $\mathbf{v}$ is collinear with $\mathbf{w}$ and the residual vanishes.](../img/mdl-la-projection.svg)
+:label:`fig_mdl-la-projection`
 
 A first dividend of Cauchy–Schwarz is the **triangle inequality**, which says
 that a detour through a third point is never shorter than going straight.
@@ -353,12 +304,6 @@ As a simple example, let's see how to compute the angle between a pair of vector
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from IPython import display
-from mxnet import gluon, np, npx
-npx.set_np()
-
 def angle(v, w):
     return np.arccos(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)))
 
@@ -367,13 +312,6 @@ angle(np.array([0, 1, 2]), np.array([2, 3, 4]))
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-from IPython import display
-import torch
-from torchvision import transforms
-import torchvision
-
 def angle(v, w):
     return torch.acos(v.dot(w) / (torch.norm(v) * torch.norm(w)))
 
@@ -382,11 +320,6 @@ angle(torch.tensor([0, 1, 2], dtype=torch.float32), torch.tensor([2.0, 3, 4]))
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-from IPython import display
-import tensorflow as tf
-
 def angle(v, w):
     return tf.acos(tf.tensordot(v, w, axes=1) / (tf.norm(v) * tf.norm(w)))
 
@@ -395,13 +328,6 @@ angle(tf.constant([0, 1, 2], dtype=tf.float32), tf.constant([2.0, 3, 4]))
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from IPython import display
-import jax
-from jax import numpy as jnp
-import numpy as np
-
 def angle(v, w):
     return jnp.arccos(jnp.dot(v, w) / (jnp.linalg.norm(v) * jnp.linalg.norm(w)))
 
@@ -418,7 +344,7 @@ extends gracefully to the zero vector, which is orthogonal to everything even
 though no angle is defined for it.) This will prove to be a workhorse condition
 throughout the chapter.
 
-## Projection and Orthogonality
+### Projection and Orthogonality
 
 Cauchy–Schwarz answers "how aligned are two vectors?"; the closely related
 operation of *projection* answers "how much of $\mathbf{v}$ points along
@@ -478,7 +404,7 @@ scales up to fitting an arbitrary linear model, which is how the singular value
 decomposition produces optimal least-squares solutions in
 :numref:`sec_mdl-svd-low-rank`.
 
-## Cosine Similarity in High Dimensions
+## Similarity in High Dimensions
 
 It is reasonable to ask why the *angle* — rather than the raw distance — is so
 often the right notion of similarity. The answer is invariance to scale.
@@ -546,33 +472,16 @@ unlikely to be an accident and instead reflects real shared structure — the
 working assumption behind embedding-based retrieval and the attention mechanism.
 
 We can watch the concentration happen by sampling random unit vectors and
-histogramming their pairwise cosines as the dimension grows.
+histogramming their pairwise cosines as the dimension grows, shown in
+:numref:`fig_mdl-la-cosine-highd`.
 
-```{.python .input #geometry-linear-algebraic-ops-near-orthogonality}
-import numpy as np
+![Histograms of the cosine between independent random unit vectors at dimensions $d = 2$, $10$, and $1000$. The $d = 2$ histogram is broad and flat; by $d = 1000$ it is a narrow spike at $0$ of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.](../img/mdl-la-cosine-highd.svg)
+:label:`fig_mdl-la-cosine-highd`
 
-def random_cosines(d, n=10000, rng=np.random.default_rng(0)):
-    # Sample 2n random unit vectors in R^d; Gaussian then normalize gives a
-    # uniform direction on the sphere. Return the cosine of each of the n pairs.
-    g = rng.standard_normal((2 * n, d))
-    g /= np.linalg.norm(g, axis=1, keepdims=True)
-    a, b = g[:n], g[n:]
-    return np.sum(a * b, axis=1)
+The higher the dimension, the more sharply the cosine concentrates at $0$:
+unrelated directions are almost always nearly orthogonal.
 
-d2l.set_figsize((6, 4))
-bins = np.linspace(-1, 1, 80)
-for d in [2, 10, 1000]:
-    cos = random_cosines(d)
-    d2l.plt.hist(cos, bins=bins, density=True, histtype='step',
-                 linewidth=1.5, label=f'd = {d}  (std ≈ {1/np.sqrt(d):.3f})')
-d2l.plt.xlabel('cosine similarity'); d2l.plt.ylabel('density')
-d2l.plt.legend(); d2l.plt.show()
-```
-
-The $d = 2$ histogram is broad and flat; by $d = 1000$ it is a narrow spike at
-$0$ of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.
-
-## Hyperplanes
+## Hyperplanes and Decision Boundaries
 
 In addition to working with vectors, another key object
 that you must understand to go far in linear algebra
@@ -591,13 +500,12 @@ $$
 \|\mathbf{v}\|\|\mathbf{w}\|\cos(\theta) = 1 \; \iff \; \|\mathbf{v}\|\cos(\theta) = \frac{1}{\|\mathbf{w}\|} = \frac{1}{\sqrt{5}}.
 $$
 
-![Recalling trigonometry, we see the formula $\|\mathbf{v}\|\cos(\theta)$ is the length of the projection of the vector $\mathbf{v}$ onto the direction of $\mathbf{w}$](../img/proj-vec.svg)
-:label:`fig_mdl-vector-project`
-
 If we consider the geometric meaning of this expression,
 we see that this is equivalent to saying
 that the length of the projection of $\mathbf{v}$
-onto the direction of $\mathbf{w}$ is exactly $1/\|\mathbf{w}\|$, as is shown in :numref:`fig_mdl-vector-project`.
+onto the direction of $\mathbf{w}$ is exactly $1/\|\mathbf{w}\|$ --- recall the
+signed projection length $\|\mathbf{v}\|\cos(\theta)$ from
+:numref:`fig_mdl-la-projection`.
 The set of all points where this is true is a line
 at right angles to the vector $\mathbf{w}$.
 If we wanted, we could find the equation for this line
@@ -621,84 +529,31 @@ side $\mathbf{w}$ points toward, negative on the other, and zero exactly on it.
 This signed distance is precisely the *margin* used by linear classifiers. The
 derivation is just the projection result of the previous section applied to the
 displacement of $\mathbf{x}$ from any point on the hyperplane, which is why the
-projection material had to come first. The figure below collects these facts:
-the normal $\mathbf{w}$ as an arrow from the origin, two parallel level lines
-$\mathbf{w}\cdot\mathbf{x} = b$ for two offsets $b$ (the larger one shifted
-along $\mathbf{w}$ without any rotation), the half-space
+projection material had to come first. :numref:`fig_mdl-la-hyperplane` collects
+these facts: the normal $\mathbf{w}$ as an arrow from the origin, two parallel
+level lines $\mathbf{w}\cdot\mathbf{x} = b$ for two offsets $b$ (the larger one
+shifted along $\mathbf{w}$ without any rotation), the half-space
 $\mathbf{w}\cdot\mathbf{x} > b$ lightly shaded, and the signed distance
 $b/\|\mathbf{w}\|$ from the origin to the line.
 
-```{.python .input #geometry-linear-algebraic-ops-fig-hyperplane}
-import numpy as np
-
-def plot_hyperplane_wxb():
-    d2l.set_figsize((5.4, 5.0))
-    ax = d2l.plt.gca()
-    w = np.array([2.0, 1.0])               # normal to the hyperplane
-    nrm = np.linalg.norm(w)
-    u = w / nrm                            # unit normal
-    t = np.array([-u[1], u[0]])            # direction along the line
-
-    lim = 4.0
-    s = np.linspace(-6, 6, 2)
-    # A line w.x = b passes through the point (b/||w||^2) w; draw it as
-    # that point plus all multiples of the in-line direction t.
-    for b, col, lab in [(2.0, 'C0', r'$\mathbf{w}\cdot\mathbf{x}=b_1$'),
-                        (5.0, 'C1', r'$\mathbf{w}\cdot\mathbf{x}=b_2$')]:
-        p0 = (b / nrm**2) * w              # foot of perpendicular from origin
-        pts = p0[:, None] + t[:, None] * s[None, :]
-        ax.plot(pts[0], pts[1], '--', color=col, lw=1.8, label=lab)
-
-    # Shade the half-space w.x > b_1 by sampling a grid and masking.
-    gx, gy = np.meshgrid(np.linspace(-lim, lim, 200),
-                         np.linspace(-lim, lim, 200))
-    mask = (w[0] * gx + w[1] * gy > 2.0).astype(float)
-    ax.contourf(gx, gy, mask, levels=[0.5, 1.5], colors=['C0'], alpha=0.12)
-
-    # Normal arrow from the origin.
-    ax.annotate('', xy=(w[0], w[1]), xytext=(0, 0),
-                arrowprops=dict(arrowstyle='->', color='C3', lw=2.2))
-    ax.text(w[0] + 0.1, w[1] + 0.05, r'$\mathbf{w}$', color='C3', fontsize=12)
-
-    # Signed distance b_1/||w|| from origin to the first line, along the normal.
-    foot = (2.0 / nrm**2) * w
-    ax.annotate('', xy=(foot[0], foot[1]), xytext=(0, 0),
-                arrowprops=dict(arrowstyle='->', color='gray', lw=1.4))
-    ax.plot(0, 0, 'o', color='k', ms=4)
-    ax.text(foot[0] / 2 - 0.95, foot[1] / 2 - 0.05,
-            r'$b/\|\mathbf{w}\|$', color='gray', fontsize=11)
-    ax.text(2.6, 3.0, r'$\mathbf{w}\cdot\mathbf{x}>b_1$', color='C0',
-            fontsize=10)
-
-    ax.set_aspect('equal'); ax.grid(alpha=.3)
-    ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim)
-    ax.legend(fontsize=8, loc='lower left')
-
-plot_hyperplane_wxb()
-```
+![The hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with normal $\mathbf{w}$. Sliding the offset $b$ translates the hyperplane along $\mathbf{w}$ without rotating it; the shaded region is the half-space $\mathbf{w}\cdot\mathbf{x} > b$; and the signed distance from any point to the hyperplane is $(\mathbf{w}\cdot\mathbf{x} - b)/\|\mathbf{w}\|$, the quantity a linear classifier reads off as its margin.](../img/mdl-la-hyperplane.svg)
+:label:`fig_mdl-la-hyperplane`
 
 If we now look at what happens when we ask about the set of points with
 $\mathbf{w}\cdot\mathbf{v} > b$ or $\mathbf{w}\cdot\mathbf{v} < b$,
 we can see that these are cases where the projections
 are longer or shorter than $b/\|\mathbf{w}\|$, respectively
 (equivalently, the signed distance above is positive or negative).
-Thus, those two inequalities define either side of the line.
-In this way, we have found a way to cut our space into two halves,
-where all the points on one side have dot product below a threshold,
-and the other side above as we see in :numref:`fig_mdl-space-division`.
+Thus, those two inequalities define either side of the line, cutting our space
+into two halves: all the points on one side have dot product below a threshold,
+and the other side above.
 
-![If we now consider the inequality version of the expression, we see that our hyperplane (in this case: just a line) separates the space into two halves.](../img/space-division.svg)
-:label:`fig_mdl-space-division`
-
-The story in higher dimension is much the same.
+The story in higher dimensions is much the same.
 If we now take $\mathbf{w} = [1,2,3]^\top$
 and ask about the points in three dimensions with $\mathbf{w}\cdot\mathbf{v} = b$,
 we obtain a plane at right angles to the given vector $\mathbf{w}$,
 offset from the origin by the signed distance $b/\|\mathbf{w}\|$.
-The two inequalities again define the two sides of the plane as is shown in :numref:`fig_mdl-higher-division`.
-
-![Hyperplanes in any dimension separate the space into two halves.](../img/space-division-3d.svg)
-:label:`fig_mdl-higher-division`
+The two inequalities again define the two sides of the plane.
 
 While our ability to visualize runs out at this point,
 nothing stops us from doing this in tens, hundreds, or billions of dimensions.
@@ -793,7 +648,6 @@ ave_1 = tf.reduce_mean(X_train_1, axis=0)
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab jax
 # Load in the dataset
-import tensorflow as tf
 ((train_images, train_labels), (
     test_images, test_labels)) = tf.keras.datasets.fashion_mnist.load_data()
 
@@ -918,7 +772,9 @@ predictions = X_test.reshape(2000, -1) @ w > b
 jnp.mean((predictions.astype(y_test.dtype) == y_test).astype(jnp.float32))
 ```
 
-## Geometry of Linear Transformations
+## Matrices as Linear Maps
+
+### Linear Transformations
 
 Through :numref:`sec_linear-algebra` and the above discussions,
 we have a solid understanding of the geometry of vectors, lengths, and angles.
@@ -980,10 +836,10 @@ If we follow this logic through carefully,
 say by considering the grid of all integer pairs of points,
 we see that what happens is that the matrix multiplication
 can skew, rotate, and scale the grid,
-but the grid structure must remain as you see in :numref:`fig_mdl-grid-transform`.
+but the grid structure must remain as you see in :numref:`fig_mdl-la-linear-map`.
 
-![The matrix $\mathbf{A}$ acting on the given basis vectors.  Notice how the entire grid is transported along with it.](../img/grid-transform.svg)
-:label:`fig_mdl-grid-transform`
+![The matrix $\mathbf{A}$ acting on the given basis vectors.  Notice how the entire grid is transported along with it.](../img/mdl-la-linear-map.svg)
+:label:`fig_mdl-la-linear-map`
 
 This is the most important intuitive point
 to internalize about linear transformations represented by matrices.
@@ -1014,7 +870,7 @@ and see where our matrix sends them,
 we can start to get a feeling for how the matrix multiplication
 distorts the entire space in whatever dimension space we are dealing with.
 
-### Rotations and Reflections: Orthogonal Matrices
+### Orthogonal Matrices
 
 A matrix may skew, rotate, and scale, but a special and important family does
 *only* the rigid part — it rotates or reflects without any stretching. A square
@@ -1044,7 +900,7 @@ writes a symmetric matrix as $\mathbf{Q}\boldsymbol\Lambda\mathbf{Q}^\top$
 writes *any* matrix as orthogonal–diagonal–orthogonal
 (:numref:`sec_mdl-svd-low-rank`).
 
-## Linear Dependence
+### Linear Dependence, Rank, and Invertibility
 
 Consider again the matrix
 
@@ -1103,7 +959,7 @@ If there is no linear dependence we say the vectors are *linearly independent*.
 If the columns of a matrix are linearly independent,
 no compression occurs and the operation can be undone.
 
-## Rank
+#### Rank
 
 If we have a general $n\times m$ matrix,
 it is reasonable to ask what dimension space the matrix maps into.
@@ -1146,7 +1002,7 @@ to compute the rank of a matrix, but for now,
 this is sufficient to see that the concept
 is well defined and understand the meaning.
 
-## Invertibility
+#### Invertibility
 
 We have seen above that multiplication by a matrix with linearly dependent columns
 cannot be undone, i.e., there is no inverse operation that can always recover the input.  However, multiplication by a full-rank matrix
@@ -1227,7 +1083,7 @@ M_inv = jnp.array([[2, -1], [-0.5, 0.5]])
 M_inv @ M
 ```
 
-### Numerical Issues
+#### Numerical Issues
 While the inverse of a matrix is useful in theory,
 we must say that most of the time we do not wish
 to *use* the matrix inverse to solve a problem in practice.
@@ -1262,13 +1118,13 @@ frequently encountered when working with linear algebra,
 we want to provide you with some intuition about when to proceed with caution,
 and generally avoiding inversion in practice is a good rule of thumb.
 
-## Determinant
+### The Determinant
 The geometric view of linear algebra gives an intuitive way
 to interpret a fundamental quantity known as the *determinant*.
-Consider the grid image from before, but now with a highlighted region (:numref:`fig_mdl-grid-filled`).
+Consider the grid image from before, but now with a highlighted region (:numref:`fig_mdl-la-determinant`).
 
-![The matrix $\mathbf{A}$ again distorting the grid.  This time, I want to draw particular attention to what happens to the highlighted square.](../img/grid-transform-filled.svg)
-:label:`fig_mdl-grid-filled`
+![The determinant as a signed area. The unit square spanned by the basis vectors maps to the parallelogram spanned by the columns of $\mathbf{A}$; its (signed) area is the determinant. A matrix that flips orientation gives a negative determinant, and a matrix that collapses the square to a segment gives a determinant of zero.](../img/mdl-la-determinant.svg)
+:label:`fig_mdl-la-determinant`
 
 Look at the highlighted square.  This is a square with edges given
 by $(0, 1)$ and $(1, 0)$ and thus it has area one.
@@ -1304,7 +1160,6 @@ Let's check this quickly with some example code.
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab mxnet
-import numpy as np
 np.linalg.det(np.array([[1, -1], [2, 3]]))
 ```
 
@@ -1448,7 +1303,7 @@ but the  intuition is the same.
 The determinant remains the factor
 that $n\times n$ matrices scale $n$-dimensional volumes.
 
-## Tensors and Common Linear Algebra Operations
+## Tensors and Einstein Summation
 
 In :numref:`sec_linear-algebra` the concept of tensors was introduced.
 In this section, we will dive more deeply into tensor contractions

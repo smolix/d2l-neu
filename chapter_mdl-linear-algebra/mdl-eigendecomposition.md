@@ -15,6 +15,50 @@ and proofs, just why they are so central. We keep the running thread of
 *iterated maps*---repeatedly applying the same matrix, as a layerless neural
 network does---because it makes the role of the largest eigenvalue unmistakable.
 
+We first load the per-framework library so the computations below have `d2l` and
+`np` in scope. The framework-agnostic checks use plain NumPy; only the small
+worked-verification cells branch per framework.
+
+```{.python .input #eigendecomposition-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+from IPython import display
+import numpy as np
+```
+
+```{.python .input #eigendecomposition-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+import numpy as np
+import torch
+```
+
+```{.python .input #eigendecomposition-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+import numpy as np
+import tensorflow as tf
+```
+
+```{.python .input #eigendecomposition-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from IPython import display
+import numpy as np
+import jax
+from jax import numpy as jnp
+```
+
+## Eigenvalues and Eigenvectors
+
+### Definition and Geometry
+
 Suppose that we have a matrix $\mathbf{A}$ with the following entries:
 
 $$
@@ -59,79 +103,15 @@ The cleanest way to picture eigenvectors is to ask what a matrix does to the
 *unit circle*, the set of all unit vectors. A general matrix maps it to an
 ellipse, and for a *symmetric* matrix the axes of that ellipse lie exactly along
 the eigenvectors, with half-lengths $|\lambda_i|$ (an axis flips when
-$\lambda_i<0$). The figure below draws this for our
+$\lambda_i<0$). :numref:`fig_mdl-la-eig-ellipse` draws this for our
 $\operatorname{diag}(2,-1)$ above and for the symmetric
 $[[2,1],[1,2]]$ we analyze below. This is the same "circle becomes an ellipse"
 picture that the singular value decomposition will generalize to *every* matrix
 in :numref:`sec_mdl-svd-low-rank`; here the special feature is that one set of
-axes does the whole job. We first load the per-framework library so the figures
-and computations below have it in scope.
+axes does the whole job.
 
-```{.python .input #eigendecomposition-imports}
-#@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from IPython import display
-import numpy as np
-```
-
-```{.python .input #eigendecomposition-imports}
-#@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-from IPython import display
-import torch
-```
-
-```{.python .input #eigendecomposition-imports}
-#@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-from IPython import display
-import tensorflow as tf
-```
-
-```{.python .input #eigendecomposition-imports}
-#@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from IPython import display
-import jax
-from jax import numpy as jnp
-```
-
-```{.python .input #eigendecomposition-fig-circle-to-ellipse}
-import numpy as np
-
-def plot_circle_to_ellipse():
-    theta = np.linspace(0, 2 * np.pi, 400)
-    circle = np.vstack([np.cos(theta), np.sin(theta)])
-    mats = [(np.array([[2., 0.], [0., -1.]]), r'$A=\mathrm{diag}(2,-1)$'),
-            (np.array([[2., 1.], [1., 2.]]), r'$A=[[2,1],[1,2]]$')]
-    d2l.set_figsize((7.5, 3.8))
-    fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 3.8))
-    for ax, (A, title) in zip(axes, mats):
-        w, V = np.linalg.eigh(A)        # symmetric: real eigenpairs
-        ellipse = A @ circle
-        ax.plot(circle[0], circle[1], '--', color='gray', lw=1,
-                label='unit circle')
-        ax.plot(ellipse[0], ellipse[1], color='C0', lw=2, label='image')
-        for k in range(2):
-            v, lam = V[:, k], w[k]
-            ax.annotate('', xy=(lam * v[0], lam * v[1]), xytext=(0, 0),
-                        arrowprops=dict(arrowstyle='->', color='C3', lw=2))
-            ax.annotate('', xy=(v[0], v[1]), xytext=(0, 0),
-                        arrowprops=dict(arrowstyle='->', color='C2', lw=1.3))
-            ax.text(lam * v[0] * 1.08, lam * v[1] * 1.08,
-                    rf'$\lambda={lam:.0f}$', color='C3', fontsize=9)
-        ax.set_title(title, fontsize=10)
-        ax.set_aspect('equal'); ax.grid(alpha=.3)
-        ax.set_xlim(-3, 3); ax.set_ylim(-3, 3)
-    axes[0].legend(fontsize=7, loc='upper left')
-    d2l.plt.tight_layout()
-
-plot_circle_to_ellipse()
-```
+![The unit circle maps to an ellipse. For a symmetric matrix the ellipse axes lie along the eigenvectors (green), with images scaled by the eigenvalues (red). Left: $\operatorname{diag}(2,-1)$, axes along the coordinate directions. Right: the symmetric $\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$, axes along the diagonal directions.](../img/mdl-la-eig-ellipse.svg)
+:label:`fig_mdl-la-eig-ellipse`
 
 The green arrows are the unit eigenvectors; the red arrows are their images
 $\mathbf{A}\mathbf{v}_i=\lambda_i\mathbf{v}_i$, which fall exactly on the
@@ -139,7 +119,7 @@ ellipse's axes. For $\operatorname{diag}(2,-1)$ the axes are the coordinate
 directions; for the symmetric $[[2,1],[1,2]]$ they are the diagonal directions
 $[1,1]^\top/\sqrt2$ (scaled by $3$) and $[1,-1]^\top/\sqrt2$ (scaled by $1$).
 
-## Finding Eigenvalues
+### Finding Eigenvalues
 :label:`subsec_mdl-finding-eigenvalues`
 Let's figure out how to find them. By subtracting off the $\lambda \mathbf{v}$ from both sides,
 and then factoring out the vector,
@@ -157,7 +137,6 @@ Once we find the eigenvalues, we can solve
 $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$
 to find the associated *eigenvector(s)*.
 
-### An Example
 Let's see this with a more challenging matrix
 
 $$
@@ -192,7 +171,7 @@ and $[1, 2]^\top$ for $\lambda = 4$, respectively.
 $\mathbf v$ is an eigenvector, so is $c\mathbf v$ for any $c\neq0$, since both
 sides of :eqref:`eq_mdl-eigpair` scale by $c$.)
 
-We can check this in code using the built-in `numpy.linalg.eig` routine.
+We can check this in code using the built-in `eig` routine.
 
 ```{.python .input #eigendecomposition-an-example}
 #@tab mxnet
@@ -220,7 +199,8 @@ Additionally, the choice of sign is arbitrary.
 However, the vectors computed are parallel
 to the ones we found by hand with the same eigenvalues.
 
-## Decomposing Matrices
+### Eigendecomposition and What It Computes
+
 Let's continue the previous example one step further.  Let
 
 $$
@@ -258,54 +238,6 @@ will exist as long as we can find a full collection
 of linearly independent eigenvectors (so that $\mathbf{W}$ is invertible).
 A matrix that admits such a decomposition is called *diagonalizable*.
 
-### When Does an Eigenbasis Exist? Multiplicity and Diagonalizability
-:label:`subsec_mdl-multiplicity`
-
-Whether we can build an invertible $\mathbf{W}$ comes down to *counting*
-eigenvectors, and the precise bookkeeping uses two notions of multiplicity. The
-eigenvalues are the roots of the characteristic polynomial
-$p(\lambda)=\det(\mathbf{A}-\lambda\mathbf{I})$. The number of times $\lambda$
-appears as a root is its *algebraic multiplicity*. The dimension of its
-eigenspace---the number of independent eigenvectors it contributes---is its
-*geometric multiplicity*. These always satisfy
-
-$$
-1 \le \textrm{geometric mult.}(\lambda) \le \textrm{algebraic mult.}(\lambda),
-$$
-
-and they need not be equal. The matrix is diagonalizable precisely when its
-eigenvectors span $\mathbb{R}^n$, which happens **if and only if geometric
-multiplicity equals algebraic multiplicity for every eigenvalue**. The simplest
-sufficient condition is worth isolating, because it covers the generic case.
-
-**Proposition (distinct eigenvalues $\Rightarrow$ diagonalizable).**
-*Eigenvectors belonging to distinct eigenvalues are linearly independent. In
-particular, an $n\times n$ matrix with $n$ distinct eigenvalues is
-diagonalizable.*
-
-**Proof.** Suppose, for contradiction, that some eigenvectors
-$\mathbf{w}_1,\ldots,\mathbf{w}_m$ with distinct eigenvalues
-$\lambda_1,\ldots,\lambda_m$ are dependent, and take a dependence relation
-$\sum_{i=1}^{m} c_i\mathbf{w}_i = \mathbf 0$ with the *fewest* nonzero
-coefficients; relabel so $c_m\neq0$. Apply $\mathbf{A}$ and subtract $\lambda_m$
-times the relation:
-
-$$
-\mathbf 0 = \mathbf{A}\!\sum_i c_i\mathbf{w}_i - \lambda_m\!\sum_i c_i\mathbf{w}_i
-   = \sum_{i=1}^{m-1} c_i(\lambda_i-\lambda_m)\,\mathbf{w}_i .
-$$
-
-The $\mathbf{w}_m$ term cancels, so we obtain a *shorter* relation. Since the
-$\lambda_i$ are distinct, $\lambda_i-\lambda_m\neq0$, so this shorter relation is
-nontrivial---contradicting minimality. Hence the eigenvectors are independent.
-With $n$ distinct eigenvalues we get $n$ independent eigenvectors, which form a
-basis of $\mathbb{R}^n$, so $\mathbf{W}$ is invertible. $\blacksquare$
-
-When eigenvalues are *repeated*, diagonalizability can fail: an eigenvalue's
-eigenspace may be too small to fill out its algebraic multiplicity. We meet
-exactly such a *defective* matrix when we reach the spectral theorem below.
-
-## Operations on Eigendecompositions
 One nice thing about eigendecompositions :eqref:`eq_mdl-eig_decomp` is that
 we can write many operations we usually encounter cleanly
 in terms of the eigendecomposition. As a first example, consider:
@@ -368,14 +300,61 @@ of linearly independent columns of a matrix.
 For a *diagonalizable* matrix, examining the eigendecomposition shows that the
 rank equals the number of non-zero eigenvalues of $\mathbf{A}$ (for a general
 matrix, the right invariant is the number of non-zero *singular values*;
-:numref:`sec_mdl-svd-low-rank`).
-
-The examples could continue, but hopefully the point is clear:
-eigendecomposition can simplify many linear-algebraic computations
-and is a fundamental operation underlying many numerical algorithms
+:numref:`sec_mdl-svd-low-rank`). The examples could continue, but hopefully the
+point is clear: eigendecomposition can simplify many linear-algebraic
+computations and is a fundamental operation underlying many numerical algorithms
 and much of the analysis that we do in linear algebra.
 
-## The Spectral Theorem: Eigendecompositions of Symmetric Matrices
+#### When Does an Eigenbasis Exist? Multiplicity and Diagonalizability
+:label:`subsec_mdl-multiplicity`
+
+Whether we can build an invertible $\mathbf{W}$ comes down to *counting*
+eigenvectors, and the precise bookkeeping uses two notions of multiplicity. The
+eigenvalues are the roots of the characteristic polynomial
+$p(\lambda)=\det(\mathbf{A}-\lambda\mathbf{I})$. The number of times $\lambda$
+appears as a root is its *algebraic multiplicity*. The dimension of its
+eigenspace---the number of independent eigenvectors it contributes---is its
+*geometric multiplicity*. These always satisfy
+
+$$
+1 \le \textrm{geometric mult.}(\lambda) \le \textrm{algebraic mult.}(\lambda),
+$$
+
+and they need not be equal. The matrix is diagonalizable precisely when its
+eigenvectors span $\mathbb{R}^n$, which happens **if and only if geometric
+multiplicity equals algebraic multiplicity for every eigenvalue**. The simplest
+sufficient condition is worth isolating, because it covers the generic case.
+
+**Proposition (distinct eigenvalues $\Rightarrow$ diagonalizable).**
+*Eigenvectors belonging to distinct eigenvalues are linearly independent. In
+particular, an $n\times n$ matrix with $n$ distinct eigenvalues is
+diagonalizable.*
+
+**Proof.** Suppose, for contradiction, that some eigenvectors
+$\mathbf{w}_1,\ldots,\mathbf{w}_m$ with distinct eigenvalues
+$\lambda_1,\ldots,\lambda_m$ are dependent, and take a dependence relation
+$\sum_{i=1}^{m} c_i\mathbf{w}_i = \mathbf 0$ with the *fewest* nonzero
+coefficients; relabel so $c_m\neq0$. Apply $\mathbf{A}$ and subtract $\lambda_m$
+times the relation:
+
+$$
+\mathbf 0 = \mathbf{A}\!\sum_i c_i\mathbf{w}_i - \lambda_m\!\sum_i c_i\mathbf{w}_i
+   = \sum_{i=1}^{m-1} c_i(\lambda_i-\lambda_m)\,\mathbf{w}_i .
+$$
+
+The $\mathbf{w}_m$ term cancels, so we obtain a *shorter* relation. Since the
+$\lambda_i$ are distinct, $\lambda_i-\lambda_m\neq0$, so this shorter relation is
+nontrivial---contradicting minimality. Hence the eigenvectors are independent.
+With $n$ distinct eigenvalues we get $n$ independent eigenvectors, which form a
+basis of $\mathbb{R}^n$, so $\mathbf{W}$ is invertible. $\blacksquare$
+
+When eigenvalues are *repeated*, diagonalizability can fail: an eigenvalue's
+eigenspace may be too small to fill out its algebraic multiplicity. We meet
+exactly such a *defective* matrix when we reach the spectral theorem below.
+
+## Symmetric Matrices and Positive Definiteness
+
+### The Spectral Theorem
 :label:`subsec_mdl-spectral-theorem`
 
 It is not always possible to find enough linearly independent eigenvectors
@@ -484,8 +463,6 @@ coordinate axes, $\boldsymbol{\Lambda}$ stretches independently along each axis,
 and $\mathbf{W}$ rotates back. This is precisely the "circle becomes an ellipse
 with axes along the eigenvectors" picture we drew above, now justified.
 
-### Bridge to the Singular Value Decomposition
-
 The defective shear :eqref:`eq_mdl-defective-shear` shows that the
 eigendecomposition is *picky*: it needs a square matrix, and to be fully
 well-behaved it really wants a symmetric one. The fix that works for *every*
@@ -508,7 +485,7 @@ construction, and give the defective shear its clean SVD, in
 work here, is important enough to deserve its own treatment, which we take up
 next.
 
-## Positive (Semi)Definiteness
+### Positive (Semi)Definiteness
 :label:`subsec_mdl-psd`
 
 A symmetric matrix's eigenvalues carry a *sign* story: whether the quadratic form
@@ -582,31 +559,10 @@ $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$, viewed through the eigenvector axes:
 all-positive eigenvalues give an upward **bowl** (PD, a strict minimum at the
 origin), a zero eigenvalue gives a flat-bottomed **trough** along that
 eigenvector (PSD, not strict), and a mix of signs gives a **saddle**
-(indefinite). The next cell renders all three.
+(indefinite). :numref:`fig_mdl-la-psd` shows all three.
 
-```{.python .input #eigendecomposition-fig-psd-bowl}
-import numpy as np
-
-def plot_quadratic_forms():
-    grid = np.linspace(-2, 2, 60)
-    X, Y = np.meshgrid(grid, grid)
-    mats = [(np.array([[2., 0.5], [0.5, 1.]]),
-             'positive definite\n(bowl: $\\lambda>0$)'),
-            (np.array([[1., 1.], [1., 1.]]),
-             'positive semidefinite\n(trough: one $\\lambda=0$)'),
-            (np.array([[1., 0.], [0., -1.]]),
-             'indefinite\n(saddle: mixed signs)')]
-    fig = d2l.plt.figure(figsize=(9.5, 3.4))
-    for j, (A, title) in enumerate(mats):
-        Z = A[0, 0] * X**2 + 2 * A[0, 1] * X * Y + A[1, 1] * Y**2
-        ax = fig.add_subplot(1, 3, j + 1, projection='3d')
-        ax.plot_surface(X, Y, Z, cmap='coolwarm', linewidth=0, antialiased=True)
-        ax.set_title(title, fontsize=9)
-        ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-    d2l.plt.tight_layout()
-
-plot_quadratic_forms()
-```
+![The quadratic-form surface $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$ takes its shape from the eigenvalue signs: a bowl when all $\lambda_i>0$ (positive definite), a flat-bottomed trough when one $\lambda_i=0$ (positive semidefinite), and a saddle for mixed signs (indefinite).](../img/mdl-la-psd.svg)
+:label:`fig_mdl-la-psd`
 
 Let us verify the eigenvalue test against the definition numerically. We build a
 Gram matrix $\mathbf{G}=\mathbf{X}^\top\mathbf{X}$ from a tall $\mathbf{X}$ with
@@ -614,8 +570,6 @@ full column rank (so it should be PD, all eigenvalues positive), and a second on
 whose columns are dependent (so it should be PSD with a zero eigenvalue).
 
 ```{.python .input #eigendecomposition-psd-gram}
-import numpy as np
-
 X_full = np.array([[1., 0.], [1., 1.], [0., 1.], [2., 1.]])  # rank 2
 X_dep = np.array([[1., 2.], [1., 2.], [0., 0.], [2., 4.]])   # col 2 = 2*col 1
 for X, name in [(X_full, 'full column rank'), (X_dep, 'dependent columns')]:
@@ -681,7 +635,9 @@ $\kappa=\lambda_{\max}/\lambda_{\min}$. This is the *condition number*; the SVD 
 :numref:`sec_mdl-svd-low-rank` gives it its general definition, and it is the same
 number that sets gradient descent's convergence rate in the optimization chapter.
 
-## Gershgorin Circle Theorem
+## Localizing and Computing Eigenvalues
+
+### Gershgorin Discs
 :label:`subsec_mdl-gershgorin`
 
 Eigenvalues are often difficult to reason with intuitively.
@@ -799,49 +755,26 @@ v, _ = jnp.linalg.eig(A)
 v
 ```
 
-The theorem is most vivid in a picture: draw the four discs in the complex plane
-and overlay the true eigenvalues, each one landing inside its disc.
+The theorem is most vivid in a picture. :numref:`fig_mdl-la-gershgorin` draws the
+four discs in the complex plane and overlays the true eigenvalues, each one
+landing inside its disc.
 
-```{.python .input #eigendecomposition-fig-gershgorin-disks}
-import numpy as np
-
-def plot_gershgorin():
-    M = np.array([[1.0, 0.1, 0.1, 0.1],
-                  [0.1, 3.0, 0.2, 0.3],
-                  [0.1, 0.2, 5.0, 0.5],
-                  [0.1, 0.3, 0.5, 9.0]])
-    centers = np.diag(M)
-    radii = np.abs(M).sum(axis=1) - np.abs(centers)  # off-diagonal row sums
-    eig = np.linalg.eigvals(M)
-    d2l.set_figsize((7, 2.6))
-    ax = d2l.plt.gca()
-    for c, r in zip(centers, radii):
-        ax.add_patch(d2l.plt.Circle((c, 0), r, alpha=.2, color='C0', ec='C0'))
-    ax.plot(eig.real, eig.imag, 'x', color='C3', ms=9, mew=2,
-            label='true eigenvalues')
-    ax.set_xlim(0, 10.5); ax.set_ylim(-1.5, 1.5); ax.set_aspect('equal')
-    ax.set_xlabel('Re'); ax.set_ylabel('Im')
-    ax.legend(fontsize=8); ax.grid(alpha=.3)
-
-plot_gershgorin()
-```
+![The four Gershgorin discs for the matrix above, centered at the diagonal entries with radii the off-diagonal row sums. The true eigenvalues (crosses) each land inside a disc, exactly as the theorem guarantees.](../img/mdl-la-gershgorin.svg)
+:label:`fig_mdl-la-gershgorin`
 
 In this way, eigenvalues can be approximated,
 and the approximations will be fairly accurate
 when the diagonal is
 significantly larger than all the other elements.
-
 It is a small thing, but with a complex
 and subtle topic like eigendecomposition,
 it is good to get any intuitive grasp we can.
 
-## A Useful Application: The Growth of Iterated Maps
+### Power Iteration
 
 Now that we understand what eigenvectors are in principle,
 let's see how they can be used to provide a deep understanding
 of a problem central to neural network behavior: proper weight initialization.
-
-### Eigenvectors as Long Term Behavior
 
 The full mathematical investigation of the initialization
 of deep neural networks is beyond the scope of the text,
@@ -857,236 +790,24 @@ $$
 \mathbf{v}_{out} = \mathbf{A}\cdot \mathbf{A}\cdots \mathbf{A} \mathbf{v}_{in} = \mathbf{A}^N \mathbf{v}_{in}.
 $$
 
-When these models are initialized, $A$ is taken to be
-a random matrix with Gaussian entries, so let's make one of those.
-To be concrete, we start with a mean zero, variance one Gaussian distributed $5 \times 5$ matrix.
+For context, let's think of a generic ML problem, where we turn input data, like
+an image, into a prediction, like the probability the image is a picture of a
+cat. If repeated application of $\mathbf{A}$ stretches a random vector out to be
+very long, then small changes in input will be amplified into large changes in
+output---tiny modifications of the input image would lead to vastly different
+predictions. On the flip side, if $\mathbf{A}$ shrinks random vectors, then after
+many layers the vector shrinks to nothing and the output stops depending on the
+input. We need to walk the narrow line between growth and decay. What governs
+which happens? Repeatedly multiplying a random vector by $\mathbf{A}$ and tracking
+its norm reveals that the *ratio of consecutive norms* stabilizes, and the
+eigendecomposition tells us exactly what it stabilizes to.
 
-```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
-#@tab mxnet
-np.random.seed(8675309)
-
-k = 5
-A = np.random.randn(k, k)
-A
-```
-
-```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
-#@tab pytorch
-torch.manual_seed(42)
-
-k = 5
-A = torch.randn(k, k, dtype=torch.float64)
-A
-```
-
-```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
-#@tab tensorflow
-k = 5
-A = tf.random.normal((k, k), dtype=tf.float64)
-A
-```
-
-```{.python .input #eigendecomposition-eigenvectors-as-long-term-behavior}
-#@tab jax
-k = 5
-A = jax.random.normal(jax.random.PRNGKey(42), (k, k), dtype=jnp.float64)
-A
-```
-
-### Behavior on Random Data
-For simplicity in our toy model,
-we will assume that the data vector we feed in $\mathbf{v}_{in}$
-is a random five dimensional Gaussian vector.
-Let's think about what we want to have happen.
-For context, lets think of a generic ML problem,
-where we are trying to turn input data, like an image, into a prediction,
-like the probability the image is a picture of a cat.
-If repeated application of $\mathbf{A}$
-stretches a random vector out to be very long,
-then small changes in input will be amplified
-into large changes in output---tiny modifications of the input image
-would lead to vastly different predictions.
-This does not seem right!
-
-On the flip side, if $\mathbf{A}$ shrinks random vectors to be shorter,
-then after running through many layers, the vector will essentially shrink to nothing,
-and the output will not depend on the input. This is also clearly not right either!
-
-We need to walk the narrow line between growth and decay
-to make sure that our output changes depending on our input, but not much!
-
-Let's see what happens when we repeatedly multiply our matrix $\mathbf{A}$
-against a random input vector, and keep track of the norm.
-
-```{.python .input #eigendecomposition-behavior-on-random-data-1}
-#@tab mxnet
-# Calculate the sequence of norms after repeatedly applying `A`
-v_in = np.random.randn(k, 1)
-
-norm_list = [np.linalg.norm(v_in)]
-for i in range(1, 100):
-    v_in = A.dot(v_in)
-    norm_list.append(np.linalg.norm(v_in))
-
-d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-1}
-#@tab pytorch
-# Calculate the sequence of norms after repeatedly applying `A`
-v_in = torch.randn(k, 1, dtype=torch.float64)
-
-norm_list = [torch.norm(v_in).item()]
-for i in range(1, 100):
-    v_in = A @ v_in
-    norm_list.append(torch.norm(v_in).item())
-
-d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-1}
-#@tab tensorflow
-# Calculate the sequence of norms after repeatedly applying `A`
-v_in = tf.random.normal((k, 1), dtype=tf.float64)
-
-norm_list = [tf.norm(v_in).numpy()]
-for i in range(1, 100):
-    v_in = tf.matmul(A, v_in)
-    norm_list.append(tf.norm(v_in).numpy())
-
-d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-1}
-#@tab jax
-# Calculate the sequence of norms after repeatedly applying `A`
-v_in = jax.random.normal(jax.random.PRNGKey(1), (k, 1), dtype=jnp.float64)
-
-norm_list = [float(jnp.linalg.norm(v_in))]
-for i in range(1, 100):
-    v_in = A @ v_in
-    norm_list.append(float(jnp.linalg.norm(v_in)))
-
-d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
-```
-
-The norm is growing uncontrollably!
-Indeed if we take the list of quotients, we will see a pattern.
-
-```{.python .input #eigendecomposition-behavior-on-random-data-2}
-#@tab mxnet
-# Compute the scaling factor of the norms
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
-
-d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-2}
-#@tab pytorch
-# Compute the scaling factor of the norms
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
-
-d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-2}
-#@tab tensorflow
-# Compute the scaling factor of the norms
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
-
-d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-behavior-on-random-data-2}
-#@tab jax
-# Compute the scaling factor of the norms
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
-
-d2l.plot(jnp.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-If we look at the last portion of the above computation,
-we see that the random vector is stretched by a factor that stabilizes
-(the exact numerical value depends on the random seed used by each
-framework; see :numref:`subsec_mdl-eig-stretch-back` for the connection to the
-largest eigenvalue of $\mathbf{A}$).
-
-### Relating Back to Eigenvectors
-:label:`subsec_mdl-eig-stretch-back`
-
-We have seen that eigenvectors and eigenvalues correspond
-to the amount something is stretched,
-but that was for specific vectors, and specific stretches.
-Let's take a look at what they are for $\mathbf{A}$.
-A bit of a caveat here: it turns out that to see them all,
-we will need to go to complex numbers.
-You can think of these as stretches and rotations.
-By taking the norm of the complex number
-(square root of the sums of squares of real and imaginary parts)
-we can measure that stretching factor. Let's also sort them.
-
-```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
-#@tab mxnet
-# Compute the eigenvalues
-eigs = np.linalg.eigvals(A).tolist()
-norm_eigs = [np.absolute(x) for x in eigs]
-norm_eigs.sort()
-print(f'norms of eigenvalues: {norm_eigs}')
-```
-
-```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
-#@tab pytorch
-# Compute the eigenvalues
-eigs = torch.linalg.eig(A).eigenvalues.tolist()
-norm_eigs = [torch.abs(torch.tensor(x)) for x in eigs]
-norm_eigs.sort()
-print(f'norms of eigenvalues: {norm_eigs}')
-```
-
-```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
-#@tab tensorflow
-# Compute the eigenvalues (A is not symmetric in general, so use eig).
-eigs = tf.linalg.eig(A)[0].numpy().tolist()
-norm_eigs = [abs(x) for x in eigs]
-norm_eigs.sort()
-print(f'norms of eigenvalues: {norm_eigs}')
-```
-
-```{.python .input #eigendecomposition-relating-back-to-eigenvectors}
-#@tab jax
-# Compute the eigenvalues
-eigs = jnp.linalg.eigvals(A).tolist()
-norm_eigs = [abs(x) for x in eigs]
-norm_eigs.sort()
-print(f'norms of eigenvalues: {norm_eigs}')
-```
-
-### An Observation
-
-We see something a bit unexpected happening here:
-that number we identified before for the
-long term stretching of our matrix $\mathbf{A}$
-applied to a random vector is *exactly*
-(accurate to thirteen decimal places!)
-the largest eigenvalue of $\mathbf{A}$.
-This is clearly not a coincidence!
-
-But if we think about what is happening geometrically, this is exactly what the
-eigendecomposition predicts. Suppose $\mathbf{A}$ is diagonalizable with a
-*strictly dominant* eigenvalue, $|\lambda_1|>|\lambda_2|\ge\cdots\ge|\lambda_n|$,
-eigenvectors $\mathbf{w}_1,\ldots,\mathbf{w}_n$. We call $\lambda_1$ the
-*principal eigenvalue* and $\mathbf{w}_1$ the *principal eigenvector*. Expand the
-input in the eigenbasis, $\mathbf{v}_0=\sum_i c_i\mathbf{w}_i$, and apply
-$\mathbf{A}$ a total of $k$ times. Because
-$\mathbf{A}^k\mathbf{w}_i=\lambda_i^k\mathbf{w}_i$,
+Suppose $\mathbf{A}$ is diagonalizable with a *strictly dominant* eigenvalue,
+$|\lambda_1|>|\lambda_2|\ge\cdots\ge|\lambda_n|$, and eigenvectors
+$\mathbf{w}_1,\ldots,\mathbf{w}_n$. We call $\lambda_1$ the *principal eigenvalue*
+and $\mathbf{w}_1$ the *principal eigenvector*. Expand the input in the
+eigenbasis, $\mathbf{v}_0=\sum_i c_i\mathbf{w}_i$, and apply $\mathbf{A}$ a total
+of $k$ times. Because $\mathbf{A}^k\mathbf{w}_i=\lambda_i^k\mathbf{w}_i$,
 
 $$
 \mathbf{A}^k\mathbf{v}_0
@@ -1101,188 +822,96 @@ decays to $c_1\mathbf{w}_1$ at the geometric rate $|\lambda_2/\lambda_1|$ (the
 slowest-decaying term). Provided $c_1\neq0$---the input has *some* component
 along $\mathbf{w}_1$---the iterate aligns with the principal eigenvector and its
 norm grows like $|\lambda_1|^k$, so consecutive norms have ratio
-$\to|\lambda_1|$. This proves what we observed numerically, and it *is* the
-classical *power iteration* for the dominant eigenpair
-:cite:`Golub.Van-Loan.1996`.
+$\to|\lambda_1|$. This *is* the classical *power iteration* for the dominant
+eigenpair :cite:`Golub.Van-Loan.1996`. :numref:`fig_mdl-la-power-iter` makes the
+convergence concrete for the small symmetric matrix $\mathbf{B}=[[3,1],[1,2]]$,
+which has a genuine strictly dominant real eigenvalue
+$\lambda_1=(5+\sqrt5)/2\approx3.618$ and a clean rate
+$|\lambda_2/\lambda_1|=(3-\sqrt5)/(3+\sqrt5)\approx0.382$: the renormalized
+iterates swing onto $\mathbf{w}_1$ while the norm ratio flattens to
+$|\lambda_1|$.
+
+![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (red). Right: the ratio of consecutive norms converges to $|\lambda_1|\approx3.618$, with the gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$.](../img/mdl-la-power-iter.svg)
+:label:`fig_mdl-la-power-iter`
 
 Two caveats are worth stating, because they are exactly where the slide-level
 story would mislead. First, **genericity**: the argument needs $c_1\neq0$, but a
 random Gaussian input has $c_1=0$ with probability zero, so the method works
 almost surely. Second, **strict dominance**: if the two largest eigenvalues are a
-*complex-conjugate pair* of equal modulus (as happens for the real random matrix
-here, whose eigenvalues come in conjugate pairs), the dominant contribution
-*rotates* rather than settling on a single real direction. The *norm ratio* still
-converges to $|\lambda_1|$---which is why our measurement is clean---but the
-direction need not. We return to this rotation phenomenon below.
+*complex-conjugate pair* of equal modulus (as happens for a real random matrix,
+whose eigenvalues come in conjugate pairs), the dominant contribution *rotates*
+rather than settling on a single real direction. The *norm ratio* still converges
+to $|\lambda_1|$---which is why the measurement is clean---but the direction need
+not.
 
-The figure below makes the convergence concrete for a small *symmetric* matrix
-$\mathbf{B}=[[3,1],[1,2]]$, which has a genuine strictly dominant real
-eigenvalue $\lambda_1=(5+\sqrt5)/2\approx3.618$ and a clean rate
-$|\lambda_2/\lambda_1|=(3-\sqrt5)/(3+\sqrt5)\approx0.382$. The arrows are the
-renormalized iterates swinging onto $\mathbf{w}_1$; the curve is the norm ratio
-flattening to $|\lambda_1|$.
+The payoff is a one-line numerical fact: run a few dozen iterations on a random
+$5\times5$ matrix, read off the stabilized norm ratio, and compare it to the
+largest eigenvalue modulus. They agree.
 
-```{.python .input #eigendecomposition-fig-power-iteration}
-import numpy as np
-
-def plot_power_iteration():
-    B = np.array([[3., 1.], [1., 2.]])
-    w, V = np.linalg.eigh(B)               # ascending eigenvalues
-    lam1, lam2 = abs(w[1]), abs(w[0])      # dominant, subdominant
-    w1 = V[:, 1] * np.sign(V[0, 1])        # orient for plotting
-    rate = lam2 / lam1
-    v = np.array([1.0, -0.6]); v /= np.linalg.norm(v)
-    dirs, ratios, prev = [v.copy()], [], v.copy()
-    for _ in range(12):
-        nv = B @ prev
-        ratios.append(np.linalg.norm(nv) / np.linalg.norm(prev))
-        prev = nv / np.linalg.norm(nv)
-        dirs.append(prev.copy())
-    fig, ax = d2l.plt.subplots(1, 2, figsize=(7.5, 3.6))
-    for k, d in enumerate(dirs):
-        s = np.sign(d @ w1) or 1.0         # align hemisphere for a clean fan
-        ax[0].annotate('', xy=(s * d[0], s * d[1]), xytext=(0, 0),
-                       arrowprops=dict(arrowstyle='->',
-                                       color=d2l.plt.cm.viridis(k / len(dirs)),
-                                       lw=1.4))
-    ax[0].annotate('', xy=(w1[0], w1[1]), xytext=(0, 0),
-                   arrowprops=dict(arrowstyle='->', color='C3', lw=2.5))
-    ax[0].text(w1[0] * 1.05, w1[1] * 1.05, r'$w_1$', color='C3')
-    ax[0].set_aspect('equal'); ax[0].set_xlim(-1.2, 1.2); ax[0].set_ylim(-1.2, 1.2)
-    ax[0].grid(alpha=.3)
-    ax[0].set_title(r'renormalized iterates swing onto $w_1$', fontsize=9)
-    ax[1].plot(range(1, len(ratios) + 1), ratios, 'o-', label='norm ratio')
-    ax[1].axhline(lam1, color='C3', ls='--', label=rf'$|\lambda_1|={lam1:.3f}$')
-    ax[1].set_xlabel('iteration'); ax[1].set_ylabel('ratio')
-    ax[1].set_title(rf'gap closes at rate $|\lambda_2/\lambda_1|={rate:.3f}$',
-                    fontsize=9)
-    ax[1].legend(fontsize=8)
-    d2l.plt.tight_layout()
-
-plot_power_iteration()
-```
-
-### Fixing the Normalization
-
-Now, from above discussions, we concluded
-that we do not want a random vector to be stretched or squished at all,
-we would like random vectors to stay about the same size throughout the entire process.
-To do so, we now rescale our matrix by this principal eigenvalue
-so that the largest eigenvalue is instead now just one.
-Let's see what happens in this case.
-
-```{.python .input #eigendecomposition-fixing-the-normalization-1}
+```{.python .input #eigendecomposition-power-iteration}
 #@tab mxnet
-# Rescale the matrix `A`
-A /= norm_eigs[-1]
-
-# Do the same experiment again
-v_in = np.random.randn(k, 1)
-
-norm_list = [np.linalg.norm(v_in)]
-for i in range(1, 100):
-    v_in = A.dot(v_in)
-    norm_list.append(np.linalg.norm(v_in))
-
-d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
+np.random.seed(8675309)
+A = np.random.randn(5, 5)
+v = np.random.randn(5, 1)
+for _ in range(200):
+    Av = A @ v
+    ratio = np.linalg.norm(Av) / np.linalg.norm(v)
+    v = Av / np.linalg.norm(Av)
+rho = max(abs(np.linalg.eigvals(A)))
+print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
-```{.python .input #eigendecomposition-fixing-the-normalization-1}
+```{.python .input #eigendecomposition-power-iteration}
 #@tab pytorch
-# Rescale the matrix `A`
-A /= norm_eigs[-1]
-
-# Do the same experiment again
-v_in = torch.randn(k, 1, dtype=torch.float64)
-
-norm_list = [torch.norm(v_in).item()]
-for i in range(1, 100):
-    v_in = A @ v_in
-    norm_list.append(torch.norm(v_in).item())
-
-d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
+torch.manual_seed(42)
+A = torch.randn(5, 5, dtype=torch.float64)
+v = torch.randn(5, 1, dtype=torch.float64)
+for _ in range(200):
+    Av = A @ v
+    ratio = (torch.norm(Av) / torch.norm(v)).item()
+    v = Av / torch.norm(Av)
+rho = max(abs(torch.linalg.eigvals(A))).item()
+print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
-```{.python .input #eigendecomposition-fixing-the-normalization-1}
+```{.python .input #eigendecomposition-power-iteration}
 #@tab tensorflow
-# Rescale the matrix `A`
-A /= norm_eigs[-1]
-
-# Do the same experiment again
-v_in = tf.random.normal((k, 1), dtype=tf.float64)
-
-norm_list = [tf.norm(v_in).numpy()]
-for i in range(1, 100):
-    v_in = tf.matmul(A, v_in)
-    norm_list.append(tf.norm(v_in).numpy())
-
-d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
+tf.random.set_seed(42)
+A = tf.random.normal((5, 5), dtype=tf.float64)
+v = tf.random.normal((5, 1), dtype=tf.float64)
+for _ in range(200):
+    Av = tf.matmul(A, v)
+    ratio = (tf.norm(Av) / tf.norm(v)).numpy()
+    v = Av / tf.norm(Av)
+rho = max(abs(tf.linalg.eigvals(A).numpy()))
+print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
-```{.python .input #eigendecomposition-fixing-the-normalization-1}
+```{.python .input #eigendecomposition-power-iteration}
 #@tab jax
-# Rescale the matrix `A`
-A = A / norm_eigs[-1]
-
-# Do the same experiment again
-v_in = jax.random.normal(jax.random.PRNGKey(2), (k, 1), dtype=jnp.float64)
-
-norm_list = [float(jnp.linalg.norm(v_in))]
-for i in range(1, 100):
-    v_in = A @ v_in
-    norm_list.append(float(jnp.linalg.norm(v_in)))
-
-d2l.plot(jnp.arange(0, 100), norm_list, 'Iteration', 'Value')
+A = jax.random.normal(jax.random.PRNGKey(42), (5, 5), dtype=jnp.float64)
+v = jax.random.normal(jax.random.PRNGKey(1), (5, 1), dtype=jnp.float64)
+for _ in range(200):
+    Av = A @ v
+    ratio = float(jnp.linalg.norm(Av) / jnp.linalg.norm(v))
+    v = Av / jnp.linalg.norm(Av)
+rho = float(max(abs(jnp.linalg.eigvals(A))))
+print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
-We can also plot the ratio between consecutive norms as before and see that indeed it stabilizes.
+The stabilized stretching factor is *exactly* the largest eigenvalue modulus---to
+many decimal places, and not by coincidence. (Here $\mathbf{A}$ is a general real
+matrix, so its eigenvalues are complex in general; we take the modulus to measure
+the stretching factor, exactly the strict-dominance caveat above.) This quantity
+has a name: the *spectral radius* $\rho(\mathbf A)=\max_i|\lambda_i|$, the largest
+eigenvalue modulus, which we examine next.
 
-```{.python .input #eigendecomposition-fixing-the-normalization-2}
-#@tab mxnet
-# Also plot the ratio
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
-
-d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-fixing-the-normalization-2}
-#@tab pytorch
-# Also plot the ratio
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
-
-d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-fixing-the-normalization-2}
-#@tab tensorflow
-# Also plot the ratio
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
-
-d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-```{.python .input #eigendecomposition-fixing-the-normalization-2}
-#@tab jax
-# Also plot the ratio
-norm_ratio_list = []
-for i in range(1, 100):
-    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
-
-d2l.plot(jnp.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
-```
-
-### Aside: Complex Eigenvalues Are Rotations
+#### Aside: Complex Eigenvalues Are Rotations
 :label:`subsec_mdl-complex-rotation`
 
-The need for complex eigenvalues above is not an accident of the random matrix;
-it is intrinsic to real matrices that *rotate*. Consider the planar rotation by
-angle $\theta$,
+The appearance of complex eigenvalues above is not an accident of the random
+matrix; it is intrinsic to real matrices that *rotate*. Consider the planar
+rotation by angle $\theta$,
 
 $$
 \mathbf{R} = \begin{bmatrix}\cos\theta & -\sin\theta\\
@@ -1303,8 +932,6 @@ iterate's *length* still grows like $r^k$, but its *direction* spins, so it neve
 locks onto a single real eigenvector.
 
 ```{.python .input #eigendecomposition-complex-rotation}
-import numpy as np
-
 theta = np.pi / 6
 R = np.array([[np.cos(theta), -np.sin(theta)],
               [np.sin(theta),  np.cos(theta)]])
@@ -1313,27 +940,29 @@ print('expected e^{+/- i*theta}:', np.round(np.exp([1j * theta, -1j * theta]), 4
 print('moduli (should be 1):', np.round(np.abs(np.linalg.eigvals(R)), 4))
 ```
 
-## Discussion
+## Spectral Radius, Stability, and Deep Networks
 
-We now see exactly what we hoped for!
-After normalizing the matrices by the principal eigenvalue,
-the random data does not explode as before,
-but rather equilibrates to a specific size.
-The quantity controlling this behavior has a name: the *spectral radius*
+We now see exactly what we hoped for. The quantity controlling whether iterated
+multiplication grows or shrinks a vector is the *spectral radius*
 $\rho(\mathbf A)=\max_i|\lambda_i|$, the largest eigenvalue modulus, which is
-exactly the stretching factor we measured. It would be nice to know its typical
-size from first principles, and random matrix theory tells us.
-For an $n\times n$ matrix whose entries are independent with mean zero and
-variance one (the *real Ginibre ensemble*), the rescaled eigenvalues
-$\lambda_i/\sqrt n$ fill the *unit* disk in the complex plane roughly uniformly
-as $n\to\infty$, a fact known as the *circular law* :cite:`Ginibre.1965`.
-Consequently $\rho(\mathbf A)/\sqrt n\to1$: the spectral radius grows like
-$\sqrt n$, with the largest modulus sitting just outside the bulk of the disk. At
-finite $n$ this is only a tendency---for our small $5\times5$ example we should
-not expect to land exactly on $\sqrt5\approx2.24$, since finite-size fluctuations
-are substantial---but the *scaling* with $\sqrt n$ is what matters for
-initialization: it is why sensible schemes scale random weights by $1/\sqrt n$
-(equivalently, by $1/\sqrt{\textrm{fan-in}}$) to keep $\rho$ near $1$.
+exactly the stretching factor we measured above. If we rescale $\mathbf{A}$ by
+$\rho(\mathbf A)$ so that its largest eigenvalue modulus is $1$, the random data
+neither explodes nor vanishes; it equilibrates to a stable size. This is the
+whole game for initialization, and it raises the question of how large $\rho$
+typically is to begin with.
+
+Random matrix theory answers it. For an $n\times n$ matrix whose entries are
+independent with mean zero and variance one (the *real Ginibre ensemble*), the
+rescaled eigenvalues $\lambda_i/\sqrt n$ fill the *unit* disk in the complex plane
+roughly uniformly as $n\to\infty$, a fact known as the *circular law*
+:cite:`Ginibre.1965`. Consequently $\rho(\mathbf A)/\sqrt n\to1$: the spectral
+radius grows like $\sqrt n$, with the largest modulus sitting just outside the
+bulk of the disk. At finite $n$ this is only a tendency---for the small
+$5\times5$ example above we should not expect to land exactly on
+$\sqrt5\approx2.24$, since finite-size fluctuations are substantial---but the
+*scaling* with $\sqrt n$ is what matters for initialization: it is why sensible
+schemes scale random weights by $1/\sqrt n$ (equivalently, by
+$1/\sqrt{\textrm{fan-in}}$) to keep $\rho$ near $1$.
 A word of caution: the spectral radius is *not* the same as the largest
 *singular value* of such a matrix, which by the Marchenko--Pastur law sits near
 $2\sqrt{n}$ at finite $n$; we return to singular values in
@@ -1341,8 +970,6 @@ $2\sqrt{n}$ at finite $n$; we return to singular values in
 related singular values) of random matrices has deep connections to proper
 initialization of neural networks, as discussed in
 :citet:`Pennington.Schoenholz.Ganguli.2017` and subsequent works.
-
-### From Spectral Radius to Exploding and Vanishing Gradients
 
 The "iterated map" is not just a toy. A recurrent network computes a hidden state
 $\mathbf{h}_t=\phi(\mathbf{W}\mathbf{h}_{t-1}+\cdots)$ by applying (almost) the
@@ -1483,7 +1110,7 @@ A symmetric $\mathbf{A}$ sends the unit circle to an ellipse
 whose axes lie *along the eigenvectors*, with half-lengths
 $|\lambda_i|$ (an axis flips when $\lambda_i<0$):
 
-@eigendecomposition-fig-circle-to-ellipse
+@fig:mdl-la-eig-ellipse
 :::
 
 ::: {.slide title="A concrete example"}
@@ -1501,7 +1128,7 @@ $\mathbf{x}^\top\mathbf{A}\mathbf{x}=\sum_i\lambda_i(\mathbf{w}_i^\top\mathbf{x}
 so the eigenvalue signs are the surface shape — bowl (PD),
 trough (PSD), saddle (indefinite):
 
-@eigendecomposition-fig-psd-bowl
+@fig:mdl-la-psd
 :::
 
 ::: {.slide title="Gershgorin circles"}
@@ -1510,7 +1137,7 @@ eigenvalues lie in the union of disks centered at
 $a_{ii}$ with radius $\sum_{j \ne i} |a_{ij}|$. Useful for
 stability arguments:
 
-@eigendecomposition-fig-gershgorin-disks
+@fig:mdl-la-gershgorin
 :::
 
 ::: {.slide title="Eigenvectors govern long-run behavior"}
@@ -1519,34 +1146,11 @@ direction converges to the leading eigenvector; the norm
 grows like $\lambda_1^t$, with the gap closing at rate
 $|\lambda_2/\lambda_1|$:
 
-@eigendecomposition-fig-power-iteration
+@fig:mdl-la-power-iter
 
 . . .
 
-@eigendecomposition-eigenvectors-as-long-term-behavior
-
-. . .
-
-@eigendecomposition-behavior-on-random-data-1
-
-. . .
-
-@eigendecomposition-behavior-on-random-data-2
-:::
-
-::: {.slide title="Relating back"}
-After repeated multiplication, normalize the vector to read off the
-direction; the scale factor estimates the dominant eigenvalue.
-
-@eigendecomposition-relating-back-to-eigenvectors
-
-. . .
-
-@eigendecomposition-fixing-the-normalization-1
-
-. . .
-
-@eigendecomposition-fixing-the-normalization-2
+@eigendecomposition-power-iteration
 :::
 
 ::: {.slide title="Recap"}

@@ -4,30 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.12.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "eigendecomposition-imports": {
-      "code_fingerprint": "sha256:f7ca6e82d1dbad31b94a2af7d059ad1e86858907a7c3baf5edd343c39910ec0e",
+      "code_fingerprint": "sha256:87f57ae83a86bcf0cac2ac5ee7a2ea8ed720c2aac4e9a0cc8b109432874b7d2b",
       "kind": "text",
       "outputs": []
     },
-    "eigendecomposition-fig-circle-to-ellipse": {
-      "code_fingerprint": "sha256:b4e43601cf998c0a6c82858c172bc1f6ca45e7b29cd88e445d54db4862a41c69",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fig-circle-to-ellipse-1.svg",
-          "bytes": 48982,
-          "sha256": "sha256:c8a1689e9d6031fe51dd2027a668942af012547eb4edc8004252e212061d3b77"
-        }
-      ]
-    },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:a04e8ede89a66cc3988c3f26484e2395e3fb0000656e6044aea7338adecd7fc8",
+      "code_fingerprint": "sha256:31aa2a5024be9ebfd8d9924fbf25cd93c9f6d9445a30d15bb0bc777dbd6a66e7",
       "kind": "text",
       "outputs": [
         {
@@ -36,21 +23,8 @@
         }
       ]
     },
-    "eigendecomposition-fig-psd-bowl": {
-      "code_fingerprint": "sha256:8bcd7d0e3c295a9bb8bd2fbfb78a75bbc765a837e6cb978003d85104c5052a7a",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fig-psd-bowl-1.svg",
-          "bytes": 739500,
-          "sha256": "sha256:00cef092448a1310d64f9860e54ddaf6e822bbaade9701ac30be6ab054740d2c"
-        }
-      ]
-    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:e22f5781dbd2f6bef570672f00a93fdef3b7b32f8f5ba2faee86dc6eef0710b1",
+      "code_fingerprint": "sha256:0addc74f0263ddaa96d413f18b87871dd762cbe86424b497db4f5155dfd20ba2",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +35,7 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:bc6caba302c75bc4349e95266665895eeccae8dd92a7029b5887450e53ec249c",
+      "code_fingerprint": "sha256:c884ad426f0e8f24c349be3dc0550b8f147c41eaebb269e4e8365c513e7de23b",
       "kind": "text",
       "outputs": [
         {
@@ -70,107 +44,19 @@
         }
       ]
     },
-    "eigendecomposition-fig-gershgorin-disks": {
-      "code_fingerprint": "sha256:b6a4942342c34052d4884a74d6a0bd2bb376a894f859b803ce9e8301e8259077",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fig-gershgorin-disks-1.svg",
-          "bytes": 22498,
-          "sha256": "sha256:a185841ddbdf8d4ebc9bc4db63760f795e4e2e2ed66fb57538a253eae38c7925"
-        }
-      ]
-    },
-    "eigendecomposition-eigenvectors-as-long-term-behavior": {
-      "code_fingerprint": "sha256:69a544054b165d0b9e436b3c2705873ae0e7e847234b98814be17048f6050ee3",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor([[ 0.2996,  0.2424,  0.2832, -0.2329,  0.6712],\n        [ 0.7818, -1.7903, -1.7484,  0.1735, -0.1182],\n        [-1.7446, -0.4695,  0.4573,  0.5177, -0.2771],\n        [-0.6641,  0.6551,  0.2616, -1.5265, -0.3311],\n        [-0.6378,  0.1072,  0.7096,  0.3009, -0.2869]], dtype=torch.float64)"
-        }
-      ]
-    },
-    "eigendecomposition-behavior-on-random-data-1": {
-      "code_fingerprint": "sha256:83133ca7f141a8575db9bca10acd9d92d87ac1c4fa35f9f5d1be72c0fc5759e6",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-behavior-on-random-data-1-1.svg",
-          "bytes": 21032,
-          "sha256": "sha256:47bb39ec407672c93be768d97a6a4fb128ec73318f0fd0c1c04ee7f0e478ff7c"
-        }
-      ]
-    },
-    "eigendecomposition-behavior-on-random-data-2": {
-      "code_fingerprint": "sha256:ff84e2525d21b395312d923a1ade2cf80a9f286cbcf308489e1df69d36c897c6",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-behavior-on-random-data-2-1.svg",
-          "bytes": 20384,
-          "sha256": "sha256:9828aedd998cc119ffd09cec58f0146a4e5670f840bf66b32b884e9282f3112c"
-        }
-      ]
-    },
-    "eigendecomposition-relating-back-to-eigenvectors": {
-      "code_fingerprint": "sha256:d66bdc04bae3fcb34aa3a2c0f329d3fc12b9081136bd39f422e42413d7211ffd",
+    "eigendecomposition-power-iteration": {
+      "code_fingerprint": "sha256:736d23ad9dcae188184fddae8a7a5a8efec7c0b0b6c452833098aed5a6811cc7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norms of eigenvalues: [tensor(0.3490), tensor(1.1296), tensor(1.1296), tensor(1.1828), tensor(2.4532)]\n"
-        }
-      ]
-    },
-    "eigendecomposition-fig-power-iteration": {
-      "code_fingerprint": "sha256:4be2973482ef4dabb81ac04d1b9a2f1f791f981022656543b2d744e9450c019d",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fig-power-iteration-1.svg",
-          "bytes": 48636,
-          "sha256": "sha256:878a064b8af2220cb205bd78dca708924f0b76cc27b9aa6885aa2a788e8b8b79"
-        }
-      ]
-    },
-    "eigendecomposition-fixing-the-normalization-1": {
-      "code_fingerprint": "sha256:efa6c3b502dcbec0a9301e7bb13f463c0ea03d5503750fdfd3ed7150b8a17acf",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fixing-the-normalization-1-1.svg",
-          "bytes": 20610,
-          "sha256": "sha256:bc29341b0556c1a753b492ce5e6ec051f9b4b01e3d5fb20342b7bc731916f0f1"
-        }
-      ]
-    },
-    "eigendecomposition-fixing-the-normalization-2": {
-      "code_fingerprint": "sha256:dec438839b79384605d18bfc511821ba18839b480c72fc3c2b50ea2aefae3ce4",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-eigendecomposition/eigendecomposition-fixing-the-normalization-2-1.svg",
-          "bytes": 21948,
-          "sha256": "sha256:7486c7b3f4fe2570c54d11c7296076018f7e0fef136946ddf9705a53a5138dd3"
+          "text": "stabilized norm ratio = 2.4532329634   max|eigenvalue| = 2.4532329634\n"
         }
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:741127a4e194753fd0f1ffd3809f8a7f17fb4c91b733439f7543303c8594dab7",
+      "code_fingerprint": "sha256:cc18042a51bef83b6f470fe9973c3c2934831e02ecf343bbdc14bb1e8d729607",
       "kind": "text",
       "outputs": [
         {

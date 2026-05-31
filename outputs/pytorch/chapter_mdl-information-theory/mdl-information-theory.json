@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-information-theory.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.12.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "information-theory-self-information": {
+      "code_fingerprint": "sha256:dfbdf894fb0c4a798ced1dfe0bcc61bd6d57897cd02ea7daed96dda2a76237bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "6.0"
+        }
+      ]
+    },
+    "information-theory-definition": {
+      "code_fingerprint": "sha256:4d7fca1ec3ef7371fe7a8823debd747e317e28cc32fdc68486c7059135654c69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(1.6855)"
+        }
+      ]
+    },
+    "information-theory-joint-entropy": {
+      "code_fingerprint": "sha256:ae89d5c2e38b04fc784f27003754b4d1b491d97f512ea836cceae44d2236ac18",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(1.6855)"
+        }
+      ]
+    },
+    "information-theory-conditional-entropy": {
+      "code_fingerprint": "sha256:47173307520db21c6ef96eb881f0ae1032c335e86ca10adb6000e19806650736",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.8635)"
+        }
+      ]
+    },
+    "information-theory-mutual-information-2": {
+      "code_fingerprint": "sha256:ce33565a952b9430221e07644fed3aea572ac48289b77f15211345866e0cb212",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.7195)"
+        }
+      ]
+    },
+    "information-theory-definition-2": {
+      "code_fingerprint": "sha256:b7173e01741266da2d292374531e73ccbaa9eecc8e04fb8c0e38ba01f3609929",
+      "kind": "text",
+      "outputs": []
+    },
+    "information-theory-example-1": {
+      "code_fingerprint": "sha256:c6f58cbc9fc5a40eaa86932528f8a7bec01854b08b40bf2b02effd7e15aa39d2",
+      "kind": "text",
+      "outputs": []
+    },
+    "information-theory-example-2": {
+      "code_fingerprint": "sha256:4a18a47b9175f9883189338caa4d009f0928e889f11983b677b654ecaf24b186",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(0.5, 0.5037238001823425)"
+        }
+      ]
+    },
+    "information-theory-example-3": {
+      "code_fingerprint": "sha256:214048415072682adb89529f85dfd8d0e1a6b35bbf866e31620fb3739a23f9d2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(0.3181471805599453, 0.8068528194400546)"
+        }
+      ]
+    },
+    "information-theory-formal-definition-1": {
+      "code_fingerprint": "sha256:ccf7cb18ad5df855750162ebcd7f64c2b1056d03e960d4588d651f6b9225b45a",
+      "kind": "text",
+      "outputs": []
+    },
+    "information-theory-formal-definition-2": {
+      "code_fingerprint": "sha256:390d2efd28aa31638e72991f054a64c0903a9f9155d55f2bfc123cef0c4b70a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.9486)"
+        }
+      ]
+    },
+    "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
+      "code_fingerprint": "sha256:4381f28f25b28af31ead6a520aed773d6b22b1b180db4dccd4be7fc8173ef979",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.9486)"
+        }
+      ]
+    }
+  }
+}

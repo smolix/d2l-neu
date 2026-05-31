@@ -253,6 +253,37 @@ book:
         - chapter_appendix-tools-for-deep-learning/contributing.qmd
         - chapter_appendix-tools-for-deep-learning/utils.qmd
         - chapter_appendix-tools-for-deep-learning/d2l.qmd
+    - part: "Mathematics for Deep Learning"
+      chapters:
+        - chapter_mdl-linear-algebra/index.qmd
+        - chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd
+        - chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd
+        - chapter_mdl-linear-algebra/mdl-svd-low-rank.qmd
+        - chapter_mdl-calculus/index.qmd
+        - chapter_mdl-calculus/mdl-single-variable-calculus.qmd
+        - chapter_mdl-calculus/mdl-multivariable-calculus.qmd
+        - chapter_mdl-calculus/mdl-matrix-calculus-autodiff.qmd
+        - chapter_mdl-calculus/mdl-integral-calculus.qmd
+        - chapter_mdl-optimization/index.qmd
+        - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
+        - chapter_mdl-optimization/mdl-convexity.qmd
+        - chapter_mdl-optimization/mdl-constrained-optimization-duality.qmd
+        - chapter_mdl-optimization/mdl-numerical-stability-conditioning.qmd
+        - chapter_mdl-probability-statistics/index.qmd
+        - chapter_mdl-probability-statistics/mdl-random-variables.qmd
+        - chapter_mdl-probability-statistics/mdl-distributions.qmd
+        - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
+        - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
+        - chapter_mdl-probability-statistics/mdl-statistics.qmd
+        - chapter_mdl-information-theory/index.qmd
+        - chapter_mdl-information-theory/mdl-information-theory.qmd
+        - chapter_mdl-information-theory/mdl-divergences-distances.qmd
+        - chapter_mdl-information-theory/mdl-mutual-information.qmd
+        - chapter_mdl-dynamics/index.qmd
+        - chapter_mdl-dynamics/mdl-odes-solvers.qmd
+        - chapter_mdl-dynamics/mdl-sdes.qmd
+        - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
+        - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
     - references.qmd
 
 bibliography: d2l.bib

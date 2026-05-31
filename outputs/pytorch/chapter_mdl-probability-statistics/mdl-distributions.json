@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-distributions.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.12.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "distributions": {
+      "code_fingerprint": "sha256:bdfd7058032a832617dcab78afe621373582653eb46c409b091d7a9483274c24",
+      "kind": "text",
+      "outputs": []
+    },
+    "distributions-bernoulli-1": {
+      "code_fingerprint": "sha256:ddffccbb00f0f06c3a9a36e8e1f21c47075d377fa9724b2b5523c6b123279efe",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-bernoulli-1-1.svg",
+          "bytes": 14489,
+          "sha256": "sha256:a46d37991ca2fc0e0709d29436799a40313bdec46057d40a5e33b168dc4955a4"
+        }
+      ]
+    },
+    "distributions-bernoulli-2": {
+      "code_fingerprint": "sha256:e4cf89176e2534d3715633194637514609894aa935c90dc6af5faad40b71e6ad",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-bernoulli-2-1.svg",
+          "bytes": 15020,
+          "sha256": "sha256:38f67218379209a29e0215855fc940fa417156550e8ef158ebaa6d224b6a10ce"
+        }
+      ]
+    },
+    "distributions-bernoulli-3": {
+      "code_fingerprint": "sha256:f1db95a7f455b5af5ae732dc6a9de0be539796dfeee21765dd252d592af84386",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[1, 0, 0, 0, 0, 1, 0, 0, 1, 0],\n        [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],\n        [0, 1, 0, 0, 1, 0, 0, 1, 0, 0],\n        [0, 1, 0, 0, 0, 0, 1, 0, 1, 0],\n        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],\n        [0, 0, 0, 1, 0, 0, 0, 0, 1, 0],\n        [0, 0, 1, 1, 0, 1, 1, 0, 0, 1],\n        [0, 0, 0, 0, 0, 1, 0, 0, 1, 0],\n        [0, 0, 0, 1, 1, 0, 0, 0, 0, 0],\n        [0, 0, 0, 1, 1, 0, 0, 1, 0, 1]])"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-1": {
+      "code_fingerprint": "sha256:4f4701022361e44b3d900835eb3eea35b2556eeb840a6d875da82e5dd2d05a18",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-discrete-uniform-1-1.svg",
+          "bytes": 14529,
+          "sha256": "sha256:8202871d5a6d031c5d653f7697f11f935fff89b2eb636368ea220be41ab1c0ba"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-2": {
+      "code_fingerprint": "sha256:c0b074ee796625d76a2b40444aa855eed45084e45c17a89e43fbddd2ad1bdf9a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-discrete-uniform-2-1.svg",
+          "bytes": 14939,
+          "sha256": "sha256:f7d6e7fcb19554dcb8f15800648d23b22583b74255c2e1f7477672aa83d290d5"
+        }
+      ]
+    },
+    "distributions-discrete-uniform-3": {
+      "code_fingerprint": "sha256:2899ce38ffd881faa93c3869ec2c9f9c0728ed5d7da79ee4c6cf89d8d6e83477",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[5, 2, 3, 3, 5, 5, 1, 5, 3, 2],\n        [1, 3, 5, 5, 3, 5, 3, 2, 4, 1],\n        [1, 5, 4, 2, 4, 4, 1, 1, 5, 5],\n        [4, 2, 5, 1, 1, 2, 5, 4, 2, 5],\n        [2, 4, 5, 4, 1, 3, 4, 2, 3, 4],\n        [3, 4, 2, 2, 3, 3, 5, 5, 3, 2],\n        [5, 1, 2, 3, 1, 4, 2, 2, 4, 4],\n        [2, 5, 2, 5, 1, 5, 5, 1, 3, 5],\n        [3, 1, 5, 4, 5, 4, 3, 1, 2, 5],\n        [5, 3, 1, 4, 1, 4, 3, 1, 5, 5]])"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-1": {
+      "code_fingerprint": "sha256:c63f0010d7b4ca80be7c8f922bb68b55f0c04baa1dac2bc64209f72a4de6ff8e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-continuous-uniform-1-1.svg",
+          "bytes": 15126,
+          "sha256": "sha256:2f7bc588e92d188589883563f15b7410b341f7f4c1806088c36cd687a03c73a5"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-2": {
+      "code_fingerprint": "sha256:645b2c2704d2389bb79d46dbd16923f5ac0a5eed4e97285e33203cee0e06c7dd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-continuous-uniform-2-1.svg",
+          "bytes": 16016,
+          "sha256": "sha256:113dae284b42ef46910cd6d6f6a8c681712bd8f9e621074057171a10b6a1d332"
+        }
+      ]
+    },
+    "distributions-continuous-uniform-3": {
+      "code_fingerprint": "sha256:17a5bdbd1af4a85b1fcedf492dbbba5fd672e3987f54214a226608de7e0391c5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[1.0325, 2.0215, 2.4820, 1.6228, 1.5133, 1.6424, 2.6776, 2.1528, 2.0910,\n         1.6194],\n        [2.0556, 2.0297, 1.9869, 2.7272, 2.5999, 1.4118, 1.7022, 2.9525, 2.8333,\n         2.3601],\n        [2.8080, 1.8235, 2.7976, 2.7498, 1.4475, 2.0861, 1.6388, 2.8840, 1.5167,\n         1.6178],\n        [2.2772, 2.6820, 1.1989, 2.4364, 2.9772, 1.9927, 1.7397, 2.3870, 2.9632,\n         1.4826],\n        [1.8773, 1.3619, 1.6050, 1.2796, 2.2795, 1.1336, 2.2217, 2.8303, 2.8970,\n         1.3015],\n        [2.4978, 2.1074, 2.9175, 1.3361, 1.3522, 1.6406, 2.1540, 1.6089, 2.1400,\n         1.2575],\n        [2.1708, 1.8718, 1.0443, 2.9735, 2.6356, 2.4806, 2.4523, 2.3966, 2.6610,\n         1.2529],\n        [1.7248, 2.8642, 1.3197, 1.0522, 1.5225, 2.0009, 2.5268, 1.6726, 2.7962,\n         2.6406],\n        [1.3928, 1.5781, 2.6964, 2.1013, 2.0702, 2.4068, 2.7054, 1.4543, 1.6329,\n         1.3621],\n        [1.6169, 2.1880, 1.5984, 1.6637, 1.9956, 2.6194, 1.0694, 1.6582, 2.2067,\n         1.7068]])"
+        }
+      ]
+    },
+    "distributions-binomial-1": {
+      "code_fingerprint": "sha256:369ceabe89898abee95789c7bb73013a336c01b6563e7f2a2da0ced59666a5bc",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-binomial-1-1.svg",
+          "bytes": 16656,
+          "sha256": "sha256:9a5276811a5c17de7b95421e7831f891b65485cdfbe96b645c23389663b258d2"
+        }
+      ]
+    },
+    "distributions-binomial-2": {
+      "code_fingerprint": "sha256:c886233f07a7f1611580a8779bd8531ee3e1c13cc84fac39d6523baef4dd92c0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-binomial-2-1.svg",
+          "bytes": 17137,
+          "sha256": "sha256:06a527994832c001932d286db38341700d40cd59b0770e3bbb6d8c426341869a"
+        }
+      ]
+    },
+    "distributions-binomial-3": {
+      "code_fingerprint": "sha256:4018652aad3c6f6c6da5939611be4e80cecf03fbd860a041b567e7433717d346",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[2., 1., 1., 0., 1., 1., 5., 3., 3., 2.],\n        [2., 0., 2., 2., 0., 2., 2., 2., 1., 1.],\n        [1., 2., 3., 1., 2., 3., 0., 2., 1., 0.],\n        [2., 1., 1., 4., 5., 2., 2., 2., 2., 3.],\n        [2., 1., 1., 2., 1., 2., 2., 3., 0., 3.],\n        [0., 2., 1., 1., 2., 1., 4., 4., 3., 0.],\n        [2., 2., 3., 3., 1., 3., 1., 3., 1., 3.],\n        [1., 2., 1., 2., 0., 0., 2., 0., 0., 1.],\n        [3., 3., 1., 2., 3., 1., 2., 3., 1., 2.],\n        [1., 2., 4., 2., 4., 2., 1., 2., 2., 2.]])"
+        }
+      ]
+    },
+    "distributions-poisson-1": {
+      "code_fingerprint": "sha256:1e03989f70c018166fc8d1025d18d5a69bda0b2d46a00a9d9ba4df4caacd4910",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-poisson-1-1.svg",
+          "bytes": 16070,
+          "sha256": "sha256:874e38cd82891ee90655fdd7505ed92a54854ba97ac0a567bfe74c83e1c17949"
+        }
+      ]
+    },
+    "distributions-poisson-2": {
+      "code_fingerprint": "sha256:8dc6f32e25e11d73ea240c880641fae594937ef0c89ba90b70dd01a49992658d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-poisson-2-1.svg",
+          "bytes": 16700,
+          "sha256": "sha256:ff58c98bd603a30a6fcf85642e92502a4b0235ddde500335bd188a27be8013a3"
+        }
+      ]
+    },
+    "distributions-poisson-3": {
+      "code_fingerprint": "sha256:52492fd2eb1962f31bce74a4457491aed6355a66bb200e0a6fed1057aaef5d6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 2.,  6.,  5.,  7.,  5.,  2.,  8.,  5.,  4.,  6.],\n        [ 6.,  5.,  4.,  2.,  9.,  8.,  7.,  4.,  7.,  7.],\n        [ 5.,  4.,  2.,  4.,  6.,  6.,  7.,  6.,  5.,  3.],\n        [ 2.,  4.,  3.,  6.,  9.,  6.,  2.,  1.,  8.,  4.],\n        [ 8.,  6.,  7.,  5.,  6.,  4.,  8.,  4.,  5.,  5.],\n        [ 8.,  9.,  7.,  5.,  3.,  7.,  3.,  6.,  4.,  3.],\n        [ 5.,  4.,  6.,  2.,  6.,  6.,  5.,  3.,  6.,  7.],\n        [ 4.,  3., 11.,  5.,  4.,  3.,  5.,  3.,  6.,  7.],\n        [11.,  2.,  5., 10.,  8.,  1.,  3.,  7.,  4.,  8.],\n        [ 5.,  5.,  3.,  4.,  5.,  2.,  8.,  4.,  5.,  2.]])"
+        }
+      ]
+    },
+    "distributions-gaussian-1": {
+      "code_fingerprint": "sha256:72fd888ee7eefb1885d851c87a4c4ddd37a05f4afc688732e03e85764f317fb9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-gaussian-1-1.svg",
+          "bytes": 193767,
+          "sha256": "sha256:21caf2679eb706e47af38a84e2b37589c25b5d4f5e687047d8125ea191795d52"
+        }
+      ]
+    },
+    "distributions-gaussian-2": {
+      "code_fingerprint": "sha256:55c031f4a21a143b1432a3690a1920e4d69f7cf217c4b7d1d84fda15b6acaaf5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-gaussian-2-1.svg",
+          "bytes": 14556,
+          "sha256": "sha256:133a37d3769174ab7018c4194c8593a03ae4f8af81e191d6c32375d47e5ff2c6"
+        }
+      ]
+    },
+    "distributions-gaussian-3": {
+      "code_fingerprint": "sha256:0ce93c87387a8c9ef192015435fcd4116acd027ed8e57ec940e5c6c674121071",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-gaussian-3-1.svg",
+          "bytes": 15434,
+          "sha256": "sha256:da5d5e60998f67ee8e22d93ca68c836eb3b41bd9c6fd8ad4fdf40021c2375d14"
+        }
+      ]
+    },
+    "distributions-gaussian-4": {
+      "code_fingerprint": "sha256:f4f54cdcec2dd8e551f0b2d8a6c525d3386f94404a07fbf646bb71718fb577a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[ 6.1717e-01,  8.1544e-01, -1.0558e+00,  2.6442e-02,  7.5278e-01,\n         -1.1637e+00,  7.8255e-01,  1.0520e+00,  4.0109e-02, -1.1290e+00],\n        [-1.0889e-01, -1.5305e+00, -1.1337e-02, -4.8078e-01, -4.0554e-01,\n         -1.3593e+00,  1.4336e-01, -9.7881e-01, -5.1461e-01, -3.1312e-02],\n        [ 3.4206e-01,  1.3004e+00,  3.3579e-01,  5.5690e-01,  1.1259e+00,\n          5.4669e-01, -7.0859e-01,  3.1377e-01, -1.4016e+00, -7.0437e-01],\n        [-6.2743e-01,  3.4711e-01,  4.8899e-01, -1.5617e+00,  1.0352e+00,\n         -1.9221e+00, -3.3758e-01,  1.5714e+00,  4.4392e-01,  1.6094e+00],\n        [-1.0500e+00,  1.7182e+00,  5.6774e-01,  1.5661e+00, -2.4544e-03,\n         -2.3956e-01, -7.2819e-01, -1.1356e+00, -2.9180e-01,  1.5691e-01],\n        [ 1.2436e-01,  3.7833e-01, -6.3095e-01,  2.0374e+00,  1.2880e+00,\n         -4.0164e-03,  1.0851e+00,  8.3956e-01,  1.7199e+00,  2.2688e-01],\n        [ 1.1180e+00, -4.2526e-01,  5.7580e-01, -7.6206e-01, -5.6857e-01,\n         -9.6385e-01,  2.7102e+00, -4.6114e-01, -1.6911e-01, -9.5671e-01],\n        [-8.7203e-01, -4.9762e-01, -6.7779e-02, -1.0564e+00, -3.8284e-01,\n         -9.9511e-01, -2.3263e-01, -1.2267e+00,  2.1148e+00,  4.2792e-01],\n        [-1.0291e+00,  2.6575e-01, -5.7877e-01, -2.0723e+00, -2.0276e+00,\n          6.7690e-01,  1.4702e+00, -5.3936e-01, -9.5818e-01,  9.7406e-01],\n        [-2.4916e-01, -6.0788e-01,  1.1043e+00,  6.9566e-01, -6.8360e-02,\n         -7.4186e-01, -7.2273e-01, -1.0923e+00, -1.4185e+00, -6.9362e-01]])"
+        }
+      ]
+    }
+  }
+}

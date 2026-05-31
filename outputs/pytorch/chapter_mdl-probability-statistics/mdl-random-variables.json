@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.12.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "random-variables-from-discrete-to-continuous": {
+      "code_fingerprint": "sha256:a251954488a1b5963b12e9f028d9fac088750b2b3321d2872a6b5fc77b522ad2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-from-discrete-to-continuous-1.svg",
+          "bytes": 16898,
+          "sha256": "sha256:98a513de8bf8caa55bc3340584ce930ee94c270d0f1289163f2810c889ff808a"
+        }
+      ]
+    },
+    "random-variables-probability-density-functions": {
+      "code_fingerprint": "sha256:214a03463c6ad2710aeb68cd08502a5ec4e8cd2ccf5de0c8f9a3fa094a2a1468",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-probability-density-functions-1.svg",
+          "bytes": 33451,
+          "sha256": "sha256:67e42172de2765c8182c827850542dc2c1cebcd5a68e0c75febec684362f5b3e"
+        },
+        {
+          "type": "execute_result",
+          "text": "'approximate Probability: 0.7736172080039978'"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-1": {
+      "code_fingerprint": "sha256:d6920a191f9e007b8cc60bc70855cba3e52c2db8b6b91150f19e8445e6e23db5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-standard-deviations-1-1.svg",
+          "bytes": 14381,
+          "sha256": "sha256:a012d159fec66c8073c4753134d78dea5ebdfb2891280b9e033185d80ae733b6"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-2": {
+      "code_fingerprint": "sha256:d5e520fe844ad762ee811401ca8f96a8e6c487ef829d3d7b5743491bb2a437dc",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-standard-deviations-2-1.svg",
+          "bytes": 15086,
+          "sha256": "sha256:b8d1590624846526607cb70dd3f580720bab8b246a701ce804c5d3626ca14e48"
+        }
+      ]
+    },
+    "random-variables-standard-deviations-3": {
+      "code_fingerprint": "sha256:e5de41b97b8ffd99a446f565917cd03d58d24c750f3d66ecea40c99018567cf2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-standard-deviations-3-1.svg",
+          "bytes": 16262,
+          "sha256": "sha256:50e8e613ca65bbf42050bb8057d372e0d6cb51ec03895919130fa7550998744a"
+        }
+      ]
+    },
+    "random-variables-means-and-variances-in-the-continuum-1": {
+      "code_fingerprint": "sha256:5efbd5f5a6e976548577697c052861a3679caa6b4559512f5445dd14550bc18f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-means-and-variances-in-the-continuum-1-1.svg",
+          "bytes": 15072,
+          "sha256": "sha256:13ad9e5ef0fe512635713416bb16db6c6e7d1043d7559064d5b5212cc39e3adc"
+        }
+      ]
+    },
+    "random-variables-means-and-variances-in-the-continuum-2": {
+      "code_fingerprint": "sha256:6a5a9ff811c6a0156b29bbc89fe91dba308ff9df4f2ad4c066b7f2899b76d658",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-means-and-variances-in-the-continuum-2-1.svg",
+          "bytes": 19817,
+          "sha256": "sha256:d312dc896bcf787ef89f164d52d405d01b633479fe772c15f735889300145827"
+        }
+      ]
+    },
+    "random-variables-covariance": {
+      "code_fingerprint": "sha256:98b405eda1043683c68bed155affeb671251d2c9896acc7c63b9b9e3f0e37765",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-covariance-1.svg",
+          "bytes": 183548,
+          "sha256": "sha256:cc6dcffc146cd7f9991ca5832be5d18fc467b1affc984f8f13d4e8930c2982ae"
+        }
+      ]
+    },
+    "random-variables-correlation": {
+      "code_fingerprint": "sha256:93b2f05d6d3b202276c24061dc98a1edae33eb04c12688112e748d5fa8527194",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-correlation-1.svg",
+          "bytes": 186499,
+          "sha256": "sha256:7d7e1e28b62e385b996bdd0ca04e991db1983b2db64b13143fed6990a07fd069"
+        }
+      ]
+    }
+  }
+}

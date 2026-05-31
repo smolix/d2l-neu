@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-maximum-likelihood.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.12.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "maximum-likelihood-a-concrete-example": {
+      "code_fingerprint": "sha256:f4abf67d8b164bdbf2e0c31748295c4f3a8700d173b4012eeb912f4a674c97c4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
+          "bytes": 20959,
+          "sha256": "sha256:faa9a30a552f43827ca60aaaeb2ae7346dcf82cb06184e94b7fc1753e25a3d7e"
+        }
+      ]
+    },
+    "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
+      "code_fingerprint": "sha256:bca4b0b35eb962547de052bd5e34209c3c79fdc28433f0f698399367a4b3366a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(0.9713, requires_grad=True), 0.9713101437890875)"
+        }
+      ]
+    }
+  }
+}

@@ -64,6 +64,7 @@ tensorflow = [
     # wheels, CPU). No `[and-cuda]` — that's a linux-only metapackage.
     "tensorflow ; sys_platform == 'darwin'",
     "tensorflow-datasets ; sys_platform == 'darwin'",
+    "tensorflow-probability[tf] ; sys_platform == 'darwin'",
 ]
 jax = [
     "jax[cuda12]>=0.10.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
@@ -73,9 +74,13 @@ jax = [
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "flaxmodels ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon: plain `jax` resolves the CPU jaxlib arm64 macOS wheel.
+    # tensorflow(+datasets) come along because d2l/jax.py imports tf for its
+    # data utilities (mirrors the linux jax extra).
     "jax>=0.10.0 ; sys_platform == 'darwin'",
     "flax ; sys_platform == 'darwin'",
     "optax ; sys_platform == 'darwin'",
+    "tensorflow ; sys_platform == 'darwin'",
+    "tensorflow-datasets ; sys_platform == 'darwin'",
 ]
 run = [
     "jupyter",

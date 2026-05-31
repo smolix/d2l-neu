@@ -540,7 +540,7 @@ def kl_divergence(p, q):
 Let's take a look at some properties of the KL divergence :eqref:`eq_mdl-kl_def`.
 
 * KL divergence is non-symmetric, i.e., there are $P,Q$ such that $$D_{\textrm{KL}}(P\|Q) \neq D_{\textrm{KL}}(Q\|P).$$
-* KL divergence is non-negative, i.e., $$D_{\textrm{KL}}(P\|Q) \geq 0,$$ with equality if and only if $P = Q$. This is *Gibbs' inequality*, and it is the workhorse from which the rest of this section follows. The proof is one application of Jensen's inequality (:numref:`sec_calculus`-style convexity) to the convex function $-\log$:
+* KL divergence is non-negative, i.e., $$D_{\textrm{KL}}(P\|Q) \geq 0,$$ with equality if and only if $P = Q$. This is *Gibbs' inequality*, and it is the workhorse from which the rest of this section follows. The proof is one application of Jensen's inequality (convexity; see :numref:`sec_calculus`) to the convex function $-\log$:
 $$
 D_{\textrm{KL}}(P\|Q) = E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right] \ge -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right] = -\log \sum_x q(x) = -\log 1 = 0,
 $$
@@ -558,8 +558,10 @@ using $\sum_x p(x)\,q(x)/p(x) = \sum_x q(x) = 1$. Because $-\log$ is *strictly* 
 
 The `kl_divergence` above works on *discrete* probability vectors. For *continuous* distributions the cleanest worked example is the KL divergence between two univariate Gaussians, which has a closed form. For $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
 
-$$D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,\sigma_2^2)\right)
-= \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}.$$
+$$
+D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,\sigma_2^2)\right)
+= \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac{1}{2}.
+$$
 :eqlabel:`eq_mdl-gaussian_kl`
 
 These logs are *natural* logs, so the result is in **nats**. Two things are worth reading off :eqref:`eq_mdl-gaussian_kl` directly. First, it is non-negative and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$). Second, it is *not symmetric*: swapping the roles of $P$ and $Q$ changes the value, because the variance ratio and the mean gap enter asymmetrically.

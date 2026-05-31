@@ -263,6 +263,31 @@ def file_supports_framework(src_path, framework):
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
 
 
+# Quarto-only constructs that leak into notebook markdown cells via the
+# shared .md → .qmd directive translation, but that a plain notebook
+# renderer (VS Code / Jupyter markdown-it + KaTeX) cannot parse:
+#   - `{#eq-…}` / `{#sec-…}` ID attributes. After a `$$…$$` display
+#     equation the trailing `{#eq-…}` breaks KaTeX's delimiter matching
+#     (it swallows following `$`), which then mangles later equations.
+#   - `@eq-…` / `@sec-…` cross-references render as broken `@…` literals.
+# Notebooks are not Quarto, so we strip the IDs and render the refs as
+# readable words. Equation numbering/cross-refs remain correct in the
+# Quarto HTML/PDF build (which sees the un-stripped .qmd); this only
+# affects the notebook view used for authoring/review.
+_QUARTO_ID_RE = re.compile(r'[ \t]*\{#(?:eq|sec|fig|tbl|lst)-[^}]*\}')
+_QUARTO_XREF_RE = re.compile(r'@(eq|sec|fig|tbl)-[A-Za-z0-9_-]+')
+_XREF_WORD = {'eq': 'the equation', 'sec': 'that section',
+              'fig': 'the figure', 'tbl': 'the table'}
+
+
+def notebookify_markdown(text):
+    """Strip Quarto-only IDs/cross-refs from a notebook markdown cell so it
+    renders cleanly in VS Code / Jupyter. Idempotent."""
+    text = _QUARTO_ID_RE.sub('', text)
+    text = _QUARTO_XREF_RE.sub(lambda m: _XREF_WORD[m.group(1)], text)
+    return text
+
+
 _PROSE_HEADER_LINE_RE = re.compile(
     r'^<!--\s*d2l:prose\s+id=([^\s]+)\s+fw=([^\s]+)\s*-->\s*$')
 
@@ -333,6 +358,16 @@ def patch_ipynb_ids(ipynb_path: Path, framework: str):
         else:
             new_cells.append(cell)
     nb['cells'] = new_cells
+
+    # Pass 1b: strip Quarto-only IDs/cross-refs from markdown cells so they
+    # render in a plain notebook frontend (VS Code/Jupyter) without breaking
+    # KaTeX. (Preserves code cells and their outputs untouched.)
+    for cell in nb.get('cells', []):
+        if cell.get('cell_type') != 'markdown':
+            continue
+        src = cell.get('source')
+        joined = ''.join(src) if isinstance(src, list) else (src or '')
+        cell['source'] = notebookify_markdown(joined).splitlines(keepends=True)
 
     # Pass 2: extract `#| label:` from code cells
     for cell in nb.get('cells', []):

@@ -43,58 +43,75 @@ function naturalFrequencies() {
   return svg(W, H, o);
 }
 
-// ── the prior → likelihood tree; Bayes inverts it ───────────────────
+// ── Bayes as a probability tree: the worked HIV computation ─────────
+// prior P(H) × likelihood P(D|H) = joint at each leaf; the posterior is
+// the true-positive leaf divided by the sum of the two positive leaves.
 function bayesTree() {
-  const W = 580, H = 300; let o = '';
-  o += tx(W / 2, 26, "Bayes' theorem inverts the tree", { fs: 15, fw: 700, fill: C.ink });
-  const root = [70, 150];
-  const h1 = [250, 86], h0 = [250, 214];
-  o += circ(root[0], root[1], 20, C.lgray, C.gray, '');
+  const W = 680, H = 372; let o = '';
+  o += tx(W / 2, 24, 'Bayes as a probability tree: the HIV test', { fs: 15, fw: 700, fill: C.ink });
+  // column headers
+  o += tx(240, 52, 'prior  P(H)', { fs: 11, fw: 700, fill: C.muted });
+  o += tx(430, 52, 'likelihood  P(D₁ | H)', { fs: 11, fw: 700, fill: C.muted });
+  o += tx(605, 52, 'joint  P(H, D₁)', { fs: 11, fw: 700, fill: C.muted });
+  const root = [60, 178];
+  const h1 = [240, 108], h0 = [240, 248];
+  o += circ(root[0], root[1], 15, C.lgray, C.gray, '');
   o += circ(h1[0], h1[1], 22, C.lgreen, C.green, 'H=1');
   o += circ(h0[0], h0[1], 22, C.lgray, C.gray, 'H=0');
-  o += arrow(root[0] + 18, root[1] - 6, h1[0] - 24, h1[1] + 8, C.ink);
-  o += arrow(root[0] + 18, root[1] + 6, h0[0] - 24, h0[1] - 8, C.ink);
-  o += tx(150, 104, 'P(H=1)=0.0015', { fs: 10, fw: 700, fill: C.green });
-  o += tx(150, 196, 'P(H=0)=0.9985', { fs: 10, fw: 700, fill: C.muted });
-  // leaves: D given H
-  const leaf = (x, y, lbl, color) => circ(x, y, 18, '#fff', color, lbl);
-  o += leaf(450, 56, 'D=1', C.amber); o += leaf(450, 116, 'D=0', C.gray);
-  o += leaf(450, 184, 'D=1', C.amber); o += leaf(450, 244, 'D=0', C.gray);
-  o += arrow(h1[0] + 22, h1[1] - 6, 432, 60, C.ink); o += tx(360, 60, '1.00', { fs: 10, fw: 700, fill: C.ink });
-  o += arrow(h1[0] + 22, h1[1] + 6, 432, 112, C.ink); o += tx(360, 104, '0', { fs: 10, fw: 700, fill: C.muted });
-  o += arrow(h0[0] + 22, h0[1] - 6, 432, 188, C.ink); o += tx(360, 184, '0.01', { fs: 10, fw: 700, fill: C.amber });
-  o += arrow(h0[0] + 22, h0[1] + 6, 432, 240, C.ink); o += tx(360, 236, '0.99', { fs: 10, fw: 700, fill: C.muted });
-  o += tx(250, 56, 'forward:  P(D | H)', { fs: 11, fw: 700, fill: C.muted, anchor: 'middle' });
-  o += tx(W / 2, H - 14, 'Bayes:  P(H | D) = P(D | H) P(H) / P(D)', { fs: 13, fw: 700, fill: C.blue });
+  // prior edges
+  o += arrow(root[0] + 13, root[1] - 6, h1[0] - 24, h1[1] + 10, C.ink);
+  o += arrow(root[0] + 13, root[1] + 6, h0[0] - 24, h0[1] - 10, C.ink);
+  o += tx(150, 132, '0.0015', { fs: 10.5, fw: 700, fill: C.green });
+  o += tx(150, 224, '0.9985', { fs: 10.5, fw: 700, fill: C.muted });
+  // D leaves: true positive (green), false positive (amber), negatives (gray)
+  const leaf = (x, y, lbl, color) => circ(x, y, 19, '#fff', color, lbl);
+  o += leaf(430, 76, 'D₁=1', C.green); o += leaf(430, 140, 'D₁=0', C.gray);
+  o += leaf(430, 216, 'D₁=1', C.amber); o += leaf(430, 280, 'D₁=0', C.gray);
+  // likelihood edges + labels
+  o += arrow(h1[0] + 22, h1[1] - 8, 411, 80, C.ink);  o += tx(340, 82, '1.00', { fs: 10.5, fw: 700, fill: C.green });
+  o += arrow(h1[0] + 22, h1[1] + 8, 411, 136, C.ink); o += tx(340, 132, '0.00', { fs: 10.5, fw: 700, fill: C.muted });
+  o += arrow(h0[0] + 22, h0[1] - 8, 411, 220, C.ink); o += tx(340, 222, '0.01', { fs: 10.5, fw: 700, fill: C.amber });
+  o += arrow(h0[0] + 22, h0[1] + 8, 411, 276, C.ink); o += tx(340, 272, '0.99', { fs: 10.5, fw: 700, fill: C.muted });
+  // joint values at each leaf
+  o += tx(605, 73, '0.0015', { fs: 12, fw: 700, fill: C.green });   o += tx(605, 90, 'true +', { fs: 9.5, fw: 700, fill: C.green });
+  o += tx(605, 140, '0', { fs: 12, fw: 700, fill: C.muted });
+  o += tx(605, 213, '0.009985', { fs: 12, fw: 700, fill: C.amber }); o += tx(605, 230, 'false +', { fs: 9.5, fw: 700, fill: C.amber });
+  o += tx(605, 280, '0.9885', { fs: 12, fw: 700, fill: C.muted });
+  // posterior callout
+  o += box(W / 2, H - 30, 560, 46, C.lblue, C.blue,
+    'P(H=1 | D₁=1) = 0.0015 / 0.011485 ≈ 13%',
+    'positive test:  0.0015 (true +) + 0.009985 (false +) = 0.011485', 13);
   return svg(W, H, o);
 }
 
 // ── joint / marginal / conditional as a grid ────────────────────────
 function jointGrid() {
-  const W = 520, H = 332; let o = ''; const s = 46, g = 5;
-  o += tx(W / 2, 26, 'Joint, marginal, conditional', { fs: 15, fw: 700, fill: C.ink });
+  const W = 384, H = 372; let o = ''; const s = 46, g = 5;
+  const x0 = 96, y0 = 102;
+  o += tx(190, 26, 'Joint, marginal, conditional', { fs: 15, fw: 700, fill: C.ink });
   const J = [['.12', '.18', '.10'], ['.20', '.15', '.25']];   // rows A=a1,a2 · cols B=b1,b2,b3
-  const x0 = 84, y0 = 70;
   const hot = (r) => r === 1;   // highlight A=a2
+  // caption + column headers, well clear of the title
+  o += tx(x0 + 1.5 * (s + g) - g / 2, y0 - 44, 'joint  P(A, B)', { fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(x0 + s / 2, y0 - 16, 'b₁', { fs: 12, fill: C.muted });
+  o += tx(x0 + s + g + s / 2, y0 - 16, 'b₂', { fs: 12, fill: C.muted });
+  o += tx(x0 + 2 * (s + g) + s / 2, y0 - 16, 'b₃', { fs: 12, fill: C.muted });
   o += grid(J, x0, y0, s, g, { fill: (r) => hot(r) ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  o += tx(x0 - 14, y0 + s / 2, 'a₁', { fs: 13, fw: 700, fill: C.muted, anchor: 'end' });
-  o += tx(x0 - 14, y0 + s + g + s / 2, 'a₂', { fs: 13, fw: 700, fill: C.muted, anchor: 'end' });
-  o += tx(x0 + s / 2, y0 - 12, 'b₁', { fs: 12, fill: C.muted });
-  o += tx(x0 + s + g + s / 2, y0 - 12, 'b₂', { fs: 12, fill: C.muted });
-  o += tx(x0 + 2 * (s + g) + s / 2, y0 - 12, 'b₃', { fs: 12, fill: C.muted });
-  o += tx(x0 + 1.5 * (s + g) - g / 2, y0 - 32, 'P(A, B)', { fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(x0 - 16, y0 + s / 2, 'a₁', { fs: 13, fw: 700, fill: C.muted, anchor: 'end' });
+  o += tx(x0 - 16, y0 + s + g + s / 2, 'a₂', { fs: 13, fw: 700, fill: C.muted, anchor: 'end' });
   // marginal P(A) = row sums, to the right
-  const mx = x0 + 3 * (s + g) + 22;
+  const mx = x0 + 3 * (s + g) + 24;
   o += grid([['.40'], ['.60']], mx, y0, s, g, { fill: () => [C.lgreen, C.green, false, C.ink] });
-  o += tx(mx + s / 2, y0 - 12, 'P(A)', { fs: 11.5, fw: 700, fill: C.green });
+  o += tx(mx + s / 2, y0 - 16, 'P(A)', { fs: 11.5, fw: 700, fill: C.green });
   // marginal P(B) = column sums, below
-  const my = y0 + 2 * (s + g) + 18;
+  const my = y0 + 2 * (s + g) + 22;
   o += grid([['.32', '.33', '.35']], x0, my, s, g, { fill: () => [C.lgreen, C.green, false, C.ink] });
-  o += tx(x0 - 14, my + s / 2, 'P(B)', { fs: 11.5, fw: 700, fill: C.green, anchor: 'end' });
+  o += tx(x0 - 16, my + s / 2, 'P(B)', { fs: 11.5, fw: 700, fill: C.green, anchor: 'end' });
   // conditional: highlighted row renormalized
-  const cy = my + s + 22;
+  const cy = my + s + 24;
   o += grid([['.33', '.25', '.42']], x0, cy, s, g, { fill: () => [C.lamber, C.amber, false, C.ink] });
-  o += tx(x0 + 3 * (s + g) + 6, cy + s / 2, 'P(B | a₂) = row ÷ 0.60', { fs: 11.5, fw: 700, fill: C.amber, anchor: 'start' });
+  o += tx(x0 - 16, cy + s / 2, 'P(B|a₂)', { fs: 11, fw: 700, fill: C.amber, anchor: 'end' });
+  o += tx(x0 + 3 * (s + g) + 6, cy + s / 2, 'row ÷ 0.60', { fs: 11.5, fw: 700, fill: C.amber, anchor: 'start' });
   return svg(W, H, o);
 }
 

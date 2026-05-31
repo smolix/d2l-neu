@@ -372,6 +372,20 @@ d2l.plt.legend();
 counts = multinomial(1, fair_probs, size=10000)
 cum_counts = counts.astype(np.float32).cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
+
+d2l.set_figsize((4.5, 3.5))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
+d2l.plt.legend();
 ```
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
@@ -380,6 +394,20 @@ counts = tfd.Multinomial(1, fair_probs).sample(10000)
 cum_counts = tf.cumsum(counts, axis=0)
 estimates = cum_counts / tf.reduce_sum(cum_counts, axis=1, keepdims=True)
 estimates = estimates.numpy()
+
+d2l.set_figsize((4.5, 3.5))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
+d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
+d2l.plt.legend();
 ```
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
@@ -387,10 +415,7 @@ estimates = estimates.numpy()
 counts = np.random.multinomial(1, fair_probs, size=10000).astype(np.float32)
 cum_counts = counts.cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
-```
 
-```{.python .input #probability-a-simple-example-tossing-coins-6}
-%%tab mxnet, tensorflow, jax
 d2l.set_figsize((4.5, 3.5))
 x = range(1, len(estimates) + 1)
 d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
@@ -653,6 +678,7 @@ all probabilities sum to 1.
 
 ![The joint distribution $P(A,B)$ determines everything: summing a row or column gives a *marginal* ($P(A)$ or $P(B)$), and renormalizing one row by its sum gives a *conditional* $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
 :label:`fig_prob_joint`
+
 Conditional probabilities
 are in fact just ordinary probabilities
 and thus respect all of the axioms,
@@ -672,14 +698,6 @@ Combining both equations yields
 $P(B\mid A) P(A) = P(A\mid B) P(B)$ and hence
 
 $$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$
-
-
-
-
-
-
-![A probability tree runs *forward* from cause to effect, $P(D \mid H)$; Bayes' theorem inverts it to infer the cause from the effect, $P(H \mid D)$.](../img/probability-bayes-tree.svg)
-:label:`fig_prob_bayes_tree`
 
 This simple equation has profound implications because
 it allows us to reverse the order of conditioning.
@@ -828,6 +846,17 @@ In other words, there is only a 13.06% chance
 that the patient actually has HIV,
 despite the test being pretty accurate.
 
+A *probability tree* makes the computation concrete. Reading left to
+right, each path multiplies a *prior* $P(H)$ by a *likelihood*
+$P(D_1 \mid H)$ to give the *joint* probability at its leaf. A positive
+test ($D_1 = 1$) can arrive along two paths — a true positive from a
+sick patient or a false positive from a healthy one — so $P(D_1 = 1)$ is
+the sum of those two leaves, and the posterior is the true-positive leaf
+divided by that sum.
+
+![Bayes' theorem as a probability tree. Multiplying each prior by its likelihood gives the joint probability at each leaf; the posterior $P(H=1 \mid D_1=1)$ is the true-positive leaf ($0.0015$) divided by the sum of the two positive-test leaves ($0.0015 + 0.009985 = 0.011485$).](../img/probability-bayes-tree.svg)
+:label:`fig_prob_bayes_tree`
+
 ![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives — of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 
@@ -878,6 +907,7 @@ it still significantly improved our estimate.
 
 ![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
+
 The assumption of both tests being conditionally independent of each other
 was crucial for our ability to generate a more accurate estimate.
 Take the extreme case where we run the same test twice.
@@ -1162,8 +1192,6 @@ sample count grows, empirical frequencies converge to the true
 $P = 0.5$:
 
 @!probability-a-simple-example-tossing-coins-5
-
-@!probability-a-simple-example-tossing-coins-6
 :::
 
 ::: {.slide title="A fair coin, 100 tosses"}
@@ -1213,8 +1241,6 @@ $P(\text{tails})$ vs. sample count — the curves zigzag toward
 $0.5$:
 
 @probability-a-simple-example-tossing-coins-5
-
-@probability-a-simple-example-tossing-coins-6
 
 The variance of the estimate shrinks like $1/\sqrt{n}$ — doubling
 accuracy means **quadrupling** the sample budget.

@@ -19,8 +19,17 @@ export const C = {
 // Font stacks. Both end in a generic family so a static SVG still reads
 // correctly even where "Source Sans 3" / "JetBrains Mono" aren't loaded
 // (see HANDOFF.md "Fonts in static SVG" for the fidelity caveat).
-export const FM = 'JetBrains Mono, monospace';
-export const FS = 'Source Sans 3, sans-serif';
+//
+// The family names MUST be quoted. "Source Sans 3" contains the token "3",
+// which is not a valid CSS identifier (identifiers cannot start with a
+// digit); unquoted, the whole font-family declaration is invalid and
+// renderers silently fall back to their default *serif* face — so figures
+// embedded as <img> (web font blocked) and the rsvg→PDF path both came out
+// in Times. Quoting keeps the declaration valid so the generic `sans-serif`
+// fallback applies. JetBrains Mono has no such token, which is why the
+// monospace cells always rendered correctly.
+export const FM = "'JetBrains Mono', monospace";
+export const FS = "'Source Sans 3', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
 
 // A rounded square cell.
 export function rc(x, y, s, f, st, dash) {

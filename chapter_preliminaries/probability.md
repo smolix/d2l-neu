@@ -846,17 +846,6 @@ In other words, there is only a 13.06% chance
 that the patient actually has HIV,
 despite the test being pretty accurate.
 
-A *probability tree* makes the computation concrete. Reading left to
-right, each path multiplies a *prior* $P(H)$ by a *likelihood*
-$P(D_1 \mid H)$ to give the *joint* probability at its leaf. A positive
-test ($D_1 = 1$) can arrive along two paths — a true positive from a
-sick patient or a false positive from a healthy one — so $P(D_1 = 1)$ is
-the sum of those two leaves, and the posterior is the true-positive leaf
-divided by that sum.
-
-![Bayes' theorem as a probability tree. Multiplying each prior by its likelihood gives the joint probability at each leaf; the posterior $P(H=1 \mid D_1=1)$ is the true-positive leaf ($0.0015$) divided by the sum of the two positive-test leaves ($0.0015 + 0.009985 = 0.011485$).](../img/probability-bayes-tree.svg)
-:label:`fig_prob_bayes_tree`
-
 ![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives — of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 

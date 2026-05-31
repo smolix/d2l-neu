@@ -163,9 +163,9 @@ the near-low-rank structure of attention.
 ## Discussion
 
 ::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Plan:** A short closing pointer plus `:begin_tab:`/`:end_tab:` Discussions
-blocks (one per framework: mxnet / pytorch / tensorflow / jax) following the
-chapter convention, to be filled in when the section is authored.
+**Plan:** A short closing pointer plus per-framework Discussions blocks
+(one each for mxnet, pytorch, tensorflow, jax) following the chapter
+convention, to be filled in when the section is authored.
 :::
 
 <!-- slides -->

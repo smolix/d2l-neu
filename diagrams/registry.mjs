@@ -8,6 +8,7 @@ import { diagrams as linearAlgebra } from './linear-algebra.mjs';
 import { diagrams as calculus } from './calculus.mjs';
 import { diagrams as autograd } from './autograd.mjs';
 import { diagrams as pandas } from './pandas.mjs';
+import { diagrams as probability } from './probability.mjs';
 
 export const diagrams = {
   ...ndarray,
@@ -15,4 +16,5 @@ export const diagrams = {
   ...calculus,
   ...autograd,
   ...pandas,
+  ...probability,
 };

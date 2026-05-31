@@ -353,11 +353,17 @@ estimates = cum_counts / cum_counts.sum(dim=1, keepdims=True)
 estimates = estimates.numpy()
 
 d2l.set_figsize((4.5, 3.5))
-d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
-d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
 d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
-d2l.plt.gca().set_xlabel('Samples')
-d2l.plt.gca().set_ylabel('Estimated probability')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
 d2l.plt.legend();
 ```
 
@@ -386,11 +392,17 @@ estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
 ```{.python .input #probability-a-simple-example-tossing-coins-6}
 %%tab mxnet, tensorflow, jax
 d2l.set_figsize((4.5, 3.5))
-d2l.plt.plot(estimates[:, 0], label=("P(coin=heads)"))
-d2l.plt.plot(estimates[:, 1], label=("P(coin=tails)"))
+x = range(1, len(estimates) + 1)
+d2l.plt.plot(x, estimates[:, 0], label=("P(coin=heads)"))
+d2l.plt.plot(x, estimates[:, 1], label=("P(coin=tails)"))
 d2l.plt.axhline(y=0.5, color='black', linestyle='dashed')
-d2l.plt.gca().set_xlabel('Samples')
-d2l.plt.gca().set_ylabel('Estimated probability')
+ax = d2l.plt.gca()
+ax.set_xscale('log')
+ax.set_xlim(1, 10000)
+ax.set_xticks([1, 10, 100, 1000, 10000])
+ax.set_xticklabels(['1', '10', '100', '1,000', '10,000'])
+ax.set_xlabel('Samples')
+ax.set_ylabel('Estimated probability')
 d2l.plt.legend();
 ```
 
@@ -468,6 +480,9 @@ Consequently, the probability of any event $\mathcal{A}$
 is $P(\mathcal{A} \cap \mathcal{A}') = 0$.
 Informally, this tells us that impossible events
 have zero probability of occurring.
+
+![Events are subsets of a sample space $\mathcal{S}$, and the axioms give the *inclusion–exclusion* rule for their union.](../img/probability-venn.svg)
+:label:`fig_prob_venn`
 
 
 
@@ -635,6 +650,9 @@ as restricting attention only to the subset
 of the sample space associated with $A=a$
 and then renormalizing so that
 all probabilities sum to 1.
+
+![The joint distribution $P(A,B)$ determines everything: summing a row or column gives a *marginal* ($P(A)$ or $P(B)$), and renormalizing one row by its sum gives a *conditional* $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
+:label:`fig_prob_joint`
 Conditional probabilities
 are in fact just ordinary probabilities
 and thus respect all of the axioms,
@@ -659,6 +677,9 @@ $$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$
 
 
 
+
+![A probability tree runs *forward* from cause to effect, $P(D \mid H)$; Bayes' theorem inverts it to infer the cause from the effect, $P(H \mid D)$.](../img/probability-bayes-tree.svg)
+:label:`fig_prob_bayes_tree`
 
 This simple equation has profound implications because
 it allows us to reverse the order of conditioning.
@@ -758,6 +779,9 @@ Shoe size and reading level are highly correlated
 among elementary school students,
 but this correlation disappears if we condition on age.
 
+![Conditioning can both destroy and create dependence. A *common cause* makes $A$ and $B$ dependent until we condition on $C$; a *collider* (common effect) makes independent causes dependent once $C$ is observed — *explaining away*.](../img/probability-explaining-away.svg)
+:label:`fig_prob_explaining_away`
+
 
 
 ## An Example
@@ -773,10 +797,10 @@ We use $D_1 \in \{0, 1\}$ to indicate the diagnosis
 ($0$ if negative and $1$ if positive)
 and $H \in \{0, 1\}$ to denote the HIV status.
 
-| Conditional probability | $H=1$ | $H=0$ |
-|:------------------------|------:|------:|
-| $P(D_1 = 1 \mid H)$        |     1 |  0.01 |
-| $P(D_1 = 0 \mid H)$        |     0 |  0.99 |
+| $P(D_1 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_1 = 1$ | 1.00 | 0.01 |
+| test negative, $D_1 = 0$ | 0.00 | 0.99 |
 
 Note that the column sums are all 1 (but the row sums do not),
 since they are conditional probabilities.
@@ -803,6 +827,10 @@ $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = 0.1306.$$
 In other words, there is only a 13.06% chance
 that the patient actually has HIV,
 despite the test being pretty accurate.
+
+![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives — of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
+:label:`fig_prob_natural_freq`
+
 As we can see, probability can be counterintuitive.
 What should a patient do upon receiving such terrifying news?
 Likely, the patient would ask the physician
@@ -810,10 +838,10 @@ to administer another test to get clarity.
 The second test has different characteristics
 and it is not as good as the first one.
 
-| Conditional probability | $H=1$ | $H=0$ |
-|:------------------------|------:|------:|
-| $P(D_2 = 1 \mid H)$          |  0.98 |  0.03 |
-| $P(D_2 = 0 \mid H)$          |  0.02 |  0.97 |
+| $P(D_2 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_2 = 1$ | 0.98 | 0.03 |
+| test negative, $D_2 = 0$ | 0.02 | 0.97 |
 
 Unfortunately, the second test comes back positive, too.
 Let's calculate the requisite probabilities to invoke Bayes' theorem
@@ -847,6 +875,9 @@ $$P(H = 1 \mid D_1 = 1, D_2 = 1)
 That is, the second test allowed us to gain much higher confidence that not all is well.
 Despite the second test being considerably less accurate than the first one,
 it still significantly improved our estimate.
+
+![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
+:label:`fig_prob_update`
 The assumption of both tests being conditionally independent of each other
 was crucial for our ability to generate a more accurate estimate.
 Take the extreme case where we run the same test twice.

@@ -73,18 +73,18 @@
         }
       ]
     },
-    "pandas-encoding-categorical-features-1": {
-      "code_fingerprint": "sha256:dfb84046e001ffdefa8b6e5549e75ff7bf9df5cb907d3544a84ad0eb181316d3",
+    "pandas-handling-missing-values-3": {
+      "code_fingerprint": "sha256:e0b1eb39ffb09af8eba869bc56d9db93ea79572ed0a3ffad0d9be418802dd1d0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "   NumRooms  Area  RoofType_Slate  RoofType_Tile  RoofType_nan\n0       3.0  1500             1.0            0.0           0.0\n1       NaN  2100             0.0            1.0           0.0\n2       2.0   850             0.0            0.0           1.0\n3       4.0  1940             1.0            0.0           0.0\n4       NaN  1200             0.0            0.0           1.0\n5       3.0  1650             0.0            1.0           0.0\n6       5.0  2600             1.0            0.0           0.0\n7       2.0   900             0.0            0.0           1.0\n8       NaN  1750             0.0            1.0           0.0\n9       4.0  2050             0.0            0.0           1.0"
+          "text": "   NumRooms RoofType  Area\n0  3.000000    Slate  1500\n1  3.285714     Tile  2100\n2  2.000000      NaN   850\n3  4.000000    Slate  1940\n4  3.285714      NaN  1200\n5  3.000000     Tile  1650\n6  5.000000    Slate  2600\n7  2.000000      NaN   900\n8  3.285714     Tile  1750\n9  4.000000      NaN  2050"
         }
       ]
     },
-    "pandas-numeric-features-1": {
-      "code_fingerprint": "sha256:4eb04e09555f3e541972ef82e6b73394efa6de004eeb33af5274f8c825e7f73b",
+    "pandas-encoding-categorical-features-1": {
+      "code_fingerprint": "sha256:253d1326b137fc1f65e8ccdf7e52b1520f480a0c14fd608e5b7c50b3536dd8d4",
       "kind": "text",
       "outputs": [
         {
@@ -93,8 +93,8 @@
         }
       ]
     },
-    "pandas-numeric-features-2": {
-      "code_fingerprint": "sha256:113012f3c17c55da28f51a42581ce3f256130cf18eb929383506acb98769af11",
+    "pandas-numerical-features-1": {
+      "code_fingerprint": "sha256:f17996df46ab982306c8c91742b8375f72410b9c6c8992e084a894f0961a9746",
       "kind": "text",
       "outputs": [
         {
@@ -103,8 +103,8 @@
         }
       ]
     },
-    "pandas-conversion-to-the-tensor-format": {
-      "code_fingerprint": "sha256:a4feb10f0194b5bc5d960398d2a0fd29c8facc94f5f0be1e1578f6669314e80a",
+    "pandas-conversion-to-tensor-format": {
+      "code_fingerprint": "sha256:35dcdfde7da0b14f491b42571c9653dd53941c946d0ca6841fcb0584473d37f9",
       "kind": "text",
       "outputs": [
         {

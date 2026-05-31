@@ -110,9 +110,9 @@ inputs
 
 ## Handling Missing Values
 
-Missing values are the bed bugs of data science: a persistent menace
-you will confront throughout your career. First, *measure* the problem —
-how many values are missing, and where:
+Missing values are unavoidable in real datasets, and how we handle them
+can change what a model learns — so it is worth doing deliberately.
+First, *measure* the problem: how many values are missing, and where?
 
 ```{.python .input #pandas-handling-missing-values-1}
 inputs.isna().sum()
@@ -130,15 +130,26 @@ There are three broad ways to respond, each with a cost:
   learn from the *fact* that a value was absent.
 
 Deletion is tempting but expensive on small data. Dropping every row
-with any missing entry here leaves us with a fraction of the dataset:
+with any missing entry here leaves only a fraction of the dataset:
 
 ```{.python .input #pandas-handling-missing-values-2}
 len(inputs.dropna()), len(inputs)
 ```
 
-Only four of ten rows survive — too wasteful. We will instead **impute**,
-treating categorical and numeric columns differently in the next two
-sections.
+Only four of ten rows survive — too wasteful. So we **impute** instead.
+*Imputation* means replacing each missing entry with an estimate; for a
+numerical column the simplest estimate is the column **mean** (use the
+median when the column is skewed). `fillna` applies it. We impute the
+numerical columns now and leave the categorical `RoofType` for the next
+section, where treating "missing" as its own category is the natural fix.
+
+```{.python .input #pandas-handling-missing-values-3}
+inputs = inputs.fillna(inputs.mean(numeric_only=True))
+inputs
+```
+
+`NumRooms` and `Area` are now filled with their column means;
+`RoofType`'s missing entries remain, to be handled by encoding.
 
 ## Encoding Categorical Features
 
@@ -157,25 +168,17 @@ inputs
 ```
 
 `RoofType` has become three columns (`Slate`, `Tile`, and `nan`); the
-numeric columns pass through untouched (still carrying their `NaN`s).
+already-imputed numerical columns pass through untouched. Every column is
+now numeric.
 
 One caveat: one-hot encoding a *high-cardinality* column — thousands of
 distinct values, or an identifier unique to each row — explodes the
 feature count and is rarely useful. Such columns call for embeddings,
 which we meet in later chapters.
 
-## Numeric Features
+## Numerical Features
 
-For the numeric columns, a common imputation is to fill each `NaN` with
-the column **mean** (use the median instead when a column is skewed).
-The one-hot columns have no missing values, so they are unaffected:
-
-```{.python .input #pandas-numeric-features-1}
-inputs = inputs.fillna(inputs.mean())
-inputs
-```
-
-Now every entry is numeric and present — but the continuous columns
+Every entry is now numeric and complete, but the continuous columns
 still span very different scales (`NumRooms` ≈ 3, `Area` ≈ 1700). Left
 as-is, the large-magnitude feature dominates distances and gradients,
 making optimization ill-conditioned. The standard fix is
@@ -183,21 +186,22 @@ making optimization ill-conditioned. The standard fix is
 deviation, so each continuous feature has roughly zero mean and unit
 variance. (We leave the one-hot columns alone — they are already 0/1.)
 
-```{.python .input #pandas-numeric-features-2}
+```{.python .input #pandas-numerical-features-1}
 continuous = ['NumRooms', 'Area']
 inputs[continuous] = (inputs[continuous] - inputs[continuous].mean()) \
                      / inputs[continuous].std()
 inputs
 ```
 
-One subtlety to flag now and revisit later: the mean and standard
-deviation used for imputation and scaling must be computed on the
-**training** data only, then reused for validation and test data.
-Computing them over the whole dataset leaks information about the test
-set into training and inflates your reported performance. We return to
-training/validation/test splits in a later chapter.
+A subtlety to flag now and revisit later: the statistics used to impute
+(the column means earlier) and to standardize (mean and standard
+deviation) must be computed on the **training** data only, then reused
+for validation and test data. Computing them over the whole dataset
+leaks information about the test set into training and inflates your
+reported performance. We return to training/validation/test splits in a
+later chapter.
 
-## Conversion to the Tensor Format
+## Conversion to Tensor Format
 
 Now that `inputs` and `targets` are entirely numeric, we can load them
 into tensors (recall :numref:`sec_ndarray`). Pandas hands off to NumPy
@@ -206,7 +210,7 @@ typically uses 32-bit floats; `to_numpy(dtype=float)` gives 64-bit, so
 in real pipelines you would cast down to `float32` to save memory and
 match the framework defaults.
 
-```{.python .input #pandas-conversion-to-the-tensor-format}
+```{.python .input #pandas-conversion-to-tensor-format}
 %%tab mxnet
 from mxnet import np
 
@@ -215,7 +219,7 @@ y = np.array(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input #pandas-conversion-to-the-tensor-format}
+```{.python .input #pandas-conversion-to-tensor-format}
 %%tab pytorch
 import torch
 
@@ -224,7 +228,7 @@ y = torch.tensor(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input #pandas-conversion-to-the-tensor-format}
+```{.python .input #pandas-conversion-to-tensor-format}
 %%tab tensorflow
 import tensorflow as tf
 
@@ -233,7 +237,7 @@ y = tf.constant(targets.to_numpy(dtype=float))
 X, y
 ```
 
-```{.python .input #pandas-conversion-to-the-tensor-format}
+```{.python .input #pandas-conversion-to-tensor-format}
 %%tab jax
 from jax import numpy as jnp
 

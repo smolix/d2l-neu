@@ -29,6 +29,45 @@ Fundamentally, a vector is a list of numbers such as the Python list below.
 v = [1, 7, 0, 1]
 ```
 
+Throughout this section we use a few standard libraries; the figures below are
+drawn with NumPy and Matplotlib.
+
+```{.python .input #geometry-linear-algebraic-ops-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+from IPython import display
+import numpy as np
+```
+
+```{.python .input #geometry-linear-algebraic-ops-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+import torch
+import numpy as np
+```
+
+```{.python .input #geometry-linear-algebraic-ops-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+import tensorflow as tf
+import numpy as np
+```
+
+```{.python .input #geometry-linear-algebraic-ops-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from IPython import display
+import jax
+from jax import numpy as jnp
+import numpy as np
+```
+
 Mathematicians most often write this as either a *column* or *row* vector, which is to say either as
 
 $$
@@ -130,35 +169,185 @@ $$
 \mathbf{v}\cdot\mathbf{w} = rs\cos(\theta) = \|\mathbf{v}\|\|\mathbf{w}\|\cos(\theta).
 $$
 
-With some simple algebraic manipulation, we can rearrange terms to obtain
+In short, for these two specific vectors the dot product, combined with the
+norms, tells us the angle between them. Remarkably, the *same identity* holds
+for **any** pair of vectors, in any number of dimensions. We can see why with
+two short arguments that together both *justify* the formula and pin down
+exactly when it makes sense.
+
+The first argument is purely planar. Any two vectors $\mathbf{v}$ and
+$\mathbf{w}$ — no matter how many coordinates they have — both lie in the
+two-dimensional plane they span, and the angle $\theta$ between them lives in
+that plane. So we lose nothing by reasoning in two dimensions. Expanding
+$\|\mathbf{v} - \mathbf{w}\|^2$ with the dot product gives
 
 $$
-\theta = \arccos\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right).
+\|\mathbf{v} - \mathbf{w}\|^2
+ = (\mathbf{v}-\mathbf{w})\cdot(\mathbf{v}-\mathbf{w})
+ = \|\mathbf{v}\|^2 - 2\,\mathbf{v}\cdot\mathbf{w} + \|\mathbf{w}\|^2,
 $$
 
-In short, for these two specific vectors,
-the dot product combined with the norms tell us the angle between the two vectors. This same fact is true in general. We will not derive the expression here, however,
-if we consider writing $\|\mathbf{v} - \mathbf{w}\|^2$ in two ways:
-one with the dot product, and the other geometrically using the law of cosines,
-we can obtain the full relationship.
-Indeed, for any two vectors $\mathbf{v}$ and $\mathbf{w}$,
-the angle between the two vectors is
+while the planar law of cosines applied to the triangle with sides
+$\mathbf{v}$, $\mathbf{w}$, and $\mathbf{v}-\mathbf{w}$ gives
+
+$$
+\|\mathbf{v} - \mathbf{w}\|^2
+ = \|\mathbf{v}\|^2 + \|\mathbf{w}\|^2 - 2\,\|\mathbf{v}\|\|\mathbf{w}\|\cos\theta.
+$$
+
+Equating the two and cancelling $\|\mathbf{v}\|^2 + \|\mathbf{w}\|^2$ leaves the
+**geometric formula for the dot product**,
+
+$$
+\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\|\mathbf{w}\|\cos\theta,
+$$
+:eqlabel:`eq_mdl-dot_geom`
+
+which we may solve for the angle:
 
 $$\theta = \arccos\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right).$$
 :eqlabel:`eq_mdl-angle_formula`
 
-This is a nice result since nothing in the computation references two-dimensions.
-Indeed, we can use this in three or three million dimensions without issue.
+Nothing in the computation referenced the ambient dimension, so
+:eqref:`eq_mdl-angle_formula` holds in three or three million dimensions
+without change.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The arccos angle formula :eqref:`eq_mdl-angle_formula` only makes sense if the argument lands in $[-1,1]$; the Cauchy–Schwarz inequality is exactly what guarantees this, so the angle is well-defined in every dimension.
-**Outline:** 1. State Cauchy–Schwarz $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$ · 2. One-line proof via the discriminant of $\|\mathbf{v} - t\mathbf{w}\|^2 \ge 0$ (a quadratic in $t$ with no two real roots) · 3. Conclude $\cos\theta \in [-1,1]$ so $\arccos$ is defined; equality $\iff$ $\mathbf{v},\mathbf{w}$ collinear · 4. Note this is what licenses :eqref:`eq_mdl-angle_formula` in arbitrary dimension.
-**Key results to state:** $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$; equality iff $\mathbf{w} = c\,\mathbf{v}$.
-**Diagrams:** `fig_mdl-proj-cauchy-schwarz` — projection of $\mathbf{v}$ onto $\mathbf{w}$ with the right-angle residual, plus the collinear equality case.
-**Worked example(s):** verify $|\mathbf{v}\cdot\mathbf{w}|/(\|\mathbf{v}\|\|\mathbf{w}\|) \le 1$ on two integer vectors before taking $\arccos$.
-**Exercises (draft):** (1) prove equality in Cauchy–Schwarz iff the vectors are collinear; (2) use Cauchy–Schwarz to prove the triangle inequality $\|\mathbf{v}+\mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$.
-**Prereqs / cross-refs:** dot product :eqref:`eq_mdl-dot_def`; feeds the projection material below and the angle formula above.
-:::
+There is, however, a subtlety we must not skip. The function $\arccos$ is only
+defined on the interval $[-1, 1]$, so :eqref:`eq_mdl-angle_formula` is
+meaningful *only if* the fraction inside it never escapes that interval. That
+this is guaranteed — in every dimension — is the content of one of the most
+useful inequalities in all of mathematics.
+
+**Proposition (Cauchy–Schwarz).** *For any vectors $\mathbf{v}, \mathbf{w}$,*
+
+$$
+|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|,
+$$
+:eqlabel:`eq_mdl-cauchy-schwarz`
+
+*with equality if and only if $\mathbf{v}$ and $\mathbf{w}$ are collinear
+(one is a scalar multiple of the other).*
+
+**Proof.** If $\mathbf{w} = \mathbf{0}$ both sides are zero and there is
+nothing to prove, so assume $\mathbf{w} \neq \mathbf{0}$. The trick is to look
+at the squared length of $\mathbf{v} - t\mathbf{w}$ as a function of the real
+number $t$. A squared length is never negative, so
+
+$$
+q(t) = \|\mathbf{v} - t\mathbf{w}\|^2
+     = \|\mathbf{w}\|^2\, t^2 - 2(\mathbf{v}\cdot\mathbf{w})\, t + \|\mathbf{v}\|^2
+     \;\ge\; 0
+     \quad\textrm{for every } t.
+$$
+
+This is a quadratic in $t$ with positive leading coefficient $\|\mathbf{w}\|^2$.
+A quadratic that stays non-negative cannot have two distinct real roots, so its
+discriminant must be $\le 0$:
+
+$$
+\bigl(2\,\mathbf{v}\cdot\mathbf{w}\bigr)^2 - 4\,\|\mathbf{w}\|^2\,\|\mathbf{v}\|^2 \le 0,
+\qquad\textrm{i.e.}\qquad
+(\mathbf{v}\cdot\mathbf{w})^2 \le \|\mathbf{v}\|^2\,\|\mathbf{w}\|^2.
+$$
+
+Taking square roots gives :eqref:`eq_mdl-cauchy-schwarz`. Equality forces the
+discriminant to vanish, which means $q$ has a (repeated) real root $t^\star$
+with $q(t^\star) = \|\mathbf{v} - t^\star\mathbf{w}\|^2 = 0$, that is
+$\mathbf{v} = t^\star \mathbf{w}$. $\blacksquare$
+
+The whole argument used nothing but the fact that *a squared length is
+non-negative*. Dividing :eqref:`eq_mdl-cauchy-schwarz` by
+$\|\mathbf{v}\|\|\mathbf{w}\|$ for nonzero $\mathbf{v}, \mathbf{w}$ yields the
+**well-definedness of the angle**:
+
+$$
+-1 \;\le\; \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|} \;\le\; 1,
+$$
+
+so the $\arccos$ in :eqref:`eq_mdl-angle_formula` is always defined and
+$\theta$ is a genuine angle in $[0, \pi]$, no matter the dimension. The
+equality cases are exactly the familiar ones: $\cos\theta = +1$ ($\theta = 0$)
+when the vectors point the same way, and $\cos\theta = -1$ ($\theta = \pi$)
+when they point in opposite directions — precisely the collinear cases of the
+proposition.
+
+Cauchy–Schwarz has a one-picture explanation, drawn in the figure below. On the
+left, the projection of $\mathbf{v}$ onto $\mathbf{w}$ has signed length
+$\|\mathbf{v}\|\cos\theta$, and the residual $\mathbf{r} = \mathbf{v} -
+\operatorname{proj}_{\mathbf{w}}\mathbf{v}$ meets $\mathbf{w}$ at a right angle
+(we prove both facts in the next section). Because the right triangle's
+hypotenuse $\mathbf{v}$ can be no shorter than its leg, $\|\mathbf{v}\|\,|\cos\theta|
+\le \|\mathbf{v}\|$, which is exactly $|\mathbf{v}\cdot\mathbf{w}| \le
+\|\mathbf{v}\|\|\mathbf{w}\|$. On the right is the equality case: when
+$\mathbf{v}$ is collinear with $\mathbf{w}$ the residual vanishes and the
+inequality becomes an equality.
+
+```{.python .input #geometry-linear-algebraic-ops-fig-projection}
+import numpy as np
+
+def plot_proj_cauchy_schwarz():
+    d2l.set_figsize((7.6, 3.6))
+    fig, ax = d2l.plt.subplots(1, 2, figsize=(7.6, 3.6))
+
+    def arrow(a, tail, head, color, lw=2.0, style='->'):
+        a.annotate('', xy=head, xytext=tail,
+                   arrowprops=dict(arrowstyle=style, color=color, lw=lw))
+
+    # Left panel: generic case, v projected onto w, orthogonal residual.
+    w = np.array([3.0, 0.0])
+    v = np.array([2.2, 1.8])
+    proj = (v @ w) / (w @ w) * w            # orthogonal projection of v onto w
+    arrow(ax[0], (0, 0), w, 'C0')
+    arrow(ax[0], (0, 0), v, 'C3')
+    arrow(ax[0], proj, v, 'C2', lw=1.4, style='->')   # residual r = v - proj
+    ax[0].plot([proj[0], proj[0]], [0, 0], 'o', color='C0')
+    # Small right-angle marker where the residual meets w.
+    m = 0.18
+    ax[0].plot([proj[0] - m, proj[0] - m, proj[0]],
+               [0, m, m], color='gray', lw=1)
+    ax[0].text(w[0] * 1.02, -0.18, r'$\mathbf{w}$', color='C0', fontsize=11)
+    ax[0].text(v[0] + 0.05, v[1] + 0.05, r'$\mathbf{v}$', color='C3', fontsize=11)
+    ax[0].text((proj[0] + v[0]) / 2 + 0.08, (proj[1] + v[1]) / 2,
+               r'$\mathbf{r}$', color='C2', fontsize=11)
+    ax[0].text(proj[0] / 2 - 0.1, -0.32, r'$\|\mathbf{v}\|\cos\theta$',
+               color='C0', fontsize=10, ha='center')
+    ax[0].set_title('generic case', fontsize=10)
+
+    # Right panel: equality case, v collinear with w, residual is zero.
+    w2 = np.array([3.0, 0.0])
+    v2 = 0.7 * w2                           # collinear: v = t w
+    arrow(ax[1], (0, 0), w2, 'C0')
+    arrow(ax[1], (0, 0), v2 + np.array([0.0, 0.12]), 'C3')  # nudged up to show both
+    ax[1].text(w2[0] * 1.02, -0.18, r'$\mathbf{w}$', color='C0', fontsize=11)
+    ax[1].text(v2[0] - 0.1, 0.32, r'$\mathbf{v}$', color='C3', fontsize=11)
+    ax[1].text(1.5, -0.55, r'$\mathbf{r}=\mathbf{0}$', color='C2',
+               fontsize=10, ha='center')
+    ax[1].set_title('equality (collinear)', fontsize=10)
+
+    for a in ax:
+        a.set_aspect('equal'); a.grid(alpha=.3)
+        a.set_xlim(-0.6, 4.0); a.set_ylim(-0.9, 2.4)
+    d2l.plt.tight_layout()
+
+plot_proj_cauchy_schwarz()
+```
+
+A first dividend of Cauchy–Schwarz is the **triangle inequality**, which says
+that a detour through a third point is never shorter than going straight.
+
+**Corollary (triangle inequality).** *For any $\mathbf{v}, \mathbf{w}$,*
+$\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$.
+
+**Proof.** Expand and apply :eqref:`eq_mdl-cauchy-schwarz`:
+
+$$
+\|\mathbf{v} + \mathbf{w}\|^2
+ = \|\mathbf{v}\|^2 + 2\,\mathbf{v}\cdot\mathbf{w} + \|\mathbf{w}\|^2
+ \le \|\mathbf{v}\|^2 + 2\,\|\mathbf{v}\|\|\mathbf{w}\| + \|\mathbf{w}\|^2
+ = \bigl(\|\mathbf{v}\| + \|\mathbf{w}\|\bigr)^2.
+$$
+
+Taking square roots gives the claim. $\blacksquare$
 
 As a simple example, let's see how to compute the angle between a pair of vectors:
 
@@ -219,54 +408,169 @@ def angle(v, w):
 angle(jnp.array([0, 1, 2], dtype=jnp.float32), jnp.array([2.0, 3, 4]))
 ```
 
-We will not use it right now, but it is useful to know
-that we will refer to vectors for which the angle is $\pi/2$
-(or equivalently $90^{\circ}$) as being *orthogonal*.
-By examining the equation above, we see that this happens when $\theta = \pi/2$,
-which is the same thing as $\cos(\theta) = 0$.
-The only way this can happen is if the dot product itself is zero,
-and two vectors are orthogonal if and only if $\mathbf{v}\cdot\mathbf{w} = 0$.
-This will prove to be a helpful formula when understanding objects geometrically.
+Two vectors whose angle is $\pi/2$ (equivalently $90^{\circ}$) are called
+*orthogonal*. From :eqref:`eq_mdl-dot_geom`, the angle is $\pi/2$ exactly when
+$\cos\theta = 0$, and since $\|\mathbf{v}\|\|\mathbf{w}\| \neq 0$ for nonzero
+vectors, this happens if and only if the dot product itself vanishes. We
+therefore *define* two vectors to be **orthogonal when**
+$\mathbf{v}\cdot\mathbf{w} = 0$. (We take this as the definition because it
+extends gracefully to the zero vector, which is orthogonal to everything even
+though no angle is defined for it.) This will prove to be a workhorse condition
+throughout the chapter.
 
-It is reasonable to ask: why is computing the angle useful?
-The answer comes in the kind of invariance we expect data to have.
-Consider an image, and a duplicate image,
-where every pixel value is the same but $10\%$ the brightness.
-The values of the individual pixels are in general far from the original values.
-Thus, if one computed the distance between the original image and the darker one,
-the distance can be large.
-However, for most ML applications, the *content* is the same---it is still
-an image of a cat as far as a cat/dog classifier is concerned.
-However, if we consider the angle, it is not hard to see
-that for any vector $\mathbf{v}$, the angle
-between $\mathbf{v}$ and $0.1\cdot\mathbf{v}$ is zero.
-This corresponds to the fact that scaling vectors
-keeps the same direction and just changes the length.
-The angle considers the darker image identical.
+## Projection and Orthogonality
 
-Examples like this are everywhere.
-In text, we might want the topic being discussed
-to not change if we write twice as long of document that says the same thing.
-For some encoding (such as counting the number of occurrences of words in some vocabulary), this corresponds to a doubling of the vector encoding the document,
-so again we can use the angle.
+Cauchy–Schwarz answers "how aligned are two vectors?"; the closely related
+operation of *projection* answers "how much of $\mathbf{v}$ points along
+$\mathbf{w}$?" Geometrically, we look for the point on the line
+$\{t\mathbf{w} : t \in \mathbb{R}\}$ that is closest to $\mathbf{v}$.
 
-### Cosine Similarity
-In ML contexts where the angle is employed
-to measure the closeness of two vectors,
-practitioners adopt the term *cosine similarity*
-to refer to the portion
+**Proposition (orthogonal projection).** *Let $\mathbf{w} \neq \mathbf{0}$. The
+closest multiple of $\mathbf{w}$ to $\mathbf{v}$ is*
+
 $$
-\cos(\theta) = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}.
+\operatorname{proj}_{\mathbf{w}}\mathbf{v}
+ = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w},
+$$
+:eqlabel:`eq_mdl-projection`
+
+*and the residual $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v}$
+is orthogonal to $\mathbf{w}$.*
+
+**Proof.** We minimize the squared distance
+$f(t) = \|\mathbf{v} - t\mathbf{w}\|^2
+ = \|\mathbf{w}\|^2 t^2 - 2(\mathbf{v}\cdot\mathbf{w})\,t + \|\mathbf{v}\|^2$.
+This is a convex parabola in $t$; setting $f'(t) = 2\|\mathbf{w}\|^2 t -
+2(\mathbf{v}\cdot\mathbf{w}) = 0$ gives the unique minimizer
+$t^\star = \dfrac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}$, which
+is :eqref:`eq_mdl-projection`. For orthogonality of the residual, compute
+
+$$
+\mathbf{r}\cdot\mathbf{w}
+ = \mathbf{v}\cdot\mathbf{w}
+   - \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,(\mathbf{w}\cdot\mathbf{w})
+ = 0. \qquad \blacksquare
 $$
 
-The cosine takes a maximum value of $1$
-when the two vectors point in the same direction,
-a minimum value of $-1$ when they point in opposite directions,
-and a value of $0$ when the two vectors are orthogonal.
-Note that if the components of high-dimensional vectors
-are sampled randomly with mean $0$,
-their cosine will nearly always be close to $0$.
+Because $\mathbf{r}$ is orthogonal to $\operatorname{proj}_{\mathbf{w}}\mathbf{v}$
+(which is a multiple of $\mathbf{w}$), the decomposition
+$\mathbf{v} = \operatorname{proj}_{\mathbf{w}}\mathbf{v} + \mathbf{r}$ splits
+$\mathbf{v}$ into two perpendicular pieces, and **Pythagoras** applies:
 
+$$
+\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2 .
+$$
+:eqlabel:`eq_mdl-pythagoras`
+
+Two remarks tie this back to the rest of the section. First, the *signed
+length* of the projection is
+
+$$
+\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{w}\|} = \|\mathbf{v}\|\cos\theta ,
+$$
+
+which is exactly the quantity the hyperplane discussion below will use, so the
+hyperplane material is now fully self-contained. Second, we just solved a
+genuine (if tiny) *least-squares* problem: we found the best approximation of
+$\mathbf{v}$ from the one-dimensional subspace spanned by $\mathbf{w}$. The
+same idea — project onto a subspace, the residual comes out orthogonal —
+scales up to fitting an arbitrary linear model, which is how the singular value
+decomposition produces optimal least-squares solutions in
+:numref:`sec_mdl-svd-low-rank`.
+
+## Cosine Similarity in High Dimensions
+
+It is reasonable to ask why the *angle* — rather than the raw distance — is so
+often the right notion of similarity. The answer is invariance to scale.
+Consider an image and a copy of it dimmed to $10\%$ brightness. Pixel by pixel
+the two are far apart, so their Euclidean distance is large; yet the content is
+identical, and a cat/dog classifier should treat them the same. The angle does:
+for any vector $\mathbf{v}$, the angle between $\mathbf{v}$ and $0.1\,\mathbf{v}$
+is zero, because scaling changes a vector's length but not its direction. This
+is why, when the angle is used to compare two vectors, practitioners work with
+its cosine and call it **cosine similarity**,
+
+$$
+\cos(\theta) = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|}
+ \;\in\; [-1, 1],
+$$
+:eqlabel:`eq_mdl-cosine-sim`
+
+equal to $+1$ when the vectors point the same way, $-1$ when opposite, and $0$
+when orthogonal. Cosine similarity is the metric behind nearest-neighbor
+retrieval over **embeddings**, the scaled dot products inside **attention**
+(:numref:`sec_attention-scoring-functions`), and the alignment objective of
+**contrastive learning**: in each case we have represented objects as vectors
+and we measure relatedness by direction, deliberately discarding magnitude.
+
+This raises a question that turns out to have a striking answer. If we drop two
+*unrelated* vectors into a high-dimensional space, what cosine should we expect
+between them? The answer is that **in high dimensions, random vectors are almost
+always nearly orthogonal** — and the higher the dimension, the more sharply this
+holds.
+
+**Proposition (near-orthogonality).** *Fix a unit vector $\mathbf{u} \in
+\mathbb{R}^d$ and let $\mathbf{v}$ be drawn uniformly from the unit sphere in
+$\mathbb{R}^d$. Then $\cos\theta = \mathbf{u}\cdot\mathbf{v}$ satisfies*
+
+$$
+\mathbb{E}[\cos\theta] = 0,
+\qquad
+\operatorname{Var}(\cos\theta) = \frac{1}{d}.
+$$
+
+**Proof.** The uniform distribution on the sphere is invariant under rotations,
+so we may rotate coordinates until $\mathbf{u} = \mathbf{e}_1$; then
+$\cos\theta = \mathbf{u}\cdot\mathbf{v} = v_1$. By the symmetry $\mathbf{v}
+\mapsto -\mathbf{v}$ we have $\mathbb{E}[v_1] = 0$. For the variance, every
+coordinate plays the same role by symmetry, so $\mathbb{E}[v_i^2]$ is the same
+for all $i$; summing and using $\sum_i v_i^2 = \|\mathbf{v}\|^2 = 1$ gives
+$d\,\mathbb{E}[v_1^2] = \mathbb{E}\!\left[\sum_i v_i^2\right] = 1$, hence
+$\operatorname{Var}(\cos\theta) = \mathbb{E}[v_1^2] = 1/d$. Chebyshev's
+inequality then bounds the chance of a large cosine,
+
+$$
+\Pr\bigl(|\cos\theta| \ge \varepsilon\bigr) \le \frac{1}{d\,\varepsilon^2},
+$$
+
+which tends to $0$ as $d \to \infty$ for any fixed $\varepsilon > 0$.
+$\blacksquare$
+
+So the typical cosine between random directions has standard deviation
+$1/\sqrt{d}$, concentrating ever more tightly at $0$. This is a first taste of
+*concentration of measure*, the phenomenon that makes high-dimensional geometry
+behave very differently from our $2$- and $3$-dimensional intuition. It is also
+exactly *why cosine similarity is such a useful signal*: since unrelated items
+are nearly orthogonal by default, a cosine that is appreciably above $0$ is
+unlikely to be an accident and instead reflects real shared structure — the
+working assumption behind embedding-based retrieval and the attention mechanism.
+
+We can watch the concentration happen by sampling random unit vectors and
+histogramming their pairwise cosines as the dimension grows.
+
+```{.python .input #geometry-linear-algebraic-ops-near-orthogonality}
+import numpy as np
+
+def random_cosines(d, n=10000, rng=np.random.default_rng(0)):
+    # Sample 2n random unit vectors in R^d; Gaussian then normalize gives a
+    # uniform direction on the sphere. Return the cosine of each of the n pairs.
+    g = rng.standard_normal((2 * n, d))
+    g /= np.linalg.norm(g, axis=1, keepdims=True)
+    a, b = g[:n], g[n:]
+    return np.sum(a * b, axis=1)
+
+d2l.set_figsize((6, 4))
+bins = np.linspace(-1, 1, 80)
+for d in [2, 10, 1000]:
+    cos = random_cosines(d)
+    d2l.plt.hist(cos, bins=bins, density=True, histtype='step',
+                 linewidth=1.5, label=f'd = {d}  (std ≈ {1/np.sqrt(d):.3f})')
+d2l.plt.xlabel('cosine similarity'); d2l.plt.ylabel('density')
+d2l.plt.legend(); d2l.plt.show()
+```
+
+The $d = 2$ histogram is broad and flat; by $d = 1000$ it is a narrow spike at
+$0$ of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.
 
 ## Hyperplanes
 
@@ -314,17 +618,64 @@ $$
 $$
 is the *signed distance* from $\mathbf{x}$ to the hyperplane: positive on the
 side $\mathbf{w}$ points toward, negative on the other, and zero exactly on it.
-This signed distance is precisely the *margin* used by linear classifiers.
+This signed distance is precisely the *margin* used by linear classifiers. The
+derivation is just the projection result of the previous section applied to the
+displacement of $\mathbf{x}$ from any point on the hyperplane, which is why the
+projection material had to come first. The figure below collects these facts:
+the normal $\mathbf{w}$ as an arrow from the origin, two parallel level lines
+$\mathbf{w}\cdot\mathbf{x} = b$ for two offsets $b$ (the larger one shifted
+along $\mathbf{w}$ without any rotation), the half-space
+$\mathbf{w}\cdot\mathbf{x} > b$ lightly shaded, and the signed distance
+$b/\|\mathbf{w}\|$ from the origin to the line.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The figure above shows the *signed length* of the projection; give the full vector projection formula explicitly, since the hyperplane and orthogonality arguments below all rely on it.
-**Outline:** 1. Define the projection of $\mathbf{v}$ onto the direction of $\mathbf{w}$ as the closest point on the line $\{t\mathbf{w}\}$ · 2. Solve $\min_t \|\mathbf{v} - t\mathbf{w}\|^2$ to get $t^\star = (\mathbf{v}\cdot\mathbf{w})/(\mathbf{w}\cdot\mathbf{w})$ · 3. State $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w}$ and the residual $\mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v} \perp \mathbf{w}$ · 4. Note the scalar (signed) length is $\mathbf{v}\cdot\mathbf{w}/\|\mathbf{w}\| = \|\mathbf{v}\|\cos\theta$, recovering $1/\|\mathbf{w}\|$ on the line above.
-**Key results to state:** $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \dfrac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w}$; $\;(\mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v})\cdot\mathbf{w} = 0$.
-**Diagrams:** reuses `fig_mdl-vector-project`; optionally annotate the orthogonal residual.
-**Worked example(s):** project $\mathbf{v}=[2,1]^\top$ onto $\mathbf{w}=[2,0]^\top$ and verify the residual is orthogonal to $\mathbf{w}$.
-**Exercises (draft):** (1) compute $\operatorname{proj}_{\mathbf{w}}\mathbf{v}$ and check $\mathbf{v}-\operatorname{proj}_{\mathbf{w}}\mathbf{v} \perp \mathbf{w}$; (2) show projection onto $\mathbf{w}$ is unchanged if $\mathbf{w}$ is rescaled.
-**Prereqs / cross-refs:** dot product :eqref:`eq_mdl-dot_def`, orthogonality ($\mathbf{v}\cdot\mathbf{w}=0$) defined above; used immediately in the hyperplane and signed-distance discussion below.
-:::
+```{.python .input #geometry-linear-algebraic-ops-fig-hyperplane}
+import numpy as np
+
+def plot_hyperplane_wxb():
+    d2l.set_figsize((5.4, 5.0))
+    ax = d2l.plt.gca()
+    w = np.array([2.0, 1.0])               # normal to the hyperplane
+    nrm = np.linalg.norm(w)
+    u = w / nrm                            # unit normal
+    t = np.array([-u[1], u[0]])            # direction along the line
+
+    lim = 4.0
+    s = np.linspace(-6, 6, 2)
+    # A line w.x = b passes through the point (b/||w||^2) w; draw it as
+    # that point plus all multiples of the in-line direction t.
+    for b, col, lab in [(2.0, 'C0', r'$\mathbf{w}\cdot\mathbf{x}=b_1$'),
+                        (5.0, 'C1', r'$\mathbf{w}\cdot\mathbf{x}=b_2$')]:
+        p0 = (b / nrm**2) * w              # foot of perpendicular from origin
+        pts = p0[:, None] + t[:, None] * s[None, :]
+        ax.plot(pts[0], pts[1], '--', color=col, lw=1.8, label=lab)
+
+    # Shade the half-space w.x > b_1 by sampling a grid and masking.
+    gx, gy = np.meshgrid(np.linspace(-lim, lim, 200),
+                         np.linspace(-lim, lim, 200))
+    mask = (w[0] * gx + w[1] * gy > 2.0).astype(float)
+    ax.contourf(gx, gy, mask, levels=[0.5, 1.5], colors=['C0'], alpha=0.12)
+
+    # Normal arrow from the origin.
+    ax.annotate('', xy=(w[0], w[1]), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='C3', lw=2.2))
+    ax.text(w[0] + 0.1, w[1] + 0.05, r'$\mathbf{w}$', color='C3', fontsize=12)
+
+    # Signed distance b_1/||w|| from origin to the first line, along the normal.
+    foot = (2.0 / nrm**2) * w
+    ax.annotate('', xy=(foot[0], foot[1]), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='gray', lw=1.4))
+    ax.plot(0, 0, 'o', color='k', ms=4)
+    ax.text(foot[0] / 2 - 0.95, foot[1] / 2 - 0.05,
+            r'$b/\|\mathbf{w}\|$', color='gray', fontsize=11)
+    ax.text(2.6, 3.0, r'$\mathbf{w}\cdot\mathbf{x}>b_1$', color='C0',
+            fontsize=10)
+
+    ax.set_aspect('equal'); ax.grid(alpha=.3)
+    ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim)
+    ax.legend(fontsize=8, loc='lower left')
+
+plot_hyperplane_wxb()
+```
 
 If we now look at what happens when we ask about the set of points with
 $\mathbf{w}\cdot\mathbf{v} > b$ or $\mathbf{w}\cdot\mathbf{v} < b$,
@@ -507,13 +858,25 @@ d2l.plt.imshow(np.array(ave_1.reshape(28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
-In a fully machine learned solution, we would learn the threshold from the dataset.  In this case, I simply eyeballed a threshold that looked good on the training data by hand.
+In a fully machine learned solution, we would learn the threshold from the
+dataset. Here we set it geometrically instead: the normal is the difference of
+the two class means $\mathbf{w} = \overline{\mathbf{x}}_1 - \overline{\mathbf{x}}_0$,
+and the natural decision boundary is the hyperplane that *bisects* the two means
+— that is, $\mathbf{w}\cdot\mathbf{x} = b$ with
+$b = \mathbf{w}\cdot\tfrac12(\overline{\mathbf{x}}_0 + \overline{\mathbf{x}}_1)$,
+the midpoint of the two means' projections onto $\mathbf{w}$. We classify a test
+image as class $1$ when it lands on the class-$1$ side, i.e.
+$\mathbf{w}\cdot\mathbf{x} > b$. Note that deriving $b$ from the data this way is
+*scale-equivariant*: it gives the same boundary whatever convention each
+framework uses for pixel intensities, which a hand-picked numeric threshold
+would not.
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab mxnet
-# Print test set accuracy with eyeballed threshold
-w = (ave_1 - ave_0).T
-predictions = X_test.reshape(2000, -1).dot(w.flatten()) > -1500000
+# Normal = difference of class means; threshold = midpoint of their projections
+w = (ave_1 - ave_0).flatten()
+b = np.dot(w, (ave_0 + ave_1).flatten()) / 2
+predictions = X_test.reshape(2000, -1).dot(w) > b
 
 # Accuracy
 np.mean(predictions.astype(y_test.dtype) == y_test, dtype=np.float64)
@@ -521,10 +884,11 @@ np.mean(predictions.astype(y_test.dtype) == y_test, dtype=np.float64)
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab pytorch
-# Print test set accuracy with eyeballed threshold
-w = ave_1 - ave_0
-# '@' is Matrix Multiplication operator in pytorch.
-predictions = X_test.reshape(2000, -1) @ (w.flatten()) > -1500000
+# Normal = difference of class means; threshold = midpoint of their projections
+w = (ave_1 - ave_0).flatten()
+b = torch.dot(w, (ave_0 + ave_1).flatten()) / 2
+# '@' is the matrix-multiplication operator in PyTorch.
+predictions = X_test.reshape(2000, -1) @ w > b
 
 # Accuracy
 torch.mean((predictions.type(y_test.dtype) == y_test).float(), dtype=torch.float64)
@@ -532,11 +896,11 @@ torch.mean((predictions.type(y_test.dtype) == y_test).float(), dtype=torch.float
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab tensorflow
-# Print test set accuracy with eyeballed threshold
-w = ave_1 - ave_0
+# Normal = difference of class means; threshold = midpoint of their projections
+w = tf.reshape(ave_1 - ave_0, [-1])
+b = tf.tensordot(w, tf.reshape(ave_0 + ave_1, [-1]), axes=1) / 2
 # Genuine per-example dot product: flatten each image and matvec against w.
-predictions = tf.linalg.matvec(
-    tf.reshape(X_test, (2000, -1)), tf.reshape(w, [-1])) > -1500000
+predictions = tf.linalg.matvec(tf.reshape(X_test, (2000, -1)), w) > b
 
 # Accuracy
 tf.reduce_mean(
@@ -545,9 +909,10 @@ tf.reduce_mean(
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
 #@tab jax
-# Print test set accuracy with eyeballed threshold
-w = ave_1 - ave_0
-predictions = X_test.reshape(2000, -1) @ w.flatten() > -1500000
+# Normal = difference of class means; threshold = midpoint of their projections
+w = (ave_1 - ave_0).flatten()
+b = jnp.dot(w, (ave_0 + ave_1).flatten()) / 2
+predictions = X_test.reshape(2000, -1) @ w > b
 
 # Accuracy
 jnp.mean((predictions.astype(y_test.dtype) == y_test).astype(jnp.float32))
@@ -648,6 +1013,36 @@ If we take similar basis vectors like $[1,0, \ldots,0]$
 and see where our matrix sends them,
 we can start to get a feeling for how the matrix multiplication
 distorts the entire space in whatever dimension space we are dealing with.
+
+### Rotations and Reflections: Orthogonal Matrices
+
+A matrix may skew, rotate, and scale, but a special and important family does
+*only* the rigid part — it rotates or reflects without any stretching. A square
+matrix $\mathbf{Q}$ is called **orthogonal** when its columns are orthonormal,
+which we can write compactly as $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$. The
+defining property of such maps is that they **preserve lengths and angles**,
+because they preserve every dot product:
+
+$$
+(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y})
+ = (\mathbf{Q}\mathbf{x})^\top(\mathbf{Q}\mathbf{y})
+ = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\,\mathbf{y}
+ = \mathbf{x}^\top\mathbf{y}
+ = \mathbf{x}\cdot\mathbf{y}.
+$$
+
+Taking $\mathbf{y} = \mathbf{x}$ shows $\|\mathbf{Q}\mathbf{x}\| =
+\|\mathbf{x}\|$, so an orthogonal map is a rigid motion of space. Since
+$\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ means $\mathbf{Q}^{-1} =
+\mathbf{Q}^\top$, such maps are trivially invertible, and as we will see in the
+next section their volume scaling is $\det\mathbf{Q} = \pm 1$ (the sign
+distinguishing rotations from reflections). Orthogonal matrices are the
+"distortion-free" linear maps, and they will turn out to be the building blocks
+of the two decompositions in the sections that follow: the spectral theorem
+writes a symmetric matrix as $\mathbf{Q}\boldsymbol\Lambda\mathbf{Q}^\top$
+(:numref:`sec_mdl-eigendecompositions`), and the singular value decomposition
+writes *any* matrix as orthogonal–diagonal–orthogonal
+(:numref:`sec_mdl-svd-low-rank`).
 
 ## Linear Dependence
 
@@ -955,6 +1350,48 @@ Thus we see the following result is true:
 a matrix $A$ is invertible if and only if
 the determinant is not equal to zero.
 
+This single equivalence is the thread that ties together three notions we have
+met separately — *linear dependence*, *invertibility*, and the *determinant* —
+and it is worth stating once, cleanly, with a proof we can carry out by hand in
+two dimensions.
+
+**Proposition (the unifying theorem).** *For a square matrix $\mathbf{A}$, the
+following are equivalent:*
+(i) *$\det\mathbf{A} = 0$;*
+(ii) *the columns of $\mathbf{A}$ are linearly dependent;*
+(iii) *$\mathbf{A}$ is not invertible.*
+
+**Proof.** We give the argument for the $2 \times 2$ matrix
+$\mathbf{A} = \bigl[\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}\bigr]$,
+where every step is a picture; the same chain of reasoning holds in any
+dimension with "area" replaced by "$n$-dimensional volume." Write the two
+columns as $\mathbf{a}_1 = [a, c]^\top$ and $\mathbf{a}_2 = [b, d]^\top$. As we
+saw above, $\det\mathbf{A} = ad - bc$ is the *signed area* of the parallelogram
+spanned by $\mathbf{a}_1$ and $\mathbf{a}_2$.
+
+*(i) $\Leftrightarrow$ (ii).* A parallelogram has zero area exactly when its two
+spanning edges are collinear, i.e., when one column is a scalar multiple of the
+other (including the degenerate case where a column is $\mathbf{0}$). That is
+precisely linear dependence of the columns. So $ad - bc = 0$ if and only if
+$\mathbf{a}_1$ and $\mathbf{a}_2$ are linearly dependent.
+
+*(ii) $\Leftrightarrow$ (iii).* If the columns are dependent, every output
+$\mathbf{A}\mathbf{x} = x_1\mathbf{a}_1 + x_2\mathbf{a}_2$ lies on the single
+line spanned by the surviving column, so the whole plane is crushed onto that
+line. Distinct inputs collide there (the map is not one-to-one), so no inverse
+can recover them, and $\mathbf{A}$ is not invertible. Conversely, if the columns
+are independent they span the plane, every target is hit exactly once, and the
+map can be undone — concretely, $ad - bc \neq 0$ is exactly the nonvanishing
+denominator that made the explicit inverse
+$\frac{1}{ad-bc}\bigl[\begin{smallmatrix} d & -b \\ -c & a \end{smallmatrix}\bigr]$
+well-defined earlier in this section. $\blacksquare$
+
+The equivalence retroactively justifies the claims we made on credit:
+linear dependence (the columns of $\mathbf{B}$ are redundant), the missing
+$ad - bc \neq 0$ hypothesis under the $2 \times 2$ inverse, and the present
+section's "$\det = 0$ means collapse" all turn out to be three faces of the
+same fact.
+
 As a final comment, imagine that we have any figure drawn on the plane.
 Thinking like computer scientists, we can decompose
 that figure into a collection of little squares
@@ -965,6 +1402,46 @@ we send each of these squares to parallelograms,
 each one of which has area given by the determinant.
 We see that for any figure, the determinant gives the (signed) number
 that a matrix scales the area of any figure.
+
+This "scale every figure's area by the same factor" reading has an immediate and
+powerful consequence for *composing* two transformations.
+
+**Proposition (multiplicativity of the determinant).** *For square matrices
+$\mathbf{A}$ and $\mathbf{B}$ of the same size,*
+
+$$
+\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{A})\,\det(\mathbf{B}).
+$$
+:eqlabel:`eq_mdl-det-multiplicative`
+
+**Proof.** Apply $\mathbf{A}\mathbf{B}$ to an arbitrary figure of area $V$ by
+running the two maps in turn. First $\mathbf{B}$ acts, and by the volume-scaling
+property just established it scales the area to $\det(\mathbf{B})\,V$. Then
+$\mathbf{A}$ acts on that result and scales its area by a further factor of
+$\det(\mathbf{A})$, giving $\det(\mathbf{A})\,\det(\mathbf{B})\,V$. But the
+composite map $\mathbf{A}\mathbf{B}$ is itself a single linear transformation, so
+by the very same property it scales the original area by exactly its own
+determinant: the final area is $\det(\mathbf{A}\mathbf{B})\,V$. Equating the two
+expressions and cancelling $V$ (true for any figure, so for one of nonzero area)
+gives the claim. The signed version is consistent too, because each map
+contributes its own orientation flip independently. $\blacksquare$
+
+Two consequences follow without any further work. Taking
+$\mathbf{B} = \mathbf{A}^{-1}$ in :eqref:`eq_mdl-det-multiplicative` and using
+$\det(\mathbf{I}) = 1$ (the identity moves no volume) gives
+
+$$
+\det(\mathbf{A}^{-1}) = \frac{1}{\det(\mathbf{A})},
+$$
+
+which also re-confirms the unifying theorem: an inverse can exist only when
+$\det(\mathbf{A}) \neq 0$, since otherwise the right-hand side is undefined.
+And looking ahead, multiplicativity is exactly what makes the determinant
+factor cleanly through a diagonalization: once we can write a matrix in terms of
+its eigenvalues in :numref:`sec_mdl-eigendecompositions`, this same identity will
+show that the determinant is simply the *product of the eigenvalues*,
+$\det(\mathbf{A}) = \prod_i \lambda_i$ — the volume scaling is just the product
+of the per-axis stretch factors.
 
 Computing determinants for larger matrices can be laborious,
 but the  intuition is the same.

@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-svd-low-rank.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.12.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "svd-imports": {
+      "code_fingerprint": "sha256:87f57ae83a86bcf0cac2ac5ee7a2ea8ed720c2aac4e9a0cc8b109432874b7d2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "svd-fig-rotate-scale-rotate": {
+      "code_fingerprint": "sha256:023d8923dcbc9ec270fd0c9a7ac28a5ee9e330ea20772d3b203674ea6aa568e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-svd-low-rank/svd-fig-rotate-scale-rotate-1.png",
+          "bytes": 28837,
+          "sha256": "sha256:80dce345b477b80210ed3acc65f9065e71ee594a4f395351146f5fd4e18eab08"
+        }
+      ]
+    },
+    "svd-defective-shear": {
+      "code_fingerprint": "sha256:02cf3a822efaaec01570f762b8e798938635e1c93e35a928b0a5726c105c1690",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "singular values of the shear: [1.618034 0.618034]\ngolden ratio phi, 1/phi:     [1.618034 0.618034]\nproduct sigma_1 * sigma_2 = |det A| = 1.0\n"
+        }
+      ]
+    },
+    "svd-fig-four-subspaces": {
+      "code_fingerprint": "sha256:b68817d89a30a11a7a4bd7d8d4c5bbce8d57fbf3a3b496f6be0c89a1a8bf5878",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-svd-low-rank/svd-fig-four-subspaces-1.png",
+          "bytes": 16576,
+          "sha256": "sha256:a754f9d91aaf17fce840e8e5bce78728b86c9a6cdbc6446a7c430dcdf200ee37"
+        }
+      ]
+    },
+    "svd-numerical-rank": {
+      "code_fingerprint": "sha256:89da07f38d05985d6c0c459ce652b8b23328ab8356213c784ca3ac361cbd0dca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "singular values: [4.351705 0.914865 0.       0.      ]\nnumerical rank (tol = 3.87e-15): 2\n"
+        }
+      ]
+    },
+    "svd-fig-eckart-young": {
+      "code_fingerprint": "sha256:a757d414a538095e3076a957b47ca08a060a05e28eed410450ae4a1bcc86d43a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-svd-low-rank/svd-fig-eckart-young-1.png",
+          "bytes": 75839,
+          "sha256": "sha256:42e4e3510f3cb80c316745451dae178cb302b897611fcbb2bbbe5b8982b45de8"
+        }
+      ]
+    },
+    "svd-pca": {
+      "code_fingerprint": "sha256:1e2c5711d623a31292951530d002c204848c1fe47447d259edc4cd2f31a306af",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "singular values of Xc:         [49.2564 13.0826]\nexplained variance (sigma^2/n): [8.0873 0.5705]\neigenvalues of covariance:      [8.0873 0.5705]\nexplained-variance ratio:       [0.9341 0.0659]\n"
+        }
+      ]
+    },
+    "svd-fig-pca-axes": {
+      "code_fingerprint": "sha256:08483cf33fffd2b16b332a86c085a56fe111530744d6621c67c6e23294bd92f4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-svd-low-rank/svd-fig-pca-axes-1.svg",
+          "bytes": 69206,
+          "sha256": "sha256:40f245c9014eba198307ce89fd3dfb5a909a2a9d7805967b639aa45952828f17"
+        }
+      ]
+    },
+    "svd-least-squares": {
+      "code_fingerprint": "sha256:d0363d945383a6d6053fa256d3e0648441a28d19924be54a36236c97f778c68b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pinv :  [3.5 1.4]  residual 2.0494\nlstsq:  [3.5 1.4]  residual 2.0494\nnormal: [3.5 1.4]\ncond(A)      = 7.469\ncond(A^T A)  = 55.782 = cond(A)^2\n"
+        }
+      ]
+    },
+    "svd-fig-condition-contours": {
+      "code_fingerprint": "sha256:c9e3355a813a793bafe22ebf49981df0cd0781fd0e6ed304019d84af7aeafcf1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-svd-low-rank/svd-fig-condition-contours-1.svg",
+          "bytes": 161142,
+          "sha256": "sha256:913a4286fdab0a0b3fa63d6ec25e47fd1f61f21efa1bf4badb61dcf2e5e1c528"
+        }
+      ]
+    },
+    "svd-weight-spectrum": {
+      "code_fingerprint": "sha256:060714521e94a6490a787008ad5f35fc46a1cc72c0510dffeaf0e972fda48b6c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "matrix shape: 256 x 512  (131072 params)\nrank for 95% spectral energy: 18\nLoRA params at that rank: 13824 (10.5% of full)\n"
+        }
+      ]
+    },
+    "svd-verify": {
+      "code_fingerprint": "sha256:75d831aab8c6f0b4f6d9cbc5dc8a198b68696bbc38385e3208e67b0e946bfed3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reconstruction error: 0.0\nsigma^2          : [18.324555  5.675445]\neig(A^T A) sorted: [18.324555  5.675445]\n"
+        }
+      ]
+    }
+  }
+}

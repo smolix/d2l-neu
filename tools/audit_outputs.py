@@ -36,12 +36,40 @@ not execute anything.
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import capture_outputs as cap
+from scan_notebook_manifests import source_execution_class
 
 FRAMEWORKS = cap.FRAMEWORKS
+
+
+def host_gpu_count():
+    """Number of NVIDIA GPUs visible on this host (0 if none / no nvidia-smi).
+
+    Used to make the freshness gate host-capability-aware: a stale notebook
+    cannot be re-executed on a box with fewer GPUs than it needs (a GPU notebook
+    on Apple Silicon, a multi-GPU notebook on a single-GPU box), so there is
+    nothing the author could do *here* to fix it. Hard-failing the render on
+    such a box would defeat the point of committing pre-executed outputs — a
+    portable baseline that lets any machine render the whole book and re-run
+    only the notebooks its hardware can actually execute. So those stay a
+    WARNING (render from store); a host that DOES have enough GPUs still
+    hard-fails and refreshes them. See docs/build-system.md §3.
+    """
+    exe = shutil.which('nvidia-smi')
+    if not exe:
+        return 0
+    try:
+        r = subprocess.run([exe, '-L'], capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            return 0
+        return sum(1 for ln in r.stdout.splitlines() if ln.strip().startswith('GPU '))
+    except Exception:
+        return 0
 
 
 def audit_manifest(repo_root, nb_root, manifest_path, fw):
@@ -69,10 +97,18 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw):
     cur_prov = cap.build_provenance(repo_root, fw, nb_path.with_suffix('.d'))
     old_prov = manifest.get('provenance', {})
 
-    # Notebook-level invalidation.
+    # Notebook-level invalidation. framework_version compares the PEP 440
+    # *public* version only — the platform/build local segment ('+cu128',
+    # '+cpu') identifies the wheel, not the framework version, and must not
+    # invalidate a store captured on a different machine (cap.public_version
+    # also normalizes legacy '+cu128' manifests captured before this change).
     prov_drift = False
     for key in ('framework_version', 'd2l_lib_fingerprint'):
-        if old_prov.get(key) != cur_prov.get(key):
+        old_val, cur_val = old_prov.get(key), cur_prov.get(key)
+        if key == 'framework_version':
+            old_val = cap.public_version(old_val) if old_val else old_val
+            cur_val = cap.public_version(cur_val) if cur_val else cur_val
+        if old_val != cur_val:
             prov_drift = True
             rec['reasons'].append(
                 f'{key}: {old_prov.get(key)} → {cur_prov.get(key)}')
@@ -211,10 +247,31 @@ def main():
         print('\n  ✓ store is clean and fresh.')
 
     if args.verify_fresh:
-        if hard:
-            print(f'\nFAIL (verify-fresh): {len(hard)} notebook(s) have stale '
-                  f'INLINE outputs. Re-run + capture them, or use `make render-fresh`.',
-                  file=sys.stderr)
+        gpus = host_gpu_count()
+        # GPUs each resource class needs to *execute*. A stale notebook the
+        # current host cannot run (it has fewer GPUs than the class needs) is
+        # deferred to a warning and rendered from the committed store — nothing
+        # the author could do here would fix it. One the host CAN run still
+        # hard-fails. This tiers cleanly: a CPU box (0) defers gpu+multi-gpu, a
+        # single-GPU box (1) defers only multi-gpu, a multi-GPU box (>=2) blocks
+        # on everything (the strict canonical gate).
+        NEED = {'cpu': 0, 'gpu': 1, 'multi-gpu': 2}
+        blocked, deferred = [], []
+        for r in hard:
+            rel = Path(r['source'])
+            cls = source_execution_class(repo_root / rel, rel)
+            (deferred if gpus < NEED.get(cls, 0) else blocked).append((r, cls))
+        if deferred:
+            print(f'\n  ⚠ {len(deferred)} stale notebook(s) need more GPUs than '
+                  f'this host has ({gpus}) — rendering from the committed store; '
+                  f'refresh them on a host with enough GPUs:', file=sys.stderr)
+            for r, cls in deferred:
+                print(f'      [{cls}] {r["framework"]:11} {r["source"]}',
+                      file=sys.stderr)
+        if blocked:
+            print(f'\nFAIL (verify-fresh): {len(blocked)} notebook(s) have stale '
+                  f'INLINE outputs you can re-run on this host. Re-run + capture '
+                  f'them, or use `make render-fresh`.', file=sys.stderr)
             return 1
         if integrity_err:
             print('\nFAIL (verify-fresh): integrity errors above.', file=sys.stderr)

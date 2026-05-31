@@ -299,3 +299,209 @@ them into reproducible pipelines — `sklearn.impute` and
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17967)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.2]{.kicker}
+
+From a messy file to a model-ready tensor<br>**load · inspect · clean · encode · scale**.
+:::
+:::
+
+::: {.slide title="Why preprocess"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Real data arrives as messy files, not tensors. The path to a model runs
+through a sequence of **decisions** — which values are missing and how to
+fill them, how to turn categories into numbers, whether to rescale.
+
+::: {.d2l-note}
+Get these wrong and even a perfect model learns nothing useful.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:pandas-pipeline
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Load & look]{.dtitle}
+
+[read a CSV, then understand it]{.dsub}
+:::
+:::
+
+::: {.slide title="Reading a CSV"}
+[Load &amp; look]{.kicker}
+
+`read_csv` loads a comma-separated file into a **DataFrame** — rows ×
+named columns. Empty fields become `NaN`, pandas's marker for a missing
+value:
+
+@pandas-reading-the-dataset-2
+:::
+
+::: {.slide title="Know your data first"}
+[Load &amp; look]{.kicker}
+
+Before transforming anything, look. `dtypes` shows how each column was
+read — numeric vs. string (a categorical cue); `describe` surfaces the
+ranges:
+
+::: {.cols .vc}
+::: {.col}
+@pandas-knowing-your-data-1
+:::
+
+::: {.col}
+@pandas-knowing-your-data-2
+:::
+:::
+
+The three numeric columns live on wildly different scales — remember that.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Clean & encode]{.dtitle}
+
+[missing values · categoricals]{.dsub}
+:::
+:::
+
+::: {.slide title="Missing values"}
+[Clean &amp; encode]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+First **measure** the problem — how many, and where:
+
+@pandas-handling-missing-values-1
+
+Three responses, each with a cost: **delete** the rows, **impute** an
+estimate, or add an **indicator** flag.
+:::
+
+::: {.col .fig .big}
+@fig:pandas-missing
+:::
+:::
+:::
+
+::: {.slide title="Deletion is costly"}
+[Clean &amp; encode]{.kicker}
+
+The simplest response is deletion — but dropping every row with a gap
+keeps only **4 of the 10** rows here:
+
+@pandas-handling-missing-values-2
+
+Too wasteful on small data. So we impute instead.
+:::
+
+::: {.slide title="Impute the numerical columns"}
+[Clean &amp; encode]{.kicker}
+
+*Imputation* fills each gap with an estimate. For a numerical column the
+simplest is the column **mean** (the median when it is skewed). The
+categorical `RoofType` we leave for encoding next:
+
+@pandas-handling-missing-values-3
+:::
+
+::: {.slide title="Encoding categoricals"}
+[Clean &amp; encode]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Models consume numbers, so the `RoofType` strings get **one-hot encoded** —
+one 0/1 column per category. `dummy_na=True` makes "missing" its own
+category (the indicator strategy again):
+
+@-pandas-encoding-categorical-features-1
+
+We avoid integer codes (`Slate=0, Tile=1`) — they invent a false ordering
+the model would wrongly exploit.
+:::
+
+::: {.col .fig .big}
+@fig:pandas-onehot
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Scale & convert]{.dtitle}
+
+[standardize, then hand off to tensors]{.dsub}
+:::
+:::
+
+::: {.slide title="One scale for all features"}
+[Scale &amp; convert]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The continuous columns span very different scales (`NumRooms` ≈ 3,
+`Area` ≈ 1700), which makes optimization ill-conditioned.
+**Standardize** each to ~zero mean, unit variance:
+
+@-pandas-numerical-features-1
+
+::: {.d2l-note .warn}
+Compute these statistics on the **training** split only — using the whole
+dataset leaks the test set into training.
+:::
+:::
+
+::: {.col .fig}
+@fig:pandas-scale
+:::
+:::
+:::
+
+::: {.slide title="From DataFrame to tensor"}
+[Scale &amp; convert]{.kicker}
+
+Every column is numeric, so `.to_numpy()` hands the frame to the
+framework's tensor constructor — and we are in tensor-land:
+
+@-pandas-conversion-to-tensor-format
+
+::: {.d2l-note}
+`X` is now a `(10, 5)` float tensor and `y` a `(10,)` target — ready for
+a model. (Real pipelines cast to `float32`.)
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Inspect** before you transform (`dtypes`, `describe`).
+- **Missing:** delete, impute, or flag — a tradeoff, not a default.
+- **Categoricals:** one-hot, not integer codes.
+- **Numericals:** standardize; fit stats on training data only.
+- **Convert:** `to_numpy` → tensor, and on to the model.
+:::
+
+::: {.col .fig}
+@fig:pandas-pipeline
+:::
+:::
+:::

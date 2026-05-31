@@ -1,12 +1,61 @@
 # D2L-Neu Project Context
 
 Rebuild of "Dive into Deep Learning" (d2l.ai) using Quarto.
-See **docs/architecture.md** for the component inventory and the current build
-flow. See **docs/build-system.md** for the *decoupled* build model (committed
-notebook-output store, capture/bless workflow, CPU-only rendering, freshness
-audit) — the design that lets site/slide rendering run without re-executing
-notebooks. The decoupled model is the target; `architecture.md` describes what
-the repo does until it lands.
+See **docs/architecture.md** for the component inventory and the build flow, and
+**docs/build-system.md** for the *decoupled* build model (committed notebook-
+output store, capture/bless workflow, CPU-only rendering, host-capability-aware
+freshness gate) — the design, now landed, that lets site/slide rendering run
+without re-executing notebooks.
+
+## Getting started (orientation — read before building)
+
+**Repo shape.** Source `.md` files (in `chapter_*/`) are the source of truth;
+the preprocessor `tools/d2l_preprocess.py` runs with `SOURCE=.` (this repo, not
+`../d2l-en`) and emits `chapter_*/*.qmd` which are **generated + gitignored** —
+never edit them. `outputs/` is the **committed** store of executed notebook
+outputs (text inline in JSON manifests, images in Git LFS); `_book/` (HTML),
+`_notebooks/` (scratch executed notebooks), `_slides/`, `_pdf/`, `logs/` are all
+gitignored build products.
+
+**Venvs.** One per framework (`.venv-pytorch`, `.venv-tensorflow`, `.venv-jax`,
+`.venv-mxnet`) plus `.venv-build` (Quarto only). Managed by `uv` via `make
+venv-<fw>`. **torch is pinned to 2.11.0 / torchvision 0.26.0** — the version the
+committed store was captured under (freshness keys on the *public* version, so
+the Linux `+cu128` wheel and the macOS arm64 wheel of 2.11.0 both match). To move
+to 2.12: bump the pin in `pyproject.toml` **and** re-capture the store.
+
+**Render + preview locally (CPU, no GPU needed):**
+
+```bash
+make html                                   # reads outputs/; gate is host-capability-aware
+python3 -m http.server 8000 -d _book        # preview at http://localhost:8000/
+```
+
+`make html` runs `tools/audit_outputs.py --verify-fresh`. That gate is tiered by
+host GPU count (`docs/build-system.md` §3.3a): a **CPU box renders the whole
+book**, deferring (warning, not failing) only stale notebooks it lacks the GPUs
+to re-execute; a single-GPU box defers only multi-GPU notebooks; a ≥2-GPU box is
+strict. So you can always render here; you only *re-run* what your hardware
+supports.
+
+**Surgically refresh one notebook's outputs** (CPU notebooks, locally — no GPU
+box, no full rebuild):
+
+```bash
+make -B _notebooks/<fw>/<chapter>/<file>.executed   # regen + execute that one
+make capture-outputs FILES=<chapter>/<file>.md      # bless into outputs/
+make html                                           # re-render
+```
+
+**Edit/run notebooks in VS Code:** `make kernels` once (registers the four
+`d2l-<fw>` ipykernels), then the `.vscode-extension/` "Edit Framework View"
+command (`Cmd+E Cmd+J`) opens the per-framework notebook with its kernel
+pre-selected. See `.vscode-extension/README.md`.
+
+**Where to look:** build/freshness model → `docs/build-system.md`; component
+inventory → `docs/architecture.md`; `:label:`/`:numref:`/`:eqlabel:` directive
+semantics → `docs/syntax.md`; how to author chapter content → the "Content
+authoring" section below.
 
 ## Rules
 
@@ -178,11 +227,23 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 
 ## Current status
 
+- **torch pinned to 2.11.0 / torchvision 0.26.0** (the committed store's
+  capture version). Freshness provenance keys on the *public* version (build
+  tag stripped) and the `verify-fresh` gate is host-capability-aware, so the
+  store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
+  book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
+  §3.1/§3.3a.
+- A **"Mathematics for Deep Learning"** part was added (branch
+  `math-for-deep-learning-appendix`): 6 chapters under `chapter_mdl-*`, with
+  `mdl-`-prefixed labels; Linear Algebra is fully written, the rest are detailed
+  ToCs + curated reading lists. The old `chapter_appendix-mathematics-for-deep-learning/`
+  still exists until the new part is finished.
 - Last all-framework green run is stale with respect to the current custom
   MXNet wheel. Current MXNet diagnostics are in
-  `docs/mxnet-runtime-diagnostics.md`.
+  `docs/mxnet-runtime-diagnostics.md`. `chapter_computational-performance/multiple-gpus.md`
+  is stale (a `#@save` block it uses changed) and needs the ≥2-GPU box to refresh.
 - **261/261 slides rendered** (PT 75, TF 56, JAX 55, MX 75)
-- 192 HTML pages, 4 PDFs, d2l library — zero errors
+- ~192 HTML pages (plus the new math part), 4 PDFs, d2l library — zero errors
 - Full `make all` takes ~3 hours
 
 ### d2l-en source fixes applied (in ../d2l-en, not committed there)

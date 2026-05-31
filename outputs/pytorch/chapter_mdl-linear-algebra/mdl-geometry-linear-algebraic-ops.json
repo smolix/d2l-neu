@@ -3,7 +3,7 @@
   "source": "chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.12.0",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
     "max_inline_bytes": 0
   },
@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 11022,
-          "sha256": "sha256:41b9fa803c8dc764eef09715f4eaf866ca31d472696fe98d49e71e6c32c36c1a"
+          "sha256": "sha256:5c90662473861b45714772e3cddc187aed2ec3140567e2dca00e706ac8b5170b"
         }
       ]
     },
@@ -55,7 +55,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-3-1.svg",
           "bytes": 10530,
-          "sha256": "sha256:3d68d3a81bab9a004669012b71adf133cc1a7830353524fbfc9636c58880021b"
+          "sha256": "sha256:84ed5a79d3dc4c487eba83ea129621d921e60261f18d88553675d914ed623c49"
         }
       ]
     },

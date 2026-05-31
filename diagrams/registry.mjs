@@ -9,6 +9,7 @@ import { diagrams as calculus } from './calculus.mjs';
 import { diagrams as autograd } from './autograd.mjs';
 import { diagrams as pandas } from './pandas.mjs';
 import { diagrams as probability } from './probability.mjs';
+import { diagrams as lookupApi } from './lookup-api.mjs';
 
 export const diagrams = {
   ...ndarray,
@@ -17,4 +18,5 @@ export const diagrams = {
   ...autograd,
   ...pandas,
   ...probability,
+  ...lookupApi,
 };

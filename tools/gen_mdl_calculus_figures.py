@@ -141,9 +141,114 @@ def fig_zero_second():
     _second_der_panels("mdl-cal-zero-second", 0)
 
 
+def fig_secant_to_tangent():
+    """Secants through (x, f(x)) and (x+eps, f(x+eps)) rotating into the tangent
+    as eps -> 0; the limiting slope is f'(x).  Real cubic + real slopes."""
+    f = lambda t: 0.15 * t ** 3 - 0.2 * t ** 2 + 0.3 * t + 0.6
+    df = lambda t: 0.45 * t ** 2 - 0.4 * t + 0.3
+    x0, xs = 1.0, np.linspace(-0.3, 2.7, 400)
+    y0 = f(x0)
+
+    fig, ax = plt.subplots(figsize=(5.6, 4.0))
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
+    for k, eps in enumerate([1.4, 0.8, 0.4]):          # secants, eps shrinking
+        slope = (f(x0 + eps) - y0) / eps
+        ax.plot(xs, y0 + slope * (xs - x0), "-", color=GRAY,
+                lw=1.0, alpha=0.35 + 0.15 * k, zorder=2)
+        ax.plot([x0 + eps], [f(x0 + eps)], "o", color=GRAY, ms=4, zorder=4)
+    ax.plot(xs, y0 + df(x0) * (xs - x0), "--", color=ORANGE, lw=2.0, zorder=5)
+    ax.plot([x0], [y0], "o", color="black", ms=5, zorder=6)
+    ax.text(2.05, y0 + df(x0) * 1.05 + 0.16, r"slope $f'(x)$", color=ORANGE,
+            ha="left", va="bottom", fontsize=10)
+    ax.text(x0, y0 - 0.16, r"$(x,\,f(x))$", ha="center", va="top", fontsize=9)
+    ax.set_xlim(-0.3, 2.75); ax.set_ylim(0.1, 1.9)
+    ax.set_xticks([x0]); ax.set_xticklabels(["$x$"]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-secant-to-tangent")
+
+
+def fig_gd_step():
+    """One gradient-descent step on a 1-D bowl: from x move -eta f'(x) along the
+    axis and land lower on the curve; the predicted drop is ~ eta [f'(x)]^2."""
+    f, df = lambda t: 0.5 * t ** 2, lambda t: t
+    x0, eta = 1.7, 0.6
+    x1, xs = x0 - eta * df(x0), np.linspace(-2.4, 2.4, 400)
+
+    fig, ax = plt.subplots(figsize=(5.6, 4.0))
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
+    ax.plot(xs, f(x0) + df(x0) * (xs - x0), "--", color=ORANGE, lw=1.6, zorder=2)
+    ax.plot([x0, x0], [0, f(x0)], ":", color=GRAY, lw=1.0)
+    ax.plot([x1, x1], [0, f(x1)], ":", color=GRAY, lw=1.0)
+    fl.arrow(ax, (x0, -0.18), (x1, -0.18), color=GREEN, lw=2.0, mut=13)
+    ax.text((x0 + x1) / 2, -0.42, r"$-\eta f'(x)$", ha="center", va="top",
+            color=GREEN, fontsize=10)
+    ax.plot([x0], [f(x0)], "o", color="black", ms=5, zorder=5)
+    ax.plot([x1], [f(x1)], "o", color=GREEN, ms=5, zorder=5)
+    ax.text(x0 + 0.08, f(x0) + 0.04, r"$x$", ha="left", va="bottom")
+    ax.text(x1 - 0.08, f(x1) + 0.06, r"$x-\eta f'(x)$", ha="right", va="bottom",
+            color=GREEN, fontsize=9)
+    ax.annotate(r"drop $\approx \eta\,[f'(x)]^2$", xy=(x1, f(x1)),
+                xytext=(-2.15, 1.8), fontsize=9.5, color=GRAY,
+                arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0,
+                                connectionstyle="arc3,rad=0.25"))
+    ax.set_xlim(-2.4, 2.4); ax.set_ylim(-0.65, 2.25)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-gd-step")
+
+
+def fig_relu_corner():
+    """The kink of |x| at the origin: no single tangent exists, but a whole fan
+    of supporting lines through the origin, slopes sweeping the subdifferential
+    interval, lie on or below the graph."""
+    xs = np.linspace(-2.0, 2.0, 400)
+    fig, ax = plt.subplots(figsize=(5.4, 4.0))
+    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    for s in np.linspace(-1.0, 1.0, 9):                # subgradient fan
+        ax.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
+    ax.plot(xs, np.abs(xs), color=BLUE, lw=2.6, zorder=4)
+    ax.plot([0], [0], "o", color="black", ms=6, zorder=5)
+    ax.text(1.45, 1.62, r"$|x|$", color=BLUE, fontsize=12, ha="center")
+    ax.text(0.0, -0.32, "kink: subgradients sweep slope $-1$ to $+1$",
+            ha="center", va="top", fontsize=9, color=ORANGE)
+    ax.set_xlim(-2.0, 2.0); ax.set_ylim(-0.55, 2.0)
+    ax.set_xticks([0]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-relu-corner")
+
+
 # =========================================================================== #
 # Integral calculus                                                           #
 # =========================================================================== #
+
+def fig_riemann():
+    """The definite integral as a limit of Riemann sums: three panels of the same
+    curve f(x)=x/(1+x^2) on [0,2] with left-endpoint rectangles of shrinking
+    width epsilon.  The rectangle sum (printed in each title) marches toward the
+    true area (1/2)log 5 as epsilon -> 0."""
+    f = lambda t: t / (1 + t ** 2)
+    a, b = 0.0, 2.0
+    truth = 0.5 * np.log(5.0)
+    xs = np.linspace(a, b, 500)
+
+    fig, axes = plt.subplots(1, 3, figsize=(10.2, 3.1))
+    for ax, eps in zip(axes, [0.5, 0.2, 0.05]):
+        left = np.arange(a, b, eps)                 # left endpoints
+        approx = float(np.sum(eps * f(left)))       # the real Riemann sum
+        ax.bar(left, f(left), width=eps, align="edge", facecolor=BLUE,
+               alpha=0.30, edgecolor=BLUE, lw=0.7, zorder=2)
+        ax.plot(xs, f(xs), color="black", lw=2.0, zorder=3)
+        ax.set_title(rf"$\epsilon={eps:g}$:  sum $={approx:.3f}$", fontsize=10.5)
+        ax.set_ylim(0, 0.6)
+        ax.set_xlim(a, b)
+        ax.set_yticks([])
+        ax.set_xticks([a, b]); ax.set_xticklabels(["$a$", "$b$"])
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+    fig.text(0.5, -0.02, rf"true area $=\frac{{1}}{{2}}\log 5 = {truth:.3f}$",
+             ha="center", va="top", fontsize=10.5, color=GRAY)
+    fl.save(fig, "mdl-cal-riemann")
+
 
 def fig_sub_area():
     """Area under a bell-shaped curve between a and b equals the area-to-the-left
@@ -397,6 +502,70 @@ def fig_chain_net2():
     fl.save(fig, "mdl-cal-chain-net2")
 
 
+def fig_gradient_field():
+    """Gradient and level sets: contours of a scalar field with real gradient
+    arrows crossing them at right angles, pointing uphill, and longer where the
+    contours bunch (the field changes fastest).  Illustrates the two propositions
+    of the gradient-geometry section."""
+    f = lambda X, Y: 0.5 * X ** 2 + 0.18 * Y ** 2        # an elongated bowl
+    grad = lambda px, py: np.array([px, 0.36 * py])      # exact gradient
+    xs = np.linspace(-2.6, 2.6, 240)
+    X, Y = np.meshgrid(xs, xs)
+
+    fig, ax = plt.subplots(figsize=(5.2, 4.4))
+    ax.contour(X, Y, f(X, Y), levels=np.linspace(0.2, 4.0, 9),
+               colors=GRAY, linewidths=1.0, zorder=2)
+    for px, py in [(-1.9, 1.1), (1.6, -1.4), (0.7, 1.9),
+                   (-1.1, -1.0), (2.1, 0.5), (-0.5, -2.0)]:
+        g = grad(px, py)
+        fl.arrow(ax, (px, py), (px + 0.32 * g[0], py + 0.32 * g[1]),
+                 color=ORANGE, lw=2.0, mut=12)
+    ax.plot([0], [0], "o", color=BLUE, ms=7, zorder=4)     # the minimum
+    ax.text(0.12, -0.32, "min", color=BLUE, fontsize=9)
+    ax.set_aspect("equal")
+    ax.set_xlim(-2.6, 2.6); ax.set_ylim(-2.6, 2.6)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-gradient-field")
+
+
+# =========================================================================== #
+# Matrix calculus & automatic differentiation                                 #
+# =========================================================================== #
+
+def fig_fwd_vs_rev():
+    """Forward- vs reverse-mode AD on a chain x -> a -> b -> L.  Both evaluate
+    left-to-right (gray); forward propagates a tangent (JVP) the same direction,
+    reverse records a tape then propagates an adjoint (VJP) right-to-left to get
+    the whole scalar-loss gradient in one pass."""
+    chain, xpos = ["x", "a", "b", "L"], [0.0, 1.5, 3.0, 4.5]
+    fig, (axt, axb) = plt.subplots(2, 1, figsize=(6.6, 4.6))
+
+    def draw(ax, direction, dual_color, dual_label, title):
+        centers = [(xp, 0.0) for xp in xpos]
+        for c0, c1 in zip(centers, centers[1:]):       # evaluation edges
+            edge(ax, c0, c1)
+        for lab, c in zip(chain, centers):
+            node(ax, c, f"${lab}$", r=0.26)
+        for c0, c1 in zip(centers, centers[1:]):       # derivative propagation
+            a, b = (c0, c1) if direction == "fwd" else (c1, c0)
+            ax.annotate("", xy=(b[0], b[1] + 0.6), xytext=(a[0], a[1] + 0.6),
+                        arrowprops=dict(arrowstyle="->", color=dual_color,
+                                        lw=1.7, connectionstyle="arc3,rad=-0.3"))
+        ax.text(2.25, 1.5, dual_label, ha="center", color=dual_color, fontsize=9)
+        ax.set_title(title, fontsize=10.5, loc="left")
+        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.7, 1.9)
+        ax.set_aspect("equal"); ax.axis("off")
+
+    draw(axt, "fwd", BLUE,
+         r"forward: tangent $\dot a = J\dot x$ (JVP), one input at a time",
+         "Forward mode")
+    draw(axb, "rev", ORANGE,
+         r"reverse: adjoint $\bar a = J^{\top}\bar L$ (VJP), one output at a time",
+         "Reverse mode (the tape = backprop)")
+    fl.save(fig, "mdl-cal-fwd-vs-rev")
+
+
 # =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
@@ -407,14 +576,21 @@ FIGURES = [
     fig_pos_second,
     fig_neg_second,
     fig_zero_second,
+    fig_secant_to_tangent,
+    fig_gd_step,
+    fig_relu_corner,
     # integral calculus
+    fig_riemann,
     fig_sub_area,
     fig_rect_trans,
     fig_sum_order,
     fig_cov_jacobian,
-    # multivariable calculus (chain-rule graphs)
+    # multivariable calculus (chain-rule graphs + gradient geometry)
     fig_chain_net1,
     fig_chain_net2,
+    fig_gradient_field,
+    # matrix calculus & autodiff
+    fig_fwd_vs_rev,
 ]
 
 

@@ -198,9 +198,12 @@ $$
 \epsilon \max_{[x,x+\epsilon]} f .
 $$
 
-Divide by $\epsilon$; both bounds converge to $f(x)$ as $\epsilon\to 0$, so the
-squeeze forces $\lim_{\epsilon\to 0}\frac{F(x+\epsilon)-F(x)}{\epsilon}=f(x)$.
-That limit is exactly $F'(x)$. $\blacksquare$
+Divide by $\epsilon$. Because $f$ is continuous at $x$, its minimum and maximum
+over the shrinking interval $[x,x+\epsilon]$ both converge to the single value
+$f(x)$ (equivalently, the mean value theorem for integrals places the average on
+the curve), so the squeeze forces
+$\lim_{\epsilon\to 0}\frac{F(x+\epsilon)-F(x)}{\epsilon}=f(x)$. That limit is
+exactly $F'(x)$. $\blacksquare$
 
 The sliver argument is the whole story: the rate at which accumulated area grows
 is just the current height of the curve. This *reverses* the problem. Finding
@@ -314,9 +317,13 @@ $$
 = \begin{cases} \dfrac{1}{p-1}, & p>1\ \text{(converges)},\\[1ex] \infty, & p\le 1\ \text{(diverges)}.\end{cases}
 $$
 
-So $\int_1^\infty x^{-2}\,dx = 1$ while $\int_1^\infty x^{-1}\,dx=\infty$: the
-boundary between convergence and divergence sits exactly at $p=1$. This single
-threshold is what decides whether a heavy-tailed density even has a finite
+The antiderivative $\tfrac{b^{1-p}-1}{1-p}$ is the $0/0$ indeterminate form at
+exactly $p=1$, where the integrand $x^{-1}$ has antiderivative $\log x$ instead, so
+$\int_1^\infty x^{-1}\,dx=\lim_{b\to\infty}\log b=\infty$; the case split above
+already records this divergent value. So $\int_1^\infty x^{-2}\,dx = 1$ while
+$\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergence
+sits exactly at $p=1$. This single threshold is what decides whether a
+heavy-tailed density even has a finite
 normalizer or mean, a recurring concern once we reach probability. The cell
 watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx$, approach its
 limit of $1$.
@@ -355,14 +362,15 @@ print('limit as b -> infinity   = 1.000000')
 
 ### A Note on Signed Area
 
-The evaluation rule :eqref:`eq_mdl-ftc-eval` cheerfully produces negative numbers
-(for instance $\int_0^{-1} 1\,dx = -1$), which can be jarring if "area" is
-supposed to be positive. The resolution is that integrals measure *signed* area,
-with two independent sign flips. First, where $f<0$ the area counts as negative:
-$\int_0^1 (-1)\,dx = -1$. Second, integrating right-to-left negates the result:
-$\int_b^a f = -\int_a^b f$. Each flip---reflecting across the $x$-axis, or
-reversing the limits---introduces one minus sign, and two flips cancel:
-$\int_0^{-1}(-1)\,dx = 1$. This is the same signed-area bookkeeping the
+The evaluation rule :eqref:`eq_mdl-ftc-eval` cheerfully produces negative numbers,
+which can be jarring if "area" is supposed to be positive. The resolution is that
+integrals measure *signed* area, governed by two independent sign rules. First,
+where $f<0$ the area counts as negative: $\int_0^1 (-1)\,dx = -1$. Second,
+integrating right-to-left negates the result: $\int_b^a f = -\int_a^b f$. Each
+flip---reflecting across the $x$-axis, or reversing the limits---introduces one
+minus sign. Apply them in turn to a single example: $\int_0^{-1} 1\,dx = -1$ (one
+flip, from reversed limits), while $\int_0^{-1}(-1)\,dx = 1$ (two flips, which
+cancel). This is the same signed-area bookkeeping the
 determinant did for transformed regions in
 :numref:`sec_mdl-geometry-linear-algebraic-ops`, and it is exactly what makes the
 change-of-variables formula below come out right.
@@ -373,8 +381,10 @@ Every differentiation rule has an integration counterpart obtained by running th
 fundamental theorem backwards: the sum rule gives linearity, the product rule
 gives integration by parts, and---most useful for us---the chain rule gives the
 *change-of-variables* formula. It is the substitution that tames otherwise
-intractable integrals, and in higher dimensions it is the engine behind the
-Gaussian normalizer and normalizing flows.
+intractable integrals, and in higher dimensions it cracks open the Gaussian
+normalizer. Read for *densities* rather than areas, the very same formula becomes
+the engine behind normalizing flows---a specialization we hand off to
+:numref:`sec_mdl-random_variables`.
 
 ### Substitution in One Dimension
 
@@ -420,49 +430,54 @@ the volume is something concrete to picture.
 
 ```{.python .input #integral-surface}
 #@tab mxnet
-x, y = np.meshgrid(np.linspace(-2, 2, 101), np.linspace(-2, 2, 101),
-                   indexing='ij')
-z = np.exp(-x**2 - y**2)                     # a 2-D bell over the plane
+g = np.linspace(-6, 6, 121)                  # wide enough to capture the tails
+x, y = np.meshgrid(g, g, indexing='ij')
+z = np.exp(-x**2 - y**2)                      # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
 ax.plot_wireframe(x.asnumpy(), y.asnumpy(), z.asnumpy(), rstride=8, cstride=8)
 d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-print('volume (Riemann)  :', float(np.sum((4 / 100) ** 2 * z)))
+dxy = (12 / 120) ** 2                         # area of one grid cell
+print('volume (Riemann)  :', float(np.sum(dxy * z)))
 print('volume (exact = pi):', float(np.pi))
 ```
 
 ```{.python .input #integral-surface}
 #@tab pytorch
-x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101),
-                      indexing='ij')
-z = torch.exp(-x**2 - y**2)                  # a 2-D bell over the plane
+g = torch.linspace(-6, 6, 121)               # wide enough to capture the tails
+x, y = torch.meshgrid(g, g, indexing='ij')
+z = torch.exp(-x**2 - y**2)                   # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
 ax.plot_wireframe(x, y, z, rstride=8, cstride=8)
 d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-print('volume (Riemann)  :', float(torch.sum((4 / 100) ** 2 * z)))
+dxy = (12 / 120) ** 2                          # area of one grid cell
+print('volume (Riemann)  :', float(torch.sum(dxy * z)))
 print('volume (exact = pi):', float(torch.pi))
 ```
 
 ```{.python .input #integral-surface}
 #@tab tensorflow
-x, y = tf.meshgrid(tf.linspace(-2., 2., 101), tf.linspace(-2., 2., 101))
-z = tf.exp(-x**2 - y**2)                      # a 2-D bell over the plane
+g = tf.linspace(-6., 6., 121)                 # wide enough to capture the tails
+x, y = tf.meshgrid(g, g, indexing='ij')
+z = tf.exp(-x**2 - y**2)                       # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
 ax.plot_wireframe(x.numpy(), y.numpy(), z.numpy(), rstride=8, cstride=8)
 d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-print('volume (Riemann)  :', float(tf.reduce_sum((4 / 100) ** 2 * z)))
+dxy = (12 / 120) ** 2                          # area of one grid cell
+print('volume (Riemann)  :', float(tf.reduce_sum(dxy * z)))
 print('volume (exact = pi):', float(np.pi))
 ```
 
 ```{.python .input #integral-surface}
 #@tab jax
-x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101), jnp.linspace(-2, 2, 101),
-                    indexing='ij')
+g = jnp.linspace(-6, 6, 121)                 # wide enough to capture the tails
+x, y = jnp.meshgrid(g, g, indexing='ij')
 z = jnp.exp(-x**2 - y**2)                     # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
 ax.plot_wireframe(np.asarray(x), np.asarray(y), np.asarray(z),
                   rstride=8, cstride=8)
 d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-print('volume (Riemann)  :', float(jnp.sum((4 / 100) ** 2 * z)))
+dxy = (12 / 120) ** 2                          # area of one grid cell
+print('volume (Riemann)  :', float(jnp.sum(dxy * z)))
 print('volume (exact = pi):', float(jnp.pi))
 ```
 
@@ -506,9 +521,14 @@ f(\mathbf{x})\,d\mathbf{x}$.
 ### Change of Variables in Many Dimensions
 
 The one-dimensional stretch factor $\frac{du}{dx}$ has a multidimensional
-successor, and it is the centerpiece of this section. Let
-$\boldsymbol{\phi}:\mathbb{R}^n\to\mathbb{R}^n$ reparametrize the domain (assume
-it is injective, so it never folds the space onto itself). Then
+successor, and it is the centerpiece of this section. Let $U\subseteq\mathbb{R}^n$
+be open and let $\boldsymbol{\phi}:U\to\mathbb{R}^n$ be a **$C^1$-diffeomorphism**
+onto its image---that is, $\boldsymbol{\phi}$ is continuously differentiable,
+injective, and has $\det D\boldsymbol{\phi}(\mathbf{x})\neq 0$ everywhere on $U$.
+(Injectivity stops the map folding space onto itself; the nonvanishing Jacobian
+keeps it from collapsing a region to lower dimension, and together they make
+$\boldsymbol{\phi}$ invertible on $\boldsymbol{\phi}(U)$ with a $C^1$ inverse.)
+Then, for absolutely integrable $f$,
 
 $$
 \int_{\boldsymbol{\phi}(U)} f(\mathbf{x})\,d\mathbf{x}
@@ -544,12 +564,14 @@ two-dimensional pictures side by side.
 ![Left: the 1-D substitution scales a segment by $du/dx$. Right: in 2-D a linear $\boldsymbol{\phi}$ sends the unit square to a parallelogram whose area is the local volume-scaling factor $|\det D\boldsymbol{\phi}|$---the multidimensional successor of the stretch factor.](../img/mdl-cal-cov-jacobian.svg)
 :label:`fig_mdl-cov-jacobian`
 
-This Jacobian-determinant factor is the exact mechanism behind **normalizing
-flows** (:numref:`sec_mdl-continuous-normalizing-flows`): pushing a simple density
-through an invertible map $\boldsymbol{\phi}$ produces a new density, and
-:eqref:`eq_mdl-change_var_nd` says the new density must be divided by
-$|\det D\boldsymbol{\phi}|$ to stay normalized. Designing $\boldsymbol{\phi}$ so
-that this determinant is cheap to compute is the whole game.
+Equation :eqref:`eq_mdl-change_var_nd` is a statement about *area and volume*: it
+says how the integral of a fixed function transports under a reparametrization of
+the domain. Applied instead to a probability *density*---a function that must keep
+integrating to $1$---the very same Jacobian factor becomes the
+change-of-variables-for-densities rule of :numref:`sec_mdl-random_variables`, whose
+$-\log|\det D\boldsymbol{\phi}|$ correction is the exact mechanism behind
+**normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`). We state the
+area theorem here and defer that density specialization to the probability chapter.
 
 The classic payoff is the **Gaussian integral**, which we will meet again as the
 normalizer of the normal distribution. Direct attack on
@@ -559,7 +581,10 @@ $$
 $$
 
 gets nowhere, but polar coordinates $\boldsymbol{\phi}(r,\theta)=(r\cos\theta,
-r\sin\theta)$ crack it open. The Jacobian determinant is
+r\sin\theta)$ crack it open. (The map fails injectivity only at the origin and
+along the seam $\theta=0\equiv 2\pi$, a set of zero area that the theorem safely
+ignores---the hypotheses need only hold off such a negligible set.) The Jacobian
+determinant is
 
 $$
 \bigl|\det D\boldsymbol{\phi}\bigr|
@@ -576,7 +601,8 @@ $$
 
 The cell verifies this two-dimensional integral numerically by summing the
 integrand over a fine grid---the same $\pi$ the surface cell above already
-suggested.
+landed on, since its $[-6,6]^2$ box is wide enough that the Gaussian's tails
+beyond it contribute nothing to six decimals.
 
 ```{.python .input #integral-gaussian}
 #@tab mxnet
@@ -687,9 +713,43 @@ $$
 :eqlabel:`eq_mdl-monte-carlo`
 
 a stochastic counterpart of the Riemann sum that ignores the geometry of the
-domain and converges at a dimension-free rate---which is exactly why it, rather
-than grid-based integration, is how expectations are computed at scale. We develop
-this thoroughly when we study random variables in :numref:`sec_mdl-random_variables`.
+domain. The **law of large numbers** is the guarantee that it works: the sample
+average converges to the true expectation, and the central limit theorem pins the
+error at order $1/\sqrt{n}$---a rate that depends only on the sample size $n$, not
+on the dimension. That dimension-free rate is decisive. A grid laid down to
+resolution $\epsilon$ in $d$ dimensions costs $\epsilon^{-d}$ evaluations, so its
+error decays only as $(\text{evaluations})^{-2/d}$ and slows to a crawl as $d$
+grows---the *curse of dimensionality*---while Monte Carlo keeps its
+$(\text{evaluations})^{-1/2}$ rate in every dimension. This is why sampling, not
+grid quadrature, is how expectations are computed at scale; we develop it
+thoroughly when we study random variables in :numref:`sec_mdl-random_variables`.
+The cell makes both halves concrete: it estimates $\int_0^1 e^{-x^2}\,dx$ by
+Monte Carlo against a fine Riemann quadrature, then plots integration error
+against the number of function evaluations on log-log axes.
+
+```{.python .input #integral-monte-carlo}
+np.random.seed(1)
+# E[e^{-X^2}], X ~ U[0, 1], by Monte Carlo vs a fine Riemann quadrature.
+quad = float(np.sum(1e-4 * np.exp(-np.arange(0., 1., 1e-4) ** 2)))
+for n in [10, 100, 1000, 10000, 100000]:
+    mc = float(np.mean(np.exp(-np.random.rand(n) ** 2)))
+    print(f'n={n:<7} Monte Carlo={mc:.5f}  error={abs(mc - quad):.5f}')
+print(f'Riemann quadrature   ={quad:.5f}')
+
+# Error vs work: a grid resolving each axis costs N^{-2/d}; Monte Carlo gives
+# N^{-1/2} in *every* dimension (the law of large numbers).
+N = np.logspace(1, 6, 50)
+d2l.plot(N, [N ** -0.5, N ** (-2 / 1), N ** (-2 / 4), N ** (-2 / 8)],
+         'function evaluations', 'integration error',
+         xscale='log', yscale='log',
+         legend=['Monte Carlo (any d)', 'grid d=1', 'grid d=4', 'grid d=8'])
+```
+
+The Monte-Carlo estimate closes in on the quadrature value as $n$ grows, and the
+log-log plot reads off the rates directly as slopes: the grid lines fan out and
+flatten with dimension while the Monte-Carlo line keeps its slope of $-\tfrac12$.
+The two cross near $d=4$, and past it sampling is the only practical choice---the
+quantitative face of the curse of dimensionality.
 
 ## Summary
 
@@ -703,13 +763,17 @@ this thoroughly when we study random variables in :numref:`sec_mdl-random_variab
   $\int_1^\infty x^{-p}\,dx$ converges exactly when $p>1$.
 * **Change of variables** multiplies by the local stretch: $du/dx$ in one
   dimension :eqref:`eq_mdl-change_var`, the Jacobian determinant
-  $|\det D\boldsymbol{\phi}|$ in many :eqref:`eq_mdl-change_var_nd`---the same
-  volume-scaling read off the determinant, and the engine of normalizing flows.
+  $|\det D\boldsymbol{\phi}|$ for a $C^1$-diffeomorphism in many
+  :eqref:`eq_mdl-change_var_nd`---the same volume-scaling read off the
+  determinant. Read for densities (:numref:`sec_mdl-random_variables`) it drives
+  normalizing flows.
 * **Fubini's theorem** evaluates a multiple integral as iterated single integrals
   in either order, for absolutely integrable functions.
 * **Integration is the language of continuous probability:** a density is a
-  normalized non-negative function $\int p = 1$, an expectation is the integral
-  $\int x\,p\,dx$, and Monte Carlo estimates it by sampling.
+  normalized non-negative function $\int p = 1$, and an expectation is the integral
+  $\int x\,p\,dx$. When it has no closed form, Monte Carlo estimates it by
+  sampling, converging at the dimension-free rate $1/\sqrt{n}$ of the law of large
+  numbers---unlike a grid, whose cost explodes with dimension.
 
 ## Exercises
 

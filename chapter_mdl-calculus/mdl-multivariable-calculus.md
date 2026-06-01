@@ -61,7 +61,10 @@ The vector $\nabla_{\mathbf{w}} L$ is the *gradient* of $L$. Equation
 $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$, with the scalar derivative
 replaced by the gradient and ordinary multiplication replaced by a dot product.
 The gradient *is* the derivative in many dimensions: it is the unique vector
-whose dot product with a perturbation gives the first-order change in $L$.
+whose dot product with a perturbation gives the first-order change in $L$. We
+treat $\nabla_{\mathbf{w}} L$ as a column vector throughout; the layout
+conventions that make this choice precise are settled in
+:numref:`sec_mdl-matrix-calculus-autodiff`.
 
 ### Directional Derivatives
 
@@ -107,7 +110,7 @@ def grad_f(x, y):
 epsilon = np.array([0.01, -0.03])
 grad_approx = f(0, np.log(2)) + epsilon.dot(grad_f(0, np.log(2)))
 true_value = f(0 + epsilon[0], np.log(2) + epsilon[1])
-f'approximation: {grad_approx}, true Value: {true_value}'
+f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
 ```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
@@ -129,7 +132,7 @@ grad_approx = f(torch.tensor([0.]), torch.log(
     grad_f(torch.tensor([0.]), torch.log(torch.tensor(2.))))
 true_value = f(torch.tensor([0.]) + epsilon[0], torch.log(
     torch.tensor([2.])) + epsilon[1])
-f'approximation: {grad_approx}, true Value: {true_value}'
+f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
 ```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
@@ -151,7 +154,7 @@ grad_approx = f(tf.constant([0.]), tf.math.log(
     epsilon, grad_f(tf.constant([0.]), tf.math.log(tf.constant(2.))), axes=1)
 true_value = f(tf.constant([0.]) + epsilon[0], tf.math.log(
     tf.constant([2.])) + epsilon[1])
-f'approximation: {grad_approx}, true Value: {true_value}'
+f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
 ```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
@@ -174,7 +177,7 @@ grad_approx = f(jnp.array([0.]), jnp.log(
     epsilon, grad_f(jnp.array([0.]), jnp.log(jnp.array(2.))))
 true_value = f(jnp.array([0.]) + epsilon[0], jnp.log(
     jnp.array([2.])) + epsilon[1])
-f'approximation: {grad_approx}, true Value: {true_value}'
+f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
 The two agree to several digits, as a first-order approximation should for a
@@ -266,6 +269,38 @@ the contours*, always perpendicular to them.
 ![Contours of a scalar field $L$ with its gradient $\nabla L$ drawn at several points: each arrow crosses the contours at a right angle, points toward higher values, and is longest where the contours bunch together, where $L$ changes fastest.](../img/mdl-cal-gradient-field.svg)
 :label:`fig_mdl-cal-gradient-field`
 
+### Tangent Planes and Linearization
+
+The level-set picture lives in the *base plane*, where the gradient is the arrow
+normal to the contours. There is a companion picture one dimension up, on the
+*graph* $z = f(\mathbf{x})$ itself. Reading :eqref:`eq_mdl-nabla_use` as an
+equation for the height $z$ rather than as an approximation gives the
+*linearization* of $f$ at $\mathbf{x}_0$,
+
+$$
+z = f(\mathbf{x}_0) + \nabla f(\mathbf{x}_0)\cdot(\mathbf{x}-\mathbf{x}_0),
+$$
+:eqlabel:`eq_mdl-tangent_plane`
+
+a linear function of $\mathbf{x}$ whose graph is a plane (a hyperplane in higher
+dimensions). It passes through the point $(\mathbf{x}_0, f(\mathbf{x}_0))$ and
+matches every first-order slope of $f$ there, so it is the *tangent plane* to the
+surface — the two-dimensional analogue of the tangent line, and the surface's
+best linear approximation near $\mathbf{x}_0$.
+
+The two pictures are one fact seen from different rooms. Rewrite
+:eqref:`eq_mdl-tangent_plane` as $\nabla f(\mathbf{x}_0)\cdot(\mathbf{x}-\mathbf{x}_0) - (z - f(\mathbf{x}_0)) = 0$:
+this says the augmented vector $[\nabla f(\mathbf{x}_0),\, -1]^\top$ is normal,
+*in graph space*, to the tangent plane — the gradient is normal to the surface
+once we account for the height direction. Drop the height coordinate, projecting
+that normal straight down onto the base plane, and we recover $\nabla f$ crossing
+the level curves at right angles. :numref:`fig_mdl-tangent-plane` shows both at
+once: the tangent plane riding the surface, and the gradient's shadow meeting the
+contours square on.
+
+![A surface $z = f(\mathbf{x})$ with its tangent plane at a point, and the gradient $\nabla f$ projected onto the base plane, where it crosses the level curves of $f$ at right angles. The tangent plane is the graph-space view of the linearization; the perpendicular crossing is the base-plane view---two faces of the same first-order approximation.](../img/mdl-cal-tangent-plane.svg)
+:label:`fig_mdl-tangent-plane`
+
 ### Critical Points and the First-Order Test
 
 Throughout this book we minimize losses numerically, because the functions that
@@ -327,6 +362,32 @@ every critical point is one — $x = 0$ above is a local maximum, and in higher
 dimensions a critical point can be a saddle. Telling these apart needs
 *second*-order information, which is the Hessian we develop below.
 
+### Optimizing on a Constraint
+
+The first-order test answers "where can an unconstrained minimum be?" One more
+turn of the same geometry answers the constrained question that pervades machine
+learning — minimize a loss *subject to* keeping some quantity fixed, say
+$g(\mathbf{x}) = c$. Now we are no longer free to step in any direction: the
+admissible moves are exactly those tangent to the constraint surface
+$\{g = c\}$. At a constrained optimum $\mathbf{x}^\star$, *no* admissible
+direction can lower $f$ to first order — otherwise we would slide along the
+constraint and improve. By :eqref:`eq_mdl-nabla_use` that means
+$\nabla f(\mathbf{x}^\star)$ has zero component along every direction tangent to
+$\{g = c\}$; it is orthogonal to that surface. But we proved above that
+$\nabla g$ is *also* orthogonal to $\{g = c\}$. Two vectors normal to the same
+surface must be parallel, so at the constrained optimum
+
+$$
+\nabla f(\mathbf{x}^\star) = \lambda\,\nabla g(\mathbf{x}^\star)
+$$
+:eqlabel:`eq_mdl-lagrange`
+
+for some scalar $\lambda$, the *Lagrange multiplier*. This single picture — the
+contours of $f$ kissing the constraint surface where their gradients align — is
+the first-order condition for constrained optimization, the seed of the KKT
+conditions and of duality. We meet it again in full force in
+:numref:`sec_mdl-constrained-optimization-duality`.
+
 ## The Multivariate Chain Rule
 
 Neural networks are deep compositions of simple functions, so computing
@@ -371,20 +432,38 @@ influences $f$: $a \to u \to f$ and $a \to v \to f$. Each path contributes the
 *product* of the derivatives along its edges, and the total derivative is the
 *sum* over paths. This is the whole rule.
 
-In general, for a network like :numref:`fig_mdl-chain-2`, to differentiate the
-output with respect to an input we **sum, over every directed path from that
-input to the output, the product of the edge derivatives along the path.**
+In general, to differentiate the output with respect to an input we **sum, over
+every directed path from that input to the output, the product of the edge
+derivatives along the path.**
 
-![A second example: to reach $f$ from $y$ there are three directed paths through the graph, and the chain rule sums their contributions.](../img/mdl-cal-chain-net2.svg)
-:label:`fig_mdl-chain-2`
+To see the rule earn its keep on a graph that is not a clean tree, consider a
+*different* composition — its own dependency graph, unrelated to
+:eqref:`eq_mdl-multi_func_def` — in which one intermediate feeds the output both
+directly and through a later node:
 
-For instance, the three paths from $y$ to $f$ in :numref:`fig_mdl-chain-2` give
+$$\begin{aligned}u(x, y) & = x + y, \qquad v(x, y) = x - y, \\a(u) & = u^2, \qquad b(v) = v^2, \\f(a, u, b) & = a + u + b.\end{aligned}$$
+:eqlabel:`eq_mdl-multi_func_def_2`
+
+These relations are exactly the edges drawn in :numref:`fig_mdl-chain-2`:
+$u$ and $v$ each depend on the input $y$; $a$ depends on $u$ and $b$ on $v$; and
+the output $f$ depends on $a$, on $b$, and *also directly on $u$* — the skip-like
+edge that gives the middle path below. Tracing every directed route from $y$ to
+$f$ — namely $y\to u\to a\to f$, the direct $y\to u\to f$, and
+$y\to v\to b\to f$ — the rule gives
 
 $$
 \frac{\partial f}{\partial y} = \frac{\partial f}{\partial a} \frac{\partial a}{\partial u} \frac{\partial u}{\partial y} + \frac{\partial f}{\partial u} \frac{\partial u}{\partial y} + \frac{\partial f}{\partial b} \frac{\partial b}{\partial v} \frac{\partial v}{\partial y}.
 $$
 
-This "sum over paths" view is exactly how gradients flow through a network, and
+![A second, distinct dependency graph, :eqref:`eq_mdl-multi_func_def_2`: the input $y$ reaches the output $f$ by three directed paths---$y\to u\to a\to f$, the direct skip $y\to u\to f$, and $y\to v\to b\to f$---and the chain rule sums their contributions.](../img/mdl-cal-chain-net2.svg)
+:label:`fig_mdl-chain-2`
+
+Here every edge derivative is elementary
+($\partial f/\partial a = \partial f/\partial u = \partial f/\partial b = 1$,
+$\partial a/\partial u = 2u$, $\partial u/\partial y = 1$, and so on), so the
+sum-over-paths value is checkable by hand: it collapses to
+$2u + 1 - 2v = 2(x+y) + 1 - 2(x-y) = 1 + 4y$. This "sum over paths" view is
+exactly how gradients flow through a network, and
 it explains why architectural choices that open or close paths — the gates of an
 LSTM (:numref:`sec_lstm`) or the skip connections of a residual block
 (:numref:`sec_resnet`) — shape learning by controlling that gradient flow.
@@ -653,113 +732,39 @@ $$
 :eqlabel:`eq_mdl-second_taylor`
 
 This is the best-approximating quadratic to $f$ near $\mathbf{x}_0$, in any
-dimension. To see it, take $f(x, y) = xe^{-x^2-y^2}$, whose approximating
-quadratic at $[-1, 0]^\top$ works out to
-$f(x, y) \approx e^{-1}(-1 - (x+1) + (x+1)^2 + y^2)$. We plot the function (in
-blue) against its quadratic approximation (in purple); near $[-1, 0]^\top$ they
-hug each other.
+dimension. To see it, take $f(x, y) = xe^{-x^2-y^2}$. Assembling its value,
+gradient, and Hessian at $\mathbf{x}_0 = [-1, 0]^\top$ via
+:eqref:`eq_mdl-second_taylor` gives the approximating quadratic
+$q(x, y) = e^{-1}\bigl(-1 - (x+1) + (x+1)^2 + y^2\bigr)$.
+:numref:`fig_mdl-taylor-quadratic` plots the surface against this quadratic;
+near $[-1, 0]^\top$ they hug each other and peel apart only as we move away.
+
+![The surface $z = xe^{-x^2-y^2}$ (blue) and its second-order Taylor quadratic at the base point $(-1, 0)^\top$ (orange). The two agree in value, slope, and curvature there, so they are nearly indistinguishable in a neighborhood of the base point and separate only farther out.](../img/mdl-cal-taylor-quadratic.svg)
+:label:`fig_mdl-taylor-quadratic`
+
+The figure asserts agreement; we can hold it to account numerically, exactly as
+we checked the gradient above. Evaluating $f$ and its quadratic $q$ at a few
+points stepping away from the base point, the gap should stay tiny nearby and
+grow with distance.
 
 ```{.python .input #multivariable-calculus-hessians}
-#@tab mxnet
-# Construct grid and compute function
-x, y = np.meshgrid(np.linspace(-2, 2, 101),
-                   np.linspace(-2, 2, 101), indexing='ij')
-z = x*np.exp(- x**2 - y**2)
+import numpy as np
 
-# Compute approximating quadratic with gradient and Hessian at (-1, 0)
-w = np.exp(-1)*(-1 - (x + 1) + (x + 1)**2 + y**2)
+def f(x, y):
+    return x * np.exp(-x**2 - y**2)
+def quad(x, y):  # 2nd-order Taylor of f at the base point (-1, 0)
+    return np.exp(-1) * (-1 - (x + 1) + (x + 1)**2 + y**2)
 
-# Plot function
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.asnumpy(), y.asnumpy(), z.asnumpy(),
-                  **{'rstride': 10, 'cstride': 10})
-ax.plot_wireframe(x.asnumpy(), y.asnumpy(), w.asnumpy(),
-                  **{'rstride': 10, 'cstride': 10}, color='purple')
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(-1, 1)
+for d in [0.0, 0.05, 0.1, 0.3]:           # step d in each coordinate from (-1, 0)
+    x, y = -1 + d, d
+    print(f'step {d:.2f}: f = {f(x, y):.6f}, '
+          f'quadratic = {quad(x, y):.6f}, gap = {abs(f(x, y) - quad(x, y)):.6f}')
 ```
 
-```{.python .input #multivariable-calculus-hessians}
-#@tab pytorch
-# Construct grid and compute function
-x, y = torch.meshgrid(torch.linspace(-2, 2, 101),
-                   torch.linspace(-2, 2, 101), indexing='ij')
-
-z = x*torch.exp(- x**2 - y**2)
-
-# Compute approximating quadratic with gradient and Hessian at (-1, 0)
-w = torch.exp(torch.tensor([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
-
-# Plot function
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.numpy(), y.numpy(), z.numpy(),
-                  **{'rstride': 10, 'cstride': 10})
-ax.plot_wireframe(x.numpy(), y.numpy(), w.numpy(),
-                  **{'rstride': 10, 'cstride': 10}, color='purple')
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(-1, 1)
-```
-
-```{.python .input #multivariable-calculus-hessians}
-#@tab tensorflow
-# Construct grid and compute function
-x, y = tf.meshgrid(tf.linspace(-2., 2., 101),
-                   tf.linspace(-2., 2., 101))
-
-z = x*tf.exp(- x**2 - y**2)
-
-# Compute approximating quadratic with gradient and Hessian at (-1, 0)
-w = tf.exp(tf.constant([-1.]))*(-1 - (x + 1) + (x + 1)**2 + y**2)
-
-# Plot function
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.numpy(), y.numpy(), z.numpy(),
-                  **{'rstride': 10, 'cstride': 10})
-ax.plot_wireframe(x.numpy(), y.numpy(), w.numpy(),
-                  **{'rstride': 10, 'cstride': 10}, color='purple')
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(-1, 1)
-```
-
-```{.python .input #multivariable-calculus-hessians}
-#@tab jax
-# Construct grid and compute function
-x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101),
-                     jnp.linspace(-2, 2, 101), indexing='ij')
-
-z = x * jnp.exp(- x**2 - y**2)
-
-# Compute approximating quadratic with gradient and Hessian at (-1, 0)
-w = jnp.exp(jnp.array([-1.])) * (-1 - (x + 1) + (x + 1)**2 + y**2)
-
-# Plot function
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(np.array(x), np.array(y), np.array(z),
-                  **{'rstride': 10, 'cstride': 10})
-ax.plot_wireframe(np.array(x), np.array(y), np.array(w),
-                  **{'rstride': 10, 'cstride': 10}, color='purple')
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(-1, 1)
-```
-
-Iterating this idea — repeatedly fit the local quadratic and jump to *its*
-minimum — is Newton's method, discussed in :numref:`sec_gd`.
+The gap vanishes at the base point and is third order in the step — doubling the
+step roughly multiplies it by eight — which is precisely what "best-fitting
+quadratic" means. Iterating this idea — repeatedly fit the local quadratic and
+jump to *its* minimum — is Newton's method, discussed in :numref:`sec_gd`.
 
 ### The Second-Derivative Test
 
@@ -772,9 +777,13 @@ $$
 f(\mathbf{x}) - f(\mathbf{x}_0) \approx \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H} f (\mathbf{x}_0)(\mathbf{x}-\mathbf{x}_0).
 $$
 
-Whether $f$ goes up or down as we leave $\mathbf{x}_0$ is governed entirely by
-the sign of this quadratic form — that is, by the *definiteness* of the
-symmetric matrix $\mathbf{H}$. The classification is read straight off the
+Stepping a unit direction $\mathbf{v}$ away from $\mathbf{x}_0$ makes the
+right-hand side $\tfrac12\mathbf{v}^\top\mathbf{H}\mathbf{v}$: the scalar
+$\mathbf{v}^\top\mathbf{H}\mathbf{v}$ is the *curvature* of $f$ along
+$\mathbf{v}$, the second-order analogue of the directional derivative
+$\mathbf{v}\cdot\nabla f$. Whether $f$ goes up or down as we leave $\mathbf{x}_0$
+is governed entirely by the sign of this quadratic form — that is, by the
+*definiteness* of the symmetric matrix $\mathbf{H}$. The classification is read straight off the
 eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
 :numref:`subsec_mdl-psd`:
 
@@ -790,11 +799,9 @@ eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
 
 This is the multivariable generalization of the single-variable test $f'' > 0$:
 there, curvature is a single number; here it is a matrix, and "positive
-curvature" becomes "positive definite." Positive (semi)definiteness of the
-Hessian is the reason the second-order optimality conditions used throughout
-optimization take the form they do, and :eqref:`eq_mdl-quadform` makes the
-upward-curving picture precise as a weighted sum of squares over the eigenvector
-directions.
+curvature" becomes "positive definite." Identity :eqref:`eq_mdl-quadform` makes
+the upward-curving picture precise, writing the quadratic form as a weighted sum
+of squares over the eigenvector directions with the eigenvalues as weights.
 
 ## A Bridge to Matrix Calculus
 

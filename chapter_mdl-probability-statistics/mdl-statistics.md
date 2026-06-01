@@ -3,7 +3,7 @@
 
 A trained model is only ever fit to a *finite* sample, so every quantity we read off it---an accuracy, a learned weight, an estimated mean---is a guess computed from random data and would come out differently on a fresh draw. Statistics is the discipline that quantifies that randomness: it tells us how far a guess typically sits from the truth, when an apparent improvement is real rather than noise, and how confident we are entitled to be. This section develops the three ideas a deep-learning practitioner reaches for most often. We define an *estimator* and the two ways it can be wrong---*bias* and *variance*---and prove the decomposition that ties them together; this single identity is the same U-curve that governs under- and over-fitting in :numref:`sec_generalization_basics`, so it is worth deriving carefully. We then turn to *hypothesis testing*, the framework behind A/B tests and benchmark comparisons, and close with *confidence intervals*, which attach a notion of uncertainty to a point estimate. Throughout we take the true parameter $\theta$ to be a scalar; the vector case is identical with sums of squares replaced by squared norms.
 
-We first load the per-framework library so the computations below have `d2l` and the tensor library in scope. The estimator simulations are framework-agnostic apart from the random-number call, so the worked cells branch only where they must.
+We first load the per-framework library so the computations below have `d2l` and the tensor library in scope, plus plain NumPy as `onp` for the resampling in the bootstrap, which is framework-agnostic. The estimator simulations are likewise framework-agnostic apart from the random-number call, so the worked cells branch only where they must.
 
 ```{.python .input #statistics-imports}
 #@tab mxnet
@@ -11,6 +11,7 @@ We first load the per-framework library so the computations below have `d2l` and
 from d2l import mxnet as d2l
 from mxnet import np, npx
 npx.set_np()
+import numpy as onp  # plain NumPy for framework-agnostic resampling below
 ```
 
 ```{.python .input #statistics-imports}
@@ -18,6 +19,7 @@ npx.set_np()
 %matplotlib inline
 from d2l import torch as d2l
 import torch
+import numpy as onp  # plain NumPy for framework-agnostic resampling below
 ```
 
 ```{.python .input #statistics-imports}
@@ -25,6 +27,7 @@ import torch
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
+import numpy as onp  # plain NumPy for framework-agnostic resampling below
 ```
 
 ```{.python .input #statistics-imports}
@@ -33,6 +36,7 @@ import tensorflow as tf
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
+import numpy as onp  # plain NumPy for framework-agnostic resampling below
 ```
 
 ## Estimators and Their Quality
@@ -82,7 +86,7 @@ $$
 P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)\to 0 \quad\textrm{for every } \varepsilon>0 .
 $$
 
-Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." A clean sufficient condition is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$; we will see this happen explicitly for the sample mean below. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent if its variance does not vanish, and vice versa.)
+Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." Its prototype is the *law of large numbers* (LLN), which says exactly this for the sample mean: as $n\to\infty$ the average $\bar x$ converges in probability to the population mean. A clean sufficient condition for consistency in general is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$; we will see this happen explicitly for the sample mean below. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent if its variance does not vanish, and vice versa.)
 
 Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here---the Cramér--Rao bound puts a lower limit on the variance of any unbiased estimator---and an estimator that attains it is as good as unbiased estimation can be. We will not need the bound itself, only the idea it formalizes: once unbiasedness is secured, the remaining game is to minimize variance, which is exactly the second half of the decomposition we turn to next.
 
@@ -245,7 +249,7 @@ var = jnp.square(jnp.std(theta_hats, ddof=1))  # ddof=1 for unbiased variance
 mse(theta_hats, theta_true), var + jnp.square(bias)
 ```
 
-The two numbers agree, and both are close to the theoretical value. For the sample mean of $\mathcal{N}(\theta,\sigma^2)$ the bias is exactly zero (the average of unbiased draws is unbiased) and the variance is $\sigma^2/n$, so $\operatorname{MSE}=\sigma^2/n = 16/30 \approx 0.53$. Because *both* the bias ($0$) and the variance ($\sigma^2/n\to0$) vanish as $n\to\infty$, the sample mean is consistent---exactly the criterion from the decomposition above.
+The two numbers agree, and both are close to the theoretical value. For the sample mean of $\mathcal{N}(\theta,\sigma^2)$ the bias is exactly zero (the average of unbiased draws is unbiased) and the variance is $\sigma^2/n$ (the variance-of-a-sum result from :numref:`sec_mdl-random_variables`), so $\operatorname{MSE}=\sigma^2/n = 16/30 \approx 0.53$. Because *both* the bias ($0$) and the variance ($\sigma^2/n\to0$) vanish as $n\to\infty$, the sample mean is consistent---this is the law of large numbers, and exactly the criterion from the decomposition above.
 
 ### Why the Unbiased Variance Divides by $n-1$
 
@@ -369,12 +373,14 @@ $$
 p\textrm{-value} = P_{H_0}\bigl(|T(X)| \ge |T(x)|\bigr),
 $$
 
-with the one-sided version using a single tail. We reject $H_0$ when $p \le \alpha$. Geometrically, the rejection region is the set of statistic values whose $p$-value falls below $\alpha$; :numref:`fig_mdl-statistical_significance` shows it for a Gaussian null at $\alpha=0.05$ as the two tails beyond the critical values, together holding $5\%$ of the probability. A statistic landing in those tails would be very unlikely if $H_0$ held, so we reject.
+valid when the null distribution is symmetric about $0$; in general the two-sided $p$-value is $2\,\min\{P_{H_0}(T\ge t),\, P_{H_0}(T\le t)\}$, which doubles the smaller tail. The one-sided version uses a single tail. We reject $H_0$ when $p \le \alpha$. Geometrically, the rejection region is the set of statistic values whose $p$-value falls below $\alpha$; :numref:`fig_mdl-statistical_significance` shows it for a Gaussian null at $\alpha=0.05$ as the two tails beyond the critical values, together holding $5\%$ of the probability. A statistic landing in those tails would be very unlikely if $H_0$ held, so we reject.
 
 ![Statistical significance: under the null distribution, the central region holds probability $1-\alpha$ and the two tails together hold $\alpha$. A test statistic in the tails is unlikely under $H_0$, so we reject it.](../img/mdl-prob-significance.svg)
 :label:`fig_mdl-statistical_significance`
 
-A persistent warning is in order, because the $p$-value is among the most misread numbers in science. It is $P(\textrm{data this extreme}\mid H_0)$, a statement about the data *given* the null---*not* $P(H_0\mid\textrm{data})$, the probability the null is true, which would require a prior and Bayes' rule. A large $p$-value does *not* confirm $H_0$; it means only that we failed to detect an effect, possibly because the test was underpowered.
+A persistent warning is in order, because the $p$-value is among the most misread numbers in science :cite:`Wasserstein.Lazar.2016`. It is $P(\textrm{data this extreme}\mid H_0)$, a statement about the data *given* the null---*not* $P(H_0\mid\textrm{data})$, the probability the null is true, which would require a prior and Bayes' rule. A large $p$-value does *not* confirm $H_0$; it means only that we failed to detect an effect, possibly because the test was underpowered.
+
+A subtler trap is *multiple testing*. The $\alpha=0.05$ guarantee holds for a *single* pre-specified test; run $m$ of them under a true null---sweeping hyperparameters, comparing across benchmarks, retrying until something "works"---and the chance of at least one spurious win is $1-(1-\alpha)^m$, which already exceeds $0.4$ at $m=10$. Reporting only the test that cleared $p\le\alpha$ is *$p$-hacking*, and it is how noise gets published as a result. The simplest guard is the *Bonferroni correction*: to hold the family-wide false-positive rate at $\alpha$, test each of the $m$ hypotheses at the stricter level $\alpha/m$.
 
 To summarize, a hypothesis test proceeds in five steps:
 
@@ -409,7 +415,7 @@ $$
 T = \frac{\hat\mu_n - \mu}{\hat\sigma_n/\sqrt n}
 $$
 
-follows *Student's $t$-distribution* on $n-1$ degrees of freedom, which approaches a standard Gaussian as $n\to\infty$. So for large $n$, $T$ lands in $[-1.96, 1.96]$ at least $95\%$ of the time (the Gaussian's central $95\%$), and rearranging $-1.96 \le T \le 1.96$ for $\mu$ yields the interval
+follows *Student's $t$-distribution* on $n-1$ degrees of freedom, which approaches a standard Gaussian as $n\to\infty$. That Gaussian limit is the *central limit theorem* of :numref:`sec_mdl-distributions`: it is what makes the sampling distribution of a mean asymptotically Gaussian and so licenses the $z$-quantile $1.96$. For large $n$, then, $T$ lands in $[-1.96, 1.96]$ with probability $\approx95\%$ (the Gaussian's central $95\%$)---exactly $95\%$ in the Gaussian limit, and slightly *less* at finite $n$, where the exact $t$-distribution has heavier tails and one should use the wider $t$-quantile in its place. Rearranging $-1.96 \le T \le 1.96$ for $\mu$ yields the interval
 
 $$
 \left[\hat\mu_n - 1.96\,\frac{\hat\sigma_n}{\sqrt n},\; \hat\mu_n + 1.96\,\frac{\hat\sigma_n}{\sqrt n}\right].
@@ -463,13 +469,59 @@ se = jnp.std(samples, ddof=1) / jnp.sqrt(N)  # ddof=1: unbiased sigma_hat
 
 The interval is narrow and brackets the true mean $0$, as it should roughly $95\%$ of the time. The same $1/\sqrt n$ scaling shows up everywhere uncertainty is reported---error bars on a learning curve, the spread of accuracies across random seeds---and :eqref:`eq_mdl-gauss_confidence` is the formula behind them.
 
+### The Bootstrap
+
+The Gaussian interval :eqref:`eq_mdl-gauss_confidence` rests on a lucky accident: the sample mean has a known sampling distribution, so its standard error has a closed form, $\hat\sigma_n/\sqrt n$. Most quantities a practitioner actually cares about enjoy no such luck. What is the standard error of a *median*, a *correlation*, a model's *test accuracy*, its *AUC* or *BLEU* score? These are complicated functions of the data with no textbook sampling distribution, and writing down their standard error analytically ranges from painful to impossible.
+
+The **bootstrap**, introduced by Bradley Efron in 1979, is the strikingly simple idea that escapes this :cite:`Efron.Hastie.2016`. We never had access to the true distribution $F$ that generated our $n$ data points; if we did, we could simulate the sampling distribution of *any* statistic by drawing fresh datasets from $F$ and recomputing it. The bootstrap's move---the **plug-in principle**---is to substitute the *empirical* distribution $\hat F_n$, which puts mass $1/n$ on each observed point, for the unknown $F$. Drawing $n$ points from $\hat F_n$ is exactly *resampling our own data $n$ times with replacement*. Concretely:
+
+1. From the original sample of size $n$, draw $n$ points **with replacement** to form a *bootstrap resample*; some points appear several times, others not at all.
+2. Compute the statistic $\hat\theta^*$ on the resample.
+3. Repeat $B$ times to obtain $\hat\theta^*_1,\ldots,\hat\theta^*_B$.
+
+The spread of these $B$ replicates approximates the sampling distribution of $\hat\theta$, so their standard deviation estimates its standard error, and the $\alpha/2$ and $1-\alpha/2$ empirical percentiles of $\{\hat\theta^*_b\}$ form a *percentile* confidence interval. :numref:`fig_mdl-bootstrap` shows the construction: one original sample fans out into many resamples, whose statistics pile up into a histogram standing in for the true (unknowable) sampling distribution, with the central band cut off at those percentiles. The crucial caveat is that this resampling distribution is *centered at $\hat\theta$, not at $\theta$*: the bootstrap estimates the *shape and width* of the sampling distribution from the one sample we have, and is only as representative as that sample.
+
+![The bootstrap. From a single observed sample (top) we draw many resamples of the same size *with replacement* (middle); recomputing the statistic $\hat\theta$ on each gives the replicates $\hat\theta^\ast_b$, whose histogram (bottom) approximates the sampling distribution. Its spread estimates the standard error, and the central $1-\alpha$ percentile band is a confidence interval. The resampling distribution is centered at $\hat\theta$, the dashed estimate, rather than at the unknown true $\theta$.](../img/mdl-prob-bootstrap.svg)
+:label:`fig_mdl-bootstrap`
+
+Let us bootstrap a statistic with no closed-form standard error---the **median**---from a skewed sample, and contrast it with the Gaussian machinery. The code is pure NumPy (`onp`) because resampling is framework-agnostic: we index the data with a matrix of random positions to draw $B$ resamples at once.
+
+```{.python .input #statistics-bootstrap}
+rng = onp.random.default_rng(0)
+data = rng.exponential(scale=1.0, size=200)  # skewed: median != mean, no SE formula
+n = len(data)
+theta_hat = onp.median(data)                 # statistic of interest
+
+B = 10000                                     # number of bootstrap resamples
+idx = rng.integers(0, n, size=(B, n))         # n positions per resample, WITH replacement
+boot = onp.median(data[idx], axis=1)          # one median per resample
+
+se_boot = boot.std(ddof=1)                    # bootstrap standard error of the median
+ci_pct = onp.percentile(boot, [2.5, 97.5])    # percentile 95% CI -- no formula needed
+print(f'sample median        = {theta_hat:.3f}')
+print(f'bootstrap SE         = {se_boot:.3f}')
+print(f'percentile 95% CI    = ({ci_pct[0]:.3f}, {ci_pct[1]:.3f})')
+```
+
+The bootstrap hands us a standard error and an interval for the median directly, with no distribution theory at all. For contrast, the Gaussian formula :eqref:`eq_mdl-gauss_confidence` only knows how to handle the *mean*---a different target, which on this skewed data sits well above the median.
+
+```{.python .input #statistics-bootstrap-contrast}
+mu_hat = data.mean()
+se_mean = data.std(ddof=1) / n**0.5           # closed-form SE, but only for the mean
+ci_gauss = (mu_hat - 1.96 * se_mean, mu_hat + 1.96 * se_mean)
+print(f'Gaussian 95% CI (mean) = ({ci_gauss[0]:.3f}, {ci_gauss[1]:.3f})')
+```
+
+The two intervals answer different questions and do not overlap, a direct consequence of the skew. The percentile interval for the median is also slightly *asymmetric* about $\hat\theta$---it inherits the shape of the resampling distribution rather than forcing the symmetric $\pm 1.96\,\widehat{\operatorname{se}}$ of a Gaussian. This is exactly why the bootstrap is indispensable in machine learning: error bars on a held-out accuracy, an AUC, or a BLEU score have no closed-form standard error, but resampling the test set delivers one in a few lines :cite:`Efron.Hastie.2016`.
+
 ## Summary
 
 * An *estimator* $\hat\theta_n$ is a function of the data; being random, it has a *sampling distribution* whose center and spread are summarized by *bias* $\mathbb{E}[\hat\theta_n]-\theta$ and *variance*. *Consistency* ($\hat\theta_n\xrightarrow{P}\theta$) follows when both shrink with $n$; *efficiency* ranks unbiased estimators by their variance.
 * The *bias-variance decomposition* $\operatorname{MSE}(\hat\theta_n)=\operatorname{Bias}(\hat\theta_n)^2+\operatorname{Var}(\hat\theta_n)$ splits the error cleanly because, after centering at $\mathbb{E}[\hat\theta_n]$, the cross term vanishes. This is the same U-curve as the under/overfitting trade-off, and it explains why regularization trades bias for variance.
 * The unbiased sample variance divides by $n-1$, not $n$: estimating the mean from the same data costs one degree of freedom, and the $1/(n-1)$ factor corrects the resulting bias exactly.
 * *Hypothesis testing* weighs evidence against a null $H_0$ via a test statistic and its $p$-value $P_{H_0}(\textrm{data this extreme})$; we control the type I error rate $\alpha$ and want high power $1-\beta$. A $p$-value is not $P(H_0\mid\textrm{data})$.
-* A *confidence interval* contains $\theta$ with probability $\ge 1-\alpha$ over repeated datasets; the Gaussian interval $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$ has half-width shrinking like $1/\sqrt n$.
+* A *confidence interval* contains $\theta$ with probability $\ge 1-\alpha$ over repeated datasets; the Gaussian interval $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$, licensed by the *central limit theorem*, has half-width shrinking like $1/\sqrt n$.
+* The *bootstrap* estimates the sampling distribution of *any* statistic with no closed-form standard error---a median, an accuracy, an AUC---by resampling the data with replacement: the spread of the replicates is the standard error and their central percentiles form a confidence interval.
 
 ## Exercises
 
@@ -480,6 +532,8 @@ The interval is narrow and brackets the true mean $0$, as it should roughly $95\
 5. A test reports $p = 0.5$. Is this evidence that $H_0$ is true? Explain in terms of $P(\textrm{data}\mid H_0)$ versus $P(H_0\mid\textrm{data})$, and describe a situation where a large $p$-value reflects only low power.
 6. Using the $1/(\textrm{effect size})^2$ scaling, estimate how many times more samples are needed to detect an effect of size $0.1$ than one of size $0.5$ at the same $\alpha$ and power.
 7. Run the confidence-interval code with $N=2$ and $\alpha=0.5$ (so $t_\star=1.0$) for $100$ independently generated datasets, and look at the resulting intervals. Some are extremely short and far from the true mean $0$. Does this contradict the $1-\alpha$ coverage guarantee? Would you trust a short interval as a sign of a precise estimate?
+8. Modify the bootstrap code to target the *mean* instead of the median. Compare the bootstrap standard error and percentile interval against the closed-form Gaussian results $\hat\sigma_n/\sqrt n$ and :eqref:`eq_mdl-gauss_confidence` on the same sample. Do they roughly agree? Why should they, given the central limit theorem?
+9. Suppose you compare $m=20$ models against a baseline, all in truth no better, each with an independent test at $\alpha=0.05$. What is the probability that at least one clears $p\le 0.05$ by chance? Recompute the per-test threshold the Bonferroni correction prescribes to hold the family-wide false-positive rate at $0.05$, and verify it brings the spurious-win probability back near $0.05$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/419)
@@ -574,14 +628,35 @@ The $p$-value is $P_{H_0}(\text{data this extreme})$ — reject
 when $p \le \alpha$. It is *not* $P(H_0\mid\text{data})$:
 
 @fig:mdl-prob-significance
+
+. . .
+
+**Multiple testing.** Run $m$ tests under a true null and the
+chance of a spurious win is $1-(1-\alpha)^m$. Reporting only the
+winner is *$p$-hacking*; Bonferroni tests each at $\alpha/m$.
 :::
 
 ::: {.slide title="Confidence intervals"}
 $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$ contains $\mu$ in
-$\approx 95\%$ of repeated datasets. Half-width shrinks like
-$1/\sqrt n$ — 4× the data to halve it:
+$\approx 95\%$ of repeated datasets (central limit theorem).
+Half-width shrinks like $1/\sqrt n$ — 4× the data to halve it:
 
 @statistics-confidence-interval
+:::
+
+::: {.slide title="The bootstrap"}
+Most statistics (median, accuracy, AUC, BLEU) have *no*
+closed-form standard error. Resample the data $n$ times **with
+replacement**, $B$ times, and recompute $\hat\theta$:
+
+- spread of $\{\hat\theta^\ast\}$ = standard error,
+- central percentiles = confidence interval.
+
+@fig:mdl-prob-bootstrap
+
+. . .
+
+@statistics-bootstrap
 :::
 
 ::: {.slide title="Recap"}
@@ -590,6 +665,9 @@ $1/\sqrt n$ — 4× the data to halve it:
   along the U-curve.
 - Unbiased variance divides by $n-1$ (one degree of freedom spent).
 - Tests control $\alpha$, want power; $p$-value is about data given
-  $H_0$, not $H_0$ given data.
-- Confidence intervals quantify uncertainty; width $\propto 1/\sqrt n$.
+  $H_0$, not $H_0$ given data. Many tests → correct for multiplicity.
+- Confidence intervals quantify uncertainty; width $\propto 1/\sqrt n$
+  (LLN drives consistency, CLT the Gaussian shape).
+- Bootstrap: resample with replacement for a standard error / CI of
+  *any* statistic, even when no formula exists.
 :::

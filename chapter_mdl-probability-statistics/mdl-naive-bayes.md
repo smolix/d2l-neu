@@ -54,7 +54,11 @@ Bayes' rule turns the problem around. Instead of modelling "which label, given t
 
 $$\hat{y} = \mathop{\mathrm{argmax}}_y \, p(y\mid\mathbf{x}) = \mathop{\mathrm{argmax}}_y \, \frac{p(\mathbf{x}\mid y)\,p(y)}{p(\mathbf{x})} = \mathop{\mathrm{argmax}}_y \, p(\mathbf{x}\mid y)\,p(y).$$
 
-The denominator $p(\mathbf{x})$ is the same for every $y$, so it cannot change which label wins the $\mathrm{argmax}$ and we drop it; in shorthand, $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$. (Should we ever want the actual posterior probabilities, normalizing the numerators so they sum to one recovers $p(\mathbf{x})$ for free.) This has not yet bought us anything: the *class-conditional* $p(\mathbf{x}\mid y)$ is a distribution over the same $2^d$ patterns. The chain rule lays the difficulty bare,
+The denominator $p(\mathbf{x})$ is the same for every $y$, so it cannot change which label wins the $\mathrm{argmax}$ and we drop it; in shorthand, $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$. (Should we ever want the actual posterior probabilities, normalizing the numerators so they sum to one recovers $p(\mathbf{x})$ for free.)
+
+This is the defining choice of a **generative** classifier: rather than modelling the label given the data, it models how the *data are generated* within each class, $p(\mathbf{x}\mid y)$, together with how often each class occurs, $p(y)$, and lets Bayes' rule turn that into a decision. It is the opposite of the **discriminative** route taken by logistic regression and the softmax classifier of :numref:`sec_softmax`, which fit the posterior $p(y\mid\mathbf{x})$ directly and never model the inputs at all. The two form the classic generative--discriminative pair, and they trade off in a characteristic way :cite:`Ng.Jordan.2002,Murphy.2012,Bishop.2006`: the generative model commits to a (here, deliberately crude) story for $p(\mathbf{x}\mid y)$, so it has more parameters fixed by assumption, learns from *fewer* examples, and approaches its --- typically higher --- error faster; the discriminative model assumes less about the inputs and so usually wins given enough data. Naive Bayes is the most economical generative classifier of all.
+
+The reframing has not yet bought us anything computationally: the *class-conditional* $p(\mathbf{x}\mid y)$ is still a distribution over the same $2^d$ patterns. The chain rule lays the difficulty bare,
 
 $$p(\mathbf{x}\mid y) = p(x_1\mid y)\,p(x_2\mid x_1, y)\cdots p(x_d\mid x_1,\ldots,x_{d-1}, y),$$
 
@@ -66,6 +70,17 @@ Here is the leap. *Assume the features are conditionally independent given the l
 
 $$p(\mathbf{x}\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_assumption`
+
+As a graphical model the assumption is a star: the label $y$ points to every
+feature, and the features are joined by nothing
+(:numref:`fig_mdl-naive-independence`, left). All a feature can learn about the
+others, it learns through the class label; given $y$, the features no longer
+talk to one another. A faithful model of a digit would add edges *among* the
+features --- neighboring pixels co-fire --- and naive Bayes simply erases them
+(:numref:`fig_mdl-naive-independence`, right).
+
+![The naive assumption as a graphical model. Left: the label $y$ fans out to the features $x_1,\ldots,x_d$ with no edges *among* the features, so they are independent once $y$ is known --- the picture of conditional independence. Right: a faithful model would carry dependence edges between features (here $x_1$–$x_2$ and $x_3$–$x_d$); naive Bayes throws them away (struck out), which is exactly what makes it cheap and what makes it wrong.](../img/mdl-prob-naive-independence.svg)
+:label:`fig_mdl-naive-independence`
 
 This is the assumption that makes Bayes "naive," and it is *false*: in a real digit the pixels are strongly correlated --- an inked pixel makes its neighbors far more likely to be inked too. The model pretends each pixel is painted by an independent coin flip whose bias depends only on the digit. Yet the assumption is wonderfully cheap. We no longer estimate one giant joint distribution; we estimate $d$ tiny one-feature distributions $p(x_i\mid y)$ per class --- only $\mathcal{O}(dn)$ numbers instead of $\mathcal{O}(2^d n)$. The curse of dimensionality is broken by fiat.
 
@@ -91,13 +106,19 @@ $$\hat{y} = \mathop{\mathrm{argmax}}_y \; \log p(y) + \sum_{i=1}^d \log p(x_i\mi
 
 A score is now a sum of $785$ well-behaved logarithms instead of a product that rounds to zero --- the classifier becomes one matrix of pre-computed log-probabilities and a few additions.
 
+It is worth pausing on the *shape* of that score. For a binary feature, $\log p(x_i\mid y) = x_i \log p(x_i{=}1\mid y) + (1-x_i)\log p(x_i{=}0\mid y)$, so the log-space objective :eqref:`eq_mdl-naive_bayes_log` becomes
+
+$$\log p(y) + \sum_{i=1}^d \Bigl[ x_i \log p(x_i{=}1\mid y) + (1-x_i)\log p(x_i{=}0\mid y) \Bigr],$$
+
+which is **affine in $\mathbf{x}$** --- a constant plus a weighted sum of the pixels :cite:`Bishop.2006`. Each class score is therefore $\mathbf{w}_y\cdot\mathbf{x} + b_y$, and the boundary between any two classes, where their scores tie, is a hyperplane. So naive Bayes is a *linear* classifier: it carves the input space with the same decision planes as the softmax classifier of :numref:`sec_softmax` (and the mean-difference rule of :numref:`sec_mdl-geometry-linear-algebraic-ops`); the two models differ only in how they *set* those planes --- by counting class-conditional frequencies here, by gradient descent on the posterior there.
+
 ## Training Is Counting
 
 Naive Bayes needs two ingredients: the class prior $p(y)$ and, for each class, the per-feature likelihoods $p(x_i\mid y)$. Both are estimated by **maximum likelihood**, and for the categorical and Bernoulli models here the MLE is just an empirical frequency --- *training is counting*.
 
 For the prior, the maximum-likelihood estimate of $p(y)$ is the fraction of training examples carrying label $y$: if class $y$ appears $n_y$ times in $n = \sum_y n_y$ examples, then $\hat p(y) = n_y / n$. For binary features, $p(x_i = 1\mid y)$ is the probability that feature $i$ fires for class $y$ --- a Bernoulli parameter whose MLE is again a frequency: of the $n_y$ examples in class $y$, the fraction in which feature $i$ is on. Storing $\hat p(x_i = 1 \mid y)$ in a matrix $P_{xy}$ fixes both Bernoulli outcomes, since $\hat p(x_i = 0\mid y) = 1 - P_{xy}[i,y]$.
 
-One hazard remains. If feature $i$ is *never* on for class $y$ in the training set, the MLE is $\hat p(x_i=1\mid y)=0$, and a single such feature at test time annihilates the whole product in :eqref:`eq_mdl-naive_bayes` (and sends :eqref:`eq_mdl-naive_bayes_log` to $-\infty$). The cure is **Laplace smoothing**: add a pseudocount, estimating $p(x_i=1\mid y)$ as $(n_{iy}+1)/(n_y+2)$ rather than $n_{iy}/n_y$. The $+2$ in the denominator covers the two outcomes a binary pixel can take. This is no ad-hoc patch: it is the MAP estimate under a uniform Beta prior --- a single phantom "on" and "off" observation per feature, exactly the prior-as-regularizer story of MAP estimation in :numref:`sec_mdl-maximum_likelihood`.
+One hazard remains. If feature $i$ is *never* on for class $y$ in the training set, the MLE is $\hat p(x_i=1\mid y)=0$, and a single such feature at test time annihilates the whole product in :eqref:`eq_mdl-naive_bayes` (and sends :eqref:`eq_mdl-naive_bayes_log` to $-\infty$). The cure is **Laplace smoothing**: add a pseudocount, estimating $p(x_i=1\mid y)$ as $(n_{iy}+1)/(n_y+2)$ rather than $n_{iy}/n_y$. The $+2$ in the denominator covers the two outcomes a binary pixel can take. More generally, for a categorical feature with $K$ possible values one adds $1$ to the count of each value and $K$ to the denominator, so the smoothed probabilities still sum to one; for the bag-of-words text models below this means $+|V|$ for a vocabulary of size $|V|$ :cite:`Manning.Raghavan.Schutze.2008`. This is no ad-hoc patch: it is the MAP estimate under a uniform Dirichlet (here Beta) prior --- a single phantom observation per outcome, exactly the prior-as-regularizer story of MAP estimation in :numref:`sec_mdl-maximum_likelihood`.
 
 ## A Worked Example: MNIST Digits
 
@@ -182,15 +203,18 @@ def predict(X):
 float((predict(X_test) == Y_test).mean())              # Test accuracy
 ```
 
-Naive Bayes lands around $84\%$ accuracy --- far above the $10\%$ of random guessing, from a model that is nothing but ten averaged templates and a counting pass over the data. Yet modern networks reach error rates below $1\%$, and the gap is precisely the price of the naive assumption: pixels in a real digit are emphatically *not* independent given the class, and pretending otherwise leaves a great deal on the table. That honest failure is the lesson. Naive Bayes shows how far a clean probabilistic idea and a single counting pass can take you --- and exactly where a wrong independence assumption stops you. (On problems where features genuinely are close to conditionally independent, such as bag-of-words text classification, the same classifier is a strong baseline, which is why it ruled spam filtering for decades.)
+Naive Bayes lands around $84\%$ accuracy --- far above the $10\%$ of random guessing, from a model that is nothing but ten averaged templates and a counting pass over the data. Yet modern networks reach error rates below $1\%$, and the gap is precisely the price of the naive assumption: pixels in a real digit are emphatically *not* independent given the class, and pretending otherwise leaves a great deal on the table. That honest failure is the lesson. Naive Bayes shows how far a clean probabilistic idea and a single counting pass can take you --- and exactly where a wrong independence assumption stops you.
+
+Images are in fact the *hard* case for the naive assumption, because adjacent pixels are so tightly coupled. Its canonical home is the opposite regime: **bag-of-words text classification**, where each feature records whether a given word appears in a document :cite:`Manning.Raghavan.Schutze.2008`. There the independence story, while still not literally true, is far less violently wrong --- the presence of any one word out of a vocabulary of tens of thousands says comparatively little about the presence of most others, where neighboring pixels almost always agree --- so the same counting-and-argmax recipe makes naive Bayes a strong, famously cheap baseline for topic labelling and spam filtering, which it dominated for decades.
 
 ## Summary
 
 * Bayes' rule recasts classification generatively: $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$, predicting the label that maximizes the numerator.
+* As a **generative** model it estimates $p(\mathbf{x}\mid y)\,p(y)$, the mirror image of a **discriminative** model like softmax regression, which estimates $p(y\mid\mathbf{x})$ directly; the generative side needs fewer samples but pays a higher asymptotic error.
 * The **naive** conditional-independence assumption $p(\mathbf{x}\mid y)=\prod_i p(x_i\mid y)$ is false but cheap --- it slays the curse of dimensionality, replacing $\mathcal{O}(2^d)$ parameters with $\mathcal{O}(d)$ --- and the classifier needs only the $\mathrm{argmax}$, not the probabilities, to be right.
-* Working in log space (sums of log-likelihoods) avoids the underflow of multiplying hundreds of probabilities.
-* Training is maximum likelihood by counting: class priors and per-feature frequencies, with Laplace smoothing as a tiny uniform (MAP) prior.
-* On MNIST it learns ten averaged digit templates and classifies respectably, but its independence assumption caps accuracy --- a clean illustration of a generative classifier and of the cost of a wrong model.
+* Working in log space (sums of log-likelihoods) avoids the underflow of multiplying hundreds of probabilities, and reveals that the score is affine in the features: naive Bayes is a **linear** classifier, drawing hyperplanes like the softmax of :numref:`sec_softmax`.
+* Training is maximum likelihood by counting: class priors and per-feature frequencies, with Laplace smoothing as a tiny uniform (MAP) prior --- $+1$ per outcome in the numerator, $+K$ in the denominator.
+* On MNIST it learns ten averaged digit templates and classifies respectably, but its independence assumption caps accuracy --- a clean illustration of a generative classifier and of the cost of a wrong model. It shines where features really are near-independent, the canonical case being bag-of-words text classification.
 
 ## Exercises
 1. Consider the dataset $\{(0,0),(0,1),(1,0),(1,1)\}$ with labels given by the XOR of the two coordinates, $\{0,1,1,0\}$. Compute the naive Bayes estimates $p(y)$ and $p(x_i\mid y)$. Does the classifier separate the points? If not, which assumption is violated?

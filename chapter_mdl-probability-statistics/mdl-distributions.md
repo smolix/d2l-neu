@@ -13,13 +13,14 @@ Gaussian. The categorical generalizes the Bernoulli from two outcomes to $K$, an
 its softmax parameterization is the output layer of every classifier. At the end
 we will see that *all* of these---and more---are special cases of one form, the
 *exponential family*, which is the reason their maximum-likelihood losses are the
-clean, convex objectives we minimize in practice.
+clean, convex objectives we minimize in practice and the reason each has a
+*conjugate prior* that makes Bayesian updating as simple as counting.
 
 This is the punchline worth keeping in view, and :numref:`fig_mdl-prob-family-tree`
 draws it: the distributions are nodes, the construction and limit relationships
 are arrows, and the whole picture sits inside the exponential-family envelope.
 
-![The distribution family. Bernoulli is the seed: summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson; the many-and-ordinary limit (the central limit theorem) gives the Gaussian. The Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Every node lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
+![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows mark the *conjugate-prior* tier sitting above the data distributions: the Beta is conjugate to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
 For each distribution we keep to a tight template: its mass or density function,
@@ -88,8 +89,10 @@ $$
 :eqlabel:`eq_mdl-bernoulli_pmf`
 
 **Where it arises.** The Bernoulli is the output distribution of *every binary
-classifier*: a model emits $\hat p$ and the negative log-likelihood
-$-y\log\hat p-(1-y)\log(1-\hat p)$ is exactly the *binary cross-entropy* loss.
+classifier*: a model emits $\hat p$, and the negative log-likelihood
+$-y\log\hat p-(1-y)\log(1-\hat p)$ is exactly the *binary cross-entropy* loss---the
+maximum-likelihood view of binary classification developed in
+:numref:`subsec_mdl-nll-crossentropy`.
 
 **Mean and variance.** Because $X$ takes only the values $0$ and $1$, we have
 $X^2=X$, which makes both moments immediate:
@@ -105,6 +108,7 @@ coin) and vanishes at $p\in\{0,1\}$ (a certain outcome carries no randomness).
 
 ```{.python .input #distributions-bernoulli}
 #@tab mxnet
+np.random.seed(0)
 p = 0.3
 sample = 1 * (np.random.rand(3, 3) < p)        # 1 with prob p, else 0
 print('pmf  P(0), P(1) =', (1 - p, p))
@@ -114,6 +118,7 @@ sample
 
 ```{.python .input #distributions-bernoulli}
 #@tab pytorch
+torch.manual_seed(0)
 p = 0.3
 sample = (torch.rand(3, 3) < p).float()        # 1 with prob p, else 0
 print('pmf  P(0), P(1) =', (1 - p, p))
@@ -123,6 +128,7 @@ sample
 
 ```{.python .input #distributions-bernoulli}
 #@tab tensorflow
+tf.random.set_seed(0)
 p = 0.3
 sample = tf.cast(tf.random.uniform((3, 3)) < p, tf.float32)
 print('pmf  P(0), P(1) =', (1 - p, p))
@@ -160,9 +166,9 @@ $$
 :eqlabel:`eq_mdl-softmax`
 
 and the negative log-likelihood of the categorical,
-$-\sum_k y_k\log p_k$ with $\mathbf y$ the one-hot label, is exactly the
-*cross-entropy* loss (:numref:`sec_mdl-information_theory`, `sec_softmax`). The
-Bernoulli is the case $K=2$.
+$-\sum_k y_k\log p_k$ with $\mathbf y$ the one-hot label, is exactly the softmax
+*cross-entropy* loss (:numref:`subsec_mdl-nll-crossentropy`, :numref:`sec_softmax`).
+The Bernoulli is the case $K=2$.
 
 The *multinomial* is its count version, the categorical analogue of how the
 binomial sums Bernoullis. Drawing $n$ independent categorical samples and counting
@@ -187,7 +193,7 @@ z = np.array([2.0, 1.0, 0.1, -1.0])            # logits over K = 4 classes
 p_cat = np.exp(z) / np.exp(z).sum()            # softmax -> categorical
 draw = int(np.random.choice(len(p_cat), p=p_cat.tolist()))
 print('categorical p =', p_cat.round(3), ' sum =', float(p_cat.sum()))
-print('one sample (argmax-ish, random) -> class', draw)
+print('one sample (random) -> class', draw)
 ```
 
 ```{.python .input #distributions-categorical}
@@ -577,6 +583,7 @@ $F(x)=1-e^{-\lambda x}$ gives exactly this map.
 
 ```{.python .input #distributions-exponential}
 #@tab mxnet
+np.random.seed(0)
 lam = 0.5
 U = np.random.rand(100000)
 sample = -np.log(U) / lam                        # inverse-transform sampler
@@ -586,6 +593,7 @@ print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var().round(
 
 ```{.python .input #distributions-exponential}
 #@tab pytorch
+torch.manual_seed(0)
 lam = 0.5
 U = torch.rand(100000)
 sample = -torch.log(U) / lam                     # inverse-transform sampler
@@ -595,6 +603,7 @@ print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var()))
 
 ```{.python .input #distributions-exponential}
 #@tab tensorflow
+tf.random.set_seed(0)
 lam = 0.5
 U = tf.random.uniform((100000,))
 sample = -tf.math.log(U) / lam                   # inverse-transform sampler
@@ -662,10 +671,10 @@ Gaussian has the largest entropy (:numref:`sec_mdl-information_theory`)---it is 
 honest default.
 
 **Where it arises.** As the CLT limit it models aggregate noise; it is the noise
-model behind *regression* (modeling $y\sim\mathcal N(\hat y,\sigma^2)$ makes the
-negative log-likelihood $\tfrac{(y-\hat y)^2}{2\sigma^2}+\text{const}$, so
-maximizing it *is* minimizing mean squared error); and it is the default prior and
-latent distribution throughout deep generative modeling.
+model behind *regression*---taking $y\sim\mathcal N(\hat y,\sigma^2)$ makes the
+negative log-likelihood equal to mean squared error, the maximum-likelihood view
+of MSE derived in :numref:`subsec_mdl-gaussian-mse`; and it is the default prior
+and latent distribution throughout deep generative modeling.
 
 ```{.python .input #distributions-gaussian}
 #@tab mxnet
@@ -740,9 +749,10 @@ tail by the fraction of mass beyond $3$ standard deviations.
 
 ```{.python .input #distributions-laplace}
 #@tab mxnet
+np.random.seed(0)
 mu, b = 0.0, 1.0
 sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
-U = np.random.rand(200000) - 0.5
+U = (np.random.rand(200000) - 0.5) * (1 - 1e-7)   # open interval avoids log(0)
 lap = mu - b * np.sign(U) * np.log(1 - 2 * np.abs(U))  # inverse transform
 gau = np.random.normal(mu, sigma, 200000)
 print('Laplace var (2b^2):', float(lap.var().round(3)), ' Gaussian var:', float(gau.var().round(3)))
@@ -752,6 +762,7 @@ print('P(|x| > 3sd): Laplace', float((np.abs(lap) > 3 * sigma).mean()),
 
 ```{.python .input #distributions-laplace}
 #@tab pytorch
+torch.manual_seed(0)
 mu, b = 0.0, 1.0
 sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
 lap = torch.distributions.Laplace(mu, b).sample((200000,))
@@ -763,9 +774,10 @@ print('P(|x| > 3sd): Laplace', float((lap.abs() > 3 * sigma).float().mean()),
 
 ```{.python .input #distributions-laplace}
 #@tab tensorflow
+tf.random.set_seed(0)
 mu, b = 0.0, 1.0
 sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
-U = tf.random.uniform((200000,)) - 0.5
+U = (tf.random.uniform((200000,)) - 0.5) * (1 - 1e-7)  # open interval avoids log(0)
 lap = mu - b * tf.sign(U) * tf.math.log(1 - 2 * tf.abs(U))  # inverse transform
 gau = tf.random.normal((200000,), mu, sigma)
 print('Laplace var (2b^2):', float(tf.math.reduce_variance(lap)),
@@ -801,12 +813,12 @@ $$
 
 **The geometry is the eigendecomposition.** The exponent is a quadratic form in
 $\boldsymbol\Sigma^{-1}$, so its level sets---the contours of equal density---are
-*ellipsoids*. Because $\boldsymbol\Sigma$ is symmetric PSD it has an orthonormal
-eigenbasis $\boldsymbol\Sigma=\mathbf W\boldsymbol\Lambda\mathbf W^\top$
-(:numref:`subsec_mdl-spectral-theorem`), and the contour ellipsoid's *axes point
-along the eigenvectors $\mathbf w_i$ with half-lengths proportional to
-$\sqrt{\lambda_i}$*: the principal directions of spread are the eigenvectors,
-stretched by the standard deviations along them. The isotropic case
+*ellipsoids*. The covariance $\boldsymbol\Sigma$ is symmetric PSD, so it has an
+orthonormal eigenbasis $\boldsymbol\Sigma=\mathbf W\boldsymbol\Lambda\mathbf W^\top$
+by the spectral theorem (:numref:`subsec_mdl-spectral-theorem`), and the contour
+ellipsoid's *axes point along the eigenvectors $\mathbf w_i$ with half-lengths
+proportional to $\sqrt{\lambda_i}$*: the principal directions of spread are the
+eigenvectors, stretched by the standard deviations along them. The isotropic case
 $\boldsymbol\Sigma=\sigma^2\mathbf I$ gives spherical contours and factorizes into
 $d$ independent one-dimensional Gaussians. :numref:`fig_mdl-prob-mvn-contours` draws
 this for a $2\times2$ covariance.
@@ -815,10 +827,37 @@ this for a $2\times2$ covariance.
 :label:`fig_mdl-prob-mvn-contours`
 
 It is the default vector noise and prior because it is *closed under linear maps and
-conditioning*: a linear transform $\mathbf A\mathbf x+\mathbf b$ of a Gaussian is
-again Gaussian, with covariance $\mathbf A\boldsymbol\Sigma\mathbf A^\top$. The cell
-draws samples, estimates the covariance, and checks that its eigenvectors recover
-the directions we built in.
+conditioning*. A linear transform $\mathbf A\mathbf x+\mathbf b$ of a Gaussian is
+again Gaussian, with covariance $\mathbf A\boldsymbol\Sigma\mathbf A^\top$; marginals
+(a special case, projecting onto a coordinate block) are therefore Gaussian too.
+*Conditioning* is closed in the same way. Partition the vector and its parameters
+into blocks $\mathbf x=(\mathbf x_1,\mathbf x_2)$,
+
+$$
+\boldsymbol\mu = \begin{pmatrix}\boldsymbol\mu_1\\\boldsymbol\mu_2\end{pmatrix},
+\qquad
+\boldsymbol\Sigma = \begin{pmatrix}\boldsymbol\Sigma_{11} & \boldsymbol\Sigma_{12}\\
+\boldsymbol\Sigma_{21} & \boldsymbol\Sigma_{22}\end{pmatrix},
+$$
+
+and the conditional $\mathbf x_1\mid\mathbf x_2$ is again Gaussian, with mean and
+covariance
+
+$$
+\boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 + \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
+\qquad
+\boldsymbol\Sigma_{1\mid 2} = \boldsymbol\Sigma_{11} - \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.
+$$
+:eqlabel:`eq_mdl-mvn_conditional`
+
+The conditional mean is a *linear* function of the observed block---a linear
+regression of $\mathbf x_1$ on $\mathbf x_2$ read straight off the covariance---and
+the conditional covariance is the *Schur complement* of $\boldsymbol\Sigma_{22}$,
+which no longer depends on $\mathbf x_2$. This pair is the entire engine of Gaussian
+process regression: condition the joint Gaussian prior over function values on the
+observed points and read off the predictive mean and variance. The cell draws
+samples, estimates the covariance, and checks that its eigenvectors recover the
+directions we built in.
 
 ```{.python .input #distributions-mvn}
 #@tab mxnet
@@ -917,6 +956,28 @@ parameter is negative, $\eta_2=-1/(2\sigma^2)<0$, which is what forces the
 tail-suppressing $e^{-x^2}$ decay. The exact split between $h$, $\eta$, and $T$ is
 not unique; what matters is that the distribution *fits the form at all*.
 
+### Where the Form Comes From: Maximum Entropy
+
+The exponential form is not an arbitrary template---it is exactly what *maximizing
+entropy* produces. The two maximum-entropy remarks we made earlier are the same
+statement seen twice: the discrete uniform is the maximum-entropy distribution on a
+finite set when we fix *nothing* but the support, and the Gaussian is the
+maximum-entropy distribution on the line when we fix the *mean and variance*. In
+general, maximizing the entropy $H[p]=-\int p\log p$ subject to fixing the expected
+sufficient statistics $\mathbb E[T(\mathbf x)]=\boldsymbol\tau$ has, by a Lagrange
+multiplier argument, the solution
+
+$$
+p(\mathbf x) \propto h(\mathbf x)\,\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x)\bigr),
+$$
+
+which is precisely :eqref:`eq_mdl-exp_family`---the multipliers $\boldsymbol\eta$
+are the natural parameters and $A(\boldsymbol\eta)$ is again the normalizer
+:cite:`Murphy.2022`. So the exponential family is the *least-committal* family
+consistent with knowing a fixed set of averages: the uniform fixes none, the
+Bernoulli/categorical fix the class probabilities, and the Gaussian fixes the first
+two moments.
+
 ### The Moment Property
 
 The single most useful fact about :eqref:`eq_mdl-exp_family` is that $A$ is a moment
@@ -1003,6 +1064,110 @@ their losses are well behaved. The exponential family is thus not an exotic
 abstraction but the structural reason the standard losses of deep learning are the
 clean objectives they are :cite:`Bishop.2006,Koller.Friedman.2009`.
 
+## Conjugate Priors
+
+The family tree so far has one half missing. The arrows of
+:numref:`fig_mdl-prob-family-tree` *build* distributions over data; but in
+:numref:`subsec_mdl-map` we saw that fitting a model means placing a *prior* over
+its parameters, and the parameters of the distributions above are themselves
+quantities to be inferred---the Bernoulli's $p$, the Poisson's $\lambda$, the
+categorical's $\mathbf p$. A *prior* over those parameters is again a distribution,
+and three new continuous laws---the **Beta**, the **Gamma**, and the
+**Dirichlet**---are exactly the priors that pair cleanly with the discrete
+distributions we have met. A prior is **conjugate** to a likelihood when the
+posterior belongs to the *same family* as the prior, so Bayesian updating just moves
+the parameters rather than changing the shape of the distribution. This closes the
+tree: a second tier of nodes sits above the data distributions, joined to them by
+"conjugate prior" links.
+
+### Beta--Bernoulli: Counting with Pseudo-Counts
+
+The **Beta** distribution is a density on the unit interval $p\in[0,1]$---exactly
+the range of a probability---with two shape parameters $\alpha,\beta>0$,
+
+$$
+\mathrm{Beta}(p\mid\alpha,\beta) = \frac{p^{\alpha-1}(1-p)^{\beta-1}}{B(\alpha,\beta)},
+$$
+:eqlabel:`eq_mdl-beta_pdf`
+
+where $B(\alpha,\beta)$ is the normalizing constant. Its mean is
+$\alpha/(\alpha+\beta)$, and the uniform prior on $[0,1]$ of
+:numref:`sec_mdl-maximum_likelihood`---the uninformative coin prior---is the special
+case $\alpha=\beta=1$.
+
+Now take a Beta prior on a coin's bias $p$ and observe a Bernoulli/binomial sample
+with $x$ heads in $n$ flips. Multiplying the prior by the likelihood
+:eqref:`eq_mdl-binomial_pmf`,
+
+$$
+\underbrace{p^{\alpha-1}(1-p)^{\beta-1}}_{\text{prior}}\cdot
+\underbrace{p^{x}(1-p)^{n-x}}_{\text{likelihood}}
+= p^{(\alpha+x)-1}(1-p)^{(\beta+n-x)-1},
+$$
+
+which---up to normalization---is again a Beta, now with parameters shifted by the
+data:
+
+$$
+p \mid x \;\sim\; \mathrm{Beta}\bigl(\alpha+x,\ \beta+(n-x)\bigr).
+$$
+:eqlabel:`eq_mdl-beta_posterior`
+
+This is the **pseudo-count** picture, the cleanest intuition in Bayesian statistics:
+$\alpha-1$ and $\beta-1$ act as *imaginary* heads and tails seen before any real
+data, and observing $x$ real heads and $n-x$ real tails simply adds them on. The
+posterior mean
+
+$$
+\mathbb E[p\mid x] = \frac{\alpha+x}{\alpha+\beta+n}
+$$
+
+interpolates between the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood
+frequency $x/n$, and slides toward the data as $n$ grows---the same flattening of the
+prior we saw turn MAP into MLE in :numref:`subsec_mdl-map`. The cell verifies the
+update on a small sample.
+
+```{.python .input #distributions-conjugate}
+alpha, beta = 2.0, 2.0                           # Beta prior pseudo-counts
+x, n = 7, 10                                     # 7 heads in 10 flips
+post_alpha, post_beta = alpha + x, beta + (n - x)  # Beta posterior update
+print('prior mean      =', round(alpha / (alpha + beta), 4))
+print('MLE  x/n        =', round(x / n, 4))
+print('posterior Beta  =', (post_alpha, post_beta))
+print('posterior mean  =', round(post_alpha / (post_alpha + post_beta), 4))
+```
+
+The posterior mean sits between the prior's $0.5$ and the data's $0.7$, exactly as
+the pseudo-count sum predicts.
+
+### The Rest of the Tier, and the General Fact
+
+The other discrete laws have their own conjugate partners, built the same way.
+
+* **Gamma--Poisson.** The **Gamma** distribution
+  $\mathrm{Gamma}(\lambda\mid\alpha,\beta)\propto\lambda^{\alpha-1}e^{-\beta\lambda}$
+  is a density on the rate $\lambda>0$; it is conjugate to the Poisson, and observing
+  counts $x_1,\dots,x_n$ updates it to $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$---pseudo-events over a pseudo-window.
+* **Dirichlet--Multinomial.** The **Dirichlet** distribution
+  $\mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)\propto\prod_k p_k^{\alpha_k-1}$ is the
+  multivariate Beta, a density over probability vectors on the simplex; it is
+  conjugate to the categorical/multinomial, and observing class counts
+  $\mathbf x$ updates it to $\mathrm{Dir}(\boldsymbol\alpha+\mathbf x)$---one
+  pseudo-count per class.
+
+These are three instances of one theorem. **Every exponential-family likelihood has a
+conjugate prior**, and it is itself an exponential family in the natural parameters
+$\boldsymbol\eta$: writing the prior as
+$p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$,
+multiplying by the likelihood :eqref:`eq_mdl-exp_family` just adds the data's
+sufficient statistics into $\boldsymbol\nu$ and increments $\kappa$ by the sample
+size. The pseudo-count update of :eqref:`eq_mdl-beta_posterior` is this general
+mechanism specialized to the Bernoulli, and the hyperparameters
+$(\boldsymbol\nu,\kappa)$ are *pseudo-data*: a prior sufficient statistic and a prior
+sample size :cite:`Bishop.2006,Murphy.2022`. Conjugacy is why the exponential family
+is the natural home not just of the standard losses but of tractable Bayesian
+inference.
+
 ## Summary
 
 * Distributions form a *family*, not a list: Bernoulli is the seed; summing $n$
@@ -1016,14 +1181,23 @@ clean objectives they are :cite:`Bishop.2006,Koller.Friedman.2009`.
   sampling), the **exponential** (memoryless waiting times, partner of the
   Poisson), the **Gaussian** (CLT limit, MSE noise model, max-entropy default), the
   **Laplace** ($L_1$/MAE loss, sparsity prior), and the **multivariate Gaussian**,
-  whose elliptical contours are the eigendecomposition of its covariance.
+  whose elliptical contours are the eigendecomposition of its covariance and which is
+  closed under both linear maps and conditioning (the Schur-complement formulas,
+  :eqref:`eq_mdl-mvn_conditional`, that drive Gaussian-process regression).
 * Means and variances follow from elegant structure---linearity of expectation,
   limits, and standard integrals---not memorization.
 * The **exponential family** $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top
-  T(\mathbf x)-A(\boldsymbol\eta))$ unifies all of them. Its log-partition $A$
-  generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$, and $A$ is
-  convex, which is exactly why exponential-family maximum likelihood (the basis of
-  the standard deep-learning losses) is a convex problem.
+  T(\mathbf x)-A(\boldsymbol\eta))$ unifies all of them; it is exactly the
+  maximum-entropy family for a fixed set of expected sufficient statistics. Its
+  log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
+  and $A$ is convex, which is exactly why exponential-family maximum likelihood (the
+  basis of the standard deep-learning losses) is a convex problem.
+* Every exponential-family likelihood has a **conjugate prior**: the **Beta** for the
+  Bernoulli/binomial, the **Gamma** for the Poisson, the **Dirichlet** for the
+  categorical/multinomial. Bayesian updating then just adds the data's sufficient
+  statistics to the prior's *pseudo-counts*---e.g. a $\mathrm{Beta}(\alpha,\beta)$
+  prior and $x$ heads in $n$ flips give a $\mathrm{Beta}(\alpha+x,\beta+n-x)$
+  posterior.
 
 ## Exercises
 
@@ -1055,6 +1229,17 @@ clean objectives they are :cite:`Bishop.2006,Koller.Friedman.2009`.
    half-lengths of the $\mathcal N(\mathbf 0,\boldsymbol\Sigma)$ density contours.
    Show that a linear map $\mathbf A\mathbf x+\mathbf b$ of a multivariate Gaussian
    is again Gaussian with covariance $\mathbf A\boldsymbol\Sigma\mathbf A^\top$.
+9. Start from a uniform $\mathrm{Beta}(1,1)$ prior on a coin's bias and observe the
+   sequence "HHHTHTTHHHHHT" ($9$ heads, $4$ tails) of
+   :numref:`sec_mdl-maximum_likelihood`. Give the posterior :eqref:`eq_mdl-beta_posterior`
+   and its mean, and show that as the data grows the posterior mean converges to the
+   maximum-likelihood frequency $n_H/(n_H+n_T)$.
+10. Using the conditional formula :eqref:`eq_mdl-mvn_conditional`, take the
+    bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
+    $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$
+    and find the distribution of $x_1$ given $x_2$. Show its mean is $\rho x_2$ and
+    its variance is $1-\rho^2$, and explain why observing $x_2$ never *increases* the
+    uncertainty about $x_1$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/417)
@@ -1166,11 +1351,29 @@ and $A$ is convex — why MLE losses are clean.
 @distributions-exp-family
 :::
 
+::: {.slide title="Conjugate priors: updating is counting"}
+Every exponential-family likelihood has a conjugate prior;
+the posterior stays in the prior's family:
+
+- **Beta** $\to$ Bernoulli / Binomial
+- **Gamma** $\to$ Poisson
+- **Dirichlet** $\to$ Categorical / Multinomial
+
+A $\mathrm{Beta}(\alpha,\beta)$ prior and $x$ heads in $n$ flips
+give a $\mathrm{Beta}(\alpha+x,\beta+n-x)$ posterior — the
+prior parameters are *pseudo-counts*.
+
+@distributions-conjugate
+:::
+
 ::: {.slide title="Recap"}
 - Bernoulli $\to$ Binomial $\to$ Poisson / Gaussian by sums
   and limits; Categorical $\to$ Multinomial.
 - Means/variances from linearity, limits, simple integrals.
-- The Gaussian is central (CLT, max entropy).
+- The Gaussian is central (CLT, max entropy); it is closed
+  under linear maps and conditioning (Schur complement).
 - The exponential family unifies them; $\nabla A = \mathbb{E}[T]$,
   and its convex $A$ is why deep-learning losses are clean.
+- Each has a conjugate prior (Beta, Gamma, Dirichlet); Bayesian
+  updating just adds pseudo-counts.
 :::

@@ -15,14 +15,16 @@ is small enough to solve by hand, which lets us check every claim against the
 answer we already know.
 
 We load the per-framework library so the worked cells below have `d2l` in
-scope. Only the two small verification cells branch per framework; everything
-else is framework-agnostic.
+scope, plus plain NumPy (as `onp`) for the framework-agnostic simulations. Only
+the two small gradient-descent cells branch per framework; everything else is
+framework-agnostic.
 
 ```{.python .input #maximum-likelihood-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
+import numpy as onp
 npx.set_np()
 ```
 
@@ -30,6 +32,7 @@ npx.set_np()
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import numpy as onp
 import torch
 ```
 
@@ -37,6 +40,7 @@ import torch
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
+import numpy as onp
 import tensorflow as tf
 ```
 
@@ -46,6 +50,7 @@ import tensorflow as tf
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
+import numpy as onp
 ```
 
 ## The Maximum Likelihood Principle
@@ -67,14 +72,17 @@ $$
 P(\boldsymbol{\theta}\mid X) = \frac{P(X \mid \boldsymbol{\theta})\,P(\boldsymbol{\theta})}{P(X)}.
 $$
 
-Two of the three pieces drop out of the $\mathop{\mathrm{argmax}}$. The evidence
-$P(X)$ does not depend on $\boldsymbol{\theta}$, so it cannot change which
-$\boldsymbol{\theta}$ wins. And if we hold *no* prior belief that one parameter
-value is better than another---an *uninformative prior*, e.g. that the coin's
-bias is equally likely to be any value in $[0,1]$---then $P(\boldsymbol{\theta})$
-is constant in $\boldsymbol{\theta}$ as well and likewise drops. What remains is
-the **likelihood** $P(X \mid \boldsymbol{\theta})$, the probability the data
-assigns under each parameter, and the principle in its working form:
+Two of the three pieces drop out of the $\mathop{\mathrm{argmax}}$, but for
+*different reasons*. The evidence $P(X)$ does not depend on $\boldsymbol{\theta}$,
+so it can never change which $\boldsymbol{\theta}$ wins---dropping it is free, no
+assumption required. The prior $P(\boldsymbol{\theta})$ is a different matter:
+discarding it is a *modelling choice*. Only if we hold *no* prior belief that one
+parameter value is better than another---an *uninformative prior*, e.g. that the
+coin's bias is equally likely to be any value in $[0,1]$---is
+$P(\boldsymbol{\theta})$ constant in $\boldsymbol{\theta}$ and free to drop too.
+What remains is the **likelihood** $P(X \mid \boldsymbol{\theta})$, the
+probability the data assigns under each parameter, and the principle in its
+working form:
 
 $$
 \hat{\boldsymbol{\theta}} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}\, P(X \mid \boldsymbol{\theta}).
@@ -343,21 +351,36 @@ $$
   = \textrm{CE}\!\left(\hat p_{\textrm{data}},\, p_{\boldsymbol{\theta}}\right),
 $$
 
-which is exactly the cross-entropy of :eqref:`eq_mdl-ce_def`. Scaling by the
+which is exactly the cross-entropy named in the proposition. Scaling by the
 positive constant $1/n$ and flipping the sign do not move the optimizer, so the
 $\mathop{\mathrm{argmax}}$ of the likelihood equals the $\mathop{\mathrm{argmin}}$
 of the cross-entropy. $\blacksquare$
 
-This also explains *why* minimizing cross-entropy is the right thing to do. By
-the decomposition $\textrm{CE}(P,Q)=H(P)+D_{\textrm{KL}}(P\|Q)$ from
-:eqref:`eq_mdl-ce_decomp`, and since the empirical entropy $H(\hat p_{\textrm{data}})$
-does not depend on $\boldsymbol{\theta}$, minimizing the cross-entropy is
-identical to minimizing $D_{\textrm{KL}}(\hat p_{\textrm{data}}\|p_{\boldsymbol{\theta}})$:
-maximum likelihood drives the model toward the data distribution in KL. The full
-cross-entropy / KL story lives in :numref:`sec_mdl-information_theory`; here we
-have shown its starting point. As a special case, the *categorical* NLL of a
-classifier with one-hot labels is precisely the softmax cross-entropy loss of
-:numref:`sec_softmax`.
+This also explains *why* minimizing cross-entropy is the right thing to do.
+Cross-entropy decomposes as $\textrm{CE}(P,Q)=H(P)+D_{\textrm{KL}}(P\|Q)$, the
+entropy of $P$ plus the Kullback--Leibler divergence from $P$ to $Q$ (see
+:numref:`sec_mdl-information_theory` for that background). Setting
+$P=\hat p_{\textrm{data}}$ and $Q=p_{\boldsymbol{\theta}}$, the empirical entropy
+$H(\hat p_{\textrm{data}})$ is fixed by the data and does not depend on
+$\boldsymbol{\theta}$, so minimizing the cross-entropy is *identical* to
+minimizing the KL term alone:
+
+$$
+\mathop{\mathrm{argmin}}_{\boldsymbol{\theta}}\, \textrm{CE}\!\left(\hat p_{\textrm{data}},\, p_{\boldsymbol{\theta}}\right)
+  = \mathop{\mathrm{argmin}}_{\boldsymbol{\theta}}\, D_{\textrm{KL}}\!\left(\hat p_{\textrm{data}}\,\|\,p_{\boldsymbol{\theta}}\right).
+$$
+
+This is the deepest reading of the section: maximum likelihood is the
+*KL-projection* of the empirical distribution onto the model family---it picks
+the $p_{\boldsymbol{\theta}}$ closest to the data in the only sense that matters
+for coding. Training cannot drive the cross-entropy below the floor
+$H(\hat p_{\textrm{data}})$, the irreducible cost of the data's own randomness;
+all it can remove is the KL gap, as :numref:`fig_mdl-mle-kl` shows. As a special
+case, the *categorical* NLL of a classifier with one-hot labels is precisely the
+softmax cross-entropy loss of :numref:`sec_softmax`.
+
+![Minimizing the negative log-likelihood is minimizing the KL divergence to the data. The per-example cross-entropy splits into the entropy $H(\hat p_{\textrm{data}})$, an irreducible floor set by the data's own randomness, plus $D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$, the only part training can remove. As the model improves, the KL slice shrinks and the cross-entropy descends toward---but never below---the floor.](../img/mdl-prob-mle-kl.svg)
+:label:`fig_mdl-mle-kl`
 
 ### Gaussian NLL Is Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
@@ -399,27 +422,136 @@ So squared-error regression is *not* an arbitrary choice---it is maximum
 likelihood under the assumption that the residuals are Gaussian, the assumption
 the central limit theorem makes plausible whenever the noise is a sum of many
 small independent effects (:numref:`sec_mdl-distributions`). The same recipe
-turns each conditional distribution into its loss: a Bernoulli $p(y\mid\mathbf x)$
-gives binary cross-entropy, a categorical gives softmax cross-entropy, and a
-Laplace $p(y\mid\mathbf x)$ gives mean *absolute* error. Picking a loss is
-picking a noise model.
+turns *every* common loss into the NLL of a chosen conditional
+$p(y\mid\mathbf x)$: pick the noise model and its negative log *is* the loss.
+
+| Noise model $p(y\mid\mathbf x)$ | Negative log-likelihood $-\log p(y\mid\mathbf x)$ | Deep-learning loss |
+|---|---|---|
+| Gaussian, fixed variance | $\tfrac{1}{2\sigma^2}(y-\hat y)^2 + \textrm{const}$ | mean squared error (MSE) |
+| Bernoulli | $-\,y\log\hat p - (1-y)\log(1-\hat p)$ | binary cross-entropy (BCE) |
+| Categorical (one-hot $y$) | $-\sum_k y_k \log \hat p_k$ | softmax cross-entropy |
+| Laplace, fixed scale | $\tfrac{1}{b}\lvert y-\hat y\rvert + \textrm{const}$ | mean absolute error (MAE) |
+
+Each row is one line of algebra---take the density, drop the
+$\boldsymbol{\theta}$-free constants---of exactly the kind we just did for the
+Gaussian. Picking a loss *is* picking a noise model.
 
 ### Why Maximum Likelihood Works
 
-A fair worry is whether $\hat{\boldsymbol{\theta}}$ is any good. The reassurance
-is the same KL picture. Drawing genuinely i.i.d. data from a true distribution
-$p_{\boldsymbol{\theta}^\star}$, the average NLL is, by the law of large numbers,
-an estimate of the *expected* cross-entropy
+A fair worry is whether $\hat{\boldsymbol{\theta}}$ is any good. The first
+reassurance is the same KL picture. Drawing genuinely i.i.d. data from a true
+distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL is, by the law of
+large numbers, an estimate of the *expected* cross-entropy
 $\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$, which the
 proposition above shows is minimized exactly at the truth
 $\boldsymbol{\theta}=\boldsymbol{\theta}^\star$ (the KL term vanishes there).
 Minimizing the empirical average therefore targets the right minimizer, and as
 $n\to\infty$ the empirical objective converges to the population one. This is the
-formal content of the statements that maximum likelihood is *consistent* (the
-estimate converges to the true parameter) and *asymptotically efficient* (no
-unbiased estimator has smaller variance in the limit) for a well-specified
-model. The coin made this concrete: $\hat\theta = n_H/(n_H+n_T) \to \theta^\star$
-by the law of large numbers.
+formal content of *consistency*: for a well-specified model the MLE converges in
+probability to the true parameter, $\hat{\boldsymbol{\theta}}\xrightarrow{P}\boldsymbol{\theta}^\star$.
+The coin made this concrete: $\hat\theta = n_H/(n_H+n_T) \to \theta^\star$ by the
+law of large numbers. Consistency, asymptotic unbiasedness, and efficiency are
+the estimator-quality notions of :numref:`sec_mdl-statistics`; here they describe
+the MLE specifically.
+
+Consistency says only *where* $\hat{\boldsymbol{\theta}}$ lands; the sharper
+statement is *how fast* and *how tightly* it concentrates. Under mild regularity
+conditions the MLE is **asymptotically normal**: the rescaled error converges in
+distribution to a Gaussian,
+
+$$
+\sqrt{n}\,\big(\hat{\boldsymbol{\theta}} - \boldsymbol{\theta}^\star\big)
+  \;\xrightarrow{d}\; \mathcal{N}\!\big(\mathbf{0},\; I(\boldsymbol{\theta}^\star)^{-1}\big),
+$$
+:eqlabel:`eq_mdl-asymptotic-normality`
+
+where $I(\boldsymbol{\theta})$ is the **Fisher information** defined just below
+:cite:`Bishop.2006,Wasserman.2013`. Two things are worth extracting. First, the
+error shrinks at the $1/\sqrt{n}$ rate, so the standard error of each component
+falls like $1/\sqrt n$---halving it costs four times the data. Second, the limiting variance is exactly
+$I(\boldsymbol{\theta}^\star)^{-1}$, and the Cramér--Rao bound of
+:numref:`sec_mdl-statistics` says *no* unbiased estimator can have smaller
+variance than $I(\boldsymbol{\theta}^\star)^{-1}/n$. The MLE attains that floor in
+the limit: it is **asymptotically efficient**---asymptotically, the best estimator
+there is. The qualifier matters. At finite $n$ the MLE is generally only
+*asymptotically* unbiased, not exactly unbiased---the maximum-likelihood estimate
+of a Gaussian's variance divides the sum of squares by $n$ rather than $n-1$ and
+so systematically underestimates $\sigma^2$, the biased estimator worked out in
+:numref:`sec_mdl-statistics`. Maximum likelihood is optimal *in the limit*, not a
+guarantee of unbiasedness at every sample size.
+
+#### Fisher Information and the Score
+
+To make :eqref:`eq_mdl-asymptotic-normality` quantitative we need the object
+$I(\boldsymbol{\theta})$ it contains. Define the **score** as the gradient of the
+log-likelihood with respect to the parameters,
+$s(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})$.
+The score is the per-example version of the NLL gradient we already met: setting
+$\sum_i s(\boldsymbol{\theta}) = \mathbf 0$ is exactly the first-order condition
+that locates $\hat{\boldsymbol{\theta}}$. At the true parameter the score has
+mean zero, and its variance is the **Fisher information**,
+
+$$
+I(\boldsymbol{\theta}) = \operatorname{Var}_{\boldsymbol{\theta}}\!\big[\,s(\boldsymbol{\theta})\,\big]
+  = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(\boldsymbol{\theta})\,s(\boldsymbol{\theta})^\top\,\big]
+  = -\,\mathbb{E}_{\boldsymbol{\theta}}\!\big[\nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\big],
+$$
+:eqlabel:`eq_mdl-fisher`
+
+the last equality (valid under the same regularity conditions) saying that the
+information is the expected *curvature* of the NLL. The reading is intuitive: a
+sharply peaked log-likelihood---large curvature, large $I$---pins the parameter
+down tightly, so the estimate has small variance; a flat one leaves
+$\boldsymbol{\theta}$ poorly determined. That is precisely what
+:eqref:`eq_mdl-asymptotic-normality` says, $\operatorname{Var}(\hat{\boldsymbol{\theta}}) \approx I(\boldsymbol{\theta}^\star)^{-1}/n$.
+
+The coin closes the loop on itself. A single flip has log-likelihood
+$\log p(x\mid\theta) = x\log\theta + (1-x)\log(1-\theta)$ for $x\in\{0,1\}$, so
+the score and its derivative are
+
+$$
+s(\theta) = \frac{x}{\theta} - \frac{1-x}{1-\theta},
+\qquad
+\frac{d}{d\theta}\, s(\theta) = -\frac{x}{\theta^2} - \frac{1-x}{(1-\theta)^2}.
+$$
+
+Taking $-\mathbb{E}[\,\cdot\,]$ with $\mathbb{E}[x]=\theta$ collapses the two
+fractions to $\tfrac{1}{\theta} + \tfrac{1}{1-\theta}$, so the per-flip Fisher
+information and its inverse are
+
+$$
+I(\theta) = \frac{1}{\theta} + \frac{1}{1-\theta} = \frac{1}{\theta(1-\theta)},
+\qquad
+\frac{I(\theta)^{-1}}{n} = \frac{\theta(1-\theta)}{n}.
+$$
+:eqlabel:`eq_mdl-coin-fisher`
+
+The prediction is therefore that the MLE $\hat\theta = n_H/n$ over $n$ flips has
+variance about $\theta(1-\theta)/n$. We can check that this is *exactly* right
+here---$\hat\theta$ is a scaled binomial count, whose variance is
+$\theta(1-\theta)/n$ on the nose---and confirm it by simulation: run the
+$n$-flip experiment many times and compare the spread of the resulting estimates
+to the Cramér--Rao floor :eqref:`eq_mdl-coin-fisher`.
+
+```{.python .input #maximum-likelihood-fisher-information}
+# A framework-agnostic numpy simulation of the coin MLE's variance.
+theta_star, n, trials = 0.3, 200, 20000
+rng = onp.random.default_rng(0)
+# Each trial: flip the coin n times; the MLE is the observed head fraction.
+heads = rng.binomial(n, theta_star, size=trials)
+theta_hats = heads / n
+
+empirical_var = theta_hats.var()
+cramer_rao = theta_star * (1 - theta_star) / n  # = I(theta)^-1 / n
+empirical_var, cramer_rao
+```
+
+The empirical variance of the maximum-likelihood estimates matches the
+Cramér--Rao floor $\theta(1-\theta)/n$ to two or three digits: the coin's MLE is
+not merely consistent, it is as tight as :eqref:`eq_mdl-asymptotic-normality`
+permits. This is the concrete content of "asymptotically efficient," and it is
+why the curvature of a loss surface---its Fisher information, or empirically its
+Hessian---tells us how trustworthy a fitted parameter is.
 
 ## MAP Estimation: Priors as Regularizers
 :label:`subsec_mdl-map`
@@ -485,6 +617,21 @@ we started with. And as the data grows the NLL bowl deepens faster than the fixe
 prior, so the data term dominates and MAP again approaches the MLE. Regularization
 matters most precisely when data is scarce.
 
+One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
+restores the prior but still reports a single point---the *mode* of the posterior
+$P(\boldsymbol{\theta}\mid X)$, the same $\mathop{\mathrm{argmax}}$ as in
+:eqref:`eq_mdl-max_like`. Genuine Bayesian inference keeps the entire posterior
+*distribution* and *integrates* over it, predicting with the posterior-averaged
+$\int p(x\mid\boldsymbol{\theta})\,P(\boldsymbol{\theta}\mid X)\,d\boldsymbol{\theta}$
+rather than plugging in one $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}$. That
+average propagates parameter *uncertainty* into the prediction, where the mode
+discards it---and the mode is not even reparameterization-invariant, since a
+nonlinear change of variables moves the peak of a density but not its integral.
+Marginalizing over the posterior is its own subject, beyond our scope here
+:cite:`Murphy.2022,mackay2003information`; the point is only that MAP is one more
+*point estimate*---maximum likelihood with a penalty---and should not be mistaken
+for the full Bayesian treatment.
+
 ## Continuous Variables
 
 Everything above was phrased for discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
@@ -530,13 +677,22 @@ NLL of :numref:`subsec_mdl-gaussian-mse` is precisely this construction.
   the log fixes underflow and makes gradients an additive sum, while the sign
   flip turns "maximize probability" into "minimize a loss."
 * The average NLL *is* the **cross-entropy** from the empirical distribution to
-  the model; minimizing it is minimizing the KL divergence to the data
-  (:numref:`sec_mdl-information_theory`). Categorical NLL is softmax cross-entropy,
-  and **fixed-variance Gaussian NLL is mean squared error**.
+  the model (this section is the canonical derivation; see
+  :numref:`sec_mdl-information_theory` for the entropy/KL background). Minimizing
+  it minimizes the KL divergence to the data---maximum likelihood is the
+  KL-projection onto the model family. Categorical NLL is softmax cross-entropy,
+  **fixed-variance Gaussian NLL is mean squared error**, and a Laplace model gives
+  mean absolute error: picking a loss is picking a noise model.
+* The MLE is **consistent** and, under regularity conditions, **asymptotically
+  normal** with limiting variance the inverse **Fisher information**
+  $I(\boldsymbol{\theta}^\star)^{-1}/n$---so it attains the Cramér--Rao bound and
+  is *asymptotically efficient*. At finite $n$ it is generally only
+  asymptotically unbiased (:numref:`sec_mdl-statistics`).
 * **MAP** estimation restores the prior, adding its negative log as a penalty: a
   Gaussian prior is exactly $L_2$ / weight decay ($\lambda=\sigma^2/\tau^2$), a
   Laplace prior is $L_1$ / sparsity, and MAP $\to$ MLE as the prior flattens or
-  the data grows.
+  the data grows. MAP is still a *point estimate* (the posterior mode), not full
+  Bayesian inference, which integrates over the posterior.
 * Maximum likelihood extends to continuous variables unchanged---probabilities
   become densities, and the matching-tolerance $\epsilon$ drops out as a constant.
 
@@ -563,6 +719,11 @@ NLL of :numref:`subsec_mdl-gaussian-mse` is precisely this construction.
 7. Prove that $\hat{\boldsymbol{\theta}}_{\textrm{MAP}} \to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$
    as the prior variance $\tau^2\to\infty$, and explain why the same happens as
    the dataset size $n\to\infty$ for fixed $\tau$.
+8. For a single Gaussian observation with known variance $\sigma^2$ and unknown
+   mean $\mu$, compute the score $\frac{d}{d\mu}\log p(x\mid\mu)$ and show the
+   Fisher information is $I(\mu)=1/\sigma^2$. Conclude that the sample-mean MLE
+   over $n$ observations has variance $\sigma^2/n$, attaining the Cramér--Rao
+   bound exactly. (*Hint:* use :eqref:`eq_mdl-fisher`.)
 
 
 :begin_tab:`mxnet`
@@ -628,6 +789,23 @@ So "minimize the loss" is "do MLE," and picking a loss is
 picking a noise model.
 :::
 
+::: {.slide title="Why it works: KL projection + Fisher"}
+Cross-entropy $=H(\hat p_{\textrm{data}})+D_{\textrm{KL}}(\hat p_{\textrm{data}}\|p_{\boldsymbol\theta})$.
+The entropy is an irreducible floor; training only removes the
+KL gap, so MLE is the **KL-projection** of the data onto the
+model family:
+
+@fig:mdl-mle-kl
+
+It is also *consistent* and, under regularity conditions,
+asymptotically normal,
+$\sqrt n(\hat{\boldsymbol\theta}-\boldsymbol\theta^\star)\to
+\mathcal N(\mathbf 0, I(\boldsymbol\theta^\star)^{-1})$, with
+**Fisher information** $I(\boldsymbol\theta)$ — attaining the
+Cramér–Rao floor (asymptotically efficient). For the coin,
+$\operatorname{Var}(\hat\theta)\approx\theta(1-\theta)/n$.
+:::
+
 ::: {.slide title="MAP: priors are regularizers"}
 Keep the prior $P(\boldsymbol\theta)$ and its negative log is
 a penalty on the NLL:
@@ -646,8 +824,8 @@ Gaussian prior $\Rightarrow$ $L_2$ / weight decay
 - MLE: maximize $\sum_i \log p(x_i \mid \boldsymbol\theta)$;
   equivalently minimize the NLL.
 - Average NLL = cross-entropy to the data = KL to the
-  empirical distribution; consistent and efficient when
-  well-specified.
+  empirical distribution; consistent and (asymptotically)
+  efficient via the Fisher information when well-specified.
 - Most "losses" in DL are NLLs of suitable conditional
   distributions; MSE is the Gaussian case.
 - Priors become regularizers: Gaussian $\to$ weight decay,

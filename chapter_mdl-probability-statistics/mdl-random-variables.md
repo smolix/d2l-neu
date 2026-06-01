@@ -43,7 +43,7 @@ import torch
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
-tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
+tf.pi = float(tf.acos(0.) * 2)  # Define pi in TensorFlow
 ```
 
 ```{.python .input #random-variables-imports}
@@ -178,8 +178,8 @@ print('P(-2 < X <= 3) :', round(float(torch.sum(epsilon * p[mask])), 4))
 # Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
 epsilon = 0.01
 x = tf.range(-5, 5, epsilon)
-p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi)) + \
-    0.8*tf.exp(-(x + 1)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi))
+p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * tf.pi) + \
+    0.8*tf.exp(-(x + 1)**2 / 2)/tf.sqrt(2 * tf.pi)
 print('total mass     :', round(float(tf.reduce_sum(epsilon * p)), 4))
 mask = (x > -2) & (x <= 3)
 print('P(-2 < X <= 3) :', round(float(tf.reduce_sum(epsilon * p[mask])), 4))
@@ -248,7 +248,8 @@ $$
 **Proof.** By definition :eqref:`eq_mdl-cdf_def`, $F(x)=\int_{-\infty}^x p(t)\,dt$
 is the area-so-far function of the integrand $p$. The fundamental theorem of
 calculus :eqref:`eq_mdl-ftc` says precisely that such an area function is
-differentiable with derivative equal to the integrand, $F'(x)=p(x)$. $\blacksquare$
+differentiable with derivative equal to the integrand, $F'(x)=p(x)$, at every
+point where $p$ is continuous. $\blacksquare$
 
 So $p=F'$ and $F=\int p$ are two views of one object: the density is the
 *instantaneous rate* at which probability accumulates, and the c.d.f. is the
@@ -543,7 +544,7 @@ $$
                  \approx \sum_i \epsilon^{2}\,p_{X,Y}(x,\epsilon i).
 $$
 
-Geometrically this sums the joint density down a column, as in
+Geometrically this integrates the joint density up a vertical strip at $x$, as in
 :numref:`fig_mdl-marginal`. Cancelling one $\epsilon$ and recognizing the
 remaining sum as an integral over $y$,
 
@@ -552,7 +553,7 @@ p_X(x) = \int_{-\infty}^\infty p_{X, Y}(x, y)\,dy.
 $$
 :eqlabel:`eq_mdl-marginal`
 
-![By summing along the columns of the array of joint probabilities, we obtain the marginal distribution of the variable on the $\mathit{x}$-axis alone.](../img/mdl-prob-marginal.svg)
+![A continuous joint density $p_{X,Y}(x,y)$ shown by its contours, with one vertical strip at $x$ highlighted. Integrating the joint density up that strip---over all $y$---gives the height of the marginal density $p_X(x)$ plotted along the $\mathit{x}$-axis below. Sweeping the strip across $x$ traces out the whole marginal.](../img/mdl-prob-marginal.svg)
 :label:`fig_mdl-marginal`
 
 To marginalize, then, we *integrate out* the variables we do not care about---the
@@ -574,8 +575,9 @@ $$
 For each fixed $y$ this is a genuine density in $x$: it is non-negative, and
 dividing the joint by exactly $p_Y(y)=\int p_{X,Y}(x,y)\,dx$ is precisely what makes
 it integrate to one. Geometrically it is a horizontal slice of the joint surface
-at height $y$, renormalized to unit area --- the continuous analogue of reading one
-row of the array in :numref:`fig_mdl-marginal`. Rearranging :eqref:`eq_mdl-cond_density`
+at height $y$, renormalized to unit area, as :numref:`fig_mdl-conditional-slice`
+shows: cut the joint density along $y=y_0$, then rescale that profile so its area
+is one. Rearranging :eqref:`eq_mdl-cond_density`
 gives the **chain rule** $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)$, and writing it
 both ways ($p_{X,Y}=p_{X\mid Y}\,p_Y=p_{Y\mid X}\,p_X$) and equating yields **Bayes'
 rule for densities**,
@@ -601,9 +603,15 @@ $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)=p_X(x)\,p_Y(y)$, which is (i). $\blac
 As a worked example, take the joint $p_{X,Y}(x,y)=4xy$ on the unit square
 $[0,1]^2$ (it integrates to one). The marginal is $p_Y(y)=\int_0^1 4xy\,dx=2y$, so
 $p_{X\mid Y}(x\mid y)=4xy/2y=2x$ --- *independent of $y$*. The conditional never
-changes as $y$ varies, so by the proposition $X\perp Y$. A joint that does not
-factor this way --- say one supported on the triangle $x\le y$ --- has a conditional
-whose support and shape shift with $y$, the signature of dependence.
+changes as $y$ varies, so by the proposition $X\perp Y$. This is exactly the
+visual test of :numref:`fig_mdl-conditional-slice`: independence is the case where
+the renormalized slice $p(x\mid y_0)$ has the *same shape* at every height $y_0$,
+since the joint factors and the $y$-factor cancels in the renormalization. A joint
+that does not factor this way --- say one supported on the triangle $x\le y$ --- has
+a conditional whose support and shape shift with $y$, the signature of dependence.
+
+![Reading off a conditional density. Left: the contours of a joint density $p_{X,Y}(x,y)$ with one horizontal slice at $y=y_0$ highlighted. Right: that slice, $x\mapsto p_{X,Y}(x,y_0)$, renormalized to unit area to give the conditional density $p(x\mid y_0)$ of :eqref:`eq_mdl-cond_density`. When the joint factors, every slice has the same shape after renormalization, regardless of $y_0$, which is precisely independence; when it does not, the slice shape drifts with $y_0$.](../img/mdl-prob-conditional-slice.svg)
+:label:`fig_mdl-conditional-slice`
 
 Independence is a strong, all-of-the-distribution statement. It is strictly
 stronger than being *uncorrelated* (zero covariance), which constrains only the
@@ -612,17 +620,86 @@ This factorized structure is also exactly what the naive Bayes classifier of
 :numref:`sec_mdl-naive_bayes` assumes across features to make high-dimensional
 densities tractable.
 
+### Conditional Expectation and the Tower Property
+
+The conditional density invites a conditional version of the mean. Averaging $X$
+against the slice $p_{X\mid Y}(x\mid y)$ rather than its own marginal gives the
+**conditional expectation**
+
+$$
+E[X\mid Y{=}y] = \int x\,p_{X\mid Y}(x\mid y)\,dx,
+$$
+:eqlabel:`eq_mdl-cond_exp`
+
+the average value of $X$ *once $Y$ is known to be $y$*. As $y$ ranges it traces a
+function of $y$; feeding in the random $Y$ makes $E[X\mid Y]$ itself a random
+variable---a function of $Y$ alone. Two identities then say that conditioning can
+only *reorganize* the mean and spread of $X$, never conjure or destroy them.
+
+**Proposition (laws of total expectation and variance).** *For any $X,Y$ with
+finite variance,*
+
+$$
+E[X] = E\bigl[E[X\mid Y]\bigr],
+\qquad
+\textrm{Var}(X) = E\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(E[X\mid Y]\bigr).
+$$
+:eqlabel:`eq_mdl-tower`
+
+**Proof.** For the first (the **tower property**), expand the inner expectation
+and use the chain rule $p_{X\mid Y}(x\mid y)\,p_Y(y)=p_{X,Y}(x,y)$ to recombine
+the slices into the joint, then integrate out $y$ via :eqref:`eq_mdl-marginal`:
+
+$$
+E\bigl[E[X\mid Y]\bigr]
+ = \int\!\Bigl(\int x\,p_{X\mid Y}(x\mid y)\,dx\Bigr)p_Y(y)\,dy
+ = \iint x\,p_{X,Y}(x,y)\,dx\,dy
+ = E[X].
+$$
+
+For the variance, apply the computational form :eqref:`eq_mdl-var_comp` *inside*
+each slice, $\textrm{Var}(X\mid Y)=E[X^2\mid Y]-E[X\mid Y]^2$, take the
+expectation over $Y$, and add and subtract $E\bigl[E[X\mid Y]\bigr]^2=E[X]^2$:
+
+$$
+E\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(E[X\mid Y]\bigr)
+ = \Bigl(E[X^2] - E\bigl[E[X\mid Y]^2\bigr]\Bigr)
+ + \Bigl(E\bigl[E[X\mid Y]^2\bigr] - E[X]^2\Bigr)
+ = E[X^2] - E[X]^2,
+$$
+
+which is $\textrm{Var}(X)$, using the tower property on $E[X^2]$ and on
+$E[X\mid Y]$. $\blacksquare$
+
+The variance law (**Eve's law**) has a memorable reading: the spread of $X$ splits
+into the *average spread within each $Y$-slice* plus the *spread of the
+slice-averages themselves*---unexplained variance plus explained variance, the
+decomposition behind the analysis of variance and behind every latent-variable
+model that explains data by a hidden cause. We use the tower property
+:eqref:`eq_mdl-tower` repeatedly when an expectation is easier one slice at a
+time, most heavily in the maximum-likelihood estimator of
+:numref:`sec_mdl-maximum_likelihood` and the variational bounds of
+:numref:`sec_mdl-mi-variational-bounds`, where a hidden variable is integrated
+out one conditional slice at a time.
+
 ### Change of Variables for Densities
 
 When we push a random variable through a function $Y=g(X)$, its density is *not*
-simply $p_X\!\big(g^{-1}(y)\big)$. Probability mass must be conserved as the map
-stretches and compresses the line, and that conservation forces a Jacobian
-correction --- the same "probability in equals probability out" bookkeeping that
-turned into a rescaling factor for areas in :numref:`fig_mdl-rect-transform`.
+simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
+density must be re-scaled to keep its total mass at $1$. The re-scaling factor is
+no mystery---we already computed it. The integral change-of-variables theorem of
+:numref:`sec_mdl-integral_calculus`, $\int_{\boldsymbol\phi(U)}f(\mathbf
+x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf x))\,|\det
+D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$ :eqref:`eq_mdl-change_var_nd`, already
+established that a reparametrization scales volume locally by the absolute
+Jacobian determinant. All a density does is read that theorem with $f=p$ and the
+constraint that the total integral stays $1$: *probability mass in equals
+probability mass out*.
 
-Take $g$ monotone, so it has an inverse. The mass in a tiny interval must survive
-the map: $p_Y(y)\,|dy| = p_X(x)\,|dx|$ with $y=g(x)$. Solving for the new density
-and writing $x=g^{-1}(y)$ gives the **one-dimensional change-of-variables formula**
+Take the one-dimensional case first, $g$ monotone so it has an inverse. The mass
+in a tiny interval must survive the map, $p_Y(y)\,|dy| = p_X(x)\,|dx|$ with
+$y=g(x)$; solving for the new density and writing $x=g^{-1}(y)$ gives the
+**one-dimensional change-of-variables formula**
 
 $$
 p_Y(y) = p_X\!\big(g^{-1}(y)\big)\,\left|\frac{d g^{-1}}{dy}(y)\right|.
@@ -631,9 +708,8 @@ $$
 
 The derivative factor is exactly the local stretch of the map: where $g$ spreads a
 small interval out, the density must drop to keep the area fixed. In several
-dimensions the scalar stretch becomes the absolute **Jacobian determinant** --- the
-local volume-scaling factor of :numref:`sec_mdl-integral_calculus`, itself the
-determinant-as-volume of :numref:`sec_mdl-geometry-linear-algebraic-ops`:
+dimensions the scalar stretch $|dg^{-1}/dy|$ becomes the absolute Jacobian
+determinant of :eqref:`eq_mdl-change_var_nd`, and conservation of mass reads
 
 $$
 p_Y(\mathbf y) = p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|,
@@ -646,7 +722,7 @@ The log form is the one that matters in practice: pushing data through an
 invertible network adds a single $-\log|\det J_g|$ term to the log-density, and
 because $\log|\det(J_2 J_1)| = \log|\det J_1| + \log|\det J_2|$ these terms simply
 *sum* along a composition of layers. That additivity is the entire mathematical
-engine behind **normalizing flows** (:numref:`sec_mdl-score-matching-diffusion-flow`).
+engine behind **normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`).
 
 As a worked example, let $X\sim\mathcal N(0,1)$ and $Y=e^X$, so $g^{-1}(y)=\log y$
 and $|dg^{-1}/dy| = 1/y$ for $y>0$. Formula :eqref:`eq_mdl-cov_density_1d` gives the
@@ -711,9 +787,10 @@ tilts up.
 ![Scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right). Negative covariance tilts the cloud down-right, zero covariance leaves it round with no linear trend, positive covariance tilts it up-right. Covariance measures the strength and sign of the linear relationship.](../img/mdl-prob-covariance.svg)
 :label:`fig_mdl-prob-covariance`
 
-Two properties we use repeatedly: covariance is *bilinear*, with
-$\textrm{Cov}(aX+b,Y)=a\,\textrm{Cov}(X,Y)$ (shifts drop out, scales pull
-through, on each argument); and independent variables have zero covariance, since
+Two properties we use repeatedly: covariance is *linear in each argument*, with
+$\textrm{Cov}(aX+b,Y)=a\,\textrm{Cov}(X,Y)$ and symmetrically
+$\textrm{Cov}(X,cY+d)=c\,\textrm{Cov}(X,Y)$ (shifts drop out, scales pull
+through, in either slot); and independent variables have zero covariance, since
 then $E[XY]=E[X]E[Y]$ in :eqref:`eq_mdl-cov_def`. Covariance also completes the
 variance-of-a-sum rule.
 
@@ -750,9 +827,41 @@ $100$: the standard deviations. The *correlation coefficient* is
 $$\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_{X}\sigma_{Y}}.$$
 :eqlabel:`eq_mdl-cor_def`
 
-A short calculation (the Cauchy--Schwarz inequality) shows $\rho\in[-1,1]$, with
-$+1$ for a perfect increasing linear relationship and $-1$ for a perfect
-decreasing one. On the running discrete example $\sigma_X=1$, $\sigma_Y=2$, so
+The normalization is calibrated so that $\rho$ never leaves $[-1,1]$, and the
+proof is the Cauchy--Schwarz argument of
+:numref:`sec_mdl-geometry-linear-algebraic-ops` wearing probabilistic clothes.
+
+**Proposition (correlation bound).** *For any $X,Y$ with finite, nonzero
+variances, $-1\le\rho(X,Y)\le 1$, with equality iff $Y$ is an affine function of
+$X$ (a perfect linear relationship).*
+
+**Proof.** A variance is never negative, so $\textrm{Var}(tX+Y)\ge 0$ for every
+real $t$. Expanding it by the variance-of-a-sum rule :eqref:`eq_mdl-var_sum`
+(with the affine rule :eqref:`eq_mdl-var_affine` on the $tX$ term) gives a
+quadratic in $t$,
+
+$$
+\textrm{Var}(tX+Y) = \textrm{Var}(X)\,t^2 + 2\,\textrm{Cov}(X,Y)\,t + \textrm{Var}(Y) \;\ge\; 0
+\quad\textrm{for every } t.
+$$
+
+A quadratic with positive leading coefficient $\textrm{Var}(X)$ that stays
+non-negative cannot have two distinct real roots, so its discriminant is $\le 0$:
+
+$$
+\bigl(2\,\textrm{Cov}(X,Y)\bigr)^2 - 4\,\textrm{Var}(X)\,\textrm{Var}(Y)\le 0,
+\qquad\textrm{i.e.}\qquad
+\textrm{Cov}(X,Y)^2 \le \textrm{Var}(X)\,\textrm{Var}(Y).
+$$
+
+Dividing by $\sigma_X^2\sigma_Y^2$ gives $\rho^2\le 1$, which is the claim.
+Equality forces the discriminant to vanish, so the quadratic has a (repeated)
+root $t^\star$ with $\textrm{Var}(t^\star X+Y)=0$; a variable of zero variance is
+constant, so $t^\star X+Y=c$, i.e. $Y=-t^\star X+c$ is affine in $X$. $\blacksquare$
+
+The two extremes read off cleanly: $\rho=+1$ for a perfect increasing linear
+relationship and $\rho=-1$ for a perfect decreasing one. On the running discrete
+example $\sigma_X=1$, $\sigma_Y=2$, so
 $\rho=\frac{4p-2}{2}=2p-1$, sweeping cleanly from $-1$ to $+1$. And for *any*
 affine $Y=aX+b$, using $\sigma_{aX+b}=|a|\sigma_X$ and
 $\textrm{Cov}(X,aX+b)=a\,\textrm{Var}(X)$,
@@ -789,6 +898,23 @@ the geometric intuition of :numref:`sec_mdl-geometry-linear-algebraic-ops`
 transfers wholesale to random variables: uncorrelated means orthogonal,
 $\rho=\pm1$ means parallel. This is the bridge between linear algebra and
 statistics that PCA and least squares both walk.
+
+For $n$ variables we collect every pairwise covariance into a single
+**covariance matrix** $\boldsymbol\Sigma$ with entries
+$\Sigma_{ij}=\textrm{Cov}(X_i,X_j)$, so the diagonal holds the variances and the
+off-diagonal the cross-terms. It is symmetric ($\textrm{Cov}$ is) and positive
+semidefinite, since for any weights $\mathbf a$ the scalar
+$\mathbf a^\top\boldsymbol\Sigma\,\mathbf a=\textrm{Var}\bigl(\sum_i a_i
+X_i\bigr)\ge 0$ by the variance-of-a-sum rule :eqref:`eq_mdl-var_sum`---the
+$n$-variable face of $\textrm{Var}\ge 0$. The Gaussian $\mathcal
+N(\boldsymbol\mu,\boldsymbol\Sigma)$ is built from exactly this matrix, and
+because $\boldsymbol\Sigma$ is symmetric PSD the spectral theorem
+(:numref:`sec_mdl-eigendecompositions`) diagonalizes it: its density contours are
+ellipses whose axes point along the eigenvectors of $\boldsymbol\Sigma$ with
+half-lengths $\propto\sqrt{\lambda_i}$, the standard deviation along each
+principal direction. We draw and sample these contours when we meet the
+multivariate Gaussian in :numref:`sec_mdl-distributions`
+(:numref:`fig_mdl-prob-mvn-contours`); finding those principal axes *is* PCA.
 
 ## Summary
 
@@ -905,7 +1031,7 @@ $p=1/8$:
 ::: {.slide title="Several variables: joint and marginal"}
 A joint density $p(x,y)$ integrates to $1$. *Marginalize* by
 integrating out the unwanted variable, $p_X(x)=\int p(x,y)\,dy$
-— summing down a column:
+— integrating the joint up a vertical strip:
 
 @fig:mdl-prob-marginal
 :::

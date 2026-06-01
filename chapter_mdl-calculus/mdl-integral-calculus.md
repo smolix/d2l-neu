@@ -1,648 +1,735 @@
 # Integral Calculus
 :label:`sec_mdl-integral_calculus`
 
-Differentiation only makes up half of the content of a traditional calculus education.  The other pillar, integration, starts out seeming a rather disjoint question, "What is the area underneath this curve?"  While seemingly unrelated, integration is tightly intertwined with the differentiation via what is known as the *fundamental theorem of calculus*.
+Differentiation answered a local question: how does a function change when we
+nudge its input? Integration answers a global one: how much of something is
+there in total---the area under a curve, the volume under a surface, the
+probability under a density. The two look unrelated, yet the *fundamental
+theorem of calculus* welds them into a single subject: integration is
+differentiation run backwards. That one fact is what makes integrals
+computable at all, and it is the reason a deep-learning reader needs them, since
+every continuous probability is an integral and every expectation is an integral
+average (:numref:`sec_mdl-random_variables`).
 
-At the level of machine learning we discuss in this book, we will not need a deep understanding of integration. However, we will provide a brief introduction to lay the groundwork for any further applications we will encounter later on.
+We will not need the full machinery of a calculus course. We need three things:
+what an integral *is* (a limit of sums), the theorem that lets us *compute* it
+(the fundamental theorem), and the *change-of-variables* rule that powers the
+Gaussian normalizer and, later, normalizing flows
+(:numref:`sec_mdl-continuous-normalizing-flows`). The worked cells branch per
+framework, so we load each framework's library once here.
 
-## Geometric Interpretation
-Suppose that we have a function $f(x)$.  For simplicity, let's assume that $f(x)$ is non-negative (never takes a value less than zero).  What we want to try and understand is: what is the area contained between $f(x)$ and the $x$-axis?
-
-```{.python .input #integral-calculus-geometric-interpretation-1}
+```{.python .input #integral-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
 from mxnet import np, npx
 npx.set_np()
-
-x = np.arange(-2, 2, 0.01)
-f = np.exp(-x**2)
-
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.tolist(), f.tolist())
-d2l.plt.show()
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-1}
+```{.python .input #integral-imports}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
+import numpy as np
 import torch
-
-x = torch.arange(-2, 2, 0.01)
-f = torch.exp(-x**2)
-
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.tolist(), f.tolist())
-d2l.plt.show()
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-1}
+```{.python .input #integral-imports}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
+import numpy as np
 import tensorflow as tf
-
-x = tf.range(-2, 2, 0.01)
-f = tf.exp(-x**2)
-
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.numpy(), f.numpy())
-d2l.plt.show()
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-1}
+```{.python .input #integral-imports}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-
-x = jnp.arange(-2, 2, 0.01)
-f = jnp.exp(-x**2)
-
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x, f)
-d2l.plt.show()
 ```
 
-In most cases, this area will be infinite or undefined (consider the area under $f(x) = x^{2}$), so people will often talk about the area between a pair of ends, say $a$ and $b$.
+## The Definite Integral
 
-```{.python .input #integral-calculus-geometric-interpretation-2}
+Take a function $f$ and ask for the area trapped between its graph and the
+$x$-axis over an interval $[a, b]$. The area under an entire curve is usually
+infinite or undefined, so we always pin it between two endpoints. The recipe is
+the same one Archimedes used: chop $[a,b]$ into $N$ thin vertical slices of width
+$\epsilon = (b-a)/N$, approximate each slice by a rectangle of height $f(x_i)$,
+and add them up. As the slices shrink, the staircase of rectangles squeezes onto
+the curve and the sum approaches a definite number, shown in
+:numref:`fig_mdl-riemann`.
+
+![Left to right: the area under $f$ from $a$ to $b$ approximated by rectangles of shrinking width $\epsilon$. As $\epsilon\to 0$ the rectangle sum $\sum_i \epsilon\,f(x_i)$ converges to the definite integral, the exact signed area.](../img/mdl-cal-riemann.svg)
+:label:`fig_mdl-riemann`
+
+We *define* the **definite integral** as this limit and write it with the
+elongated-$S$ symbol,
+
+$$
+\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\ \sum_i \epsilon\, f(x_i),
+$$
+:eqlabel:`eq_mdl-riemann`
+
+a continuous analogue of a sum: $\sum$ becomes $\int$, the spacing $\epsilon$
+becomes $dx$, and the term $f(x_i)$ becomes $f(x)$. The inner variable is a dummy,
+exactly like a summation index, so $\int_a^b f(x)\,dx = \int_a^b f(z)\,dz$. For
+absolutely integrable $f$---all we ever meet in machine learning---the limit
+exists and does not depend on how the slices are chosen.
+
+The definition is honest but not yet a *computation*: only the simplest
+integrands (a line, $\int_a^b x\,dx$) succumb to summing the rectangles by hand.
+The next section gives the tool that computes the rest. First let us check that
+the limit :eqref:`eq_mdl-riemann` is real by watching it converge. Take
+$\int_0^2 \tfrac{x}{1+x^2}\,dx$, whose exact value is $\tfrac12\log 5$ (we will
+see why shortly), and refine the partition: the rectangle sum should march toward
+the truth, with the error shrinking roughly in proportion to $\epsilon$ for this
+left-endpoint rule.
+
+```{.python .input #integral-riemann-converge}
 #@tab mxnet
-x = np.arange(-2, 2, 0.01)
-f = np.exp(-x**2)
+def riemann(eps, a=0., b=2.):
+    x = np.arange(a, b, eps)
+    return float(np.sum(eps * x / (1 + x**2)))
 
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
-d2l.plt.show()
+truth = float(np.log(np.array(5.)) / 2)
+for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
+    approx = riemann(eps)
+    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
+print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-2}
+```{.python .input #integral-riemann-converge}
 #@tab pytorch
-x = torch.arange(-2, 2, 0.01)
-f = torch.exp(-x**2)
+def riemann(eps, a=0., b=2.):
+    x = torch.arange(a, b, eps)
+    return float(torch.sum(eps * x / (1 + x**2)))
 
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
-d2l.plt.show()
+truth = float(torch.log(torch.tensor(5.)) / 2)
+for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
+    approx = riemann(eps)
+    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
+print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-2}
+```{.python .input #integral-riemann-converge}
 #@tab tensorflow
-x = tf.range(-2, 2, 0.01)
-f = tf.exp(-x**2)
+def riemann(eps, a=0., b=2.):
+    x = tf.range(a, b, eps)
+    return float(tf.reduce_sum(eps * x / (1 + x**2)))
 
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x.numpy()[50:250], f.numpy()[50:250])
-d2l.plt.show()
+truth = float(tf.math.log(5.) / 2)
+for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
+    approx = riemann(eps)
+    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
+print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-```{.python .input #integral-calculus-geometric-interpretation-2}
+```{.python .input #integral-riemann-converge}
 #@tab jax
-x = jnp.arange(-2, 2, 0.01)
-f = jnp.exp(-x**2)
+def riemann(eps, a=0., b=2.):
+    x = jnp.arange(a, b, eps)
+    return float(jnp.sum(eps * x / (1 + x**2)))
 
-d2l.set_figsize()
-d2l.plt.plot(x, f, color='black')
-d2l.plt.fill_between(x[50:250], f[50:250])
-d2l.plt.show()
+truth = float(jnp.log(5.) / 2)
+for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
+    approx = riemann(eps)
+    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
+print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-We will denote this area by the integral symbol below:
-
-$$
-\textrm{Area}(\mathcal{A}) = \int_a^b f(x) \;dx.
-$$
-
-The inner variable is a dummy variable, much like the index of a sum in a $\sum$, and so this can be equivalently written with any inner value we like:
-
-$$
-\int_a^b f(x) \;dx = \int_a^b f(z) \;dz.
-$$
-
-There is a traditional way to try and understand how we might try to approximate such integrals: we can imagine taking the region in-between $a$ and $b$ and chopping it into $N$ vertical slices.  If $N$ is large, we can approximate the area of each slice by a rectangle, and then add up the areas to get the total area under the curve.  Let's take a look at an example doing this in code.  We will see how to get the true value in a later section.
-
-```{.python .input #integral-calculus-geometric-interpretation-3}
-#@tab mxnet
-epsilon = 0.05
-a = 0
-b = 2
-
-x = np.arange(a, b, epsilon)
-f = x / (1 + x**2)
-
-approx = np.sum(epsilon*f)
-true = np.log(5) / 2
-
-d2l.set_figsize()
-d2l.plt.bar(x.asnumpy(), f.asnumpy(), width=epsilon, align='edge')
-d2l.plt.plot(x, f, color='black')
-d2l.plt.ylim([0, 1])
-d2l.plt.show()
-
-f'approximation: {approx}, truth: {true}'
-```
-
-```{.python .input #integral-calculus-geometric-interpretation-3}
-#@tab pytorch
-epsilon = 0.05
-a = 0
-b = 2
-
-x = torch.arange(a, b, epsilon)
-f = x / (1 + x**2)
-
-approx = torch.sum(epsilon*f)
-true = torch.log(torch.tensor([5.])) / 2
-
-d2l.set_figsize()
-d2l.plt.bar(x, f, width=epsilon, align='edge')
-d2l.plt.plot(x, f, color='black')
-d2l.plt.ylim([0, 1])
-d2l.plt.show()
-
-f'approximation: {approx}, truth: {true}'
-```
-
-```{.python .input #integral-calculus-geometric-interpretation-3}
-#@tab tensorflow
-epsilon = 0.05
-a = 0
-b = 2
-
-x = tf.range(a, b, epsilon)
-f = x / (1 + x**2)
-
-approx = tf.reduce_sum(epsilon*f)
-true = tf.math.log(tf.constant([5.])) / 2
-
-d2l.set_figsize()
-d2l.plt.bar(x, f, width=epsilon, align='edge')
-d2l.plt.plot(x, f, color='black')
-d2l.plt.ylim([0, 1])
-d2l.plt.show()
-
-f'approximation: {approx}, truth: {true}'
-```
-
-```{.python .input #integral-calculus-geometric-interpretation-3}
-#@tab jax
-epsilon = 0.05
-a = 0
-b = 2
-
-x = jnp.arange(a, b, epsilon)
-f = x / (1 + x**2)
-
-approx = jnp.sum(epsilon*f)
-true = jnp.log(jnp.array([5.])) / 2
-
-d2l.set_figsize()
-d2l.plt.bar(np.asarray(x), np.asarray(f), width=epsilon, align='edge')
-d2l.plt.plot(x, f, color='black')
-d2l.plt.ylim([0, 1])
-d2l.plt.show()
-
-f'approximation: {approx}, truth: {true}'
-```
-
-The issue is that while it can be done numerically, we can do this approach analytically for only the simplest functions like
-
-$$
-\int_a^b x \;dx.
-$$
-
-Anything somewhat more complex like our example from the code above
-
-$$
-\int_a^b \frac{x}{1+x^{2}} \;dx.
-$$
-
-is beyond what we can solve with such a direct method.
-
-We will instead take a different approach.  We will work intuitively with the notion of the area, and learn the main computational tool used to find integrals: the *fundamental theorem of calculus*.   This will be the basis for our study of integration.
-
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The Riemann sum above *approximates* the area, but right now we only assert that it converges to the truth as the slices shrink---a short convergence demo makes the limit visible instead of asserted, which is what makes the integral feel well-defined.
-**Outline:** 1. Define the integral as the limit of the rectangle sum $\sum_i \epsilon\, f(x_i)$ as $\epsilon\to 0$. · 2. Reuse the running example $\int_0^2 x/(1+x^2)\,dx = \tfrac12\log 5$. · 3. Sweep $\epsilon \in \{0.5, 0.1, 0.05, 0.01, \dots\}$, tabulate the sum vs. the truth, and plot error against $\epsilon$ (roughly linear for this left-rule). · 4. One sentence: smoother $f$ and finer partitions converge faster (forward-pointer to numerical integration).
-**Key results to state:** $\int_a^b f\,dx = \lim_{\epsilon\to0}\sum_i \epsilon f(x_i)$; error $\to 0$ as the partition refines.
-**Diagrams:** small-multiples of the bar-chart approximation at three shrinking $\epsilon$ values, overlaid on the curve (extends the existing single-$\epsilon$ figure).
-**Worked example(s):** the $\epsilon$-sweep error table for $\int_0^2 x/(1+x^2)\,dx$, framework-agnostic.
-**Exercises (draft):** 1. Run the sweep and confirm the error shrinks with $\epsilon$. 2. Compare left-, right-, and midpoint rules' error rates. 3. For which $\epsilon$ is the error below $10^{-3}$? 4. Why does a discontinuous $f$ converge more slowly?
-**Prereqs / cross-refs:** the Riemann-sum figure above; forward to the Monte-Carlo pointer in *Integration Meets Probability*.
-:::
+The error falls by about a factor of ten each time we cut $\epsilon$ by ten,
+confirming the first-order convergence of the left-rule. Refining the partition
+*works*, but it is slow and gives no closed form. We need a better idea.
 
 ## The Fundamental Theorem of Calculus
 
-To dive deeper into the theory of integration, let's introduce a function
+The breakthrough is to stop treating the integral as a fixed number and instead
+let its upper limit *move*. Define the **area-so-far function**
 
 $$
-F(x) = \int_0^x f(y) dy.
+F(x) = \int_a^x f(y)\,dy,
+$$
+:eqlabel:`eq_mdl-area-fn`
+
+the signed area accumulated from the left endpoint $a$ out to $x$. This single
+function captures *every* definite integral at once: the area over any
+sub-interval is a difference of accumulated areas,
+
+$$
+\int_c^b f(x)\,dx = F(b) - F(c),
 $$
 
-This function measures the area between $0$ and $x$ depending on how we change $x$.  Notice that this is everything we need since
+since the area out to $b$ minus the area out to $c$ leaves exactly the area
+between them. :numref:`fig_mdl-area-subtract` draws this subtraction.
 
-$$
-\int_a^b f(x) \;dx = F(b) - F(a).
-$$
-
-This is a mathematical encoding of the fact that we can measure the area out to the far end-point and then subtract off the area to the near end point as indicated in :numref:`fig_mdl-area-subtract`.
-
-![Visualizing why we may reduce the problem of computing the area under a curve between two points to computing the area to the left of a point.](../img/mdl-cal-sub-area.svg)
+![The area under $f$ from $a$ to $b$ equals the area-to-the-left of $b$ minus the area-to-the-left of $a$: $F(b) - F(a)$. Every definite integral is a difference of values of the single accumulation function $F$.](../img/mdl-cal-sub-area.svg)
 :label:`fig_mdl-area-subtract`
 
-Thus, we can figure out what the integral over any interval is by figuring out what $F(x)$ is.
+So knowing $F$ solves the whole problem. The astonishing fact---the
+*fundamental theorem of calculus*---is that $F$ is determined by a derivative.
 
-To do so, let's consider an experiment.  As we often do in calculus, let's imagine what happens when we shift the value by a tiny bit.  From the comment above, we know that
-
-$$
-F(x+\epsilon) - F(x) = \int_x^{x+\epsilon} f(y) \; dy.
-$$
-
-This tells us that the function changes by the area under a tiny sliver of a function.
-
-This is the point at which we make an approximation.  If we look at a tiny sliver of area like this, it looks like this area is close to the rectangular area with height the value of $f(x)$ and the base width $\epsilon$.  Indeed, one can show that as $\epsilon \rightarrow 0$ this approximation becomes better and better.  Thus we can conclude:
-
-$$
-F(x+\epsilon) - F(x) \approx \epsilon f(x).
-$$
-
-However, we can now notice: this is exactly the pattern we expect if we were computing the derivative of $F$!  Thus we see the following rather surprising fact:
+**Theorem (Fundamental theorem of calculus).** *Let $f$ be continuous and let
+$F(x)=\int_a^x f(y)\,dy$. Then $F$ is differentiable and*
 
 $$
 \frac{dF}{dx}(x) = f(x).
 $$
-
-This is the *fundamental theorem of calculus*.  We may write it in expanded form as
-$$\frac{d}{dx}\int_0^x  f(y) \; dy = f(x).$$
 :eqlabel:`eq_mdl-ftc`
 
-It takes the concept of finding areas (*a priori* rather hard), and reduces it to a statement derivatives (something much more completely understood).  One last comment that we must make is that this does not tell us exactly what $F(x)$ is.  Indeed $F(x) + C$ for any $C$ has the same derivative.  This is a fact-of-life in the theory of integration.  Thankfully, notice that when working with definite integrals, the constants drop out, and thus are irrelevant to the outcome.
+**Proof.** Differentiate $F$ from the definition: nudge $x$ by $\epsilon$ and
+read off how much new area appears. By :eqref:`eq_mdl-area-fn` the increment is a
+single thin sliver,
 
 $$
-\int_a^b f(x) \; dx = (F(b) + C) - (F(a) + C) = F(b) - F(a).
+F(x+\epsilon) - F(x) = \int_x^{x+\epsilon} f(y)\,dy .
 $$
 
-This may seem like abstract non-sense, but let's take a moment to appreciate that it has given us a whole new perspective on computing integrals.  Our goal is no-longer to do some sort of chop-and-sum process to try and recover the area, rather we need only find a function whose derivative is the function we have!  This is incredible since we can now list many rather difficult integrals by just reversing the table from :numref:`sec_mdl-derivative_table`.  For instance, we know that the derivative of $x^{n}$ is $nx^{n-1}$.  Thus, we can say using the fundamental theorem :eqref:`eq_mdl-ftc` that
+The sliver sits over an interval of width $\epsilon$, and on it the continuous
+function $f$ varies by at most $\max_{[x,x+\epsilon]}f - \min_{[x,x+\epsilon]}f$,
+a gap that shrinks to $0$ as $\epsilon\to 0$. Bounding the area between the
+smallest and largest rectangles of width $\epsilon$,
 
 $$
-\int_0^{x} ny^{n-1} \; dy = x^n - 0^n = x^n.
+\epsilon \min_{[x,x+\epsilon]} f
+\ \le\ F(x+\epsilon) - F(x)\ \le\
+\epsilon \max_{[x,x+\epsilon]} f .
 $$
 
-Similarly, we know that the derivative of $e^{x}$ is itself, so that means
+Divide by $\epsilon$; both bounds converge to $f(x)$ as $\epsilon\to 0$, so the
+squeeze forces $\lim_{\epsilon\to 0}\frac{F(x+\epsilon)-F(x)}{\epsilon}=f(x)$.
+That limit is exactly $F'(x)$. $\blacksquare$
+
+The sliver argument is the whole story: the rate at which accumulated area grows
+is just the current height of the curve. This *reverses* the problem. Finding
+areas, hard on its own, becomes the search for an **antiderivative**---a function
+whose derivative is $f$---which we can read straight off the derivative table of
+:numref:`sec_mdl-derivative_table`. If $G'=f$ then $G$ and $F$ differ by a
+constant (they have the same derivative), and since that constant cancels in any
+difference,
 
 $$
-\int_0^{x} e^{t} \; dt = e^{x} - e^{0} = e^x - 1.
+\int_a^b f(x)\,dx = G(b) - G(a)
+$$
+:eqlabel:`eq_mdl-ftc-eval`
+
+for *any* antiderivative $G$. The arbitrary constant of integration is real but
+irrelevant to definite integrals.
+
+This turns hard sums into easy lookups. The derivative of $x^n$ is $nx^{n-1}$, so
+running it backwards,
+
+$$
+\int_0^{x} n\,y^{n-1}\,dy = x^n - 0^n = x^n ,
 $$
 
-In this way, we can develop the entire theory of integration leveraging ideas from differential calculus freely.  Every integration rule derives from this one fact.
+and since $e^x$ is its own derivative,
 
-## Improper Integrals
+$$
+\int_0^{x} e^{t}\,dt = e^{x} - e^{0} = e^x - 1 .
+$$
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** Every density that lives on an unbounded domain---the Gaussian, the exponential, anything with a tail---requires integrating "all the way to infinity," but so far we have only defined integrals over a finite $[a,b]$; the *improper integral* fills that gap by defining the infinite-range integral as a limit, and the limit need not exist.
-**Outline:** 1. Define $\int_a^\infty f\,dx = \lim_{b\to\infty}\int_a^b f\,dx$, and similarly for $\int_{-\infty}^\infty$ via a split. · 2. Convergence vs. divergence: the limit may be finite (converges) or infinite/undefined (diverges). · 3. Contrast a convergent tail ($\int_1^\infty x^{-2}\,dx = 1$) with a divergent one ($\int_1^\infty x^{-1}\,dx = \infty$). · 4. Same idea for singularities at a finite endpoint ($\int_0^1 x^{-1/2}\,dx$). · 5. Why this matters: it is the precise sense in which $\int_{-\infty}^\infty p(x)\,dx = 1$ for a density (forward-ref *Integration Meets Probability* and the Gaussian integral).
-**Key results to state:** $\int_a^\infty f\,dx := \lim_{b\to\infty}\int_a^b f\,dx$; $\int_1^\infty x^{-p}\,dx$ converges iff $p>1$.
-**Diagrams:** an unbounded curve with the upper limit $b$ sliding to the right and the shaded area approaching a finite total (convergent) vs. growing without bound (divergent).
-**Worked example(s):** evaluate $\int_1^\infty x^{-2}\,dx$ as a limit; show $\int_1^\infty x^{-1}\,dx$ diverges; numerically watch $\int_0^b e^{-x}\,dx \to 1$.
-**Exercises (draft):** 1. For which $p$ does $\int_1^\infty x^{-p}\,dx$ converge? 2. Evaluate $\int_0^\infty x e^{-x^2}\,dx$ as a limit. 3. Does $\int_0^1 x^{-1/2}\,dx$ converge? 4. Show $\int_{-\infty}^\infty \tfrac{1}{\pi(1+x^2)}\,dx = 1$.
-**Prereqs / cross-refs:** the FTC :eqref:`eq_mdl-ftc`; the Gaussian integral below; forward to :numref:`sec_mdl-random_variables` (densities, heavy tails).
-:::
+Every integration rule is a differentiation rule read in reverse, which is why
+the running example obeyed $\int_0^2 x/(1+x^2)\,dx=\tfrac12\log 5$: the
+antiderivative of $x/(1+x^2)$ is $\tfrac12\log(1+x^2)$, evaluated at the
+endpoints. Let us confirm the theorem numerically by checking that the
+area-so-far function $F$ has derivative $f$: compute $F$ as a cumulative Riemann
+sum, finite-difference it, and compare against $f$ itself.
+
+```{.python .input #integral-ftc-check}
+#@tab mxnet
+f = lambda t: t / (1 + t**2)
+G = lambda t: np.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
+eps = 1e-3
+x = np.arange(0., 2., eps)
+F = np.cumsum(eps * f(x))                    # area-so-far via Riemann sum
+dFdx = (F[1:] - F[:-1]) / eps                # finite-difference derivative of F
+print('max |dF/dx - f|      :', float(np.abs(dFdx - f(x[:-1])).max()))
+print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(np.array(2.))))
+```
+
+```{.python .input #integral-ftc-check}
+#@tab pytorch
+f = lambda t: t / (1 + t**2)
+G = lambda t: torch.log(1 + t**2) / 2        # antiderivative: F(x) = G(x) - G(0)
+eps = 1e-3
+x = torch.arange(0., 2., eps)
+F = torch.cumsum(eps * f(x), dim=0)          # area-so-far via Riemann sum
+dFdx = (F[1:] - F[:-1]) / eps                # finite-difference derivative of F
+print('max |dF/dx - f|      :', float((dFdx - f(x[:-1])).abs().max()))
+print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(torch.tensor(2.))))
+```
+
+```{.python .input #integral-ftc-check}
+#@tab tensorflow
+f = lambda t: t / (1 + t**2)
+G = lambda t: tf.math.log(1 + t**2) / 2      # antiderivative: F(x) = G(x) - G(0)
+eps = 1e-3
+x = tf.range(0., 2., eps)
+F = tf.cumsum(eps * f(x))                     # area-so-far via Riemann sum
+dFdx = (F[1:] - F[:-1]) / eps                 # finite-difference derivative of F
+print('max |dF/dx - f|      :', float(tf.reduce_max(tf.abs(dFdx - f(x[:-1])))))
+print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(tf.constant(2.))))
+```
+
+```{.python .input #integral-ftc-check}
+#@tab jax
+f = lambda t: t / (1 + t**2)
+G = lambda t: jnp.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
+eps = 1e-3
+x = jnp.arange(0., 2., eps)
+F = jnp.cumsum(eps * f(x))                    # area-so-far via Riemann sum
+dFdx = (F[1:] - F[:-1]) / eps                 # finite-difference derivative of F
+print('max |dF/dx - f|      :', float(jnp.abs(dFdx - f(x[:-1])).max()))
+print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(jnp.array(2.))))
+```
+
+The finite-difference derivative of the accumulated area matches $f$ to the level
+of the discretization, and the Riemann total agrees with the antiderivative
+formula---the fundamental theorem made flesh.
+
+### Improper Integrals
+
+Many densities live on an unbounded domain---the Gaussian, the exponential, any
+heavy tail---so we will need to integrate "all the way to infinity," yet
+:eqref:`eq_mdl-riemann` only defined integrals over a finite $[a,b]$. We fill the
+gap the same way we defined the integral itself: as a limit. The **improper
+integral** is
+
+$$
+\int_a^\infty f(x)\,dx = \lim_{b\to\infty}\int_a^b f(x)\,dx ,
+$$
+:eqlabel:`eq_mdl-improper`
+
+with $\int_{-\infty}^\infty$ defined by splitting at any point and taking both
+limits. The limit may be finite, in which case the integral *converges*, or
+infinite, in which case it *diverges*. Whether the tail is "thin enough" is a
+genuine question. The cleanest test case is the power law $x^{-p}$, for which the
+antiderivative gives
+
+$$
+\int_1^\infty x^{-p}\,dx = \lim_{b\to\infty}\frac{b^{1-p}-1}{1-p}
+= \begin{cases} \dfrac{1}{p-1}, & p>1\ \text{(converges)},\\[1ex] \infty, & p\le 1\ \text{(diverges)}.\end{cases}
+$$
+
+So $\int_1^\infty x^{-2}\,dx = 1$ while $\int_1^\infty x^{-1}\,dx=\infty$: the
+boundary between convergence and divergence sits exactly at $p=1$. This single
+threshold is what decides whether a heavy-tailed density even has a finite
+normalizer or mean, a recurring concern once we reach probability. The cell
+watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx$, approach its
+limit of $1$.
+
+```{.python .input #integral-improper}
+#@tab mxnet
+for b in [1., 2., 5., 10., 20.]:
+    x = np.arange(0., b, 1e-3)
+    print(f'integral_0^{b:<4} e^-x dx = {float(np.sum(1e-3 * np.exp(-x))):.6f}')
+print('limit as b -> infinity   = 1.000000')
+```
+
+```{.python .input #integral-improper}
+#@tab pytorch
+for b in [1., 2., 5., 10., 20.]:
+    x = torch.arange(0., b, 1e-3)
+    print(f'integral_0^{b:<4} e^-x dx = {float(torch.sum(1e-3 * torch.exp(-x))):.6f}')
+print('limit as b -> infinity   = 1.000000')
+```
+
+```{.python .input #integral-improper}
+#@tab tensorflow
+for b in [1., 2., 5., 10., 20.]:
+    x = tf.range(0., b, 1e-3)
+    print(f'integral_0^{b:<4} e^-x dx = {float(tf.reduce_sum(1e-3 * tf.exp(-x))):.6f}')
+print('limit as b -> infinity   = 1.000000')
+```
+
+```{.python .input #integral-improper}
+#@tab jax
+for b in [1., 2., 5., 10., 20.]:
+    x = jnp.arange(0., b, 1e-3)
+    print(f'integral_0^{b:<4} e^-x dx = {float(jnp.sum(1e-3 * jnp.exp(-x))):.6f}')
+print('limit as b -> infinity   = 1.000000')
+```
+
+### A Note on Signed Area
+
+The evaluation rule :eqref:`eq_mdl-ftc-eval` cheerfully produces negative numbers
+(for instance $\int_0^{-1} 1\,dx = -1$), which can be jarring if "area" is
+supposed to be positive. The resolution is that integrals measure *signed* area,
+with two independent sign flips. First, where $f<0$ the area counts as negative:
+$\int_0^1 (-1)\,dx = -1$. Second, integrating right-to-left negates the result:
+$\int_b^a f = -\int_a^b f$. Each flip---reflecting across the $x$-axis, or
+reversing the limits---introduces one minus sign, and two flips cancel:
+$\int_0^{-1}(-1)\,dx = 1$. This is the same signed-area bookkeeping the
+determinant did for transformed regions in
+:numref:`sec_mdl-geometry-linear-algebraic-ops`, and it is exactly what makes the
+change-of-variables formula below come out right.
 
 ## Change of Variables
-:label:`subsec_mdl-integral_example`
 
-Just as with differentiation, there are a number of rules which make the computation of integrals more tractable.  In fact, every rule of differential calculus (like the product rule, sum rule, and chain rule) has a corresponding rule for integral calculus (integration by parts, linearity of integration, and the change of variables formula respectively).  In this section, we will dive into what is arguably the most important from the list: the change of variables formula.
+Every differentiation rule has an integration counterpart obtained by running the
+fundamental theorem backwards: the sum rule gives linearity, the product rule
+gives integration by parts, and---most useful for us---the chain rule gives the
+*change-of-variables* formula. It is the substitution that tames otherwise
+intractable integrals, and in higher dimensions it is the engine behind the
+Gaussian normalizer and normalizing flows.
 
-First, suppose that we have a function which is itself an integral:
+### Substitution in One Dimension
 
-$$
-F(x) = \int_0^x f(y) \; dy.
-$$
-
-Let's suppose that we want to know how this function looks when we compose it with another to obtain $F(u(x))$.  By the chain rule, we know
-
-$$
-\frac{d}{dx}F(u(x)) = \frac{dF}{du}(u(x))\cdot \frac{du}{dx}.
-$$
-
-We can turn this into a statement about integration by using the fundamental theorem :eqref:`eq_mdl-ftc` as above.  This gives
+Suppose we reparametrize the variable through a function $u$. The chain rule says
+$\frac{d}{dx}F(u(x)) = F'(u(x))\,u'(x)$; feeding this through the fundamental
+theorem with $F'=f$ and integrating both sides yields the
+**change-of-variables formula**
 
 $$
-F(u(x)) - F(u(0)) = \int_0^x \frac{dF}{du}(u(y))\cdot \frac{du}{dy} \;dy.
+\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,\frac{du}{dx}\,dx .
 $$
-
-Recalling that $F$ is itself an integral gives that the left hand side may be rewritten to be
-
-$$
-\int_{u(0)}^{u(x)} f(y) \; dy = \int_0^x \frac{dF}{du}(u(y))\cdot \frac{du}{dy} \;dy.
-$$
-
-Similarly, recalling that $F$ is an integral allows us to recognize that $\frac{dF}{dx} = f$ using the fundamental theorem :eqref:`eq_mdl-ftc`, and thus we may conclude
-
-$$\int_{u(0)}^{u(x)} f(y) \; dy = \int_0^x f(u(y))\cdot \frac{du}{dy} \;dy.$$
 :eqlabel:`eq_mdl-change_var`
 
-This is the *change of variables* formula.
+The picture explains the mysterious factor $\frac{du}{dx}$. Look at one thin
+rectangle. On the left side of :eqref:`eq_mdl-change_var`, the sliver from $x$ to
+$x+\epsilon$ has area $\approx \epsilon\,f(u(x))$. On the right, the corresponding
+sliver runs from $u(x)$ to $u(x+\epsilon)\approx u(x)+\epsilon\,u'(x)$, so its
+width is *stretched* by the factor $u'(x)$ and its area is
+$\approx \epsilon\,u'(x)\,f(u(x))$. To make the two slivers agree we must multiply
+by exactly the local stretch $\frac{du}{dx}$, as :numref:`fig_mdl-rect-transform`
+shows.
 
-For a more intuitive derivation, consider what happens when we take an integral of $f(u(x))$ between $x$ and $x+\epsilon$. For a small $\epsilon$, this integral is approximately $\epsilon f(u(x))$, the area of the associated rectangle.  Now, let's compare this with the integral of $f(y)$ from $u(x)$ to $u(x+\epsilon)$.  We know that $u(x+\epsilon) \approx u(x) + \epsilon \frac{du}{dx}(x)$, so the area of this rectangle is approximately $\epsilon \frac{du}{dx}(x)f(u(x))$.  Thus, to make the area of these two rectangles to agree, we need to multiply the first one by $\frac{du}{dx}(x)$ as is illustrated in :numref:`fig_mdl-rect-transform`.
-
-![Visualizing the transformation of a single thin rectangle under the change of variables.](../img/mdl-cal-rect-trans.svg)
+![A thin rectangle under the substitution $y=u(x)$. The sliver of width $\epsilon$ at $x$ maps to a sliver of width $\epsilon\,u'(x)$; matching the two areas forces the factor $du/dx$ in the change-of-variables formula.](../img/mdl-cal-rect-trans.svg)
 :label:`fig_mdl-rect-transform`
 
-This tells us that
+With the right $u$ this collapses hard integrals to trivial ones. Taking $f=1$
+and $u(x)=e^{-x^2}$ (so $u'(x)=-2x\,e^{-x^2}$),
 
 $$
-\int_x^{x+\epsilon} f(u(y))\frac{du}{dy}(y)\;dy = \int_{u(x)}^{u(x+\epsilon)} f(y) \; dy.
+e^{-1}-1 = \int_{e^{0}}^{e^{-1}} 1\,dy = -2\int_0^{1} y\,e^{-y^2}\,dy
+\quad\Longrightarrow\quad
+\int_0^{1} y\,e^{-y^2}\,dy = \frac{1-e^{-1}}{2},
 $$
 
-This is the change of variables formula expressed for a single small rectangle.
+an integral that was hopeless by direct summation.
 
-If $u(x)$ and $f(x)$ are properly chosen, this can allow for the computation of incredibly complex integrals.  For instance, if we even chose $f(y) = 1$ and $u(x) = e^{-x^{2}}$ (which means $\frac{du}{dx}(x) = -2xe^{-x^{2}}$), this can show for instance that
+### Multiple Integrals and Fubini's Theorem
 
-$$
-e^{-1} - 1 = \int_{e^{-0}}^{e^{-1}} 1 \; dy = -2\int_0^{1} ye^{-y^2}\;dy,
-$$
+In higher dimensions we integrate over regions. For $f(x,y)$ on a rectangle
+$U=[a,b]\times[c,d]$, the integral is the (signed) volume under the surface,
+written $\int_U f(x,y)\,dx\,dy$. The teaching cell below builds such a surface so
+the volume is something concrete to picture.
 
-and thus by rearranging that
-
-$$
-\int_0^{1} ye^{-y^2}\; dy = \frac{1-e^{-1}}{2}.
-$$
-
-## A Comment on Sign Conventions
-
-Keen-eyed readers will observe something strange about the computations above.  Namely, computations like
-
-$$
-\int_{e^{-0}}^{e^{-1}} 1 \; dy = e^{-1} -1 < 0,
-$$
-
-can produce negative numbers.  When thinking about areas, it can be strange to see a negative value, and so it is worth digging into what the convention is.
-
-Mathematicians take the notion of signed areas.  This manifests itself in two ways.  First, if we consider a function $f(x)$ which is sometimes less than zero, then the area will also be negative.  So for instance
-
-$$
-\int_0^{1} (-1)\;dx = -1.
-$$
-
-Similarly, integrals which progress from right to left, rather than left to right are also taken to be negative areas
-
-$$
-\int_0^{-1} 1\; dx = -1.
-$$
-
-The standard area (from left to right of a positive function) is always positive.  Anything obtained by flipping it (say flipping over the $x$-axis to get the integral of a negative number, or flipping over the $y$-axis to get an integral in the wrong order) will produce a negative area.  And indeed, flipping twice will give a pair of negative signs that cancel out to have positive area
-
-$$
-\int_0^{-1} (-1)\;dx =  1.
-$$
-
-If this discussion sounds familiar, it is!  In :numref:`sec_mdl-geometry-linear-algebraic-ops` we discussed how the determinant represented the signed area in much the same way.
-
-## Multiple Integrals
-In some cases, we will need to work in higher dimensions.  For instance, suppose that we have a function of two variables, like $f(x, y)$ and we want to know the volume under $f$ when $x$ ranges over $[a, b]$ and $y$ ranges over $[c, d]$.
-
-```{.python .input #integral-calculus-multiple-integrals}
+```{.python .input #integral-surface}
 #@tab mxnet
-# Construct grid and compute function
 x, y = np.meshgrid(np.linspace(-2, 2, 101), np.linspace(-2, 2, 101),
                    indexing='ij')
-z = np.exp(- x**2 - y**2)
-
-# Plot function
+z = np.exp(-x**2 - y**2)                     # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.asnumpy(), y.asnumpy(), z.asnumpy())
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.plt.xticks([-2, -1, 0, 1, 2])
-d2l.plt.yticks([-2, -1, 0, 1, 2])
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(0, 1)
+ax.plot_wireframe(x.asnumpy(), y.asnumpy(), z.asnumpy(), rstride=8, cstride=8)
+d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
+print('volume (Riemann)  :', float(np.sum((4 / 100) ** 2 * z)))
+print('volume (exact = pi):', float(np.pi))
 ```
 
-```{.python .input #integral-calculus-multiple-integrals}
+```{.python .input #integral-surface}
 #@tab pytorch
-# Construct grid and compute function
 x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101),
                       indexing='ij')
-z = torch.exp(- x**2 - y**2)
-
-# Plot function
+z = torch.exp(-x**2 - y**2)                  # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x, y, z)
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.plt.xticks([-2, -1, 0, 1, 2])
-d2l.plt.yticks([-2, -1, 0, 1, 2])
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(0, 1)
+ax.plot_wireframe(x, y, z, rstride=8, cstride=8)
+d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
+print('volume (Riemann)  :', float(torch.sum((4 / 100) ** 2 * z)))
+print('volume (exact = pi):', float(torch.pi))
 ```
 
-```{.python .input #integral-calculus-multiple-integrals}
+```{.python .input #integral-surface}
 #@tab tensorflow
-# Construct grid and compute function
 x, y = tf.meshgrid(tf.linspace(-2., 2., 101), tf.linspace(-2., 2., 101))
-z = tf.exp(- x**2 - y**2)
-
-# Plot function
+z = tf.exp(-x**2 - y**2)                      # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x, y, z)
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.plt.xticks([-2, -1, 0, 1, 2])
-d2l.plt.yticks([-2, -1, 0, 1, 2])
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(0, 1)
+ax.plot_wireframe(x.numpy(), y.numpy(), z.numpy(), rstride=8, cstride=8)
+d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
+print('volume (Riemann)  :', float(tf.reduce_sum((4 / 100) ** 2 * z)))
+print('volume (exact = pi):', float(np.pi))
 ```
 
-```{.python .input #integral-calculus-multiple-integrals}
+```{.python .input #integral-surface}
 #@tab jax
-# Construct grid and compute function
 x, y = jnp.meshgrid(jnp.linspace(-2, 2, 101), jnp.linspace(-2, 2, 101),
-                     indexing='ij')
-z = jnp.exp(- x**2 - y**2)
-
-# Plot function
+                    indexing='ij')
+z = jnp.exp(-x**2 - y**2)                     # a 2-D bell over the plane
 ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x, y, z)
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y')
-d2l.plt.xticks([-2, -1, 0, 1, 2])
-d2l.plt.yticks([-2, -1, 0, 1, 2])
-d2l.set_figsize()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_zlim(0, 1)
+ax.plot_wireframe(np.asarray(x), np.asarray(y), np.asarray(z),
+                  rstride=8, cstride=8)
+d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
+print('volume (Riemann)  :', float(jnp.sum((4 / 100) ** 2 * z)))
+print('volume (exact = pi):', float(jnp.pi))
 ```
 
-We write this as
+How do we evaluate such a thing? Discretize the region into $\epsilon\times
+\epsilon$ squares indexed by integers $i,j$; the integral is approximately
+$\sum_{i,j}\epsilon^2 f(\epsilon i, \epsilon j)$. This is just a sum of numbers
+on a grid, and **a finite sum can be totalled in any order**. Summing
+columns-first---add up each column $i$, then add the column totals---we get
 
 $$
-\int_{[a, b]\times[c, d]} f(x, y)\;dx\;dy.
+\sum_j \epsilon\!\left(\sum_i \epsilon\, f(\epsilon i, \epsilon j)\right),
 $$
 
-Suppose that we wish to compute this integral.  My claim is that we can do this by iteratively computing first the integral in $x$ and then shifting to the integral in $y$, that is to say
+illustrated in :numref:`fig_mdl-sum-order`. The inner sum is the Riemann
+discretization of $\int_a^b f(x,\epsilon j)\,dx$, and the outer sum then
+integrates that over $y$.
 
-$$
-\int_{[a, b]\times[c, d]} f(x, y)\;dx\;dy = \int_c^{d} \left(\int_a^{b} f(x, y) \;dx\right) \; dy.
-$$
-
-Let's see why this is.
-
-Consider the figure above where we have split the function into $\epsilon \times \epsilon$ squares which we will index with integer coordinates $i, j$.  In this case, our integral is approximately
-
-$$
-\sum_{i, j} \epsilon^{2} f(\epsilon i, \epsilon j).
-$$
-
-Once we discretize the problem, we may add up the values on these squares in whatever order we like, and not worry about changing the values.  This is illustrated in :numref:`fig_mdl-sum-order`.  In particular, we can say that
-
-$$
- \sum _ {j} \epsilon \left(\sum_{i} \epsilon f(\epsilon i, \epsilon j)\right).
-$$
-
-![Illustrating how to decompose a sum over many squares as a sum over first the columns (1), then adding the column sums together (2).](../img/mdl-cal-sum-order.svg)
+![Summing a grid of $\epsilon\times\epsilon$ cells columns-first (1), then adding the column totals together (2). Reordering a finite sum changes nothing---the discrete fact behind iterated integration.](../img/mdl-cal-sum-order.svg)
 :label:`fig_mdl-sum-order`
 
-The sum on the inside is precisely the discretization of the integral
+Passing to the limit gives **Fubini's theorem**: a double integral equals either
+iterated integral,
 
 $$
-G(\epsilon j) = \int _a^{b} f(x, \epsilon j) \; dx.
+\int_U f(x,y)\,dx\,dy
+= \int_c^{d}\!\left(\int_a^{b} f(x,y)\,dx\right)dy
+= \int_a^{b}\!\left(\int_c^{d} f(x,y)\,dy\right)dx .
 $$
+:eqlabel:`eq_mdl-fubini`
 
-Finally, notice that if we combine these two expressions we get
+All we did was reorder a sum, so it may seem like nothing---but Fubini's theorem
+is *not* unconditional. It needs $f$ to be absolutely integrable. The standard
+counterexample is $f(x,y)=(x^2-y^2)/(x^2+y^2)^2$ on $[0,1]^2$: integrating $x$
+first gives $-\tfrac{\pi}{4}$, integrating $y$ first gives $+\tfrac{\pi}{4}$, and
+the orders disagree precisely because $f$ has a non-integrable singularity at the
+origin. For the continuous, absolutely integrable functions of machine learning
+there is no such trouble, and we freely swap orders. When the region is more
+complicated than a rectangle we write the integral compactly as $\int_U
+f(\mathbf{x})\,d\mathbf{x}$.
 
-$$
-\sum _ {j} \epsilon G(\epsilon j) \approx \int _ {c}^{d} G(y) \; dy = \int _ {[a, b]\times[c, d]} f(x, y)\;dx\;dy.
-$$
+### Change of Variables in Many Dimensions
 
-Thus putting it all together, we have that
-
-$$
-\int _ {[a, b]\times[c, d]} f(x, y)\;dx\;dy = \int _ c^{d} \left(\int _ a^{b} f(x, y) \;dx\right) \; dy.
-$$
-
-Notice that, once discretized, all we did was rearrange the order in which we added a list of numbers.  This may make it seem like it is nothing, however this result (called *Fubini's Theorem*) is not always true!  For the type of mathematics encountered when doing machine learning (continuous, absolutely integrable functions), there is no concern, however it is possible to create examples where it fails.  The standard counterexample is $f(x, y) = (x^2-y^2)/(x^2+y^2)^2$ on the unit square $[0,1]^2$: integrating $x$ first gives $\int_0^1\!\left(\int_0^1 f\,dx\right)dy = -\frac{\pi}{4}$, while integrating $y$ first gives $\int_0^1\!\left(\int_0^1 f\,dy\right)dx = +\frac{\pi}{4}$.  The two orders disagree because $f$ has a non-integrable singularity at the origin (it is not absolutely integrable over the square), which is exactly the hypothesis Fubini's theorem requires.
-
-Note that the choice to do the integral in $x$ first, and then the integral in $y$ was arbitrary.  We could have equally well chosen to do $y$ first and then $x$ to see
-
-$$
-\int _ {[a, b]\times[c, d]} f(x, y)\;dx\;dy = \int _ a^{b} \left(\int _ c^{d} f(x, y) \;dy\right) \; dx.
-$$
-
-Often times, we will condense down to vector notation, and say that for $U = [a, b]\times [c, d]$ this is
+The one-dimensional stretch factor $\frac{du}{dx}$ has a multidimensional
+successor, and it is the centerpiece of this section. Let
+$\boldsymbol{\phi}:\mathbb{R}^n\to\mathbb{R}^n$ reparametrize the domain (assume
+it is injective, so it never folds the space onto itself). Then
 
 $$
-\int _ U f(\mathbf{x})\;d\mathbf{x}.
+\int_{\boldsymbol{\phi}(U)} f(\mathbf{x})\,d\mathbf{x}
+= \int_{U} f(\boldsymbol{\phi}(\mathbf{x}))\,
+  \bigl|\det D\boldsymbol{\phi}(\mathbf{x})\bigr|\,d\mathbf{x},
 $$
+:eqlabel:`eq_mdl-change_var_nd`
 
-## Change of Variables in Multiple Integrals
-As with single variables in :eqref:`eq_mdl-change_var`, the ability to change variables inside a higher dimensional integral is a key tool.  Let's summarize the result without derivation.
-
-We need a function that reparametrizes our domain of integration.  We can take this to be $\phi : \mathbb{R}^n \rightarrow \mathbb{R}^n$, that is any function which takes in $n$ real variables and returns another $n$.  To keep the expressions clean, we will assume that $\phi$ is *injective* which is to say it never folds over itself ($\phi(\mathbf{x}) = \phi(\mathbf{y}) \implies \mathbf{x} = \mathbf{y}$).
-
-In this case, we can say that
-
-$$
-\int _ {\phi(U)} f(\mathbf{x})\;d\mathbf{x} = \int _ {U} f(\phi(\mathbf{x})) \left|\det(D\phi(\mathbf{x}))\right|\;d\mathbf{x}.
-$$
-
-where $D\phi$ is the *Jacobian* of $\phi$, which is the matrix of partial derivatives of $\boldsymbol{\phi} = (\phi_1(x_1, \ldots, x_n), \ldots, \phi_n(x_1, \ldots, x_n))$,
+where $D\boldsymbol{\phi}$ is the **Jacobian**, the matrix of partial derivatives
 
 $$
 D\boldsymbol{\phi} = \begin{bmatrix}
-\frac{\partial \phi _ 1}{\partial x _ 1} & \cdots & \frac{\partial \phi _ 1}{\partial x _ n} \\
+\frac{\partial \phi_1}{\partial x_1} & \cdots & \frac{\partial \phi_1}{\partial x_n} \\
 \vdots & \ddots & \vdots \\
-\frac{\partial \phi _ n}{\partial x _ 1} & \cdots & \frac{\partial \phi _ n}{\partial x _ n}
+\frac{\partial \phi_n}{\partial x_1} & \cdots & \frac{\partial \phi_n}{\partial x_n}
 \end{bmatrix}.
 $$
 
-Looking closely, we see that this is similar to the single variable chain rule :eqref:`eq_mdl-change_var`, except we have replaced the term $\frac{du}{dx}(x)$ with $\left|\det(D\phi(\mathbf{x}))\right|$.  Let's see how we can to interpret this term.  Recall that the $\frac{du}{dx}(x)$ term existed to say how much we stretched our $x$-axis by applying $u$.  The same process in higher dimensions is to determine how much we stretch the area (or volume, or hyper-volume) of a little square (or little *hyper-cube*) by applying $\boldsymbol{\phi}$.  If $\boldsymbol{\phi}$ was the multiplication by a matrix, then we know how the determinant already gives the answer.
+Compare :eqref:`eq_mdl-change_var_nd` with the one-dimensional rule
+:eqref:`eq_mdl-change_var`: the scalar stretch $\frac{du}{dx}$ has been replaced by
+$|\det D\boldsymbol{\phi}|$. The reason is geometry. In one dimension $u'$ said
+how much $u$ stretches a tiny interval; in $n$ dimensions the Jacobian is the best
+linear approximation of $\boldsymbol{\phi}$ at a point (just as the gradient was
+the best linear approximation of a scalar field), and the determinant of a linear
+map is exactly the factor by which it scales area or volume---the signed-area
+reading of the determinant from
+:numref:`sec_mdl-geometry-linear-algebraic-ops`. So a tiny cube of volume
+$d\mathbf{x}$ is sent to a tiny parallelepiped of volume
+$|\det D\boldsymbol{\phi}|\,d\mathbf{x}$, and we multiply by that factor to keep
+the bookkeeping honest. :numref:`fig_mdl-cov-jacobian` puts the one- and
+two-dimensional pictures side by side.
 
-With some work, one can show that the *Jacobian* provides the best approximation to a multivariable function $\boldsymbol{\phi}$ at a point by a matrix in the same way we could approximate by lines or planes with derivatives and gradients. Thus the determinant of the Jacobian exactly mirrors the scaling factor we identified in one dimension, as shown in :numref:`fig_mdl-cov-jacobian`.
-
-![A unit square mapped by a linear $\phi$ to a parallelogram whose area is the area-scaling factor $|\det D\phi|$, mirroring the one-dimensional stretch by $du/dx$.](../img/mdl-cal-cov-jacobian.svg)
+![Left: the 1-D substitution scales a segment by $du/dx$. Right: in 2-D a linear $\boldsymbol{\phi}$ sends the unit square to a parallelogram whose area is the local volume-scaling factor $|\det D\boldsymbol{\phi}|$---the multidimensional successor of the stretch factor.](../img/mdl-cal-cov-jacobian.svg)
 :label:`fig_mdl-cov-jacobian`
 
+This Jacobian-determinant factor is the exact mechanism behind **normalizing
+flows** (:numref:`sec_mdl-continuous-normalizing-flows`): pushing a simple density
+through an invertible map $\boldsymbol{\phi}$ produces a new density, and
+:eqref:`eq_mdl-change_var_nd` says the new density must be divided by
+$|\det D\boldsymbol{\phi}|$ to stay normalized. Designing $\boldsymbol{\phi}$ so
+that this determinant is cheap to compute is the whole game.
 
-It takes some work to fill in the details to this, so do not worry if they are not clear now.  Let's see at least one example we will make use of later on.  Consider the integral
-
-$$
-\int _ {-\infty}^{\infty} \int _ {-\infty}^{\infty} e^{-x^{2}-y^{2}} \;dx\;dy.
-$$
-
-Playing with this integral directly will get us nowhere, but if we change variables, we can make significant progress.  If we let $\boldsymbol{\phi}(r, \theta) = (r \cos(\theta),  r\sin(\theta))$ (which is to say that $x = r \cos(\theta)$, $y = r \sin(\theta)$), then we can apply the change of variable formula to see that this is the same thing as
-
-$$
-\int _ 0^\infty \int_0 ^ {2\pi} e^{-r^{2}} \left|\det(D\mathbf{\phi}(\mathbf{x}))\right|\;d\theta\;dr,
-$$
-
-where
+The classic payoff is the **Gaussian integral**, which we will meet again as the
+normalizer of the normal distribution. Direct attack on
 
 $$
-\left|\det(D\mathbf{\phi}(\mathbf{x}))\right| = \left|\det\begin{bmatrix}
-\cos(\theta) & -r\sin(\theta) \\
-\sin(\theta) & r\cos(\theta)
-\end{bmatrix}\right| = r(\cos^{2}(\theta) + \sin^{2}(\theta)) = r.
+\int_{-\infty}^{\infty}\!\!\int_{-\infty}^{\infty} e^{-x^2-y^2}\,dx\,dy
 $$
 
-Thus, the integral is
+gets nowhere, but polar coordinates $\boldsymbol{\phi}(r,\theta)=(r\cos\theta,
+r\sin\theta)$ crack it open. The Jacobian determinant is
 
 $$
-\int _ 0^\infty \int _ 0 ^ {2\pi} re^{-r^{2}} \;d\theta\;dr = 2\pi\int _ 0^\infty re^{-r^{2}} \;dr = \pi,
+\bigl|\det D\boldsymbol{\phi}\bigr|
+= \left|\det\begin{bmatrix}\cos\theta & -r\sin\theta\\ \sin\theta & r\cos\theta\end{bmatrix}\right|
+= r(\cos^2\theta + \sin^2\theta) = r,
 $$
 
-where the final equality follows by the same computation that we used in section :numref:`subsec_mdl-integral_example`.
+so the integrand picks up a factor $r$ that makes it elementary:
 
-We will meet this integral again when we study continuous random variables in :numref:`sec_mdl-random_variables`.
+$$
+\int_0^\infty\!\!\int_0^{2\pi} r\,e^{-r^2}\,d\theta\,dr
+= 2\pi\int_0^\infty r\,e^{-r^2}\,dr = \pi .
+$$
+
+The cell verifies this two-dimensional integral numerically by summing the
+integrand over a fine grid---the same $\pi$ the surface cell above already
+suggested.
+
+```{.python .input #integral-gaussian}
+#@tab mxnet
+g = np.arange(-6., 6., 0.01)
+x, y = np.meshgrid(g, g, indexing='ij')
+val = float(np.sum(0.01 ** 2 * np.exp(-x**2 - y**2)))
+print('grid integral of e^(-x^2-y^2):', round(val, 6))
+print('exact value pi               :', round(float(np.pi), 6))
+```
+
+```{.python .input #integral-gaussian}
+#@tab pytorch
+g = torch.arange(-6., 6., 0.01)
+x, y = torch.meshgrid(g, g, indexing='ij')
+val = float(torch.sum(0.01 ** 2 * torch.exp(-x**2 - y**2)))
+print('grid integral of e^(-x^2-y^2):', round(val, 6))
+print('exact value pi               :', round(float(torch.pi), 6))
+```
+
+```{.python .input #integral-gaussian}
+#@tab tensorflow
+g = tf.range(-6., 6., 0.01)
+x, y = tf.meshgrid(g, g)
+val = float(tf.reduce_sum(0.01 ** 2 * tf.exp(-x**2 - y**2)))
+print('grid integral of e^(-x^2-y^2):', round(val, 6))
+print('exact value pi               :', round(float(np.pi), 6))
+```
+
+```{.python .input #integral-gaussian}
+#@tab jax
+g = jnp.arange(-6., 6., 0.01)
+x, y = jnp.meshgrid(g, g, indexing='ij')
+val = float(jnp.sum(0.01 ** 2 * jnp.exp(-x**2 - y**2)))
+print('grid integral of e^(-x^2-y^2):', round(val, 6))
+print('exact value pi               :', round(float(jnp.pi), 6))
+```
 
 ## Integration Meets Probability
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** This is the entire reason a deep-learning reader needs integration: a continuous probability *density* is exactly a non-negative function whose total integral is $1$, and an *expectation* is an integral---the two facts the section has been building toward and that today appear only on the slides.
-**Outline:** 1. State in the body: a density satisfies $p(x)\ge 0$ and $\int_{\mathcal X} p(x)\,dx = 1$ (a *normalized* non-negative function), connecting back to the Gaussian integral that gives $\int e^{-x^2}=\sqrt\pi$ the normalizer. · 2. The expectation $\mathbb{E}[X] = \int x\,p(x)\,dx$, and more generally $\mathbb{E}[g(X)] = \int g(x)p(x)\,dx$. · 3. Joint densities and Fubini: $\int\!\!\int p(x,y)\,dx\,dy = 1$, marginals by integrating out a variable---and a one-line callback to the Fubini caveat (order matters only for non-integrable integrands; densities are fine). · 4. *Monte-Carlo pointer:* when an integral has no closed form, estimate $\mathbb{E}[g(X)]\approx \tfrac1n\sum_i g(x_i)$ with $x_i\sim p$; this is how expectations are computed at scale in practice (forward-ref to sampling/estimation).
-**Key results to state:** $\int_{\mathcal X} p(x)\,dx = 1$; $\mathbb{E}[X]=\int x\,p(x)\,dx$; $\mathbb{E}[g(X)]=\int g(x)p(x)\,dx$; the Monte-Carlo estimator $\hat\mu = \tfrac1n\sum_i g(x_i)$.
-**Diagrams:** reuse the shaded-density figure (`fig_mdl-area-subtract` style) to show "area under $p$ on an interval = probability"; optional Monte-Carlo scatter converging to the true area.
-**Worked example(s):** verify $\int_{-\infty}^\infty \tfrac{1}{\sqrt\pi}e^{-x^2}\,dx = 1$ using the Gaussian integral; compute $\mathbb{E}[X]$ for that density (by symmetry $=0$); a short Monte-Carlo estimate of $\int_0^1 e^{-x^2}\,dx$ vs. the Riemann value.
-**Exercises (draft):** 1. Find the constant $c$ making $c\,e^{-x^2}$ a density on $\mathbb R$. 2. Compute $\mathbb{E}[X]$ and $\mathbb{E}[X^2]$ for the uniform density on $[0,1]$. 3. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo and compare to a Riemann sum. 4. For $p(x,y)=4xy$ on $[0,1]^2$, verify it integrates to $1$ and find the marginal of $x$.
-**Prereqs / cross-refs:** the Gaussian integral above; the Fubini discussion in *Multiple Integrals*; the improper-integral definition; forward to :numref:`sec_mdl-random_variables` (densities, expectation) and the change-of-variables density transform for normalizing flows.
-:::
+This is why a deep-learning reader needs integration at all. A continuous
+probability **density** is nothing more than a non-negative function that is
+*normalized*---its total integral is $1$:
+
+$$
+p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
+$$
+:eqlabel:`eq_mdl-density`
+
+The Gaussian integral above is precisely what supplies the normalizer: since
+$\int_{-\infty}^\infty e^{-x^2}\,dx=\sqrt\pi$, the function
+$p(x)=\tfrac{1}{\sqrt\pi}e^{-x^2}$ integrates to $1$ and is a bona fide density.
+An **expectation** is then an integral average---weighting each value by its
+density,
+
+$$
+\mathbb{E}[X] = \int_{\mathcal X} x\,p(x)\,dx,
+\qquad
+\mathbb{E}[g(X)] = \int_{\mathcal X} g(x)\,p(x)\,dx .
+$$
+:eqlabel:`eq_mdl-expectation`
+
+In several variables a joint density satisfies $\iint p(x,y)\,dx\,dy = 1$, and
+*marginals* are obtained by integrating a variable out, $p(x)=\int p(x,y)\,dy$;
+Fubini :eqref:`eq_mdl-fubini` guarantees the order of integration does not matter
+(densities are absolutely integrable, so the caveat above never bites). The cell
+verifies that $\tfrac{1}{\sqrt\pi}e^{-x^2}$ is normalized and computes its mean,
+which symmetry sends to $0$.
+
+```{.python .input #integral-density}
+#@tab mxnet
+x = np.arange(-8., 8., 1e-3)
+p = np.exp(-x**2) / np.sqrt(np.array(np.pi))
+print('total mass  integral p dx :', round(float(np.sum(1e-3 * p)), 6))
+print('mean        integral x p dx:', round(float(np.sum(1e-3 * x * p)), 6))
+```
+
+```{.python .input #integral-density}
+#@tab pytorch
+x = torch.arange(-8., 8., 1e-3)
+p = torch.exp(-x**2) / np.sqrt(np.pi)
+print('total mass  integral p dx :', round(float(torch.sum(1e-3 * p)), 6))
+print('mean        integral x p dx:', round(float(torch.sum(1e-3 * x * p)), 6))
+```
+
+```{.python .input #integral-density}
+#@tab tensorflow
+x = tf.range(-8., 8., 1e-3)
+p = tf.exp(-x**2) / np.sqrt(np.pi)
+print('total mass  integral p dx :', round(float(tf.reduce_sum(1e-3 * p)), 6))
+print('mean        integral x p dx:', round(float(tf.reduce_sum(1e-3 * x * p)), 6))
+```
+
+```{.python .input #integral-density}
+#@tab jax
+x = jnp.arange(-8., 8., 1e-3)
+p = jnp.exp(-x**2) / jnp.sqrt(jnp.pi)
+print('total mass  integral p dx :', round(float(jnp.sum(1e-3 * p)), 6))
+print('mean        integral x p dx:', round(float(jnp.sum(1e-3 * x * p)), 6))
+```
+
+When an expectation has no closed form---the rule rather than the exception in
+deep learning---we estimate it by **Monte Carlo**: draw samples $x_i\sim p$ and
+average,
+
+$$
+\mathbb{E}[g(X)] \approx \frac{1}{n}\sum_{i=1}^n g(x_i),
+$$
+:eqlabel:`eq_mdl-monte-carlo`
+
+a stochastic counterpart of the Riemann sum that ignores the geometry of the
+domain and converges at a dimension-free rate---which is exactly why it, rather
+than grid-based integration, is how expectations are computed at scale. We develop
+this thoroughly when we study random variables in :numref:`sec_mdl-random_variables`.
 
 ## Summary
 
-* The theory of integration allows us to answer questions about areas or volumes.
-* The fundamental theorem of calculus allows us to leverage knowledge about derivatives to compute areas via the observation that the derivative of the area up to some point is given by the value of the function being integrated.
-* Integrals in higher dimensions can be computed by iterating single variable integrals.
+* The **definite integral** $\int_a^b f\,dx$ is the limit of Riemann rectangle
+  sums :eqref:`eq_mdl-riemann`---the signed area under $f$, with negative
+  contributions where $f<0$ or when the limits run backwards.
+* The **fundamental theorem of calculus** :eqref:`eq_mdl-ftc` says the area-so-far
+  function $F(x)=\int_a^x f$ has derivative $F'=f$. Integration is therefore
+  differentiation reversed: $\int_a^b f = G(b)-G(a)$ for any antiderivative $G$.
+* **Improper integrals** extend the definition to infinite domains as a limit;
+  $\int_1^\infty x^{-p}\,dx$ converges exactly when $p>1$.
+* **Change of variables** multiplies by the local stretch: $du/dx$ in one
+  dimension :eqref:`eq_mdl-change_var`, the Jacobian determinant
+  $|\det D\boldsymbol{\phi}|$ in many :eqref:`eq_mdl-change_var_nd`---the same
+  volume-scaling read off the determinant, and the engine of normalizing flows.
+* **Fubini's theorem** evaluates a multiple integral as iterated single integrals
+  in either order, for absolutely integrable functions.
+* **Integration is the language of continuous probability:** a density is a
+  normalized non-negative function $\int p = 1$, an expectation is the integral
+  $\int x\,p\,dx$, and Monte Carlo estimates it by sampling.
 
 ## Exercises
-1. What is $\int_1^2 \frac{1}{x} \;dx$?
-2. Use the change of variables formula to integrate $\int_0^{\sqrt{\pi}}x\sin(x^2)\;dx$.
-3. What is $\int_{[0,1]^2} xy \;dx\;dy$?
-4. Let $f(x, y) = (x^2-y^2)/(x^2+y^2)^2$. Compute the iterated integrals $\int_0^1\!\left(\int_0^1 f(x, y)\;dx\right)dy$ and $\int_0^1\!\left(\int_0^1 f(x, y)\;dy\right)dx$ over the unit square and confirm that they equal $-\frac{\pi}{4}$ and $+\frac{\pi}{4}$ respectively. Why does this not contradict Fubini's theorem? (Hint: $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2} = f(x,y)$.)
+
+1. Evaluate $\int_1^2 \tfrac{1}{x}\,dx$ using an antiderivative, then confirm with
+   a Riemann sum.
+2. Use the change-of-variables formula to integrate
+   $\int_0^{\sqrt{\pi}} x\sin(x^2)\,dx$.
+3. Compute $\int_{[0,1]^2} xy\,dx\,dy$ by Fubini's theorem.
+4. For which $p$ does $\int_1^\infty x^{-p}\,dx$ converge? Verify the boundary
+   $p=1$ numerically by watching the partial integrals as the upper limit grows.
+5. Find the constant $c$ that makes $c\,e^{-x^2}$ a probability density on
+   $\mathbb{R}$, then compute its mean and $\mathbb{E}[X^2]$.
+6. Let $f(x,y) = (x^2-y^2)/(x^2+y^2)^2$. Compute the iterated integrals
+   $\int_0^1\!\bigl(\int_0^1 f\,dx\bigr)dy$ and $\int_0^1\!\bigl(\int_0^1
+   f\,dy\bigr)dx$ over $[0,1]^2$ and confirm they equal $-\tfrac{\pi}{4}$ and
+   $+\tfrac{\pi}{4}$. Why does this not contradict Fubini's theorem? (Hint:
+   $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2} = f(x,y)$; the singularity at the
+   origin breaks absolute integrability.)
+7. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo (average $e^{-x_i^2}$ over
+   $x_i$ uniform on $[0,1]$) and compare with a Riemann sum.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/414)
@@ -668,50 +755,73 @@ Differentiation gives slopes; integration gives totals.
 
 $$\int_a^b f(x)\, dx = \text{signed area under } f \text{ on } [a, b].$$
 
-We need integrals to define probabilities ($\int p(x) dx = 1$),
-expectations ($\mathbb{E}[X] = \int x\, p(x)\, dx$), and
-multivariate generalizations everywhere a continuous random
-variable shows up.
+We need integrals to define probabilities ($\int p(x)\,dx = 1$),
+expectations ($\mathbb{E}[X] = \int x\, p(x)\, dx$), and the
+change-of-variables rule that powers normalizing flows.
 :::
 
-::: {.slide title="Geometric interpretation"}
-Integration starts as area under a nonnegative curve:
+::: {.slide title="The definite integral as a limit"}
+Chop $[a,b]$ into slices of width $\epsilon$, sum the rectangles,
+shrink $\epsilon$:
 
-@!integral-calculus-geometric-interpretation-1
+$$\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\sum_i \epsilon\, f(x_i).$$
+
+Refining the partition converges (here to $\tfrac12\log 5$), but
+slowly and with no closed form:
+
+@!integral-riemann-converge
 :::
 
-::: {.slide title="Definite integral"}
-Most useful integrals are over an interval $[a,b]$:
+::: {.slide title="Fundamental theorem of calculus"}
+Let area-so-far be $F(x)=\int_a^x f$. The $\epsilon$-sliver of new
+area is $\approx \epsilon f(x)$, so
 
-$$\int_a^b f(x)\,dx.$$
+$$\frac{dF}{dx}(x) = f(x).$$
 
-Geometrically this keeps only the area between the vertical
-boundaries.
+Integration is differentiation reversed:
+$\int_a^b f = G(b)-G(a)$ for any antiderivative $G$.
 
-@!integral-calculus-geometric-interpretation-2
+@!integral-ftc-check
 :::
 
-::: {.slide title="Riemann approximation"}
-Approximate the area by rectangles; refine the partition; the
-limit is the integral.
+::: {.slide title="Change of variables"}
+Substitution multiplies by the local stretch:
 
-@!integral-calculus-geometric-interpretation-3
+$$\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,\frac{du}{dx}\,dx.$$
+
+In $n$ dimensions the stretch is the **Jacobian determinant**
+$|\det D\boldsymbol{\phi}|$ — the volume-scaling factor, and the
+engine behind normalizing flows.
 :::
 
-::: {.slide title="Multiple integrals"}
-$\iint f(x, y)\, dA$ — total under a 2D surface; iterated
-integration treats one axis at a time:
+::: {.slide title="Multiple integrals & Fubini"}
+$\int_U f\, d\mathbf{x}$ is the volume under a surface; a finite
+sum totals in any order, so
 
-@integral-calculus-multiple-integrals
+$$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy
+= \int\!\!\left(\int f\,dy\right)dx.$$
+
+@integral-surface
+:::
+
+::: {.slide title="Integration meets probability"}
+A density is a normalized non-negative function; an expectation is
+an integral; Monte Carlo estimates it by sampling:
+
+$$\int_{\mathcal X} p = 1, \quad \mathbb{E}[g(X)] = \int g\,p\,dx
+\approx \tfrac1n\textstyle\sum_i g(x_i).$$
+
+The Gaussian normalizer $\int e^{-x^2}=\sqrt\pi$ falls out of the
+2-D change of variables:
+
+@!integral-density
 :::
 
 ::: {.slide title="Recap"}
-- Integral = signed area / volume; defined as a limit of
-  Riemann sums.
-- Fundamental theorem of calculus: integral is the
-  inverse of differentiation.
-- Multiple integrals integrate over higher-dimensional
-  regions.
-- Foundation of probability: $\int_{\mathcal{X}} p = 1$
-  defines a density; expectation is an integral.
+- Integral = signed area/volume; defined as a limit of Riemann sums.
+- Fundamental theorem: integration is the inverse of differentiation.
+- Change of variables scales by $du/dx$ (1-D) or
+  $|\det D\boldsymbol{\phi}|$ ($n$-D).
+- Foundation of probability: $\int_{\mathcal X} p = 1$ is a density;
+  expectation is an integral.
 :::

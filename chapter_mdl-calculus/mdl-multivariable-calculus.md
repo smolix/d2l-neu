@@ -1,79 +1,100 @@
 # Multivariable Calculus
 :label:`sec_mdl-multivariable_calculus`
 
-Now that we have a fairly strong understanding of derivatives of a function of a single variable, let's return to our original question where we were considering a loss function of potentially billions of weights.
+A deep network's loss is a function of potentially billions of weights, yet
+training rests on a single question asked over and over: how does the loss
+change when we nudge the parameters? :numref:`sec_mdl-single_variable_calculus`
+answered this for one variable. This section lifts that local-linear picture to
+many variables. The central object is the *gradient*, and we will see three
+things about it that the rest of deep learning leans on: it is the multivariable
+derivative (a first-order approximation), it points in the direction of steepest
+change (which is why we descend along it), and organizing the chain rule around
+it *is* the backpropagation algorithm. We close with the *Hessian*, the
+second-order term that tells a minimum from a saddle.
 
-## Higher-Dimensional Differentiation
-What :numref:`sec_mdl-single_variable_calculus` tells us is that if we change a single one of these billions of weights leaving every other one fixed, we know what will happen!  This is nothing more than a function of a single variable, so we can write
+## From Partial Derivatives to the Gradient
+
+### Partial Derivatives
+
+The one observation we already have is this: if we change a *single* weight
+$w_1$ and freeze the rest, we are back to a function of one variable, and
+:numref:`sec_mdl-single_variable_calculus` applies verbatim:
 
 $$L(w_1+\epsilon_1, w_2, \ldots, w_N) \approx L(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N).$$
 :eqlabel:`eq_mdl-part_der`
 
-We will call the derivative in one variable while fixing the other variables the *partial derivative*, and we will use the notation $\frac{\partial}{\partial w_1}$ for the derivative in :eqref:`eq_mdl-part_der`.
+The derivative in one variable *while holding the others fixed* is the *partial
+derivative*, written $\frac{\partial}{\partial w_1}$. The new idea is what
+happens when we perturb several coordinates at once.
 
-Now, let's take this and change $w_2$ a little bit to $w_2 + \epsilon_2$:
+### The Gradient
 
-$$
-\begin{aligned}
-L(w_1+\epsilon_1, w_2+\epsilon_2, \ldots, w_N+\epsilon_N) & \approx L(w_1, w_2+\epsilon_2, \ldots, w_N+\epsilon_N) + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2+\epsilon_2, \ldots, w_N+\epsilon_N) \\
-& \approx L(w_1, w_2, \ldots, w_N) \\
-& \quad + \epsilon_2\frac{\partial}{\partial w_2} L(w_1, w_2, \ldots, w_N) \\
-& \quad + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N) \\
-& \quad + \epsilon_1\epsilon_2\frac{\partial}{\partial w_2}\frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N) \\
-& \approx L(w_1, w_2, \ldots, w_N) \\
-& \quad + \epsilon_2\frac{\partial}{\partial w_2} L(w_1, w_2, \ldots, w_N) \\
-& \quad + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N).
-\end{aligned}
-$$
-
-We have again used the idea that $\epsilon_1\epsilon_2$ is a higher order term that we can discard in the same way we could discard $\epsilon^{2}$ in the previous section, along with what we saw in :eqref:`eq_mdl-part_der`.  By continuing in this manner, we may write that
+Suppose we perturb every coordinate, replacing each $w_i$ by $w_i + \epsilon_i$.
+Apply :eqref:`eq_mdl-part_der` one coordinate at a time. Changing $w_1$
+contributes $\epsilon_1\frac{\partial L}{\partial w_1}$; changing $w_2$
+contributes $\epsilon_2\frac{\partial L}{\partial w_2}$, and so on. The
+corrections that involve *two* perturbations, like
+$\epsilon_1\epsilon_2\frac{\partial^2 L}{\partial w_1 \partial w_2}$, are
+products of small quantities — second order — and we discard them exactly as we
+discarded $\epsilon^2$ in one variable. What survives is a single sum:
 
 $$
-L(w_1+\epsilon_1, w_2+\epsilon_2, \ldots, w_N+\epsilon_N) \approx L(w_1, w_2, \ldots, w_N) + \sum_i \epsilon_i \frac{\partial}{\partial w_i} L(w_1, w_2, \ldots, w_N).
+L(w_1+\epsilon_1, \ldots, w_N+\epsilon_N) \approx L(w_1, \ldots, w_N) + \sum_{i=1}^N \epsilon_i \frac{\partial L}{\partial w_i}.
 $$
 
-This may look like a mess, but we can make this more familiar by noting that the sum on the right looks exactly like a dot product, so if we let
+That sum on the right is a dot product. Collecting the perturbations and the
+partials into vectors,
 
 $$
-\boldsymbol{\epsilon} = [\epsilon_1, \ldots, \epsilon_N]^\top \; \textrm{and} \;
+\boldsymbol{\epsilon} = [\epsilon_1, \ldots, \epsilon_N]^\top
+\quad\textrm{and}\quad
 \nabla_{\mathbf{w}} L = \left[\frac{\partial L}{\partial w_1}, \ldots, \frac{\partial L}{\partial w_N}\right]^\top,
 $$
 
-then
+we obtain the multivariable analogue of the linear approximation,
 
 $$L(\mathbf{w} + \boldsymbol{\epsilon}) \approx L(\mathbf{w}) + \boldsymbol{\epsilon}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}).$$
 :eqlabel:`eq_mdl-nabla_use`
 
-We will call the vector $\nabla_{\mathbf{w}} L$ the *gradient* of $L$.
+The vector $\nabla_{\mathbf{w}} L$ is the *gradient* of $L$. Equation
+:eqref:`eq_mdl-nabla_use` has exactly the shape of the one-dimensional
+$f(x+\epsilon) \approx f(x) + \epsilon f'(x)$, with the scalar derivative
+replaced by the gradient and ordinary multiplication replaced by a dot product.
+The gradient *is* the derivative in many dimensions: it is the unique vector
+whose dot product with a perturbation gives the first-order change in $L$.
 
-Equation :eqref:`eq_mdl-nabla_use` is worth pondering for a moment.  It has exactly the format that we encountered in one dimension, just we have converted everything to vectors and dot products.  It allows us to tell approximately how the function $L$ will change given any perturbation to the input.  As we will see in the next section, this will provide us with an important tool in understanding geometrically how we can learn using information contained in the gradient.
+### Directional Derivatives
 
-But first, let's see this approximation at work with an example.  Suppose that we are working with the function
-
-$$
-f(x, y) = \log(e^x + e^y) \textrm{ with gradient } \nabla f (x, y) = \left[\frac{e^x}{e^x+e^y}, \frac{e^y}{e^x+e^y}\right].
-$$
-
-If we look at a point like $(0, \log(2))$, we see that
-
-$$
-f(x, y) = \log(3) \textrm{ with gradient } \nabla f (x, y) = \left[\frac{1}{3}, \frac{2}{3}\right].
-$$
-
-Thus, if we want to approximate $f$ at $(\epsilon_1, \log(2) + \epsilon_2)$,  we see that we should have the specific instance of :eqref:`eq_mdl-nabla_use`:
+Reading :eqref:`eq_mdl-nabla_use` for a perturbation $\boldsymbol{\epsilon} =
+h\,\mathbf{u}$ of size $h$ along a unit direction $\mathbf{u}$ shows what the
+gradient says about *any* direction at once:
 
 $$
-f(\epsilon_1, \log(2) + \epsilon_2) \approx \log(3) + \frac{1}{3}\epsilon_1 + \frac{2}{3}\epsilon_2.
+\frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\;h\to 0\;}\; \mathbf{u}\cdot\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-We can test this in code to see how good the approximation is.
+The rate of change of $L$ as we move along $\mathbf{u}$ — the *directional
+derivative* — is the projection of the gradient onto $\mathbf{u}$. The single
+vector $\nabla_{\mathbf{w}} L$ thus encodes the slope in every direction
+simultaneously. The next section turns this one identity into the geometry of
+gradient descent.
+
+First, let us check that :eqref:`eq_mdl-nabla_use` really does approximate $L$.
+Take
+
+$$
+f(x, y) = \log(e^x + e^y), \qquad \nabla f (x, y) = \left[\frac{e^x}{e^x+e^y}, \frac{e^y}{e^x+e^y}\right].
+$$
+
+At the point $(0, \log 2)$ we have $f = \log 3$ and $\nabla f = [\tfrac13, \tfrac23]$,
+so :eqref:`eq_mdl-nabla_use` predicts
+$f(\epsilon_1, \log 2 + \epsilon_2) \approx \log 3 + \tfrac13\epsilon_1 + \tfrac23\epsilon_2$.
+We compare this against the true value for a small step.
 
 ```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
 from mxnet import autograd, np, npx
 npx.set_np()
 
@@ -93,8 +114,6 @@ f'approximation: {grad_approx}, true Value: {true_value}'
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
 import torch
 import numpy as np
 
@@ -117,8 +136,6 @@ f'approximation: {grad_approx}, true Value: {true_value}'
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
 import tensorflow as tf
 import numpy as np
 
@@ -141,8 +158,6 @@ f'approximation: {grad_approx}, true Value: {true_value}'
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from IPython import display
-from mpl_toolkits import mplot3d
 import jax
 from jax import numpy as jnp
 import numpy as np
@@ -162,75 +177,118 @@ true_value = f(jnp.array([0.]) + epsilon[0], jnp.log(
 f'approximation: {grad_approx}, true Value: {true_value}'
 ```
 
-## Geometry of Gradients and Gradient Descent
-Consider the expression from :eqref:`eq_mdl-nabla_use` again:
+The two agree to several digits, as a first-order approximation should for a
+small step.
 
-$$
-L(\mathbf{w} + \boldsymbol{\epsilon}) \approx L(\mathbf{w}) + \boldsymbol{\epsilon}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}).
-$$
+## The Geometry of Gradients
 
-Let's suppose that I want to use this to help minimize our loss $L$.  Let's understand geometrically the algorithm of gradient descent first described in  :numref:`sec_autograd`. What we will do is the following:
+### Steepest Descent
 
-1. Start with a random choice for the initial parameters $\mathbf{w}$.
-2. Find the direction $\mathbf{v}$ that makes $L$ decrease the most rapidly at $\mathbf{w}$.
-3. Take a small step in that direction: $\mathbf{w} \rightarrow \mathbf{w} + \epsilon\mathbf{v}$.
+Equation :eqref:`eq_mdl-nabla_use` tells us how $L$ changes in *any* direction,
+so we can ask which direction makes it decrease fastest. This is the geometric
+content of gradient descent, first introduced in :numref:`sec_autograd`:
+
+1. Start from some initial parameters $\mathbf{w}$.
+2. Find the unit direction $\mathbf{v}$ along which $L$ decreases most rapidly.
+3. Take a small step that way: $\mathbf{w} \leftarrow \mathbf{w} + \eta\mathbf{v}$.
 4. Repeat.
 
-The only thing we do not know exactly how to do is to compute the vector $\mathbf{v}$ in the second step.  We will call such a direction the *direction of steepest descent*.  Using the geometric understanding of dot products from :numref:`sec_mdl-geometry-linear-algebraic-ops`, we see that we can rewrite :eqref:`eq_mdl-nabla_use` as
+Everything hinges on step 2. Write the gradient's effect on a unit direction
+$\mathbf{v}$ using the geometric form of the dot product from
+:numref:`sec_mdl-geometry-linear-algebraic-ops`,
 
 $$
-L(\mathbf{w} + \mathbf{v}) \approx L(\mathbf{w}) + \mathbf{v}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}) = L(\mathbf{w}) + \|\nabla_{\mathbf{w}} L(\mathbf{w})\|\cos(\theta).
+L(\mathbf{w} + \mathbf{v}) - L(\mathbf{w}) \approx \mathbf{v}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}) = \|\nabla_{\mathbf{w}} L(\mathbf{w})\|\cos(\theta),
 $$
 
-Note that we have taken our direction to have length one for convenience, and used $\theta$ for the angle between $\mathbf{v}$ and $\nabla_{\mathbf{w}} L(\mathbf{w})$.  If we want to find the direction that decreases $L$ as rapidly as possible, we want to make this expression as negative as possible.  The only way the direction we pick enters into this equation is through $\cos(\theta)$, and thus we wish to make this cosine as negative as possible.  Now, recalling the shape of cosine, we can make this as negative as possible by making $\cos(\theta) = -1$ or equivalently making the angle between the gradient and our chosen direction to be $\pi$ radians, or equivalently $180$ degrees.  The only way to achieve this is to head in the exact opposite direction:  pick $\mathbf{v}$ to point in the exact opposite direction to $\nabla_{\mathbf{w}} L(\mathbf{w})$!
+where $\theta$ is the angle between $\mathbf{v}$ and the gradient. The direction
+enters only through $\cos\theta$. This is the place to state the result
+precisely, because it is the single fact on which all of gradient-based learning
+rests.
 
-This brings us to one of the most important mathematical concepts in machine learning: the direction of steepest descent points in the direction of $-\nabla_{\mathbf{w}}L(\mathbf{w})$.  Thus our informal algorithm can be rewritten as follows.
+**Proposition (steepest ascent and descent).** *At any point where
+$\nabla L \neq \mathbf{0}$, among all unit vectors $\mathbf{v}$ the directional
+derivative $\mathbf{v}\cdot\nabla L$ is largest when $\mathbf{v}$ points along
+$+\nabla L$ and smallest when it points along $-\nabla L$. Thus $+\nabla L$ is
+the direction of steepest ascent and $-\nabla L$ the direction of steepest
+descent.*
 
-1. Start with a random choice for the initial parameters $\mathbf{w}$.
-2. Compute $\nabla_{\mathbf{w}} L(\mathbf{w})$.
-3. Take a small step in the opposite of that direction: $\mathbf{w} \leftarrow \mathbf{w} - \epsilon\nabla_{\mathbf{w}} L(\mathbf{w})$.
-4. Repeat.
+**Proof.** By Cauchy–Schwarz (:eqref:`eq_mdl-cauchy-schwarz`) applied to the
+unit vector $\mathbf{v}$,
 
-
-This basic algorithm has been modified and adapted many ways by many researchers, but the core concept remains the same in all of them.  Use the gradient to find the direction that decreases the loss as rapidly as possible, and update the parameters to take a step in that direction.
-
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The same dot-product argument that picked the descent direction also tells us what the gradient *is* geometrically---it points in the direction of steepest **ascent** and is everywhere orthogonal to the level sets of $L$---and stating this in the body (it currently lives only on the slides) is what makes contour-plot intuition click.
-**Outline:** 1. Re-read $L(\mathbf{w}+\mathbf{v})\approx L(\mathbf{w}) + \|\nabla L\|\cos\theta$: maximized at $\theta=0$, so $+\nabla L$ is steepest ascent, $-\nabla L$ steepest descent (mirror of the descent derivation just above). · 2. Move *along* a level set: $L$ is (to first order) unchanged, so $\nabla L\cdot\mathbf{v}=0$ for any tangent direction $\mathbf{v}$---hence $\nabla L\perp$ the level set. · 3. Picture: on a contour map the gradient is the arrow crossing contours at right angles, longest where contours bunch up.
-**Key results to state:** $\arg\max_{\|\mathbf{v}\|=1}\nabla L\cdot\mathbf{v} = \nabla L/\|\nabla L\|$ (steepest ascent); $\nabla L \perp \{L=c\}$; $\|\nabla L\|$ = local rate of steepest change.
-**Diagrams:** `fig_mdl-gradient-contour` — a contour plot of a 2-D $L$ with gradient arrows crossing the level curves orthogonally and $-\nabla L$ arrows pointing downhill toward the minimum.
-**Worked example(s):** for $f(x,y)=x^2+2y^2$, compute $\nabla f$, verify it is orthogonal to the ellipse $f=c$ at a sample point, and show the descent arrow points inward.
-**Exercises (draft):** 1. Prove $\nabla f\perp$ level set from the first-order expansion. 2. For $f=\log(e^x+e^y)$, sketch a contour and its gradient. 3. Where is $\|\nabla f\|$ largest on a given contour, and why. 4. Show steepest ascent maximizes the directional derivative.
-**Prereqs / cross-refs:** :eqref:`eq_mdl-nabla_use`; :numref:`sec_mdl-geometry-linear-algebraic-ops` (dot products, $\cos\theta$); forward to the Optimization chapter (descent directions).
-:::
-
-## A Note on Mathematical Optimization
-Throughout this book, we focus squarely on numerical optimization techniques for the practical reason that all functions we encounter in the deep learning setting are too complex to minimize explicitly.
-
-However, it is a useful exercise to consider what the geometric understanding we obtained above tells us about optimizing functions directly.
-
-Suppose that we wish to find the value of $\mathbf{x}_0$ which minimizes some function $L(\mathbf{x})$.  Let's suppose that moreover someone gives us a value and tells us that it is the value that minimizes $L$.  Is there anything we can check to see if their answer is even plausible?
-
-Again consider :eqref:`eq_mdl-nabla_use`:
 $$
-L(\mathbf{x}_0 + \boldsymbol{\epsilon}) \approx L(\mathbf{x}_0) + \boldsymbol{\epsilon}\cdot \nabla_{\mathbf{x}} L(\mathbf{x}_0).
+-\|\nabla L\| \;\le\; \mathbf{v}\cdot\nabla L \;\le\; \|\nabla L\|,
 $$
 
-If the gradient is not zero, we know that we can take a step in the direction $-\epsilon \nabla_{\mathbf{x}} L(\mathbf{x}_0)$ to find a value of $L$ that is smaller.  Thus, if we truly are at a minimum, this cannot be the case!  We can conclude that if $\mathbf{x}_0$ is a minimum, then $\nabla_{\mathbf{x}} L(\mathbf{x}_0) = 0$.  We call points with $\nabla_{\mathbf{x}} L(\mathbf{x}_0) = 0$ *critical points*.
+and the proposition's equality criterion says each bound is attained exactly
+when $\mathbf{v}$ is collinear with $\nabla L$. The upper bound $+\|\nabla L\|$
+is reached by $\mathbf{v} = \nabla L/\|\nabla L\|$ and the lower bound
+$-\|\nabla L\|$ by $\mathbf{v} = -\nabla L/\|\nabla L\|$. $\blacksquare$
 
-This is nice, because in some rare settings, we *can* explicitly find all the points where the gradient is zero, and find the one with the smallest value.
+The same statement reads off the page from $\cos\theta$: the directional
+derivative $\|\nabla L\|\cos\theta$ is maximized at $\theta = 0$ and minimized
+at $\theta = \pi$, so $\mathbf{v}$ should be parallel or antiparallel to the
+gradient. Steepest descent therefore steps along $-\nabla_{\mathbf{w}} L$, and
+the informal recipe becomes the gradient-descent update
 
-For a concrete example, consider the function
 $$
-f(x) = 3x^4 - 4x^3 -12x^2.
-$$
-
-This function has derivative
-$$
-\frac{df}{dx} = 12x^3 - 12x^2 -24x = 12x(x-2)(x+1).
+\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-The only possible location of minima are at $x = -1, 0, 2$, where the function takes the values $-5,0, -32$ respectively, and thus we can conclude that we minimize our function when $x = 2$.  A quick plot confirms this.
+Every optimizer in this book — momentum, RMSProp, Adam — modifies *how* the step
+along the gradient is computed, but they all inherit this core idea: read the
+gradient, move against it.
+
+### Gradients and Level Sets
+
+The same expression $L(\mathbf{w} + \mathbf{v}) - L(\mathbf{w}) \approx
+\|\nabla L\|\cos\theta$ also reveals what the gradient is *geometrically*, not
+just which way to step. Consider moving along a *level set*, the set of points
+where $L$ keeps a fixed value $c$. To first order, $L$ does not change along
+such a direction, so the directional derivative vanishes.
+
+**Proposition (gradients are normal to level sets).** *At any point, $\nabla L$
+is orthogonal to every direction tangent to the level set
+$\{\mathbf{x} : L(\mathbf{x}) = c\}$ through that point.*
+
+**Proof.** Let $\mathbf{v}$ be tangent to the level set. Moving along
+$\mathbf{v}$ keeps $L$ constant to first order, so
+$\mathbf{v}\cdot\nabla L = 0$; by the definition of orthogonality from
+:numref:`sec_mdl-geometry-linear-algebraic-ops`, $\mathbf{v}\perp\nabla L$.
+$\blacksquare$
+
+So on a contour map the gradient is the arrow crossing the contours at right
+angles, pointing toward higher ground, and it is longest where the contours
+bunch together — exactly where $L$ changes fastest, as drawn in
+:numref:`fig_mdl-cal-gradient-field`. Gradient descent slides *downhill across
+the contours*, always perpendicular to them.
+
+![Contours of a scalar field $L$ with its gradient $\nabla L$ drawn at several points: each arrow crosses the contours at a right angle, points toward higher values, and is longest where the contours bunch together, where $L$ changes fastest.](../img/mdl-cal-gradient-field.svg)
+:label:`fig_mdl-cal-gradient-field`
+
+### Critical Points and the First-Order Test
+
+Throughout this book we minimize losses numerically, because the functions that
+arise in deep learning are far too complex to minimize in closed form. But the
+geometry above gives a cheap, exact *necessary* condition that every minimum
+must satisfy, and it is worth pausing on.
+
+Suppose someone hands us a point $\mathbf{x}_0$ and claims it minimizes $L$. Is
+the claim even plausible? Read :eqref:`eq_mdl-nabla_use` at $\mathbf{x}_0$: if
+$\nabla L(\mathbf{x}_0) \neq \mathbf{0}$, then stepping along
+$-\nabla L(\mathbf{x}_0)$ strictly decreases $L$, so $\mathbf{x}_0$ cannot be a
+minimum. Contrapositively, **a minimum forces $\nabla L(\mathbf{x}_0) =
+\mathbf{0}$.** Points where the gradient vanishes are called *critical points*.
+
+This is occasionally enough to optimize by hand: find every critical point and
+compare values. For example,
+
+$$
+f(x) = 3x^4 - 4x^3 - 12x^2, \qquad f'(x) = 12x(x-2)(x+1),
+$$
+
+has critical points $x = -1, 0, 2$ with values $-5, 0, -32$, so the minimum is
+at $x = 2$. A plot confirms it.
 
 ```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
 #@tab mxnet
@@ -264,92 +322,85 @@ f = (3 * x**4) - (4 * x**3) - (12 * x**2)
 d2l.plot(x, f, 'x', 'f(x)')
 ```
 
-This highlights an important fact to know when working either theoretically or numerically: the only possible points where we can minimize (or maximize) a function will have gradient equal to zero, however, not every point with gradient zero is the true *global* minimum (or maximum).
+The lesson cuts both ways: only critical points can be minima or maxima, but not
+every critical point is one — $x = 0$ above is a local maximum, and in higher
+dimensions a critical point can be a saddle. Telling these apart needs
+*second*-order information, which is the Hessian we develop below.
 
-## Multivariate Chain Rule
-Let's suppose that we have a function of four variables ($w, x, y$, and $z$) which we can make by composing many terms:
+## The Multivariate Chain Rule
+
+Neural networks are deep compositions of simple functions, so computing
+gradients means differentiating compositions. Consider four inputs $w, x, y, z$
+flowing through intermediate quantities to a scalar output:
 
 $$\begin{aligned}f(u, v) & = (u+v)^{2} \\u(a, b) & = (a+b)^{2}, \qquad v(a, b) = (a-b)^{2}, \\a(w, x, y, z) & = (w+x+y+z)^{2}, \qquad b(w, x, y, z) = (w+x-y-z)^2.\end{aligned}$$
 :eqlabel:`eq_mdl-multi_func_def`
 
-Such chains of equations are common when working with neural networks, so trying to understand how to compute gradients of such functions is key.  We can start to see visual hints of this connection in :numref:`fig_mdl-chain-1` if we take a look at what variables directly relate to one another.
+The dependencies form a graph (:numref:`fig_mdl-chain-1`): each node is a value,
+each edge a direct functional dependence.
 
-![The function relations above where nodes represent values and edges show functional dependence.](../img/mdl-cal-chain-net1.svg)
+![The function relations of :eqref:`eq_mdl-multi_func_def`, drawn as a graph where nodes are values and edges show direct functional dependence.](../img/mdl-cal-chain-net1.svg)
 :label:`fig_mdl-chain-1`
 
-Nothing stops us from just composing everything from :eqref:`eq_mdl-multi_func_def` and writing out that
+We *could* substitute everything and differentiate the resulting monster
+directly, but $\frac{\partial f}{\partial w}$ alone expands into a page of
+repeated subexpressions, and $\frac{\partial f}{\partial x}$ would repeat most
+of them again. That waste is precisely what the chain rule organizes away.
+
+### The Rule as a Sum Over Paths
+
+Take the simplest composite step, $f(u(a,b), v(a,b))$, and perturb $a$ by a
+small $\epsilon$. Each intermediate moves by its partial,
+$u \to u + \epsilon\frac{\partial u}{\partial a}$ and
+$v \to v + \epsilon\frac{\partial v}{\partial a}$, and feeding those into the
+first-order expansion of $f$ gives
 
 $$
-f(w, x, y, z) = \left(\left((w+x+y+z)^2+(w+x-y-z)^2\right)^2+\left((w+x+y+z)^2-(w+x-y-z)^2\right)^2\right)^2.
+f\!\left(u + \epsilon\tfrac{\partial u}{\partial a},\, v + \epsilon\tfrac{\partial v}{\partial a}\right)
+\approx f(u, v) + \epsilon\left[\frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}\right].
 $$
 
-We may then take the derivative by just using single variable derivatives, but if we did that we would quickly find ourself swamped with terms, many of which are repeats!  Indeed, one can see that, for instance:
+Reading off the coefficient of $\epsilon$ gives the multivariate chain rule,
 
 $$
-\begin{aligned}
-\frac{\partial f}{\partial w} & = 2 \left(2 \left(2 (w + x + y + z) - 2 (w + x - y - z)\right) \left((w + x + y + z)^{2}- (w + x - y - z)^{2}\right) + \right.\\
-& \left. \quad 2 \left(2 (w + x - y - z) + 2 (w + x + y + z)\right) \left((w + x - y - z)^{2}+ (w + x + y + z)^{2}\right)\right) \times \\
-& \quad \left(\left((w + x + y + z)^{2}- (w + x - y - z)^2\right)^{2}+ \left((w + x - y - z)^{2}+ (w + x + y + z)^{2}\right)^{2}\right).
-\end{aligned}
+\frac{\partial f}{\partial a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}.
 $$
 
-If we then also wanted to compute $\frac{\partial f}{\partial x}$, we would end up with a similar equation again with many repeated terms, and many *shared* repeated terms between the two derivatives.  This represents a massive quantity of wasted work, and if we needed to compute derivatives this way, the whole deep learning revolution would have stalled out before it began!
+The structure is worth saying in words. There are two *pathways* by which $a$
+influences $f$: $a \to u \to f$ and $a \to v \to f$. Each path contributes the
+*product* of the derivatives along its edges, and the total derivative is the
+*sum* over paths. This is the whole rule.
 
+In general, for a network like :numref:`fig_mdl-chain-2`, to differentiate the
+output with respect to an input we **sum, over every directed path from that
+input to the output, the product of the edge derivatives along the path.**
 
-Let's break up the problem.  We will start by trying to understand how $f$ changes when we change $a$, essentially assuming that $w, x, y$, and $z$ all do not exist.  We will reason as we did back when we worked with the gradient for the first time.  Let's take $a$ and add a small amount $\epsilon$ to it.
-
-$$
-\begin{aligned}
-& f(u(a+\epsilon, b), v(a+\epsilon, b)) \\
-\approx & f\left(u(a, b) + \epsilon\frac{\partial u}{\partial a}(a, b), v(a, b) + \epsilon\frac{\partial v}{\partial a}(a, b)\right) \\
-\approx & f(u(a, b), v(a, b)) + \epsilon\left[\frac{\partial f}{\partial u}(u(a, b), v(a, b))\frac{\partial u}{\partial a}(a, b) + \frac{\partial f}{\partial v}(u(a, b), v(a, b))\frac{\partial v}{\partial a}(a, b)\right].
-\end{aligned}
-$$
-
-The first line follows from the definition of partial derivative, and the second follows from the definition of gradient.  It is notationally burdensome to track exactly where we evaluate every derivative, as in the expression $\frac{\partial f}{\partial u}(u(a, b), v(a, b))$, so we often abbreviate this to the much more memorable
-
-$$
-\frac{\partial f}{\partial a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a}+\frac{\partial f}{\partial v}\frac{\partial v}{\partial a}.
-$$
-
-It is useful to think about the meaning of the process. We are trying to understand how a function of the form $f(u(a, b), v(a, b))$ changes its value with a change in $a$.  There are two pathways this can occur: there is the pathway where $a \rightarrow u \rightarrow f$ and where $a \rightarrow v \rightarrow f$.  We can compute both of these contributions via the chain rule: $\frac{\partial f}{\partial u} \cdot \frac{\partial u}{\partial a}$ and $\frac{\partial f}{\partial v} \cdot \frac{\partial v}{\partial a}$ respectively, and added up.
-
-Imagine we have a different network of functions where the functions on the right depend on those that are connected to on the left as is shown in :numref:`fig_mdl-chain-2`.
-
-![Another more subtle example of the chain rule.](../img/mdl-cal-chain-net2.svg)
+![A second example: to reach $f$ from $y$ there are three directed paths through the graph, and the chain rule sums their contributions.](../img/mdl-cal-chain-net2.svg)
 :label:`fig_mdl-chain-2`
 
-To compute something like $\frac{\partial f}{\partial y}$, we need to sum over all (in this case $3$) paths from $y$ to $f$ giving
+For instance, the three paths from $y$ to $f$ in :numref:`fig_mdl-chain-2` give
 
 $$
 \frac{\partial f}{\partial y} = \frac{\partial f}{\partial a} \frac{\partial a}{\partial u} \frac{\partial u}{\partial y} + \frac{\partial f}{\partial u} \frac{\partial u}{\partial y} + \frac{\partial f}{\partial b} \frac{\partial b}{\partial v} \frac{\partial v}{\partial y}.
 $$
 
-Understanding the chain rule in this way will pay great dividends when trying to understand how gradients flow through networks, and why various architectural choices like those in LSTMs (:numref:`sec_lstm`) or residual layers (:numref:`sec_resnet`) can help shape the learning process by controlling gradient flow.
+This "sum over paths" view is exactly how gradients flow through a network, and
+it explains why architectural choices that open or close paths — the gates of an
+LSTM (:numref:`sec_lstm`) or the skip connections of a residual block
+(:numref:`sec_resnet`) — shape learning by controlling that gradient flow.
 
-## The Backpropagation Algorithm
+### The Backpropagation Algorithm
 
-Let's return to the example of :eqref:`eq_mdl-multi_func_def` the previous section where
-
-$$
-\begin{aligned}
-f(u, v) & = (u+v)^{2} \\
-u(a, b) & = (a+b)^{2}, \qquad v(a, b) = (a-b)^{2}, \\
-a(w, x, y, z) & = (w+x+y+z)^{2}, \qquad b(w, x, y, z) = (w+x-y-z)^2.
-\end{aligned}
-$$
-
-If we want to compute say $\frac{\partial f}{\partial w}$ we may apply the multi-variate chain rule to see:
+Return to :eqref:`eq_mdl-multi_func_def` and ask for $\frac{\partial f}{\partial
+w}$. Applying the chain rule the obvious way pushes $w$ forward through the
+graph,
 
 $$
-\begin{aligned}
-\frac{\partial f}{\partial w} & = \frac{\partial f}{\partial u}\frac{\partial u}{\partial w} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial w}, \\
-\frac{\partial u}{\partial w} & = \frac{\partial u}{\partial a}\frac{\partial a}{\partial w}+\frac{\partial u}{\partial b}\frac{\partial b}{\partial w}, \\
-\frac{\partial v}{\partial w} & = \frac{\partial v}{\partial a}\frac{\partial a}{\partial w}+\frac{\partial v}{\partial b}\frac{\partial b}{\partial w}.
-\end{aligned}
+\frac{\partial f}{\partial w} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial w} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial w}, \qquad
+\frac{\partial u}{\partial w} = \frac{\partial u}{\partial a}\frac{\partial a}{\partial w}+\frac{\partial u}{\partial b}\frac{\partial b}{\partial w}, \quad \ldots
 $$
 
-Let's try using this decomposition to compute $\frac{\partial f}{\partial w}$.  Notice that all we need here are the various single step partials:
+and the single-step partials are all elementary,
 
 $$
 \begin{aligned}
@@ -360,7 +411,7 @@ $$
 \end{aligned}
 $$
 
-If we write this out into code this becomes a fairly manageable expression.
+In code this is a tidy forward sweep through the graph.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
 # Compute the value of the function from inputs to outputs
@@ -381,29 +432,25 @@ df_dw = df_du*du_dw + df_dv*dv_dw
 print(f'df/dw at {w}, {x}, {y}, {z} is {df_dw}')
 ```
 
-However, note that this still does not make it easy to compute something like $\frac{\partial f}{\partial x}$.  The reason for that is the *way* we chose to apply the chain rule.  If we look at what we did above, we always kept $\partial w$ in the denominator when we could.  In this way, we chose to apply the chain rule seeing how $w$ changed every other variable.  If that is what we wanted, this would be a good idea.  However, think back to our motivation from deep learning: we want to see how every parameter changes the *loss*.  In essence, we want to apply the chain rule keeping $\partial f$ in the numerator whenever we can!
-
-To be more explicit, note that we can write
-
-$$
-\begin{aligned}
-\frac{\partial f}{\partial w} & = \frac{\partial f}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial f}{\partial b}\frac{\partial b}{\partial w}, \\
-\frac{\partial f}{\partial a} & = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a}+\frac{\partial f}{\partial v}\frac{\partial v}{\partial a}, \\
-\frac{\partial f}{\partial b} & = \frac{\partial f}{\partial u}\frac{\partial u}{\partial b}+\frac{\partial f}{\partial v}\frac{\partial v}{\partial b}.
-\end{aligned}
-$$
-
-Note that this application of the chain rule has us explicitly compute $\frac{\partial f}{\partial u}, \frac{\partial f}{\partial v}, \frac{\partial f}{\partial a}, \frac{\partial f}{\partial b}, \; \textrm{and} \; \frac{\partial f}{\partial w}$.  Nothing stops us from also including the equations:
+This computes one derivative, $\frac{\partial f}{\partial w}$. The trouble is
+that it gives us *no head start* on $\frac{\partial f}{\partial x}$: by keeping
+$\partial w$ in every denominator, we organized the work around "how $w$ affects
+everything." But in deep learning we want the opposite — how *one* loss is
+affected by *every* parameter. So we keep $\partial f$ in every *numerator*
+instead, walking the graph from the output backward:
 
 $$
 \begin{aligned}
-\frac{\partial f}{\partial x} & = \frac{\partial f}{\partial a}\frac{\partial a}{\partial x} + \frac{\partial f}{\partial b}\frac{\partial b}{\partial x}, \\
-\frac{\partial f}{\partial y} & = \frac{\partial f}{\partial a}\frac{\partial a}{\partial y}+\frac{\partial f}{\partial b}\frac{\partial b}{\partial y}, \\
-\frac{\partial f}{\partial z} & = \frac{\partial f}{\partial a}\frac{\partial a}{\partial z}+\frac{\partial f}{\partial b}\frac{\partial b}{\partial z}.
+\frac{\partial f}{\partial a} & = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a}+\frac{\partial f}{\partial v}\frac{\partial v}{\partial a}, \qquad
+\frac{\partial f}{\partial b} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial b}+\frac{\partial f}{\partial v}\frac{\partial v}{\partial b}, \\
+\frac{\partial f}{\partial w} & = \frac{\partial f}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial f}{\partial b}\frac{\partial b}{\partial w}, \qquad (\textrm{and likewise for } x, y, z).
 \end{aligned}
 $$
 
-and then keeping track of how $f$ changes when we change *any* node in the entire network.  Let's implement it.
+Computing $\frac{\partial f}{\partial u}, \frac{\partial f}{\partial v}$ once,
+then $\frac{\partial f}{\partial a}, \frac{\partial f}{\partial b}$, then all
+four input derivatives, *reuses* every intermediate. One backward sweep yields
+the gradient with respect to all inputs at once.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
 # Compute the value of the function from inputs to outputs
@@ -433,13 +480,13 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {df_dy}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {df_dz}')
 ```
 
-The fact that we compute derivatives from $f$ back towards the inputs rather than from the inputs forward to the outputs (as we did in the first code snippet above) is what gives this algorithm its name: *backpropagation*.  Note that there are two steps:
-1. Compute the value of the function, and the single step partials from front to back.  While not done above, this can be combined into a single *forward pass*.
-2. Compute the gradient of $f$ from back to front.  We call this the *backwards pass*.
-
-This is precisely what every deep learning algorithm implements to allow the computation of the gradient of the loss with respect to every weight in the network at one pass.  It is an astonishing fact that we have such a decomposition.
-
-To see how to encapsulate this, let's take a quick look at this example.
+Computing derivatives *from $f$ back toward the inputs*, rather than forward from
+the inputs, is what gives the algorithm its name: *backpropagation*. It is two
+passes — a *forward pass* that evaluates the function and records the single-step
+partials, and a *backward pass* that accumulates $\frac{\partial f}{\partial
+\cdot}$ from output to input. This is exactly what every deep learning framework
+does to obtain the gradient of the loss with respect to *every* weight in a
+single sweep, and it is what `f.backward()` runs under the hood.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab mxnet
@@ -540,71 +587,77 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {y_grad}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {z_grad}')
 ```
 
-All of what we did above can be done automatically by calling `f.backwards()`.
+The framework's automatic answer matches our hand-computed backward pass. The
+*why* — that backprop is reverse-mode automatic differentiation, a chain of
+vector–Jacobian products, and when to prefer it over forward mode — is the
+subject of :numref:`sec_mdl-matrix-calculus-autodiff`.
 
+## Second-Order Structure: the Hessian
 
-## Hessians
-As with single variable calculus, it is useful to consider higher-order derivatives in order to get a handle on how we can obtain a better approximation to a function than using the gradient alone.
-
-There is one immediate problem one encounters when working with higher order derivatives of functions of several variables, and that is there are a large number of them.  If we have a function $f(x_1, \ldots, x_n)$ of $n$ variables, then we can take $n^{2}$ many second derivatives, namely for any choice of $i$ and $j$:
+The gradient is a first-order, linear approximation; to know whether a critical
+point is a minimum we need the *curvature*, which lives in the second
+derivatives. A function of $n$ variables has $n^2$ second partials,
 
 $$
-\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial}{\partial x_i}\left(\frac{\partial}{\partial x_j} f\right).
+\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial}{\partial x_i}\left(\frac{\partial}{\partial x_j} f\right),
 $$
 
-This is traditionally assembled into a matrix called the *Hessian*:
+collected into the *Hessian* matrix
 
 $$\mathbf{H}_f = \begin{bmatrix} \frac{\partial^2 f}{\partial x_1 \partial x_1} & \cdots & \frac{\partial^2 f}{\partial x_1 \partial x_n} \\ \vdots & \ddots & \vdots \\ \frac{\partial^2 f}{\partial x_n \partial x_1} & \cdots & \frac{\partial^2 f}{\partial x_n \partial x_n} \\ \end{bmatrix}.$$
 :eqlabel:`eq_mdl-hess_def`
 
-Not every entry of this matrix is independent.  Indeed, we can show that as long as both *mixed partials* (partial derivatives with respect to more than one variable) exist and are continuous, we can say that for any $i$, and $j$,
+These $n^2$ entries are not independent: the Hessian is symmetric.
+
+**Proposition (symmetry of the Hessian; Clairaut).** *If the mixed partials of
+$f$ exist and are continuous, then for all $i, j$,*
 
 $$
-\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial^2 f}{\partial x_j \partial x_i}.
+\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial^2 f}{\partial x_j \partial x_i},
+\qquad\textrm{equivalently}\qquad \mathbf{H}_f = \mathbf{H}_f^\top.
 $$
 
-This follows by considering first perturbing a function in the direction of $x_i$, and then perturbing it in $x_j$ and then comparing the result of that with what happens if we perturb first $x_j$ and then $x_i$, with the knowledge that both of these orders lead to the same final change in the output of $f$.
+**Proof sketch.** Both mixed partials measure the same thing: the leading
+correction to $f$ when we perturb in $x_i$ *and* $x_j$. Perturbing first in
+$x_j$ then in $x_i$, versus first in $x_i$ then in $x_j$, produces the same net
+change in $f$; continuity of the second partials lets us pass to the limit and
+conclude the two orders give the same value. $\blacksquare$
 
-As with single variables, we can use these derivatives to get a far better idea of how the function behaves near a point.  In particular, we can use it to find the best fitting quadratic near a point $\mathbf{x}_0$, as we saw in a single variable.
+Symmetry matters because it puts the Hessian in the world of symmetric matrices,
+where the spectral theorem and positive-definiteness from
+:numref:`sec_mdl-eigendecompositions` apply — which is exactly what the
+second-derivative test will use.
 
-Let's see an example.  Suppose that $f(x_1, x_2) = a + b_1x_1 + b_2x_2 + c_{11}x_1^{2} + c_{12}x_1x_2 + c_{22}x_2^{2}$.  This is the general form for a quadratic in two variables.  If we look at the value of the function, its gradient, and its Hessian :eqref:`eq_mdl-hess_def`, all at the point zero:
+### The Second-Order Taylor Approximation
 
-$$
-\begin{aligned}
-f(0,0) & = a, \\
-\nabla f (0,0) & = \begin{bmatrix}b_1 \\ b_2\end{bmatrix}, \\
-\mathbf{H} f (0,0) & = \begin{bmatrix}2 c_{11} & c_{12} \\ c_{12} & 2c_{22}\end{bmatrix},
-\end{aligned}
-$$
-
-we can get our original polynomial back by saying
-
-$$
-f(\mathbf{x}) = f(0) + \nabla f (0) \cdot \mathbf{x} + \frac{1}{2}\mathbf{x}^\top \mathbf{H} f (0) \mathbf{x}.
-$$
-
-In general, if we computed this expansion any point $\mathbf{x}_0$, we see that
+Just as the gradient gives the best linear fit, the Hessian gives the best
+*quadratic* fit. The cleanest way to see the coefficients is to read them off a
+quadratic. Let $f(x_1, x_2) = a + b_1x_1 + b_2x_2 + c_{11}x_1^{2} + c_{12}x_1x_2 + c_{22}x_2^{2}$.
+Evaluating the value, gradient, and Hessian :eqref:`eq_mdl-hess_def` at the
+origin gives
 
 $$
-f(\mathbf{x}) = f(\mathbf{x}_0) + \nabla f (\mathbf{x}_0) \cdot (\mathbf{x}-\mathbf{x}_0) + \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H} f (\mathbf{x}_0) (\mathbf{x}-\mathbf{x}_0).
+f(0,0) = a, \qquad
+\nabla f (0,0) = \begin{bmatrix}b_1 \\ b_2\end{bmatrix}, \qquad
+\mathbf{H} f (0,0) = \begin{bmatrix}2 c_{11} & c_{12} \\ c_{12} & 2c_{22}\end{bmatrix},
 $$
 
-This works for any dimensional input, and provides the best approximating quadratic to any function at a point.  To give an example, let's plot the function
+and these recover the polynomial exactly:
+$f(\mathbf{x}) = f(0) + \nabla f(0) \cdot \mathbf{x} + \tfrac12\mathbf{x}^\top \mathbf{H} f(0)\, \mathbf{x}$.
+The same assembly holds at any base point $\mathbf{x}_0$ and for any
+twice-differentiable $f$, giving the *second-order Taylor approximation*
 
 $$
-f(x, y) = xe^{-x^2-y^2}.
+f(\mathbf{x}) \approx f(\mathbf{x}_0) + \nabla f (\mathbf{x}_0) \cdot (\mathbf{x}-\mathbf{x}_0) + \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H} f (\mathbf{x}_0) (\mathbf{x}-\mathbf{x}_0).
 $$
+:eqlabel:`eq_mdl-second_taylor`
 
-One can compute that the gradient and Hessian are
-$$
-\nabla f(x, y) = e^{-x^2-y^2}\begin{pmatrix}1-2x^2 \\ -2xy\end{pmatrix} \; \textrm{and} \; \mathbf{H}f(x, y) = e^{-x^2-y^2}\begin{pmatrix} 4x^3 - 6x & 4x^2y - 2y \\ 4x^2y-2y &4xy^2-2x\end{pmatrix}.
-$$
-
-And thus, with a little algebra, see that the approximating quadratic at $[-1,0]^\top$ is
-
-$$
-f(x, y) \approx e^{-1}\left(-1 - (x+1) +(x+1)^2+y^2\right).
-$$
+This is the best-approximating quadratic to $f$ near $\mathbf{x}_0$, in any
+dimension. To see it, take $f(x, y) = xe^{-x^2-y^2}$, whose approximating
+quadratic at $[-1, 0]^\top$ works out to
+$f(x, y) \approx e^{-1}(-1 - (x+1) + (x+1)^2 + y^2)$. We plot the function (in
+blue) against its quadratic approximation (in purple); near $[-1, 0]^\top$ they
+hug each other.
 
 ```{.python .input #multivariable-calculus-hessians}
 #@tab mxnet
@@ -705,244 +758,99 @@ ax.set_ylim(-2, 2)
 ax.set_zlim(-1, 1)
 ```
 
-This forms the basis for Newton's Algorithm discussed in :numref:`sec_gd`, where we perform numerical optimization iteratively finding the best fitting quadratic, and then exactly minimizing that quadratic.
+Iterating this idea — repeatedly fit the local quadratic and jump to *its*
+minimum — is Newton's method, discussed in :numref:`sec_gd`.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The gradient being zero tells us only that a point is *critical*; the Hessian's curvature is what distinguishes a minimum from a maximum from a saddle, so these second-order conditions (today on the recap slide only) are the multivariable analogue of the single-variable $f''>0$ test and the reason eigenvalues of the Hessian matter.
-**Outline:** 1. At a critical point ($\nabla L=0$) the local model reduces to $L(\mathbf{x})\approx L(\mathbf{x}_0)+\tfrac12(\mathbf{x}-\mathbf{x}_0)^\top\mathbf{H}(\mathbf{x}-\mathbf{x}_0)$. · 2. The behavior is governed by the *definiteness* of $\mathbf{H}$, read off its eigenvalues (forward-ref :numref:`sec_mdl-eigendecompositions` / spectral theorem). · 3. The classification table. · 4. The borderline (semidefinite / zero eigenvalue) case is inconclusive at second order---needs higher-order terms.
-**Key results to state:** $\mathbf{H}\succ 0$ (all $\lambda_i>0$) $\Rightarrow$ strict local **min**; $\mathbf{H}\prec 0$ $\Rightarrow$ local **max**; $\mathbf{H}$ indefinite (mixed-sign eigenvalues) $\Rightarrow$ **saddle**; $\mathbf{H}\succeq 0$ is *necessary* for a local min.
-**Diagrams:** reuse the existing $xe^{-x^2-y^2}$ wireframe to mark a saddle vs. a bowl; optional small "bowl / dome / saddle" triptych keyed to eigenvalue signs.
-**Worked example(s):** classify the critical points of $f(x,y)=x^2 - y^2$ (saddle) and $x^2+2y^2$ (min) by inspecting the (constant) Hessian's eigenvalues; connect to Exercise 4's $x^2y+xy^2$.
-**Exercises (draft):** 1. Classify the critical point of $x^2-y^2$ via $\mathbf{H}$. 2. Build a 2-D $f$ whose Hessian is positive *semidefinite* yet the point is not a min. 3. Show $\mathbf{H}\succeq0$ is necessary but not sufficient. 4. Relate the test to the single-variable $f''$ sign.
-**Prereqs / cross-refs:** :eqref:`eq_mdl-hess_def`; :numref:`sec_mdl-eigendecompositions` (eigenvalues, PSD); single-variable curvature (:numref:`sec_mdl-single_variable_calculus`); forward to the Optimization chapter.
-:::
+### The Second-Derivative Test
 
-## A Little Matrix Calculus
-<!-- migrates to sec_mdl-matrix-calculus-autodiff -->
-Derivatives of functions involving matrices turn out to be particularly nice.  This section can become notationally heavy, so may be skipped in a first reading, but it is useful to know how derivatives of functions involving common matrix operations are often much cleaner than one might initially anticipate, particularly given how central matrix operations are to deep learning applications.
-
-Let's begin with an example.  Suppose that we have some fixed column vector $\boldsymbol{\beta}$, and we want to take the product function $f(\mathbf{x}) = \boldsymbol{\beta}^\top\mathbf{x}$, and understand how the dot product changes when we change $\mathbf{x}$.
-
-A bit of notation that will be useful when working with matrix derivatives in ML is called the *denominator layout matrix derivative* where we assemble our partial derivatives into the shape of whatever vector, matrix, or tensor is in the denominator of the differential.  In this case, we will write
+We can now finish the story the first-order test left open: at a critical point,
+the Hessian decides whether we sit at a minimum, a maximum, or a saddle. At a
+critical point $\mathbf{x}_0$ the gradient term in :eqref:`eq_mdl-second_taylor`
+vanishes, so the local picture is purely quadratic,
 
 $$
-\frac{\partial f}{\partial \mathbf{x}} = \begin{bmatrix}
-\frac{\partial f}{\partial x_1} \\
-\vdots \\
-\frac{\partial f}{\partial x_n}
-\end{bmatrix},
+f(\mathbf{x}) - f(\mathbf{x}_0) \approx \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H} f (\mathbf{x}_0)(\mathbf{x}-\mathbf{x}_0).
 $$
 
-where we matched the shape of the column vector $\mathbf{x}$.
-
-If we write out our function into components this is
-
-$$
-f(\mathbf{x}) = \sum_{i = 1}^{n} \beta_ix_i = \beta_1x_1 + \cdots + \beta_nx_n.
-$$
-
-If we now take the partial derivative with respect to say $x_1$, note that everything is zero but the first term, which is just $\beta_1$ multiplied by $x_1$, so we obtain that
-
-$$
-\frac{\partial f}{\partial x_1} = \beta_1,
-$$
-
-or more generally that
-
-$$
-\frac{\partial f}{\partial x_i} = \beta_i.
-$$
-
-We can now reassemble this into a matrix to see
-
-$$
-\frac{\partial f}{\partial \mathbf{x}} = \begin{bmatrix}
-\frac{\partial f}{\partial x_1} \\
-\vdots \\
-\frac{\partial f}{\partial x_n}
-\end{bmatrix} = \begin{bmatrix}
-\beta_1 \\
-\vdots \\
-\beta_n
-\end{bmatrix} = \boldsymbol{\beta}.
-$$
-
-This illustrates a few factors about matrix calculus that we will often encounter throughout this section:
-
-* First, The computations will get rather involved.
-* Second, The final results are much cleaner than the intermediate process, and will always look similar to the single variable case.  In this case, note that $\frac{d}{dx}(bx) = b$ and $\frac{\partial}{\partial \mathbf{x}} (\boldsymbol{\beta}^\top\mathbf{x}) = \boldsymbol{\beta}$ are both similar.
-* Third, transposes can often appear seemingly from nowhere.  The core reason for this is the convention that we match the shape of the denominator, thus when we multiply matrices, we will need to take transposes to match back to the shape of the original term.
-
-To keep building intuition, let's try a computation that is a little harder.  Suppose that we have a column vector $\mathbf{x}$, and a square matrix $A$ and we want to compute
-
-$$\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x}).$$
-:eqlabel:`eq_mdl-mat_goal_1`
-
-To drive towards easier to manipulate notation, let's consider this problem using Einstein notation.  In this case we can write the function as
-
-$$
-\mathbf{x}^\top A \mathbf{x} = x_ia_{ij}x_j.
-$$
-
-To compute our derivative, we need to understand for every $k$, what is the value of
-
-$$
-\frac{\partial}{\partial x_k}(\mathbf{x}^\top A \mathbf{x}) = \frac{\partial}{\partial x_k}x_ia_{ij}x_j.
-$$
-
-By the product rule, this is
-
-$$
-\frac{\partial}{\partial x_k}x_ia_{ij}x_j = \frac{\partial x_i}{\partial x_k}a_{ij}x_j + x_ia_{ij}\frac{\partial x_j}{\partial x_k}.
-$$
-
-For a term like $\frac{\partial x_i}{\partial x_k}$, it is not hard to see that this is one when $i=k$ and zero otherwise.  This means that every term where $i$ and $k$ are different vanish from this sum, so the only terms that remain in that first sum are the ones where $i=k$.  The same reasoning holds for the second term where we need $j=k$.  This gives
-
-$$
-\frac{\partial}{\partial x_k}x_ia_{ij}x_j = a_{kj}x_j + x_ia_{ik}.
-$$
-
-Now, the names of the indices in Einstein notation are arbitrary---the fact that $i$ and $j$ are different is immaterial to this computation at this point, so we can re-index so that they both use $i$ to see that
-
-$$
-\frac{\partial}{\partial x_k}x_ia_{ij}x_j = a_{ki}x_i + x_ia_{ik} = (a_{ki} + a_{ik})x_i.
-$$
-
-Now, here is where we start to need some practice to go further.  Let's try and identify this outcome in terms of matrix operations.  $a_{ki} + a_{ik}$ is the $k, i$-th component of $\mathbf{A} + \mathbf{A}^\top$.  This gives
-
-$$
-\frac{\partial}{\partial x_k}x_ia_{ij}x_j = [\mathbf{A} + \mathbf{A}^\top]_{ki}x_i.
-$$
-
-Similarly, this term is now the product of the matrix $\mathbf{A} + \mathbf{A}^\top$ by the vector $\mathbf{x}$, so we see that
-
-$$
-\left[\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x})\right]_k = \frac{\partial}{\partial x_k}x_ia_{ij}x_j = [(\mathbf{A} + \mathbf{A}^\top)\mathbf{x}]_k.
-$$
-
-Thus, we see that the $k$-th entry of the desired derivative from :eqref:`eq_mdl-mat_goal_1` is just the $k$-th entry of the vector on the right, and thus the two are the same.  Thus yields
-
-$$
-\frac{\partial}{\partial \mathbf{x}}(\mathbf{x}^\top A \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}.
-$$
-
-This required significantly more work than our last one, but the final result is small.  More than that, consider the following computation for traditional single variable derivatives:
-
-$$
-\frac{d}{dx}(xax) = \frac{dx}{dx}ax + xa\frac{dx}{dx} = (a+a)x.
-$$
-
-Equivalently $\frac{d}{dx}(ax^2) = 2ax = (a+a)x$.  Again, we get a result that looks rather like the single variable result but with a transpose tossed in.
-
-At this point, the pattern should be looking rather suspicious, so let's try to figure out why.  When we take matrix derivatives like this, let's first assume that the expression we get will be another matrix expression: an expression we can write it in terms of products and sums of matrices and their transposes.  If such an expression exists, it will need to be true for all matrices.  In particular, it will need to be true of $1 \times 1$ matrices, in which case the matrix product is just the product of the numbers, the matrix sum is just the sum, and the transpose does nothing at all!  In other words, whatever expression we get *must* match the single variable expression.  This means that, with some practice, one can often guess matrix derivatives just by knowing what the associated single variable expression must look like!
-
-Let's try this out.  Suppose that $\mathbf{X}$ is a $n \times m$ matrix, $\mathbf{U}$ is an $n \times r$ and $\mathbf{V}$ is an $r \times m$.  Let's try to compute
-
-$$\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2} = \;?$$
-:eqlabel:`eq_mdl-mat_goal_2`
-
-This computation is important in an area called matrix factorization.  For us, however, it is just a derivative to compute.  Let's try to imagine what this would be for $1\times1$ matrices.  In that case, we get the expression
-
-$$
-\frac{d}{dv} (x-uv)^{2}= -2(x-uv)u,
-$$
-
-where, the derivative is rather standard.  If we try to convert this back into a matrix expression we get
-
-$$
-\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2(\mathbf{X} - \mathbf{U}\mathbf{V})\mathbf{U}.
-$$
-
-However, if we look at this it does not quite work.  Recall that $\mathbf{X}$ is $n \times m$, as is $\mathbf{U}\mathbf{V}$, so the matrix $2(\mathbf{X} - \mathbf{U}\mathbf{V})$ is $n \times m$.  On the other hand $\mathbf{U}$ is $n \times r$, and we cannot multiply a $n \times m$ and a $n \times r$ matrix since the dimensions do not match!
-
-We want to get $\frac{\partial}{\partial \mathbf{V}}$, which is the same shape as $\mathbf{V}$, which is $r \times m$.  So somehow we need to take a $n \times m$ matrix and a $n \times r$ matrix, multiply them together (perhaps with some transposes) to get a $r \times m$. We can do this by multiplying $U^\top$ by $(\mathbf{X} - \mathbf{U}\mathbf{V})$.  Thus, we can guess the solution to :eqref:`eq_mdl-mat_goal_2` is
-
-$$
-\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
-$$
-
-To show that this works, we would be remiss to not provide a detailed computation.  If we already believe that this rule-of-thumb works, feel free to skip past this derivation.  To compute
-
-$$
-\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^2,
-$$
-
-we must find for every $a$, and $b$
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \frac{\partial}{\partial v_{ab}} \sum_{i, j}\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)^2.
-$$
-
-Recalling that all entries of $\mathbf{X}$ and $\mathbf{U}$ are constants as far as $\frac{\partial}{\partial v_{ab}}$ is concerned, we may push the derivative inside the sum, and apply the chain rule to the square to get
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= \sum_{i, j}2\left(x_{ij} - \sum_k u_{ik}v_{kj}\right)\left(-\sum_k u_{ik}\frac{\partial v_{kj}}{\partial v_{ab}} \right).
-$$
-
-As in the previous derivation, we may note that $\frac{\partial v_{kj}}{\partial v_{ab}}$ is only non-zero if the $k=a$ and $j=b$.  If either of those conditions do not hold, the term in the sum is zero, and we may freely discard it.  We see that
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}\left(x_{ib} - \sum_k u_{ik}v_{kb}\right)u_{ia}.
-$$
-
-An important subtlety here is that the requirement that $k=a$ does not occur inside the inner sum since that $k$ is a dummy variable which we are summing over inside the inner term.  For a notationally cleaner example, consider why
-
-$$
-\frac{\partial}{\partial x_1} \left(\sum_i x_i \right)^{2}= 2\left(\sum_i x_i \right).
-$$
-
-From this point, we may start identifying components of the sum.  First,
-
-$$
-\sum_k u_{ik}v_{kb} = [\mathbf{U}\mathbf{V}]_{ib}.
-$$
-
-So the entire expression in the inside of the sum is
-
-$$
-x_{ib} - \sum_k u_{ik}v_{kb} = [\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}.
-$$
-
-This means we may now write our derivative as
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}u_{ia}.
-$$
-
-We want this to look like the $a, b$ element of a matrix so we can use the technique as in the previous example to arrive at a matrix expression, which means that we need to exchange the order of the indices on $u_{ia}$.  If we notice that $u_{ia} = [\mathbf{U}^\top]_{ai}$, we can then write
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\sum_{i} [\mathbf{U}^\top]_{ai}[\mathbf{X}-\mathbf{U}\mathbf{V}]_{ib}.
-$$
-
-This is a matrix product, and thus we can conclude that
-
-$$
-\frac{\partial}{\partial v_{ab}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2[\mathbf{U}^\top(\mathbf{X}-\mathbf{U}\mathbf{V})]_{ab}.
-$$
-
-and thus we may write the solution to :eqref:`eq_mdl-mat_goal_2`
-
-$$
-\frac{\partial}{\partial \mathbf{V}} \|\mathbf{X} - \mathbf{U}\mathbf{V}\|_2^{2}= -2\mathbf{U}^\top(\mathbf{X} - \mathbf{U}\mathbf{V}).
-$$
-
-This matches the solution we guessed above!
-
-It is reasonable to ask at this point, "Why can I not just write down matrix versions of all the calculus rules I have learned?  It is clear this is still mechanical.  Why do we not just get it over with!"  And indeed there are such rules and :cite:`Petersen.Pedersen.ea.2008` provides an excellent summary.  However, due to the plethora of ways matrix operations can be combined compared to single values, there are many more matrix derivative rules than single variable ones.  It is often the case that it is best to work with the indices, or leave it up to automatic differentiation when appropriate.
+Whether $f$ goes up or down as we leave $\mathbf{x}_0$ is governed entirely by
+the sign of this quadratic form — that is, by the *definiteness* of the
+symmetric matrix $\mathbf{H}$. The classification is read straight off the
+eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
+:numref:`subsec_mdl-psd`:
+
+* $\mathbf{H} \succ 0$ (all eigenvalues positive): $f$ curves *upward* in every
+  direction, so $\mathbf{x}_0$ is a strict local **minimum**.
+* $\mathbf{H} \prec 0$ (all eigenvalues negative): $f$ curves downward
+  everywhere, so $\mathbf{x}_0$ is a local **maximum**.
+* $\mathbf{H}$ *indefinite* (eigenvalues of both signs): $f$ rises along some
+  directions and falls along others — a **saddle**.
+* $\mathbf{H} \succeq 0$ with a zero eigenvalue (semidefinite): the quadratic is
+  flat along that eigenvector and second order is *inconclusive*; the behavior
+  is decided by higher-order terms.
+
+This is the multivariable generalization of the single-variable test $f'' > 0$:
+there, curvature is a single number; here it is a matrix, and "positive
+curvature" becomes "positive definite." Positive (semi)definiteness of the
+Hessian is the reason the second-order optimality conditions used throughout
+optimization take the form they do, and :eqref:`eq_mdl-quadform` makes the
+upward-curving picture precise as a weighted sum of squares over the eigenvector
+directions.
+
+## A Bridge to Matrix Calculus
+
+Everything above differentiated a *scalar* loss with respect to a vector of
+parameters, packaging the partials into the gradient $\nabla L$. Real layers,
+however, map *vectors to vectors* and carry *matrix* parameters, so the natural
+derivative becomes a matrix of partials — the *Jacobian* — and the gradient and
+Hessian are special cases of it. The pleasant surprise is that derivatives of
+matrix expressions are often as clean as their scalar analogues: for a fixed
+vector $\boldsymbol{\beta}$ one finds
+$\frac{\partial}{\partial \mathbf{x}}(\boldsymbol{\beta}^\top\mathbf{x}) =
+\boldsymbol{\beta}$, the exact echo of $\frac{d}{dx}(bx) = b$.
+
+We do not develop the Jacobian machinery, the numerator/denominator layout
+conventions, the standard matrix-derivative identities, or how all of this
+yields backpropagation as reverse-mode automatic differentiation here. That is
+the dedicated subject of :numref:`sec_mdl-matrix-calculus-autodiff`, where these
+ideas are treated in full.
 
 ## Summary
 
-* In higher dimensions, we can define gradients which serve the same purpose as derivatives in one dimension.  These allow us to see how a multi-variable function changes when we make an arbitrary small change to the inputs.
-* The backpropagation algorithm can be seen to be a method of organizing the multi-variable chain rule to allow for the efficient computation of many partial derivatives.
-* Matrix calculus allows us to write the derivatives of matrix expressions in concise ways.
+* The *gradient* $\nabla_{\mathbf{w}} L$ is the derivative in many dimensions: it
+  gives the first-order change $L(\mathbf{w}+\boldsymbol{\epsilon}) \approx
+  L(\mathbf{w}) + \boldsymbol{\epsilon}\cdot\nabla_{\mathbf{w}} L$, and its dot
+  product with a unit direction is the rate of change along that direction.
+* By Cauchy–Schwarz, $+\nabla L$ is the direction of steepest ascent and
+  $-\nabla L$ of steepest descent, and the gradient is everywhere orthogonal to
+  the level sets of $L$ — the geometry behind gradient descent.
+* The multivariate *chain rule* sums, over every path from an input to the
+  output, the product of edge derivatives. Organizing it from the output
+  backward reuses every intermediate, giving *backpropagation*: a forward pass
+  followed by a backward pass that yields the gradient with respect to all
+  parameters at once.
+* The symmetric *Hessian* supplies the second-order Taylor approximation; at a
+  critical point its definiteness — read from its eigenvalues — distinguishes a
+  minimum, a maximum, and a saddle.
 
 ## Exercises
-1. Given a column vector $\boldsymbol{\beta}$, compute the derivatives of both $f(\mathbf{x}) = \boldsymbol{\beta}^\top\mathbf{x}$ and $g(\mathbf{x}) = \mathbf{x}^\top\boldsymbol{\beta}$.  Why do you get the same answer?
-2. Let $\mathbf{v}$ be an $n$ dimension vector. What is $\frac{\partial}{\partial\mathbf{v}}\|\mathbf{v}\|_2$?
-3. Let $L(x, y) = \log(e^x + e^y)$.  Compute the gradient.  What is the sum of the components of the gradient?
-4. Let $f(x, y) = x^2y + xy^2$. Show that the only critical point is $(0,0)$. By considering $f(x, x)$, determine if $(0,0)$ is a maximum, minimum, or neither.
-5. Suppose that we are minimizing a function $f(\mathbf{x}) = g(\mathbf{x}) + h(\mathbf{x})$.  How can we geometrically interpret the condition of $\nabla f = 0$ in terms of $g$ and $h$?
+1. Let $L(x, y) = \log(e^x + e^y)$. Compute the gradient, and verify that the
+   sum of its components is always $1$. What does that say about the directions
+   in which $L$ grows fastest?
+2. For $f(x, y) = x^2 + 2y^2$, compute $\nabla f$ and verify at a sample point on
+   the ellipse $f = c$ that the gradient is orthogonal to the level curve.
+3. Prove directly from :eqref:`eq_mdl-nabla_use` that at a local minimum the
+   gradient must vanish.
+4. Let $f(x, y) = x^2y + xy^2$. Show that $(0,0)$ is the only critical point. By
+   examining $f(x, x)$ and $f(x, -x)$, determine whether it is a minimum, a
+   maximum, or a saddle, and confirm by computing the Hessian there.
+5. Classify the critical point of $f(x, y) = x^2 - y^2$ by inspecting the
+   eigenvalues of its (constant) Hessian. Why is this point a saddle?
+6. Give a two-variable $f$ whose Hessian at a critical point is positive
+   *semidefinite* (one zero eigenvalue) yet the point is not a local minimum.
+   Why does the second-derivative test go silent here?
+7. Suppose we minimize $f(\mathbf{x}) = g(\mathbf{x}) + h(\mathbf{x})$. Interpret
+   the condition $\nabla f = \mathbf{0}$ geometrically in terms of $\nabla g$ and
+   $\nabla h$.
 
 
 :begin_tab:`mxnet`
@@ -986,10 +894,11 @@ bundles them into the vector pointing across level sets.
 @multivariable-calculus-higher-dimensional-differentiation
 :::
 
-::: {.slide title="Optimization in many dimensions"}
-GD: $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$.
-Newton: $\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f]^{-1} \nabla f$.
-The latter is exact for quadratics, expensive in high dim:
+::: {.slide title="Geometry of the gradient"}
+$L(\mathbf{w}+\mathbf{v}) - L(\mathbf{w}) \approx \|\nabla L\|\cos\theta$:
+steepest ascent at $\theta=0$, steepest descent at $\theta=\pi$
+(Cauchy–Schwarz), and $\nabla L \perp$ the level sets. A critical
+point $\nabla L = \mathbf{0}$ is *necessary* for a minimum:
 
 @multivariable-calculus-a-note-on-mathematical-optimization
 :::

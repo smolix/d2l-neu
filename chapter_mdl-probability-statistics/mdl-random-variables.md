@@ -561,27 +561,105 @@ probabilistic meaning.
 
 ### Conditional Densities and Independence
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** Having the joint and the marginal, the missing piece is *conditioning*: how the density of $X$ updates once we learn $Y=y$. This is the continuous analogue of conditional probability and the density-level statement of independence — and it is exactly the structure the naive Bayes classifier exploits.
-**Outline:** 1. Define the conditional density as the joint divided by the marginal. · 2. The continuous chain rule and Bayes' rule for densities. · 3. Independence as factorization of the joint; contrast with "uncorrelated."
-**Key results to state:** $p_{X\mid Y}(x\mid y) = \dfrac{p_{X,Y}(x,y)}{p_Y(y)}$ for $p_Y(y) > 0$; chain rule $p_{X,Y}(x,y) = p_{X\mid Y}(x\mid y)\,p_Y(y)$; Bayes $p_{X\mid Y}(x\mid y) = \dfrac{p_{Y\mid X}(y\mid x)\,p_X(x)}{p_Y(y)}$; independence $\iff p_{X,Y}(x,y) = p_X(x)\,p_Y(y)$ for all $x,y$ $\iff p_{X\mid Y}(x\mid y) = p_X(x)$.
-**Diagrams:** reuse :numref:`fig_mdl-marginal` (a horizontal slice of the joint array at fixed $y$, renormalized, *is* the conditional density).
-**Worked example(s):** for the joint $p(x,y)=4xy$ on $[0,1]^2$, compute $p_Y(y)=2y$, then $p_{X\mid Y}(x\mid y)=2x$ independent of $y$, hence $X \perp Y$; contrast with a non-factorizing joint where conditioning shifts the density.
-**Exercises (draft):** (1) show $X \perp Y \implies \operatorname{Cov}(X,Y)=0$ and exhibit the converse failing (callback to the $X=Y^2$ example); (2) given a joint on a triangle, find $p_{X\mid Y}$ and decide independence.
-**Prereqs / cross-refs:** the Marginal and Covariance subsections above; main-book Bayes in :numref:`sec_prob`; sets up :numref:`sec_mdl-naive_bayes`.
-:::
+With the joint and the marginal in hand, the last piece is *conditioning*: how the
+density of $X$ should update once we learn that $Y=y$. The discrete rule
+$P(X\mid Y)=P(X,Y)/P(Y)$ carries over verbatim to densities. We define the
+**conditional density**
+
+$$
+p_{X\mid Y}(x\mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}, \qquad p_Y(y) > 0.
+$$
+:eqlabel:`eq_mdl-cond_density`
+
+For each fixed $y$ this is a genuine density in $x$: it is non-negative, and
+dividing the joint by exactly $p_Y(y)=\int p_{X,Y}(x,y)\,dx$ is precisely what makes
+it integrate to one. Geometrically it is a horizontal slice of the joint surface
+at height $y$, renormalized to unit area --- the continuous analogue of reading one
+row of the array in :numref:`fig_mdl-marginal`. Rearranging :eqref:`eq_mdl-cond_density`
+gives the **chain rule** $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)$, and writing it
+both ways ($p_{X,Y}=p_{X\mid Y}\,p_Y=p_{Y\mid X}\,p_X$) and equating yields **Bayes'
+rule for densities**,
+
+$$
+p_{X\mid Y}(x\mid y) = \frac{p_{Y\mid X}(y\mid x)\,p_X(x)}{p_Y(y)},
+$$
+:eqlabel:`eq_mdl-bayes_density`
+
+the engine of every Bayesian update in this book.
+
+The sharpest special case is when learning $Y$ tells us *nothing* about $X$.
+
+**Proposition (independence).** *The following are equivalent: (i) the joint
+factorizes, $p_{X,Y}(x,y)=p_X(x)\,p_Y(y)$ for all $x,y$; (ii) the conditional equals
+the marginal, $p_{X\mid Y}(x\mid y)=p_X(x)$ whenever $p_Y(y)>0$. When either holds we
+call $X$ and $Y$ independent, $X\perp Y$.*
+
+**Proof.** If (i) holds, then $p_{X\mid Y}(x\mid y)=p_X(x)p_Y(y)/p_Y(y)=p_X(x)$, which
+is (ii). Conversely, if (ii) holds, multiply by $p_Y(y)$ and use the chain rule:
+$p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)=p_X(x)\,p_Y(y)$, which is (i). $\blacksquare$
+
+As a worked example, take the joint $p_{X,Y}(x,y)=4xy$ on the unit square
+$[0,1]^2$ (it integrates to one). The marginal is $p_Y(y)=\int_0^1 4xy\,dx=2y$, so
+$p_{X\mid Y}(x\mid y)=4xy/2y=2x$ --- *independent of $y$*. The conditional never
+changes as $y$ varies, so by the proposition $X\perp Y$. A joint that does not
+factor this way --- say one supported on the triangle $x\le y$ --- has a conditional
+whose support and shape shift with $y$, the signature of dependence.
+
+Independence is a strong, all-of-the-distribution statement. It is strictly
+stronger than being *uncorrelated* (zero covariance), which constrains only the
+linear relationship; we make the gap precise in the covariance subsection below.
+This factorized structure is also exactly what the naive Bayes classifier of
+:numref:`sec_mdl-naive_bayes` assumes across features to make high-dimensional
+densities tractable.
 
 ### Change of Variables for Densities
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** When we push a random variable through a function $Y=g(X)$, its density is *not* simply $p_X(g^{-1}(y))$ — probability mass must be conserved as the map stretches and compresses space, and the correction factor is a Jacobian determinant. This single formula is the mathematical engine behind normalizing flows.
-**Outline:** 1. The 1-D rule via "probability in = probability out" over matched intervals. · 2. The multivariate rule with the absolute Jacobian determinant. · 3. Why $\log p$ acquires an additive $\log|\det J|$ term, and the forward reference to flows.
-**Key results to state:** 1-D: $p_Y(y) = p_X\!\big(g^{-1}(y)\big)\,\left|\dfrac{d g^{-1}}{dy}\right|$ for monotone $g$; multivariate: $p_Y(\mathbf{y}) = p_X\!\big(g^{-1}(\mathbf{y})\big)\,\left|\det J_{g^{-1}}(\mathbf{y})\right|$, equivalently $\log p_Y(\mathbf{y}) = \log p_X(\mathbf{x}) - \log\left|\det J_g(\mathbf{x})\right|$.
-**Diagrams:** `fig_mdl-change-of-vars` — a 1-D base density mapped through a monotone $g$, with an interval of width $dx$ stretched to width $dy$ and the two shaded areas drawn equal, making the $|dg^{-1}/dy|$ rescaling visible.
-**Worked example(s):** $X \sim \mathcal{N}(0,1)$, $Y = e^X$ → derive the log-normal density (this is the planned Exercise 3); a linear map $\mathbf{y} = A\mathbf{x}$ scaling the density by $1/|\det A|$.
-**Exercises (draft):** (1) density of $Y = aX + b$; (2) density of $Y = X^2$ for $X\sim\mathcal{N}(0,1)$ (note the two-branch inverse); (3) verify $\log|\det J|$ is additive for a composition $g_2 \circ g_1$.
-**Prereqs / cross-refs:** :numref:`sec_mdl-integral_calculus` (change of variables / Jacobian determinant), Ch1 (determinant as volume scaling); load-bearing for normalizing flows in :numref:`sec_mdl-score-matching-diffusion-flow`.
-:::
+When we push a random variable through a function $Y=g(X)$, its density is *not*
+simply $p_X\!\big(g^{-1}(y)\big)$. Probability mass must be conserved as the map
+stretches and compresses the line, and that conservation forces a Jacobian
+correction --- the same "probability in equals probability out" bookkeeping that
+turned into a rescaling factor for areas in :numref:`fig_mdl-rect-transform`.
+
+Take $g$ monotone, so it has an inverse. The mass in a tiny interval must survive
+the map: $p_Y(y)\,|dy| = p_X(x)\,|dx|$ with $y=g(x)$. Solving for the new density
+and writing $x=g^{-1}(y)$ gives the **one-dimensional change-of-variables formula**
+
+$$
+p_Y(y) = p_X\!\big(g^{-1}(y)\big)\,\left|\frac{d g^{-1}}{dy}(y)\right|.
+$$
+:eqlabel:`eq_mdl-cov_density_1d`
+
+The derivative factor is exactly the local stretch of the map: where $g$ spreads a
+small interval out, the density must drop to keep the area fixed. In several
+dimensions the scalar stretch becomes the absolute **Jacobian determinant** --- the
+local volume-scaling factor of :numref:`sec_mdl-integral_calculus`, itself the
+determinant-as-volume of :numref:`sec_mdl-geometry-linear-algebraic-ops`:
+
+$$
+p_Y(\mathbf y) = p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|,
+\qquad\text{equivalently}\qquad
+\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|.
+$$
+:eqlabel:`eq_mdl-cov_density`
+
+The log form is the one that matters in practice: pushing data through an
+invertible network adds a single $-\log|\det J_g|$ term to the log-density, and
+because $\log|\det(J_2 J_1)| = \log|\det J_1| + \log|\det J_2|$ these terms simply
+*sum* along a composition of layers. That additivity is the entire mathematical
+engine behind **normalizing flows** (:numref:`sec_mdl-score-matching-diffusion-flow`).
+
+As a worked example, let $X\sim\mathcal N(0,1)$ and $Y=e^X$, so $g^{-1}(y)=\log y$
+and $|dg^{-1}/dy| = 1/y$ for $y>0$. Formula :eqref:`eq_mdl-cov_density_1d` gives the
+**log-normal** density
+
+$$
+p_Y(y) = \frac{1}{y\sqrt{2\pi}}\,\exp\!\Big(-\tfrac12(\log y)^2\Big), \qquad y>0,
+$$
+
+whose $1/y$ prefactor is precisely the change-of-variables correction. A linear map
+$\mathbf y = A\mathbf x$ illustrates the multivariate rule in one stroke: $J_g=A$ is
+constant, so the density is rescaled uniformly by $1/|\det A|$ --- stretch space by
+$|\det A|$ and the density thins by the same factor.
 
 ### Covariance
 :label:`subsec_mdl-covariance`

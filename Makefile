@@ -99,6 +99,11 @@ SLIDES_FILTER ?= $(FILES)
 # Includes top-level index.md (landing page), which d2l_preprocess.py
 # converts to index.qmd alongside the chapter files.
 SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md) $(SOURCE)/index.md
+# Mathematics-for-Deep-Learning chapters are NOT in d2l_preprocess.py's
+# CHAPTER_NUMBERING, so the default (no --files) preprocess skips them. List
+# them (source-relative) so the recipe can regenerate their .qmd explicitly —
+# otherwise `make html` never picks up edits to chapter_mdl-*/*.md.
+MDL_MDS := $(patsubst $(SOURCE)/%,%,$(wildcard $(SOURCE)/chapter_mdl-*/*.md))
 TOOLS   := $(wildcard tools/*.py)
 
 # Logging: each recipe logs to logs/<target>-YYYYMMDD-HHMMSS.log
@@ -152,6 +157,21 @@ help:
 # ── d2l library ────────────────────────────────────────────
 
 lib: d2l/.built
+
+# ── Illustrative figures (committed SVGs; see the mdl-figure skill) ──
+# Regenerate every committed img/mdl-*.svg from its generator. The shared house
+# style lives in tools/gen_mdl_figures.py (Linear Algebra); each other chapter
+# has tools/gen_mdl_<chapter>_figures.py that imports that style. Output is
+# byte-idempotent (svg.hashsalt + metadata Date:None), so CI can gate on a clean
+# `git diff img/` after running this. Notebooks never draw figures — they
+# include these SVGs (see CLAUDE.md "Content authoring").
+.PHONY: figures
+figures: | .venv-pytorch/.synced
+	@.venv-pytorch/bin/python tools/gen_mdl_figures.py
+	@for g in $$(ls tools/gen_mdl_*_figures.py 2>/dev/null); do \
+		echo "=== $$g ==="; .venv-pytorch/bin/python $$g || exit 1; \
+	done
+	@echo "Figures regenerated into img/ (verify: git diff --stat img/)"
 
 # ── Committed outputs store (decoupled build; see docs/build-system.md) ──
 # capture-outputs   distill executed _notebooks/ → committed outputs/ store
@@ -315,6 +335,8 @@ html: _book/index.html
 .preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py tools/gen_api_doc.py d2l/.built
 	@echo "=== Preprocessing .md → .qmd ==="
 	python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch
+	@echo "=== Preprocessing Mathematics-for-Deep-Learning chapters (not in CHAPTER_NUMBERING) ==="
+	python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch --files $(MDL_MDS)
 	python3 tools/gen_api_doc.py
 	@touch $@
 

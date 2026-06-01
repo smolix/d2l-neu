@@ -49,13 +49,14 @@ chapter reports `0 error(s), 0 warning(s)`.
 The committed SVGs must be byte-stable, or every regen churns the repo. Confirm:
 
 ```bash
-.venv-pytorch/bin/python tools/gen_mdl_figures.py
-git diff --stat img/        # MUST be empty
+make figures               # runs gen_mdl_figures.py + every gen_mdl_*_figures.py
+git diff --stat img/       # MUST be empty
 ```
 
 A non-empty diff means a figure picked up a timestamp/random id — check it uses
-`save()` (not a bare `fig.savefig`) and didn't drop `svg.hashsalt` /
-`metadata={'Date': None}` from the generator's style block.
+`fl.save()` (not a bare `fig.savefig`) and that the chapter generator imports the
+shared style from `gen_mdl_figures.py` (so it inherits `svg.hashsalt` /
+`metadata={'Date': None}`) rather than redefining its own rcParams.
 
 ## 3. Judgment checks (read the rendered chapter)
 

@@ -114,12 +114,16 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
   matplotlib plumbing that teaches nothing. Keep teaching code compact and
   elegant.
 - **Illustrative figures are pre-generated, never drawn inline.** Conceptual /
-  schematic / illustrative figures are produced by a committed matplotlib
-  generator (`tools/gen_mdl_figures.py` → `img/<id>.svg`) and included as
+  schematic / illustrative figures are produced by committed matplotlib
+  generators → `img/mdl-<chapter>-<id>.svg` and included as
   `![caption](../img/<id>.svg)` + `:label:`fig_…`` with **no drawing code** in
-  the notebook — exactly like the slide SVGs. To change a figure, edit the
-  generator and re-run it; commit the `.svg`. (Data plots that *teach* a
-  computed result, e.g. a loss curve, may stay as a short `d2l.plot(...)` cell.)
+  the notebook — exactly like the slide SVGs. The shared house style lives in
+  `tools/gen_mdl_figures.py` (also the Linear Algebra figures); each other
+  chapter has `tools/gen_mdl_<chapter>_figures.py` that imports it. To change a
+  figure, edit its generator and run `make figures` (byte-idempotent); commit
+  the `.svg`. Use the **`mdl-figure`** skill to add one and **`figure-style-audit`**
+  to check a chapter. (Data plots that *teach* a computed result, e.g. a loss
+  curve, may stay as a short `d2l.plot(...)` cell.)
 - **One figure style per chapter.** Use a single consistent look (the
   generator's shared style). Do not mix hand-drawn SVGs, inline matplotlib, and
   generated plots in the same chapter — reproduce stragglers in the chosen style.

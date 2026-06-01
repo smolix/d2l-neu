@@ -30,7 +30,24 @@ change one of those figures correctly.
   draw*.)
 - **Never** put figure-drawing matplotlib plumbing in a notebook cell.
 
-## The generator (source of truth for style)
+## Where figures live (per-chapter generators, one shared style)
+
+The house style lives **once** in `tools/gen_mdl_figures.py` (which also holds the
+Linear Algebra figures). Every other chapter has its own generator
+`tools/gen_mdl_<chapter>_figures.py` (calculus, probability, infotheory,
+optimization, dynamics) that **imports** the style from `gen_mdl_figures.py`:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gen_mdl_figures as fl   # importing applies the shared rcParams/hashsalt
+np, plt = fl.np, fl.plt
+BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+```
+
+Then it uses `fl.save`, `fl.arrow`, `fl.right_angle`, `fl.clean_axes`,
+`fl.axis_cross`, `fl.vlabel` and the palette by name. `make figures` runs
+`gen_mdl_figures.py` plus every `gen_mdl_*_figures.py`.
 
 `tools/gen_mdl_figures.py` defines, once:
 
@@ -55,25 +72,27 @@ existing `fig_*` that is closest to what you need.
    prefix; for a new chapter, choose a short slug and use it consistently. IDs
    never change once written (they're referenced by `:label:`).
 
-2. **Write `fig_<id>()`** in `tools/gen_mdl_figures.py`, near the other figures
-   of that chapter. Build the axes with `clean_axes()`/`axis_cross()`, draw with
-   `arrow()`/`right_angle()`/`vlabel()` and the palette, and **compute real
-   numbers** where the picture must be exact (apply the matrix, call
-   `np.linalg.eig`/`svd`, sample) — the figures teach by being accurate, not
-   sketched. End with `save(fig, "mdl-<prefix>-<id>")`.
+2. **Write `fig_<id>()`** in the chapter's generator
+   (`tools/gen_mdl_<chapter>_figures.py`; Linear Algebra lives in
+   `gen_mdl_figures.py` itself). Build the axes with `clean_axes()`/
+   `axis_cross()`, draw with `arrow()`/`right_angle()`/`vlabel()` and the
+   palette, and **compute real numbers** where the picture must be exact (apply
+   the matrix, call `np.linalg.eig`/`svd`, integrate, sample with a seeded RNG) —
+   the figures teach by being accurate, not sketched. End with
+   `fl.save(fig, "mdl-<prefix>-<id>")`. If the chapter has no generator yet,
+   create one with the import header above.
 
-3. **Register it** by adding `fig_<id>` to the `FIGURES` list (under the
-   chapter's comment block).
+3. **Register it** by adding `fig_<id>` to that file's `FIGURES` list.
 
 4. **Generate** (CPU, fast):
 
    ```bash
-   .venv-pytorch/bin/python tools/gen_mdl_figures.py
+   make figures        # runs gen_mdl_figures.py + every gen_mdl_*_figures.py
    ```
 
-   It writes every `img/mdl-*.svg` and self-verifies each is present, non-empty,
-   and valid SVG. Confirm your new file changed and **re-run once more** to
-   confirm `git diff` is now empty (idempotence).
+   Each generator self-verifies its SVGs are present, non-empty, and valid.
+   Confirm your new file changed, then **re-run** and confirm `git diff img/` is
+   empty (idempotence — `make figures` is byte-stable).
 
 5. **Include it in the chapter `.md`** (the source of truth — never the `.qmd`):
 

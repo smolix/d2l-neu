@@ -567,7 +567,7 @@ def fig_power_iter():
     """(a) fan of arrows: a unit vector under repeated A-then-renormalize
     swinging onto the dominant eigenvector; (b) the ratio ||A^{k+1}v||/||A^k v||
     converging to |lambda_1|."""
-    A = np.array([[2.0, 1.0], [1.0, 2.0]])  # symmetric; eigvals 3 (dominant), 1
+    A = np.array([[3.0, 1.0], [1.0, 2.0]])  # symmetric; eigvals (5±√5)/2 ≈ 3.618, 1.382
     w, V = np.linalg.eigh(A)
     order = np.argsort(-np.abs(w))
     lam1 = w[order[0]]
@@ -613,7 +613,7 @@ def fig_power_iter():
     ks = np.arange(1, len(ratios) + 1)
     axb.plot(ks, ratios, "o-", color=BLUE, ms=5)
     axb.axhline(abs(lam1), color=GRAY, ls="--", lw=1.4)
-    axb.text(ks[-1], abs(lam1) + 0.06, rf"$|\lambda_1|={abs(lam1):.0f}$",
+    axb.text(ks[-1], abs(lam1) + 0.06, rf"$|\lambda_1|\approx{abs(lam1):.3g}$",
              ha="right", va="bottom", color=GRAY, fontsize=10)
     axb.set_xlabel("iteration $k$")
     axb.set_ylabel(r"$\|A^{k+1}v\|/\|A^k v\|$")

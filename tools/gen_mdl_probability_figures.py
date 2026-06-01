@@ -37,57 +37,52 @@ from matplotlib.patches import Rectangle  # noqa: E402
 # =========================================================================== #
 
 def fig_marginal():
-    """A joint-probability array p_{X,Y}(x,y) as a Blues heatmap; summing along
-    the columns (over y, for fixed x) collapses it onto the marginal p_X(x),
-    drawn as the bar strip beneath the grid.  The values are a real, normalized
-    joint PMF (a smooth bump) so the column sums shown are the true marginal."""
-    # A real joint PMF on a small grid: a Gaussian-ish bump, normalized to 1.
-    nx, ny = 10, 8
-    xs = np.arange(nx)
-    ys = np.arange(ny)
-    XX, YY = np.meshgrid(xs, ys)  # YY rows, XX cols
-    joint = np.exp(-((XX - 5.5) ** 2) / 7.0 - ((YY - 3.0) ** 2) / 4.5)
-    joint += 0.15 * np.exp(-((XX - 2.5) ** 2) / 3.0 - ((YY - 5.0) ** 2) / 2.0)
-    joint /= joint.sum()
-    marg_x = joint.sum(axis=0)  # sum down each column -> p_X(x)
+    """A continuous joint density p_{X,Y}(x,y) (Blues filled contours); integrating
+    it up a vertical strip at fixed x (over all y) collapses it onto the marginal
+    p_X(x), the curve beneath.  Real, normalized mixture-of-Gaussians density, so
+    the marginal shown is the true integral."""
+    xs = np.linspace(-3.4, 3.8, 260)
+    ys = np.linspace(-3.0, 3.6, 260)
+    X, Y = np.meshgrid(xs, ys)
+
+    def bump(mx, my, sx, sy, rho, w):
+        z = ((X - mx) ** 2 / sx ** 2
+             - 2 * rho * (X - mx) * (Y - my) / (sx * sy)
+             + (Y - my) ** 2 / sy ** 2)
+        return w * np.exp(-z / (2 * (1 - rho ** 2))) / (
+            2 * np.pi * sx * sy * np.sqrt(1 - rho ** 2))
+
+    joint = bump(0.4, 0.2, 1.0, 0.9, 0.45, 0.65) + bump(-1.2, 1.3, 0.7, 0.8, -0.2, 0.35)
+    dx, dy = xs[1] - xs[0], ys[1] - ys[0]
+    joint /= joint.sum() * dx * dy
+    marg_x = joint.sum(axis=0) * dy            # integrate over y -> p_X(x)
+    x0 = 0.4
 
     fig, (axj, axm) = plt.subplots(
-        2, 1, figsize=(5.6, 5.0), sharex=True,
-        gridspec_kw=dict(height_ratios=[ny, 3], hspace=0.08),
+        2, 1, figsize=(5.6, 5.2), sharex=True,
+        gridspec_kw=dict(height_ratios=[4, 1.5], hspace=0.12),
     )
 
-    # --- joint array ---
-    # imshow with origin lower so y increases upward like a probability table.
-    axj.imshow(joint, cmap="Blues", origin="lower", aspect="auto",
-               extent=(-0.5, nx - 0.5, -0.5, ny - 0.5),
-               vmin=0, vmax=joint.max())
-    # faint cell grid lines so it reads as an "array of probabilities"
-    for x in np.arange(-0.5, nx, 1.0):
-        axj.axvline(x, color="white", lw=0.8)
-    for y in np.arange(-0.5, ny, 1.0):
-        axj.axhline(y, color="white", lw=0.8)
-    # highlight the column being summed (fixed x) with an outline
-    col = 5
-    axj.add_patch(Rectangle((col - 0.5, -0.5), 1.0, ny, fill=False,
-                            edgecolor=ORANGE, lw=2.2, zorder=5))
-    # downward arrows from the highlighted column into the marginal strip
-    axj.annotate("", xy=(col, -0.5), xytext=(col, 1.2),
-                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=2.0))
+    # --- joint density with the integrated strip highlighted ---
+    axj.contourf(X, Y, joint, levels=12, cmap="Blues")
+    axj.axvspan(x0 - 0.07, x0 + 0.07, color=ORANGE, alpha=0.30)
+    axj.axvline(x0, color=ORANGE, lw=2.0)
+    axj.text(x0 + 0.15, ys[-1] - 0.3, r"$\int p\,dy$", color=ORANGE, va="top",
+             fontsize=10)
     axj.set_ylabel(r"$y$")
-    axj.set_yticks(ys)
-    axj.set_title(r"joint $p_{X,Y}(x,y)$", fontsize=11)
-    axj.spines["top"].set_visible(True)
-    axj.spines["right"].set_visible(True)
+    axj.set_title(r"joint density $p_{X,Y}(x,y)$", fontsize=11)
 
-    # --- marginal strip: bars of p_X(x) = sum over y ---
-    axm.bar(xs, marg_x, width=0.86, color=BLUE, edgecolor="white", lw=0.8)
-    axm.bar(col, marg_x[col], width=0.86, color=ORANGE, edgecolor="white",
-            lw=0.8, zorder=4)
+    # --- marginal density curve p_X(x) = integral over y ---
+    axm.plot(xs, marg_x, color=BLUE, lw=2.4)
+    axm.fill_between(xs, 0, marg_x, color=BLUE, alpha=0.18, lw=0)
+    axm.axvline(x0, color=ORANGE, lw=2.0)
+    axm.plot([x0], [np.interp(x0, xs, marg_x)], "o", color=ORANGE, ms=6, zorder=5)
     axm.set_xlabel(r"$x$")
     axm.set_ylabel(r"$p_X(x)$")
-    axm.set_xticks(xs)
-    axm.set_ylim(0, marg_x.max() * 1.18)
+    axm.set_ylim(0, marg_x.max() * 1.22)
     axm.set_yticks([])
+    axm.spines["top"].set_visible(False)
+    axm.spines["right"].set_visible(False)
     axm.spines["left"].set_visible(False)
 
     fl.save(fig, "mdl-prob-marginal")
@@ -478,19 +473,23 @@ def _box(ax, xy, w, h, label, fc=LIGHT):
 
 
 def fig_family_tree():
-    """Relationship map of the common distributions, inside an exponential-family
-    envelope: Bernoulli -> Binomial -> {Poisson, Gaussian} with limit arrows, and
-    Bernoulli -> Categorical -> Multinomial."""
-    fig, ax = plt.subplots(figsize=(7.6, 4.2))
-    ax.add_patch(Rectangle((-0.35, -0.35), 9.1, 4.1, facecolor=LIGHT, alpha=0.16,
+    """Relationship map of the common distributions inside an exponential-family
+    envelope.  Solid arrows *construct* or take limits (Bernoulli -> Binomial ->
+    {Poisson, Gaussian}; Bernoulli -> Categorical -> Multinomial); dashed green
+    arrows mark the *conjugate prior* of each likelihood family (Beta for
+    Bernoulli/Binomial, Gamma for Poisson, Dirichlet for Categorical/Multinomial)."""
+    fig, ax = plt.subplots(figsize=(7.8, 5.4))
+    ax.add_patch(Rectangle((-0.35, -0.35), 8.7, 4.05, facecolor=LIGHT, alpha=0.16,
                            edgecolor=GRAY, lw=1.2, ls="--", zorder=1))
-    ax.text(8.5, 3.55, "exponential family", ha="right", va="top", color=GRAY,
+    ax.text(0.05, 3.55, "exponential family", ha="left", va="top", color=GRAY,
             fontsize=9, style="italic")
     w, h = 1.95, 0.66
-    boxes = {"Bernoulli": (0.0, 1.5), "Binomial": (3.0, 2.7), "Poisson": (6.3, 2.9),
+    boxes = {"Bernoulli": (0.0, 1.5), "Binomial": (3.0, 2.6), "Poisson": (6.3, 2.9),
              "Gaussian": (6.3, 1.5), "Categorical": (3.0, 0.3),
              "Multinomial": (6.3, 0.3)}
-    centers = {k: (x + w / 2, y + h / 2) for k, (x, y) in boxes.items()}
+    priors = {"Beta": (3.0, 4.4), "Gamma": (6.3, 4.4), "Dirichlet": (6.3, -1.4)}
+    centers = {k: (x + w / 2, y + h / 2)
+               for k, (x, y) in {**boxes, **priors}.items()}
     arrows = [("Bernoulli", "Binomial", r"sum of $n$"),
               ("Binomial", "Poisson", r"$n\to\infty,\ np\to\lambda$"),
               ("Binomial", "Gaussian", r"CLT"),
@@ -503,9 +502,20 @@ def fig_family_tree():
         mid = (c0 + c1) / 2
         ax.text(mid[0], mid[1] + 0.14, lab, ha="center", va="bottom",
                 fontsize=7.0, color=GRAY)
+    # dashed conjugate-prior arrows (prior -> its likelihood family)
+    for s, t in [("Beta", "Binomial"), ("Gamma", "Poisson"),
+                 ("Dirichlet", "Multinomial")]:
+        c0, c1 = np.array(centers[s]), np.array(centers[t])
+        d = c1 - c0
+        ax.annotate("", xy=tuple(c1 - d * 0.30), xytext=tuple(c0 + d * 0.30),
+                    arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.5, ls="--"))
+    ax.text(-0.3, -1.15, "dashed: conjugate prior", color=GREEN, fontsize=8.5,
+            style="italic", va="center", ha="left")
     for k, (x, y) in boxes.items():
         _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
-    ax.set_xlim(-0.5, 8.7); ax.set_ylim(-0.5, 3.9)
+    for k, (x, y) in priors.items():
+        _box(ax, (x, y), w, h, k, fc="#e7f3e7")        # light green for priors
+    ax.set_xlim(-0.5, 8.6); ax.set_ylim(-1.9, 5.2)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
 
@@ -573,9 +583,209 @@ def fig_mvn_contours():
     fl.save(fig, "mdl-prob-mvn-contours")
 
 
+# =========================================================================== #
+# NAIVE BAYES (sec_mdl-naive_bayes): the conditional-independence graph        #
+# =========================================================================== #
+
+def fig_naive_independence():
+    """The naive-Bayes conditional-independence assumption as a graphical model,
+    beside the dependence structure it discards.  Left ("naive Bayes"): the label
+    node y fans d directed edges out to the feature nodes x_1..x_d and there are
+    NO edges among the x_i -- the visual definition of conditional independence
+    given y.  Right ("true model"): the same fan-out, plus a couple of x_i--x_j
+    edges that a real model would carry, struck out in orange to dramatize what
+    the naive assumption throws away.  A pure schematic (no axes)."""
+    from matplotlib.patches import Circle
+
+    def node(ax, xy, label, fc=LIGHT):
+        ax.add_patch(Circle(xy, 0.30, facecolor=fc, edgecolor="black", lw=1.4,
+                            zorder=4))
+        ax.text(xy[0], xy[1], label, ha="center", va="center", fontsize=10.5,
+                zorder=5)
+
+    def edge_into_node(ax, src, dst, color=GRAY, lw=1.6, r=0.30):
+        # arrow from node center `src` to node `dst`, stopping at the rims so the
+        # head sits cleanly on the circle (not buried inside it).
+        s, d = np.asarray(src, float), np.asarray(dst, float)
+        u = (d - s) / np.linalg.norm(d - s)
+        fl.arrow(ax, s + r * u, d - r * u, color=color, lw=lw, mut=11)
+
+    # feature-node x-positions and the label-node position (shared by both panels)
+    xs = np.array([-2.4, -1.2, 0.0, 1.2, 2.4])
+    feat_labels = [r"$x_1$", r"$x_2$", r"$x_3$", r"$\cdots$", r"$x_d$"]
+    y_top, y_bot = 1.7, -1.1
+    ynode = (0.0, y_top)
+
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(9.6, 3.9))
+
+    for ax, title in ((axL, "naive Bayes (assumed)"),
+                      (axR, "true dependence (discarded)")):
+        # fan-out: y -> every x_i (skip the ellipsis "node")
+        for x, lab in zip(xs, feat_labels):
+            if lab == r"$\cdots$":
+                ax.text(x, y_bot, lab, ha="center", va="center", fontsize=13,
+                        zorder=5)
+                continue
+            edge_into_node(ax, ynode, (x, y_bot))
+        node(ax, ynode, r"$y$", fc="#dbe6f3")
+        for x, lab in zip(xs, feat_labels):
+            if lab == r"$\cdots$":
+                continue
+            node(ax, (x, y_bot), lab)
+        ax.set_title(title, fontsize=11)
+        ax.set_xlim(-3.1, 3.1)
+        ax.set_ylim(-1.9, 2.5)
+        ax.set_aspect("equal")
+        ax.axis("off")
+
+    # right panel only: a couple of among-feature edges, struck out in orange to
+    # show the dependence naive Bayes refuses to model.  Draw the (curved) edge
+    # faint and bowed up between the feature nodes, then a bold orange slash
+    # across the arc's apex.
+    from matplotlib.patches import FancyArrowPatch
+    rad = -0.42                 # arc curvature (bows the edge upward)
+    struck = [(0, 1), (2, 4)]   # (x_1,x_2) neighbors and (x_3,x_d)
+    for i, j in struck:
+        a = np.array([xs[i], y_bot]); b = np.array([xs[j], y_bot])
+        # trim the endpoints to the node rims so the edge meets the circles
+        u = (b - a) / np.linalg.norm(b - a)
+        pa, pb = a + 0.30 * u, b - 0.30 * u
+        edge = FancyArrowPatch(
+            pa, pb, connectionstyle=f"arc3,rad={rad}", arrowstyle="-",
+            color=GRAY, lw=1.4, ls=(0, (4, 3)), zorder=2)
+        axR.add_patch(edge)
+        # apex of an arc3 quadratic Bezier sits at the chord midpoint displaced
+        # perpendicular by (rad/2)*|chord|; perp of (dx,dy) is (dy,-dx).
+        mid = (pa + pb) / 2
+        perp = np.array([pb[1] - pa[1], -(pb[0] - pa[0])])
+        apex = mid + 0.5 * rad * perp
+        # strike it out: a short bold orange slash centered on the apex
+        axR.plot([apex[0] - 0.16, apex[0] + 0.16],
+                 [apex[1] - 0.16, apex[1] + 0.16],
+                 color=ORANGE, lw=3.0, solid_capstyle="round", zorder=6)
+    axR.text(0.0, -1.75, "edges among features struck out", ha="center",
+             va="bottom", color=ORANGE, fontsize=8.5)
+
+    fl.save(fig, "mdl-prob-naive-independence")
+
+
+# =========================================================================== #
+# RANDOM VARIABLES: conditioning as slicing                                   #
+# =========================================================================== #
+
+def fig_conditional_slice():
+    """Conditioning as slicing.  Left: the joint density p(x,y) with a horizontal
+    slice at y=y0 highlighted.  Right: that slice, renormalized to unit area, is
+    the conditional density p(x|y0).  For an *independent* pair the slice shape
+    would be the same at every y0; here the pair is correlated, so it shifts."""
+    xs = np.linspace(-3.0, 3.4, 220)
+    ys = np.linspace(-3.0, 3.2, 220)
+    X, Y = np.meshgrid(xs, ys)
+    sx, sy, rho = 1.0, 0.9, 0.55                       # correlated -> dependence
+    z = (X ** 2 / sx ** 2 - 2 * rho * X * Y / (sx * sy) + Y ** 2 / sy ** 2)
+    joint = np.exp(-z / (2 * (1 - rho ** 2)))
+    dx, dy = xs[1] - xs[0], ys[1] - ys[0]
+    joint /= joint.sum() * dx * dy
+    y0 = 1.0
+    j0 = int(np.argmin(np.abs(ys - y0)))
+    sl = joint[j0, :]
+    cond = sl / (sl.sum() * dx)                        # renormalize -> p(x|y0)
+
+    fig, (axj, axc) = plt.subplots(1, 2, figsize=(8.6, 3.8))
+    axj.contourf(X, Y, joint, levels=12, cmap="Blues")
+    axj.axhline(y0, color=ORANGE, lw=2.4)
+    axj.text(3.2, y0 + 0.12, r"$y=y_0$", color=ORANGE, ha="right", va="bottom",
+             fontsize=10)
+    axj.set_xlabel(r"$x$"); axj.set_ylabel(r"$y$")
+    axj.set_title(r"joint $p(x,y)$ with a slice", fontsize=10.5)
+
+    axc.plot(xs, cond, color=ORANGE, lw=2.6)
+    axc.fill_between(xs, 0, cond, color=ORANGE, alpha=0.18, lw=0)
+    axc.set_xlabel(r"$x$"); axc.set_ylabel(r"$p(x \mid y_0)$")
+    axc.set_title("slice renormalized to unit area", fontsize=10.5)
+    axc.set_yticks([])
+    axc.spines["top"].set_visible(False); axc.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-conditional-slice")
+
+
+# =========================================================================== #
+# MAXIMUM LIKELIHOOD: NLL = cross-entropy = floor + KL                         #
+# =========================================================================== #
+
+def fig_mle_kl():
+    """Maximum likelihood as KL minimization.  The per-example cross-entropy
+    H(p, q) = H(p) + KL(p || q) splits into an irreducible floor H(p) (the data's
+    own entropy) and the excess KL(p || q) that training drives toward zero.  As
+    the model q improves across steps, the KL slice shrinks and the cross-entropy
+    settles onto the floor."""
+    steps = np.arange(5)
+    floor = 1.0
+    kl = 1.6 * np.exp(-0.8 * steps)
+    fig, ax = plt.subplots(figsize=(6.0, 3.9))
+    ax.bar(steps, [floor] * len(steps), color=BLUE, alpha=0.85,
+           label=r"$H(\hat p)$  (irreducible floor)")
+    ax.bar(steps, kl, bottom=[floor] * len(steps), color=ORANGE, alpha=0.85,
+           label=r"$D_{\mathrm{KL}}(\hat p \,\Vert\, p_\theta)$  (removed by training)")
+    ax.axhline(floor, color=GRAY, lw=1.0, ls="--")
+    ax.set_xlabel("training step")
+    ax.set_ylabel(r"cross-entropy  $H(\hat p,\, p_\theta)$")
+    ax.set_xticks(steps)
+    ax.set_yticks([])
+    ax.legend(loc="upper right", fontsize=8.5, frameon=False)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-mle-kl")
+
+
+# =========================================================================== #
+# STATISTICS: the bootstrap                                                   #
+# =========================================================================== #
+
+def fig_bootstrap():
+    """The bootstrap.  From one observed sample we draw many resamples *with
+    replacement*, recompute the statistic on each, and read its spread: the
+    histogram of replicates hat-theta* approximates the sampling distribution, and
+    its central (1-alpha) percentiles give a confidence interval.  Real resampling
+    of a fixed, seeded skewed sample (statistic = the median)."""
+    rng = np.random.default_rng(0)
+    sample = rng.gamma(2.0, 1.0, size=60)
+    reps = np.array([np.median(rng.choice(sample, size=60, replace=True))
+                     for _ in range(4000)])
+    lo, hi = np.percentile(reps, [2.5, 97.5])
+
+    fig, (axs, axh) = plt.subplots(1, 2, figsize=(8.8, 3.6),
+                                   gridspec_kw=dict(width_ratios=[1.0, 1.4]))
+    # left: observed sample, then two resamples beneath it
+    axs.eventplot([sample], colors=[BLUE], lineoffsets=2.2, linelengths=0.7)
+    for k in range(2):
+        rs = rng.choice(sample, size=60, replace=True)
+        axs.eventplot([rs], colors=[GRAY], lineoffsets=1.2 - 0.8 * k,
+                      linelengths=0.6)
+    axs.text(np.max(sample) * 0.5, 2.85, "observed sample", color=BLUE,
+             fontsize=9, ha="center")
+    axs.text(np.max(sample) * 0.5, 1.75, "resamples (with replacement)",
+             color=GRAY, fontsize=8.5, ha="center")
+    axs.set_ylim(-0.5, 3.2); axs.set_yticks([]); axs.set_xlabel("value")
+    for sp in ("top", "right", "left"):
+        axs.spines[sp].set_visible(False)
+
+    # right: histogram of bootstrap medians + central-95% percentile band
+    axh.hist(reps, bins=40, color=BLUE, alpha=0.7)
+    axh.axvspan(lo, hi, color=ORANGE, alpha=0.20)
+    for v in (lo, hi):
+        axh.axvline(v, color=ORANGE, lw=1.8)
+    axh.set_title(r"bootstrap replicates $\hat\theta^{*}$", fontsize=10.5)
+    axh.set_xlabel(r"$\hat\theta^{*}$  (median)")
+    axh.text((lo + hi) / 2, axh.get_ylim()[1] * 0.93, r"central $95\%$",
+             color=ORANGE, ha="center", va="top", fontsize=9)
+    axh.set_yticks([])
+    axh.spines["top"].set_visible(False); axh.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-bootstrap")
+
+
 FIGURES = [
     # random variables
     fig_marginal,
+    fig_conditional_slice,
     fig_pdf_area,
     fig_pdf_cdf,
     fig_chebyshev,
@@ -588,11 +798,15 @@ FIGURES = [
     fig_mvn_contours,
     # maximum likelihood
     fig_map_prior,
+    fig_mle_kl,
+    # naive bayes
+    fig_naive_independence,
     # statistics
     fig_significance,
     fig_bias_variance_u_curve,
     fig_sampling_distribution,
     fig_type_i_ii_matrix,
+    fig_bootstrap,
 ]
 
 

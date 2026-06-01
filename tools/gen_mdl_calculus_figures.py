@@ -198,23 +198,88 @@ def fig_gd_step():
 
 
 def fig_relu_corner():
-    """The kink of |x| at the origin: no single tangent exists, but a whole fan
-    of supporting lines through the origin, slopes sweeping the subdifferential
-    interval, lie on or below the graph."""
+    """Two convex kinks and their subdifferentials. Left: $|x|$, whose corner at 0
+    admits a fan of supporting lines with slopes sweeping $[-1,1]$. Right: ReLU,
+    $\\max(0,x)$, whose corner admits slopes sweeping $[0,1]$. Off the corner each
+    has a single tangent and the subdifferential collapses to the derivative."""
     xs = np.linspace(-2.0, 2.0, 400)
-    fig, ax = plt.subplots(figsize=(5.4, 4.0))
-    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
-    for s in np.linspace(-1.0, 1.0, 9):                # subgradient fan
-        ax.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
-    ax.plot(xs, np.abs(xs), color=BLUE, lw=2.6, zorder=4)
-    ax.plot([0], [0], "o", color="black", ms=6, zorder=5)
-    ax.text(1.45, 1.62, r"$|x|$", color=BLUE, fontsize=12, ha="center")
-    ax.text(0.0, -0.32, "kink: subgradients sweep slope $-1$ to $+1$",
-            ha="center", va="top", fontsize=9, color=ORANGE)
-    ax.set_xlim(-2.0, 2.0); ax.set_ylim(-0.55, 2.0)
-    ax.set_xticks([0]); ax.set_yticks([])
-    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.9))
+
+    # left: |x|, subgradient fan sweeping [-1, 1]
+    axa.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    for s in np.linspace(-1.0, 1.0, 9):
+        axa.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
+    axa.plot(xs, np.abs(xs), color=BLUE, lw=2.6, zorder=4)
+    axa.plot([0], [0], "o", color="black", ms=6, zorder=5)
+    axa.text(1.45, 1.62, r"$|x|$", color=BLUE, fontsize=12, ha="center")
+    axa.set_title(r"$\partial|x|(0)=[-1,1]$", fontsize=11)
+    axa.set_xlim(-2.0, 2.0); axa.set_ylim(-0.55, 2.0)
+    axa.set_xticks([0]); axa.set_yticks([])
+    axa.spines["top"].set_visible(False); axa.spines["right"].set_visible(False)
+
+    # right: ReLU = max(0, x), subgradient fan sweeping [0, 1]
+    axb.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    for s in np.linspace(0.0, 1.0, 6):
+        axb.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
+    axb.plot(xs, np.maximum(0.0, xs), color=BLUE, lw=2.6, zorder=4)
+    axb.plot([0], [0], "o", color="black", ms=6, zorder=5)
+    axb.text(1.35, 1.62, r"$\mathrm{ReLU}(x)$", color=BLUE, fontsize=12, ha="center")
+    axb.set_title(r"$\partial\,\mathrm{ReLU}(0)=[0,1]$", fontsize=11)
+    axb.set_xlim(-2.0, 2.0); axb.set_ylim(-0.55, 2.0)
+    axb.set_xticks([0]); axb.set_yticks([])
+    axb.spines["top"].set_visible(False); axb.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-relu-corner")
+
+
+def fig_mvt():
+    """The mean value theorem: the secant chord from $(a,f(a))$ to $(b,f(b))$ is
+    parallel to the tangent at some interior point $\\xi$ where $f'(\\xi)$ equals
+    the secant slope. Real $f$, real $\\xi$ located numerically."""
+    f = lambda t: np.sin(t) + 0.25 * t
+    df = lambda t: np.cos(t) + 0.25
+    a, b = 0.6, 4.2
+    xs = np.linspace(a - 0.3, b + 0.5, 400)
+    slope = (f(b) - f(a)) / (b - a)
+    grid = np.linspace(a, b, 4000)
+    xi = float(grid[np.argmin(np.abs(df(grid) - slope))])   # f'(xi) = secant slope
+
+    fig, ax = plt.subplots(figsize=(5.8, 4.0))
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
+    ax.plot([a, b], [f(a), f(b)], "-", color=GRAY, lw=1.6, zorder=2)
+    ax.plot(xs, f(xi) + slope * (xs - xi), "--", color=ORANGE, lw=2.0, zorder=4)
+    for x, lab in [(a, "$a$"), (b, "$b$")]:
+        ax.plot([x], [f(x)], "o", color="black", ms=5, zorder=5)
+        ax.text(x, f(x) - 0.28, lab, ha="center", va="top", fontsize=10)
+    ax.plot([xi], [f(xi)], "o", color=ORANGE, ms=6, zorder=6)
+    ax.text(xi, f(xi) + 0.16, r"$\xi$", ha="center", va="bottom", color=ORANGE,
+            fontsize=12)
+    ax.text((a + b) / 2 + 0.3, f((a + b) / 2) - 0.7, "secant", color=GRAY,
+            fontsize=9, ha="center")
+    ax.set_xlim(a - 0.3, b + 0.6)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-mvt")
+
+
+def fig_smooth_not_analytic():
+    """$f(x)=e^{-1/x^2}$ (with $f(0)=0$) is smooth, yet every derivative vanishes
+    at 0, so its Taylor series there is identically zero and agrees with $f$ only
+    at the single point $x=0$: smoothness does not imply analyticity."""
+    xs = np.linspace(-1.5, 1.5, 600)
+    with np.errstate(divide="ignore"):
+        f = np.where(xs == 0, 0.0, np.exp(-1.0 / xs ** 2))
+
+    fig, ax = plt.subplots(figsize=(5.8, 4.0))
+    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    ax.plot(xs, f, color=BLUE, lw=2.6, zorder=3, label=r"$f(x)=e^{-1/x^2}$")
+    ax.plot(xs, np.zeros_like(xs), "--", color=ORANGE, lw=2.0, zorder=2,
+            label=r"Taylor series at $0\ \equiv\ 0$")
+    ax.plot([0], [0], "o", color="black", ms=5, zorder=4)
+    ax.set_xlim(-1.5, 1.5); ax.set_ylim(-0.06, 0.5)
+    ax.set_xticks([0]); ax.set_yticks([])
+    ax.legend(loc="upper center", fontsize=9, frameon=False)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-smooth-not-analytic")
 
 
 # =========================================================================== #
@@ -529,6 +594,68 @@ def fig_gradient_field():
     fl.save(fig, "mdl-cal-gradient-field")
 
 
+def fig_taylor_quadratic():
+    """The second-order Taylor model hugs the surface near the base point. The
+    surface $z=x\\,e^{-x^2-y^2}$ (blue) and its quadratic Taylor approximation at
+    $(-1,0)$ (orange), which matches value, gradient, and curvature there. The
+    gradient $(-e^{-1},0)$ and Hessian $2e^{-1}\\mathbf{I}$ are exact."""
+    f = lambda X, Y: X * np.exp(-X ** 2 - Y ** 2)
+    x0, y0 = -1.0, 0.0
+    e1 = np.exp(-1.0)
+    # exact at (-1,0): f=-e^{-1}, grad=(-e^{-1},0), Hessian = 2 e^{-1} I
+    q = lambda X, Y: (-e1) + (-e1) * (X - x0) + e1 * ((X - x0) ** 2 + (Y - y0) ** 2)
+
+    fig = plt.figure(figsize=(6.0, 4.8))
+    ax = fig.add_subplot(projection="3d")
+    gx, gy = np.linspace(-2.2, 0.7, 60), np.linspace(-1.4, 1.4, 60)
+    X, Y = np.meshgrid(gx, gy)
+    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.45, linewidth=0,
+                    antialiased=True)
+    px, py = np.linspace(-1.8, -0.2, 30), np.linspace(-0.8, 0.8, 30)
+    PX, PY = np.meshgrid(px, py)
+    ax.plot_surface(PX, PY, q(PX, PY), color=ORANGE, alpha=0.6, linewidth=0,
+                    antialiased=True)
+    ax.scatter([x0], [y0], [f(x0, y0)], color="black", s=26)
+    ax.text(x0, y0, f(x0, y0) - 0.14, r"$(-1,0)$", fontsize=9)
+    ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
+    ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+    ax.view_init(elev=22, azim=-58)
+    fl.save(fig, "mdl-cal-taylor-quadratic")
+
+
+def fig_tangent_plane():
+    """Tangent plane and gradient geometry. The surface $z=f(x,y)$ (blue) with its
+    tangent plane at a point (orange); on the base plane, the level curves of $f$
+    (gray) and the gradient (orange arrow) crossing them at a right angle -- the
+    graph-space companion to ``gradient is normal to the level set''."""
+    f = lambda X, Y: 0.35 * X ** 2 + 0.6 * Y ** 2
+    fx, fy = lambda X, Y: 0.70 * X, lambda X, Y: 1.20 * Y
+    x0, y0 = 1.1, -0.8
+    z0, gx0, gy0 = f(x0, y0), fx(x0, y0), fy(x0, y0)
+    plane = lambda X, Y: z0 + gx0 * (X - x0) + gy0 * (Y - y0)
+
+    fig = plt.figure(figsize=(6.2, 5.0))
+    ax = fig.add_subplot(projection="3d")
+    gx, gy = np.linspace(-1.8, 1.8, 60), np.linspace(-1.8, 1.8, 60)
+    X, Y = np.meshgrid(gx, gy)
+    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.35, linewidth=0)
+    px, py = np.linspace(x0 - 0.7, x0 + 0.7, 20), np.linspace(y0 - 0.7, y0 + 0.7, 20)
+    PX, PY = np.meshgrid(px, py)
+    ax.plot_surface(PX, PY, plane(PX, PY), color=ORANGE, alpha=0.5, linewidth=0)
+    ax.scatter([x0], [y0], [z0], color="black", s=26)
+    zbase = -0.2
+    ax.contour(X, Y, f(X, Y), levels=np.linspace(0.3, 3.0, 6), colors=GRAY,
+               linewidths=0.9, offset=zbase)
+    g = np.array([gx0, gy0]); g = g / np.linalg.norm(g) * 0.9
+    ax.quiver(x0, y0, zbase, g[0], g[1], 0.0, color=ORANGE, lw=2.0)
+    ax.text(x0 + g[0], y0 + g[1] - 0.15, zbase, r"$\nabla f$", color=ORANGE,
+            fontsize=11)
+    ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
+    ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+    ax.view_init(elev=24, azim=-52)
+    fl.save(fig, "mdl-cal-tangent-plane")
+
+
 # =========================================================================== #
 # Matrix calculus & automatic differentiation                                 #
 # =========================================================================== #
@@ -566,6 +693,43 @@ def fig_fwd_vs_rev():
     fl.save(fig, "mdl-cal-fwd-vs-rev")
 
 
+def fig_tape_dag():
+    """The computational graph (Wengert list) of $(uv+u)^2$ is a *diamond*: the
+    input $u$ fans out to both the product $uv$ and the later $+u$, and the two
+    paths reconverge at $q$, so reverse mode must *accumulate* $u$'s adjoint from
+    its two children rather than overwrite it."""
+    fig, ax = plt.subplots(figsize=(6.6, 3.0))
+
+    def box(c, label, color=LIGHT, w=0.9):
+        cx, cy = c
+        ax.add_patch(FancyBboxPatch((cx - w / 2, cy - 0.3), w, 0.6,
+                     boxstyle="round,pad=0.02,rounding_size=0.12",
+                     facecolor=color, edgecolor="black", lw=1.2, zorder=3))
+        ax.text(cx, cy, label, ha="center", va="center", fontsize=10.5, zorder=4)
+
+    pos = {"u": (0.0, 1.7), "v": (0.0, 0.3), "p": (2.1, 1.0),
+           "q": (4.1, 1.0), "z": (6.1, 1.0)}
+    half = {"u": 0.45, "v": 0.45, "p": 0.65, "q": 0.7, "z": 0.65}
+
+    def link(a, b):
+        c0, c1 = np.array(pos[a], float), np.array(pos[b], float)
+        d = (c1 - c0) / np.linalg.norm(c1 - c0)
+        fl.arrow(ax, c0 + d * (half[a] + 0.05), c1 - d * (half[b] + 0.05),
+                 color=GRAY, lw=1.4, mut=12)
+
+    for a, b in [("u", "p"), ("v", "p"), ("p", "q"), ("u", "q"), ("q", "z")]:
+        link(a, b)
+    box(pos["u"], "$u$"); box(pos["v"], "$v$")
+    box(pos["p"], r"$p=uv$", color=BLUE, w=1.3)
+    box(pos["q"], r"$q=p+u$", color=BLUE, w=1.4)
+    box(pos["z"], r"$z=q^2$", color=ORANGE, w=1.3)
+    ax.text(1.0, 2.05, r"$u$ fans out (diamond)", color=GRAY, fontsize=8.5,
+            ha="center")
+    ax.set_xlim(-0.7, 7.0); ax.set_ylim(-0.3, 2.4)
+    ax.set_aspect("equal"); ax.axis("off")
+    fl.save(fig, "mdl-cal-tape-dag")
+
+
 # =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
@@ -579,6 +743,8 @@ FIGURES = [
     fig_secant_to_tangent,
     fig_gd_step,
     fig_relu_corner,
+    fig_mvt,
+    fig_smooth_not_analytic,
     # integral calculus
     fig_riemann,
     fig_sub_area,
@@ -589,8 +755,11 @@ FIGURES = [
     fig_chain_net1,
     fig_chain_net2,
     fig_gradient_field,
+    fig_taylor_quadratic,
+    fig_tangent_plane,
     # matrix calculus & autodiff
     fig_fwd_vs_rev,
+    fig_tape_dag,
 ]
 
 

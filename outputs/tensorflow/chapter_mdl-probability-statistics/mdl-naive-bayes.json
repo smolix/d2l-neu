@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-naive-bayes.md",
-  "framework": "pytorch",
+  "framework": "tensorflow",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2ee604c59760805cf6e14928aa06908d6dd75a2b7230bed2b464e7c6598e8ffd",
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:81c02e2eaea6b81f75ba6d432f4b69b22ffef6893ec3b5dff789a8664f910377",
     "max_inline_bytes": 0
   },
   "cells": {
     "naive-bayes-imports": {
-      "code_fingerprint": "sha256:d91e17376919a578ec38a32a8af6080d3ead9d690258d808c75bd1d8db9d962a",
+      "code_fingerprint": "sha256:2e1964f4774d39ba051ca76bf5256543d9abbfc0c205691008a0883d0b50d7da",
       "kind": "text",
       "outputs": []
     },
     "naive-bayes-load": {
-      "code_fingerprint": "sha256:fa40b1a0c71dcf293d61f6e44624ee47581bfa315a6238eb94e43710c0a242e6",
+      "code_fingerprint": "sha256:fa7880d8c308b3430a4867e747096a21646603ded63bf0016897147c4729c41a",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "naive-bayes-train": {
-      "code_fingerprint": "sha256:624807fa35cb73892edfb24380c9827c902dab18e6a9222764bf46880ec7cf75",
+      "code_fingerprint": "sha256:758ee80c476c33cea9fc4969b9f840886142dd2ed17a558c587712529ee4da32",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "naive-bayes-templates": {
-      "code_fingerprint": "sha256:0259ad1474ab99e25b19cd63721b91a63e825f111d3abc25900df1a4f2f7700d",
+      "code_fingerprint": "sha256:cb22945454dffa5ee3d69c9fb8071c19bad74c85c298b19af892120ba85758ef",
       "kind": "asset",
       "outputs": [
         {
@@ -42,12 +42,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 47657,
-          "sha256": "sha256:c86ff486c9c7075819f688e217cbaa0e2179b4956db62a4a1785242ba51b9ddc"
+          "sha256": "sha256:10727722b181634d3627df95a737e4d95da890c57e2db367b3e0574f37634f23"
         }
       ]
     },
     "naive-bayes-predict": {
-      "code_fingerprint": "sha256:b77ec92ed41c409f30a06c4490db89df554631b4287d61f887d8e9760354d3a3",
+      "code_fingerprint": "sha256:7a41e6b2cd27436352279ad95df4b78dcb7c7a371290152aee21e4c0ddda2166",
       "kind": "text",
       "outputs": [
         {

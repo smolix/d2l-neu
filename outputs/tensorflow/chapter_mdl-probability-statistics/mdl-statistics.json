@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-statistics.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "statistics-imports": {
+      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-estimator-metrics": {
+      "code_fingerprint": "sha256:49f2427ef27fff8dc9b9ec6e2d633af9c4615182c4f1e5aef9716ecac34050de",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-sampling-distribution": {
+      "code_fingerprint": "sha256:2c3ae8ea871f020c87020b26dfefaf553e41015da2aa55cb6302ff2443261e01",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-verify-decomposition": {
+      "code_fingerprint": "sha256:c73dc38dce6613669098b3054e50ab2b25e42cb66cf3a277fbe0fbb35292bcba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5287980437278748>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5288509130477905>)"
+        }
+      ]
+    },
+    "statistics-unbiased-variance": {
+      "code_fingerprint": "sha256:0cd4eb3995fce769c7222d2d86069a3b271a208f5da059b6cbac651b44e89cc9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true variance         = 4\nE[divide by n]   = 2.668  (biased)\nE[divide by n-1] = 4.003  (unbiased)\n"
+        }
+      ]
+    },
+    "statistics-confidence-interval": {
+      "code_fingerprint": "sha256:fffd2d6d6836cd4f3b037f6a20c60b44e1f0a28b59c42e2b3ed0f373db15582d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.08958905935287476>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.034175023436546326>)"
+        }
+      ]
+    }
+  }
+}

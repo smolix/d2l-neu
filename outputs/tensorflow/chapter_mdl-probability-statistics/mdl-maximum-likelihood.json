@@ -1,38 +1,38 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-maximum-likelihood.md",
-  "framework": "pytorch",
+  "framework": "tensorflow",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "tensorflow==2.21.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "maximum-likelihood-imports": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
       "kind": "text",
       "outputs": []
     },
     "maximum-likelihood-a-concrete-example": {
-      "code_fingerprint": "sha256:22a4239d99f48263c2c78de210913db82c81b0922c3b0f947a26038aee8667fa",
+      "code_fingerprint": "sha256:abe0d6ab53bdf099d2c523e51798147c1469465c4bdd8a4c0fd446fd0b8296e4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20959,
-          "sha256": "sha256:1f93899c41b26aef778b1dd825dd649e249e3de7c7aeac0f326c69e963c337fa"
+          "bytes": 20953,
+          "sha256": "sha256:1585325bf3d8aaa62cde39bddcbd0d84fe813dbe9eadb747260dcb4eea9129fb"
         }
       ]
     },
     "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
-      "code_fingerprint": "sha256:d42dceafd75104879a5d78cef62ddb0fd34287236897e8d4aa031cc4f1cff34a",
+      "code_fingerprint": "sha256:ed8e4e38f02ec8dcfe202e218bee5fadd765a7f55d05e5ba0d7404b8e40f1a78",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.9713, requires_grad=True), 0.9713101437890875)"
+          "text": "(<tf.Variable 'Variable:0' shape=() dtype=float32, numpy=0.9713100790977478>,\n 0.9713101437890875)"
         }
       ]
     }

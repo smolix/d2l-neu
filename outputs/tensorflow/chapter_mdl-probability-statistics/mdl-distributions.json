@@ -1,35 +1,35 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-distributions.md",
-  "framework": "pytorch",
+  "framework": "tensorflow",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "tensorflow==2.21.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "distributions-imports": {
-      "code_fingerprint": "sha256:6719e2772e211cd908133061dabf83c6d44ed4216294f37e1016ca1c4be25ced",
+      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
       "kind": "text",
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:7b6f3e106be66e0c65a096d4db25b0d139c2923a8253bc93c9835de688cadce6",
+      "code_fingerprint": "sha256:bddb18bb7b6c644dc4f3eae4ac88f759d214e03bf24e1831b62d68924e6f01b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.4444444477558136  (≈ p)\n"
+          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.2222222238779068  (≈ p)\n"
         },
         {
           "type": "execute_result",
-          "text": "tensor([[0., 1., 1.],\n        [0., 0., 1.],\n        [1., 0., 0.]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[0., 0., 0.],\n       [1., 1., 0.],\n       [0., 0., 0.]], dtype=float32)>"
         }
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:e9534c8a6e6c0328efe0724a75d55cef72837b120ba8c67717fa442f2dc35bc6",
+      "code_fingerprint": "sha256:367e8f8af12cb946d8c0c772da0d755adc4064325f9c3f0cbc32f80557de8320",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +40,7 @@
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:3734f15ce06bbecfb42eb937cb7624cea492d650a435996f7b0c5b15b2e8eb3f",
+      "code_fingerprint": "sha256:c0c2920bec5fb6f307c711eb0ab330f89de95f4f17cbce4b59d06816df8fd8ed",
       "kind": "text",
       "outputs": [
         {
@@ -50,12 +50,12 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[1, 3, 3],\n        [1, 3, 2],\n        [2, 6, 6]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=int32, numpy=\narray([[1, 6, 4],\n       [5, 5, 6],\n       [5, 4, 3]], dtype=int32)>"
         }
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:bf923c43b42abdec143c5692a23c65192846dd8c0eb39989113e90cb4208d30f",
+      "code_fingerprint": "sha256:aa2026e88fbbc499cd40937d11192e69f21275dc2de69d3ad61a036267fafa66",
       "kind": "text",
       "outputs": [
         {
@@ -65,12 +65,12 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[6., 7., 5.],\n        [5., 4., 4.],\n        [6., 3., 7.]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=int32, numpy=\narray([[6, 6, 6],\n       [6, 6, 5],\n       [6, 2, 7]], dtype=int32)>"
         }
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:c0da4abdc038b7dd4bc2d22be4f2d7405364d8389735e2af4f4d6d3d301f216e",
+      "code_fingerprint": "sha256:c38bcfb14ad8fff4da8a34633bec2a9c3a6ba21296058100f84302e22276f6f9",
       "kind": "text",
       "outputs": [
         {
@@ -80,12 +80,12 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[3., 7., 4.],\n        [5., 5., 0.],\n        [8., 6., 3.]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[1., 9., 5.],\n       [4., 3., 2.],\n       [3., 2., 5.]], dtype=float32)>"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:52cb2b2d45e27c0463123b90e48e12e9a9e13a8cf7310fecbc0b70da410d3264",
+      "code_fingerprint": "sha256:a6a89cbb195df25e2b875f171492ba319539630253836cf39626166a7e3d79c0",
       "kind": "text",
       "outputs": [
         {
@@ -95,71 +95,66 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[2.0101, 2.6945, 1.5908],\n        [2.3885, 1.6902, 2.9344],\n        [1.6308, 1.5749, 2.3405]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[2.193635 , 1.4191761, 1.5584288],\n       [2.473848 , 2.8750186, 2.269567 ],\n       [1.1209581, 1.2022979, 2.371808 ]], dtype=float32)>"
         }
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:741d508c36c8000bd1f1d34ec0ff191ba4f61632a595390fe0c35e54d0e38679",
+      "code_fingerprint": "sha256:d0c4805ffbc8af0ae12a661c38aea6e5c1b9df33b400a8f3323e677f82f3c21d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.0085337162017822\nvar 1/lambda^2 = 4.0  sample var = 4.0041117668151855\n"
+          "text": "mean 1/lambda = 2.0   sample mean = inf\nvar 1/lambda^2 = 4.0  sample var = nan\n"
         }
       ]
     },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:309d4b5af221450daddf5924a43f148b561795c9dbd6c32b3b53bc9a0989eaba",
+      "code_fingerprint": "sha256:ee165809f45de6e51cb5fb5003af9c08d5035daaec39f0872e1039b981c6e5f5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass (≈1): 0.999936580657959\n"
+          "text": "total mass (≈1): 0.9999366998672485\n"
         },
         {
           "type": "execute_result",
-          "text": "tensor([[-0.1746,  0.8703,  1.5916],\n        [-0.0964,  0.2345,  0.1427],\n        [ 0.9606, -1.2377,  1.1291]])"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[-0.4902052 , -1.6709224 , -1.3884784 ],\n       [ 0.67191285,  0.503875  , -0.9943462 ],\n       [ 1.0463345 ,  0.02376489,  0.48800743]], dtype=float32)>"
         }
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:6b14631515320a044ec5399bd6205b8324ebc493297ef24aa4ddc65f7e1a12c9",
+      "code_fingerprint": "sha256:7352b47ac466935f9d4f16ced6db8a367d7ade9c18637a7514da2f2ac43ba42d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Laplace var (2b^2): 2.005920648574829  Gaussian var: 1.9926282167434692\nP(|x| > 3sd): Laplace 0.014670000411570072  Gaussian 0.0024850000627338886\n"
+          "text": "Laplace var (2b^2): 2.0259640216827393  Gaussian var: 2.005730390548706\nP(|x| > 3sd): Laplace 0.015189999714493752  Gaussian 0.0026599999982863665\n"
         }
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:96cf2f1269c33ba86b51ee33c5c9b457576a62e306813d0b70a89a437ec3fce2",
+      "code_fingerprint": "sha256:5fac307d31637e4001bf1041f61c12edc97dd698099675bede23fb4196d63caa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[2.08 1.06]\n [1.06 2.04]]\neigenvalues (≈ 1, 3): [1.   3.12]\n"
+          "text": "empirical covariance:\n [[2.01 1.03]\n [1.03 2.03]]\neigenvalues (≈ 1, 3): [0.99 3.05]\n"
         }
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:f6c4fcd1b0e53de51e7ebe8dc101a06ac4ccea5676fee74b8ce3728843464fe2",
+      "code_fingerprint": "sha256:c1a8f05ef1854c1114ca30da2775fa7a67297da6ab34d00b954111e4eafeccd6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/claude-501/ipykernel_82220/2036575739.py:5: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta)), 6))\n"
         }
       ]
     }

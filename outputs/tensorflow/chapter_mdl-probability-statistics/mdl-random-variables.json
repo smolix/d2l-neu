@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
-  "framework": "pytorch",
+  "framework": "tensorflow",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "tensorflow==2.21.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:be1a2390066b392d0c79a002716000da44086014c5b426bdd3cfbe8b2ea31dc7",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:23cbae131a267d80f0bc67f8ec379704b2b5637b0e7c4f36cc452cb9aee510df",
+      "code_fingerprint": "sha256:b0b04958fafbd8ba3e0180ff7be8c259e42983394c625c846763996e2b6b5434",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:efb4d0cd2f1cad282ac4fd490a20c1e8af95ecff8705f0429592e85907f5588e",
+      "code_fingerprint": "sha256:12fab0531bef2cf4250dfdc5ea5d8163db8520af430b53f96b2a851459b2c62b",
       "kind": "text",
       "outputs": [
         {

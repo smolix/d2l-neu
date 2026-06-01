@@ -1,56 +1,56 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-statistics.md",
-  "framework": "pytorch",
+  "framework": "mxnet",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:16e5e0b3bd44a35b7a0463115df804ee6360888eff5b7651352e4b3aefd88e74",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:858ab76423911d2019eb41ea34ae8659559fde375c060fbe634fd46159d5f79f",
+      "code_fingerprint": "sha256:1419431d0881089ba52698ed3c6de6f54b2410406ceaf87a94f8ff61fd2c9eac",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:9a08fa5f5d297a177b70cf7ebba59dd31608c93674163b03e68f013e4232921b",
+      "code_fingerprint": "sha256:8c2c32df99a547d688bebb6a42de3e5e70dd8f9a2bd7463fa4451e1c32e38a47",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:2da9972f40ebf236a2d28372d78d5ecd04012a67b13cc951c385d7610c8977cf",
+      "code_fingerprint": "sha256:0772e34767c91b38b30a949f6ee85e931fe28b109c4e764110393387fff8e037",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.5423), tensor(0.5424))"
+          "text": "(array(0.56694543), array(0.5670009))"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:d57c9ce506ddfe46d4c3672717cac9182144854fec4b4802991c4a73f79bd6e8",
+      "code_fingerprint": "sha256:4e36b26fa5840b226d123885948ee96361bffb663d3c1ba7bbc738d35c71e637",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance         = 4\nE[divide by n]   = 2.657  (biased)\nE[divide by n-1] = 3.986  (unbiased)\n"
+          "text": "true variance         = 4\nE[divide by n]   = 2.645  (biased)\nE[divide by n-1] = 3.968  (unbiased)\n"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:fd6d5dfe94ad8d6f01049383425f72a0aa28bc14ed8c364b6a4c812fe13918c8",
+      "code_fingerprint": "sha256:81a1f709de27e1c114083287bef2604f1965d6294572b84c87806263d88f9974",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(-0.0491), tensor(0.0732))"
+          "text": "(array(-0.07299235), array(0.05348402))"
         }
       ]
     }

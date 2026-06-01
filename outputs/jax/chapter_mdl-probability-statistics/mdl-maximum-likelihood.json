@@ -1,38 +1,38 @@
 {
   "schema": 1,
   "source": "chapter_mdl-probability-statistics/mdl-maximum-likelihood.md",
-  "framework": "pytorch",
+  "framework": "jax",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "jax==0.10.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "maximum-likelihood-imports": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
       "kind": "text",
       "outputs": []
     },
     "maximum-likelihood-a-concrete-example": {
-      "code_fingerprint": "sha256:22a4239d99f48263c2c78de210913db82c81b0922c3b0f947a26038aee8667fa",
+      "code_fingerprint": "sha256:763b9837c3d205b63d15e76a3e45c194c695ec7ee88e009e5cf3af3d146e0cbb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20959,
-          "sha256": "sha256:1f93899c41b26aef778b1dd825dd649e249e3de7c7aeac0f326c69e963c337fa"
+          "bytes": 20952,
+          "sha256": "sha256:a2c66375199d1631ac35b3b4b309998277e984348a98725d65ff80670da17a80"
         }
       ]
     },
     "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
-      "code_fingerprint": "sha256:d42dceafd75104879a5d78cef62ddb0fd34287236897e8d4aa031cc4f1cff34a",
+      "code_fingerprint": "sha256:243d4ea8bf203cd491d825cca80210b672b3ae8036cc79a736a8904464aed65f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.9713, requires_grad=True), 0.9713101437890875)"
+          "text": "(Array(0.9713101, dtype=float32), 0.9713101437890875)"
         }
       ]
     }

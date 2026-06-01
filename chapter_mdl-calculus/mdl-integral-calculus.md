@@ -265,7 +265,7 @@ $$
 
 This is a mathematical encoding of the fact that we can measure the area out to the far end-point and then subtract off the area to the near end point as indicated in :numref:`fig_mdl-area-subtract`.
 
-![Visualizing why we may reduce the problem of computing the area under a curve between two points to computing the area to the left of a point.](../img/sub-area.svg)
+![Visualizing why we may reduce the problem of computing the area under a curve between two points to computing the area to the left of a point.](../img/mdl-cal-sub-area.svg)
 :label:`fig_mdl-area-subtract`
 
 Thus, we can figure out what the integral over any interval is by figuring out what $F(x)$ is.
@@ -364,7 +364,7 @@ This is the *change of variables* formula.
 
 For a more intuitive derivation, consider what happens when we take an integral of $f(u(x))$ between $x$ and $x+\epsilon$. For a small $\epsilon$, this integral is approximately $\epsilon f(u(x))$, the area of the associated rectangle.  Now, let's compare this with the integral of $f(y)$ from $u(x)$ to $u(x+\epsilon)$.  We know that $u(x+\epsilon) \approx u(x) + \epsilon \frac{du}{dx}(x)$, so the area of this rectangle is approximately $\epsilon \frac{du}{dx}(x)f(u(x))$.  Thus, to make the area of these two rectangles to agree, we need to multiply the first one by $\frac{du}{dx}(x)$ as is illustrated in :numref:`fig_mdl-rect-transform`.
 
-![Visualizing the transformation of a single thin rectangle under the change of variables.](../img/rect-trans.svg)
+![Visualizing the transformation of a single thin rectangle under the change of variables.](../img/mdl-cal-rect-trans.svg)
 :label:`fig_mdl-rect-transform`
 
 This tells us that
@@ -525,7 +525,7 @@ $$
  \sum _ {j} \epsilon \left(\sum_{i} \epsilon f(\epsilon i, \epsilon j)\right).
 $$
 
-![Illustrating how to decompose a sum over many squares as a sum over first the columns (1), then adding the column sums together (2).](../img/sum-order.svg)
+![Illustrating how to decompose a sum over many squares as a sum over first the columns (1), then adding the column sums together (2).](../img/mdl-cal-sum-order.svg)
 :label:`fig_mdl-sum-order`
 
 The sum on the inside is precisely the discretization of the integral
@@ -583,9 +583,10 @@ $$
 
 Looking closely, we see that this is similar to the single variable chain rule :eqref:`eq_mdl-change_var`, except we have replaced the term $\frac{du}{dx}(x)$ with $\left|\det(D\phi(\mathbf{x}))\right|$.  Let's see how we can to interpret this term.  Recall that the $\frac{du}{dx}(x)$ term existed to say how much we stretched our $x$-axis by applying $u$.  The same process in higher dimensions is to determine how much we stretch the area (or volume, or hyper-volume) of a little square (or little *hyper-cube*) by applying $\boldsymbol{\phi}$.  If $\boldsymbol{\phi}$ was the multiplication by a matrix, then we know how the determinant already gives the answer.
 
-With some work, one can show that the *Jacobian* provides the best approximation to a multivariable function $\boldsymbol{\phi}$ at a point by a matrix in the same way we could approximate by lines or planes with derivatives and gradients. Thus the determinant of the Jacobian exactly mirrors the scaling factor we identified in one dimension.
+With some work, one can show that the *Jacobian* provides the best approximation to a multivariable function $\boldsymbol{\phi}$ at a point by a matrix in the same way we could approximate by lines or planes with derivatives and gradients. Thus the determinant of the Jacobian exactly mirrors the scaling factor we identified in one dimension, as shown in :numref:`fig_mdl-cov-jacobian`.
 
-<!-- Planned diagram `fig_mdl-cov-jacobian`: a unit square mapped by a linear φ to a parallelogram, with the shaded-area ratio labeled |det Dφ|, beside the existing 1-D rectangle-stretch panel (fig_mdl-rect-transform) — making the "Jacobian determinant = local area-scaling factor" idea visual and tying it forward to the normalizing-flows change-of-variables in the probability chapter. -->
+![A unit square mapped by a linear $\phi$ to a parallelogram whose area is the area-scaling factor $|\det D\phi|$, mirroring the one-dimensional stretch by $du/dx$.](../img/mdl-cal-cov-jacobian.svg)
+:label:`fig_mdl-cov-jacobian`
 
 
 It takes some work to fill in the details to this, so do not worry if they are not clear now.  Let's see at least one example we will make use of later on.  Consider the integral

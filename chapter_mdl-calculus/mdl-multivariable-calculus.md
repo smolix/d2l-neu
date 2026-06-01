@@ -274,7 +274,7 @@ $$\begin{aligned}f(u, v) & = (u+v)^{2} \\u(a, b) & = (a+b)^{2}, \qquad v(a, b) =
 
 Such chains of equations are common when working with neural networks, so trying to understand how to compute gradients of such functions is key.  We can start to see visual hints of this connection in :numref:`fig_mdl-chain-1` if we take a look at what variables directly relate to one another.
 
-![The function relations above where nodes represent values and edges show functional dependence.](../img/chain-net1.svg)
+![The function relations above where nodes represent values and edges show functional dependence.](../img/mdl-cal-chain-net1.svg)
 :label:`fig_mdl-chain-1`
 
 Nothing stops us from just composing everything from :eqref:`eq_mdl-multi_func_def` and writing out that
@@ -316,7 +316,7 @@ It is useful to think about the meaning of the process. We are trying to underst
 
 Imagine we have a different network of functions where the functions on the right depend on those that are connected to on the left as is shown in :numref:`fig_mdl-chain-2`.
 
-![Another more subtle example of the chain rule.](../img/chain-net2.svg)
+![Another more subtle example of the chain rule.](../img/mdl-cal-chain-net2.svg)
 :label:`fig_mdl-chain-2`
 
 To compute something like $\frac{\partial f}{\partial y}$, we need to sum over all (in this case $3$) paths from $y$ to $f$ giving

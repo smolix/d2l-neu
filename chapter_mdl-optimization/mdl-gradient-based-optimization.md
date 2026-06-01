@@ -39,15 +39,20 @@ references: :cite:`Boyd.Vandenberghe.2004`, :cite:`Nesterov.2018`,
 ::: {.callout-note title="⟢ 3.1.2 Gradient Descent and L-Smoothness"}
 **Outline:** 1. The iteration $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)$. · 2. Define $L$-smoothness ($\nabla f$ is $L$-Lipschitz; equivalently $\nabla^2 f \preceq L I$) and derive the quadratic *upper* bound. · 3. Plug the GD step into the upper bound to get the **descent lemma**: progress is guaranteed for $\eta \le 1/L$, with per-step decrease $\ge \tfrac{\eta}{2}\|\nabla f\|_2^2$. · 4. Intuition hook: $L$ is the worst-case curvature; step shorter than $1/L$ so you never overshoot the parabola that bounds $f$ from above.
 **Key results to state:** $f(\mathbf{y}) \le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \tfrac{L}{2}\|\mathbf{y}-\mathbf{x}\|_2^2$; descent lemma $f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \eta(1-\tfrac{L\eta}{2})\|\nabla f(\mathbf{x}_k)\|_2^2$; monotone for $0<\eta\le 1/L$.
-**Diagrams:** `fig_mdl-gd-bowl-vs-valley` — GD trajectory on an isotropic bowl ($\kappa=1$, straight to minimum) beside an anisotropic valley ($\kappa\gg1$, zig-zag), the headline contrast for the whole section.
+**Diagrams:** :numref:`fig_mdl-opt-gd-bowl-vs-valley` (below) — GD trajectory on an isotropic bowl ($\kappa\approx1$, straight to minimum) beside an anisotropic valley ($\kappa\gg1$, zig-zag), the headline contrast for the whole section.
 **Worked example(s):** for the quadratic $f(\mathbf{x})=\tfrac12\mathbf{x}^\top A\mathbf{x}$, identify $L=\lambda_{\max}(A)$ and verify the descent lemma numerically.
 **Exercises (draft):** (1) Prove the descent lemma from $L$-smoothness. (2) Show $\eta=1/L$ maximizes the guaranteed one-step decrease.
 :::
 
+The headline contrast for the whole section is in :numref:`fig_mdl-opt-gd-bowl-vs-valley`. On a well-conditioned bowl the contours are near-circular and gradient descent heads almost straight to the minimum; in an ill-conditioned valley the step size is throttled by the steep direction (to stay stable) while the flat $\lambda_{\min}$ direction needs many such small steps, so the iterates zig-zag across the narrow valley. The zig-zag is the visible cost of a large condition number $\kappa$.
+
+![Gradient descent on a quadratic $f(\mathbf{x})=\tfrac12\mathbf{x}^\top A\mathbf{x}$. Left: a well-conditioned bowl ($\kappa\approx1$, near-circular contours, an almost straight path). Right: an ill-conditioned valley ($\kappa\gg1$, elongated contours); a step size near the stability ceiling makes the steep mode oscillate while the slow $\lambda_{\min}$ axis barely moves, producing a zig-zag.](../img/mdl-opt-gd-bowl-vs-valley.svg)
+:label:`fig_mdl-opt-gd-bowl-vs-valley`
+
 ::: {.callout-note title="⟢ 3.1.3 Convergence Rates and the Condition Number"}
 **Outline:** 1. The closed-form GD analysis on the quadratic: in the eigenbasis of $A$, each coordinate contracts independently by $(1-\eta\lambda_i)$. · 2. Smooth-convex (no strong convexity): sublinear $O(1/k)$ in function value. · 3. Strongly convex: *linear* (geometric) convergence with rate governed by $\kappa$ — slow along the small-curvature axis. · 4. The eigenvalue-bowl picture: the slowest mode sets the rate; this is the math behind the §3.1.2 valley diagram.
 **Key results to state:** per-mode factor $1-\eta\lambda_i$; optimal fixed step $\eta^\star = \tfrac{2}{\lambda_{\min}+\lambda_{\max}}$ giving contraction $\tfrac{\kappa-1}{\kappa+1}$ per step; smooth-convex $f(\mathbf{x}_k)-f^\star \le \tfrac{L\|\mathbf{x}_0-\mathbf{x}^\star\|_2^2}{2k} = O(1/k)$; strongly convex (parameter $\mu$, $\kappa=L/\mu$) $f(\mathbf{x}_k)-f^\star \le \big(1-\tfrac{1}{\kappa}\big)^k \big(f(\mathbf{x}_0)-f^\star\big)$, i.e. $O\!\big(\kappa\log\tfrac1\varepsilon\big)$ iterations.
-**Diagrams:** reuse `fig_mdl-gd-bowl-vs-valley`; annotate the zig-zag with the slow ($\lambda_{\min}$) axis.
+**Diagrams:** reuse :numref:`fig_mdl-opt-gd-bowl-vs-valley`; its right panel annotates the zig-zag with the slow ($\lambda_{\min}$) axis.
 **Worked example(s):** closed-form GD on $\tfrac12\mathbf{x}^\top A\mathbf{x}$ with $A=\mathrm{diag}(1,10)$: derive the per-mode factors, the optimal $\eta^\star$, and verify the $(\kappa-1)/(\kappa+1)$ contraction against an iteration count.
 **Exercises (draft):** (1) Derive $\eta^\star=2/(\lambda_{\min}+\lambda_{\max})$ by minimizing $\max_i|1-\eta\lambda_i|$. (2) Show the optimal contraction is exactly $(\kappa-1)/(\kappa+1)$ and explain why $\kappa\to1$ is one-step convergence. (3) Connect $\kappa$ here to $\kappa=\sigma_{\max}/\sigma_{\min}$ from `sec_mdl-svd-low-rank` (forward-link to `sec_mdl-numerical-stability-conditioning`).
 :::
@@ -55,7 +60,7 @@ references: :cite:`Boyd.Vandenberghe.2004`, :cite:`Nesterov.2018`,
 ::: {.callout-note title="⟢ 3.1.4 Step Size and Line Search"}
 **Outline:** 1. Fixed step vs. adaptive step. · 2. Stability ceiling: on a quadratic, GD's iteration map has spectral radius $\max_i|1-\eta\lambda_i|$; $\eta > 2/L$ makes it $>1$ and the iterates *diverge*. · 3. Backtracking line search with the Armijo (sufficient-decrease) condition — guarantees progress without knowing $L$. · 4. Hook to the main book's learning-rate schedules: warmup/decay are practical surrogates for line search at scale.
 **Key results to state:** convergence requires $0<\eta<2/L$; divergence for $\eta>2/L$; Armijo condition $f(\mathbf{x}-\eta\nabla f) \le f(\mathbf{x}) - c\,\eta\,\|\nabla f\|_2^2$ with $c\in(0,1)$; backtrack $\eta \leftarrow \beta\eta$ until satisfied.
-**Diagrams:** small inset (no dedicated fig) — three GD trajectories at $\eta<1/L$ (slow), $\eta\approx 2/(\lambda_{\min}+\lambda_{\max})$ (fast), $\eta>2/L$ (spiraling out). Specified as part of `fig_mdl-gd-bowl-vs-valley` family; no new SVG.
+**Diagrams:** small inset (no dedicated fig) — three GD trajectories at $\eta<1/L$ (slow), $\eta\approx 2/(\lambda_{\min}+\lambda_{\max})$ (fast), $\eta>2/L$ (spiraling out). Specified as part of the :numref:`fig_mdl-opt-gd-bowl-vs-valley` family; no new SVG.
 **Worked example(s):** $\eta$-sweep on the 1-D quadratic $f(x)=\tfrac{L}{2}x^2$ showing convergence → oscillation at $\eta=2/L$ → divergence; tabulate $|1-\eta L|$.
 **Exercises (draft):** (1) Find the exact $\eta$ at which $f(x)=\tfrac{L}{2}x^2$ oscillates without converging or diverging. (2) Implement backtracking line search and show it never picks $\eta>2/L$ on a quadratic.
 :::
@@ -113,4 +118,4 @@ back-reference.
 
 *Planned.* Slide deck `::: {.slide ...}` divs to be authored once the body cells
 exist, with `@<id>` placeholders pointing to the worked-example code fences
-(`fig_mdl-gd-bowl-vs-valley`, the $\eta$-sweep, the momentum speedup).
+(`fig_mdl-opt-gd-bowl-vs-valley`, the $\eta$-sweep, the momentum speedup).

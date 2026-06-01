@@ -193,6 +193,10 @@ $\operatorname{Cov}(d\mathbf{X})=g^2 I\,dt$; $g\equiv0$ recovers the §6.1 ODE.
 **Diagrams:** `fig_mdl-sde-trajectory-cloud` — one SDE simulated from a fixed start
 many times: a fan/cloud of jittery paths whose mean follows the drift and whose
 spread is set by the diffusion, with the mean curve highlighted.
+:numref:`fig_mdl-dyn-sde-paths` shows this for the Ornstein–Uhlenbeck process.
+
+![Many sample paths of the SDE $dX=-\theta X\,dt+\sigma\,dW$ simulated by Euler–Maruyama from a single start $X_0$. The thin blue curves are the jittery individual paths; their mean follows the deterministic drift $X_0 e^{-\theta t}$ (green), and the spreading ensemble is captured by the analytic $\pm 2$-standard-deviation time-marginal envelope (orange), whose width $\sqrt{(\sigma^2/2\theta)(1-e^{-2\theta t})}$ saturates as the process reaches its stationary distribution.](../img/mdl-dyn-sde-paths.svg)
+:label:`fig_mdl-dyn-sde-paths`
 **Worked example(s):** simulate the same SDE from one initial condition many times
 and visualize the path cloud; vary $g$ to show drift-dominated vs.
 diffusion-dominated regimes. (Simulation method is §6.2.6.)

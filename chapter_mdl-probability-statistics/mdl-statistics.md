@@ -204,9 +204,10 @@ $$
 
 We refer to the above formula as the *bias-variance trade-off*. The mean squared error decomposes into two sources of error: the error from high bias and the error from high variance. The bias error is commonly seen in a simple model (such as a linear regression model), which cannot extract high-dimensional relations between the features and the outputs. If a model suffers from high bias error, we often say it is *underfitting* or lacks *flexibility* (see :numref:`sec_generalization_basics`). The high variance usually results from a too complex model, which overfits the training data. As a result, an *overfitting* model is sensitive to small fluctuations in the data. If a model suffers from high variance, we often say it is *overfitting* and lacks *generalization* (see :numref:`sec_generalization_basics`).
 
-::: {.callout-note title="⟢ Planned — diagram only (not yet built)"}
-**Diagrams:** `fig_mdl-bias-variance-u-curve` --- as model complexity increases, bias$^2$ falls and variance rises; their sum (the MSE / test error) traces a U-curve with a minimum at the sweet spot. This is exactly the under/overfitting U-curve of :numref:`sec_generalization_basics`, making the decomposition above and generalization the *same* picture; regularization shifts the minimum by trading bias for variance.
-:::
+As model complexity increases, the squared bias falls while the variance rises, so their sum --- the mean squared error, which is the test error --- traces a U-curve with a minimum at the sweet spot, as shown in :numref:`fig_mdl-bias-variance-u-curve`. This is exactly the under/overfitting U-curve of :numref:`sec_generalization_basics`, which makes the decomposition above and generalization the *same* picture; regularization shifts the minimum by trading bias for variance.
+
+![As model complexity grows, squared bias falls and variance rises; their sum, the MSE (test error), is a U-curve with a minimum at the sweet spot.](../img/mdl-prob-bias-variance-u-curve.svg)
+:label:`fig_mdl-bias-variance-u-curve`
 
 
 ### Evaluating Estimators in Code
@@ -395,7 +396,7 @@ This erroneous rejection of a true null hypothesis is exactly the *type I error*
 
 :numref:`fig_mdl-statistical_significance` shows the observations' values and probability of a given normal distribution in a two-sample hypothesis test. If the observation data example is located outsides the $95\%$ threshold, it will be a very unlikely observation under the null hypothesis assumption. Hence, there might be something wrong with the null hypothesis and we will reject it.
 
-![Statistical significance.](../img/statistical-significance.svg)
+![Statistical significance.](../img/mdl-prob-significance.svg)
 :label:`fig_mdl-statistical_significance`
 
 
@@ -407,9 +408,10 @@ $$ \textrm{statistical power }= 1 - \beta = 1 - P(\textrm{ fail to reject } H_0 
 
 Recall that a *type I error* is error caused by rejecting the null hypothesis when it is true, whereas a *type II error* is resulted from failing to reject the null hypothesis when it is false. A type II error is usually denoted as $\beta$, and hence the corresponding statistical power is $1-\beta$.
 
-::: {.callout-note title="⟢ Planned — diagram only (not yet built)"}
-**Diagrams:** `fig_mdl-type-i-ii-matrix` --- the $2\times 2$ decision matrix (rows: $H_0$ true / $H_0$ false; columns: fail to reject / reject) labeling the four cells: correct acceptance, type I error (rate $\alpha$), type II error (rate $\beta$), and correct rejection (power $1-\beta$). This is the picture that makes the $\alpha$/$\beta$ definitions hard to get backwards.
-:::
+The four possible outcomes of a test arrange into the $2\times 2$ decision matrix of :numref:`fig_mdl-type-i-ii-matrix`: the rows are whether $H_0$ is in fact true or false, the columns are whether we fail to reject or reject it. The two diagonal cells are correct decisions, while the off-diagonal cells are the type I error (rate $\alpha$) and the type II error (rate $\beta$); the bottom-right cell is the correct rejection, whose probability is the power $1-\beta$. This is the picture that makes the $\alpha$ and $\beta$ definitions hard to get backwards.
+
+![The $2\times 2$ hypothesis-test decision matrix: correct decisions on the diagonal, the type I error (rate $\alpha$) and type II error (rate $\beta$) off the diagonal, and the power $1-\beta$ in the correct-rejection cell.](../img/mdl-prob-type-i-ii-matrix.svg)
+:label:`fig_mdl-type-i-ii-matrix`
 
 
 Intuitively, statistical power can be interpreted as how likely our test will detect a real discrepancy of some minimum magnitude at a desired statistical significance level. $80\%$ is a commonly used statistical power threshold. The higher the statistical power, the more likely we are to detect true differences.

@@ -44,6 +44,9 @@ $\textrm{pmi}(x,y)=\log\frac{p_{X,Y}(x,y)}{p_X(x)p_Y(y)}$.
 **Diagrams:** `fig_mdl-mi-overlap` — extend the §5.1 entropy Venn diagram with
 $I(X;Y)$ labeled as the overlap of $H(X)$ and $H(Y)$, $H(X\mid Y)$/$H(Y\mid X)$ as
 the crescents, $H(X,Y)$ as the union.
+
+![Mutual information $I(X;Y)$ as the overlap of the entropies $H(X)$ and $H(Y)$: the crescents are the conditional entropies $H(X\mid Y)$ and $H(Y\mid X)$, the union is the joint entropy $H(X,Y)$, and the three equivalent expressions for $I(X;Y)$ follow by reading off the areas.](../img/mdl-it-mi-overlap.svg)
+:label:`fig_mdl-mi-overlap`
 **Worked example(s):** migrate the discrete `mutual_information` cell from §5.1;
 add the closed-form Gaussian MI $I=-\tfrac12\log(1-\rho^2)$ as a continuous
 ground-truth anchor.
@@ -129,6 +132,9 @@ NWJ: $I(X;Y)\ge E_{P_{XY}}[T]-E_{P_XP_Y}[e^{T-1}]$.
 **Diagrams:** `fig_mdl-mi-variational-bounds` — schematic of the bounds stacked
 under the true MI, annotated with their bias/variance behavior as MI grows
 (after Poole et al.).
+
+![Variational lower bounds on mutual information, after Poole et al. (2019). Every estimator sits at or below the true-MI diagonal: InfoNCE is capped at $\log N$, NWJ / Barber–Agakov is low-variance but biased downward (it flattens as $I$ grows), and Donsker–Varadhan / MINE is nearly unbiased but its estimate spreads with growing variance at high $I$ (shaded band).](../img/mdl-it-mi-variational-bounds.svg)
+:label:`fig_mdl-mi-variational-bounds`
 **Worked example(s):** minimal MINE critic on two correlated Gaussians — tracks
 the closed-form $I=-\tfrac12\log(1-\rho^2)$ at low MI, degrades (bias/variance) at
 high MI.

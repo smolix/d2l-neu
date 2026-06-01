@@ -129,6 +129,10 @@ $\tfrac12\nabla\!\cdot(g^2\nabla p)=\nabla\!\cdot\!\big(p\cdot(-\tfrac12 g^2\nab
 **Diagrams:** `fig_mdl-continuity-flux` — a fixed control region with probability
 flux arrows crossing its boundary, illustrating "change inside = net flux"; a
 side note linking to the CNF trace picture of §6.1.8.
+:numref:`fig_mdl-dyn-fokker-planck-flux` draws this balance in one dimension.
+
+![The continuity equation as a flux balance. A density $p(x)$ (blue) is carried by a drift $f$, giving the probability current $j(x)=f\,p(x)$. Over the fixed region from $a$ to $b$ the enclosed mass (orange) changes only through the current crossing its two boundaries: $\partial_t\int_a^b p\,dx = j(a)-j(b)$, the net inward flux. Probability is conserved, never created or destroyed inside the region.](../img/mdl-dyn-fokker-planck-flux.svg)
+:label:`fig_mdl-dyn-fokker-planck-flux`
 **Worked example(s):** verify the diffusion-as-transport identity
 $\tfrac12\nabla\!\cdot(g^2\nabla p)=-\nabla\!\cdot(p\cdot\tfrac12 g^2\nabla\log p)$
 using $\nabla p=p\,\nabla\log p$; check conservation $\int p_t\,d\mathbf{x}=1$ for
@@ -208,7 +212,11 @@ $Z$); Gaussian score
 $\nabla\log\mathcal N(\mathbf{x};\boldsymbol\mu,\sigma^2 I)=-(\mathbf{x}-\boldsymbol\mu)/\sigma^2$.
 **Diagrams:** reuse `fig_mdl-score-field` (from `sec_mdl-fisher-divergence`) — the
 score vector field of a 2-D density, arrows climbing toward the modes; annotate
-"the one unknown in the PF-ODE / reverse SDE."
+"the one unknown in the PF-ODE / reverse SDE." :numref:`fig_mdl-dyn-score-field`
+shows the score of a two-mode density.
+
+![The score $\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$ of a two-component Gaussian mixture, drawn as a vector field over the density contours. The arrows climb the density landscape, pointing toward the nearest mode, and vanish at the two modes (orange) where the density is locally flat. This vector field is the only quantity in the probability-flow ODE and the reverse SDE that is not known by design.](../img/mdl-dyn-score-field.svg)
+:label:`fig_mdl-dyn-score-field`
 **Worked example(s):** compute the score of a 1-D and a 2-D Gaussian by hand and
 plot the field; show adding a constant to $\log\tilde p$ leaves the score
 unchanged; compute the score of a Gaussian mixture and observe it points toward
@@ -249,7 +257,11 @@ reverse drift correction $-g^2\nabla\log p_t$ (SDE) vs. $-\tfrac12 g^2\nabla\log
 **Diagrams:** `fig_mdl-forward-reverse` — a single panel with the forward
 (data→noise) arrow on top and the reverse (noise→data) arrow on the bottom, the
 score $\nabla\log p_t$ drawn as the field that "flips the arrow"; the only learned
-piece highlighted.
+piece highlighted. :numref:`fig_mdl-dyn-forward-reverse` shows the two processes
+as a row of density slices.
+
+![The forward and reverse diffusion processes on a density. Top row (left to right): the forward noising SDE turns a structured bimodal data density $p_0$ into a single Gaussian $p_T$ across a few time slices, each panel an exact variance-preserving (OU) marginal of the mixture. Bottom row (right to left): the reverse process, driven by the score $\nabla\log p_t$, runs the same marginals backward to recover the data density from noise. Forward is fixed by design; reverse needs only the learned score.](../img/mdl-dyn-forward-reverse.svg)
+:label:`fig_mdl-dyn-forward-reverse`
 **Worked example(s):** for 1-D OU, plug the analytic score into Anderson's reverse
 SDE, integrate from the stationary Gaussian back to $t=0$, and recover the original
 $p_0$; do the same with the PF-ODE and show the marginals agree.

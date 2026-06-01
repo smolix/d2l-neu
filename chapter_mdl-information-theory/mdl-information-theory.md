@@ -398,7 +398,7 @@ We can summarize all of these relationships in image :numref:`fig_mdl-mutual_inf
 * $H(Y) - H(Y \mid X)$
 * $H(X) + H(Y) - H(X, Y)$
 
-![Mutual information's relationship with joint entropy and conditional entropy.](../img/mutual-information.svg)
+![Mutual information's relationship with joint entropy and conditional entropy.](../img/mdl-it-mutual-information.svg)
 :label:`fig_mdl-mutual_information`
 
 

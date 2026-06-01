@@ -58,7 +58,11 @@ $\mathbf{x}(t)=\mathbf{x}_0+\int_0^t \mathbf{f}(\mathbf{x}(s),s)\,ds$;
 flow map $\Phi_t$ with $\Phi_0=\mathrm{id}$, $\Phi_{t+s}=\Phi_t\circ\Phi_s$.
 **Diagrams:** `fig_mdl-vector-field-flow` — a 2-D vector field (arrow grid) with
 several integral curves threaded through it from different start points, showing
-the field "steering" each trajectory.
+the field "steering" each trajectory. :numref:`fig_mdl-dyn-ode-field` shows this
+for a linear spiral-sink field.
+
+![An ODE as a velocity field. The faint grid arrows are the field $\mathbf{f}(\mathbf{x})=A\mathbf{x}$ with $A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$; the two coloured integral curves are trajectories that always follow the local arrow, spiralling into the stable fixed point at the origin (eigenvalues $-0.5\pm i$).](../img/mdl-dyn-ode-field.svg)
+:label:`fig_mdl-dyn-ode-field`
 **Worked example(s):** sketch and integrate $\dot x=-x$ (exponential decay) and a
 rotational field $\dot{\mathbf{x}}=\begin{psmallmatrix}0&-1\\1&0\end{psmallmatrix}\mathbf{x}$
 (circular orbits) — framework-agnostic plots of the field plus a few curves.

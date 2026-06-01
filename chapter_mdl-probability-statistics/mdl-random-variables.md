@@ -712,7 +712,7 @@ $$
 \end{aligned}
 $$
 
-![By summing along the columns of our array of probabilities, we are able to obtain the marginal distribution for just the random variable represented along the $\mathit{x}$-axis.](../img/marginal.svg)
+![By summing along the columns of our array of probabilities, we are able to obtain the marginal distribution for just the random variable represented along the $\mathit{x}$-axis.](../img/mdl-prob-marginal.svg)
 :label:`fig_mdl-marginal`
 
 This tells us to add up the value of the density along a series of squares in a line as is shown in :numref:`fig_mdl-marginal`.  Indeed, after canceling one factor of epsilon from both sides, and recognizing the sum on the right is the integral over $y$, we can conclude that

@@ -139,9 +139,10 @@ ys = jnp.sin(x_small**x_small)
 d2l.plot(x_small, ys, 'x', 'f(x)')
 ```
 
-<!-- Planned diagram `fig_mdl-zoom-sequence`: three side-by-side static panels of the same smooth curve at shrinking x-ranges, flattening to a straight line, to capture the "zoom until it's a line" intuition without requiring the reader to run code. -->
+![The same smooth curve viewed over shrinking $x$-ranges: as we zoom in around the base point it flattens onto its tangent line.](../img/mdl-cal-zoom-sequence.svg)
+:label:`fig_mdl-zoom-sequence`
 
-This is the key observation of single variable calculus: the behavior of familiar functions can be modeled by a line in a small enough range.  This means that for most functions, it is reasonable to expect that as we shift the $x$ value of the function by a little bit, the output $f(x)$ will also be shifted by a little bit.  The only question we need to answer is, "How large is the change in the output compared to the change in the input?  Is it half as large?  Twice as large?"
+This is the key observation of single variable calculus, illustrated in :numref:`fig_mdl-zoom-sequence`: the behavior of familiar functions can be modeled by a line in a small enough range.  This means that for most functions, it is reasonable to expect that as we shift the $x$ value of the function by a little bit, the output $f(x)$ will also be shifted by a little bit.  The only question we need to answer is, "How large is the change in the output compared to the change in the input?  Is it half as large?  Twice as large?"
 
 Thus, we can consider the ratio of the change in the output of a function for a small change in the input of the function.  We can write this formally as
 
@@ -380,19 +381,19 @@ Let's try to understand *why* this is a useful notion.  Below, we visualize $f^{
 
 First, consider the case that the second derivative $f^{(2)}(x)$ is a positive constant.  This means that the slope of the first derivative is positive.  As a result, the first derivative $f^{(1)}(x)$ may start out negative, becomes zero at a point, and then becomes positive in the end. This tells us the slope of our original function $f$ and therefore, the function $f$ itself decreases, flattens out, then increases.  In other words, the function $f$ curves up, and has a single minimum as is shown in :numref:`fig_mdl-positive-second`.
 
-![If we assume the second derivative is a positive constant, then the first derivative is increasing, which implies the function itself has a minimum.](../img/posSecDer.svg)
+![If we assume the second derivative is a positive constant, then the first derivative is increasing, which implies the function itself has a minimum.](../img/mdl-cal-pos-second.svg)
 :label:`fig_mdl-positive-second`
 
 
 Second, if the second derivative is a negative constant, that means that the first derivative is decreasing.  This implies the first derivative may start out positive, becomes zero at a point, and then becomes negative. Hence, the function $f$ itself increases, flattens out, then decreases.  In other words, the function $f$ curves down, and has a single maximum as is shown in :numref:`fig_mdl-negative-second`.
 
-![If we assume the second derivative is a negative constant, then the first derivative is decreasing, which implies the function itself has a maximum.](../img/negSecDer.svg)
+![If we assume the second derivative is a negative constant, then the first derivative is decreasing, which implies the function itself has a maximum.](../img/mdl-cal-neg-second.svg)
 :label:`fig_mdl-negative-second`
 
 
 Third, if the second derivative is a always zero, then the first derivative will never change---it is constant!  This means that $f$ increases (or decreases) at a fixed rate, and $f$ is itself a straight line  as is shown in :numref:`fig_mdl-zero-second`.
 
-![If we assume the second derivative is zero, then the first derivative is constant, which implies the function itself is a straight line.](../img/zeroSecDer.svg)
+![If we assume the second derivative is zero, then the first derivative is constant, which implies the function itself is a straight line.](../img/mdl-cal-zero-second.svg)
 :label:`fig_mdl-zero-second`
 
 To summarize, the second derivative can be interpreted as describing the way that the function $f$ curves.  A positive second derivative leads to a upwards curve, while a negative second derivative means that $f$ curves downwards, and a zero second derivative means that $f$ does not curve at all.

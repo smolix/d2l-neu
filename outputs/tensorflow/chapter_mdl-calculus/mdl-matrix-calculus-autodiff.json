@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-matrix-calculus-autodiff.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "matrix-calculus-autodiff-imports": {
+      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-jacobian-finite-diff": {
+      "code_fingerprint": "sha256:d9a8ba360878b142742770eb4ca7241fe98146b32e05699048aa6492a13f8ad9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear approx: [0.499    0.997424]\nexact        : [0.498996 0.997424]\nerror / |delta|: 0.0015819444529976167\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-softmax-jacobian": {
+      "code_fingerprint": "sha256:6aec0e8851507f60eda7a9c503514592df1151f0b5d6bd47b2fba0b16c12608c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax Jacobian rows sum to zero: True\nd loss / d z = p - y : [ 0.253716 -0.943388  0.689672]\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-dual-numbers": {
+      "code_fingerprint": "sha256:b2698a38e181cb98b355dbe6c511d3cef38e58dc3093e7dec7f961d084608db0",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-dual-eval": {
+      "code_fingerprint": "sha256:27ef282030e0ad4b3436682c19bdd30bbdbd554a25c5f74ac6df2c8d35aaa587",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dual result : 4.662200 + 3.360101 eps\nvalue f(x)  : 4.662200318713363\nderivative  : dual 3.360101  vs  exact 3.360101\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-tape": {
+      "code_fingerprint": "sha256:2277847dd52558851498cd19c097845367acf5738f2a1cb3f9e2a5c5a02d6b9f",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-tape-check": {
+      "code_fingerprint": "sha256:d75a627434d892aafdf8df4e249a1cc418f25ef09cffd00fa676f4f095697dcd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\nclosed form: dy/du = 16.0000  dy/dv = -16.0000\n"
+        }
+      ]
+    }
+  }
+}

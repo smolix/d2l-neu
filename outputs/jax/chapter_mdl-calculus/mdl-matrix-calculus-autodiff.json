@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-matrix-calculus-autodiff.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "matrix-calculus-autodiff-imports": {
+      "code_fingerprint": "sha256:72c8ffe765144daee3db7148c63ee751b4d7a834abd1736ca5bb5293f8b8d3a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-jacobian-finite-diff": {
+      "code_fingerprint": "sha256:26e7d84fc407ef01eb3b1ff11ba820d7f7f24d2f1ca5e47970ba52d81869e566",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear approx: [0.499    0.997424]\nexact        : [0.498996 0.997424]\nerror / |delta|: 0.0015819444529976167\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-softmax-jacobian": {
+      "code_fingerprint": "sha256:e784886ab2356c8e91986b64cea883bfa8646d1d3253d03e0d55e1f1801eacf1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax Jacobian matches autograd: True\nd loss / d z : [ 0.253716 -0.943388  0.689672]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "p - y        : [ 0.253716 -0.943388  0.689672]\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-dual-numbers": {
+      "code_fingerprint": "sha256:3f20e0015b160b35331653c4492c0d862e1646adf75bec00304920abcb8ae746",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-dual-eval": {
+      "code_fingerprint": "sha256:3350f350ab2bbda19c245c908d196bbf616dc94544f05f42dc89862611248570",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dual result : 4.662200 + 3.360101 eps\nvalue f(x)  : 4.662200318713363\nderivative  : dual 3.360101  vs  exact 3.360101\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-tape": {
+      "code_fingerprint": "sha256:93e6fcf214f9b4ea823426e2bf06e2d63778687563fca2fb924770889b15ffe5",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-tape-check": {
+      "code_fingerprint": "sha256:b3001fa41a6d9442aee9ecc5f86008724ee4f01a5711f854d720eada3ca86a26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\njax        : dy/du = 16.0000  dy/dv = -16.0000\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-integral-calculus.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "integral-imports": {
+      "code_fingerprint": "sha256:16e5e0b3bd44a35b7a0463115df804ee6360888eff5b7651352e4b3aefd88e74",
+      "kind": "text",
+      "outputs": []
+    },
+    "integral-riemann-converge": {
+      "code_fingerprint": "sha256:22d9eb2fc47890dbae77daf300097d884ef58b4ccceacbbb098be68048960ffb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\neps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802709  error=0.002010\neps=0.001  sum=0.804518  error=0.000201\ntruth = (1/2) log 5 = 0.804719\n"
+        }
+      ]
+    },
+    "integral-ftc-check": {
+      "code_fingerprint": "sha256:89e31a64978eff146202b9db6d205461788ac847c0731d287939586688f224da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |dF/dx - f|      : 0.0009999991161748767\nRiemann F(2) vs G(2)-G(0): 0.8045181035995483 0.8047189712524414\n"
+        }
+      ]
+    },
+    "integral-improper": {
+      "code_fingerprint": "sha256:9a2049c74f72c99f9f34dbe70cc3cf004ff5269cca600987dc2f57cd8835a1df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993758\nintegral_0^10.0 e^-x dx = 1.000460\nintegral_0^20.0 e^-x dx = 1.000460\nlimit as b -> infinity   = 1.000000\n"
+        }
+      ]
+    },
+    "integral-surface": {
+      "code_fingerprint": "sha256:419234a477cb7e205b2dd50568383c4f91bc7889ee9a24a5a7510ce743e4e137",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "volume (Riemann)  : 3.1148147583007812\nvolume (exact = pi): 3.141592653589793\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-integral-calculus/integral-surface-1.png",
+          "bytes": 75262,
+          "sha256": "sha256:17acd6f394076fca89c7df6f6a55e42aab0e43b17e345533681661ba6d86edda"
+        }
+      ]
+    },
+    "integral-gaussian": {
+      "code_fingerprint": "sha256:e206702ff9134fedfce2e815c9b6f3ddf32e5857e82cfdd52d182e89e7dae20b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grid integral of e^(-x^2-y^2): 3.140211\nexact value pi               : 3.141593\n"
+        }
+      ]
+    },
+    "integral-density": {
+      "code_fingerprint": "sha256:6de3a2533740d0837230b7f72da235a71e6fdb438b765c4231b5a2864bd8d2b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass  integral p dx : 0.999997\nmean        integral x p dx: -0.0\n"
+        }
+      ]
+    }
+  }
+}

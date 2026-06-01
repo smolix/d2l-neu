@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "source": "chapter_mdl-calculus/mdl-single-variable-calculus.md",
-  "framework": "pytorch",
+  "framework": "tensorflow",
   "provenance": {
-    "framework_version": "torch==2.11.0",
+    "framework_version": "tensorflow==2.21.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:69778ef691a43f897abc2824f2683711e135e30e5b735192db8635c897f591f6",
+      "code_fingerprint": "sha256:be1a2390066b392d0c79a002716000da44086014c5b426bdd3cfbe8b2ea31dc7",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:3639d669b9578d7708641c229bfa1aabe86c78f4f3f84cc056f81db77216feb7",
+      "code_fingerprint": "sha256:81d8c4e4ebd79542c4b2643967cfd9f954ea008722fe765777aaab1ae4247746",
       "kind": "text",
       "outputs": [
         {
@@ -25,20 +25,20 @@
       ]
     },
     "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:94e21be8fd6c6a64b25af10e7d6ad75bdf7365b3451deda6002b82b06e0bd35e",
+      "code_fingerprint": "sha256:21430e7bd8f447e1645353be2c6df0c52609835144b5fd9f98ada955ec86161f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15849,
-          "sha256": "sha256:eadf5f8972db12caa6847c3d276ddee3a0d415bdd79456a5dbc5108fa24c8dbb"
+          "bytes": 15841,
+          "sha256": "sha256:4b17a350d78ca9a7d8152de96e1c908af1dff2aa7b05ad45c64b6498e50f976b"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:7e48a39544fa35ed178bf15d2220a5a02a11be0a9a11c3e11448514af17c9f50",
+      "code_fingerprint": "sha256:51325f91601ad83f52e15cb322b27bbbd02943cef4b360788c3f1622a615e1f0",
       "kind": "text",
       "outputs": [
         {
@@ -49,20 +49,20 @@
       ]
     },
     "single-variable-calculus-higher-order-derivatives": {
-      "code_fingerprint": "sha256:f7a0b3c8a11d53715524d3130065fabb4ca2f07296241ba0c1023f6fffe5db43",
+      "code_fingerprint": "sha256:98e577a691fd365f203b9a09ad8f459e69106a23b809920c28df9549c0ad9e50",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
-          "bytes": 17904,
-          "sha256": "sha256:fc5fba322e5bb0b909eb45d8502f199ed32787dd311ea27db8ba6ab11b745708"
+          "bytes": 17896,
+          "sha256": "sha256:44776442b8f6920d225c44fbce59877a38b7ff21199184296ae5d692f274e2d7"
         }
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:cbf780829ee882c58eb42e4d51ad43e89a28861562bc52b2133d3a4e429b100f",
+      "code_fingerprint": "sha256:f074265b73d2a3dc3b2561842ea513cdc1594cc2fd9da12c464a3d9818444129",
       "kind": "asset",
       "outputs": [
         {
@@ -70,12 +70,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28556,
-          "sha256": "sha256:31686830c47d16bc30ad295e55c05e89f72fd69aeac3008e71d8eb18480fcc8c"
+          "sha256": "sha256:1834f4189cf1bc0bb8e4f303d6df83198dd933d7d2553971475fd83db2b20756"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:efc26b5ce2b1b8d38d170c420a6d41a01d1a5f23165a98df1b1b3647830dcc2c",
+      "code_fingerprint": "sha256:980af328acf4db2da2625da49fc4476007532d8dace32e8c4150137ece0e8b78",
       "kind": "text",
       "outputs": [
         {

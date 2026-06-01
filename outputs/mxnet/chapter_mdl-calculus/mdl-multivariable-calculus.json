@@ -1,38 +1,38 @@
 {
   "schema": 1,
   "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
-  "framework": "pytorch",
+  "framework": "mxnet",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:8195978bcecbf263acec520fa88e1b60a8fb9d4c9ff9e9cee0e5d0987d8a2016",
+      "code_fingerprint": "sha256:51a01ad8dcba11b3824bf99b1397238f6177a40bedf116c17fae888a84d7529c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'approximation: tensor([1.0819]), true Value: tensor([1.0821])'"
+          "text": "'approximation: 1.0819456577301025, true Value: 1.0821242332458496'"
         }
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:d25cb9285866002ea9294e64aa2b934da73c48058774fff22a4eebbb6d2eaa40",
+      "code_fingerprint": "sha256:9012593d965db6f54283c034a4959d9a60bc59bf2ebc30fd45d42f23d3fbc7c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13741,
-          "sha256": "sha256:fc5d4274e7321d6bf624f2b21f2654ed77fd0318518b2f218dded7beeba3e874"
+          "bytes": 13771,
+          "sha256": "sha256:71882d49fe5215b384db3bdf7b15920e186253c5732decc10fa6e1c7a79f4f3d"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:1f0333889e14121757ebf0107578b0fd29b8d8c5170b5020b6c54b317cee8506",
+      "code_fingerprint": "sha256:35ca5991df7263ab54089f06b920f4dc3e99455dbadf81bdc8d966ada37a8b81",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +43,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:155faedf4f1169db1c157ccfb0a439f681c5baad6ec1ec60bc980e437b0329a0",
+      "code_fingerprint": "sha256:84e1b70d8dd5759e96b122c9992d33ee3010489c71b36e481775905a47042ba0",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:f481480b0ea6433b22d382961e13d3a36afce8ec3a5d05cb87f4027626d6554a",
+      "code_fingerprint": "sha256:79eb36a5d96e5fbb92fe6db720a8af1bb5a193393af78757e748f6c24ffede04",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:9a5a875bb6bd32ab2c4343131ef2ca3fd4c53c9c92038ba358ba572419f7c62b",
+      "code_fingerprint": "sha256:484eaed2814a933c251128a9bbc4dc2b5cadb6109555af3a50565e074c57da36",
       "kind": "mixed",
       "outputs": [
         {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-hessians-1.svg",
-          "bytes": 120530,
-          "sha256": "sha256:3a28d461188f8d1a07a8f8f9a507198ae874615c1e6392a049026ad7b52556f8"
+          "bytes": 120546,
+          "sha256": "sha256:d76d8416a7e299c7d84af32503d824b547238c221119e0b21ad9976a328a55d5"
         }
       ]
     }

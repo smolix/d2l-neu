@@ -1,38 +1,38 @@
 {
   "schema": 1,
   "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
-  "framework": "pytorch",
+  "framework": "jax",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:8195978bcecbf263acec520fa88e1b60a8fb9d4c9ff9e9cee0e5d0987d8a2016",
+      "code_fingerprint": "sha256:725f0ee127ca310622d224763e79b7e5c2c62cecb9ef9bdae9507dd026238dfd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'approximation: tensor([1.0819]), true Value: tensor([1.0821])'"
+          "text": "'approximation: [1.0819457], true Value: [1.0821242]'"
         }
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:d25cb9285866002ea9294e64aa2b934da73c48058774fff22a4eebbb6d2eaa40",
+      "code_fingerprint": "sha256:4ad443465edfb40686f263a34b18f61ff131d8b26981d83c0b73cace48e34231",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13741,
-          "sha256": "sha256:fc5d4274e7321d6bf624f2b21f2654ed77fd0318518b2f218dded7beeba3e874"
+          "bytes": 13743,
+          "sha256": "sha256:cecabd64f523a652ab7a4f6c49b55eab4c9bfaa710cc4e9601965ae9e695c3c1"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:1f0333889e14121757ebf0107578b0fd29b8d8c5170b5020b6c54b317cee8506",
+      "code_fingerprint": "sha256:98402f5e0dc2d18d8dfb06807fee892e8b39b33b7b728790478bdbbef76a22d4",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +43,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:155faedf4f1169db1c157ccfb0a439f681c5baad6ec1ec60bc980e437b0329a0",
+      "code_fingerprint": "sha256:b08eac3fa1955ee23302be3b76d332a2742ab0cc34f01800991b9da536df32c3",
       "kind": "text",
       "outputs": [
         {
@@ -54,18 +54,18 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:f481480b0ea6433b22d382961e13d3a36afce8ec3a5d05cb87f4027626d6554a",
+      "code_fingerprint": "sha256:c2df858d60a2f1f9a4e248369302b547f24145102ca1a894410a2339cb974a4a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "df/dw at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dx at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dy at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dz at -1.0, 0.0, -2.0, 1.0 is -4096.0\n"
+          "text": "df/dw at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dx at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dy at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dz at [-1.], [0.], [-2.], [1.] is [-4096.]\n"
         }
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:9a5a875bb6bd32ab2c4343131ef2ca3fd4c53c9c92038ba358ba572419f7c62b",
+      "code_fingerprint": "sha256:4b07bba5913677b64633420b4915d81506736ece1980a7dd874fbcd48baf751e",
       "kind": "mixed",
       "outputs": [
         {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-hessians-1.svg",
-          "bytes": 120530,
-          "sha256": "sha256:3a28d461188f8d1a07a8f8f9a507198ae874615c1e6392a049026ad7b52556f8"
+          "bytes": 120521,
+          "sha256": "sha256:b5fe08c1081fa03b8dcf0a95a4d8360d37f7775b9263a78eda70f70b588f6d15"
         }
       ]
     }

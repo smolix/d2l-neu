@@ -502,7 +502,7 @@ $$
 
 If we consider the geometric meaning of this expression,
 we see that this is equivalent to saying
-that the length of the projection of $\mathbf{v}$
+that the signed length of the projection of $\mathbf{v}$
 onto the direction of $\mathbf{w}$ is exactly $1/\|\mathbf{w}\|$ --- recall the
 signed projection length $\|\mathbf{v}\|\cos(\theta)$ from
 :numref:`fig_mdl-la-projection`.
@@ -993,6 +993,12 @@ $$
 and show that $\mathbf{C}$ has rank two since, for instance,
 the first two columns are linearly independent,
 however any of the $\binom{5}{3} = 10$ collections of three columns are linearly dependent.
+
+Equivalently, the rank is the dimension of the *column space* (the span of the
+columns), and a foundational theorem of linear algebra says this equals the
+dimension of the *row space*. A matrix "compresses space" into a lower dimension
+exactly when its rank is smaller than its number of columns --- equivalently, when
+it has a nontrivial null space (some nonzero $\mathbf{x}$ with $\mathbf{A}\mathbf{x}=\mathbf{0}$).
 
 This procedure, as described, is very inefficient.
 It requires looking at every subset of the columns of our given matrix,

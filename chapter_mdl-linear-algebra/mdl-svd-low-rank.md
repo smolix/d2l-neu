@@ -468,10 +468,23 @@ The pivot is the collision: the kernel of $\mathbf{B}$ and the top-$(k{+}1)$
 singular subspace *overfill* $\mathbb{R}^n$, so they must share a direction. On
 that shared vector $\mathbf{B}$ is blind ($\mathbf{B}\mathbf{x}=\mathbf 0$) while
 $\mathbf{A}$ still stretches by at least $\sigma_{k+1}$---so no rank-$k$
-$\mathbf{B}$ can track $\mathbf{A}$ everywhere. (The Frobenius optimality needs a
-little more---Weyl's inequalities for singular values, see
-:cite:`Golub.Van-Loan.1996`---but the conclusion and the optimal $\mathbf{A}_k$ are
-the same.)
+$\mathbf{B}$ can track $\mathbf{A}$ everywhere.
+
+For the **Frobenius** norm---the case PCA relies on---the same conclusion follows
+from a one-line singular-value inequality. *Weyl's inequality for singular values*,
+$\sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y})$,
+applied with $\mathbf{X}=\mathbf{A}-\mathbf{B}$, $\mathbf{Y}=\mathbf{B}$ and
+$j=k{+}1$ gives
+$\sigma_{k+i}(\mathbf{A})\le\sigma_i(\mathbf{A}-\mathbf{B})+\sigma_{k+1}(\mathbf{B})=\sigma_i(\mathbf{A}-\mathbf{B})$,
+since $\mathbf{B}$ has rank $\le k$ and so $\sigma_{k+1}(\mathbf{B})=0$. Squaring
+and summing over $i\ge1$,
+
+$$
+\|\mathbf{A}-\mathbf{B}\|_F^2=\sum_{i\ge1}\sigma_i(\mathbf{A}-\mathbf{B})^2
+  \ge\sum_{i\ge1}\sigma_{k+i}(\mathbf{A})^2=\sum_{j>k}\sigma_j(\mathbf{A})^2 ,
+$$
+
+again with equality at the truncation $\mathbf{A}_k$. $\blacksquare$
 
 The error formulas give a quantitative *dial*. The fraction of "energy" retained
 by the rank-$k$ truncation is the *energy ratio*
@@ -508,8 +521,11 @@ rows of $\mathbf{X}\in\mathbb{R}^{n\times d}$, first *center* them by subtractin
 the mean row, $\tilde{\mathbf{X}}=\mathbf{X}-\mathbf 1\bar{\mathbf{x}}^\top$. The
 empirical covariance is the symmetric PSD matrix
 $\mathbf{C}=\tfrac1n\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ from
-:numref:`subsec_mdl-psd`. PCA asks: which unit direction $\mathbf{w}$ captures the
-most variance of the projected data?
+:numref:`subsec_mdl-psd` (we use the maximum-likelihood $\tfrac1n$ covariance; the
+unbiased $\tfrac1{n-1}$ version rescales every eigenvalue by the same factor and so
+changes neither the principal directions nor the explained-variance ratio). PCA
+asks: which unit direction $\mathbf{w}$ captures the most variance of the projected
+data?
 
 **Proposition (PCA via Rayleigh).** *The projected variance
 $\tfrac1n\|\tilde{\mathbf{X}}\mathbf{w}\|^2=\mathbf{w}^\top\mathbf{C}\mathbf{w}$ is
@@ -739,15 +755,19 @@ normal-equations matrix squares the conditioning, $\kappa(\mathbf{A}^\top\mathbf
 prefer an SVD/QR least-squares solve over the normal equations
 (:numref:`subsec_mdl-pseudoinverse`).
 
-Geometrically, a large $\kappa$ means very *elongated* level sets. For the
-quadratic bowl $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}$,
-the contours are ellipses with axis ratio $\kappa$; when $\kappa\gg1$ the bowl is a
+Geometrically, a large $\kappa$ means very *elongated* level sets. For a quadratic
+bowl $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{M}\mathbf{x}$ with $\mathbf{M}$
+symmetric positive definite, the contours are ellipses whose axis ratio is exactly
+$\kappa(\mathbf{M})=\lambda_{\max}/\lambda_{\min}$; when $\kappa\gg1$ the bowl is a
 narrow valley, and gradient descent zig-zags across the steep walls while crawling
-along the flat floor. This is the same picture that ended the Rayleigh discussion
-in :numref:`subsec_mdl-rayleigh`, and it is no coincidence: the very same $\kappa$
-controls gradient descent's convergence rate, which contracts like
-$(\kappa-1)/(\kappa+1)$ per step---*one number, two consequences*, error
-amplification in a solve and slow convergence in optimization. We make this
+along the flat floor. (For a least-squares objective
+$\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$ the bowl's matrix is
+$\mathbf{M}=\mathbf{A}^\top\mathbf{A}$, so its axis ratio is $\kappa(\mathbf{A})^2$---one
+more reason squaring the conditioning hurts.) This is the same picture that ended
+the Rayleigh discussion in :numref:`subsec_mdl-rayleigh`, and it is no coincidence:
+with the best fixed step size, gradient descent's error contracts like
+$(\kappa-1)/(\kappa+1)$ per step on such a bowl---*one number, two consequences*,
+error amplification in a solve and slow convergence in optimization. We make this
 precise when we analyze gradient descent in :numref:`sec_mdl-gradient-based-optimization`
 and study numerical conditioning in :numref:`sec_mdl-numerical-stability-conditioning`.
 :numref:`fig_mdl-la-condition` contrasts a well-conditioned bowl ($\kappa\approx1$,
@@ -820,9 +840,18 @@ print(f'{m} x {n} matrix; rank for 95% energy: {r95}; '
 ```
 
 **Scaling up.** For matrices too large to factor fully, *randomized SVD*
-(Halko, Martinsson, and Tropp, 2011) computes an accurate rank-$k$ truncation by
-projecting onto a small random subspace, at a fraction of the cost---the standard
-tool when only the leading singular triples are needed.
+(Halko, Martinsson, and Tropp, 2011) computes an accurate rank-$k$ truncation at a
+fraction of the cost. The mechanism is a *range finder*: draw a random
+$n\times(k{+}p)$ Gaussian matrix $\boldsymbol\Omega$ (a small oversampling $p$ adds
+robustness), form $\mathbf{Y}=\mathbf{A}\boldsymbol\Omega$---a handful of
+matrix--vector products that sketch the column space---and orthonormalize it,
+$\mathbf{Q}=\operatorname{qr}(\mathbf{Y})$. Because $\mathbf{A}$'s energy is
+concentrated in its top singular directions, the $k{+}p$ columns of $\mathbf{Q}$
+capture them with high probability, so one then factors only the *tiny* matrix
+$\mathbf{Q}^\top\mathbf{A}$ and maps its left singular vectors back through
+$\mathbf{Q}$. The cost drops from the $O(mn\min(m,n))$ of a full SVD to essentially
+a few passes over $\mathbf{A}$---the standard tool when only the leading singular
+triples are needed.
 
 Let us verify the two facts the whole section rests on: that the SVD reconstructs
 $\mathbf{A}$, and that $\sigma_i^2$ are the eigenvalues of $\mathbf{A}^\top\mathbf{A}$.

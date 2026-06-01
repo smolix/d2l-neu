@@ -226,7 +226,7 @@ $$
 \mathbf{A}\mathbf{W} =\mathbf{W} \boldsymbol{\Lambda} .
 $$
 
-The matrix $W$ is invertible, so we may multiply both sides by $W^{-1}$ on the right,
+The matrix $\mathbf{W}$ is invertible, so we may multiply both sides by $\mathbf{W}^{-1}$ on the right,
 we see that we may write
 
 $$\mathbf{A} = \mathbf{W} \boldsymbol{\Lambda} \mathbf{W}^{-1}.$$
@@ -430,7 +430,7 @@ so $(\lambda-\mu)\langle\mathbf{u},\mathbf{v}\rangle=0$. Since
 $\lambda\neq\mu$, we conclude $\langle\mathbf{u},\mathbf{v}\rangle=0$: the
 eigenvectors are orthogonal. $\blacksquare$
 
-**Proof, part (iii): a full orthonormal basis (Axler's induction).** We induct on
+**Proof, part (iii): a full orthonormal basis (induction on the orthogonal complement).** We induct on
 $n$. For $n=1$ the claim is trivial. For $n>1$, part (i) gives a real eigenpair
 $(\lambda_1,\mathbf{w}_1)$ with $\|\mathbf{w}_1\|=1$. Let
 $U=\mathbf{w}_1^{\perp}$ be its orthogonal complement (dimension $n-1$). This
@@ -619,7 +619,10 @@ Maximizing over subspaces of fixed dimension recovers *every* eigenvalue in
 between (the *Courant--Fischer min-max theorem*,
 $\lambda_k=\max_{\dim S=k}\min_{\mathbf 0\neq\mathbf x\in S}R(\mathbf x)$); we will
 not need the general form, but it is the workhorse behind comparison and
-perturbation bounds. The Rayleigh quotient is a thread that runs through the rest
+perturbation bounds---for symmetric matrices it yields **Weyl's inequality**,
+$|\lambda_k(\mathbf{A}+\mathbf{E})-\lambda_k(\mathbf{A})|\le\|\mathbf{E}\|_2$, so
+every eigenvalue moves by no more than the size of the perturbation. The Rayleigh
+quotient is a thread that runs through the rest
 of the chapter: in :numref:`sec_mdl-svd-low-rank` it reappears as
 $\sigma_1=\max_{\|\mathbf x\|=1}\|\mathbf{A}\mathbf x\|$ (the largest singular
 value) and as the variational characterization of PCA's top component. In
@@ -827,7 +830,7 @@ eigenpair :cite:`Golub.Van-Loan.1996`. :numref:`fig_mdl-la-power-iter` makes the
 convergence concrete for the small symmetric matrix $\mathbf{B}=[[3,1],[1,2]]$,
 which has a genuine strictly dominant real eigenvalue
 $\lambda_1=(5+\sqrt5)/2\approx3.618$ and a clean rate
-$|\lambda_2/\lambda_1|=(3-\sqrt5)/(3+\sqrt5)\approx0.382$: the renormalized
+$|\lambda_2/\lambda_1|=\tfrac{5-\sqrt5}{5+\sqrt5}=\tfrac{3-\sqrt5}{2}\approx0.382$: the renormalized
 iterates swing onto $\mathbf{w}_1$ while the norm ratio flattens to
 $|\lambda_1|$.
 
@@ -905,6 +908,26 @@ matrix, so its eigenvalues are complex in general; we take the modulus to measur
 the stretching factor, exactly the strict-dominance caveat above.) This quantity
 has a name: the *spectral radius* $\rho(\mathbf A)=\max_i|\lambda_i|$, the largest
 eigenvalue modulus, which we examine next.
+
+#### Aside: PageRank and the Perron--Frobenius Theorem
+
+Power iteration is not only a way to *measure* the dominant eigenvalue; for an
+important class of matrices it is the algorithm of choice for *computing* the
+dominant eigenvector, and that eigenvector is often the whole point. The
+**Perron--Frobenius theorem** says that a matrix with non-negative entries (and a
+mild connectivity condition) has a real, positive dominant eigenvalue whose
+eigenvector can be chosen with all entries non-negative---so it is interpretable
+as a distribution. Google's original **PageRank** is exactly this eigenvector.
+Model a random web surfer who at each step follows a random outgoing link;
+collect the click probabilities into a column-stochastic matrix $\mathbf{P}$
+(every column sums to $1$, so $\rho(\mathbf{P})=1$). The fraction of time the
+surfer spends on each page is the stationary distribution $\boldsymbol\pi$ with
+$\mathbf{P}\boldsymbol\pi=\boldsymbol\pi$---the dominant eigenvector. Power
+iteration started from the uniform distribution converges to $\boldsymbol\pi$, and
+that is precisely how PageRank is computed at web scale: forming $\mathbf{P}$
+explicitly is unthinkable, but multiplying by it is cheap. The same
+dominant-eigenvector-by-power-iteration idea reappears across machine learning, in
+the stationary distribution of a Markov chain and in spectral clustering.
 
 #### Aside: Complex Eigenvalues Are Rotations
 :label:`subsec_mdl-complex-rotation`

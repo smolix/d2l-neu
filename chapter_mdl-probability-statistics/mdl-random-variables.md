@@ -1,736 +1,563 @@
 # Random Variables
 :label:`sec_mdl-random_variables`
 
-In :numref:`sec_prob` we saw the basics of how to work with discrete random variables, which in our case refer to those random variables which take either a finite set of possible values, or the integers.  In this section, we develop the theory of *continuous random variables*, which are random variables which  can take on any real value.
+In :numref:`sec_prob` we worked with *discrete* random variables---those taking
+values in a finite set or the integers, where a probability *mass* sits on each
+outcome and we sum to get probabilities. Deep learning lives mostly in the
+*continuous* world: a pixel intensity, a network weight, a Gaussian noise sample
+all range over a continuum, and there a single outcome carries zero probability.
+The fix is the *density*, met already in :numref:`sec_mdl-integral_calculus`:
+probability becomes *area under a curve*, so the natural operation is no longer
+summation but integration. This section builds the continuous theory we actually
+use---densities and their cumulative functions, the summary statistics (mean,
+variance, standard deviation) that compress a distribution to a few numbers, and
+the joint/marginal/covariance machinery for several correlated variables---and at
+every step the discrete sum and the continuous integral are *the same idea* seen
+through :numref:`sec_mdl-integral_calculus`. The recurring thread is the small
+identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny interval $\approx$ its
+width times the density there.* Almost everything below is that statement
+integrated.
 
-## Continuous Random Variables
+We load the per-framework library so the few computational cells have `d2l` and
+the framework's tensor library in scope. The cells that follow *compute*
+results---recovering a probability from a density, checking a continuum
+mean/variance---rather than draw illustrations; the figures are pre-generated.
 
-Continuous random variables are a significantly more subtle topic than discrete random variables.  A fair analogy to make is that the technical jump is comparable to the jump between adding lists of numbers and integrating functions.  As such, we will need to take some time to develop the theory.
-
-### From Discrete to Continuous
-
-To understand the additional technical challenges encountered when working with continuous random variables, let's perform a thought experiment.  Suppose that we are throwing a dart at the dart board, and we want to know the probability that it hits exactly $2 \textrm{cm}$ from the center of the board.
-
-To start with, we imagine measuring a single digit of accuracy, that is to say with bins for $0 \textrm{cm}$, $1 \textrm{cm}$, $2 \textrm{cm}$, and so on.  We throw say $100$ darts at the dart board, and if $20$ of them fall into the bin for $2\textrm{cm}$ we conclude that $20\%$ of the darts we throw hit the board $2 \textrm{cm}$ away from the center.
-
-However, when we look closer, this does not match our question!  We wanted exact equality, whereas these bins hold all that fell between say $1.5\textrm{cm}$ and $2.5\textrm{cm}$.
-
-Undeterred, we continue further.  We measure even more precisely, say $1.9\textrm{cm}$, $2.0\textrm{cm}$, $2.1\textrm{cm}$, and now see that perhaps $3$ of the $100$ darts hit the board in the $2.0\textrm{cm}$ bucket.  Thus we conclude the probability is $3\%$.
-
-However, this does not solve anything!  We have just pushed the issue down one digit further.  Let's abstract a bit. Imagine we know the probability that the first $k$ digits match with $2.00000\ldots$ and we want to know the probability it matches for the first $k+1$ digits. It is fairly reasonable to assume that the ${k+1}^{\textrm{th}}$ digit is essentially a random choice from the set $\{0, 1, 2, \ldots, 9\}$.  At least, we cannot conceive of a physically meaningful process which would force the number of micrometers away from the center to prefer to end in a $7$ vs a $3$.
-
-What this means is that in essence each additional digit of accuracy we require should decrease probability of matching by a factor of $10$.  Or put another way, we would expect that
-
-$$
-P(\textrm{distance is}\; 2.00\ldots, \;\textrm{to}\; k \;\textrm{digits} ) \approx p\cdot10^{-k}.
-$$
-
-The value $p$ essentially encodes what happens with the first few digits, and the $10^{-k}$ handles the rest.
-
-Notice that if we know the position accurate to $k=4$ digits after the decimal, that means we know the value falls within the interval say $[1.99995,2.00005]$ which is an interval of length $2.00005-1.99995 = 10^{-4}$.  Thus, if we call the length of this interval $\epsilon$, we can say
-
-$$
-P(\textrm{distance is in an}\; \epsilon\textrm{-sized interval around}\; 2 ) \approx \epsilon \cdot p.
-$$
-
-Let's take this one final step further.  We have been thinking about the point $2$ the entire time, but never thinking about other points.  Nothing is different there fundamentally, but it is the case that the value $p$ will likely be different.  We would at least hope that a dart thrower was more likely to hit a point near the center, like $2\textrm{cm}$ rather than $20\textrm{cm}$.  Thus, the value $p$ is not fixed, but rather should depend on the point $x$.  This tells us that we should expect
-
-$$P(\textrm{distance is in an}\; \epsilon \textrm{-sized interval around}\; x ) \approx \epsilon \cdot p(x).$$
-:eqlabel:`eq_mdl-pdf_deriv`
-
-Indeed, :eqref:`eq_mdl-pdf_deriv` precisely defines the *probability density function*.  It is a function $p(x)$ which encodes the relative probability of hitting near one point vs. another.
-
-Notice the consequence of the $\epsilon$ factor in :eqref:`eq_mdl-pdf_deriv`: as we shrink the interval to a single point ($\epsilon \to 0$) the probability vanishes.  In other words, for a continuous random variable $X$ and *any* fixed value $x$,
-
-$$P(X = x) = 0.$$
-
-This resolves the dartboard paradox: the probability of hitting *exactly* $2\textrm{cm}$ is zero, even though the dart certainly lands *somewhere*.  For continuous random variables only intervals (sets of positive length) carry probability, and we obtain those probabilities by integrating the density.  Let's visualize what such a function might look like.
-
-```{.python .input #random-variables-from-discrete-to-continuous}
+```{.python .input #random-variables-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
-from IPython import display
 from mxnet import np, npx
 npx.set_np()
-
-# Plot the probability density function for some random variable
-x = np.arange(-5, 5, 0.01)
-p = 0.2*np.exp(-(x - 3)**2 / 2)/np.sqrt(2 * np.pi) + \
-    0.8*np.exp(-(x + 1)**2 / 2)/np.sqrt(2 * np.pi)
-
-d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input #random-variables-from-discrete-to-continuous}
+```{.python .input #random-variables-imports}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-from IPython import display
 import torch
-torch.pi = torch.acos(torch.zeros(1)).item() * 2  # Define pi in torch
-
-# Plot the probability density function for some random variable
-x = torch.arange(-5, 5, 0.01)
-p = 0.2*torch.exp(-(x - 3)**2 / 2)/torch.sqrt(2 * torch.tensor(torch.pi)) + \
-    0.8*torch.exp(-(x + 1)**2 / 2)/torch.sqrt(2 * torch.tensor(torch.pi))
-
-d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input #random-variables-from-discrete-to-continuous}
+```{.python .input #random-variables-imports}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
-from IPython import display
 import tensorflow as tf
 tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
-
-# Plot the probability density function for some random variable
-x = tf.range(-5, 5, 0.01)
-p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi)) + \
-    0.8*tf.exp(-(x + 1)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi))
-
-d2l.plot(x, p, 'x', 'Density')
 ```
 
-```{.python .input #random-variables-from-discrete-to-continuous}
+```{.python .input #random-variables-imports}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from IPython import display
 import jax
 from jax import numpy as jnp
 import numpy as np
-
-# Plot the probability density function for some random variable
-x = jnp.arange(-5, 5, 0.01)
-p = 0.2*jnp.exp(-(x - 3)**2 / 2)/jnp.sqrt(2 * jnp.pi) + \
-    0.8*jnp.exp(-(x + 1)**2 / 2)/jnp.sqrt(2 * jnp.pi)
-
-d2l.plot(x, p, 'x', 'Density')
 ```
 
-The locations where the function value is large indicates regions where we are more likely to find the random value.  The low portions are areas where we are unlikely to find the random value.
+## From Discrete to Continuous Probability
 
-### Probability Density Functions
+Continuous random variables are subtler than discrete ones, and the technical
+jump is exactly the jump from *summing a list* to *integrating a function*. We
+develop the theory in three steps: the density that replaces the mass function,
+the cumulative function that turns it back into a genuine probability, and the
+derivative relationship between them that is the fundamental theorem of calculus
+in probabilistic dress.
 
-Let's now investigate this further.  We have already seen what a probability density function is intuitively for a random variable $X$, namely the density function is a function $p(x)$ so that
+### The Density Appears: A Thought Experiment
 
-$$P(X \; \textrm{is in an}\; \epsilon \textrm{-sized interval around}\; x ) \approx \epsilon \cdot p(x).$$
+Throw a dart at a board and ask for the probability it lands *exactly*
+$2\,\textrm{cm}$ from the center. Measure to one digit, with bins for
+$0,1,2,\ldots\,\textrm{cm}$: of $100$ throws, perhaps $20$ land in the
+"$2\,\textrm{cm}$" bin, suggesting $20\%$. But that bin holds everything between
+$1.5$ and $2.5\,\textrm{cm}$---not what we asked. Measure finer, to bins of
+$0.1\,\textrm{cm}$: now perhaps $3$ throws land in $[1.95,2.05]$, suggesting
+$3\%$. We have only pushed the problem one digit down.
+
+Abstract it. Knowing the first $k$ digits match $2.000\ldots$, the
+$(k{+}1)$-th digit is essentially a uniform draw from $\{0,\ldots,9\}$---no
+physical mechanism makes the micrometer count prefer a $7$ to a $3$. So each
+extra digit of accuracy shrinks the probability by a factor of $10$:
+
+$$
+P(\textrm{distance is}\; 2.00\ldots \;\textrm{to}\; k \;\textrm{digits}) \approx p\cdot 10^{-k}.
+$$
+
+Knowing $k$ digits pins the value to an interval of width $10^{-k}$. Writing
+$\epsilon$ for that width, the statement becomes $P(\text{within }\epsilon
+\text{ of }2)\approx \epsilon\cdot p$. Nothing privileged the point $2$: a good
+dart thrower is likelier to land near the center, so the constant depends on
+*where* we look. Calling it $p(x)$,
+
+$$P(X \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; x ) \approx \epsilon \cdot p(x).$$
 :eqlabel:`eq_mdl-pdf_def`
 
-But what does this imply for the properties of $p(x)$?
+This *is* the *probability density function* (p.d.f.): a function $p(x)$ encoding
+the relative likelihood of landing near $x$ versus elsewhere. It is the exact
+object introduced as a normalized non-negative function in
+:eqref:`eq_mdl-density`; here we see *where it comes from*.
 
-First, probabilities are never negative, thus we should expect that $p(x) \ge 0$ as well.
+One consequence is immediate and worth stating, because it is where continuous
+probability first feels strange. Shrinking the interval to a single point
+($\epsilon\to 0$) sends the right-hand side of :eqref:`eq_mdl-pdf_def` to zero,
+so for *any* fixed value $x$,
 
-Second, let's imagine that we slice up the $\mathbb{R}$ into an infinite number of slices which are $\epsilon$ wide, say with slices $(\epsilon\cdot i, \epsilon \cdot (i+1)]$.  For each of these, we know from :eqref:`eq_mdl-pdf_def` the probability is approximately
+$$P(X = x) = 0.$$
 
-$$
-P(X \; \textrm{is in an}\; \epsilon\textrm{-sized interval around}\; x ) \approx \epsilon \cdot p(\epsilon \cdot i),
-$$
+This resolves the dartboard paradox: the probability of landing *exactly*
+$2\,\textrm{cm}$ out is zero, even though the dart certainly lands *somewhere*.
+For a continuous variable only intervals---sets of positive length---carry
+probability, and we read those probabilities off the density by integrating.
 
-so summed over all of them it should be
+### Densities and Their Two Defining Properties
 
-$$
-P(X\in\mathbb{R}) \approx \sum_i \epsilon \cdot p(\epsilon\cdot i).
-$$
-
-This is nothing more than the approximation of an integral discussed in :numref:`sec_mdl-integral_calculus`, thus we can say that
-
-$$
-P(X\in\mathbb{R}) = \int_{-\infty}^{\infty} p(x) \; dx.
-$$
-
-We know that $P(X\in\mathbb{R}) = 1$, since the random variable must take on *some* number, we can conclude that for any density
-
-$$
-\int_{-\infty}^{\infty} p(x) \; dx = 1.
-$$
-
-Indeed, digging into this further shows that for any $a$, and $b$, we see that
+What must $p(x)$ satisfy to be a density? Two things, both from
+:eqref:`eq_mdl-pdf_def`. First, probabilities are never negative, so $p(x)\ge 0$.
+Second, slice $\mathbb{R}$ into width-$\epsilon$ pieces $(\epsilon i,
+\epsilon(i{+}1)]$; by :eqref:`eq_mdl-pdf_def` each contributes about $\epsilon\,
+p(\epsilon i)$ to the total probability, and summing,
 
 $$
-P(X\in(a, b]) = \int _ {a}^{b} p(x) \; dx.
+P(X\in\mathbb{R}) \approx \sum_i \epsilon \cdot p(\epsilon\cdot i)
+\;\xrightarrow[\epsilon\to0]{}\; \int_{-\infty}^{\infty} p(x)\,dx .
 $$
 
-We may approximate this in code by using the same discrete approximation methods as before.  In this case we can approximate the probability of falling in the blue region.
+The middle expression is exactly the Riemann sum of :numref:`sec_mdl-integral_calculus`.
+Since $X$ must take *some* value, $P(X\in\mathbb{R})=1$, and we recover the
+normalization :eqref:`eq_mdl-density`,
 
-```{.python .input #random-variables-probability-density-functions}
-#@tab mxnet
-# Approximate probability using numerical integration
-epsilon = 0.01
-x = np.arange(-5, 5, 0.01)
-p = 0.2*np.exp(-(x - 3)**2 / 2) / np.sqrt(2 * np.pi) + \
-    0.8*np.exp(-(x + 1)**2 / 2) / np.sqrt(2 * np.pi)
-
-d2l.set_figsize()
-d2l.plt.plot(x, p, color='black')
-d2l.plt.fill_between(x.tolist()[300:800], p.tolist()[300:800])
-d2l.plt.show()
-
-f'approximate Probability: {np.sum(epsilon*p[300:800])}'
-```
-
-```{.python .input #random-variables-probability-density-functions}
-#@tab pytorch
-# Approximate probability using numerical integration
-epsilon = 0.01
-x = torch.arange(-5, 5, 0.01)
-p = 0.2*torch.exp(-(x - 3)**2 / 2) / torch.sqrt(2 * torch.tensor(torch.pi)) +\
-    0.8*torch.exp(-(x + 1)**2 / 2) / torch.sqrt(2 * torch.tensor(torch.pi))
-
-d2l.set_figsize()
-d2l.plt.plot(x, p, color='black')
-d2l.plt.fill_between(x.tolist()[300:800], p.tolist()[300:800])
-d2l.plt.show()
-
-f'approximate Probability: {torch.sum(epsilon*p[300:800])}'
-```
-
-```{.python .input #random-variables-probability-density-functions}
-#@tab tensorflow
-# Approximate probability using numerical integration
-epsilon = 0.01
-x = tf.range(-5, 5, 0.01)
-p = 0.2*tf.exp(-(x - 3)**2 / 2) / tf.sqrt(2 * tf.constant(tf.pi)) +\
-    0.8*tf.exp(-(x + 1)**2 / 2) / tf.sqrt(2 * tf.constant(tf.pi))
-
-d2l.set_figsize()
-d2l.plt.plot(x, p, color='black')
-d2l.plt.fill_between(x.numpy().tolist()[300:800], p.numpy().tolist()[300:800])
-d2l.plt.show()
-
-f'approximate Probability: {tf.reduce_sum(epsilon*p[300:800])}'
-```
-
-```{.python .input #random-variables-probability-density-functions}
-#@tab jax
-# Approximate probability using numerical integration
-epsilon = 0.01
-x = jnp.arange(-5, 5, 0.01)
-p = 0.2*jnp.exp(-(x - 3)**2 / 2) / jnp.sqrt(2 * jnp.pi) +\
-    0.8*jnp.exp(-(x + 1)**2 / 2) / jnp.sqrt(2 * jnp.pi)
-
-d2l.set_figsize()
-d2l.plt.plot(x, p, color='black')
-d2l.plt.fill_between(np.asarray(x).tolist()[300:800],
-                     np.asarray(p).tolist()[300:800])
-d2l.plt.show()
-
-f'approximate Probability: {jnp.sum(epsilon*p[300:800])}'
-```
-
-It turns out that these two properties describe exactly the space of possible probability density functions (or *p.d.f.*'s for the commonly encountered abbreviation).  They are non-negative functions $p(x) \ge 0$ such that
-
-$$\int_{-\infty}^{\infty} p(x) \; dx = 1.$$
+$$\int_{-\infty}^{\infty} p(x)\,dx = 1.$$
 :eqlabel:`eq_mdl-pdf_int_one`
 
-We interpret this function by using integration to obtain the probability our random variable is in a specific interval:
+The same slicing argument over a finite range gives the rule we actually use:
+*probability is area under the density*,
 
-$$P(X\in(a, b]) = \int _ {a}^{b} p(x) \; dx.$$
+$$P(X\in(a, b]) = \int_{a}^{b} p(x)\,dx.$$
 :eqlabel:`eq_mdl-pdf_int_int`
 
-In :numref:`sec_mdl-distributions` we will see a number of common distributions, but let's continue working in the abstract.
+These two properties---non-negativity and total area $1$---describe *exactly* the
+space of densities. :numref:`fig_mdl-prob-pdf-area` shows the picture: the total
+shaded region has area $1$, and the probability of an interval is the area above
+it.
 
-### Cumulative Distribution Functions
+![A probability density $p(x)$. The total area under the curve is $1$; the probability that $X$ lands in the interval from $a$ to $b$ is the area of the shaded slab above it, $\int_a^b p(x)\,dx$. The density itself is not a probability---it may exceed $1$---only its integral over an interval is.](../img/mdl-prob-pdf-area.svg)
+:label:`fig_mdl-prob-pdf-area`
 
-In the previous section, we saw the notion of the p.d.f.  In practice, this is a commonly encountered method to discuss continuous random variables, but it has one significant pitfall: that the values of the p.d.f. are not themselves probabilities, but rather a function that we must integrate to yield probabilities.  There is nothing wrong with a density being larger than $10$, as long as it is not larger than $10$ for more than an interval of length $1/10$.  This can be counter-intuitive, so people often also think in terms of the *cumulative distribution function*, or c.d.f., which *is* a probability.
+We can confirm :eqref:`eq_mdl-pdf_int_int` numerically. Take the two-bump density
+$p(x)=0.2\,\mathcal N(x;3,1)+0.8\,\mathcal N(x;-1,1)$ and recover the probability
+of an interval by a Riemann sum---the discrete approximation of the integral,
+made flesh. This *computes* the density-to-probability link rather than merely
+drawing it.
 
-In particular, by using :eqref:`eq_mdl-pdf_int_int`, we define the c.d.f. for a random variable $X$ with density $p(x)$ by
+```{.python .input #random-variables-density-to-probability}
+#@tab mxnet
+# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
+epsilon = 0.01
+x = np.arange(-5, 5, epsilon)
+p = 0.2*np.exp(-(x - 3)**2 / 2)/np.sqrt(2 * np.pi) + \
+    0.8*np.exp(-(x + 1)**2 / 2)/np.sqrt(2 * np.pi)
+print('total mass     :', round(float(np.sum(epsilon * p)), 4))
+mask = (x > -2) & (x <= 3)
+print('P(-2 < X <= 3) :', round(float(np.sum(epsilon * p[mask])), 4))
+```
+
+```{.python .input #random-variables-density-to-probability}
+#@tab pytorch
+# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
+epsilon = 0.01
+x = torch.arange(-5, 5, epsilon)
+p = 0.2*torch.exp(-(x - 3)**2 / 2)/torch.sqrt(torch.tensor(2 * torch.pi)) + \
+    0.8*torch.exp(-(x + 1)**2 / 2)/torch.sqrt(torch.tensor(2 * torch.pi))
+print('total mass     :', round(float(torch.sum(epsilon * p)), 4))
+mask = (x > -2) & (x <= 3)
+print('P(-2 < X <= 3) :', round(float(torch.sum(epsilon * p[mask])), 4))
+```
+
+```{.python .input #random-variables-density-to-probability}
+#@tab tensorflow
+# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
+epsilon = 0.01
+x = tf.range(-5, 5, epsilon)
+p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi)) + \
+    0.8*tf.exp(-(x + 1)**2 / 2)/tf.sqrt(2 * tf.constant(tf.pi))
+print('total mass     :', round(float(tf.reduce_sum(epsilon * p)), 4))
+mask = (x > -2) & (x <= 3)
+print('P(-2 < X <= 3) :', round(float(tf.reduce_sum(epsilon * p[mask])), 4))
+```
+
+```{.python .input #random-variables-density-to-probability}
+#@tab jax
+# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
+epsilon = 0.01
+x = jnp.arange(-5, 5, epsilon)
+p = 0.2*jnp.exp(-(x - 3)**2 / 2)/jnp.sqrt(2 * jnp.pi) + \
+    0.8*jnp.exp(-(x + 1)**2 / 2)/jnp.sqrt(2 * jnp.pi)
+print('total mass     :', round(float(jnp.sum(epsilon * p)), 4))
+mask = (x > -2) & (x <= 3)
+print('P(-2 < X <= 3) :', round(float(jnp.sum(epsilon * p[mask])), 4))
+```
+
+The total mass comes out to $1$ as :eqref:`eq_mdl-pdf_int_one` demands, and the
+interval integral returns a genuine probability in $[0,1]$. A catalogue of named
+densities---Gaussian, exponential, and the rest---waits in
+:numref:`sec_mdl-distributions`; here we stay abstract.
+
+### The Cumulative Distribution Function
+
+A density has one awkward feature: its *values* are not probabilities. A density
+can exceed $10$, as long as it does so only over an interval shorter than
+$1/10$. The remedy is the *cumulative distribution function* (c.d.f.), which by
+:eqref:`eq_mdl-pdf_int_int` accumulates the density up to $x$ and so *is* an
+honest probability:
 
 $$
-F(x) = \int _ {-\infty}^{x} p(t) \; dt = P(X \le x).
+F(x) = \int_{-\infty}^{x} p(t)\,dt = P(X \le x).
 $$
+:eqlabel:`eq_mdl-cdf_def`
 
-Let's observe a few properties.
-
-* $F(x) \rightarrow 0$ as $x\rightarrow -\infty$.
-* $F(x) \rightarrow 1$ as $x\rightarrow \infty$.
-* $F(x)$ is non-decreasing ($y > x \implies F(y) \ge F(x)$).
-* $F(x)$ is continuous (has no jumps) if $X$ is a continuous random variable.
-
-With the fourth bullet point, note that this would not be true if $X$ were discrete, say taking the values $0$ and $1$ both with probability $1/2$.  In that case
+Read off its properties directly: $F(x)\to 0$ as $x\to-\infty$ and $F(x)\to 1$ as
+$x\to+\infty$ (the total mass is $1$); $F$ is non-decreasing, since the integrand
+$p\ge 0$ only ever adds area; and $F$ is continuous when $X$ is continuous. The
+c.d.f. is also what lets discrete and continuous variables share one framework.
+For a discrete $X$ taking $0$ and $1$ with probability $\tfrac12$ each,
 
 $$
 F(x) = \begin{cases}
 0 & x < 0, \\
-\frac{1}{2} & 0 \le x < 1, \\
-1 & x \ge 1.
+\tfrac12 & 0 \le x < 1, \\
+1 & x \ge 1,
 \end{cases}
 $$
 
-In this example, we see one of the benefits of working with the c.d.f., the ability to deal with continuous or discrete random variables in the same framework, or indeed mixtures of the two (flip a coin: if heads return the roll of a die, if tails return the distance of a dart throw from the center of a dart board).
+a *staircase* that jumps by the mass at each atom---so the same $F$ describes
+continuous variables, discrete ones, and mixtures (flip a coin: heads, report a
+die roll; tails, a dart distance).
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** A short visual + algorithmic coda to the c.d.f. that pairs a density with its cumulative function and shows that inverting the c.d.f. turns uniform noise into samples from any 1-D distribution — the foundation of how libraries draw random numbers.
-**Outline:** 1. PDF and CDF side by side (area under the PDF = height of the CDF). · 2. The staircase c.d.f. for the discrete/mixture case redrawn next to its density. · 3. Inverse-transform sampling: if $U \sim U(0,1)$ then $F^{-1}(U)$ has c.d.f. $F$.
-**Key results to state:** $F(x) = \int_{-\infty}^x p(t)\,dt$; $p(x) = F'(x)$; $X = F^{-1}(U) \implies P(X \le x) = P(U \le F(x)) = F(x)$.
-**Diagrams:** `fig_mdl-pdf-cdf-pair` — a density on the left with a shaded interval $[a,b]$, and on the right the same distribution's c.d.f. with the corresponding rise $F(b)-F(a)$ marked, so the shaded area and the vertical gap are visibly equal.
-**Worked example(s):** invert the exponential c.d.f. $F(x)=1-e^{-\lambda x}$ to get the sampler $X = -\tfrac1\lambda \log(1-U)$, then histogram draws against the true density (ties to the inverse-transform exercise and to :numref:`sec_mdl-distributions`).
-**Exercises (draft):** (1) derive $F^{-1}$ for the continuous uniform and confirm it returns $U(a,b)$; (2) explain why inverse-transform needs $F$ to be invertible and what to do at flat / jump regions.
-**Prereqs / cross-refs:** :numref:`sec_mdl-integral_calculus` (FTC), :numref:`sec_mdl-distributions` (the distributions sampled this way).
-:::
+The density and the c.d.f. carry the same information, and the bridge between
+them is the fundamental theorem of calculus. Differentiating
+:eqref:`eq_mdl-cdf_def` recovers the density.
 
-### Means
+**Proposition (density is the derivative of the c.d.f.).** *If $X$ has a
+continuous density $p$, then $F$ is differentiable and*
 
-Suppose that we are dealing with a random variable $X$.  The distribution itself can be hard to interpret.  It is often useful to be able to summarize the behavior of a random variable concisely.  Numbers that help us capture the behavior of a random variable are called *summary statistics*.  The most commonly encountered ones are the *mean*, the *variance*, and the *standard deviation*.
+$$
+F'(x) = p(x).
+$$
+:eqlabel:`eq_mdl-cdf-deriv`
 
-The *mean* encodes the average value of a random variable.  If we have a discrete random variable $X$, which takes the values $x_i$ with probabilities $p_i$, then the mean is given by the weighted average: sum the values times the probability that the random variable takes on that value:
+**Proof.** By definition :eqref:`eq_mdl-cdf_def`, $F(x)=\int_{-\infty}^x p(t)\,dt$
+is the area-so-far function of the integrand $p$. The fundamental theorem of
+calculus :eqref:`eq_mdl-ftc` says precisely that such an area function is
+differentiable with derivative equal to the integrand, $F'(x)=p(x)$. $\blacksquare$
 
-$$\mu_X = E[X] = \sum_i x_i p_i.$$
+So $p=F'$ and $F=\int p$ are two views of one object: the density is the
+*instantaneous rate* at which probability accumulates, and the c.d.f. is the
+*accumulated area*. :numref:`fig_mdl-prob-pdf-cdf` puts them side by side---the
+shaded area $\int_a^b p$ on the left equals the vertical rise $F(b)-F(a)$ on the
+right---making :eqref:`eq_mdl-cdf_def` and :eqref:`eq_mdl-cdf-deriv` a single
+picture.
+
+![Left: a density $p$ with the area over the interval from $a$ to $b$ shaded. Right: the matching c.d.f. $F(x)=\int_{-\infty}^x p$, an increasing curve from $0$ to $1$; the rise $F(b)-F(a)$ equals the shaded area on the left. The density is the slope of the c.d.f. $\left(F'=p\right)$ and the c.d.f. is the accumulated area under the density.](../img/mdl-prob-pdf-cdf.svg)
+:label:`fig_mdl-prob-pdf-cdf`
+
+The relationship $F'=p$ underwrites *inverse-transform sampling*---if $U$ is
+uniform on $[0,1]$ then $F^{-1}(U)$ has c.d.f. $F$---which is how libraries turn
+uniform noise into samples from any one-dimensional distribution. We return to it
+when we meet the named distributions in :numref:`sec_mdl-distributions`.
+
+## Summarizing a Distribution
+
+A full distribution is often more than we can interpret at a glance. *Summary
+statistics* compress it to a few numbers: the *mean* says where the variable
+sits, the *variance* and *standard deviation* say how far it spreads. Each is an
+expectation---a density-weighted average, :eqref:`eq_mdl-expectation`---and each
+obeys clean algebra that we prove once and reuse everywhere.
+
+### The Mean
+
+The *mean* (or *expectation*) is the average value, weighting each outcome by its
+probability. For a discrete $X$ taking $x_i$ with probability $p_i$,
+
+$$\mu_X = E[X] = \sum_i x_i p_i,$$
 :eqlabel:`eq_mdl-exp_def`
 
-The way we should interpret the mean (albeit with caution) is that it tells us essentially where the random variable tends to be located.
+and in the continuum the sum becomes the density-weighted integral
+:eqref:`eq_mdl-expectation`, $\mu_X=\int x\,p(x)\,dx$, by the same
+slice-and-refine argument that produced :eqref:`eq_mdl-pdf_int_one`. The mean
+tells us, with some caution, where the variable tends to sit.
 
-As a minimalistic example that we will examine throughout this section, let's take $X$ to be the random variable which takes the value $a-2$ with probability $p$, $a+2$ with probability $p$ and $a$ with probability $1-2p$.  We can compute using :eqref:`eq_mdl-exp_def` that, for any possible choice of $a$ and $p$, the mean is
+A running example will pay off through the whole section. Let $X$ take $a-2$ with
+probability $p$, $a+2$ with probability $p$, and $a$ with probability $1-2p$.
+Then
 
 $$
-\mu_X = E[X] = \sum_i x_i p_i = (a-2)p + a(1-2p) + (a+2)p = a.
+\mu_X = (a-2)p + a(1-2p) + (a+2)p = a,
 $$
 
-Thus we see that the mean is $a$.  This matches the intuition since $a$ is the location around which we centered our random variable.
+the center of symmetry, exactly as intuition demands.
 
-Because they are helpful, let's summarize a few properties.
+The two algebraic properties of the mean we lean on most are that it is
+*linear*---constants pull out and sums split. Both follow in one line from the
+definition.
 
-* For any random variable $X$ and numbers $a$ and $b$, we have that $\mu_{aX+b} = a\mu_X + b$.
-* If we have two random variables $X$ and $Y$, we have $\mu_{X+Y} = \mu_X+\mu_Y$.
+**Proposition (linearity of expectation).** *For random variables $X,Y$ and
+constants $a,b$,*
 
-Means are useful for understanding the average behavior of a random variable, however the mean is not sufficient to even have a full intuitive understanding.  Making a profit of $\$10 \pm \$1$ per sale is very different from making $\$10 \pm \$15$ per sale despite having the same average value.  The second one has a much larger degree of fluctuation, and thus represents a much larger risk.  Thus, to understand the behavior of a random variable, we will need at minimum one more measure: some measure of how widely a random variable fluctuates.
+$$
+E[aX+b]=a\,E[X]+b,
+\qquad
+E[X+Y]=E[X]+E[Y].
+$$
+:eqlabel:`eq_mdl-exp_linear`
 
-### Variances
+**Proof.** Both are linearity of the sum (or integral) defining the expectation.
+For the scaling-and-shift, $E[aX+b]=\sum_i(ax_i+b)p_i = a\sum_i x_i p_i + b\sum_i
+p_i = a\,E[X]+b$, using $\sum_i p_i=1$. For the sum, write the expectation over
+the *joint* distribution of $(X,Y)$ and split the inner sum: $E[X+Y]=\sum_{i,j}
+(x_i+y_j)p_{ij} = \sum_{i,j} x_i p_{ij} + \sum_{i,j} y_j p_{ij} = E[X]+E[Y]$, the
+last step recognizing the marginals $\sum_j p_{ij}=P(X=x_i)$. The continuous case
+replaces every sum by an integral verbatim. $\blacksquare$
 
-This leads us to consider the *variance* of a random variable.  This is a quantitative measure of how far a random variable deviates from the mean.  Consider the expression $X - \mu_X$.  This is the deviation of the random variable from its mean.  This value can be positive or negative, so we need to do something to make it positive so that we are measuring the magnitude of the deviation.
+The second identity needs *no independence assumption*: expectations of sums
+always add, however entangled $X$ and $Y$ are. This is the workhorse behind
+nearly every expected-loss calculation in the book.
 
-A reasonable thing to try is to look at $\left|X-\mu_X\right|$, and indeed this leads to a useful quantity called the *mean absolute deviation*, however due to connections with other areas of mathematics and statistics, people often use a different solution.
+The mean alone is not enough. A profit of $\$10\pm\$1$ per sale and one of
+$\$10\pm\$15$ share a mean but carry wildly different risk. We need a measure of
+*spread*.
 
-In particular, they look at $(X-\mu_X)^2.$  If we look at the typical size of this quantity by taking the mean, we arrive at the variance
+### Variance and Standard Deviation
 
-$$\sigma_X^2 = \textrm{Var}(X) = E\left[(X-\mu_X)^2\right] = E[X^2] - \mu_X^2.$$
+The *variance* measures how far $X$ strays from its mean. The deviation
+$X-\mu_X$ is positive or negative, so we square it before averaging:
+
+$$\sigma_X^2 = \textrm{Var}(X) = E\bigl[(X-\mu_X)^2\bigr].$$
 :eqlabel:`eq_mdl-var_def`
 
-The last equality in :eqref:`eq_mdl-var_def` holds by expanding out the definition in the middle, and applying the properties of expectation.
+Expanding the square gives a formula that is almost always easier to compute
+with, and it deserves a proof since we use it constantly.
 
-Let's look at our example where $X$ is the random variable which takes the value $a-2$ with probability $p$, $a+2$ with probability $p$ and $a$ with probability $1-2p$.  In this case $\mu_X = a$, so all we need to compute is $E\left[X^2\right]$.  This can readily be done:
-
-$$
-E\left[X^2\right] = (a-2)^2p + a^2(1-2p) + (a+2)^2p = a^2 + 8p.
-$$
-
-Thus, we see that by :eqref:`eq_mdl-var_def` our variance is
+**Proposition (computational form of the variance).**
 
 $$
-\sigma_X^2 = \textrm{Var}(X) = E[X^2] - \mu_X^2 = a^2 + 8p - a^2 = 8p.
+\textrm{Var}(X) = E[X^2] - E[X]^2 = E[X^2]-\mu_X^2.
+$$
+:eqlabel:`eq_mdl-var_comp`
+
+**Proof.** Expand the square inside :eqref:`eq_mdl-var_def` and apply linearity
+:eqref:`eq_mdl-exp_linear`, treating $\mu_X$ as the constant it is:
+
+$$
+E\bigl[(X-\mu_X)^2\bigr]
+ = E\bigl[X^2 - 2\mu_X X + \mu_X^2\bigr]
+ = E[X^2] - 2\mu_X\,E[X] + \mu_X^2
+ = E[X^2] - \mu_X^2,
 $$
 
-This result again makes sense.  The largest $p$ can be is $1/2$ which corresponds to picking $a-2$ or $a+2$ with a coin flip.  The variance of this being $4$ corresponds to the fact that both $a-2$ and $a+2$ are $2$ units away from the mean, and $2^2 = 4$.  On the other end of the spectrum, if $p=0$, this random variable always takes the value $0$ and so it has no variance at all.
+since $E[X]=\mu_X$, so $-2\mu_X E[X]+\mu_X^2 = -2\mu_X^2+\mu_X^2=-\mu_X^2$. $\blacksquare$
 
-We will list a few properties of variance below:
+On the running example $\mu_X=a$, and the computational form does the rest:
+$E[X^2]=(a-2)^2p+a^2(1-2p)+(a+2)^2p = a^2+8p$, so
 
-* For any random variable $X$, $\textrm{Var}(X) \ge 0$, with $\textrm{Var}(X) = 0$ if and only if $X$ is a constant.
-* For any random variable $X$ and numbers $a$ and $b$, we have that $\textrm{Var}(aX+b) = a^2\textrm{Var}(X)$.
-* If we have two *independent* random variables $X$ and $Y$, we have $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$.
+$$
+\textrm{Var}(X) = E[X^2]-\mu_X^2 = (a^2+8p)-a^2 = 8p.
+$$
 
-When interpreting these values, there can be a bit of a hiccup.  In particular, let's try imagining what happens if we keep track of units through this computation.  Suppose that we are working with the star rating assigned to a product on the web page.  Then $a$, $a-2$, and $a+2$ are all measured in units of stars.  Similarly, the mean $\mu_X$ is then also measured in stars (being a weighted average).  However, if we get to the variance, we immediately encounter an issue, which is we want to look at $(X-\mu_X)^2$, which is in units of *squared stars*.  This means that the variance itself is not comparable to the original measurements.  To make it interpretable, we will need to return to our original units.
+This is sensible: at the largest allowed $p=\tfrac12$ the variable is a coin flip
+between $a\pm2$, each $2$ away from the mean, giving variance $8\cdot\tfrac12=4=2^2$;
+at $p=0$ it is constant at $a$ with no variance at all.
 
-### Standard Deviations
+How does variance behave under the affine maps we constantly apply (rescaling
+units, centering data)? The shift drops out and the scale comes out squared.
 
-This summary statistics can always be deduced from the variance by taking the square root!  Thus we define the *standard deviation* to be
+**Proposition (variance under affine maps).** *For constants $a,b$,*
+
+$$
+\textrm{Var}(aX+b) = a^2\,\textrm{Var}(X).
+$$
+:eqlabel:`eq_mdl-var_affine`
+
+**Proof.** By linearity :eqref:`eq_mdl-exp_linear` the mean maps as
+$\mu_{aX+b}=a\mu_X+b$, so the deviation is $(aX+b)-\mu_{aX+b}=a(X-\mu_X)$---the
+shift $b$ cancels. Squaring and taking the expectation,
+
+$$
+\textrm{Var}(aX+b) = E\bigl[a^2(X-\mu_X)^2\bigr] = a^2\,E\bigl[(X-\mu_X)^2\bigr] = a^2\,\textrm{Var}(X). \qquad\blacksquare
+$$
+
+Two further facts round out the list: $\textrm{Var}(X)\ge 0$, with equality iff
+$X$ is constant (a square has non-negative mean, zero only when $X-\mu_X\equiv0$);
+and for *independent* $X,Y$, $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)$
+(we prove the general version, with a covariance correction, in
+:numref:`subsec_mdl-covariance`).
+
+The variance has a units problem. If $X$ is in stars, $X-\mu_X$ is in stars but
+$(X-\mu_X)^2$ is in *squared stars*, so $\textrm{Var}(X)$ is not comparable to
+the data. Taking the square root restores the original units and defines the
+*standard deviation*
 
 $$
 \sigma_X = \sqrt{\textrm{Var}(X)}.
 $$
+:eqlabel:`eq_mdl-std_def`
 
-In our example, this means we now have the standard deviation is $\sigma_X = 2\sqrt{2p}$.  If we are dealing with units of stars for our review example, $\sigma_X$ is again in units of stars.
+Its properties echo the variance through the square root: $\sigma_X\ge0$;
+$\sigma_{aX+b}=|a|\sigma_X$ (the absolute value because $\sqrt{a^2}=|a|$); and for
+independent $X,Y$, $\sigma_{X+Y}=\sqrt{\sigma_X^2+\sigma_Y^2}$. On the running
+example $\sigma_X=2\sqrt{2p}$, back in units of stars.
 
-The properties we had for the variance can be restated for the standard deviation.
+### What the Standard Deviation Means: Chebyshev's Inequality
 
-* For any random variable $X$, $\sigma_{X} \ge 0$.
-* For any random variable $X$ and numbers $a$ and $b$, we have that $\sigma_{aX+b} = |a|\sigma_{X}$
-* If we have two *independent* random variables $X$ and $Y$, we have $\sigma_{X+Y} = \sqrt{\sigma_{X}^2 + \sigma_{Y}^2}$.
+Does $\sigma_X$ have a concrete reading? Yes: it sets the scale over which $X$
+fluctuates, and *Chebyshev's inequality* makes this rigorous for *any*
+distribution with finite variance,
 
-It is natural at this moment to ask, "If the standard deviation is in the units of our original random variable, does it represent something we can draw with regards to that random variable?"  The answer is a resounding yes!  Indeed much like the mean told us the typical location of our random variable, the standard deviation gives the typical range of variation of that random variable.  We can make this rigorous with what is known as Chebyshev's inequality:
-
-$$P\left(X \not\in [\mu_X - \alpha\sigma_X, \mu_X + \alpha\sigma_X]\right) \le \frac{1}{\alpha^2}.$$
+$$P\bigl(X \notin [\mu_X - \alpha\sigma_X, \mu_X + \alpha\sigma_X]\bigr) \le \frac{1}{\alpha^2}.$$
 :eqlabel:`eq_mdl-chebyshev`
 
-Or to state it verbally in the case of $\alpha=10$, *at least* $99\%$ of the samples from any random variable fall within $10$ standard deviations of the mean.  This gives an immediate interpretation to our standard summary statistics.
+In words at $\alpha=10$: *at least $99\%$* of the mass of any distribution lies
+within $10$ standard deviations of the mean. The standard deviation is thus a
+universal yardstick for "how far is far."
 
-To see how this statement is rather subtle, let's take a look at our running example again where  $X$ is the random variable which takes the value $a-2$ with probability $p$, $a+2$ with probability $p$ and $a$ with probability $1-2p$.  We saw that the mean was $a$ and the standard deviation was $2\sqrt{2p}$.  This means, if we take Chebyshev's inequality :eqref:`eq_mdl-chebyshev` with $\alpha = 2$, we see that the expression is
+The bound is *sharp*, and our running example shows exactly why no tighter
+constant is possible. With $\mu_X=a$ and $\sigma_X=2\sqrt{2p}$, the interval at
+$\alpha=2$ is $[a-4\sqrt{2p},\,a+4\sqrt{2p}]$ and :eqref:`eq_mdl-chebyshev`
+promises at most $\tfrac14$ of the mass outside it. As $p$ shrinks the interval
+narrows toward the single point $a$, and the two outlying atoms $a\pm2$ eventually
+fall outside. They cross the boundary exactly when $a+4\sqrt{2p}=a+2$, i.e. at
+$p=\tfrac18$---and at that $p$ the mass outside is exactly $p+p=\tfrac14$, hitting
+the bound with equality. :numref:`fig_mdl-prob-chebyshev` shows the three regimes:
+for $p>\tfrac18$ the interval safely contains all three atoms; at $p=\tfrac18$ it
+just touches $a\pm2$ (the equality case); and for $p<\tfrac18$ the outliers sit
+outside, which is allowed because their combined mass $2p<\tfrac14$.
 
-$$
-P\left(X \not\in [a - 4\sqrt{2p}, a + 4\sqrt{2p}]\right) \le \frac{1}{4}.
-$$
-
-This means that $75\%$ of the time, this random variable will fall within this interval for any value of $p$.  Now, notice that as $p \rightarrow 0$, this interval also converges to the single point $a$.  But we know that our random variable takes the values $a-2, a$, and $a+2$ only so eventually we can be certain $a-2$ and $a+2$ will fall outside the interval!  The question is, at what $p$ does that happen.  So we want to solve: for what $p$ does $a+4\sqrt{2p} = a+2$, which is solved when $p=1/8$, which is *exactly* the first $p$ where it could possibly happen without violating our claim that no more than $1/4$ of samples from the distribution would fall outside the interval ($1/8$ to the left, and $1/8$ to the right).
-
-Let's visualize this.  We will show the probability of getting the three values as three vertical bars with height proportional to the probability.  The interval will be drawn as a horizontal line in the middle.  The first plot shows what happens for $p > 1/8$ where the interval safely contains all points.
-
-```{.python .input #random-variables-standard-deviations-1}
-#@tab mxnet
-# Define a helper to plot these figures
-def plot_chebyshev(a, p):
-    d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
-    d2l.plt.xlim([-4, 4])
-    d2l.plt.xlabel('x')
-    d2l.plt.ylabel('p.m.f.')
-
-    d2l.plt.hlines(0.5, a - 4 * np.sqrt(2 * p),
-                   a + 4 * np.sqrt(2 * p), 'black', lw=4)
-    d2l.plt.vlines(a - 4 * np.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.vlines(a + 4 * np.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.title(f'p = {p:.3f}')
-
-    d2l.plt.show()
-
-# Plot interval when p > 1/8
-plot_chebyshev(0.0, 0.2)
-```
-
-```{.python .input #random-variables-standard-deviations-1}
-#@tab pytorch
-# Define a helper to plot these figures
-def plot_chebyshev(a, p):
-    d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
-    d2l.plt.xlim([-4, 4])
-    d2l.plt.xlabel('x')
-    d2l.plt.ylabel('p.m.f.')
-
-    d2l.plt.hlines(0.5, a - 4 * torch.sqrt(2 * p),
-                   a + 4 * torch.sqrt(2 * p), 'black', lw=4)
-    d2l.plt.vlines(a - 4 * torch.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.vlines(a + 4 * torch.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.title(f'p = {p:.3f}')
-
-    d2l.plt.show()
-
-# Plot interval when p > 1/8
-plot_chebyshev(0.0, torch.tensor(0.2))
-```
-
-```{.python .input #random-variables-standard-deviations-1}
-#@tab tensorflow
-# Define a helper to plot these figures
-def plot_chebyshev(a, p):
-    d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
-    d2l.plt.xlim([-4, 4])
-    d2l.plt.xlabel('x')
-    d2l.plt.ylabel('p.m.f.')
-
-    d2l.plt.hlines(0.5, a - 4 * tf.sqrt(2 * p),
-                   a + 4 * tf.sqrt(2 * p), 'black', lw=4)
-    d2l.plt.vlines(a - 4 * tf.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.vlines(a + 4 * tf.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.title(f'p = {p:.3f}')
-
-    d2l.plt.show()
-
-# Plot interval when p > 1/8
-plot_chebyshev(0.0, tf.constant(0.2))
-```
-
-```{.python .input #random-variables-standard-deviations-1}
-#@tab jax
-# Define a helper to plot these figures
-def plot_chebyshev(a, p):
-    d2l.set_figsize()
-    d2l.plt.stem([a-2, a, a+2], [p, 1-2*p, p])
-    d2l.plt.xlim([-4, 4])
-    d2l.plt.xlabel('x')
-    d2l.plt.ylabel('p.m.f.')
-
-    d2l.plt.hlines(0.5, a - 4 * jnp.sqrt(2 * p),
-                   a + 4 * jnp.sqrt(2 * p), 'black', lw=4)
-    d2l.plt.vlines(a - 4 * jnp.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.vlines(a + 4 * jnp.sqrt(2 * p), 0.53, 0.47, 'black', lw=1)
-    d2l.plt.title(f'p = {p:.3f}')
-
-    d2l.plt.show()
-
-# Plot interval when p > 1/8
-plot_chebyshev(0.0, jnp.float32(0.2))
-```
-
-The second shows that at $p = 1/8$, the interval exactly touches the two points.  This shows that the inequality is *sharp*, since no smaller interval could be taken while keeping the inequality true.
-
-```{.python .input #random-variables-standard-deviations-2}
-#@tab mxnet
-# Plot interval when p = 1/8
-plot_chebyshev(0.0, 0.125)
-```
-
-```{.python .input #random-variables-standard-deviations-2}
-#@tab pytorch
-# Plot interval when p = 1/8
-plot_chebyshev(0.0, torch.tensor(0.125))
-```
-
-```{.python .input #random-variables-standard-deviations-2}
-#@tab tensorflow
-# Plot interval when p = 1/8
-plot_chebyshev(0.0, tf.constant(0.125))
-```
-
-```{.python .input #random-variables-standard-deviations-2}
-#@tab jax
-# Plot interval when p = 1/8
-plot_chebyshev(0.0, jnp.float32(0.125))
-```
-
-The third shows that for $p < 1/8$ the interval only contains the center.  This does not invalidate the inequality since we only needed to ensure that no more than $1/4$ of the probability falls outside the interval, which means that once $p < 1/8$, the two points at $a-2$ and $a+2$ can be discarded.
-
-```{.python .input #random-variables-standard-deviations-3}
-#@tab mxnet
-# Plot interval when p < 1/8
-plot_chebyshev(0.0, 0.05)
-```
-
-```{.python .input #random-variables-standard-deviations-3}
-#@tab pytorch
-# Plot interval when p < 1/8
-plot_chebyshev(0.0, torch.tensor(0.05))
-```
-
-```{.python .input #random-variables-standard-deviations-3}
-#@tab tensorflow
-# Plot interval when p < 1/8
-plot_chebyshev(0.0, tf.constant(0.05))
-```
-
-```{.python .input #random-variables-standard-deviations-3}
-#@tab jax
-# Plot interval when p < 1/8
-plot_chebyshev(0.0, jnp.float32(0.05))
-```
+![Chebyshev's bound on the running three-atom example, masses drawn as vertical bars at $a-2,a,a+2$ with the $\alpha=2$ interval of half-width $4\sqrt{2p}$ about $a$ as a horizontal bracket. For $p>1/8$ the bracket contains all atoms; at $p=1/8$ it exactly touches $a\pm2$, the equality case showing the inequality is sharp; for $p<1/8$ the atoms $a\pm2$ fall outside, permitted since their mass $2p<1/4$.](../img/mdl-prob-chebyshev.svg)
+:label:`fig_mdl-prob-chebyshev`
 
 ### Means and Variances in the Continuum
 
-This has all been in terms of discrete random variables, but the case of continuous random variables is similar.  To intuitively understand how this works, imagine that we split the real number line into intervals of length $\epsilon$ given by $(\epsilon i, \epsilon (i+1)]$.  Once we do this, our continuous random variable has been made discrete and we can use :eqref:`eq_mdl-exp_def` say that
+Everything above transfers to continuous variables by the now-familiar move:
+slice $\mathbb{R}$ into width-$\epsilon$ pieces, apply the discrete definition,
+and let $\epsilon\to0$ to turn the sum into an integral. The mean is the
+density-weighted average :eqref:`eq_mdl-expectation`, and the variance follows
+from its computational form :eqref:`eq_mdl-var_comp`:
 
 $$
-\begin{aligned}
-\mu_X & \approx \sum_{i} (\epsilon i)P(X \in (\epsilon i, \epsilon (i+1)]) \\
-& \approx \sum_{i} (\epsilon i)p_X(\epsilon i)\epsilon, \\
-\end{aligned}
+\mu_X = \int_{-\infty}^\infty x\,p_X(x)\,dx,
+\qquad
+\sigma^2_X = \int_{-\infty}^\infty x^2 p_X(x)\,dx - \mu_X^2 .
 $$
+:eqlabel:`eq_mdl-cont_mean_var`
 
-where $p_X$ is the density of $X$.  This is an approximation to the integral of $xp_X(x)$, so we can conclude that
+Every property proved above---linearity, the affine rule, Chebyshev---carries
+over unchanged, since each rested only on linearity of the averaging operation.
+For the uniform density $p(x)=1$ on $[0,1]$ (zero elsewhere),
+$\mu_X=\int_0^1 x\,dx=\tfrac12$ and $\sigma_X^2=\int_0^1
+x^2\,dx-\tfrac14=\tfrac13-\tfrac14=\tfrac1{12}$, both elementary integrals.
 
-$$
-\mu_X = \int_{-\infty}^\infty xp_X(x) \; dx.
-$$
+A cautionary example: the *Cauchy distribution* $p(x)=\frac{1}{\pi(1+x^2)}$ is a
+perfectly good density (a table of integrals confirms it integrates to $1$), yet
+it has *neither* a finite variance *nor* a well-defined mean. The variance
+integral $\int x^2 p(x)\,dx$ diverges because $\frac{x^2}{1+x^2}\to1$, so the
+integrand has infinite area. The mean is worse: although the integrand
+$\frac{x}{\pi(1+x^2)}$ is *odd* and tempts us to declare $0$ by symmetry, the mean
+is defined only when $\int|x|p(x)\,dx<\infty$. Substituting $u=1+x^2$,
+$\int_0^\infty \frac{x}{\pi(1+x^2)}\,dx=\frac{1}{2\pi}\int_1^\infty
+\frac{du}{u}=+\infty$, and the left tail gives $-\infty$, so the mean is a
+meaningless $\infty-\infty$ whose value depends on how the limits are taken---a
+*stronger* failure than "the mean is infinite." We can watch both integrals
+diverge numerically by extending the integration range and seeing the partial
+sums refuse to settle.
 
-Similarly, using :eqref:`eq_mdl-var_def` the variance can be written as
-
-$$
-\sigma^2_X = E[X^2] - \mu_X^2 = \int_{-\infty}^\infty x^2p_X(x) \; dx - \left(\int_{-\infty}^\infty xp_X(x) \; dx\right)^2.
-$$
-
-Everything stated above about the mean, the variance, and the standard deviation still applies in this case.  For instance, if we consider the random variable with density
-
-$$
-p(x) = \begin{cases}
-1 & x \in [0,1], \\
-0 & \textrm{otherwise}.
-\end{cases}
-$$
-
-we can compute
-
-$$
-\mu_X = \int_{-\infty}^\infty xp(x) \; dx = \int_0^1 x \; dx = \frac{1}{2}.
-$$
-
-and
-
-$$
-\sigma_X^2 = \int_{-\infty}^\infty x^2p(x) \; dx - \left(\frac{1}{2}\right)^2 = \frac{1}{3} - \frac{1}{4} = \frac{1}{12}.
-$$
-
-As a warning, let's examine one more example, known as the *Cauchy distribution*.  This is the distribution with p.d.f. given by
-
-$$
-p(x) = \frac{1}{\pi(1+x^2)}.
-$$
-
-```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
+```{.python .input #random-variables-cauchy-diverges}
 #@tab mxnet
-# Plot the Cauchy distribution p.d.f.
-x = np.arange(-5, 5, 0.01)
-p = 1 / (np.pi * (1 + x**2))
-
-d2l.plot(x, p, 'x', 'p.d.f.')
+# Cauchy second moment integral over growing ranges: it should NOT converge
+for R in [10, 100, 1000]:
+    x = np.arange(-R, R, 0.01)
+    integrand = x**2 / (np.pi * (1 + x**2))
+    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(np.sum(0.01*integrand)):.3f}')
 ```
 
-```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
+```{.python .input #random-variables-cauchy-diverges}
 #@tab pytorch
-# Plot the Cauchy distribution p.d.f.
-x = torch.arange(-5, 5, 0.01)
-p = 1 / (torch.pi * (1 + x**2))
-
-d2l.plot(x, p, 'x', 'p.d.f.')
+# Cauchy second moment integral over growing ranges: it should NOT converge
+for R in [10, 100, 1000]:
+    x = torch.arange(-R, R, 0.01)
+    integrand = x**2 / (torch.pi * (1 + x**2))
+    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(torch.sum(0.01*integrand)):.3f}')
 ```
 
-```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
+```{.python .input #random-variables-cauchy-diverges}
 #@tab tensorflow
-# Plot the Cauchy distribution p.d.f.
-x = tf.range(-5, 5, 0.01)
-p = 1 / (tf.pi * (1 + x**2))
-
-d2l.plot(x, p, 'x', 'p.d.f.')
+# Cauchy second moment integral over growing ranges: it should NOT converge
+for R in [10, 100, 1000]:
+    x = tf.range(-float(R), float(R), 0.01)
+    integrand = x**2 / (tf.pi * (1 + x**2))
+    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(tf.reduce_sum(0.01*integrand)):.3f}')
 ```
 
-```{.python .input #random-variables-means-and-variances-in-the-continuum-1}
+```{.python .input #random-variables-cauchy-diverges}
 #@tab jax
-# Plot the Cauchy distribution p.d.f.
-x = jnp.arange(-5, 5, 0.01)
-p = 1 / (jnp.pi * (1 + x**2))
-
-d2l.plot(x, p, 'x', 'p.d.f.')
+# Cauchy second moment integral over growing ranges: it should NOT converge
+for R in [10, 100, 1000]:
+    x = jnp.arange(-R, R, 0.01)
+    integrand = x**2 / (jnp.pi * (1 + x**2))
+    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(jnp.sum(0.01*integrand)):.3f}')
 ```
 
-This function looks innocent, and indeed consulting a table of integrals will show it has area one under it, and thus it defines a continuous random variable.
+The "integral" grows without bound as the range widens---it does not converge, so
+the variance is infinite. Machine-learning models are usually set up to avoid such
+*heavy-tailed* variables, but they arise in modeling physical systems, so it is
+worth knowing they exist.
 
-To see what goes astray, let's try to compute the variance of this.  This would involve using :eqref:`eq_mdl-var_def` computing
+## Several Variables
 
-$$
-\int_{-\infty}^\infty x^2 p(x) \; dx = \int_{-\infty}^\infty \frac{1}{\pi}\frac{x^2}{1+x^2}\; dx.
-$$
+Machine learning rarely involves one variable in isolation. Pixels $R_{i,j}$ in
+an image, prices $P_t$ across time---nearby coordinates are correlated, and a
+model that ignores this under-performs (:numref:`sec_mdl-naive_bayes` analyzes
+exactly such a model). We need a language for *several*, possibly correlated,
+continuous variables, and the multiple integrals of :numref:`sec_mdl-integral_calculus`
+supply it.
 
-Up to the constant factor $1/\pi$, the function we are integrating looks like this:
+### Joint and Marginal Densities
 
-```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
-#@tab mxnet
-# Plot the integrand needed to compute the variance
-x = np.arange(-20, 20, 0.01)
-p = x**2 / (1 + x**2)
-
-d2l.plot(x, p, 'x', 'integrand')
-```
-
-```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
-#@tab pytorch
-# Plot the integrand needed to compute the variance
-x = torch.arange(-20, 20, 0.01)
-p = x**2 / (1 + x**2)
-
-d2l.plot(x, p, 'x', 'integrand')
-```
-
-```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
-#@tab tensorflow
-# Plot the integrand needed to compute the variance
-x = tf.range(-20, 20, 0.01)
-p = x**2 / (1 + x**2)
-
-d2l.plot(x, p, 'x', 'integrand')
-```
-
-```{.python .input #random-variables-means-and-variances-in-the-continuum-2}
-#@tab jax
-# Plot the integrand needed to compute the variance
-x = jnp.arange(-20, 20, 0.01)
-p = x**2 / (1 + x**2)
-
-d2l.plot(x, p, 'x', 'integrand')
-```
-
-This function clearly has infinite area under it since it is essentially the constant $1/\pi$ with a small dip near zero, and indeed we could show that
+For two variables $X,Y$, the same $\epsilon$-interval reasoning gives a *joint
+density* $p(x,y)$ with
 
 $$
-\int_{-\infty}^\infty \frac{1}{\pi}\frac{x^2}{1+x^2}\; dx = \infty.
+P(X\approx x \text{ and } Y\approx y \text{ in } \epsilon\text{-boxes}) \approx \epsilon^{2}\,p(x, y),
 $$
 
-This means it does not have a well-defined finite variance.
+and the one-variable properties carry over: $p(x,y)\ge0$, $\int_{\mathbb{R}^2}
+p(x,y)\,dx\,dy=1$, and $P((X,Y)\in\mathcal{D})=\int_{\mathcal{D}} p(x,y)\,dx\,dy$.
+For $n$ variables the joint density $p(\mathbf x)=p(x_1,\ldots,x_n)$ obeys the
+same non-negativity and unit-integral rules.
 
-However, looking deeper shows an even more disturbing result.  Let's try to compute the mean using :eqref:`eq_mdl-exp_def`, which requires evaluating
-
-$$
-\mu_X = \int_{-\infty}^{\infty} \frac{1}{\pi}\frac{x}{1+x^2} \; dx.
-$$
-
-The integrand is *odd*, so one is tempted to declare the answer $0$ by symmetry.  The subtlety is that the mean is only well defined when the integral converges *absolutely*, i.e., when $\int_{-\infty}^\infty |x| \, p(x) \, dx < \infty$.  Here it does not: splitting at the origin and substituting $u = 1+x^2$,
-
-$$
-\int_{0}^{\infty} \frac{1}{\pi}\frac{x}{1+x^2} \; dx = \frac{1}{2\pi}\int_1^\infty \frac{1}{u} \; du = +\infty,
-$$
-
-and by the same argument the integral over $(-\infty, 0]$ diverges to $-\infty$.  The mean would therefore be a meaningless $\infty - \infty$: its value depends on *how* we let the two limits run off to infinity (for instance, $\lim_{R\to\infty}\int_{-R}^{R}$ gives $0$, but $\lim_{R\to\infty}\int_{-R}^{2R}$ gives a different answer).  Because there is no consistent value, we say the Cauchy distribution has *no well-defined mean* at all — note that this is a stronger statement than "the mean is infinite."
-
-Machine learning scientists define their models so that we most often do not need to deal with these issues, and will in the vast majority of cases deal with random variables with well-defined means and variances.  However, every so often random variables with *heavy tails* (that is those random variables where the probabilities of getting large values are large enough to make things like the mean or variance undefined) are helpful in modeling physical systems, thus it is worth knowing that they exist.
-
-### Joint Density Functions
-
-The above work all assumes we are working with a single real valued random variable.  But what if we are dealing with two or more potentially highly correlated random variables?  This circumstance is the norm in machine learning: imagine random variables like $R_{i, j}$ which encode the red value of the pixel at the $(i, j)$ coordinate in an image, or $P_t$ which is a random variable given by a stock price at time $t$.  Nearby pixels tend to have similar color, and nearby times tend to have similar prices.  We cannot treat them as separate random variables, and expect to create a successful model (we will see in :numref:`sec_mdl-naive_bayes` a model that under-performs due to such an assumption).  We need to develop the mathematical language to handle these correlated continuous random variables.
-
-Thankfully, with the multiple integrals in :numref:`sec_mdl-integral_calculus` we can develop such a language.  Suppose that we have, for simplicity, two random variables $X, Y$ which can be correlated.  Then, similar to the case of a single variable, we can ask the question:
+Often we hold a joint density but want the distribution of *one* coordinate,
+ignoring the rest---its *marginal distribution*. Starting from
+$P(X\in[x,x+\epsilon])\approx\epsilon\,p_X(x)$ and noting $Y$ takes *some* value,
+we slice in $y$ as well:
 
 $$
-P(X \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; x \; \textrm{and} \;Y \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; y ).
+\epsilon\,p_X(x) \approx \sum_i P\bigl(X\in[x,x{+}\epsilon],\ Y\in[\epsilon i,\epsilon(i{+}1)]\bigr)
+                 \approx \sum_i \epsilon^{2}\,p_{X,Y}(x,\epsilon i).
 $$
 
-Similar reasoning to the single variable case shows that this should be approximately
+Geometrically this sums the joint density down a column, as in
+:numref:`fig_mdl-marginal`. Cancelling one $\epsilon$ and recognizing the
+remaining sum as an integral over $y$,
 
 $$
-P(X \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; x \; \textrm{and} \;Y \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; y ) \approx \epsilon^{2}p(x, y),
+p_X(x) = \int_{-\infty}^\infty p_{X, Y}(x, y)\,dy.
 $$
+:eqlabel:`eq_mdl-marginal`
 
-for some function $p(x, y)$.  This is referred to as the joint density of $X$ and $Y$.  Similar properties are true for this as we saw in the single variable case. Namely:
-
-* $p(x, y) \ge 0$;
-* $\int _ {\mathbb{R}^2} p(x, y) \;dx \;dy = 1$;
-* $P((X, Y) \in \mathcal{D}) = \int _ {\mathcal{D}} p(x, y) \;dx \;dy$.
-
-In this way, we can deal with multiple, potentially correlated random variables.  If we wish to work with more than two random variables, we can extend the multivariate density to as many coordinates as desired by considering $p(\mathbf{x}) = p(x_1, \ldots, x_n)$.  The same properties of being non-negative, and having total integral of one still hold.
-
-### Marginal Distributions
-When dealing with multiple variables, we oftentimes want to be able to ignore the relationships and ask, "how is this one variable distributed?"  Such a distribution is called a *marginal distribution*.
-
-To be concrete, let's suppose that we have two random variables $X, Y$ with joint density given by $p _ {X, Y}(x, y)$.  We will be using the subscript to indicate what random variables the density is for.  The question of finding the marginal distribution is taking this function, and using it to find $p _ X(x)$.
-
-As with most things, it is best to return to the intuitive picture to figure out what should be true.  Recall that the density is the function $p _ X$ so that
-
-$$
-P(X \in [x, x+\epsilon]) \approx \epsilon \cdot p _ X(x).
-$$
-
-There is no mention of $Y$, but if all we are given is $p _{X, Y}$, we need to include $Y$ somehow. We can first observe that this is the same as
-
-$$
-P(X \in [x, x+\epsilon] \textrm{, and } Y \in \mathbb{R}) \approx \epsilon \cdot p _ X(x).
-$$
-
-Our density does not directly tell us about what happens in this case, we need to split into small intervals in $y$ as well, so we can write this as
-
-$$
-\begin{aligned}
-\epsilon \cdot p _ X(x) & \approx \sum _ {i} P(X \in [x, x+\epsilon] \textrm{, and } Y \in [\epsilon \cdot i, \epsilon \cdot (i+1)]) \\
-& \approx \sum _ {i} \epsilon^{2} p _ {X, Y}(x, \epsilon\cdot i).
-\end{aligned}
-$$
-
-![By summing along the columns of our array of probabilities, we are able to obtain the marginal distribution for just the random variable represented along the $\mathit{x}$-axis.](../img/mdl-prob-marginal.svg)
+![By summing along the columns of the array of joint probabilities, we obtain the marginal distribution of the variable on the $\mathit{x}$-axis alone.](../img/mdl-prob-marginal.svg)
 :label:`fig_mdl-marginal`
 
-This tells us to add up the value of the density along a series of squares in a line as is shown in :numref:`fig_mdl-marginal`.  Indeed, after canceling one factor of epsilon from both sides, and recognizing the sum on the right is the integral over $y$, we can conclude that
-
-$$
-\begin{aligned}
- p _ X(x) &  \approx \sum _ {i} \epsilon p _ {X, Y}(x, \epsilon\cdot i) \\
- & \approx \int_{-\infty}^\infty p_{X, Y}(x, y) \; dy.
-\end{aligned}
-$$
-
-Thus we see
-
-$$
-p _ X(x) = \int_{-\infty}^\infty p_{X, Y}(x, y) \; dy.
-$$
-
-This tells us that to get a marginal distribution, we integrate over the variables we do not care about.  This process is often referred to as *integrating out* or *marginalized out* the unneeded variables.
+To marginalize, then, we *integrate out* the variables we do not care about---the
+same operation introduced in :numref:`sec_mdl-integral_calculus`, here given its
+probabilistic meaning.
 
 ### Conditional Densities and Independence
 
@@ -757,282 +584,169 @@ This tells us that to get a marginal distribution, we integrate over the variabl
 :::
 
 ### Covariance
+:label:`subsec_mdl-covariance`
 
-When dealing with multiple random variables, there is one additional summary statistic which is helpful to know: the *covariance*.  This measures the degree that two random variable fluctuate together.
+For a *single* extra summary statistic capturing how two variables move together,
+we use the *covariance*. For discrete $X,Y$ taking $(x_i,y_j)$ with probability
+$p_{ij}$,
 
-Suppose that we have two random variables $X$ and $Y$, to begin with, let's suppose they are discrete, taking on values $(x_i, y_j)$ with probability $p_{ij}$.  In this case, the covariance is defined as
-
-$$\sigma_{XY} = \textrm{Cov}(X, Y) = \sum_{i, j} (x_i - \mu_X) (y_j-\mu_Y) p_{ij} = E[XY] - E[X]E[Y].$$
+$$\sigma_{XY} = \textrm{Cov}(X, Y) = \sum_{i, j} (x_i - \mu_X)(y_j-\mu_Y)\,p_{ij} = E[XY] - E[X]E[Y],$$
 :eqlabel:`eq_mdl-cov_def`
 
-To think about this intuitively: consider the following pair of random variables.  Suppose that $X$ takes the values $1$ and $3$, and $Y$ takes the values $-1$ and $3$.  Suppose that we have the following probabilities
+the second form being the exact two-variable analogue of the computational
+variance formula :eqref:`eq_mdl-var_comp` (and indeed
+$\textrm{Cov}(X,X)=\textrm{Var}(X)$). The covariance is positive when $X$ and $Y$
+tend to be large together, negative when one is large as the other is small.
+
+A clean example makes this concrete. Let $X\in\{1,3\}$ and $Y\in\{-1,3\}$ with
 
 $$
 \begin{aligned}
-P(X = 1 \; \textrm{and} \; Y = -1) & = \frac{p}{2}, \\
-P(X = 1 \; \textrm{and} \; Y = 3) & = \frac{1-p}{2}, \\
-P(X = 3 \; \textrm{and} \; Y = -1) & = \frac{1-p}{2}, \\
-P(X = 3 \; \textrm{and} \; Y = 3) & = \frac{p}{2},
+P(X{=}1, Y{=}{-}1) &= \tfrac{p}{2}, &\quad P(X{=}1, Y{=}3) &= \tfrac{1-p}{2}, \\
+P(X{=}3, Y{=}{-}1) &= \tfrac{1-p}{2}, &\quad P(X{=}3, Y{=}3) &= \tfrac{p}{2},
 \end{aligned}
 $$
 
-where $p$ is a parameter in $[0,1]$ we get to pick.  Notice that if $p=1$ then they are both always their minimum or maximum values simultaneously, and if $p=0$ they are guaranteed to take their flipped values simultaneously (one is large when the other is small and vice versa).  If $p=1/2$, then the four possibilities are all equally likely, and neither should be related.  Let's compute the covariance.  First, note $\mu_X = 2$ and $\mu_Y = 1$, so we may compute using :eqref:`eq_mdl-cov_def`:
+for a parameter $p\in[0,1]$. At $p=1$ the two are large or small *together*; at
+$p=0$ they are *opposed*; at $p=\tfrac12$ all four cells are equally likely and
+the two are unrelated. With $\mu_X=2$, $\mu_Y=1$, the definition
+:eqref:`eq_mdl-cov_def` gives, after summing the four terms,
+$\textrm{Cov}(X,Y)=4p-2$: equal to $+2$ at $p=1$, $-2$ at $p=0$, and $0$ at
+$p=\tfrac12$, matching every expectation.
+
+Covariance captures only *linear* co-variation. If $Y$ is uniform on
+$\{-2,-1,0,1,2\}$ and $X=Y^2$, then $X$ is a deterministic function of $Y$ yet
+$\textrm{Cov}(X,Y)=0$, because the symmetric quadratic relationship has no linear
+trend. Zero covariance does *not* mean independent.
+
+The continuous version replaces the sum by the density-weighted integral,
 
 $$
-\begin{aligned}
-\textrm{Cov}(X, Y) & = \sum_{i, j} (x_i - \mu_X) (y_j-\mu_Y) p_{ij} \\
-& = (1-2)(-1-1)\frac{p}{2} + (1-2)(3-1)\frac{1-p}{2} + (3-2)(-1-1)\frac{1-p}{2} + (3-2)(3-1)\frac{p}{2} \\
-& = 4p-2.
-\end{aligned}
+\sigma_{XY} = \int_{\mathbb{R}^2} (x-\mu_X)(y-\mu_Y)\,p(x, y)\,dx\,dy .
 $$
+:eqlabel:`eq_mdl-cov_cont`
 
-When $p=1$ (the case where they are both maximally positive or negative at the same time) has a covariance of $2$. When $p=0$ (the case where they are flipped) the covariance is $-2$.  Finally, when $p=1/2$ (the case where they are unrelated), the covariance is $0$.  Thus we see that the covariance measures how these two random variables are related.
+:numref:`fig_mdl-prob-covariance` shows clouds of points whose covariance we tune
+from negative through zero to positive: the cloud tilts down, rounds out, then
+tilts up.
 
-A quick note on the covariance is that it only measures these linear relationships.  More complex relationships like $X = Y^2$ where $Y$ is randomly chosen from $\{-2, -1, 0, 1, 2\}$ with equal probability can be missed.  Indeed a quick computation shows that these random variables have covariance zero, despite one being a deterministic function of the other.
+![Scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right). Negative covariance tilts the cloud down-right, zero covariance leaves it round with no linear trend, positive covariance tilts it up-right. Covariance measures the strength and sign of the linear relationship.](../img/mdl-prob-covariance.svg)
+:label:`fig_mdl-prob-covariance`
 
-For continuous random variables, much the same story holds.  At this point, we are pretty comfortable with doing the transition between discrete and continuous, so we will provide the continuous analogue of :eqref:`eq_mdl-cov_def` without any derivation.
+Two properties we use repeatedly: covariance is *bilinear*, with
+$\textrm{Cov}(aX+b,Y)=a\,\textrm{Cov}(X,Y)$ (shifts drop out, scales pull
+through, on each argument); and independent variables have zero covariance, since
+then $E[XY]=E[X]E[Y]$ in :eqref:`eq_mdl-cov_def`. Covariance also completes the
+variance-of-a-sum rule.
 
-$$
-\sigma_{XY} = \int_{\mathbb{R}^2} (x-\mu_X)(y-\mu_Y)p(x, y) \;dx \;dy.
-$$
-
-For visualization, let's take a look at a collection of random variables with tunable covariance.
-
-```{.python .input #random-variables-covariance}
-#@tab mxnet
-# Plot a few random variables adjustable covariance
-covs = [-0.9, 0.0, 1.2]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = np.random.normal(0, 1, 500)
-    Y = covs[i]*X + np.random.normal(0, 1, (500))
-
-    d2l.plt.subplot(1, 4, i+1)
-    d2l.plt.scatter(X.asnumpy(), Y.asnumpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cov = {covs[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-covariance}
-#@tab pytorch
-# Plot a few random variables adjustable covariance
-covs = [-0.9, 0.0, 1.2]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = torch.randn(500)
-    Y = covs[i]*X + torch.randn(500)
-
-    d2l.plt.subplot(1, 4, i+1)
-    d2l.plt.scatter(X.numpy(), Y.numpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cov = {covs[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-covariance}
-#@tab tensorflow
-# Plot a few random variables adjustable covariance
-covs = [-0.9, 0.0, 1.2]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = tf.random.normal((500, ))
-    Y = covs[i]*X + tf.random.normal((500, ))
-
-    d2l.plt.subplot(1, 4, i+1)
-    d2l.plt.scatter(X.numpy(), Y.numpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cov = {covs[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-covariance}
-#@tab jax
-# Plot a few random variables adjustable covariance
-covs = [-0.9, 0.0, 1.2]
-d2l.plt.figure(figsize=(12, 3))
-key = jax.random.PRNGKey(0)
-for i in range(3):
-    key, subkey1, subkey2 = jax.random.split(key, 3)
-    X = jax.random.normal(subkey1, (500,))
-    Y = covs[i]*X + jax.random.normal(subkey2, (500,))
-
-    d2l.plt.subplot(1, 4, i+1)
-    d2l.plt.scatter(np.asarray(X), np.asarray(Y))
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cov = {covs[i]}')
-d2l.plt.show()
-```
-
-Let's see some properties of covariances:
-
-* For any random variable $X$, $\textrm{Cov}(X, X) = \textrm{Var}(X)$.
-* For any random variables $X, Y$ and numbers $a$ and $b$, $\textrm{Cov}(aX+b, Y) = \textrm{Cov}(X, aY+b) = a\textrm{Cov}(X, Y)$.
-* If $X$ and $Y$ are independent then $\textrm{Cov}(X, Y) = 0$.
-
-In addition, we can use the covariance to expand a relationship we saw before.  Recall that is $X$ and $Y$ are two independent random variables then
+**Proposition (variance of a sum).** *For any random variables $X,Y$,*
 
 $$
-\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y).
+\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y).
+$$
+:eqlabel:`eq_mdl-var_sum`
+
+**Proof.** Write $\bar X=X-\mu_X$, $\bar Y=Y-\mu_Y$, so $X+Y$ has mean
+$\mu_X+\mu_Y$ by linearity :eqref:`eq_mdl-exp_linear` and deviation $\bar X+\bar Y$.
+Then by :eqref:`eq_mdl-var_def` and linearity,
+
+$$
+\textrm{Var}(X+Y) = E\bigl[(\bar X+\bar Y)^2\bigr]
+ = E[\bar X^2] + 2\,E[\bar X\bar Y] + E[\bar Y^2]
+ = \textrm{Var}(X) + 2\,\textrm{Cov}(X,Y) + \textrm{Var}(Y),
 $$
 
-With knowledge of covariances, we can expand this relationship.  Indeed, some algebra can show that in general,
+recognizing $E[\bar X\bar Y]=\textrm{Cov}(X,Y)$ from :eqref:`eq_mdl-cov_def`. $\blacksquare$
 
-$$
-\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\textrm{Cov}(X, Y).
-$$
-
-This allows us to generalize the variance summation rule for correlated random variables.
+When $X$ and $Y$ are independent the cross term vanishes and we recover the
+additive rule $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)$ promised
+earlier.
 
 ### Correlation
 
-As we did in the case of means and variances, let's now consider units.  If $X$ is measured in one unit (say inches), and $Y$ is measured in another (say dollars), the covariance is measured in the product of these two units $\textrm{inches} \times \textrm{dollars}$.  These units can be hard to interpret.  What we will often want in this case is a unit-less measurement of relatedness.  Indeed, often we do not care about exact quantitative correlation, but rather ask if the correlation is in the same direction, and how strong the relationship is.
+Covariance inherits the *units* of $X$ times $Y$---inches $\times$ dollars---so
+its magnitude is hard to read. Switching $Y$ from dollars to cents multiplies it
+by $100$. To get a unit-free measure, divide by something that also scales by
+$100$: the standard deviations. The *correlation coefficient* is
 
-To see what makes sense, let's perform a thought experiment.  Suppose that we convert our random variables in inches and dollars to be in inches and cents.  In this case the random variable $Y$ is multiplied by $100$.  If we work through the definition, this means that $\textrm{Cov}(X, Y)$ will be multiplied by $100$.  Thus we see that in this case a change of units change the covariance by a factor of $100$.  Thus, to find our unit-invariant measure of correlation, we will need to divide by something else that also gets scaled by $100$.  Indeed we have a clear candidate, the standard deviation!  Indeed if we define the *correlation coefficient* to be
-
-$$\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_{X}\sigma_{Y}},$$
+$$\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_{X}\sigma_{Y}}.$$
 :eqlabel:`eq_mdl-cor_def`
 
-we see that this is a unit-less value.  A little mathematics can show that this number is between $-1$ and $1$ with $1$ meaning maximally positively correlated, whereas $-1$ means maximally negatively correlated.
-
-Returning to our explicit discrete example above, we can see that $\sigma_X = 1$ and $\sigma_Y = 2$, so we can compute the correlation between the two random variables using :eqref:`eq_mdl-cor_def` to see that
-
-$$
-\rho(X, Y) = \frac{4p-2}{1\cdot 2} = 2p-1.
-$$
-
-This now ranges between $-1$ and $1$ with the expected behavior of $1$ meaning most correlated, and $-1$ meaning minimally correlated.
-
-As another example, consider $X$ as any random variable, and $Y=aX+b$ as any linear deterministic function of $X$.  Then, one can compute that
-
-$$\sigma_{Y} = \sigma_{aX+b} = |a|\sigma_{X},$$
-
-$$\textrm{Cov}(X, Y) = \textrm{Cov}(X, aX+b) = a\textrm{Cov}(X, X) = a\textrm{Var}(X),$$
-
-and thus by :eqref:`eq_mdl-cor_def` that
+A short calculation (the Cauchy--Schwarz inequality) shows $\rho\in[-1,1]$, with
+$+1$ for a perfect increasing linear relationship and $-1$ for a perfect
+decreasing one. On the running discrete example $\sigma_X=1$, $\sigma_Y=2$, so
+$\rho=\frac{4p-2}{2}=2p-1$, sweeping cleanly from $-1$ to $+1$. And for *any*
+affine $Y=aX+b$, using $\sigma_{aX+b}=|a|\sigma_X$ and
+$\textrm{Cov}(X,aX+b)=a\,\textrm{Var}(X)$,
 
 $$
-\rho(X, Y) = \frac{a\textrm{Var}(X)}{|a|\sigma_{X}^2} = \frac{a}{|a|} = \textrm{sign}(a).
+\rho(X, aX+b) = \frac{a\,\textrm{Var}(X)}{|a|\,\sigma_X^2} = \frac{a}{|a|} = \operatorname{sign}(a),
 $$
 
-Thus we see that the correlation is $+1$ for any $a > 0$, and $-1$ for any $a < 0$ illustrating that correlation measures the degree and directionality the two random variables are related, not the scale that the variation takes.
+exactly $+1$ for $a>0$ and $-1$ for $a<0$, independent of the scale---correlation
+measures direction and tightness of a linear relationship, never its slope.
+:numref:`fig_mdl-prob-correlation` shows clouds at correlation $-0.9$, $0$, and
+$0.9$; unlike the covariance clouds, the *spread* is comparable across panels and
+only the tilt changes.
 
-Let's again plot a collection of random variables with tunable correlation.
+![Scatter clouds of $(X,Y)$ at correlation $-0.9$, $0$, and $0.9$ (left to right). Correlation rescales covariance to lie between $-1$ and $1$, so unlike raw covariance the comparison is unit-free: only the tilt, not the overall spread, changes across the panels.](../img/mdl-prob-correlation.svg)
+:label:`fig_mdl-prob-correlation`
 
-```{.python .input #random-variables-correlation}
-#@tab mxnet
-# Plot a few random variables adjustable correlations
-cors = [-0.9, 0.0, 1.0]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = np.random.normal(0, 1, 500)
-    Y = cors[i] * X + np.sqrt(1 - cors[i]**2) * np.random.normal(0, 1, 500)
-
-    d2l.plt.subplot(1, 4, i + 1)
-    d2l.plt.scatter(X.asnumpy(), Y.asnumpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cor = {cors[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-correlation}
-#@tab pytorch
-# Plot a few random variables adjustable correlations
-cors = [-0.9, 0.0, 1.0]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = torch.randn(500)
-    Y = cors[i] * X + torch.sqrt(torch.tensor(1) -
-                                 cors[i]**2) * torch.randn(500)
-
-    d2l.plt.subplot(1, 4, i + 1)
-    d2l.plt.scatter(X.numpy(), Y.numpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cor = {cors[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-correlation}
-#@tab tensorflow
-# Plot a few random variables adjustable correlations
-cors = [-0.9, 0.0, 1.0]
-d2l.plt.figure(figsize=(12, 3))
-for i in range(3):
-    X = tf.random.normal((500, ))
-    Y = cors[i] * X + tf.sqrt(tf.constant(1.) -
-                                 cors[i]**2) * tf.random.normal((500, ))
-
-    d2l.plt.subplot(1, 4, i + 1)
-    d2l.plt.scatter(X.numpy(), Y.numpy())
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cor = {cors[i]}')
-d2l.plt.show()
-```
-
-```{.python .input #random-variables-correlation}
-#@tab jax
-# Plot a few random variables adjustable correlations
-cors = [-0.9, 0.0, 1.0]
-d2l.plt.figure(figsize=(12, 3))
-key = jax.random.PRNGKey(0)
-for i in range(3):
-    key, subkey1, subkey2 = jax.random.split(key, 3)
-    X = jax.random.normal(subkey1, (500,))
-    Y = cors[i] * X + jnp.sqrt(jnp.float32(1.) -
-                                 cors[i]**2) * jax.random.normal(subkey2, (500,))
-
-    d2l.plt.subplot(1, 4, i + 1)
-    d2l.plt.scatter(np.asarray(X), np.asarray(Y))
-    d2l.plt.xlabel('X')
-    d2l.plt.ylabel('Y')
-    d2l.plt.title(f'cor = {cors[i]}')
-d2l.plt.show()
-```
-
-Let's list a few properties of the correlation below.
-
-* For any random variable $X$, $\rho(X, X) = 1$.
-* For any random variables $X, Y$ and numbers $a$ and $b$, $\rho(aX+b, Y) = \rho(X, aY+b) = \textrm{sign}(a)\,\rho(X, Y)$.
-* If $X$ and $Y$ are independent with non-zero variance then $\rho(X, Y) = 0$.
-
-As a final note, you may feel like some of these formulae are familiar.  Indeed, if we expand everything out assuming that $\mu_X = \mu_Y = 0$, we see that this is
+There is a satisfying geometric reading. Centering so $\mu_X=\mu_Y=0$ and writing
+out :eqref:`eq_mdl-cor_def`,
 
 $$
-\rho(X, Y) = \frac{\sum_{i, j} x_iy_ip_{ij}}{\sqrt{\sum_{i, j}x_i^2 p_{ij}}\sqrt{\sum_{i, j}y_j^2 p_{ij}}}.
+\rho(X, Y) = \frac{\sum_{i, j} x_i y_j\,p_{ij}}{\sqrt{\sum_{i, j}x_i^2 p_{ij}}\,\sqrt{\sum_{i, j}y_j^2 p_{ij}}},
 $$
 
-This looks like a sum of a product of terms divided by the square root of sums of terms.  This is exactly the formula for the cosine of the angle between two vectors $\mathbf{v}, \mathbf{w}$ with the different coordinates weighted by $p_{ij}$:
+which is precisely the cosine of the angle between two vectors with coordinates
+weighted by $p_{ij}$,
 
 $$
-\cos(\theta) = \frac{\mathbf{v}\cdot \mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|} = \frac{\sum_{i} v_iw_i}{\sqrt{\sum_{i}v_i^2}\sqrt{\sum_{i}w_i^2}}.
+\cos(\theta) = \frac{\mathbf{v}\cdot \mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|} = \frac{\sum_{i} v_i w_i}{\sqrt{\sum_{i}v_i^2}\,\sqrt{\sum_{i}w_i^2}}.
 $$
 
-Indeed if we think of norms as being related to standard deviations, and correlations as being cosines of angles, much of the intuition we have from geometry can be applied to thinking about random variables.
+If standard deviations are "lengths" and correlations are "cosines of angles,"
+the geometric intuition of :numref:`sec_mdl-geometry-linear-algebraic-ops`
+transfers wholesale to random variables: uncorrelated means orthogonal,
+$\rho=\pm1$ means parallel. This is the bridge between linear algebra and
+statistics that PCA and least squares both walk.
 
 ## Summary
-* Continuous random variables are random variables that can take on a continuum of values.  They have some technical difficulties that make them more challenging to work with compared to discrete random variables.
-* The probability density function allows us to work with continuous random variables by giving a function where the area under the curve on some interval gives the probability of finding a sample point in that interval.
-* The cumulative distribution function is the probability of observing the random variable to be less than a given threshold.  It can provide a useful alternate viewpoint which unifies discrete and continuous variables.
-* The mean is the average value of a random variable.
-* The variance is the expected square of the difference between the random variable and its mean.
-* The standard deviation is the square root of the variance.  It can be thought of as measuring the range of values the random variable may take.
-* Chebyshev's inequality allows us to make this intuition rigorous by giving an explicit interval that contains the random variable most of the time.
-* Joint densities allow us to work with correlated random variables.  We may marginalize joint densities by integrating over unwanted random variables to get the distribution of the desired random variable.
-* The covariance and correlation coefficient provide a way to measure any linear relationship between two correlated random variables.
+
+* A continuous random variable is described by a *probability density* $p(x)\ge0$
+  with $\int p\,dx=1$ :eqref:`eq_mdl-pdf_int_one`; the density is not itself a
+  probability---only its integral over an interval is,
+  $P(X\in(a,b])=\int_a^b p$ :eqref:`eq_mdl-pdf_int_int`. Any single point has
+  probability zero.
+* The *cumulative distribution function* $F(x)=\int_{-\infty}^x p=P(X\le x)$ *is*
+  a probability and unifies discrete, continuous, and mixed variables. Density and
+  c.d.f. are derivative and integral of each other: $F'=p$
+  :eqref:`eq_mdl-cdf-deriv`, the fundamental theorem of calculus.
+* The *mean* $\mu_X=E[X]$ locates the distribution and is *linear*
+  :eqref:`eq_mdl-exp_linear`---sums of expectations add with no independence
+  needed. The *variance* $\textrm{Var}(X)=E[X^2]-\mu_X^2$
+  :eqref:`eq_mdl-var_comp` measures spread, scales as
+  $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine`, and its root
+  is the *standard deviation*, back in the original units.
+* *Chebyshev's inequality* :eqref:`eq_mdl-chebyshev` reads $\sigma_X$ as a
+  universal yardstick: a fraction at most $1/\alpha^2$ of any distribution lies
+  beyond $\alpha$ standard deviations.
+* Several variables are handled by a *joint density*; *marginals* come from
+  integrating out the unwanted variables :eqref:`eq_mdl-marginal`. *Covariance*
+  measures linear co-variation, giving $\textrm{Var}(X+Y)=\textrm{Var}(X)+
+  \textrm{Var}(Y)+2\textrm{Cov}(X,Y)$ :eqref:`eq_mdl-var_sum`, and *correlation*
+  normalizes it to $[-1,1]$ as a cosine between centered variables. Zero
+  covariance does not imply independence.
 
 ## Exercises
-1. Suppose that we have the random variable with density given by $p(x) = \frac{1}{x^2}$ for $x \ge 1$ and $p(x) = 0$ otherwise.  What is $P(X > 2)$?
-2. The Laplace distribution is a random variable whose density is given by $p(x) = \tfrac12 e^{-|x|}$.  What is the mean and the standard deviation of this function?  As a hint, $\int_0^\infty xe^{-x} \; dx = 1$ and $\int_0^\infty x^2e^{-x} \; dx = 2$.
-3. I walk up to you on the street and say "I have a random variable with mean $1$, standard deviation $2$, and I observed $25\%$ of my samples taking a value larger than $9$."  Do you believe me?  Why or why not?
-4. Suppose that you have two random variables $X, Y$, with joint density given by $p_{XY}(x, y) = 4xy$ for $x, y \in [0,1]$ and $p_{XY}(x, y) = 0$ otherwise.  What is the covariance of $X$ and $Y$?
-
+1. Suppose $X$ has density $p(x) = \frac{1}{x^2}$ for $x \ge 1$ and $p(x) = 0$ otherwise. Verify it is a density and compute $P(X > 2)$ and the c.d.f. $F(x)$.
+2. The Laplace distribution has density $p(x) = \tfrac12 e^{-|x|}$. Find its mean and standard deviation. (*Hint:* $\int_0^\infty xe^{-x}\,dx = 1$ and $\int_0^\infty x^2e^{-x}\,dx = 2$.)
+3. I claim a random variable with mean $1$ and standard deviation $2$ produced $25\%$ of samples above $9$. Use Chebyshev :eqref:`eq_mdl-chebyshev` to decide whether to believe me.
+4. Two variables $X,Y$ have joint density $p_{XY}(x, y) = 4xy$ on $[0,1]^2$ and $0$ otherwise. Find the marginals $p_X,p_Y$, the covariance $\textrm{Cov}(X,Y)$, and decide whether $X$ and $Y$ are independent.
+5. Prove the affine variance rule $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine` directly from $\textrm{Var}(X)=E[X^2]-E[X]^2$, without using :eqref:`eq_mdl-exp_linear` on the deviation.
+6. Using $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)+2\textrm{Cov}(X,Y)$ :eqref:`eq_mdl-var_sum`, show that for independent identically distributed $X_1,\ldots,X_n$ with variance $\sigma^2$, the sample mean $\bar X=\tfrac1n\sum_i X_i$ has variance $\sigma^2/n$. (This is why averaging reduces noise.)
+7. Let $Y$ be uniform on $\{-2,-1,0,1,2\}$ and $X=Y^2$. Compute $\textrm{Cov}(X,Y)$ and confirm it is zero even though $X$ is a deterministic function of $Y$. Why does correlation miss this relationship?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/415)
@@ -1056,77 +770,88 @@ Indeed if we think of norms as being related to standard deviations, and correla
 ::: {.slide title="Continuous Random Variables"}
 Continuous random variables and their summaries:
 
-- **PDF** $p(x)$ — probability density; $P(X \in A) = \int_A p$.
+- **PDF** $p(x)\ge0$ with $\int p = 1$; $P(X \in A) = \int_A p$.
+- **CDF** $F(x)=\int_{-\infty}^x p = P(X\le x)$, with $F'=p$.
 - **Mean** $\mu = \mathbb{E}[X] = \int x\, p(x)\, dx$.
-- **Variance** $\sigma^2 = \mathbb{E}[(X-\mu)^2]$ —
-  spread.
-- **Covariance** $\text{Cov}(X, Y)$ — joint variation.
-- **Correlation** $\rho$ — covariance normalized to
-  $[-1, 1]$.
+- **Variance** $\sigma^2 = \mathbb{E}[X^2]-\mu^2$ — spread.
+- **Covariance / correlation** — joint variation, raw and
+  normalized to $[-1,1]$.
 
 These are the building blocks of every probabilistic
 analysis in the book.
 :::
 
 ::: {.slide title="From discrete to continuous"}
-Discrete variables assign mass to points. Continuous variables
-assign density, and probabilities come from integrating over
-intervals.
+Discrete variables assign *mass* to points; a single point
+then has probability zero in the continuous world. Continuous
+variables assign *density*, and probability is area:
+$P(X\in(a,b]) = \int_a^b p$.
 
-@random-variables-from-discrete-to-continuous
+@fig:mdl-prob-pdf-area
 :::
 
-::: {.slide title="PDFs"}
-A PDF describes relative likelihood locally; only areas under the
-curve are probabilities, so the density itself can exceed 1.
+::: {.slide title="Density to probability, in code"}
+The density is not a probability — only its integral is. A
+Riemann sum recovers $P(-2 < X \le 3)$ from the density and
+confirms the total mass is $1$:
 
-@random-variables-probability-density-functions
+@random-variables-density-to-probability
 :::
 
-::: {.slide title="Standard deviation in code"}
-Standard deviation is the square root of variance; these snippets
-compute both so the scale of spread stays interpretable.
+::: {.slide title="PDF and CDF: derivative and integral"}
+The c.d.f. accumulates the density; the density is its slope.
+Area under $p$ over $(a,b]$ equals the rise $F(b)-F(a)$ —
+the fundamental theorem of calculus, $F'=p$:
 
-@random-variables-standard-deviations-1
-
-. . .
-
-@random-variables-standard-deviations-2
-
-. . .
-
-@random-variables-standard-deviations-3
+@fig:mdl-prob-pdf-cdf
 :::
 
-::: {.slide title="Continuous mean and variance"}
-For continuous variables, sums become integrals: weight each value
-or squared deviation by its density.
+::: {.slide title="Mean, variance, standard deviation"}
+$\mathbb{E}$ is linear: $\mathbb{E}[X+Y]=\mathbb{E}[X]+\mathbb{E}[Y]$,
+*no independence needed*. Variance scales as
+$\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$; $\sigma=\sqrt{\textrm{Var}}$
+restores the original units.
+:::
 
-@random-variables-means-and-variances-in-the-continuum-1
+::: {.slide title="Chebyshev: σ is a yardstick"}
+For *any* distribution with finite variance,
 
-. . .
+$$P\bigl(|X-\mu| > \alpha\sigma\bigr) \le \tfrac{1}{\alpha^2}.$$
 
-@random-variables-means-and-variances-in-the-continuum-2
+The bound is sharp — the three-atom example touches it at
+$p=1/8$:
+
+@fig:mdl-prob-chebyshev
+:::
+
+::: {.slide title="Several variables: joint and marginal"}
+A joint density $p(x,y)$ integrates to $1$. *Marginalize* by
+integrating out the unwanted variable, $p_X(x)=\int p(x,y)\,dy$
+— summing down a column:
+
+@fig:mdl-prob-marginal
 :::
 
 ::: {.slide title="Covariance and correlation"}
-Covariance keeps the original units; correlation normalizes by
-standard deviations so the result lies between $-1$ and $1$.
+Covariance $\textrm{Cov}(X,Y)=\mathbb{E}[XY]-\mathbb{E}[X]\mathbb{E}[Y]$
+measures *linear* co-variation (in mixed units); correlation
+$\rho=\textrm{Cov}/(\sigma_X\sigma_Y)\in[-1,1]$ normalizes it —
+the cosine between centered variables.
 
-@random-variables-covariance
+@fig:mdl-prob-covariance
 
 . . .
 
-@random-variables-correlation
+@fig:mdl-prob-correlation
 :::
 
 ::: {.slide title="Recap"}
-- PDF integrates to 1; the integral over an interval is
-  the probability of falling in it.
-- $\mathbb{E}, \text{Var}$ are integrals weighted by the
-  PDF.
-- Correlation = covariance / product of std devs;
-  measures linear relationship strength.
-- Foundation for cross-entropy, KL divergence,
-  expectations through stochastic gradients, ...
+- PDF integrates to $1$; probability is area; $F'=p$ ties
+  density and c.d.f. by the FTC.
+- $\mathbb{E}$ linear; $\textrm{Var}=\mathbb{E}[X^2]-\mu^2$;
+  $\sigma$ is a Chebyshev yardstick.
+- Covariance = linear co-variation; correlation =
+  covariance normalized = cosine of an angle.
+- Foundation for cross-entropy, KL divergence, and
+  expectations through stochastic gradients.
 :::

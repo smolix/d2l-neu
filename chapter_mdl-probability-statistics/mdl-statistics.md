@@ -1,654 +1,485 @@
 # Statistics
 :label:`sec_mdl-statistics`
 
-Undoubtedly, to be a top deep learning practitioner, the ability to train the state-of-the-art and high accurate models is crucial.  However, it is often unclear when improvements are significant, or only the result of random fluctuations in the training process.  To be able to discuss uncertainty in estimated values, we must learn some statistics.
+A trained model is only ever fit to a *finite* sample, so every quantity we read off it---an accuracy, a learned weight, an estimated mean---is a guess computed from random data and would come out differently on a fresh draw. Statistics is the discipline that quantifies that randomness: it tells us how far a guess typically sits from the truth, when an apparent improvement is real rather than noise, and how confident we are entitled to be. This section develops the three ideas a deep-learning practitioner reaches for most often. We define an *estimator* and the two ways it can be wrong---*bias* and *variance*---and prove the decomposition that ties them together; this single identity is the same U-curve that governs under- and over-fitting in :numref:`sec_generalization_basics`, so it is worth deriving carefully. We then turn to *hypothesis testing*, the framework behind A/B tests and benchmark comparisons, and close with *confidence intervals*, which attach a notion of uncertainty to a point estimate. Throughout we take the true parameter $\theta$ to be a scalar; the vector case is identical with sums of squares replaced by squared norms.
 
+We first load the per-framework library so the computations below have `d2l` and the tensor library in scope. The estimator simulations are framework-agnostic apart from the random-number call, so the worked cells branch only where they must.
 
-The earliest reference of *statistics* can be traced back to an Arab scholar Al-Kindi in the $9^{\textrm{th}}$-century, who gave a detailed description of how to use statistics and frequency analysis to decipher encrypted messages. After 800 years, the modern statistics arose from Germany in 1700s, when the researchers focused on the demographic and economic data collection and analysis. Today, statistics is the science subject that concerns the collection, processing, analysis, interpretation and visualization of data. What is more, the core theory of statistics has been widely used in the research within academia, industry, and government.
-
-
-More specifically, statistics can be divided to *descriptive statistics* and *statistical inference*. The former focus on summarizing and illustrating the features of a collection of observed data, which is referred to as a *sample*. The sample is drawn from a *population*, denotes the total set of similar individuals, items, or events of our experiment interests. Contrary to descriptive statistics, *statistical inference* further deduces the characteristics of a population from the given *samples*, based on the assumptions that the sample distribution can replicate the population distribution at some degree.
-
-
-You may wonder: “What is the essential difference between machine learning and statistics?” Fundamentally speaking, statistics focuses on the inference problem. This type of problems includes modeling the relationship between the variables, such as causal inference, and testing the statistical significance of model parameters, such as A/B testing. In contrast, machine learning emphasizes on making accurate predictions, without explicitly programming and understanding each parameter's functionality.
-
-
-In this section, we will introduce three types of statistics inference methods: evaluating and comparing estimators, conducting hypothesis tests, and constructing confidence intervals. These methods can help us infer the characteristics of a given population, i.e., the true parameter $\theta$. For brevity, we assume that the true parameter $\theta$ of a given population is a scalar value. It is straightforward to extend to the case where $\theta$ is a vector or a tensor, thus we omit it in our discussion.
-
-
-
-## Evaluating and Comparing Estimators
-
-In statistics, an *estimator* is a function of given samples used to estimate the true parameter $\theta$. We will write $\hat{\theta}_n = \hat{f}(x_1, \ldots, x_n)$ for the estimate of $\theta$ after observing the samples {$x_1, x_2, \ldots, x_n$}.
-
-We have seen simple examples of estimators before in section :numref:`sec_mdl-maximum_likelihood`.  If you have a number of samples from a Bernoulli random variable, then the maximum likelihood estimate for the probability the random variable is one can be obtained by counting the number of ones observed and dividing by the total number of samples.  Similarly, an exercise asked you to show that the maximum likelihood estimate of the mean of a Gaussian given a number of samples is given by the average value of all the samples.  These estimators will almost never give the true value of the parameter, but ideally for a large number of samples the estimate will be close.
-
-As an example, we show below the true density of a Gaussian random variable with mean zero and variance one, along with a collection samples from that Gaussian.  We constructed the $y$ coordinate so every point is visible and the relationship to the original density is clearer.
-
-```{.python .input #statistics-evaluating-and-comparing-estimators}
+```{.python .input #statistics-imports}
 #@tab mxnet
+%matplotlib inline
 from d2l import mxnet as d2l
-import mxnet as mx
 from mxnet import np, npx
-import random
 npx.set_np()
-
-# Sample datapoints and create y coordinate
-epsilon = 0.1
-# `random.seed` only seeds the stdlib RNG, not MXNet's; seed both so the
-# demo is reproducible.
-random.seed(8675309)
-mx.random.seed(8675309)
-xs = np.random.normal(loc=0, scale=1, size=(300,))
-
-ys = [np.sum(np.exp(-(xs[:i] - xs[i])**2 / (2 * epsilon**2))
-             / np.sqrt(2*np.pi*epsilon**2)) / len(xs) for i in range(len(xs))]
-
-# Compute true density
-xd = np.arange(np.min(xs).item(), np.max(xs).item(), 0.01)
-yd = np.exp(-xd**2/2) / np.sqrt(2 * np.pi)
-
-# Plot the results
-d2l.plot(xd, yd, 'x', 'density')
-d2l.plt.scatter(xs, ys)
-d2l.plt.axvline(x=0)
-d2l.plt.axvline(x=np.mean(xs), linestyle='--', color='purple')
-d2l.plt.title(f'sample mean: {float(np.mean(xs)):.2f}')
-d2l.plt.show()
 ```
 
-```{.python .input #statistics-evaluating-and-comparing-estimators}
+```{.python .input #statistics-imports}
 #@tab pytorch
+%matplotlib inline
 from d2l import torch as d2l
 import torch
-
-torch.pi = torch.acos(torch.zeros(1)) * 2  #define pi in torch
-
-# Sample datapoints and create y coordinate
-epsilon = 0.1
-torch.manual_seed(8675309)
-xs = torch.randn(size=(300,))
-
-ys = torch.tensor(
-    [torch.sum(torch.exp(-(xs[:i] - xs[i])**2 / (2 * epsilon**2))\
-               / torch.sqrt(2*torch.pi*epsilon**2)) / len(xs)\
-     for i in range(len(xs))])
-
-# Compute true density
-xd = torch.arange(torch.min(xs), torch.max(xs), 0.01)
-yd = torch.exp(-xd**2/2) / torch.sqrt(2 * torch.pi)
-
-# Plot the results
-d2l.plot(xd, yd, 'x', 'density')
-d2l.plt.scatter(xs, ys)
-d2l.plt.axvline(x=0)
-d2l.plt.axvline(x=torch.mean(xs), linestyle='--', color='purple')
-d2l.plt.title(f'sample mean: {float(torch.mean(xs).item()):.2f}')
-d2l.plt.show()
 ```
 
-```{.python .input #statistics-evaluating-and-comparing-estimators}
+```{.python .input #statistics-imports}
 #@tab tensorflow
+%matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
-
-tf.pi = tf.acos(tf.zeros(1)) * 2  # define pi in TensorFlow
-
-# Sample datapoints and create y coordinate
-epsilon = 0.1
-tf.random.set_seed(8675309)
-xs = tf.random.normal((300,))
-
-ys = tf.constant(
-    [(tf.reduce_sum(tf.exp(-(xs[:i] - xs[i])**2 / (2 * epsilon**2)) \
-               / tf.sqrt(2*tf.pi*epsilon**2)) / tf.cast(
-        tf.size(xs), dtype=tf.float32)).numpy() \
-     for i in range(tf.size(xs))])
-
-# Compute true density
-xd = tf.range(tf.reduce_min(xs), tf.reduce_max(xs), 0.01)
-yd = tf.exp(-xd**2/2) / tf.sqrt(2 * tf.pi)
-
-# Plot the results
-d2l.plot(xd, yd, 'x', 'density')
-d2l.plt.scatter(xs, ys)
-d2l.plt.axvline(x=0)
-d2l.plt.axvline(x=tf.reduce_mean(xs), linestyle='--', color='purple')
-d2l.plt.title(f'sample mean: {float(tf.reduce_mean(xs).numpy()):.2f}')
-d2l.plt.show()
 ```
 
-```{.python .input #statistics-evaluating-and-comparing-estimators}
+```{.python .input #statistics-imports}
 #@tab jax
+%matplotlib inline
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-import numpy as np
-
-# Sample datapoints and create y coordinate
-epsilon = 0.1
-key = jax.random.PRNGKey(8675309)
-xs = jax.random.normal(key, (300,))
-
-ys = jnp.array(
-    [jnp.sum(jnp.exp(-(xs[:i] - xs[i])**2 / (2 * epsilon**2))
-             / jnp.sqrt(2*jnp.pi*epsilon**2)) / len(xs)
-     for i in range(len(xs))])
-
-# Compute true density
-xd = jnp.arange(jnp.min(xs), jnp.max(xs), 0.01)
-yd = jnp.exp(-xd**2/2) / jnp.sqrt(2 * jnp.pi)
-
-# Plot the results
-d2l.plot(xd, yd, 'x', 'density')
-d2l.plt.scatter(xs, ys)
-d2l.plt.axvline(x=0)
-d2l.plt.axvline(x=float(jnp.mean(xs)), linestyle='--', color='purple')
-d2l.plt.title(f'sample mean: {float(jnp.mean(xs)):.2f}')
-d2l.plt.show()
 ```
 
-There can be many ways to compute an estimator of a parameter $\hat{\theta}_n$.  In this section, we introduce three common methods to evaluate and compare estimators: the mean squared error, the standard deviation, and statistical bias.
+## Estimators and Their Quality
 
-### Mean Squared Error
+### Estimators
 
-Perhaps the simplest metric used to evaluate estimators is the *mean squared error (MSE)* (or $l_2$ loss) estimator which can be defined as
+An *estimator* is a recipe that turns data into a guess for an unknown parameter. Formally, given samples $x_1,\ldots,x_n$ drawn from a distribution governed by a parameter $\theta$, an estimator is a function
 
-$$\textrm{MSE} (\hat{\theta}_n, \theta) = E[(\hat{\theta}_n - \theta)^2].$$
-:eqlabel:`eq_mdl-mse_est`
+$$
+\hat\theta_n = \hat f(x_1,\ldots,x_n)
+$$
 
-This allows us to quantify the average squared deviation from the true value.  MSE is always non-negative. If you have read :numref:`sec_linear_regression`, you will recognize it as the most commonly used regression loss function. As a measure to evaluate an estimator, the closer its value is to zero, the closer the estimator is to the true parameter $\theta$.
+that we hope lands near $\theta$. We have met estimators already: in :numref:`sec_mdl-maximum_likelihood` the maximum-likelihood estimate of a Bernoulli probability was the fraction of observed ones, and the maximum-likelihood estimate of a Gaussian mean was the sample average. The key fact is that $\hat\theta_n$ is itself a *random variable*: it depends on the random sample, so it would come out differently on a fresh dataset. Asking whether an estimator is *good* is therefore asking about the distribution of $\hat\theta_n$ over repeated datasets---its *sampling distribution*---and that distribution has two features that matter, its center and its spread.
 
+### Bias and Variance
 
-### Statistical Bias
+The first feature is the *center*. The **bias** of $\hat\theta_n$ measures the systematic gap between where the estimator centers and the truth,
 
-The MSE provides a natural metric, but we can easily imagine multiple different phenomena that might make it large.  Two fundamentally important are fluctuation in the estimator due to randomness in the dataset, and systematic error in the estimator due to the estimation procedure.
-
-
-First, let's measure the systematic error. For an estimator $\hat{\theta}_n$, the mathematical illustration of *statistical bias* can be defined as
-
-$$\textrm{bias}(\hat{\theta}_n) = E(\hat{\theta}_n - \theta) = E(\hat{\theta}_n) - \theta.$$
+$$
+\operatorname{Bias}(\hat\theta_n) = \mathbb{E}[\hat\theta_n] - \theta ,
+$$
 :eqlabel:`eq_mdl-bias`
 
-Note that when $\textrm{bias}(\hat{\theta}_n) = 0$, the expectation of the estimator $\hat{\theta}_n$ is equal to the true value of parameter.  In this case, we say $\hat{\theta}_n$ is an unbiased estimator.  In general, an unbiased estimator is better than a biased estimator since its expectation is the same as the true parameter.
+the expectation taken over the random sample. When $\operatorname{Bias}(\hat\theta_n)=0$ for every $\theta$ we call $\hat\theta_n$ *unbiased*: it is right *on average*, even though any single estimate misses. Bias is the error that does not wash out by collecting more data of the same kind---it is baked into the recipe.
 
+The second feature is the *spread*. The **variance** measures how much the estimator fluctuates around its own center, with the **standard error** its square root,
 
-It is worth being aware, however, that biased estimators are frequently used in practice.  There are cases where unbiased estimators do not exist without further assumptions, or are intractable to compute.  This may seem like a significant flaw in an estimator, however the majority of estimators encountered in practice are at least *asymptotically unbiased* in the sense that the bias tends to zero as the number of available samples tends to infinity: $\lim_{n \rightarrow \infty} \textrm{bias}(\hat{\theta}_n) = 0$.
-
-A closely related but stronger property is *consistency*: an estimator is consistent if it *converges in probability* to the true parameter, $\hat{\theta}_n \xrightarrow{P} \theta$, meaning $P(|\hat{\theta}_n - \theta| > \varepsilon) \to 0$ for every $\varepsilon > 0$ as $n \to \infty$.  An estimator can be asymptotically unbiased without being consistent (its bias may vanish while its variance does not) and vice versa, but in the common case where both the bias and the variance tend to zero, the estimator is consistent.  Consistency is the basic guarantee that "more data gets us arbitrarily close to the truth."
-
-
-### Variance and Standard Deviation
-
-Second, let's measure the randomness in the estimator.  Recall from :numref:`sec_mdl-random_variables`, the *standard deviation* (or *standard error*) is defined as the square root of the variance.  We may measure the degree of fluctuation of an estimator by measuring the standard deviation or variance of that estimator.
-
-$$\sigma_{\hat{\theta}_n} = \sqrt{\textrm{Var} (\hat{\theta}_n )} = \sqrt{E[(\hat{\theta}_n - E(\hat{\theta}_n))^2]}.$$
+$$
+\operatorname{Var}(\hat\theta_n) = \mathbb{E}\!\left[(\hat\theta_n - \mathbb{E}[\hat\theta_n])^2\right],
+\qquad
+\operatorname{se}(\hat\theta_n) = \sqrt{\operatorname{Var}(\hat\theta_n)} .
+$$
 :eqlabel:`eq_mdl-var_est`
 
-It is important to compare :eqref:`eq_mdl-var_est` to :eqref:`eq_mdl-mse_est`.  In this equation we do not compare to the true population value $\theta$, but instead to $E(\hat{\theta}_n)$, the expected sample mean.  Thus we are not measuring how far the estimator tends to be from the true value, but instead we are measuring the fluctuation of the estimator itself.
+Note carefully that variance is measured against $\mathbb{E}[\hat\theta_n]$, *not* against the true $\theta$: it captures the noise in the estimator, not its accuracy. :numref:`fig_mdl-sampling-distribution` makes the two features visible by drawing the sampling distribution for two estimators of the same $\theta$. Bias is the offset of the distribution's center from $\theta$; variance is its width.
 
+![The sampling distribution of an estimator, drawn over many datasets. Bias is the offset of the center $\mathbb{E}\left(\hat\theta\right)$ from the true $\theta$; variance is the spread. Left: low bias, high variance. Right: high bias, low variance. A good estimator wants both small, but usually one is traded for the other.](../img/mdl-prob-sampling-distribution.svg)
+:label:`fig_mdl-sampling-distribution`
 
-### The Bias-Variance Trade-off
+### Consistency and Efficiency
 
-It is intuitively clear that these two components contribute to the mean squared error.  What is somewhat shocking is that we can show that this is actually a *decomposition* of the mean squared error into exactly these two contributions: the square of the bias plus the variance.  Since $\theta$ is a fixed (non-random) population parameter, $E[\theta] = \theta$ and $\textrm{Var}[\theta] = 0$, so:
+Bias and variance describe an estimator at a *fixed* sample size. Two further notions describe how it behaves as data accumulates. An estimator is *asymptotically unbiased* if its bias vanishes in the limit, $\lim_{n\to\infty}\operatorname{Bias}(\hat\theta_n)=0$; many estimators used in practice are biased at finite $n$ but asymptotically unbiased, which is usually good enough. A stronger and more useful guarantee is *consistency*: $\hat\theta_n$ is consistent if it *converges in probability* to $\theta$,
 
 $$
-\begin{aligned}
-\textrm{MSE} (\hat{\theta}_n, \theta) &= E[(\hat{\theta}_n - \theta)^2] \\
- &= E[(\hat{\theta}_n)^2] - 2 \theta\, E[\hat{\theta}_n] + \theta^2 \\
- &= \textrm{Var} [\hat{\theta}_n] + E[\hat{\theta}_n]^2 - 2 \theta\, E[\hat{\theta}_n] + \theta^2 \\
- &= \textrm{Var} [\hat{\theta}_n] + (E[\hat{\theta}_n] - \theta)^2 \\
- &= (\textrm{bias} [\hat{\theta}_n])^2 + \textrm{Var} (\hat{\theta}_n).\\
-\end{aligned}
+\hat\theta_n \xrightarrow{P} \theta,
+\qquad\textrm{i.e.}\qquad
+P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)\to 0 \quad\textrm{for every } \varepsilon>0 .
 $$
 
-We refer to the above formula as the *bias-variance trade-off*. The mean squared error decomposes into two sources of error: the error from high bias and the error from high variance. The bias error is commonly seen in a simple model (such as a linear regression model), which cannot extract high-dimensional relations between the features and the outputs. If a model suffers from high bias error, we often say it is *underfitting* or lacks *flexibility* (see :numref:`sec_generalization_basics`). The high variance usually results from a too complex model, which overfits the training data. As a result, an *overfitting* model is sensitive to small fluctuations in the data. If a model suffers from high variance, we often say it is *overfitting* and lacks *generalization* (see :numref:`sec_generalization_basics`).
+Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." A clean sufficient condition is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$; we will see this happen explicitly for the sample mean below. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent if its variance does not vanish, and vice versa.)
 
-As model complexity increases, the squared bias falls while the variance rises, so their sum --- the mean squared error, which is the test error --- traces a U-curve with a minimum at the sweet spot, as shown in :numref:`fig_mdl-bias-variance-u-curve`. This is exactly the under/overfitting U-curve of :numref:`sec_generalization_basics`, which makes the decomposition above and generalization the *same* picture; regularization shifts the minimum by trading bias for variance.
+Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here---the Cramér--Rao bound puts a lower limit on the variance of any unbiased estimator---and an estimator that attains it is as good as unbiased estimation can be. We will not need the bound itself, only the idea it formalizes: once unbiasedness is secured, the remaining game is to minimize variance, which is exactly the second half of the decomposition we turn to next.
+
+## The Bias-Variance Decomposition
+
+We now have two distinct ways an estimator can be wrong---a systematic offset (bias) and random fluctuation (variance)---and a single number that ought to combine them: the *mean squared error*. It is worth pausing on the remarkable fact that the MSE is *exactly* the sum of these two contributions, with no cross term. This decomposition is the centerpiece of the section.
+
+### Mean Squared Error and the Decomposition
+
+The simplest summary of how far an estimator lands from the truth is the **mean squared error**,
+
+$$
+\operatorname{MSE}(\hat\theta_n) = \mathbb{E}\!\left[(\hat\theta_n-\theta)^2\right] .
+$$
+:eqlabel:`eq_mdl-mse_est`
+
+It is always non-negative, and the smaller it is the closer $\hat\theta_n$ sits to $\theta$ on average. If you have read :numref:`sec_linear_regression` you will recognize it as the squared-error loss, now applied to an estimator rather than a prediction.
+
+**Proposition (bias-variance decomposition).** *For any estimator $\hat\theta_n$ of a fixed parameter $\theta$,*
+
+$$
+\operatorname{MSE}(\hat\theta_n) = \operatorname{Bias}(\hat\theta_n)^2 + \operatorname{Var}(\hat\theta_n) .
+$$
+:eqlabel:`eq_mdl-bias-variance`
+
+**Proof.** Abbreviate $\mu = \mathbb{E}[\hat\theta_n]$, the center of the estimator, and add and subtract it inside the square:
+
+$$
+\operatorname{MSE}(\hat\theta_n)
+ = \mathbb{E}\!\left[(\hat\theta_n - \theta)^2\right]
+ = \mathbb{E}\!\left[\bigl((\hat\theta_n - \mu) + (\mu - \theta)\bigr)^2\right].
+$$
+
+Expanding the square gives three terms. The first is $\mathbb{E}[(\hat\theta_n-\mu)^2]=\operatorname{Var}(\hat\theta_n)$; the last is $(\mu-\theta)^2=\operatorname{Bias}(\hat\theta_n)^2$, a constant. The middle, cross term *vanishes*, because $\mu-\theta$ is a constant and $\hat\theta_n-\mu$ has mean zero by the definition of $\mu$:
+
+$$
+2\,(\mu-\theta)\,\mathbb{E}[\hat\theta_n - \mu]
+ = 2\,(\mu-\theta)\,(\mu - \mu) = 0 .
+$$
+
+What remains is $\operatorname{Var}(\hat\theta_n)+\operatorname{Bias}(\hat\theta_n)^2$. $\blacksquare$
+
+The vanishing cross term is the whole story: because the deviation from the center has mean zero, the systematic part and the fluctuating part of the error never interfere, and the squared error splits cleanly into the two pieces of :numref:`fig_mdl-sampling-distribution`. One immediate payoff is the consistency criterion promised above: if both $\operatorname{Bias}(\hat\theta_n)\to0$ and $\operatorname{Var}(\hat\theta_n)\to0$, then :eqref:`eq_mdl-bias-variance` forces $\operatorname{MSE}(\hat\theta_n)\to0$, which implies $\hat\theta_n\xrightarrow{P}\theta$ by Chebyshev's inequality.
+
+### The Trade-off and Generalization
+
+Identity :eqref:`eq_mdl-bias-variance` is more than bookkeeping; it explains the central tension of model fitting. Read $\hat\theta_n$ as a *fitted model* and $\theta$ as the function we wish it had learned. A model too simple to capture the signal---a straight line for a curved relationship---has large bias: it misses systematically no matter how much data we feed it. A model too flexible chases the noise in the particular training set, so it has large variance: a fresh dataset would fit it to a wildly different shape. These are the familiar failures of *underfitting* (high bias) and *overfitting* (high variance) from :numref:`sec_generalization_basics`.
+
+As we dial up model complexity, the squared bias falls while the variance rises, and their sum---the MSE, which is the expected test error---traces a U with a minimum at the sweet spot, shown in :numref:`fig_mdl-bias-variance-u-curve`. The decomposition and the generalization U-curve are therefore literally the *same picture*. This also explains *why regularization helps*: techniques like weight decay deliberately add a little bias in exchange for a large reduction in variance, sliding leftward on the curve to a lower total error.
 
 ![As model complexity grows, squared bias falls and variance rises; their sum, the MSE (test error), is a U-curve with a minimum at the sweet spot.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_mdl-bias-variance-u-curve`
 
+### The Decomposition in Code
 
-### Evaluating Estimators in Code
+The decomposition is an exact algebraic identity, so it should hold to numerical precision on a concrete example. We first define bias and MSE as the formulas :eqref:`eq_mdl-bias` and :eqref:`eq_mdl-mse_est` say---averages over a collection of estimates, against the true parameter.
 
-Since the standard deviation of an estimator has been implementing by simply calling `a.std()` for a tensor `a`, we will skip it but implement the statistical bias and the mean squared error.
-
-```{.python .input #statistics-evaluating-estimators-in-code-1}
+```{.python .input #statistics-estimator-metrics}
 #@tab mxnet
-# Statistical bias
-def stat_bias(true_theta, est_theta):
-    return(np.mean(est_theta) - true_theta)
+def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
+    return np.mean(est_theta) - true_theta
 
-# Mean squared error
-def mse(data, true_theta):
-    return(np.mean(np.square(data - true_theta)))
+def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
+    return np.mean(np.square(est_theta - true_theta))
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-1}
+```{.python .input #statistics-estimator-metrics}
 #@tab pytorch
-# Statistical bias
-def stat_bias(true_theta, est_theta):
-    return(torch.mean(est_theta) - true_theta)
+def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
+    return torch.mean(est_theta) - true_theta
 
-# Mean squared error
-def mse(data, true_theta):
-    return(torch.mean(torch.square(data - true_theta)))
+def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
+    return torch.mean(torch.square(est_theta - true_theta))
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-1}
+```{.python .input #statistics-estimator-metrics}
 #@tab tensorflow
-# Statistical bias
-def stat_bias(true_theta, est_theta):
-    return(tf.reduce_mean(est_theta) - true_theta)
+def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
+    return tf.reduce_mean(est_theta) - true_theta
 
-# Mean squared error
-def mse(data, true_theta):
-    return(tf.reduce_mean(tf.square(data - true_theta)))
+def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
+    return tf.reduce_mean(tf.square(est_theta - true_theta))
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-1}
+```{.python .input #statistics-estimator-metrics}
 #@tab jax
-# Statistical bias
-def stat_bias(true_theta, est_theta):
-    return(jnp.mean(est_theta) - true_theta)
+def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
+    return jnp.mean(est_theta) - true_theta
 
-# Mean squared error
-def mse(data, true_theta):
-    return(jnp.mean(jnp.square(data - true_theta)))
+def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
+    return jnp.mean(jnp.square(est_theta - true_theta))
 ```
 
-To illustrate the equation of the bias-variance trade-off, let's simulate of normal distribution $\mathcal{N}(\theta, \sigma^2)$ with $10,000$ samples. Here, we use a $\theta = 1$ and $\sigma = 4$. As the estimator is a function of the given samples, here we use the mean of the samples as an estimator for true $\theta$ in this normal distribution $\mathcal{N}(\theta, \sigma^2)$ .
+To exercise these we need the *sampling distribution* itself, not a single dataset: we draw many independent datasets from $\mathcal{N}(\theta,\sigma^2)$, compute the sample mean on each, and collect the resulting estimates. Their spread is the variance and their center the bias.
 
-```{.python .input #statistics-evaluating-estimators-in-code-2}
+```{.python .input #statistics-sampling-distribution}
 #@tab mxnet
-theta_true = 1
-sigma = 4
-sample_len = 10000
-samples = np.random.normal(theta_true, sigma, sample_len)
-theta_est = np.mean(samples)
-theta_est
+theta_true, sigma = 1.0, 4.0
+num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
+samples = np.random.normal(theta_true, sigma, (num_datasets, n))
+theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-2}
+```{.python .input #statistics-sampling-distribution}
 #@tab pytorch
-theta_true = 1
-sigma = 4
-sample_len = 10000
-samples = torch.normal(theta_true, sigma, size=(sample_len, 1))
-theta_est = torch.mean(samples)
-theta_est
+theta_true, sigma = 1.0, 4.0
+num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
+samples = torch.normal(theta_true, sigma, size=(num_datasets, n))
+theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-2}
+```{.python .input #statistics-sampling-distribution}
 #@tab tensorflow
-theta_true = 1
-sigma = 4
-sample_len = 10000
-samples = tf.random.normal((sample_len, 1), theta_true, sigma)
-theta_est = tf.reduce_mean(samples)
-theta_est
+theta_true, sigma = 1.0, 4.0
+num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
+samples = tf.random.normal((num_datasets, n), theta_true, sigma)
+theta_hats = tf.reduce_mean(samples, axis=1)  # one estimate per dataset
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-2}
+```{.python .input #statistics-sampling-distribution}
 #@tab jax
-theta_true = 1
-sigma = 4
-sample_len = 10000
+theta_true, sigma = 1.0, 4.0
+num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
 key = jax.random.PRNGKey(0)
-samples = jax.random.normal(key, (sample_len, 1)) * sigma + theta_true
-theta_est = jnp.mean(samples)
-theta_est
+samples = jax.random.normal(key, (num_datasets, n)) * sigma + theta_true
+theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
 ```
 
-Let's validate the trade-off equation by calculating the summation of the squared bias and the variance of our estimator. First, calculate the MSE of our estimator.
+Now we read the decomposition off the empirical sampling distribution. The MSE of the estimates around the true $\theta$ should match the squared bias plus the variance of the estimates around their own mean---the two sides of :eqref:`eq_mdl-bias-variance`.
 
-```{.python .input #statistics-evaluating-estimators-in-code-3}
-mse(samples, theta_true)
-```
-
-Next, we calculate $\textrm{Var} (\hat{\theta}_n) + [\textrm{bias} (\hat{\theta}_n)]^2$ as below. As you can see, the two values agree to numerical precision.
-
-```{.python .input #statistics-evaluating-estimators-in-code-4}
+```{.python .input #statistics-verify-decomposition}
 #@tab mxnet
-bias = stat_bias(theta_true, theta_est)
-# Pass ddof=1 explicitly so the variance estimate is unbiased and matches
-# across all four frameworks (defaults differ: NumPy/MXNet/TF/JAX use ddof=0,
-# PyTorch uses ddof=1).
-np.square(samples.std(ddof=1)) + np.square(bias)
+bias = stat_bias(theta_true, theta_hats)
+# ddof=1 for the unbiased variance estimate (see the next subsection); NumPy/
+# MXNet/TF/JAX default to ddof=0, PyTorch to ddof=1, so we set it explicitly.
+var = np.square(theta_hats.std(ddof=1))
+mse(theta_hats, theta_true), var + np.square(bias)
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-4}
+```{.python .input #statistics-verify-decomposition}
 #@tab pytorch
-bias = stat_bias(theta_true, theta_est)
-# unbiased=True corresponds to ddof=1; see the mxnet tab for context.
-torch.square(samples.std(unbiased=True)) + torch.square(bias)
+bias = stat_bias(theta_true, theta_hats)
+var = torch.square(theta_hats.std(unbiased=True))  # unbiased=True is ddof=1
+mse(theta_hats, theta_true), var + torch.square(bias)
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-4}
+```{.python .input #statistics-verify-decomposition}
 #@tab tensorflow
-bias = stat_bias(theta_true, theta_est)
-# tf.math.reduce_std has no ddof argument, so we compute the unbiased
-# variance manually: sum of squared deviations / (n - 1).
-n = tf.cast(tf.size(samples), samples.dtype)
-mean = tf.reduce_mean(samples)
-var_unbiased = tf.reduce_sum(tf.square(samples - mean)) / (n - 1)
-var_unbiased + tf.square(bias)
+bias = stat_bias(theta_true, theta_hats)
+# tf.math.reduce_std has no ddof, so compute the unbiased variance directly.
+n_d = tf.cast(tf.size(theta_hats), theta_hats.dtype)
+var = tf.reduce_sum(tf.square(theta_hats - tf.reduce_mean(theta_hats))) / (n_d - 1)
+mse(theta_hats, theta_true), var + tf.square(bias)
 ```
 
-```{.python .input #statistics-evaluating-estimators-in-code-4}
+```{.python .input #statistics-verify-decomposition}
 #@tab jax
-bias = stat_bias(theta_true, theta_est)
-jnp.square(jnp.std(samples, ddof=1)) + jnp.square(bias)
+bias = stat_bias(theta_true, theta_hats)
+var = jnp.square(jnp.std(theta_hats, ddof=1))  # ddof=1 for unbiased variance
+mse(theta_hats, theta_true), var + jnp.square(bias)
 ```
 
-## Sampling Distributions by Resampling
+The two numbers agree, and both are close to the theoretical value. For the sample mean of $\mathcal{N}(\theta,\sigma^2)$ the bias is exactly zero (the average of unbiased draws is unbiased) and the variance is $\sigma^2/n$, so $\operatorname{MSE}=\sigma^2/n = 16/30 \approx 0.53$. Because *both* the bias ($0$) and the variance ($\sigma^2/n\to0$) vanish as $n\to\infty$, the sample mean is consistent---exactly the criterion from the decomposition above.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The "Evaluating Estimators in Code" demo above only checks an algebraic identity on a *single* dataset; it never shows the object that actually matters --- the *sampling distribution* of $\hat\theta_n$ obtained by drawing many fresh datasets. This reworked subsection replaces the single-dataset demo with a many-datasets experiment so bias and variance become visible.
-**Outline:** 1. Draw $B$ independent datasets, compute $\hat\theta_n$ on each, histogram the estimates. · 2. Read *bias* off the offset of the histogram's center from the true $\theta$. · 3. Read *variance* off the spread. · 4. Verify $\textrm{MSE} = \textrm{bias}^2 + \textrm{Var}$ empirically against the histogram moments.
-**Key results to state:** for the sample mean of $\mathcal{N}(\theta,\sigma^2)$, the sampling distribution is $\mathcal{N}(\theta, \sigma^2/n)$ (unbiased, variance $\sigma^2/n$).
-**Diagrams:** `fig_mdl-sampling-distribution` --- histogram/KDE of $\hat\theta_n$ over many datasets with the true $\theta$ marked, center=bias, spread=variance.
-**Worked example(s):** resampling loop building the sampling distribution of the sample mean; overlay the theoretical $\mathcal{N}(\theta,\sigma^2/n)$.
-**Exercises (draft):** (1) shrink $n$ and watch the spread widen as $\sigma/\sqrt{n}$; (2) repeat for a biased estimator (e.g. $\max_i X_i$ for $\textrm{Unif}(0,\theta)$) and see the center shift.
-**Prereqs / cross-refs:** :numref:`sec_mdl-random_variables` (mean/variance); the bias-variance decomposition above; `sec_generalization_basics`.
-:::
+### Why the Unbiased Variance Divides by $n-1$
 
-## Cross-Validation and the Bootstrap
+The sample mean was unbiased for free. The sample *variance* is more delicate, and it exposes a subtlety that every framework's `std` function encodes in a `ddof` flag. Given samples $x_1,\ldots,x_n$ with sample mean $\bar x=\frac1n\sum_i x_i$, the natural estimator of the population variance $\sigma^2$ would average the squared deviations,
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** When we cannot draw fresh datasets (the usual case) and have no closed-form sampling distribution, two resampling tools stand in: $k$-fold cross-validation for estimating out-of-sample error and selecting models, and the bootstrap for standard errors and confidence intervals of arbitrary statistics.
-**Outline:** 1. $k$-fold CV: partition the data, train on $k-1$ folds, evaluate on the held-out fold, average. · 2. CV for model/hyperparameter selection and its variance. · 3. The bootstrap: resample $n$ points with replacement, recompute the statistic, repeat. · 4. Bootstrap standard errors and percentile confidence intervals.
-**Key results to state:** the bootstrap approximates the sampling distribution of $\hat\theta$ by the empirical resampling distribution; CV error $\approx$ expected out-of-sample error.
-**Diagrams:** reuse `fig_mdl-sampling-distribution` (bootstrap replicates form an approximate sampling distribution); no new SVG.
-**Worked example(s):** bootstrap standard error of the *median* (no simple closed form); $5$-fold CV picking a regularization strength.
-**Exercises (draft):** (1) bootstrap SE of the median vs the analytic SE of the mean; (2) why leave-one-out CV has low bias but high variance.
-**Prereqs / cross-refs:** the sampling-distribution subsection above; `sec_generalization_basics` (validation/model selection); Ch3 (regularization).
-:::
+$$
+s_0^2 = \frac1n\sum_{i=1}^n (x_i-\bar x)^2 .
+$$
 
-## Conducting Hypothesis Tests
+This is *biased*: it systematically underestimates $\sigma^2$, because the deviations are measured from $\bar x$---the point that *minimizes* the sum of squared deviations for this particular sample---rather than from the unknown true mean $\mu$. The fix is to divide by $n-1$ instead of $n$, and the factor is exactly what unbiasedness requires.
 
+**Proposition (unbiased sample variance).** *For i.i.d. samples with variance $\sigma^2$,*
 
-The most commonly encountered topic in statistical inference is hypothesis testing. While hypothesis testing was popularized in the early $20^{th}$ century, the first use can be traced back to John Arbuthnot in the 1700s. John tracked 80-year birth records in London and concluded that more men were born than women each year. Following that, the modern significance testing is the intellectual heritage by Karl Pearson who invented $p$-value and Pearson's chi-squared test, William Gosset who is the father of Student's t-distribution, and Ronald Fisher who initiated the null hypothesis and the significance test.
+$$
+s^2 = \frac{1}{n-1}\sum_{i=1}^n (x_i-\bar x)^2
+\qquad\textrm{satisfies}\qquad
+\mathbb{E}[s^2] = \sigma^2 .
+$$
+:eqlabel:`eq_mdl-unbiased-var`
 
-A *hypothesis test* is a way of evaluating some evidence against the default statement about a population. We refer the default statement as the *null hypothesis* $H_0$, which we try to reject using the observed data. Here, we use $H_0$ as a starting point for the statistical significance testing. The *alternative hypothesis* $H_A$ (or $H_1$) is a statement that is contrary to the null hypothesis. A null hypothesis is often stated in a declarative form which posits a relationship between variables. It should reflect the belief as explicitly as possible, and be testable by statistics theory.
+**Proof.** Center the data at the true mean $\mu$ by writing $x_i-\bar x = (x_i-\mu)-(\bar x-\mu)$, and expand the sum of squared deviations:
 
-Imagine you are a chemist. After spending thousands of hours in the lab, you develop a new medicine which can dramatically improve one's ability to understand math. To show its magic power, you need to test it. Naturally, you may need some volunteers to take the medicine and see whether it can help them learn mathematics better. How do you get started?
+$$
+\sum_{i=1}^n (x_i-\bar x)^2
+ = \sum_{i=1}^n (x_i-\mu)^2 - n\,(\bar x-\mu)^2 ,
+$$
 
-First, you will need carefully random selected two groups of volunteers, so that there is no difference between their mathematical understanding ability measured by some metrics. The two groups are commonly referred to as the test group and the control group. The *test group* (or *treatment group*) is a group of individuals who will experience the medicine, while the *control group* represents the group of users who are set aside as a benchmark, i.e., identical environment setups except taking this medicine. In this way, the influence of all the variables are minimized, except the impact of the independent variable in the treatment.
+where the cross term collapsed because $\sum_i (x_i-\mu) = n(\bar x-\mu)$. Now take expectations. Each $\mathbb{E}[(x_i-\mu)^2]=\sigma^2$, so the first sum has expectation $n\sigma^2$. The second uses the variance of the sample mean, $\mathbb{E}[(\bar x-\mu)^2]=\operatorname{Var}(\bar x)=\sigma^2/n$, so that term has expectation $n\cdot\sigma^2/n=\sigma^2$. Hence
 
-Second, after a period of taking the medicine, you will need to measure the two groups' mathematical understanding by the same metrics, such as letting the volunteers do the same tests after learning a new mathematical formula. Then, you can collect their performance and compare the results.  In this case, our null hypothesis will be that there is no difference between the two groups, and our alternate will be that there is.
+$$
+\mathbb{E}\!\left[\sum_{i=1}^n (x_i-\bar x)^2\right] = n\sigma^2 - \sigma^2 = (n-1)\,\sigma^2 .
+$$
 
-This is still not fully formal.  There are many details you have to think of carefully. For example, what is the suitable metrics to test their mathematical understanding ability? How many volunteers for your test so you can be confident to claim the effectiveness of your medicine? How long should you run the test? How do you decide if there is a difference between the two groups?  Do you care about the average performance only, or also the range of variation of the scores? And so on.
+Dividing by $n-1$ gives $\mathbb{E}[s^2]=\sigma^2$. $\blacksquare$
 
-In this way, hypothesis testing provides a framework for experimental design and reasoning about certainty in observed results.  If we can now show that the null hypothesis is very unlikely to be true, we may reject it with confidence.
+The intuition is *degrees of freedom*: estimating $\bar x$ from the same data consumes one degree of freedom, so only $n-1$ of the deviations are free to vary, and dividing by $n-1$ rather than $n$ corrects for it exactly. (As $n\to\infty$ the two estimators agree, so $s_0^2$ is biased but asymptotically unbiased and consistent.) We can watch the bias appear and the correction remove it by estimating both variances over many datasets and averaging.
 
-To complete the story of how to work with hypothesis testing, we need to now introduce some additional terminology and make some of our concepts above formal.
+```{.python .input #statistics-unbiased-variance}
+#@tab mxnet
+n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
+data = np.random.normal(0, 2, (100000, n))  # sigma^2 = 4
+dev2 = np.square(data - data.mean(axis=1, keepdims=True)).sum(axis=1)
+print(f'true variance         = 4')
+print(f'E[divide by n]   = {float((dev2 / n).mean()):.3f}  (biased)')
+print(f'E[divide by n-1] = {float((dev2 / (n - 1)).mean()):.3f}  (unbiased)')
+```
 
+```{.python .input #statistics-unbiased-variance}
+#@tab pytorch
+n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
+data = torch.normal(0, 2, size=(100000, n))  # sigma^2 = 4
+dev2 = torch.square(data - data.mean(axis=1, keepdim=True)).sum(axis=1)
+print(f'true variance         = 4')
+print(f'E[divide by n]   = {(dev2 / n).mean():.3f}  (biased)')
+print(f'E[divide by n-1] = {(dev2 / (n - 1)).mean():.3f}  (unbiased)')
+```
 
-### Statistical Significance
+```{.python .input #statistics-unbiased-variance}
+#@tab tensorflow
+n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
+data = tf.random.normal((100000, n), 0, 2)  # sigma^2 = 4
+dev2 = tf.reduce_sum(tf.square(
+    data - tf.reduce_mean(data, axis=1, keepdims=True)), axis=1)
+print(f'true variance         = 4')
+print(f'E[divide by n]   = {tf.reduce_mean(dev2 / n):.3f}  (biased)')
+print(f'E[divide by n-1] = {tf.reduce_mean(dev2 / (n - 1)):.3f}  (unbiased)')
+```
 
-The *significance level* $\alpha$ is the probability of erroneously rejecting the null hypothesis, $H_0$, when it is in fact true, i.e.,
+```{.python .input #statistics-unbiased-variance}
+#@tab jax
+n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
+data = jax.random.normal(jax.random.PRNGKey(1), (100000, n)) * 2  # sigma^2 = 4
+dev2 = jnp.square(data - data.mean(axis=1, keepdims=True)).sum(axis=1)
+print(f'true variance         = 4')
+print(f'E[divide by n]   = {(dev2 / n).mean():.3f}  (biased)')
+print(f'E[divide by n-1] = {(dev2 / (n - 1)).mean():.3f}  (unbiased)')
+```
 
-$$ \alpha = P(\textrm{reject } H_0 \mid H_0 \textrm{ is true} ).$$
+With $n=3$ the biased estimator averages near $\tfrac{n-1}{n}\sigma^2 = \tfrac23\cdot 4 \approx 2.67$, while dividing by $n-1$ recovers $4$, confirming :eqref:`eq_mdl-unbiased-var`. This is precisely why `numpy` and friends expose `ddof` ("delta degrees of freedom"): `ddof=1` divides by $n-1$ for the unbiased estimate, `ddof=0` divides by $n$.
 
-This erroneous rejection of a true null hypothesis is exactly the *type I error* (or *false positive*), so the significance level *is* the type I error rate.  Its commonly used value is $5\%$, i.e., $\alpha = 0.05$.  The significance level can be explained as the level of risk that we are willing to take when we reject a true null hypothesis.  The complementary quantity $1 - \alpha$ is the *confidence level* (here $95\%$); we reserve that term for confidence intervals below, and we are careful *not* to call $1-\alpha$ the significance.
+## Hypothesis Testing
 
-:numref:`fig_mdl-statistical_significance` shows the observations' values and probability of a given normal distribution in a two-sample hypothesis test. If the observation data example is located outsides the $95\%$ threshold, it will be a very unlikely observation under the null hypothesis assumption. Hence, there might be something wrong with the null hypothesis and we will reject it.
+The bias-variance picture asks *how good* a single estimate is. Hypothesis testing asks a different question that dominates experimental practice: given two estimates---a baseline and a new model, a control group and a treatment---is the observed difference *real*, or could it be a fluke of the particular sample? This is the framework behind A/B testing and behind claims that one architecture beats another on a benchmark.
 
-![Statistical significance.](../img/mdl-prob-significance.svg)
-:label:`fig_mdl-statistical_significance`
+### The Setup: Null, Alternative, and Two Kinds of Error
 
+A *hypothesis test* weighs evidence against a default claim. The **null hypothesis** $H_0$ is that default---typically "there is no effect," e.g. the new model is no better than the baseline---and the **alternative** $H_A$ is its negation, the effect we hope to detect. The asymmetry is deliberate: we never *prove* $H_0$; we either gather enough evidence to *reject* it in favor of $H_A$, or we fail to, much as a court returns "guilty" or "not guilty" rather than "innocent."
 
-### Statistical Power
+Because the data are random, the decision can go wrong in two ways. A **type I error** (false positive) is rejecting $H_0$ when it is in fact true---declaring an effect that is not there. A **type II error** (false negative) is failing to reject $H_0$ when it is in fact false---missing a real effect. Their rates have standard names, the significance level $\alpha$ and $\beta$,
 
-The *statistical power* (or *sensitivity*) measures the probability of reject the null hypothesis, $H_0$, when it should be rejected, i.e.,
+$$
+\alpha = P(\textrm{reject } H_0 \mid H_0 \textrm{ true}),
+\qquad
+\beta = P(\textrm{fail to reject } H_0 \mid H_0 \textrm{ false}),
+$$
 
-$$ \textrm{statistical power }= 1 - \beta = 1 - P(\textrm{ fail to reject } H_0  \mid H_0 \textrm{ is false} ).$$
-
-Recall that a *type I error* is error caused by rejecting the null hypothesis when it is true, whereas a *type II error* is resulted from failing to reject the null hypothesis when it is false. A type II error is usually denoted as $\beta$, and hence the corresponding statistical power is $1-\beta$.
-
-The four possible outcomes of a test arrange into the $2\times 2$ decision matrix of :numref:`fig_mdl-type-i-ii-matrix`: the rows are whether $H_0$ is in fact true or false, the columns are whether we fail to reject or reject it. The two diagonal cells are correct decisions, while the off-diagonal cells are the type I error (rate $\alpha$) and the type II error (rate $\beta$); the bottom-right cell is the correct rejection, whose probability is the power $1-\beta$. This is the picture that makes the $\alpha$ and $\beta$ definitions hard to get backwards.
+and the four possible outcomes arrange into the $2\times2$ decision matrix of :numref:`fig_mdl-type-i-ii-matrix`: rows are whether $H_0$ is true or false, columns are our decision. The diagonal cells are correct; the off-diagonal cells are the two errors. This picture is the surest way to keep $\alpha$ and $\beta$ from getting swapped.
 
 ![The $2\times 2$ hypothesis-test decision matrix: correct decisions on the diagonal, the type I error (rate $\alpha$) and type II error (rate $\beta$) off the diagonal, and the power $1-\beta$ in the correct-rejection cell.](../img/mdl-prob-type-i-ii-matrix.svg)
 :label:`fig_mdl-type-i-ii-matrix`
 
+### Significance and Power
 
-Intuitively, statistical power can be interpreted as how likely our test will detect a real discrepancy of some minimum magnitude at a desired statistical significance level. $80\%$ is a commonly used statistical power threshold. The higher the statistical power, the more likely we are to detect true differences.
+We *choose* the type I error rate up front: the **significance level** $\alpha$ is the risk of a false positive we are willing to tolerate, conventionally $\alpha=0.05$. The complement $1-\alpha$ is the *confidence level*; we reserve that name for the confidence intervals below and are careful not to call $1-\alpha$ the significance. The bottom-right cell of the matrix is the quantity we want to be large: the **statistical power**
 
-One of the most common uses of statistical power is in determining the number of samples needed.  The probability you reject the null hypothesis when it is false depends on the degree to which it is false (known as the *effect size*) and the number of samples you have.  As you might expect, small effect sizes will require a very large number of samples to be detectable with high probability.  While beyond the scope of this brief appendix to derive in detail, here is an indicative example for a one-sample two-sided $z$-test at significance level $\alpha = 0.05$ and target power $1-\beta = 0.8$.  Suppose we want to reject the null hypothesis that our sample came from a mean-zero, variance-one Gaussian.  If we believe the true mean is actually close to one (a large effect), a sample size of only about $8$ suffices.  However, if we think the true mean is close to $0.01$ (a tiny effect), then because the required sample size scales like $1/(\textrm{effect size})^2$, we would need a sample size on the order of $80{,}000$ to detect the difference at the same $\alpha$ and power.
+$$
+1 - \beta = P(\textrm{reject } H_0 \mid H_0 \textrm{ false})
+$$
 
-We can imagine the power as a water filter. In this analogy, a high power hypothesis test is like a high quality water filtration system that will reduce harmful substances in the water as much as possible. On the other hand, a smaller discrepancy is like a low quality water filter, where some relative small substances may easily escape from the gaps. Similarly, if the statistical power is not of enough high power, then the test may not catch the smaller discrepancy.
+is the probability the test *detects* a real effect. A test with $\alpha=0.05$ but power $0.2$ rejects a true null only $5\%$ of the time yet still misses $80\%$ of genuine effects---underpowered, and worthless for confirming improvements. A common target is $1-\beta=0.8$.
 
+Power is what determines how much data we need. The probability of detecting an effect grows with both the *effect size* (how false $H_0$ really is) and the sample size, and for the standard tests the required $n$ scales like $1/(\textrm{effect size})^2$. As an indicative one-sample two-sided $z$-test at $\alpha=0.05$ and power $0.8$: detecting that a mean-zero, variance-one Gaussian actually has mean near $1$ (a large effect) needs only about $8$ samples, whereas detecting a mean near $0.01$ (a tiny effect) needs on the order of $80{,}000$. This is why marginal benchmark gains demand enormous test sets to confirm.
 
-### Test Statistic
+### Test Statistics, $p$-values, and Significance
 
-A *test statistic* $T(x)$ is a scalar which summarizes some characteristic of the sample data.  The goal of defining such a statistic is that it should allow us to distinguish between different distributions and conduct our hypothesis test.  Thinking back to our chemist example, if we wish to show that one population performs better than the other, it could be reasonable to take the mean as the test statistic.  Different choices of test statistic can lead to statistical test with drastically different statistical power.
+To run a test we compress the data into a single **test statistic** $T(x)$---a scalar chosen so that extreme values are unlikely under $H_0$. The mean difference between two groups is a natural choice. Crucially, under $H_0$ the statistic has a known (often approximately Gaussian) *null distribution*, and that is what lets us judge whether an observed value is surprising.
 
-Often, $T(X)$ (the distribution of the test statistic under our null hypothesis) will follow, at least approximately, a common probability distribution such as a normal distribution when considered under the null hypothesis. If we can derive explicitly such a distribution, and then measure our test statistic on our dataset, we can safely reject the null hypothesis if our statistic is far outside the range that we would expect.  Making this quantitative leads us to the notion of $p$-values.
+The verdict is delivered by the **$p$-value**: the probability, *computed under $H_0$*, of seeing a statistic at least as extreme as the one we observed. For a two-sided test (the common case, where a deviation in either direction counts as evidence),
 
+$$
+p\textrm{-value} = P_{H_0}\bigl(|T(X)| \ge |T(x)|\bigr),
+$$
 
-### $p$-value
+with the one-sided version using a single tail. We reject $H_0$ when $p \le \alpha$. Geometrically, the rejection region is the set of statistic values whose $p$-value falls below $\alpha$; :numref:`fig_mdl-statistical_significance` shows it for a Gaussian null at $\alpha=0.05$ as the two tails beyond the critical values, together holding $5\%$ of the probability. A statistic landing in those tails would be very unlikely if $H_0$ held, so we reject.
 
-The $p$-value (or the *probability value*) is the probability that $T(X)$ is at least as extreme as the observed test statistic $T(x)$ assuming that the null hypothesis is *true*.  What counts as "extreme" depends on the alternative.  For a one-sided test it is one tail,
+![Statistical significance: under the null distribution, the central region holds probability $1-\alpha$ and the two tails together hold $\alpha$. A test statistic in the tails is unlikely under $H_0$, so we reject it.](../img/mdl-prob-significance.svg)
+:label:`fig_mdl-statistical_significance`
 
-$$ p\textrm{-value} = P_{H_0}(T(X) \geq T(x)),$$
+A persistent warning is in order, because the $p$-value is among the most misread numbers in science. It is $P(\textrm{data this extreme}\mid H_0)$, a statement about the data *given* the null---*not* $P(H_0\mid\textrm{data})$, the probability the null is true, which would require a prior and Bayes' rule. A large $p$-value does *not* confirm $H_0$; it means only that we failed to detect an effect, possibly because the test was underpowered.
 
-while for a two-sided test (the most common case) "extreme" means large in *either* direction, so we use the two-tailed form
+To summarize, a hypothesis test proceeds in five steps:
 
-$$ p\textrm{-value} = P_{H_0}(|T(X)| \geq |T(x)|).$$
+1. State $H_0$ and $H_A$.
+2. Fix the significance level $\alpha$ and a target power $1-\beta$ (which, with the expected effect size, sets the sample size).
+3. Collect the data.
+4. Compute the test statistic and its $p$-value under $H_0$.
+5. Reject $H_0$ if $p \le \alpha$; otherwise fail to reject.
 
-If the $p$-value is smaller than or equal to a predefined and fixed statistical significance level $\alpha$, we may reject the null hypothesis. Otherwise, we will conclude that we lack evidence to reject the null hypothesis. For a given population distribution, the *region of rejection* will be the interval contained of all the points which has a $p$-value smaller than the statistical significance level $\alpha$.
+## Confidence Intervals
 
+A point estimate $\hat\theta$ carries no notion of uncertainty---it is a single number that hides how much it would wobble on fresh data. A **confidence interval** repairs this by reporting an *interval* engineered to contain the true $\theta$ with high probability. The idea is due to Jerzy Neyman :cite:`Neyman.1937`.
 
-### What a p-value Is NOT
+### Definition and Interpretation
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The $p$-value is one of the most misread numbers in all of science, and the misreadings drive bad ML benchmarking; a short "is NOT" box (the post-2016 ASA-statement framing) pre-empts the standard fallacies.
-**Outline (the box):** A $p$-value is NOT 1. the probability that $H_0$ is true; · 2. the probability the result is "due to chance" / a fluke; · 3. a measure of effect size or practical importance; · 4. evidence *for* $H_0$ when it is large (large $p$ = "did not detect," not "no effect"); · 5. reproducible enough to treat $p<0.05$ as a hard truth threshold.
-**Key results to state:** $p = P_{H_0}(\textrm{data at least this extreme})$, a statement about the data *given* $H_0$, never about $P(H_0\mid\textrm{data})$ (which needs a prior, via Bayes).
-**Diagrams:** none new (text box).
-**Worked example(s):** a base-rate / Bayes computation showing $P(H_0\mid p<0.05)$ can be large even when $p$ is small.
-**Exercises (draft):** (1) given a prior on $H_0$, compute $P(H_0\mid\textrm{reject})$ and contrast with $\alpha$; (2) explain why a large $p$ does not confirm $H_0$.
-**Prereqs / cross-refs:** the $p$-value and significance subsections above; `sec_prob` (Bayes); :citet:`Morey.Hoekstra.Rouder.ea.2016`.
-:::
+A confidence interval for $\theta$ is an interval $C_n$ computed from the data such that
 
-
-### One-side Test and Two-sided Test
-
-Normally there are two kinds of significance test: the one-sided test and the two-sided test. The *one-sided test* (or *one-tailed test*) is applicable when the null hypothesis and the alternative hypothesis only have one direction. For example, the null hypothesis may state that the true parameter $\theta$ is less than or equal to a value $c$. The alternative hypothesis would be that $\theta$ is greater than $c$. That is, the region of rejection is on only one side of the sampling distribution.  Contrary to the one-sided test, the *two-sided test* (or *two-tailed test*) is applicable when the region of rejection is on both sides of the sampling distribution. An example in this case may have a null hypothesis state that the true parameter $\theta$ is equal to a value $c$. The alternative hypothesis would be that $\theta$ is not equal to $c$.
-
-
-### General Steps of Hypothesis Testing
-
-After getting familiar with the above concepts, let's go through the general steps of hypothesis testing.
-
-1. State the question and establish a null hypotheses $H_0$.
-2. Set the statistical significance level $\alpha$ and a statistical power ($1 - \beta$).
-3. Obtain samples through experiments.  The number of samples needed will depend on the statistical power, and the expected effect size.
-4. Calculate the test statistic and the $p$-value.
-5. Make the decision to keep or reject the null hypothesis based on the $p$-value and the statistical significance level $\alpha$.
-
-To conduct a hypothesis test, we start by defining a null hypothesis and a level of risk that we are willing to take. Then we calculate the test statistic of the sample, taking an extreme value of the test statistic as evidence against the null hypothesis. If the test statistic falls within the reject region, we may reject the null hypothesis in favor of the alternative.
-
-Hypothesis testing is applicable in a variety of scenarios such as the clinical trials and A/B testing.
-
-
-## Multiple Comparisons and A/B-Testing Pitfalls
-
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** A single test controls the false-positive rate at $\alpha$, but ML practice rarely runs a single test --- leaderboards, hyperparameter sweeps, and dashboards that are "peeked at" daily run *many* implicit tests, and each one is a fresh chance at a false positive. This subsection names the trap and the standard corrections.
-**Outline:** 1. The multiple-comparisons problem: $m$ independent tests at level $\alpha$ give a family-wise false-positive probability $1-(1-\alpha)^m$. · 2. Peeking / optional stopping inflates type I error (sequential analysis). · 3. The Bonferroni correction (test each at $\alpha/m$) controls the family-wise error rate. · 4. The Benjamini--Hochberg procedure controls the false discovery rate (FDR), less conservative for large $m$. · 5. ML relevance: model-selection leaderboards and hyperparameter sweeps are multiple comparisons; "the best of 100 configs beat baseline" needs correction.
-**Key results to state:** $P(\text{at least one false positive}) = 1-(1-\alpha)^m \approx m\alpha$ for small $\alpha$; Bonferroni threshold $\alpha/m$.
-**Diagrams:** none new.
-**Worked example(s):** simulate $20$ A/B tests under a true null at $\alpha=0.05$, count false positives, recompute under Bonferroni.
-**Exercises (draft):** (1) $20$ tests at $\alpha=0.05$: $P(\geq 1$ false positive$)$, then Bonferroni-corrected; (2) why does optional stopping (peeking until significant) guarantee eventual "significance"?
-**Prereqs / cross-refs:** the significance/$p$-value subsections above; `sec_generalization_basics` (model selection on a validation set); main-book benchmarking discussion.
-:::
-
-
-## Constructing Confidence Intervals
-
-
-When estimating the value of a parameter $\theta$, point estimators like $\hat \theta$ are of limited utility since they contain no notion of uncertainty. Rather, it would be far better if we could produce an interval that would contain the true parameter $\theta$ with high probability.  If you were interested in such ideas a century ago, then you would have been excited to read "Outline of a Theory of Statistical Estimation Based on the Classical Theory of Probability" by Jerzy Neyman :cite:`Neyman.1937`, who first introduced the concept of confidence interval in 1937.
-
-To be useful, a confidence interval should be as small as possible for a given degree of certainty. Let's see how to derive it.
-
-
-### Definition
-
-Mathematically, a *confidence interval* for the true parameter $\theta$ is an interval $C_n$ that computed from the sample data such that
-
-$$P_{\theta} (C_n \ni \theta) \geq 1 - \alpha, \forall \theta.$$
+$$
+P_\theta(C_n \ni \theta) \ge 1 - \alpha \quad \textrm{for all } \theta,
+$$
 :eqlabel:`eq_mdl-confidence`
 
-Here $\alpha \in (0, 1)$, and $1 - \alpha$ is called the *confidence level* or *coverage* of the interval. This is the same $\alpha$ as the significance level as we discussed about above.
+where $1-\alpha$ is the *confidence level* or *coverage*. We write $C_n \ni \theta$ rather than $\theta \in C_n$ to stress where the randomness lives: $\theta$ is a *fixed* unknown, and it is the *interval* $C_n$ that is random, redrawn with every dataset.
 
-Note that :eqref:`eq_mdl-confidence` is about variable $C_n$, not about the fixed $\theta$. To emphasize this, we write $P_{\theta} (C_n \ni \theta)$ rather than $P_{\theta} (\theta \in C_n)$.
-
-### Interpretation
-
-It is very tempting to interpret a $95\%$ confidence interval as an interval where you can be $95\%$ sure the true parameter lies, however this is sadly not true.  The true parameter is fixed, and it is the interval that is random.  Thus a better interpretation would be to say that if you generated a large number of confidence intervals by this procedure, $95\%$ of the generated intervals would contain the true parameter.
-
-This may seem pedantic, but it can have real implications for the interpretation of the results.  In particular, we may satisfy :eqref:`eq_mdl-confidence` by constructing intervals that we are *almost certain* do not contain the true value, as long as we only do so rarely enough.  We close this section by providing three tempting but false statements.  An in-depth discussion of these points can be found in :citet:`Morey.Hoekstra.Rouder.ea.2016`.
-
-* **Fallacy 1**. Narrow confidence intervals mean we can estimate the parameter precisely.
-* **Fallacy 2**. The values inside the confidence interval are more likely to be the true value than those outside the interval.
-* **Fallacy 3**. The probability that a particular observed $95\%$ confidence interval contains the true value is $95\%$.
-
-Suffice it to say, confidence intervals are subtle objects.  However, if you keep the interpretation clear, they can be powerful tools.
+This makes the correct interpretation subtle, and it is worth getting right. A $95\%$ confidence interval does *not* mean "the true $\theta$ lies in this particular interval with probability $95\%$"---that particular interval is already drawn, and $\theta$ either is or is not inside it. The right reading is *about the procedure*: if we generated many intervals this way, $95\%$ of them would contain $\theta$. The guarantee is on the long-run hit rate of the recipe, not on any single interval.
 
 ### A Gaussian Example
 
-Let's discuss the most classical example, the confidence interval for the mean of a Gaussian of unknown mean and variance.  Suppose we collect $n$ samples $\{x_i\}_{i=1}^n$ from our Gaussian $\mathcal{N}(\mu, \sigma^2)$.  We can compute estimators for the mean and variance by taking
-
-$$\hat\mu_n = \frac{1}{n}\sum_{i=1}^n x_i \;\textrm{and}\; \hat\sigma^2_n = \frac{1}{n-1}\sum_{i=1}^n (x_i - \hat\mu)^2.$$
-
-If we now consider the random variable
+The classic case is the mean of a Gaussian $\mathcal{N}(\mu,\sigma^2)$ with both parameters unknown. From $n$ samples we form the usual estimators $\hat\mu_n=\frac1n\sum_i x_i$ and the unbiased $\hat\sigma_n^2=\frac1{n-1}\sum_i (x_i-\hat\mu_n)^2$ from :eqref:`eq_mdl-unbiased-var`. The studentized statistic
 
 $$
-T = \frac{\hat\mu_n - \mu}{\hat\sigma_n/\sqrt{n}},
+T = \frac{\hat\mu_n - \mu}{\hat\sigma_n/\sqrt n}
 $$
 
-we obtain a random variable following a well-known distribution called the *Student's t-distribution on* $n-1$ *degrees of freedom*.
-
-This distribution is very well studied, and it is known, for instance, that as $n\rightarrow \infty$, it is approximately a standard Gaussian, and thus by looking up values of the Gaussian c.d.f. in a table, we may conclude that the value of $T$ is in the interval $[-1.96, 1.96]$ at least $95\%$ of the time.  For finite values of $n$, the interval needs to be somewhat larger, but are well known and precomputed in tables.
-
-Thus, we may conclude that for large $n$,
+follows *Student's $t$-distribution* on $n-1$ degrees of freedom, which approaches a standard Gaussian as $n\to\infty$. So for large $n$, $T$ lands in $[-1.96, 1.96]$ at least $95\%$ of the time (the Gaussian's central $95\%$), and rearranging $-1.96 \le T \le 1.96$ for $\mu$ yields the interval
 
 $$
-P\left(\frac{\hat\mu_n - \mu}{\hat\sigma_n/\sqrt{n}} \in [-1.96, 1.96]\right) \ge 0.95.
+\left[\hat\mu_n - 1.96\,\frac{\hat\sigma_n}{\sqrt n},\; \hat\mu_n + 1.96\,\frac{\hat\sigma_n}{\sqrt n}\right].
 $$
-
-Rearranging this by multiplying both sides by $\hat\sigma_n/\sqrt{n}$ and then adding $\hat\mu_n$, we obtain
-
-$$
-P\left(\mu \in \left[\hat\mu_n - 1.96\frac{\hat\sigma_n}{\sqrt{n}}, \hat\mu_n + 1.96\frac{\hat\sigma_n}{\sqrt{n}}\right]\right) \ge 0.95.
-$$
-
-Thus we know that we have found our $95\%$ confidence interval:
-$$\left[\hat\mu_n - 1.96\frac{\hat\sigma_n}{\sqrt{n}}, \hat\mu_n + 1.96\frac{\hat\sigma_n}{\sqrt{n}}\right].$$
 :eqlabel:`eq_mdl-gauss_confidence`
 
-It is safe to say that :eqref:`eq_mdl-gauss_confidence` is one of the most used formula in statistics.  Let's close our discussion of statistics by implementing it.  For simplicity, we assume we are in the asymptotic regime.  Small values of $N$ should include the correct value of `t_star` obtained either programmatically or from a $t$-table.
+This is one of the most-used formulas in statistics. The half-width $1.96\,\hat\sigma_n/\sqrt n$ shrinks like $1/\sqrt n$---to halve the interval we need *four times* the data. Let us construct one for a standard-normal sample, taking the asymptotic $t_\star=1.96$.
 
-```{.python .input #statistics-a-gaussian-example}
+```{.python .input #statistics-confidence-interval}
 #@tab mxnet
-# Number of samples
 N = 1000
-
-# Sample dataset
 samples = np.random.normal(loc=0, scale=1, size=(N,))
-
-# Lookup Students's t-distribution c.d.f.
-t_star = 1.96
-
-# Construct interval
+t_star = 1.96  # asymptotic value; small N would look this up in a t-table
 mu_hat = np.mean(samples)
-sigma_hat = samples.std(ddof=1)
-(mu_hat - t_star*sigma_hat/np.sqrt(N), mu_hat + t_star*sigma_hat/np.sqrt(N))
+se = samples.std(ddof=1) / np.sqrt(N)  # ddof=1: unbiased sigma_hat
+(mu_hat - t_star * se, mu_hat + t_star * se)
 ```
 
-```{.python .input #statistics-a-gaussian-example}
+```{.python .input #statistics-confidence-interval}
 #@tab pytorch
-# PyTorch uses Bessel's correction by default, which means the use of ddof=1
-# instead of default ddof=0 in numpy. We can use unbiased=False to imitate
-# ddof=0.
-
-# Number of samples
 N = 1000
-
-# Sample dataset
 samples = torch.normal(0, 1, size=(N,))
-
-# Lookup Students's t-distribution c.d.f.
-t_star = 1.96
-
-# Construct interval
+t_star = 1.96  # asymptotic value; small N would look this up in a t-table
 mu_hat = torch.mean(samples)
-sigma_hat = samples.std(unbiased=True)
-(mu_hat - t_star*sigma_hat/torch.sqrt(torch.tensor(N, dtype=torch.float32)),\
- mu_hat + t_star*sigma_hat/torch.sqrt(torch.tensor(N, dtype=torch.float32)))
+se = samples.std(unbiased=True) / N**0.5  # unbiased=True: ddof=1
+(mu_hat - t_star * se, mu_hat + t_star * se)
 ```
 
-```{.python .input #statistics-a-gaussian-example}
+```{.python .input #statistics-confidence-interval}
 #@tab tensorflow
-# Number of samples
 N = 1000
-
-# Sample dataset
 samples = tf.random.normal((N,), 0, 1)
-
-# Lookup Students's t-distribution c.d.f.
-t_star = 1.96
-
-# Construct interval. tf.math.reduce_std uses ddof=0; compute the
-# unbiased (ddof=1) standard deviation manually to match the other tabs.
+t_star = 1.96  # asymptotic value; small N would look this up in a t-table
 mu_hat = tf.reduce_mean(samples)
-n = tf.cast(tf.size(samples), samples.dtype)
-sigma_hat = tf.sqrt(tf.reduce_sum(tf.square(samples - mu_hat)) / (n - 1))
-(mu_hat - t_star*sigma_hat/tf.sqrt(tf.constant(N, dtype=tf.float32)), \
- mu_hat + t_star*sigma_hat/tf.sqrt(tf.constant(N, dtype=tf.float32)))
+n_d = tf.cast(tf.size(samples), samples.dtype)
+sigma_hat = tf.sqrt(tf.reduce_sum(tf.square(samples - mu_hat)) / (n_d - 1))
+se = sigma_hat / tf.sqrt(n_d)  # ddof=1 done by hand: divide by n-1
+(mu_hat - t_star * se, mu_hat + t_star * se)
 ```
 
-```{.python .input #statistics-a-gaussian-example}
+```{.python .input #statistics-confidence-interval}
 #@tab jax
-# Number of samples
 N = 1000
-
-# Sample dataset
 key = jax.random.PRNGKey(0)
 samples = jax.random.normal(key, (N,))
-
-# Lookup Students's t-distribution c.d.f.
-t_star = 1.96
-
-# Construct interval
+t_star = 1.96  # asymptotic value; small N would look this up in a t-table
 mu_hat = jnp.mean(samples)
-sigma_hat = jnp.std(samples, ddof=1)
-(mu_hat - t_star*sigma_hat/jnp.sqrt(N), \
- mu_hat + t_star*sigma_hat/jnp.sqrt(N))
+se = jnp.std(samples, ddof=1) / jnp.sqrt(N)  # ddof=1: unbiased sigma_hat
+(mu_hat - t_star * se, mu_hat + t_star * se)
 ```
+
+The interval is narrow and brackets the true mean $0$, as it should roughly $95\%$ of the time. The same $1/\sqrt n$ scaling shows up everywhere uncertainty is reported---error bars on a learning curve, the spread of accuracies across random seeds---and :eqref:`eq_mdl-gauss_confidence` is the formula behind them.
 
 ## Summary
 
-* Statistics focuses on inference problems, whereas deep learning emphasizes on making accurate predictions without explicitly programming and understanding.
-* There are three common statistics inference methods: evaluating and comparing estimators, conducting hypothesis tests, and constructing confidence intervals.
-* Statistical bias, standard deviation (standard error), and mean squared error are *evaluation metrics* that measure the quality of an estimator --- they are not themselves estimators of the parameter $\theta$.
-* A confidence interval is an estimated range of a true population parameter that we can construct by given the samples.
-* Hypothesis testing is a way of evaluating some evidence against the default statement about a population.
-
+* An *estimator* $\hat\theta_n$ is a function of the data; being random, it has a *sampling distribution* whose center and spread are summarized by *bias* $\mathbb{E}[\hat\theta_n]-\theta$ and *variance*. *Consistency* ($\hat\theta_n\xrightarrow{P}\theta$) follows when both shrink with $n$; *efficiency* ranks unbiased estimators by their variance.
+* The *bias-variance decomposition* $\operatorname{MSE}(\hat\theta_n)=\operatorname{Bias}(\hat\theta_n)^2+\operatorname{Var}(\hat\theta_n)$ splits the error cleanly because, after centering at $\mathbb{E}[\hat\theta_n]$, the cross term vanishes. This is the same U-curve as the under/overfitting trade-off, and it explains why regularization trades bias for variance.
+* The unbiased sample variance divides by $n-1$, not $n$: estimating the mean from the same data costs one degree of freedom, and the $1/(n-1)$ factor corrects the resulting bias exactly.
+* *Hypothesis testing* weighs evidence against a null $H_0$ via a test statistic and its $p$-value $P_{H_0}(\textrm{data this extreme})$; we control the type I error rate $\alpha$ and want high power $1-\beta$. A $p$-value is not $P(H_0\mid\textrm{data})$.
+* A *confidence interval* contains $\theta$ with probability $\ge 1-\alpha$ over repeated datasets; the Gaussian interval $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$ has half-width shrinking like $1/\sqrt n$.
 
 ## Exercises
 
-1. Let $X_1, X_2, \ldots, X_n \overset{\textrm{iid}}{\sim} \textrm{Unif}(0, \theta)$, where "iid" stands for *independent and identically distributed*. Consider the following estimators of $\theta$:
-$$\hat{\theta} = \max \{X_1, X_2, \ldots, X_n \};$$
-$$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
-    * Find the statistical bias, standard deviation, and mean square error of $\hat{\theta}.$
-    * Find the statistical bias, standard deviation, and mean square error of $\tilde{\theta}.$
-    * Which estimator is better?
-1. For our chemist example in introduction, can you derive the 5 steps to conduct a two-sided hypothesis testing? Given the statistical significance level $\alpha = 0.05$ and the statistical power $1 - \beta = 0.8$.
-1. Run the confidence interval code with $N=2$ and $\alpha = 0.5$ for $100$ independently generated dataset, and plot the resulting intervals (in this case `t_star = 1.0`).  You will see several very short intervals which are very far from containing the true mean $0$.  Does this contradict the interpretation of the confidence interval?  Do you feel comfortable using short intervals to indicate high precision estimates?
+1. Let $X_1, \ldots, X_n \overset{\textrm{iid}}{\sim} \textrm{Unif}(0,\theta)$ and consider the estimators $\hat\theta = \max\{X_1,\ldots,X_n\}$ and $\tilde\theta = \frac2n\sum_i X_i$. Find the bias, variance, and MSE of each, and decide which is better. Is $\hat\theta$ biased? Is it consistent?
+2. Prove the bias-variance decomposition :eqref:`eq_mdl-bias-variance` directly by expanding $\mathbb{E}[(\hat\theta_n-\theta)^2]$ into $\mathbb{E}[\hat\theta_n^2]-2\theta\,\mathbb{E}[\hat\theta_n]+\theta^2$ and substituting $\mathbb{E}[\hat\theta_n^2]=\operatorname{Var}(\hat\theta_n)+\mathbb{E}[\hat\theta_n]^2$. Confirm it agrees with the add-and-subtract proof in the text.
+3. Modify the sampling-distribution code to use the biased variance estimator $s_0^2$ ($n$ in the denominator, `ddof=0`). Does the empirical MSE still match $\operatorname{Bias}^2+\operatorname{Var}$? Explain why the *identity* holds regardless of which variance estimator you plug in, even though one is biased.
+4. Shrink the per-dataset size $n$ in the sampling-distribution simulation and confirm the spread of $\hat\theta$ widens like $\sigma/\sqrt n$. Repeat with the biased estimator $\hat\theta=\max_i X_i$ for $\textrm{Unif}(0,\theta)$ and watch the center shift away from $\theta$.
+5. A test reports $p = 0.5$. Is this evidence that $H_0$ is true? Explain in terms of $P(\textrm{data}\mid H_0)$ versus $P(H_0\mid\textrm{data})$, and describe a situation where a large $p$-value reflects only low power.
+6. Using the $1/(\textrm{effect size})^2$ scaling, estimate how many times more samples are needed to detect an effect of size $0.1$ than one of size $0.5$ at the same $\alpha$ and power.
+7. Run the confidence-interval code with $N=2$ and $\alpha=0.5$ (so $t_\star=1.0$) for $100$ independently generated datasets, and look at the resulting intervals. Some are extremely short and far from the true mean $0$. Does this contradict the $1-\alpha$ coverage guarantee? Would you trust a short interval as a sign of a precise estimate?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/419)
@@ -669,64 +500,96 @@ $$\tilde{\theta} = 2 \bar{X_n} = \frac{2}{n} \sum_{i=1}^n X_i.$$
 <!-- slides -->
 
 ::: {.slide title="Estimator Quality"}
-A primer on the language of estimators that ML borrows
-heavily from:
+The language of estimators that ML borrows:
 
-- **Estimator** — a procedure that takes data and outputs
-  a guess (e.g. sample mean, MLE).
-- **Bias** — $\mathbb{E}[\hat\theta] - \theta$. Systematic
-  error.
-- **Variance** — $\text{Var}(\hat\theta)$. Noise across
+- **Estimator** $\hat\theta_n = \hat f(x_1,\ldots,x_n)$ — a
+  procedure that turns data into a guess (sample mean, MLE).
+- **Bias** $\mathbb{E}[\hat\theta] - \theta$ — systematic error.
+- **Variance** $\operatorname{Var}(\hat\theta)$ — noise across
   datasets.
-- **MSE = bias$^2$ + variance** — the basic decomposition
-  that explains overfitting and why regularization helps.
+- **Consistency** — $\hat\theta_n \xrightarrow{P} \theta$ as
+  data accumulates.
 
-This deck makes the bias-variance tradeoff concrete.
+An estimator is judged by its *sampling distribution*: where
+the estimates center, and how widely they spread.
 :::
 
-::: {.slide title="Evaluating estimators"}
-An estimator is judged by its sampling distribution: repeat the
-same experiment on fresh datasets and ask where the estimates
-center and how widely they vary.
+::: {.slide title="Sampling distribution: center vs spread"}
+Repeat the experiment on fresh datasets. Bias is the offset
+of the center from $\theta$; variance is the spread. Usually
+one is traded for the other:
 
-@statistics-evaluating-and-comparing-estimators
+@fig:mdl-prob-sampling-distribution
 :::
 
-::: {.slide title="Empirical bias / variance"}
-Simulate a sampling distribution: many datasets → many
-estimates → empirical mean and spread:
+::: {.slide title="The bias–variance decomposition"}
+**Proposition.** $\operatorname{MSE}(\hat\theta) =
+\operatorname{Bias}(\hat\theta)^2 + \operatorname{Var}(\hat\theta)$.
 
-@statistics-evaluating-estimators-in-code-1
+Center at $\mu=\mathbb{E}[\hat\theta]$, expand
+$(\hat\theta-\theta)^2 = ((\hat\theta-\mu)+(\mu-\theta))^2$;
+the cross term vanishes because $\hat\theta-\mu$ has mean $0$.
+No interference between systematic and random error.
+:::
+
+::: {.slide title="Same picture as generalization"}
+Bias falls and variance rises with model complexity; their
+sum (the test error) is a U-curve. Regularization trades a
+little bias for a lot of variance reduction:
+
+@fig:mdl-prob-bias-variance-u-curve
+:::
+
+::: {.slide title="Verify it in code"}
+Build the sampling distribution from many datasets, then
+check $\operatorname{MSE} =
+\operatorname{Bias}^2 + \operatorname{Var}$ numerically:
+
+@statistics-sampling-distribution
 
 . . .
 
-@statistics-evaluating-estimators-in-code-2
+@statistics-verify-decomposition
 :::
 
-::: {.slide title="Empirical bias / variance (cont.)"}
-The second pass turns simulated estimates into empirical bias,
-variance, and MSE, making the bias-variance decomposition visible.
+::: {.slide title="Why variance divides by n−1"}
+Deviations are measured from $\bar x$ (which minimizes them),
+so dividing by $n$ underestimates $\sigma^2$. One degree of
+freedom is spent estimating the mean; $1/(n-1)$ corrects it:
 
-@statistics-evaluating-estimators-in-code-3
-
-. . .
-
-@statistics-evaluating-estimators-in-code-4
+@statistics-unbiased-variance
 :::
 
-::: {.slide title="A Gaussian example"}
-Sample mean for $\mathcal{N}(\mu, \sigma^2)$: unbiased,
-variance $\sigma^2/n$. Concretely visualize this:
+::: {.slide title="Hypothesis testing"}
+Weigh evidence against a default $H_0$. Two errors:
 
-@statistics-a-gaussian-example
+- **Type I** ($\alpha$) — reject a true $H_0$ (false positive).
+- **Type II** ($\beta$) — keep a false $H_0$; **power** $=1-\beta$.
+
+@fig:mdl-prob-type-i-ii-matrix
+:::
+
+::: {.slide title="p-values and significance"}
+The $p$-value is $P_{H_0}(\text{data this extreme})$ — reject
+when $p \le \alpha$. It is *not* $P(H_0\mid\text{data})$:
+
+@fig:mdl-prob-significance
+:::
+
+::: {.slide title="Confidence intervals"}
+$\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$ contains $\mu$ in
+$\approx 95\%$ of repeated datasets. Half-width shrinks like
+$1/\sqrt n$ — 4× the data to halve it:
+
+@statistics-confidence-interval
 :::
 
 ::: {.slide title="Recap"}
-- Estimator quality = bias + variance.
-- Sample mean is BLUE for $\mu$ — best linear unbiased
-  estimator under iid Gaussian noise.
-- Regularization trades a bit of bias for a lot of
-  variance reduction.
-- Same trade-off shows up everywhere: dropout, weight
-  decay, ensembling.
+- Estimator quality = bias + variance; their squares sum to MSE.
+- Same trade-off as under/overfitting — regularization slides
+  along the U-curve.
+- Unbiased variance divides by $n-1$ (one degree of freedom spent).
+- Tests control $\alpha$, want power; $p$-value is about data given
+  $H_0$, not $H_0$ given data.
+- Confidence intervals quantify uncertainty; width $\propto 1/\sqrt n$.
 :::

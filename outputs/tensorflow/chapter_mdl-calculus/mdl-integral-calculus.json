@@ -47,25 +47,25 @@
       ]
     },
     "integral-surface": {
-      "code_fingerprint": "sha256:b1d8f1ad3d1f4b414ab49f22d312418e696546acc6c99b73a266154f3cbf49a6",
+      "code_fingerprint": "sha256:59a066bd2d4a95aa4292c38efb503d6a66781e791e5e2b38757e6b1d3336f37d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.1147871017456055\nvolume (exact = pi): 3.141592653589793\n"
+          "text": "volume (Riemann)  : 3.141592025756836\nvolume (exact = pi): 3.141592653589793\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 75282,
-          "sha256": "sha256:86d59716b9884125a5e46ff1ac02672047fe56e48c4f2b0c6b9498af53e6e828"
+          "bytes": 75523,
+          "sha256": "sha256:ed8d738692c8cc4546c27d88c01b63e97751d9945fcaa01e7c981afc2050fb29"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:343623131ec15a2bf080ee66ac5fd44858fb7b36f5f5caaac019602e769af2a6",
+      "code_fingerprint": "sha256:53e39d281143d7177ec428e88300492ed734767ab5a2106df30b1f6c7ad65483",
       "kind": "text",
       "outputs": [
         {
@@ -76,13 +76,31 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:1c6f9a4825c7d86f59e0ef9327db9abc9fffbfeb198105f3e73eb741b835e022",
+      "code_fingerprint": "sha256:d25de7c18ccf2003407443164c2e1ff3062ce8689797bf7c25bb125888b6ae63",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
+        }
+      ]
+    },
+    "integral-monte-carlo": {
+      "code_fingerprint": "sha256:cb94975d55f154f6c8144134c3ae64a134450a9e212a721f27cb00e5ef839997",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n=10      Monte Carlo=0.87741  error=0.13056\nn=100     Monte Carlo=0.73200  error=0.01486\nn=1000    Monte Carlo=0.74470  error=0.00216\nn=10000   Monte Carlo=0.74809  error=0.00123\nn=100000  Monte Carlo=0.74682  error=0.00003\nRiemann quadrature   =0.74686\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
+          "bytes": 45710,
+          "sha256": "sha256:cc1d4bf471d1be1bfaf2561047053b9c654a1462dc7adcf98b5118a007b2b3a8"
         }
       ]
     }

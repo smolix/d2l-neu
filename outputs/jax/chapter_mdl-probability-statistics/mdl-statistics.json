@@ -9,22 +9,22 @@
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
+      "code_fingerprint": "sha256:230a5cc8a42e5a7330108a2bf54601e53f0efbe6bdc0fa969e3e963c4e17bf3f",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:700fec4c619657eaf9d8acc229221f290bb953831a27b06aa963d91052373729",
+      "code_fingerprint": "sha256:8033194e11f5b7925200c090daf96dabf20232875e997ee468b9e6b82ac2fb62",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:7c64c462207fcd6e02e93e8c981c9d2f30d2999d213638cb0e74709f8cfbce28",
+      "code_fingerprint": "sha256:f5ec7f499590ba67f55485fadf67c787f7d3b498b9e9eff219a8bc3efe97febb",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:115718d102e341841092124c077b2957ae5f1f626e60f383233ce5680d40b613",
+      "code_fingerprint": "sha256:482b15aa1bb1282695aa0e01bf489c7684c0d6847e97d1ddce2f7c4ecf9d2d83",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:983b202e6327c97b633b4f1a5f07c5b9adb9fb8e917bb486fb4666ff083066e4",
+      "code_fingerprint": "sha256:061ee4992cea88648c3c7b7b2865848435accced01d70fd48826c4a1bc9cf94b",
       "kind": "text",
       "outputs": [
         {
@@ -45,12 +45,34 @@
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:7a6c6b61bd1311274e82cb11ef75855ca6cc5bf79db7e634a2584144cad8897a",
+      "code_fingerprint": "sha256:74f39282694992bd567eea9ef525cfe6358af5f7698276163fb388b86a5958e8",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "(Array(-0.06360511, dtype=float32), Array(0.05844307, dtype=float32))"
+        }
+      ]
+    },
+    "statistics-bootstrap": {
+      "code_fingerprint": "sha256:aec1f4009070c074953cba9a807bcec3c2cf87e02b359e715ce6c953cc87b9d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sample median        = 0.808\nbootstrap SE         = 0.072\npercentile 95% CI    = (0.682, 0.955)\n"
+        }
+      ]
+    },
+    "statistics-bootstrap-contrast": {
+      "code_fingerprint": "sha256:a00348f45cbc8f0b5f3be2596da310fbac4c64824e7bbe2763c03283b50da9e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gaussian 95% CI (mean) = (0.986, 1.272)\n"
         }
       ]
     }

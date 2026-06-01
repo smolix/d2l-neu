@@ -157,6 +157,17 @@
           "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
         }
       ]
+    },
+    "distributions-conjugate": {
+      "code_fingerprint": "sha256:1da28ec0589104e3992cf2b91e4e61d8a3da6c8b86ae095d52c57463c082a8a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
+        }
+      ]
     }
   }
 }

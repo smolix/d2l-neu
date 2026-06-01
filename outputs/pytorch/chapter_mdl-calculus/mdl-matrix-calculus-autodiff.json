@@ -51,13 +51,24 @@
         }
       ]
     },
+    "matrix-calculus-autodiff-forward-jvp": {
+      "code_fingerprint": "sha256:a25bbc64152316c5e930f16952a183efac3bf6b0625563ecc4ffcd4f473008e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward-mode J:\n [[1.       1.      ]\n [0.070737 0.070737]]\nJVP matches analytic Jacobian: True\n"
+        }
+      ]
+    },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:5c6436d49aa7900578cff9f87b6f44a9f4c68487d4719a33a5539b05f559db96",
+      "code_fingerprint": "sha256:84fe1d1081e2ae2f2f209260bcdec6c9d6350ef1ab30c8ec13aaf295262eba7a",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:57a658f7f8a523b0de3b0cffb782f1730c560a9d4ac1d6c3497cca9497447acc",
+      "code_fingerprint": "sha256:356d488b341b6ed8dc82d794067d4592c858e8ffdb997d470560391974fa6a43",
       "kind": "text",
       "outputs": [
         {

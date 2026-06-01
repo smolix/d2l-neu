@@ -14,33 +14,33 @@
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:55e9bf28e6e150661b9df00efaac2bdfc2b8e8f2f18c02e7a0e916469df4d3d5",
+      "code_fingerprint": "sha256:cb11dcfe83d8c053af0db4469f5d31ba80b609bf54e91ae5d4f76fb830adee36",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.3333333333333333  (≈ p)\n"
+          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.0  (≈ p)\n"
         },
         {
           "type": "execute_result",
-          "text": "array([[1, 0, 0],\n       [0, 1, 0],\n       [0, 1, 0]])"
+          "text": "array([[0, 0, 0],\n       [0, 0, 0],\n       [0, 0, 0]])"
         }
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:3e83df76e9479040d82f87569a02373f2dad12dc287aead5c8ba3efe810bf6e5",
+      "code_fingerprint": "sha256:50a5ac5e698f621f8debb9a14c54a20ba09ae7e966f5c7751380a9628296aac3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample (argmax-ish, random) -> class 3\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample (random) -> class 0\n"
         }
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:711f29bd9587108c7e5cfa09767630abb32ba933384a192539cf6391f4e1b3a5",
+      "code_fingerprint": "sha256:d6216ff11e96253f1c243b0b31bf1f26ba35725e34900fc943b4279951900c8d",
       "kind": "text",
       "outputs": [
         {
@@ -50,12 +50,12 @@
         },
         {
           "type": "execute_result",
-          "text": "array([[5, 3, 1],\n       [2, 1, 5],\n       [6, 1, 3]])"
+          "text": "array([[1, 2, 6],\n       [2, 6, 1],\n       [2, 5, 4]])"
         }
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:5afb0ab14192ed5392a4e6a7be6a0e2ba18e80aaff4130aedf46ff2fbd237f31",
+      "code_fingerprint": "sha256:93573a09a86920ed3bfe782318c0d3267936ad9c414838b540f9891da70410e4",
       "kind": "text",
       "outputs": [
         {
@@ -65,12 +65,12 @@
         },
         {
           "type": "execute_result",
-          "text": "array([[5, 6, 3],\n       [5, 5, 7],\n       [7, 5, 3]])"
+          "text": "array([[3, 7, 2],\n       [6, 4, 5],\n       [4, 5, 5]])"
         }
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:537297dc3f1dccd49785652b84c031e0fb350216c428601dff6e8eb920d2df9b",
+      "code_fingerprint": "sha256:560edfaf444d49f592a821a8232775caf07cbb01c408a2b94fa26ed0b945138e",
       "kind": "text",
       "outputs": [
         {
@@ -80,12 +80,12 @@
         },
         {
           "type": "execute_result",
-          "text": "array([[2, 4, 5],\n       [4, 2, 3],\n       [6, 2, 4]])"
+          "text": "array([[4, 3, 2],\n       [5, 5, 1],\n       [8, 6, 5]])"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:225212a2ba2f549db348f3900a0db3d1107767516de143a49ff499e506808675",
+      "code_fingerprint": "sha256:aa93116d8904d1a4027737e95987aab40366f4405c42f91f90c751ee7ff529c5",
       "kind": "text",
       "outputs": [
         {
@@ -95,23 +95,23 @@
         },
         {
           "type": "execute_result",
-          "text": "array([[1.43142288, 1.79326827, 2.47167942],\n       [2.05683838, 2.93332616, 2.02492959],\n       [1.52043557, 1.6387944 , 1.14338647]])"
+          "text": "array([[1.90231843, 1.03997533, 1.88342184],\n       [2.95917346, 1.71888893, 1.96178706],\n       [2.37732237, 2.76095178, 2.83647093]])"
         }
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:dd08f64dc96fc94ffe55f29e09be3d22f71559f473ed769a5dc161726386de65",
+      "code_fingerprint": "sha256:74ba4e554ea4699753ee6e4a931c3524f19c2d62e5a02db765dcd93d67420006",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.007\nvar 1/lambda^2 = 4.0  sample var = 4.002\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.004\nvar 1/lambda^2 = 4.0  sample var = 3.997\n"
         }
       ]
     },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:e55773edfd16d0b5c1ff642c1f32f921c81b2268c2be816e0c6ba17c64652c7a",
+      "code_fingerprint": "sha256:b77169d3bf6b19e055629fbea19db28c22768b58b5914b7f1e97d84d411c6ee9",
       "kind": "text",
       "outputs": [
         {
@@ -121,40 +121,51 @@
         },
         {
           "type": "execute_result",
-          "text": "array([[ 0.30454122,  0.35598547, -0.2459257 ],\n       [ 0.23549055, -1.7746901 , -0.1549283 ],\n       [-0.61652305,  0.93216464, -0.33032952]])"
+          "text": "array([[ 0.91150284,  0.07953813, -0.94930459],\n       [ 0.00570008,  1.83183843,  0.2391989 ],\n       [-0.29942875, -0.12454975,  0.30064457]])"
         }
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:622c036a31eea484fcee86e50a535543678be4cfff4968439df1ab9566de3e39",
+      "code_fingerprint": "sha256:60cf57361e790f3b5f92d12cb11e26b13869b9e7302a2087a54f07fc4ddf1ba6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Laplace var (2b^2): 2.001  Gaussian var: 2.006\nP(|x| > 3sd): Laplace 0.01436  Gaussian 0.00272\n"
+          "text": "Laplace var (2b^2): 2.003  Gaussian var: 2.0\nP(|x| > 3sd): Laplace 0.014385  Gaussian 0.0027\n"
         }
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:8a0ec3320845c787c034eef1612ff3f1552e78b00532acce6dd3c35426200b32",
+      "code_fingerprint": "sha256:33a0a4b7dd2ea77dd27a55fa2b022c510b83324bcacad03c8fdd6bd1d8309ede",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[1.99 0.97]\n [0.97 1.92]]\neigenvalues (≈ 1, 3): [0.99 2.92]\n"
+          "text": "empirical covariance:\n [[1.99 1.  ]\n [1.   1.96]]\neigenvalues (≈ 1, 3): [0.98 2.97]\n"
         }
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:c569ee6a9e8c01b6d05ddeecbdd381380daa1d570dd5381ae9c6542d3e4b056e",
+      "code_fingerprint": "sha256:e22bba7ad1726082d7c24cddd7ffba42c373d995987d320560a404f823bd46bd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+        }
+      ]
+    },
+    "distributions-conjugate": {
+      "code_fingerprint": "sha256:bd990b2dfb141520146d155b4459781cc5714fa8bbdfd427059b7e2d1c474b6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
         }
       ]
     }

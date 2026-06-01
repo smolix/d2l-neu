@@ -20,7 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 0.9954\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
@@ -31,7 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-100^100 x^2 p(x) dx = 62.668\n"
         },
         {
           "type": "stream",

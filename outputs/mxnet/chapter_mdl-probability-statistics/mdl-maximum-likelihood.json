@@ -9,12 +9,12 @@
   },
   "cells": {
     "maximum-likelihood-imports": {
-      "code_fingerprint": "sha256:d0231af3630a799671c9fe5f4c9f8174b62ae291774f09d65ef3bfee51528a45",
+      "code_fingerprint": "sha256:1c084aa30d5d666fb4a2901fec7f8b0ab01902b8a760b8f98cfe3c5aba472ffc",
       "kind": "text",
       "outputs": []
     },
     "maximum-likelihood-a-concrete-example": {
-      "code_fingerprint": "sha256:2cac003ddaf1511a555b4effaae9732eba65b5ab211139c181ebe2e26d715575",
+      "code_fingerprint": "sha256:350a8c8ce5d7f5c0522cf2d76cd7797198cf4111038d6585e7819f3c7961f917",
       "kind": "asset",
       "outputs": [
         {
@@ -22,17 +22,27 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20951,
-          "sha256": "sha256:850dc83711df2edfe76f1e4720a011b61aa2872969316d9cc597a55554baa32b"
+          "sha256": "sha256:848f2a4a869dce03d7332322149e817844cd9308d32deb90d34bf617e16380eb"
         }
       ]
     },
     "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
-      "code_fingerprint": "sha256:588582c4a2461363f9ca38a08f682fdddc75134c7d5a9e719ca7a5d7b47108e2",
+      "code_fingerprint": "sha256:6fa7097e1f52a962b2b1b3e79b7645d3eb51ef90ff94a16cc1e21731d4f58e38",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"
+        }
+      ]
+    },
+    "maximum-likelihood-fisher-information": {
+      "code_fingerprint": "sha256:1415d5d5faeaa3c23a5b09c5ff1dc500cbe4a0747e2244d61e1592e985a9aa77",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(0.00103853717775, 0.00105)"
         }
       ]
     }

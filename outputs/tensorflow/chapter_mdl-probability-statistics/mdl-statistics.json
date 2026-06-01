@@ -9,48 +9,70 @@
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "code_fingerprint": "sha256:6b5deec65cbdba8f4b1ce82f047b341bd2239d6dc348d43b188df43485b8c644",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:49f2427ef27fff8dc9b9ec6e2d633af9c4615182c4f1e5aef9716ecac34050de",
+      "code_fingerprint": "sha256:516696ebe859b966e643e13efe6abd91d108c7bc3759bbbfd1245f1657d98887",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:2c3ae8ea871f020c87020b26dfefaf553e41015da2aa55cb6302ff2443261e01",
+      "code_fingerprint": "sha256:a7f697921cd17368eba2cb77a3952945dffadef94c562d81e0f9e370a2204d73",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:c73dc38dce6613669098b3054e50ab2b25e42cb66cf3a277fbe0fbb35292bcba",
+      "code_fingerprint": "sha256:039ec2af3f7bdbc29a5688c025ee8019772bada595c2e948af7edab45e5ed943",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5287980437278748>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5288509130477905>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5350170135498047>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.535070538520813>)"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:0cd4eb3995fce769c7222d2d86069a3b271a208f5da059b6cbac651b44e89cc9",
+      "code_fingerprint": "sha256:08169efb9828c0cbae1a498ef3d69b93dbf712048299842bee73e46f864aae11",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance         = 4\nE[divide by n]   = 2.668  (biased)\nE[divide by n-1] = 4.003  (unbiased)\n"
+          "text": "true variance         = 4\nE[divide by n]   = 2.668  (biased)\nE[divide by n-1] = 4.002  (unbiased)\n"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:fffd2d6d6836cd4f3b037f6a20c60b44e1f0a28b59c42e2b3ed0f373db15582d",
+      "code_fingerprint": "sha256:4b5014ba82d7a6aa3d19f8a2bdafb59fef61570c242835b73834e1526fb55ca1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.08958905935287476>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.034175023436546326>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.04913574457168579>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.07650738954544067>)"
+        }
+      ]
+    },
+    "statistics-bootstrap": {
+      "code_fingerprint": "sha256:b2ac4ec07398bec3c8b1447e7b6b34d25935e70fa5de58be62cf429171264305",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sample median        = 0.808\nbootstrap SE         = 0.072\npercentile 95% CI    = (0.682, 0.955)\n"
+        }
+      ]
+    },
+    "statistics-bootstrap-contrast": {
+      "code_fingerprint": "sha256:5e2b8a7f8e503324f74c62929bc31186f3e5b2a6528b3e5899b62aa71757ad8a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gaussian 95% CI (mean) = (0.986, 1.272)\n"
         }
       ]
     }

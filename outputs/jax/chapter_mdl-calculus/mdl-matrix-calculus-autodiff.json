@@ -31,12 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax Jacobian matches autograd: True\nd loss / d z : [ 0.253716 -0.943388  0.689672]\n"
+          "text": "softmax Jacobian matches autograd: True\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p - y        : [ 0.253716 -0.943388  0.689672]\n"
+          "text": "d loss / d z : [ 0.253716 -0.943388  0.689672]\np - y        : [ 0.253716 -0.943388  0.689672]\n"
         }
       ]
     },
@@ -56,13 +56,24 @@
         }
       ]
     },
+    "matrix-calculus-autodiff-forward-jvp": {
+      "code_fingerprint": "sha256:4798a250fe0d875b805982da420553cad3a27b66d9ee782e26f86567a64f108b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward-mode J:\n [[1.       1.      ]\n [0.070737 0.070737]]\nJVP matches analytic Jacobian: True\n"
+        }
+      ]
+    },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:93e6fcf214f9b4ea823426e2bf06e2d63778687563fca2fb924770889b15ffe5",
+      "code_fingerprint": "sha256:5ce9f4a9063c8869fc35ed6b70a35ed4c0a0c678b24a5fea5e108b25cccbba64",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:b3001fa41a6d9442aee9ecc5f86008724ee4f01a5711f854d720eada3ca86a26",
+      "code_fingerprint": "sha256:ba34cdfa47995c46f2a31ad5fe6a91e7d733e49bcdeb0eac871c254f8c95d168",
       "kind": "text",
       "outputs": [
         {

@@ -9,12 +9,12 @@
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:be1a2390066b392d0c79a002716000da44086014c5b426bdd3cfbe8b2ea31dc7",
+      "code_fingerprint": "sha256:877a7cd75cdaf6950c9841b498d471b60b6d30014d8fcfce4a5dbd99b3725f9d",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:b0b04958fafbd8ba3e0180ff7be8c259e42983394c625c846763996e2b6b5434",
+      "code_fingerprint": "sha256:af958e6cdf566457c6394da74e692a43a89731e2abfb531c41c21eaeb19e994c",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:12fab0531bef2cf4250dfdc5ea5d8163db8520af430b53f96b2a851459b2c62b",
+      "code_fingerprint": "sha256:5f8f4448aff956be51dd31124f25ca16ded9d6e4b77ca7478bfe31fb4e7ee772",
       "kind": "text",
       "outputs": [
         {

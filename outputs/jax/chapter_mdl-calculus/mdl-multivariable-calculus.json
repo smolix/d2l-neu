@@ -4,22 +4,17 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:725f0ee127ca310622d224763e79b7e5c2c62cecb9ef9bdae9507dd026238dfd",
+      "code_fingerprint": "sha256:66685ad2602ad9f6cf7f0f0842650b61544bf35b41aea0c3969de6ffee0dfebd",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'approximation: [1.0819457], true Value: [1.0821242]'"
-        }
-      ]
+      "outputs": []
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:4ad443465edfb40686f263a34b18f61ff131d8b26981d83c0b73cace48e34231",
+      "code_fingerprint": "sha256:17c8de46fa40ae871cb4d98db4f96cad490a5e67dd8fc2084f61b4f66a5dba54",
       "kind": "asset",
       "outputs": [
         {
@@ -32,7 +27,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:98402f5e0dc2d18d8dfb06807fee892e8b39b33b7b728790478bdbbef76a22d4",
+      "code_fingerprint": "sha256:5f03874e505ad37290ecad39d34e21d239e1fe8ceb50d33ff564e1e26ac4ea5a",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +38,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:b08eac3fa1955ee23302be3b76d332a2742ab0cc34f01800991b9da536df32c3",
+      "code_fingerprint": "sha256:5c69b350695dca5107d115327dc4f86fea57ab09d9e7d80ca38279adcc9638ff",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +49,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:c2df858d60a2f1f9a4e248369302b547f24145102ca1a894410a2339cb974a4a",
+      "code_fingerprint": "sha256:e0bfa1b47d10ba9e78819f083a355c75a0e7f84461288bcf2164bfd19201c69e",
       "kind": "text",
       "outputs": [
         {
@@ -65,21 +60,9 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:4b07bba5913677b64633420b4915d81506736ece1980a7dd874fbcd48baf751e",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(-1.0, 1.0)"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-multivariable-calculus/multivariable-calculus-hessians-1.svg",
-          "bytes": 120521,
-          "sha256": "sha256:b5fe08c1081fa03b8dcf0a95a4d8360d37f7775b9263a78eda70f70b588f6d15"
-        }
-      ]
+      "code_fingerprint": "sha256:e5f42b2ab35d776c2125c274fb54a7d2b8a07f8c2cc039382d0d3ad74fd9ca44",
+      "kind": "text",
+      "outputs": []
     }
   }
 }

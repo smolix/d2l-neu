@@ -169,10 +169,11 @@ upload_changed() {
         return
     fi
     echo "  Uploading $count file(s) with $UPLOAD_JOBS worker(s)..."
-    # Each line in $list is a relative path under $BOOK_DIR. -d '\n'
-    # keeps paths with spaces intact.
+    # Each line in $list is a relative path under $BOOK_DIR. NUL-delimit via tr
+    # so paths with spaces stay intact and xargs -0 works on both GNU and BSD
+    # (macOS) xargs (which lacks GNU's -a/-d).
     # shellcheck disable=SC2016
-    xargs -a "$list" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+    tr '\n' '\0' < "$list" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
         bash -c 'upload_one "$1"' _ {}
 }
 
@@ -249,7 +250,7 @@ else
     if $DELETE && [[ $REMOVED -gt 0 ]]; then
         echo "  Removing $REMOVED file(s) from bucket with $UPLOAD_JOBS worker(s)..."
         # shellcheck disable=SC2016
-        xargs -a "$WORK_DIR/removed.txt" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+        tr '\n' '\0' < "$WORK_DIR/removed.txt" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
             bash -c 'delete_one "$1"' _ {}
         echo "  Removing bucket .quarto cache objects..."
         aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \

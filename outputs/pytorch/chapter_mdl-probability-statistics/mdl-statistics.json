@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-statistics.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "statistics-imports": {
+      "code_fingerprint": "sha256:b49f3a3ea258cdd92c1492069748b735fee2f68fa14fdf528d3147a5bda448ef",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-estimator-metrics": {
+      "code_fingerprint": "sha256:1419e9d050adec1ad1f7c0d734103b185a238ca3ecbb9c35fa282d489f55aba3",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-sampling-distribution": {
+      "code_fingerprint": "sha256:756c8cf118504b219408ea971316cdd2d35bf8879d0f91d9118d635b76b8a870",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-verify-decomposition": {
+      "code_fingerprint": "sha256:d08f87f5c3d40bb9ff19edbdec02e4701b3e43a0fc840a097ca72032ccc34bfc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(0.5431), tensor(0.5432))"
+        }
+      ]
+    },
+    "statistics-unbiased-variance": {
+      "code_fingerprint": "sha256:5784d317da4c0eba3253205ab00d4b03c67fccead311c7320182ea2d6e2693a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true variance         = 4\nE[divide by n]   = 2.675  (biased)\nE[divide by n-1] = 4.013  (unbiased)\n"
+        }
+      ]
+    },
+    "statistics-confidence-interval": {
+      "code_fingerprint": "sha256:4f9bdcce5e8e0a24d95b697bd2d0e42e966d14654e95c6d98af82b4358c877a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(-0.1108), tensor(0.0179))"
+        }
+      ]
+    },
+    "statistics-bootstrap": {
+      "code_fingerprint": "sha256:672b9747a512b40c413436c4d76cc122de2a4c7d48a901b1b5cbd074d9550cf8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sample median        = 0.808\nbootstrap SE         = 0.072\npercentile 95% CI    = (0.682, 0.955)\n"
+        }
+      ]
+    },
+    "statistics-bootstrap-contrast": {
+      "code_fingerprint": "sha256:1677b556543878acbece82acd21ec0020df0a45db297bd18de01d1c4c9b03695",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gaussian 95% CI (mean) = (0.986, 1.272)\n"
+        }
+      ]
+    }
+  }
+}

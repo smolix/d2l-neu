@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-maximum-likelihood.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "maximum-likelihood-imports": {
+      "code_fingerprint": "sha256:36dbbc8d247b7ab56dc489690ed814d46fa23cac88f848530bda99abbb2853eb",
+      "kind": "text",
+      "outputs": []
+    },
+    "maximum-likelihood-a-concrete-example": {
+      "code_fingerprint": "sha256:99f7d43c48e19404d689a13e6ef2f8e150a2e63dbc8e39e647b6ea4395ea9b78",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
+          "bytes": 20953,
+          "sha256": "sha256:f518aac9e890b9a02b26bfbd16d05d9fce0ca9074e388f7adc99c862d67f479a"
+        }
+      ]
+    },
+    "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
+      "code_fingerprint": "sha256:a18d28de650cc154475415ba9bfaa235c03d4aceb032dbd5528cccb13d10ff2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Variable 'Variable:0' shape=() dtype=float32, numpy=0.9713100790977478>,\n 0.9713101437890875)"
+        }
+      ]
+    },
+    "maximum-likelihood-fisher-information": {
+      "code_fingerprint": "sha256:c71f2ec6e52f187ba18f15d6226d084bd939d66b39eab3dd09c9ac977febad4e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(np.float64(0.0010385371777499998), 0.00105)"
+        }
+      ]
+    }
+  }
+}

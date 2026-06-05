@@ -67,6 +67,26 @@ def _join(val) -> str:
 _VERSION_CACHE = {}
 
 
+def public_version(spec: str) -> str:
+    """Strip the PEP 440 *local* version segment from a 'pkg==X.Y.Z+local'
+    provenance string, leaving 'pkg==X.Y.Z'.
+
+    The local segment (e.g. '+cu128', '+cpu') identifies the *platform wheel*,
+    not the framework version: torch 2.11.0 is torch 2.11.0 whether it's the
+    CUDA-12.8 Linux build or the arm64 macOS CPU/MPS build. Keying freshness on
+    it wrongly invalidates the *entire* committed store the instant you audit
+    from a different machine — defeating the whole point of committing
+    pre-executed outputs (a portable baseline that lets you re-run only the
+    CPU-capable notebooks you touched, anywhere, instead of a full multi-GPU
+    re-run). So freshness keys on the public version only; a genuine
+    version change (2.11.0 → 2.12.0) still invalidates. See docs/build-system.md §3.
+    """
+    name, sep, ver = spec.partition('==')
+    if not sep:
+        return spec
+    return f'{name}=={ver.split("+", 1)[0]}'
+
+
 def framework_version(repo_root: Path, fw: str) -> str:
     if fw in _VERSION_CACHE:
         return _VERSION_CACHE[fw]
@@ -79,7 +99,7 @@ def framework_version(repo_root: Path, fw: str) -> str:
                 [str(py), '-c', f'import {pkg}; print({pkg}.__version__)'],
                 capture_output=True, text=True, timeout=120)
             if r.returncode == 0 and r.stdout.strip():
-                ver = f'{pkg}=={r.stdout.strip()}'
+                ver = public_version(f'{pkg}=={r.stdout.strip()}')
         except Exception:
             pass
     _VERSION_CACHE[fw] = ver

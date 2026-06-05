@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "random-variables-imports": {
+      "code_fingerprint": "sha256:877a7cd75cdaf6950c9841b498d471b60b6d30014d8fcfce4a5dbd99b3725f9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "random-variables-density-to-probability": {
+      "code_fingerprint": "sha256:af958e6cdf566457c6394da74e692a43a89731e2abfb531c41c21eaeb19e994c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+        }
+      ]
+    },
+    "random-variables-cauchy-diverges": {
+      "code_fingerprint": "sha256:5f8f4448aff956be51dd31124f25ca16ded9d6e4b77ca7478bfe31fb4e7ee772",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
+        }
+      ]
+    }
+  }
+}

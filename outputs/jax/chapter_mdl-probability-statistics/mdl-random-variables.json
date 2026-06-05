@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "random-variables-imports": {
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "random-variables-density-to-probability": {
+      "code_fingerprint": "sha256:9d3ef50955ca497ae2ce32306b02b44a3bd47440b6dc15ba65d96245f528691e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass     : 0.9954\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(-2 < X <= 3) : 0.7725\n"
+        }
+      ]
+    },
+    "random-variables-cauchy-diverges": {
+      "code_fingerprint": "sha256:0fb65cabe669f82e53ca8d8316e146cf59097553fbed32f77b41e67110deab41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-100^100 x^2 p(x) dx = 62.668\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-1000^1000 x^2 p(x) dx = 635.621\n"
+        }
+      ]
+    }
+  }
+}

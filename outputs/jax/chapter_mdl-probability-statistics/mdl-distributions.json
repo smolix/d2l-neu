@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-distributions.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "distributions-imports": {
+      "code_fingerprint": "sha256:72c8ffe765144daee3db7148c63ee751b4d7a834abd1736ca5bb5293f8b8d3a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "distributions-bernoulli": {
+      "code_fingerprint": "sha256:dd3407562bfa3fa2bd6ebdd3d8959264b21e21480aa646f2c50958ce43af9ecd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.1111111119389534  (≈ p)\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[0., 0., 0.],\n       [0., 0., 1.],\n       [0., 0., 0.]], dtype=float32)"
+        }
+      ]
+    },
+    "distributions-categorical": {
+      "code_fingerprint": "sha256:5248a0f3bf0641ace1cd2198ee1b691b8ec627e601e17eff02a31539ae2d2ac8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample (random) -> class 0\n"
+        }
+      ]
+    },
+    "distributions-discrete-uniform": {
+      "code_fingerprint": "sha256:6872a7f903e1d55890f2e025f8ef23f7a0d8dda603632071803a997e042818c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean (n+1)/2 = 3.5   var (n^2-1)/12 = 2.9166666666666665\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[2, 1, 3],\n       [2, 6, 4],\n       [1, 6, 4]], dtype=int32)"
+        }
+      ]
+    },
+    "distributions-binomial": {
+      "code_fingerprint": "sha256:b1d7803628a56a3b705f14816d08c695851ba493203898cf24c870e9bc621bb2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean np = 4.0   var np(1-p) = 2.4\nP(X=k): [0.006 0.04  0.121 0.215 0.251 0.201 0.111 0.042 0.011 0.002 0.   ]\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[4, 2, 3],\n       [2, 5, 4],\n       [5, 1, 2]], dtype=int32)"
+        }
+      ]
+    },
+    "distributions-poisson": {
+      "code_fingerprint": "sha256:7868ae602a79aba9da32edc33369f2098ceb69d3c9823a2573f42024009ec7a7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean = var = lambda = 4.0\nP(X=k): [0.018 0.073 0.147 0.195 0.195 0.156 0.104 0.06  0.03  0.013 0.005 0.002\n 0.001 0.    0.   ]\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[0, 1, 5],\n       [5, 2, 2],\n       [4, 6, 1]], dtype=int32)"
+        }
+      ]
+    },
+    "distributions-continuous-uniform": {
+      "code_fingerprint": "sha256:4c875e4a619f8a86b09877c4fc5035490c60b1814c1196b87d01435864f5f31f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean (a+b)/2 = 2.0   var (b-a)^2/12 = 0.3333333333333333\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[2.895334 , 2.9571598, 1.664583 ],\n       [1.9373369, 2.1397774, 1.331006 ],\n       [1.6203892, 2.378961 , 2.4935331]], dtype=float32)"
+        }
+      ]
+    },
+    "distributions-exponential": {
+      "code_fingerprint": "sha256:7736efc64ac47b615fbeb219abe324d30345feac646d1fa49d853b55762149b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean 1/lambda = 2.0   sample mean = 2.0050487518310547\nvar 1/lambda^2 = 4.0  sample var = 4.005532264709473\n"
+        }
+      ]
+    },
+    "distributions-gaussian": {
+      "code_fingerprint": "sha256:74e11cd4a506f6d08f2c619fc2de8d83da10175ba6435d9c94528605b40bf38d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass (≈1): 0.9999366402626038\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "Array([[ 1.6226422 ,  2.0252647 , -0.43359444],\n       [-0.07861735,  0.1760909 , -0.97208923],\n       [-0.49529874,  0.4943786 ,  0.6643493 ]], dtype=float32)"
+        }
+      ]
+    },
+    "distributions-laplace": {
+      "code_fingerprint": "sha256:955e88f9be5bbb7b9accdb981895d7676a0d10d77d9647d5a9167851fd9e5c27",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Laplace var (2b^2): 2.0059871673583984  Gaussian var: 1.995692491531372\nP(|x| > 3sd): Laplace 0.014454999938607216  Gaussian 0.0025549998972564936\n"
+        }
+      ]
+    },
+    "distributions-mvn": {
+      "code_fingerprint": "sha256:c347e26456c4beb42f7c212da5bbf1be18add89a87df6f92e0606c9d28de5274",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "empirical covariance:\n [[2.03 1.02]\n [1.02 2.06]]\neigenvalues (≈ 1, 3): [1.03 3.06]\n"
+        }
+      ]
+    },
+    "distributions-exp-family": {
+      "code_fingerprint": "sha256:72df8a3a01b74d4578b3bc89743d16b361ba2fbe6ccb220df31e3bdae322d31b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+        }
+      ]
+    },
+    "distributions-conjugate": {
+      "code_fingerprint": "sha256:1da28ec0589104e3992cf2b91e4e61d8a3da6c8b86ae095d52c57463c082a8a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-integral-calculus.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "integral-imports": {
+      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "kind": "text",
+      "outputs": []
+    },
+    "integral-riemann-converge": {
+      "code_fingerprint": "sha256:d4b38ed7ee71deac83b9480f5cc92da139f2a250b0b5befa544a91da5c069e62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\neps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\neps=0.001  sum=0.804519  error=0.000200\ntruth = (1/2) log 5 = 0.804719\n"
+        }
+      ]
+    },
+    "integral-ftc-check": {
+      "code_fingerprint": "sha256:cb866571508898bc27aa20afc98ff0486381b357a8fab272ba6f756c6fcbd1c1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |dF/dx - f|      : 0.0009999991161748767\nRiemann F(2) vs G(2)-G(0): 0.8045181035995483 0.8047189712524414\n"
+        }
+      ]
+    },
+    "integral-improper": {
+      "code_fingerprint": "sha256:7a1b14d4af976abee48faeced7922d1c68e0f973035cc95c672fb72fc628ae49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993759\nintegral_0^10.0 e^-x dx = 1.000455\nintegral_0^20.0 e^-x dx = 1.000500\nlimit as b -> infinity   = 1.000000\n"
+        }
+      ]
+    },
+    "integral-surface": {
+      "code_fingerprint": "sha256:59a066bd2d4a95aa4292c38efb503d6a66781e791e5e2b38757e6b1d3336f37d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "volume (Riemann)  : 3.141592025756836\nvolume (exact = pi): 3.141592653589793\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-integral-calculus/integral-surface-1.png",
+          "bytes": 75523,
+          "sha256": "sha256:ed8d738692c8cc4546c27d88c01b63e97751d9945fcaa01e7c981afc2050fb29"
+        }
+      ]
+    },
+    "integral-gaussian": {
+      "code_fingerprint": "sha256:53e39d281143d7177ec428e88300492ed734767ab5a2106df30b1f6c7ad65483",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grid integral of e^(-x^2-y^2): 3.141593\nexact value pi               : 3.141593\n"
+        }
+      ]
+    },
+    "integral-density": {
+      "code_fingerprint": "sha256:d25de7c18ccf2003407443164c2e1ff3062ce8689797bf7c25bb125888b6ae63",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
+        }
+      ]
+    },
+    "integral-monte-carlo": {
+      "code_fingerprint": "sha256:cb94975d55f154f6c8144134c3ae64a134450a9e212a721f27cb00e5ef839997",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n=10      Monte Carlo=0.87741  error=0.13056\nn=100     Monte Carlo=0.73200  error=0.01486\nn=1000    Monte Carlo=0.74470  error=0.00216\nn=10000   Monte Carlo=0.74809  error=0.00123\nn=100000  Monte Carlo=0.74682  error=0.00003\nRiemann quadrature   =0.74686\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
+          "bytes": 45710,
+          "sha256": "sha256:cc1d4bf471d1be1bfaf2561047053b9c654a1462dc7adcf98b5118a007b2b3a8"
+        }
+      ]
+    }
+  }
+}

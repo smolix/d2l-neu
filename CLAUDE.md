@@ -1,12 +1,61 @@
 # D2L-Neu Project Context
 
 Rebuild of "Dive into Deep Learning" (d2l.ai) using Quarto.
-See **docs/architecture.md** for the component inventory and the current build
-flow. See **docs/build-system.md** for the *decoupled* build model (committed
-notebook-output store, capture/bless workflow, CPU-only rendering, freshness
-audit) — the design that lets site/slide rendering run without re-executing
-notebooks. The decoupled model is the target; `architecture.md` describes what
-the repo does until it lands.
+See **docs/architecture.md** for the component inventory and the build flow, and
+**docs/build-system.md** for the *decoupled* build model (committed notebook-
+output store, capture/bless workflow, CPU-only rendering, host-capability-aware
+freshness gate) — the design, now landed, that lets site/slide rendering run
+without re-executing notebooks.
+
+## Getting started (orientation — read before building)
+
+**Repo shape.** Source `.md` files (in `chapter_*/`) are the source of truth;
+the preprocessor `tools/d2l_preprocess.py` runs with `SOURCE=.` (this repo, not
+`../d2l-en`) and emits `chapter_*/*.qmd` which are **generated + gitignored** —
+never edit them. `outputs/` is the **committed** store of executed notebook
+outputs (text inline in JSON manifests, images in Git LFS); `_book/` (HTML),
+`_notebooks/` (scratch executed notebooks), `_slides/`, `_pdf/`, `logs/` are all
+gitignored build products.
+
+**Venvs.** One per framework (`.venv-pytorch`, `.venv-tensorflow`, `.venv-jax`,
+`.venv-mxnet`) plus `.venv-build` (Quarto only). Managed by `uv` via `make
+venv-<fw>`. **torch is pinned to 2.11.0 / torchvision 0.26.0** — the version the
+committed store was captured under (freshness keys on the *public* version, so
+the Linux `+cu128` wheel and the macOS arm64 wheel of 2.11.0 both match). To move
+to 2.12: bump the pin in `pyproject.toml` **and** re-capture the store.
+
+**Render + preview locally (CPU, no GPU needed):**
+
+```bash
+make html                                   # reads outputs/; gate is host-capability-aware
+python3 -m http.server 8000 -d _book        # preview at http://localhost:8000/
+```
+
+`make html` runs `tools/audit_outputs.py --verify-fresh`. That gate is tiered by
+host GPU count (`docs/build-system.md` §3.3a): a **CPU box renders the whole
+book**, deferring (warning, not failing) only stale notebooks it lacks the GPUs
+to re-execute; a single-GPU box defers only multi-GPU notebooks; a ≥2-GPU box is
+strict. So you can always render here; you only *re-run* what your hardware
+supports.
+
+**Surgically refresh one notebook's outputs** (CPU notebooks, locally — no GPU
+box, no full rebuild):
+
+```bash
+make -B _notebooks/<fw>/<chapter>/<file>.executed   # regen + execute that one
+make capture-outputs FILES=<chapter>/<file>.md      # bless into outputs/
+make html                                           # re-render
+```
+
+**Edit/run notebooks in VS Code:** `make kernels` once (registers the four
+`d2l-<fw>` ipykernels), then the `.vscode-extension/` "Edit Framework View"
+command (`Cmd+E Cmd+J`) opens the per-framework notebook with its kernel
+pre-selected. See `.vscode-extension/README.md`.
+
+**Where to look:** build/freshness model → `docs/build-system.md`; component
+inventory → `docs/architecture.md`; `:label:`/`:numref:`/`:eqlabel:` directive
+semantics → `docs/syntax.md`; how to author chapter content → the "Content
+authoring" section below.
 
 ## Rules
 
@@ -52,6 +101,46 @@ the repo does until it lands.
 - Slide rendering uses `eval: false`; outputs come from
   `tools/inject_outputs.py slides`, matched by cell ID against
   `_notebooks/<fw>/...`. Slides need no GPU.
+
+## Content authoring (how to write a chapter)
+
+Conventions for writing/revising chapter `.md` content. Model the density and
+shape on the **preliminaries** and **linear-neural-networks** chapters.
+
+- **Code teaches; it does not draw.** Every notebook code cell must *compute or
+  demonstrate* something the prose discusses (fit a model, decompose a matrix,
+  verify an identity, classify data). Code whose only purpose is to draw an
+  illustrative figure does NOT belong in the notebook — it is a wall of
+  matplotlib plumbing that teaches nothing. Keep teaching code compact and
+  elegant.
+- **Illustrative figures are pre-generated, never drawn inline.** Conceptual /
+  schematic / illustrative figures are produced by committed matplotlib
+  generators → `img/mdl-<chapter>-<id>.svg` and included as
+  `![caption](../img/<id>.svg)` + `:label:`fig_…`` with **no drawing code** in
+  the notebook — exactly like the slide SVGs. The shared house style lives in
+  `tools/gen_mdl_figures.py` (also the Linear Algebra figures); each other
+  chapter has `tools/gen_mdl_<chapter>_figures.py` that imports it. To change a
+  figure, edit its generator and run `make figures` (byte-idempotent); commit
+  the `.svg`. Use the **`mdl-figure`** skill to add one and **`figure-style-audit`**
+  to check a chapter. (Data plots that *teach* a computed result, e.g. a loss
+  curve, may stay as a short `d2l.plot(...)` cell.)
+- **One figure style per chapter.** Use a single consistent look (the
+  generator's shared style). Do not mix hand-drawn SVGs, inline matplotlib, and
+  generated plots in the same chapter — reproduce stragglers in the chosen style.
+- **One imports cell.** Import each library exactly once, in a single
+  per-framework imports cell near the top; never re-import inside later cells.
+  Prefer d2l helpers (`d2l.plot`, `d2l.plt`, `d2l.set_figsize`, …) over raw
+  matplotlib.
+- **Hierarchical structure.** Group content into **3–5 top-level `##`
+  sections**, each with `###` (and occasional `####`) subsections — not a long
+  flat run of `##` headings.
+- **Proofs, intuition-first.** Foundations chapters favour short, *elegant*
+  proofs (`**Proposition.**` / `**Proof.**` … `$\blacksquare$`) over assertion,
+  led by a picture or intuition.
+- **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
+  and closing lines with `:eqlabel:` on the next line, or the label fails to
+  attach. Never put a `]` in an image caption (it truncates the alt-text); write
+  matrices in captions with `\begin{smallmatrix}…\end{smallmatrix}`, not `[[…]]`.
 
 ## Landing-page university adopters
 
@@ -142,11 +231,31 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 
 ## Current status
 
+- **torch pinned to 2.11.0 / torchvision 0.26.0** (the committed store's
+  capture version). Freshness provenance keys on the *public* version (build
+  tag stripped) and the `verify-fresh` gate is host-capability-aware, so the
+  store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
+  book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
+  §3.1/§3.3a.
+- The **"Mathematics for Deep Learning"** part (branch
+  `math-for-deep-learning-appendix`) is now the **default math appendix**: a
+  single part of 6 numbered chapters under `chapter_mdl-*` — **22** Linear
+  Algebra, **23** Calculus, **24** Optimization, **25** Probability & Statistical
+  Learning, **26** Information Theory, **27** Dynamics (Tools for Deep Learning is
+  now **28**) — with `mdl-`-prefixed labels. LA, Calculus, and Probability &
+  Statistics are written to the bar; Optimization, Information Theory, and
+  Dynamics are still detailed ToCs + reading lists (to be completed on the site).
+  The legacy `chapter_appendix-mathematics-for-deep-learning/` has been
+  **retired** — removed from `_quarto.yml` + `CHAPTER_NUMBERING` and its source
+  + committed outputs deleted. Numbering lives in `CHAPTER_NUMBERING`
+  (`tools/d2l_preprocess.py`); a file absent from it renders unnumbered — see
+  `docs/build-system.md` §4.1.
 - Last all-framework green run is stale with respect to the current custom
   MXNet wheel. Current MXNet diagnostics are in
-  `docs/mxnet-runtime-diagnostics.md`.
+  `docs/mxnet-runtime-diagnostics.md`. `chapter_computational-performance/multiple-gpus.md`
+  is stale (a `#@save` block it uses changed) and needs the ≥2-GPU box to refresh.
 - **261/261 slides rendered** (PT 75, TF 56, JAX 55, MX 75)
-- 192 HTML pages, 4 PDFs, d2l library — zero errors
+- ~192 HTML pages (plus the new math part), 4 PDFs, d2l library — zero errors
 - Full `make all` takes ~3 hours
 
 ### d2l-en source fixes applied (in ../d2l-en, not committed there)

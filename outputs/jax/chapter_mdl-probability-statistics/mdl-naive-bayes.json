@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-naive-bayes.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:25cd0d4ec9c432c2f409c8f178fb6ca5d2af2bdf731cd05b371fc1a763af6de2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "naive-bayes-imports": {
+      "code_fingerprint": "sha256:3e70310ed6b20a7f0c15b8b84fd46c1bb66ba521432941178ae3e4a9bcd04de9",
+      "kind": "text",
+      "outputs": []
+    },
+    "naive-bayes-load": {
+      "code_fingerprint": "sha256:dfb6b8bb5ce26f310fe3108b5c62d8a6c342808aa1c27caf13060a6f6ee06f4f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\r\u001b[1m       0/11490434\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0s/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m  311296/11490434\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 1835008/11490434\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 4734976/11490434\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 6701056/11490434\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 8396800/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m10829824/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m11490434/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 0us/step\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "((60000, 28, 28), (60000,))"
+        }
+      ]
+    },
+    "naive-bayes-train": {
+      "code_fingerprint": "sha256:86377ee664538830f0700692c9d713800b960ae3ee4efe3c26008c0545f70c40",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.09871667, 0.11236667, 0.0993    , 0.10218333, 0.09736667,\n       0.09035   , 0.09863333, 0.10441667, 0.09751667, 0.09915   ])"
+        }
+      ]
+    },
+    "naive-bayes-templates": {
+      "code_fingerprint": "sha256:54b9bab363ea796eeb71d7c9f6113d23033945fe28440ba2fb81b214cfad6bb2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
+          "bytes": 47657,
+          "sha256": "sha256:63ebc443c0ac0360865e89d0700fd74abd2a9d6b3affb0a1ac74fb499aad0865"
+        }
+      ]
+    },
+    "naive-bayes-predict": {
+      "code_fingerprint": "sha256:9439a3af92f8cf1303d32d96abc5f96805d68cda805430f26d34ba246008c967",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8427"
+        }
+      ]
+    }
+  }
+}

@@ -202,9 +202,16 @@ the hash. This signal pinpoints *which* cells drifted.
   paths). A `#@save` change therefore marks *precisely* the notebooks that use
   the changed symbol stale — replacing CLAUDE.md's "when in doubt rerun all
   frameworks."
-- **`framework_version`** — the installed framework/wheel version
-  (`.venv-<fw>/bin/python -c "import <pkg>; print(<pkg>.__version__)"`). A MXNet-
-  wheel rebuild bumps this and invalidates MXNet outputs (and nothing else).
+- **`framework_version`** — the installed framework version, keyed on the
+  PEP 440 **public** version only (`tools/capture_outputs.py:public_version`
+  strips the local build segment, e.g. `torch==2.11.0+cu128` → `torch==2.11.0`).
+  The local segment names the *platform wheel*, not the version: torch 2.11.0 is
+  torch 2.11.0 whether it's the Linux CUDA-12.8 build or the macOS arm64 CPU/MPS
+  build, and the same code produces the same results either way. Keying on the
+  full wheel string would hard-stale the *entire* store the instant you audit
+  from a different machine — defeating portability. A genuine version change
+  (`2.11.0 → 2.12.0`, or a MXNet-wheel rebuild) still invalidates. The audit
+  also normalizes legacy `+cu128` manifests on read, so old captures match.
 
 ### 3.2 Stale ⟺ code or provenance drift
 
@@ -230,6 +237,37 @@ A *stale* output means different things for the two storage classes:
 - **Asset (`kind: "asset"`) → SOFT gate.** A stale plot is an old-but-valid
   sample; the render **warns** but proceeds. You refresh it on a deliberate
   bless.
+
+### 3.3a Host-capability-aware gate: render anywhere
+
+The HARD gate of §3.3 only makes sense where the author could *act* on it. A
+stale **GPU** notebook on a GPU-less Mac, or a stale **multi-GPU** notebook on a
+single-GPU box, cannot be re-executed there — hard-failing the render would
+block a machine from building the book over a notebook it could never fix,
+defeating the portable-store promise (a CPU box should render the whole book and
+re-run only what its hardware supports).
+
+So `verify-fresh` is **capability-tiered**. Each notebook's resource class
+(`cpu` / `gpu` / `multi-gpu`, from `tools/scan_notebook_manifests.py:source_execution_class`,
+which keys off `runtime_env.MULTI_GPU_NOTEBOOKS` + GPU keyword scan) implies a
+GPU floor — `cpu`=0, `gpu`=1, `multi-gpu`=2. `tools/audit_outputs.py` counts the
+host's GPUs (`nvidia-smi -L`; 0 if absent) and, for each HARD-stale notebook:
+
+- host GPUs **<** the class floor → the host *can't* run it → **deferred to a
+  WARNING**, rendered from the committed store;
+- host GPUs **≥** the floor → the host *can* run it → still **hard-fails**.
+
+This tiers cleanly:
+
+| Host | Renders | Hard-fails on stale… |
+|------|---------|----------------------|
+| CPU only (0 GPU, e.g. Apple Silicon) | everything | nothing (cpu notebooks are runnable → still block) |
+| Single-GPU | everything | `cpu` + `gpu` stale (defers only `multi-gpu`) |
+| Multi-GPU (≥2) | everything | all (the strict canonical gate) |
+
+The canonical green build runs on the multi-GPU box, where the gate is strict
+and refreshes whatever drifted; CPU/single-GPU authors still get a loud warning
+listing the deferred notebooks and render from the store meanwhile.
 
 ### 3.4 The d2l `#@save` ripple, made precise
 
@@ -286,6 +324,36 @@ all notebooks yields *identical* numbering. Partial execution cannot perturb
 these. (Generated plots are cell *outputs*, not `:numref:`-labeled figures —
 labeled figures are authored SVGs in `img/` — so output churn doesn't touch
 figure numbering either.)
+
+**The map is the single source of truth for numbers.** `CHAPTER_NUMBERING` (in
+`tools/d2l_preprocess.py`) maps each source `.md` to its logical number: `[N]` =
+chapter *N* (a chapter-group's `index.md`), `[N, k]` = section *N.k*, `None` =
+unnumbered (front matter, references). `fix_crossref_numbers.py` **imports this
+same dict**, so preprocessing and the post-render renumber pass never disagree.
+Two consequences worth knowing:
+
+- **A file *absent* from the map renders unnumbered.** The preprocessor treats a
+  missing key as `None` and prepends `---\nnumber-sections: false\n---` front
+  matter, so Quarto emits the page with no chapter/section number. To give a new
+  chapter real numbers you **must** add it to `CHAPTER_NUMBERING` — listing it in
+  `_quarto.yml` alone is not enough. (This was exactly why the
+  Mathematics-for-Deep-Learning chapters first rendered without numbers.)
+- **Part titles in `_quarto.yml` are cosmetic.** `build_chapter_map` flattens the
+  `chapters:` lists and ignores the `part:` strings, so whether *N* groups live
+  under one part or *N* parts has **zero** effect on numbering — only the map and
+  the flat file order do. Part grouping is purely the left-nav/sidebar structure.
+  (A part whose `part:` is a bare title string keeps its `index.md` as a numbered
+  chapter; pointing `part:` at a `.qmd` file instead makes that page an *unnumbered
+  divider*, which breaks any `:numref:` that targets it — so we use title strings.)
+
+Current tail of the map: the **Mathematics for Deep Learning** part is chapters
+**22–27** (Linear Algebra 22, Calculus 23, Optimization 24, Probability &
+Statistical Learning 25, Information Theory 26, Dynamics 27) — each group's
+`index.md` is the chapter, its siblings the `N.k` sections — and the **Tools for
+Deep Learning** appendix is chapter **28**. The legacy
+`chapter_appendix-mathematics-for-deep-learning/` part (formerly chapter 22) has
+been retired; inserting or retiring a group means renumbering the map's tail and
+the matching `_quarto.yml` order together.
 
 ### 4.2 The one index that matters: cell-id → output
 
@@ -348,6 +416,14 @@ A fresh clone with only `.venv-build` renders the whole book. (LFS assets are
 fetched on clone; `GIT_LFS_SKIP_SMUDGE=1` gives a text-only checkout if you only
 need to edit prose/slides and don't care about plot images yet.)
 
+This holds on *any* host, including one that has framework venvs and so can
+detect staleness: per §3.3a the gate is capability-tiered, so a CPU or
+single-GPU box renders the whole book — deferring (with a warning) only the
+stale notebooks it lacks the GPUs to re-execute, which the multi-GPU box
+refreshes on the canonical build. To re-run a CPU notebook locally without a
+full rebuild: `make -B _notebooks/<fw>/<chapter>/<file>.executed` then
+`make capture-outputs FILES=<chapter>/<file>.md`.
+
 ### 5.3 Partial / selective refresh (convenience)
 
 ```bash
@@ -390,6 +466,27 @@ Make want to execute a notebook.
 `run-notebooks-*`, the `.executed` stamps, `.generated`, `notebooks-*`, `lib`,
 and `.d` dep files are **unchanged** — execution works exactly as today; capture
 is a new consumer of its results.
+
+### 6.3 Gotcha: don't hand-delete `.preprocess.stamp` under GNU Make 3.81
+
+The `.d` auto-dependencies are `-include`d, so every `make` first remakes those
+files (the `scan_d2l_usage` lines) and **re-execs itself**. Under the macOS
+system **GNU Make 3.81**, if you manually `rm .preprocess.stamp`, that re-exec
+can leave `make html` deciding `_book/index.html` is already up to date and skip
+preprocessing **and** rendering entirely — it prints only the trailing
+`Output:`/`Log:` echoes and exits 0, fooling you into thinking it rebuilt. Force
+the stamp explicitly first (`make .preprocess.stamp`) or touch a real
+prerequisite (`touch _quarto.yml`); then `make html` renders normally. Better
+still, use `make -B <target>` when you deliberately want a forced rebuild rather
+than deleting stamps by hand. (GNU Make ≥ 4.3 resolves the missing stamp
+correctly; 3.81 also emits harmless `overriding commands for target '&'` warnings
+because it predates the `&:` grouped-target syntax the Makefile uses.)
+
+Note also that the preprocess step is a **single pass** — `d2l_preprocess.py`
+with no `--files` regenerates every `.qmd` for the files in `CHAPTER_NUMBERING`.
+(The former second pass that explicitly re-ran the `chapter_mdl-*` files was a
+workaround for their absence from the map; now that they are in it, the main pass
+covers them and the workaround has been removed.)
 
 ---
 

@@ -153,6 +153,21 @@ help:
 
 lib: d2l/.built
 
+# ── Illustrative figures (committed SVGs; see the mdl-figure skill) ──
+# Regenerate every committed img/mdl-*.svg from its generator. The shared house
+# style lives in tools/gen_mdl_figures.py (Linear Algebra); each other chapter
+# has tools/gen_mdl_<chapter>_figures.py that imports that style. Output is
+# byte-idempotent (svg.hashsalt + metadata Date:None), so CI can gate on a clean
+# `git diff img/` after running this. Notebooks never draw figures — they
+# include these SVGs (see CLAUDE.md "Content authoring").
+.PHONY: figures
+figures: | .venv-pytorch/.synced
+	@.venv-pytorch/bin/python tools/gen_mdl_figures.py
+	@for g in $$(ls tools/gen_mdl_*_figures.py 2>/dev/null); do \
+		echo "=== $$g ==="; .venv-pytorch/bin/python $$g || exit 1; \
+	done
+	@echo "Figures regenerated into img/ (verify: git diff --stat img/)"
+
 # ── Committed outputs store (decoupled build; see docs/build-system.md) ──
 # capture-outputs   distill executed _notebooks/ → committed outputs/ store
 # audit-outputs     report stale notebooks (code-provenance drift) + integrity
@@ -347,7 +362,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 				\( -name data -o -name img \) -delete; \
 			echo "Rewriting deck '../img/' refs to '../../../img/' (single-source)..."; \
 			find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
-				-exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +; \
+				-exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +; \
 		fi; \
 		if [ -d _pdf ]; then \
 			echo "Staging PDFs into _book/pdf/ ..."; \

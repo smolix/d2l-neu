@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-svd-low-rank.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "svd-imports": {
+      "code_fingerprint": "sha256:6719e2772e211cd908133061dabf83c6d44ed4216294f37e1016ca1c4be25ced",
+      "kind": "text",
+      "outputs": []
+    },
+    "svd-defective-shear": {
+      "code_fingerprint": "sha256:7f42854d28ee43e384a6e1c3cb81af58bb3305b9bba31383c77ad2956b1b643f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "singular values of the shear: [1.618034 0.618034]\ngolden ratio phi, 1/phi:     [1.618034 0.618034]\nproduct sigma_1 * sigma_2 = |det A| = 1.0\n"
+        }
+      ]
+    },
+    "svd-numerical-rank": {
+      "code_fingerprint": "sha256:b208e024455a47ac9fcec3800babfde36a3857f5196be3092ce36621bdd46bf6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "singular values: [4.351705 0.914865 0.       0.      ]\nnumerical rank : 2\n"
+        }
+      ]
+    },
+    "svd-pca": {
+      "code_fingerprint": "sha256:123f287a45de47c6bbb6b3d58d71a86d796f25d8b0de65827c1d864e4fdd836b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "explained variance (sigma^2/n): [8.0873 0.5705]\neigenvalues of covariance     : [8.0873 0.5705]\nexplained-variance ratio      : [0.9341 0.0659]\n"
+        }
+      ]
+    },
+    "svd-least-squares": {
+      "code_fingerprint": "sha256:1a4c6c29e02ed06ded501b61affd000c5087b02396df43eb701500de662a6118",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\ncond(A^T A) = 55.782 = cond(A)^2\n"
+        }
+      ]
+    },
+    "svd-weight-spectrum": {
+      "code_fingerprint": "sha256:def79e919a0a084e37f7bf616e7f6e54b50e7b800f179dfbaafcd57f99754497",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "256 x 512 matrix; rank for 95% energy: 18; LoRA params 10.5% of full\n"
+        }
+      ]
+    },
+    "svd-verify": {
+      "code_fingerprint": "sha256:405b8d44e411ba21c4065dc82a3a5540307552056769e26c35de11e49a88fcf9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reconstruction error: 0.0\nsigma^2          : [18.324555  5.675445]\neig(A^T A) sorted: [18.324555  5.675445]\n"
+        }
+      ]
+    }
+  }
+}

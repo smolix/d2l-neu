@@ -262,6 +262,66 @@ async function openSlidePreview(output: vscode.OutputChannel) {
     }
 }
 
+async function runAndCapture(output: vscode.OutputChannel) {
+    // Resolve (framework, source .md) from the active notebook, or from an
+    // active chapter_*/*.md plus a framework pick.
+    let nbPath: string | undefined;
+    let md: string | undefined;
+    let fw: Framework | undefined;
+    const nbEditor = vscode.window.activeNotebookEditor;
+    const inNotebooks = nbEditor
+        && nbEditor.notebook.uri.fsPath.includes(`${path.sep}_notebooks${path.sep}`);
+    if (inNotebooks) {
+        nbPath = nbEditor!.notebook.uri.fsPath;
+        md = sourceMdFromNotebook(nbPath);
+        fw = frameworkFromNotebook(nbPath);
+    } else {
+        const text = vscode.window.activeTextEditor?.document.fileName;
+        if (text?.endsWith('.md')) {
+            md = text;
+            fw = await pickFramework();
+            if (fw) nbPath = notebookPathFor(md, fw);
+        }
+    }
+    if (!md || !fw || !nbPath) {
+        vscode.window.showErrorMessage(
+            'Run & Capture: open a framework notebook (or a chapter_*/*.md) first');
+        return;
+    }
+
+    const root = workspaceRoot();
+    const srcRel = path.relative(root, md);                 // chapter_x/foo.md
+    const stamp = path.posix.join(
+        '_notebooks', fw, srcRel.replace(/\\/g, '/').replace(/\.md$/, '.executed'));
+
+    // Flush the editor so sync_back/capture see current cells.
+    await vscode.commands.executeCommand('workbench.action.files.save');
+
+    // Canonical refresh chain (same as the Makefile recipe in docs/build-system.md
+    // §5.2): push in-editor edits to source, regen+execute that one notebook with
+    // the Makefile's full env, then bless into the committed outputs/ store. Run in
+    // a terminal — execution can take minutes and inherits the shell's PATH/CUDA env.
+    const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+    const steps: string[] = [];
+    if (inNotebooks) {
+        steps.push(`${pyExe()} tools/sync_back.py --notebook ${q(nbPath)} `
+            + `--source ${q(md)} --framework ${fw}`);
+    }
+    steps.push(`make -B ${q(stamp)}`);
+    steps.push(`make capture-outputs FILES=${q(srcRel)}`);
+    const cmd = steps.join(' && ');
+
+    output.appendLine(`run+capture ${srcRel} (${fw}): ${cmd}`);
+    const name = 'd2l run+capture';
+    const term = vscode.window.terminals.find(t => t.name === name)
+        ?? vscode.window.createTerminal({ cwd: root, name });
+    term.show();
+    term.sendText(cmd);
+    vscode.window.showInformationMessage(
+        `d2l: running + capturing ${srcRel} (${fw}) — watch the '${name}' terminal, `
+        + `then run 'make html' to re-render. (GPU notebooks need a GPU host.)`);
+}
+
 let syncEnabled = true;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -290,6 +350,8 @@ export function activate(context: vscode.ExtensionContext) {
             lintSource(output, diag)),
         vscode.commands.registerCommand('d2l.openSlidePreview', () =>
             openSlidePreview(output)),
+        vscode.commands.registerCommand('d2l.runAndCapture', () =>
+            runAndCapture(output)),
         vscode.commands.registerCommand('d2l.toggleSyncDaemon', () => {
             syncEnabled = !syncEnabled;
             vscode.window.showInformationMessage(

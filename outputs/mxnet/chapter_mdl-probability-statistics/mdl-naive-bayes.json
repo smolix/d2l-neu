@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-naive-bayes.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:40278f4132e8c5b273ad8108c7f82de338defd43178b3913bc71e3e75790a0c7",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "naive-bayes-imports": {
+      "code_fingerprint": "sha256:b2c6334a89ce46d246d1c71fc0cfb6f8e9de51b09fb7377c2fa851dd3c41f885",
+      "kind": "text",
+      "outputs": []
+    },
+    "naive-bayes-load": {
+      "code_fingerprint": "sha256:721f3184dbe5025a40a7cce4176e0032a7b73d3ba8e5fb4ed6bfdd9b4e4bc185",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/train-images-idx3-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/train-labels-idx1-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/t10k-images-idx3-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/t10k-labels-idx1-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz...\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "((60000, 28, 28), (60000,))"
+        }
+      ]
+    },
+    "naive-bayes-train": {
+      "code_fingerprint": "sha256:ee26cc67961cafcab603efb4f85acb1a11782e2fb5d4b6ce9fdc255336b32bbd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.09871667, 0.11236667, 0.0993    , 0.10218333, 0.09736667,\n       0.09035   , 0.09863333, 0.10441667, 0.09751667, 0.09915   ])"
+        }
+      ]
+    },
+    "naive-bayes-templates": {
+      "code_fingerprint": "sha256:07abe1bb39fd31cd7023b45908bdcfdeeb02dbfc3cb68f2257416ca0e00f589c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
+          "bytes": 47657,
+          "sha256": "sha256:1cb9bbf7989ad214d250a6bf2823e200b52de67d41466fdff53c568c4ac5bcb6"
+        }
+      ]
+    },
+    "naive-bayes-predict": {
+      "code_fingerprint": "sha256:f5c472e7e77342797c70e10e5b7516ff04ba0ea6b4128aec74e341114a6d2dba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8427"
+        }
+      ]
+    }
+  }
+}

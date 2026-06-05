@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-naive-bayes.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2ee604c59760805cf6e14928aa06908d6dd75a2b7230bed2b464e7c6598e8ffd",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "naive-bayes-imports": {
+      "code_fingerprint": "sha256:d91e17376919a578ec38a32a8af6080d3ead9d690258d808c75bd1d8db9d962a",
+      "kind": "text",
+      "outputs": []
+    },
+    "naive-bayes-load": {
+      "code_fingerprint": "sha256:fa40b1a0c71dcf293d61f6e44624ee47581bfa315a6238eb94e43710c0a242e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((60000, 28, 28), (60000,))"
+        }
+      ]
+    },
+    "naive-bayes-train": {
+      "code_fingerprint": "sha256:624807fa35cb73892edfb24380c9827c902dab18e6a9222764bf46880ec7cf75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0.09871667, 0.11236667, 0.0993    , 0.10218333, 0.09736667,\n       0.09035   , 0.09863333, 0.10441667, 0.09751667, 0.09915   ])"
+        }
+      ]
+    },
+    "naive-bayes-templates": {
+      "code_fingerprint": "sha256:0259ad1474ab99e25b19cd63721b91a63e825f111d3abc25900df1a4f2f7700d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
+          "bytes": 47657,
+          "sha256": "sha256:c86ff486c9c7075819f688e217cbaa0e2179b4956db62a4a1785242ba51b9ddc"
+        }
+      ]
+    },
+    "naive-bayes-predict": {
+      "code_fingerprint": "sha256:b77ec92ed41c409f30a06c4490db89df554631b4287d61f887d8e9760354d3a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8427"
+        }
+      ]
+    }
+  }
+}

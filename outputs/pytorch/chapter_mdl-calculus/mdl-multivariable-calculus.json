@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multivariable-calculus-higher-dimensional-differentiation": {
+      "code_fingerprint": "sha256:68b2623e58512b31eefd4d30a72854565947bae74c5e3be26ec5b99955f4b683",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'approximation: 1.081946, true value: 1.082124'"
+        }
+      ]
+    },
+    "multivariable-calculus-a-note-on-mathematical-optimization": {
+      "code_fingerprint": "sha256:d5333da3641c041405be87bc1d8ada5a9746a19526a7696eb6a1537f38efd6f6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
+          "bytes": 13741,
+          "sha256": "sha256:a7a7e7fb66de16795c701f69c6eb22f41e8092cd236aa34c167fc7168e56b74f"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-1": {
+      "code_fingerprint": "sha256:d18d3adcd201c5d5f0e073310f43da44aec4f16d798c71c971cc6fd246b08f62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-2": {
+      "code_fingerprint": "sha256:96e13e88d660e35c438ee4eebb5db4713627e7a851a67e7ed02d88e3f2e9174b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\ndf/dx at -1, 0, -2, 1 is -4096\ndf/dy at -1, 0, -2, 1 is -4096\ndf/dz at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-3": {
+      "code_fingerprint": "sha256:f4c38922195bed8973599818a4e45e8b86924f644da36a3b4349d3c82f598639",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "df/dw at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dx at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dy at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dz at -1.0, 0.0, -2.0, 1.0 is -4096.0\n"
+        }
+      ]
+    },
+    "multivariable-calculus-hessians": {
+      "code_fingerprint": "sha256:67f93fa4cd12aa539c586f5c5b6b243bceebf85d1a36936a410541dcb882c260",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+        }
+      ]
+    }
+  }
+}

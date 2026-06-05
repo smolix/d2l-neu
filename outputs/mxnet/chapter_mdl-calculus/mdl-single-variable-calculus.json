@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-single-variable-calculus.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "single-variable-calculus-imports": {
+      "code_fingerprint": "sha256:16e5e0b3bd44a35b7a0463115df804ee6360888eff5b7651352e4b3aefd88e74",
+      "kind": "text",
+      "outputs": []
+    },
+    "single-variable-calculus-differential-calculus-4": {
+      "code_fingerprint": "sha256:d4b06887cabcf9e28c324fb15d5c4eabc813ef066f98a7aa57772eeeb730f4ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.10000 -> 25.11000\nepsilon = 0.00100 -> 8.00270\nepsilon = 0.00010 -> 8.00012\nepsilon = 0.00001 -> 8.00001\n"
+        }
+      ]
+    },
+    "single-variable-calculus-linear-approximation": {
+      "code_fingerprint": "sha256:635cc42ada87e6f82ef4c76389ffb1ed1f2a11a04a5789bfeeb4afb74fc31b37",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
+          "bytes": 15843,
+          "sha256": "sha256:65ecc4cad463f395d2b239df15fbeb481e2c02c680f4f35d79723a471b3cfa9d"
+        }
+      ]
+    },
+    "single-variable-calculus-gradient-descent": {
+      "code_fingerprint": "sha256:0d87c35cfe7be6cfc49e6a9cb11d43b78ebcdfc1fc43d13612fb058d8287e915",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta = 0.05 -> x_10 = +0.34868\neta = 0.50 -> x_10 = +0.00000\neta = 0.90 -> x_10 = +0.10737\neta = 1.00 -> x_10 = +1.00000\neta = 1.10 -> x_10 = +6.19174\n"
+        }
+      ]
+    },
+    "single-variable-calculus-higher-order-derivatives": {
+      "code_fingerprint": "sha256:0845c18fb9967f46754c234e3099dee8790095688d5f88d51f489d7aaf389598",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
+          "bytes": 17897,
+          "sha256": "sha256:80b94db5804ff5813bbfd97382e9fa80f6769feb86f76348c52601acbfbdef37"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-series": {
+      "code_fingerprint": "sha256:fed64751ff5c5cc184f3360023dd8c9e423fc366d92cf6fb0a5adaa264230e6a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
+          "bytes": 28558,
+          "sha256": "sha256:4f200b601a03cd26168a4e905f36731663a6406c60f68bef620f6acba59919db"
+        }
+      ]
+    },
+    "single-variable-calculus-one-sided": {
+      "code_fingerprint": "sha256:02beb163f9662b7d74945361df07000a07e7ae2c86519acae53065d4fa30b093",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.10000 -> left = -1.0, right = +1.0\nepsilon = 0.00100 -> left = -1.0, right = +1.0\nepsilon = 0.00010 -> left = -1.0, right = +1.0\nepsilon = 0.00001 -> left = -1.0, right = +1.0\n"
+        }
+      ]
+    }
+  }
+}

@@ -84,11 +84,13 @@ if $STAGE_SLIDES && [[ -d _slides ]]; then
     find "$BOOK_DIR/slides" -mindepth 2 -maxdepth 2 -type l \
         \( -name data -o -name img \) -delete
     find "$BOOK_DIR/slides" -mindepth 3 -maxdepth 3 -name '*.html' \
-        -exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +
+        -exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +
 fi
 
 ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-S3_ARGS=(--endpoint-url "$ENDPOINT")
+# R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
+# upload is independent of the ambient ~/.aws/config default region.
+S3_ARGS=(--endpoint-url "$ENDPOINT" --region auto)
 
 # ── Hash the local tree ─────────────────────────────────────
 # sha256sum format: `<64-hex>  <path>` — 64 + 2 + path.
@@ -136,7 +138,7 @@ upload_one() {
         *.json) ct="application/json; charset=utf-8" ;;
         *)      ct="" ;;
     esac
-    local args=(--endpoint-url "$R2_ENDPOINT")
+    local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
     if [[ -n "$ct" ]]; then
         args+=(--content-type "$ct")
     fi
@@ -149,7 +151,7 @@ upload_one() {
 # ── Delete one bucket object ────────────────────────────────
 delete_one() {
     local rel=$1
-    local args=(--endpoint-url "$R2_ENDPOINT")
+    local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
     if [[ -n "${DRY_RUN:-}" ]]; then
         args+=("$DRY_RUN")
     fi
@@ -167,10 +169,11 @@ upload_changed() {
         return
     fi
     echo "  Uploading $count file(s) with $UPLOAD_JOBS worker(s)..."
-    # Each line in $list is a relative path under $BOOK_DIR. -d '\n'
-    # keeps paths with spaces intact.
+    # Each line in $list is a relative path under $BOOK_DIR. NUL-delimit via tr
+    # so paths with spaces stay intact and xargs -0 works on both GNU and BSD
+    # (macOS) xargs (which lacks GNU's -a/-d).
     # shellcheck disable=SC2016
-    xargs -a "$list" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+    tr '\n' '\0' < "$list" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
         bash -c 'upload_one "$1"' _ {}
 }
 
@@ -247,7 +250,7 @@ else
     if $DELETE && [[ $REMOVED -gt 0 ]]; then
         echo "  Removing $REMOVED file(s) from bucket with $UPLOAD_JOBS worker(s)..."
         # shellcheck disable=SC2016
-        xargs -a "$WORK_DIR/removed.txt" -d '\n' -P "$UPLOAD_JOBS" -I{} \
+        tr '\n' '\0' < "$WORK_DIR/removed.txt" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
             bash -c 'delete_one "$1"' _ {}
         echo "  Removing bucket .quarto cache objects..."
         aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \

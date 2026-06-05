@@ -175,10 +175,11 @@ cross-references. The primary framework (PyTorch) gets executable code
 cells; others are display-only.
 
 `fix_crossref_numbers.py` remaps Quarto's file-position chapter numbers
-to logical chapter numbers (defined in `CHAPTER_NUMBERING`, a 191-entry
-static map in d2l_preprocess.py). It patches `header-section-number`
+to logical chapter numbers (defined in `CHAPTER_NUMBERING`, a 208-entry
+static map in d2l_preprocess.py; a source file *absent* from it renders
+unnumbered — see build-system.md §4.1). It patches `header-section-number`
 spans, `data-number` attributes, sidebar entries, and equation/figure
-references across all 192 HTML files.
+references across all 209 HTML files.
 
 #### PDF (single-framework, parallel-safe)
 

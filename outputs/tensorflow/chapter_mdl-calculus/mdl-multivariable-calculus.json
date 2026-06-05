@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multivariable-calculus-higher-dimensional-differentiation": {
+      "code_fingerprint": "sha256:0a525ffa1a233a7bd46942bd56e62486b4a365f090f69d75332322310e5b554f",
+      "kind": "text",
+      "outputs": []
+    },
+    "multivariable-calculus-a-note-on-mathematical-optimization": {
+      "code_fingerprint": "sha256:1446ca218e30edde5116979e03bdf97c2f4641eafe191c86d48ce0ca2b4d0067",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
+          "bytes": 13772,
+          "sha256": "sha256:c2dbb236229025376060117dedb2ab83aab59f5e057c68440905c060bfb9bf09"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-1": {
+      "code_fingerprint": "sha256:e0da01b598811dc882ea27c76bd5fee9019dfbc7a7caae72667472dd018993de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-2": {
+      "code_fingerprint": "sha256:5f1cdc7723a68df1bf50859481e9643015c7befe8e4fef46469c1792abe42823",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\ndf/dx at -1, 0, -2, 1 is -4096\ndf/dy at -1, 0, -2, 1 is -4096\ndf/dz at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-3": {
+      "code_fingerprint": "sha256:63f7add7c6cd54b994670a06b53e686c2b3ad7e4321b0df515840f9ecf30add5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "df/dw at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dx at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dy at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dz at [-1.], [0.], [-2.], [1.] is [-4096.]\n"
+        }
+      ]
+    },
+    "multivariable-calculus-hessians": {
+      "code_fingerprint": "sha256:f09d969da44c342073dc0c5f1e06db9c86b5937a34a54a406f5055ca9aaaa1a0",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

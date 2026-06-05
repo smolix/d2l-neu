@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-eigendecomposition.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "eigendecomposition-imports": {
+      "code_fingerprint": "sha256:87f57ae83a86bcf0cac2ac5ee7a2ea8ed720c2aac4e9a0cc8b109432874b7d2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "eigendecomposition-an-example": {
+      "code_fingerprint": "sha256:31aa2a5024be9ebfd8d9924fbf25cd93c9f6d9445a30d15bb0bc777dbd6a66e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.return_types.linalg_eig(\neigenvalues=tensor([1.+0.j, 4.+0.j], dtype=torch.complex128),\neigenvectors=tensor([[-0.7071+0.j, -0.4472+0.j],\n        [ 0.7071+0.j, -0.8944+0.j]], dtype=torch.complex128))"
+        }
+      ]
+    },
+    "eigendecomposition-psd-gram": {
+      "code_fingerprint": "sha256:0addc74f0263ddaa96d413f18b87871dd762cbe86424b497db4f5155dfd20ba2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full column rank: eigenvalues of X^T X = [1.1459 7.8541]\ndependent columns: eigenvalues of X^T X = [ 0. 30.]\n"
+        }
+      ]
+    },
+    "eigendecomposition-gershgorin-circle-theorem": {
+      "code_fingerprint": "sha256:c884ad426f0e8f24c349be3dc0550b8f147c41eaebb269e4e8365c513e7de23b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0.9923+0.j, 9.0803+0.j, 4.9539+0.j, 2.9734+0.j])"
+        }
+      ]
+    },
+    "eigendecomposition-power-iteration": {
+      "code_fingerprint": "sha256:736d23ad9dcae188184fddae8a7a5a8efec7c0b0b6c452833098aed5a6811cc7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stabilized norm ratio = 2.4532329634   max|eigenvalue| = 2.4532329634\n"
+        }
+      ]
+    },
+    "eigendecomposition-complex-rotation": {
+      "code_fingerprint": "sha256:cc18042a51bef83b6f470fe9973c3c2934831e02ecf343bbdc14bb1e8d729607",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of R: [0.866+0.5j 0.866-0.5j]\nexpected e^{+/- i*theta}: [0.866+0.5j 0.866-0.5j]\nmoduli (should be 1): [1. 1.]\n"
+        }
+      ]
+    }
+  }
+}

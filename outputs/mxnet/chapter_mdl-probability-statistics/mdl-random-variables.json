@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "random-variables-imports": {
+      "code_fingerprint": "sha256:16e5e0b3bd44a35b7a0463115df804ee6360888eff5b7651352e4b3aefd88e74",
+      "kind": "text",
+      "outputs": []
+    },
+    "random-variables-density-to-probability": {
+      "code_fingerprint": "sha256:53bfcd4ca9567ad2d353c0fdfc197f8701e819d43f3601cd63843309532b8d01",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+        }
+      ]
+    },
+    "random-variables-cauchy-diverges": {
+      "code_fingerprint": "sha256:38144d128a7c0004e6d0f060dc0e82878cd21d1f20bf1aa64286924ca37551ea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.664\nintegral_-1000^1000 x^2 p(x) dx = 634.777\n"
+        }
+      ]
+    }
+  }
+}

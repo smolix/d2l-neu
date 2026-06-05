@@ -1,8 +1,8 @@
 {
   "name": "d2l-tools",
   "displayName": "d2l Tools",
-  "description": "Workspace tools for the d2l-neu (Dive into Deep Learning) source repository: per-framework notebook editing, slide preview, source linting, and sync-back of notebook edits to source .md.",
-  "version": "0.1.0",
+  "description": "Workspace tools for the d2l-neu (Dive into Deep Learning) source repository: per-framework notebook editing and local execution (via the d2l-<fw> kernels), slide preview, source linting, and sync-back of notebook edits to source .md.",
+  "version": "0.2.0",
   "publisher": "d2l-internal",
   "engines": {
     "vscode": "^1.85.0"
@@ -47,9 +47,39 @@
         "category": "D2L"
       },
       {
+        "command": "d2l.runAndCapture",
+        "title": "D2L: Run & Capture Notebook (refresh committed outputs)",
+        "category": "D2L"
+      },
+      {
         "command": "d2l.toggleSyncDaemon",
         "title": "D2L: Toggle Sync Daemon",
         "category": "D2L"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "d2l.editFrameworkView",
+        "key": "ctrl+e ctrl+j",
+        "mac": "cmd+e cmd+j",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "d2l.switchFramework",
+        "key": "ctrl+e ctrl+s",
+        "mac": "cmd+e cmd+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "d2l.watchSlides",
+        "key": "ctrl+e ctrl+w",
+        "mac": "cmd+e cmd+w",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "d2l.runAndCapture",
+        "key": "ctrl+e ctrl+r",
+        "mac": "cmd+e cmd+r"
       }
     ],
     "configuration": {

@@ -1,0 +1,751 @@
+# Single Variable Calculus
+:label:`sec_mdl-single_variable_calculus`
+
+In :numref:`sec_calculus`, we met the basic elements of differential calculus. This section goes deeper, building the one-variable theory we actually lean on in deep learning: the derivative as a *local linear model*, the rules that compute it mechanically, and three things that local model is *for* --- it hands us gradient descent, it explains curvature through the second derivative and Taylor series, and it tells us exactly what to do at the corners of a function like $\mathrm{ReLU}$ where the model breaks down.
+
+## The Derivative
+
+Differential calculus is, at heart, the study of how a function behaves under a *small change* of its input. To see why this is the question deep learning cares about, picture a neural network whose weights are stacked into one long vector $\mathbf{w} = (w_1, \ldots, w_n)$, and write $L(\mathbf{w})$ for its loss on a training set. This $L$ is hopelessly complicated --- it encodes the performance of *every* model of the given architecture --- so we cannot simply read off the minimizing $\mathbf{w}$. Instead we initialize $\mathbf{w}$ randomly and take small steps that make $L$ decrease as fast as possible. Everything in this section is in service of one question: *which way is downhill, and by how much?* We answer it first for a single weight, $L(\mathbf{w}) = f(x)$ with $x \in \mathbb{R}$.
+
+### Zooming In: Every Smooth Curve Looks Like a Line
+
+Take a point $x$ and nudge it to $x + \epsilon$ for a tiny $\epsilon$ --- if it helps, picture $\epsilon = 10^{-7}$. The decisive observation is geometric. Plot any familiar function, say $f(x) = \sin(x^x)$ on $[0,3]$, and it wiggles in a complicated way; but zoom in on a small window around a point and the wiggles flatten out, until on a small enough scale the graph is indistinguishable from a *straight line*. :numref:`fig_mdl-zoom-sequence` shows this for three successively smaller windows.
+
+![The same smooth curve viewed over shrinking $x$-ranges: as we zoom in around the base point it flattens onto its tangent line.](../img/mdl-cal-zoom-sequence.svg)
+:label:`fig_mdl-zoom-sequence`
+
+This is the founding idea of single-variable calculus: *locally, a smooth function is a line.* So as we shift $x$ by a little, $f(x)$ shifts by a little too, and the only thing left to pin down is the proportionality --- is the output change half the input change? Twice? That ratio is the slope of the line we zoomed in on.
+
+### The Difference Quotient and the Derivative
+
+To measure that slope we compare the change in output to the change in input,
+
+$$
+\frac{f(x+\epsilon) - f(x)}{(x+\epsilon) - x} = \frac{f(x+\epsilon) - f(x)}{\epsilon},
+$$
+
+the slope of the *secant* line through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$. As $\epsilon$ shrinks, the second point slides toward the first and the secant rotates into the tangent line we saw under the microscope; :numref:`fig_mdl-secant-to-tangent` shows this rotation. We can watch the slope settle down in code. We rely on a single set of imports throughout the section; the few code cells that follow use the framework's own tensor library and the d2l plotting helpers.
+
+![The difference quotient is the slope of the secant through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$; as $\epsilon \to 0$ the second point slides toward the first and the secant rotates into the tangent line, whose slope is the derivative $f'(x)$.](../img/mdl-cal-secant-to-tangent.svg)
+:label:`fig_mdl-secant-to-tangent`
+
+```{.python .input #single-variable-calculus-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+from mxnet import np, npx
+npx.set_np()
+```
+
+```{.python .input #single-variable-calculus-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import torch
+torch.pi = torch.acos(torch.zeros(1)).item() * 2  # Define pi in torch
+```
+
+```{.python .input #single-variable-calculus-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
+```
+
+```{.python .input #single-variable-calculus-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+```
+
+Take $f(x) = x^2 + 1701(x-4)^3$ and evaluate the difference quotient at $x = 4$ for shrinking $\epsilon$.
+
+```{.python .input #single-variable-calculus-differential-calculus-4}
+# Define our function
+def f(x):
+    return x**2 + 1701*(x-4)**3
+
+# Slope of the secant through x=4, for shrinking epsilon
+for epsilon in [0.1, 0.001, 0.0001, 0.00001]:
+    print(f'epsilon = {epsilon:.5f} -> {(f(4+epsilon) - f(4)) / epsilon:.5f}')
+```
+
+The numbers march toward $8$, and the smaller $\epsilon$ gets the closer they sit. The cubic is there to make the convergence *visible*: expanding $f(4+\epsilon) - f(4) = 8\epsilon + \epsilon^2 + 1701\,\epsilon^3$, the difference quotient is $8 + \epsilon + 1701\,\epsilon^2$, so the cubic contributes a $1701\,\epsilon^2$ error --- a hefty $17$ at $\epsilon = 0.1$, which is exactly why the top row sits so far off, but a negligible $1.7\times10^{-7}$ once $\epsilon$ reaches $10^{-5}$. So the slope we are after at $x = 4$ is $8$, written
+
+$$
+\lim_{\epsilon \rightarrow 0}\frac{f(4+\epsilon) - f(4)}{\epsilon} = 8.
+$$
+
+A historical aside. In the first decades of neural-network research this very computation --- the *method of finite differences* --- was how people measured the effect of a weight on the loss: perturb the weight, re-run the network, watch the loss move. It costs two full evaluations of $L$ per weight, so with even a few thousand parameters it is thousands of forward passes for a single gradient. That bottleneck fell in 1986, when the *backpropagation algorithm* popularized by :citet:`Rumelhart.Hinton.Williams.ea.1988` showed how to get the effect of *all* weights at once, at the cost of essentially a single forward pass. Backpropagation is the chain rule (below) run in reverse over the network.
+
+The slope is itself a function of $x$, so we name it. The **derivative** of $f$ is
+
+$$\frac{df}{dx}(x) = \lim_{\epsilon \rightarrow 0}\frac{f(x+\epsilon) - f(x)}{\epsilon},$$
+:eqlabel:`eq_mdl-der_def`
+
+when the limit exists. (When it fails to --- as at the corner of $\mathrm{ReLU}$ --- we will need the refinement of :numref:`sec_mdl-tangent-fails`.) Many notations denote this same object, and it pays to recognize all of them:
+
+$$
+\frac{df}{dx} = \frac{d}{dx}f = f' = D_xf = f_x.
+$$
+
+We default to $\frac{df}{dx}$, switching to $\frac{d}{dx}f$ when differentiating a bulky expression such as $\frac{d}{dx}\left[x^4+\cos\left(\frac{x^2+1}{2x-1}\right)\right]$.
+
+### The Small-Change Identity
+
+Rearranging the definition gives the single most useful equation in this section. Since the quotient approaches the derivative, for small $\epsilon$
+
+$$
+\frac{f(x+\epsilon) - f(x)}{\epsilon} \approx \frac{df}{dx}(x)
+\quad\Longrightarrow\quad
+f(x+\epsilon) \approx f(x) + \epsilon \frac{df}{dx}(x).
+$$
+:eqlabel:`eq_mdl-small_change`
+
+Read it aloud: *nudge the input by $\epsilon$ and the output moves by $\epsilon$ times the derivative.* The derivative is the exchange rate between an input change and the output change it buys. We will use the symbol "$\approx$" throughout to mean "equal up to terms that vanish faster than $\epsilon$ as $\epsilon \to 0$." Almost everything that follows --- the differentiation rules, gradient descent, Taylor series --- is :eqref:`eq_mdl-small_change` applied with a different face on.
+
+## Computing Derivatives
+:label:`sec_mdl-derivative_table`
+
+A fully formal course would build every derivative from the limit :eqref:`eq_mdl-der_def`. We take the working mathematician's route instead: a short table of derivatives for the elementary functions, plus a handful of *rules* for combining them, from which any expression built out of sums, products, and compositions can be differentiated mechanically.
+
+### A Table of Common Derivatives
+
+As in :numref:`sec_calculus`, most derivatives reduce to a few core ones, repeated here for reference.
+
+* **Derivative of constants.** $\frac{d}{dx}c = 0$.
+* **Derivative of linear functions.** $\frac{d}{dx}(ax) = a$.
+* **Power rule.** $\frac{d}{dx}x^n = nx^{n-1}$.
+* **Derivative of exponentials.** $\frac{d}{dx}e^x = e^x$.
+* **Derivative of the logarithm.** $\frac{d}{dx}\log(x) = \frac{1}{x}$.
+* **Derivative of sine.** $\frac{d}{dx}\sin(x) = \cos(x)$.
+* **Derivative of cosine.** $\frac{d}{dx}\cos(x) = -\sin(x)$.
+
+### Three Rules from One Identity
+
+Storing a derivative for every conceivable function is hopeless. What makes calculus tractable is that derivatives respect the three ways we *build* functions --- adding, multiplying, and composing --- so any expression assembled from the table can be differentiated by following the matching rules:
+
+* **Sum rule.** $\frac{d}{dx}\left(g(x) + h(x)\right) = \frac{dg}{dx}(x) + \frac{dh}{dx}(x)$.
+* **Product rule.** $\frac{d}{dx}\left(g(x)\, h(x)\right) = g(x)\frac{dh}{dx}(x) + \frac{dg}{dx}(x)h(x)$.
+* **Quotient rule.** $\frac{d}{dx}\left(\frac{g(x)}{h(x)}\right) = \frac{\frac{dg}{dx}(x)h(x) - g(x)\frac{dh}{dx}(x)}{h(x)^2}$, valid wherever $h(x)\neq 0$.
+* **Chain rule.** $\frac{d}{dx}g(h(x)) = \frac{dg}{dh}(h(x))\cdot \frac{dh}{dx}(x)$.
+
+Each of these is one line of the small-change identity :eqref:`eq_mdl-small_change`. The recipe never varies: write $f(x+\epsilon)$, expand every factor to first order in $\epsilon$, and read off the coefficient of $\epsilon$ --- that coefficient *is* the derivative, because :eqref:`eq_mdl-small_change` says $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$.
+
+**Sum rule.** Expanding each summand,
+
+$$
+f(x+\epsilon) = g(x+\epsilon) + h(x+\epsilon)
+\approx \Bigl(g(x) + h(x)\Bigr) + \epsilon\left(\frac{dg}{dx}(x) + \frac{dh}{dx}(x)\right),
+$$
+
+so the coefficient of $\epsilon$ --- the derivative --- is $\frac{dg}{dx}(x) + \frac{dh}{dx}(x)$. Two changes simply add. $\blacksquare$
+
+**Product rule.** Expanding both factors and multiplying out,
+
+$$
+\begin{aligned}
+f(x+\epsilon) = g(x+\epsilon)\,h(x+\epsilon)
+&\approx \left(g(x) + \epsilon g'(x)\right)\left(h(x) + \epsilon h'(x)\right) \\
+&= g(x)h(x) + \epsilon\Bigl(g(x)h'(x) + g'(x)h(x)\Bigr) + \underbrace{\epsilon^2\, g'(x)h'(x)}_{\textrm{higher order}}.
+\end{aligned}
+$$
+
+The $\epsilon^2$ term is a *higher-order term*: with $\epsilon = 10^{-7}$ it is $10^{-14}$, dwarfed by the $\epsilon$ term, and it vanishes faster than $\epsilon$ as $\epsilon \to 0$. Dropping it, the coefficient of $\epsilon$ gives $g(x)h'(x) + g'(x)h(x)$. The lopsided shape --- *differentiate one factor, leave the other alone, then swap* --- is exactly the two ways a rectangle of sides $g$ and $h$ grows when both sides stretch. (If you want to avoid "$\approx$" entirely, divide the line above by $\epsilon$: the difference quotient equals $g(x)h'(x)+g'(x)h(x) + \epsilon\,g'(x)h'(x)$, whose last term goes to $0$.) $\blacksquare$
+
+**Chain rule.** Compose, then expand the *inner* function first and feed the result into the *outer* one:
+
+$$
+\begin{aligned}
+f(x+\epsilon) = g\bigl(h(x+\epsilon)\bigr)
+&\approx g\!\left(h(x) + \epsilon\, h'(x)\right)
+&&\text{(inner: small-change identity)}\\
+&\approx g(h(x)) + \epsilon\, h'(x)\, \frac{dg}{dh}(h(x))
+&&\text{(outer: small-change identity, with step } \epsilon h'(x)).
+\end{aligned}
+$$
+
+The coefficient of $\epsilon$ is $\frac{dg}{dh}(h(x))\, h'(x)$: a change in $x$ moves $h$ by $\epsilon h'(x)$, and that in turn moves $g$ by its own derivative times that step --- *the rates multiply*. The one subtlety is the second line, where we fed the *variable* step $\epsilon h'(x)$ into $g$'s small-change identity: because $g$ is differentiable at $h(x)$, its error term is $o(\text{step}) = o(\epsilon h'(x))$, which is still $o(\epsilon)$ and so vanishes faster than the $\epsilon$ we keep. (The borderline case $h'(x) = 0$, where the step degenerates, is handled cleanly by the standard error-function form of the proof --- write $g(h(x)+s) = g(h(x)) + (g'(h(x)) + r(s))\,s$ with $r(s)\to 0$, substitute $s = \epsilon h'(x) + o(\epsilon)$, and the same coefficient drops out.) This chaining of local linear factors, applied across the layers of a network, is precisely backpropagation. (The quotient rule is the product and chain rules applied to $g\cdot h^{-1}$; we leave it as an exercise.) $\blacksquare$
+
+Together these rules let us differentiate essentially anything in closed form. For instance,
+
+$$
+\begin{aligned}
+\frac{d}{dx}\left[\log\left(1+(x-1)^{10}\right)\right] & = \left(1+(x-1)^{10}\right)^{-1}\frac{d}{dx}\left[1+(x-1)^{10}\right]\\
+& = \left(1+(x-1)^{10}\right)^{-1}\left(\frac{d}{dx}[1] + \frac{d}{dx}[(x-1)^{10}]\right) \\
+& = \left(1+(x-1)^{10}\right)^{-1}\left(0 + 10(x-1)^9\frac{d}{dx}[x-1]\right) \\
+& = 10\left(1+(x-1)^{10}\right)^{-1}(x-1)^9 \\
+& = \frac{10(x-1)^9}{1+(x-1)^{10}}.
+\end{aligned}
+$$
+
+Where each line has used the following rules:
+
+1. The chain rule and derivative of logarithm.
+2. The sum rule.
+3. The derivative of constants, chain rule, and power rule.
+4. The sum rule, derivative of linear functions, derivative of constants.
+
+Two lessons follow. First, *anything* assembled from sums, products, constants, powers, exponentials, and logarithms can be differentiated mechanically. Second, doing so by hand is tedious and error-prone --- a perfect candidate for mechanization, which is exactly what automatic differentiation (:numref:`sec_autograd`) provides.
+
+## Linear Approximation and Gradient Descent
+
+The small-change identity is not only a calculation tool; it is the bridge to optimization. We first read it geometrically as the *tangent line*, then turn it into the gradient-descent step.
+
+### The Tangent Line
+
+Reading :eqref:`eq_mdl-small_change` as a function of the displacement, the line
+
+$$
+f(x+\epsilon) \approx f(x) + \epsilon \frac{df}{dx}(x)
+$$
+
+passes through $(x, f(x))$ with slope $\frac{df}{dx}(x)$: it is the *tangent* at $x$, the best straight-line model of $f$ nearby and the limit of the rotating secants of :numref:`fig_mdl-secant-to-tangent`. Drawing the tangent at several points of $\sin$, using $\frac{d}{dx}\sin(x) = \cos(x)$, shows each line hugging the curve in a neighborhood and peeling away as we move off.
+
+```{.python .input #single-variable-calculus-linear-approximation}
+#@tab mxnet
+# Compute sin
+xs = np.arange(-np.pi, np.pi, 0.01)
+plots = [np.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0, 2]:
+    plots.append(np.sin(x0) + (xs - x0) * np.cos(x0))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-linear-approximation}
+#@tab pytorch
+# Compute sin
+xs = torch.arange(-torch.pi, torch.pi, 0.01)
+plots = [torch.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(torch.sin(torch.tensor(x0)) + (xs - x0) *
+                 torch.cos(torch.tensor(x0)))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-linear-approximation}
+#@tab tensorflow
+# Compute sin
+xs = tf.range(-tf.pi, tf.pi, 0.01)
+plots = [tf.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(tf.sin(tf.constant(x0)) + (xs - x0) *
+                 tf.cos(tf.constant(x0)))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-linear-approximation}
+#@tab jax
+# Compute sin
+xs = jnp.arange(-jnp.pi, jnp.pi, 0.01)
+plots = [jnp.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(jnp.sin(x0) + (xs - x0) * jnp.cos(x0))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+### The Gradient-Descent Step
+
+Here is the move that powers the rest of deep learning. So far we have *observed* $\epsilon$; now we get to *choose* it. In the small-change identity :eqref:`eq_mdl-small_change` the step $\epsilon$ is ours to pick, and we want to pick it so that $f$ goes *down*. The identity already tells us the price of any step: a step $\epsilon$ buys an output change of about $\epsilon\, f'(x)$. To make that change negative as cheaply as possible, point the step opposite the slope. Take $\epsilon = -\eta\, f'(x)$ for a step size $\eta > 0$ --- and, *if the step is not too large*, the descent is guaranteed.
+
+The qualification matters. The small-change identity by itself only describes the first-order *model*; turning "the model goes down" into "$f$ really goes down" needs control on how fast the slope can change over the step, which is exactly the curvature. The clean hypothesis is that $f'$ is **$L$-Lipschitz** near $x$ --- $|f'(u) - f'(v)| \le L\,|u-v|$ for $u,v$ in a neighborhood --- so the slope cannot swing by more than $L$ per unit of $x$. (If $f$ is twice differentiable this just says $|f''| \le L$ there.) Under that single assumption the first-order *guess* becomes a genuine *inequality*.
+
+**Proposition (descent lemma).** *Suppose $f'$ is $L$-Lipschitz on a neighborhood of $x$. Then for every step size $\eta > 0$ small enough that the segment stays in that neighborhood,*
+
+$$
+f\bigl(x - \eta\, f'(x)\bigr) \;\le\; f(x) - \eta\left(1 - \tfrac{L\eta}{2}\right)[f'(x)]^2.
+$$
+:eqlabel:`eq_mdl-descent`
+
+*In particular $f$ strictly decreases whenever $0 < \eta < 2/L$ and $f'(x) \neq 0$, and the bound is tightest at the optimal step $\eta = 1/L$, where it reads $f(x - \tfrac1L f'(x)) \le f(x) - \tfrac{1}{2L}[f'(x)]^2$.*
+
+**Proof.** Write the exact change in $f$ along the step as an integral of the slope (the fundamental theorem of calculus, :numref:`sec_mdl-integral_calculus`), then add and subtract the slope at the base point:
+
+$$
+f(x+s) - f(x) = \int_0^1 f'(x + t s)\, s \, dt = f'(x)\, s + \int_0^1 \bigl(f'(x + t s) - f'(x)\bigr) s\, dt.
+$$
+
+Bounding the remaining integrand with the Lipschitz hypothesis, $|f'(x+ts) - f'(x)| \le L\,|ts| = Lt|s|$, and using $\int_0^1 t\, dt = \tfrac12$ gives $f(x+s) \le f(x) + f'(x)\,s + \tfrac{L}{2}s^2$. Now insert the descent step $s = -\eta\,f'(x)$:
+
+$$
+f\bigl(x - \eta\, f'(x)\bigr) \le f(x) - \eta\,[f'(x)]^2 + \tfrac{L}{2}\eta^2 [f'(x)]^2 = f(x) - \eta\left(1 - \tfrac{L\eta}{2}\right)[f'(x)]^2.
+$$
+
+The bracket $1 - L\eta/2$ is positive exactly for $\eta < 2/L$, and as a function of $\eta$ the whole coefficient $\eta(1 - L\eta/2)$ is maximized at $\eta = 1/L$. $\blacksquare$
+
+The leading term $-\eta\,[f'(x)]^2$ is the first-order promise of :eqref:`eq_mdl-small_change`; the new $+\tfrac{L}{2}\eta^2[f'(x)]^2$ is the *curvature tax* the model ignored, and the lemma shows it stays a strict bargain as long as $\eta < 2/L$. The square is still the whole point: *whatever* the sign of the slope, moving against it lowers $f$, by an amount proportional to the slope *squared* --- steepest where the function is steepest, vanishing only where $f'(x) = 0$. Iterating the step is **gradient descent**, the one-dimensional version of the loop that trains every network in this book,
+
+$$
+x_{t+1} = x_t - \eta\, f'(x_t),
+$$
+:eqlabel:`eq_mdl-gd-loop`
+
+which is exactly the weight update $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla L(\mathbf{w})$ from the introduction, one coordinate at a time. :numref:`fig_mdl-gd-step` shows a single step: stand at $x$, follow the tangent downhill by $-\eta f'(x)$, and land lower on the curve.
+
+![One gradient-descent step on a 1-D bowl. At $x$ the tangent line has slope $f'(x)$; the step $-\eta f'(x)$ moves opposite the slope and lands at $x - \eta f'(x)$, lower on the curve, with the drop equal to $\eta f'(x)^2$ to first order.](../img/mdl-cal-gd-step.svg)
+:label:`fig_mdl-gd-step`
+
+Two consequences deserve emphasis. The descent stalls *exactly* at the **stationary condition** $f'(x) = 0$: the update stops moving and :eqref:`eq_mdl-descent` predicts no further decrease, which is why $f'(x) = 0$ is the equation we solve to find candidate minima. And the descent lemma pins down what "too large a step" means: the guaranteed decrease holds only for $\eta < 2/L$, and at $\eta = 2/L$ the curvature tax exactly cancels the first-order gain. Push $\eta$ past $2/L$ and the bound flips sign --- a single step can overshoot the minimum and *increase* $f$, the failure mode analyzed at length in :numref:`sec_gd`. So the Lipschitz constant $L$ of the slope --- the curvature, which the second derivative measures next --- is precisely what sets how large $\eta$ may safely be.
+
+We can see all of this on the cleanest possible example, $f(x) = x^2$, whose slope is $f'(x) = 2x$. The gradient-descent step becomes
+
+$$
+x_{t+1} = x_t - \eta\,(2x_t) = (1 - 2\eta)\, x_t,
+$$
+
+a simple geometric recursion with closed form $x_t = (1-2\eta)^t x_0$. So the iterates converge to the minimum $x = 0$ exactly when $|1 - 2\eta| < 1$, i.e. for $0 < \eta < 1$ --- and this is the descent lemma made exact, since here $f'' \equiv 2$ so $L = 2$ and the safe range $\eta < 2/L = 1$ is precisely the convergence threshold. Within it, tiny $\eta$ creeps in monotonically, the optimal $\eta = 1/L = \tfrac12$ jumps to the minimum in one step, $\tfrac12 < \eta < 1$ overshoots and oscillates inward, and $\eta \ge 1$ diverges. The next code cell runs the recursion for a sweep of step sizes and prints $x_t$ after several steps, echoing the finite-difference table at the start of the section.
+
+```{.python .input #single-variable-calculus-gradient-descent}
+# Gradient descent on f(x) = x^2 from x0 = 1, for several step sizes
+def gd(eta, steps=10, x0=1.0):
+    x = x0
+    for _ in range(steps):
+        x = x - eta * (2 * x)   # x <- x - eta * f'(x), with f'(x) = 2x
+    return x
+
+for eta in [0.05, 0.5, 0.9, 1.0, 1.1]:
+    print(f'eta = {eta:.2f} -> x_10 = {gd(eta):+.5f}')
+```
+
+The output confirms the analysis: small $\eta$ approaches $0$, $\eta = 0.5$ lands on it, $\eta = 0.9$ converges while oscillating in sign, $\eta = 1.0$ sits frozen at $|x|=1$, and $\eta = 1.1$ blows up.
+
+## Curvature and Taylor Series
+
+The first derivative gave us the best *line* through a point. Its own derivative --- the second derivative --- measures how the slope itself bends, which is what distinguishes a minimum from a maximum and what limited the step size above. Pushing the idea to higher derivatives yields the *Taylor series*, the best polynomial model of a function.
+
+### Higher-Order Derivatives and Curvature
+
+The derivative $\frac{df}{dx}$ is itself a function, so nothing stops us from differentiating it again. Doing so yields the *second derivative*, $\frac{d^2f}{dx^2} = \frac{d}{dx}\!\left(\frac{df}{dx}\right)$ --- the derivative *operator* applied twice, **not** the square of $\frac{df}{dx}$. It is the rate of change of the rate of change: how the slope itself is changing. Repeating gives the $n$-th derivative,
+
+$$
+f^{(n)}(x) = \frac{d^{n}f}{dx^{n}} = \left(\frac{d}{dx}\right)^{n} f.
+$$
+
+What does the second derivative *tell* us? Its **sign** is the direction the curve bends, and read *locally* this is the classifier we need for optimization. Suppose $x_0$ is a stationary point, $f'(x_0) = 0$. The second derivative is the rate of change of the slope, so $f''(x_0) > 0$ means the slope is *increasing* as it passes through $0$: just left of $x_0$ the slope is negative ($f$ falling), just right of $x_0$ it is positive ($f$ rising). The function dips and turns back up, so $x_0$ is a **local minimum**. Symmetrically, $f''(x_0) < 0$ means the slope is decreasing through $0$ --- positive then negative --- so $f$ rises and turns back down and $x_0$ is a **local maximum**. This is the **second-derivative test**, and it certifies *only the neighborhood* of $x_0$, not the whole function; the global picture, when $f$ is convex, is the subject of :numref:`sec_gd`.
+
+The three constant-curvature functions are the cleanest pictures of what each sign *means*, even though most functions have a varying $f''$. A positive constant $f''$ keeps the slope increasing everywhere, so $f'$ runs from negative through zero to positive and the graph is a single upward bowl (:numref:`fig_mdl-positive-second`) --- exactly the bowl that gradient descent rolls into.
+
+![A constant positive second derivative keeps the first derivative increasing, so the function curves upward; near a point where the slope crosses zero this is the local-minimum shape of the second-derivative test.](../img/mdl-cal-pos-second.svg)
+:label:`fig_mdl-positive-second`
+
+A negative constant $f''$ keeps the slope decreasing, running from positive through zero to negative --- the upward dome of a maximum (:numref:`fig_mdl-negative-second`).
+
+![A constant negative second derivative keeps the first derivative decreasing, so the function curves downward into the local-maximum shape.](../img/mdl-cal-neg-second.svg)
+:label:`fig_mdl-negative-second`
+
+And a zero $f''$ leaves the slope unchanged: $f$ rises or falls at a fixed rate and is a straight **line** with no curvature at all (:numref:`fig_mdl-zero-second`), the borderline the test cannot decide.
+
+![A zero second derivative keeps the first derivative constant, so the function is a straight line --- no curvature, and the borderline case where the second-derivative test is inconclusive.](../img/mdl-cal-zero-second.svg)
+:label:`fig_mdl-zero-second`
+
+In short, the *sign* of the second derivative at a stationary point decides minimum versus maximum --- positive curves up into a min, negative curves down into a max, zero is undecided. (This is the one-dimensional shadow of the Hessian eigenvalue test for many variables in :numref:`sec_mdl-multivariable_calculus`.)
+
+### The Mean Value Theorem
+:label:`sec_mdl-mvt`
+
+We have been spending the derivative freely: a vanishing slope marks a candidate extremum, a negative slope means the function is falling. Both deductions read information about $f$ *itself* off its derivative at single points, and the one theorem that licenses every such reading is the **Mean Value Theorem**. Its statement is a picture (:numref:`fig_mdl-mvt`): draw the secant chord joining the endpoints of the graph over $[a,b]$; somewhere inside, the tangent runs *parallel* to it. The average rate of change is achieved exactly, as an instantaneous rate, at some interior point.
+
+![Over the interval from $a$ to $b$, the secant chord through the endpoints has slope equal to the average rate of change; the Mean Value Theorem says some interior point $\xi$ has a tangent of that same slope, parallel to the chord.](../img/mdl-cal-mvt.svg)
+:label:`fig_mdl-mvt`
+
+**Proposition (Mean Value Theorem).** *If $f$ is continuous on $[a,b]$ and differentiable on $(a,b)$, then there is a point $\xi \in (a,b)$ with*
+
+$$
+f'(\xi) = \frac{f(b) - f(a)}{b - a}.
+$$
+:eqlabel:`eq_mdl-mvt`
+
+**Proof.** First take the flat case $f(a) = f(b)$ (Rolle's theorem): a continuous function on a closed interval attains a maximum and a minimum. If both occur at the endpoints then $f$ is constant and $f' \equiv 0$ inside; otherwise an extremum sits at some interior $\xi$, where the one-sided difference quotients have opposite signs yet must agree, forcing $f'(\xi) = 0$. For the general case, subtract off the chord: the tilted function $g(x) = f(x) - \frac{f(b)-f(a)}{b-a}(x - a)$ has $g(a) = g(b) = f(a)$, so the flat case gives a $\xi$ with $g'(\xi) = 0$, which is exactly :eqref:`eq_mdl-mvt`. $\blacksquare$
+
+Two corollaries are the facts we already used. If $f' > 0$ throughout an interval then for any $x_1 < x_2$ in it, :eqref:`eq_mdl-mvt` gives $f(x_2) - f(x_1) = f'(\xi)(x_2 - x_1) > 0$ for some $\xi$ between them, so $f$ is **increasing** --- a positive slope really does mean the function climbs, and the sign of $f'$ governs monotonicity. And if $f$ has a *constant* sign of $f'$ on each side of a stationary point, the theorem turns that into the rise-and-fall behaviour the second-derivative test read off. The Mean Value Theorem is the formal bridge from *the derivative at a point* to *the behaviour of the function on an interval*.
+
+### The Best Quadratic, and the Taylor Idea
+
+The first derivative built the best line; the second lets us build the best *parabola*. Consider a generic quadratic $g(x) = ax^2 + bx + c$, for which
+
+$$
+\begin{aligned}
+\frac{dg}{dx}(x) & = 2ax + b \\
+\frac{d^2g}{dx^2}(x) & = 2a.
+\end{aligned}
+$$
+
+A quadratic has three free coefficients, so we can match three pieces of information about $f$ at a base point $x_0$: its value, slope, and curvature. Demanding $g(x_0) = f(x_0)$, $g'(x_0) = f'(x_0)$, and $g''(x_0) = f''(x_0)$ pins down $a$, $b$, $c$ uniquely and produces the best local *quadratic* model, just as the tangent was the best local *line*. The next cell overlays this quadratic on $f(x) = \sin(x)$ at several base points, using $\frac{d}{dx}\sin(x) = \cos(x)$ and $\frac{d^2}{dx^2}\sin(x) = -\sin(x)$.
+
+```{.python .input #single-variable-calculus-higher-order-derivatives}
+#@tab mxnet
+# Compute sin
+xs = np.arange(-np.pi, np.pi, 0.01)
+plots = [np.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0, 2]:
+    plots.append(np.sin(x0) + (xs - x0) * np.cos(x0) -
+                              (xs - x0)**2 * np.sin(x0) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-higher-order-derivatives}
+#@tab pytorch
+# Compute sin
+xs = torch.arange(-torch.pi, torch.pi, 0.01)
+plots = [torch.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(torch.sin(torch.tensor(x0)) + (xs - x0) *
+                 torch.cos(torch.tensor(x0)) - (xs - x0)**2 *
+                 torch.sin(torch.tensor(x0)) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-higher-order-derivatives}
+#@tab tensorflow
+# Compute sin
+xs = tf.range(-tf.pi, tf.pi, 0.01)
+plots = [tf.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(tf.sin(tf.constant(x0)) + (xs - x0) *
+                 tf.cos(tf.constant(x0)) - (xs - x0)**2 *
+                 tf.sin(tf.constant(x0)) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input #single-variable-calculus-higher-order-derivatives}
+#@tab jax
+# Compute sin
+xs = jnp.arange(-jnp.pi, jnp.pi, 0.01)
+plots = [jnp.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(jnp.sin(x0) + (xs - x0) * jnp.cos(x0) -
+                 (xs - x0)**2 * jnp.sin(x0) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+Each parabola tracks $\sin$ over a wider window than the tangent line did, because it captures curvature as well as slope. The natural next step is to match *more* derivatives with a higher-degree polynomial, which is the Taylor series.
+
+### Taylor Series
+
+The *Taylor series* generalizes the tangent and the best parabola: given the value and first $n$ derivatives of $f$ at a base point $x_0$, find the degree-$n$ polynomial that matches all of them. The quadratic case, rewritten in displacement from $x_0$, is
+
+$$
+f(x) \approx f(x_0) + \frac{df}{dx}(x_0)(x-x_0) + \frac{1}{2}\frac{d^2f}{dx^2}(x_0)(x-x_0)^{2}.
+$$
+
+The factor $\tfrac12$ is bookkeeping: differentiating $(x-x_0)^2$ twice produces a $2$, and dividing by $2$ leaves the coefficient equal to $f''(x_0)$, while all lower terms differentiate to zero at $x_0$. The same accounting at degree $3$ produces a $3! = 6$,
+
+$$
+f(x) \approx f(x_0) + \frac{df}{dx}(x_0)(x-x_0) + \frac{\frac{d^2f}{dx^2}(x_0)}{2}(x-x_0)^{2} + \frac{\frac{d^3f}{dx^3}(x_0)}{6}(x-x_0)^3,
+$$
+
+and in general the $i$-th term carries an $i!$, giving the degree-$n$ **Taylor polynomial**
+
+$$
+P_n(x) = \sum_{i = 0}^{n} \frac{f^{(i)}(x_0)}{i!}(x-x_0)^{i},
+$$
+
+the best degree-$n$ polynomial approximation to $f$ near $x_0$.
+
+How good is it? The Mean Value Theorem answers exactly, in the form of the **Lagrange remainder**: if $f$ is $(n+1)$-times differentiable between $x_0$ and $x$, then
+
+$$
+f(x) = P_n(x) + R_n(x), \qquad R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\,(x - x_0)^{n+1},
+$$
+:eqlabel:`eq_mdl-lagrange`
+
+for some $\xi$ strictly between $x_0$ and $x$. (Indeed $n = 0$ is just the Mean Value Theorem :eqref:`eq_mdl-mvt`, $f(x) = f(x_0) + f'(\xi)(x - x_0)$; the higher orders follow by the same chord-subtraction argument applied $n+1$ times.) The remainder is one term *past* the polynomial, evaluated at an unknown interior $\xi$ instead of at $x_0$. It makes "the approximation improves near $x_0$" quantitative: the error shrinks like $|x - x_0|^{n+1}$, so each extra matched derivative buys another power of closeness. The case $n = 1$ is the curvature tax we already met --- $R_1 = \tfrac12 f''(\xi)(x-x_0)^2$ is exactly the $\tfrac{L}{2}\eta^2$ term bounded in the descent lemma :eqref:`eq_mdl-descent` --- and the same quadratic remainder is what Newton's method (:numref:`sec_gd`) drives to zero by stepping to the minimum of $P_2$ rather than $P_1$.
+
+Letting $n \to \infty$ gives the full *Taylor series*. For well-behaved functions --- the *real analytic* ones, such as $\cos(x)$ and $e^{x}$ --- the infinitely many terms reproduce the function exactly:
+
+$$
+f(x) = \sum_{n = 0}^\infty \frac{f^{(n)}(x_0)}{n!}(x-x_0)^{n}.
+$$
+
+A word of caution is in order, because two separate things can go wrong. The equality above holds only *where the series converges* **and** $f$ is *real analytic* there --- convergence of the series is not the same as convergence *to $f$*. Being infinitely differentiable (smooth) is not enough for either. The classic counterexample is $f(x) = e^{-1/x^2}$ (with $f(0) = 0$), which is smooth everywhere yet has $f^{(n)}(0) = 0$ for every $n$; its Taylor series at $x_0 = 0$ is identically zero --- it converges on the *whole line*, but to the zero function, reproducing $f$ only at $x = 0$ itself (:numref:`fig_mdl-smooth-not-analytic`). So an infinite radius of convergence guarantees nothing about agreement with $f$. In practice we mostly use the *finite* truncations $P_n$, whose error :eqref:`eq_mdl-lagrange` we can bound directly, and which sharpen the closer $x$ is to $x_0$.
+
+![The smooth function $f(x) = e^{-1/x^2}$ has every derivative equal to zero at the origin, so its Taylor series there is identically zero. The series converges everywhere yet agrees with $f$ only at $x = 0$ --- smooth does not imply analytic.](../img/mdl-cal-smooth-not-analytic.svg)
+:label:`fig_mdl-smooth-not-analytic`
+
+Take $f(x) = e^{x}$ as an example. Since $e^{x}$ is its own derivative, we know that $f^{(n)}(x) = e^{x}$. Therefore, $e^{x}$ can be reconstructed by taking the Taylor series at $x_0 = 0$, i.e.,
+
+$$
+e^{x} = \sum_{n = 0}^\infty \frac{x^{n}}{n!} = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \cdots.
+$$
+
+Let's see how this works in code and observe how increasing the degree of the Taylor approximation brings us closer to the desired function $e^x$.
+
+```{.python .input #single-variable-calculus-taylor-series}
+#@tab mxnet
+# Compute the exponential function
+xs = np.arange(0, 3, 0.01)
+ys = np.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
+```{.python .input #single-variable-calculus-taylor-series}
+#@tab pytorch
+# Compute the exponential function
+xs = torch.arange(0, 3, 0.01)
+ys = torch.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
+```{.python .input #single-variable-calculus-taylor-series}
+#@tab tensorflow
+# Compute the exponential function
+xs = tf.range(0, 3, 0.01)
+ys = tf.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
+```{.python .input #single-variable-calculus-taylor-series}
+#@tab jax
+# Compute the exponential function
+xs = jnp.arange(0, 3, 0.01)
+ys = jnp.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
+Taylor series earn their keep in two ways. *Theoretically*, replacing an unwieldy function by its low-degree polynomial makes it tractable --- the first-order term is what gave us gradient descent, the second-order term is the curvature behind Newton's method and step-size limits. *Numerically*, functions like $e^x$ and $\cos(x)$ are computed in practice by evaluating a truncated series (with a remainder bound to control the error), the basic trick behind the math libraries every framework calls.
+
+## When the Tangent Fails
+:label:`sec_mdl-tangent-fails`
+
+Everything so far rested on the "zoom in and see a line" picture: a smooth function looks linear up close, so the limit :eqref:`eq_mdl-der_def` exists. But the activation that built modern deep learning, $\mathrm{ReLU}(x) = \max(0, x)$, has a *corner* at the origin, and so does $|x|$. At a corner the microscope never settles on one line, and the ordinary derivative is undefined. This section says exactly what goes wrong, what to use instead, and why stochastic gradient descent is unbothered.
+
+### One-Sided Derivatives
+
+The trouble is visible directly in the difference quotient :eqref:`eq_mdl-der_def`. For $f(x) = |x|$ at $x = 0$,
+
+$$
+\frac{|0+\epsilon| - |0|}{\epsilon} = \frac{|\epsilon|}{\epsilon} =
+\begin{cases} +1 & \epsilon > 0, \\ -1 & \epsilon < 0. \end{cases}
+$$
+
+The two sides give different limits, so no single number is *the* slope: approaching from the right the function rises with slope $+1$, from the left it falls with slope $-1$. These are the **one-sided derivatives** $f'_+(0) = +1$ and $f'_-(0) = -1$. The ordinary two-sided derivative exists only when they agree. For $\mathrm{ReLU}$ at $0$ the same computation gives $f'_-(0) = 0$ (flat on the left) and $f'_+(0) = 1$ (slope $1$ on the right). We can confirm the $|x|$ case numerically.
+
+```{.python .input #single-variable-calculus-one-sided}
+# One-sided difference quotients of |x| at 0
+for epsilon in [0.1, 0.001, 0.0001, 0.00001]:
+    right = (abs(0 + epsilon) - abs(0)) / epsilon
+    left = (abs(0 - epsilon) - abs(0)) / (-epsilon)
+    print(f'epsilon = {epsilon:.5f} -> left = {left:+.1f}, right = {right:+.1f}')
+```
+
+### Subgradients and Optimality
+
+The fix is to stop insisting on a *single* tangent and allow *all* the lines that stay below the graph. A number $g$ is a **subgradient** of a convex $f$ at $x$ if
+
+$$
+f(y) \ge f(x) + g\,(y - x) \quad \textrm{for all } y,
+$$
+:eqlabel:`eq_mdl-subgrad`
+
+i.e. the line through $(x, f(x))$ with slope $g$ is a global underestimate of $f$. The set of all such slopes is the **subdifferential** $\partial f(x)$. Away from a corner it is the single ordinary slope; at a corner it is the whole interval *between* the one-sided derivatives, the "fan" of supporting lines shown in :numref:`fig_mdl-relu-corner`:
+
+$$
+\partial |x|(0) = [-1, 1], \qquad \partial\, \mathrm{ReLU}(0) = [0, 1].
+$$
+
+The two panels of :numref:`fig_mdl-relu-corner` show both. For $|x|$ the corner is symmetric, so every slope from $-1$ to $+1$ underestimates the graph and $\partial|x|(0) = [-1,1]$; for $\mathrm{ReLU}$ the left arm is flat, so the admissible slopes run only from $0$ to $1$ and $\partial\,\mathrm{ReLU}(0) = [0,1]$. Off the corner each is differentiable and the subdifferential collapses to the single ordinary slope.
+
+![Two corners and their subdifferentials. Left: $|x|$ has a symmetric corner at the origin, and every line through it with slope between $-1$ and $+1$ stays on or below the graph, so the subdifferential $\partial|x|(0)$ runs from $-1$ to $+1$. Right: $\mathrm{ReLU}(x) = \max(0,x)$, the activation that built modern deep learning, is flat to the left, so its admissible slopes run only from $0$ to $1$, giving the subdifferential $\partial\,\mathrm{ReLU}(0)$. Off each corner there is a single tangent and the subdifferential collapses to the ordinary derivative.](../img/mdl-cal-relu-corner.svg)
+:label:`fig_mdl-relu-corner`
+
+The subgradient pays off immediately in optimization. For differentiable $f$ a minimum requires $f'(x) = 0$; the subgradient version is the inclusion
+
+$$
+0 \in \partial f(x).
+$$
+:eqlabel:`eq_mdl-subopt`
+
+This is no harder to prove than its smooth cousin: taking $g = 0$ in :eqref:`eq_mdl-subgrad` reads $f(y) \ge f(x)$ for all $y$, which is precisely the statement that $x$ is a global minimum. For $|x|$ at $0$ we have $0 \in [-1,1] = \partial|x|(0)$, correctly certifying the origin as the minimum even though no derivative exists there --- exactly the case the smooth test $f'(x)=0$ cannot reach.
+
+### Why SGD Shrugs
+
+This is not a corner case that breaks training; it is handled by design. One clarification first, so the convexity above is not over-read: a deep network's loss surface is wildly *non*-convex, and the subdifferential :eqref:`eq_mdl-subgrad` is a *convex*-function notion. The two are reconciled at the level of the *pieces*: the kinks come from convex building blocks --- $|x|$, $\mathrm{ReLU}$, the hinge loss $\max(0, 1-x)$ --- and at each kink we take a subgradient of *that local convex piece*, which the chain rule then propagates through the surrounding (nonconvex) composition. So autograd never needs the whole loss to be convex; it only needs one valid subgradient per kink. The kinks themselves form a *measure-zero* set, so a randomly drawn input lands on one with probability zero, and even if it did, *any* element of the subdifferential is a legitimate descent direction. Frameworks therefore just return one such value at the kink --- PyTorch, TensorFlow, and JAX all report $\mathrm{ReLU}'(0) = 0$ --- and stochastic gradient descent proceeds with it in place of the missing derivative. The convex-analysis machinery behind this is developed in :numref:`sec_gd`; here the lesson is simply that the local-linear program survives at corners, provided we read "slope" as "a subgradient."
+
+## Summary
+
+* The derivative is the *local linear model* of a function: $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$. It is the slope of the line a smooth curve flattens onto when we zoom in, and the limit of difference quotients.
+* The derivatives of elementary functions, combined with the sum, product, and chain rules, differentiate any expression mechanically. Each rule is the small-change identity expanded to first order; the chain rule run in reverse over a network is backpropagation.
+* Choosing the step $\epsilon = -\eta f'(x)$ in the local model predicts a decrease of $\eta[f'(x)]^2$. When the slope is $L$-Lipschitz the *descent lemma* turns this into a genuine guarantee $f(x - \eta f'(x)) \le f(x) - \eta(1 - L\eta/2)[f'(x)]^2$, a strict drop for $0 < \eta < 2/L$ (best at $\eta = 1/L$). Descent stalls at the stationary points $f'(x) = 0$, and a step past $2/L$ can *increase* $f$ when curvature overwhelms the first-order gain.
+* The second derivative is curvature: its sign decides minimum vs. maximum, and Taylor series extend the line and parabola to the best polynomial model of any order.
+* At corners like $\mathrm{ReLU}(0)$ the derivative is undefined, but the *subdifferential* supplies a set of valid slopes ($\partial|x|(0) = [-1,1]$), optimality becomes $0 \in \partial f(x)$, and SGD trains unharmed.
+
+## Exercises
+
+1. Compute the derivative of $x^3 - 4x + 1$, and of $\log\!\left(\frac{1}{x}\right)$ for $x > 0$.
+2. True or false: if $f'(x) = 0$ then $f$ has a maximum or a minimum at $x$. If false, give a counterexample and the test that distinguishes the cases.
+3. Find the minimum of $f(x) = x\log(x)$ for $x \ge 0$ (take the limiting value $f(0) = 0$).
+4. The first-order model predicts $f(x - \eta f'(x)) \approx f(x) - \eta[f'(x)]^2$. Starting from the small-change identity, derive this prediction and name the term it discards. Then, assuming $f'$ is $L$-Lipschitz, fill in the proof of the descent lemma :eqref:`eq_mdl-descent` and verify that the optimal step is $\eta = 1/L$.
+5. For $f(x) = x^2$, find *all* step sizes $\eta$ for which gradient descent from $x_0 \neq 0$ converges to the minimum, and the one $\eta$ that reaches it in a single step. (*Hint:* use $x_{t+1} = (1-2\eta)x_t$.)
+6. Give a function $f$ and a step size $\eta$ for which a single gradient-descent step *increases* $f$, and explain the failure: which hypothesis of the descent lemma :eqref:`eq_mdl-descent` is violated, or is $\eta$ simply past $2/L$? (*Hint:* $f(x) = x^2$ with $\eta > 1$ already does it.)
+7. Relate the one-dimensional update $x \leftarrow x - \eta f'(x)$ to the vector update $\mathbf{w} \leftarrow \mathbf{w} - \eta\nabla L(\mathbf{w})$ from the introduction.
+8. Compute the subdifferentials $\partial\,\mathrm{ReLU}(0)$ and $\partial|x|(0)$. Which of $\{0,\, 0.5,\, 1\}$ are valid subgradients of $\mathrm{ReLU}$ at $0$? Sketch the subdifferential of the hinge loss $\max(0, 1 - x)$.
+9. Use the degree-$5$ Taylor polynomial of $e^x$ at $x_0 = 0$ to estimate $e$, and compare with the true value.
+
+
+:begin_tab:`mxnet`
+[Discussions](https://d2l.discourse.group/t/412)
+:end_tab:
+
+:begin_tab:`pytorch`
+[Discussions](https://d2l.discourse.group/t/1088)
+:end_tab:
+
+
+:begin_tab:`tensorflow`
+[Discussions](https://d2l.discourse.group/t/1089)
+:end_tab:
+
+:begin_tab:`jax`
+[Discussions](https://d2l.discourse.group/t/1089)
+:end_tab:
+
+<!-- slides -->
+
+::: {.slide title="Single-Variable Calculus"}
+The single-variable calculus toolkit underlying gradient
+descent. The derivative
+
+$$f'(x) = \lim_{\epsilon \to 0} \frac{f(x+\epsilon) - f(x)}{\epsilon}$$
+
+is the *local linear approximation* of $f$ at $x$. The
+gradient-descent update $x \leftarrow x - \eta f'(x)$ uses
+exactly this approximation: take a small step opposite the
+slope.
+
+This deck visualizes derivatives, linear approximation, and
+Taylor expansion — the local quadratic and beyond.
+:::
+
+::: {.slide title="Derivative as slope of zoom"}
+Zoom in on a smooth curve and it flattens onto a straight
+line — the tangent, whose slope is $f'(x)$:
+
+@fig:mdl-cal-zoom-sequence
+:::
+
+::: {.slide title="Difference quotient → slope"}
+The secant slope $\frac{f(x+\epsilon)-f(x)}{\epsilon}$ settles
+onto $f'(x)$ as $\epsilon \to 0$. Here it marches toward $8$:
+
+@single-variable-calculus-differential-calculus-4
+:::
+
+::: {.slide title="Linear approximation"}
+$f(x + \epsilon) \approx f(x) + \epsilon f'(x)$ — the
+first-order Taylor term, the tangent line. Valid for small
+$\epsilon$; foundation of GD analysis:
+
+@single-variable-calculus-linear-approximation
+:::
+
+::: {.slide title="The gradient-descent step"}
+Choose $\epsilon = -\eta f'(x)$: the model predicts
+$f(x - \eta f'(x)) \approx f(x) - \eta[f'(x)]^2$. With an
+$L$-Lipschitz slope the *descent lemma* makes it a genuine drop,
+$f(x-\eta f'(x)) \le f(x) - \eta(1-\tfrac{L\eta}{2})[f'(x)]^2$,
+for $0 < \eta < 2/L$.
+
+@fig:mdl-cal-gd-step
+
+. . .
+
+@single-variable-calculus-gradient-descent
+:::
+
+::: {.slide title="Higher-order derivatives"}
+The second derivative measures how the slope itself changes:
+$f''(x) > 0$ curves upward, $f''(x) < 0$ curves downward.
+
+@single-variable-calculus-higher-order-derivatives
+:::
+
+::: {.slide title="Taylor series"}
+$f(x + \epsilon) = \sum_{k=0}^\infty \frac{f^{(k)}(x)}{k!} \epsilon^k$.
+Truncating gives polynomial approximations of any order:
+
+@single-variable-calculus-taylor-series
+:::
+
+::: {.slide title="When the tangent fails"}
+At a corner ($\mathrm{ReLU}$, $|x|$) the one-sided slopes
+disagree, so no single tangent exists. The *subdifferential* is
+the fan of valid slopes --- $\partial|x|(0) = [-1,1]$,
+$\partial\,\mathrm{ReLU}(0) = [0,1]$ --- and optimality becomes
+$0 \in \partial f(x)$:
+
+@fig:mdl-cal-relu-corner
+
+. . .
+
+@single-variable-calculus-one-sided
+:::
+
+::: {.slide title="Recap"}
+- Derivative = slope of the tangent line; second
+  derivative = curvature.
+- Linear (1st-order) Taylor → gradient descent
+  $x \leftarrow x - \eta f'(x)$.
+- Quadratic (2nd-order) Taylor → Newton's method.
+- At corners, swap the derivative for a subgradient; SGD
+  shrugs it off.
+:::

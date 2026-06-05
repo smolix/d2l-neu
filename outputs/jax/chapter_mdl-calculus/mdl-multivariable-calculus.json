@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multivariable-calculus-higher-dimensional-differentiation": {
+      "code_fingerprint": "sha256:66685ad2602ad9f6cf7f0f0842650b61544bf35b41aea0c3969de6ffee0dfebd",
+      "kind": "text",
+      "outputs": []
+    },
+    "multivariable-calculus-a-note-on-mathematical-optimization": {
+      "code_fingerprint": "sha256:17c8de46fa40ae871cb4d98db4f96cad490a5e67dd8fc2084f61b4f66a5dba54",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
+          "bytes": 13743,
+          "sha256": "sha256:cecabd64f523a652ab7a4f6c49b55eab4c9bfaa710cc4e9601965ae9e695c3c1"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-1": {
+      "code_fingerprint": "sha256:5f03874e505ad37290ecad39d34e21d239e1fe8ceb50d33ff564e1e26ac4ea5a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-2": {
+      "code_fingerprint": "sha256:5c69b350695dca5107d115327dc4f86fea57ab09d9e7d80ca38279adcc9638ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\ndf/dx at -1, 0, -2, 1 is -4096\ndf/dy at -1, 0, -2, 1 is -4096\ndf/dz at -1, 0, -2, 1 is -4096\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-3": {
+      "code_fingerprint": "sha256:e0bfa1b47d10ba9e78819f083a355c75a0e7f84461288bcf2164bfd19201c69e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "df/dw at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dx at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dy at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dz at [-1.], [0.], [-2.], [1.] is [-4096.]\n"
+        }
+      ]
+    },
+    "multivariable-calculus-hessians": {
+      "code_fingerprint": "sha256:e5f42b2ab35d776c2125c274fb54a7d2b8a07f8c2cc039382d0d3ad74fd9ca44",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

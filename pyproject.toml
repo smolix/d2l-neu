@@ -26,17 +26,22 @@ dependencies = [
 # `build`/`run` extras — which is all the CPU-only render path needs — install
 # fine. Executing notebooks still happens on the linux-x86_64 GPU box.
 pytorch = [
-    "torch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "torchvision ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # torch/torchvision are pinned to the version the committed outputs/ store
+    # was captured under (the freshness audit keys on the PEP 440 *public*
+    # version, so the linux cu128 build and the darwin arm64 build of the same
+    # 2.11.0 both match the store — see tools/capture_outputs.py:public_version).
+    # To move to 2.12: bump these pins AND re-capture the store under 2.12.
+    "torch==2.11.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "torchvision==0.26.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "gymnasium[toy-text] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "gpytorch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "syne-tune[gpsearchers] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon CPU/MPS: PyPI ships native arm64 wheels (CPU-only render
-    # host can now also *execute* notebooks). torch source is gated to the
-    # cu128 index for linux only (see [tool.uv.sources]), so darwin resolves
-    # torch from the default index.
-    "torch ; sys_platform == 'darwin'",
-    "torchvision ; sys_platform == 'darwin'",
+    # host can now also *execute* the CPU-capable notebooks). torch source is
+    # gated to the cu128 index for linux only (see [tool.uv.sources]), so darwin
+    # resolves torch 2.11.0 from the default index.
+    "torch==2.11.0 ; sys_platform == 'darwin'",
+    "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "gymnasium[toy-text] ; sys_platform == 'darwin'",
 ]
 mxnet = [

@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-single-variable-calculus.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "single-variable-calculus-imports": {
+      "code_fingerprint": "sha256:69778ef691a43f897abc2824f2683711e135e30e5b735192db8635c897f591f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "single-variable-calculus-differential-calculus-4": {
+      "code_fingerprint": "sha256:3639d669b9578d7708641c229bfa1aabe86c78f4f3f84cc056f81db77216feb7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.10000 -> 25.11000\nepsilon = 0.00100 -> 8.00270\nepsilon = 0.00010 -> 8.00012\nepsilon = 0.00001 -> 8.00001\n"
+        }
+      ]
+    },
+    "single-variable-calculus-linear-approximation": {
+      "code_fingerprint": "sha256:94e21be8fd6c6a64b25af10e7d6ad75bdf7365b3451deda6002b82b06e0bd35e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
+          "bytes": 15849,
+          "sha256": "sha256:eadf5f8972db12caa6847c3d276ddee3a0d415bdd79456a5dbc5108fa24c8dbb"
+        }
+      ]
+    },
+    "single-variable-calculus-gradient-descent": {
+      "code_fingerprint": "sha256:7e48a39544fa35ed178bf15d2220a5a02a11be0a9a11c3e11448514af17c9f50",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta = 0.05 -> x_10 = +0.34868\neta = 0.50 -> x_10 = +0.00000\neta = 0.90 -> x_10 = +0.10737\neta = 1.00 -> x_10 = +1.00000\neta = 1.10 -> x_10 = +6.19174\n"
+        }
+      ]
+    },
+    "single-variable-calculus-higher-order-derivatives": {
+      "code_fingerprint": "sha256:f7a0b3c8a11d53715524d3130065fabb4ca2f07296241ba0c1023f6fffe5db43",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
+          "bytes": 17904,
+          "sha256": "sha256:fc5fba322e5bb0b909eb45d8502f199ed32787dd311ea27db8ba6ab11b745708"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-series": {
+      "code_fingerprint": "sha256:cbf780829ee882c58eb42e4d51ad43e89a28861562bc52b2133d3a4e429b100f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
+          "bytes": 28556,
+          "sha256": "sha256:31686830c47d16bc30ad295e55c05e89f72fd69aeac3008e71d8eb18480fcc8c"
+        }
+      ]
+    },
+    "single-variable-calculus-one-sided": {
+      "code_fingerprint": "sha256:efc26b5ce2b1b8d38d170c420a6d41a01d1a5f23165a98df1b1b3647830dcc2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.10000 -> left = -1.0, right = +1.0\nepsilon = 0.00100 -> left = -1.0, right = +1.0\nepsilon = 0.00010 -> left = -1.0, right = +1.0\nepsilon = 0.00001 -> left = -1.0, right = +1.0\n"
+        }
+      ]
+    }
+  }
+}

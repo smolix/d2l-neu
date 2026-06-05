@@ -10,6 +10,10 @@ book:
     - Mu Li
     - Alexander J. Smola
   date: today
+  cookie-consent:
+    type: express
+    style: headline
+    palette: dark
   navbar:
     background: "#2196F3"
     search: true
@@ -230,20 +234,39 @@ book:
         - chapter_recommender-systems/ctr.qmd
         - chapter_recommender-systems/fm.qmd
         - chapter_recommender-systems/deepfm.qmd
-    - part: "Appendix"
+    - part: "Mathematics for Deep Learning"
       chapters:
-        - chapter_appendix-mathematics-for-deep-learning/index.qmd
-        - chapter_appendix-mathematics-for-deep-learning/geometry-linear-algebraic-ops.qmd
-        - chapter_appendix-mathematics-for-deep-learning/eigendecomposition.qmd
-        - chapter_appendix-mathematics-for-deep-learning/single-variable-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/multivariable-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/integral-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/random-variables.qmd
-        - chapter_appendix-mathematics-for-deep-learning/maximum-likelihood.qmd
-        - chapter_appendix-mathematics-for-deep-learning/distributions.qmd
-        - chapter_appendix-mathematics-for-deep-learning/naive-bayes.qmd
-        - chapter_appendix-mathematics-for-deep-learning/statistics.qmd
-        - chapter_appendix-mathematics-for-deep-learning/information-theory.qmd
+        - chapter_mdl-linear-algebra/index.qmd
+        - chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd
+        - chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd
+        - chapter_mdl-linear-algebra/mdl-svd-low-rank.qmd
+        - chapter_mdl-calculus/index.qmd
+        - chapter_mdl-calculus/mdl-single-variable-calculus.qmd
+        - chapter_mdl-calculus/mdl-multivariable-calculus.qmd
+        - chapter_mdl-calculus/mdl-matrix-calculus-autodiff.qmd
+        - chapter_mdl-calculus/mdl-integral-calculus.qmd
+        - chapter_mdl-optimization/index.qmd
+        - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
+        - chapter_mdl-optimization/mdl-convexity.qmd
+        - chapter_mdl-optimization/mdl-constrained-optimization-duality.qmd
+        - chapter_mdl-optimization/mdl-numerical-stability-conditioning.qmd
+        - chapter_mdl-probability-statistics/index.qmd
+        - chapter_mdl-probability-statistics/mdl-random-variables.qmd
+        - chapter_mdl-probability-statistics/mdl-distributions.qmd
+        - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
+        - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
+        - chapter_mdl-probability-statistics/mdl-statistics.qmd
+        - chapter_mdl-information-theory/index.qmd
+        - chapter_mdl-information-theory/mdl-information-theory.qmd
+        - chapter_mdl-information-theory/mdl-divergences-distances.qmd
+        - chapter_mdl-information-theory/mdl-mutual-information.qmd
+        - chapter_mdl-dynamics/index.qmd
+        - chapter_mdl-dynamics/mdl-odes-solvers.qmd
+        - chapter_mdl-dynamics/mdl-sdes.qmd
+        - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
+        - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
+    - part: "Appendix: Tools for Deep Learning"
+      chapters:
         - chapter_appendix-tools-for-deep-learning/index.qmd
         - chapter_appendix-tools-for-deep-learning/jupyter.qmd
         - chapter_appendix-tools-for-deep-learning/sagemaker.qmd

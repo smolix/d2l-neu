@@ -237,11 +237,19 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
   book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
   §3.1/§3.3a.
-- A **"Mathematics for Deep Learning"** part was added (branch
-  `math-for-deep-learning-appendix`): 6 chapters under `chapter_mdl-*`, with
-  `mdl-`-prefixed labels; Linear Algebra is fully written, the rest are detailed
-  ToCs + curated reading lists. The old `chapter_appendix-mathematics-for-deep-learning/`
-  still exists until the new part is finished.
+- The **"Mathematics for Deep Learning"** part (branch
+  `math-for-deep-learning-appendix`) is now the **default math appendix**: a
+  single part of 6 numbered chapters under `chapter_mdl-*` — **22** Linear
+  Algebra, **23** Calculus, **24** Optimization, **25** Probability & Statistical
+  Learning, **26** Information Theory, **27** Dynamics (Tools for Deep Learning is
+  now **28**) — with `mdl-`-prefixed labels. LA, Calculus, and Probability &
+  Statistics are written to the bar; Optimization, Information Theory, and
+  Dynamics are still detailed ToCs + reading lists (to be completed on the site).
+  The legacy `chapter_appendix-mathematics-for-deep-learning/` has been
+  **retired** — removed from `_quarto.yml` + `CHAPTER_NUMBERING` and its source
+  + committed outputs deleted. Numbering lives in `CHAPTER_NUMBERING`
+  (`tools/d2l_preprocess.py`); a file absent from it renders unnumbered — see
+  `docs/build-system.md` §4.1.
 - Last all-framework green run is stale with respect to the current custom
   MXNet wheel. Current MXNet diagnostics are in
   `docs/mxnet-runtime-diagnostics.md`. `chapter_computational-performance/multiple-gpus.md`

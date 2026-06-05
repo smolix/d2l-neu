@@ -1195,7 +1195,12 @@ chapter_gaussian-processes/index
 chapter_hyperparameter-optimization/index
 chapter_generative-adversarial-networks/index
 chapter_recommender-systems/index
-chapter_appendix-mathematics-for-deep-learning/index
+chapter_mdl-linear-algebra/index
+chapter_mdl-calculus/index
+chapter_mdl-optimization/index
+chapter_mdl-probability-statistics/index
+chapter_mdl-information-theory/index
+chapter_mdl-dynamics/index
 chapter_appendix-tools-for-deep-learning/index
 
 ```

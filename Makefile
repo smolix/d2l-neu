@@ -99,11 +99,6 @@ SLIDES_FILTER ?= $(FILES)
 # Includes top-level index.md (landing page), which d2l_preprocess.py
 # converts to index.qmd alongside the chapter files.
 SRC_MDS := $(wildcard $(SOURCE)/chapter_*/*.md) $(SOURCE)/index.md
-# Mathematics-for-Deep-Learning chapters are NOT in d2l_preprocess.py's
-# CHAPTER_NUMBERING, so the default (no --files) preprocess skips them. List
-# them (source-relative) so the recipe can regenerate their .qmd explicitly —
-# otherwise `make html` never picks up edits to chapter_mdl-*/*.md.
-MDL_MDS := $(patsubst $(SOURCE)/%,%,$(wildcard $(SOURCE)/chapter_mdl-*/*.md))
 TOOLS   := $(wildcard tools/*.py)
 
 # Logging: each recipe logs to logs/<target>-YYYYMMDD-HHMMSS.log
@@ -335,8 +330,6 @@ html: _book/index.html
 .preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py tools/gen_api_doc.py d2l/.built
 	@echo "=== Preprocessing .md → .qmd ==="
 	python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch
-	@echo "=== Preprocessing Mathematics-for-Deep-Learning chapters (not in CHAPTER_NUMBERING) ==="
-	python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch --files $(MDL_MDS)
 	python3 tools/gen_api_doc.py
 	@touch $@
 
@@ -369,7 +362,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 				\( -name data -o -name img \) -delete; \
 			echo "Rewriting deck '../img/' refs to '../../../img/' (single-source)..."; \
 			find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
-				-exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +; \
+				-exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +; \
 		fi; \
 		if [ -d _pdf ]; then \
 			echo "Staging PDFs into _book/pdf/ ..."; \

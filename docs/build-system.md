@@ -325,6 +325,36 @@ these. (Generated plots are cell *outputs*, not `:numref:`-labeled figures —
 labeled figures are authored SVGs in `img/` — so output churn doesn't touch
 figure numbering either.)
 
+**The map is the single source of truth for numbers.** `CHAPTER_NUMBERING` (in
+`tools/d2l_preprocess.py`) maps each source `.md` to its logical number: `[N]` =
+chapter *N* (a chapter-group's `index.md`), `[N, k]` = section *N.k*, `None` =
+unnumbered (front matter, references). `fix_crossref_numbers.py` **imports this
+same dict**, so preprocessing and the post-render renumber pass never disagree.
+Two consequences worth knowing:
+
+- **A file *absent* from the map renders unnumbered.** The preprocessor treats a
+  missing key as `None` and prepends `---\nnumber-sections: false\n---` front
+  matter, so Quarto emits the page with no chapter/section number. To give a new
+  chapter real numbers you **must** add it to `CHAPTER_NUMBERING` — listing it in
+  `_quarto.yml` alone is not enough. (This was exactly why the
+  Mathematics-for-Deep-Learning chapters first rendered without numbers.)
+- **Part titles in `_quarto.yml` are cosmetic.** `build_chapter_map` flattens the
+  `chapters:` lists and ignores the `part:` strings, so whether *N* groups live
+  under one part or *N* parts has **zero** effect on numbering — only the map and
+  the flat file order do. Part grouping is purely the left-nav/sidebar structure.
+  (A part whose `part:` is a bare title string keeps its `index.md` as a numbered
+  chapter; pointing `part:` at a `.qmd` file instead makes that page an *unnumbered
+  divider*, which breaks any `:numref:` that targets it — so we use title strings.)
+
+Current tail of the map: the **Mathematics for Deep Learning** part is chapters
+**22–27** (Linear Algebra 22, Calculus 23, Optimization 24, Probability &
+Statistical Learning 25, Information Theory 26, Dynamics 27) — each group's
+`index.md` is the chapter, its siblings the `N.k` sections — and the **Tools for
+Deep Learning** appendix is chapter **28**. The legacy
+`chapter_appendix-mathematics-for-deep-learning/` part (formerly chapter 22) has
+been retired; inserting or retiring a group means renumbering the map's tail and
+the matching `_quarto.yml` order together.
+
 ### 4.2 The one index that matters: cell-id → output
 
 Injection is keyed by **stable cell IDs**. `tools/add_cell_ids.py` is idempotent
@@ -436,6 +466,27 @@ Make want to execute a notebook.
 `run-notebooks-*`, the `.executed` stamps, `.generated`, `notebooks-*`, `lib`,
 and `.d` dep files are **unchanged** — execution works exactly as today; capture
 is a new consumer of its results.
+
+### 6.3 Gotcha: don't hand-delete `.preprocess.stamp` under GNU Make 3.81
+
+The `.d` auto-dependencies are `-include`d, so every `make` first remakes those
+files (the `scan_d2l_usage` lines) and **re-execs itself**. Under the macOS
+system **GNU Make 3.81**, if you manually `rm .preprocess.stamp`, that re-exec
+can leave `make html` deciding `_book/index.html` is already up to date and skip
+preprocessing **and** rendering entirely — it prints only the trailing
+`Output:`/`Log:` echoes and exits 0, fooling you into thinking it rebuilt. Force
+the stamp explicitly first (`make .preprocess.stamp`) or touch a real
+prerequisite (`touch _quarto.yml`); then `make html` renders normally. Better
+still, use `make -B <target>` when you deliberately want a forced rebuild rather
+than deleting stamps by hand. (GNU Make ≥ 4.3 resolves the missing stamp
+correctly; 3.81 also emits harmless `overriding commands for target '&'` warnings
+because it predates the `&:` grouped-target syntax the Makefile uses.)
+
+Note also that the preprocess step is a **single pass** — `d2l_preprocess.py`
+with no `--files` regenerates every `.qmd` for the files in `CHAPTER_NUMBERING`.
+(The former second pass that explicitly re-ran the `chapter_mdl-*` files was a
+workaround for their absence from the map; now that they are in it, the main pass
+covers them and the workaround has been removed.)
 
 ---
 

@@ -84,11 +84,13 @@ if $STAGE_SLIDES && [[ -d _slides ]]; then
     find "$BOOK_DIR/slides" -mindepth 2 -maxdepth 2 -type l \
         \( -name data -o -name img \) -delete
     find "$BOOK_DIR/slides" -mindepth 3 -maxdepth 3 -name '*.html' \
-        -exec sed -i 's|src="\.\./img/|src="../../../img/|g' {} +
+        -exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +
 fi
 
 ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-S3_ARGS=(--endpoint-url "$ENDPOINT")
+# R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
+# upload is independent of the ambient ~/.aws/config default region.
+S3_ARGS=(--endpoint-url "$ENDPOINT" --region auto)
 
 # ── Hash the local tree ─────────────────────────────────────
 # sha256sum format: `<64-hex>  <path>` — 64 + 2 + path.
@@ -136,7 +138,7 @@ upload_one() {
         *.json) ct="application/json; charset=utf-8" ;;
         *)      ct="" ;;
     esac
-    local args=(--endpoint-url "$R2_ENDPOINT")
+    local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
     if [[ -n "$ct" ]]; then
         args+=(--content-type "$ct")
     fi
@@ -149,7 +151,7 @@ upload_one() {
 # ── Delete one bucket object ────────────────────────────────
 delete_one() {
     local rel=$1
-    local args=(--endpoint-url "$R2_ENDPOINT")
+    local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
     if [[ -n "${DRY_RUN:-}" ]]; then
         args+=("$DRY_RUN")
     fi

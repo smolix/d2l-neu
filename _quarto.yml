@@ -10,6 +10,10 @@ book:
     - Mu Li
     - Alexander J. Smola
   date: today
+  cookie-consent:
+    type: express
+    style: headline
+    palette: dark
   navbar:
     background: "#2196F3"
     search: true
@@ -230,29 +234,6 @@ book:
         - chapter_recommender-systems/ctr.qmd
         - chapter_recommender-systems/fm.qmd
         - chapter_recommender-systems/deepfm.qmd
-    - part: "Appendix"
-      chapters:
-        - chapter_appendix-mathematics-for-deep-learning/index.qmd
-        - chapter_appendix-mathematics-for-deep-learning/geometry-linear-algebraic-ops.qmd
-        - chapter_appendix-mathematics-for-deep-learning/eigendecomposition.qmd
-        - chapter_appendix-mathematics-for-deep-learning/single-variable-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/multivariable-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/integral-calculus.qmd
-        - chapter_appendix-mathematics-for-deep-learning/random-variables.qmd
-        - chapter_appendix-mathematics-for-deep-learning/maximum-likelihood.qmd
-        - chapter_appendix-mathematics-for-deep-learning/distributions.qmd
-        - chapter_appendix-mathematics-for-deep-learning/naive-bayes.qmd
-        - chapter_appendix-mathematics-for-deep-learning/statistics.qmd
-        - chapter_appendix-mathematics-for-deep-learning/information-theory.qmd
-        - chapter_appendix-tools-for-deep-learning/index.qmd
-        - chapter_appendix-tools-for-deep-learning/jupyter.qmd
-        - chapter_appendix-tools-for-deep-learning/sagemaker.qmd
-        - chapter_appendix-tools-for-deep-learning/aws.qmd
-        - chapter_appendix-tools-for-deep-learning/colab.qmd
-        - chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.qmd
-        - chapter_appendix-tools-for-deep-learning/contributing.qmd
-        - chapter_appendix-tools-for-deep-learning/utils.qmd
-        - chapter_appendix-tools-for-deep-learning/d2l.qmd
     - part: "Mathematics for Deep Learning"
       chapters:
         - chapter_mdl-linear-algebra/index.qmd
@@ -284,6 +265,17 @@ book:
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
         - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
+    - part: "Appendix: Tools for Deep Learning"
+      chapters:
+        - chapter_appendix-tools-for-deep-learning/index.qmd
+        - chapter_appendix-tools-for-deep-learning/jupyter.qmd
+        - chapter_appendix-tools-for-deep-learning/sagemaker.qmd
+        - chapter_appendix-tools-for-deep-learning/aws.qmd
+        - chapter_appendix-tools-for-deep-learning/colab.qmd
+        - chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.qmd
+        - chapter_appendix-tools-for-deep-learning/contributing.qmd
+        - chapter_appendix-tools-for-deep-learning/utils.qmd
+        - chapter_appendix-tools-for-deep-learning/d2l.qmd
     - references.qmd
 
 bibliography: d2l.bib

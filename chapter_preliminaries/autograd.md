@@ -33,14 +33,19 @@ While autograd libraries have become
 a major concern over the past decade,
 they have a long history. 
 In fact the earliest references to autograd
-date back over half of a century :cite:`Wengert.1964`.
-The core ideas behind modern backpropagation
-date to a PhD thesis from 1980 :cite:`Speelpenning.1980`
-and were further developed in the late 1980s :cite:`Griewank.1989`.
-While backpropagation has become the default method 
-for computing gradients, it is not the only option. 
-For instance, the Julia programming language employs 
-forward propagation :cite:`Revels.Lubin.Papamarkou.2016`. 
+date back over half a century :cite:`Wengert.1964`.
+Reverse-mode automatic differentiation---the variant
+that powers modern backpropagation---was developed
+by :citet:`Linnainmaa.1970` and :citet:`Speelpenning.1980`,
+with efficient implementations studied through
+the late 1980s :cite:`Griewank.1989`.
+Backpropagation as the algorithm for *training neural networks*
+was popularized by :citet:`Rumelhart.Hinton.Williams.ea.1988`.
+While reverse mode has become the default
+for computing the gradient of a scalar loss, it is not the only option. 
+Forward-mode differentiation is sometimes preferable,
+as in the Julia package ForwardDiff.jl
+:cite:`Revels.Lubin.Papamarkou.2016`. 
 Before exploring methods, 
 let's first master the autograd package.
 
@@ -369,8 +374,9 @@ rather than $\partial_{\mathbf{x}} \mathbf{y}$.
 This next part may be confusing,
 but for reasons that will become clear later, 
 this argument (representing $\mathbf{v}$) is named `gradient`. 
-For a more detailed description, see Yang Zhang's 
-[Medium post](https://zhang-yang.medium.com/the-gradient-argument-in-pytorchs-backward-function-explained-by-examples-68f266950c29). 
+For a more detailed description, see the PyTorch documentation on the
+`gradient` argument to
+[`Tensor.backward`](https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html). 
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -431,10 +437,11 @@ but whose *provenance* (how it was created)
 has been wiped out.
 Thus `u` has no ancestors in the graph
 and gradients do not flow through `u` to `x`.
-For example, taking the gradient of `z = x * u`
-will yield the result `u`,
-(not `3 * x * x` as you might have 
-expected since `z = x * x * x`).
+Now consider `z = x * u`.
+Because `u` is treated as a constant equal to $x^2$,
+the gradient is $\partial z / \partial x = u = x^2$.
+Had we *not* detached---so that `z = x * (x * x)` $= x^3$---we
+would instead have obtained $\partial z / \partial x = 3x^2$.
 
 ```{.python .input #autograd-detaching-computation-1}
 %%tab mxnet

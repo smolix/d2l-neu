@@ -18,7 +18,7 @@ so to start, let's get our hands dirty
 with $n$-dimensional arrays, 
 which we also call *tensors*.
 If you already know the NumPy 
-scientific computing package, 
+scientific computing package :cite:`Harris.Millman.Walt.ea.2020`, 
 this will be a breeze.
 For all modern deep learning frameworks,
 the *tensor class* (`ndarray` in MXNet, 
@@ -32,6 +32,9 @@ to accelerate numerical computation,
 whereas NumPy only runs on CPUs.
 These properties make neural networks
 both easy to code and fast to run.
+(We cover how to place tensors on a GPU and move them between devices
+in :numref:`sec_use_gpu`; until then, every tensor we create lives in
+CPU memory.)
 
 
 
@@ -157,6 +160,19 @@ x = jnp.arange(12)
 x
 ```
 
+The `dtype` (data type) of a tensor determines how its elements are stored.
+Integer ranges like `arange` default to an integer type, but deep learning
+is done almost entirely in *floating point*, and by convention in
+**32-bit** floating point (`float32`): it halves the memory and bandwidth of
+`float64` while providing far more than enough precision for gradient-based
+learning, and it is what GPU hardware is optimized for. That is why several
+cells in this section request `dtype=...` explicitly. You can inspect a
+tensor's type via its `dtype` attribute and convert between types by casting
+(e.g., with `astype`, `.float()`, or `tf.cast`). A related concern is
+numerical *stability*: in finite precision, naive computations can overflow
+or underflow, which is why later sections compute quantities such as the
+softmax and cross-entropy with stabilized formulas (:numref:`sec_softmax`).
+
 :begin_tab:`mxnet`
 Each of these values is called
 an *element* of the tensor.
@@ -244,6 +260,11 @@ that should be inferred automatically.
 In our case, instead of calling `x.reshape(3, 4)`,
 we could have equivalently called `x.reshape(-1, 4)` or `x.reshape(3, -1)`.
 
+Reshaping does not move any data: the returned tensor typically *shares
+storage* with the original---only the metadata describing the shape
+changes---so writing into one can affect the other. We return to this
+subtlety in the discussion of saving memory below.
+
 Practitioners often need to work with tensors
 initialized to contain all 0s or 1s.
 We can construct a tensor with all elements set to 0 
@@ -296,7 +317,9 @@ We often wish to
 sample each element randomly (and independently) 
 from a given probability distribution.
 For example, the parameters of neural networks
-are often initialized randomly.
+are often initialized randomly, in part to *break symmetry* between units:
+if every weight in a layer started at the same value (say, zero),
+the units would all compute the same thing and could never specialize.
 The following snippet creates a tensor 
 with elements drawn from 
 a standard Gaussian (normal) distribution
@@ -324,6 +347,14 @@ tf.random.normal(shape=[3, 4])
 # always result in the same sample being generated
 jax.random.normal(jax.random.PRNGKey(0), (3, 4))
 ```
+
+Random sampling raises the question of *reproducibility*. Calling a sampler
+repeatedly gives different draws, which is usually what we want, but for
+debugging or for figures that should not change between runs we fix a *seed*.
+PyTorch, TensorFlow, and MXNet keep a global generator that
+`torch.manual_seed` / `tf.random.set_seed` / `np.random.seed` reset; JAX
+takes the opposite, more explicit stance, threading a *key* through every
+draw (the same key always yields the same sample), as the JAX cell above shows.
 
 Finally, we can construct tensors by
 supplying the exact values for each element
@@ -615,7 +646,8 @@ on two tensors of the same shape.
 Under certain conditions,
 even when shapes differ, 
 we can still perform elementwise binary operations
-by invoking the *broadcasting mechanism*.
+by invoking the *broadcasting mechanism*
+(a convention inherited from NumPy).
 Broadcasting works according to 
 the following two-step procedure:
 (i) expand one or both arrays
@@ -624,6 +656,12 @@ so that after this transformation,
 the two tensors have the same shape;
 (ii) perform an elementwise operation
 on the resulting arrays.
+
+Broadcasting is not magic; it follows a simple rule. Line the two shapes up
+from the *right* and compare them axis by axis: two axes are compatible when
+they are equal or when one of them is $1$ (a missing leading axis counts as
+$1$). The size-$1$ axis is then *stretched* to match the other. If any pair
+of axes is incompatible, the operation raises an error rather than guessing.
 
 ```{.python .input #ndarray-broadcasting-1}
 %%tab mxnet
@@ -759,20 +797,11 @@ to reduce the memory overhead of the operation.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Even once you store state persistently in a `Variable`, 
-you may want to reduce your memory usage further by avoiding excess
-allocations for tensors that are not your model parameters.
-Because TensorFlow `Tensors` are immutable 
-and gradients do not flow through `Variable` assignments, 
-TensorFlow does not provide an explicit way to run
-an individual operation in-place.
-
-However, TensorFlow provides the `tf.function` decorator 
-to wrap computation inside of a TensorFlow graph 
-that gets compiled and optimized before running.
-This allows TensorFlow to prune unused values, 
-and to reuse prior allocations that are no longer needed. 
-This minimizes the memory overhead of TensorFlow computations.
+Because TensorFlow `Tensors` are immutable, there is no in-place assignment
+for ordinary tensors; reuse a `Variable` (as above) when you need mutable
+state. Compiling a computation with `tf.function` additionally lets
+TensorFlow prune and reuse allocations for you; we return to graph
+compilation and its performance benefits in :numref:`sec_hybridize`.
 :end_tab:
 
 ```{.python .input #ndarray-saving-memory-3}
@@ -780,19 +809,6 @@ This minimizes the memory overhead of TensorFlow computations.
 before = id(X)
 X += Y
 id(X) == before
-```
-
-```{.python .input #ndarray-saving-memory-3}
-%%tab tensorflow
-@tf.function
-def computation(X, Y):
-    Z = tf.zeros_like(Y)  # This unused value will be pruned out
-    A = X + Y  # Allocations will be reused when no longer needed
-    B = A + Y
-    C = B + Y
-    return C + Y
-
-computation(X, Y)
 ```
 
 ```{.python .input #ndarray-saving-memory-3}
@@ -854,7 +870,7 @@ type(A), type(B)
 ```
 
 To convert a size-1 tensor to a Python scalar,
-we can invoke the `item` function or Python's built-in functions.
+we can invoke the `item` method or Python's built-in `float` and `int`.
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-2}
 %%tab mxnet
@@ -890,6 +906,10 @@ Tensors provide a variety of functionalities including construction routines; in
 
 1. Run the code in this section. Change the conditional statement `X == Y` to `X < Y` or `X > Y`, and then see what kind of tensor you can get.
 1. Replace the two tensors that operate by element in the broadcasting mechanism with other shapes, e.g., 3-dimensional tensors. Is the result the same as expected?
+1. Create the vector `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor using `-1` for one of the components. Which component does the framework infer, and why is at most one `-1` allowed?
+1. Build a $(3, 4)$ tensor and predict, *before running*, the shape of its sum along `axis=0`, along `axis=1`, and with `keepdims=True`. Then check each prediction against the code.
+1. Try to add two tensors whose shapes are *not* broadcast-compatible, for example shapes $(3, 2)$ and $(2, 3)$. What error do you get? Use the alignment rule from the broadcasting section to explain it, then find a reshape of one operand that makes the addition valid.
+1. Recall the saving-memory discussion. Verify with `id()` that `X[:] = X + Y` (or `X += Y`) reuses `X`'s memory while `X = X + Y` allocates a fresh tensor. Why does this distinction matter when training a model with millions of parameters?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)
@@ -1281,23 +1301,6 @@ If `X` isn't needed afterward, `X += Y` is cheapest:
 A `Variable.assign` writes in place — its `id` is unchanged:
 
 @ndarray-saving-memory-2
-:::
-
-::: {.col .fig}
-@fig:ndarray-saving-memory
-:::
-:::
-:::
-
-::: {.slide title="Reusing allocations with `tf.function`" only="tensorflow"}
-[Performance]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-`Tensor`s themselves are immutable. Wrap a computation in **`tf.function`**
-so the graph compiler prunes and reuses allocations:
-
-@ndarray-saving-memory-3
 :::
 
 ::: {.col .fig}

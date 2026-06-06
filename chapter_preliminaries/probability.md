@@ -267,6 +267,11 @@ np.random.multinomial(100, fair_probs)
 Each time you run this sampling process,
 you will receive a new random value
 that may differ from the previous outcome.
+If instead you need *reproducible* draws---to debug,
+or so that a figure looks the same on every run---seed
+the generator first (`torch.manual_seed`, `np.random.seed`, or,
+in JAX, by passing an explicit `key`, as introduced
+in :numref:`sec_ndarray`).
 Dividing by the number of tosses
 gives us the *frequency*
 of each outcome in our data.
@@ -340,7 +345,7 @@ and the *central limit theorem*
 tells us that in many situations,
 as the sample size $n$ grows,
 these errors should go down
-at a rate of $(1/\sqrt{n})$.
+at a rate of $(1/\sqrt{n})$ :cite:`Wasserman.2013`.
 Let's get some more intuition by studying
 how our estimate evolves as we grow
 the number of tosses from 1 to 10,000.
@@ -550,12 +555,13 @@ For example, we might use $P(X)$ to refer broadly
 to the *distribution* of $X$, i.e.,
 the function that tells us the probability
 that $X$ takes any given value.
-Other times we write expressions
-like $P(X,Y) = P(X) P(Y)$,
-as a shorthand to express a statement
-that is true for all of the values
-that the random variables $X$ and $Y$ can take, i.e.,
-for all $i,j$ it holds that $P(X=i \textrm{ and } Y=j) = P(X=i)P(Y=j)$.
+Other times we write an equation between distributions
+as shorthand for a statement that holds
+for all of the values the random variables can take.
+For instance, the equation $P(X,Y) = P(X) P(Y)$
+is shorthand for "$P(X=i \textrm{ and } Y=j) = P(X=i)P(Y=j)$
+for all $i,j$"---although, as we will see when we discuss
+*independence*, that particular equation holds only in special cases.
 Other times, we abuse notation by writing
 $P(v)$ when the random variable is clear from the context.
 Since an event in probability theory is a set of outcomes from the sample space,
@@ -596,7 +602,7 @@ You might have noticed that we could not even
 make it through the previous section without
 making statements involving interactions
 among multiple random variables
-(recall that $P(X,Y) = P(X) P(Y)$).
+(recall our shorthand $P(X,Y)$ for the joint distribution).
 Most of machine learning
 is concerned with such relationships.
 Here, the sample space would be
@@ -802,7 +808,7 @@ but this correlation disappears if we condition on age.
 
 
 
-## An Example
+## Worked Example: HIV Testing
 :label:`subsec_probability_hiv_app`
 
 Let's put our skills to the test.
@@ -1125,6 +1131,17 @@ It tells us that draws from a distribution lie
 with at least 50% probability
 within a $[-\sqrt{2} \sigma, \sqrt{2} \sigma]$
 interval centered on the expectation.
+
+This section is only a preview of the probability and statistics
+we will use.
+:numref:`chap_mdl-probability-statistics` develops it in full---common
+distributions such as the Bernoulli and Gaussian
+(:numref:`sec_mdl-distributions`), maximum likelihood estimation
+(:numref:`sec_mdl-maximum_likelihood`), and the elements of statistics
+that turn data into estimates---while
+:numref:`chap_mdl-information-theory` introduces entropy and the
+divergences between distributions.
+For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
 
 
 

@@ -23,16 +23,15 @@ changes:
    at the top of the `DOMContentLoaded` handler turns the duplicate
    firing into a no-op.
 
-3. Guard the inline cookie-consent initializer against the same synthetic
-   `DOMContentLoaded`. Quarto's `cookie-consent` feature emits, on every
-   page, an inline `data-cfasync="false"` script whose body is
-   `document.addEventListener('DOMContentLoaded', function () { cookieconsent.run({...}) })`.
-   `data-cfasync` keeps RL from *loading* it, but RL's synthetic
-   `DOMContentLoaded` still re-fires the listener, so `cookieconsent.run`
-   runs twice and a second consent banner pops up ("cookie alert launches
-   twice"). We splice the same one-shot guard in front of `cookieconsent.run`
-   so the duplicate firing is a no-op. (Quarto reveal.js slides carry no
-   cookie-consent, so only the book HTML needs this.)
+3. Make Quarto's inline cookie-consent init idempotent. Same synthetic
+   `DOMContentLoaded` problem as (2), but the handler lives inline in every
+   page's `<head>` (`document.addEventListener('DOMContentLoaded', () =>
+   cookieconsent.run({...}))`), not in a shared site_libs file. Firing it
+   twice calls `cookieconsent.run()` twice, so the visitor sees two stacked
+   "We use cookies" dialogs. The same one-line guard makes the second firing
+   a no-op. (`data-cfasync="false"` alone does not help here: every page
+   script is already excluded — it is RL's own bootstrap that re-dispatches
+   the event.)
 """
 from __future__ import annotations
 
@@ -61,13 +60,16 @@ def patch(html: str) -> tuple[str, int]:
     return out, n
 
 
-# The inline cookie-consent initializer Quarto emits per page. We anchor on
-# `cookieconsent.run` immediately inside the `DOMContentLoaded` handler so we
-# never touch any other `DOMContentLoaded` listener on the page (search, nav,
-# tabsets, …). The guard is spliced right after the handler's opening `{`.
+# Quarto's cookie-consent injects an inline <head> script of the form:
+#   document.addEventListener('DOMContentLoaded', function () {
+#   cookieconsent.run({ ... });
+#   });
+# Guard the handler so a second (RL-synthetic) DOMContentLoaded firing does
+# not build a duplicate "We use cookies" banner. We splat the guard between
+# the handler's opening brace and the `cookieconsent.run(` call.
 _CC_INIT_RE = re.compile(
     r"(document\.addEventListener\(\s*['\"]DOMContentLoaded['\"]\s*,\s*"
-    r"function\s*\(\s*\)\s*\{)(\s*cookieconsent\.run)",
+    r"function\s*\([^)]*\)\s*\{)(\s*cookieconsent\.run\()"
 )
 _CC_GUARD = (
     " if (window.__d2lCookieConsentInit) return; "
@@ -76,15 +78,13 @@ _CC_GUARD = (
 
 
 def patch_cookie_consent(html: str) -> tuple[str, int]:
-    """Splice a one-shot guard before `cookieconsent.run` so RL's synthetic
-    DOMContentLoaded can't run the consent banner twice. Idempotent: a no-op
-    once the guard variable is present. Returns (patched_html, n_patched)."""
+    """Return (patched_html, n_patched). Idempotent: a page already carrying
+    the guard is left untouched."""
     if "__d2lCookieConsentInit" in html:
         return html, 0
-    out, n = _CC_INIT_RE.subn(
+    return _CC_INIT_RE.subn(
         lambda m: m.group(1) + _CC_GUARD + m.group(2), html, count=1
     )
-    return out, n
 
 
 # quarto-search.js's DOMContentLoaded handler signature. We splat a
@@ -154,23 +154,23 @@ def main() -> int:
         return 1
     files = 0
     tags = 0
-    cc_files = 0
+    cc = 0
     for p in root.rglob("*.html"):
         text = p.read_text(encoding="utf-8")
         patched, n = patch(text)
-        patched, cc = patch_cookie_consent(patched)
-        if n or cc:
+        patched, n_cc = patch_cookie_consent(patched)
+        if n or n_cc:
             p.write_text(patched, encoding="utf-8")
-            files += 1 if n else 0
+            files += 1
             tags += n
-            cc_files += cc
+            cc += n_cc
     qs_version = patch_quarto_search(root)
     qs_stamped = (
         stamp_quarto_search_src(root, qs_version) if qs_version else 0
     )
     print(
         f"add_cfasync: tagged {tags} <script> tags across {files} files; "
-        f"cookie-consent guard in {cc_files} files; "
+        f"cookie-consent guard added in {cc} files; "
         f"quarto-search.js guard: v={qs_version or 'n/a'}, "
         f"stamped in {qs_stamped} HTML files"
     )

@@ -3,8 +3,8 @@
   "source": "chapter_linear-classification/softmax-regression-scratch.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:9171ba36e4a48cc47e3225e8b3a91deca4c017e2172fc7d50ca374fe7458608a",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:9cf23561aadd82fc12d5772dfb925f3fc20cb0d46dc389b53215fa85c6fc1e88",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[0.2301, 0.1338, 0.1965, 0.2430, 0.1965],\n         [0.2897, 0.1703, 0.2620, 0.1475, 0.1305]]),\n tensor([1., 1.]))"
+          "text": "(tensor([[0.1632, 0.2483, 0.1914, 0.1165, 0.2806],\n         [0.1262, 0.2917, 0.3079, 0.1294, 0.1448]]),\n tensor([1.0000, 1.0000]))"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 60514,
-          "sha256": "sha256:126ec1ba52dc049f4d28ab23fdef746e9092e013afa4132f16fe51d7cd79b4ef"
+          "bytes": 22394,
+          "sha256": "sha256:10eb3f27156191295b7bcfd693064aac76e5480011efbf688579215c3ca3d5c7"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 50289,
-          "sha256": "sha256:01236c10faa2cfc09272252a2692daf3818a3739ba611a655e5393fa25d67342"
+          "bytes": 50577,
+          "sha256": "sha256:7f3e942400b8fa4088599e157b0ba7c8a26ed14a8ac1391ca1df765dd128ca14"
         }
       ]
     }

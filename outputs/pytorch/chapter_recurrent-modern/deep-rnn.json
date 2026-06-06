@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/deep-rnn.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:a127074e1b2a6575613486340a4f6048ded5180d2379706a60d75c03e3e1bede",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:cc3513d5450d0b78401a90c6800b2d04b740a204da9ab63b6788b667f3a615c2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 1067855,
-          "sha256": "sha256:5523739a0bc9ee3ec150c10f7f5f9ff667cc1b78039f64863f1ac4912333d49e"
+          "bytes": 24863,
+          "sha256": "sha256:ab8eeb0be2535d742bf04c101a480d6b4d1e4fb26792479659614220763411e6"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 1072155,
-          "sha256": "sha256:270555145d813e145e699f9d500f1334c8a71e8bf22b96d0bd325f4617edad74"
+          "bytes": 24191,
+          "sha256": "sha256:913cc05facb9726f4b931b4e9d4578e2d9708a04c666136a50da4d38cc48a993"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the time traveller '"
+          "text": "'it has a conth a man the t'"
         }
       ]
     }

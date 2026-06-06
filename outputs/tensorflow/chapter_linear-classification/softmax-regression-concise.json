@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a77ee271ee6b78595d9d86abc06fa4973ac4424564cabbc21618dc03fe5e91a7",
+    "d2l_lib_fingerprint": "sha256:89b266024e9b88a87d9d853e86a9daf63a21b2d91517b8835945f2f1cc34295a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 60591,
-          "sha256": "sha256:72a6a6faa95cf7983bccc37f36d5d5548684db958a1f6094916c5b996613e832"
+          "bytes": 22394,
+          "sha256": "sha256:543780cbe778c42069feccc7575be5b5e08388fd29a15eed2fa18c94311357a1"
         }
       ]
     }

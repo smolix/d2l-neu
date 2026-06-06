@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:49cb308545a8137b7003c2d1c599d77a204688528c533a1304d94226f85d6eea",
+    "d2l_lib_fingerprint": "sha256:384b34a181dd7cd31ac9ce78464c50e2d13250e91653c61d42c9dfb9a147daa3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 106299,
-          "sha256": "sha256:d692a0a520d1249024336fb0a383b4a75c694b41ea3df4fe502f2c353d063de5"
+          "bytes": 20065,
+          "sha256": "sha256:64d31fdf24d07a1ebe31a323224f0832b66f89cc0cca6ae2c96c02ad5011ec48"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 107170,
-          "sha256": "sha256:768c60eae5b55d04ac0213b265cf9e48c5431b8f922a6da0e08c6be3dd99e507"
+          "bytes": 20451,
+          "sha256": "sha256:056d217defd1d2480f776a71e3a2a218a5d8a15234d169d4cb9575f7dc3e3fde"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of the provell the '"
+          "text": "'it has it in time travelle'"
         }
       ]
     }

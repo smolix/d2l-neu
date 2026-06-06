@@ -66,45 +66,137 @@ def save_hyperparameters(self, ignore=[]):
 Progress bar.
 
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
+#@save
+import io, os, queue, threading, time
+
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
 def draw(self, x, y, label, every_n=1):
-    Point = collections.namedtuple('Point', ['x', 'y'])
-    if not hasattr(self, 'raw_points'):
-        self.raw_points = collections.OrderedDict()
-        self.data = collections.OrderedDict()
-    if label not in self.raw_points:
-        self.raw_points[label] = []
-        self.data[label] = []    
-    points = self.raw_points[label]
-    line = self.data[label]
-    points.append(Point(x, y))
-    if len(points) != every_n:
-        return    
-    mean = lambda x: sum(x) / len(x)
-    line.append(Point(mean([p.x for p in points]), 
-                      mean([p.y for p in points])))
-    points.clear()
-    if not self.display: 
+    """Schedule the point (x, y) to be plotted under `label`.
+
+    This call is *asynchronous*: it appends the point to an internal queue
+    and returns immediately, so the (possibly compiled) training loop never
+    blocks on a device-to-host transfer or on matplotlib. `y` may be a number
+    or a zero-argument callable returning one; if it is a callable, the
+    conversion runs on the background drawing thread, not on the caller's.
+    `every_n` averages each group of `n` raw points into one plotted point."""
+    self._start_drawer()
+    try:
+        self._queue.put_nowait((x, y, label, every_n))
+    except queue.Full:
+        pass  # drop the point rather than stall the training loop
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def _start_drawer(self):
+    if getattr(self, '_drawer', None) is not None:
         return
-    d2l.use_svg_display()
-    if self.fig is None:
-        self.fig = d2l.plt.figure(figsize=self.figsize)
-    plt_lines, labels = [], []
-    for (k, v), ls, color in zip(self.data.items(), self.ls, self.colors):        
-        plt_lines.append(d2l.plt.plot([p.x for p in v], [p.y for p in v], 
-                                      linestyle=ls, color=color)[0])
-        labels.append(k)        
-    axes = self.axes if self.axes else d2l.plt.gca()
+    self._queue = queue.Queue(maxsize=1000)
+    self._lock = threading.Lock()
+    self._handle = None
+    self._last = 0.0
+    self._running = True
+    # Emit live frames only outside the headless book build, so an executed
+    # notebook records exactly one (final) figure in the committed store.
+    self._live = self.display and os.environ.get('D2L_NB_CAPTURE') != '1'
+    self._drawer = threading.Thread(target=self._drain, daemon=True)
+    self._drawer.start()
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def _drain(self):
+    while self._running or not self._queue.empty():
+        try:
+            batch = [self._queue.get(timeout=0.1)]
+        except queue.Empty:
+            continue
+        while True:  # coalesce everything currently queued
+            try: batch.append(self._queue.get_nowait())
+            except queue.Empty: break
+        for x, y, label, every_n in batch:
+            self._accumulate(x, y() if callable(y) else y, label, every_n)
+        if self._live and time.time() - self._last > 0.1:
+            self._render(thread=True)
+            self._last = time.time()
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def _accumulate(self, x, y, label, every_n):
+    Point = collections.namedtuple('Point', ['x', 'y'])
+    with self._lock:
+        if not hasattr(self, 'raw_points'):
+            self.raw_points = collections.OrderedDict()
+            self.data = collections.OrderedDict()
+        if label not in self.raw_points:
+            self.raw_points[label] = []
+            self.data[label] = []
+        points = self.raw_points[label]
+        points.append(Point(x, float(y)))
+        if len(points) != every_n:
+            return
+        mean = lambda v: sum(v) / len(v)
+        self.data[label].append(Point(mean([p.x for p in points]),
+                                      mean([p.y for p in points])))
+        points.clear()
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def _plot_lines(self, axes):
+    with self._lock:
+        series = [(k, list(v)) for k, v in getattr(self, 'data', {}).items()]
+    for (k, v), ls, color in zip(series, self.ls, self.colors):
+        axes.plot([p.x for p in v], [p.y for p in v],
+                  linestyle=ls, color=color, label=k)
     if self.xlim: axes.set_xlim(self.xlim)
     if self.ylim: axes.set_ylim(self.ylim)
-    if not self.xlabel: self.xlabel = self.x    
+    if not self.xlabel: self.xlabel = self.x
     axes.set_xlabel(self.xlabel)
     axes.set_ylabel(self.ylabel)
     axes.set_xscale(self.xscale)
     axes.set_yscale(self.yscale)
-    axes.legend(plt_lines, labels)    
-    display.display(self.fig)
-    display.clear_output(wait=True)
+    if series: axes.legend()
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def _render(self, thread=False):
+    if not self.display:
+        return
+    if thread:
+        # Off the main thread: matplotlib's global pyplot state is not
+        # thread-safe, so render into a private Agg figure and push a PNG.
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        fig = Figure(figsize=self.figsize)
+        FigureCanvasAgg(fig)
+        self._plot_lines(fig.add_subplot(111))
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight')
+        frame = display.Image(data=buf.getvalue())
+        if self._handle is None:
+            self._handle = display.display(frame, display_id=True)
+        else:
+            self._handle.update(frame)
+    else:
+        # Main thread (final frame): render through pyplot so the output is
+        # captured exactly like the rest of the book's inline figures.
+        d2l.use_svg_display()
+        if self.fig is None:
+            self.fig = d2l.plt.figure(figsize=self.figsize)
+        self.fig.clf()
+        self._plot_lines(self.fig.add_subplot(111))
+        if self._handle is not None:
+            self._handle.update(self.fig)         # interactive: reuse live slot
+        else:
+            # Display, then a trailing clear_output(wait=True): the inline
+            # backend's automatic end-of-cell render then *replaces* (rather
+            # than duplicates) this figure, so exactly one image is captured.
+            display.display(self.fig)
+            display.clear_output(wait=True)
+
+@d2l.add_to_class(d2l.ProgressBoard)  #@save
+def flush(self):
+    """Wait for every scheduled point to be drawn, then render the final
+    figure on the calling thread. `Trainer.fit` calls this for you; call it
+    yourself after a bare `draw` loop."""
+    if getattr(self, '_drawer', None) is not None:
+        self._running = False
+        self._drawer.join()
+        self._drawer = None
+    self._render(thread=False)
 ```
 
 Add FrozenLake environment

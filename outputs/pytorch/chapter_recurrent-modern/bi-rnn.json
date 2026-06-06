@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/bi-rnn.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:924f188520ac1e812f6e987bb98aecc4fed90a1d9157c535a4673451c7750981",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:09b278fd5dc588adacf9dd2c8d4a2d4d7bad38ca15b661f861b96eb6f62f283d",
     "max_inline_bytes": 0
   },
   "cells": {

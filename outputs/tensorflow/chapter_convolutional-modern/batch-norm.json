@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:5bc747a03ad9e8512ac133effa8361878215edaccd486bd7755c85fa76b263e3",
+    "d2l_lib_fingerprint": "sha256:3695622f4804256d9724856274e8ee3b0168e931174c26049f28c80dc6daeee5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 57868,
-          "sha256": "sha256:f1a20a03517d1deb28c5ff79e911c689696bf22afc690819755522f67e93dc1f"
+          "bytes": 19975,
+          "sha256": "sha256:03484b3f9c9ad2f05b3fbe0c3c4d2600c3d8cab20a053b0a0ccecb7b4293b76e"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.6405852, 2.5346386, 4.4909935, 2.0466583, 2.5389442, 2.3539135],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 0.3217615, -2.7100601,  2.4613204, -1.5031106,  1.255107 ,\n         2.7647116], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([1.5763943, 4.8199883, 2.6749642, 2.2007535, 2.3816333, 3.8115103],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([1.561023 , 2.5082805, 1.0404164, 2.097167 , 1.203618 , 3.942358 ],\n       dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 57772,
-          "sha256": "sha256:37ebef50aa8613f3f1ab7d8ca2ce82cac3733402d6fd8aa1a6bc86c64f7803eb"
+          "bytes": 19980,
+          "sha256": "sha256:0066a8ecd4e3a76986587801c7ebe77dde909d9af615b16b3e80eba38c1ec071"
         }
       ]
     }

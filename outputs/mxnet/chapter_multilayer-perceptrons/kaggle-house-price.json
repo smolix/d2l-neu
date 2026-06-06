@@ -3,8 +3,8 @@
   "source": "chapter_multilayer-perceptrons/kaggle-house-price.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:82f7f066738f72f3e5203ef21d0d3c485aad53fa95de49e1bcb181b243f37c0e",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:57a91d9ca8b5c13a6022b2a00450ac41e0fe1c5c0cd743793a487192d34821cf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.17841921776533126\n"
+          "text": "average validation log mse = 0.17434226512908935\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-1.svg",
-          "bytes": 41653,
-          "sha256": "sha256:8d585de9c2a0f3969706db25f7738d0b5a737d2b4c319550915a383bd50df691"
+          "bytes": 21408,
+          "sha256": "sha256:46fe15237c314ebfd10e8d7e9bfdcf7f245dd03289dbc27c2a424a80fd7cfd22"
         }
       ]
     },

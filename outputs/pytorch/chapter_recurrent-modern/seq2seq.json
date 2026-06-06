@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/seq2seq.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:1bf747d06eacb306a8c09517bab5f0f1487feeb49eb342311d9c72840f51b700",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:ec8bc963d28cc4521d24d6bf23c35fb835accd929bcf9554925450ff2de8572e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 140106,
-          "sha256": "sha256:1be24fae63e7be06984429c1590354e9319a16ac2e0f3a972463f78e3e263d89"
+          "bytes": 20862,
+          "sha256": "sha256:cca766de16f184d390d4c8e95bc200c36ef4e811a71d9e1408cf102f2ffe00f4"
         }
       ]
     },

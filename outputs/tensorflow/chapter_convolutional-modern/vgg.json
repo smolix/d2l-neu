@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:5bc747a03ad9e8512ac133effa8361878215edaccd486bd7755c85fa76b263e3",
+    "d2l_lib_fingerprint": "sha256:3695622f4804256d9724856274e8ee3b0168e931174c26049f28c80dc6daeee5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 58694,
-          "sha256": "sha256:9ace45ea4affd2722f85408d0225931219b2525417a8bca55377bcda3eb9c4d6"
+          "bytes": 20958,
+          "sha256": "sha256:30573c0a467dfc9c1ad9f8016fc2bf883ce78d8e8ae10643407c6e1f12edb068"
         }
       ]
     }

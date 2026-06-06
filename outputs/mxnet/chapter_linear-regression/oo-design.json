@@ -3,8 +3,8 @@
   "source": "chapter_linear-regression/oo-design.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:90854982940e2968d2ce289361d1ce9fe7f9736fd0d72a8955a1dc71bda78bc6",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:c17831c71cdd8eefd6866b6e987fe263b6840a01e85cdfb1d597fff30623394b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,30 +56,30 @@
       "outputs": []
     },
     "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:88aa1066a87e7ffe30452710644c00a3e3184172d2cdf92df16a553466d8caf9",
+      "code_fingerprint": "sha256:73db5f14553acd348cad9a26cffec0876ae371ed748229508cc041c88b8255cf",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
-          "bytes": 78046,
-          "sha256": "sha256:92468e2b9c77878b65e230345dc6ed511ecd62a8054c59fe528a93904abb3638"
+          "bytes": 17183,
+          "sha256": "sha256:f7740b9e4dcfd2dd3beb846e9b57ba00771bf3351fd606c2776d274ecadccfed"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:3a3e3cb10ff6d9760cf6cf3294c1afd9b7ed23edc7cbda601d571f3cd838353d",
+      "code_fingerprint": "sha256:a55c1aaabf8504c653ee31cb41289bf550400c8504312aec935e2286f326f573",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:dda5a7294d1eba921be423efeade6f24bc8a3224001c1d90d1a2a06b4e0afab7",
+      "code_fingerprint": "sha256:0ecea88303c3f3479e3e668419dc9986ef4dc45c2dfbc6efaa333d73c70e68d2",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:3a91e0c2ac30d5f26020f7435d0854b98788273912724d879cd8f545625e4ea8",
+      "code_fingerprint": "sha256:013b6f7cb71913e86e3430889cbe0409f66aaf9af10bb89edbc0a0c41078f751",
       "kind": "text",
       "outputs": []
     }

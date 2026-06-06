@@ -3,8 +3,8 @@
   "source": "chapter_linear-regression/linear-regression-scratch.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:5def8eff0406246cf70a29d78a7c06c3add66f25ee1d737dc8730434a497e77e",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:55bf6b1aacad4ece4f1b4a04972ce35ae783297e4c71456ca2dbbd72cbb79887",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 40313,
-          "sha256": "sha256:0281806ac462c8f607b85f0fc12223edec4e4602046f387445cc6705da4be534"
+          "bytes": 19124,
+          "sha256": "sha256:fb02560e7fa3b5b399b1edd8c7c0c81b2c12590e97eca2c3ef0dd8979a439a0e"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 4.875660e-05 -2.553463e-04]\nerror in estimating b: [0.00033855]\n"
+          "text": "error in estimating w: [ 0.0007869  -0.00073338]\nerror in estimating b: [0.00037289]\n"
         }
       ]
     }

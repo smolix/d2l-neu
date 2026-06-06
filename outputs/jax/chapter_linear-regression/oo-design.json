@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:6f9a6e48c82f87c2335a74b978be4ad370d49b348447be04e1a4132a1cd49bb0",
+    "d2l_lib_fingerprint": "sha256:c597474dbd6e645cc5db6bbf8176d84e43d9811bbd319d7f93e267ed6d43bef8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,30 +56,30 @@
       "outputs": []
     },
     "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:4fadf5e622f2e1fb870ecd2665cbd1bcc8ec50fc7ed091148303555b0b1fefbb",
+      "code_fingerprint": "sha256:e1611576a2a4baa621f1b2fc92d41d2dcba20fd4ee9c8f100044c3e2898665bf",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
-          "bytes": 78046,
-          "sha256": "sha256:29e801f938fa3e8db37c5cefc66522fd6f41e04aebaa683da03799f68242d52e"
+          "bytes": 17183,
+          "sha256": "sha256:e14060ec2e0876b90544c3e730401a538526b24ae218c7d7fa05468423ad1d66"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:1fc1d6e6e95b74aa683e839db7b3d7f461887940ac2c5bfbb2e855ea7603c00a",
+      "code_fingerprint": "sha256:cb47f541304597c7614be5976a769695c74d1958c6ea5c2a033fee60758cae4d",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:2031f1fa4631a8b10b7db7a3a3a3d46b4e9e821a662fc0e85cf37c302918faa2",
+      "code_fingerprint": "sha256:19fab9d378fb6ab129d8a8effca6b1211d87651c475b549ff7563b52034abe13",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:6b21152e8b5c52dc927f003c09c99f1bb07e692425e2fb322bb0b94ff5783199",
+      "code_fingerprint": "sha256:b16065313da9df5e7cd67149a298898dfa5543ea5b81038a5cf744beecc7dded",
       "kind": "text",
       "outputs": []
     }

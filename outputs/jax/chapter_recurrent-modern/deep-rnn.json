@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:696396db6fcd6324a5a0c29981d989e2af8d23d57fdfd3e8f3bc560bd15e0017",
+    "d2l_lib_fingerprint": "sha256:ece128e209927b3ef2ec9777fea765c4e12bb026ba8b3fcc351098b50340c803",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 322493,
-          "sha256": "sha256:6628fd6d87b5834011cab6be09afc95f9c822280bbdb6781d125708b8ee04282"
+          "bytes": 25056,
+          "sha256": "sha256:3561c6ba9fc226861a0bc1237598c1a022da9a06ec2108abaa5972e8505d4035"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 325512,
-          "sha256": "sha256:e7a91bacb89d0f4b3647204a068c4ab9c26291c391edbf96c0a639419b755884"
+          "bytes": 24684,
+          "sha256": "sha256:e89a191ab9336481d5c9cce90778307b8ae7bccd00c69ec4e335ea1f11615f92"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has no has no has no ha'"
+          "text": "'it has of space and so and'"
         }
       ]
     }

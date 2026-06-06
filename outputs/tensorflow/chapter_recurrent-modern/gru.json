@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:561fbbffffd30bea1860f099849bc30e5796590905291ded6a9285e6b692f3fd",
+    "d2l_lib_fingerprint": "sha256:8ab3340639d41faeacce241612bc8b0e506d98e89ae5cdf2a3f6e82914202ea9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 311254,
-          "sha256": "sha256:61d2175b36ae9fd60f4a0f823140537def8048f79a4af6231046d94c7a353d9a"
+          "bytes": 20306,
+          "sha256": "sha256:9770ce7a4366cae9df5ee8819d6eee09199e8d3c686fb5102f6a48f085fc28ad"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 312142,
-          "sha256": "sha256:212725233d11d2bc5fd312f1776ec6e2ef04656c3501481d1d7f439c95d80e1f"
+          "bytes": 20319,
+          "sha256": "sha256:388a84092e2c8ede96d3073fc9e8b5146a5289ffcb6d3a147d9eae6bc6e4ac7a"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a move to the the t'"
+          "text": "'it has in the proun it a s'"
         }
       ]
     }

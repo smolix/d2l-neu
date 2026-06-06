@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/transformer.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:b443dd9346daf75de0a1adad57d36f6836e2189004dbeddb573240eb9ac79f10",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:7c7957bd4fbfbe030f7a9d9253c3f58afa723d231fdfee752e3922e29a1f6bb8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 6.6490318e-03,  6.8853069e-03,  5.1484141e-03, -2.9870796e-03,\n         2.6286724e-03, -3.3797827e-05,  4.3491035e-04,  3.4067892e-03],\n       [ 6.6490318e-03,  6.8853069e-03,  5.1484141e-03, -2.9870796e-03,\n         2.6286724e-03, -3.3797827e-05,  4.3491035e-04,  3.4067892e-03],\n       [ 6.6490318e-03,  6.8853069e-03,  5.1484141e-03, -2.9870796e-03,\n         2.6286724e-03, -3.3797827e-05,  4.3491035e-04,  3.4067892e-03]])"
+          "text": "array([[-0.00112457, -0.00276945, -0.00465174, -0.00470635,  0.00300954,\n         0.00205162, -0.00199499, -0.0016012 ],\n       [-0.00112457, -0.00276945, -0.00465174, -0.00470635,  0.00300954,\n         0.00205162, -0.00199499, -0.0016012 ],\n       [-0.00112457, -0.00276945, -0.00465174, -0.00470635,  0.00300954,\n         0.00205162, -0.00199499, -0.0016012 ]])"
         }
       ]
     },
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-1-1.svg",
-          "bytes": 139748,
-          "sha256": "sha256:84b91d1b8207c633583b37e6391d0ac7a71f258edc0b9be266d41f311e2aea8c"
+          "bytes": 20441,
+          "sha256": "sha256:8666c2e6ad103300fa4d671724f2c88c1b2fb076aadc378436a7bb70fbe63303"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-4-1.svg",
-          "bytes": 51913,
-          "sha256": "sha256:a8d0388e9c0f9cf4f08f2f50bbc3d7e8a992172207aead1ddbc7b544e1dbebdc"
+          "bytes": 51948,
+          "sha256": "sha256:18597a3bc558f9666dd0f7984707aa334bdb2d22d90f110d195d28fdbdfd2992"
         }
       ]
     },
@@ -144,8 +144,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-7-1.svg",
-          "bytes": 52944,
-          "sha256": "sha256:3ad58652ab380dffb27d403c8d005b7ec1e04b11585c321dbc6a7d5c942b7c38"
+          "bytes": 52624,
+          "sha256": "sha256:454ca605f663fdae0d2316e8c14870646e82e292acca155345ee271ec2ba7dd0"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-8-1.svg",
-          "bytes": 52061,
-          "sha256": "sha256:ac5f302a7cc2479ae9836dd7cf4d25644ef6415f5059e0a52eecd8759ea59ab3"
+          "bytes": 52101,
+          "sha256": "sha256:c902095b905743844aaa923398630ca013b866c94c4b3c01cbb397ce1b9543b5"
         }
       ]
     }

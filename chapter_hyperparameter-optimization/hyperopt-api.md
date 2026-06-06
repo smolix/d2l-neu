@@ -323,6 +323,7 @@ for time_stamp, error in zip(
     tuner.cumulative_runtime, tuner.incumbent_trajectory
 ):
     board.draw(time_stamp, error, "random search", every_n=1)
+board.flush()  # drawing is asynchronous; render the final trajectory
 ```
 
 ## Comparing HPO Algorithms

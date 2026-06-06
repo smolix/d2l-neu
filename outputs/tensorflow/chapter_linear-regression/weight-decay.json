@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:04d7813f465e4fb7f5bcab73db32b8b42e728426e976ba504cc725f80b838b6d",
+    "d2l_lib_fingerprint": "sha256:485fc2e5214bc365f15a89bd9b24ed66c54fdb3f1746464636d083904b2d16d9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.011562452651560307\n"
+          "text": "L2 norm of w: 0.011738499626517296\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 44036,
-          "sha256": "sha256:dde95b84306e5c1a7e901d767d03a58f7cf0e6aec7c14db9285f6f05a0b4f7ac"
+          "bytes": 26168,
+          "sha256": "sha256:fec3e4c4fd1b7d4e54a76091b7eef1429e3c02638bcdd78922742df9dc1638c5"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0018944668117910624\n"
+          "text": "L2 norm of w: 0.0017113953363150358\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 38152,
-          "sha256": "sha256:24e4d453f82347a836b529aeb788b113f4e6ad76408ba0982ad5c6d6bb17878b"
+          "bytes": 22697,
+          "sha256": "sha256:f4fec9ab6f8042e966cfe73f42b631e6d340dbdb671a67516da00a502d527670"
         }
       ]
     },
@@ -81,14 +81,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0020030015148222446\n"
+          "text": "L2 norm of w: 0.0020236950367689133\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 39514,
-          "sha256": "sha256:4b9011d2599efb7749d3372c70ba00445987d894c8f54320794fce140f341bf0"
+          "bytes": 20535,
+          "sha256": "sha256:87227fd840c543ab745c999d7f6a8b7122bbd7ec765de8beb4f78804b051f367"
         }
       ]
     }

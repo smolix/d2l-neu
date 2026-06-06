@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/resnet.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d1bcf869611aaf5f7743cc599a9fdec8b7b157c36cdb2607b832d680ba44fdb5",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2a6baee7edf2bb67e8ea7d1261994fec3095eb72a911d41686fd702b412d6234",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 59156,
-          "sha256": "sha256:d486adc20d1fb47ea2f298e766173b08e43b3ae5f759feba5701323f95be8c91"
+          "bytes": 20982,
+          "sha256": "sha256:04abfebf7c89f1e56c1121d9ff05239f80395ad3b977682c125cbca079f223a3"
         }
       ]
     },

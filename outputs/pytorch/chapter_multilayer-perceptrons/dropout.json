@@ -3,8 +3,8 @@
   "source": "chapter_multilayer-perceptrons/dropout.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:6c550fd224299b55eca26f6a8bef32a147af1d82b04c5f307c59cded91009a18",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8e505068ef4c0e16e72a73fd04244acdec83384f3fd3981669527ac971722a0c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  0.,  0.,  0., 14.],\n        [16., 18.,  0., 22.,  0.,  0.,  0.,  0.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
+          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  0.,  4.,  6.,  0.,  0., 12.,  0.],\n        [16.,  0., 20.,  0.,  0., 26., 28., 30.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 59706,
-          "sha256": "sha256:ea199d1d7e8bf1199bb7cfcbf52a5ebe4747aede6e2cf7aaf3b97e041e79c5f3"
+          "bytes": 22068,
+          "sha256": "sha256:cb3ddda0d33c3efec38e0beba9f7565dfb44180df5009c072565cc72cb41c094"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 59623,
-          "sha256": "sha256:17ef8c3ca23dfd0437a8c3bfc023bd1de982d719ec8ddac549e382ec261469e2"
+          "bytes": 21509,
+          "sha256": "sha256:7e9f509b7c6c6b8c4696b4e863e840f6f038ac2e465779e27570f0942ce66c9f"
         }
       ]
     }

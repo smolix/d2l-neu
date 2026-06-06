@@ -3,8 +3,8 @@
   "source": "chapter_linear-classification/classification.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:a0237310aee486231d4e5053ba1a79b15fea379175cc68b121623a6229321d65",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:b74758173891e66459582cf678e034f3cfa37bf39bfe9a5f0af5a977be1da4d6",
     "max_inline_bytes": 0
   },
   "cells": {

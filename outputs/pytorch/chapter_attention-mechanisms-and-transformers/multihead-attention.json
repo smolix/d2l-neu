@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/multihead-attention.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d9eced77a48b3a43a8034c83c113d25eda694d6fc90c12ca4185690ba83203f5",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:320c94f3ab43f0620284e1b1003dd29a0fa96e880d422d624f5c082eb1e48e6b",
     "max_inline_bytes": 0
   },
   "cells": {

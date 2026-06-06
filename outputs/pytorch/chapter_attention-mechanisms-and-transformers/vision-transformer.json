@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/vision-transformer.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:453f6aa755820f17051e396bd58e6d1910bfa212996aa81b27f865fde103c7e2",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2faa3658bf575adb0814ee95d92d08804518de64a00ed17ed2a6dec6e5fc4d3b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 59280,
-          "sha256": "sha256:9d8874e2395a44a8d77a0d5b49920365abf330c6321923180e8ef6b4efff2a9f"
+          "bytes": 22872,
+          "sha256": "sha256:573db5709407b720573ed245de57bca6bc10c661368496cf2368eb2a676b1176"
         }
       ]
     }

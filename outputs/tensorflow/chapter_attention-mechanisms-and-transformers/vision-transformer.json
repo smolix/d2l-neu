@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b3fb61a7bf633ed42dfe3b6d6f18d25133eaee169b6e8fc198a64223ee831e3e",
+    "d2l_lib_fingerprint": "sha256:2cd91e4658d588f9849b9b5267da58bd06edd356c90318b8bd8311e93944749f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 57308,
-          "sha256": "sha256:ae89751d649ace360c37ee41381fdc04c7d9038772ad11ef86f2ab1140e6ad2c"
+          "bytes": 19974,
+          "sha256": "sha256:de2c998560fcaeb8cc158dcb59b0ed5234d34e2b424fe5279687df975a5a7344"
         }
       ]
     }

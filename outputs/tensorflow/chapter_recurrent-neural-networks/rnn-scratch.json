@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:d8ca2d4326825a728b8b6a8674fd1f4959725913cd2257fec02636d3d9d14332",
+    "d2l_lib_fingerprint": "sha256:671bae347daa5b20827dbec31d6b46d1a45985438170ddfe66daea0dc26eabf6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 1046939,
-          "sha256": "sha256:0c713c276b8f34ee2bab87ed87db16b22c5a6a5506573b313607ac21bd725fa2"
+          "bytes": 24113,
+          "sha256": "sha256:bf165e9ca06f6b239aaa7cc20b6a2d5c6259668e7dbebd10d86fe45d36366932"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.2, 'time traveller and the pratere wha'\n"
+          "text": "perplexity 7.4, 'time traveller and the the the the'\n"
         }
       ]
     }

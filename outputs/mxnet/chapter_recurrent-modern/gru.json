@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/gru.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:6a2f6e3d623f7de4d429d50546892b9d6804a4414266bf096dd328430552b13a",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:255154ba07d8f50966453169781fb9727a6a9ffb620d05af72f5f8b1ecf17dc1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 311337,
-          "sha256": "sha256:0e8097e2538ba2ae21bf7bc4c874eee23976f55dbb6aef5dbce672c7961419c7"
+          "bytes": 20305,
+          "sha256": "sha256:8fdc8826a5f36373961b808e1da53cc7724261aca9ac3928aacf252d5513b9f8"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 312673,
-          "sha256": "sha256:1d59d91433740a6173c3c4f6becc8097c84c33033054de581333084a9b9880d8"
+          "bytes": 21337,
+          "sha256": "sha256:3d2ba398fce541d6fe7b44b0fa2aaef568a5a77a2608701d2ef3028a9a18dfdb"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a ling and the prop'"
+          "text": "'it has a move is a move is'"
         }
       ]
     }

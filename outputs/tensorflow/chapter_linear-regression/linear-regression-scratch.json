@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:f910e71d06bc1ec2a0cdc59248ad951dbfbaa99c4b8209b58cf7a02ece181bf0",
+    "d2l_lib_fingerprint": "sha256:d6b52e093be3995538a1166075f6f4a543632f0f321e26dd6205ea926393a2d8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 40260,
-          "sha256": "sha256:3e4bc442877591eb2e71961ae764778940b603eade3567d10c8826e0661fa19e"
+          "bytes": 19121,
+          "sha256": "sha256:d042f83e14430829b5d742fdc3323dc6a014f622c6842029d4b1a8a0fcfc2a14"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [5.5789948e-05 4.3725967e-04]\nerror in estimating b: [-4.1484833e-05]\n"
+          "text": "error in estimating w: [ 0.00044882 -0.00029063]\nerror in estimating b: [0.0006876]\n"
         }
       ]
     }

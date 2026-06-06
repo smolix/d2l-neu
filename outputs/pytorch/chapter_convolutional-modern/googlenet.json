@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/googlenet.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d1bcf869611aaf5f7743cc599a9fdec8b7b157c36cdb2607b832d680ba44fdb5",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2a6baee7edf2bb67e8ea7d1261994fec3095eb72a911d41686fd702b412d6234",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 58762,
-          "sha256": "sha256:f088e45807681e8c96a90910b5e347ab1d6b6b30b170856671edae6c12b42e7c"
+          "bytes": 20968,
+          "sha256": "sha256:8d935ab7fa6d05e091e7c947870d226f61a052e2b11bd34b55f3d08a161704a9"
         }
       ]
     }

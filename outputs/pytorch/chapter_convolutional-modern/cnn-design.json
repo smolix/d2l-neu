@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/cnn-design.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:23cd77c62719590374620b9b8dc26ebf97fe352ecee6b1ded5b821028452233d",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:054247af3a9956915330dedab8d0504e79eabfdfb5e291f51fabc3fbaea9190e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 59097,
-          "sha256": "sha256:15315ada438976638e4b067954bb1affee99b12dfa0fe3f3d8976f248cc0a860"
+          "bytes": 21033,
+          "sha256": "sha256:76505ef196170cea4a927ab35f56a6061376ccb13c2d231b68bc5af7a25ab4d3"
         }
       ]
     }

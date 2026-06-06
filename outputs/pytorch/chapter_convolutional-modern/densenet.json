@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/densenet.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d1bcf869611aaf5f7743cc599a9fdec8b7b157c36cdb2607b832d680ba44fdb5",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2a6baee7edf2bb67e8ea7d1261994fec3095eb72a911d41686fd702b412d6234",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 58652,
-          "sha256": "sha256:7dd975effd5eb55887f2e1ef487e9cd7e1fa68170b6ec823ffcd520ad3e07321"
+          "bytes": 20541,
+          "sha256": "sha256:da8969f5a58c1cf72507f64e09bf3e886fbb6e53277a39553955e3f3eeaf3873"
         }
       ]
     }

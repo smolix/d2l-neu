@@ -149,11 +149,9 @@ def grad_f(x, y):
                         (tf.exp(y) / (tf.exp(x) + tf.exp(y))).numpy()])
 
 epsilon = tf.constant([0.01, -0.03])
-grad_approx = f(tf.constant([0.]), tf.math.log(
-    tf.constant([2.]))) + tf.tensordot(
-    epsilon, grad_f(tf.constant([0.]), tf.math.log(tf.constant(2.))), axes=1)
-true_value = f(tf.constant([0.]) + epsilon[0], tf.math.log(
-    tf.constant([2.])) + epsilon[1])
+grad_approx = f(tf.constant(0.), tf.math.log(tf.constant(2.))) + tf.tensordot(
+    epsilon, grad_f(tf.constant(0.), tf.math.log(tf.constant(2.))), axes=1)
+true_value = f(tf.constant(0.) + epsilon[0], tf.math.log(tf.constant(2.)) + epsilon[1])
 f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
@@ -172,11 +170,9 @@ def grad_f(x, y):
                       jnp.exp(y) / (jnp.exp(x) + jnp.exp(y))])
 
 epsilon = jnp.array([0.01, -0.03])
-grad_approx = f(jnp.array([0.]), jnp.log(
-    jnp.array([2.]))) + jnp.dot(
-    epsilon, grad_f(jnp.array([0.]), jnp.log(jnp.array(2.))))
-true_value = f(jnp.array([0.]) + epsilon[0], jnp.log(
-    jnp.array([2.])) + epsilon[1])
+grad_approx = f(jnp.array(0.), jnp.log(jnp.array(2.))) + jnp.dot(
+    epsilon, grad_f(jnp.array(0.), jnp.log(jnp.array(2.))))
+true_value = f(jnp.array(0.) + epsilon[0], jnp.log(jnp.array(2.)) + epsilon[1])
 f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 

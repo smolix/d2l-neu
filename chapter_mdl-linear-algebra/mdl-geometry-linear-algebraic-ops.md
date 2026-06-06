@@ -1487,7 +1487,7 @@ For example, the same tensor contraction can also be written as:
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
 #@tab mxnet
-np.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
+# MXNet does not support this type of notation.
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}

@@ -15,6 +15,9 @@ This section offers a gentle introduction
 to the most essential concepts,
 starting from scalar arithmetic
 and ramping up to matrix multiplication.
+The notation introduced here is collected,
+together with the rest of the book's notation,
+in :numref:`chap_notation`.
 
 ```{.python .input #linear-algebra}
 %%tab mxnet
@@ -204,6 +207,10 @@ To avoid this confusion,
 we use *order* to refer to the number of axes
 and *dimensionality* exclusively to refer
 to the number of components.
+(NumPy and the deep learning frameworks instead call the number of axes
+the array's *rank* or `ndim`; take care not to confuse this with the
+*rank* of a matrix in linear algebra, which is the number of linearly
+independent rows or columns.)
 
 
 ## Matrices
@@ -760,7 +767,7 @@ $$
 
 We can think of multiplication with a matrix
 $\mathbf{A}\in \mathbb{R}^{m \times n}$
-as a transformation that projects vectors
+as a linear transformation that maps vectors
 from $\mathbb{R}^{n}$ to $\mathbb{R}^{m}$.
 These transformations are remarkably useful.
 For example, we can represent rotations
@@ -1102,8 +1109,11 @@ to introduce more mathematics later on,
 we wrap up this section here.
 
 If you are eager to learn more linear algebra,
-there are many excellent books and online resources.
-For a more advanced crash course, consider checking out
+start with :numref:`chap_mdl-linear-algebra`,
+which develops eigendecompositions, the singular value decomposition,
+and their use in machine learning in full.
+For further reading, there are many excellent books and online resources;
+consider the crash courses by
 :citet:`Strang.1993`, :citet:`Kolter.2008`, and :citet:`Petersen.Pedersen.ea.2008`.
 
 To recap:

@@ -553,7 +553,22 @@ EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 # measurable perf hit on tutorial workloads. GPU memory is fine by default
 # (no init-time preallocation; pool retention is per-process so it doesn't
 # bleed into the next notebook).
-EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+#
+# Concurrency cap (D2L_MXNET_*_SLOTS, honored by run_one_notebook.py on top of
+# the global pool): even at ~56 threads/proc, image-dataset notebooks spawn
+# Gluon DataLoader worker subprocesses, and at the default GPU_SLOTS (~2/GPU →
+# 8 here) the combined process/thread count exhausts `ulimit -u` (soft 4096 /
+# hard 8192 on this host). A starved worker then fails to lazy-`dlopen` the
+# bundled OpenCV and surfaces the misleading "Build with USE_OPENCV=1 for image
+# resize operator" — even though OpenCV IS compiled in and works in isolation
+# (see docs/mxnet-runtime-diagnostics.md, 2026-06-06). The same notebooks pass
+# serially. Capping mxnet to 2 concurrent keeps it well under the thread limit
+# while pt/tf/jax keep using the freed global slots. Raise if `ulimit -u` is
+# raised on the host.
+MXNET_GPU_SLOTS ?= 2
+MXNET_CPU_SLOTS ?= 2
+EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                   D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_MXNET_CPU_SLOTS=$(MXNET_CPU_SLOTS)
 
 define EXEC_RULE
 _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
@@ -725,6 +740,10 @@ rebuild-book-artifacts:
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
 	$(MAKE) slides
 	$(MAKE) html
+	@# Clear stale render-scratch PDFs so the parallel PDF render can't
+	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This
+	@# makes `make all` self-sufficient without a preceding `make clean`.
+	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	$(MAKE) -j4 pdfs
 	$(MAKE) check-all-artifacts
 
@@ -750,6 +769,10 @@ clean:
 	rm -rf _book _pdf _notebooks _slides
 	rm -rf d2l/_blocks
 	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
+	# img/outputs/ is render scratch; stale *.pdf there make Quarto's
+	# convert_svg skip-then-read an old/corrupt PDF and abort the PDF build
+	# (main.lua:7348 assertion). Clear them so PDFs always rebuild clean.
+	find img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
 	rm -f $(wildcard _notebooks/*/MANIFEST.mk)
 	rm -f $(wildcard _pdf/*/.generated)

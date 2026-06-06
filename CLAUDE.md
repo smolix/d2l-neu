@@ -141,6 +141,13 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
   and closing lines with `:eqlabel:` on the next line, or the label fails to
   attach. Never put a `]` in an image caption (it truncates the alt-text); write
   matrices in captions with `\begin{smallmatrix}…\end{smallmatrix}`, not `[[…]]`.
+  **A closing `$` must not be followed by a digit** — pandoc's "don't make
+  `$5 … $10` math" rule means `$x$2` won't close, mangling the math and breaking
+  the PDF (`\symcal allowed only in math mode`); keep the digit inside the span
+  or use `\text{…}` (e.g. `$\mathcal F=\{\text{1-Lipschitz}\}$`). For a
+  parenthesized small matrix write `\left(\begin{smallmatrix}…\right)` (renders
+  in HTML; pandoc emits the `psmallmatrix` the PDF preamble's `mathtools`
+  defines). These are PDF-build tripwires — see `docs/build-system.md` §6.6.
 
 ## Landing-page university adopters
 
@@ -222,12 +229,15 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   - **tensorflow**: TF 2.21 ships SASS through `sm_89` plus
     `compute_90` PTX; on Blackwell the first use of each op
     JIT-compiles from PTX (slower cold start, then cached).
-  - **mxnet**: custom MXNet 2.0 CUDA 13 wheel. The current wheel is
-    Blackwell-oriented and imports on Ada (`sm_89`), but RTX 4090 GPU probes
-    fail with `cudaErrorNoKernelImageForDevice`. See
-    `docs/mxnet-runtime-diagnostics.md`; rebuild the wheel with `sm_89`
-    kernels and a PTX fallback before treating MXNet GPU notebooks as
-    supported on Ada hosts.
+  - **mxnet**: custom MXNet 2.0 CUDA 13 wheel, pinned to
+    `2.0.0+cu13.bw.20260529.3` (GitHub release). This build **ships `sm_89`
+    kernels and runs on the RTX 4090** — the earlier
+    `cudaErrorNoKernelImageForDevice` (error 209) is **resolved**; all MXNet GPU
+    notebooks execute. One caveat: MXNet image-dataset notebooks spawn many
+    DataLoader threads, so the Makefile caps MXNet to `MXNET_GPU_SLOTS=2`
+    concurrent jobs to stay under `ulimit -u` (otherwise a starved worker
+    misreports a missing-OpenCV error). See `docs/mxnet-runtime-diagnostics.md`
+    (2026-06-06) and `docs/build-system.md` §6.5/§6.6.
 
 ## Current status
 
@@ -250,13 +260,20 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   + committed outputs deleted. Numbering lives in `CHAPTER_NUMBERING`
   (`tools/d2l_preprocess.py`); a file absent from it renders unnumbered — see
   `docs/build-system.md` §4.1.
-- Last all-framework green run is stale with respect to the current custom
-  MXNet wheel. Current MXNet diagnostics are in
-  `docs/mxnet-runtime-diagnostics.md`. `chapter_computational-performance/multiple-gpus.md`
-  is stale (a `#@save` block it uses changed) and needs the ≥2-GPU box to refresh.
-- **261/261 slides rendered** (PT 75, TF 56, JAX 55, MX 75)
-- ~192 HTML pages (plus the new math part), 4 PDFs, d2l library — zero errors
-- Full `make all` takes ~3 hours
+- **Fresh all-framework green run (2026-06-06)** on the 4×RTX 4090 box with the
+  `…20260529.3` MXNet wheel: `make clean && make all` executes all four
+  frameworks with **0 notebook failures** (the previously-failing MXNet GPU/image
+  and error-209 notebooks all pass), the freshness gate is clean, and **all 4
+  PDFs build** (~46 MB each). `multiple-gpus*` refreshed in that run.
+- **PDFs build green** via `make pdfs` (and `make all`). Several
+  pandoc/LaTeX/Quarto pitfalls were fixed to get here — see `docs/build-system.md`
+  §6.6 (mathtools preamble, the `$`-before-digit math rule, stale `img/outputs`
+  PDFs, and the now-tracked `static/d2l-preamble.tex`).
+- ~192 HTML pages (plus the math part), 4 PDFs, ~261 slide decks, d2l library —
+  zero errors.
+- Full `make all` takes ~3 hours. No CI yet: building is the manual `make all`
+  (or `make clean && make all` for a pristine run); it now completes green with
+  no manual fix-ups.
 
 ### d2l-en source fixes applied (in ../d2l-en, not committed there)
 - matplotlib: removed deprecated `use_line_collection` from stem() calls

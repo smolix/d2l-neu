@@ -9,25 +9,30 @@
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:0a525ffa1a233a7bd46942bd56e62486b4a365f090f69d75332322310e5b554f",
+      "code_fingerprint": "sha256:bb43257c0adb16a907071ce5f3ef11df0e7163c90ca58461e7d013995458f6a1",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'approximation: 1.081946, true value: 1.082124'"
+        }
+      ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:1446ca218e30edde5116979e03bdf97c2f4641eafe191c86d48ce0ca2b4d0067",
+      "code_fingerprint": "sha256:ab316d80ce025eb169a4b7f43df67fb4f2a6beba5a0a53163e22ad1fcf2c34fc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13772,
-          "sha256": "sha256:c2dbb236229025376060117dedb2ab83aab59f5e057c68440905c060bfb9bf09"
+          "bytes": 13770,
+          "sha256": "sha256:500098fb6758b5566fd54346f3da8d63898ab8cf85b55499ce26cce4175cd441"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:e0da01b598811dc882ea27c76bd5fee9019dfbc7a7caae72667472dd018993de",
+      "code_fingerprint": "sha256:2c11680aabaa48d37f1dddedac8cfed8a7caaded5c425467388cdc9707c08c82",
       "kind": "text",
       "outputs": [
         {
@@ -38,7 +43,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:5f1cdc7723a68df1bf50859481e9643015c7befe8e4fef46469c1792abe42823",
+      "code_fingerprint": "sha256:38e3980e0c4d942e721255b189c9f3fc359c9c6d11087ce898a0b19984a387d3",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +54,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:63f7add7c6cd54b994670a06b53e686c2b3ad7e4321b0df515840f9ecf30add5",
+      "code_fingerprint": "sha256:0b9f68822f1ef518de8bdb587240b2128ea0f6479aa72c6e47bbb79efa971d3c",
       "kind": "text",
       "outputs": [
         {
@@ -60,9 +65,15 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:f09d969da44c342073dc0c5f1e06db9c86b5937a34a54a406f5055ca9aaaa1a0",
+      "code_fingerprint": "sha256:3550c5f2bc48d91a2bf1cad3566c41fa98ad93825a09f2a8b08d93fcc2fbfd77",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+        }
+      ]
     }
   }
 }

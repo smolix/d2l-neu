@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.9337328 , -0.802088  , -0.33094463,  0.02662477],\n       [-0.07949208, -0.2227707 ,  0.62188077, -0.9484485 ],\n       [ 0.67566264, -0.8842037 ,  0.09970008,  1.0227075 ]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.11565171, -0.35444042, -1.5713948 ,  1.0032659 ],\n       [ 0.22868653,  0.27024463, -0.6480879 ,  0.23779102],\n       [ 1.7582299 , -1.2115004 , -0.14002402,  0.84630024]],\n      dtype=float32)>"
         }
       ]
     },
@@ -104,17 +104,17 @@
       ]
     },
     "ndarray-indexing-and-slicing-2": {
-      "code_fingerprint": "sha256:fcc63be9cc8a2d250d7b88ab233c70c920a5a9ec4d73b436dd71118810930eed",
+      "code_fingerprint": "sha256:d63470903db400c3773ef8f3f8d32948065de08898ad42a8d24016f312bc5810",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Variable 'Variable:0' shape=(3, 4) dtype=float32, numpy=\narray([[ 0.,  1.,  2.,  3.],\n       [ 4.,  5.,  9.,  7.],\n       [ 8.,  9., 10., 11.]], dtype=float32)>"
+          "text": "<tf.Variable 'Variable:0' shape=(3, 4) dtype=float32, numpy=\narray([[ 0.,  1.,  2.,  3.],\n       [ 4.,  5., 17.,  7.],\n       [ 8.,  9., 10., 11.]], dtype=float32)>"
         }
       ]
     },
     "ndarray-indexing-and-slicing-3": {
-      "code_fingerprint": "sha256:7c4ccad3a55eb2940165888e69f61f00c00b2a19aeaf586547f4db0e5edf1f19",
+      "code_fingerprint": "sha256:560e19aaada8ef48304b5480ac400be98db59be04847f7247f0c02afc8fbc8aa",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "ndarray-operations-1": {
-      "code_fingerprint": "sha256:b63bbddfe6cb8d784b46d9de8a6438190786b25ea99b31f40edabc984cae100a",
+      "code_fingerprint": "sha256:d4272979bdbb6a498062dc05bb825d1e0ac3acfa46dfce328960d760189ce5ec",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "ndarray-operations-2": {
-      "code_fingerprint": "sha256:ce327466564e662391ea95cad60c486cebe29b276c91d04a882fe60ea4fbf585",
+      "code_fingerprint": "sha256:3536ccdf97dd58bfbc098cf53224541cece55db08a4037d7b106a83777ebe893",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +144,7 @@
       ]
     },
     "ndarray-operations-3": {
-      "code_fingerprint": "sha256:73a54e1457c111fb9513a2f7fb658ec2c1b1517637dc4d89f4966b432df95984",
+      "code_fingerprint": "sha256:dfc61317bde8e8edc1afb5ad6c3cad288a531e04fe44fe5cb0f9c9fb263f533e",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "ndarray-operations-4": {
-      "code_fingerprint": "sha256:f1e6cb24a5082f7ab5b620ba099eb73c5b550ea23f0a591b37dacce321d186ad",
+      "code_fingerprint": "sha256:0247e7b75fc1f315d6d9524eeb14fdc2359cdc720a6f9d41d3059a05c8479ed3",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +164,7 @@
       ]
     },
     "ndarray-operations-5": {
-      "code_fingerprint": "sha256:a01b756a4463ead3071c725fc6dd2a9dfe0bce3d1f5354c587cc4b7ae04d1f82",
+      "code_fingerprint": "sha256:bbd4d8e12dc7fa6d37e12232b1c3ddb382c05568fa2aff1975bbc4dd7c6de1c6",
       "kind": "text",
       "outputs": [
         {
@@ -174,7 +174,7 @@
       ]
     },
     "ndarray-broadcasting-1": {
-      "code_fingerprint": "sha256:e6cf3b060b60ae0df253aa3127c4eb58404df9a0cae392043406eecc344ae2ce",
+      "code_fingerprint": "sha256:009bcaeffdc7d8c3f37d26661c1d5a30e2dd3d4e722850ecad3b4cde1eb11c66",
       "kind": "text",
       "outputs": [
         {
@@ -184,7 +184,7 @@
       ]
     },
     "ndarray-broadcasting-2": {
-      "code_fingerprint": "sha256:8a6ea9c91b48ccfb9c57ec19a7390fe5219477c7295decb9daa5720473b76c0e",
+      "code_fingerprint": "sha256:3cab961d4f9215fe7a194cff611aed7c98bd2e27788f1abc4e9bba7a883127d5",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +194,7 @@
       ]
     },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:c90245cca4f3cc47e7b923a6d8f05514c00f713d84e150ad928eac2bb67c38aa",
+      "code_fingerprint": "sha256:60b76f3a1caada9018ce132d57f427c148d6facc7588b3aef82adafbe9e365f6",
       "kind": "text",
       "outputs": [
         {
@@ -204,28 +204,18 @@
       ]
     },
     "ndarray-saving-memory-2": {
-      "code_fingerprint": "sha256:e09f096af26c79e7c5aadf2eaa18b0fb6f05bb8bea68cdefcbb77e1bb5ddd735",
+      "code_fingerprint": "sha256:0e30d7dbb806d81c80f70cf6cb2cfe58a0beec9a6bc04b6d3c8dc853eff2f500",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 123133906199632\nid(Z): 123133906199632\n"
-        }
-      ]
-    },
-    "ndarray-saving-memory-3": {
-      "code_fingerprint": "sha256:d557edc0f2c2a6e09a4957a44473bdf9488a0e32216fad9ff3a052d3f3de19d8",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[ 8.,  9., 26., 27.],\n       [24., 33., 42., 51.],\n       [56., 57., 58., 59.]], dtype=float32)>"
+          "text": "id(Z): 136132672808592\nid(Z): 136132672808592\n"
         }
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:a0f3fc5e1fab080ee42149fec3a491df58c477ab64404cf609210537124fdcae",
+      "code_fingerprint": "sha256:be33514f0f694d6fd7c507f089dc8b6a4a8ddabe0ed391395e16ee0dfe16b48b",
       "kind": "text",
       "outputs": [
         {
@@ -235,7 +225,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:3c8eeb6fdb42dbc180f2e443f8a434cd47f8a7a37af5b108b3fc7b969a2df28f",
+      "code_fingerprint": "sha256:cb3e6faf591eb7bf0705fa25fecdbf9e0cf02239145cbce23c8f422baf1eedc2",
       "kind": "text",
       "outputs": [
         {

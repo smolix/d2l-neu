@@ -64,7 +64,7 @@ for a linear spiral-sink field.
 ![An ODE as a velocity field. The faint grid arrows are the field $\mathbf{f}(\mathbf{x})=A\mathbf{x}$ with $A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$; the two coloured integral curves are trajectories that always follow the local arrow, spiralling into the stable fixed point at the origin (eigenvalues $-0.5\pm i$).](../img/mdl-dyn-ode-field.svg)
 :label:`fig_mdl-dyn-ode-field`
 **Worked example(s):** sketch and integrate $\dot x=-x$ (exponential decay) and a
-rotational field $\dot{\mathbf{x}}=\begin{psmallmatrix}0&-1\\1&0\end{psmallmatrix}\mathbf{x}$
+rotational field $\dot{\mathbf{x}}=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)\mathbf{x}$
 (circular orbits) — framework-agnostic plots of the field plus a few curves.
 **Exercises (draft):** (1) verify $\mathbf{x}(t)=e^{-t}\mathbf{x}_0$ solves
 $\dot{\mathbf{x}}=-\mathbf{x}$; (2) show the rotational field's trajectories are

@@ -1,6 +1,80 @@
 # MXNet Runtime Diagnostics
 
-Date: 2026-05-19
+## Latest status (2026-06-06 — wheel `2.0.0+cu13.bw.20260529.3`)
+
+This supersedes the 2026-05-19 snapshot below (which was wheel `…20260517`). The
+custom MXNet wheel has been rebuilt twice since; the current pin is
+`2.0.0+cu13.bw.20260529.3` (GitHub release; see `docs/build-system.md` §6.5 for
+the pin mechanics).
+
+**The dominant `cudaErrorNoKernelImageForDevice` (error 209) failure is FIXED.**
+The wheel now ships `sm_89` kernels, so the "Missing GPU kernels on RTX 4090"
+group (§2 below — ~33 notebooks) and the GPU-scalar-to-host "could not execute a
+primitive" group (§3 below — 6 notebooks) **all pass** on the 4×4090 box.
+Confirmed in a full `make all` run:
+
+- Standalone probe `(np.ones((1024,1024), ctx=mx.gpu(0)) @ …).sum()` passes.
+- The previously-209 notebooks now run real GPU training to completion:
+  `seq2seq`, `bahdanau-attention`, `recommender-systems/{mf,neumf,…}`,
+  `recurrent-modern/{gru,lstm,deep-rnn}`, `rnn-scratch`, `minibatch-sgd`,
+  `word2vec-pretraining`, etc.
+- **Zero** error-209 occurrences across `logs/nb-errors/mxnet/` in the run.
+
+So the §2/§3 "fix direction: rebuild with sm_89" below is **done**. The
+self-contained `gpu-*` reproducers (§"Self-Contained Reproducers") now pass and
+are useful as a regression check when bumping the wheel again.
+
+**Remaining failure (new surface): `Build with USE_OPENCV=1` under heavy
+parallelism.** In the full `make all` run, ~28 image-dataset notebooks
+(everything that loads FashionMNIST/CIFAR/CV data — `lenet`, `alexnet`, the
+`convolutional-modern/*` family, `computer-vision/*`, `softmax-regression-*`,
+`dropout`, `mlp-implementation`, …) failed with:
+
+```text
+MXNetError: Build with USE_OPENCV=1 for image resize operator.   (or "… for image io")
+```
+
+This is **not** a wheel defect and **not** the §1 "missing OpenCV runtime libs"
+(an `OSError` at import). Here import succeeds and OpenCV is genuinely present:
+
+- `mxnet.runtime.Features().is_enabled('OPENCV')` → `True`.
+- `libopencv_{core,imgproc,imgcodecs}.so.406` are bundled in
+  `…/site-packages/mxnet/lib/` (resolved by `ldd libmxnet.so`) **and** installed
+  system-wide; `tools/check_runtime_deps.py mxnet` exits 0.
+- The image ops **succeed in isolation** — `mx.image.imresize(...)` and the full
+  `d2l.FashionMNIST(...).get_dataloader()` (DataLoader worker subprocesses)
+  return a batch cleanly, **including after a GPU context is initialized first**
+  (ruling out a fork-after-CUDA-init hypothesis).
+
+The ops fail *only* under the concurrent build. Root cause: **process/thread
+exhaustion against `ulimit -u`** — even at the ~56 threads/proc the
+`EXTRA_ENV_mxnet` env vars leave, MXNet image-dataset notebooks spawn Gluon
+DataLoader worker subprocesses, and at the default `GPU_SLOTS` (~2/GPU → 8 here)
+the combined count exceeds the host's `ulimit -u` (soft 4096 / hard 8192). A
+starved worker then can't lazy-`dlopen` the bundled OpenCV and surfaces the
+misleading "build without OpenCV" error.
+
+**Fixed (2026-06-06, verified).** Confirmed by re-running the image notebooks
+serially (`make -B …/lenet.executed`, etc.) — every one passes in isolation. The
+durable fix is a per-framework concurrency cap, **`MXNET_GPU_SLOTS ?= 2`** in the
+Makefile (injected as `D2L_MXNET_GPU_SLOTS`, honored by `run_one_notebook.py`'s
+`acquire_fw_cap` on top of the global pool; pt/tf/jax keep using the freed
+slots). Re-verified end-to-end: a full `make clean && make all` ran all 28
+formerly-failing MXNet image notebooks (lenet, the `convolutional-modern/*`
+family, `computer-vision/*`, `softmax-regression-*`, dropout, mlp-implementation,
+…) to completion with **zero** OpenCV errors. Raise the cap only if the host's
+`ulimit -u` is raised.
+
+Also note one **content** bug surfaced under this wheel, unrelated to the runtime:
+`chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops` used `np.einsum`'s
+sublist/interleaved form, which MXNet's einsum does not support (it requires the
+string-subscript form, like TensorFlow) — fixed in source by making the mxnet tab
+a comment, matching the existing tf tab.
+
+---
+
+Date: 2026-05-19  *(historical snapshot — wheel `…20260517`; the error-209
+analysis below is now resolved per the section above)*
 
 This note summarizes the current MXNet notebook failures and gives
 self-contained reproducers that do not require the D2L notebooks or the `d2l`

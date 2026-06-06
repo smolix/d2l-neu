@@ -283,7 +283,9 @@ plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'])
 Thus far, we have been differentiating
 functions of just one variable.
 In deep learning, we also need to work
-with functions of *many* variables.
+with functions of *many* variables---typically functions that take
+the vectors and matrices from :numref:`sec_linear-algebra`
+as their inputs.
 We briefly introduce notions of the derivative
 that apply to such *multivariate* functions.
 
@@ -324,14 +326,19 @@ When there is no ambiguity,
 $\nabla_{\mathbf{x}} f(\mathbf{x})$ 
 is typically replaced 
 by $\nabla f(\mathbf{x})$.
+
+Geometrically, the gradient has a crucial interpretation:
+it points in the direction of *steepest ascent* of $f$,
+i.e., the direction in which the function grows fastest.
+To *decrease* $f$ as quickly as possible
+we therefore take a small step in the opposite direction,
+along the *negative* gradient $-\nabla f(\mathbf{x})$.
+This is the entire idea behind *gradient descent*:
+every optimizer in this book repeatedly nudges the parameters
+a little way along $-\nabla f$ in order to reduce the loss.
+
 The following rules come in handy 
 for differentiating multivariate functions.
-Note that the notation $\nabla_{\mathbf{x}}$ is also used for
-vector-valued functions $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$:
-in that case $\nabla_{\mathbf{x}} \mathbf{f}(\mathbf{x})$ denotes the
-transpose of the Jacobian (the denominator-layout convention), so
-that the identities below reduce to the familiar scalar forms when
-$m=1$.
 
 * For all $\mathbf{A} \in \mathbb{R}^{m \times n}$ we have $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$ and $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$.
 * For square matrices $\mathbf{A} \in \mathbb{R}^{n \times n}$ we have that $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A} \mathbf{x}  = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ and in particular
@@ -372,11 +379,15 @@ Then the chain rule states that
 
 $$\frac{\partial y}{\partial x_{i}} = \frac{\partial y}{\partial u_{1}} \frac{\partial u_{1}}{\partial x_{i}} + \frac{\partial y}{\partial u_{2}} \frac{\partial u_{2}}{\partial x_{i}} + \ldots + \frac{\partial y}{\partial u_{m}} \frac{\partial u_{m}}{\partial x_{i}} \ \textrm{ and so } \ \nabla_{\mathbf{x}} y =  \mathbf{A} \nabla_{\mathbf{u}} y,$$
 
-where $\mathbf{A} \in \mathbb{R}^{n \times m}$ is a *matrix*
-that contains the derivative of vector $\mathbf{u}$
-with respect to vector $\mathbf{x}$.
+where $\mathbf{A} \in \mathbb{R}^{n \times m}$ is the *matrix*
+whose entry $A_{ij} = \partial u_j / \partial x_i$ collects
+the derivatives of the components of $\mathbf{u}$
+with respect to those of $\mathbf{x}$.
+Reading off the sum on the left,
+$(\nabla_{\mathbf{x}} y)_i = \sum_{j} A_{ij} (\nabla_{\mathbf{u}} y)_j$,
+which is exactly the matrix--vector product on the right.
 Thus, evaluating the gradient requires 
-computing a vector--matrix product. 
+computing a matrix--vector product. 
 This is one of the key reasons why linear algebra 
 is such an integral building block 
 in building deep learning systems. 
@@ -386,27 +397,37 @@ in building deep learning systems.
 ## Discussion
 
 While we have just scratched the surface of a deep topic,
-a number of concepts already come into focus: 
-first, the composition rules for differentiation
+a number of concepts already come into focus.
+First, and most important for what follows:
+from the viewpoint of optimization,
+the gradient tells us how to move the parameters of a model
+in order to lower the loss.
+Because $-\nabla f$ points in the direction of steepest *descent*,
+each step of the optimization algorithms used throughout this book
+amounts to evaluating the gradient
+and nudging the parameters a little way along it.
+Second, the composition rules for differentiation
 can be applied routinely, enabling
-us to compute gradients *automatically*.
-This task requires no creativity and thus 
+us to compute gradients *automatically*;
+this task requires no creativity, so
 we can focus our cognitive powers elsewhere.
-Second, computing the derivatives of vector-valued functions 
+Third, computing the derivatives of vector-valued functions 
 requires us to multiply matrices as we trace 
 the dependency graph of variables from output to input. 
-In particular, this graph is traversed in a *forward* direction 
+This graph is traversed in a *forward* direction 
 when we evaluate a function 
 and in a *backward* direction
 when we compute gradients. 
 Later chapters will formally introduce backpropagation,
 a computational procedure for applying the chain rule.
 
-From the viewpoint of optimization, gradients allow us 
-to determine how to move the parameters of a model
-in order to lower the loss,
-and each step of the optimization algorithms used 
-throughout this book will require calculating the gradient.
+This section deliberately previews only the calculus we need
+to train models.
+For a thorough development---single- and multivariable calculus,
+the integral, and the matrix calculus behind automatic
+differentiation---see :numref:`chap_mdl-calculus`;
+:citet:`Deisenroth.Faisal.Ong.2020` give a complementary treatment
+aimed at machine learning.
 
 ## Exercises
 
@@ -431,6 +452,12 @@ throughout this book will require calculating the gradient.
    compute the derivative of its inverse $f^{-1}(x)$. 
    Here we have that $f^{-1}(f(x)) = x$ and conversely $f(f^{-1}(y)) = y$. 
    Hint: use these properties in your derivation. 
+1. Consider the function $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$. 
+   Starting from $\mathbf{x} = [1, 1]^\top$, take a single gradient-descent step 
+   $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$ 
+   with learning rate $\eta = 0.1$ and verify that $f$ decreases. 
+   What happens if you instead pick $\eta = 1$? And $\eta = 2$? 
+   What does this tell you about the role of the learning rate?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/32)

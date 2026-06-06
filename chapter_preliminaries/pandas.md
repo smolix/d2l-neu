@@ -15,7 +15,7 @@ which values are missing and how to fill them,
 how to turn categories into numbers,
 whether features need rescaling.
 Get these wrong and even a perfect model learns nothing useful.
-The *pandas* [library](https://pandas.pydata.org/)
+The *pandas* [library](https://pandas.pydata.org/) :cite:`McKinney.2010`
 does the heavy lifting; this section is a crash course
 on the routines you will reach for most —
 not a substitute for a proper

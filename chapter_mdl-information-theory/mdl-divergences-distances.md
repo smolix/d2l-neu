@@ -193,7 +193,7 @@ generative models: differentiable, sample-based, no adversary needed (MMD-GAN).
 **Key results to state:**
 $\textrm{IPM}_{\mathcal F}(P,Q)=\sup_{f\in\mathcal F}(E_P f - E_Q f)$;
 $\textrm{MMD}^2(P,Q)=E_{x,x'}k(x,x')+E_{y,y'}k(y,y')-2E_{x,y}k(x,y)$;
-$\mathcal F=\{$1-Lipschitz$\}\Rightarrow$ IPM $=W_1$ (link to §5.2.7).
+$\mathcal F=\{\text{1-Lipschitz}\}\Rightarrow \textrm{IPM}=W_1$ (link to §5.2.7).
 **Diagrams:** `fig_mdl-mmd-embedding` — two point clouds mapped to their kernel
 mean embeddings in feature space, with the gap $\|\mu_P-\mu_Q\|$ marked.
 **Worked example(s):** compute the unbiased MMD$^2$ estimator with a Gaussian

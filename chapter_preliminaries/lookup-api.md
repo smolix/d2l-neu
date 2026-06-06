@@ -24,7 +24,7 @@ for the framework you use:
 | PyTorch | [pytorch.org/docs](https://pytorch.org/docs/stable/index.html) | [pytorch.org/tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html) |
 | JAX | [jax.readthedocs.io](https://jax.readthedocs.io/en/latest/) | [JAX tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) |
 | TensorFlow | [tensorflow.org/api_docs](https://www.tensorflow.org/api_docs) | [tensorflow.org/tutorials](https://www.tensorflow.org/tutorials) |
-| MXNet | [API reference](https://mxnet.apache.org/versions/1.8.0/api) | [tutorials](https://mxnet.apache.org/versions/1.8.0/api/python/docs/tutorials/) |
+| MXNet | [API reference](https://mxnet.apache.org/versions/1.9.1/api) | [tutorials](https://mxnet.apache.org/versions/1.9.1/api/python/docs/tutorials/) |
 
 For most day-to-day questions, though, you do not need to leave your
 notebook. Four moves, repeated until the call behaves, cover almost
@@ -169,6 +169,22 @@ The same two habits do the checking and cost almost nothing---glance at the
 signature with `help` or `?`, and run a small example.
 A suggestion that survives both is one you can rely on,
 and the loop above is how you run that check.
+
+## Exercises
+
+1. Use `dir` on your framework's random-number module to find the routine
+   that samples from a *uniform* distribution. Read its signature with `help`
+   (or `?`), then call it to draw a $3 \times 3$ tensor and confirm the values
+   lie in $[0, 1)$.
+1. You want to reduce a tensor along a single axis but cannot remember the
+   keyword. Look up your framework's `sum` (or `reduce_sum`) with `help`,
+   identify the argument that selects the axis, and verify on a $2 \times 3$
+   tensor that summing over each axis gives the shape you predicted.
+1. Ask a coding assistant "how do I concatenate two tensors along a new axis
+   in my framework?" Then run its answer through the
+   discover&nbsp;&rarr;&nbsp;inspect&nbsp;&rarr;&nbsp;read&nbsp;&rarr;&nbsp;verify
+   loop: does the suggested function exist (`dir`), does its signature match
+   the claim (`help`/`?`), and does a tiny example do what you expect?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/38)

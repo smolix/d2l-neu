@@ -3,7 +3,7 @@
   "source": "chapter_linear-classification/softmax-regression-concise.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
     "max_inline_bytes": 0
   },
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 60459,
-          "sha256": "sha256:6ee7701e3f1e1fef0e44db8a6e76334f908c5d4ea59c3bf92132595c3c972680"
+          "bytes": 60486,
+          "sha256": "sha256:3d2c1ce89f2ef0ca5d59ad721cc1c2a90d716f6a0bf44c85ad378a7a8b11b505"
         }
       ]
     }

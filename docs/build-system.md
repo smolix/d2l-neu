@@ -1,9 +1,15 @@
 # Build System: Decoupled Notebook Execution & Site Rendering
 
-**Status:** design of record (the *new* model). The execution-coupled flow
-described in `architecture.md` is the *current* reality; this document specifies
-what replaces it. See **§16 Implementation status** for what exists today vs.
-what is still to be built. Read this before changing anything in the
+**Status:** **landed** — this decoupled model is the *current* reality, not a
+proposal. The `outputs/` store, `tools/capture_outputs.py`,
+`tools/audit_outputs.py`, the `inject_outputs.py` repoint, the Make rewiring
+(§6), and the Git-LFS setup (§7) are all in the tree and in use: `outputs/` is
+committed (≈1400 manifests + LFS assets), `make html` renders from it and gates
+on `tools/audit_outputs.py --verify-fresh`, and `bootstrap.sh` exists. The
+execution-*coupled* flow described in `architecture.md` has been **superseded**
+by this model (that doc's component inventory is still accurate; its "render
+reads `_notebooks/`" claim is historical). See **§16 Implementation status** for
+the per-piece state. Read this before changing anything in the
 notebook → output → render path.
 
 ---
@@ -488,6 +494,84 @@ with no `--files` regenerates every `.qmd` for the files in `CHAPTER_NUMBERING`.
 workaround for their absence from the map; now that they are in it, the main pass
 covers them and the workaround has been removed.)
 
+### 6.4 Aggregate / full-build targets (the "rebuild everything" path)
+
+The surgical flows in §11 are the day-to-day path; they deliberately avoid full
+rebuilds. But a *whole-book* rebuild is still real — initial population, the
+canonical green run on the multi-GPU box, or a "clean and rebuild the world"
+request. Those run through the aggregate targets:
+
+| Target | Expands to | Executes notebooks? |
+|---|---|---|
+| `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
+| `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
+| `make rebuild-book-artifacts` | `slides` → `html` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
+| `make check-all-artifacts` | Asserts `_book/index.html`, `_slides/index.html`, `_book/slides/index.html` exist. | No |
+| `make clean` | Wipe build products (`_book _pdf _notebooks _slides`, generated `.qmd`, `d2l/.built`, stamps). **Keeps** `./data/`, `logs/`, `.upload-manifest-*.txt`. | — |
+| `make veryclean` | `clean` **plus** wipe `./data/` (datasets), `logs/`, upload manifests — forces dataset re-download. | — |
+
+Things that bite if you don't know them:
+
+- **`make all` does NOT bless.** Its body is `lib; notebooks; run-all-notebooks;
+  rebuild-book-artifacts` — there is **no `capture-outputs`**. Execution writes
+  into `_notebooks/` (scratch), but the render reads the **committed `outputs/`
+  store** (`inject_outputs.resolve_id_outputs` prefers the store whenever a
+  manifest exists; §8). So the freshly-executed results do **not** appear in the
+  rendered site until you run `make capture-outputs` and re-render. `make all`'s
+  job is to (a) re-execute and surface failures and (b) let the freshness gate
+  verify the committed store still matches source — *not* to publish new outputs.
+  The "execute → **capture** → render" publish path is flow A in §11.1.
+- **`make all` tolerates notebook failures.** The execution queues run under
+  `make -k`; `all` records the exit code but still runs `rebuild-book-artifacts`,
+  so the site/slides/PDFs are produced from available outputs and `make all`
+  *then* exits non-zero. A non-zero `make all` therefore does **not** mean "no
+  artifacts." Per-notebook tracebacks land in
+  `logs/nb-errors/<fw>/<chapter>/<file>.log`; `tools/notebook_run_summary.py`
+  gives the pass/fail roll-up.
+- **"Clean everything" usually means `clean`, not `veryclean`.** Datasets in
+  `./data/` are *inputs*, not build products — re-downloading them cannot change
+  any output, only cost time/network. Reach for `veryclean` only to re-exercise
+  the download path itself.
+- **A local-wheel-tag bump does not auto-stale.** `framework_version` keys on the
+  PEP 440 *public* version (§3.1), so e.g. bumping the MXNet wheel
+  `2.0.0+cu13.bw.20260529` → `…20260529.3` (public version still `2.0.0`) does
+  **not** mark the store stale — the gate passes and the committed outputs render
+  unchanged. Only a public-version change (`2.0.0 → 2.1.0`) or a per-cell code
+  change invalidates. Re-capture after a same-public-version wheel rebuild is a
+  deliberate choice, not something the gate forces.
+
+### 6.5 Updating a framework wheel pin (MXNet)
+
+The custom MXNet wheel is pinned by URL in `pyproject.toml`. To move to a newer
+published build:
+
+```bash
+python3 tools/update_mxnet_wheel.py --source github   # pin the latest GitHub *release* asset
+uv lock && make venv-mxnet                            # relock + install into .venv-mxnet
+```
+
+Caveats (each learned the hard way):
+
+- **`--source github` is not the default.** Bare
+  `python3 tools/update_mxnet_wheel.py` (and `make update-mxnet-wheel`) defaults
+  to `--source local`, which scans `../mxnet/dist/` for a `file://` wheel — for
+  iterating on a local build that outpaces GitHub. Pass `--source github` to
+  track the published release.
+- **The tool's rewrite strips platform markers.** Its regex re-emits only
+  `; python_version == '3.12'`. If `pyproject.toml` carries *multiple*
+  platform-specific mxnet pins (a linux `x86_64` line **and** a macOS `arm64`
+  line), running it drops `and sys_platform == '…' and platform_machine == '…'`
+  from the first match — which then resolves the linux wheel on macOS too and
+  breaks the lock there. With multiple pins, **bump the URL by hand** (a surgical
+  edit preserving the markers) rather than running the tool.
+- **The `uv sync` preflight ignores `https://` pins.** `tools/preflight_mxnet_pin.py`
+  only auto-repairs a `file://` pin whose wheel went missing; a GitHub URL pin
+  returns 0 immediately, so it won't clobber your bump.
+- After moving the wheel, see §6.4 on staleness: a same-public-version rebuild is
+  *not* auto-flagged, so re-run + re-capture MXNet only if you want the new
+  wheel's outputs in the store. Runtime gotchas specific to the wheel live in
+  `docs/mxnet-runtime-diagnostics.md`.
+
 ---
 
 ## 7. Git & LFS setup (one-time)
@@ -753,6 +837,17 @@ outputs store in place:
 - **`GIT_LFS_SKIP_SMUDGE=1`** gives a fast text-only checkout (manifests, no
   plot images) for prose/slide-structure work; remember plot images will be
   missing until you `git lfs pull`.
+- **Don't edit a source `.md` while a build is running.** `_notebooks/%/.generated`
+  depends on `$(SRC_MDS)` (every `chapter_*/*.md` + `index.md`), and notebook
+  *generation is per-framework, not per-file*. So touching any source `.md`
+  mid-build bumps its mtime, invalidates the `.generated` stamp, and makes an
+  in-flight `run-notebooks-<fw>` queue **regenerate that framework's entire
+  `.ipynb` set** — which can re-execute notebooks the regen freshened. The edit
+  is *not* picked up by the queues that already finished, so it also won't fix
+  what you intended. Let the build finish, then do the per-notebook refresh
+  (§5.1): `make -B _notebooks/<fw>/<ch>/<f>.executed` → `make capture-outputs
+  FILES=<ch>/<f>.md`. (Editing `docs/*.md`, SCSS, or `_quarto.yml` mid-build is
+  fine — they are not in `$(SRC_MDS)` and don't feed `.generated`.)
 
 ---
 
@@ -779,15 +874,20 @@ outputs store in place:
 
 ## 16. Implementation status
 
+All of this has **landed** — the table below is now a verification checklist, not
+a plan. (Verified 2026-06-06.)
+
 | Piece | State |
 |---|---|
-| `execute.enabled: false`, cell-id-keyed injection, `_output_fingerprint`, stable ids, `.d` deps | **Exists** — the seam this design builds on. |
-| `outputs/` store, manifest schema, split (§2) | **To build.** |
-| `tools/capture_outputs.py`, `tools/audit_outputs.py` (§8) | **To build.** |
-| `inject_outputs.py` repoint to `outputs/` (§8) | **To change.** |
-| Make rewiring + new targets (§6) | **To build.** |
-| Git LFS + `.gitattributes` (§7) | **Partly done** — `git-lfs/3.4.1` installed; per-clone `git lfs install` + `.gitattributes` still to add. |
-| Initial bless + reader flip (§10) | **To run** once tools land. |
+| `execute.enabled: false`, cell-id-keyed injection, `_output_fingerprint`, stable ids, `.d` deps | **Landed** — the seam this design builds on. |
+| `outputs/` store, manifest schema, split (§2) | **Landed** — `outputs/` committed (≈1400 manifests; `git ls-files outputs/`); images in LFS. |
+| `tools/capture_outputs.py`, `tools/audit_outputs.py` (§8) | **Landed** — both present and used by the targets below. |
+| `inject_outputs.py` repoint to `outputs/` (§8) | **Landed** — `resolve_id_outputs()` prefers the store, falls back to `_notebooks/`. |
+| Make rewiring + new targets (§6) | **Landed** — `capture-outputs`, `audit-outputs`, `verify-outputs-fresh`, `refresh-stale`, `render-fresh` all exist; `_book/index.html` runs `audit_outputs.py --verify-fresh`. |
+| Git LFS + `.gitattributes` (§7) | **Landed** — `git-lfs/3.4.1` installed; `.gitattributes` tracks `outputs/**/*.{png,jpg,jpeg,svg,gif}`. Per-clone `git lfs install` still required once. |
+| Initial bless + reader flip (§10) | **Done** — `bootstrap.sh` exists; render reads `outputs/`. |
+| Host-capability-aware gate (§3.3a) | **Landed** — `audit_outputs.py --verify-fresh` tiers by `nvidia-smi` GPU count. |
 
-Until these land, the repo behaves as `architecture.md` describes (render reads
-`_notebooks/`). This document is the target; implement it in the order of §10.
+The repo no longer behaves as `architecture.md`'s coupled flow describes; this
+document is the operative model. If you find a target or tool that contradicts
+what's written here, the code is right and this doc has drifted — fix the doc.

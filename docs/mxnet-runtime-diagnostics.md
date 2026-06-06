@@ -1,6 +1,80 @@
 # MXNet Runtime Diagnostics
 
-Date: 2026-05-19
+## Latest status (2026-06-06 — wheel `2.0.0+cu13.bw.20260529.3`)
+
+This supersedes the 2026-05-19 snapshot below (which was wheel `…20260517`). The
+custom MXNet wheel has been rebuilt twice since; the current pin is
+`2.0.0+cu13.bw.20260529.3` (GitHub release; see `docs/build-system.md` §6.5 for
+the pin mechanics).
+
+**The dominant `cudaErrorNoKernelImageForDevice` (error 209) failure is FIXED.**
+The wheel now ships `sm_89` kernels, so the "Missing GPU kernels on RTX 4090"
+group (§2 below — ~33 notebooks) and the GPU-scalar-to-host "could not execute a
+primitive" group (§3 below — 6 notebooks) **all pass** on the 4×4090 box.
+Confirmed in a full `make all` run:
+
+- Standalone probe `(np.ones((1024,1024), ctx=mx.gpu(0)) @ …).sum()` passes.
+- The previously-209 notebooks now run real GPU training to completion:
+  `seq2seq`, `bahdanau-attention`, `recommender-systems/{mf,neumf,…}`,
+  `recurrent-modern/{gru,lstm,deep-rnn}`, `rnn-scratch`, `minibatch-sgd`,
+  `word2vec-pretraining`, etc.
+- **Zero** error-209 occurrences across `logs/nb-errors/mxnet/` in the run.
+
+So the §2/§3 "fix direction: rebuild with sm_89" below is **done**. The
+self-contained `gpu-*` reproducers (§"Self-Contained Reproducers") now pass and
+are useful as a regression check when bumping the wheel again.
+
+**Remaining failure (new surface): `Build with USE_OPENCV=1` under heavy
+parallelism.** In the full `make all` run, ~28 image-dataset notebooks
+(everything that loads FashionMNIST/CIFAR/CV data — `lenet`, `alexnet`, the
+`convolutional-modern/*` family, `computer-vision/*`, `softmax-regression-*`,
+`dropout`, `mlp-implementation`, …) failed with:
+
+```text
+MXNetError: Build with USE_OPENCV=1 for image resize operator.   (or "… for image io")
+```
+
+This is **not** a wheel defect and **not** the §1 "missing OpenCV runtime libs"
+(an `OSError` at import). Here import succeeds and OpenCV is genuinely present:
+
+- `mxnet.runtime.Features().is_enabled('OPENCV')` → `True`.
+- `libopencv_{core,imgproc,imgcodecs}.so.406` are bundled in
+  `…/site-packages/mxnet/lib/` (resolved by `ldd libmxnet.so`) **and** installed
+  system-wide; `tools/check_runtime_deps.py mxnet` exits 0.
+- The image ops **succeed in isolation** — `mx.image.imresize(...)` and the full
+  `d2l.FashionMNIST(...).get_dataloader()` (DataLoader worker subprocesses)
+  return a batch cleanly, **including after a GPU context is initialized first**
+  (ruling out a fork-after-CUDA-init hypothesis).
+
+The ops fail *only* under the concurrent build. Leading hypothesis: **resource /
+thread exhaustion** — MXNet 2.0 runs ~304 threads per process (see Makefile
+`EXTRA_ENV_mxnet`), and `make all` runs many MXNet notebooks at once, each
+spawning DataLoader worker processes; under that load a constrained worker's
+lazy OpenCV `dlopen` fails and surfaces as the misleading "build without OpenCV"
+error.
+
+To confirm and to heal: re-run the MXNet image set with reduced parallelism, e.g.
+
+```bash
+make -k run-notebooks-mxnet GPU_SLOTS=1 CPU_SLOTS=2     # serialize the queues
+# or one notebook at a time:
+make -B _notebooks/mxnet/chapter_convolutional-neural-networks/lenet.executed
+```
+
+If they pass serially, the fix is purely scheduling (cap MXNet concurrency in the
+queue), not the wheel. *(Status when written: confirmation pending — the full
+parallel run had just finished; update this line once the serial re-run is done.)*
+
+Also note one **content** bug surfaced under this wheel, unrelated to the runtime:
+`chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops` used `np.einsum`'s
+sublist/interleaved form, which MXNet's einsum does not support (it requires the
+string-subscript form, like TensorFlow) — fixed in source by making the mxnet tab
+a comment, matching the existing tf tab.
+
+---
+
+Date: 2026-05-19  *(historical snapshot — wheel `…20260517`; the error-209
+analysis below is now resolved per the section above)*
 
 This note summarizes the current MXNet notebook failures and gives
 self-contained reproducers that do not require the D2L notebooks or the `d2l`

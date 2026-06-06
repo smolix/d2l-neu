@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 31152,
-          "sha256": "sha256:e0387bfbfd376ffcdbec9c639226701f829a155cba0faca0cea8808710cbb7c5"
+          "bytes": 21645,
+          "sha256": "sha256:f2f1f26ada77185a06ac3ce881604681e3f483a3411546599b07b604d04036c3"
         }
       ]
     }

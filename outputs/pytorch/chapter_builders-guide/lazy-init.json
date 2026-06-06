@@ -3,8 +3,8 @@
   "source": "chapter_builders-guide/lazy-init.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:08d1944ca612209c388cfeae4d530be5dc5c64f2afab48567e03de085d00685d",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:58db6b447915a8879186910b8d43482613f87ff4cefdee3241ba5647ba6e1781",
     "max_inline_bytes": 0
   },
   "cells": {

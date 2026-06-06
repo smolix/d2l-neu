@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/seq2seq.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:1b586c31be2a8b8f77f8fe3935a2310dd3e325f8b4c0f39be418172068527376",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:7be8583000aa079895f3dc47a31c24c061f39a241032a2ff270b02f22414c566",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 138672,
-          "sha256": "sha256:4f047bab82a946b5a8bf5e076572d1a7eb0b25eea3dfa15341ffbb14902e001d"
+          "bytes": 20386,
+          "sha256": "sha256:fa53a6dab2419ebdf95f81004ddd7e12b24a24922d2e34418c7e978a50a7867e"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => ['j’ai', 'perdu', '.'], bleu,0.687\ni'm calm . => ['je', 'suis', 'en', 'la', 'partie', '.'], bleu,0.473\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => ['je', 'me', 'porte', 'bien', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'malade', '.'], bleu,0.658\ni'm home . => ['je', 'vais', 'bien', '.'], bleu,0.000\n"
         }
       ]
     }

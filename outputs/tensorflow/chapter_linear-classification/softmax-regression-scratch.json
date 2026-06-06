@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a77ee271ee6b78595d9d86abc06fa4973ac4424564cabbc21618dc03fe5e91a7",
+    "d2l_lib_fingerprint": "sha256:89b266024e9b88a87d9d853e86a9daf63a21b2d91517b8835945f2f1cc34295a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.14585224, 0.2988133 , 0.12653475, 0.14161904, 0.28718063],\n        [0.14257015, 0.2471806 , 0.14910138, 0.21412344, 0.24702439]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.25456578, 0.17222504, 0.17404406, 0.18012586, 0.2190393 ],\n        [0.16942234, 0.25249213, 0.13499434, 0.17256403, 0.27052715]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 60611,
-          "sha256": "sha256:ca9dbd5fea22d5c9f4f49e16ca22a86bacb7435f7e6d274314d816c457e7138a"
+          "bytes": 22396,
+          "sha256": "sha256:87aecaf9f5e295527ce14b79fbf85afa36e1c850214d0c472d8cd16ac683a89b"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 50738,
-          "sha256": "sha256:56439f88cdaa69fb50de06634addf8cc31e38b650e0e71497dcee1ffcb214d31"
+          "bytes": 49778,
+          "sha256": "sha256:210ebe786bb091f193860ef9c76562d2c8092ed548d8c10e3a77c9f7efaf8ed2"
         }
       ]
     }

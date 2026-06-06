@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/batch-norm.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:3ac00049c77d231f5a64852b45a0d66cb36c227c977233237be61b84f1a5d802",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:fcbad95973c6bc38f168effa4b494446d661dbff578af5fd96902671264cc374",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 58130,
-          "sha256": "sha256:a7543beb6bd0bcf8bc2cd8dd8c185f911787ab9c1988aa0b251f14abe79fb604"
+          "bytes": 19994,
+          "sha256": "sha256:1566f59c776baa3ec2920d369b39a967400a73a76b60282f0a129a9ca4913c9c"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([1.7895, 1.7359, 1.9869, 2.1353, 1.6413, 2.0381], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-1.0031, -0.9641, -0.4802, -0.8353,  1.2347, -1.2555], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor([1.7118, 1.8259, 1.6269, 1.8576, 2.2954, 1.7066], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-0.5619,  1.1945, -1.5424,  0.8652,  1.3594,  0.0749], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 58072,
-          "sha256": "sha256:42a9325ed808f31fa41306aaaecc7afb87af446c16c276532ac1330276df907d"
+          "bytes": 19993,
+          "sha256": "sha256:b44e4d59e6cdf8ba79902680032bd7431668caf095460a019aa10ce9fbdbaee8"
         }
       ]
     }

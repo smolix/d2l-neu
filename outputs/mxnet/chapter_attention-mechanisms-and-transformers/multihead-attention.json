@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/multihead-attention.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:33ffcbc6c0e6f42e5721f4027cd269f8be062280a43b3c2d9fa646f5ab0347bd",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:2dc0099536948c87437702c1562675b2449bc7643c086e411c4dbfd62692ec7d",
     "max_inline_bytes": 0
   },
   "cells": {

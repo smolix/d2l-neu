@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/lstm.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:372e1c175de1dbf27facdc799adffd3d5d264c57aec7cce018e7c48dd7fa5d96",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:73d6822868fa9babb07f8275b9204b7b0fc2afd062de9de096ef57f9233dc5a3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 308886,
-          "sha256": "sha256:3f1f89a3cc32845e37d44a2ed13c0998ce8243f44ead75048c9c1a24e7e1ec57"
+          "bytes": 19928,
+          "sha256": "sha256:53c6032de7ca0e2d9f33a60339d2d73989b581db5729f3e11d5b54d2c47d1953"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 310805,
-          "sha256": "sha256:d09edda6563a799bca816be9990900b6305aca15782499d4493213c6998cfc44"
+          "bytes": 20303,
+          "sha256": "sha256:5c3e2464eb7d0b451e418ad40a76ad798efd2fa480de2a04696ae4589655473e"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a dimention a four '"
+          "text": "'it has a mone and the time'"
         }
       ]
     }

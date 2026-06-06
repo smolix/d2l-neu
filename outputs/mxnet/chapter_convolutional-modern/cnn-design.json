@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/cnn-design.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:424600a43a6a6917eeb61f60386cfd3d54b67e8a78d3cbc68a8509a218aa1830",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:fc41d13481a8c76134210d0f7856e7a5859213a50332234df86d9495b5dbc9ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 58779,
-          "sha256": "sha256:22e18f3a30196b063ae74b523adb32963008f462d509a544f49c44b28f504ddf"
+          "bytes": 22072,
+          "sha256": "sha256:a443b84279031ed087541d1170672e4a21d685e2c4f8b2f93e63ca4068f22410"
         }
       ]
     }

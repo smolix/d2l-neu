@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:cb2af27d34b0e2b5d7073aec5287e97975696293cda0fab83eb616a486855b63",
+    "d2l_lib_fingerprint": "sha256:1230848dce367f6d6186b8277234581980ac179576ba5f431a4929f8ddf61981",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 58699,
-          "sha256": "sha256:c43066185c5fcd706c11f820232bee12809667ae9057d7f6a05327fd382cc62b"
+          "bytes": 21498,
+          "sha256": "sha256:02d071c430487719e0c74ce98a96c8f8e7ec6134fa6556b7f9eae863fb5658f5"
         }
       ]
     }

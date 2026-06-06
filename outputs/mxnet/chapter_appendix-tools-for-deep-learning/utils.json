@@ -3,8 +3,8 @@
   "source": "chapter_appendix-tools-for-deep-learning/utils.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:f0bf0038571c8eac4de2065218b7d92f85ca5c9beb62840176490e1875cc6c32",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:1ae5cd21d58754bad7a3d1a2d2790f8ae73975fd3e0b030a0284726bcf4e26c9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,52 +19,52 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:9e6d401d955ab52bfd0e463dead2d45aed90c4b8bc4ef99a477f0ac85ec04ab4",
+      "code_fingerprint": "sha256:3143175cd761073ead3665e9ffc3e44cd7c115c2ad662aa9fe2c5cefa417837d",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:711553d1e22838c54529e613cd8a8fc464e41a94078c070a49c6e50ba3efdf9d",
+      "code_fingerprint": "sha256:7b3e582fbfe05f571f861e10fe70b548c31de588bda1f1aff81b19e4cc0af5b5",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-9": {
-      "code_fingerprint": "sha256:6dbf315ed62405518c7d59c0e5e1187705ef6df15f0bc6371bfadf12162f3bcb",
+      "code_fingerprint": "sha256:5324a312c57ccccac1a9737c946bbab5e343feafe396587b504546ce7718ef20",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:1288f5a9438ac380135a17495048a879eab188dc28dd645421b2ebbbe49aea37",
+      "code_fingerprint": "sha256:3147028a4fb3b1a1ed5b335ab9f9fd76b5e15ab5c85cf5c37d4234ad1a31079c",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-11": {
-      "code_fingerprint": "sha256:7d862ef451a5ebaea230fd36f193b7b761b7bc1f77a013bf3a652385c0ef6a16",
+      "code_fingerprint": "sha256:6295d3f2f8fddac5b0e7cb63ab9187aff10d9a61b23bc19c2283df7b73006476",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:02c7d3e2061c474839cab6320b3d025cbeffd932dbd4ecd7ba45cd9c1152f610",
+      "code_fingerprint": "sha256:a9540804477f8cdb9dcb86db066777b23ea79f384847f6c7f573a9e37abff088",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-13": {
-      "code_fingerprint": "sha256:4aaf6c5002f3716243974b638fca88e56698c14d9d2ddd1026c250f505978a2b",
+      "code_fingerprint": "sha256:dc3980d223aefe0ce63571d394c68e124082d6eafb5a1d5acd97671430672046",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-14": {
-      "code_fingerprint": "sha256:47adad150c208fe522eb9ace3342be47d158857156a45ebb65f17ddfc265d5d5",
+      "code_fingerprint": "sha256:90a852161c74a53f35b11ad7d113a2294a730c9cf255b97a7dabc1d7237c0c5e",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-16": {
-      "code_fingerprint": "sha256:d247c22abc3be54ebbe346f57a035a8f92920959f9068faae56bdb38be0c8123",
+      "code_fingerprint": "sha256:447f4de9762a1abd5265314fddccc00d3d511c8c46a834fd2cb8144533cf42d8",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-17": {
-      "code_fingerprint": "sha256:2a1cbaa2cd94289118e300dbab6b5c035a372f0b1363a7785db571163e58f1cb",
+      "code_fingerprint": "sha256:29f934951939bf11186bdf29cabf8986cc9f5a8cba7b41e08369f3becd162df8",
       "kind": "text",
       "outputs": []
     }

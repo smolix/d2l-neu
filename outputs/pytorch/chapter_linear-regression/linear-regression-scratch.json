@@ -3,8 +3,8 @@
   "source": "chapter_linear-regression/linear-regression-scratch.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:3c79ae826763847e31a161d7a5c5b4938d5cfecea0ac5d8ff7131feb1e67799e",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8c796544c9e5269b7f7931dd1c404edca2ea9e79734fbd6ec566dc63005dffda",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 38523,
-          "sha256": "sha256:4b27a662ac2f99695195f9d09563faff2541c4d5b4e7ee9b3e3dc82f377d51bb"
+          "bytes": 19125,
+          "sha256": "sha256:5dce8b0d575930275e5bcf64722b7b214dfa2dee5e5c43c272f91e2f57bed7b8"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 8.7142e-05, -3.9339e-05])\nerror in estimating b: tensor([-0.0003])\n"
+          "text": "error in estimating w: tensor([ 8.3685e-05, -5.6744e-05])\nerror in estimating b: tensor([0.0007])\n"
         }
       ]
     }

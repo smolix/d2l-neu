@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-neural-networks/rnn-scratch.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:e0a41948b4fb774c40b9709b34a8381d5aa3e2996bf466ae03341bcbaf2905ea",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:32fe12ff64e675fcc758361a970712233509b11e4da8030a81ebd77183840897",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 1049158,
-          "sha256": "sha256:5eb6ccc8d9e8d0fb776f4bb5b37fbea39b8704df339fcdc9b1b8d4095a1aded5"
+          "bytes": 23945,
+          "sha256": "sha256:ad0026f4ac2118139309e361c3d73af64b999d8981fb3a74151fe834af9fd5d3"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller and the prach and t'\n"
+          "text": "perplexity 7.2, 'time traveller and the thing and t'\n"
         }
       ]
     }

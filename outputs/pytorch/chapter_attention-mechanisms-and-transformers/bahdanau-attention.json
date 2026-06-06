@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/bahdanau-attention.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:b053b963123184853f38c753b34fdf3b34245e3562e236232970f9705830c1cf",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:1e172791c36036ae492fe1e02c2ffcc046fe0fedaab54ea5cd9e4791dce3fec1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 139848,
-          "sha256": "sha256:097a765387639b276b578fe1f32de73714da143ce7ccc73dc20ee63bd090417c"
+          "bytes": 20413,
+          "sha256": "sha256:290721c1292728ca7b749e9664a5a35204c5f0e16b5c81f9278a4463b0cae64d"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 18616,
-          "sha256": "sha256:70c03d7d769cc9e9c170b7044f0d54930253f399ce4a207116a05064bfc37920"
+          "bytes": 19308,
+          "sha256": "sha256:c74023d6e66b39d92f686deadc36f2cda2227944d9a996dc8fc55946fb3e8004"
         }
       ]
     }

@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/lstm.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:6a2f6e3d623f7de4d429d50546892b9d6804a4414266bf096dd328430552b13a",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:255154ba07d8f50966453169781fb9727a6a9ffb620d05af72f5f8b1ecf17dc1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 308351,
-          "sha256": "sha256:80013b594069c408ca9f334428afec195f5f35b02825a6baf26cfb63d32dfa75"
+          "bytes": 19937,
+          "sha256": "sha256:c9954505e02166b593be279ff057267f14719afb3a2e6e66080ddf2933af6dea"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 310049,
-          "sha256": "sha256:1626939ccfc87102ec3912470810ad8535543b7b5d4b0b59afee000ef230d64a"
+          "bytes": 19936,
+          "sha256": "sha256:da64d0d010e355573ac2bb0fa8299faf44569e4e251d1f6067bc5497ffca0bd4"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the time traveller '"
+          "text": "'it has is the time the tim'"
         }
       ]
     }

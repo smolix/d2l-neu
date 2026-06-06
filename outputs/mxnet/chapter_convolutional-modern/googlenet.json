@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/googlenet.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:f83bf7a81392866ccc6162a3ea64fe0a8f8fbd8e7f8f971a775ae9555c9a1038",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 58927,
-          "sha256": "sha256:2e8c1645c61042110a58339c819ffa03af0b9d59df261228e51a391a622749d5"
+          "bytes": 20579,
+          "sha256": "sha256:b3bc574e7675a592ab6788a833e118630e29a24aba6e13e9a683d894984dc069"
         }
       ]
     }

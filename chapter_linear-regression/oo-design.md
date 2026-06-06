@@ -138,7 +138,7 @@ b = B(a=1, b=2, c=3)
 
 The final utility allows us to plot experiment progress interactively while it is going on. In deference to the much more powerful (and complex) [TensorBoard](https://www.tensorflow.org/tensorboard) we name it `ProgressBoard`. The  implementation is deferred to :numref:`sec_utils`. For now, let's simply see it in action.
 
-The `draw` method plots a point `(x, y)` in the figure, with `label` specified in the legend. The optional `every_n` smooths the line by only showing $1/n$ points in the figure. Their values are averaged from the $n$ neighbor points in the original figure.
+The `draw` method records a point `(x, y)` to be shown in the figure, with `label` specified in the legend. The optional `every_n` smooths the line by only showing $1/n$ points in the figure; their values are averaged from the $n$ neighbor points. As we explain just below, `draw` is *asynchronous*: it merely schedules the point and returns immediately, so that plotting never slows down training.
 
 ```{.python .input #oo-design-utilities-6}
 class ProgressBoard(d2l.HyperParameters):  #@save
@@ -153,13 +153,39 @@ class ProgressBoard(d2l.HyperParameters):  #@save
         raise NotImplementedError
 ```
 
-In the following example, we draw `sin` and `cos` with a different smoothness. If you run this code block, you will see the lines grow in animation.
+Why does `draw` go to the trouble of *scheduling* work instead of plotting
+right away? The answer previews a theme that runs through the entire book.
+Modern frameworks get their speed by *compiling* the training computation---PyTorch
+with `torch.compile`, JAX with `jax.jit`, TensorFlow with `tf.function`, MXNet
+with `hybridize`---into a graph that runs on the accelerator with little Python in
+the loop. Compilation imposes two rules we must respect. First, a compiled step has
+to be *pure*: a `print` or a plotting call inside it cannot be traced, and forces
+the framework back onto slow, op-by-op execution. Second, the accelerator runs
+*asynchronously*, ahead of Python; the instant we ask for a concrete number---to
+print or plot it---Python must *block* until the device catches up, stalling the
+very pipeline we worked to speed up.
+
+Real-time monitoring therefore seems to be at odds with efficiency. `ProgressBoard`
+resolves the tension by *decoupling* the two: `draw` hands the value to a queue and
+returns at once, while a background thread performs the device-to-host transfer and
+the (comparatively slow) rendering at its own pace---and simply drops points if it
+falls behind, since a live loss curve needs no more than a few updates per second.
+The training loop stays compiled and the device stays busy, yet we still watch the
+loss go down as it happens. It is a pattern worth remembering: *keep the hot path
+pure and compiled, and push logging, plotting, and checkpointing off to the side.*
+
+In the following example, we draw `sin` and `cos` with different smoothness. If you
+run this code block interactively, you will see the lines grow in animation. Because
+drawing is asynchronous, we finish with `board.flush()`, which waits for the queue
+to drain and renders the final figure; `Trainer.fit` (developed below) does this for
+you.
 
 ```{.python .input #oo-design-utilities-7}
 board = d2l.ProgressBoard('x')
 for x in np.arange(0, 10, 0.1):
     board.draw(x, np.sin(x), 'sin', every_n=2)
     board.draw(x, np.cos(x), 'cos', every_n=10)
+board.flush()  # wait for the queued points, then render the final figure
 ```
 
 ## Models
@@ -204,7 +230,9 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        self.board.draw(x, d2l.numpy(d2l.to(value, d2l.cpu())),
+        # Pass a thunk, not the value: the device-to-host transfer is deferred
+        # to the board's drawing thread so this loop never blocks on it.
+        self.board.draw(x, lambda v=value: d2l.numpy(d2l.to(v, d2l.cpu())),
                         ('train_' if train else 'val_') + key,
                         every_n=int(n))
 
@@ -249,7 +277,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        self.board.draw(x, d2l.numpy(value), (
+        # Defer the device-to-host transfer to the board's drawing thread.
+        self.board.draw(x, lambda v=value: d2l.numpy(v), (
             'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
@@ -300,7 +329,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        self.board.draw(x, d2l.numpy(value), (
+        # Defer the device-to-host transfer to the board's drawing thread.
+        self.board.draw(x, lambda v=value: d2l.numpy(v), (
             'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
@@ -358,11 +388,9 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        # Skip device sync unless this point will be plotted; every_n
-        # buckets ensure alignment with the board's own filter
-        if train and int(n) > 1 and self.trainer.train_batch_idx % int(n):
-            return
-        self.board.draw(x, d2l.to(value, d2l.cpu()),
+        # Defer the device-to-host transfer to the board's drawing thread, so
+        # this loop never blocks on it (the board itself filters via every_n).
+        self.board.draw(x, lambda v=value: d2l.numpy(d2l.to(v, d2l.cpu())),
                         ('train_' if train else 'val_') + key,
                         every_n=int(n))
 
@@ -534,6 +562,7 @@ class Trainer(d2l.HyperParameters):  #@save
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
+        self.model.board.flush()  # drain queued points; render the final figure
 
     def fit_epoch(self):
         raise NotImplementedError
@@ -569,6 +598,7 @@ class Trainer(d2l.HyperParameters):  #@save
         self._compile_steps()
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
+        self.model.board.flush()  # drain queued points; render the final figure
 
     def fit_epoch(self):
         raise NotImplementedError
@@ -633,6 +663,7 @@ class Trainer(d2l.HyperParameters):  #@save
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
+        self.model.board.flush()  # drain queued points; render the final figure
 
     def fit_epoch(self):
         raise NotImplementedError
@@ -667,6 +698,7 @@ class Trainer(d2l.HyperParameters):  #@save
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
+        self.model.board.flush()  # drain queued points; render the final figure
 
     def fit_epoch(self):
         raise NotImplementedError

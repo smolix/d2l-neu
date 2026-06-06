@@ -159,6 +159,10 @@ def setup_framework_env(framework, venv_root=None):
         os.environ.setdefault(k, v)
     for k, v in THREAD_LIMIT_ENV.get(framework, {}).items():
         os.environ.setdefault(k, v)
+    # Signal headless capture so d2l.ProgressBoard skips its live (interactive)
+    # animation frames and records exactly one final figure per cell. Interactive
+    # sessions never call this, so they keep the live curve.
+    os.environ.setdefault("D2L_NB_CAPTURE", "1")
 
     nv_libs = nvidia_lib_path(venv_root)
     if nv_libs:

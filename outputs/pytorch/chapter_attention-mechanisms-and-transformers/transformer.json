@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/transformer.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:9bb0e4de16dc141478f062eb792e70b550cc1884bf1b7551a3bbe8f804ae2117",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:4eb13edddba2708554a2946bb215adeb27262af47bc89aa3e0647cd6f8a5fa4d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251],\n        [ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251],\n        [ 0.3086, -0.1798, -0.9607, -0.1000, -0.6509, -0.5685,  0.4194,  0.8251]],\n       grad_fn=<SelectBackward0>)"
+          "text": "tensor([[-0.7912, -0.2699,  0.2196,  0.3307, -0.1439,  0.0511, -0.2587,  0.0874],\n        [-0.7912, -0.2699,  0.2196,  0.3307, -0.1439,  0.0511, -0.2587,  0.0874],\n        [-0.7912, -0.2699,  0.2196,  0.3307, -0.1439,  0.0511, -0.2587,  0.0874]],\n       grad_fn=<SelectBackward0>)"
         }
       ]
     },
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-1-1.svg",
-          "bytes": 139750,
-          "sha256": "sha256:c260acd95a7e4bae4a4f029b07f9064390daaf4518df259972300233888df11a"
+          "bytes": 20412,
+          "sha256": "sha256:a6183c89238ef14b8154667f9f6ee90264a18a5a9d3ee88c362aa9106fd9e26c"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-4-1.svg",
-          "bytes": 50952,
-          "sha256": "sha256:3a9d3b7d4fc853c427439b9b2aa79cdab5a2056b113a99b151db0ff10b3596f7"
+          "bytes": 50843,
+          "sha256": "sha256:743cac5172a04d457c73de94acd3499fb89e956b3e029f4adda335689621bbcb"
         }
       ]
     },
@@ -144,8 +144,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-7-1.svg",
-          "bytes": 51872,
-          "sha256": "sha256:3e34a95bc10cdbf329f27a7f7285bf47fb19fdf5cf0f2ae314810f25f3be924c"
+          "bytes": 51832,
+          "sha256": "sha256:6d736b5fdf4ad59015716ff99f23ba7408a3c20e2ae6e4f3ce7ab76550edc3d1"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-8-1.svg",
-          "bytes": 52026,
-          "sha256": "sha256:b8f71ae57d5848f27e4f7f8233abae6e9a688cf769c91e2de0a3753df8e5a839"
+          "bytes": 51966,
+          "sha256": "sha256:3412545745544c26a4f661c71edeb6520d7ced2ee5aa81506d9663a1b2db2d09"
         }
       ]
     }

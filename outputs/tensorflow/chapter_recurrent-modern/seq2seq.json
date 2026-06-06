@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9ef861426fb4fd7aa77ddf7edf80ddaa60fc2828354604bbebc812a8f526bada",
+    "d2l_lib_fingerprint": "sha256:1b18f464ef24dd608af478230eeb967919a2c4b0e8d4bc1c7b6ecfdf7b32723e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 242087,
-          "sha256": "sha256:2402fabe8020eea472987374cd502139e0317cddfe288074f2159de7c7da1d5c"
+          "bytes": 22528,
+          "sha256": "sha256:4f1a2cd37470828d9f077de4c0d803226c12a48af23f78fcad1a69f46a8cc03d"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'compris', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'certain', '.'], bleu,0.512\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', '<unk>', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'riche', '.'], bleu,0.512\n"
         }
       ]
     }

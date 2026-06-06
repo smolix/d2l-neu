@@ -3,8 +3,8 @@
   "source": "chapter_builders-guide/use-gpu.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d4a7d45b3064bc2ff7dee83a221e7092507a4b1abd9e31b3fbd08e95edac4ba5",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:6143cb5eba1040a1328f252960bcfc0f52d293edabb33c629ed5bb5e3d3afa66",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.8118, 0.6344, 0.7437],\n        [0.9931, 0.3141, 0.0327]], device='cuda:1')"
+          "text": "tensor([[0.3832, 0.4555, 0.5116],\n        [0.9712, 0.9875, 0.1477]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.8118, 1.6344, 1.7437],\n        [1.9931, 1.3141, 1.0327]], device='cuda:1')"
+          "text": "tensor([[1.3832, 1.4555, 1.5116],\n        [1.9712, 1.9875, 1.1477]], device='cuda:1')"
         }
       ]
     },
@@ -115,7 +115,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.6825],\n        [0.6825]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-0.1968],\n        [-0.1968]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },

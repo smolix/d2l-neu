@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/vgg.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:3ac00049c77d231f5a64852b45a0d66cb36c227c977233237be61b84f1a5d802",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:fcbad95973c6bc38f168effa4b494446d661dbff578af5fd96902671264cc374",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 59345,
-          "sha256": "sha256:5448d9a30a41bdda53cba041b3765ecab0087344bccb909162f703baba152cef"
+          "bytes": 20989,
+          "sha256": "sha256:b00c9385c679db9d2904c97776c149a88c7f0b7a26965622f48eb02f4c50d060"
         }
       ]
     }

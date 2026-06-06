@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/alexnet.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:abf06d54538478c1060edf28289fd79d29c11329126dcd6a431339ae45795465",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:2510ce4b53f8326764f12ef931483006478a88a371ced69912c0e2274df77091",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 58591,
-          "sha256": "sha256:266ff832280a7e82e5941110d060e93aebd1cac61e6d93333667591b29bc0f44"
+          "bytes": 58614,
+          "sha256": "sha256:93620139b52862fcfcedf9c358bdebda5f11d44265a35504d4dda95a48e2d4d4"
         }
       ]
     }

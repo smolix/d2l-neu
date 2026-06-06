@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:df07c9d71b2ce5afec74b58f21ad0f407f557902db7558c8792a24d4ad37fd57",
+    "d2l_lib_fingerprint": "sha256:3356f280935b9045d64771c07d6a4b3e70c5b432408bca2cf5da07592e3b8630",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf74bd2c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7c807ecf40>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ede100>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x715739d90800>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x715739fcc9c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x715730102d00>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef55c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5300>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef52c0>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5280>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5240>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7a7bf6ef5200>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x71573011dec0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x71573011dc00>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x71573011dbc0>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x71573011db80>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x71573011db40>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x71573011db00>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.584556  , 0.67113423, 0.00837564],\n       [0.03477895, 0.2866397 , 0.3940568 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.65688777, 0.30790913, 0.36148965],\n       [0.5407907 , 0.99298   , 0.43986094]], dtype=float32)>"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.584556 , 1.6711342, 1.0083756],\n       [1.034779 , 1.2866397, 1.3940568]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.6568878, 1.3079091, 1.3614897],\n       [1.5407907, 1.99298  , 1.4398609]], dtype=float32)>"
         }
       ]
     },
@@ -121,7 +121,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.7608571],\n       [1.7608571]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-1.0369363],\n       [-1.0369363]], dtype=float32)>"
         }
       ]
     },

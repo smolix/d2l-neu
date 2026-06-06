@@ -3,8 +3,8 @@
   "source": "chapter_convolutional-modern/nin.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:3ac00049c77d231f5a64852b45a0d66cb36c227c977233237be61b84f1a5d802",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:fcbad95973c6bc38f168effa4b494446d661dbff578af5fd96902671264cc374",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 59010,
-          "sha256": "sha256:66996f29d15f2d0162ca5251fac5aeef9be0ad4bd8d63155dae619c3b1b8bb80"
+          "bytes": 21519,
+          "sha256": "sha256:435f82886b6b04f4dea12f56ba879cb3e5b5f12911e77250a27a518b4b1e8f0f"
         }
       ]
     }

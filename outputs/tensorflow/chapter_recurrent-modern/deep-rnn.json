@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:f869460d097686e549031238b8a5110987aa7a8967dfa860eb74277aff1b209b",
+    "d2l_lib_fingerprint": "sha256:574109619539c33dd5e876bce900f39cf3bce31a57410fc2b91c4aee47c59bc7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 1055908,
-          "sha256": "sha256:9993a5c265f9bcf23d324aba790de4dedb318a2f9cbd602b84f3a5f5fd595f90"
+          "bytes": 24792,
+          "sha256": "sha256:27df3c0caa58e8a0436b885f49c25111965e3cf693fc32befb118ad440f2f40e"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 1060359,
-          "sha256": "sha256:8a288729212ae14a2c8987c319bd8340dcd0f7108868bf7c21521810bb315a45"
+          "bytes": 24130,
+          "sha256": "sha256:f2fcd90a0687d32686f9950b12237b1812b09e21aba770af21f230a1da8ee654"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has space the time trav'"
+          "text": "'it has i said the time tra'"
         }
       ]
     }

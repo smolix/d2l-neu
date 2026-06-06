@@ -3,8 +3,8 @@
   "source": "chapter_multilayer-perceptrons/mlp-implementation.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:9171ba36e4a48cc47e3225e8b3a91deca4c017e2172fc7d50ca374fe7458608a",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:9cf23561aadd82fc12d5772dfb925f3fc20cb0d46dc389b53215fa85c6fc1e88",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 59133,
-          "sha256": "sha256:4a232f2db7f00c6416297188a176c468b1f8f821ee15f79d1b79660a369b4fc5"
+          "bytes": 20995,
+          "sha256": "sha256:97eaf28a55318bce3eb327cae4a49dfa6b00ecedd44c83ed41ec908cf5b2fea6"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 58593,
-          "sha256": "sha256:19d6b61fffa4ddbc710160027e88334989306e95d1cd17b4aadf3eb49e31dd33"
+          "bytes": 20515,
+          "sha256": "sha256:82b4c315f70d45c2d5d0364969187d1c846495096279720690ac1304867ee0ac"
         }
       ]
     }

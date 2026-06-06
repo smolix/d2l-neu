@@ -129,43 +129,128 @@ class ProgressBoard(d2l.HyperParameters):
         self.save_hyperparameters()
 
     def draw(self, x, y, label, every_n=1):
-        Point = collections.namedtuple('Point', ['x', 'y'])
-        if not hasattr(self, 'raw_points'):
-            self.raw_points = collections.OrderedDict()
-            self.data = collections.OrderedDict()
-        if label not in self.raw_points:
-            self.raw_points[label] = []
-            self.data[label] = []    
-        points = self.raw_points[label]
-        line = self.data[label]
-        points.append(Point(x, y))
-        if len(points) != every_n:
-            return    
-        mean = lambda x: sum(x) / len(x)
-        line.append(Point(mean([p.x for p in points]), 
-                          mean([p.y for p in points])))
-        points.clear()
-        if not self.display: 
+        """Schedule the point (x, y) to be plotted under `label`.
+
+        This call is *asynchronous*: it appends the point to an internal queue
+        and returns immediately, so the (possibly compiled) training loop never
+        blocks on a device-to-host transfer or on matplotlib. `y` may be a number
+        or a zero-argument callable returning one; if it is a callable, the
+        conversion runs on the background drawing thread, not on the caller's.
+
+        Defined in :numref:`sec_utils`"""
+        self._start_drawer()
+        try:
+            self._queue.put_nowait((x, y, label, every_n))
+        except queue.Full:
+            pass  # drop the point rather than stall the training loop
+
+    def _start_drawer(self):
+        if getattr(self, '_drawer', None) is not None:
             return
-        d2l.use_svg_display()
-        if self.fig is None:
-            self.fig = d2l.plt.figure(figsize=self.figsize)
-        plt_lines, labels = [], []
-        for (k, v), ls, color in zip(self.data.items(), self.ls, self.colors):        
-            plt_lines.append(d2l.plt.plot([p.x for p in v], [p.y for p in v], 
-                                          linestyle=ls, color=color)[0])
-            labels.append(k)        
-        axes = self.axes if self.axes else d2l.plt.gca()
+        self._queue = queue.Queue(maxsize=1000)
+        self._lock = threading.Lock()
+        self._handle = None
+        self._last = 0.0
+        self._running = True
+        # Emit live frames only outside the headless book build, so an executed
+        # notebook records exactly one (final) figure in the committed store.
+        self._live = self.display and os.environ.get('D2L_NB_CAPTURE') != '1'
+        self._drawer = threading.Thread(target=self._drain, daemon=True)
+        self._drawer.start()
+
+    def _drain(self):
+        while self._running or not self._queue.empty():
+            try:
+                batch = [self._queue.get(timeout=0.1)]
+            except queue.Empty:
+                continue
+            while True:  # coalesce everything currently queued
+                try: batch.append(self._queue.get_nowait())
+                except queue.Empty: break
+            for x, y, label, every_n in batch:
+                self._accumulate(x, y() if callable(y) else y, label, every_n)
+            if self._live and time.time() - self._last > 0.1:
+                self._render(thread=True)
+                self._last = time.time()
+
+    def _accumulate(self, x, y, label, every_n):
+        Point = collections.namedtuple('Point', ['x', 'y'])
+        with self._lock:
+            if not hasattr(self, 'raw_points'):
+                self.raw_points = collections.OrderedDict()
+                self.data = collections.OrderedDict()
+            if label not in self.raw_points:
+                self.raw_points[label] = []
+                self.data[label] = []
+            points = self.raw_points[label]
+            points.append(Point(x, float(y)))
+            if len(points) != every_n:
+                return
+            mean = lambda v: sum(v) / len(v)
+            self.data[label].append(Point(mean([p.x for p in points]),
+                                          mean([p.y for p in points])))
+            points.clear()
+
+    def _plot_lines(self, axes):
+        with self._lock:
+            series = [(k, list(v)) for k, v in getattr(self, 'data', {}).items()]
+        for (k, v), ls, color in zip(series, self.ls, self.colors):
+            axes.plot([p.x for p in v], [p.y for p in v],
+                      linestyle=ls, color=color, label=k)
         if self.xlim: axes.set_xlim(self.xlim)
         if self.ylim: axes.set_ylim(self.ylim)
-        if not self.xlabel: self.xlabel = self.x    
+        if not self.xlabel: self.xlabel = self.x
         axes.set_xlabel(self.xlabel)
         axes.set_ylabel(self.ylabel)
         axes.set_xscale(self.xscale)
         axes.set_yscale(self.yscale)
-        axes.legend(plt_lines, labels)    
-        display.display(self.fig)
-        display.clear_output(wait=True)
+        if series: axes.legend()
+
+    def _render(self, thread=False):
+        if not self.display:
+            return
+        if thread:
+            # Off the main thread: matplotlib's global pyplot state is not
+            # thread-safe, so render into a private Agg figure and push a PNG.
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+            fig = Figure(figsize=self.figsize)
+            FigureCanvasAgg(fig)
+            self._plot_lines(fig.add_subplot(111))
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', bbox_inches='tight')
+            frame = display.Image(data=buf.getvalue())
+            if self._handle is None:
+                self._handle = display.display(frame, display_id=True)
+            else:
+                self._handle.update(frame)
+        else:
+            # Main thread (final frame): render through pyplot so the output is
+            # captured exactly like the rest of the book's inline figures.
+            d2l.use_svg_display()
+            if self.fig is None:
+                self.fig = d2l.plt.figure(figsize=self.figsize)
+            self.fig.clf()
+            self._plot_lines(self.fig.add_subplot(111))
+            if self._handle is not None:
+                self._handle.update(self.fig)         # interactive: reuse live slot
+            else:
+                # Display, then a trailing clear_output(wait=True): the inline
+                # backend's automatic end-of-cell render then *replaces* (rather
+                # than duplicates) this figure, so exactly one image is captured.
+                display.display(self.fig)
+                display.clear_output(wait=True)
+
+    def flush(self):
+        """Wait for every scheduled point to be drawn, then render the final
+        figure on the calling thread. `Trainer.fit` calls this for you; call it
+
+        Defined in :numref:`sec_utils`"""
+        if getattr(self, '_drawer', None) is not None:
+            self._running = False
+            self._drawer.join()
+            self._drawer = None
+        self._render(thread=False)
 
 class Module(d2l.nn_Module, d2l.HyperParameters):
     """The base class of models.
@@ -195,7 +280,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        self.board.draw(x, d2l.numpy(value), (
+        # Defer the device-to-host transfer to the board's drawing thread.
+        self.board.draw(x, lambda v=value: d2l.numpy(v), (
             'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
@@ -282,6 +368,7 @@ class Trainer(d2l.HyperParameters):
         self.val_batch_idx = 0
         for self.epoch in range(self.max_epochs):
             self.fit_epoch()
+        self.model.board.flush()  # drain queued points; render the final figure
 
     def fit_epoch(self):
         for batch in self.train_dataloader:
@@ -2847,6 +2934,8 @@ class CTRDataset(gluon.data.Dataset):
         # Wrap label in np.array so DataLoader batching yields an ndarray
         # (not a list-of-lists), matching the pytorch tab's torch.tensor(...).
         return feat + self.offsets, np.array(self.data[idx]['y'])
+
+import io, os, queue, threading, time
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a Gluon data iterator.

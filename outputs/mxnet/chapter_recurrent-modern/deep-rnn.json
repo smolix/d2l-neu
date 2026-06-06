@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/deep-rnn.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:e61c32a753f3edc3d2aa26ede8b383eea5701854f91b9327b283119fa94155b2",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:b35ed7f1d0b3081c0b12030bf24a23dfccd92d52f0786cb100b1e949fa065094",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 1075022,
-          "sha256": "sha256:0e4ba544c039317917b3f2f6723ad2c1bff8b5b86ea1bf381482932c84cc3aef"
+          "bytes": 23641,
+          "sha256": "sha256:ab002105b3c9ef3fb08817130bbdfc3ac621b898f1bb79f03dcea3fc0cb7cc21"
         }
       ]
     },
@@ -47,14 +47,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the time the time t'"
+          "text": "'it has of the time and the'"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 1045664,
-          "sha256": "sha256:bbfe03a014b70f141d692226fe2f0fa5399c2cda6ff5a95b52a6f7e03768a58f"
+          "bytes": 24798,
+          "sha256": "sha256:9cfac04045a29bee7fb51336d358166f61b14529007b6c1dd9092670dc5be1d5"
         }
       ]
     }

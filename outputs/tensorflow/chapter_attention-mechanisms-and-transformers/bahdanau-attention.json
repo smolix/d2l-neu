@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1f1271df89a27712bdd60ff749a2bdd07f87da1e5a99cbec5a1f2ccfc3f87125",
+    "d2l_lib_fingerprint": "sha256:44207d932ad40a1922914d0364147a9aef81e9558c51787dffdb8ea815136800",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 243654,
-          "sha256": "sha256:7af1c85c94ccf79787c1d522332a8ead0959999b4e748272e8c7780b4ceab6b3"
+          "bytes": 22159,
+          "sha256": "sha256:f15c3564204fdf9f12062e469ee05d0b102cc03628ecb5a5c7c7bfa8e5141abf"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => ['je', \"l'ai\", 'emporté', '!'], bleu,0.000\ni'm calm . => ['je', 'suis', '<unk>', '.'], bleu,0.658\ni'm home . => ['je', 'suis', '<unk>', '.'], bleu,0.512\n"
+          "text": "i lost . => ['je', 'suis', 'perdu', '.'], bleu,0.537\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'perdu', '.'], bleu,0.512\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19976,
-          "sha256": "sha256:49e029841cdadc5cc1ff0c8a158e1c07ec3febc040a5b47ce7c49d4179ae02bb"
+          "bytes": 19117,
+          "sha256": "sha256:44935c05533ccfddb6832fbac28e9efb6073136c38339a3ea98109e9b9a815b9"
         }
       ]
     }

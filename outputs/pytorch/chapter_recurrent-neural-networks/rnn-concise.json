@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-neural-networks/rnn-concise.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:27fd31b5b737fb7f4cc8808916aa83367aa606437b36989a31e65aa1f83965e0",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:1cf8ed85d3a62acba5dca9110ed44ce5762a104c2c431a19f530e99ce1ba2821",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasuguguggggggggggggggg'"
+          "text": "'it hasppbbbupbbbupbbbupbbb'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 1064042,
-          "sha256": "sha256:862e828532c1b15b95b8bd4ec7a8da84ddf45c3dae37040b04939314781ea264"
+          "bytes": 24650,
+          "sha256": "sha256:e338eab0a0c41d22fd4d3ffdd140aff57ffd87df78daf1d76783485cfc2a73ae"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller and the pravell the'\n"
+          "text": "perplexity 7.4, 'time traveller the the the the the'\n"
         }
       ]
     }

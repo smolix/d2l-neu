@@ -3,8 +3,8 @@
   "source": "chapter_attention-mechanisms-and-transformers/bahdanau-attention.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:7eb062d4adf5c4f95d11f26df438c2c58c0aae3a0e974f943ff76cf98725d9eb",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:460488b0fabb5b4a54f059942ce9940b7fd639d458e731bf67bd28e081f47dfc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 140198,
-          "sha256": "sha256:c84f4002c04d46c94a164c1f566f1b3fdcd75326c10887677f9055798bfa3c0d"
+          "bytes": 20771,
+          "sha256": "sha256:e29330bbee9c1e92b76c69dd885b155b6069a41211a606c7657c283993ea7231"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19149,
-          "sha256": "sha256:6f7944c7771ba7ce19db527c1e2edb628c31ea7b59aabf3202aaf95e34174e9d"
+          "bytes": 18644,
+          "sha256": "sha256:c3fab3823ee70bea922b71864286f586128a91e6e89ebd8994ade0397d93ddb5"
         }
       ]
     }

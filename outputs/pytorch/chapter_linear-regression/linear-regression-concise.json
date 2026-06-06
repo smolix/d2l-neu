@@ -3,8 +3,8 @@
   "source": "chapter_linear-regression/linear-regression-concise.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:d4b8cdf3dde00fc5c9c1f1fc252f3eec6fcdc83b846082c75a540869bf7867da",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:bff6bd982be4d64591ff4055b7f27ca643bd9cd83050b1517f5f4bee0b97d59d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 23997,
-          "sha256": "sha256:3b42e2201397a0390de282395023679c15035954f0eed5551e88cf81aeba4a4c"
+          "bytes": 18906,
+          "sha256": "sha256:605ed1a2134e94447e6e6496c789f4a9d5eafd2153c1403c481c191f06130d0b"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 0.0071, -0.0074])\nerror in estimating b: tensor([0.0081])\n"
+          "text": "error in estimating w: tensor([ 0.0073, -0.0051])\nerror in estimating b: tensor([0.0085])\n"
         }
       ]
     }

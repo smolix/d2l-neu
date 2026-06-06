@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b8e3b51e8c7272a813f62d1117c4dfe7dda5c9bdf725a75221028aa1c2b20114",
+    "d2l_lib_fingerprint": "sha256:e603e89573bdabfcdba22af9fe3d76d00700430f129d0f63a0a5cb32da44fbdc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.176268008351326\n"
+          "text": "average validation log mse = 0.1770395740866661\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-1.svg",
-          "bytes": 41687,
-          "sha256": "sha256:e16c0f4a43c146ad01d64e850afe3ce3ce639a32255c2fbf7ccb5b9a636f262e"
+          "bytes": 21407,
+          "sha256": "sha256:354b591623dc190341b7bf5ddab5bfcb599417fdeee955cd0d1f08827ac49062"
         }
       ]
     },

@@ -3,8 +3,8 @@
   "source": "chapter_linear-classification/softmax-regression-concise.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:9171ba36e4a48cc47e3225e8b3a91deca4c017e2172fc7d50ca374fe7458608a",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:9cf23561aadd82fc12d5772dfb925f3fc20cb0d46dc389b53215fa85c6fc1e88",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 60482,
-          "sha256": "sha256:1708cad9d10d31e44a5309d26bdd847b19c66a5d0754bd1755bb2cbd6a2dd645"
+          "bytes": 22390,
+          "sha256": "sha256:92197c728c7e60edf7a068fa19a5515e85afe6dc8f9cf15856583c8283d4663c"
         }
       ]
     }

@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-neural-networks/rnn-scratch.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
-    "d2l_lib_fingerprint": "sha256:9ebf32177d3dbe814a4f720dbbece3c90181127fd2c6bb5d9ac78922164db856",
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:b9fbc89871322bb05f29ffc6dc2399fb03d845298dfce4bde659b490168fc5d6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 1016418,
-          "sha256": "sha256:6677f2afcaf3df11962a1ffd2669e74650a480ac2bb6167720cf8cd7bf09f587"
+          "bytes": 24252,
+          "sha256": "sha256:76878b773f4b91885ef75e6f87bccf33d536cc9706af100aa288df5450a7da6f"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.2, 'time traveller the the the the the'\n"
+          "text": "perplexity 7.5, 'time traveller and the peat and th'\n"
         }
       ]
     }

@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-neural-networks/rnn-concise.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
-    "d2l_lib_fingerprint": "sha256:6edd764edf8aee14a6f81a343ddd2921a3fe27487c53ebbc5aca0602bdc41b4c",
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:561b974fc902469c9ddd3201e365f6b17798261e870d913da228433f5045ac82",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasaaaaaaaaaaaaaaaaaaaa'"
+          "text": "'it hasfsfteeeeeeeeeeeeeeee'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 1072796,
-          "sha256": "sha256:65d504b7f49033e17f4fd2565365dbbcb24d3c7c5f69720c891b7e945c3bb7c8"
+          "bytes": 24409,
+          "sha256": "sha256:4a3763d0fe8fde0ad93dd4436d82c1b227fb5cd0e566ba8ba50dc329d289cf10"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.5, 'time traveller the the the the the'\n"
+          "text": "perplexity 7.3, 'time traveller and the that and th'\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:49cb308545a8137b7003c2d1c599d77a204688528c533a1304d94226f85d6eea",
+    "d2l_lib_fingerprint": "sha256:384b34a181dd7cd31ac9ce78464c50e2d13250e91653c61d42c9dfb9a147daa3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 106217,
-          "sha256": "sha256:bb0defb24dc670cb867a1547b6ce232e4902e9258693b2924d6aff45dd39feb7"
+          "bytes": 20051,
+          "sha256": "sha256:b6a894770a63102bbd266e1ee8932ea65ff78df9a45955ffffe842b913127ca3"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 106784,
-          "sha256": "sha256:618243f8549c75331ea1a306596c02c9bfc2efab3d3829ca01a4bbdb9ba0e194"
+          "bytes": 20437,
+          "sha256": "sha256:921fee5ae32f6cb14b696059a06ea8ae37dc1672f5bd2e209903cad29e8e2726"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the the the prace t'"
+          "text": "'it has in the traveller th'"
         }
       ]
     }

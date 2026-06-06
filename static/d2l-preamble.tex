@@ -1,0 +1,26 @@
+% LaTeX preamble for "Dive into Deep Learning" PDF builds.
+% Referenced by tools/gen_pdf.py via `include-in-header`.
+% Quarto already loads fontspec/hyperref/amsmath/amssymb/graphicx/longtable/booktabs,
+% so this file only adds project-specific tweaks.
+
+% Allow line breaks inside long verbatim spans (URLs, code lines).
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},breaklines,breakanywhere,fontsize=\small}
+
+% Better float placement for figures inside narrow sections.
+\usepackage{float}
+
+% mathtools (extends amsmath) provides the small parenthesized-matrix
+% environments — pandoc's LaTeX writer normalizes
+% \left(\begin{smallmatrix}…\end{smallmatrix}\right) into \begin{psmallmatrix},
+% which is undefined without this. Load after amsmath (which Quarto loads).
+\usepackage{mathtools}
+
+% Allow underscores in identifiers without escaping.
+\usepackage[strings]{underscore}
+
+% Show subsections in the TOC.
+\setcounter{tocdepth}{1}
+
+% Looser hyphenation to reduce overfull \hbox warnings in code-heavy paragraphs.
+\sloppy

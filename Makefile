@@ -765,6 +765,10 @@ clean:
 	rm -rf _book _pdf _notebooks _slides
 	rm -rf d2l/_blocks
 	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
+	# img/outputs/ is render scratch; stale *.pdf there make Quarto's
+	# convert_svg skip-then-read an old/corrupt PDF and abort the PDF build
+	# (main.lua:7348 assertion). Clear them so PDFs always rebuild clean.
+	find img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
 	rm -f $(wildcard _notebooks/*/MANIFEST.mk)
 	rm -f $(wildcard _pdf/*/.generated)

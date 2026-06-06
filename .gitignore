@@ -34,6 +34,9 @@ img/outputs/
 
 # Quarto intermediates
 *.tex
+# ...but static/d2l-preamble.tex is a hand-written SOURCE file (the PDF
+# LaTeX preamble, referenced by gen_pdf.py), not generated — keep it tracked.
+!static/d2l-preamble.tex
 *.aux
 *.log
 *.toc

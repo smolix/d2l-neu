@@ -22,6 +22,17 @@ changes:
    mobile reads as "two search boxes" in the navbar. A one-line guard
    at the top of the `DOMContentLoaded` handler turns the duplicate
    firing into a no-op.
+
+3. Guard the inline cookie-consent initializer against the same synthetic
+   `DOMContentLoaded`. Quarto's `cookie-consent` feature emits, on every
+   page, an inline `data-cfasync="false"` script whose body is
+   `document.addEventListener('DOMContentLoaded', function () { cookieconsent.run({...}) })`.
+   `data-cfasync` keeps RL from *loading* it, but RL's synthetic
+   `DOMContentLoaded` still re-fires the listener, so `cookieconsent.run`
+   runs twice and a second consent banner pops up ("cookie alert launches
+   twice"). We splice the same one-shot guard in front of `cookieconsent.run`
+   so the duplicate firing is a no-op. (Quarto reveal.js slides carry no
+   cookie-consent, so only the book HTML needs this.)
 """
 from __future__ import annotations
 
@@ -47,6 +58,32 @@ def patch(html: str) -> tuple[str, int]:
         return f'{m.group("open")} data-cfasync="false"{m.group("attrs")}>'
 
     out = _SCRIPT_TAG_RE.sub(repl, html)
+    return out, n
+
+
+# The inline cookie-consent initializer Quarto emits per page. We anchor on
+# `cookieconsent.run` immediately inside the `DOMContentLoaded` handler so we
+# never touch any other `DOMContentLoaded` listener on the page (search, nav,
+# tabsets, …). The guard is spliced right after the handler's opening `{`.
+_CC_INIT_RE = re.compile(
+    r"(document\.addEventListener\(\s*['\"]DOMContentLoaded['\"]\s*,\s*"
+    r"function\s*\(\s*\)\s*\{)(\s*cookieconsent\.run)",
+)
+_CC_GUARD = (
+    " if (window.__d2lCookieConsentInit) return; "
+    "window.__d2lCookieConsentInit = true;"
+)
+
+
+def patch_cookie_consent(html: str) -> tuple[str, int]:
+    """Splice a one-shot guard before `cookieconsent.run` so RL's synthetic
+    DOMContentLoaded can't run the consent banner twice. Idempotent: a no-op
+    once the guard variable is present. Returns (patched_html, n_patched)."""
+    if "__d2lCookieConsentInit" in html:
+        return html, 0
+    out, n = _CC_INIT_RE.subn(
+        lambda m: m.group(1) + _CC_GUARD + m.group(2), html, count=1
+    )
     return out, n
 
 
@@ -117,19 +154,23 @@ def main() -> int:
         return 1
     files = 0
     tags = 0
+    cc_files = 0
     for p in root.rglob("*.html"):
         text = p.read_text(encoding="utf-8")
         patched, n = patch(text)
-        if n:
+        patched, cc = patch_cookie_consent(patched)
+        if n or cc:
             p.write_text(patched, encoding="utf-8")
-            files += 1
+            files += 1 if n else 0
             tags += n
+            cc_files += cc
     qs_version = patch_quarto_search(root)
     qs_stamped = (
         stamp_quarto_search_src(root, qs_version) if qs_version else 0
     )
     print(
         f"add_cfasync: tagged {tags} <script> tags across {files} files; "
+        f"cookie-consent guard in {cc_files} files; "
         f"quarto-search.js guard: v={qs_version or 'n/a'}, "
         f"stamped in {qs_stamped} HTML files"
     )

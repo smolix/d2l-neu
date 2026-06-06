@@ -341,6 +341,9 @@ JAX has `jax.lax.scan` utility transformation to achieve the same behavior.
 It takes in an initial state called `carry` and an `inputs` array which
 is scanned on its leading axis. The `scan` transformation ultimately
 returns the final state and the stacked outputs as expected.
+The explicit timestep loop shown for PyTorch, MXNet, and TensorFlow is the
+deliberately readable teaching form; the JAX tab uses `jax.lax.scan` instead,
+trading that clarity for acceptable JIT compilation time.
 :end_tab:
 
 ```{.python .input #lstm-initializing-model-parameters-2}

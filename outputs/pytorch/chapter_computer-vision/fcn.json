@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/fcn.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:6fbe40e6d908300482df1316985abe8f965031733233b00ef5d480600e1ae18b",
     "max_inline_bytes": 0
   },
@@ -49,17 +49,17 @@
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-2": {
-      "code_fingerprint": "sha256:b512995bf650d768c3a8be23a463b513737cc8c8bff3c649f0f76cf18f7666cd",
+      "code_fingerprint": "sha256:761436fae587aeff2cc7ab13e661ade0cddfa198b03caacb2b756275e8627533",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-3": {
-      "code_fingerprint": "sha256:0a6868ac80ba7f444db2404312e10028c921bcbde204df34e4ae34544f5b5380",
+      "code_fingerprint": "sha256:c08461769931a67f4d14a215671f2992fc300343c4ceb4598e339b7ad8ef7588",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-4": {
-      "code_fingerprint": "sha256:91de3fe5b6799c8b399138b53e4eafa898bb2636863ba0125e726cc04937116b",
+      "code_fingerprint": "sha256:36224a50e7bbce26d6f7010d5baa9d233af40e665987a8cf663565767ede7db2",
       "kind": "mixed",
       "outputs": [
         {
@@ -72,17 +72,17 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:3f318d9bcf2385c91643d33f390030c74bd5cda6d1072cf4d529788f39ea788e"
+          "sha256": "sha256:7315c5185d0e60bdef6d02a4992693d99bf7e6018fb43551451137a3e15c25e0"
         }
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-5": {
-      "code_fingerprint": "sha256:fd550d766e6a9c9216d77d823ee8542db9d33fdacb0a9d2505530d2c6a075398",
+      "code_fingerprint": "sha256:6445792c09a5d8a56820e8c3d9a17a7cd1a7cbfcd58828099b08b2d4afc85232",
       "kind": "text",
       "outputs": []
     },
     "fcn-reading-the-dataset": {
-      "code_fingerprint": "sha256:226ec7bfe06fd4bf18a26385c27dc1cba30dbfcb95bc670a99a43421190ba3eb",
+      "code_fingerprint": "sha256:507870a436230be3012ca2b5a6abdfc401ad9ef81e24a0c153e180cc8da4ab67",
       "kind": "text",
       "outputs": [
         {
@@ -98,43 +98,43 @@
       ]
     },
     "fcn-training": {
-      "code_fingerprint": "sha256:d59973703ed4699d26ac56655f5d0187159da9886ef311053af32d47f0aac537",
+      "code_fingerprint": "sha256:d3a0e41f2631b461f34c54eaede3d65fda4ee4e0e32b54ca2c27133b60ac97bb",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.418, train acc 0.869, test acc 0.850\n316.4 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.408, train acc 0.872, test acc 0.850\n406.2 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25061,
-          "sha256": "sha256:e83059e564f7c2b55a3b1223909013752ed85c5e3919a0f53056fa02b0d8682f"
+          "bytes": 25064,
+          "sha256": "sha256:4d6ed8e0dfb506f20439b302021b169cf343f74ccb3e8369e1dd488dc7544f92"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:c937b28166070fa5026579a4a5198c7805005da13748d3ff520620edaec15e83",
+      "code_fingerprint": "sha256:1738f88480448b2189b9b198dfb01f592a077172b65445fa8f141f6441052f9f",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:50b5ae262aa5ea78a37f0110878dea0a4dfbbf5c20c645b556daf93a75027b09",
+      "code_fingerprint": "sha256:3491e6e60fbeae289e470ca537ee2b9942672fc6e47d327a11e6d287dc363365",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:31504ab1546657b44bf19faa6b2a1b8b8b32437fb4d76c248699d229f9fef52d",
+      "code_fingerprint": "sha256:cec4aecb8382f983a5c357bf35d2683ec0c9cbf21753b4735751343defb753f8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 154905,
-          "sha256": "sha256:39dba43ebee5b7edaeef9522efdbe9f69f3f6da94a99d0b78c2228c66cce159b"
+          "bytes": 156761,
+          "sha256": "sha256:9fa4de959aee605fe5e6666b3c73e008dd377f94793591db14c624a60663eff9"
         }
       ]
     }

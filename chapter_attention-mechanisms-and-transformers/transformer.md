@@ -752,6 +752,9 @@ any query
 only attends to
 all positions in the decoder
 up to the query position.
+The implementation here re-attends over the full prefix at each decode step
+($O(T^2)$ recompute); production decoders cache the per-step keys and values
+and append one row, making generation $O(T)$ amortized.
 
 ```{.python .input #transformer-decoder-1}
 %%tab mxnet

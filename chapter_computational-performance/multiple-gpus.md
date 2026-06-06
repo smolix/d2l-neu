@@ -914,8 +914,11 @@ one minibatch stream, no gradient synchronization.
 :::
 
 ::: {.slide title="Two GPUs"}
-Per-epoch time roughly halves; per-step iteration count
-drops because each GPU sees half the minibatch:
+On this small model the second GPU is ~30% *slower* — naive
+data parallelism's worst case (LeNet runs each minibatch in
+microseconds, so the hand-rolled `allreduce` and Python
+orchestration dominate). Larger models amortize the sync cost
+and the second GPU pays for itself:
 
 @multiple-gpus-training-4
 :::

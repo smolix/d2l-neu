@@ -462,6 +462,8 @@ class LinearRegression(d2l.Module):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
+        # NOTE: net is lazy, so weight/bias are uninitialized here; .data is
+        # required (a bare .normal_/.fill_ raises on an uninitialized param).
         self.net.weight.data.normal_(0, 0.01)
         self.net.bias.data.fill_(0)
 
@@ -476,7 +478,7 @@ class LinearRegression(d2l.Module):
         return torch.optim.SGD(self.parameters(), self.lr)
 
     def get_w_b(self):
-        return (self.net.weight.data, self.net.bias.data)
+        return (self.net.weight.detach(), self.net.bias.detach())
 
 class FashionMNIST(d2l.DataModule):
     """The Fashion-MNIST dataset.

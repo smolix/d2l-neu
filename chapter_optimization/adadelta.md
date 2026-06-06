@@ -81,7 +81,7 @@ def adadelta(params, states, hyperparams):
             g = (torch.sqrt(delta + eps) / torch.sqrt(s + eps)) * p.grad
             p[:] -= g
             delta[:] = rho * delta + (1 - rho) * g * g
-        p.grad.data.zero_()
+        p.grad.zero_()
 ```
 
 ```{.python .input #adadelta-implementation-1}

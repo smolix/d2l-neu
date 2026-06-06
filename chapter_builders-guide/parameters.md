@@ -175,7 +175,7 @@ type(net[1].bias), net[1].bias.data()
 
 ```{.python .input #parameters-targeted-parameters-1}
 %%tab pytorch
-type(net[2].bias), net[2].bias.data
+type(net[2].bias), net[2].bias.detach()
 ```
 
 ```{.python .input #parameters-targeted-parameters-1}

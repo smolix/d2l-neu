@@ -555,7 +555,8 @@ differently, but the model contract is the same:
 ::: {.slide title="Loading pretrained GloVe"}
 Use 100-dim GloVe vectors trained on Wikipedia + Gigaword.
 Initialize the embedding layer from them; freeze or
-fine-tune (we fine-tune):
+fine-tune (we **freeze** — we do not update the pretrained
+GloVe vectors):
 
 @sentiment-analysis-rnn-loading-pretrained-word-vectors-1
 

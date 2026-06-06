@@ -325,7 +325,8 @@ def my_init(module):
         print("Init", *[(name, param.shape)
                         for name, param in module.named_parameters()][0])
         nn.init.uniform_(module.weight, -10, 10)
-        module.weight.data *= module.weight.data.abs() >= 5
+        with torch.no_grad():
+            module.weight *= module.weight.abs() >= 5
 
 net.apply(my_init)
 net[0].weight[:2]
@@ -385,9 +386,10 @@ net[0].weight.data()[0]
 
 ```{.python .input #init-param-custom-initialization-2}
 %%tab pytorch
-net[0].weight.data[:] += 1
-net[0].weight.data[0, 0] = 42
-net[0].weight.data[0]
+with torch.no_grad():
+    net[0].weight[:] += 1
+    net[0].weight[0, 0] = 42
+net[0].weight[0]
 ```
 
 ```{.python .input #init-param-custom-initialization-2}
@@ -548,6 +550,6 @@ Most of the time, don't. Cases where you should:
 - Framework defaults are sane; override via
   `net.apply(init_fn)` and write per-type rules in the
   function.
-- Direct `layer.weight.data[...] = ...` for one-off tensor
-  surgery.
+- Direct `with torch.no_grad(): layer.weight[...] = ...` for
+  one-off tensor surgery.
 :::

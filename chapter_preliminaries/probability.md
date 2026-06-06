@@ -259,9 +259,13 @@ tfd.Multinomial(100, fair_probs).sample()
 
 ```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab jax
-fair_probs = [0.5, 0.5]
-# jax.random does not have multinomial distribution implemented
-np.random.multinomial(100, fair_probs)
+# jax.random has no multinomial sampler, so we draw categorical samples
+# with an explicit key and bin them with jnp.bincount
+fair_probs = jnp.array([0.5, 0.5])
+key = d2l.get_key()
+counts = jnp.bincount(jax.random.categorical(key, jnp.log(fair_probs),
+                                              shape=(100,)), length=2)
+counts
 ```
 
 Each time you run this sampling process,
@@ -297,7 +301,10 @@ tfd.Multinomial(100, fair_probs).sample() / 100
 
 ```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab jax
-np.random.multinomial(100, fair_probs) / 100
+key = d2l.get_key()
+counts = jnp.bincount(jax.random.categorical(key, jnp.log(fair_probs),
+                                              shape=(100,)), length=2)
+counts / 100
 ```
 
 Here, even though our simulated coin is fair
@@ -331,7 +338,10 @@ counts / 10000
 
 ```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab jax
-counts = np.random.multinomial(10000, fair_probs).astype(np.float32)
+key = d2l.get_key()
+counts = jnp.bincount(jax.random.categorical(key, jnp.log(fair_probs),
+                                              shape=(10000,)),
+                      length=2).astype(jnp.float32)
 counts / 10000
 ```
 
@@ -417,7 +427,9 @@ d2l.plt.legend();
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab jax
-counts = np.random.multinomial(1, fair_probs, size=10000).astype(np.float32)
+key = d2l.get_key()
+counts = jnp.eye(2)[jax.random.categorical(key, jnp.log(fair_probs),
+                                            shape=(10000,))]
 cum_counts = counts.cumsum(axis=0)
 estimates = cum_counts / cum_counts.sum(axis=1, keepdims=True)
 

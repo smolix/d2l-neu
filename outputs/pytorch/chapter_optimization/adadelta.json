@@ -3,49 +3,49 @@
   "source": "chapter_optimization/adadelta.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:4a2974680b98b320935baaa283156134f335b304de1732dc05ab79bae0062a1b",
     "max_inline_bytes": 0
   },
   "cells": {
     "adadelta-implementation-1": {
-      "code_fingerprint": "sha256:d1ada1c3a70574eee65815039a05d2d04e77eb62f579fdeb3f615f8e78b9f33d",
+      "code_fingerprint": "sha256:84f0567ec75e0d68c4a4ec58023835a71d18c5e6da626c21cc881a964f858665",
       "kind": "text",
       "outputs": []
     },
     "adadelta-implementation-2": {
-      "code_fingerprint": "sha256:df005f56ed78cfabfe2e198f67890266e09008d0bc59ec13c73d7064d6f421e0",
+      "code_fingerprint": "sha256:a80aa2d4c41d31863f7510f5bff658dae878ea4715650a79835ed34e13641667",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.152 sec/epoch\n"
+          "text": "loss: 0.246, 0.163 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-2-1.svg",
-          "bytes": 18778,
-          "sha256": "sha256:ef32a9f825d272362661887995cd583e0d6a13d94a9180f3dd144f3caa8b8abf"
+          "bytes": 18772,
+          "sha256": "sha256:7205a8b8e1555930a522182daab957ebfc75010354a73f384975115d1ac00638"
         }
       ]
     },
     "adadelta-implementation-3": {
-      "code_fingerprint": "sha256:2129f49111cc98299a036c3569d3d4bc2d5974e66e4d6d5be4e9a586cec9903f",
+      "code_fingerprint": "sha256:450fa3db4e450056826760150af04f19737e549652ea3130ebbbe91d68ca8093",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.120 sec/epoch\n"
+          "text": "loss: 0.243, 0.082 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-3-1.svg",
-          "bytes": 18531,
-          "sha256": "sha256:e3083139421d361df6f2dabc76280c061f04711295a9177f52a4fd6bbe3dcfb6"
+          "bytes": 18529,
+          "sha256": "sha256:376372dc84a9cf5bc745560866dbdf489cbd1098627681cdfc285557fa1807bd"
         }
       ]
     }

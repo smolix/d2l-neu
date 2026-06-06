@@ -20,50 +20,50 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [45, 55]\n"
+          "text": "heads, tails:  [48, 52]\n"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-2": {
-      "code_fingerprint": "sha256:3c560b1e1d0e3f59ea180ea776b3d3bb7deec8cd00464c1ffd78ac504a0f9870",
+      "code_fingerprint": "sha256:64560848e9b62d5c20b453811eb5eb3347dc501aa476b481dc4f9d97abe9d5dd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([53, 47])"
+          "text": "Array([51, 49], dtype=int32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-3": {
-      "code_fingerprint": "sha256:21104b44e5c5270617329fbd49b523cab2c36454b9af6fd04aaf7fc5a597a902",
+      "code_fingerprint": "sha256:ad1d31cea9caf02cdb0e50c1b40b254e88884239377ec90580d63fd56306842b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.47, 0.53])"
+          "text": "Array([0.53, 0.47], dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-4": {
-      "code_fingerprint": "sha256:db2c24ae738be67758ee6e07b1c7beddcbdd83dbc4929d37e6f4235fc34b5cd4",
+      "code_fingerprint": "sha256:c0cf77ed07a0af8277244b896896f9a43ffd06eb8c22bc273f1128d065827c73",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.5098, 0.4902], dtype=float32)"
+          "text": "Array([0.5047, 0.4953], dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:63b0fb2815bdb57fcdeb13496282b7c4dbba1066661d071eb9af331e2eae3f1a",
+      "code_fingerprint": "sha256:21eba5707c7a23866e671e011147b3bdd4564be0eee443292ca5e4d7f1419710",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 108266,
-          "sha256": "sha256:c590917cb4cbb79396867a7e39aa098647f8d6af71473b324d84434479401b97"
+          "bytes": 107351,
+          "sha256": "sha256:32d5c8bd3cb7ad3efc7a4c6871bf9032ee477e149b2bb431c7c130fcf86c8cd4"
         }
       ]
     }

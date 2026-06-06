@@ -3,7 +3,7 @@
   "source": "chapter_optimization/adagrad.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:69ecff974918eb2eaa4f0232bf1bad66060eed509c38cfe75c4591f122b83f0c",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-the-algorithm-2-1.svg",
           "bytes": 26334,
-          "sha256": "sha256:ed812f0c9a9702a9f4e10058dd996e3069005beb709af53769314260f790f71b"
+          "sha256": "sha256:f72cda64e9fdab7cccaf84f82630b51898dce5d1bbf76fd278897ce3e148082b"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-the-algorithm-3-1.svg",
           "bytes": 26340,
-          "sha256": "sha256:cd4e3976d4a03bbb71853067908724ff963080d9f252ebce0e7bdbffeb5eea9b"
+          "sha256": "sha256:e991ce97044d32ec5100945e51dd40992fdd23776ca750b83c2d77197a47705f"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.224 sec/epoch\n"
+          "text": "loss: 0.242, 0.207 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-implementation-from-scratch-2-1.svg",
-          "bytes": 18784,
-          "sha256": "sha256:6d763adc34e151212d21fa62fbe562b229d5834119940e963294bd1ef24b3d0b"
+          "bytes": 18783,
+          "sha256": "sha256:879a7f797fb2597959b7eaa450699f5a2c3a2b69618d232e33c2993655217c8c"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.279 sec/epoch\n"
+          "text": "loss: 0.242, 0.276 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-concise-implementation-1.svg",
           "bytes": 18783,
-          "sha256": "sha256:820b381b3f8183b34aadb30271d16c73ba24473f6488a896b2068f3d01a2977b"
+          "sha256": "sha256:eb05fe259b113558f46fdf59b7b37ac0aeb53f69393ed62c491b08629d4aeda6"
         }
       ]
     }

@@ -135,8 +135,8 @@ We have started with a length-scale of 0.2. Before we fit the data, it is import
 prior_samples = np.random.multivariate_normal(mean=mean, cov=cov, size=5)
 d2l.plt.plot(test_x, prior_samples.T, color='black', alpha=0.5)
 d2l.plt.plot(test_x, mean, linewidth=2.)
-d2l.plt.fill_between(test_x, mean - 2 * np.diag(cov), mean + 2 * np.diag(cov), 
-                 alpha=0.25)
+d2l.plt.fill_between(test_x, mean - 2 * np.sqrt(np.diag(cov)),
+                 mean + 2 * np.sqrt(np.diag(cov)), alpha=0.25)
 d2l.plt.show()
 ```
 

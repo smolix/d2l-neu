@@ -3,7 +3,7 @@
   "source": "chapter_gaussian-processes/gp-inference.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:cd5c4312c4b71802bcf6a717c9c1269ca990e31e0e4663b23d92df94bc632691",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-1-1.svg",
           "bytes": 24274,
-          "sha256": "sha256:a9e22084b35267fcdf695735f030191ff4bfd4fce51aa4b8c6fed73585e62491"
+          "sha256": "sha256:93dd9ebe75bddc796a838abc0afb57c3f51ceb4c5af1a2e794efdde0522f5d3b"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "outputs": []
     },
     "gp-inference-worked-example-from-scratch-3": {
-      "code_fingerprint": "sha256:af019876e2dc9de9c735100a7065c64045cf9e18c389ff324f3f6fc8364395a5",
+      "code_fingerprint": "sha256:92f9a3f6f48473a6c29705a0be9f900fccc6e4e6ed2b1bab7ecb0cfa35eb2893",
       "kind": "asset",
       "outputs": [
         {
@@ -40,17 +40,17 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-3-1.svg",
           "bytes": 55479,
-          "sha256": "sha256:2b7e035e6c4b43ef687703caf275367c3ada651ac80d7192e3cd934775b42db2"
+          "sha256": "sha256:ce4f257e779349ec5e6dbd2cf58eccf94b581237d51bf42ff16a68cf7a01d45b"
         }
       ]
     },
     "gp-inference-worked-example-from-scratch-4": {
-      "code_fingerprint": "sha256:d4a0ccf070a6a85b6364be2d3db1f20059aa52fab93493fc1b8b4bea5f7a637a",
+      "code_fingerprint": "sha256:922995099713b8ea3d121c288684851c448104e686f102501f6c684c5bcf2dfa",
       "kind": "text",
       "outputs": []
     },
     "gp-inference-worked-example-from-scratch-5": {
-      "code_fingerprint": "sha256:36524b6bd45dc01340284380e635d88c1a277e4f3f62dbea0fafcc2b38c5294b",
+      "code_fingerprint": "sha256:c2600d71c1dd3eb5032201b17b7b1e7ab856eaa4d70489219fd46763cf4242c9",
       "kind": "asset",
       "outputs": [
         {
@@ -58,17 +58,17 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-5-1.svg",
           "bytes": 59860,
-          "sha256": "sha256:b47a956edb3106fae19c43b910e02036359eb099cecc76823fce1fd67456e902"
+          "sha256": "sha256:5ba54ce519e4b951a31422f192527c563ce1886ee95559f3dc1552e8519a2e04"
         }
       ]
     },
     "gp-inference-worked-example-from-scratch-6": {
-      "code_fingerprint": "sha256:ed5e3e2e5c072469111d804a2ed5b7653c974a785650906302416a8f7d31e421",
+      "code_fingerprint": "sha256:56af9b409790d1f50ead0f2b391c8f019e365abfc58130d8628d9897bde49090",
       "kind": "text",
       "outputs": []
     },
     "gp-inference-worked-example-from-scratch-7": {
-      "code_fingerprint": "sha256:303bb289fd276d5fa2483ea4c62f3a6e763acdbe91ae10274817257eee06db47",
+      "code_fingerprint": "sha256:bfcecafeba76cc44bdfa45fa4575f4c97d96f687aa2c6fbfdaa8baa819ee04a3",
       "kind": "asset",
       "outputs": [
         {
@@ -76,22 +76,22 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-7-1.svg",
           "bytes": 112704,
-          "sha256": "sha256:11d4e88ee44ac732ab1457490ea2d2f316c0905ee82e1622cca66257fb65143d"
+          "sha256": "sha256:4cff131e39f544f1d114ffd14d8b74484ac306e43b2bc0535f9f4691da9b46cf"
         }
       ]
     },
     "gp-inference-making-life-easy-with-gpytorch-1": {
-      "code_fingerprint": "sha256:f1352019073f9c1a6aaa9a581f9eec6ef97eb2d9136727d119b644c4e81ad107",
+      "code_fingerprint": "sha256:45431a4518e42b40431598ef767864e15d76a6514d74a1e14bb45c39c4213040",
       "kind": "text",
       "outputs": []
     },
     "gp-inference-making-life-easy-with-gpytorch-2": {
-      "code_fingerprint": "sha256:3bb2c3ddbf353c265e0adcd41a20a21ac942118431a1c2c194923188f4990e9b",
+      "code_fingerprint": "sha256:a86ee5d6f753083bc05684ee9eab41e547cabd16049b646b137bbd114168b2e3",
       "kind": "text",
       "outputs": []
     },
     "gp-inference-making-life-easy-with-gpytorch-3": {
-      "code_fingerprint": "sha256:c2ca3bd8b619a357d38843fa9b4f2f3dd6758aa07af3d744082c7ac53222a6d3",
+      "code_fingerprint": "sha256:57d18a4881d4775df2ec86d02b5523d362aedd282a9ead542d22f2618d34b30c",
       "kind": "text",
       "outputs": [
         {
@@ -102,12 +102,12 @@
       ]
     },
     "gp-inference-making-life-easy-with-gpytorch-4": {
-      "code_fingerprint": "sha256:340bb16820775f30686d2ee40675fae16b2529931a403a25cbd2bbad8e250ba9",
+      "code_fingerprint": "sha256:bcff91986f328c1e29f341c3548ccd01416e58a28ad815230d2a4d32dab802f0",
       "kind": "text",
       "outputs": []
     },
     "gp-inference-making-life-easy-with-gpytorch-5": {
-      "code_fingerprint": "sha256:f831fad1d0d274ea9ab094ae4210aaa986ba6913a8a5129cc2344c7d2b9d3b3f",
+      "code_fingerprint": "sha256:ee95d2cc46c2675d3efd7f386c87e902c23f9816343eadc3e39a1f55f86ac2b7",
       "kind": "asset",
       "outputs": [
         {
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-making-life-easy-with-gpytorch-5-1.svg",
           "bytes": 63810,
-          "sha256": "sha256:3bf4d0452a2bcca11890099f72b34572dad3e372b18cf143cd1c2f1e4401e037"
+          "sha256": "sha256:8c96d6e53854baadcce73cac5a294d06eed84e2df5d348c1a453df70b443c7ee"
         }
       ]
     }

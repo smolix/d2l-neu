@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:141c813a33fa0f9c24000f0448f46b71c2dc7011428778dddb13565d38dbd59b",
+    "d2l_lib_fingerprint": "sha256:7a4b370adcefdf454ffd4e9584cf83ae886380f1a6fb4fae7adbd769c029a956",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.1790795999765396\n"
+          "text": "average validation log mse = 0.1794283613562584\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-1.svg",
-          "bytes": 21405,
-          "sha256": "sha256:15bb5afd4ff7a9ca7c3057c3e4d237054243128dec4f95309e8eedda6e60387c"
+          "bytes": 21408,
+          "sha256": "sha256:97aae7df4f4a4ef530d9fc948fd7a0dbfd7dd3433d09b3f4447a7924700e016e"
         }
       ]
     },

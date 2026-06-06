@@ -415,8 +415,9 @@ def sgd(params, states, hyperparams):
 #@tab pytorch
 def sgd(params, states, hyperparams):
     for p in params:
-        p.data.sub_(hyperparams['lr'] * p.grad)
-        p.grad.data.zero_()
+        with torch.no_grad():
+            p.sub_(hyperparams['lr'] * p.grad)
+        p.grad.zero_()
 ```
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-1}

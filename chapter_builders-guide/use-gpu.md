@@ -566,7 +566,7 @@ net[0].weight.data().ctx
 
 ```{.python .input #use-gpu-neural-networks-and-gpus-3}
 %%tab pytorch
-net[0].weight.data.device
+net[0].weight.device
 ```
 
 ```{.python .input #use-gpu-neural-networks-and-gpus-3}

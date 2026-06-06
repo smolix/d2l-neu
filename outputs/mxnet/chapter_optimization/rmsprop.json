@@ -3,7 +3,7 @@
   "source": "chapter_optimization/rmsprop.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:33c73c6dfa72b127b324e3115b469e3ed481052180f14726351021cdd72454fb",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-the-algorithm-2-1.svg",
           "bytes": 15576,
-          "sha256": "sha256:3452074d281a9e199814fda4673709eaf31359d330d0aa24cdff5462299768b0"
+          "sha256": "sha256:86bbba308bc9c48934d2f1562b4cda1dd4adcc1636842bb82a44bf26f0a6e7f3"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-implementation-from-scratch-1-1.svg",
           "bytes": 26336,
-          "sha256": "sha256:72ae983a6aa3d74346c99926e88f03a66a85528af4ef9cc20b35e72fe8669cf8"
+          "sha256": "sha256:21b0238942578e22adc301a791f7006e7a45851362eff2e53692ebcd1112060c"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.249, 0.316 sec/epoch\n"
+          "text": "loss: 0.244, 0.260 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-implementation-from-scratch-4-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:647b0ed17cb017c98833af32f9b18573de565c29bc10168c91823e04b0c8321a"
+          "bytes": 18777,
+          "sha256": "sha256:338d2ab352cbd71d0efbc76de752d1607e858d24872cf2c8e898e094225bb794"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.212 sec/epoch\n"
+          "text": "loss: 0.244, 0.172 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-concise-implementation-1.svg",
-          "bytes": 18775,
-          "sha256": "sha256:207ad16ba10097c5d41560bf0e586ce0cca479f72860d00790f8d01b23869467"
+          "bytes": 18781,
+          "sha256": "sha256:2beaa97ae516be4b03e1e9d272a190966b4531c60fa6d378142e701ce2c6a6b8"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/mlp.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16904,
-          "sha256": "sha256:584baf6497b46dcf0ec111589f4083f45c74586f5a01a26f511526b799120805"
+          "sha256": "sha256:6b65ccaa7e63c5550f37039b944d5fa5214e693abdd6ab900115dd18b7cdaa04"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21206,
-          "sha256": "sha256:43b4e998b06967e8092c79ee8963a4ba140971ea6cb7c9098be5dd3352e4f55f"
+          "sha256": "sha256:d7566a159102357f902aebe9a3b2d51c1045a6d03540b3ca2f5f298b09cb6b60"
         }
       ]
     },
@@ -48,12 +48,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21785,
-          "sha256": "sha256:b2082d50e5a0f7ab4dc4f6e076668f39757a7f5d3dccd81b507d637779baeb32"
+          "sha256": "sha256:6c4149bec658beeb3a1f4677c814940d4ad5d376e5b0b5e2f188f8ecfb7883f0"
         }
       ]
     },
     "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:2a854bf2176fc6069592cdf39bf2736edef49d42eba35e9941f3adea2081d879",
+      "code_fingerprint": "sha256:b2a9c2dc101d212bb138cf2a48b1c2a3015cdd0bfd0987da6237a4c7c63759b5",
       "kind": "asset",
       "outputs": [
         {
@@ -61,12 +61,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24520,
-          "sha256": "sha256:4006903b909b1f0d4eeafa9a937c5e3741d673c3eac8d74a0997fc40dcef4828"
+          "sha256": "sha256:c7e43315116f8bd92d6e5d4067526266d81e33dbdc1ba62b81d56355210838de"
         }
       ]
     },
     "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:4e0c7add0f9f4a330782ba1b0eebd296c1e436b71643c64d1ab2b187bcf3215d",
+      "code_fingerprint": "sha256:fbb426660ae12bad99752ecf8b62c4167b7ac9702871472fea15ea54585596e7",
       "kind": "asset",
       "outputs": [
         {
@@ -74,12 +74,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20176,
-          "sha256": "sha256:e3e2f1bead0dff80f93383240ff078a9ecb1271e4925ea7e6320d9e1057334c1"
+          "sha256": "sha256:b750cad32c55c9f5a88d5fd11ae6795da48a76bd221af69a89f5b67e329f588a"
         }
       ]
     },
     "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:0e3ec55bdbb01d2248fa8622c70845392fd9bbd16e8c40d4ddb0d230e6483321",
+      "code_fingerprint": "sha256:9d16e4f7d80229ab3f6214970faa97944b28f34b80d959b5208a97c11a3882e5",
       "kind": "asset",
       "outputs": [
         {
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22744,
-          "sha256": "sha256:5c28b5c1ceee49e85e11c6ccbcc281717695b233ab40290ad0b4d4eda1dcccea"
+          "sha256": "sha256:b27bbed3defb09734cad4e2d43c801f17dc1090d2563a4f3d61b804ff656d98d"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_builders-guide/init-param.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([-0.0013,  0.0098,  0.0037, -0.0125]), tensor(0.))"
+          "text": "(tensor([ 0.0106, -0.0073, -0.0034, -0.0068]), tensor(0.))"
         }
       ]
     },
@@ -50,12 +50,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([-0.1192, -0.1065,  0.0884, -0.1809])\ntensor([[42., 42., 42., 42., 42., 42., 42., 42.]])\n"
+          "text": "tensor([ 0.4476, -0.4846,  0.4355,  0.5317])\ntensor([[42., 42., 42., 42., 42., 42., 42., 42.]])\n"
         }
       ]
     },
     "init-param-custom-initialization-1": {
-      "code_fingerprint": "sha256:761c69248a2326853633765779c0221b2c265aa65d98ba7a71252801289e8b8a",
+      "code_fingerprint": "sha256:53e7c630cd7097280d989fc0749412581e7418e2541ea780c3bddc77e3afe73c",
       "kind": "text",
       "outputs": [
         {
@@ -65,17 +65,17 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0000, -9.4692,  6.4917, -9.0826],\n        [-0.0000,  0.0000,  5.7718, -0.0000]], grad_fn=<SliceBackward0>)"
+          "text": "tensor([[-5.7863, -0.0000, -8.9392, -9.6844],\n        [-8.2614, -9.0422, -6.9606,  9.1139]], grad_fn=<SliceBackward0>)"
         }
       ]
     },
     "init-param-custom-initialization-2": {
-      "code_fingerprint": "sha256:a436fec16aa70507cc11c3ab5f5920b4694b5322d77961504f6b4f28d8914701",
+      "code_fingerprint": "sha256:fa43692dc0ef7cbfc9cc8bebb7fcfebbbc0844fb6ca8cf280bf33f5fdc0c9285",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42.0000, -8.4692,  7.4917, -8.0826])"
+          "text": "tensor([42.0000,  1.0000, -7.9392, -8.6844], grad_fn=<SelectBackward0>)"
         }
       ]
     }

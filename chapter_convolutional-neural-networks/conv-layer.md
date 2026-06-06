@@ -372,7 +372,8 @@ for i in range(10):
     conv2d.zero_grad()
     l.sum().backward()
     # Update the kernel
-    conv2d.weight.data[:] -= lr * conv2d.weight.grad
+    with torch.no_grad():
+        conv2d.weight[:] -= lr * conv2d.weight.grad
     if (i + 1) % 2 == 0:
         print(f'epoch {i + 1}, loss {l.sum():.3f}')
 ```

@@ -127,6 +127,10 @@ the outermost dimension of `inputs`,
 updating the hidden state 
 one time step at a time.
 The model here uses a $\tanh$ activation function (:numref:`subsec_tanh`).
+The explicit timestep loop kept in every tab here, including JAX, is the
+deliberately readable teaching form; the GRU and LSTM cells that follow
+swap the JAX loop for `jax.lax.scan`, trading that clarity for acceptable
+JIT compilation time.
 
 ```{.python .input #rnn-scratch-rnn-model-2}
 %%tab pytorch

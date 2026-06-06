@@ -14,51 +14,51 @@
       "outputs": []
     },
     "linear-regression-concise-defining-the-model-1": {
-      "code_fingerprint": "sha256:660fe71802e22fb45bf38e277e309bad2e449049f36b013d8be969af06fcde1d",
+      "code_fingerprint": "sha256:cf9f247b9ca5f31fe93381d5e24429590846455bc94d841633a28dca45554a8e",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-model-2": {
-      "code_fingerprint": "sha256:8db9465780b84052709b97cf175d5975e70ee089fa990ba071c41a4ddbcc03aa",
+      "code_fingerprint": "sha256:0cf770e0d8a09cb174ea72dfa4616e78958460115b61815c691ba1b7b85c69c7",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-loss-function": {
-      "code_fingerprint": "sha256:d7cd581f70976527eb5879134965877fc1fdb412b9d46bbac2f0afa1e46de32d",
+      "code_fingerprint": "sha256:e2ef7af7c1bd463b65369d157995e01891d469f2c3a74548eb8424355f23ef90",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-optimization-algorithm": {
-      "code_fingerprint": "sha256:db7d0d5914894dcc6f46d41b66f75a80170bb830d2ac877cc8f099ec8ed4739c",
+      "code_fingerprint": "sha256:f0b03a141d181df9db25fdd46769ebe935491690e452ad2ea8c0c10cdee5f2a2",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:9ffefc98b5f8746b46c66f010987b37f21d4ea6d74c82a02849200d9b907b67e",
+      "code_fingerprint": "sha256:13cafd76271d02c6ca8183cbd2faee90da070ab993945e87058e2d33cab4e3b5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 18906,
-          "sha256": "sha256:605ed1a2134e94447e6e6496c789f4a9d5eafd2153c1403c481c191f06130d0b"
+          "bytes": 19499,
+          "sha256": "sha256:031d5ff3ef7a7d7bc2881af54e9eef631e6276e72b68b7e557e805a8bea46346"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:5291315d296cc8030b62cd46599f1e06a70be5572025b310af4cd9e4376d2cd2",
+      "code_fingerprint": "sha256:fff38b7353c3706801ad80d92aed97c4beaea940e37aed779754aa4e7a9d8b30",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:3b42fd623bfdfd34d167981d64bfaa40e667834146bfbefd641f977e40f87d24",
+      "code_fingerprint": "sha256:a6bd1af8f3fcf5318f1743522cd97cbce57385d347cff72e7e7ab8e3cdc49c66",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 0.0073, -0.0051])\nerror in estimating b: tensor([0.0085])\n"
+          "text": "error in estimating w: tensor([ 0.0021, -0.0119])\nerror in estimating b: tensor([0.0129])\n"
         }
       ]
     }

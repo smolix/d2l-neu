@@ -302,7 +302,10 @@ class SGD(d2l.HyperParameters):  #@save
     def init(self, params):
         # Delete unused params
         del params
-        return optax.EmptyState
+        # Return an EmptyState *instance* (an empty NamedTuple, hence a valid
+        # pytree) -- not the class -- so this hand-rolled optimizer is
+        # JIT-traceable just like any optax GradientTransformation.
+        return optax.EmptyState()
 
     def update(self, updates, state, params=None):
         del params
@@ -427,10 +430,10 @@ wrap the optimizer step and the bookkeeping
 in two small `@jax.jit` functions, `_trainer_update` and
 `_trainer_update_with_bn`, and call the appropriate one per batch.
 The forward + gradient computation is already inside `self.model.loss`
-(itself `@jax.jit`-decorated), so after this change the entire per-batch
-work consists of two JIT-ed calls with no Python-side optax dispatch.
-We fall back to the non-JIT path when the optimizer state is not a
-pytree, which covers the hand-rolled `SGD` we will define below.
+(itself `@jax.jit`-decorated), so the entire per-batch work consists of
+two JIT-ed calls with no Python-side optax dispatch. Because the hand-rolled
+`SGD.init` below returns a proper `EmptyState()` pytree, even that optimizer
+is JIT-traceable, so we always take the compiled path (no eager fallback).
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-training-1  n=15}
@@ -554,31 +557,23 @@ def _trainer_update_with_bn(state, grads, batch_stats):
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
     self.model.training = True
-    # Some hand-rolled optimizers (e.g. LinearRegressionScratch.SGD) are not
-    # JIT-traceable: detect that by probing opt_state and skip the JIT path.
-    jit_ok = isinstance(self.state.opt_state, tuple)
     if self.state.batch_stats:
         # Mutable states will be used later (e.g., for batch norm)
         for batch in self.train_dataloader:
             (_, mutated_vars), grads = self.model.training_step(
                 self.state.params, self.prepare_batch(batch), self.state)
-            if jit_ok:
-                self.state = _trainer_update_with_bn(
-                    self.state, grads, mutated_vars['batch_stats'])
-            else:
-                self.state = self.state.apply_gradients(grads=grads).replace(
-                    dropout_rng=jax.random.split(self.state.dropout_rng)[0],
-                    batch_stats=mutated_vars['batch_stats'])
+            if self.gradient_clip_val > 0:
+                grads = self.clip_gradients(self.gradient_clip_val, grads)
+            self.state = _trainer_update_with_bn(
+                self.state, grads, mutated_vars['batch_stats'])
             self.train_batch_idx += 1
     else:
         for batch in self.train_dataloader:
             _, grads = self.model.training_step(
                 self.state.params, self.prepare_batch(batch), self.state)
-            if jit_ok:
-                self.state = _trainer_update(self.state, grads)
-            else:
-                self.state = self.state.apply_gradients(grads=grads).replace(
-                    dropout_rng=jax.random.split(self.state.dropout_rng)[0])
+            if self.gradient_clip_val > 0:
+                grads = self.clip_gradients(self.gradient_clip_val, grads)
+            self.state = _trainer_update(self.state, grads)
             self.train_batch_idx += 1
 
     if self.val_dataloader is None:

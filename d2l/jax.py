@@ -450,31 +450,23 @@ class Trainer(d2l.HyperParameters):
 
     def fit_epoch(self):
         self.model.training = True
-        # Some hand-rolled optimizers (e.g. LinearRegressionScratch.SGD) are not
-        # JIT-traceable: detect that by probing opt_state and skip the JIT path.
-        jit_ok = isinstance(self.state.opt_state, tuple)
         if self.state.batch_stats:
             # Mutable states will be used later (e.g., for batch norm)
             for batch in self.train_dataloader:
                 (_, mutated_vars), grads = self.model.training_step(
                     self.state.params, self.prepare_batch(batch), self.state)
-                if jit_ok:
-                    self.state = _trainer_update_with_bn(
-                        self.state, grads, mutated_vars['batch_stats'])
-                else:
-                    self.state = self.state.apply_gradients(grads=grads).replace(
-                        dropout_rng=jax.random.split(self.state.dropout_rng)[0],
-                        batch_stats=mutated_vars['batch_stats'])
+                if self.gradient_clip_val > 0:
+                    grads = self.clip_gradients(self.gradient_clip_val, grads)
+                self.state = _trainer_update_with_bn(
+                    self.state, grads, mutated_vars['batch_stats'])
                 self.train_batch_idx += 1
         else:
             for batch in self.train_dataloader:
                 _, grads = self.model.training_step(
                     self.state.params, self.prepare_batch(batch), self.state)
-                if jit_ok:
-                    self.state = _trainer_update(self.state, grads)
-                else:
-                    self.state = self.state.apply_gradients(grads=grads).replace(
-                        dropout_rng=jax.random.split(self.state.dropout_rng)[0])
+                if self.gradient_clip_val > 0:
+                    grads = self.clip_gradients(self.gradient_clip_val, grads)
+                self.state = _trainer_update(self.state, grads)
                 self.train_batch_idx += 1
 
         if self.val_dataloader is None:
@@ -558,7 +550,10 @@ class SGD(d2l.HyperParameters):
     def init(self, params):
         # Delete unused params
         del params
-        return optax.EmptyState
+        # Return an EmptyState *instance* (an empty NamedTuple, hence a valid
+        # pytree) -- not the class -- so this hand-rolled optimizer is
+        # JIT-traceable just like any optax GradientTransformation.
+        return optax.EmptyState()
 
     def update(self, updates, state, params=None):
         del params

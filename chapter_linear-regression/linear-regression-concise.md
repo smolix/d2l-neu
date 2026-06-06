@@ -151,6 +151,8 @@ class LinearRegression(d2l.Module):  #@save
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
+        # NOTE: net is lazy, so weight/bias are uninitialized here; .data is
+        # required (a bare .normal_/.fill_ raises on an uninitialized param).
         self.net.weight.data.normal_(0, 0.01)
         self.net.bias.data.fill_(0)
 ```
@@ -367,7 +369,7 @@ are close to their true counterparts.
 %%tab pytorch
 @d2l.add_to_class(LinearRegression)  #@save
 def get_w_b(self):
-    return (self.net.weight.data, self.net.bias.data)
+    return (self.net.weight.detach(), self.net.bias.detach())
 w, b = model.get_w_b()
 ```
 

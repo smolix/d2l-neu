@@ -3,7 +3,7 @@
   "source": "chapter_convolutional-neural-networks/conv-layer.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -69,23 +69,23 @@
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:fe8e50333ef08edb885ccbb69667a338483432b796ef97f542b488aad4e9f9e1",
+      "code_fingerprint": "sha256:63776f37c065cffabf90653f1dbff8c96d5504323df5dd07fb1951444485f679",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 12.293\nepoch 4, loss 2.472\nepoch 6, loss 0.583\nepoch 8, loss 0.166\nepoch 10, loss 0.056\n"
+          "text": "epoch 2, loss 12.378\nepoch 4, loss 3.301\nepoch 6, loss 1.055\nepoch 8, loss 0.382\nepoch 10, loss 0.148\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:ac44f6acd0f393d08a99d16d7c23fa7811de6d877cf69b35fd401cd30e6a5133",
+      "code_fingerprint": "sha256:e8875d52ec4f5bcd280ae8089fb1d99c5079b6bc7590174193215ddb47c5eb58",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9605, -1.0056]])"
+          "text": "tensor([[ 0.9469, -1.0249]])"
         }
       ]
     }

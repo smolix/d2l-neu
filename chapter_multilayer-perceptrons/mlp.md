@@ -501,7 +501,7 @@ d2l.plot(x, x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```{.python .input #mlp-sigmoid-function-2}
 %%tab pytorch
 # Clear out previous gradients
-x.grad.data.zero_()
+x.grad.zero_()
 y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
 ```
@@ -576,7 +576,7 @@ d2l.plot(x, x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```{.python .input #mlp-tanh-function-2}
 %%tab pytorch
 # Clear out previous gradients
-x.grad.data.zero_()
+x.grad.zero_()
 y.backward(torch.ones_like(x),retain_graph=True)
 d2l.plot(x.detach(), x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
 ```

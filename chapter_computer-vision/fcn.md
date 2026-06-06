@@ -485,7 +485,8 @@ conv_trans.initialize(init.Constant(bilinear_kernel(3, 3, 4)))
 #@tab pytorch
 conv_trans = nn.ConvTranspose2d(3, 3, kernel_size=4, padding=1, stride=2,
                                 bias=False)
-conv_trans.weight.data.copy_(bilinear_kernel(3, 3, 4));
+with torch.no_grad():
+    conv_trans.weight.copy_(bilinear_kernel(3, 3, 4));
 ```
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-2}

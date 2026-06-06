@@ -28,7 +28,7 @@ Armed with the proper estimates we can now write out the update equations. First
 
 $$\mathbf{g}_t' = \frac{\eta \hat{\mathbf{v}}_t}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon}.$$
 
-Unlike RMSProp our update uses the momentum $\hat{\mathbf{v}}_t$ rather than the gradient itself. Moreover, there is a slight cosmetic difference as the rescaling happens using $\frac{1}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon}$ instead of $\frac{1}{\sqrt{\hat{\mathbf{s}}_t + \epsilon}}$. The former works arguably slightly better in practice, hence the deviation from RMSProp. Typically we pick $\epsilon = 10^{-6}$ for a good trade-off between numerical stability and fidelity. 
+Unlike RMSProp our update uses the momentum $\hat{\mathbf{v}}_t$ rather than the gradient itself. Moreover, there is a slight cosmetic difference as the rescaling happens using $\frac{1}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon}$ instead of $\frac{1}{\sqrt{\hat{\mathbf{s}}_t + \epsilon}}$. The former works arguably slightly better in practice, hence the deviation from RMSProp. We use $\epsilon = 10^{-6}$ in the from-scratch implementation below for a good trade-off between numerical stability and fidelity; deep-learning frameworks typically default to $\epsilon = 10^{-8}$. 
 
 Now we have all the pieces in place to compute updates. This is slightly anticlimactic and we have a simple update of the form
 
@@ -84,7 +84,7 @@ def adam(params, states, hyperparams):
             s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
             p[:] -= hyperparams['lr'] * v_bias_corr / (torch.sqrt(s_bias_corr)
                                                        + eps)
-        p.grad.data.zero_()
+        p.grad.zero_()
     hyperparams['t'] += 1
 ```
 
@@ -217,7 +217,7 @@ def yogi(params, states, hyperparams):
             s_bias_corr = s / (1 - beta2 ** hyperparams['t'])
             p[:] -= hyperparams['lr'] * v_bias_corr / (torch.sqrt(s_bias_corr)
                                                        + eps)
-        p.grad.data.zero_()
+        p.grad.zero_()
     hyperparams['t'] += 1
 
 data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
@@ -323,7 +323,8 @@ Update:
 $$\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} - \frac{\eta}{\sqrt{\hat{\mathbf{s}}_t} + \epsilon} \odot \hat{\mathbf{v}}_t.$$
 
 Defaults that just work most of the time:
-$\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$.
+$\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$
+(the from-scratch demo uses $\epsilon = 10^{-6}$).
 :::
 
 ::: {.slide title="From-scratch Adam"}
@@ -361,7 +362,7 @@ $$\mathbf{s}_t = \mathbf{s}_{t-1} - (1-\beta_2)\, \text{sign}(\mathbf{s}_{t-1} -
 - Adam = momentum + RMSProp + bias correction. The
   default for transformers / language models.
 - Defaults $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$
-  rarely need tuning.
+  rarely need tuning (the from-scratch demo uses $\epsilon = 10^{-6}$).
 - Failure modes: instability with rare-but-large gradients
   (Yogi addresses this); generalization gap vs. SGD on
   certain vision tasks (motivated AdamW + decoupled weight

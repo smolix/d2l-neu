@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:bbadb9b2a00a5a242501369044684eacff9c5c7e9b79d4a7160c74df3eaf5b8e"
+          "sha256": "sha256:978fcdc733090c2f11bb4e2b07e56fb556396383840fb211382b8c090d594dd8"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:08f20fda8cef207e1d352b214228f26eecea1cb5a996a25d8a743e76aa2f34e3"
+          "sha256": "sha256:cc7379e1276e3f91f83be097885eaaf37ff201e6dc1f55e6af1a9407894463a0"
         }
       ]
     },
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21781,
-          "sha256": "sha256:1917a890c01d118ab6b60fe5be40b1ccd090ae1fcf495290b06acd8eaec6d191"
+          "sha256": "sha256:2f13972ab9dd6ebc3e97a7356913a7243d8cf0fc73754183365e34a630f95ef3"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24512,
-          "sha256": "sha256:6c89bda6d0b66f64674412748560ee6b725293bed169075072a82d57f316f120"
+          "sha256": "sha256:f6947e69b04a0ca6e49270760c4a539ab8e991bff9a2932eff436af013cd2505"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20169,
-          "sha256": "sha256:211c05a51a59203847d4268030e49bf0189d471a22df471b10a3230a4e75e04d"
+          "sha256": "sha256:3680b33437d0e11aa6505c42de844a2af86ce2d8f81acf82f71feedc2bbef333"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:6400ddb333d203184347295cde2c39795f68bb856e7737a49682ede3b550a1dd"
+          "sha256": "sha256:17e4377f76fd94def6bad9a7bc71eff543c3e99bdfc9eb29ab501e1d26b2b5d6"
         }
       ]
     }

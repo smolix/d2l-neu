@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.3832, 0.4555, 0.5116],\n        [0.9712, 0.9875, 0.1477]], device='cuda:1')"
+          "text": "tensor([[8.0799e-01, 7.0294e-01, 3.0075e-01],\n        [3.1099e-01, 8.3587e-02, 1.4931e-04]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.3832, 1.4555, 1.5116],\n        [1.9712, 1.9875, 1.1477]], device='cuda:1')"
+          "text": "tensor([[1.8080, 1.7029, 1.3007],\n        [1.3110, 1.0836, 1.0001]], device='cuda:1')"
         }
       ]
     },
@@ -115,12 +115,12 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.1968],\n        [-0.1968]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-0.4279],\n        [-0.4279]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
     "use-gpu-neural-networks-and-gpus-3": {
-      "code_fingerprint": "sha256:c46c7c93377235ffc7162410d66e69ae2f635ebd2339a199a099acb7b312bc39",
+      "code_fingerprint": "sha256:6c6abd6d2ee303136b83b84f0cb67fef9811b25e6f5417da28ce7387d9c464d1",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +130,7 @@
       ]
     },
     "use-gpu-neural-networks-and-gpus-5": {
-      "code_fingerprint": "sha256:80050f58523b35f97313c04d4d694807e79f1d7931430bcd583fcd8a3d2a4677",
+      "code_fingerprint": "sha256:82afce9f11a520c33dc5488b4b0544fd281431eea81103e930cdb5997ae10c65",
       "kind": "text",
       "outputs": []
     }

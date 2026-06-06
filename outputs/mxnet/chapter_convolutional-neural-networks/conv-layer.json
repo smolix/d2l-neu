@@ -3,7 +3,7 @@
   "source": "chapter_convolutional-neural-networks/conv-layer.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 4.671\nepoch 4, loss 0.786\nepoch 6, loss 0.133\nepoch 8, loss 0.023\nepoch 10, loss 0.004\n"
+          "text": "epoch 2, loss 5.081\nepoch 4, loss 0.886\nepoch 6, loss 0.163\nepoch 8, loss 0.033\nepoch 10, loss 0.008\n"
         },
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[06:56:14] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[01:47:41] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.9905812 , -0.98696756]])"
+          "text": "array([[ 0.99493885, -0.98194456]])"
         }
       ]
     }

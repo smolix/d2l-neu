@@ -3,7 +3,7 @@
   "source": "chapter_builders-guide/parameters.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -29,22 +29,22 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "OrderedDict([('weight',\n              tensor([[-0.1834, -0.1948, -0.0750, -0.2811, -0.3219, -0.2577,  0.3450,  0.0698]])),\n             ('bias', tensor([-0.3068]))])"
+          "text": "OrderedDict([('weight',\n              tensor([[-0.1945,  0.2324,  0.0555,  0.0389,  0.0313, -0.2247,  0.2971,  0.3257]])),\n             ('bias', tensor([-0.1174]))])"
         }
       ]
     },
     "parameters-targeted-parameters-1": {
-      "code_fingerprint": "sha256:b3095ee32a579f510fea74b498422030b10146dfaaf92e882a25189d02d63e82",
+      "code_fingerprint": "sha256:e36bbb55a19ef7d6c325ae8a3dc95224ced42966bf2ecb648c045eaad48b26f5",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.nn.parameter.Parameter, tensor([-0.3068]))"
+          "text": "(torch.nn.parameter.Parameter, tensor([-0.1174]))"
         }
       ]
     },
     "parameters-targeted-parameters-2": {
-      "code_fingerprint": "sha256:766cd7c7c767101affd5d9c1ad3ed982d8e6d1fa1b9cfef3b7043428d32acc80",
+      "code_fingerprint": "sha256:08586a2fcd35a1248c21ef718d27c192567a290c45627b18c23e6149a36ba7ca",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "parameters-all-parameters-at-once": {
-      "code_fingerprint": "sha256:bbe395e913ddb39dd56c1b9062675e517d56b95b2c01bda79aef735370917a09",
+      "code_fingerprint": "sha256:9d1c14456b6fb87f129f8bc5e8a0528217c85da56596ab7dd187e81d4bd26e62",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "parameters-tied-parameters": {
-      "code_fingerprint": "sha256:5f8f438147ccf275846c1b7b87dba26b67416ac23cec6a50b1fd53092a0a04f5",
+      "code_fingerprint": "sha256:36ed43f96e03160b3b682c36607d99bb9790a956c81c3d06cdba8b1b758aec75",
       "kind": "text",
       "outputs": []
     }

@@ -218,11 +218,15 @@ def dropout_layer(X, dropout):
 def dropout_layer(X, dropout, key=d2l.get_key()):
     # Note: `key` is bound at function-definition time (mutable default
     # pattern), so this educational from-scratch dropout uses one fixed
-    # key for all calls. That keeps the function JIT-traceable — calling
-    # `d2l.get_key()` at call time would mutate `d2l._master_key` and
-    # leak a tracer when invoked inside a JIT'd loss. Production
-    # randomness should go through Flax's `nn.Dropout`, which threads
-    # PRNG keys via `rngs={"dropout": ...}`.
+    # key for all calls — i.e. the dropout mask is identical on every
+    # call, which is *not* what real training wants. That keeps the
+    # function JIT-traceable — calling `d2l.get_key()` at call time would
+    # mutate `d2l._master_key` and leak a tracer when invoked inside a
+    # JIT'd loss. Real per-step dropout instead threads a *fresh* key for
+    # each call, e.g. derive one deterministically with
+    # `jax.random.fold_in(key, step)`, or — better — let Flax's
+    # `nn.Dropout` handle it, which pulls a new key per step via
+    # `rngs={"dropout": ...}`.
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
     mask = jax.random.uniform(key, X.shape) > dropout

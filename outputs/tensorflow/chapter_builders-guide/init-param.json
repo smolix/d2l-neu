@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<Variable path=sequential_1/dense_2/kernel, shape=(4, 4), dtype=float32, value=[[ 0.01351649 -0.01893514  0.00400103  0.01071155]\n  [-0.01155291 -0.01346976  0.01258854 -0.01595419]\n  [ 0.00490116  0.01213251 -0.0040374   0.00524947]\n  [ 0.01690177 -0.01160192  0.0070013  -0.01185552]]>,\n <Variable path=sequential_1/dense_2/bias, shape=(4,), dtype=float32, value=[0. 0. 0. 0.]>)"
+          "text": "(<Variable path=sequential_1/dense_2/kernel, shape=(4, 4), dtype=float32, value=[[-0.00575089  0.02160718  0.00669985  0.0148847 ]\n  [-0.0173384  -0.01943794 -0.00990538  0.00497972]\n  [ 0.00710446  0.00869539 -0.00334434  0.00419146]\n  [ 0.00858208 -0.00083296  0.00590264  0.00610988]]>,\n <Variable path=sequential_1/dense_2/bias, shape=(4,), dtype=float32, value=[0. 0. 0. 0.]>)"
         }
       ]
     },
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "<Variable path=sequential_3/dense_6/kernel, shape=(4, 4), dtype=float32, value=[[ 0.45649034 -0.2112422  -0.3388276  -0.42810598]\n [ 0.50334996  0.51424485 -0.14520895  0.7002807 ]\n [ 0.6495134  -0.07530838  0.21155852 -0.46688908]\n [ 0.37942833 -0.69026655 -0.3907903  -0.80395174]]>\n<Variable path=sequential_3/dense_7/kernel, shape=(4, 1), dtype=float32, value=[[42.]\n [42.]\n [42.]\n [42.]]>\n"
+          "text": "<Variable path=sequential_3/dense_6/kernel, shape=(4, 4), dtype=float32, value=[[-0.54308677 -0.82510895 -0.3202641  -0.463214  ]\n [ 0.06532836 -0.27415293 -0.5070298  -0.04678714]\n [ 0.83184654 -0.6020435  -0.82110494 -0.02825093]\n [-0.41089058 -0.5448936   0.00851923  0.61341435]]>\n<Variable path=sequential_3/dense_7/kernel, shape=(4, 1), dtype=float32, value=[[42.]\n [42.]\n [42.]\n [42.]]>\n"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[-5.642619   5.672825  -0.        -8.760483 ]\n [-0.        -0.        -0.        -9.942968 ]\n [-5.921049  -0.         0.         0.       ]\n [-0.        -8.601568  -0.        -5.7857013]]>\n"
+          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[-0.         0.        -0.        -0.       ]\n [ 0.         0.        -0.         8.640228 ]\n [-7.795303  -0.         0.         0.       ]\n [-0.         0.        -0.         6.4670467]]>\n"
         }
       ]
     },
@@ -71,7 +71,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[42.         6.672825   1.        -7.760483 ]\n [ 1.         1.         1.        -8.942968 ]\n [-4.921049   1.         1.         1.       ]\n [ 1.        -7.601568   1.        -4.7857013]]>"
+          "text": "<Variable path=sequential_4/dense_8/kernel, shape=(4, 4), dtype=float32, value=[[42.         1.         1.         1.       ]\n [ 1.         1.         1.         9.640228 ]\n [-6.795303   1.         1.         1.       ]\n [ 1.         1.         1.         7.4670467]]>"
         }
       ]
     }

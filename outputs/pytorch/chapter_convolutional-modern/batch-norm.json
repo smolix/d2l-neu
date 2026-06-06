@@ -14,58 +14,58 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:2e609a3705fd759bdb1ff6ac2eff37083b66ca981c48f9e9a5da3512080ad5b9",
+      "code_fingerprint": "sha256:9258a9c7a548e2c4fafd867a602ae253927b39c6a066823756b4e5d181ec2a76",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:e7bcf2c1637c366a06716362c9aa447f2db14c3f8924fa4ed2eebfff228f855d",
+      "code_fingerprint": "sha256:12b9a015782baaa36031e2fe700e0803793af8e6f601977b4fa563996f86fa08",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-1": {
-      "code_fingerprint": "sha256:3f3f194eba57571f329d3916148065fb16620ba5723d3252a1be7fb112bca97c",
+      "code_fingerprint": "sha256:7374d4bf2f9a520274dbbde6b0d75a560dc102adc4befd77e899f46635b67119",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-3": {
-      "code_fingerprint": "sha256:06025c008b3770cda7038e334c5386b9328b9297a97288af4c5316c2b7efa779",
+      "code_fingerprint": "sha256:c61225f06f1590c7a6f91a063ced98c434617bfcd4e3badb59d1bf5bb7c8026c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19994,
-          "sha256": "sha256:1566f59c776baa3ec2920d369b39a967400a73a76b60282f0a129a9ca4913c9c"
+          "bytes": 19997,
+          "sha256": "sha256:22a62899206adcbb29a02a958584b0acdd271f20d58e462f53c8738252a3375d"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-4": {
-      "code_fingerprint": "sha256:568a655b50ba81593f2a880936df9a29f9bed90fc8ca18d6252ed3b9e4d637e2",
+      "code_fingerprint": "sha256:57ece4ab932187f38df19208ec047fa66f75f0f357e6f47a38ee6037ac8e5493",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([1.7118, 1.8259, 1.6269, 1.8576, 2.2954, 1.7066], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-0.5619,  1.1945, -1.5424,  0.8652,  1.3594,  0.0749], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor([2.0661, 1.4029, 2.0033, 1.9108, 1.8969, 1.3937], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-1.6627,  1.0130, -0.1074,  1.0248, -0.6578, -1.3620], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:b17481ba5ff396efbcfd9798b71c6b6ffb168669f8614b9f1ab5b69fb3d47f02",
+      "code_fingerprint": "sha256:f7325bc35b68505628fa9445af448a08fa2a7d0654c89321e99aa7fe874d9000",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:0e11e5541939ea364d2e431f1f3668a7fada93b733e435a17312df86bb13ad2a",
+      "code_fingerprint": "sha256:f6b7b082765b3323ca019886fff2cfc82d841da6cba1b06e8564e061d579419d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19993,
-          "sha256": "sha256:b44e4d59e6cdf8ba79902680032bd7431668caf095460a019aa10ce9fbdbaee8"
+          "bytes": 20626,
+          "sha256": "sha256:d0b18a8ef54164b449a5f4a5adf0e409e89f09683cebefd9bf4e1cca8db21748"
         }
       ]
     }

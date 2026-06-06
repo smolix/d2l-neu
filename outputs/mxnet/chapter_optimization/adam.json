@@ -3,7 +3,7 @@
   "source": "chapter_optimization/adam.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:54f6921be5c59e6720a1d21a5e9c4549db67eecabce4771a315639f7ed2176b5",
     "max_inline_bytes": 0
   },
@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.367 sec/epoch\n"
+          "text": "loss: 0.242, 0.324 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-2-1.svg",
-          "bytes": 18775,
-          "sha256": "sha256:f00065f5faf775e25fde3b01103ce902cb604d32c722c036597f4aa26ee07ebe"
+          "bytes": 18776,
+          "sha256": "sha256:ea57545fcaf0c526f9aa7d9f9f696f596c31ed5bba21b15837c91af2522eea9e"
         }
       ]
     },
@@ -38,14 +38,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.208 sec/epoch\n"
+          "text": "loss: 0.243, 0.176 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-3-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:ef24fe1f281424da60479d6aba95a8247b9e1c32cc57318350237f0801d9d23c"
+          "bytes": 18776,
+          "sha256": "sha256:c766a516a34dc4ac51b8225054aeb2166d6db637b7770242c17f56fc2fa0bde4"
         }
       ]
     },
@@ -56,14 +56,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.414 sec/epoch\n"
+          "text": "loss: 0.242, 0.376 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-yogi-1.svg",
-          "bytes": 18773,
-          "sha256": "sha256:4107a1c6a5d2d887a28b9c6a7b185ea38a3c624de36125b6452d16085711d9ba"
+          "bytes": 18774,
+          "sha256": "sha256:d2c1718396cbd1941c280a5ac50395dee682cc00214588c6103daae9ab15216c"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_optimization/adadelta.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:54f6921be5c59e6720a1d21a5e9c4549db67eecabce4771a315639f7ed2176b5",
     "max_inline_bytes": 0
   },
@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.342 sec/epoch\n"
+          "text": "loss: 0.243, 0.343 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-2-1.svg",
-          "bytes": 18773,
-          "sha256": "sha256:58caee336068b2ecdc037a6a4759a2f71d4bc5b7369c8a79c96e24d337b4e095"
+          "bytes": 18775,
+          "sha256": "sha256:2be7302e3c50b7b5a30aec31aeadbd2cf1ecac74e63c2ce03b54f0c4bbb6c8d0"
         }
       ]
     },
@@ -38,14 +38,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.254, 0.432 sec/epoch\n"
+          "text": "loss: 0.254, 0.423 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-3-1.svg",
-          "bytes": 18702,
-          "sha256": "sha256:f6295715b3a940de399dc77009627309f2ed7db4e4e13706c9ff55f815e0fe39"
+          "bytes": 18721,
+          "sha256": "sha256:e4a4cf525b0a32aa2f42548a9232aabc6aedac21b996329c25818ff690077439"
         }
       ]
     }

@@ -19,12 +19,12 @@
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:6ee93925adc1e5439e7e890b0d3fddd6fee02ae50bb0943e7228ab1a690bd602",
+      "code_fingerprint": "sha256:693a29d5ad09672a6d8acc215986f52ca94319739cf2fda089403c9fd533b2b7",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:54122ee4017d2b591825f19ed9785679487876d8a7d6d8b1324f5fa38642ce0e",
+      "code_fingerprint": "sha256:8520737754a106b556a419bf9922d24c30e72e3046936432953e9fa90f674a83",
       "kind": "text",
       "outputs": [
         {
@@ -35,15 +35,15 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:6d446cc939ab88855bd9ec18985759e9ae93b8ae8df563c105bb8e3e65d53813",
+      "code_fingerprint": "sha256:a46ac097dcb09b6000ff354b39f7e987b815b7cea00bdb1ac54c04a2c39faa78",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 20960,
-          "sha256": "sha256:a0895b5b8ad0f887c30cca04aae61ac96bd83c2ab20637cf5abc272794fef95a"
+          "bytes": 20964,
+          "sha256": "sha256:3f2debb34b35c35745546e8745313c0264e7c0333d2dfc45ae68853eecdd70cf"
         }
       ]
     }

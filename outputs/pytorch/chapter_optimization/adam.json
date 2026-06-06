@@ -3,67 +3,67 @@
   "source": "chapter_optimization/adam.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:4a2974680b98b320935baaa283156134f335b304de1732dc05ab79bae0062a1b",
     "max_inline_bytes": 0
   },
   "cells": {
     "adam-implementation-1": {
-      "code_fingerprint": "sha256:8b3293411e02707003705d2deffe53a88c8ff70cf1ec61fe456ae111f4e6d0af",
+      "code_fingerprint": "sha256:9368a49c723f80f4a74ba960cf4e1e669b385b1222e560a7ff6634899918f36b",
       "kind": "text",
       "outputs": []
     },
     "adam-implementation-2": {
-      "code_fingerprint": "sha256:7e03b2a2b5bb9087a1f723d95c6b38b85c69fb0be1e5b0c7055da9e9e3913ee6",
+      "code_fingerprint": "sha256:7993291d8de206702064047175afe6de85dc72ee24675a9c464283cb36dbbec0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.148 sec/epoch\n"
+          "text": "loss: 0.245, 0.102 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-2-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:7d88f082757a0050c7b46863e9618ed9787b3f230784b489d90057297531d5a6"
+          "bytes": 18772,
+          "sha256": "sha256:5258d3744c247c4459d7a943cbd6c6173e97d4d94a56e2489239385896103c66"
         }
       ]
     },
     "adam-implementation-3": {
-      "code_fingerprint": "sha256:6912210490bee0109ac6d947f25249ae815bf9226c7053ab3431d7071c88d5f8",
+      "code_fingerprint": "sha256:ba981161d22716758439fb62ece16ea8296003304c8a5cb0ad622ade76e21ac0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.115 sec/epoch\n"
+          "text": "loss: 0.243, 0.075 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-3-1.svg",
-          "bytes": 18625,
-          "sha256": "sha256:6825c032f9ebb82d2f286b635bfbc3bd8e1d8f60fa32d2bffccd78f822ed1629"
+          "bytes": 18626,
+          "sha256": "sha256:0e6fb91171c86067ca89a902449137590be1762da7e07df7f62b5d5de4c3572d"
         }
       ]
     },
     "adam-yogi": {
-      "code_fingerprint": "sha256:014287cbe5730c521f6a1b3f2f7ed2d64373fef01ea6fb189226a8ba9d55729b",
+      "code_fingerprint": "sha256:ed6c42dee2974a39609c17c4ccb0a0d9bdba0517f03deba2f736d70191742a44",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.125 sec/epoch\n"
+          "text": "loss: 0.244, 0.079 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-yogi-1.svg",
-          "bytes": 18773,
-          "sha256": "sha256:7dc6964ac6bf519a4cec2f50f6ec0727d511e3c0ea57228e4de159b642e6de2c"
+          "bytes": 18774,
+          "sha256": "sha256:09aae1a282bd39e9639747a9a2b6b4973b9ee8fb85f6f3645bf4494e7cd27a6c"
         }
       ]
     }

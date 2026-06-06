@@ -254,6 +254,9 @@ class GRUScratch(d2l.Module):
 Now we are ready to define the GRU forward computation.
 Its structure is the same as that of the basic RNN cell, 
 except that the update equations are more complex.
+The explicit timestep loop shown for PyTorch, MXNet, and TensorFlow is the
+deliberately readable teaching form; the JAX tab uses `jax.lax.scan` instead,
+trading that clarity for acceptable JIT compilation time.
 
 ```{.python .input #gru-defining-the-model}
 %%tab pytorch

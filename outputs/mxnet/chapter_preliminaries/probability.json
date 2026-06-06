@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/probability.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+macos.arm64.20260529",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [47, 53]\n"
+          "text": "heads, tails:  [57, 43]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([53, 47], dtype=int64)"
+          "text": "array([51, 49], dtype=int64)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.47, 0.53])"
+          "text": "array([0.52, 0.48])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.4894, 0.5106])"
+          "text": "array([0.5019, 0.4981])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 106765,
-          "sha256": "sha256:6035b2da28c781335111b3ebeeb64faa67987c4e2f5d0d20f66e8d5ed3617e77"
+          "bytes": 108625,
+          "sha256": "sha256:711c094dabd9416b57a0e6f96017e5dd87421c3acbbcda8b85b7987e51c5266a"
         }
       ]
     }

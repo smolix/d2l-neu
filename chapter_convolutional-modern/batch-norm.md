@@ -331,7 +331,7 @@ def batch_norm(X, gamma, beta, moving_mean, moving_var, eps, momentum):
         moving_mean = (1.0 - momentum) * moving_mean + momentum * mean
         moving_var = (1.0 - momentum) * moving_var + momentum * var
     Y = gamma * X_hat + beta  # Scale and shift
-    return Y, moving_mean.data, moving_var.data
+    return Y, moving_mean.detach(), moving_var.detach()
 ```
 
 ```{.python .input #batch-norm-implementation-from-scratch-1}

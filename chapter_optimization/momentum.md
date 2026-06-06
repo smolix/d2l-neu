@@ -206,7 +206,7 @@ def sgd_momentum(params, states, hyperparams):
         with torch.no_grad():
             v[:] = hyperparams['momentum'] * v + p.grad
             p[:] -= hyperparams['lr'] * v
-        p.grad.data.zero_()
+        p.grad.zero_()
 ```
 
 ```{.python .input #momentum-implementation-from-scratch-2}

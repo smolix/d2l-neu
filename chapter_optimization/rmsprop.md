@@ -133,7 +133,7 @@ def rmsprop(params, states, hyperparams):
         with torch.no_grad():
             s[:] = gamma * s + (1 - gamma) * torch.square(p.grad)
             p[:] -= hyperparams['lr'] * p.grad / torch.sqrt(s + eps)
-        p.grad.data.zero_()
+        p.grad.zero_()
 ```
 
 ```{.python .input #rmsprop-implementation-from-scratch-3}

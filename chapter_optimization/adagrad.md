@@ -155,7 +155,7 @@ def adagrad(params, states, hyperparams):
         with torch.no_grad():
             s[:] += torch.square(p.grad)
             p[:] -= hyperparams['lr'] * p.grad / torch.sqrt(s + eps)
-        p.grad.data.zero_()
+        p.grad.zero_()
 ```
 
 ```{.python .input #adagrad-implementation-from-scratch-1}

@@ -3,7 +3,7 @@
   "source": "chapter_optimization/minibatch-sgd.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:7623fda92faee9de6e90d5e444d5f464d98a691d4839836fdf0e23d4ef08b771",
     "max_inline_bytes": 0
   },
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.8200249671936035"
+          "text": "0.8289403915405273"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.01354074478149414"
+          "text": "0.012808084487915039"
         }
       ]
     },
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: element 0.037, column 2.216, full 22.294\n"
+          "text": "performance in Gigaflops: element 0.036, column 2.342, full 21.458\n"
         }
       ]
     },
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: block 19.744\n"
+          "text": "performance in Gigaflops: block 20.497\n"
         }
       ]
     },
@@ -66,120 +66,120 @@
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:6c3a670ea18c9729f3bd32e1398c0869d4a96caffc71fa3b6a8d94cfb906ca5a",
+      "code_fingerprint": "sha256:f72e2e35afdfdb0cc56958173371197de90fe300d90f17fe42962375c73dfbea",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:31d3206d09c5f908dbb82c0f0e8a9dea6fe311d788c3736828902aada89e9d9f",
+      "code_fingerprint": "sha256:df5ca583f2cadb24d1efc534d3e25cdddf8c5982ebaed5a5c5251a70e1bc5792",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:9704411cfd80408ee96dfd46c2dd1d9d926693b0653ff3d0e7e2d89e09a949c4",
+      "code_fingerprint": "sha256:65af0f7a9460df6431e80ebe33bcad4e81d59a5fd4428ddc91507d80f4baba85",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.044 sec/epoch\n"
+          "text": "loss: 0.247, 0.041 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-3-1.svg",
-          "bytes": 20226,
-          "sha256": "sha256:fe67bbedb5f08cd164982d6f5bd56541f7aa225f3f11c9b7bc9753d0499b03e6"
+          "bytes": 20227,
+          "sha256": "sha256:4ea2b43a88c8993e4165d23ac81f8bba37cfd47f2fcbd10362c593824230ee5c"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-4": {
-      "code_fingerprint": "sha256:04428bde2e2466dc82dcc712776d7e898b8bbdce1e6756e3b9c54f37877f0931",
+      "code_fingerprint": "sha256:5c38101d2aa596e2fef5a1a2a257a66dce366a44f411c48861f07dd3f711f291",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.399 sec/epoch\n"
+          "text": "loss: 0.250, 0.398 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-4-1.svg",
-          "bytes": 18784,
-          "sha256": "sha256:4c26936f336e4ca0f1def67f5650a1decbd810e14195d541ba52c6fd6b35455b"
+          "bytes": 18779,
+          "sha256": "sha256:0b6f648bfe67bfe7a00fd330da43348a2e54796b04eac5c84cf1b2b55e9f3800"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-5": {
-      "code_fingerprint": "sha256:e7f35289ca07f107bdc748f2b58db81eaa9cdf1da6488bffa77aa84414bad592",
+      "code_fingerprint": "sha256:1eb95d3fc6623a0ac3ad5030d65c259539bb928860bb2ed1f2df12bcad5b1203",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.018 sec/epoch\n"
+          "text": "loss: 0.251, 0.018 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-5-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:4d0fd8d43a3678b76f5bf2f28df408c34becf075c851a9a9f2165fafb16dc938"
+          "bytes": 18783,
+          "sha256": "sha256:c3263ca2206eb3dbea2590b294bdca17641b48955c2e5f29212c13ce398c5093"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-6": {
-      "code_fingerprint": "sha256:3812986d44886d92a2418ed30150d81e4524bd86fe7b86c23057deb9b176da08",
+      "code_fingerprint": "sha256:e9ce41b9bf6ef83c3d571b3a0238eaa63993fb5859343de3d8ba04c81186e3c0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.053 sec/epoch\n"
+          "text": "loss: 0.243, 0.054 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-6-1.svg",
-          "bytes": 18781,
-          "sha256": "sha256:be4ed36764a5952d0f8aa3271997d4a9113e96c26f47a3e4d851ae721ee8d533"
+          "bytes": 18783,
+          "sha256": "sha256:392043a71b0e6b06af56402eae5441bc3ff54c1aa6f31c5f4957f69e80a0f50f"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-7": {
-      "code_fingerprint": "sha256:e1bf5d7af0024c985a3f55578a09bf93e69784f7ed86cba945097532c1401818",
+      "code_fingerprint": "sha256:d322d0dccdf508f9592408415530fc0a5a8d703c213846a3be855cde4a51d423",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 33004,
-          "sha256": "sha256:7fba1d9a9ff1bcbd998b415107d0802a1da8b21e02979ff8f3e8608bf214ee37"
+          "bytes": 32996,
+          "sha256": "sha256:2ca0cc9032d09aa9e3b2bb4ddf65f60c17b29676f06cf8639cee82c2c52a3883"
         }
       ]
     },
     "minibatch-sgd-concise-implementation-1": {
-      "code_fingerprint": "sha256:4ea4555336e07098cce72aaa40fbd7023d81cbbe45806ae0f938e0b68d3d39d0",
+      "code_fingerprint": "sha256:6c34449d8d0bf079ef47e949cb26209eab123d6112c4a019b1109f0ce4c3bd4b",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-concise-implementation-2": {
-      "code_fingerprint": "sha256:559155ba60d5667dc11fc18d8c0a7992923a932f423e0a28405f6e24fb126a2a",
+      "code_fingerprint": "sha256:e0a05b97de5601a66299827bbe66b31be6dc71de4200b283a199cb8368297cd0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.057 sec/epoch\n"
+          "text": "loss: 0.244, 0.058 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-concise-implementation-2-1.svg",
-          "bytes": 18620,
-          "sha256": "sha256:8f75e223e041a473777dd631ac29ca5f86678c3a087cf4406791f16aa1c07f2d"
+          "bytes": 18622,
+          "sha256": "sha256:9cdb2af2da88f2d2d99f9d339ee60452773c9a5d73c36de8536e36e136116eb2"
         }
       ]
     }

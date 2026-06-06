@@ -202,7 +202,7 @@ import optax
 
 class NiN(d2l.Classifier):
     lr: float = 0.1
-    num_classes = 10
+    num_classes: int = 10
     training: bool = True
 
     def setup(self):

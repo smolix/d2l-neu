@@ -553,7 +553,22 @@ EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 # measurable perf hit on tutorial workloads. GPU memory is fine by default
 # (no init-time preallocation; pool retention is per-process so it doesn't
 # bleed into the next notebook).
-EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+#
+# Concurrency cap (D2L_MXNET_*_SLOTS, honored by run_one_notebook.py on top of
+# the global pool): even at ~56 threads/proc, image-dataset notebooks spawn
+# Gluon DataLoader worker subprocesses, and at the default GPU_SLOTS (~2/GPU →
+# 8 here) the combined process/thread count exhausts `ulimit -u` (soft 4096 /
+# hard 8192 on this host). A starved worker then fails to lazy-`dlopen` the
+# bundled OpenCV and surfaces the misleading "Build with USE_OPENCV=1 for image
+# resize operator" — even though OpenCV IS compiled in and works in isolation
+# (see docs/mxnet-runtime-diagnostics.md, 2026-06-06). The same notebooks pass
+# serially. Capping mxnet to 2 concurrent keeps it well under the thread limit
+# while pt/tf/jax keep using the freed global slots. Raise if `ulimit -u` is
+# raised on the host.
+MXNET_GPU_SLOTS ?= 2
+MXNET_CPU_SLOTS ?= 2
+EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                   D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_MXNET_CPU_SLOTS=$(MXNET_CPU_SLOTS)
 
 define EXEC_RULE
 _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \

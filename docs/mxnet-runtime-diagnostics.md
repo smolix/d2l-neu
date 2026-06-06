@@ -46,24 +46,24 @@ This is **not** a wheel defect and **not** the §1 "missing OpenCV runtime libs"
   return a batch cleanly, **including after a GPU context is initialized first**
   (ruling out a fork-after-CUDA-init hypothesis).
 
-The ops fail *only* under the concurrent build. Leading hypothesis: **resource /
-thread exhaustion** — MXNet 2.0 runs ~304 threads per process (see Makefile
-`EXTRA_ENV_mxnet`), and `make all` runs many MXNet notebooks at once, each
-spawning DataLoader worker processes; under that load a constrained worker's
-lazy OpenCV `dlopen` fails and surfaces as the misleading "build without OpenCV"
-error.
+The ops fail *only* under the concurrent build. Root cause: **process/thread
+exhaustion against `ulimit -u`** — even at the ~56 threads/proc the
+`EXTRA_ENV_mxnet` env vars leave, MXNet image-dataset notebooks spawn Gluon
+DataLoader worker subprocesses, and at the default `GPU_SLOTS` (~2/GPU → 8 here)
+the combined count exceeds the host's `ulimit -u` (soft 4096 / hard 8192). A
+starved worker then can't lazy-`dlopen` the bundled OpenCV and surfaces the
+misleading "build without OpenCV" error.
 
-To confirm and to heal: re-run the MXNet image set with reduced parallelism, e.g.
-
-```bash
-make -k run-notebooks-mxnet GPU_SLOTS=1 CPU_SLOTS=2     # serialize the queues
-# or one notebook at a time:
-make -B _notebooks/mxnet/chapter_convolutional-neural-networks/lenet.executed
-```
-
-If they pass serially, the fix is purely scheduling (cap MXNet concurrency in the
-queue), not the wheel. *(Status when written: confirmation pending — the full
-parallel run had just finished; update this line once the serial re-run is done.)*
+**Fixed (2026-06-06, verified).** Confirmed by re-running the image notebooks
+serially (`make -B …/lenet.executed`, etc.) — every one passes in isolation. The
+durable fix is a per-framework concurrency cap, **`MXNET_GPU_SLOTS ?= 2`** in the
+Makefile (injected as `D2L_MXNET_GPU_SLOTS`, honored by `run_one_notebook.py`'s
+`acquire_fw_cap` on top of the global pool; pt/tf/jax keep using the freed
+slots). Re-verified end-to-end: a full `make clean && make all` ran all 28
+formerly-failing MXNet image notebooks (lenet, the `convolutional-modern/*`
+family, `computer-vision/*`, `softmax-regression-*`, dropout, mlp-implementation,
+…) to completion with **zero** OpenCV errors. Raise the cap only if the host's
+`ulimit -u` is raised.
 
 Also note one **content** bug surfaced under this wheel, unrelated to the runtime:
 `chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops` used `np.einsum`'s

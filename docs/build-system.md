@@ -572,6 +572,51 @@ Caveats (each learned the hard way):
   wheel's outputs in the store. Runtime gotchas specific to the wheel live in
   `docs/mxnet-runtime-diagnostics.md`.
 
+### 6.6 PDF build (XeLaTeX via Quarto) — pitfalls and how it's kept green
+
+`make pdfs` (and `make all`) renders one `_pdf/<fw>/` Quarto book per framework
+→ `quarto render --to pdf` → XeLaTeX → `_pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf`,
+then copies it into `_book/pdf/` for the site. The render is **CPU-only** and
+reads the committed `outputs/` store like every other artifact (§6.1). Four
+pitfalls bit us; each now has a guard, so a clean `make all` builds all four PDFs
+(~46 MB each) with no manual steps:
+
+- **`static/d2l-preamble.tex` is a tracked SOURCE file.** It is the hand-written
+  LaTeX preamble (`gen_pdf.py` injects it via `include-in-header`) and **must**
+  exist for the PDF to build. The repo-wide `*.tex` ignore rule (for *generated*
+  intermediates) used to swallow it, so it was never committed and PDFs only
+  built on machines that happened to have it locally. `.gitignore` now carries
+  `!static/d2l-preamble.tex`. If you add another hand-written `.tex`, add a
+  matching negation.
+- **`mathtools` must be in the preamble.** pandoc's LaTeX writer normalizes
+  `\left(\begin{smallmatrix}…\end{smallmatrix}\right)` into `\begin{psmallmatrix}`,
+  which `amsmath` alone does not define → *"Environment psmallmatrix undefined."*
+  The preamble loads `mathtools`. (Authoring tip: write parenthesized small
+  matrices in source as `\left(\begin{smallmatrix}…\right)` — portable to HTML
+  MathJax — and let pandoc emit the mathtools form for PDF.)
+- **A `$` immediately followed by a digit does not close inline math** (pandoc's
+  "don't make `$5 … $10` math" rule). `$\mathcal F=\{$1-Lipschitz$\}…$` therefore
+  mis-parsed and leaked `\mathcal` into text mode → *"\symcal allowed only in
+  math mode."* Keep math + adjacent digits inside a single span, using
+  `\text{1-Lipschitz}` for the words. (`grep -nE '\$[0-9]'` over a math-heavy
+  chapter is a quick smell test, though most hits are legitimate *opening*
+  `$1\times 1$`.)
+- **Stale PDFs in `img/outputs/` abort the parallel render.** Quarto's
+  `convert_svg` (built-in `main.lua`) has a "skip conversion if the `.pdf`
+  already exists" optimization, then `assert(read(pdf) ~= nil)`. A leftover
+  corrupt/empty scratch PDF there makes the assert fail (`main.lua:7348`), killing
+  the whole PDF render — and `img/outputs/` is gitignored scratch that survives
+  across builds. Both `make clean` *and* `rebuild-book-artifacts` (just before
+  `make -j4 pdfs`) now `find img/outputs -name '*.pdf' -delete`, so `make all` is
+  self-sufficient. For a bare standalone `make pdfs` on a dirty tree, run
+  `make clean` first if you suspect stale scratch.
+
+Not fixed here (cosmetic, non-fatal): a few `:numref:`fig_mdl-dyn-*`` references
+in the still-incomplete Dynamics chapter render as "?" — the figures, SVGs, and
+labels exist, but Quarto fails to register the crossref (math-heavy captions are
+the suspect). This warns but does **not** stop the PDF build, and it is present in
+the HTML too.
+
 ---
 
 ## 7. Git & LFS setup (one-time)

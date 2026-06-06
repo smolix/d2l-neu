@@ -740,6 +740,10 @@ rebuild-book-artifacts:
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
 	$(MAKE) slides
 	$(MAKE) html
+	@# Clear stale render-scratch PDFs so the parallel PDF render can't
+	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This
+	@# makes `make all` self-sufficient without a preceding `make clean`.
+	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	$(MAKE) -j4 pdfs
 	$(MAKE) check-all-artifacts
 

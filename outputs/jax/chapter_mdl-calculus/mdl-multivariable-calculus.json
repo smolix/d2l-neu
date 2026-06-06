@@ -9,12 +9,17 @@
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:66685ad2602ad9f6cf7f0f0842650b61544bf35b41aea0c3969de6ffee0dfebd",
+      "code_fingerprint": "sha256:769affaf1f0ba9efb2e316fa16a208d54c24f9c52c2277c503a952e04b515a88",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'approximation: 1.081946, true value: 1.082124'"
+        }
+      ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:17c8de46fa40ae871cb4d98db4f96cad490a5e67dd8fc2084f61b4f66a5dba54",
+      "code_fingerprint": "sha256:8dff6ff593f8517f2b626695d5fb20f3088ef0a693e53e02ccb5a99f59c3b268",
       "kind": "asset",
       "outputs": [
         {
@@ -22,12 +27,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
           "bytes": 13743,
-          "sha256": "sha256:cecabd64f523a652ab7a4f6c49b55eab4c9bfaa710cc4e9601965ae9e695c3c1"
+          "sha256": "sha256:20956fdfe718fe8e05546d381d0dc3026b99a52d55c432d5f42aa75b623260b8"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:5f03874e505ad37290ecad39d34e21d239e1fe8ceb50d33ff564e1e26ac4ea5a",
+      "code_fingerprint": "sha256:cd1badffca4c7594b6df536fc14bc17f56a915ec3e3fd5583ab2884867a93b47",
       "kind": "text",
       "outputs": [
         {
@@ -38,7 +43,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:5c69b350695dca5107d115327dc4f86fea57ab09d9e7d80ca38279adcc9638ff",
+      "code_fingerprint": "sha256:7efda9c91f1d364767aa6d5b1beed3752fbcbcddddaed1055a6a43f54b05c2ec",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +54,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:e0bfa1b47d10ba9e78819f083a355c75a0e7f84461288bcf2164bfd19201c69e",
+      "code_fingerprint": "sha256:2002e8e42f49ec92f9021520673192f0b58cb79e37a2d77fcf1c79c3f83ef202",
       "kind": "text",
       "outputs": [
         {
@@ -60,9 +65,15 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:e5f42b2ab35d776c2125c274fb54a7d2b8a07f8c2cc039382d0d3ad74fd9ca44",
+      "code_fingerprint": "sha256:d1cd4a9b0f08e39f5de8fe1e65010adaad429fb17b4cd3a883899bfa1ac39c47",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+        }
+      ]
     }
   }
 }

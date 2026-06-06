@@ -3,7 +3,7 @@
   "source": "chapter_convolutional-neural-networks/lenet.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
     "max_inline_bytes": 0
   },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 59249,
-          "sha256": "sha256:2a1f7201f6958409b1e1b4bdbd93053f73cf25387ff3630957106d1e037d1d15"
+          "bytes": 59140,
+          "sha256": "sha256:95d4212893cf0a16dbec84b78623bedff12f0a7ba9deae8bccb5fbe0ff121542"
         }
       ]
     }

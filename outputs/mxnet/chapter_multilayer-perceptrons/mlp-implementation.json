@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/mlp-implementation.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:7bbe9a9dcd66154a4731c000d30446707d722f1924e3da249a6849bab3db53d7",
     "max_inline_bytes": 0
   },
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 60001,
-          "sha256": "sha256:0e1409f49b454bb71b79f181d96eee61f0d532129c20274185876cfcad6bbc54"
+          "bytes": 59999,
+          "sha256": "sha256:f081f169bb80168f193d4c8727c74358217853682b6904a8e2186bf1ac28eda7"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 58589,
-          "sha256": "sha256:b1d6e8222d0c246f1c1b17da74bc8a3fd772d5cd86a50f27cef2fd8b62d3a3f4"
+          "bytes": 58508,
+          "sha256": "sha256:0b4824cbbc92187a6086a3c303b83c74024538757bf822f961afc68791684190"
         }
       ]
     }

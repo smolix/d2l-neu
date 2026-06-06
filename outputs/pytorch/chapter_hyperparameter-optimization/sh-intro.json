@@ -3,7 +3,7 @@
   "source": "chapter_hyperparameter-optimization/sh-intro.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:1e3508121c7bfce1a8ca387d29e93e72f57ca676cf2fbcca2d93ce30f8954719",
     "max_inline_bytes": 0
   },
@@ -45,217 +45,217 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1353001594543457, runtime = 72.50481462478638\n"
+          "text": "    error = 0.17993927001953125, runtime = 34.57598519325256\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-1.svg",
-          "bytes": 22673,
-          "sha256": "sha256:5c209b4d3cad2d6a58df9091ad4b597a529ff45d1e6c1a7fdc998d050f073f81"
+          "bytes": 22667,
+          "sha256": "sha256:c0108dddef37a1deb6f6109f817903738aabcf1fec362b7546645339967b826a"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-2.svg",
-          "bytes": 22667,
-          "sha256": "sha256:6bb057d882d39625f853912b76e999b01938459ee215663c55f68c2899934529"
+          "bytes": 22652,
+          "sha256": "sha256:21ab0d7dc12100841c6f9217a21509eceb0a921a5b2e47736bce13f298695dc5"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-3.svg",
-          "bytes": 21608,
-          "sha256": "sha256:316bc0a00da004b613a21de10c5645f093462c908972b0c1d30fcfcf56be34cc"
+          "bytes": 22647,
+          "sha256": "sha256:80ade06fab4dc2d65c25e853705696cbe9b091a2f62a15319ca715307f8d8dfa"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-4.svg",
-          "bytes": 22663,
-          "sha256": "sha256:4777e4d0bc59759493f79a659e71e011b73dff73b2b64840303924752b75d42b"
+          "bytes": 22652,
+          "sha256": "sha256:892f3e2ab8784f9f5bb672827c16a64322a44d1f797af090c1222f1324466448"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-5.svg",
-          "bytes": 22648,
-          "sha256": "sha256:e8c31a95b36000102ee168af0f141d8b4e2ed1473826915696439db6a448c5de"
+          "bytes": 22654,
+          "sha256": "sha256:479c0099b5e7e354e0d94bf66731800695f1d18c05354aa2be7c8707c800063c"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-6.svg",
-          "bytes": 22674,
-          "sha256": "sha256:3ff17a563155fd0e718b63348309b79f9f312cd2c01ef7d08939571de5fa0d70"
+          "bytes": 22653,
+          "sha256": "sha256:32548336a12cbdf651476e48bdeed8ccf01afe3193a1722bb809e68574aef560"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-7.svg",
-          "bytes": 22673,
-          "sha256": "sha256:fa9d8bf52017cbedfa899d313d746f90a1a49e942b3621d6efdf0a3f45ca7988"
+          "bytes": 22667,
+          "sha256": "sha256:ca84f385e1204e02387c33cd2f6f914ba94a21579b1f4cd94fba5157ae94f53b"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-8.svg",
-          "bytes": 22644,
-          "sha256": "sha256:b2ba80e84c3ef9b64b53995ace500976e23d7755b21a3f749acadee266e6b760"
+          "bytes": 22673,
+          "sha256": "sha256:c19ede598cecad0f34d0efa0817fc6391d6ca8ee0346d8e28983f926de50d361"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-9.svg",
-          "bytes": 29437,
-          "sha256": "sha256:d77226aa263a220c58dee672cbbc1fb210db5d9f0c4775943005c3709aaa47ae"
+          "bytes": 29411,
+          "sha256": "sha256:01fc69ce60623a6d2b97833e113ffb1662450c8d73315434718d9cdda663bc43"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-10.svg",
-          "bytes": 29429,
-          "sha256": "sha256:09033ed4d58545c6cd5fa8c46ddb0d2f3a03e4e58e6ee1561b18c3851cae0956"
+          "bytes": 29453,
+          "sha256": "sha256:80c4356214574190c6f7cede79c0f37205856d2bcef098da668ad1434d9870ee"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-11.svg",
-          "bytes": 29218,
-          "sha256": "sha256:12147063c6fa7a3910ae46a97b80769a8e5d9074edfe34d54edf98e0ffa7e537"
+          "bytes": 29436,
+          "sha256": "sha256:3f75d8c4a05ccde157fe0a3d04626a0445b3061b32fd3bf20834503a9686156f"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-12.svg",
-          "bytes": 28906,
-          "sha256": "sha256:d6c9d3b14829994247fbf2c4f0be6911349f8bd1db5e4b867aa4cfe31f0e5c7e"
+          "bytes": 29343,
+          "sha256": "sha256:8d142ae378c819b10547b312b4a90beb3a98caf9a0e6d5286fc24755ac85eab4"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-13.svg",
-          "bytes": 47763,
-          "sha256": "sha256:49502856bdc791288834a7b11b85c96562619d01ab2322e0fc0c80d507a631ee"
+          "bytes": 47755,
+          "sha256": "sha256:6a52d754364c27c2e149b9c351f9f958806f82fbc006bb81a25322420765c129"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-14.svg",
-          "bytes": 47580,
-          "sha256": "sha256:b2d7f217389591bb2140d7544abd40a27640a981a2e5e90c4cc071b2fa5cdd9c"
+          "bytes": 47805,
+          "sha256": "sha256:ef373abb398d3cbe48fb7b3e4b30be7f0e0e229ea13334208dd710c27d42ac9a"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-15.svg",
-          "bytes": 59297,
-          "sha256": "sha256:aeecb957a0dc719fd318d956a23f5d579ad7c27e381fbccd19f1188c97cfa5cf"
+          "bytes": 59424,
+          "sha256": "sha256:8295819f4cdc8bfa6e97d47b860ccee8d200ad805c6e21661978222f82464dd4"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-16.svg",
-          "bytes": 22679,
-          "sha256": "sha256:12272e731e87783ea23c7a596f35ad5649fffab68f21847598575e6946dd26b3"
+          "bytes": 21582,
+          "sha256": "sha256:937c77acf1fd3d98774ef8eb6008d8a446d29158e5ceda97b63688b746dc2289"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-17.svg",
-          "bytes": 22663,
-          "sha256": "sha256:90b40e22eaca0246393d1128a88fa54b82962701387be7e98294a14695f21a54"
+          "bytes": 22652,
+          "sha256": "sha256:490bc9f78a3f78d72bce4914e420e8f5b9f1b0b945df30cc44c2f5116869b2c9"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-18.svg",
-          "bytes": 22672,
-          "sha256": "sha256:0cb98df1b13eeef7180822735fa02a75e9a2c3782a5a9ba5e385862d2055a5fb"
+          "bytes": 22642,
+          "sha256": "sha256:ce65afac7bebc0b047415d9b91adac32ff333000373e852901ae096ddae76dd9"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-19.svg",
-          "bytes": 22137,
-          "sha256": "sha256:f5dec8519bc34e8f37c19ad87232ca86db916db825a4142da3e10749151aa015"
+          "bytes": 22646,
+          "sha256": "sha256:8cc591b387e834a0eb847a511bc198bd69f9af1ec42fc462be97c589c137777b"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-20.svg",
-          "bytes": 22669,
-          "sha256": "sha256:dc06a765bb2c81b442b1ce86713d38ead6b877aa63b8a526a99cda38f5e305c5"
+          "bytes": 22661,
+          "sha256": "sha256:a380e06fa7c9fb6cebfbd1eedb563853a8318a0fa5f863ff48557d97d3fb1f35"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-21.svg",
-          "bytes": 22652,
-          "sha256": "sha256:3a842677202e204cfeeff5af45e27d863b049a4a1791c3249b25b603b333c103"
+          "bytes": 22654,
+          "sha256": "sha256:d264aaf02f87ce4279f8b02229c55881785ad853fc5185bbe708f777bd8b7e13"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-22.svg",
-          "bytes": 22668,
-          "sha256": "sha256:fe10d20130ce458ec8d0502e0bef36eb3421b72ca1354cb959c64a223c878b28"
+          "bytes": 22651,
+          "sha256": "sha256:0e84a61f14629bb7abcf45702e9d804a7b78d0e8c75cdc1351969f20131b2f78"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-23.svg",
-          "bytes": 22124,
-          "sha256": "sha256:f8595016284ac8135b002f6f907953f6c712b082175f30b9e7df923c83d30c41"
+          "bytes": 22661,
+          "sha256": "sha256:c9d58a7c5fb416ee485bd8f113aa4c1206e82327913d5e59617a13882db04a9a"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-24.svg",
-          "bytes": 29339,
-          "sha256": "sha256:585ea5260064f5ca14e51f48eb64b40ce42f1d8bf92a9839590aeef670eee22e"
+          "bytes": 29450,
+          "sha256": "sha256:b06c43d7e532a7a486f1d14d65757b061e4414ffe690c3accb2476bd525f3bc9"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-25.svg",
-          "bytes": 29462,
-          "sha256": "sha256:d9823c537838de0e66f71e0a0566a3754a75024af909445edb7d70c04c3c47a6"
+          "bytes": 29417,
+          "sha256": "sha256:e1c5116fbecd678f1f7a678f7bdf427a2f47a15398a414ec11844ee0ea9fc150"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-26.svg",
-          "bytes": 28942,
-          "sha256": "sha256:5dd84b1314ba619d670b6bf0b49c25bb88849623a9d1afea170e6c0303f7bba8"
+          "bytes": 28818,
+          "sha256": "sha256:3f8fdc44513388951d7f699dbb460a1156e23c6e76d5561160922ba35f76c3c3"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-27.svg",
-          "bytes": 28883,
-          "sha256": "sha256:530159f476965a9b9771fa0945274109eb6bc05e2885b57e063ec17de55eb099"
+          "bytes": 28922,
+          "sha256": "sha256:f0059b1d90b9ba0be74357b57afdc3a34334f0f7f5708291df14624075f7c2c9"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-28.svg",
-          "bytes": 47581,
-          "sha256": "sha256:d1b37026f7d03f3d0a3b52e8a87da033597b5faa26201ce2365cbbae7506dcb0"
+          "bytes": 47947,
+          "sha256": "sha256:c6391cad6e73b356822a85586f16cc6a49fee964c850cb8b6cb89f463c5704d7"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-29.svg",
-          "bytes": 47857,
-          "sha256": "sha256:6fd17461b4bd63fd33490dc38dd3eb1721f149a8f2e03fd74140e7f695f7142d"
+          "bytes": 47464,
+          "sha256": "sha256:4154a6d608fab4b2269238f1996053f272d052cc7a9c592af57ee6af940f7381"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-6-30.svg",
-          "bytes": 59547,
-          "sha256": "sha256:9ebef6b26f1f237da5536b162dbf65115a3f2192eec194e2b9845bb6000e20e3"
+          "bytes": 59386,
+          "sha256": "sha256:e192269894fec32a2116ca4bbdc2d35f1f56a1b6c85aaf4fb65429ccf04c40ec"
         }
       ]
     },
@@ -272,7 +272,7 @@
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-7-1.svg",
           "bytes": 25908,
-          "sha256": "sha256:948f91da9525bdb270c676499691db94455f98fe4f2e6116c757b9cc5170fd19"
+          "sha256": "sha256:c20085c76d49eae176bf6323ecb838607e2381b68ddbae6e28337f875e06accb"
         }
       ]
     }

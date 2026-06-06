@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/dropout.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:abf06d54538478c1060edf28289fd79d29c11329126dcd6a431339ae45795465",
     "max_inline_bytes": 0
   },
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  2.  4.  0.  8.  0.  0.  0.]\n [ 0. 18. 20.  0. 24.  0.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  6.  0.  0.  0.  0.]\n [16. 18. 20. 22. 24. 26. 28.  0.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 59136,
-          "sha256": "sha256:9ef2176cebc1de5dc5abc278df0edf875fecba509f3f2b3e24dce385f342bf30"
+          "bytes": 59166,
+          "sha256": "sha256:1839cf627495909eb03894fd286ba64250eba59f3e222c2c88ac2a4613a111de"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 59064,
-          "sha256": "sha256:b776fa4457144d107c4b8e00fbeb9bcabade8a7cc1f811fdee94a260c5210331"
+          "bytes": 59033,
+          "sha256": "sha256:a813aaca1078e5be5af3da0dcc6d305981f2e4f6d6f507f7f1b57dae5ffaa170"
         }
       ]
     }

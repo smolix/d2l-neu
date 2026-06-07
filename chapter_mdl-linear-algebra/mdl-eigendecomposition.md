@@ -52,6 +52,8 @@ from d2l import jax as d2l
 from IPython import display
 import numpy as np
 import jax
+jax.config.update("jax_enable_x64", True)  # honor explicit float64 (else JAX
+# silently truncates to float32 and the eigvals/power-iteration check disagrees)
 from jax import numpy as jnp
 ```
 

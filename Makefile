@@ -623,17 +623,13 @@ run-notebooks-multigpu-%: _notebooks/%/.generated $$(EXECUTED_MULTI_GPU_$$*)
 # `make all` propagates the failure to its caller. Use the post-run summary
 # printed by tools/notebook_run_summary.py to see which notebooks failed.
 run-notebooks-%: _notebooks/%/.generated
+	@mkdir -p $(LOGDIR)
 	@python3 tools/detect_resources.py --report || true
 	@python3 tools/notebook_run_plan.py --framework $* || true
-	@cpu_rc=0; gpu_rc=0; mgpu_rc=0; \
-	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
-	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) run-notebooks-gpu-$*; rc=$$?; \
-	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) run-notebooks-multigpu-$*; mrc=$$?; \
-	  exit $$((rc || mrc)) ) & gpu=$$!; \
-	wait $$gpu || gpu_rc=$$?; \
-	wait $$cpu || cpu_rc=$$?; \
+	@$(SCHED_ENV) python3 tools/notebook_scheduler.py --frameworks $* \
+		2>&1 | tee -a $(LOGDIR)/scheduler-$*-$(TS).log; rc=$${PIPESTATUS[0]}; \
 	python3 tools/notebook_run_summary.py --framework $* || true; \
-	exit $$((gpu_rc || cpu_rc))
+	exit $$rc
 
 # For a single notebook, invoke the stamp target directly:
 #   make _notebooks/pytorch/chapter_x/foo.executed
@@ -655,21 +651,29 @@ run-notebooks-%: _notebooks/%/.generated
 # below GPU_SLOTS the leftover slots sat idle, and each framework left a slow-
 # straggler tail. Interleaving keeps the GPU pool full with a framework mix
 # throughout — one combined tail instead of four.
+# Resource env handed to the unified scheduler (tools/notebook_scheduler.py).
+# `=` (recursive) so JAX_GPU_SLOTS / MXNET_GPU_SLOTS (defined later) resolve at
+# recipe-expansion time.
+SCHED_ENV = D2L_NUM_GPUS=$(NUM_GPUS) D2L_GPU_SLOTS=$(GPU_SLOTS) D2L_CPU_SLOTS=$(CPU_SLOTS) \
+	D2L_NUM_GPU_PAIRS=$(NUM_GPU_PAIRS) D2L_MULTIGPU_PER_PAIR=$(MULTIGPU_PER_PAIR) \
+	D2L_MULTIGPU_SLOTS=$(MULTIGPU_SLOTS) D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) \
+	D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_JAX_MGPU_MEM_FRACTION=$(JAX_MGPU_MEM_FRACTION)
+
+# The unified scheduler (tools/notebook_scheduler.py) replaces the old "two
+# background `make -jN` queues" orchestration: it owns the GPU/CPU/multi-GPU
+# slot pools (resource allocation) and dispatches one item per free slot while
+# never running two framework variants of the same notebook at once (scheduling
+# — sequences a notebook's frameworks one at a time, killing the shared-dataset
+# reorg race structurally). It shells `make <stamp>` per notebook with the
+# device assigned via D2L_ASSIGNED_CUDA, reusing the per-framework EXEC_RULE env.
 run-all-notebooks: notebooks
+	@mkdir -p $(LOGDIR)
 	@python3 tools/detect_resources.py --report || true
 	@python3 tools/notebook_run_plan.py || true
-	@cpu_rc=0; gpu_rc=0; \
-	cpu_stamps=$$(printf '%s\n' $(EXECUTED_CPU_pytorch) $(EXECUTED_CPU_tensorflow) $(EXECUTED_CPU_jax) $(EXECUTED_CPU_mxnet) | sort -t/ -k3); \
-	gpu_stamps=$$(printf '%s\n' $(EXECUTED_GPU_pytorch) $(EXECUTED_GPU_tensorflow) $(EXECUTED_GPU_jax) $(EXECUTED_GPU_mxnet) | sort -t/ -k3); \
-	mgpu_stamps=$$(printf '%s\n' $(EXECUTED_MULTI_GPU_pytorch) $(EXECUTED_MULTI_GPU_tensorflow) $(EXECUTED_MULTI_GPU_jax) $(EXECUTED_MULTI_GPU_mxnet) | sort -t/ -k3); \
-	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $$cpu_stamps & cpu=$$!; \
-	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $$gpu_stamps; rc=$$?; \
-	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) $$mgpu_stamps; mrc=$$?; \
-	  exit $$((rc || mrc)) ) & gpu=$$!; \
-	wait $$gpu || gpu_rc=$$?; \
-	wait $$cpu || cpu_rc=$$?; \
+	@$(SCHED_ENV) python3 tools/notebook_scheduler.py \
+		2>&1 | tee -a $(LOGDIR)/scheduler-$(TS).log; rc=$${PIPESTATUS[0]}; \
 	python3 tools/notebook_run_summary.py || true; \
-	exit $$((gpu_rc || cpu_rc))
+	exit $$rc
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 

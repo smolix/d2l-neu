@@ -627,6 +627,38 @@ ulimits). It prints the plan (`--report`) at the top of `run-all-notebooks` /
 (overridable on the command line — the values are `?=` defaults). On the 4×24 GiB
 / 64-core box: `GPU_SLOTS=12  CPU_SLOTS=8  MXNET_GPU_SLOTS=8  MULTIGPU_SLOTS=6`.
 
+**Unified scheduler (`tools/notebook_scheduler.py`).** `run-all-notebooks` (and
+`run-notebooks-<fw>`) are driven by a single Python scheduler that **decouples
+the two concerns the old "two background `make -jN` queues + per-notebook flock"
+design tangled together**:
+
+- *Scheduling* — *which* work may run. The only scheduling constraint is that the
+  four framework variants of a given notebook **never run concurrently** (a
+  per-relpath mutex, applied to ALL notebooks). That sequences a notebook's
+  frameworks one at a time, which **structurally** prevents the shared-dataset
+  reorg race (kaggle-cifar10 / kaggle-dog `shutil.copy` into the same
+  `data/.../train_valid_test/` tree, read half-written by another framework →
+  OpenCV `imdecode_ !buf.empty()`) — no special-casing needed. Different
+  notebooks run concurrently.
+- *Resource allocation* — *how many* run, on which device. Three independent slot
+  pools (same model as before, so VRAM behaviour is unchanged): per-GPU light
+  slots (`GPU_SLOTS//NUM_GPUS` each; a heavy notebook takes >1 on one GPU), CPU
+  slots (each pinned to a core group), and multi-GPU pair-packing slots
+  (`pairs × per_pair`). Per-framework GPU caps (JAX, MXNet) bound a single
+  framework's concurrent GPU notebooks. Multi-GPU items are held until light-GPU
+  work drains so the two never double-book a physical GPU (CPU overlaps always).
+
+The scheduler dispatches each item by shelling **`make <stamp>`** with the device
+assigned via `D2L_ASSIGNED_CUDA` (`""`=CPU, `"2"`=one GPU, `"2,3"`=a pair) plus
+`D2L_ASSIGNED_CPU_CORES`, so it **reuses the per-framework `EXEC_RULE` env**
+(venv, `LD_LIBRARY_PATH`, thread/memory tuning, stamp `@touch`, per-fw log)
+verbatim — no env duplication. `run_one_notebook._run_once` sees the assignment
+and **skips its own flock** (its self-locking path remains the fallback for a
+direct `make _notebooks/<fw>/<x>.executed`, where the per-relpath sequencing is
+instead provided by `serialize_dataset_prep` on the shared-dataset notebooks).
+The make `?=` resource knobs are passed through as env so the inner make doesn't
+re-run `detect_resources`/`nvidia-smi` on every dispatch (~0.5 s/no-op).
+
 - **Per-job budgets** (env-overridable): `GPU_MIB_PER_LIGHT=7680` (7.5 GiB),
   `CPU_PER_LIGHT=8` (cores/CPU-notebook), `RAM_MIB_PER_LIGHT=4096`. So a 16 GiB
   GPU packs 2 jobs/card, an 8-core box runs 1 CPU notebook, etc. — the same
@@ -638,12 +670,14 @@ ulimits). It prints the plan (`--report`) at the top of `run-all-notebooks` /
   ≤7.5 GiB each**, so instead of `acquire_all_gpus` + a `-j1` queue they are
   packed onto disjoint GPU **pairs**: `pairs = num_gpus//2`,
   `per_pair = floor(min_VRAM/7.5 GiB)`, `MULTIGPU_SLOTS = pairs × per_pair`
-  (4×24 GiB ⇒ 6 ; 2×16 GiB ⇒ 2). `run_one_notebook.acquire_gpu_pair()` claims a
-  packing slot on a pair (spread-first, then pack) and pins `CUDA_VISIBLE_DEVICES`
-  to that pair. **JAX preallocates**, so its `XLA_PYTHON_CLIENT_MEM_FRACTION` is
-  auto-set to `~1/per_pair` (0.30 at per_pair=3) for the packed multigpu run;
-  PyTorch/TF/MXNet allocate on demand. Verified: 6 multi-GPU notebooks run
-  concurrently across all four frameworks, 0 failures.
+  (4×24 GiB ⇒ 6 ; 2×16 GiB ⇒ 2). The scheduler's multi-GPU pair pool claims a
+  packing slot on a pair (spread-first, then pack) and assigns
+  `D2L_ASSIGNED_CUDA="2p,2p+1"`. **JAX preallocates**, so its
+  `XLA_PYTHON_CLIENT_MEM_FRACTION` is set to `~1/per_pair` (0.30 at per_pair=3)
+  for the packed multigpu run; PyTorch/TF/MXNet allocate on demand. (The
+  standalone fallback path still uses `run_one_notebook.acquire_gpu_pair()` /
+  `acquire_all_gpus()` flock.) Verified: 6 multi-GPU notebooks run concurrently
+  across all four frameworks, 0 failures.
 - **MXNet GPU cap** is now ulimit-derived (`nofile//FD_PER_MXNET_JOB`,
   `nproc//PROC_PER_MXNET_JOB`) rather than the old hardcoded `2`; the board fix
   below + a verified 3/GPU run make higher concurrency safe.

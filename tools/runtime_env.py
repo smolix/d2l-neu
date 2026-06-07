@@ -65,6 +65,21 @@ CPU_ONLY_ENV = {
 }
 
 # Notebooks that use multiple GPUs or test GPU availability across devices.
+# Notebooks that REORGANIZE a shared on-disk dataset (non-atomic shutil.copy
+# into data/.../train_valid_test/). All four framework variants read+write the
+# SAME directory under data/, so running them concurrently across frameworks
+# races: one framework's half-written copy is read by another's ImageFolder /
+# DataLoader → OpenCV "imdecode_ … !buf.empty()" / empty-image errors. The
+# framework-interleaved scheduler made this overlap likely (it was rare/absent
+# when frameworks ran one-after-another). run_one_notebook serializes these
+# across frameworks with a per-notebook lock (serialize_dataset_prep), held for
+# the whole run because the reorg copies and the per-epoch image reads both
+# touch the shared tree throughout.
+SHARED_DATA_NOTEBOOKS = {
+    "chapter_computer-vision/kaggle-cifar10.ipynb",
+    "chapter_computer-vision/kaggle-dog.ipynb",
+}
+
 MULTI_GPU_NOTEBOOKS = {
     "chapter_builders-guide/use-gpu.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",

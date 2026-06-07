@@ -318,6 +318,40 @@ def acquire_all_gpus(gpu_slots, num_gpus):
                 pass
 
 
+@contextmanager
+def acquire_gpu_pair(pairs, per_pair):
+    """Acquire a packing slot on one of `pairs` disjoint GPU pairs; each pair
+    holds up to `per_pair` concurrent multi-GPU notebooks (they only use 2 GPUs
+    at <=GPU_MIB_PER_LIGHT each, so several share a pair). Yields the pair's two
+    physical device indices as 'a,b'. Slot order spreads across pairs FIRST
+    (slot 0 of every pair, then slot 1, ...) so the first notebooks land on
+    distinct pairs (using all GPUs) before any pair is packed.
+    """
+    SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    order = [(p, s) for s in range(per_pair) for p in range(pairs)]
+    paths = [(p, SLOT_DIR / f'mgpu-p{p}-s{s}.lock') for (p, s) in order]
+    for _, pth in paths:
+        pth.touch()
+    while True:
+        for p, pth in paths:
+            fp = open(pth, 'w')
+            try:
+                fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                fp.close()
+                continue
+            try:
+                yield f"{2 * p},{2 * p + 1}"
+            finally:
+                try:
+                    fcntl.flock(fp, fcntl.LOCK_UN)
+                    fp.close()
+                except Exception:
+                    pass
+            return
+        time.sleep(0.5)
+
+
 def progress_for(fw):
     """Return (done, total) counts for a framework, snapshot-of-disk.
 
@@ -385,14 +419,29 @@ def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label)
     nb = Path(nb_path).resolve()
 
     if mode == 'multi-gpu':
+        pairs = int(os.environ.get('D2L_NUM_GPU_PAIRS') or num_gpus // 2)
+        per_pair = int(os.environ.get('D2L_MULTIGPU_PER_PAIR') or 1)
         with acquire_fw_cap(fw, 'gpu', _fw_cap(fw, 'gpu')):
-            with acquire_all_gpus(gpu_slots, num_gpus) as cuda:
-                print(f"{label}: [all GPUs] running", flush=True)
-                release_init = _maybe_serialize_mxnet(fw)
-                try:
-                    return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
-                finally:
-                    release_init()
+            if pairs >= 1 and num_gpus >= 2:
+                # Pack several 2-GPU notebooks onto disjoint GPU pairs.
+                with acquire_gpu_pair(pairs, per_pair) as cuda:
+                    if fw == 'jax':  # cap preallocation so per_pair procs fit
+                        os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = \
+                            os.environ.get('D2L_JAX_MGPU_MEM_FRACTION', '0.30')
+                    print(f"{label}: [GPU {cuda}] running", flush=True)
+                    release_init = _maybe_serialize_mxnet(fw)
+                    try:
+                        return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+                    finally:
+                        release_init()
+            else:
+                with acquire_all_gpus(gpu_slots, num_gpus) as cuda:
+                    print(f"{label}: [all GPUs] running", flush=True)
+                    release_init = _maybe_serialize_mxnet(fw)
+                    try:
+                        return execute_notebook(nb, timeout=timeout, cuda_devices=cuda)
+                    finally:
+                        release_init()
     if mode == 'gpu':
         rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
         heavy_n = HEAVY_GPU_NOTEBOOKS.get((fw, rel), 1)
@@ -405,14 +454,23 @@ def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label)
                     return execute_notebook(nb, timeout=timeout, cuda_devices=str(i))
                 finally:
                     release_init()
-    # CPU-only: bounded-pool acquisition so we don't oversubscribe cores
-    # when many CPU notebooks are queued under `make -j`.
+    # CPU-only: bounded-pool acquisition so we don't oversubscribe cores when
+    # many CPU notebooks are queued under `make -j`. Pin each notebook to a
+    # dedicated core set (8 cores/notebook when >=8 cores) via cpu_affinity.
     with acquire_fw_cap(fw, 'cpu', _fw_cap(fw, 'cpu')):
         with acquire_cpu_slot(cpu_slots) as i:
-            print(f"{label}: [CPU {i}] running", flush=True)
+            try:
+                cores = sorted(os.sched_getaffinity(0))
+                per = max(1, len(cores) // max(1, cpu_slots))
+                aff = set(cores[i * per:(i + 1) * per]) or None
+            except Exception:
+                aff = None
+            ctag = f" cores {min(aff)}-{max(aff)}" if aff else ""
+            print(f"{label}: [CPU {i}{ctag}] running", flush=True)
             release_init = _maybe_serialize_mxnet(fw)
             try:
-                return execute_notebook(nb, timeout=timeout, cuda_devices="")
+                return execute_notebook(nb, timeout=timeout, cuda_devices="",
+                                        cpu_affinity=aff)
             finally:
                 release_init()
 

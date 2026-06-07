@@ -75,8 +75,8 @@ NUM_GPUS ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
 # d2l.cpu() to host-transfer metrics, so we can't restrict to cuda only.
 GPU_MIB_PER_LIGHT  ?= 7680
 GPU_MIB_PER_jax    ?= 11776
-CPU_PER_LIGHT      ?= 10
-CPU_PER_jax        ?= 15
+CPU_PER_LIGHT      ?= 8
+CPU_PER_jax        ?= 8
 
 # Slot helpers. Each evaluates to "max(1, n*m / per)" using shell arith,
 # falling back to 1 on CPU-only hosts where DETECTED_GPU_MIB=0.
@@ -92,6 +92,15 @@ _cpu_slots = $(shell n=$$(nproc 2>/dev/null || echo 16); per=$(1); \
 # On this 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=6.
 GPU_SLOTS ?= $(call _gpu_slots,$(GPU_MIB_PER_LIGHT))
 CPU_SLOTS ?= $(call _cpu_slots,$(CPU_PER_LIGHT))
+
+# Multi-GPU notebooks use exactly 2 GPUs at <=GPU_MIB_PER_LIGHT each, so they
+# are memory-packed onto disjoint GPU pairs (verified: 3 fit on a 24 GiB card
+# across all 4 frameworks). tools/detect_resources.py is the single source for
+# the packing plan (pairs × per_pair) and the jax preallocation fraction.
+NUM_GPU_PAIRS         ?= $(shell python3 tools/detect_resources.py --get NUM_GPU_PAIRS)
+MULTIGPU_PER_PAIR     ?= $(shell python3 tools/detect_resources.py --get MULTIGPU_PER_PAIR)
+MULTIGPU_SLOTS        ?= $(shell python3 tools/detect_resources.py --get MULTIGPU_SLOTS)
+JAX_MGPU_MEM_FRACTION ?= $(shell python3 tools/detect_resources.py --get JAX_MGPU_MEM_FRACTION)
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 
@@ -562,10 +571,11 @@ EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 # bundled OpenCV and surfaces the misleading "Build with USE_OPENCV=1 for image
 # resize operator" — even though OpenCV IS compiled in and works in isolation
 # (see docs/mxnet-runtime-diagnostics.md, 2026-06-06). The same notebooks pass
-# serially. Capping mxnet to 2 concurrent keeps it well under the thread limit
-# while pt/tf/jax keep using the freed global slots. Raise if `ulimit -u` is
-# raised on the host.
-MXNET_GPU_SLOTS ?= 2
+# serially. We therefore derive the mxnet GPU cap from the open-file/process
+# ulimits (tools/detect_resources.py: nofile//FD_PER_MXNET_JOB etc.) rather than
+# a hardcoded 2; the board fix + the verified 3/GPU run make higher concurrency
+# safe. Override with MXNET_GPU_SLOTS=N on the command line.
+MXNET_GPU_SLOTS ?= $(shell python3 tools/detect_resources.py --get MXNET_GPU_SLOTS)
 MXNET_CPU_SLOTS ?= 2
 EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
                    D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_MXNET_CPU_SLOTS=$(MXNET_CPU_SLOTS)
@@ -581,6 +591,9 @@ _notebooks/$(1)/%.executed: _notebooks/$(1)/%.ipynb \
 	D2L_NUM_GPUS=$(NUM_GPUS) \
 	D2L_GPU_SLOTS=$(GPU_SLOTS) \
 	D2L_CPU_SLOTS=$(CPU_SLOTS) \
+	D2L_NUM_GPU_PAIRS=$(NUM_GPU_PAIRS) \
+	D2L_MULTIGPU_PER_PAIR=$(MULTIGPU_PER_PAIR) \
+	D2L_JAX_MGPU_MEM_FRACTION=$(JAX_MGPU_MEM_FRACTION) \
 	$$(EXTRA_ENV_$(1)) \
 	.venv-$(1)/bin/python tools/run_one_notebook.py $(1) $$< \
 		2>&1 | tee -a $(LOGDIR)/run-$(1)-$(TS).log
@@ -609,12 +622,12 @@ run-notebooks-multigpu-%: _notebooks/%/.generated $$(EXECUTED_MULTI_GPU_$$*)
 # `make all` propagates the failure to its caller. Use the post-run summary
 # printed by tools/notebook_run_summary.py to see which notebooks failed.
 run-notebooks-%: _notebooks/%/.generated
-	@echo "=== Running $* notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@python3 tools/detect_resources.py --report || true
 	@python3 tools/notebook_run_plan.py --framework $* || true
 	@cpu_rc=0; gpu_rc=0; mgpu_rc=0; \
 	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) run-notebooks-cpu-$* & cpu=$$!; \
 	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) run-notebooks-gpu-$*; rc=$$?; \
-	  $(MAKE) --no-print-directory -k -j1 run-notebooks-multigpu-$*; mrc=$$?; \
+	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) run-notebooks-multigpu-$*; mrc=$$?; \
 	  exit $$((rc || mrc)) ) & gpu=$$!; \
 	wait $$gpu || gpu_rc=$$?; \
 	wait $$cpu || cpu_rc=$$?; \
@@ -633,12 +646,12 @@ run-notebooks-%: _notebooks/%/.generated
 # -k on every sub-make keeps the queues draining even after individual
 # notebook failures.
 run-all-notebooks: notebooks
-	@echo "=== Running all notebooks: GPU_SLOTS=$(GPU_SLOTS) CPU_SLOTS=$(CPU_SLOTS) ==="
+	@python3 tools/detect_resources.py --report || true
 	@python3 tools/notebook_run_plan.py || true
 	@cpu_rc=0; gpu_rc=0; \
 	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
 	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS); rc=$$?; \
-	  $(MAKE) --no-print-directory -k -j1 $(RUN_NOTEBOOK_MULTIGPU_TARGETS); mrc=$$?; \
+	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) $(RUN_NOTEBOOK_MULTIGPU_TARGETS); mrc=$$?; \
 	  exit $$((rc || mrc)) ) & gpu=$$!; \
 	wait $$gpu || gpu_rc=$$?; \
 	wait $$cpu || cpu_rc=$$?; \

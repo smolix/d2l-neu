@@ -663,6 +663,49 @@ matplotlib. PyTorch/JAX/TF keep the deferred thunk (they tolerate cross-thread
 host transfers). If you add a framework whose plotting path moves a GPU read off
 the main thread, check it survives a long multi-notebook GPU run.
 
+### 6.8 Parallel HTML render (single-file concurrency pool)
+
+`quarto render` is single-threaded **and does not amortize**: every page pays the
+full per-invocation pandoc + crossref-DB scan, ~40-50 s each, *regardless of how
+the work is batched*. Measured on the 64-core box: 1 file 40 s; 10 files in one
+`quarto render a.qmd b.qmd …` 392 s (~39 s/file); 10 files via a
+`project: render:` subset 529 s. Batching N files into one invocation just
+renders them **sequentially** — it does not share the scan. So a cold full-book
+render is ~209 × ~40 s ≈ **140 min single-threaded** (the `user`-time of the
+parallel run confirms it: ~8300 s of CPU).
+
+The only lever is **concurrency across independent invocations**. Concurrent
+single-file renders of the same project are safe (disjoint output pages; shared
+`.quarto/` is read-mostly; `site_libs` writes are idempotent), and each
+invocation still scans the whole project so cross-chapter `:numref:`/`:eqref:`
+crossrefs resolve. `tools/render_html_parallel.sh` therefore runs one
+`quarto render <file>` **per page** through an `xargs -P C` pool (C = cores−8,
+clamped [4,60]; ~56 here), heaviest-qmd-first (LPT). Wall ≈ ⌈pages/C⌉ × ~45 s ≈
+**~4-5 min** for 209 pages — a **~30×** speedup over single-threaded.
+
+Two concurrency flakes are handled so they never fail the build, both via a
+**sequential re-render** (single-file renders are 100 % reliable):
+
+- a page may trip a transient `Error running filter …/main.lua` (it renders fine
+  alone), or
+- a render may fail to read the project config and fall back to **standalone
+  mode**, writing the page next to its *source* instead of `_book/` (clean log,
+  but `_book/` is missing it).
+
+The script collects every page with a log error **or** a missing `_book/` output,
+re-renders each sequentially, then deletes any stray `.html` left in the source
+tree (no `.html` is ever tracked under a source dir). Only an error/missing that
+*survives the retry* fails the build.
+
+A subset render (which this effectively is) does **not** regenerate the
+project-level `search.json`, so the `make html` recipe rebuilds it from the
+rendered HTML with `tools/build_search_index.py` (one entry per page lead-in +
+one per H2 section, matching quarto's shape) — run **after**
+`fix_crossref_numbers.py` so the index carries the logical numbering. Recipe
+order: `render_html_parallel.sh` → `fix_crossref_numbers.py` →
+`build_search_index.py` → `add_cfasync.py`. Tune concurrency with `RENDER_JOBS`,
+per-file timeout with `RENDER_TIMEOUT`.
+
 ---
 
 ## 7. Git & LFS setup (one-time)

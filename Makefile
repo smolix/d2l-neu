@@ -356,9 +356,8 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \
 		python3 tools/build_slides_index.py; \
-		QUARTO="$(QUARTO)" bash tools/render_html_parallel.sh; \
+		$(CURDIR)/$(QUARTO) render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
-		.venv-build/bin/python tools/build_search_index.py _book; \
 		python3 tools/add_cfasync.py _book; \
 		if [ -d _slides ] && [ -f _slides/index.html ]; then \
 			echo "Integrating _slides/ → _book/slides/ ..."; \

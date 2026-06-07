@@ -71,8 +71,10 @@ authoring" section below.
   GPU/CPU/multi-GPU slot pools, and **sequences a notebook's four framework
   variants one at a time** (never concurrently) so they can't race on the shared
   `data/` tree. See `docs/build-system.md` §6.7. Slide rendering is CPU-only and
-  parallel-safe (`make -j4 slides`); HTML render is parallelized internally by
-  `make html` (§6.8) — don't wrap it in `-j`.
+  parallel-safe (`make -j4 slides`). `make html` is a single `quarto render`
+  (it amortizes the crossref scan to ~2.4 s/page, ~9 min for the book;
+  per-file/subset renders do NOT amortize and flake under concurrency — §6.8) —
+  don't wrap it in `-j`.
 - `make clean` keeps `data/`; use `make veryclean` to force re-download.
 - **Full build:** `make all` (lib → notebooks → run-all-notebooks → slides →
   html → pdfs), or `make clean && make all` for a pristine run (~2–2.5 h on the

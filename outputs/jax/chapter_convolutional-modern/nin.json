@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:50c92e8da63a21a1fe2fc3f51ccf3b9ed1e7a5bbe367bc0f79131da726f367ce",
+    "d2l_lib_fingerprint": "sha256:e14f7f27cfe1c26b61a8a455fd6ce164c3c22c351b611672a57c9c9ab7575a24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,31 +19,31 @@
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:693a29d5ad09672a6d8acc215986f52ca94319739cf2fda089403c9fd533b2b7",
+      "code_fingerprint": "sha256:307e2e4ed94f24b970905c9b675e03110f31096b694348571f55bcbb1d043c17",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:8520737754a106b556a419bf9922d24c30e72e3046936432953e9fa90f674a83",
+      "code_fingerprint": "sha256:4c699cce403ad6bd53f28d559c3ef38f21fc3d61d6af5765e5745f696046cc25",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nfunction output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nfunction output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nfunction output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nfunction output shape:\t (1, 1, 1, 10)\nfunction output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nfunction output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nfunction output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nfunction output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nfunction output shape:\t (1, 10)\nfunction output shape:\t (1, 10)\n"
         }
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:a46ac097dcb09b6000ff354b39f7e987b815b7cea00bdb1ac54c04a2c39faa78",
+      "code_fingerprint": "sha256:e11ef12327429f3c7ca208032549cb4af666b1d07838873bd6f3962239811e5e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 20964,
-          "sha256": "sha256:3f2debb34b35c35745546e8745313c0264e7c0333d2dfc45ae68853eecdd70cf"
+          "bytes": 20963,
+          "sha256": "sha256:7cc71f841cd81783dcc7110827c5bd89f87b0ad19db14b12e33704baafc81971"
         }
       ]
     }

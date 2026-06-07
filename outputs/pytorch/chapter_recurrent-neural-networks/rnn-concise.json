@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1cf8ed85d3a62acba5dca9110ed44ce5762a104c2c431a19f530e99ce1ba2821",
+    "d2l_lib_fingerprint": "sha256:cd608a1a26227b2f1c46e6df6ee7ddb912afc6488376abf3190af99caed5181d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasppbbbupbbbupbbbupbbb'"
+          "text": "'it hasafsfffffffffffffffff'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 24650,
-          "sha256": "sha256:e338eab0a0c41d22fd4d3ffdd140aff57ffd87df78daf1d76783485cfc2a73ae"
+          "bytes": 24025,
+          "sha256": "sha256:378724f60dac6cb3f3cbc1269098f87b5a3664b046302ec3074fdf6a558e3a84"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.4, 'time traveller the the the the the'\n"
+          "text": "perplexity 7.2, 'time traveller and the time travel'\n"
         }
       ]
     }

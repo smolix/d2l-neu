@@ -64,22 +64,22 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:f7740b9e4dcfd2dd3beb846e9b57ba00771bf3351fd606c2776d274ecadccfed"
+          "sha256": "sha256:fec66985992c5941f24b6d167b8814698e60c8af18086e54fd2dde5b2cb68f51"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:a55c1aaabf8504c653ee31cb41289bf550400c8504312aec935e2286f326f573",
+      "code_fingerprint": "sha256:729ab1b3935481000a9e5cbdbe31e93d5c728cd1c0ad4313dd968c2ad28c2348",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:0ecea88303c3f3479e3e668419dc9986ef4dc45c2dfbc6efaa333d73c70e68d2",
+      "code_fingerprint": "sha256:b631fcfd8a1f6a92c14074e014a00a269487ce8b6a3f9967c59e43699118fe50",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:013b6f7cb71913e86e3430889cbe0409f66aaf9af10bb89edbc0a0c41078f751",
+      "code_fingerprint": "sha256:aac46eb7bfa14fa2a0d04618dd01198322e2b6677818ace628860fe878fd6be7",
       "kind": "text",
       "outputs": []
     }

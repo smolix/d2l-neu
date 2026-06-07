@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:7315c5185d0e60bdef6d02a4992693d99bf7e6018fb43551451137a3e15c25e0"
+          "sha256": "sha256:fdaee2e7fb488acacc9f5f65e8d7a44fd19005721b40af6399ca5682ea4d5305"
         }
       ]
     },
@@ -104,37 +104,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.408, train acc 0.872, test acc 0.850\n406.2 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.420, train acc 0.868, test acc 0.855\n219.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25064,
-          "sha256": "sha256:4d6ed8e0dfb506f20439b302021b169cf343f74ccb3e8369e1dd488dc7544f92"
+          "bytes": 25063,
+          "sha256": "sha256:4e0f47695dfb60ea1a74dc9b87e80a35d27a967e41572b547d98743439ff2b9b"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:1738f88480448b2189b9b198dfb01f592a077172b65445fa8f141f6441052f9f",
+      "code_fingerprint": "sha256:41b5e508e6bb013eeeaab8dac8602a70f90f711cf380d58f7707f4a670beb851",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:3491e6e60fbeae289e470ca537ee2b9942672fc6e47d327a11e6d287dc363365",
+      "code_fingerprint": "sha256:e33c669f8fc19e88283c1319f9ce3f987a14b4191732c59675e2035bd0204891",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:cec4aecb8382f983a5c357bf35d2683ec0c9cbf21753b4735751343defb753f8",
+      "code_fingerprint": "sha256:e31e96debebda0ce2177750805af3ef34ebf93699f9bebd52f6d971a8038ef7e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 156761,
-          "sha256": "sha256:9fa4de959aee605fe5e6666b3c73e008dd377f94793591db14c624a60663eff9"
+          "bytes": 155877,
+          "sha256": "sha256:5b5a8f3de2ed4b77f25b80e50d9d228e3f239aacfb5dba2d7b3f63d0a1219861"
         }
       ]
     }

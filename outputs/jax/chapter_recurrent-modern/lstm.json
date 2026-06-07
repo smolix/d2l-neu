@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:384b34a181dd7cd31ac9ce78464c50e2d13250e91653c61d42c9dfb9a147daa3",
+    "d2l_lib_fingerprint": "sha256:7a8d52fe203a0fd2718fc7c2b87e018ec9244286a54dd11dd43eba8b053392d3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,36 +31,36 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 20051,
-          "sha256": "sha256:b6a894770a63102bbd266e1ee8932ea65ff78df9a45955ffffe842b913127ca3"
+          "bytes": 20052,
+          "sha256": "sha256:5ec0af9e7125c25bfc84a16d90d84bed23918da3342e2ccf9de956c396d0cb3a"
         }
       ]
     },
     "lstm-concise-implementation-1": {
-      "code_fingerprint": "sha256:061c100e0de70a3dce745cea6d29f3249b1e5197f3fc4b9501fe025f738205ba",
+      "code_fingerprint": "sha256:bc9b63ddc2ebde4263aea2cd2595676b62197efe8ab5f053171eb4636e1c490d",
       "kind": "text",
       "outputs": []
     },
     "lstm-concise-implementation-2": {
-      "code_fingerprint": "sha256:39ff3c67cf718172210413bd882e7ded3fc090b62055e49b9f70689cc7752d7f",
+      "code_fingerprint": "sha256:ea7d8fc40b7f2fdf8318b1db54938e2a3eadc076e0e8aeec64e08ad5baf03c92",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20437,
-          "sha256": "sha256:921fee5ae32f6cb14b696059a06ea8ae37dc1672f5bd2e209903cad29e8e2726"
+          "bytes": 20441,
+          "sha256": "sha256:763d23ebbafb8d6090a50d7dab992a2f44fb883a1e51784cf337773500e80adf"
         }
       ]
     },
     "lstm-concise-implementation-3": {
-      "code_fingerprint": "sha256:fd03e436220cc60b681cee8a2a9f6627bff098d81cd097e052a6578445a35997",
+      "code_fingerprint": "sha256:11c86036036d2996cada20ef1d520c8bfb645518bae90880bbe6f9377feea3e6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has in the traveller th'"
+          "text": "'it has a dimension the tim'"
         }
       ]
     }

@@ -39,12 +39,12 @@
       ]
     },
     "model-construction-the-sequential-module-1": {
-      "code_fingerprint": "sha256:cfeb0eeaad65e172d5573d3f8dc0b37643c950c82c7410f8afb7f8da628365d4",
+      "code_fingerprint": "sha256:3934c28c55e4ad53301ead224570c157868edfc010a23b9ba58aec4257ff80e0",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-sequential-module-2": {
-      "code_fingerprint": "sha256:09e584116a27a493d102dbc0f8e6270fdc2aec2ca6db050e8b4ccbcc65be868c",
+      "code_fingerprint": "sha256:34e99850ccbd4bd13809c4a2a77c3024fdfc77449ce393ac8095c5aae624d037",
       "kind": "text",
       "outputs": [
         {
@@ -54,27 +54,27 @@
       ]
     },
     "model-construction-executing-code-in-the-forward-propagation-method-1": {
-      "code_fingerprint": "sha256:2022be464d6cbeb51bac51ba114cdd6cffb6fb98571d335d237661f55c2b8631",
+      "code_fingerprint": "sha256:bff86f52a1564db6334d1adfffc2482cb0d2bf4ba9c0c06baebc3679b8941713",
       "kind": "text",
       "outputs": []
     },
     "model-construction-executing-code-in-the-forward-propagation-method-2": {
-      "code_fingerprint": "sha256:b7ac7853b1e6359eb63dfd7bdddb6c8ef828b0a6029a8ca96aad0b1a67bc316f",
+      "code_fingerprint": "sha256:3900b2f743b5138fe0d12b5a4ee64d7da29043699733e7a1f9a49d247f22aa4e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.11348616, dtype=float32)"
+          "text": "Array(0.21808884, dtype=float32)"
         }
       ]
     },
     "model-construction-executing-code-in-the-forward-propagation-method-3": {
-      "code_fingerprint": "sha256:f4300ce99d8ab8dd442da776740ce1a0aa92999aec0eab9fa6343af07af5a635",
+      "code_fingerprint": "sha256:17eb48a659e21c4aabdaf97bcee0257e9ce3599771205bbd0e8a1815b79d9f3e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(-0.00752359, dtype=float32)"
+          "text": "Array(-0.1969575, dtype=float32)"
         }
       ]
     }

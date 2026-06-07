@@ -74,7 +74,7 @@
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:c5dd206b7583b11a768daa9cc5d3ba09baa57830e07fa354cce51a13948b5a2e",
+      "code_fingerprint": "sha256:d7f89a2009402f99a6edc213e36e6d8ba7c23758525612655a2029dcd493ebb0",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:d3c187e71cc1c17832175e8fd96fbdb1183fba73930ae78146d891767499de93",
+      "code_fingerprint": "sha256:061eb99a596f7d220d240bc85d9d6e70d64e2a3ff3b19b12a8f081007400ed95",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:6c6d17b23d79ba8552b403a6e672775e5f8f2ba7757e6d9b5e90224ad1419e04",
+      "code_fingerprint": "sha256:5af7a6e031ca11547b95814d10056e304f96abbdc8403be81a097a4606c179c1",
       "kind": "text",
       "outputs": [
         {
@@ -104,17 +104,17 @@
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:cb7998a3816d9cbe9d745db9a07f8c5a8d7c19b9f9fd57537b0a9d10cc880623",
+      "code_fingerprint": "sha256:faec50c16be64ce084dd373dbc2dc3683b2e63e571329d74a39d60369c382e26",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:8d3e1d59ec5b64acc9e6881fdff60138049e266de572e292a4fb765b3e3fcfb5",
+      "code_fingerprint": "sha256:866d94c5ec321f549b6d56d6c0754d09d935517c6cdcd59985ae3f1564085deb",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:023fdd03894a6b61ed346de07dcdf90049d1a65a5288265f568932f29b7ab185",
+      "code_fingerprint": "sha256:14fecc3216d06a882296cccf195fc75a58d9b10acc246089616d03139129ac83",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:051e8ac6cff9a28df586719cb190336dc1da31ab7f18e1396571e917171f1725",
+      "code_fingerprint": "sha256:dc452d41bce916879753036eae9d3ca6b4a061b979ffd84dfd3b31e94a5f1052",
       "kind": "text",
       "outputs": [
         {

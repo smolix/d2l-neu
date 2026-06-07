@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:73d6822868fa9babb07f8275b9204b7b0fc2afd062de9de096ef57f9233dc5a3",
+    "d2l_lib_fingerprint": "sha256:477923828982bf6fee4f4fe9f5723c02c56c71e112b28457ee75ee9833f05b65",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20307,
-          "sha256": "sha256:22efcffb47200ffa9a9994226252c6b6759e437de7c45eeb28d536f108b8c37f"
+          "bytes": 20298,
+          "sha256": "sha256:e269316b4075e40b13c01160eccd71af69fc60e7a06b0bb4c09ef2aaacedb0db"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20311,
-          "sha256": "sha256:68e8aefe61ecc1b7919813d6f5bac8e30a880500570a4574e6e0d9e31e1ae505"
+          "bytes": 20315,
+          "sha256": "sha256:bdf4feda35423950b2e07de2beb00c030e61583721c9acbde374c4430b39e413"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has said the time trave'"
+          "text": "'it has i the time the the '"
         }
       ]
     }

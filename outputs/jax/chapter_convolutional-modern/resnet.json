@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -49,17 +49,17 @@
       "outputs": []
     },
     "resnet-resnet-model-3": {
-      "code_fingerprint": "sha256:8ba30e26e61d909fb72cfb317a09b0097dfe4bad3dda2b6e8e70c69ed189b06e",
+      "code_fingerprint": "sha256:082d55f29f6cf2b07a9570aeda7b03c55413890cdc72e4ab8aff8139435565d4",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-4": {
-      "code_fingerprint": "sha256:a3e8063a9c71a329008cc5e9e48b53d0c58c4bbb43f6368a9d796a172b6b77d2",
+      "code_fingerprint": "sha256:17738a3e2600168531ce23025128a2e0b5cf960beecf1016f7b7ddb47cff7999",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-5": {
-      "code_fingerprint": "sha256:fe88ae67fe01f2613547dacc77cd43bd9e46749ddafab0610b08f8cc1ce1e8e6",
+      "code_fingerprint": "sha256:64f49ed56f4564c9a7338bba490f9dbaef2016c69c85c659d2c60932888c6133",
       "kind": "text",
       "outputs": [
         {
@@ -70,25 +70,25 @@
       ]
     },
     "resnet-training": {
-      "code_fingerprint": "sha256:59db1dc6e683f38b608dd4fefc59b7929f8040a737748f82c5a725e1e5fb515b",
+      "code_fingerprint": "sha256:97f7277eb8378d2a5b40a7904e9780c7df03e4f2531a9d28f68f9908fb7d7155",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21039,
-          "sha256": "sha256:0ca781ce2446d5264ebe62fd1d1eba41026d5bcbf2de2fe94ae95d46896fd072"
+          "bytes": 21040,
+          "sha256": "sha256:eaa3d9bfe2e3b737457d56ee33027410b15474908dda3e9f52f6cc7622f4e0f8"
         }
       ]
     },
     "resnet-resnext-1": {
-      "code_fingerprint": "sha256:dbf2eb1ec2db636a50d2c6dcf1f2559db2ffab625e47ec6afb795cd77e3ecac7",
+      "code_fingerprint": "sha256:28a346ee8fb0b4cb5be42e457c899007ed5ec81eae8860090e3b8db04ae38fe7",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnext-2": {
-      "code_fingerprint": "sha256:08a548d1a89475a448ee03f2d6b6c4a7b038167761d3b0c01e8a6852a6841131",
+      "code_fingerprint": "sha256:687efb8de9c0a54d011f045285fda7a1d52c66f4a739d7a71373b673bb815fb5",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:73d6822868fa9babb07f8275b9204b7b0fc2afd062de9de096ef57f9233dc5a3",
+    "d2l_lib_fingerprint": "sha256:477923828982bf6fee4f4fe9f5723c02c56c71e112b28457ee75ee9833f05b65",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19928,
-          "sha256": "sha256:53c6032de7ca0e2d9f33a60339d2d73989b581db5729f3e11d5b54d2c47d1953"
+          "bytes": 19924,
+          "sha256": "sha256:7637746752118c73a8f7f117be808605e4249ba4f766f9af51d12e25fe2f7e6e"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20303,
-          "sha256": "sha256:5c3e2464eb7d0b451e418ad40a76ad798efd2fa480de2a04696ae4589655473e"
+          "bytes": 20308,
+          "sha256": "sha256:748860aab7223c72ca22756179ac6f237d736096811a419893e3960f0d22f03a"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a mone and the time'"
+          "text": "'it has in the there there '"
         }
       ]
     }

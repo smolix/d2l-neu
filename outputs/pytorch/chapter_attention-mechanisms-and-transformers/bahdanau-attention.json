@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1e172791c36036ae492fe1e02c2ffcc046fe0fedaab54ea5cd9e4791dce3fec1",
+    "d2l_lib_fingerprint": "sha256:8df2f72c2fb181ac091525cdf8bb5d2c3ffe37b556529d8f918f8cbeb899a51c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 20413,
-          "sha256": "sha256:290721c1292728ca7b749e9664a5a35204c5f0e16b5c81f9278a4463b0cae64d"
+          "bytes": 20408,
+          "sha256": "sha256:d2dc5453af5b90dffd9c35d4b4fabe83182525d3261f48754fd60f3a015600d6"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19308,
-          "sha256": "sha256:c74023d6e66b39d92f686deadc36f2cda2227944d9a996dc8fc55946fb3e8004"
+          "bytes": 20076,
+          "sha256": "sha256:4e6cb7a67deca68a7eb57abf37b879beb217463bb37d9db481ac66eae5bae5fb"
         }
       ]
     }

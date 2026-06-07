@@ -617,6 +617,52 @@ labels exist, but Quarto fails to register the crossref (math-heavy captions are
 the suspect). This warns but does **not** stop the PDF build, and it is present in
 the HTML too.
 
+### 6.7 Resource-aware scheduling (GPU / CPU / RAM autodetect)
+
+`tools/detect_resources.py` determines host resources at the start of every
+notebook build and derives the parallelism plan, taking the **min across all
+constraints** (VRAM, system RAM, cores, and — for MXNet — the open-file/process
+ulimits). It prints the plan (`--report`) at the top of `run-all-notebooks` /
+`run-notebooks-<fw>`, and the Makefile reads individual knobs via `--get KEY`
+(overridable on the command line — the values are `?=` defaults). On the 4×24 GiB
+/ 64-core box: `GPU_SLOTS=12  CPU_SLOTS=8  MXNET_GPU_SLOTS=8  MULTIGPU_SLOTS=6`.
+
+- **Per-job budgets** (env-overridable): `GPU_MIB_PER_LIGHT=7680` (7.5 GiB),
+  `CPU_PER_LIGHT=8` (cores/CPU-notebook), `RAM_MIB_PER_LIGHT=4096`. So a 16 GiB
+  GPU packs 2 jobs/card, an 8-core box runs 1 CPU notebook, etc. — the same
+  Makefile scales from a laptop to the server with no edits.
+- **CPU affinity:** each CPU-only notebook is pinned to a dedicated core set
+  (`cpu_affinity`, `floor(ncores/8)` slots → 8 cores each on this box) so they
+  don't oversubscribe.
+- **Multi-GPU packing:** the d2l multi-GPU notebooks use exactly **2 GPUs at
+  ≤7.5 GiB each**, so instead of `acquire_all_gpus` + a `-j1` queue they are
+  packed onto disjoint GPU **pairs**: `pairs = num_gpus//2`,
+  `per_pair = floor(min_VRAM/7.5 GiB)`, `MULTIGPU_SLOTS = pairs × per_pair`
+  (4×24 GiB ⇒ 6 ; 2×16 GiB ⇒ 2). `run_one_notebook.acquire_gpu_pair()` claims a
+  packing slot on a pair (spread-first, then pack) and pins `CUDA_VISIBLE_DEVICES`
+  to that pair. **JAX preallocates**, so its `XLA_PYTHON_CLIENT_MEM_FRACTION` is
+  auto-set to `~1/per_pair` (0.30 at per_pair=3) for the packed multigpu run;
+  PyTorch/TF/MXNet allocate on demand. Verified: 6 multi-GPU notebooks run
+  concurrently across all four frameworks, 0 failures.
+- **MXNet GPU cap** is now ulimit-derived (`nofile//FD_PER_MXNET_JOB`,
+  `nproc//PROC_PER_MXNET_JOB`) rather than the old hardcoded `2`; the board fix
+  below + a verified 3/GPU run make higher concurrency safe.
+
+Net effect: a full `make clean` + re-execute of all 524 notebooks dropped from
+~180 min to **~96 min** (run-all), ~136 min total including the artifact rebuild.
+
+**Gotcha — async ProgressBoard + MXNet (cross-thread CUDA).** The async board's
+drawing thread must **not** issue framework GPU ops. MXNet's engine + the custom
+CUDA-13 wheel corrupts the CUDA context when `NDArray.asnumpy()` is called from a
+foreign thread (manifests as `Xid 154` / `uvm global fatal error` → `CUDA error
+999`, **node-reboot required**, and the engine also stops reclaiming memory so a
+notebook balloons to fill the card). The MXNet tab of `Module.plot`
+(`oo-design.md`) therefore resolves the device→host metric transfer on the
+**main** thread and enqueues a host scalar; the board thread does only
+matplotlib. PyTorch/JAX/TF keep the deferred thunk (they tolerate cross-thread
+host transfers). If you add a framework whose plotting path moves a GPU read off
+the main thread, check it survives a long multi-notebook GPU run.
+
 ---
 
 ## 7. Git & LFS setup (one-time)

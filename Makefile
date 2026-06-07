@@ -645,13 +645,25 @@ run-notebooks-%: _notebooks/%/.generated
 # invalidates an already-complete `.generated` stamp and re-runs gen_notebooks.
 # -k on every sub-make keeps the queues draining even after individual
 # notebook failures.
+#
+# Each queue is fed a single INTERLEAVED flat list of every framework's stamps
+# (sorted by the path AFTER the framework, so a notebook's 4 framework variants
+# are adjacent) rather than 4 grouped per-framework phony goals. GNU make drains
+# one goal's prerequisites before the next, so the grouped form ran the
+# frameworks ~sequentially: when a framework's own cap (e.g. JAX_GPU_SLOTS=8) is
+# below GPU_SLOTS the leftover slots sat idle, and each framework left a slow-
+# straggler tail. Interleaving keeps the GPU pool full with a framework mix
+# throughout — one combined tail instead of four.
 run-all-notebooks: notebooks
 	@python3 tools/detect_resources.py --report || true
 	@python3 tools/notebook_run_plan.py || true
 	@cpu_rc=0; gpu_rc=0; \
-	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $(RUN_NOTEBOOK_CPU_TARGETS) & cpu=$$!; \
-	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $(RUN_NOTEBOOK_GPU_TARGETS); rc=$$?; \
-	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) $(RUN_NOTEBOOK_MULTIGPU_TARGETS); mrc=$$?; \
+	cpu_stamps=$$(printf '%s\n' $(EXECUTED_CPU_pytorch) $(EXECUTED_CPU_tensorflow) $(EXECUTED_CPU_jax) $(EXECUTED_CPU_mxnet) | sort -t/ -k3); \
+	gpu_stamps=$$(printf '%s\n' $(EXECUTED_GPU_pytorch) $(EXECUTED_GPU_tensorflow) $(EXECUTED_GPU_jax) $(EXECUTED_GPU_mxnet) | sort -t/ -k3); \
+	mgpu_stamps=$$(printf '%s\n' $(EXECUTED_MULTI_GPU_pytorch) $(EXECUTED_MULTI_GPU_tensorflow) $(EXECUTED_MULTI_GPU_jax) $(EXECUTED_MULTI_GPU_mxnet) | sort -t/ -k3); \
+	$(MAKE) --no-print-directory -k -j$(CPU_SLOTS) $$cpu_stamps & cpu=$$!; \
+	( $(MAKE) --no-print-directory -k -j$(GPU_SLOTS) $$gpu_stamps; rc=$$?; \
+	  $(MAKE) --no-print-directory -k -j$(MULTIGPU_SLOTS) $$mgpu_stamps; mrc=$$?; \
 	  exit $$((rc || mrc)) ) & gpu=$$!; \
 	wait $$gpu || gpu_rc=$$?; \
 	wait $$cpu || cpu_rc=$$?; \

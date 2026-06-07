@@ -166,7 +166,7 @@ X.shape, Y.shape
 
 ### Estimating the Model
 
-Training is two counts, done in NumPy. The prior $\hat p(y)$ is the class frequency; the likelihood matrix $P_{xy}$ holds, for each class, the Laplace-smoothed fraction of its images in which each pixel is inked. From here on the code is framework-agnostic --- the model is pure counting --- and prediction works in log space.
+Training is two counts, done in NumPy. The prior $\hat p(y)$ is the class frequency; the likelihood matrix $P_{xy}$ holds, for each class, the Laplace-smoothed fraction of its images in which each pixel is inked. From here on the code is framework-agnostic --- the model is pure counting --- and prediction works in log space. The per-class `for y in range(10)` loop below is written for clarity, one class at a time; an idiomatic vectorized form would replace it with `np.bincount(Y)` for the class counts and a one-hot matrix multiply `onehot(Y).T @ X` for the per-class pixel sums.
 
 ```{.python .input #naive-bayes-train}
 n_y = np.array([(Y == y).sum() for y in range(10)])

@@ -249,8 +249,7 @@ def create_net(self):
     for i, s in enumerate(self.arch):
         net.layers.extend([self.stage(*s)])
     net.layers.extend([nn.Sequential([
-        lambda x: nn.avg_pool(x, window_shape=x.shape[1:3],
-                            strides=x.shape[1:3], padding='valid'),
+        lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
         lambda x: x.reshape((x.shape[0], -1)),
         nn.Dense(self.num_classes)])])
     return net

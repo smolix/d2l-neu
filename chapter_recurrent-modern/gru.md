@@ -431,6 +431,8 @@ class GRU(d2l.RNN):
     def __call__(self, inputs, H=None, training=False):
         if H is None:
             batch_size = inputs.shape[1]
+            # The carry is zero-initialized, so the PRNGKey (required by the
+            # API) is unused here; a fixed key is fine.
             H = nn.GRUCell(features=self.num_hiddens).initialize_carry(
                 jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
 

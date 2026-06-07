@@ -416,8 +416,8 @@ class SNLIBERTDataset(gluon.data.Dataset):
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
-        pool = multiprocessing.Pool(4)  # Use 4 worker processes
-        out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
+        with multiprocessing.Pool(4) as pool:  # Use 4 worker processes
+            out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
         all_token_ids = [
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]
@@ -470,8 +470,8 @@ class SNLIBERTDataset(torch.utils.data.Dataset):
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
-        pool = multiprocessing.Pool(4)  # Use 4 worker processes
-        out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
+        with multiprocessing.Pool(4) as pool:  # Use 4 worker processes
+            out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
         all_token_ids = [
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]
@@ -580,8 +580,8 @@ class SNLIBERTDataset:
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
-        pool = multiprocessing.Pool(4)  # Use 4 worker processes
-        out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
+        with multiprocessing.Pool(4) as pool:  # Use 4 worker processes
+            out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
         all_token_ids = [
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]

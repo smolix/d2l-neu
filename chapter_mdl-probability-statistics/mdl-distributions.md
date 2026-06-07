@@ -108,9 +108,9 @@ coin) and vanishes at $p\in\{0,1\}$ (a certain outcome carries no randomness).
 
 ```{.python .input #distributions-bernoulli}
 #@tab mxnet
-np.random.seed(0)
+rng = np.random.default_rng(0)
 p = 0.3
-sample = 1 * (np.random.rand(3, 3) < p)        # 1 with prob p, else 0
+sample = 1 * (rng.random((3, 3)) < p)          # 1 with prob p, else 0
 print('pmf  P(0), P(1) =', (1 - p, p))
 print('sample mean =', float(sample.mean()), ' (≈ p)')
 sample
@@ -583,9 +583,9 @@ $F(x)=1-e^{-\lambda x}$ gives exactly this map.
 
 ```{.python .input #distributions-exponential}
 #@tab mxnet
-np.random.seed(0)
+rng = np.random.default_rng(0)
 lam = 0.5
-U = np.random.rand(100000)
+U = rng.random(100000)
 sample = -np.log(U) / lam                        # inverse-transform sampler
 print('mean 1/lambda =', 1 / lam, '  sample mean =', float(sample.mean().round(3)))
 print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var().round(3)))
@@ -749,12 +749,12 @@ tail by the fraction of mass beyond $3$ standard deviations.
 
 ```{.python .input #distributions-laplace}
 #@tab mxnet
-np.random.seed(0)
+rng = np.random.default_rng(0)
 mu, b = 0.0, 1.0
 sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
-U = (np.random.rand(200000) - 0.5) * (1 - 1e-7)   # open interval avoids log(0)
+U = (rng.random(200000) - 0.5) * (1 - 1e-7)       # open interval avoids log(0)
 lap = mu - b * np.sign(U) * np.log(1 - 2 * np.abs(U))  # inverse transform
-gau = np.random.normal(mu, sigma, 200000)
+gau = rng.normal(mu, sigma, 200000)
 print('Laplace var (2b^2):', float(lap.var().round(3)), ' Gaussian var:', float(gau.var().round(3)))
 print('P(|x| > 3sd): Laplace', float((np.abs(lap) > 3 * sigma).mean()),
       ' Gaussian', float((np.abs(gau) > 3 * sigma).mean()))

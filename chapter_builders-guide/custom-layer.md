@@ -201,7 +201,7 @@ class MyDense(nn.Block):
 class MyDense(nn.Module):
     def __init__(self, in_units, units):
         super().__init__()
-        # Scaled init (Xavier-ish) keeps activations bounded on size-64 inputs
+        # LeCun/Kaiming fan-in scaling keeps activations bounded on size-64 inputs
         self.weight = nn.Parameter(torch.randn(in_units, units) / in_units**0.5)
         self.bias = nn.Parameter(torch.zeros(units,))
         

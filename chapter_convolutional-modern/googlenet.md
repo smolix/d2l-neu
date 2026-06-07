@@ -461,10 +461,7 @@ def b5(self):
     return nn.Sequential([Inception(256, (160, 320), (32, 128), 128),
                           Inception(384, (192, 384), (48, 128), 128),
                           # Flax does not provide a GlobalAvgPool2D layer
-                          lambda x: nn.avg_pool(x,
-                                                window_shape=x.shape[1:3],
-                                                strides=x.shape[1:3],
-                                                padding='valid'),
+                          lambda x: x.mean(axis=(1, 2)),  # global avg over H, W (NHWC)
                           lambda x: x.reshape((x.shape[0], -1))])
 ```
 

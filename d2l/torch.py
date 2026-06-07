@@ -838,6 +838,7 @@ class RNNLMScratch(d2l.Classifier):
         rnn_outputs, _ = self.rnn(embs, state)
         return self.output_layer(rnn_outputs)
 
+    @torch.no_grad()  # inference only: no autograd graph needed
     def predict(self, prefix, num_preds, vocab, device=None):
         state, outputs = None, [vocab[prefix[0]]]
         for i in range(len(prefix) + num_preds - 1):
@@ -1154,8 +1155,8 @@ class AdditiveAttention(nn.Module):
     """Additive attention.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, num_hiddens, dropout, **kwargs):
-        super(AdditiveAttention, self).__init__(**kwargs)
+    def __init__(self, num_hiddens, dropout):
+        super().__init__()
         self.W_k = nn.LazyLinear(num_hiddens, bias=False)
         self.W_q = nn.LazyLinear(num_hiddens, bias=False)
         self.w_v = nn.LazyLinear(1, bias=False)

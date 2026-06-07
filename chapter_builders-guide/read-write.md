@@ -280,7 +280,7 @@ torch.save(net.state_dict(), 'mlp.params')
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-2}
 %%tab tensorflow
-net.save_weights('mlp.weights.h5')
+net.save_weights('mlp.weights.h5')  # Legacy H5 format; prefer .keras / save_weights('.keras') in Keras v3
 ```
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-2}
@@ -311,12 +311,13 @@ clone.eval()
 %%tab tensorflow
 clone = MLP()
 clone(X)
-clone.load_weights('mlp.weights.h5')
+clone.load_weights('mlp.weights.h5')  # Legacy H5 format; prefer .keras / save_weights('.keras') in Keras v3
 ```
 
 ```{.python .input #read-write-loading-and-saving-model-parameters-3}
 %%tab jax
 clone = MLP()
+# Note: flax.training.checkpoints is deprecated; prefer orbax.checkpoint (Orbax) for new code.
 cloned_params = flax.core.freeze(checkpoints.restore_checkpoint(
     os.path.abspath('ckpt_dir'), target=params))
 ```

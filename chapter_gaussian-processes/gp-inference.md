@@ -254,9 +254,9 @@ In these cases, the _GPyTorch_ library will make our lives a lot easier. We'll b
 
 ```{.python .input #gp-inference-making-life-easy-with-gpytorch-1}
 # First let's convert our data into tensors for use with PyTorch
-train_x = torch.tensor(train_x)
-train_y = torch.tensor(train_y)
-test_y = torch.tensor(test_y)
+train_x = torch.from_numpy(np.asarray(train_x)).float()
+train_y = torch.from_numpy(np.asarray(train_y)).float()
+test_y = torch.from_numpy(np.asarray(test_y)).float()
 
 # We are using exact GP inference with a zero mean and RBF kernel
 class ExactGPModel(gpytorch.models.ExactGP):
@@ -317,7 +317,7 @@ Here we actually run the optimization procedure, outputting the values of the lo
 
 ```{.python .input #gp-inference-making-life-easy-with-gpytorch-4}
 # Get into evaluation (predictive posterior) mode
-test_x = torch.tensor(test_x)
+test_x = torch.from_numpy(np.asarray(test_x)).float()
 model.eval()
 likelihood.eval()
 observed_pred = likelihood(model(test_x)) 

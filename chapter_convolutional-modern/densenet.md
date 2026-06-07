@@ -488,8 +488,7 @@ def create_net(self):
     net.layers.extend([
         nn.BatchNorm(not self.training),
         nn.relu,
-        lambda x: nn.avg_pool(x, window_shape=x.shape[1:3],
-                              strides=x.shape[1:3], padding='valid'),
+        lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
         lambda x: x.reshape((x.shape[0], -1)),
         nn.Dense(self.num_classes)
     ])

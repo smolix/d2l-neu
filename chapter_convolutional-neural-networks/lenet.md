@@ -66,7 +66,7 @@ from d2l import jax as d2l
 from flax import linen as nn
 import jax
 from jax import numpy as jnp
-from types import FunctionType
+from typing import Callable
 ```
 
 ## LeNet
@@ -192,7 +192,7 @@ class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
     lr: float = 0.1
     num_classes: int = 10
-    kernel_init: FunctionType = nn.initializers.xavier_uniform
+    kernel_init: Callable = nn.initializers.xavier_uniform
 
     def setup(self):
         self.net = nn.Sequential([
@@ -280,7 +280,8 @@ model.layer_summary((1, 28, 28, 1))
 ```{.python .input #lenet-3}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
-def layer_summary(self, X_shape, key=d2l.get_key()):
+def layer_summary(self, X_shape, key=None):
+    key = d2l.get_key() if key is None else key  # resolve at call time
     X = jnp.zeros(X_shape)
     params = self.init(key, X)
     bound_model = self.clone().bind(params, mutable=['batch_stats'])

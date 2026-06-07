@@ -892,8 +892,10 @@ print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 
 ```{.python .input #eigendecomposition-power-iteration}
 #@tab jax
-A = jax.random.normal(jax.random.PRNGKey(42), (5, 5), dtype=jnp.float64)
-v = jax.random.normal(jax.random.PRNGKey(1), (5, 1), dtype=jnp.float64)
+key = jax.random.PRNGKey(42)
+_, key_v = jax.random.split(key)                  # split off a distinct key for v
+A = jax.random.normal(key, (5, 5), dtype=jnp.float64)
+v = jax.random.normal(key_v, (5, 1), dtype=jnp.float64)
 for _ in range(200):
     Av = A @ v
     ratio = float(jnp.linalg.norm(Av) / jnp.linalg.norm(v))

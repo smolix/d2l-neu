@@ -575,7 +575,7 @@ class Classifier(d2l.Module):
             print(layer.__class__.__name__, 'output shape:\t', X.shape)
 
 def cross_entropy(y_hat, y):
-    p = tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
+    p = tf.gather(y_hat, y, batch_dims=1)
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
     return -tf.reduce_mean(tf.math.log(tf.maximum(p, 1e-12)))
 

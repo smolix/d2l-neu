@@ -411,6 +411,11 @@ we run one forward pass
 to let Keras create the layer weights,
 since `tf.function` needs all variables
 to exist at trace time.
+This graph-compilation step is specific to the TensorFlow tab
+(PyTorch and MXNet run this from-scratch loop eagerly;
+JAX gets the same effect from `jax.jit` in later chapters).
+At the tiny scale of this example the wall-clock difference is modest —
+the pattern earns its keep once models and batches grow.
 :end_tab:
 
 :begin_tab:`jax`

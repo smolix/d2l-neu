@@ -263,7 +263,20 @@ class Scheduler:
         if self.args.dry_run:
             time.sleep(0.05)
         else:
-            cmd = ["make", "--no-print-directory", str(it.stamp.relative_to(ROOT))]
+            # CRITICAL: each notebook is a SEPARATE `make` process, so without
+            # this they would race to rebuild the SHARED d2l library / preprocess
+            # / per-framework notebook set — concurrent writers corrupt d2l/*.py
+            # ("partially initialized module … circular import") for notebooks
+            # importing it at that instant. Those phase stamps are already built
+            # once upfront (make all: lib → notebooks → run-all; or the
+            # `: notebooks` prereq). `--old-file` (`-o`) tells the inner make to
+            # treat them as up-to-date and never rebuild them or anything on
+            # their account — only the .executed recipe runs.
+            cmd = ["make", "--no-print-directory",
+                   "-o", ".preprocess.stamp", "-o", "d2l/.built",
+                   "-o", f"d2l/{it.fw}.py",
+                   "-o", f"_notebooks/{it.fw}/.generated",
+                   str(it.stamp.relative_to(ROOT))]
             try:
                 cp = subprocess.run(cmd, cwd=str(ROOT), env=self._make_env(asg))
                 rc = cp.returncode
@@ -282,6 +295,29 @@ class Scheduler:
         tag = ("GPU " + asg["cuda"]) if asg["cuda"] else "CPU"
         print(f"{it.label}: {'OK' if rc == 0 else 'FAIL'} ({elapsed:.0f}s) "
               f"[{tag}] ({done}/{self.total} done)", flush=True)
+
+    def _warm_pyc(self, frameworks):
+        """Pre-compile d2l/*.pyc serially BEFORE dispatching any notebook.
+
+        The first burst of concurrent notebook processes would otherwise all
+        first-import d2l at once and race to write d2l/__pycache__/*.pyc; a
+        torn .pyc surfaces as "partially initialized module 'd2l.<fw>' …
+        circular import" and fails the notebook. compileall writes the byte
+        cache atomically here, with no concurrency, so every later import finds
+        a valid .pyc and skips compilation. All four venvs are the same CPython,
+        so one compile warms the shared cache (the `-o d2l/.built` dispatch guard
+        keeps it valid by preventing any mid-run lib rebuild)."""
+        py = next((ROOT / f".venv-{fw}/bin/python" for fw in frameworks
+                   if (ROOT / f".venv-{fw}/bin/python").exists()), None)
+        if py is None:
+            return
+        try:
+            subprocess.run([str(py), "-m", "compileall", "-q", "-f", "d2l"],
+                           cwd=str(ROOT), timeout=180,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("scheduler: pre-compiled d2l bytecode (warm import cache)", flush=True)
+        except Exception as e:
+            print(f"scheduler: warm-pyc skipped ({e})", flush=True)
 
     def _track(self):
         """Record peak resource usage (called under lock) for the dry-run check."""
@@ -310,6 +346,8 @@ class Scheduler:
         # invariant trackers (dry-run self-check): peak usage must stay within pools
         self.peak = {"gpu_per": [0] * self.num_gpus, "cpu": 0, "pair": [0] * self.pairs,
                      "fw": {fw: 0 for fw in FRAMEWORKS}, "mgpu_during_light": 0}
+        if not self.args.dry_run:
+            self._warm_pyc({it.fw for it in items})
         with self.lock:
             while pending or self.inflight:
                 progressed = False

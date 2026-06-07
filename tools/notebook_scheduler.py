@@ -71,11 +71,12 @@ def _detect(key):
 
 
 class Item:
-    __slots__ = ("fw", "rel", "nb", "stamp", "mode", "heavy_n")
+    __slots__ = ("fw", "rel", "nb", "stamp", "mode", "heavy_n", "order")
 
     def __init__(self, fw, rel, nb, stamp, mode, heavy_n):
         self.fw, self.rel, self.nb, self.stamp = fw, rel, nb, stamp
         self.mode, self.heavy_n = mode, heavy_n  # mode: 'cpu'|'gpu'|'multigpu'
+        self.order = 0  # stable tiebreak, assigned in build_worklist
 
     @property
     def label(self):
@@ -130,6 +131,11 @@ def build_worklist(frameworks, force_all=False):
                 mode = "cpu"
             heavy_n = HEAVY_GPU_NOTEBOOKS.get((fw, rel), 1)
             items.append(Item(fw, rel, nb, stamp, mode, heavy_n))
+    # Stable order = sorted by relpath then framework, so the balance tiebreak
+    # walks notebooks in a consistent, framework-interleaved order.
+    items.sort(key=lambda it: (it.rel, it.fw))
+    for i, it in enumerate(items):
+        it.order = i
     return items
 
 
@@ -162,6 +168,7 @@ class Scheduler:
         self.fw_gpu_running = {fw: 0 for fw in FRAMEWORKS}
 
         self.lock = threading.Condition()
+        self.fw_started = {fw: 0 for fw in FRAMEWORKS}  # for framework-fair dispatch
         self.running_rel = set()          # relpaths with a framework in flight
         self.light_gpu_pending = 0        # incl. heavy single-GPU
         self.light_gpu_inflight = 0
@@ -306,20 +313,33 @@ class Scheduler:
         with self.lock:
             while pending or self.inflight:
                 progressed = False
-                for it in list(pending):
-                    asg = self._reserve(it)
-                    if asg is None:
-                        continue
-                    pending.remove(it)
-                    self.running_rel.add(it.rel)
-                    if it.mode == "gpu":
-                        self.light_gpu_pending -= 1
-                        self.light_gpu_inflight += 1
-                    self.inflight += 1
-                    self._track()
-                    threading.Thread(target=self._worker, args=(it, asg),
-                                     daemon=True).start()
-                    progressed = True
+                # Fill every free slot this round, but FRAMEWORK-FAIRLY: always try
+                # the least-progressed framework first (then build order), so the
+                # four frameworks advance together instead of one racing ahead and
+                # leaving a single-framework tail. Re-sort after each placement
+                # since fw_started just changed.
+                while True:
+                    placed = False
+                    for it in sorted(pending, key=lambda x: (self.fw_started[x.fw], x.order)):
+                        if it.rel in self.running_rel:
+                            continue
+                        asg = self._reserve(it)
+                        if asg is None:
+                            continue
+                        pending.remove(it)
+                        self.running_rel.add(it.rel)
+                        self.fw_started[it.fw] += 1
+                        if it.mode == "gpu":
+                            self.light_gpu_pending -= 1
+                            self.light_gpu_inflight += 1
+                        self.inflight += 1
+                        self._track()
+                        threading.Thread(target=self._worker, args=(it, asg),
+                                         daemon=True).start()
+                        placed = progressed = True
+                        break
+                    if not placed:
+                        break
                 if not progressed:
                     self.lock.wait()
         failed = [it for it, rc, _ in self.results if rc != 0]

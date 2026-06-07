@@ -659,6 +659,27 @@ instead provided by `serialize_dataset_prep` on the shared-dataset notebooks).
 The make `?=` resource knobs are passed through as env so the inner make doesn't
 re-run `detect_resources`/`nvidia-smi` on every dispatch (~0.5 s/no-op).
 
+Three more correctness/efficiency properties of the scheduler:
+
+- **Framework-fair dispatch.** When a slot frees, the scheduler dispatches the
+  **least-progressed framework first** (fewest started, then stable build order).
+  Without this, the per-relpath mutex + a framework-grouped scan starves one
+  backend (observed: pytorch 116 / tf 57 / mxnet 35 / jax 5) and leaves a
+  single-framework tail; fair dispatch keeps all four advancing together.
+- **No concurrent lib rebuild.** Because every notebook is a *separate* `make`
+  process, the dispatch passes `-o .preprocess.stamp -o d2l/.built -o
+  d2l/<fw>.py -o _notebooks/<fw>/.generated` (make `--old-file`) so an inner make
+  can NEVER rebuild the **shared** d2l library / preprocess / notebook set. Those
+  phase stamps are built once upfront (`make all`: lib → notebooks → run-all). If
+  they weren't guarded, concurrent inner makes would race to rewrite `d2l/*.py`
+  mid-run and corrupt it for any notebook importing it at that instant — one such
+  race even wiped the hand-maintained preamble (`DATA_URL`/`DATA_HUB`/`download`
+  vanished → `partially initialized module 'd2l.<fw>'`).
+- **Warm `.pyc` before dispatch.** The scheduler pre-compiles `d2l` bytecode once
+  (serially) so the first burst of concurrent imports finds a valid
+  `d2l/__pycache__/*.pyc` and doesn't race on writing it. All four venvs are the
+  same CPython, so one compile warms the shared cache.
+
 - **Per-job budgets** (env-overridable): `GPU_MIB_PER_LIGHT=7680` (7.5 GiB),
   `CPU_PER_LIGHT=8` (cores/CPU-notebook), `RAM_MIB_PER_LIGHT=4096`. So a 16 GiB
   GPU packs 2 jobs/card, an 8-core box runs 1 CPU notebook, etc. — the same

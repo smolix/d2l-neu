@@ -499,7 +499,6 @@ class BatchNorm(tf.keras.layers.Layer):
         delta = (1.0 - momentum) * variable + momentum * value
         return variable.assign(delta)
 
-    @tf.function
     def call(self, inputs, training=False):
         if training:
             axes = list(range(len(inputs.shape) - 1))

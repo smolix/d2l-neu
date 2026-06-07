@@ -123,8 +123,8 @@ import numpy as np
 def f(x, y):
     return torch.log(torch.exp(x) + torch.exp(y))
 def grad_f(x, y):
-    return torch.tensor([torch.exp(x) / (torch.exp(x) + torch.exp(y)),
-                     torch.exp(y) / (torch.exp(x) + torch.exp(y))])
+    return torch.stack([(torch.exp(x) / (torch.exp(x) + torch.exp(y)))[0],
+                        (torch.exp(y) / (torch.exp(x) + torch.exp(y)))[0]])
 
 epsilon = torch.tensor([0.01, -0.03])
 grad_approx = f(torch.tensor([0.]), torch.log(

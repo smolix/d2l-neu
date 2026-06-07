@@ -459,6 +459,10 @@ class MySequential(tf.keras.Model):
 ```{.python .input #model-construction-the-sequential-module-1}
 %%tab jax
 class MySequential(nn.Module):
+    # Flax registers submodules held in a dataclass field (including inside a
+    # list), so the children in `modules` are tracked and their parameters
+    # appear in the param tree. (Equivalently, assign them in `setup()` or
+    # create them inline under `@nn.compact`.)
     modules: List
 
     def __call__(self, X):
@@ -593,8 +597,9 @@ class FixedHiddenMLP(nn.Module):
     def __init__(self):
         super().__init__()
         # Random weight parameters that will not compute gradients and
-        # therefore keep constant during training
-        self.rand_weight = torch.rand((20, 20))
+        # therefore keep constant during training. Registered as a buffer so it
+        # is part of the module state and moves with .to(device).
+        self.register_buffer('rand_weight', torch.rand((20, 20)))
         self.linear = nn.LazyLinear(20)
 
     def forward(self, X):
@@ -646,9 +651,10 @@ class FixedHiddenMLP(tf.keras.Model):
 %%tab jax
 class FixedHiddenMLP(nn.Module):
     def setup(self):
-        # Random weight parameters that will not compute gradients and
-        # therefore keep constant during training
-        self.rand_weight = jax.random.uniform(d2l.get_key(), (20, 20))
+        # Random weight that will not compute gradients and therefore keeps
+        # constant during training. Seeded with a fixed key so the "constant"
+        # is reproducible across runs (it is not part of the param tree).
+        self.rand_weight = jax.random.uniform(jax.random.PRNGKey(0), (20, 20))
         self.dense = nn.Dense(20)
 
     def __call__(self, X):

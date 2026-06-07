@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:ece128e209927b3ef2ec9777fea765c4e12bb026ba8b3fcc351098b50340c803",
+    "d2l_lib_fingerprint": "sha256:665562006c702d8a364f4e8705cd61ecf26b3b04d3dde3306e06892e85dbee9c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,36 +31,36 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 25056,
-          "sha256": "sha256:3561c6ba9fc226861a0bc1237598c1a022da9a06ec2108abaa5972e8505d4035"
+          "bytes": 25182,
+          "sha256": "sha256:44a3ffc7740caab4ea5d65b8d026d72280405841d4804bea46860a5ffff67d24"
         }
       ]
     },
     "deep-rnn-concise-implementation-1": {
-      "code_fingerprint": "sha256:26e5ba6077153625b5c98f6e61885b810e092bd80d1b37937795a71fa0c29a7e",
+      "code_fingerprint": "sha256:c17aa4e1dbcc5147a198ad00e357672bc8d6d17efca2c6cc0c5195da6524f95a",
       "kind": "text",
       "outputs": []
     },
     "deep-rnn-concise-implementation-2": {
-      "code_fingerprint": "sha256:cd763e5da6df0d46f1bb92a5fa5f44c3e89dd8554e4aaaa6f00d19ff0d9260f7",
+      "code_fingerprint": "sha256:f141028ef46ce277b793e1ed8e43cd7e4957e1fc903978c99c698ba04af13630",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24684,
-          "sha256": "sha256:e89a191ab9336481d5c9cce90778307b8ae7bccd00c69ec4e335ea1f11615f92"
+          "bytes": 24641,
+          "sha256": "sha256:5947faecd49f67aba403b2c5c006e4b32f9612e510502affa84d66d1b48a0fa5"
         }
       ]
     },
     "deep-rnn-concise-implementation-3": {
-      "code_fingerprint": "sha256:f8dfeba7febbec46b6b5b888dd3a3b036e6a4d106cd67b408e258dd374e3f846",
+      "code_fingerprint": "sha256:22028822ad729cf34b09818845c71de16318ae2922dbf3a9310436b6b1265700",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of space and so and'"
+          "text": "'it has have the time trave'"
         }
       ]
     }

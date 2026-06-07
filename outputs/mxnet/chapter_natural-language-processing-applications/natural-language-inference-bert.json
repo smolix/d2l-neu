@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-bert.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:2bf07be7f514e440bb9cad3915e1b0685b87986a084e8bfa96aac99bab4fafb7",
     "max_inline_bytes": 0
   },
@@ -29,12 +29,12 @@
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:657e623e0d41180ef2b3124a1924065d8372a1b4c3ba4fd4a13d0fc157592c2d",
+      "code_fingerprint": "sha256:a0c5b3e2ea178eaf832515b080d6e61729717015f2596ac8d6639f1113726107",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:753693652b7382902dce613a66d9b2094a63e8cbf9b7430f8debe00376348f76",
+      "code_fingerprint": "sha256:a44c77dfcbe158de578da60cd7b37e8f1934f8e9b2a61d0a0657129aadfbdb60",
       "kind": "text",
       "outputs": [
         {
@@ -50,30 +50,30 @@
       ]
     },
     "natural-language-inference-bert-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:187fde0aa32856d43537c63c9d9c4b3d9b855dd91b1dd40ba141cbe7f381fcfc",
+      "code_fingerprint": "sha256:12cd6a4c3c79ea825faf07544938b5883288cbbe259c3c0cd55df72948f44cc7",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:3a8e9c254eb4dab4f85f701f30e0f851c5d7eb782112466822a70968241b5582",
+      "code_fingerprint": "sha256:d131bf91354005f1263ab14e1f97e3beea02daa46d79debffcb89ce0d55a399f",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-3": {
-      "code_fingerprint": "sha256:7edaa9456d0c8311b773b2e0677f399cff9bce6c8076d2b5c687421ded65eeba",
+      "code_fingerprint": "sha256:11d8099399a30938059d5fba72ffcb752982dca16ac8346c8eb6ec6c4b8687f4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.479, train acc 0.809, test acc 0.787\n2490.0 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.479, train acc 0.810, test acc 0.788\n2240.5 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
-          "bytes": 25197,
-          "sha256": "sha256:38e32ca27487660e756ca655de25ce5f8b9958f4536fb72c287ba39af235e242"
+          "bytes": 25198,
+          "sha256": "sha256:344ba37a676f80767284c022c56a0f5b6b2b5ef45ea1ab10c27f0ec66a5ca97d"
         }
       ]
     }

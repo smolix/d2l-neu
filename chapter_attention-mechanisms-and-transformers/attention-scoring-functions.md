@@ -509,8 +509,8 @@ class AdditiveAttention(nn.Block):  #@save
 %%tab pytorch
 class AdditiveAttention(nn.Module):  #@save
     """Additive attention."""
-    def __init__(self, num_hiddens, dropout, **kwargs):
-        super(AdditiveAttention, self).__init__(**kwargs)
+    def __init__(self, num_hiddens, dropout):
+        super().__init__()
         self.W_k = nn.LazyLinear(num_hiddens, bias=False)
         self.W_q = nn.LazyLinear(num_hiddens, bias=False)
         self.w_v = nn.LazyLinear(1, bias=False)

@@ -501,7 +501,7 @@ As with the pointwise mutual information :eqref:`eq_mdl-pmi_def`, we can again p
 
 Let's implement the KL divergence from Scratch.
 
-Here `p` and `q` are *probability vectors* over the same finite outcome set. KL divergence is non-negative on its own (Gibbs' inequality, below), so we do **not** wrap the result in `abs()` — doing so would teach the false idea that KL needs an absolute value to stay non-negative.
+Here `p` and `q` are *probability vectors* over the same finite outcome set. KL divergence is non-negative on its own (Gibbs' inequality, below), so we do **not** wrap the result in `abs()` — doing so would teach the false idea that KL needs an absolute value to stay non-negative. The `nansum` is deliberate: where $p(x)=0$ the term is $0\cdot\log_2(0/q)=0\cdot(-\infty)=$ `nan`, which `nansum` drops to encode the convention $0\log 0=0$; the *other* edge case, $p(x)>0$ with $q(x)=0$, instead yields $+\infty$ (not `nan`), which `nansum` keeps — so the code correctly returns $+\infty$ for that divergence, exactly the property at the end of this section.
 
 ```{.python .input #information-theory-definition-2}
 #@tab mxnet

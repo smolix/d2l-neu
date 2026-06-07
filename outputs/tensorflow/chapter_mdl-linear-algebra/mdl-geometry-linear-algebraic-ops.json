@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "geometry-linear-algebraic-ops-geometry-of-vectors": {
+      "code_fingerprint": "sha256:97ebc02feeda38d3892c125899c942593add71e168b5fcfd0df6fe618f9b39d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "geometry-linear-algebraic-ops-imports": {
+      "code_fingerprint": "sha256:4cfde0719f38795735a5f0606b70494cfbb4446b6c06d54f7c2d6b3621907ef6",
+      "kind": "text",
+      "outputs": []
+    },
+    "geometry-linear-algebraic-ops-dot-products-and-angles": {
+      "code_fingerprint": "sha256:e3dcddff44507f425234429492a267c672f01f969094ff9c3374e2b3517be871",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.41899001598358154>"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-1": {
+      "code_fingerprint": "sha256:297700735c8c4fb4325c99f7a2da7c074c0b482afcfa57fb8f216f65cc35ae76",
+      "kind": "text",
+      "outputs": []
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-2": {
+      "code_fingerprint": "sha256:81f01bfce829950a5e47e5fe47ac706db6306de939932ad9607df05dc76b5edd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
+          "bytes": 11090,
+          "sha256": "sha256:d7b45e6bc05e6a0973e4735630c5e3b15973afd229286b5357c9562a550f0f63"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-3": {
+      "code_fingerprint": "sha256:039b9f390ebb2f717f75e5d11294f91223c81f62b4a1da0e5c5e7eaa5856594f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-3-1.svg",
+          "bytes": 10566,
+          "sha256": "sha256:568119958c01ee90fc6c17527b1c11f503d360ea477ac0681687f955309d16e6"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-hyperplanes-4": {
+      "code_fingerprint": "sha256:0a1b104a57aea105b2938b93d83f8989287a6e59d613e69d44a818f41c2fac7e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.9154999852180481>"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-invertibility": {
+      "code_fingerprint": "sha256:f6a1a6e3a3823ad1bcb998fb550115900022879247637902f0f9f24af1e372b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[1., 0.],\n       [0., 1.]], dtype=float32)>"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-determinant": {
+      "code_fingerprint": "sha256:3e2d3076a24b6ad4cea0652d453827bdf3fdc984bdc8d0eca36ea1c82602a6ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=5.0>"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-1": {
+      "code_fingerprint": "sha256:255b2e40145a4ad6f413de392de31b322e8cba8daa8caf139ce7eea4a7fad18b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 2]), TensorShape([2, 2, 3]), TensorShape([2]))"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-2": {
+      "code_fingerprint": "sha256:048de4621126a098e80acff951067b601b9a7ab81bbdac784782a35af04d2245",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2,), dtype=int32, numpy=array([ 5, 11], dtype=int32)>,\n <tf.Tensor: shape=(2, 1), dtype=int32, numpy=\n array([[ 5],\n        [11]], dtype=int32)>)"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-3": {
+      "code_fingerprint": "sha256:38c5beb25b1cad9052fa8d747daad111c97568ff9bcaa0d10ed3f098af554e3c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 2), dtype=int32, numpy=\narray([[ 90, 126],\n       [102, 144],\n       [114, 162]], dtype=int32)>"
+        }
+      ]
+    },
+    "geometry-linear-algebraic-ops-expressing-in-code-4": {
+      "code_fingerprint": "sha256:8653a18210831b7f5bb9031144d18f7d31ea197206ad78e183c2621b6455a411",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

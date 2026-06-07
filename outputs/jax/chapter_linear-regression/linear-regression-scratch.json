@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:07b301389484c6cb624a8738d8d2697ea9dfe127ffd1fdc2138396d4cc3a04ec",
+    "d2l_lib_fingerprint": "sha256:61f4f74977d22707aa9a2165d61ae42335f380408afee784f4db72f15b93f151",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,46 +29,46 @@
       "outputs": []
     },
     "linear-regression-scratch-defining-the-optimization-algorithm-1": {
-      "code_fingerprint": "sha256:8d703c9a0fed0a919106299a8400001143c896ca8a28d0f4f3536caf13df6715",
+      "code_fingerprint": "sha256:13adae19c3e82589ec224e0e5ba3a02dca9a56a3700ca22cc7add335812e1158",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-optimization-algorithm-2": {
-      "code_fingerprint": "sha256:051af4b3af4e9df19d5fa0a0870618a17cef31274c88575b799d58b90009502a",
+      "code_fingerprint": "sha256:87ba3c75bf297ebbe3cc663dccde179af484efd14d7791ada687843e369360a4",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-1": {
-      "code_fingerprint": "sha256:4581d0af152f893dc4e77ea8c58d0fa2fd74bdabe49c18ca0360d01fb8a12969",
+      "code_fingerprint": "sha256:44e50c274c917deb94b8e7b479a77aca60c0cbabd759b4c4e24daef77ee3e6d4",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-2": {
-      "code_fingerprint": "sha256:5d04f3d0fd8d99d28342d8895a4bf9b98d1a90da400eb0ebf0987df67722227c",
+      "code_fingerprint": "sha256:eeeca325955279fcbe4edece32d960e964eaab7bba1674343edb293b95d7f4d5",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-3": {
-      "code_fingerprint": "sha256:bc47fe51df139ead48c7c9f56b65ee96906683b89ca9ce9bc2d42af1b224605e",
+      "code_fingerprint": "sha256:b1bf411f71ad4c3db756991777b36e2ab2c1410245ed2f5bdad0e3dd28cd1e05",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 19062,
-          "sha256": "sha256:79970c0a5872da9317dca426952f1e6c6e577bc25a43048af5ed0748483c3f60"
+          "bytes": 20508,
+          "sha256": "sha256:15b97603c4f74395c1814b21c6ec766b4100b57a449f879878a676176c8a17bf"
         }
       ]
     },
     "linear-regression-scratch-training-4": {
-      "code_fingerprint": "sha256:74cefddc6bb5f110f8ac02a821ebdac6013c98a02dff358ad058d5b0800c09ec",
+      "code_fingerprint": "sha256:eed5e60699ba3b8f5d1e3f49298b489ea90d03b8dcf454b5467944add0116fc3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.00055158 -0.00066948]\nerror in estimating b: [0.00088978]\n"
+          "text": "error in estimating w: [ 0.00057745 -0.00060844]\nerror in estimating b: [0.00098896]\n"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_attention-mechanisms-and-transformers/attention-scoring-functions.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:df2adfff0b7f4f782f110f663ea3fd4fc21704053db7a4a2d2a68b71245f7faa",
     "max_inline_bytes": 0
   },
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[0.5252, 0.4748, 0.0000, 0.0000],\n         [0.6647, 0.3353, 0.0000, 0.0000]],\n\n        [[0.2488, 0.3472, 0.4040, 0.0000],\n         [0.3420, 0.3194, 0.3386, 0.0000]]])"
+          "text": "tensor([[[0.4656, 0.5344, 0.0000, 0.0000],\n         [0.3846, 0.6154, 0.0000, 0.0000]],\n\n        [[0.3909, 0.2653, 0.3438, 0.0000],\n         [0.3157, 0.2752, 0.4092, 0.0000]]])"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.2842, 0.4260, 0.2899, 0.0000]],\n\n        [[0.4256, 0.5744, 0.0000, 0.0000],\n         [0.1961, 0.3384, 0.2924, 0.1731]]])"
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3893, 0.3180, 0.2927, 0.0000]],\n\n        [[0.4964, 0.5036, 0.0000, 0.0000],\n         [0.2392, 0.2877, 0.2265, 0.2466]]])"
         }
       ]
     },
@@ -61,31 +61,31 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 13612,
-          "sha256": "sha256:077a759ce2f0f2acf9f44797eeca092593fcfd548219681a7b76209af237f518"
+          "bytes": 13613,
+          "sha256": "sha256:9ece7840417a197228ed5fc7d4fca6a19b2a14e5e58384106e3932ca3a76a256"
         }
       ]
     },
     "attention-scoring-functions-additive-attention-1": {
-      "code_fingerprint": "sha256:21ab02a97fb486234e20b09ee156a9b68ee49a0e985b8363794107fa25f8a3e0",
+      "code_fingerprint": "sha256:4f9468922bf46ca75a7d54f04b0efe180ff1c096baee8d8083d5a4a24fa38855",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-functions-additive-attention-2": {
-      "code_fingerprint": "sha256:c1a8e812eca6ea6bc219a7029d7a2b406254b5e24e56cc1f5c7ced50658bea38",
+      "code_fingerprint": "sha256:758039b6df35617575758259158758c2a5798f43168edb01ba160c2745196e16",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-functions-additive-attention-3": {
-      "code_fingerprint": "sha256:5de02ff1fb407dcc75809197391da791fded1cb7d89f0336662f14c14b934d75",
+      "code_fingerprint": "sha256:046997e93e41c96389b8ece7fe9d272c161ed4f5314b081aa7e97615bbe01209",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
-          "bytes": 13608,
-          "sha256": "sha256:1abe722a53886f89a98764807cfac58c475b50074897e737a59ff06598956d3e"
+          "bytes": 13601,
+          "sha256": "sha256:68c5c23abef7dad568f0fe3b7a09797fe0a498b34cc0610c10e233e46f2b1f84"
         }
       ]
     }

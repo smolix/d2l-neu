@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:384b34a181dd7cd31ac9ce78464c50e2d13250e91653c61d42c9dfb9a147daa3",
+    "d2l_lib_fingerprint": "sha256:7a8d52fe203a0fd2718fc7c2b87e018ec9244286a54dd11dd43eba8b053392d3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,36 +31,36 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20065,
-          "sha256": "sha256:64d31fdf24d07a1ebe31a323224f0832b66f89cc0cca6ae2c96c02ad5011ec48"
+          "bytes": 20069,
+          "sha256": "sha256:5d64e90c9654497cb40e15f0a02e05158e0e996e483c6807a637ec72e3553a0e"
         }
       ]
     },
     "gru-concise-implementation-1": {
-      "code_fingerprint": "sha256:2a79b0d574170f1344086dff238fcb1b33c2051ddb85aea3ae45af11cc46f5db",
+      "code_fingerprint": "sha256:1b02ad7c8017ee3684caa7db38e90999b6cbecd6727ea438ebfa488203409edf",
       "kind": "text",
       "outputs": []
     },
     "gru-concise-implementation-2": {
-      "code_fingerprint": "sha256:972030665c2030d4b66e9b1522329fad7bd704de7f690b00049e6ffdaec13dfa",
+      "code_fingerprint": "sha256:78840f127bcf23ea8617baa45cae08e73537c772a2da1630d38792eba3003871",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20451,
-          "sha256": "sha256:056d217defd1d2480f776a71e3a2a218a5d8a15234d169d4cb9575f7dc3e3fde"
+          "bytes": 20448,
+          "sha256": "sha256:840dc1b85fccca11575f3eb438db117345fb80dc531cd2206f79f30de0891e04"
         }
       ]
     },
     "gru-concise-implementation-3": {
-      "code_fingerprint": "sha256:72cdb1678b3cde78d2d6fd51828244e26703ce8bb59381e2693bb344a5ae0297",
+      "code_fingerprint": "sha256:2b79bb7c18eb55baee1dbd26c3277191f5309cb1d08c50260f8491b5c7240925",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has it in time travelle'"
+          "text": "'it has in the time travell'"
         }
       ]
     }

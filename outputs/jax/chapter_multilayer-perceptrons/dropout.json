@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0.5: [[ 0.  0.  0.  6.  0. 10. 12.  0.]\n [ 0. 18.  0.  0. 24.  0. 28. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0.  0. 14.]\n [ 0. 18.  0. 22.  0.  0.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 20992,
-          "sha256": "sha256:a96c1394abf8f86790506843e2fd74935a326d2b1ddeea0c9d9adde9371d81ff"
+          "bytes": 20993,
+          "sha256": "sha256:1e2110b2913066c185ce0ca63b2cb91b2fb22f4d90ecc59ed08a6863b01f0fa8"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 20993,
-          "sha256": "sha256:c7dc5048f5cd9ab4b5bdf276d4dc408921f036b943ebd11d6af55d09ae581251"
+          "bytes": 20987,
+          "sha256": "sha256:e3e01eac3ad93c30ae79259bb457cc1469d4c8163d65df4f28147e39d259a3da"
         }
       ]
     }

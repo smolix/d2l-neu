@@ -762,8 +762,10 @@ def predict(img):
 ```{.python .input #fcn-prediction-1}
 #@tab pytorch
 def predict(img):
+    net.eval()
     X = test_iter.dataset.normalize_image(img).unsqueeze(0)
-    pred = net(X.to(devices[0])).argmax(dim=1)
+    with torch.no_grad():
+        pred = net(X.to(devices[0])).argmax(dim=1)
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 

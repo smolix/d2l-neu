@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:2d6da2f3824917d7e0cf0b18e69a179639e606ad507bd65195b028133ac7a626",
+    "d2l_lib_fingerprint": "sha256:9ce350a0624cbc05a7393baa824274978c07ebdaff4206f7379870d0aa0c3726",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 18887,
-          "sha256": "sha256:b5019cb0162ef6304b8a66b0d60ce1e299103a433512549c6f60ef6aee3df7da"
+          "bytes": 18882,
+          "sha256": "sha256:26ad1de72b211aab112eeaa7da1cc33707db31cc2ecea67f91d23e9a5fc63b2d"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.01241195 -0.01030874]\nerror in estimating b: [0.01968908]\n"
+          "text": "error in estimating w: [ 0.01231468 -0.01108789]\nerror in estimating b: [0.01999569]\n"
         }
       ]
     }

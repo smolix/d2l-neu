@@ -767,6 +767,7 @@ as the input at the next time step.
 ```{.python .input #rnn-scratch-decoding-1}
 %%tab pytorch
 @d2l.add_to_class(RNNLMScratch)  #@save
+@torch.no_grad()  # inference only: no autograd graph needed
 def predict(self, prefix, num_preds, vocab, device=None):
     state, outputs = None, [vocab[prefix[0]]]
     for i in range(len(prefix) + num_preds - 1):

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:32fe12ff64e675fcc758361a970712233509b11e4da8030a81ebd77183840897",
+    "d2l_lib_fingerprint": "sha256:29d5baebaed7e64c9ae0073e104adb5b4e3ec7f4544f39524cfcc25c1d73bd4e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 23945,
-          "sha256": "sha256:ad0026f4ac2118139309e361c3d73af64b999d8981fb3a74151fe834af9fd5d3"
+          "bytes": 24058,
+          "sha256": "sha256:c1b6e489e9a483b72cfe28e0c5b66c760a7299450f45065ed4eedb702b940ff3"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.2, 'time traveller and the thing and t'\n"
+          "text": "perplexity 7.4, 'time traveller and the paller and '\n"
         }
       ]
     }

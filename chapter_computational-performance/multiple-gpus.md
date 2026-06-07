@@ -674,13 +674,15 @@ def train(num_gpus, batch_size, lr):
 #@tab jax
 def evaluate_accuracy_jax(predict_fn, data_iter):
     """Evaluate accuracy using JAX predict function."""
-    num_correct, num_total = 0, 0
+    num_correct = jnp.array(0)
+    num_total = 0
     for X, y in data_iter:
         X, y = jnp.array(X).transpose(0, 3, 1, 2), jnp.array(y)
         y_hat = predict_fn(X)
-        num_correct += jnp.sum(jnp.argmax(y_hat, axis=1) == y).item()
+        # Accumulate on-device; defer the host sync until after the loop
+        num_correct += jnp.sum(jnp.argmax(y_hat, axis=1) == y)
         num_total += y.shape[0]
-    return num_correct / num_total
+    return num_correct.item() / num_total
 
 def train(num_gpus, batch_size, lr):
     data = d2l.FashionMNIST(batch_size=batch_size)

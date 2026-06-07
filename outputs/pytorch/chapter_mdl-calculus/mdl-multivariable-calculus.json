@@ -9,7 +9,7 @@
   },
   "cells": {
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:68b2623e58512b31eefd4d30a72854565947bae74c5e3be26ec5b99955f4b683",
+      "code_fingerprint": "sha256:f50724091485a4050b2bfed10546222212045e81deff92dbed47aa3ebd68ad98",
       "kind": "text",
       "outputs": [
         {
@@ -19,20 +19,20 @@
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:d5333da3641c041405be87bc1d8ada5a9746a19526a7696eb6a1537f38efd6f6",
+      "code_fingerprint": "sha256:53e2d3ea6007a41bbced2a22868a7d7379d75a096f7584b9f8de8e02069210a5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13741,
-          "sha256": "sha256:a7a7e7fb66de16795c701f69c6eb22f41e8092cd236aa34c167fc7168e56b74f"
+          "bytes": 13748,
+          "sha256": "sha256:6a041a6e5303eec11dd060727cb97440df70829c126e3e4ba26599d421a6095a"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:d18d3adcd201c5d5f0e073310f43da44aec4f16d798c71c971cc6fd246b08f62",
+      "code_fingerprint": "sha256:692bffb1a41745772a126d635f5d5a55c29da57c59201b3ee4f6ba5d6e037a10",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +43,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:96e13e88d660e35c438ee4eebb5db4713627e7a851a67e7ed02d88e3f2e9174b",
+      "code_fingerprint": "sha256:1f7a03e6acbba6a514d3935019722200c3d0ca95bfb8b412d3cfb094fddce70f",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:f4c38922195bed8973599818a4e45e8b86924f644da36a3b4349d3c82f598639",
+      "code_fingerprint": "sha256:f6cb59087c7628ecfc23766131ba838e017650b5c009af4538b2689fd5f5efe0",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:67f93fa4cd12aa539c586f5c5b6b243bceebf85d1a36936a410541dcb882c260",
+      "code_fingerprint": "sha256:4082319f492dc95db7504c17af398e2c0aaf690ef242abf660a7de9c1f9b54a8",
       "kind": "text",
       "outputs": [
         {

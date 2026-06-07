@@ -277,7 +277,7 @@ def update_D(X, Z, net_D, net_G, loss, optimizer_D):
 from functools import partial
 
 @partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_D'))
-def update_D(X, Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_D,
+def update_D(X, Z, net_D, net_G, params_D, params_G, opt_state_D,
              optimizer_D):
     """Update discriminator."""
     batch_size = X.shape[0]
@@ -360,7 +360,7 @@ def update_G(Z, net_D, net_G, loss, optimizer_G):
 #@tab jax
 #@save
 @partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_G'))
-def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
+def update_G(Z, net_D, net_G, params_D, params_G, opt_state_G,
              optimizer_G):
     """Update generator."""
     batch_size = Z.shape[0]
@@ -552,10 +552,10 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D, lr_G, latent_dim, data):
             key, subkey = jax.random.split(key)
             Z = jax.random.normal(subkey, (batch_size, latent_dim))
             loss_D, params_D, opt_state_D = update_D(
-                X, Z, net_D, net_G, params_D, params_G, None,
+                X, Z, net_D, net_G, params_D, params_G,
                 opt_state_D, optimizer_D)
             loss_G, params_G, opt_state_G = update_G(
-                Z, net_D, net_G, params_D, params_G, None,
+                Z, net_D, net_G, params_D, params_G,
                 opt_state_G, optimizer_G)
             metric.add(loss_D, loss_G, batch_size)
         # Visualize generated examples

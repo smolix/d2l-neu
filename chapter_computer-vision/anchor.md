@@ -542,7 +542,7 @@ the remaining anchor boxes $A_1, A_3, A_4, A_6, A_8$ and determine whether to as
 ![Assigning ground-truth bounding boxes to anchor boxes.](../img/anchor-label.svg)
 :label:`fig_anchor_label`
 
-This algorithm is implemented in the following `assign_anchor_to_bbox` function.
+This algorithm is implemented in the following `assign_anchor_to_bbox` function. Note that this routine and the `nms` function below are written as explicit per-box Python loops to mirror the algorithm step by step for teaching; production code should instead use a vectorized/library routine such as `torchvision.ops.batched_nms`, since each in-loop `argmax` forces a device-to-host synchronization on every iteration.
 
 ```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab mxnet

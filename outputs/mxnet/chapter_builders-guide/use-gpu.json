@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:5c511ec1f0e0525e269948ef784efde223cc7fc94dd4494abfda3cf35386b8a7",
+    "d2l_lib_fingerprint": "sha256:e5213a1628a721ddacb4a97c20672fd37c75e17eec0dec9cb853b83654c131a3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4"
+          "text": "2"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(gpu(0), cpu(0), [gpu(0), gpu(1), gpu(2), gpu(3)])"
+          "text": "(gpu(0), cpu(0), [gpu(0), gpu(1)])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.24891572, 0.95589715, 0.36603513],\n       [0.7581131 , 0.08064361, 0.07628659]], device=gpu(1))"
+          "text": "array([[0.40364832, 0.6497831 , 0.5503983 ],\n       [0.8160587 , 0.09364714, 0.5954137 ]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.2489157, 1.9558971, 1.3660351],\n       [1.7581131, 1.0806437, 1.0762866]], device=gpu(1))"
+          "text": "array([[1.4036484, 1.6497831, 1.5503983],\n       [1.8160586, 1.0936471, 1.5954137]], device=gpu(1))"
         }
       ]
     },
@@ -115,7 +115,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.09163381],\n       [-0.09163381]], device=gpu(0))"
+          "text": "array([[0.16547933],\n       [0.16547933]], device=gpu(0))"
         }
       ]
     },

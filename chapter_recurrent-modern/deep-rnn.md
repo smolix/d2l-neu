@@ -303,9 +303,11 @@ class GRU(d2l.RNN):  #@save
         new_state = []
         if state is None:
             batch_size = X.shape[1]
+            # One distinct carry per layer (a list comprehension, not `[c] * n`,
+            # which would alias the same object across all layers).
             state = [nn.GRUCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0),
-                (batch_size, self.num_hiddens))] * self.num_layers
+                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
+                for _ in range(self.num_layers)]
 
         GRU = nn.scan(nn.GRUCell, variable_broadcast="params",
                       in_axes=0, out_axes=0, split_rngs={"params": False})

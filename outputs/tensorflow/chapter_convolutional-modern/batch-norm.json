@@ -19,53 +19,53 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:5452b95f98f6e1862dc12ac38d81e2bbd74e912244e9d6f94d2f9b799a9dd1a1",
+      "code_fingerprint": "sha256:75eb6f02c881601f12f1c218fc7fdf5d5213a7cb268b3bc10260c21f24e6ea28",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-1": {
-      "code_fingerprint": "sha256:242e1287a3f7963ec9c5249f342b0399970c1d78112b0a51f59b6a9cfdb769c7",
+      "code_fingerprint": "sha256:dec15ed0f8c9c11437856144c7cbed4632313936c74610efaa136981f1b2bf75",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-3": {
-      "code_fingerprint": "sha256:bd19f290b85b7dbc17329c058d161fe15798af4e5fcf1ab246a601d884a8d2b1",
+      "code_fingerprint": "sha256:b93cfc84a1159fd84f0ca1fc791690ca006349b17b38f028dfc1cafa65bd7a2d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19975,
-          "sha256": "sha256:03484b3f9c9ad2f05b3fbe0c3c4d2600c3d8cab20a053b0a0ccecb7b4293b76e"
+          "bytes": 19977,
+          "sha256": "sha256:5fe7f596eeb85fca94bb3576e36cce2197aaebf147390e1cace03f447095291d"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-4": {
-      "code_fingerprint": "sha256:fc14b715c5a634daff7da7b597be7be5dbed087471fa8957fabc52ebab659eb1",
+      "code_fingerprint": "sha256:7a550c6905c828efb497686421f68af1f9cf0381080d2caeba5b49473427017a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([1.5763943, 4.8199883, 2.6749642, 2.2007535, 2.3816333, 3.8115103],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([1.561023 , 2.5082805, 1.0404164, 2.097167 , 1.203618 , 3.942358 ],\n       dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([3.1763916, 0.6442079, 4.3617687, 1.9461361, 3.23094  , 2.9952812],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.6959093, 0.6197066, 2.2279444, 2.1957877, 1.1972816, 1.9789588],\n       dtype=float32)>)"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:14e3f9423fabc86fc8ed63648d064cba8eec998c3afad51949183648fddeb152",
+      "code_fingerprint": "sha256:d86889f4e2e65ccb595622985970d313cf3a762233ed2982f5ea4b646f0dc972",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:222377428895127e4665abfb83175e4510c4106697722ae3134898c34c47ff07",
+      "code_fingerprint": "sha256:f82066031b213ad6e632ec3e40d5c71844e1498b1bbedcea2859e5338fa3a9f7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19980,
-          "sha256": "sha256:0066a8ecd4e3a76986587801c7ebe77dde909d9af615b16b3e80eba38c1ec071"
+          "bytes": 19976,
+          "sha256": "sha256:b2e75c5d6cc64e2d897c4262cdd3bdaa3793311bd99a4a70354cb5c1934a02cf"
         }
       ]
     }

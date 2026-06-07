@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:9ed979d089474cee805f76e90ca34c3b6130d4307ca3f39869eee781e3c7409a",
+    "d2l_lib_fingerprint": "sha256:f3ee843419d3365b5a6eea700876a4cce5e1d0921e82ad8aa0d46e42ba2bd2c2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24655,
-          "sha256": "sha256:7694534a28579b4eac053c381ae93392d118571fb8516788effab9c33158544a"
+          "bytes": 24573,
+          "sha256": "sha256:8e50b19a3d51c6d9555ab91af285f86d32992c9e8e1571ad29c1a2df198c532d"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller and the this the th'\n"
+          "text": "perplexity 7.5, 'time traveller and the the the the'\n"
         }
       ]
     }

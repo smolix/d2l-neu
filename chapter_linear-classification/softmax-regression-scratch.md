@@ -239,7 +239,7 @@ y_hat[[0, 1], y]
 %%tab tensorflow
 y_hat = tf.constant([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
 y = tf.constant([0, 2])
-tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
+tf.gather(y_hat, y, batch_dims=1)
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
@@ -280,7 +280,8 @@ cross_entropy(y_hat, y)
 %%tab jax
 def cross_entropy(y_hat, y):  #@save
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
+    p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
+                                     axis=1).squeeze(-1), min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 cross_entropy(y_hat, y)
@@ -289,7 +290,7 @@ cross_entropy(y_hat, y)
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab tensorflow
 def cross_entropy(y_hat, y):  #@save
-    p = tf.boolean_mask(y_hat, tf.one_hot(y, depth=y_hat.shape[-1]))
+    p = tf.gather(y_hat, y, batch_dims=1)
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
     return -tf.reduce_mean(tf.math.log(tf.maximum(p, 1e-12)))
 
@@ -312,7 +313,8 @@ def loss(self, y_hat, y):
 def loss(self, params, X, y, state):
     def cross_entropy(y_hat, y):
         # Tiny clip to keep log finite when softmax outputs underflow to 0.
-        p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
+        p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
+                                         axis=1).squeeze(-1), min=1e-12)
         return -d2l.reduce_mean(d2l.log(p))
     y_hat = state.apply_fn({'params': params}, *X)
     # The returned empty dictionary is a placeholder for auxiliary data,
@@ -357,7 +359,8 @@ our model is ready to classify some images.
 ```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab pytorch
 X, y = next(iter(data.val_dataloader()))
-preds = d2l.argmax(model(X), axis=1)
+with torch.no_grad():
+    preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 

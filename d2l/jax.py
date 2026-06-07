@@ -86,8 +86,7 @@ import numpy as np
 import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from types import FunctionType
-from typing import Any
+from typing import Any, Callable
 
 def use_svg_display():
     """Use the svg format to display a plot in Jupyter.
@@ -450,31 +449,23 @@ class Trainer(d2l.HyperParameters):
 
     def fit_epoch(self):
         self.model.training = True
-        # Some hand-rolled optimizers (e.g. LinearRegressionScratch.SGD) are not
-        # JIT-traceable: detect that by probing opt_state and skip the JIT path.
-        jit_ok = isinstance(self.state.opt_state, tuple)
         if self.state.batch_stats:
             # Mutable states will be used later (e.g., for batch norm)
             for batch in self.train_dataloader:
                 (_, mutated_vars), grads = self.model.training_step(
                     self.state.params, self.prepare_batch(batch), self.state)
-                if jit_ok:
-                    self.state = _trainer_update_with_bn(
-                        self.state, grads, mutated_vars['batch_stats'])
-                else:
-                    self.state = self.state.apply_gradients(grads=grads).replace(
-                        dropout_rng=jax.random.split(self.state.dropout_rng)[0],
-                        batch_stats=mutated_vars['batch_stats'])
+                if self.gradient_clip_val > 0:
+                    grads = self.clip_gradients(self.gradient_clip_val, grads)
+                self.state = _trainer_update_with_bn(
+                    self.state, grads, mutated_vars['batch_stats'])
                 self.train_batch_idx += 1
         else:
             for batch in self.train_dataloader:
                 _, grads = self.model.training_step(
                     self.state.params, self.prepare_batch(batch), self.state)
-                if jit_ok:
-                    self.state = _trainer_update(self.state, grads)
-                else:
-                    self.state = self.state.apply_gradients(grads=grads).replace(
-                        dropout_rng=jax.random.split(self.state.dropout_rng)[0])
+                if self.gradient_clip_val > 0:
+                    grads = self.clip_gradients(self.gradient_clip_val, grads)
+                self.state = _trainer_update(self.state, grads)
                 self.train_batch_idx += 1
 
         if self.val_dataloader is None:
@@ -507,9 +498,12 @@ class SyntheticRegressionData(d2l.DataModule):
 
     Defined in :numref:`sec_synthetic-regression-data`"""
     def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000,
-                 batch_size=32, key=jax.random.PRNGKey(0)):
+                 batch_size=32, key=None):
         super().__init__()
         self.save_hyperparameters()
+        # Resolve the key at call time (the None idiom) rather than baking a
+        # fixed PRNGKey into the signature; default stays deterministic.
+        key = jax.random.PRNGKey(0) if key is None else key
         n = num_train + num_val
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))
@@ -558,7 +552,10 @@ class SGD(d2l.HyperParameters):
     def init(self, params):
         # Delete unused params
         del params
-        return optax.EmptyState
+        # Return an EmptyState *instance* (an empty NamedTuple, hence a valid
+        # pytree) -- not the class -- so this hand-rolled optimizer is
+        # JIT-traceable just like any optax GradientTransformation.
+        return optax.EmptyState()
 
     def update(self, updates, state, params=None):
         del params
@@ -675,7 +672,8 @@ class Classifier(d2l.Module):
         compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
         return d2l.reduce_mean(compare) if averaged else compare
 
-    def layer_summary(self, X_shape, key=d2l.get_key()):
+    def layer_summary(self, X_shape, key=None):
+        key = d2l.get_key() if key is None else key  # resolve at call time
         X = jnp.zeros(X_shape)
         params = self.init(key, X)
         bound_model = self.clone().bind(params, mutable=['batch_stats'])
@@ -697,7 +695,8 @@ class Classifier(d2l.Module):
 
 def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = jnp.clip(y_hat[list(range(len(y_hat))), y], min=1e-12)
+    p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
+                                     axis=1).squeeze(-1), min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 class SoftmaxRegression(d2l.Classifier):
@@ -762,7 +761,7 @@ class LeNet(d2l.Classifier):
     Defined in :numref:`sec_lenet`"""
     lr: float = 0.1
     num_classes: int = 10
-    kernel_init: FunctionType = nn.initializers.xavier_uniform
+    kernel_init: Callable = nn.initializers.xavier_uniform
 
     def setup(self):
         self.net = nn.Sequential([
@@ -1024,6 +1023,8 @@ class RNN(nn.Module):
     def __call__(self, inputs, H=None, training=False):
         if H is None:
             batch_size = inputs.shape[1]
+            # The carry is zero-initialized, so the PRNGKey (required by the
+            # API) is unused here; a fixed key is fine.
             H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(
                 jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
 
@@ -1065,9 +1066,11 @@ class GRU(d2l.RNN):
         new_state = []
         if state is None:
             batch_size = X.shape[1]
+            # One distinct carry per layer (a list comprehension, not `[c] * n`,
+            # which would alias the same object across all layers).
             state = [nn.GRUCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0),
-                (batch_size, self.num_hiddens))] * self.num_layers
+                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
+                for _ in range(self.num_layers)]
 
         GRU = nn.scan(nn.GRUCell, variable_broadcast="params",
                       in_axes=0, out_axes=0, split_rngs={"params": False})
@@ -3160,7 +3163,7 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
 from functools import partial
 
 @partial(jax.jit, static_argnames=('net_D', 'net_G', 'optimizer_G'))
-def update_G(Z, net_D, net_G, params_D, params_G, loss_fn, opt_state_G,
+def update_G(Z, net_D, net_G, params_D, params_G, opt_state_G,
              optimizer_G):
     """Update generator.
 

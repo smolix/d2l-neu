@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,20 +54,20 @@
       "outputs": []
     },
     "densenet-densenet-model-2": {
-      "code_fingerprint": "sha256:f4bbf8b356cd93260b12fa1c8bdd8fc3bc8a30ef48dffbd36c9905d4a2aee710",
+      "code_fingerprint": "sha256:8330eb71f4a1dc91853d7c5be5982cbf0f76f0f8ef0f5ce7a35c67ac93bc0809",
       "kind": "text",
       "outputs": []
     },
     "densenet-training": {
-      "code_fingerprint": "sha256:9347456372aaa23e3c7e6a9b4d0517bd6a8041392072a0b34db9e779e406cbbd",
+      "code_fingerprint": "sha256:f1347cb7e39545ee00bb7bab995f6db415a712fedbc04a9c1432b5e127611a99",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 21119,
-          "sha256": "sha256:3ee5f7a3021ff5749854bf501a1a73264911015acd61f3ac2596793970472884"
+          "bytes": 21018,
+          "sha256": "sha256:a0af230bfda48876d7970f16c3b4cf66a23ab03d7a7d8f046ec2d0647943cb33"
         }
       ]
     }

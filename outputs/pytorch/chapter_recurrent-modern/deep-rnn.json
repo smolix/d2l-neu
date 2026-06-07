@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cc3513d5450d0b78401a90c6800b2d04b740a204da9ab63b6788b667f3a615c2",
+    "d2l_lib_fingerprint": "sha256:53947a0ca4bdf3f69b3dae43e12614399439539db4cf999aa99bdc7cddaeac56",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24863,
-          "sha256": "sha256:ab8eeb0be2535d742bf04c101a480d6b4d1e4fb26792479659614220763411e6"
+          "bytes": 24764,
+          "sha256": "sha256:c7bb31766a25545d7b679fd2ca87a5db81be99399186c131d0a96ed14a4bdc94"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24191,
-          "sha256": "sha256:913cc05facb9726f4b931b4e9d4578e2d9708a04c666136a50da4d38cc48a993"
+          "bytes": 24029,
+          "sha256": "sha256:c024f6d3a792265d0a95a0ab3f0c0eaa9787740c4e9c52a05705c9b397c2de92"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a conth a man the t'"
+          "text": "'it has in this the promed '"
         }
       ]
     }

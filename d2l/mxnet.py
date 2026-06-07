@@ -280,8 +280,12 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
             x = self.trainer.epoch + 1
             n = self.trainer.num_val_batches / \
                 self.plot_valid_per_epoch
-        # Defer the device-to-host transfer to the board's drawing thread.
-        self.board.draw(x, lambda v=value: d2l.numpy(v), (
+        # MXNet's engine is NOT safe for GPU->host transfers issued from a
+        # foreign thread (under load it corrupts the CUDA context -> error 999).
+        # So, unlike the other frameworks, resolve the value on THIS (main)
+        # thread and enqueue the host scalar; the board's drawing thread then
+        # does only matplotlib, never an MXNet GPU op.
+        self.board.draw(x, d2l.numpy(value), (
             'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:feba1e173b07c069a2475269096e6e52c079906b69dadbd7a91df0a5b23d5a57",
+    "d2l_lib_fingerprint": "sha256:a0000d3978d8ead27956b1462a357eab05384544331974de228fcb38831bdb78",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20057,
-          "sha256": "sha256:15531e1cc9148db2c48295f83c2d7da625f90e0f6f81fcd8047f4a7790356606"
+          "bytes": 20362,
+          "sha256": "sha256:3ca9226df9ff3455e4eca93e7261f088272bc872f23bfda1631aa114278342f2"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => ['je', 'me', 'refuse', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => ['je', 'sais', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'mouillé', '.'], bleu,0.658\ni'm home . => ['je', 'vais', 'bien', '.'], bleu,0.000\n"
         }
       ]
     }

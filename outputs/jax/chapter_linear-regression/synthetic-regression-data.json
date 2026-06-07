@@ -14,17 +14,17 @@
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-1": {
-      "code_fingerprint": "sha256:2c42cbd65fbda85e02d47ba3de3b05bd1555c83647f5992c3be3dae9c685c902",
+      "code_fingerprint": "sha256:c769e27e71df5b9a0a62d81b1a55d1340a10da51d544f4f1e02615a0730bb0dc",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-2": {
-      "code_fingerprint": "sha256:bb0ed7f4de4e6d8e1d8aae5ecfd1358780cfa5648bd12f01e9b4f31f51a5ec6b",
+      "code_fingerprint": "sha256:d71b981050839edfb5e15ff598b042ad33c95fd8865d8ecee5152cab7bdffdff",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-3": {
-      "code_fingerprint": "sha256:0e7f3a901b7ab03f11ac25471a2e6494c051f5a9d71a4bb5ea07b776597e2762",
+      "code_fingerprint": "sha256:7aa6342812976cebf955cb79a48a1e0d8f534948f54fd2811dc48d91deb16cc9",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "synthetic-regression-data-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:ba857bb109cfde831d5bff53bf03e1fb28fabdf4e5dffa41d8e6e03972eb0d80",
+      "code_fingerprint": "sha256:55c8968a7d5e165ffcf73547e4d197f473d545e340bee206eb73ce449cb65973",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:3f3d917a9a323539643a579700141e2eb7582993576c82f9fd2c1e2563786362",
+      "code_fingerprint": "sha256:8f7881685b65657e4c150a02809b4da597cd1fe1a72f5013b7acb8d5f03e476f",
       "kind": "text",
       "outputs": [
         {
@@ -51,17 +51,17 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-1": {
-      "code_fingerprint": "sha256:61fcf822fb2371d2099a8b12ced44829031132ca39bcebae2bf3be90070ea991",
+      "code_fingerprint": "sha256:9d19a68a53730f2a78430b0b6975f5153d551dca0f5f4e661f13970a3fb7956c",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-2": {
-      "code_fingerprint": "sha256:b07e26d201f6ab6a5fd2444f8bff9bc4a3b61a52b624efc4f3ba0bbeef3cbce4",
+      "code_fingerprint": "sha256:964379ab278badbb3fa8f76ea41a5f2d5ba2c391aa84153cc3d7dac9805f533c",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-3": {
-      "code_fingerprint": "sha256:1965078a821de179e8f0ee3746e53f13c464abe005cac1568ca15bb4f48fab7b",
+      "code_fingerprint": "sha256:677210be0bcbc3491a1a9b64a32a232825dc5aa1534a6077f7a5338efd8debe4",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-4": {
-      "code_fingerprint": "sha256:159b87dc83adf5e859a1b08181d198b319df7d814b8f0a6b812cf9e52bbcb219",
+      "code_fingerprint": "sha256:e1a8c329ba06d82b7aa2f8fbf937764fc7b7f2a93dffbd442d3c85da751e3d2b",
       "kind": "text",
       "outputs": [
         {

@@ -562,6 +562,8 @@ class LSTM(d2l.RNN):
         # Flax ≥0.8 deprecates OptimizedLSTMCell; use LSTMCell instead.
         if H_C is None:
             batch_size = inputs.shape[1]
+            # The carry is zero-initialized, so the PRNGKey (required by the
+            # API) is unused here; a fixed key is fine.
             H_C = nn.LSTMCell(features=self.num_hiddens).initialize_carry(
                 jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
 

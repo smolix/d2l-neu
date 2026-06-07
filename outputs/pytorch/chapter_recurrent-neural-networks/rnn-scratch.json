@@ -76,24 +76,24 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24252,
-          "sha256": "sha256:76878b773f4b91885ef75e6f87bccf33d536cc9706af100aa288df5450a7da6f"
+          "bytes": 23981,
+          "sha256": "sha256:53f137fe343581aa1581e91d0bf1cadaebfbdd6d3c3c2218722759d84c1300b6"
         }
       ]
     },
     "rnn-scratch-decoding-1": {
-      "code_fingerprint": "sha256:c3b54fa7d4ca5945d5054478e51c93f45a9e075c505861efe1681d17de95d902",
+      "code_fingerprint": "sha256:6b39af37a1d1099571f519d130ce557238ae92457bdffd1f4f97ef224e7e57d1",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-decoding-2": {
-      "code_fingerprint": "sha256:6fa6b224dbb28aa0ca8841187d3fe34feed6c6e44e3463cfc2747443b06d4b88",
+      "code_fingerprint": "sha256:b6fadf1cb6d4e03d5768c37711c3f15e24d82a830270380a96e73d284f8b4e29",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.5, 'time traveller and the peat and th'\n"
+          "text": "perplexity 7.3, 'time traveller and the time travel'\n"
         }
       ]
     }

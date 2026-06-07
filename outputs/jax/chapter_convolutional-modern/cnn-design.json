@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:35dcfb98c734291c4d362af5298c81355f8850ad72f7de81f648130f69b36988",
+    "d2l_lib_fingerprint": "sha256:5255e0efdcc5eeba0c8c55300c1bf9eee6ff4927ff6b79970653bb42ea72f5d5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,17 +24,17 @@
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:42dad5e3489a1a5f0adbaffd0c4d05bbeb0e26ce5ffe2257e8064332bfd69b4d",
+      "code_fingerprint": "sha256:a2f1070710ed06b6e8bff7c7006ff1112f5ffb2aab07643190a5d84954f72cba",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:9c2ec3e56d1ecc005e4dbde9a19988166c65615e63e5b9fe4e7b5f837a90a16f",
+      "code_fingerprint": "sha256:4b916c95123de6467832fb89957326283b1054a8ae4b3ea3e543d7412cc44743",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:920fd1fc386d5ec4e4cbe08e7cc7f5f3ffc267977a822dc378077b2737290087",
+      "code_fingerprint": "sha256:72ba47152524fa09ecf63aee505cd5b49156011d64deda480b062d3769e7ef2b",
       "kind": "text",
       "outputs": [
         {
@@ -45,15 +45,15 @@
       ]
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:149eebd80c7eaa4f1706bc30df042bca4ba6e34908000e510a1ca4f8350b5ed3",
+      "code_fingerprint": "sha256:fe2661291db6a2f4fe6a3410499478a932791445fe301b99fd8d32efd562ef78",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21645,
-          "sha256": "sha256:f2f1f26ada77185a06ac3ce881604681e3f483a3411546599b07b604d04036c3"
+          "bytes": 21641,
+          "sha256": "sha256:2bf00753294cea5add1a54536ea78b702251fee28c546b89dd6a87299a71f042"
         }
       ]
     }

@@ -486,7 +486,7 @@ y = lambda x: x * x
 u = jax.lax.stop_gradient(y(x))
 z = lambda x: u * x
 
-grad(lambda x: z(x).sum())(x) == y(x)
+grad(lambda x: z(x).sum())(x) == u
 ```
 
 Note that while this procedure

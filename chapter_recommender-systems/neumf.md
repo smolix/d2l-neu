@@ -215,7 +215,7 @@ def hit_and_auc(rankedlist, test_matrix, k):
     return len(hits_k), auc
 ```
 
-Then, the overall Hit rate and AUC are calculated as follows.
+Then, the overall Hit rate and AUC are calculated as follows. Note that `evaluate_ranking` rebuilds and `sorted`-ranks each user's candidate scores in a per-user Python loop for clarity; the efficient form would score all users in a batch and select the top items with a single `torch.topk`.
 
 ```{.python .input #neumf-evaluator-2  n=5}
 #@tab mxnet

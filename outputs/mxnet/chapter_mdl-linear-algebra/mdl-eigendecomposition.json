@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-eigendecomposition.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "eigendecomposition-imports": {
+      "code_fingerprint": "sha256:73760d4b168714eccb6f55de66fdb0d51710ff861c2bdac14a59990a9c6d3c9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "eigendecomposition-an-example": {
+      "code_fingerprint": "sha256:c858ecb2cc14f0ce7536b9a168a20cd57cba645661a0b40591cc627645de76b4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
+        }
+      ]
+    },
+    "eigendecomposition-psd-gram": {
+      "code_fingerprint": "sha256:a0038b2a0ec4964ade7e201d23b885d954d2390b00b7fe9af06fad85a295c989",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full column rank: eigenvalues of X^T X = [1.1459 7.8541]\ndependent columns: eigenvalues of X^T X = [ 0. 30.]\n"
+        }
+      ]
+    },
+    "eigendecomposition-gershgorin-circle-theorem": {
+      "code_fingerprint": "sha256:cce9f1c958ba85b30f49a803c2b94ca9a4a594a75d747798fb407523de086bac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
+        }
+      ]
+    },
+    "eigendecomposition-power-iteration": {
+      "code_fingerprint": "sha256:363f88ff52060ccea9ec5ac4fbb5a57f508873cd08101a23bad83936592b02de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stabilized norm ratio = 1.9744593215   max|eigenvalue| = 1.9744593215\n"
+        }
+      ]
+    },
+    "eigendecomposition-complex-rotation": {
+      "code_fingerprint": "sha256:a6cc5d39d85ba8fa32979086cc9a733acc9087ad9981a083052a9ec6d4bcf89f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of R: [0.866+0.5j 0.866-0.5j]\nexpected e^{+/- i*theta}: [0.866+0.5j 0.866-0.5j]\nmoduli (should be 1): [1. 1.]\n"
+        }
+      ]
+    }
+  }
+}

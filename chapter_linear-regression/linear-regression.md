@@ -428,13 +428,13 @@ rather than writing costly for-loops in Python.
 
 To see why this matters so much,
 let's consider two methods for adding vectors.
-To start, we instantiate two 10,000-dimensional vectors
+To start, we instantiate two 1000-dimensional vectors
 containing all 1s.
 In the first method, we loop over the vectors with a Python for-loop.
 In the second, we rely on a single call to `+`.
 
 ```{.python .input #linear-regression-vectorization-for-speed-1}
-n = 10000
+n = 1000
 a = d2l.ones(n)
 b = d2l.ones(n)
 ```

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:02032e61f6641322b42718633b7bdd73365e5abd117e53f8616cf013a64d7eeb",
+    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -39,12 +39,12 @@
       "outputs": []
     },
     "googlenet-googlenet-model-5": {
-      "code_fingerprint": "sha256:cfe923c9c26b3502b9dca6b9eb858e4ec733dc13e439010aeee6c1482e393680",
+      "code_fingerprint": "sha256:2739c7ee59de54dd462fb881b000f8f819e7db0d118f9acad202379e4b33c539",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:f8cf0f073b6bc12cc32e69241a14d01532773dc8c54e48956a25000e3dd55419",
+      "code_fingerprint": "sha256:76c504491a2f75088e7f7dde9978616798cea94f30494695caa1538daffe1765",
       "kind": "text",
       "outputs": [
         {
@@ -55,15 +55,15 @@
       ]
     },
     "googlenet-training": {
-      "code_fingerprint": "sha256:668699ae5a782a5e7c99128479a374c3d1b38d9088f03a85658a4f2144136713",
+      "code_fingerprint": "sha256:72bec5da1ad0a9490dd64d8111d85e5d2185c2a66b3ad5d6b4361b5ae3cc0b8e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 20952,
-          "sha256": "sha256:82c981e19064bbdc964567d7576fdc2980ffd689b803feeb05fd0bc3b8b60cb3"
+          "bytes": 20955,
+          "sha256": "sha256:4e812a17872a25563f007558e73ba3341ad20e6000a70fcaf8e88285eca05800"
         }
       ]
     }

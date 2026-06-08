@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 421)"
+          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 1298)"
         }
       ]
     },
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.130, test hit rate 0.371, test AUC 0.889\n895.4 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.129, test hit rate 0.399, test AUC 0.892\n824.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21503,
-          "sha256": "sha256:2c272f45707bd2e9ad74c9737899436607c7484af42022601be35f46d39f3a9e"
+          "sha256": "sha256:58114f93eda8aa16c7b296acee56140319d5b9b8a8a22247924d5e1cc9e68dfe"
         }
       ]
     }

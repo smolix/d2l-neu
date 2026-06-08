@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.612, NSP loss 0.720\n1327.8 sentence pairs/sec on [<tensorflow.python.eager.context._EagerDeviceContext object at 0x77bbaeae4340>]\n"
+          "text": "MLM loss 9.624, NSP loss 0.715\n1344.8 sentence pairs/sec on [<tensorflow.python.eager.context._EagerDeviceContext object at 0x7a7c300b4440>]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21557,
-          "sha256": "sha256:6414d07c79baf2726de572a7b4ccc3a807a0339c838aa37dcc67c0ccdec63ab6"
+          "bytes": 21556,
+          "sha256": "sha256:1ac24f081b30a89ffe5296a4244f9d73d12156af0c7741a7a1d056a7c5640e04"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([-0.61329955, -0.12385442,  0.12459652], dtype=float32)>)"
+          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([-0.05952902,  1.3501235 , -1.7090942 ], dtype=float32)>)"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([-0.43131852, -0.2200211 ,  0.01403944], dtype=float32)>)"
+          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n <tf.Tensor: shape=(3,), dtype=float32, numpy=array([ 0.25815508,  1.4410756 , -1.6191719 ], dtype=float32)>)"
         }
       ]
     }

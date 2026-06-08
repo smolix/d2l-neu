@@ -39,12 +39,12 @@
       ]
     },
     "bert-masked-language-modeling-1": {
-      "code_fingerprint": "sha256:46c47d3a6629796156e375968bbaab3a1bebb00003f3aa6f5bfb974726c62c64",
+      "code_fingerprint": "sha256:be0c518dac5ced113dcd314661a27d078d557d0427ba612244e5d8a9d0329029",
       "kind": "text",
       "outputs": []
     },
     "bert-masked-language-modeling-2": {
-      "code_fingerprint": "sha256:9bb7965c00261195126a34869a46659226ad4c392154068e8304835a8b8c70a3",
+      "code_fingerprint": "sha256:7ad4fe1a116046bc9751bf05b66426f7f4cbfca96b7d967358c927a785889e8c",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "bert-masked-language-modeling-3": {
-      "code_fingerprint": "sha256:d60e0d22c9db4bd94156c99f05907733095cb7007568e2429005b1c1da6fb09a",
+      "code_fingerprint": "sha256:82d719119c935b1892edf20dbc21e18e470f350cf96c1f35eb24e44127a34c9b",
       "kind": "text",
       "outputs": [
         {
@@ -64,12 +64,12 @@
       ]
     },
     "bert-next-sentence-prediction-1": {
-      "code_fingerprint": "sha256:cda3c988889ea1c215c547e011b07f5b49557d52b6d1194f76d8c9ed22e85a8b",
+      "code_fingerprint": "sha256:8f6453515746d1a753e46841f3cf15f59b16f41ac7c92d50280323525fe7cb7e",
       "kind": "text",
       "outputs": []
     },
     "bert-next-sentence-prediction-2": {
-      "code_fingerprint": "sha256:af34d5ea47216151f13695772dcaf85cb3f4b6abc3ef306d5ad4e7398abeb3d1",
+      "code_fingerprint": "sha256:ee27f70af5f38bd8548c48a6d81e63cb9d2712132297a1dba9c5499d0322b098",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "bert-next-sentence-prediction-3": {
-      "code_fingerprint": "sha256:2153feff3dd0fe74529dbc4bc8ab0e0270ed3165d6a87055a60b0aefc82b98cb",
+      "code_fingerprint": "sha256:d951766fa0bf2c35f7938a158231b1b63120a91547b06aadee62b87dfcc7171b",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "bert-putting-it-all-together": {
-      "code_fingerprint": "sha256:01b26c8192bd44b0b7b2a883201cf45cef98a84862bc86379f2bc2b3e4c9873a",
+      "code_fingerprint": "sha256:5670445cc7579dca29383b71249313c239459e669e0f00fb87ba661c18f1a773",
       "kind": "text",
       "outputs": []
     }

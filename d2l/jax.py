@@ -2556,7 +2556,7 @@ class TokenEmbedding:
     def __getitem__(self, tokens):
         indices = [self.token_to_idx.get(token, self.unknown_idx)
                    for token in tokens]
-        vecs = self.idx_to_vec[d2l.tensor(indices)]
+        vecs = self.idx_to_vec[d2l.tensor(indices, dtype=d2l.int32)]
         return vecs
 
     def __len__(self):

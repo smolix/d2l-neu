@@ -2227,7 +2227,7 @@ class TokenEmbedding:
     def __getitem__(self, tokens):
         indices = [self.token_to_idx.get(token, self.unknown_idx)
                    for token in tokens]
-        vecs = self.idx_to_vec[d2l.tensor(indices)]
+        vecs = self.idx_to_vec[d2l.tensor(indices, dtype=d2l.int32)]
         return vecs
 
     def __len__(self):
@@ -2286,9 +2286,9 @@ class MaskLM(nn.Block):
 
     def forward(self, X, pred_positions):
         num_pred_positions = pred_positions.shape[1]
-        pred_positions = pred_positions.reshape(-1)
+        pred_positions = pred_positions.reshape(-1).astype('int32')
         batch_size = X.shape[0]
-        batch_idx = np.arange(0, batch_size)
+        batch_idx = np.arange(0, batch_size, dtype='int32', ctx=X.ctx)
         # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
         # `batch_idx` is `np.array([0, 0, 0, 1, 1, 1])`
         batch_idx = np.repeat(batch_idx, num_pred_positions)

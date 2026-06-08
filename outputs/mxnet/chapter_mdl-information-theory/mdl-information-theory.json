@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, array(0.50143915))"
+          "text": "(0.5, array(0.49744576))"
         }
       ]
     },
@@ -89,12 +89,12 @@
       ]
     },
     "information-theory-formal-definition-1": {
-      "code_fingerprint": "sha256:bab57e37ab0f1058c711f3b205254d9c9a41b93752e55bedcb21a5ddb233e16b",
+      "code_fingerprint": "sha256:924cc4b63d7536abc98f3d109ea7b851b75805c418ad9a88a34b876ee86089d1",
       "kind": "text",
       "outputs": []
     },
     "information-theory-formal-definition-2": {
-      "code_fingerprint": "sha256:4691bc792cb1ba0c51e4b5b051e81a9af65ac97b85302b41a18a2630087caac3",
+      "code_fingerprint": "sha256:4f64dd14dc2b01c4e12e6e557d6531159ea250fe9a96e4802891ad513e7cebc6",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:1c9c60e3e53de53f27bc590136169ce47df69ded6982b15b950b4e33f480bd4b",
+      "code_fingerprint": "sha256:6ab70d5e069c2a54fae6977d9857b9e75e63a35e12b6a365291c5036c6e1cd4c",
       "kind": "text",
       "outputs": [
         {

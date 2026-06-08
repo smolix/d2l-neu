@@ -180,7 +180,7 @@ class SeqDataset(gluon.data.Dataset):
                  candidates, test_items=None):
         user_ids, item_ids = np.array(user_ids), np.array(item_ids)
         sort_idx = np.array(sorted(range(len(user_ids)),
-                                   key=lambda k: user_ids[k]))
+                                   key=lambda k: user_ids[k]), dtype='int32')
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
         temp, u_ids = {}, u_ids.asnumpy()
         # Precompute each user's negative pool once: items the user has not

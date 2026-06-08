@@ -74,8 +74,8 @@ authoring" section below.
   no barrier and no per-relpath lock — the framework grouping keeps a notebook's
   variants ~130 dispatches apart, so they never run together and can't race on
   the shared `data/` tree. (CPU notebooks flow ahead onto free CPU slots even
-  while earlier frameworks' GPU work runs — it's just a queue.) See
-  `docs/build-system.md` §6.7. Slide rendering is CPU-only and
+  while earlier frameworks' GPU work runs — it's just a queue.) Full reference:
+  **`docs/notebook-scheduler.md`** (summary in `docs/build-system.md` §6.7). Slide rendering is CPU-only and
   parallel-safe (`make -j4 slides`). `make html` is a single `quarto render`
   (it amortizes the crossref scan to ~2.4 s/page, ~9 min for the book;
   per-file/subset renders do NOT amortize and flake under concurrency — §6.8) —

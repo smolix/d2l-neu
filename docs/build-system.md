@@ -632,9 +632,10 @@ notebook build and sizes the slot pools:
 It prints the plan with `--report` at the top of `run-all-notebooks`; the
 Makefile passes the knobs to the scheduler via `SCHED_ENV` (all `?=` overridable).
 
-**Unified scheduler (`tools/notebook_scheduler.py`).** `run-all-notebooks` (and
-`run-notebooks-<fw>`) put every stale notebook on **one queue** and serve it as
-resources free up. It's deliberately a plain queue, not a phased plan:
+**Unified scheduler (`tools/notebook_scheduler.py`).** Full reference:
+**`docs/notebook-scheduler.md`**. `run-all-notebooks` (and `run-notebooks-<fw>`)
+put every stale notebook on **one queue** and serve it as resources free up.
+It's deliberately a plain queue, not a phased plan:
 
 - **Queue order = framework-grouped.** All of pytorch's notebooks, then all of
   jax's, then tensorflow's, then mxnet's (relpath order within each). This is the

@@ -577,7 +577,12 @@ EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 # safe. Override with MXNET_GPU_SLOTS=N on the command line.
 MXNET_GPU_SLOTS ?= $(shell python3 tools/detect_resources.py --get MXNET_GPU_SLOTS)
 MXNET_CPU_SLOTS ?= 2
+# MXNET_CUDNN_LIB_CHECKING=0: the 20260607.1 wheel is compiled against cuDNN
+# 9.23 but the only pip-available nvidia-cudnn-cu13 is 9.22 (ABI-compatible —
+# conv/matmul verified correct). Without this, every GPU op prints a "cuDNN lib
+# mismatch" line to stderr that gets captured into the notebook outputs.
 EXTRA_ENV_mxnet := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                   MXNET_CUDNN_LIB_CHECKING=0 \
                    D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_MXNET_CPU_SLOTS=$(MXNET_CPU_SLOTS)
 
 define EXEC_RULE

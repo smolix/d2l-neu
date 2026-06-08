@@ -650,13 +650,13 @@ run-notebooks-%: _notebooks/%/.generated
 # below GPU_SLOTS the leftover slots sat idle, and each framework left a slow-
 # straggler tail. Interleaving keeps the GPU pool full with a framework mix
 # throughout — one combined tail instead of four.
-# Resource env handed to the unified scheduler (tools/notebook_scheduler.py).
-# `=` (recursive) so JAX_GPU_SLOTS / MXNET_GPU_SLOTS (defined later) resolve at
-# recipe-expansion time.
-SCHED_ENV = D2L_NUM_GPUS=$(NUM_GPUS) D2L_GPU_SLOTS=$(GPU_SLOTS) D2L_CPU_SLOTS=$(CPU_SLOTS) \
-	D2L_NUM_GPU_PAIRS=$(NUM_GPU_PAIRS) D2L_MULTIGPU_PER_PAIR=$(MULTIGPU_PER_PAIR) \
-	D2L_MULTIGPU_SLOTS=$(MULTIGPU_SLOTS) D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) \
-	D2L_MXNET_GPU_SLOTS=$(MXNET_GPU_SLOTS) D2L_JAX_MGPU_MEM_FRACTION=$(JAX_MGPU_MEM_FRACTION)
+# Resource env handed to the unified scheduler (tools/notebook_scheduler.py):
+# per-GPU slot capacity + per-GPU VRAM (heterogeneous-aware) + CPU slots.
+GPU_SLOTS_PER    ?= $(shell python3 tools/detect_resources.py --get GPU_SLOTS_PER)
+GPU_VRAM_PER     ?= $(shell python3 tools/detect_resources.py --get GPU_VRAM_PER)
+GPU_MIB_PER_SLOT ?= $(shell python3 tools/detect_resources.py --get GPU_MIB_PER_SLOT)
+SCHED_ENV = D2L_GPU_SLOTS_PER='$(GPU_SLOTS_PER)' D2L_GPU_VRAM_PER='$(GPU_VRAM_PER)' \
+	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS)
 
 # The unified scheduler (tools/notebook_scheduler.py) replaces the old "two
 # background `make -jN` queues" orchestration: it owns the GPU/CPU/multi-GPU

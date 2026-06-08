@@ -1,41 +1,39 @@
 #!/usr/bin/env python3
-"""Unified, resource-aware notebook execution scheduler.
+"""Unified notebook execution scheduler.
 
-This replaces the old "two background `make -jN` queues + per-notebook flock"
-orchestration in `run-all-notebooks`. It cleanly separates the two concerns the
-old design tangled together:
+Model (see CLAUDE.md / docs/build-system.md §6.7):
 
-  * **Scheduling** — *which* work is allowed to run. The only scheduling
-    constraint is that the four framework variants of a given notebook NEVER run
-    concurrently (a per-relpath mutex, applied to ALL notebooks). That sequences
-    a notebook's frameworks one at a time, which structurally prevents the
-    shared-dataset reorg race (kaggle-cifar10/-dog copy into the same
-    data/.../train_valid_test/ tree) without any special-casing. Different
-    notebooks run concurrently.
+* **Resources.** 1 GPU slot per GPU_MIB_PER_SLOT (7.5 GiB) of EACH GPU's VRAM,
+  tracked PER physical GPU (heterogeneous GPUs just contribute different slot
+  counts, e.g. 3×24 GiB + 1×32 GiB → 3+3+3+4 = 13). 1 CPU slot per 8 cores
+  (min 1).
 
-  * **Resource allocation** — *how many* run at once, on which device. Three
-    independent slot pools sized from detect_resources (same model the validated
-    build used, so VRAM behaviour is unchanged):
-        - per-GPU light slots:  GPU_SLOTS // NUM_GPUS on each physical GPU;
-          a light GPU notebook takes `heavy_n` slots on ONE GPU.
-        - CPU slots:            CPU_SLOTS, each pinned to a core group.
-        - multi-GPU pairs:      NUM_GPU_PAIRS × MULTIGPU_PER_PAIR packing slots;
-          a multi-GPU notebook takes one packing slot on a pair → 2 device idxs.
-    Per-framework GPU caps (JAX/MXNet) bound a single framework's concurrent GPU
-    notebooks. Multi-GPU items are held until light-GPU work drains so the two
-    never double-book a physical GPU (CPU work overlaps throughout).
+* **Per-notebook requirement** (tools/runtime_env.notebook_resource):
+  default 1 CPU *or* 1 GPU slot; a notebook may instead need 2 slots on one GPU
+  (memory-heavy), 1 slot on each of two GPUs ("2x1", data-parallel), or 2 slots
+  on each of two GPUs ("2x2", a heavier framework's data-parallel variant).
 
-Each dispatch shells `make <stamp>` with D2L_ASSIGNED_CUDA / D2L_ASSIGNED_CPU_CORES
-set, so it reuses the per-framework EXEC_RULE env (venv, LD_LIBRARY_PATH, thread
-/ memory tuning) and stamp/log handling verbatim; run_one_notebook sees the
-assignment and skips its own flock (see run_one_notebook._run_once assigned mode).
+* **Scheduling.** A single continuous dispatch over ONE work list ordered
+  framework-by-framework (all of pytorch's notebooks, then jax's, …). Items are
+  dispatched the moment their required slots are free — 1- and 2-GPU and CPU
+  notebooks all mixed — with NO barrier between frameworks. The framework-grouped
+  order separates a notebook's framework variants by ~one framework's worth of
+  dispatches (~130), so with a ~12-20 slot pool the same notebook never runs in
+  two frameworks at once: cross-framework contention (shared data/ reorg, lib
+  rebuild) is avoided by ordering, not by a mutex or a barrier.
 
-Env in (set by the Makefile recipe, falling back to detect_resources):
-  D2L_NUM_GPUS D2L_GPU_SLOTS D2L_CPU_SLOTS D2L_NUM_GPU_PAIRS D2L_MULTIGPU_PER_PAIR
-  D2L_MULTIGPU_SLOTS D2L_JAX_GPU_SLOTS D2L_MXNET_GPU_SLOTS D2L_JAX_MGPU_MEM_FRACTION
+Each dispatch shells `make <stamp>` with the chosen device(s) in
+D2L_ASSIGNED_CUDA (reusing the per-framework EXEC_RULE env / stamp / log) and
+`--old-file` guards so an inner make never rebuilds the shared d2l library;
+d2l bytecode is pre-compiled once so the first import burst doesn't race.
 
-Usage:
-  notebook_scheduler.py [--frameworks pytorch,jax,...] [--dry-run] [--jobs-cap N]
+Env in (Makefile SCHED_ENV, else detect_resources):
+  D2L_GPU_SLOTS_PER  e.g. "3,3,3,3"   (per-GPU slot capacity)
+  D2L_GPU_VRAM_PER   e.g. "24564,..." (per-GPU VRAM MiB, for jax mem fraction)
+  D2L_CPU_SLOTS      e.g. "8"
+  D2L_GPU_MIB_PER_SLOT e.g. "7680"
+
+Usage: notebook_scheduler.py [--frameworks a,b] [--dry-run] [--force-all]
 """
 import argparse
 import os
@@ -46,46 +44,44 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from runtime_env import MULTI_GPU_NOTEBOOKS, HEAVY_GPU_NOTEBOOKS, file_uses_gpu
+from runtime_env import notebook_resource, file_uses_gpu
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS_DIR = ROOT / "_notebooks"
 FRAMEWORKS = ["pytorch", "tensorflow", "jax", "mxnet"]
 
 
-def _int(env, default):
-    try:
-        return int(os.environ.get(env, "") or default)
-    except ValueError:
-        return default
-
-
 def _detect(key):
-    """Fallback to detect_resources --get KEY when an env knob is absent."""
     try:
-        out = subprocess.run([sys.executable, str(ROOT / "tools/detect_resources.py"),
-                              "--get", key], capture_output=True, text=True, timeout=30)
-        return out.stdout.strip()
+        return subprocess.run([sys.executable, str(ROOT / "tools/detect_resources.py"),
+                               "--get", key], capture_output=True, text=True,
+                              timeout=30).stdout.strip()
     except Exception:
         return ""
 
 
-class Item:
-    __slots__ = ("fw", "rel", "nb", "stamp", "mode", "heavy_n", "order")
+def _intlist(s):
+    return [int(x) for x in s.split(",") if x.strip()]
 
-    def __init__(self, fw, rel, nb, stamp, mode, heavy_n):
-        self.fw, self.rel, self.nb, self.stamp = fw, rel, nb, stamp
-        self.mode, self.heavy_n = mode, heavy_n  # mode: 'cpu'|'gpu'|'multigpu'
-        self.order = 0  # stable tiebreak, assigned in build_worklist
+
+class Item:
+    __slots__ = ("fw", "rel", "nb", "stamp", "req")
+
+    def __init__(self, fw, rel, nb, stamp, req):
+        self.fw, self.rel, self.nb, self.stamp, self.req = fw, rel, nb, stamp, req
 
     @property
     def label(self):
         return f"[{self.fw}] {self.rel}"
 
+    @property
+    def slots(self):  # total slots, for reporting / big-first tie-break
+        if self.req[0] == "cpu":
+            return 1
+        return self.req[1] * self.req[2]
+
 
 def _stale(nb: Path, stamp: Path) -> bool:
-    """True if the notebook needs (re)running: stamp missing, or older than the
-    notebook or any content dep listed in its `.d` file (matches make's deps)."""
     if not stamp.exists():
         return True
     st = stamp.stat().st_mtime
@@ -97,13 +93,11 @@ def _stale(nb: Path, stamp: Path) -> bool:
             text = d.read_text()
         except OSError:
             return True
-        # `.d` is make syntax: "target: dep1 dep2 ...". Check every dep mtime.
-        deps = text.replace("\\\n", " ").split(":", 1)
-        if len(deps) == 2:
-            for tok in deps[1].split():
-                p = (ROOT / tok)
+        parts = text.replace("\\\n", " ").split(":", 1)
+        if len(parts) == 2:
+            for tok in parts[1].split():
                 try:
-                    if p.stat().st_mtime > st:
+                    if (ROOT / tok).stat().st_mtime > st:
                         return True
                 except OSError:
                     continue
@@ -111,123 +105,114 @@ def _stale(nb: Path, stamp: Path) -> bool:
 
 
 def build_worklist(frameworks, force_all=False):
+    """Items in framework-grouped order (framework outer, relpath inner)."""
     items = []
-    for fw in frameworks:
+    for fw in frameworks:                       # framework is the OUTER ordering
         root = NOTEBOOKS_DIR / fw
         if not root.is_dir():
             continue
-        for nb in sorted(root.rglob("*.ipynb")):
+        for nb in sorted(root.rglob("*.ipynb")):  # relpath inner ordering
             if ".ipynb_checkpoints" in nb.parts:
                 continue
             rel = str(nb.relative_to(root))
             stamp = nb.with_suffix(".executed")
             if not force_all and not _stale(nb, stamp):
                 continue
-            if rel in MULTI_GPU_NOTEBOOKS:
-                mode = "multigpu"
-            elif file_uses_gpu(nb, NOTEBOOKS_DIR):
-                mode = "gpu"
-            else:
-                mode = "cpu"
-            heavy_n = HEAVY_GPU_NOTEBOOKS.get((fw, rel), 1)
-            items.append(Item(fw, rel, nb, stamp, mode, heavy_n))
-    # Stable order = sorted by relpath then framework, so the balance tiebreak
-    # walks notebooks in a consistent, framework-interleaved order.
-    items.sort(key=lambda it: (it.rel, it.fw))
-    for i, it in enumerate(items):
-        it.order = i
+            req = notebook_resource(fw, rel, file_uses_gpu(nb, NOTEBOOKS_DIR))
+            items.append(Item(fw, rel, nb, stamp, req))
     return items
 
 
 class Scheduler:
     def __init__(self, args):
         self.args = args
-        self.num_gpus = _int("D2L_NUM_GPUS", 0) or int(_detect("NUM_GPUS") or 0)
-        self.gpu_slots = _int("D2L_GPU_SLOTS", 0) or int(_detect("GPU_SLOTS") or 0)
-        self.cpu_slots = max(1, _int("D2L_CPU_SLOTS", 0) or int(_detect("CPU_SLOTS") or 2))
-        self.pairs = _int("D2L_NUM_GPU_PAIRS", 0) or int(_detect("NUM_GPU_PAIRS") or 0)
-        self.per_pair = _int("D2L_MULTIGPU_PER_PAIR", 0) or int(_detect("MULTIGPU_PER_PAIR") or 1)
-        self.jax_mgpu_frac = os.environ.get("D2L_JAX_MGPU_MEM_FRACTION") or _detect("JAX_MGPU_MEM_FRACTION") or "0.30"
-        self.fw_cap = {}
-        jcap = _int("D2L_JAX_GPU_SLOTS", 0)
-        mcap = _int("D2L_MXNET_GPU_SLOTS", 0) or int(_detect("MXNET_GPU_SLOTS") or 0)
-        if jcap:
-            self.fw_cap["jax"] = jcap
-        if mcap:
-            self.fw_cap["mxnet"] = mcap
+        self.gpu_cap = _intlist(os.environ.get("D2L_GPU_SLOTS_PER")
+                                or _detect("GPU_SLOTS_PER"))
+        self.gpu_vram = _intlist(os.environ.get("D2L_GPU_VRAM_PER")
+                                 or _detect("GPU_VRAM_PER"))
+        try:
+            self.cpu_slots = max(1, int(os.environ.get("D2L_CPU_SLOTS")
+                                        or _detect("CPU_SLOTS") or 1))
+        except ValueError:
+            self.cpu_slots = 1
+        try:
+            self.mib_per_slot = int(os.environ.get("D2L_GPU_MIB_PER_SLOT")
+                                    or _detect("GPU_MIB_PER_SLOT") or 7680)
+        except ValueError:
+            self.mib_per_slot = 7680
+        self.num_gpus = len(self.gpu_cap)
+        if len(self.gpu_vram) != self.num_gpus:        # vram unknown → assume uniform
+            self.gpu_vram = [self.mib_per_slot * c for c in self.gpu_cap]
 
-        self.per_gpu = max(1, self.gpu_slots // self.num_gpus) if self.num_gpus else 0
-        # Resource pools (mutated only under self.lock).
-        self.gpu_free = [self.per_gpu] * self.num_gpus
-        self.pair_free = [self.per_pair] * self.pairs
-        cores = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else list(range(os.cpu_count() or 1))
+        # pools (mutated under lock)
+        self.gpu_free = list(self.gpu_cap)
+        cores = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") \
+            else list(range(os.cpu_count() or 1))
         per = max(1, len(cores) // self.cpu_slots)
         self.core_groups = [cores[i * per:(i + 1) * per] or [cores[i % len(cores)]]
                             for i in range(self.cpu_slots)]
         self.cpu_free = list(range(self.cpu_slots))
-        self.fw_gpu_running = {fw: 0 for fw in FRAMEWORKS}
 
         self.lock = threading.Condition()
-        self.fw_started = {fw: 0 for fw in FRAMEWORKS}  # for framework-fair dispatch
-        self.running_rel = set()          # relpaths with a framework in flight
-        self.light_gpu_pending = 0        # incl. heavy single-GPU
-        self.light_gpu_inflight = 0
-        self.results = []                 # (item, rc, elapsed)
         self.inflight = 0
+        self.results = []
+        self.peak_gpu = [0] * self.num_gpus
+        self.peak_cpu = 0
 
-    # ---- resource reservation (called under self.lock) ----
+        # Pre-set the inner `make <stamp>`'s ?= resource vars in the child env so
+        # it doesn't re-run detect_resources/nvidia-smi on every dispatch.
+        # run_one_notebook ignores them in assigned mode, but EXEC_RULE still
+        # evaluates them.
+        self.inner_env = {
+            "NUM_GPUS": str(self.num_gpus or 1),
+            "GPU_SLOTS": str(sum(self.gpu_cap) or 1),
+            "CPU_SLOTS": str(self.cpu_slots),
+            "NUM_GPU_PAIRS": _detect("NUM_GPU_PAIRS") or "0",
+            "MULTIGPU_PER_PAIR": _detect("MULTIGPU_PER_PAIR") or "1",
+            "MULTIGPU_SLOTS": _detect("MULTIGPU_SLOTS") or "1",
+            "JAX_MGPU_MEM_FRACTION": _detect("JAX_MGPU_MEM_FRACTION") or "0.30",
+            "MXNET_GPU_SLOTS": _detect("MXNET_GPU_SLOTS") or "8",
+            "JAX_GPU_SLOTS": _detect("JAX_GPU_SLOTS") or "8",
+        }
+
+    # ---- reservation (under lock); returns assignment dict or None ----
     def _reserve(self, it):
-        """Return an assignment dict and mutate pools, or None if not runnable
-        now. Assignment keys: cuda (str), cpu_cores (list|None), and private
-        bookkeeping under '_'."""
-        if it.rel in self.running_rel:
-            return None
-        fw = it.fw
-        if it.mode == "cpu":
+        if it.req[0] == "cpu":
             if not self.cpu_free:
                 return None
             slot = self.cpu_free.pop()
-            return {"cuda": "", "cpu_cores": self.core_groups[slot], "_": ("cpu", slot)}
-        if it.mode == "gpu":
-            cap = self.fw_cap.get(fw)
-            if cap is not None and self.fw_gpu_running[fw] >= cap:
-                return None
-            # place on the GPU with the most free slots that fits heavy_n
-            best = max(range(self.num_gpus), key=lambda g: self.gpu_free[g], default=-1)
-            if best < 0 or self.gpu_free[best] < it.heavy_n:
-                return None
-            self.gpu_free[best] -= it.heavy_n
-            self.fw_gpu_running[fw] += 1
-            return {"cuda": str(best), "cpu_cores": None, "_": ("gpu", best, it.heavy_n)}
-        # multigpu: held until light-GPU work fully drains (no double-booking)
-        if self.light_gpu_pending or self.light_gpu_inflight:
+            return {"cuda": "", "cpu_cores": self.core_groups[slot],
+                    "_": ("cpu", slot)}
+        _, ngpu, spg = it.req
+        # GPUs with at least spg free, most-free first (spread load)
+        cand = sorted((g for g in range(self.num_gpus) if self.gpu_free[g] >= spg),
+                      key=lambda g: self.gpu_free[g], reverse=True)
+        if len(cand) < ngpu:
             return None
-        cap = self.fw_cap.get(fw)
-        if cap is not None and self.fw_gpu_running[fw] >= cap:
-            return None
-        p = max(range(self.pairs), key=lambda i: self.pair_free[i], default=-1)
-        if p < 0 or self.pair_free[p] <= 0:
-            return None
-        self.pair_free[p] -= 1
-        self.fw_gpu_running[fw] += 1
+        chosen = sorted(cand[:ngpu])
+        for g in chosen:
+            self.gpu_free[g] -= spg
         env = {}
-        if fw == "jax":
-            env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = self.jax_mgpu_frac
-        return {"cuda": f"{2 * p},{2 * p + 1}", "cpu_cores": None,
-                "extra_env": env, "_": ("mgpu", p)}
+        if it.fw == "jax":   # jax preallocates: cap to the slots we reserved
+            vram = min(self.gpu_vram[g] for g in chosen)
+            frac = min(0.95, max(0.05, (spg * self.mib_per_slot) / vram))
+            env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{frac:.2f}"
+        return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": None,
+                "extra_env": env, "_": ("gpu", chosen, spg)}
 
-    def _release(self, it, asg):
+    def _release(self, asg):
         kind = asg["_"][0]
         if kind == "cpu":
             self.cpu_free.append(asg["_"][1])
-        elif kind == "gpu":
-            _, g, n = asg["_"]
-            self.gpu_free[g] += n
-            self.fw_gpu_running[it.fw] -= 1
-        elif kind == "mgpu":
-            self.pair_free[asg["_"][1]] += 1
-            self.fw_gpu_running[it.fw] -= 1
-        self.running_rel.discard(it.rel)
+        else:
+            _, chosen, spg = asg["_"]
+            for g in chosen:
+                self.gpu_free[g] += spg
+
+    def _track(self):
+        for g in range(self.num_gpus):
+            self.peak_gpu[g] = max(self.peak_gpu[g], self.gpu_cap[g] - self.gpu_free[g])
+        self.peak_cpu = max(self.peak_cpu, self.cpu_slots - len(self.cpu_free))
 
     # ---- execution ----
     def _make_env(self, asg):
@@ -237,23 +222,10 @@ class Scheduler:
             env["D2L_ASSIGNED_CPU_CORES"] = ",".join(str(c) for c in asg["cpu_cores"])
         else:
             env.pop("D2L_ASSIGNED_CPU_CORES", None)
-        # The scheduler owns concurrency, so the inner `make <stamp>` must NOT
-        # try to join this process's parent jobserver (we run it as a plain
-        # single-target build).
         for k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL"):
             env.pop(k, None)
-        # Hand resource knobs to the inner make as env (origin=environment ⇒ its
-        # `?=` is skipped), so it doesn't re-run detect_resources / nvidia-smi on
-        # every dispatch. In assigned mode run_one_notebook ignores these (no
-        # flock), but EXEC_RULE still evaluates them.
-        for k, v in (("NUM_GPUS", self.num_gpus), ("GPU_SLOTS", self.gpu_slots),
-                     ("CPU_SLOTS", self.cpu_slots), ("NUM_GPU_PAIRS", self.pairs),
-                     ("MULTIGPU_PER_PAIR", self.per_pair),
-                     ("MULTIGPU_SLOTS", self.pairs * self.per_pair),
-                     ("JAX_MGPU_MEM_FRACTION", self.jax_mgpu_frac)):
-            env.setdefault(k, str(v))
-        if "mxnet" in self.fw_cap:
-            env.setdefault("MXNET_GPU_SLOTS", str(self.fw_cap["mxnet"]))
+        for k, v in self.inner_env.items():
+            env.setdefault(k, v)
         env.update(asg.get("extra_env", {}))
         return env
 
@@ -263,50 +235,71 @@ class Scheduler:
         if self.args.dry_run:
             time.sleep(0.05)
         else:
-            # CRITICAL: each notebook is a SEPARATE `make` process, so without
-            # this they would race to rebuild the SHARED d2l library / preprocess
-            # / per-framework notebook set — concurrent writers corrupt d2l/*.py
-            # ("partially initialized module … circular import") for notebooks
-            # importing it at that instant. Those phase stamps are already built
-            # once upfront (make all: lib → notebooks → run-all; or the
-            # `: notebooks` prereq). `--old-file` (`-o`) tells the inner make to
-            # treat them as up-to-date and never rebuild them or anything on
-            # their account — only the .executed recipe runs.
+            # -o guards: a per-notebook `make` must never rebuild the SHARED
+            # d2l lib / preprocess / notebook set (built once upfront); else
+            # concurrent inner makes corrupt d2l/*.py mid-import.
             cmd = ["make", "--no-print-directory",
                    "-o", ".preprocess.stamp", "-o", "d2l/.built",
                    "-o", f"d2l/{it.fw}.py",
                    "-o", f"_notebooks/{it.fw}/.generated",
                    str(it.stamp.relative_to(ROOT))]
             try:
-                cp = subprocess.run(cmd, cwd=str(ROOT), env=self._make_env(asg))
-                rc = cp.returncode
+                rc = subprocess.run(cmd, cwd=str(ROOT), env=self._make_env(asg)).returncode
             except Exception as e:
                 print(f"{it.label}: scheduler error: {e}", file=sys.stderr, flush=True)
                 rc = 1
-        elapsed = time.time() - t0
+        el = time.time() - t0
         with self.lock:
-            self._release(it, asg)
-            if it.mode in ("gpu",):
-                self.light_gpu_inflight -= 1
-            self.results.append((it, rc, elapsed))
+            self._release(asg)
+            self.results.append((it, rc, el))
             self.inflight -= 1
             done = len(self.results)
             self.lock.notify_all()
         tag = ("GPU " + asg["cuda"]) if asg["cuda"] else "CPU"
-        print(f"{it.label}: {'OK' if rc == 0 else 'FAIL'} ({elapsed:.0f}s) "
-              f"[{tag}] ({done}/{self.total} done)", flush=True)
+        print(f"{it.label}: {'OK' if rc == 0 else 'FAIL'} ({el:.0f}s) [{tag}] "
+              f"({done}/{self.total} done)", flush=True)
+
+    def run(self, items):
+        self.total = len(items)
+        pending = list(items)                    # already framework-grouped
+        n_cpu = sum(1 for it in items if it.req[0] == "cpu")
+        print(f"=== scheduler: {self.total} notebooks ({self.total - n_cpu} gpu, "
+              f"{n_cpu} cpu) | GPUs per-slot {self.gpu_cap}, CPU {self.cpu_slots} ===",
+              flush=True)
+        if not self.args.dry_run:
+            self._warm_pyc({it.fw for it in items})
+        with self.lock:
+            while pending or self.inflight:
+                progressed = False
+                # First-fit in framework order: dispatch every item whose slots
+                # are free right now; skip (don't block on) ones that don't fit.
+                for it in list(pending):
+                    asg = self._reserve(it)
+                    if asg is None:
+                        continue
+                    pending.remove(it)
+                    self.inflight += 1
+                    self._track()
+                    threading.Thread(target=self._worker, args=(it, asg),
+                                     daemon=True).start()
+                    progressed = True
+                if not progressed:
+                    self.lock.wait()
+
+        failed = [it for it, rc, _ in self.results if rc != 0]
+        print(f"=== scheduler done: {self.total - len(failed)}/{self.total} ok, "
+              f"{len(failed)} failed ===", flush=True)
+        for it in failed:
+            print(f"  FAILED: {it.label}", flush=True)
+        if self.args.dry_run:
+            ok = all(self.peak_gpu[g] <= self.gpu_cap[g] for g in range(self.num_gpus)) \
+                 and self.peak_cpu <= self.cpu_slots
+            print(f"peak: gpu={self.peak_gpu} (caps {self.gpu_cap}), "
+                  f"cpu={self.peak_cpu} (<= {self.cpu_slots}) — "
+                  f"INVARIANTS {'OK' if ok else 'VIOLATED'}", flush=True)
+        return 1 if failed else 0
 
     def _warm_pyc(self, frameworks):
-        """Pre-compile d2l/*.pyc serially BEFORE dispatching any notebook.
-
-        The first burst of concurrent notebook processes would otherwise all
-        first-import d2l at once and race to write d2l/__pycache__/*.pyc; a
-        torn .pyc surfaces as "partially initialized module 'd2l.<fw>' …
-        circular import" and fails the notebook. compileall writes the byte
-        cache atomically here, with no concurrency, so every later import finds
-        a valid .pyc and skips compilation. All four venvs are the same CPython,
-        so one compile warms the shared cache (the `-o d2l/.built` dispatch guard
-        keeps it valid by preventing any mid-run lib rebuild)."""
         py = next((ROOT / f".venv-{fw}/bin/python" for fw in frameworks
                    if (ROOT / f".venv-{fw}/bin/python").exists()), None)
         if py is None:
@@ -319,97 +312,13 @@ class Scheduler:
         except Exception as e:
             print(f"scheduler: warm-pyc skipped ({e})", flush=True)
 
-    def _track(self):
-        """Record peak resource usage (called under lock) for the dry-run check."""
-        for g in range(self.num_gpus):
-            self.peak["gpu_per"][g] = max(self.peak["gpu_per"][g], self.per_gpu - self.gpu_free[g])
-        self.peak["cpu"] = max(self.peak["cpu"], self.cpu_slots - len(self.cpu_free))
-        for p in range(self.pairs):
-            self.peak["pair"][p] = max(self.peak["pair"][p], self.per_pair - self.pair_free[p])
-        for fw in FRAMEWORKS:
-            self.peak["fw"][fw] = max(self.peak["fw"][fw], self.fw_gpu_running[fw])
-        if (self.light_gpu_pending or self.light_gpu_inflight):
-            self.peak["mgpu_during_light"] = max(
-                self.peak["mgpu_during_light"], sum(self.per_pair - f for f in self.pair_free))
-
-    def run(self, items):
-        self.total = len(items)
-        pending = list(items)
-        self.light_gpu_pending = sum(1 for it in items if it.mode == "gpu")
-        n_cpu = sum(1 for it in items if it.mode == "cpu")
-        n_mg = sum(1 for it in items if it.mode == "multigpu")
-        print(f"=== scheduler: {self.total} notebooks "
-              f"({self.light_gpu_pending} gpu, {n_cpu} cpu, {n_mg} multi-gpu) | "
-              f"GPUs={self.num_gpus}×{self.per_gpu}slot, CPU={self.cpu_slots}, "
-              f"pairs={self.pairs}×{self.per_pair}, caps={self.fw_cap} ===",
-              flush=True)
-        # invariant trackers (dry-run self-check): peak usage must stay within pools
-        self.peak = {"gpu_per": [0] * self.num_gpus, "cpu": 0, "pair": [0] * self.pairs,
-                     "fw": {fw: 0 for fw in FRAMEWORKS}, "mgpu_during_light": 0}
-        if not self.args.dry_run:
-            self._warm_pyc({it.fw for it in items})
-        with self.lock:
-            while pending or self.inflight:
-                progressed = False
-                # Fill every free slot this round, but FRAMEWORK-FAIRLY: always try
-                # the least-progressed framework first (then build order), so the
-                # four frameworks advance together instead of one racing ahead and
-                # leaving a single-framework tail. Re-sort after each placement
-                # since fw_started just changed.
-                while True:
-                    placed = False
-                    for it in sorted(pending, key=lambda x: (self.fw_started[x.fw], x.order)):
-                        if it.rel in self.running_rel:
-                            continue
-                        asg = self._reserve(it)
-                        if asg is None:
-                            continue
-                        pending.remove(it)
-                        self.running_rel.add(it.rel)
-                        self.fw_started[it.fw] += 1
-                        if it.mode == "gpu":
-                            self.light_gpu_pending -= 1
-                            self.light_gpu_inflight += 1
-                        self.inflight += 1
-                        self._track()
-                        threading.Thread(target=self._worker, args=(it, asg),
-                                         daemon=True).start()
-                        placed = progressed = True
-                        break
-                    if not placed:
-                        break
-                if not progressed:
-                    self.lock.wait()
-        failed = [it for it, rc, _ in self.results if rc != 0]
-        print(f"=== scheduler done: {self.total - len(failed)}/{self.total} ok, "
-              f"{len(failed)} failed ===", flush=True)
-        for it in failed:
-            print(f"  FAILED: {it.label}", flush=True)
-        if self.args.dry_run:
-            p = self.peak
-            print(f"peak: gpu_per={p['gpu_per']} (<= {self.per_gpu}), "
-                  f"cpu={p['cpu']} (<= {self.cpu_slots}), "
-                  f"pair={p['pair']} (<= {self.per_pair}), "
-                  f"fw_gpu={p['fw']} (caps={self.fw_cap}), "
-                  f"mgpu_during_light={p['mgpu_during_light']} (must be 0)",
-                  flush=True)
-            ok = (all(x <= self.per_gpu for x in p["gpu_per"]) and p["cpu"] <= self.cpu_slots
-                  and all(x <= self.per_pair for x in p["pair"])
-                  and all(p["fw"][f] <= self.fw_cap.get(f, 10 ** 9) for f in FRAMEWORKS)
-                  and p["mgpu_during_light"] == 0)
-            print(f"INVARIANTS: {'OK' if ok else 'VIOLATED'}", flush=True)
-        return 1 if failed else 0
-
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--frameworks", default=",".join(FRAMEWORKS),
-                    help="comma-separated subset to run")
-    ap.add_argument("--dry-run", action="store_true",
-                    help="plan + simulate dispatch (no notebook execution)")
-    ap.add_argument("--force-all", action="store_true",
-                    help="include every notebook regardless of stamp freshness")
+    ap.add_argument("--frameworks", default=",".join(FRAMEWORKS))
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--force-all", action="store_true")
     args = ap.parse_args()
     fws = [f for f in args.frameworks.split(",") if f.strip()]
     items = build_worklist(fws, force_all=args.force_all)

@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-modern/encoder-decoder.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:1acd3944a03b6990b3d4f2e855bce7dc19abb5a3b75d73e28bcac8ce818bc1de",
     "max_inline_bytes": 0
   },

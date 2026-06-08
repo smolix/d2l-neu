@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20306,
-          "sha256": "sha256:9770ce7a4366cae9df5ee8819d6eee09199e8d3c686fb5102f6a48f085fc28ad"
+          "bytes": 20309,
+          "sha256": "sha256:27125b06866bc2fde06d91fa487b7b055369b9c1deb3a9ba7b3d0529b2c4c32f"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20319,
-          "sha256": "sha256:388a84092e2c8ede96d3073fc9e8b5146a5289ffcb6d3a147d9eae6bc6e4ac7a"
+          "bytes": 20306,
+          "sha256": "sha256:064d0ae7dd4ec2b90b22a2095c31d46d29e899cff9230e72644a3a6338757f8f"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has in the proun it a s'"
+          "text": "'it has it as it a cour a s'"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/multiple-gpus.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:6fee02007d14ef5d56b8306914cfd55f99fcaf3f2edadb78b21a810c79e426e8",
     "max_inline_bytes": 0
   },
@@ -46,12 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "before allreduce:\n "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[[1. 1.]] @gpu(0) \n [[2. 2.]] @gpu(1)\nafter allreduce:\n [[3. 3.]] @gpu(0) \n [[3. 3.]] @gpu(1)\n"
+          "text": "before allreduce:\n [[1. 1.]] @gpu(0) \n [[2. 2.]] @gpu(1)\nafter allreduce:\n [[3. 3.]] @gpu(0) \n [[3. 3.]] @gpu(1)\n"
         }
       ]
     },
@@ -88,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 2.1 sec/epoch on [gpu(0)]\n"
+          "text": "test acc: 0.84, 2.3 sec/epoch on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16963,
-          "sha256": "sha256:e3fc0d0dba85395ccd83201c8be30c5e05830ac310978bfc9ab0bcc5b22ecd66"
+          "bytes": 16964,
+          "sha256": "sha256:89d47f68119bf3bd1ca48bd91746b1599cf0946c105168fc423b98807367bab3"
         }
       ]
     },
@@ -106,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 3.1 sec/epoch on [gpu(0), gpu(1)]\n"
+          "text": "test acc: 0.82, 3.2 sec/epoch on [gpu(0), gpu(1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:3c5130756a9dab55540d313e494b2d1b79859d25e4aa7e4f9599c49735cee428"
+          "bytes": 16962,
+          "sha256": "sha256:272974e6947fa77602aa41c380082495397e1c8759545c8b1b255ad11c301046"
         }
       ]
     }

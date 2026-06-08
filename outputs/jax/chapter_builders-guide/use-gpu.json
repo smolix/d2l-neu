@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4"
+          "text": "2"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(CudaDevice(id=0),\n CpuDevice(id=0),\n [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)])"
+          "text": "(CudaDevice(id=0), CpuDevice(id=0), [CudaDevice(id=0), CudaDevice(id=1)])"
         }
       ]
     },

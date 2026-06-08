@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4"
+          "text": "2"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(device(type='cuda', index=0),\n device(type='cpu'),\n [device(type='cuda', index=0),\n  device(type='cuda', index=1),\n  device(type='cuda', index=2),\n  device(type='cuda', index=3)])"
+          "text": "(device(type='cuda', index=0),\n device(type='cpu'),\n [device(type='cuda', index=0), device(type='cuda', index=1)])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[8.0799e-01, 7.0294e-01, 3.0075e-01],\n        [3.1099e-01, 8.3587e-02, 1.4931e-04]], device='cuda:1')"
+          "text": "tensor([[0.8146, 0.8827, 0.1936],\n        [0.6428, 0.5094, 0.6851]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.8080, 1.7029, 1.3007],\n        [1.3110, 1.0836, 1.0001]], device='cuda:1')"
+          "text": "tensor([[1.8146, 1.8827, 1.1936],\n        [1.6428, 1.5094, 1.6851]], device='cuda:1')"
         }
       ]
     },
@@ -115,7 +115,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.4279],\n        [-0.4279]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.1291],\n        [0.1291]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },

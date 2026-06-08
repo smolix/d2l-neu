@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40201,
-          "sha256": "sha256:5a477c20b304685b33d38e90d6309491c33cfc0f0e5d5b8a29a4eeee3f46f143"
+          "bytes": 40651,
+          "sha256": "sha256:10818506e1a57bcc98bc9a68177cfd6df62d0fedb5994f57486cdd3ea02d049a"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17932,
-          "sha256": "sha256:7a82db0faf715c90ebc7d6bd49fa289036d33cb959bbd3aa664305ab9c8ca95f"
+          "bytes": 19846,
+          "sha256": "sha256:9ded925ab2ae0bb54ec7e2044260fdcd40c6c3b7ae6e989b1b7aa29a7e45680c"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 69399,
-          "sha256": "sha256:16836fb624c4672e9912d97712707e98b7d92339c23c4c22a456d374b9d43ce0"
+          "bytes": 69108,
+          "sha256": "sha256:339c9cfb571d8cb87667451fda1cefe79b4c0f6bfcb3a6727cb8c6f67e6583e3"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 50811,
-          "sha256": "sha256:38e7fc3720d67fa8423af5f49acfe542a3375d9c677d3ae2b76eb34cab8d0643"
+          "bytes": 45462,
+          "sha256": "sha256:d9800fc42849f5ae478de2ae7736f44df05bb3db65ec546ead00c7a89b8c54c7"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 109186,
-          "sha256": "sha256:0f604110bbf9b3a783319fe298f84d6041d8b39528804bfa56e893a01c76e506"
+          "bytes": 106296,
+          "sha256": "sha256:da132cf912a9a9c24cfc755194261b0775cb6bcfd8f1502c35383d3198af51d7"
         }
       ]
     }

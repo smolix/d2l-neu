@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20951,
-          "sha256": "sha256:848f2a4a869dce03d7332322149e817844cd9308d32deb90d34bf617e16380eb"
+          "sha256": "sha256:df748233738f1a9f6e64255c5a01cd7b2446c095a79b79e00a6f649765fe9123"
         }
       ]
     },
@@ -30,6 +30,11 @@
       "code_fingerprint": "sha256:6fa7097e1f52a962b2b1b3e79b7645d3eb51ef90ff94a16cc1e21731d4f58e38",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[21:12:14] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"

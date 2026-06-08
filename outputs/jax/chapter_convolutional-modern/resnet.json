@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21040,
-          "sha256": "sha256:eaa3d9bfe2e3b737457d56ee33027410b15474908dda3e9f52f6cc7622f4e0f8"
+          "bytes": 21037,
+          "sha256": "sha256:4f3c8f7e608072c1f0d24db5f96325dd1eb99b4e3785ae98878790fd33f48159"
         }
       ]
     },

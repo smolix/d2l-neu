@@ -3,7 +3,7 @@
   "source": "chapter_recommender-systems/neumf.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:168081dc95b97cd0a1be9001dc53dd084cc39eba92f1db871ca2c676fd2bc7d5",
     "max_inline_bytes": 0
   },
@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.154, test hit rate 0.350, test AUC 0.880\n11.4 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.152, test hit rate 0.349, test AUC 0.881\n12.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
           "bytes": 22215,
-          "sha256": "sha256:060c7836e4023b93b92b75853082ad871c6c46d1d1dfa89a811802f19cfa969f"
+          "sha256": "sha256:5192b12541c6ac30233613a0b38c0098f0dc578144c7b7f27e339f9a71a558ca"
         }
       ]
     }

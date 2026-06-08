@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/autograd.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+macos.arm64.20260529",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -48,8 +48,18 @@
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[21:15:50] /home/smola/mxnet/src/base.cc:"
+        },
+        {
           "type": "execute_result",
           "text": "array([ 0.,  4.,  8., 12.])"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },

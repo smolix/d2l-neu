@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [57, 43]\n"
+          "text": "heads, tails:  [52, 48]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([51, 49], dtype=int64)"
+          "text": "array([48, 52], dtype=int64)"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.5019, 0.4981])"
+          "text": "array([0.4946, 0.5054])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 108625,
-          "sha256": "sha256:711c094dabd9416b57a0e6f96017e5dd87421c3acbbcda8b85b7987e51c5266a"
+          "bytes": 106844,
+          "sha256": "sha256:f20acf70f1cf6e75a04e6b9c866df173b3a0e617d0221b5c8aba0a2ac1492479"
         }
       ]
     }

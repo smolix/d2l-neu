@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "OrderedDict([('weight',\n              tensor([[-0.1945,  0.2324,  0.0555,  0.0389,  0.0313, -0.2247,  0.2971,  0.3257]])),\n             ('bias', tensor([-0.1174]))])"
+          "text": "OrderedDict([('weight',\n              tensor([[-0.0840,  0.1342,  0.2044, -0.1538, -0.2386, -0.3135, -0.2910,  0.0085]])),\n             ('bias', tensor([-0.1457]))])"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.nn.parameter.Parameter, tensor([-0.1174]))"
+          "text": "(torch.nn.parameter.Parameter, tensor([-0.1457]))"
         }
       ]
     },

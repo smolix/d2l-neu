@@ -55,7 +55,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 12, 12, 192)\n"
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 192)\n"
         },
         {
           "type": "stream",
@@ -82,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 20965,
-          "sha256": "sha256:cfcb71344cd81f83ed410098bd7cb9fa0af343ffdc447bb2c9b49c6a20e604c6"
+          "bytes": 20961,
+          "sha256": "sha256:c57d715efb03ccf8f16043fefca8049056556dcd96991a46e811887427c2f1f7"
         }
       ]
     }

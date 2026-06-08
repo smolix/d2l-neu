@@ -3,7 +3,7 @@
   "source": "chapter_linear-regression/synthetic-regression-data.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:7bd9345bc35e81a6544e27b7662bd19ff3228accd7bb49e4a4b2959d8b8ec485",
     "max_inline_bytes": 0
   },
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: [ 0.25932503 -0.00915256] \nlabel: [4.7316046]\n"
+          "text": "features: [0.10669245 0.428062  ] \nlabel: [2.968613]\n"
         }
       ]
     },

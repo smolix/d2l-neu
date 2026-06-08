@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/multiscale-object-detection.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:f71bf1a43c8757e3596b22f4da518f79110221e88a7244707dcddbf0a5ff3a26",
     "max_inline_bytes": 0
   },
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
           "bytes": 100148,
-          "sha256": "sha256:e3fff865129d50209a8bd9f4d7758bb77ddd686409e26549b9649c1af22956fc"
+          "sha256": "sha256:56be8b176fc8db6ba857a4505a0056f734ae31b32ad9c0209c58e0a7277d2a2a"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
           "bytes": 90278,
-          "sha256": "sha256:128db8666475ad1dd8f7d0ffd767429d91529f620a6eb28391d47627b549cb61"
+          "sha256": "sha256:bd16a905a259115d9a5861b538c345feabe11077277f7cfd3b123521a220d6b5"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
           "bytes": 87821,
-          "sha256": "sha256:eeaf0fd7eddbe22af9721c318385b288ae39884d249917cd4203b343ba52f4c0"
+          "sha256": "sha256:6a54d328af377a3974de7b5c3274c88748a6a3c5974006f0dd42aa584ce8d972"
         }
       ]
     }

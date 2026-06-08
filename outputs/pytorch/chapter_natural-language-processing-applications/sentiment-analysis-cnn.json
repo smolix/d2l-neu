@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/sentiment-analysis-cnn.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:ebb957f773cc68b7716403c602c8cdf742441cc10d2d177bd041aede26b7fc37",
     "max_inline_bytes": 0
   },
@@ -60,14 +60,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.091, train acc 0.969, test acc 0.867\n4512.7 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.091, train acc 0.970, test acc 0.867\n13220.4 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-cnn/sentiment-analysis-cnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25223,
-          "sha256": "sha256:27d6b1c758f37225a02f2e700b8c48dd15785f0e4c7e8e095963c175575ada55"
+          "bytes": 25221,
+          "sha256": "sha256:c173aa8ec3fc42e9823be28826747e51f9452d854261a8faa917286cefaf243c"
         }
       ]
     },

@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-1000^1000 x^2 p(x) dx = 635.621\n"
+          "text": "integral_-1000^1000 x^2 p(x) dx = 635.620\n"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_recommender-systems/seqrec.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:9eecf71ffaeb571d8bd50ddb9cdabd958c2d002ffadfea4f69ce3ad5c453c0eb",
     "max_inline_bytes": 0
   },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 997)"
+          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 1383)"
         }
       ]
     },
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.152, test hit rate 0.380, test AUC 0.882\n252.4 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.127, test hit rate 0.422, test AUC 0.895\n267.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21503,
-          "sha256": "sha256:f3c6d4222a630e3999759aa8e2fe18c5ed04aa22119557324fb62a0e21fec76b"
+          "sha256": "sha256:9bbecd42f5824e33902812bd2f5fff9968c822760e2268356b476369136419dd"
         }
       ]
     }

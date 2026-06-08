@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-neural-networks/text-sequence.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:454fe059a2d38b8fccde9027ee44bc71c52e97a348a773749a25463a4c8abdc1",
     "max_inline_bytes": 0
   },
@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:797b870f8efa3d50a86aa957c48631fe785be4ac03c587ff20e7e24765b5b499"
+          "sha256": "sha256:d19d2cfd3e697f446685557b1703a9d785515de98701605dc50a2440f337a1bd"
         }
       ]
     },
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:95a83343291a9e6be8edee0458eaffba899af566d7ba5fd3195eb70e59cbf217"
+          "sha256": "sha256:40ea2b8af553af4160adcf908d253f218570eed484f184a2d1be5f38a1912fbe"
         }
       ]
     }

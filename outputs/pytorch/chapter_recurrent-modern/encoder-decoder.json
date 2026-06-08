@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-modern/encoder-decoder.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:f0bf9c70315adfbafcc0270eb158a19252d841f01913a38e98a97ac36242409d",
     "max_inline_bytes": 0
   },

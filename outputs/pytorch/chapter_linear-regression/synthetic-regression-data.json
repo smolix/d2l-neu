@@ -3,7 +3,7 @@
   "source": "chapter_linear-regression/synthetic-regression-data.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:4fa9930146eb92f7e2374c1085ae24e7640e3ea1805d2db5cd0da1be8672f89a",
     "max_inline_bytes": 0
   },
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: tensor([0.7043, 0.0611]) \nlabel: tensor([5.4010])\n"
+          "text": "features: tensor([-0.4718,  2.2871]) \nlabel: tensor([-4.5134])\n"
         }
       ]
     },

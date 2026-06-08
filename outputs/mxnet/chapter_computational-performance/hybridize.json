@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/hybridize.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:62da3ca7febfadb7a75b1d4ba0c3c470aa04bac87215460a0aa44b106a43add3",
     "max_inline_bytes": 0
   },
@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.12180391, -0.1829783 ]])"
+          "text": "array([[ 0.09183958, -0.0562437 ]])"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.12180391, -0.1829783 ]])"
+          "text": "array([[ 0.09183958, -0.0562437 ]])"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without hybridization: 0.3886 sec\nWith hybridization: 0.1365 sec\n"
+          "text": "Without hybridization: 0.3968 sec\nWith hybridization: 0.1474 sec\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-rw------- 1 smola smola 644K May 29 07:35 my_mlp-0000.params\r\n-rw------- 1 smola smola 3.2K May 29 07:35 my_mlp-symbol.json\r\n"
+          "text": "-rw------- 1 smola smola 644K Jun  7 21:08 my_mlp-0000.params\r\n-rw------- 1 smola smola 3.2K Jun  7 21:08 my_mlp-symbol.json\r\n"
         }
       ]
     },
@@ -100,11 +100,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "value  x:  [[ 0.6991747  -0.03699835  0.51506144]]\nresult  :  [[0.05669826 0.00078876 0.         0.        ]]\n"
+          "text": "value  x:  [[-0.5094592 -1.2016639  1.7870196]]\nresult  :  [[0.         0.00976313 0.         0.02962823]]\n"
         },
         {
           "type": "execute_result",
-          "text": "array([[-0.00394582, -0.00255334]])"
+          "text": "array([[0.00044163, 0.00102122]])"
         }
       ]
     },
@@ -115,11 +115,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "value  x:  [[ 0.6991747  -0.03699835  0.51506144]]\nresult  :  [[0.05669826 0.00078876 0.         0.        ]]\n"
+          "text": "value  x:  [[-0.5094592 -1.2016639  1.7870196]]\nresult  :  [[0.         0.00976313 0.         0.02962823]]\n"
         },
         {
           "type": "execute_result",
-          "text": "array([[-0.00394582, -0.00255334]])"
+          "text": "array([[0.00044163, 0.00102122]])"
         }
       ]
     },
@@ -129,7 +129,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.00394582, -0.00255334]])"
+          "text": "array([[0.00044163, 0.00102122]])"
         }
       ]
     }

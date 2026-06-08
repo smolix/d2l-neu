@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5350170135498047>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.535070538520813>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5390759706497192>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5391299724578857>)"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance         = 4\nE[divide by n]   = 2.668  (biased)\nE[divide by n-1] = 4.002  (unbiased)\n"
+          "text": "true variance         = 4\nE[divide by n]   = 2.663  (biased)\nE[divide by n-1] = 3.995  (unbiased)\n"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.04913574457168579>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.07650738954544067>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.0394284725189209>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.08487319201231003>)"
         }
       ]
     },

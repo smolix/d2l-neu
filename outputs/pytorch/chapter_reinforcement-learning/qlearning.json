@@ -3,7 +3,7 @@
   "source": "chapter_reinforcement-learning/qlearning.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:0c7a1029c6afe776d2a246c7afbf742a750641a7602a7b748d06d2b593dbd886",
     "max_inline_bytes": 0
   },

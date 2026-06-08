@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/auto-parallelism.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:6ed6ef34c21850b1719f519cced06c1d15ae6728e88630af2f778ad5faf41d6a",
     "max_inline_bytes": 0
   },
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 time: 0.1227 sec\nGPU2 time: 0.1207 sec\n"
+          "text": "GPU1 time: 0.1675 sec\nGPU2 time: 0.1498 sec\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 & GPU2: 0.1245 sec\n"
+          "text": "GPU1 & GPU2: 0.1464 sec\n"
         }
       ]
     },
@@ -47,12 +47,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1: 0.1300 sec\n"
+          "text": "Run on GPU1: 0.1389 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Copy to CPU: 2.1126 sec\n"
+          "text": "Copy to CPU: 2.2167 sec\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1 and copy to CPU: 2.6844 sec\n"
+          "text": "Run on GPU1 and copy to CPU: 3.0349 sec\n"
         }
       ]
     }

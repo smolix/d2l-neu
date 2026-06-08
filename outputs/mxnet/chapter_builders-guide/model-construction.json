@@ -3,7 +3,7 @@
   "source": "chapter_builders-guide/model-construction.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.98189294)"
+          "text": "array(0.873178)"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.7572548)"
+          "text": "array(0.8166737)"
         }
       ]
     }

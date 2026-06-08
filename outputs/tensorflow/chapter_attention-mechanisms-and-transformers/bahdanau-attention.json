@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 22159,
-          "sha256": "sha256:f15c3564204fdf9f12062e469ee05d0b102cc03628ecb5a5c7c7bfa8e5141abf"
+          "bytes": 22515,
+          "sha256": "sha256:c76049a632fd419aa306f5fbd9a6b38bcfe02f63f229354d3d600837ff1608fa"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => ['je', 'suis', 'perdu', '.'], bleu,0.537\ni'm calm . => ['je', 'suis', 'certain', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'perdu', '.'], bleu,0.512\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', '<unk>', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'malade', '.'], bleu,0.512\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19117,
-          "sha256": "sha256:44935c05533ccfddb6832fbac28e9efb6073136c38339a3ea98109e9b9a815b9"
+          "bytes": 18603,
+          "sha256": "sha256:401d022735a0ecf3b169debaea73fedd6da31514356d98d1f21f1cabb04ba5ef"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[06:56:44] /home/smola/work/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[21:12:31] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26187,
-          "sha256": "sha256:74180d0337af4bca9dc895d1d60efe79627e6e22bbaca4195144530c258821b7"
+          "sha256": "sha256:804e0e23a176a98d0f55953b06cd7167ad64246607fbca89e1cd220abbee8b5c"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix [[ 0.9691438  -0.58003026  1.4641818   0.7388741 ]\n [-1.4183844   0.26703835 -0.01505547  0.9019568 ]\n [-0.38692597  0.2376973   0.47373858 -0.8646684 ]\n [-1.6764781   0.66892415 -0.866102   -1.5460656 ]]\nafter multiplying 100 matrices [[-2.0943128e+25  4.8895585e+25 -3.4581408e+25 -3.0860201e+25]\n [ 7.8994308e+24 -1.8442674e+25  1.3043583e+25  1.1639992e+25]\n [-3.8176696e+24  8.9130511e+24 -6.3037569e+24 -5.6254257e+24]\n [ 1.5821473e+25 -3.6938127e+25  2.6124498e+25  2.3313300e+25]]\n"
+          "text": "a single matrix [[ 0.47892863 -0.898878   -0.25121254 -0.29062983]\n [-0.9698661   0.00440728 -0.53274715 -1.4643959 ]\n [ 0.06032511 -0.05194403  1.2527509  -0.6212743 ]\n [ 0.72586775 -0.73582816  0.47353622 -0.7738326 ]]\nafter multiplying 100 matrices [[-1.2019452e+22  2.3744254e+22 -2.9205119e+22 -7.3061007e+21]\n [ 9.4232919e+21 -1.8615583e+22  2.2896920e+22  5.7280124e+21]\n [ 3.2976942e+22 -6.5145433e+22  8.0128027e+22  2.0045209e+22]\n [ 7.2493571e+21 -1.4320998e+22  1.7614638e+22  4.4065642e+21]]\n"
         }
       ]
     }

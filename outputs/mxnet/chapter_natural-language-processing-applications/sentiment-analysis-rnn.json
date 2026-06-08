@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/sentiment-analysis-rnn.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:356ff7a9adff18a086796d54e62a654a7d23e7f2cacb867f784b1cc3b54fa181",
     "max_inline_bytes": 0
   },
@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.308, train acc 0.872, test acc 0.851\n929.2 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.336, train acc 0.857, test acc 0.843\n822.5 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-rnn/sentiment-analysis-rnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25210,
-          "sha256": "sha256:3cb4fd0281985c8eb113eacffa2765e4d42db2d7ccd32b32ea93fb4c75cac71b"
+          "bytes": 25209,
+          "sha256": "sha256:e6a4b99e6181929758cdf8b5ddc03b4bd445d35a77bdfc47bad47e3b6b282324"
         }
       ]
     },
@@ -77,7 +77,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'negative'"
+          "text": "'positive'"
         }
       ]
     },

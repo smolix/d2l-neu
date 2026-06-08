@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/bounding-box.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 87007,
-          "sha256": "sha256:b73ae7776f8bb8fb6619c92a5f7b8c3c940d8e1fdc5543cb7fc697a9161164eb"
+          "sha256": "sha256:7fcaccbabea2b57b39c505bb1869a90bf147fcfe3dd72b5dfd9445d172357059"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87556,
-          "sha256": "sha256:aeb5196432eb41c56913cb029d726dafb6caeda553a6f99a93d105297ee2332a"
+          "sha256": "sha256:5d6498018b383dccaf2f5d727593d2ee8eac87f6f4695a4930f843f567b9c1fa"
         }
       ]
     }

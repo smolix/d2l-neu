@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39814,
-          "sha256": "sha256:2a5e1b8cf529b9de5d5acd269b1ed02bdd6f1f8343a672c04a2d40307878fa92"
+          "bytes": 40581,
+          "sha256": "sha256:9ca3f88c2537ee487304e88c25c41e1eaba86df8c6fe0ee774a4504ca56726e2"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17932,
-          "sha256": "sha256:fb700e4935444fdbc917318bd23c7b5c4553b25c4cfc35e7534b7774e4377c22"
+          "bytes": 19947,
+          "sha256": "sha256:0783c24c0d1aa10490ab4c3fae351d0355c051d51ddd828bced4a5bd318ce146"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67160,
-          "sha256": "sha256:ac95827c7292bf11a71b9e4e2cb00abcdcf65b80035afac75defb7ab8b4334d4"
+          "bytes": 67970,
+          "sha256": "sha256:23c291f631ee265dd0fbe28736a149a4732c8c43f928a0445d63cc5d4ad5445c"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44539,
-          "sha256": "sha256:bde3c79585af3fc20247cee1b92718b4fef669e83f3147bc1ebf22bc0a6c1a19"
+          "bytes": 44494,
+          "sha256": "sha256:53f592bd1b934b42b83388a0ac4921c84f64b573f48cf085c4c3b52ef77db75a"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104346,
-          "sha256": "sha256:63a24bf92a6e1f8edf5365608575a664e366820f431559626e5758fe540cf598"
+          "bytes": 104523,
+          "sha256": "sha256:8b556cb953a4c7bfc62cd97422ff7716743cf87c505927d7fbfe13e46ee6d261"
         }
       ]
     }

@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.15627599, 0.13588224, 0.21264055, 0.2485671 , 0.2466341 ],\n        [0.14247672, 0.17870061, 0.33448547, 0.20235814, 0.14197905]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1.        , 0.99999994], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.18625122, 0.2282426 , 0.20152652, 0.25048587, 0.13349378],\n        [0.18639821, 0.20665354, 0.2652286 , 0.13747701, 0.20424263]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22397,
-          "sha256": "sha256:6fffd0ca535f80a37f68f26399302c3f78fe951625f8ef0aa0a0555a21e944bc"
+          "bytes": 22398,
+          "sha256": "sha256:6a3077a1ad696f3bc4d697948b76048e44e07d0923b77af2acc2ef8255ecd307"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 50577,
-          "sha256": "sha256:7db060e17c38f72123740639dd9655b25531b41ad4d29e4aa78e939466b89e3f"
+          "bytes": 51029,
+          "sha256": "sha256:65ce873e0c52d3ca88d83d729b0eee620974c307195a3371c77e324baf73bc79"
         }
       ]
     }

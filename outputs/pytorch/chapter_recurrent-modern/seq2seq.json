@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20862,
-          "sha256": "sha256:cca766de16f184d390d4c8e95bc200c36ef4e811a71d9e1408cf102f2ffe00f4"
+          "bytes": 20886,
+          "sha256": "sha256:50f44073c32f22a62b503b8d4d3d27d64a957648a465af548120755fa381c9ee"
         }
       ]
     },

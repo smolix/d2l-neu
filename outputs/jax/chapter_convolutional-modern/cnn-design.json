@@ -40,7 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 48, 48, 32)\nSequential output shape:\t (1, 24, 24, 32)\nSequential output shape:\t (1, 12, 12, 80)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 48, 48, 32)\nSequential output shape:\t (1, 24, 24, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 80)\nSequential output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -52,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21641,
-          "sha256": "sha256:2bf00753294cea5add1a54536ea78b702251fee28c546b89dd6a87299a71f042"
+          "bytes": 21650,
+          "sha256": "sha256:49f623a40cfcc8961af31b4628c20877f08f2e796d8fabf5278610a826baeb28"
         }
       ]
     }

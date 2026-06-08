@@ -39,20 +39,20 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stdout",
-          "text": "L2 norm of w: 0.010981880128383636\n"
+          "name": "stderr",
+          "text": "/tmp/ipykernel_31467/2946282728.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
         },
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/ipykernel_13082/2946282728.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
+          "name": "stdout",
+          "text": "L2 norm of w: 0.011275979690253735\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 25359,
-          "sha256": "sha256:8c3b27bbe69dab62988f122975cf1405d8e39e862abf7bf405c2b266882490b7"
+          "bytes": 24777,
+          "sha256": "sha256:a43aa1b580e29ba77c8ea635df56e288e42404bc77affd2b7bfd1a567e8930e0"
         }
       ]
     },
@@ -63,14 +63,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0018144361674785614\n"
+          "text": "L2 norm of w: 0.0017777428729459643\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 19840,
-          "sha256": "sha256:8f7a49d56cb858d2479ad23f0800a6b56173e4a7eb11566f41dee0dedee696aa"
+          "bytes": 19261,
+          "sha256": "sha256:8c5c62605b9a9ea5488a33ec4598bb8cdcbb555c5c6e150a5236417f63bc8e61"
         }
       ]
     },
@@ -86,14 +86,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.013965068385004997\n"
+          "text": "L2 norm of w: 0.014761021360754967\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 27647,
-          "sha256": "sha256:531599b23d7f5e2f24192e00317194313debf38742e7707fa1f69612a8461b74"
+          "bytes": 25202,
+          "sha256": "sha256:f14c4be40868712b88dd05a605d253c2ec246dde990f9e224aad0051f10bbecf"
         }
       ]
     }

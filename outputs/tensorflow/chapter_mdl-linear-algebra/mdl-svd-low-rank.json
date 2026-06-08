@@ -64,7 +64,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "256 x 512 matrix; rank for 95% energy: 18; LoRA params 10.5% of full\n"
+          "text": "256 x 512 matrix; rank for 95% energy: 18; LoRA params 10.5% of full"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n"
         }
       ]
     },

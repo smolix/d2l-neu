@@ -3,7 +3,7 @@
   "source": "chapter_optimization/convexity.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:3fe10b6c9d55819491a772519e022a7ef6bd98e12c641c0a27c8b32ac4210072",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-convex-functions-1.svg",
           "bytes": 28647,
-          "sha256": "sha256:ce6131776702fad784678bb3c516d600cda8cce2bce120d34d4e2519bedb8f3d"
+          "sha256": "sha256:1558cc8664a6d7de73bffe1fe4c0cbb8843111ad8f6a7c4516f9f26b1aa9cbb3"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-local-minima-are-global-minima-1.svg",
           "bytes": 14563,
-          "sha256": "sha256:afa5d92eade17ad5b4d484a140487c5de56ae0eb08ab50a1565021367d20054f"
+          "sha256": "sha256:1f33022fdd1a07319863613a909c29ee1f2b170b7465c48abfe800bb4cd67601"
         }
       ]
     }

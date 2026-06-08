@@ -25,12 +25,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nConv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 384)\n"
+          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nConv2D output shape:\t (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Dense output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -42,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 20442,
-          "sha256": "sha256:a13fab196b6708acf6de7473640dc0e9e755b6808f1d1588cb698ff7b258d1ac"
+          "bytes": 20441,
+          "sha256": "sha256:d8075b38593418d1adbe8996abf63d90e891ec61e8c9ae08f83678fdfe3c9d49"
         }
       ]
     }

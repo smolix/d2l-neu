@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0', '/job:localhost/replica:0/task:0/device:GPU:1', '/job:localhost/replica:0/task:0/device:GPU:2', '/job:localhost/replica:0/task:0/device:GPU:3')\n"
+          "text": "INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0', '/job:localhost/replica:0/task:0/device:GPU:1')\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Number of devices: 4\n"
+          "text": "Number of devices: 2\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.93, 102.7 sec total on ['/device:GPU:0']\n"
+          "text": "test acc: 0.92, 111.6 sec total on ['/device:GPU:0']\n"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.90, 89.8 sec total on ['/device:GPU:0', '/device:GPU:1']\n"
+          "text": "test acc: 0.91, 88.9 sec total on ['/device:GPU:0', '/device:GPU:1']\n"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/neural-style.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:1810fc717f7c1029ee0214e9978fd890f3455a8c6c6a1ae4ceab6d44c60a0a30",
     "max_inline_bytes": 0
   },
@@ -17,7 +17,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
           "bytes": 142658,
-          "sha256": "sha256:1e8f8936649fbc7df4f6d0ef9d18b2cd0fa53bf089b304d61345e3be98ed4dc2"
+          "sha256": "sha256:0e3b2478a40e8e2eefbb875ef0c885768b706e15a69adf2c39298831ca37b1ab"
         }
       ]
     },
@@ -30,7 +30,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 196603,
-          "sha256": "sha256:1ff73331605bb4327646b7cefbce256ea7942fc76a86a45995e4bd7242b0f285"
+          "sha256": "sha256:439f64b10857bf22ffa111a73c3147d913be43788245aa5131984904e04b1ab5"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 146328,
-          "sha256": "sha256:01cff8e0298882f608869379b62b62366b69185a9096e875ea0ceb8c51fee294"
+          "bytes": 146040,
+          "sha256": "sha256:52bdc4aea02b9662b4f71eb3a51572bd51e8f6b71383752e921903ac2ceb3350"
         }
       ]
     }

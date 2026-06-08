@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasyaavmotrysray<unk>uxsaly'"
+          "text": "'it hashaqqzmmsu<unk> <unk>f<unk>qlsl<unk>f'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 23876,
-          "sha256": "sha256:6bc6459ea416098c0404dbd475dbde18278a6b25deb15f4dd8416dd2a0519cee"
+          "bytes": 24709,
+          "sha256": "sha256:50cf1c6ed985d5475f57d5f5ed17c2f484f4c97d8b3db3242be5030f21e21213"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller and the time trevel'\n"
+          "text": "perplexity 7.4, 'time traveller ark in a mome time '\n"
         }
       ]
     }

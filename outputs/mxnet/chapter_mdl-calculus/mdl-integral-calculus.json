@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\neps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802709  error=0.002010\neps=0.001  sum=0.804518  error=0.000201\ntruth = (1/2) log 5 = 0.804719\n"
+          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\neps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\neps=0.001  sum=0.804519  error=0.000200\ntruth = (1/2) log 5 = 0.804719\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993758\nintegral_0^10.0 e^-x dx = 1.000460\nintegral_0^20.0 e^-x dx = 1.000460\nlimit as b -> infinity   = 1.000000\n"
+          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993759\nintegral_0^10.0 e^-x dx = 1.000455\nintegral_0^20.0 e^-x dx = 1.000496\nlimit as b -> infinity   = 1.000000\n"
         }
       ]
     },
@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.14158034324646\nvolume (exact = pi): 3.141592653589793\n"
+          "text": "volume (Riemann)  : 3.141590118408203\nvolume (exact = pi): 3.141592653589793\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 75436,
-          "sha256": "sha256:74ca409b3aca0d68df7002c3cc057c932fa23340814619e989a8675c0598ac73"
+          "bytes": 88770,
+          "sha256": "sha256:abce4cf3df42aa31e451c145f0832283d75d632599b332de4df80bb26eaa59f8"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid integral of e^(-x^2-y^2): 3.140211\nexact value pi               : 3.141593\n"
+          "text": "grid integral of e^(-x^2-y^2): 3.141416\nexact value pi               : 3.141593\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass  integral p dx : 0.999997\nmean        integral x p dx: -0.0\n"
+          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
         }
       ]
     },
@@ -93,14 +93,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.77087  error=0.02401\nn=100     Monte Carlo=0.76976  error=0.02290\nn=1000    Monte Carlo=0.75317  error=0.00631\nn=10000   Monte Carlo=0.74551  error=0.00134\nn=100000  Monte Carlo=0.74691  error=0.00005\nRiemann quadrature   =0.74685\n"
+          "text": "n=10      Monte Carlo=0.77087  error=0.02401\nn=100     Monte Carlo=0.76976  error=0.02290\nn=1000    Monte Carlo=0.75317  error=0.00631\nn=10000   Monte Carlo=0.74551  error=0.00135\nn=100000  Monte Carlo=0.74690  error=0.00004\nRiemann quadrature   =0.74686\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45726,
-          "sha256": "sha256:d4aee0c5623ab9c01f92e4ae37bba89e559379c3ec7b2b726ff39a2be4033ed2"
+          "sha256": "sha256:26fd9ae990a5d11259b482def647871202164fd6f671d8502995f790af6db356"
         }
       ]
     }

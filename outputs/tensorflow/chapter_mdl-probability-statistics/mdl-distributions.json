@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample (random) -> class 0\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample (random) -> class 0\n"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass (≈1): 0.9999366998672485\n"
+          "text": "total mass (≈1): 0.999936580657959\n"
         },
         {
           "type": "execute_result",
@@ -143,7 +143,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[1.94 0.92]\n [0.92 1.88]]\neigenvalues (≈ 1, 3): [0.98 2.83]\n"
+          "text": "empirical covariance:\n [[1.99 1.  ]\n [1.   2.03]]\neigenvalues (≈ 1, 3): [1.01 3.  ]\n"
         }
       ]
     },

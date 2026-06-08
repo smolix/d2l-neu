@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
           "bytes": 30003,
-          "sha256": "sha256:e51d07c95859686eaa8601a61288138f10748d5c4516be05808fe9bb77952264"
+          "sha256": "sha256:1a152ab6de7d7f33b0e4a7c64a4690b6b2de83afc012df56c681ad8f9a179a99"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
           "bytes": 19690,
-          "sha256": "sha256:77f0a978269354da675fcfae6102ed2f530c7c11471bd8a852cf9e39f7e385a3"
+          "sha256": "sha256:3a66567c427fdbe15484fd81541673f440190484e16da561afe93ce9350c51dd"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
           "bytes": 17871,
-          "sha256": "sha256:b7a37ccdc4374305c90b9c2e79e2ee25ecf8e62d09b8b4840dda71902252fcbe"
+          "sha256": "sha256:4e7c400b2467754d701ea2f30a37319971aa358abcd58370df13c910eab201d0"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
           "bytes": 63367,
-          "sha256": "sha256:0a5a6a762941793d914a3f8ae65b1be171e5dd25ff37538ac36356d35d856a30"
+          "sha256": "sha256:8828c5fee7b507d25cfd0a9fc705dd0034f8cf6b2402cd4246f5f1a2b6abe620"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
           "bytes": 20461,
-          "sha256": "sha256:89f601c830072e47e26d30d3c31410c840229ae38b1c1b6f772f9d0ba4e8b7f7"
+          "sha256": "sha256:76c2955388ab3116e8b15a97a692932b76303e03b4d1f2d62306844c62af1f11"
         }
       ]
     }

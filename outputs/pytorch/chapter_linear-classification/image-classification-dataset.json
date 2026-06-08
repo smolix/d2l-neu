@@ -3,7 +3,7 @@
   "source": "chapter_linear-classification/image-classification-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:413a41683fc86df84c31d1feb51bb0b869a533e90e8b38acb9120bbe6b7b8aac",
     "max_inline_bytes": 0
   },
@@ -65,7 +65,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'3.94 sec'"
+          "text": "'3.57 sec'"
         }
       ]
     },
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
           "bytes": 49234,
-          "sha256": "sha256:58adf3c0feae51b2192a7ee4d9b81293e459bcdb6619059f965d95eedc7b15ee"
+          "sha256": "sha256:00671458f726aa7f340b143ab80b3c5f3eb834816c084579c8202080035ebad3"
         }
       ]
     }

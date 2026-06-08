@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.5303473, -0.5135098]], dtype=float32)"
+          "text": "Array([[ 0.53034717, -0.5135099 ]], dtype=float32)"
         }
       ]
     },
@@ -62,12 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without jax.jit: 7.6129 sec\n"
+          "text": "Without jax.jit: 7.1173 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "With jax.jit: 0.2158 sec\n"
+          "text": "With jax.jit: 0.2164 sec\n"
         }
       ]
     },

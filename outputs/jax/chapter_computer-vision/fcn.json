@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0606 02:03:52.747645   27737 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0607 21:11:56.380670   41668 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:c05f90d454f0d1c22342fbcd979cf5defdb621b9cdee220369b075becd95fa7d"
+          "sha256": "sha256:9e599fd0992f0d60f55b6baa6ded4170f6373ff32632c374659c2ed065e71047"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.384\n"
+          "text": "epoch 1, loss 1.679\n"
         },
         {
           "type": "stream",
@@ -127,17 +127,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.465\n"
+          "text": "epoch 3, loss 1.394\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 1.224\n"
+          "text": "epoch 4, loss 1.500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 1.086\n"
+          "text": "epoch 5, loss 1.557\n"
         }
       ]
     },
@@ -159,8 +159,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 151893,
-          "sha256": "sha256:413fbc3b560d9d1968439b8ba4cd372e180369f9e2ff64acb540405443ad11c6"
+          "bytes": 151713,
+          "sha256": "sha256:38d168ed6f6b73e1821b41071f914f769dac65f816d74c7d8c6909de0572fc5d"
         }
       ]
     }

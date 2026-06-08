@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.356, 224237.7 tokens/sec\n"
+          "text": "loss 0.356, 236172.5 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 15816,
-          "sha256": "sha256:cde81feea4a849c05d16d806b52fa935d8fa649e4cca8c93c263cb9f855b4601"
+          "bytes": 15681,
+          "sha256": "sha256:49fa8da7f8e3cca49b9358526c982762bb6a6ea4a4f0a750fa6624f9cd9e8514"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.604: microprocessor\ncosine sim=0.569: intel\ncosine sim=0.490: clara\n"
+          "text": "cosine sim=0.612: intel\ncosine sim=0.577: microprocessor\ncosine sim=0.516: workstations\n"
         }
       ]
     }

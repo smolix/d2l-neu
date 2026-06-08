@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 25182,
-          "sha256": "sha256:44a3ffc7740caab4ea5d65b8d026d72280405841d4804bea46860a5ffff67d24"
+          "bytes": 25132,
+          "sha256": "sha256:e3e07386defdfdb19190edca6da1c15900eba5408795207fcb98894ffc08d2eb"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24641,
-          "sha256": "sha256:5947faecd49f67aba403b2c5c006e4b32f9612e510502affa84d66d1b48a0fa5"
+          "bytes": 24802,
+          "sha256": "sha256:44a62cfc88d66e9f4128ea44c1d49b32aaed2985d46a143cd1b8324b6474446f"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has have the time trave'"
+          "text": "'it has move are why only a'"
         }
       ]
     }

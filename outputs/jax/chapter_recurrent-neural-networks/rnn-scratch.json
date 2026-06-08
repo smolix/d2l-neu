@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24573,
-          "sha256": "sha256:8e50b19a3d51c6d9555ab91af285f86d32992c9e8e1571ad29c1a2df198c532d"
+          "bytes": 24466,
+          "sha256": "sha256:14cfc299331d3aff95be973533adb8773ceae278c81ab685b7f4d695173a7061"
         }
       ]
     },

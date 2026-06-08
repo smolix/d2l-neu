@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:978fcdc733090c2f11bb4e2b07e56fb556396383840fb211382b8c090d594dd8"
+          "sha256": "sha256:b2c5dd994b7f54bdf9d514f89050196a36f31ad96792e348af54dfe823c15da9"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:cc7379e1276e3f91f83be097885eaaf37ff201e6dc1f55e6af1a9407894463a0"
+          "sha256": "sha256:a59e93492004c5c96410fe95eb8b5276e491dc3bd3251aac2a32397437aefed4"
         }
       ]
     },
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21781,
-          "sha256": "sha256:2f13972ab9dd6ebc3e97a7356913a7243d8cf0fc73754183365e34a630f95ef3"
+          "sha256": "sha256:a5680b8f0bec07859d3ca3557acfd02a874131299f2abbae386ea1945cf5e4b0"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24512,
-          "sha256": "sha256:f6947e69b04a0ca6e49270760c4a539ab8e991bff9a2932eff436af013cd2505"
+          "sha256": "sha256:d43e303fdb43316eafaa244ec0d34dbcf0dadcabc8693351f90c6509bdd16493"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20169,
-          "sha256": "sha256:3680b33437d0e11aa6505c42de844a2af86ce2d8f81acf82f71feedc2bbef333"
+          "sha256": "sha256:3ee8c0d2d83dfaffeffd53181b43f86be80d9494a62dbe34a25a8372c411e3e0"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:17e4377f76fd94def6bad9a7bc71eff543c3e99bdfc9eb29ab501e1d26b2b5d6"
+          "sha256": "sha256:3bcd0bbb96bda402d4f59a828b593ab76d30a17c9a42aabf6a06298919d7b366"
         }
       ]
     }

@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.141592025756836\nvolume (exact = pi): 3.141592653589793\n"
+          "text": "volume (Riemann)  : 3.141592502593994\nvolume (exact = pi): 3.141592653589793\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 75523,
-          "sha256": "sha256:ed8d738692c8cc4546c27d88c01b63e97751d9945fcaa01e7c981afc2050fb29"
+          "bytes": 88709,
+          "sha256": "sha256:8fbc41171dcc71c85a01cec291bf17c86cefbd78329d41728f2d8ddc869279cc"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45710,
-          "sha256": "sha256:cc1d4bf471d1be1bfaf2561047053b9c654a1462dc7adcf98b5118a007b2b3a8"
+          "sha256": "sha256:1dfd3f63d61f734443b10a611ba0ac0db4dcc6cc3cf91681989f65b7074e596d"
         }
       ]
     }

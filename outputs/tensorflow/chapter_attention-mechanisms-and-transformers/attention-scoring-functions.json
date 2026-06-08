@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[0.6224394 , 0.3775606 , 0.        , 0.        ],\n        [0.43266475, 0.56733525, 0.        , 0.        ]],\n\n       [[0.2759768 , 0.2643211 , 0.4597021 , 0.        ],\n        [0.42453766, 0.278009  , 0.29745328, 0.        ]]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[0.5525845 , 0.4474155 , 0.        , 0.        ],\n        [0.38905275, 0.61094725, 0.        , 0.        ]],\n\n       [[0.28411534, 0.30528298, 0.41060168, 0.        ],\n        [0.24455218, 0.41603753, 0.3394103 , 0.        ]]], dtype=float32)>"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[1.        , 0.        , 0.        , 0.        ],\n        [0.39651868, 0.33157605, 0.2719053 , 0.        ]],\n\n       [[0.4936647 , 0.50633526, 0.        , 0.        ],\n        [0.30664587, 0.2639355 , 0.2119152 , 0.21750343]]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 2, 4), dtype=float32, numpy=\narray([[[1.        , 0.        , 0.        , 0.        ],\n        [0.37937728, 0.2144115 , 0.4062112 , 0.        ]],\n\n       [[0.41042337, 0.5895766 , 0.        , 0.        ],\n        [0.20492516, 0.35415432, 0.17933652, 0.261584  ]]], dtype=float32)>"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 13617,
-          "sha256": "sha256:40fda293d1e237e117c0f2e9e6de2014d02a27f013fb3304c956d1e71273c694"
+          "bytes": 14335,
+          "sha256": "sha256:3a7a35c4d6c3e54c3c7786bb22fa028ca08255bef32316a69218b54b734cccea"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
-          "bytes": 13600,
-          "sha256": "sha256:e4d2f4ca01b67b4ea999d0ecb4a0910802a28a755aba59aea73539daab4c1ff9"
+          "bytes": 14799,
+          "sha256": "sha256:14b54885e9773094638ea7e50abee09a401669b217afd7fda3eafaf29fc0009f"
         }
       ]
     }

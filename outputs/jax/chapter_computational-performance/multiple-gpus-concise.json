@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Using 4 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]\n"
+          "text": "Using 2 devices: [CudaDevice(id=0), CudaDevice(id=1)]\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 9.2 sec/epoch on 4 devices\n"
+          "text": "test acc: 0.92, 7.7 sec/epoch on 2 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 17952,
-          "sha256": "sha256:d015a260d3551f347384aea4353a1709231df1118ec50a0a9d2a9f4f826d9d07"
+          "bytes": 18767,
+          "sha256": "sha256:3230925202968da83980d4e2e9e8b697bc21f25c19c1c421e44033d565dc6233"
         }
       ]
     },
@@ -59,14 +59,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 5.8 sec/epoch on 4 devices\n"
+          "text": "test acc: 0.92, 5.6 sec/epoch on 2 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 17874,
-          "sha256": "sha256:f745a8c4bc1c53ff18e757d1301e9e421cc97d1cda0e9f6932c31ff4b8e3b60a"
+          "bytes": 18761,
+          "sha256": "sha256:b45d295dc9408f387aee6e337fe0216756bad0d13a3d17c7250384385aba1f61"
         }
       ]
     }

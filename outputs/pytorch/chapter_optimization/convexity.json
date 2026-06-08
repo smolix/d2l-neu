@@ -3,7 +3,7 @@
   "source": "chapter_optimization/convexity.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:015294a5277e58de871b31d925612a7100d3a596cc670f8a74ab3333cebd394d",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-convex-functions-1.svg",
           "bytes": 28629,
-          "sha256": "sha256:b4ed155008eb79f3814528c6b5eeb2eee8bdc6ebd3424d7778ca04e9b1a64bdc"
+          "sha256": "sha256:fc0d7edb4873dbad27db5d77a5d1764050e08a485f8dea40d13178b4adfcda42"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-local-minima-are-global-minima-1.svg",
           "bytes": 14544,
-          "sha256": "sha256:df716152b8c68364bcb70bdff4eab35de38c4b756a2a74b67a6e7ea60f6ccc08"
+          "sha256": "sha256:8e934bef141a039b7e52e2f209798b9b206aca5c1626f21de0385944fee10e9c"
         }
       ]
     }

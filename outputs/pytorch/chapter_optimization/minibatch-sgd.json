@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.8289403915405273"
+          "text": "0.782200813293457"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.012808084487915039"
+          "text": "0.012409687042236328"
         }
       ]
     },
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: element 0.036, column 2.342, full 21.458\n"
+          "text": "performance in Gigaflops: element 0.038, column 2.417, full 21.262\n"
         }
       ]
     },
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: block 20.497\n"
+          "text": "performance in Gigaflops: block 20.500\n"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.041 sec/epoch\n"
+          "text": "loss: 0.245, 0.029 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-3-1.svg",
-          "bytes": 20227,
-          "sha256": "sha256:4ea2b43a88c8993e4165d23ac81f8bba37cfd47f2fcbd10362c593824230ee5c"
+          "bytes": 20226,
+          "sha256": "sha256:3130d351a48d291d59d89dc5da16e0495ebd607147117968b5f8ff9090058fb3"
         }
       ]
     },
@@ -100,14 +100,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.250, 0.398 sec/epoch\n"
+          "text": "loss: 0.244, 0.394 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-4-1.svg",
-          "bytes": 18779,
-          "sha256": "sha256:0b6f648bfe67bfe7a00fd330da43348a2e54796b04eac5c84cf1b2b55e9f3800"
+          "bytes": 18782,
+          "sha256": "sha256:745d49f12a3c626dd7a3f4d76ce60f9725d92bfb529229579718f094a7c56244"
         }
       ]
     },
@@ -118,14 +118,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.251, 0.018 sec/epoch\n"
+          "text": "loss: 0.243, 0.018 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-5-1.svg",
           "bytes": 18783,
-          "sha256": "sha256:c3263ca2206eb3dbea2590b294bdca17641b48955c2e5f29212c13ce398c5093"
+          "sha256": "sha256:efb37193d5e968600ef00819aaa989c458308c05340523583b22a6d63f47c432"
         }
       ]
     },
@@ -143,7 +143,7 @@
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-6-1.svg",
           "bytes": 18783,
-          "sha256": "sha256:392043a71b0e6b06af56402eae5441bc3ff54c1aa6f31c5f4957f69e80a0f50f"
+          "sha256": "sha256:619525c2512e4ac9bef9500c0666c2b8a5ff97624e1c47e9a48c016e66d98a94"
         }
       ]
     },
@@ -155,8 +155,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 32996,
-          "sha256": "sha256:2ca0cc9032d09aa9e3b2bb4ddf65f60c17b29676f06cf8639cee82c2c52a3883"
+          "bytes": 33002,
+          "sha256": "sha256:ac4d31eb50b4a0575b39214e49c148bd99675a36041bb552b3631844093508d2"
         }
       ]
     },
@@ -172,14 +172,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.058 sec/epoch\n"
+          "text": "loss: 0.242, 0.058 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-concise-implementation-2-1.svg",
           "bytes": 18622,
-          "sha256": "sha256:9cdb2af2da88f2d2d99f9d339ee60452773c9a5d73c36de8536e36e136116eb2"
+          "sha256": "sha256:e6a400917ef72daf40bda723e0c6ee8ab0b54f590491e4469b53870b53ebda2a"
         }
       ]
     }

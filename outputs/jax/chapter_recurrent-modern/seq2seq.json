@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20362,
-          "sha256": "sha256:3ca9226df9ff3455e4eca93e7261f088272bc872f23bfda1631aa114278342f2"
+          "bytes": 20357,
+          "sha256": "sha256:e0ebedcdeb33437882eec46279624eaed3732a6f7e458272d4939c55297c4e51"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => ['je', 'sais', '.'], bleu,0.000\ni'm calm . => ['je', 'suis', 'mouillé', '.'], bleu,0.658\ni'm home . => ['je', 'vais', 'bien', '.'], bleu,0.000\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
         }
       ]
     }

@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 75487,
-          "sha256": "sha256:4fc529f4ffe2209e65deff03e174f7b08bce063627dd9258ac3ea3e38808e51f"
+          "bytes": 88796,
+          "sha256": "sha256:f3a62177dc5406c276d3fc811d6815c5fd720c7b1938f69d4f9c1fda8edcce4f"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45710,
-          "sha256": "sha256:1da22ae25c5ae1bf9c6d1434700045a99aa8fa0e1de4e82670a05f5bed8a50d1"
+          "sha256": "sha256:855505c013b5f711c749ea1f00b3139f058f1ca7457d48d1ff6ddb11841f6e79"
         }
       ]
     }

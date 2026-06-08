@@ -3,7 +3,7 @@
   "source": "chapter_generative-adversarial-networks/dcgan.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:8af7b3a839e1e826604b48b034b459da2389fddd32a9d61eacd414511dd2583d",
     "max_inline_bytes": 0
   },
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
-          "bytes": 375216,
-          "sha256": "sha256:acab086573f6adff77e1418eca680cff6c41f358181b4267490836081839ab49"
+          "bytes": 366580,
+          "sha256": "sha256:49468cf41f28076e570c7e3bf9ac7fb2afdff66c912b44219f3acdf2a3082327"
         }
       ]
     },
@@ -85,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-discriminator-1-1.svg",
           "bytes": 18795,
-          "sha256": "sha256:2b9902bb492c02381a6f17507976f162ea03b5d6e335e6ac1d604c920af2c6c0"
+          "sha256": "sha256:ff7a7609d56d0831ea064029d4130f6538bddff74683d9d02d8728e38c63e089"
         }
       ]
     },
@@ -131,14 +131,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.091, loss_G 4.721, 4087.3 examples/sec on cuda:0\n"
+          "text": "loss_D 0.183, loss_G 4.523, 4949.5 examples/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-training-2-1.svg",
-          "bytes": 206766,
-          "sha256": "sha256:dd543a47d9fb3b1a6bfbde9cffe88b215caf893192fab7d7391150650bb658a3"
+          "bytes": 217240,
+          "sha256": "sha256:68400541227fe328577b650bf473a5083c3b637bb0b7cbc3335ba1485ae4cf7b"
         }
       ]
     }

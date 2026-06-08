@@ -83,27 +83,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.646, train acc 0.641, test acc 0.826\n"
+          "text": "epoch 1, loss 0.991, train acc 0.517, test acc 0.694\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.376, train acc 0.852, test acc 0.891\n"
+          "text": "epoch 2, loss 0.444, train acc 0.787, test acc 0.878\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.277, train acc 0.892, test acc 0.901\n"
+          "text": "epoch 3, loss 0.299, train acc 0.882, test acc 0.908\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.241, train acc 0.916, test acc 0.910\n"
+          "text": "epoch 4, loss 0.246, train acc 0.902, test acc 0.921\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.208, train acc 0.923, test acc 0.915\n"
+          "text": "epoch 5, loss 0.214, train acc 0.918, test acc 0.927\n"
         }
       ]
     },
@@ -124,27 +124,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.776, train acc 0.516, test acc 0.590\n"
+          "text": "epoch 1, loss 0.705, train acc 0.522, test acc 0.499\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.681, train acc 0.579, test acc 0.650\n"
+          "text": "epoch 2, loss 0.660, train acc 0.607, test acc 0.688\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.613, train acc 0.667, test acc 0.607\n"
+          "text": "epoch 3, loss 0.548, train acc 0.736, test acc 0.768\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.567, train acc 0.715, test acc 0.733\n"
+          "text": "epoch 4, loss 0.436, train acc 0.798, test acc 0.823\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.445, train acc 0.791, test acc 0.810\n"
+          "text": "epoch 5, loss 0.364, train acc 0.826, test acc 0.812\n"
         }
       ]
     },

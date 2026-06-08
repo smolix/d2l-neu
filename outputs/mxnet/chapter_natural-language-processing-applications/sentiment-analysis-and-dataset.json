@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:31e6298f99c36c5c11a9845eed9bec56ff2394d16574075a12b931ba9532f0da",
     "max_inline_bytes": 0
   },
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20893,
-          "sha256": "sha256:c4d7a47e6bf06d982b1b16b96eade95ac235946c762866e0d01963558f6546c6"
+          "sha256": "sha256:587dbcf0d7e2610c1357eefddb1069ff966f821a42664ac35d613a9d5de893f7"
         }
       ]
     },

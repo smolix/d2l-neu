@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 23670,
-          "sha256": "sha256:6b12c29c3ec26c2eb0c41e7d598baf9bacc1ff4b6b46b09157b5313965dcedb1"
+          "bytes": 23740,
+          "sha256": "sha256:fecaabf906002b08667911bd400a61ee59d8884d77ade51686a825cdecc104ca"
         }
       ]
     },
@@ -47,14 +47,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a mon the the the t'"
+          "text": "'it has the the the the the'"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24692,
-          "sha256": "sha256:a8590a6b39571e4340c08b8aa7bb7bdd4617ca5794501c7ef7cb340c828229f8"
+          "bytes": 24512,
+          "sha256": "sha256:4c1b0cc85eeb77ee11d1d55a1db65af2d4e56342dacce4888876377cf6816364"
         }
       ]
     }

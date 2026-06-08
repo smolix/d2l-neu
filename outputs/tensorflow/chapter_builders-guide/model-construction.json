@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.6550171375274658>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.8086180090904236>"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.5022469162940979>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.5804013609886169>"
         }
       ]
     }

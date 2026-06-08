@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[-0.03110558, -0.04773474,  0.01383934, -0.00105197],\n        [-0.0450362 , -0.00578558,  0.01830475,  0.00511928],\n        [ 0.02101139, -0.04946297, -0.00036541,  0.00634863]],\n\n       [[ 0.04641633,  0.02471114, -0.04684628,  0.04540631],\n        [-0.00985569, -0.04213702, -0.02032608,  0.00789586],\n        [-0.03894933, -0.00087675,  0.04394114,  0.02551872]]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[-0.02534803,  0.0380323 , -0.04700066,  0.00392114],\n        [-0.04723637, -0.02085719, -0.04694691,  0.02174957],\n        [-0.02444501,  0.00057973,  0.02279439, -0.0230318 ]],\n\n       [[-0.03265129,  0.02250793,  0.00991834, -0.04588128],\n        [-0.01573195, -0.02083402, -0.02115431, -0.03871689],\n        [ 0.00023365, -0.04388038, -0.02987472,  0.04042938]]],\n      dtype=float32)>"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.406, 115768.8 tokens/sec\n"
+          "text": "loss 0.406, 90079.7 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17682,
-          "sha256": "sha256:b6a8c6aa415c346411b3cd9e1c43ef4f26b712aacc2c7965e38f4794f983512f"
+          "bytes": 17680,
+          "sha256": "sha256:85927435fd065416e51be5210dac62033fd6a77428b9cedd0fe4c8b3d385d8c5"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.641: intel\ncosine sim=0.605: microprocessor\ncosine sim=0.577: computers\n"
+          "text": "cosine sim=0.605: microprocessor\ncosine sim=0.593: intel\ncosine sim=0.575: machines\n"
         }
       ]
     }

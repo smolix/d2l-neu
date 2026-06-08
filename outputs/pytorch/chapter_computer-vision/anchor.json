@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/anchor.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:16f8343167d56bceabee5a66fdbe44ccc1589577db05e17890535e7c2eeadcdb",
     "max_inline_bytes": 0
   },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95750,
-          "sha256": "sha256:87fe81ca8e57626fad689ffa4f690bee2d98f9b09c3d4798bb36651b7517ae5d"
+          "sha256": "sha256:48b7138d10faf0b035a6fc6eb20dd148f1965669fa72710af46183ccfe0b3c6c"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94721,
-          "sha256": "sha256:78e0ef0eba68b94a222486548e42ba46b3b87aec68060fbc96db4e96de007678"
+          "sha256": "sha256:85f4c37b34f0172e997d06bac187779586ac02b3cb9668deea35647d725e9d43"
         }
       ]
     },
@@ -158,7 +158,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96403,
-          "sha256": "sha256:7c67290ecc95faeb17347bcee0bb0dfa397d12a77421555313b6b174bfbea952"
+          "sha256": "sha256:a9ef9dfbe946a7859a1c327e8e4846ef1a691edd1e319c662cdabb8afdc7df18"
         }
       ]
     },
@@ -181,7 +181,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 93212,
-          "sha256": "sha256:6c9f9896115ff3e2a8b0484fe2daae31a25f9a0acf46030b62ffb036a9a7c7ce"
+          "sha256": "sha256:e42c756b479c2cf5ca011798ba4312121d94758399ac994d51bd6718823cd040"
         }
       ]
     }

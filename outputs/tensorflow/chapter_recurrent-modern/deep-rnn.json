@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24792,
-          "sha256": "sha256:27df3c0caa58e8a0436b885f49c25111965e3cf693fc32befb118ad440f2f40e"
+          "bytes": 24742,
+          "sha256": "sha256:cdab2334b8a45b712e46d5a8b425925baa8ec898ab98d302e5b415084e0e3035"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24130,
-          "sha256": "sha256:f2fcd90a0687d32686f9950b12237b1812b09e21aba770af21f230a1da8ee654"
+          "bytes": 24157,
+          "sha256": "sha256:5b97839b426a38d508d0ff445c8aa29362cc4335ceb7cbd6f60c963f1b473d28"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i said the time tra'"
+          "text": "'it has of the time travell'"
         }
       ]
     }

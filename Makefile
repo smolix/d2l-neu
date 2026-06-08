@@ -767,7 +767,7 @@ rebuild-book-artifacts:
 	@rm -f $(SLIDE_STAMPS)
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
-	$(MAKE) slides
+	$(MAKE) -j4 slides
 	$(MAKE) html
 	@# Clear stale render-scratch PDFs so the parallel PDF render can't
 	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This

@@ -965,19 +965,19 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
    argument like the one in :numref:`subsec_mdl-eckart-young`.)
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/t/svd)
+[Discussions](https://d2l.discourse.group/t/svd)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/t/svd)
+[Discussions](https://d2l.discourse.group/t/svd)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/t/svd)
+[Discussions](https://d2l.discourse.group/t/svd)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/t/svd)
+[Discussions](https://d2l.discourse.group/t/svd)
 :end_tab:
 
 <!-- slides -->

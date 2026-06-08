@@ -90,9 +90,10 @@ def strip_discussions(text):
     text = re.sub(
         r'^##\s+Discussions?\s*\n.*?(?=^##\s|\Z)',
         '', text, flags=re.MULTILINE | re.DOTALL)
-    # Remove standalone discussion links: [Discussions](https://discuss.d2l.ai/...)
+    # Remove standalone discussion links (website-only): both the current
+    # d2l.discourse.group domain and the legacy discuss.d2l.ai one.
     text = re.sub(
-        r'^\[Discussions?\]\(https://discuss\.d2l\.ai/[^)]*\)\s*$',
+        r'^\[Discussions?\]\(https://(?:discuss\.d2l\.ai|d2l\.discourse\.group)/[^)]*\)\s*$',
         '', text, flags=re.MULTILINE)
     return text
 

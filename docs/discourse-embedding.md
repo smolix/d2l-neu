@@ -1,6 +1,30 @@
 # Embedding Discourse topics on each chapter page
 
-**Status:** Plan / blocked on topic-seeding (see [§ Seeding](#seeding-the-topics-on-d2ldiscoursegroup)).
+**Status:** Implemented and live (2026-06-08). The embed runs entirely
+client-side from the JS block at the bottom of `_d2l-tabs.html`
+(include-after-body, wired in `_quarto.yml`) — **not** the separate
+`add_discourse_embed.py` script sketched below, which was superseded and
+never added. It finds the *active* framework tab's topic, hides the raw
+`Discussions` links, and embeds that topic in a single
+`#d2l-discourse-embed` container, re-embedding when the framework tab
+switches. Topics are now seeded on `d2l.discourse.group` and the
+server-side embedding config (embeddable host `d2l.smola.org`) is done.
+
+> Two gotchas that kept this dark until 2026-06-08, both now fixed:
+> 1. `_d2l-tabs.html`'s `LINK_RE` matched the **old** `discuss.d2l.ai`
+>    domain while the links (and selectors) were `d2l.discourse.group`,
+>    so `findActiveTopicId()` always returned null and no embed loaded.
+> 2. Eight `mdl-*` math-appendix chapters still pointed at
+>    `discuss.d2l.ai`; these were rewritten to `d2l.discourse.group`.
+>
+> **Flagged — placeholder topics:** 14 links across the 8 `mdl-*`
+> chapters are still placeholders with no numeric topic id (10 bare
+> `d2l.discourse.group/`, 4 `…/t/svd`), so those chapters do **not**
+> embed yet. They need real Discourse topics seeded, then a numeric-id
+> link, before their discussion renders inline. Files: `mdl-svd-low-rank`,
+> `mdl-matrix-calculus-autodiff`, `mdl-mutual-information`,
+> `mdl-divergences-distances`, `mdl-sdes`, `mdl-odes-solvers`,
+> `mdl-fokker-planck-probability-flow`, `mdl-score-matching-diffusion-flow`.
 
 ## Why
 
@@ -101,6 +125,13 @@ The build can emit this version unconditionally — it's a strict
 improvement for any page longer than a screen-height.
 
 ## Implementation plan in this repo
+
+> **Superseded (kept for context).** The as-built implementation is the
+> client-side JS in `_d2l-tabs.html`, which is *better* than this sketch:
+> it is framework-tab-aware (embeds the active tab's topic and swaps on tab
+> change), needs no post-render HTML pass, and handles the multi-topic
+> pages that this single-`#discourse-comments` sketch could not. The
+> sketch below is left only to document the original approach.
 
 Mirror what `tools/add_cfasync.py` already does for `data-cfasync`:
 walk `_book/**/*.html` after the Quarto render finishes and rewrite

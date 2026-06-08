@@ -66,11 +66,16 @@ authoring" section below.
 - Run notebook *execution* through `make run-all-notebooks` (all frameworks)
   or `make run-notebooks-<fw>` (one framework). Both are driven by the unified
   **`tools/notebook_scheduler.py`** — do NOT add an outer `make -j`, and do not
-  hand-roll parallel `run-notebooks-*`; the scheduler owns concurrency. It
-  auto-detects resources, runs different notebooks concurrently up to the
-  GPU/CPU/multi-GPU slot pools, and **sequences a notebook's four framework
-  variants one at a time** (never concurrently) so they can't race on the shared
-  `data/` tree. See `docs/build-system.md` §6.7. Slide rendering is CPU-only and
+  hand-roll parallel `run-notebooks-*`; the scheduler owns concurrency. It puts
+  every notebook on **one queue ordered framework-by-framework** (all pytorch,
+  then jax, …) and serves it as slots free: 1 GPU slot per 7.5 GiB of each GPU's
+  VRAM (tracked per physical GPU), 1 CPU slot per 8 cores. A notebook takes 1
+  slot by default (or 2-on-one-GPU / 2×1 / 2×2 if marked); 1-/2-GPU/CPU all mix,
+  no barrier and no per-relpath lock — the framework grouping keeps a notebook's
+  variants ~130 dispatches apart, so they never run together and can't race on
+  the shared `data/` tree. (CPU notebooks flow ahead onto free CPU slots even
+  while earlier frameworks' GPU work runs — it's just a queue.) See
+  `docs/build-system.md` §6.7. Slide rendering is CPU-only and
   parallel-safe (`make -j4 slides`). `make html` is a single `quarto render`
   (it amortizes the crossref scan to ~2.4 s/page, ~9 min for the book;
   per-file/subset renders do NOT amortize and flake under concurrency — §6.8) —

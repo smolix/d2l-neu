@@ -47,7 +47,8 @@ from jax import numpy as jnp
 from flax import linen as nn
 import optax
 import numpy as np
-import tensorflow as tf
+import flaxmodels as fm
+import tensorflow as tf  # data pipeline only (tf.data); all compute runs in JAX
 import os
 ```
 
@@ -176,7 +177,8 @@ transform_train = torchvision.transforms.Compose([
 ```{.python .input #kaggle-dog-image-augmentation-1}
 #@tab jax
 def transform_train_fn(image, label):
-    """Training augmentation: random crop, flip, color jitter, normalize."""
+    """Training augmentation: random crop, flip, color jitter; scale to [0, 1]
+    (the ResNet-34 backbone applies ImageNet mean/std internally)."""
     image = tf.cast(image, tf.float32)
     # Random resized crop to 224x224
     image = tf.image.resize(image, [256, 256])
@@ -186,7 +188,7 @@ def transform_train_fn(image, label):
     image = tf.image.random_contrast(image, lower=0.6, upper=1.4)
     image = tf.image.random_saturation(image, lower=0.6, upper=1.4)
     image = tf.clip_by_value(image, 0.0, 255.0)
-    return tf.keras.applications.resnet50.preprocess_input(image), label
+    return image / 255.0, label
 ```
 
 ```{.python .input #kaggle-dog-image-augmentation-1}
@@ -234,12 +236,13 @@ transform_test = torchvision.transforms.Compose([
 ```{.python .input #kaggle-dog-image-augmentation-2}
 #@tab jax
 def transform_test_fn(image, label):
-    """Test preprocessing: resize, center crop, normalize."""
+    """Test preprocessing: resize, center crop; scale to [0, 1] (the ResNet-34
+    backbone applies ImageNet mean/std internally)."""
     image = tf.cast(image, tf.float32)
     image = tf.image.resize(image, [256, 256])
     # Center crop to 224x224
     image = tf.image.resize_with_crop_or_pad(image, 224, 224)
-    return tf.keras.applications.resnet50.preprocess_input(image), label
+    return image / 255.0, label
 ```
 
 ```{.python .input #kaggle-dog-image-augmentation-2}
@@ -454,15 +457,10 @@ def get_net(devices):
 
 ```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab jax
-# Use a pretrained TF ResNet50 to extract ImageNet logits as frozen features,
-# then train a small Flax output network on top. This mirrors the PyTorch tab,
-# where torchvision's pretrained ResNet emits 1000 ImageNet logits before the
-# custom dog-breed head.
-_resnet_for_features = tf.keras.applications.ResNet50(
-    weights='imagenet', include_top=True, classifier_activation=None,
-    input_shape=(224, 224, 3))
-_resnet_for_features.trainable = False
-
+# Frozen ImageNet-pretrained ResNet-34 (Flax, runs on GPU), matching the
+# PyTorch/MXNet tabs: it emits 1000 ImageNet logits, on top of which we train a
+# small dog-breed head. `normalize=True` applies the standard ImageNet mean/std
+# internally, so the data pipeline only needs images in [0, 1].
 class OutputNet(nn.Module):
     """Small output network for fine-tuning."""
     num_classes: int = 120
@@ -475,8 +473,11 @@ class OutputNet(nn.Module):
         return x
 
 def get_net():
+    backbone = fm.ResNet34(output='logits', pretrained='imagenet')
+    backbone_vars = backbone.init(jax.random.PRNGKey(0),
+                                  jnp.ones((1, 224, 224, 3)))
     output_net = OutputNet(num_classes=120)
-    return _resnet_for_features, output_net
+    return backbone, backbone_vars, output_net
 ```
 
 ```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
@@ -537,20 +538,18 @@ def evaluate_loss(data_iter, net, devices):
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
 
-def extract_features(features_net, X_batch):
-    """Extract features using the frozen TF ResNet50."""
-    feats = features_net.predict(X_batch, verbose=0)
-    return jnp.array(feats)
+def extract_features(backbone, backbone_vars, X_batch):
+    """Frozen ResNet-34 forward (on GPU) -> 1000-dim ImageNet logits."""
+    return backbone.apply(backbone_vars, jnp.asarray(X_batch), train=False)
 
-def precompute_features(features_net, data_iter):
-    """Run the frozen TF backbone once over the whole dataset and cache
-    the (features, labels) tensors as JAX arrays. Subsequent training
-    only iterates the small classifier head over these cached features,
-    so we never round-trip from JAX into TF on the per-step path."""
+def precompute_features(backbone, backbone_vars, data_iter):
+    """Run the frozen backbone (on GPU) over the whole dataset and cache the
+    (features, labels) tensors as JAX arrays. Subsequent training only
+    iterates the small classifier head over these cached features."""
     feats_list, labels_list = [], []
     for features, labels in data_iter:
-        f = features_net(features, training=False).numpy()
-        feats_list.append(f)
+        f = extract_features(backbone, backbone_vars, features.numpy())
+        feats_list.append(np.asarray(f))
         labels_list.append(labels.numpy())
     feats = jnp.array(np.concatenate(feats_list, axis=0))
     labels = jnp.array(np.concatenate(labels_list, axis=0))
@@ -566,17 +565,6 @@ def evaluate_loss_from_feats(feats, labels, output_net, variables,
         l = loss_fn(logits, yb)
         l_sum += float(l.sum())
         n += int(yb.shape[0])
-    return l_sum / n
-
-def evaluate_loss(data_iter, features_net, output_net, variables):
-    l_sum, n = 0.0, 0
-    for features, labels in data_iter:
-        feats = extract_features(features_net, features.numpy())
-        y = jnp.array(labels.numpy())
-        logits = output_net.apply(variables, feats, training=False)
-        l = loss_fn(logits, y)
-        l_sum += float(l.sum())
-        n += len(labels)
     return l_sum / n
 ```
 
@@ -688,8 +676,8 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab jax
-def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
-          wd, lr_period, lr_decay):
+def train(backbone, backbone_vars, output_net, train_iter, valid_iter,
+          num_epochs, lr, wd, lr_period, lr_decay):
     # Only train the small custom output network
     # ResNet50 with include_top=True outputs 1000 ImageNet logits.
     dummy = jnp.ones((1, 1000))
@@ -705,11 +693,12 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
     # n_train and num_batches, which are needed to configure the LR schedule
     # before the epoch loop starts.
     print('Pre-extracting train features...')
-    train_feats, train_labels = precompute_features(features_net, train_iter)
+    train_feats, train_labels = precompute_features(backbone, backbone_vars,
+                                                     train_iter)
     if valid_iter is not None:
         print('Pre-extracting valid features...')
-        valid_feats, valid_labels = precompute_features(features_net,
-                                                       valid_iter)
+        valid_feats, valid_labels = precompute_features(backbone, backbone_vars,
+                                                        valid_iter)
     # Use the same batch size as the data loader (defined globally).
     bs = batch_size
     n_train = int(train_feats.shape[0])
@@ -753,7 +742,7 @@ def train(features_net, output_net, train_iter, valid_iter, num_epochs, lr,
         # augmented images (random crop/flip/jitter from the tf.data pipeline).
         # This matches PyTorch, which runs augmentation + backbone forward on
         # every batch in every epoch rather than caching a single augmented pass.
-        train_feats, train_labels = precompute_features(features_net,
+        train_feats, train_labels = precompute_features(backbone, backbone_vars,
                                                         train_iter)
         # Shuffle indices each epoch
         perm = rng.permutation(n_train)
@@ -856,8 +845,8 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 #@tab jax
 num_epochs, lr, wd = 10, 1e-4, 1e-4
 lr_period, lr_decay = 2, 0.9
-features_net, output_net = get_net()
-variables = train(features_net, output_net, train_iter, valid_iter,
+backbone, backbone_vars, output_net = get_net()
+variables = train(backbone, backbone_vars, output_net, train_iter, valid_iter,
                   num_epochs, lr, wd, lr_period, lr_decay)
 ```
 
@@ -920,13 +909,13 @@ with open('submission.csv', 'w') as f:
 
 ```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab jax
-features_net, output_net = get_net()
-variables = train(features_net, output_net, train_valid_iter, None,
+backbone, backbone_vars, output_net = get_net()
+variables = train(backbone, backbone_vars, output_net, train_valid_iter, None,
                   num_epochs, lr, wd, lr_period, lr_decay)
 
 preds = []
 for data, label in test_iter:
-    feats = extract_features(features_net, data.numpy())
+    feats = extract_features(backbone, backbone_vars, data.numpy())
     logits = output_net.apply(variables, feats, training=False)
     output = jax.nn.softmax(logits, axis=-1)
     preds.extend(np.array(output))

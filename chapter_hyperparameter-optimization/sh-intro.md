@@ -52,7 +52,6 @@ d2l.set_figsize()
 ```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab tensorflow
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
 from d2l import tensorflow as d2l
 import numpy as np
 from scipy import stats

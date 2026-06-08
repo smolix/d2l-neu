@@ -32,7 +32,6 @@ from scipy import stats
 %%tab tensorflow
 import time
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
 from d2l import tensorflow as d2l
 import numpy as np
 from scipy import stats

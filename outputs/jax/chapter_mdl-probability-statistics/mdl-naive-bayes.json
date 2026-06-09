@@ -18,51 +18,6 @@
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\r\u001b[1m       0/11490434\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0s/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m  311296/11490434\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 1835008/11490434\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 4734976/11490434\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 6701056/11490434\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 8396800/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m10829824/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 0us/step"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m11490434/11490434\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 0us/step\n"
-        },
-        {
           "type": "execute_result",
           "text": "((60000, 28, 28), (60000,))"
         }
@@ -86,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47657,
-          "sha256": "sha256:63ebc443c0ac0360865e89d0700fd74abd2a9d6b3affb0a1ac74fb499aad0865"
+          "bytes": 47953,
+          "sha256": "sha256:820951beea3a6726246325c7fcf4d5151328c96748fe8afb32545912f4c00f0a"
         }
       ]
     },

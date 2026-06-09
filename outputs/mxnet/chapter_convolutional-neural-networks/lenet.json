@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21504,
-          "sha256": "sha256:87cc1ea9e758d654d3c35c97350239412ef2cff6843f5be2ebe07974a6a269fa"
+          "bytes": 21512,
+          "sha256": "sha256:6a13a4b2bcc32748ed2408ca3f6743b5875ebd1b422c27f74b845a8efa4b0e32"
         }
       ]
     }

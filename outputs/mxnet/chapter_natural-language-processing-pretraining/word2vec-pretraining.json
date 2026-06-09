@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-pretraining/word2vec-pretraining.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:11b6eeddbc059a3c165ce9467f428c9147eba3dc8e829503cab6ddfa4ecba80d",
     "max_inline_bytes": 0
   },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[ 0.05420889,  0.05137677, -0.01580331,  0.00029405],\n        [-0.00063882,  0.0453654 ,  0.05350208,  0.02731892],\n        [ 0.01668914,  0.01789143,  0.05927321, -0.0271509 ]],\n\n       [[-0.02084802, -0.04419554, -0.02120254,  0.06979033],\n        [-0.05824137,  0.01857951, -0.01785785,  0.00955272],\n        [ 0.03942686,  0.03035271,  0.01175872,  0.01171747]]])"
+          "text": "array([[[ 0.01274019, -0.01342023,  0.00207424,  0.01875273],\n        [-0.01510429, -0.06431492, -0.03583668,  0.04978917],\n        [ 0.06380823, -0.00099016,  0.02318969, -0.00675029]],\n\n       [[-0.02739556, -0.01877953, -0.02129235,  0.05748305],\n        [-0.05207107, -0.00447375, -0.06888662, -0.01036879],\n        [ 0.01864999, -0.06090265, -0.06453115, -0.03857605]]])"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.407, 38212.6 tokens/sec on gpu(0)\n"
+          "text": "loss 0.408, 37981.3 tokens/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 18346,
-          "sha256": "sha256:7d3dc6171e9bac5605eab40ee4ec3fdc0eb1cbd0497849b89a22c4f1126d7573"
+          "bytes": 18493,
+          "sha256": "sha256:7ad8c27e442241077ba4335b8232eaec07b3a7570741abaeaa3831888f52671c"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.635: intel\ncosine sim=0.574: dell\ncosine sim=0.573: graphics\n"
+          "text": "cosine sim=0.692: microprocessor\ncosine sim=0.604: intel\ncosine sim=0.583: memory\n"
         }
       ]
     }

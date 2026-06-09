@@ -3,7 +3,7 @@
   "source": "chapter_generative-adversarial-networks/gan.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:0fe78b4c2b490c5dfd42e606597e26658c68147727e298fb28a444c3bf45468b",
     "max_inline_bytes": 0
   },
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-generate-some-real-data-2-1.svg",
-          "bytes": 20775,
-          "sha256": "sha256:6160b6cc9512fb400ca948b17ece8f0e782cf5e4a3ed6cb90802229b5652d478"
+          "bytes": 20423,
+          "sha256": "sha256:d40aed6d6275bf9f3e7bf1e05bfc0a88b5272442f9d740ceec7d74dbe02cebf5"
         }
       ]
     },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.694, loss_G 0.694, 935.5 examples/sec\n"
+          "text": "loss_D 0.693, loss_G 0.693, 871.3 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-4-1.svg",
-          "bytes": 57982,
-          "sha256": "sha256:5ae71dae6d96622ae4c81bb50359867e75a87091f9a69d8a70614e372b6e4f1e"
+          "bytes": 59630,
+          "sha256": "sha256:4c953bda74d527696871121d03d95d0b88d8bbadaf9854615cf4013435652e26"
         }
       ]
     }

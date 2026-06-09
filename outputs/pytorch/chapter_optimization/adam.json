@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.102 sec/epoch\n"
+          "text": "loss: 0.245, 0.132 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-2-1.svg",
           "bytes": 18772,
-          "sha256": "sha256:5258d3744c247c4459d7a943cbd6c6173e97d4d94a56e2489239385896103c66"
+          "sha256": "sha256:0775e7c70ce30f30949584c21388978835f7ea9ace832c4c89a1e078e001fe5f"
         }
       ]
     },
@@ -38,14 +38,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.075 sec/epoch\n"
+          "text": "loss: 0.243, 0.096 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-3-1.svg",
-          "bytes": 18626,
-          "sha256": "sha256:0e6fb91171c86067ca89a902449137590be1762da7e07df7f62b5d5de4c3572d"
+          "bytes": 18622,
+          "sha256": "sha256:b0116317c41781efb838b363c1ff154a49a79475e950108ff0bfed3ce50e01bc"
         }
       ]
     },
@@ -56,14 +56,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.079 sec/epoch\n"
+          "text": "loss: 0.247, 0.097 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-yogi-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:09aae1a282bd39e9639747a9a2b6b4973b9ee8fb85f6f3645bf4494e7cd27a6c"
+          "bytes": 18775,
+          "sha256": "sha256:c7807280622d7f402f15410ab1baed5554db525e024c0098d1013bac1630a0e9"
         }
       ]
     }

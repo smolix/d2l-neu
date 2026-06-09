@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/calculus.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 18533,
-          "sha256": "sha256:cf206b7bc7fbc8442f840a30ca141c2b34e35803ff70f74ecfd66356c6f9ce5b"
+          "sha256": "sha256:9f05a3556727a9d3205c61c99618b4e0852bda2d8e4bdcf754a2adaebdb5fe59"
         }
       ]
     }

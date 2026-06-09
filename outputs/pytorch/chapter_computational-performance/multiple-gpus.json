@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/multiple-gpus.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:5668de212d6ae8734024ffe60068752e9d6d60a1f9765b8d4cadac4746e30983",
     "max_inline_bytes": 0
   },
@@ -46,12 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "before allreduce:\n tensor([[1., 1.]], device='cuda:0') \n tensor([[2., 2.]], device='cuda:1')\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "after allreduce:\n tensor([[3., 3.]], device='cuda:0') \n tensor([[3., 3.]], device='cuda:1')\n"
+          "text": "before allreduce:\n tensor([[1., 1.]], device='cuda:0') \n tensor([[2., 2.]], device='cuda:1')\nafter allreduce:\n tensor([[3., 3.]], device='cuda:0') \n tensor([[3., 3.]], device='cuda:1')\n"
         }
       ]
     },
@@ -88,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.82, 1.7 sec/epoch on [device(type='cuda', index=0)]\n"
+          "text": "test acc: 0.84, 2.0 sec/epoch on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16957,
-          "sha256": "sha256:817c4884362c227d15228d905a9ecffecba0797629b2785228f4b420024e82dc"
+          "bytes": 16964,
+          "sha256": "sha256:a1d0020a8ba53dff800468fb41e0e7322468a4334769d4de31f2d2b18ba55129"
         }
       ]
     },
@@ -106,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.81, 1.9 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
+          "text": "test acc: 0.84, 3.6 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
           "bytes": 16963,
-          "sha256": "sha256:4c438ca6c4778bdd6356a61c39525b90c3a7783ec5cdf2f4128b836d7fa18ab7"
+          "sha256": "sha256:cde263fbc22cfa85bca8e2c832f73a53889db233f4970d8bac5d2ca93623389e"
         }
       ]
     }

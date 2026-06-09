@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22398,
-          "sha256": "sha256:455b7683b747ae45ad943509c30dca0e6ed99a753be05eaf17c28f16a4741973"
+          "bytes": 22395,
+          "sha256": "sha256:e6dda591c7ea212a7ac0f0ef3e8cba3c815cffb349544b861dfda720e4b3b9da"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 51904,
-          "sha256": "sha256:2a2fd29955d46d6fe31a786a2789668436342fa52dd33e0db0a4c4cfe18e8bd9"
+          "bytes": 49717,
+          "sha256": "sha256:bf1be77fac51e432f207e40077a1edfd23a70662ac9a5eb71318383b80bee780"
         }
       ]
     }

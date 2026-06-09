@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39814,
-          "sha256": "sha256:2a5e1b8cf529b9de5d5acd269b1ed02bdd6f1f8343a672c04a2d40307878fa92"
+          "bytes": 40562,
+          "sha256": "sha256:4ab9533298e11d359fd5842ca5b36b8a683eb3fa970af70373e5664e200f11d3"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17932,
-          "sha256": "sha256:fb700e4935444fdbc917318bd23c7b5c4553b25c4cfc35e7534b7774e4377c22"
+          "bytes": 19948,
+          "sha256": "sha256:457d8582e742619136cfdbb67abc28c19a919b901b6e3d428aaaf170b1f83248"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67160,
-          "sha256": "sha256:ac95827c7292bf11a71b9e4e2cb00abcdcf65b80035afac75defb7ab8b4334d4"
+          "bytes": 68443,
+          "sha256": "sha256:45b6da3263aee228da1fe6954f551fd2f578cc6b7dca5b2578de9e4c3007bc7f"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44539,
-          "sha256": "sha256:bde3c79585af3fc20247cee1b92718b4fef669e83f3147bc1ebf22bc0a6c1a19"
+          "bytes": 44913,
+          "sha256": "sha256:e2fee834909b6b672efbcef35706ad8f568f9e41b6ab209a8b5a78bf8f7716c5"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104346,
-          "sha256": "sha256:63a24bf92a6e1f8edf5365608575a664e366820f431559626e5758fe540cf598"
+          "bytes": 106184,
+          "sha256": "sha256:a63da4bdd47ebba187aed164782363bd0dc4533e2418a0a5e4ccae783b51d68f"
         }
       ]
     }

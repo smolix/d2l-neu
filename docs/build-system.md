@@ -620,36 +620,71 @@ the HTML too.
 ### 6.7 Resource-aware scheduling (GPU / CPU / RAM autodetect)
 
 `tools/detect_resources.py` determines host resources at the start of every
-notebook build and derives the parallelism plan, taking the **min across all
-constraints** (VRAM, system RAM, cores, and — for MXNet — the open-file/process
-ulimits). It prints the plan (`--report`) at the top of `run-all-notebooks` /
-`run-notebooks-<fw>`, and the Makefile reads individual knobs via `--get KEY`
-(overridable on the command line — the values are `?=` defaults). On the 4×24 GiB
-/ 64-core box: `GPU_SLOTS=12  CPU_SLOTS=8  MXNET_GPU_SLOTS=8  MULTIGPU_SLOTS=6`.
+notebook build and sizes the slot pools:
 
-- **Per-job budgets** (env-overridable): `GPU_MIB_PER_LIGHT=7680` (7.5 GiB),
-  `CPU_PER_LIGHT=8` (cores/CPU-notebook), `RAM_MIB_PER_LIGHT=4096`. So a 16 GiB
-  GPU packs 2 jobs/card, an 8-core box runs 1 CPU notebook, etc. — the same
-  Makefile scales from a laptop to the server with no edits.
-- **CPU affinity:** each CPU-only notebook is pinned to a dedicated core set
-  (`cpu_affinity`, `floor(ncores/8)` slots → 8 cores each on this box) so they
-  don't oversubscribe.
-- **Multi-GPU packing:** the d2l multi-GPU notebooks use exactly **2 GPUs at
-  ≤7.5 GiB each**, so instead of `acquire_all_gpus` + a `-j1` queue they are
-  packed onto disjoint GPU **pairs**: `pairs = num_gpus//2`,
-  `per_pair = floor(min_VRAM/7.5 GiB)`, `MULTIGPU_SLOTS = pairs × per_pair`
-  (4×24 GiB ⇒ 6 ; 2×16 GiB ⇒ 2). `run_one_notebook.acquire_gpu_pair()` claims a
-  packing slot on a pair (spread-first, then pack) and pins `CUDA_VISIBLE_DEVICES`
-  to that pair. **JAX preallocates**, so its `XLA_PYTHON_CLIENT_MEM_FRACTION` is
-  auto-set to `~1/per_pair` (0.30 at per_pair=3) for the packed multigpu run;
-  PyTorch/TF/MXNet allocate on demand. Verified: 6 multi-GPU notebooks run
-  concurrently across all four frameworks, 0 failures.
-- **MXNet GPU cap** is now ulimit-derived (`nofile//FD_PER_MXNET_JOB`,
-  `nproc//PROC_PER_MXNET_JOB`) rather than the old hardcoded `2`; the board fix
-  below + a verified 3/GPU run make higher concurrency safe.
+- **GPU:** 1 slot per `GPU_MIB_PER_SLOT` (7.5 GiB) of **each** GPU's VRAM,
+  reported **per physical GPU** so heterogeneous GPUs just contribute different
+  counts — `GPU_SLOTS_PER` e.g. `3,3,3,3` for 4×24 GiB (sum 12), or `3,3,3,4`
+  for 3×24 GiB + 1×32 GiB (sum 13). `GPU_VRAM_PER` carries each card's MiB.
+- **CPU:** 1 slot per `CPU_PER_LIGHT` (8) cores, **min 1** (a 6-core box still
+  gets 1) → `CPU_SLOTS`.
 
-Net effect: a full `make clean` + re-execute of all 524 notebooks dropped from
-~180 min to **~96 min** (run-all), ~136 min total including the artifact rebuild.
+It prints the plan with `--report` at the top of `run-all-notebooks`; the
+Makefile passes the knobs to the scheduler via `SCHED_ENV` (all `?=` overridable).
+
+**Unified scheduler (`tools/notebook_scheduler.py`).** Full reference:
+**`docs/notebook-scheduler.md`**. `run-all-notebooks` (and `run-notebooks-<fw>`)
+put every stale notebook on **one queue** and serve it as resources free up.
+It's deliberately a plain queue, not a phased plan:
+
+- **Queue order = framework-grouped.** All of pytorch's notebooks, then all of
+  jax's, then tensorflow's, then mxnet's (relpath order within each). This is the
+  only ordering; there is **no barrier** between frameworks and **no per-relpath
+  mutex**. The framework grouping separates a notebook's framework variants by
+  ~one framework's worth of dispatches (~130), so with a ~12-20 slot pool the
+  same notebook never runs in two frameworks at once — the cross-framework
+  contention (kaggle-cifar10/-dog `data/.../train_valid_test/` reorg race, lib
+  rebuild) is avoided by **ordering**, statistically, not by a lock.
+- **Served as slots free.** Each dispatch round scans the whole queue and starts
+  every item whose required slots are free *right now* (first-fit, skipping —
+  not blocking on — items that don't fit yet). GPU and CPU pools are independent,
+  so **CPU notebooks just run through as CPU slots free, even across the
+  framework boundary while earlier frameworks' GPU notebooks are still going** —
+  it's a queue, requests served on resource availability, not a per-framework
+  gate.
+- **Resource pools.** GPU slots tracked **per physical GPU** (`gpu_free[i]`,
+  capacity from `GPU_SLOTS_PER`); CPU slots each pinned to a core group
+  (affinity). Per-notebook requirement (`runtime_env.notebook_resource`):
+  default **1 GPU or 1 CPU slot**; overridable to **2 slots on one GPU**
+  (memory-heavy, `HEAVY_GPU_NOTEBOOKS`), **2×1** (one slot on each of two GPUs,
+  data-parallel, `MULTI_GPU_NOTEBOOKS`), or **2×2** (two on each of two GPUs,
+  `TWO_GPU_SLOTS_PER`). A 2-GPU item is placed on the two emptiest GPUs that each
+  have the slots free; 2-GPU and 1-GPU and CPU items are all **mixed** — no
+  separate phase or gating.
+
+Each dispatch shells **`make <stamp>`** with the chosen device(s) in
+`D2L_ASSIGNED_CUDA` (`""`=CPU, `"2"`=one GPU, `"0,1"`=two GPUs) +
+`D2L_ASSIGNED_CPU_CORES`, reusing the per-framework `EXEC_RULE` env verbatim (no
+duplication); `run_one_notebook._run_once` runs on the assignment and **skips its
+own flock** (the self-locking path + `serialize_dataset_prep` remain the fallback
+for a direct `make _notebooks/<fw>/<x>.executed`). For **jax** the scheduler also
+sets `XLA_PYTHON_CLIENT_MEM_FRACTION = slots×7.5 GiB / card-VRAM` (jax
+preallocates; others allocate on demand). Two race guards, both because each
+notebook is a *separate* make process:
+
+- **No concurrent lib rebuild:** the dispatch passes `-o .preprocess.stamp -o
+  d2l/.built -o d2l/<fw>.py -o _notebooks/<fw>/.generated` (make `--old-file`) so
+  an inner make can never rebuild the shared d2l library / preprocess / notebook
+  set (built once upfront). Unguarded, concurrent inner makes raced to rewrite
+  `d2l/*.py` mid-run and corrupted it — one race even wiped the hand-maintained
+  preamble (`DATA_URL`/`DATA_HUB`/`download` gone → `partially initialized
+  module 'd2l.<fw>'`).
+- **Warm `.pyc` before dispatch:** the scheduler pre-compiles `d2l` bytecode once
+  so the first import burst finds a valid `d2l/__pycache__/*.pyc` and doesn't race
+  on writing it (all venvs are the same CPython → one compile warms the cache).
+
+Net effect: a full `make clean` + re-execute of all 524 notebooks runs in
+~100 min (`run-all-notebooks`), 524/524 with 0 failures.
 
 **Gotcha — async ProgressBoard + MXNet (cross-thread CUDA).** The async board's
 drawing thread must **not** issue framework GPU ops. MXNet's engine + the custom
@@ -662,6 +697,32 @@ notebook balloons to fill the card). The MXNet tab of `Module.plot`
 matplotlib. PyTorch/JAX/TF keep the deferred thunk (they tolerate cross-thread
 host transfers). If you add a framework whose plotting path moves a GPU read off
 the main thread, check it survives a long multi-notebook GPU run.
+
+### 6.8 HTML render — why it's a single `quarto render` (not parallel)
+
+`make html` renders the whole book with **one** `quarto render --to html`. That
+is deliberate, and we measured why parallelizing it is counter-productive here:
+
+- A **single full-project render amortizes**: quarto scans the crossref DB once,
+  then renders pages at **~2.4 s/page**. Cold, all 209 pages: **558 s (~9.3 min)**,
+  0 errors, and it regenerates `search.json` itself.
+- A **subset / per-file render does NOT amortize** — each invocation re-does the
+  whole-project crossref scan: `quarto render <1 file>` ≈ 40 s; `<10 files>`
+  ≈ 39 s/file; a `project: render:` subset ≈ 53 s/file. So splitting the book
+  across processes makes each page **15-20× more expensive**, and you'd need
+  >17 isolated workers just to break even with the single render.
+- Concurrent renders sharing one project dir also **flake** under load
+  (transient `Error running filter …/main.lua`, or a render falling back to
+  standalone mode and writing next to the source) — the community workaround is
+  one isolated working copy per worker, which only pays off when *execution*
+  dominates. Here the render is pandoc/crossref-bound, which the single render
+  already amortizes. (An earlier `tools/render_html_parallel.sh` pool hit a ~56 %
+  cold flake rate and was removed.)
+
+Recipe order: `quarto render --to html` → `fix_crossref_numbers.py` (rewrites
+logical numbering in the HTML *and* `search.json`) → `add_cfasync.py`. The render
+is single-threaded but it's only ~9 min of a ~2.5 h full build — see §6.9 for the
+artifact-phase breakdown.
 
 ---
 

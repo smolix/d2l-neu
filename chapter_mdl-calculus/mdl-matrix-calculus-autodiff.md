@@ -808,19 +808,19 @@ mixed modes, and checkpointing is the subject of Griewank and Walther's monograp
    matrix $\mathbf H$*.
 
 :begin_tab:`mxnet`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 <!-- slides -->

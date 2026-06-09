@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/transposed-conv.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:6f968f9b9b6c0c1e7fa640275128e8d23aea0c605947e33a247aadfbf9a1cc5a",
     "max_inline_bytes": 0
   },

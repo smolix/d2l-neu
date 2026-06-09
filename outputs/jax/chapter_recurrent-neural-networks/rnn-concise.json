@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 24230,
-          "sha256": "sha256:f2b81aa8e524ba84cd7bf3b7bdcb274d81fe14278f720cd5ec0b9fefd09cef84"
+          "bytes": 24287,
+          "sha256": "sha256:0bea16fd1d7bfe5da3fe6e6aad1edb9bfd72e1bad871347d899219f061ae530e"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.5, 'time traveller and the merint a la'\n"
+          "text": "perplexity 7.3, 'time traveller and the medint a th'\n"
         }
       ]
     }

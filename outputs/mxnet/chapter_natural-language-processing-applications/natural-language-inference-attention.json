@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-attention.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:d01a0a0653f0c08f4c8a42e4fd8d9343c4b43086b717032ef9ebce79fec32103",
     "max_inline_bytes": 0
   },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.513, train acc 0.797, test acc 0.822\n6555.6 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.515, train acc 0.797, test acc 0.825\n2780.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
-          "bytes": 27072,
-          "sha256": "sha256:ab12ddbff55a23a58cdabf3c7d3627b9ca275bd2ad704eb511a53d6b2e8cd4ce"
+          "bytes": 27064,
+          "sha256": "sha256:523640accece46f4b0fe37aa4b52a90a0e0a49e329c3cb2abd260d9c76fbd076"
         }
       ]
     },

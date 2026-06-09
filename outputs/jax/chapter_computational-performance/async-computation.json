@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.5139 sec\njax: 0.0175 sec\n"
+          "text": "numpy: 0.5108 sec\njax: 0.0169 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.0025 sec\n"
+          "text": "Done: 0.0033 sec\n"
         }
       ]
     },

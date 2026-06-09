@@ -63,7 +63,7 @@ def _detect():
         if mibs:
             num_gpus, min_gpu_mib = len(mibs), min(mibs)
     except Exception:
-        pass
+        mibs = []
 
     # CPU: respect cgroup / taskset affinity when available.
     try:
@@ -95,7 +95,8 @@ def _detect():
     except Exception:
         nofile, nproc = 8192, 4096
 
-    return dict(num_gpus=num_gpus, min_gpu_mib=min_gpu_mib, ncpu=ncpu,
+    return dict(num_gpus=num_gpus, min_gpu_mib=min_gpu_mib, gpu_mibs=mibs,
+                ncpu=ncpu,
                 mem_total_mib=mem_total_mib, mem_avail_mib=mem_avail_mib,
                 ulimit_nofile=int(nofile), ulimit_nproc=int(nproc))
 
@@ -154,10 +155,22 @@ def derive(d):
     # fit one card with ~10% headroom (per_pair=3 -> 0.30; =2 -> 0.45; =1 -> 0.90).
     jax_mgpu_frac = f"{0.9 / per_pair:.2f}"
 
+    # ── Authoritative model for the unified scheduler ────────────────────────
+    # 1 GPU slot per GPU_MIB_PER_LIGHT (7.5 GiB) of EACH GPU's VRAM, summed
+    # across (possibly heterogeneous) GPUs; 1 CPU slot per CPU_PER_LIGHT cores
+    # (min 1). The scheduler tracks slots PER physical GPU (not a flat pool).
+    gpu_mibs = d.get("gpu_mibs") or []
+    per_gpu_slots = [max(0, m // GPU_MIB_PER_LIGHT) for m in gpu_mibs]
+    gpu_slots_total = sum(per_gpu_slots) or gpu_slots   # fall back to flat calc
+    cpu_slots_cores = max(1, _floor_div(ncpu, CPU_PER_LIGHT))
+
     return dict(
         NUM_GPUS=num_gpus,
-        GPU_SLOTS=gpu_slots,
-        CPU_SLOTS=cpu_slots,
+        GPU_SLOTS=gpu_slots_total,
+        GPU_SLOTS_PER=",".join(str(s) for s in per_gpu_slots),
+        GPU_VRAM_PER=",".join(str(m) for m in gpu_mibs),
+        GPU_MIB_PER_SLOT=GPU_MIB_PER_LIGHT,
+        CPU_SLOTS=cpu_slots_cores,
         JAX_GPU_SLOTS=max(1, jax_gpu),
         JAX_CPU_SLOTS=max(1, jax_cpu),
         MXNET_GPU_SLOTS=mxnet_gpu,
@@ -217,9 +230,9 @@ def main(argv):
     print(f"  ulimit : nofile={d['ulimit_nofile']} nproc={d['ulimit_nproc']}")
     print("══ Parallelism ══")
     print(f"  GPU_SLOTS       = {plan['GPU_SLOTS']}  "
-          f"(VRAM-fit {prov['raw_gpu_vram']}, RAM-fit {prov['total_ram_jobs']})")
+          f"(per-GPU [{plan['GPU_SLOTS_PER']}] @ {plan['GPU_MIB_PER_SLOT']} MiB/slot)")
     print(f"  CPU_SLOTS       = {plan['CPU_SLOTS']}  "
-          f"(cores-fit {prov['raw_cpu_cores']})")
+          f"(1 per {CPU_PER_LIGHT} cores)")
     print(f"  JAX_GPU_SLOTS   = {plan['JAX_GPU_SLOTS']}   "
           f"JAX_CPU_SLOTS = {plan['JAX_CPU_SLOTS']}")
     print(f"  MXNET_GPU_SLOTS = {plan['MXNET_GPU_SLOTS']}  "

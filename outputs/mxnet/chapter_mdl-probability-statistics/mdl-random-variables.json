@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.664\nintegral_-1000^1000 x^2 p(x) dx = 634.777\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
         }
       ]
     }

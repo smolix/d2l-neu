@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/object-detection-dataset.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:dcb0e54f287d2565e33226b4a81543522d82a3139e03d1486ed8240ff006a6b9",
     "max_inline_bytes": 0
   },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 400900,
-          "sha256": "sha256:f75c0dea458cab998980cbb08b04f076270454fdd30ed524c3b937259ed19bbb"
+          "bytes": 434796,
+          "sha256": "sha256:8fb2e92fc5c810f43f99e9eb9bda95217f826ab4c3c5e053980a7a6481c2bb51"
         }
       ]
     }

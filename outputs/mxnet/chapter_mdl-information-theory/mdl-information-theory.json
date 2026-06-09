@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, array(0.4998834))"
+          "text": "(0.5, array(0.49560252))"
         }
       ]
     },

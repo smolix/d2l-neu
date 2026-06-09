@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-neural-networks/language-model.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:51b626cf7034803b7527b7ab337df36ae735c25cdaff0a7e3d3a6e0f1a446723",
     "max_inline_bytes": 0
   },
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[ 1, 17,  4,  8,  1, 16, 12, 14,  8,  9],\n        [ 5, 11,  1,  3,  9,  2,  1, 13,  2, 11]]) \nY: tensor([[17,  4,  8,  1, 16, 12, 14,  8,  9,  2],\n        [11,  1,  3,  9,  2,  1, 13,  2, 11,  5]])\n"
+          "text": "X: tensor([[ 1, 19,  7, 14,  1,  9,  4, 22,  2,  1],\n        [ 1,  8,  3,  7, 20,  1,  7, 10,  1,  4]]) \nY: tensor([[19,  7, 14,  1,  9,  4, 22,  2,  1,  4],\n        [ 8,  3,  7, 20,  1,  7, 10,  1,  4, 15]])\n"
         }
       ]
     }

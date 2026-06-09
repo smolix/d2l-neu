@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/semantic-segmentation-and-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:88e1668079b212dbe9193ff51b8f04ecc6110702efe75ebb63c414c22a4bd21d",
     "max_inline_bytes": 0
   },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 80355,
-          "sha256": "sha256:9ebc21e3eab3889551ebfbcf1f8c77bcff679ba0950af735fc2e4769fae25ef2"
+          "bytes": 78041,
+          "sha256": "sha256:e40dc28f4678d5b087b367d2693d070eff6017eb94d9e6a953f2916efca21aee"
         }
       ]
     },

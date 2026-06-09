@@ -3,7 +3,7 @@
   "source": "chapter_recommender-systems/fm.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:1a6dd0425b7d550df76ad6b9e6250838d9cbec1425598cd61c1f09d27954d04f",
     "max_inline_bytes": 0
   },
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.006, train acc 1.000, test acc 0.924\n212472.8 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.003, train acc 1.000, test acc 0.926\n227242.9 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 30572,
-          "sha256": "sha256:6b126ee7ecb269d4873cca08a4db945853e8f5a6b402aa781328081690dc0dda"
+          "bytes": 29604,
+          "sha256": "sha256:2a336719f72a00c7700a70f65ace954bcf9d6611b1036a2f06db17849f266ec1"
         }
       ]
     }

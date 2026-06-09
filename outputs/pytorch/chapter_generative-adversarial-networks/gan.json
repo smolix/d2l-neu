@@ -3,7 +3,7 @@
   "source": "chapter_generative-adversarial-networks/gan.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:49fcc0bf8e86a401f3ebcd84112cdb13006ef4669b67a9b0abadbd18bb0182e9",
     "max_inline_bytes": 0
   },
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-generate-some-real-data-2-1.svg",
-          "bytes": 19499,
-          "sha256": "sha256:7c05ffe00724ca334b8f3bd1ff0f93887f93c4957b01688fcb03f176e9f350b5"
+          "bytes": 20856,
+          "sha256": "sha256:3ff1ba48241681b87a3e7867c43775cd8c02942f362be3f6dd8d12e8a9f74ed5"
         }
       ]
     },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.693, loss_G 0.693, 1608.6 examples/sec\n"
+          "text": "loss_D 0.693, loss_G 0.698, 1681.9 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-4-1.svg",
-          "bytes": 57908,
-          "sha256": "sha256:d9b15720ca62acc6c7ce7c09b84de2d8280b392f86e1716cbd0fb775328a8ec3"
+          "bytes": 57443,
+          "sha256": "sha256:aed30efb70131e58d0b059560792e446b2936f5f483f8d8d6efb3d7cf628dbbc"
         }
       ]
     }

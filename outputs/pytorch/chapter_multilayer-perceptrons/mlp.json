@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16904,
-          "sha256": "sha256:6b65ccaa7e63c5550f37039b944d5fa5214e693abdd6ab900115dd18b7cdaa04"
+          "sha256": "sha256:baf8bf00fbc25483a11beb08c5b2defcfce326eaa90d1d589d8fe26375b7f124"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21206,
-          "sha256": "sha256:d7566a159102357f902aebe9a3b2d51c1045a6d03540b3ca2f5f298b09cb6b60"
+          "sha256": "sha256:ac4afec2cd30c1704f216dc64e926510b96c069a4c2e9998196929d548ade1c6"
         }
       ]
     },
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21785,
-          "sha256": "sha256:6c4149bec658beeb3a1f4677c814940d4ad5d376e5b0b5e2f188f8ecfb7883f0"
+          "sha256": "sha256:953ac80e285f1825408a0c99e75563c3847723c1a0b66d8f0c31c67787ae3fcf"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24520,
-          "sha256": "sha256:c7e43315116f8bd92d6e5d4067526266d81e33dbdc1ba62b81d56355210838de"
+          "sha256": "sha256:52217831bc2b8634c5c03fbbd62070db4ce602e66ef09b853123e56c9592b44e"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20176,
-          "sha256": "sha256:b750cad32c55c9f5a88d5fd11ae6795da48a76bd221af69a89f5b67e329f588a"
+          "sha256": "sha256:d9c3c6798254d210701922da7e32074489065f544e043f366d9854ca147f7e92"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22744,
-          "sha256": "sha256:b27bbed3defb09734cad4e2d43c801f17dc1090d2563a4f3d61b804ff656d98d"
+          "sha256": "sha256:7b949c830baa65fed9cd467c39b63acc2cbef1f2bb1be3a0ed8a4bba4f846391"
         }
       ]
     }

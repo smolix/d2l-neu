@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20306,
-          "sha256": "sha256:9770ce7a4366cae9df5ee8819d6eee09199e8d3c686fb5102f6a48f085fc28ad"
+          "bytes": 20307,
+          "sha256": "sha256:c59873856d253f1503684eb5d9c1319cab3b928a2b781231a513c78a67a8957f"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20319,
-          "sha256": "sha256:388a84092e2c8ede96d3073fc9e8b5146a5289ffcb6d3a147d9eae6bc6e4ac7a"
+          "bytes": 20313,
+          "sha256": "sha256:44f0992fa3c427428958ac2031598045e68d5031108da2b92bd5675f3d872259"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has in the proun it a s'"
+          "text": "'it has the man the persent'"
         }
       ]
     }

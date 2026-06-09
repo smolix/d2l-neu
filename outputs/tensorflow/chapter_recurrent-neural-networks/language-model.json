@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[ 1  6  7 17  1  9  2  1  8  4]\n [17  5  3  9  1 13 19  1 16  5]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 6  7 17  1  9  2  1  8  4  5]\n [ 5  3  9  1 13 19  1 16  5  6]], shape=(2, 10), dtype=int32)\n"
+          "text": "X: tf.Tensor(\n[[ 1  7 16  1  8 20  4 15  2  1]\n [ 6 15  2 20  3  5  7  6  1  5]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[ 7 16  1  8 20  4 15  2  1  9]\n [15  2 20  3  5  7  6  1  5  8]], shape=(2, 10), dtype=int32)\n"
         }
       ]
     }

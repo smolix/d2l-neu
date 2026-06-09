@@ -268,5 +268,5 @@ training signals, not measurements.
 :::
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:

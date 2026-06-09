@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19997,
-          "sha256": "sha256:22a62899206adcbb29a02a958584b0acdd271f20d58e462f53c8738252a3375d"
+          "bytes": 19999,
+          "sha256": "sha256:a202163097b5366db83821e1fd78e0015e9ce6b0f0387e1b338d090be0e49e35"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([2.0661, 1.4029, 2.0033, 1.9108, 1.8969, 1.3937], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-1.6627,  1.0130, -0.1074,  1.0248, -0.6578, -1.3620], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor([1.4009, 0.9677, 1.5970, 2.3406, 2.2848, 1.6420], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-0.9134, -0.7240, -0.0729,  1.6461,  1.5144, -1.0800], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 20626,
-          "sha256": "sha256:d0b18a8ef54164b449a5f4a5adf0e409e89f09683cebefd9bf4e1cca8db21748"
+          "bytes": 20000,
+          "sha256": "sha256:42fd720500224b101dc58a0e1a8570faa3a9538fd66eb410d6c69de518bdac4f"
         }
       ]
     }

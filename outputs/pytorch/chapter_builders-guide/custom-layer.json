@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0., grad_fn=<MeanBackward0>)"
+          "text": "tensor(5.3551e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -54,7 +54,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Parameter containing:\ntensor([[-0.0116,  0.4262, -0.1086],\n        [-0.0503,  0.5053, -0.3359],\n        [ 0.3884, -0.1859, -0.0358],\n        [-0.2477,  0.4953, -0.5614],\n        [ 0.4147,  0.6333, -0.0923]], requires_grad=True)"
+          "text": "Parameter containing:\ntensor([[-0.4121, -0.1712, -0.1867],\n        [ 0.4238, -0.6729,  0.3600],\n        [-0.0333,  1.0338,  0.3187],\n        [ 0.2535,  0.0299, -0.7272],\n        [ 0.8112,  0.5107,  0.2842]], requires_grad=True)"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4319, 1.3839, 0.0000],\n        [0.2066, 1.0426, 0.0000]], grad_fn=<ReluBackward0>)"
+          "text": "tensor([[0.8116, 0.6697, 0.0000],\n        [0.4113, 0.7082, 0.1547]], grad_fn=<ReluBackward0>)"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4658],\n        [0.8060]], grad_fn=<ReluBackward0>)"
+          "text": "tensor([[0.3312],\n        [0.2625]], grad_fn=<ReluBackward0>)"
         }
       ]
     }

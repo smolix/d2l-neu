@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/multiple-gpus-concise.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:1d0139b1ae4dd35a48b22a8c8314ff333ab9136e33733459958495e8a32352a3",
     "max_inline_bytes": 0
   },
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.86, 29.3 sec/epoch on [device(type='cuda', index=0)]\n"
+          "text": "test acc: 0.78, 48.1 sec/epoch on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 16429,
-          "sha256": "sha256:ab388e925397a5fc9a524bd11463cd8249c7d354fe48d51f729325e2006db8dd"
+          "bytes": 16423,
+          "sha256": "sha256:5b0ee758069f0f52bebf3d3a15760d1ceac6d520c2b4b4c73622f9c17275ecc7"
         }
       ]
     },
@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.88, 17.0 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
+          "text": "test acc: 0.88, 23.4 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 16236,
-          "sha256": "sha256:295a21189fcb297a619790fde1383a55f3943bc3fa88b9df62735dfa366bf631"
+          "bytes": 19220,
+          "sha256": "sha256:fd0c05416a04addfa5c759c2a08a83a1dcbed6128d0b4c349f1f1612711a2dfa"
         }
       ]
     }

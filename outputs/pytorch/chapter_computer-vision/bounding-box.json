@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/bounding-box.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 87007,
-          "sha256": "sha256:6b21348b0530a928c12c2c928ab3f59215827d8b9f024153ca45d3acd41881ef"
+          "sha256": "sha256:280218aa0cda5552b4809fcff33ff765371dbe833a4ad5b1f315fa7361197d35"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87556,
-          "sha256": "sha256:a023a27aaa577a6755a3425fda4a1bf81acd67da538f349f00f58950ff378720"
+          "sha256": "sha256:30c062fcf5e8e0102685d74e831e81a5966e80a3efa881c07c4912b52415ba77"
         }
       ]
     }

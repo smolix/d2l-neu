@@ -65,6 +65,21 @@ CPU_ONLY_ENV = {
 }
 
 # Notebooks that use multiple GPUs or test GPU availability across devices.
+# Notebooks that REORGANIZE a shared on-disk dataset (non-atomic shutil.copy
+# into data/.../train_valid_test/). All four framework variants read+write the
+# SAME directory under data/, so running them concurrently across frameworks
+# races: one framework's half-written copy is read by another's ImageFolder /
+# DataLoader → OpenCV "imdecode_ … !buf.empty()" / empty-image errors. The
+# framework-interleaved scheduler made this overlap likely (it was rare/absent
+# when frameworks ran one-after-another). run_one_notebook serializes these
+# across frameworks with a per-notebook lock (serialize_dataset_prep), held for
+# the whole run because the reorg copies and the per-epoch image reads both
+# touch the shared tree throughout.
+SHARED_DATA_NOTEBOOKS = {
+    "chapter_computer-vision/kaggle-cifar10.ipynb",
+    "chapter_computer-vision/kaggle-dog.ipynb",
+}
+
 MULTI_GPU_NOTEBOOKS = {
     "chapter_builders-guide/use-gpu.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",
@@ -92,6 +107,37 @@ HEAVY_GPU_NOTEBOOKS = {
     # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.
     ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,
 }
+
+
+# Per-(framework, relpath) slots-per-GPU for the 2-GPU (data-parallel) notebooks
+# in MULTI_GPU_NOTEBOOKS. Default is 1 slot on EACH of the 2 GPUs ("2x1");
+# combos listed here need 2 slots on each GPU ("2x2") because that framework
+# allocates more than one slot's worth (GPU_MIB_PER_SLOT, 7.5 GiB) on a card.
+# Fill in empirically as 2x1 OOMs are observed.
+TWO_GPU_SLOTS_PER = {
+}
+
+
+def notebook_resource(framework, rel, uses_gpu):
+    """Resource requirement of one notebook, for the unified scheduler:
+
+        ('cpu',)         → 1 CPU slot
+        ('gpu', n, spg)  → spg GPU slots on EACH of n distinct GPUs:
+                           (1,1) default 1 slot · (1,2) 2 slots on one GPU
+                           (2,1) "2x1" (1 each on 2 GPUs) · (2,2) "2x2"
+
+    A GPU slot is GPU_MIB_PER_SLOT (7.5 GiB) of VRAM. Default is 1 slot;
+    memory-heavy single-GPU notebooks (HEAVY_GPU_NOTEBOOKS) take 2 on one GPU;
+    data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each.
+    """
+    if rel in MULTI_GPU_NOTEBOOKS:
+        return ('gpu', 2, TWO_GPU_SLOTS_PER.get((framework, rel), 1))
+    heavy = HEAVY_GPU_NOTEBOOKS.get((framework, rel))
+    if heavy:
+        return ('gpu', 1, heavy)
+    if uses_gpu:
+        return ('gpu', 1, 1)
+    return ('cpu',)
 
 
 def _text_has_gpu_keywords(text):

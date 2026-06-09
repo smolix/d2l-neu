@@ -3,7 +3,7 @@
   "source": "chapter_recommender-systems/fm.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:68ddfa4df2a01247b7da097bb85302cecc86aea3d69e6b009b9a29cbde6c11c0",
     "max_inline_bytes": 0
   },
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.002, train acc 1.000, test acc 0.921\n122007.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.004, train acc 1.000, test acc 0.922\n140080.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 29479,
-          "sha256": "sha256:8c90b5a7f46b3921ac7f4c79c061aff3e61c7d0fa2303c111e55a0315d43628a"
+          "bytes": 30546,
+          "sha256": "sha256:175c1f3bd2bd3ce8226f66945557431c493a6fc1f43f0ee766f6743928d411cf"
         }
       ]
     }

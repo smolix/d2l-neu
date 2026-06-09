@@ -3,7 +3,7 @@
   "source": "chapter_recommender-systems/movielens.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:229e8d8d62abb8daacb809438bfdd11a05b1b0a9466fa9abfd8f35ad6448778d",
     "max_inline_bytes": 0
   },

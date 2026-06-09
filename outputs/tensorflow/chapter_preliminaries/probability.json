@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [48, 52]\n"
+          "text": "heads, tails:  [51, 49]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([54., 46.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([50., 50.], dtype=float32)>"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.53, 0.47], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.48, 0.52], dtype=float32)>"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.4988, 0.5012], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5028, 0.4972], dtype=float32)>"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 108268,
-          "sha256": "sha256:1034e03f7295ceb67dd4aad8ca097836800615a005627e7fa54c4e5f493c2922"
+          "bytes": 107744,
+          "sha256": "sha256:de6ee3bb3d89850e3141cb62c72aae42bff24087a10afae8e36610dbffea2002"
         }
       ]
     }

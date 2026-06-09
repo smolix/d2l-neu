@@ -379,5 +379,5 @@ CNF density rule that §6.3 reuses.
 :::
 
 :begin_tab:`pytorch`
-[Discussions](https://discuss.d2l.ai/)
+[Discussions](https://d2l.discourse.group/)
 :end_tab:

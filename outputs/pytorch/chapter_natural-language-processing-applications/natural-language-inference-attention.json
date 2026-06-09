@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-attention.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:585eff9e59c0bce47cb706a831584ed26505bb9d58fac8b08c8269a22dd31c45",
     "max_inline_bytes": 0
   },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.497, train acc 0.805, test acc 0.826\n29224.6 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.496, train acc 0.806, test acc 0.824\n25298.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
           "bytes": 27069,
-          "sha256": "sha256:92acac729752cd1dd846099d47ee6701aad0fb9d36835766c299c42b90ec4177"
+          "sha256": "sha256:2a2bc66d81c23bb8ec8dc40efdaefd655d4939dfc591a255e7defbf1c20e6d50"
         }
       ]
     },

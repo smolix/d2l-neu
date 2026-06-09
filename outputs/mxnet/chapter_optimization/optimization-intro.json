@@ -3,7 +3,7 @@
   "source": "chapter_optimization/optimization-intro.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
           "bytes": 30007,
-          "sha256": "sha256:8a8d240c21be79513795565d8685405c744fab798bd76bc9fb1787efb7f2249d"
+          "sha256": "sha256:56e1b02a9d43b38ba4a5fad633c6dced939de2abc88e4fdda31280c4d2ed4da8"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
           "bytes": 19689,
-          "sha256": "sha256:3f3b1cdb3de59644d4977cd86821d9a82b912a16bda91e85aa15af6c0fcb50c6"
+          "sha256": "sha256:1419bde76d635a912a15df3bd750c6bb29c1d90e87b2749d9f1f5ee49e84247c"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
           "bytes": 17872,
-          "sha256": "sha256:2ee7774e04068df659218b943f84fa2169f4948bc32a24f0174231ca530bfdd6"
+          "sha256": "sha256:c4aae809232eb92bc46718be8ad1694c733d8118f208a07a050057a94d590528"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
           "bytes": 63336,
-          "sha256": "sha256:68232d6b6ab2c831b024c486a869ad0473825c364dbf378eb1ea27143b212258"
+          "sha256": "sha256:fffd1a7392834d031de82fb23bd10f671f69ab096424d273e5861f99599b2b8f"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
           "bytes": 20463,
-          "sha256": "sha256:34b658ffa428eee97b7326debbcc8c68c496cdf624f1b6025b4a5b3b1f56b2c9"
+          "sha256": "sha256:534ea51823a85099f9a70bb6c73f2e7d8e5fae5df3dab20589f4d3bdef34a864"
         }
       ]
     }

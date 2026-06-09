@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/async-computation.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:b6d5345d62800e8290fd63233fe96a1ed0a0d81c9232eec0f50918df43cdb8ac",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.4893 sec\ntorch: 0.0006 sec\n"
+          "text": "numpy: 0.4926 sec\ntorch: 0.0007 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.0015 sec\n"
+          "text": "Done: 0.0022 sec\n"
         }
       ]
     },

@@ -65,12 +65,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 24, 24, 64)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 12, 12, 128)\nSequential output shape:\t (1, 6, 6, 256)\n"
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 128)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 6, 6, 256)\n"
         },
         {
           "type": "stream",
@@ -87,8 +97,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 20961,
-          "sha256": "sha256:86a82795a085784488ef3c579acd7f2fa5cb52de00fb1d36bfad85a0d38ea2c4"
+          "bytes": 22119,
+          "sha256": "sha256:2cbb9e6673f22c51cd434dddc083febb5ab6911a01c8fde443188617a03f3fd3"
         }
       ]
     },

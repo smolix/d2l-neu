@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample (random) -> class 0\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample (random) -> class 0\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.0006933212280273\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.0006930828094482\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/tmp/claude-501/ipykernel_86609/2036575739.py:5: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta)), 6))\n"
+          "text": "/tmp/ipykernel_48692/2036575739.py:5: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta)), 6))\n"
         }
       ]
     },

@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/ndarray.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-1.5866,  0.3727, -0.5981, -0.1036],\n        [-1.3765, -0.4576,  0.6870,  1.8337],\n        [ 0.9081, -0.1825,  1.4939,  0.8758]])"
+          "text": "tensor([[ 1.2596, -1.0028, -0.2930, -0.4451],\n        [ 2.1115,  0.6321, -1.8434, -1.0147],\n        [-0.4847,  2.8804,  0.2142, -1.0072]])"
         }
       ]
     },
@@ -210,7 +210,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 134060911742880\nid(Z): 134060911742880\n"
+          "text": "id(Z): 135723957454160\nid(Z): 135723957454160\n"
         }
       ]
     },

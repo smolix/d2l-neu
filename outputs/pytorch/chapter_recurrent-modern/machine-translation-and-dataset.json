@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-modern/machine-translation-and-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:5395e5a4f545ef0b0a58fdb82c2a6629a43d6e2ea511f555e5fda53bc5155ab0",
     "max_inline_bytes": 0
   },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:cea2182d469fa97e2535a068320ecfb299bee13e43da1e80f826e33feb6a2648"
+          "sha256": "sha256:7f9963b92621e02e09f1caa81c8d254233f5d0f727e76325f17197f191341aa3"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tensor([[138,   7,   3,   2,   1,   1,   1,   1,   1],\n        [  6, 100,   3,   2,   1,   1,   1,   1,   1],\n        [ 31,  19,   3,   2,   1,   1,   1,   1,   1]], dtype=torch.int32)\ndecoder input: tensor([[ 2,  0,  5,  3,  1,  1,  1,  1,  1],\n        [ 2,  6,  7,  0,  4,  3,  1,  1,  1],\n        [ 2,  0, 32,  5,  3,  1,  1,  1,  1]], dtype=torch.int32)\nsource len excluding pad: tensor([4, 4, 4], dtype=torch.int32)\nlabel: tensor([[ 0,  5,  3,  1,  1,  1,  1,  1,  1],\n        [ 6,  7,  0,  4,  3,  1,  1,  1,  1],\n        [ 0, 32,  5,  3,  1,  1,  1,  1,  1]], dtype=torch.int32)\n"
+          "text": "source: tensor([[ 40,  81,   3,   2,   1,   1,   1,   1,   1],\n        [  6,   0,   3,   2,   1,   1,   1,   1,   1],\n        [ 14, 102,   3,   2,   1,   1,   1,   1,   1]], dtype=torch.int32)\ndecoder input: tensor([[ 2,  0,  4,  3,  1,  1,  1,  1,  1],\n        [ 2, 10,  0,  0,  4,  3,  1,  1,  1],\n        [ 2, 22, 44,  5,  3,  1,  1,  1,  1]], dtype=torch.int32)\nsource len excluding pad: tensor([4, 4, 4], dtype=torch.int32)\nlabel: tensor([[ 0,  4,  3,  1,  1,  1,  1,  1,  1],\n        [10,  0,  0,  4,  3,  1,  1,  1,  1],\n        [22, 44,  5,  3,  1,  1,  1,  1,  1]], dtype=torch.int32)\n"
         }
       ]
     },

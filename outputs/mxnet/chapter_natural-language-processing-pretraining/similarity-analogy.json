@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-pretraining/similarity-analogy.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e4518aa664dfb2c89d40e5db3dc4354ea7982b7db3db52331c57e0a738632062",
     "max_inline_bytes": 0
   },

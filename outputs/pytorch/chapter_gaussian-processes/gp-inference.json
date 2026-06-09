@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-1-1.svg",
           "bytes": 24274,
-          "sha256": "sha256:cd0a43d43167a218e8e2539f193298cd4eda8723029f4e696007a32f83e4e153"
+          "sha256": "sha256:99bac7edfdd7353fed74cb8bc66d5261fd8b2a28165b0e858a13ae2d3a48ff98"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-3-1.svg",
           "bytes": 55479,
-          "sha256": "sha256:1da7867c7cf164a1238f8407e28684312324e66490f421fbe4d1f1778c82cf83"
+          "sha256": "sha256:c356281181fc7216520c03b83c5aa4b7635fefbffba55d48e136a3c3c53d60b0"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-5-1.svg",
           "bytes": 59860,
-          "sha256": "sha256:08c013e46c84c170069bab754d2f8767eb8b6fd984c108fb58052921a502ef92"
+          "sha256": "sha256:b8597a3c41f73af8c8fea4dee61bfca20b0b09f6df89973753db8968f6e9b4d3"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-7-1.svg",
           "bytes": 112704,
-          "sha256": "sha256:b6fb1e2a4a7fcf91257201788b6a3eb28361a939e2f4f68f41df4f422f818bd6"
+          "sha256": "sha256:b400cb91f418ab745067e949ef8a7294fa1bf1ea1dd0cd9922d35a533a2d240c"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-making-life-easy-with-gpytorch-5-1.svg",
           "bytes": 63801,
-          "sha256": "sha256:0cd055ee282eefa40aee731232b1046e9bccbceebb76e4c0ca35cd845c94a9e7"
+          "sha256": "sha256:95d3b1172839fd7352a0076503f2f3580870bdd2645ae8b71d1e4488454aab12"
         }
       ]
     }

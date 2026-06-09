@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-neural-networks/text-sequence.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:d84134d3181390cc62d0424620d4a815964240dbb8a812daa34433ec18adbdc0",
     "max_inline_bytes": 0
   },
@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:0a5612dccaa5b1603dfaa6b90764d8b52d61d710b0e4dad69574504977335491"
+          "sha256": "sha256:b60b09da7b982260b3abc5de9156433e7724f8e2a02dfeb090572d6de0bb528b"
         }
       ]
     },
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:6e3a7d71233906809fd523dd324fa8cdaee593f8363af67ecb125f8522e2dd7b"
+          "sha256": "sha256:ee9586ffac30057498d131fa8aa39a4527750c8d0732a996a0aeda00da064f67"
         }
       ]
     }

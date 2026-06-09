@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  0.,  4.,  6.,  0.,  0., 12.,  0.],\n        [16.,  0., 20.,  0.,  0., 26., 28., 30.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
+          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8.,  0.,  0.,  0.],\n        [16., 18.,  0., 22., 24.,  0., 28., 30.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 22068,
-          "sha256": "sha256:cb3ddda0d33c3efec38e0beba9f7565dfb44180df5009c072565cc72cb41c094"
+          "bytes": 21511,
+          "sha256": "sha256:f1da2483be8a946c0ac52ec09135ddad127cf4828286097b697065766940ce40"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
           "bytes": 21509,
-          "sha256": "sha256:7e9f509b7c6c6b8c4696b4e863e840f6f038ac2e465779e27570f0942ce66c9f"
+          "sha256": "sha256:4f1b4b3afaeab00bc94c2f4684f9f91e94b61076039a307b9a6bc868040a5134"
         }
       ]
     }

@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24792,
-          "sha256": "sha256:27df3c0caa58e8a0436b885f49c25111965e3cf693fc32befb118ad440f2f40e"
+          "bytes": 24764,
+          "sha256": "sha256:f25396e724e9625afd35f24267e76743fa32c9eb54230f54dc74bcb5243f8694"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24130,
-          "sha256": "sha256:f2fcd90a0687d32686f9950b12237b1812b09e21aba770af21f230a1da8ee654"
+          "bytes": 24238,
+          "sha256": "sha256:8524f0f7ee453038539b0a108f23e165d540ab0401601b1b6ff1f0e59989096b"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i said the time tra'"
+          "text": "'it has a moment and why no'"
         }
       ]
     }

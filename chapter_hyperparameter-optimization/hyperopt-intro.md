@@ -79,7 +79,6 @@ from scipy import stats
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab tensorflow
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
 from d2l import tensorflow as d2l
 import numpy as np
 from scipy import stats

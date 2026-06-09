@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "input : [[ 0.  1.  2.  3.  4.]\n [ 5.  6.  7.  8.  9.]\n [10. 11. 12. 13. 14.]\n [15. 16. 17. 18. 19.]]\nload into ['/device:GPU:0', '/device:GPU:1', '/device:GPU:2', '/device:GPU:3']\noutput: [array([[0., 1., 2., 3., 4.]], dtype=float32), array([[5., 6., 7., 8., 9.]], dtype=float32), array([[10., 11., 12., 13., 14.]], dtype=float32), array([[15., 16., 17., 18., 19.]], dtype=float32)]\n"
+          "text": "input : [[ 0.  1.  2.  3.  4.]\n [ 5.  6.  7.  8.  9.]\n [10. 11. 12. 13. 14.]\n [15. 16. 17. 18. 19.]]\nload into ['/device:GPU:0', '/device:GPU:1']\noutput: [array([[0., 1., 2., 3., 4.],\n       [5., 6., 7., 8., 9.]], dtype=float32), array([[10., 11., 12., 13., 14.],\n       [15., 16., 17., 18., 19.]], dtype=float32)]\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.83, 2.5 sec/epoch on ['/device:GPU:0']\n"
+          "text": "test acc: 0.84, 2.6 sec/epoch on ['/device:GPU:0']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16965,
-          "sha256": "sha256:30f1bb268017d2816106ae03b634a71ee03e777115393349f445b5606dcde5f0"
+          "bytes": 16234,
+          "sha256": "sha256:b4ab77e87501ba2f1e28f49753fede4e58445362e73e44cabbe73ee745dc6bf2"
         }
       ]
     },
@@ -101,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 5.2 sec/epoch on ['/device:GPU:0', '/device:GPU:1']\n"
+          "text": "test acc: 0.83, 5.3 sec/epoch on ['/device:GPU:0', '/device:GPU:1']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16961,
-          "sha256": "sha256:d98d55c2f0f1c98321f9dec57817d707da76c0297c1d0b3638a4753b19ad6e47"
+          "bytes": 16965,
+          "sha256": "sha256:b9b9989aaaba662ea6a4235e6068fe4d238c25015a24f15bcc178342dce49034"
         }
       ]
     }

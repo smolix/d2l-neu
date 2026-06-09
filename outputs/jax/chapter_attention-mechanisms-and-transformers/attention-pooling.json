@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-3-1.png",
-          "bytes": 41850,
-          "sha256": "sha256:2f1e8412ea0da929ef516b32384bb423edb550996632e7b0506c04adee7608ce"
+          "bytes": 44626,
+          "sha256": "sha256:5fa15c0fe66249eb3284828d913e94a20a9c2682bb7db99a13de472d3871168f"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-4-1.png",
-          "bytes": 18957,
-          "sha256": "sha256:efb7b67b74693d0315c993b47419d190ac46241ac38724ea18e080e8307e69ca"
+          "bytes": 18998,
+          "sha256": "sha256:3f3b0b7c2f6b5ee652b23fc8c5c4d1c6a2e5c40e0bba974ea5a9a531ac6cf760"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-1-1.png",
-          "bytes": 46191,
-          "sha256": "sha256:7b944ab50ecb1ade6ac24925e04fc0c0200f89807132fb2c6fa754fe956d2f14"
+          "bytes": 48219,
+          "sha256": "sha256:c6191ee85c0ed03e262496f5245fb18ac1c25eef2a7d759559af3b620a40dd92"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-2-1.png",
-          "bytes": 21441,
-          "sha256": "sha256:717a0940cca886ba3ab3c7337950f5dcfa03b673a4b01eee456af7a08710ab92"
+          "bytes": 19514,
+          "sha256": "sha256:a27b40df62d223dbb74fa69b6fe027494ba9fa3bb4337e20227c9a46e4751d3b"
         }
       ]
     }

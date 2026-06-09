@@ -132,7 +132,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Laplace var (2b^2): 2.0059871673583984  Gaussian var: 1.995692491531372\nP(|x| > 3sd): Laplace 0.014454999938607216  Gaussian 0.0025549998972564936\n"
+          "text": "Laplace var (2b^2): 2.0059871673583984  Gaussian var: 1.995692491531372\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(|x| > 3sd): Laplace 0.014454999938607216  Gaussian 0.0025549998972564936\n"
         }
       ]
     },
@@ -154,7 +159,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+          "text": "dA/deta      = 0.668188\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigmoid(eta) = E[x] = p = 0.668188\n"
         }
       ]
     },

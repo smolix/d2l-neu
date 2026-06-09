@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:a03b7a79654c13b15b3b97ccebccc1c755f26a117eeb915f8ee4995532350169",
     "max_inline_bytes": 0
   },
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20893,
-          "sha256": "sha256:76aa897f1588d66a0de8fcfcf7de87cfcdb86dc498482fc960df635d2c7dcc9b"
+          "sha256": "sha256:f81988f62b556155b7be8f509bc8d7a6e9a990aa27c206c667e7b6e240ef1c4b"
         }
       ]
     },

@@ -53,12 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "cond(A^T A) = 55.782 = cond(A)^2\n"
+          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\ncond(A^T A) = 55.782 = cond(A)^2\n"
         }
       ]
     },

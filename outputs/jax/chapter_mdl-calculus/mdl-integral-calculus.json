@@ -20,12 +20,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\n"
+          "text": "eps=0.5    sum=0.680769  error=0.123950\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\n"
+          "text": "eps=0.1    sum=0.783785  error=0.020934\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.05   sum=0.794486  error=0.010233\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.01   sum=0.802710  error=0.002009\n"
         },
         {
           "type": "stream",
@@ -41,12 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 0.0009999991161748767\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Riemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 0.0009999991161748767\nRiemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
         }
       ]
     },
@@ -57,12 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^1.0  e^-x dx = 0.632437\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "integral_0^2.0  e^-x dx = 0.865097\n"
+          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\n"
         },
         {
           "type": "stream",
@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.141589641571045\nvolume (exact = pi): 3.141592653589793\n"
+          "text": "volume (Riemann)  : 3.141590118408203\nvolume (exact = pi): 3.141592653589793\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 75379,
-          "sha256": "sha256:e4269bb23acd312d43095bc2e647273854d9794e80e99b9fd1731840a7bdd17c"
+          "bytes": 88731,
+          "sha256": "sha256:631198eeda5091f9d799a4e17766fc5f6f117066bcf176d477b89b830395e780"
         }
       ]
     },
@@ -135,7 +135,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45710,
-          "sha256": "sha256:a152d9612c31c62297808c94806f2b5335d371e4d0099fe80f5ea4b23312b0b2"
+          "sha256": "sha256:ca2ff6dbcdf14682bc2a2acc8653dc9a6483d3b0d2241072cc6afa10838090e1"
         }
       ]
     }

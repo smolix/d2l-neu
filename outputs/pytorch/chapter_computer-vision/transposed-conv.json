@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/transposed-conv.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:846228dd97ebfacae7c46f9cc44454a4945c8dfeb9e70ff4f9bcd6c265d11986",
     "max_inline_bytes": 0
   },

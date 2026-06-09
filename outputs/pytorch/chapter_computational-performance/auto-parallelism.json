@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/auto-parallelism.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:ba3edf51d8f4351a2f1b06a14ff5d7a074c6c65a26b949700cd6372d6a15d4da",
     "max_inline_bytes": 0
   },
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 time: 0.1217 sec\nGPU2 time: 0.1208 sec\n"
+          "text": "GPU1 time: 0.1201 sec\nGPU2 time: 0.1184 sec\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 & GPU2: 0.1215 sec\n"
+          "text": "GPU1 & GPU2: 0.1185 sec\n"
         }
       ]
     },
@@ -47,12 +47,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1: 0.1210 sec\n"
+          "text": "Run on GPU1: 0.1216 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Copy to CPU: 2.0854 sec\n"
+          "text": "Copy to CPU: 2.1543 sec\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1 and copy to CPU: 3.0855 sec\n"
+          "text": "Run on GPU1 and copy to CPU: 3.4255 sec\n"
         }
       ]
     }

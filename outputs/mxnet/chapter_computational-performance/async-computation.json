@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/async-computation.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:d9ab6c53ac0f51d32cef0a41a8d26f6ef49f87ec2572e5110bd212213c5dff13",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.5083 sec\nmxnet.np: 0.0026 sec\n"
+          "text": "numpy: 0.5265 sec\nmxnet.np: 0.0023 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.3378 sec\n"
+          "text": "Done: 0.3317 sec\n"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "waitall: 0.0256 sec\nwait_to_read: 0.0329 sec\n"
+          "text": "waitall: 0.0246 sec\nwait_to_read: 0.0219 sec\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy conversion: 0.0144 sec\nscalar conversion: 0.0180 sec\n"
+          "text": "numpy conversion: 0.0300 sec\nscalar conversion: 0.0306 sec\n"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "synchronous: 0.6358 sec\n"
+          "text": "synchronous: 0.8130 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "asynchronous: 0.2256 sec\n"
+          "text": "asynchronous: 0.2142 sec\n"
         }
       ]
     }

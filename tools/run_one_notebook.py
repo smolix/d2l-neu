@@ -25,12 +25,13 @@ import os
 import signal
 import sys
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
-    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS, setup_framework_env, file_uses_gpu,
+    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS, SHARED_DATA_NOTEBOOKS,
+    setup_framework_env, file_uses_gpu,
 )
 # Reuse functions defined in run_notebooks.py rather than duplicating them.
 from run_notebooks import (
@@ -352,6 +353,39 @@ def acquire_gpu_pair(pairs, per_pair):
         time.sleep(0.5)
 
 
+@contextmanager
+def serialize_dataset_prep(rel):
+    """Serialize cross-framework execution of notebooks that reorganize a
+    SHARED on-disk dataset (SHARED_DATA_NOTEBOOKS).
+
+    The four framework variants of e.g. kaggle-cifar10 read+write the same
+    data/.../train_valid_test/ tree; their non-atomic shutil.copy races against
+    each other's image reads (a half-written file → OpenCV `!buf.empty()`). A
+    single per-relpath flock lets only one framework touch the dataset at a
+    time. No-op for every other notebook.
+
+    Acquired OUTSIDE any GPU/CPU slot, so a process waiting here holds no
+    execution resource (no deadlock against slot acquisition) and simply lets
+    other, unrelated notebooks keep the devices busy via other make jobs.
+    """
+    if rel not in SHARED_DATA_NOTEBOOKS:
+        yield
+        return
+    SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path = SLOT_DIR / f"dataprep-{rel.replace('/', '_')}.lock"
+    lock_path.touch()
+    fp = open(lock_path, 'w')
+    try:
+        fcntl.flock(fp, fcntl.LOCK_EX)  # blocking: at most one fw at a time
+        yield
+    finally:
+        try:
+            fcntl.flock(fp, fcntl.LOCK_UN)
+            fp.close()
+        except Exception:
+            pass
+
+
 def progress_for(fw):
     """Return (done, total) counts for a framework, snapshot-of-disk.
 
@@ -403,20 +437,45 @@ def _maybe_serialize_mxnet(fw):
     return lambda: None
 
 
-def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label):
+def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label,
+              assigned=None):
     """Single attempt; uses pre-computed mode and prints which slot we acquired.
 
     `mode` is 'multi-gpu', 'gpu', or 'cpu' (from notebook_mode()). `label`
     is the human-readable prefix for log lines (e.g. "[mxnet] chapter/foo:").
 
-    For frameworks with a tighter concurrency cap (today: JAX), acquires
-    the framework-specific slot FIRST, then the global pool slot, so a
-    capped framework can't tie up a global slot waiting on its own cap.
-    For mxnet, an additional cuDNN-init flock prevents the multi-process
-    library-loader race; held for a few seconds after exec_notebook
-    spawns the child, then released.
+    Two execution modes:
+
+    * **Standalone** (`assigned is None`): this process acquires its own GPU/CPU
+      slot via flock, the way a direct `make _notebooks/<fw>/<x>.executed`
+      invocation does. Frameworks with a tighter concurrency cap (today: JAX)
+      acquire the framework slot FIRST, then the global pool slot, so a capped
+      framework can't tie up a global slot waiting on its own cap.
+
+    * **Assigned** (`assigned={'cuda': devs, 'cpu_cores': set|None}`): the unified
+      scheduler (tools/notebook_scheduler.py) already allocated the device(s) and
+      guarantees no other framework variant of this notebook runs concurrently,
+      so we skip ALL slot flock and just run on the assignment. This is what
+      decouples resource allocation (the scheduler's pools) from execution.
+
+    For mxnet, the cuDNN-init flock is kept in BOTH modes: it's a short
+    library-loader-race guard, orthogonal to slot allocation.
     """
     nb = Path(nb_path).resolve()
+
+    if assigned is not None:
+        cuda = assigned.get('cuda', '') or ''
+        cores = assigned.get('cpu_cores')  # a set of ints, or None
+        tag = f"GPU {cuda}" if cuda else "CPU"
+        if cores:
+            tag += f" cores {min(cores)}-{max(cores)}"
+        print(f"{label}: [{tag}] running (scheduled)", flush=True)
+        release_init = _maybe_serialize_mxnet(fw)
+        try:
+            return execute_notebook(nb, timeout=timeout, cuda_devices=cuda,
+                                    cpu_affinity=cores)
+        finally:
+            release_init()
 
     if mode == 'multi-gpu':
         pairs = int(os.environ.get('D2L_NUM_GPU_PAIRS') or num_gpus // 2)
@@ -476,7 +535,7 @@ def _run_once(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout, mode, label)
 
 
 def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
-                   mode, label):
+                   mode, label, assigned=None):
     """Execute one notebook, retrying for stochastic / transient cases."""
     nb = Path(nb_path).resolve()
     rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
@@ -492,8 +551,15 @@ def run_with_retry(nb_path, fw, gpu_slots, num_gpus, cpu_slots, timeout,
     err_log = (NOTEBOOKS_DIR.parent / 'logs' / 'nb-errors' / fw / rel).with_suffix('.log')
 
     for attempt in range(1, max_attempts + 1):
-        ok, elapsed, err = _run_once(nb, fw, gpu_slots, num_gpus, cpu_slots,
-                                     timeout, mode, label)
+        # Standalone mode: serialize across frameworks for shared-dataset
+        # notebooks (no-op otherwise) so a direct parallel `make <stamp>` of the
+        # four variants can't race on the shared data/ tree. Under the scheduler
+        # (assigned), this is unnecessary — it already sequences a notebook's
+        # frameworks for ALL notebooks — so skip it.
+        seq = nullcontext() if assigned is not None else serialize_dataset_prep(rel)
+        with seq:
+            ok, elapsed, err = _run_once(nb, fw, gpu_slots, num_gpus, cpu_slots,
+                                         timeout, mode, label, assigned=assigned)
         if not ok and err:
             err_log.parent.mkdir(parents=True, exist_ok=True)
             with err_log.open('a') as fh:
@@ -577,11 +643,20 @@ def main():
     label = f"[{args.framework}] {rel}"
     mode = notebook_mode(args.notebook, args.framework)
     mode_tag = {'multi-gpu': '[all GPUs]', 'gpu': '[GPU]', 'cpu': '[CPU]'}[mode]
+    # Assigned mode: the unified scheduler pins the device(s) via env and skips
+    # this process's own slot flock. D2L_ASSIGNED_CUDA is "" for CPU, "2" for a
+    # single GPU, "2,3" for a multi-GPU pair; absent ⇒ standalone (self-locking).
+    assigned = None
+    ac = os.environ.get('D2L_ASSIGNED_CUDA')
+    if ac is not None:
+        cores_env = os.environ.get('D2L_ASSIGNED_CPU_CORES', '')
+        cores = {int(x) for x in cores_env.split(',') if x.strip()} or None
+        assigned = {'cuda': ac, 'cpu_cores': cores}
     print(f"{label}: start {mode_tag}", flush=True)
     t0 = time.time()
     ok, err = run_with_retry(args.notebook, args.framework,
                              args.gpu_slots, args.num_gpus, args.cpu_slots,
-                             args.timeout, mode, label)
+                             args.timeout, mode, label, assigned=assigned)
     elapsed = time.time() - t0
     # Progress counter ONLY on the end line — it's a "stamps now on disk vs
     # total" snapshot. With parallel workers and brief gen_notebooks wipes

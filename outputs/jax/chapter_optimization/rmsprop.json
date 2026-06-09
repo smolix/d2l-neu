@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-the-algorithm-2-1.svg",
           "bytes": 15568,
-          "sha256": "sha256:033f628a48ab1cd14bf87a04c561939aeea6df47fa4329b28a05ffd3b1a8af5c"
+          "sha256": "sha256:e1f522f584233e29aa59b3ae6acef7e2be2618349703fe10a0a63727ab99ccda"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-implementation-from-scratch-1-1.svg",
           "bytes": 23700,
-          "sha256": "sha256:be7247aef704624ee0f405b437a18f19bbaa81660bfcfe3f3b5eafb00362f82d"
+          "sha256": "sha256:49744a0697525186e2409e6160a10461405d1ed9c134ad4dee3ad5adcef8870b"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 1.784 sec/epoch\n"
+          "text": "loss: 0.243, 1.721 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-implementation-from-scratch-4-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:57da0ec7372623f78140c3dd8526c9086a7197bab3eba497a6d580c0042b518a"
+          "bytes": 18783,
+          "sha256": "sha256:2e616386211ce3e755651e68abe0a9a66a277ba970ee638ecc28c47c81fde7db"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.703 sec/epoch\n"
+          "text": "loss: 0.246, 0.722 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rmsprop/rmsprop-concise-implementation-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:8d493a5e4a96fd4d5a9171ddbd3d1b08453f34a78fd3efe60089aee765e8738b"
+          "bytes": 18772,
+          "sha256": "sha256:2917f9ce6fb15ab530fdc3ff3356ac3e3863e4b2df570f27623c088064eaa493"
         }
       ]
     }

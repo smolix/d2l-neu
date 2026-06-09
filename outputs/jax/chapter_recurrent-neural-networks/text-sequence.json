@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:f2739bd56265249d41d6447d4f311bfb9a596f069a834ec8a46e5a1bbee257b3"
+          "sha256": "sha256:f13aae55f0f2382a9c15d1171a57429711a7c5dc398ecbf7fb513c7b520ec6ce"
         }
       ]
     },
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:4aa2bd85afffa598cb190a1de0a91e4ee6a5da17f7103a71613765ede1bf36ad"
+          "sha256": "sha256:27268c2c7cdaa6344299deec9156acf6a6cc59bcff8444853a957e02a8e659c8"
         }
       ]
     }

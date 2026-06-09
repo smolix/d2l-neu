@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26193,
-          "sha256": "sha256:b8ca3764b7b17217350db3c92ce39991c06a6d0641df8c5b3ebb258004f74efa"
+          "sha256": "sha256:71a0cb905dada0f4f2666d2204b856535bf27088e76932e8218bc1447a85eab8"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tensor([[ 0.0099, -1.1882, -1.2529, -0.6950],\n        [-2.1248, -3.2917, -1.4673,  0.1034],\n        [-1.0885,  0.8568,  0.9642, -0.3951],\n        [ 0.2331, -2.0332, -0.8175, -0.2957]])\nafter multiplying 100 matrices\n tensor([[ 1.0391e+25, -4.9455e+24,  1.0402e+25, -7.9391e+23],\n        [ 3.5795e+25, -1.7036e+25,  3.5835e+25, -2.7349e+24],\n        [ 4.8167e+24, -2.2925e+24,  4.8220e+24, -3.6801e+23],\n        [ 3.1067e+24, -1.4786e+24,  3.1101e+24, -2.3736e+23]])\n"
+          "text": "a single matrix \n tensor([[ 0.1444, -0.4962, -0.2421,  0.0793],\n        [-0.1901, -0.1980,  0.6846,  0.3040],\n        [ 0.2179,  1.2258, -2.4922,  0.8218],\n        [-2.9356,  1.4208,  0.7456, -1.2150]])\nafter multiplying 100 matrices\n tensor([[ 1.9075e+24,  1.0354e+25,  6.4936e+24, -9.5598e+24],\n        [-1.8419e+24, -9.9981e+24, -6.2701e+24,  9.2309e+24],\n        [-1.4346e+24, -7.7875e+24, -4.8838e+24,  7.1899e+24],\n        [-1.5788e+25, -8.5701e+25, -5.3746e+25,  7.9125e+25]])\n"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:e67bc8df4b44b6fcdbba8bfeaa104fc78949af15645586a905e68e3e4187a4b0",
     "max_inline_bytes": 0
   },
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-positional-encoding-2-1.svg",
           "bytes": 31362,
-          "sha256": "sha256:64fc145ab69e443618037bc18a31fb42c03604e2a625b81507fe886aa2517d71"
+          "sha256": "sha256:a44f6cb13aa4edf7abcc46874d3685ac9efbae64357affd638179a5ad7360f6c"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-absolute-positional-information-2-1.svg",
           "bytes": 31325,
-          "sha256": "sha256:7688e48090bb625b38b4f02033a76d1e92212150964af8709dd138594a94737e"
+          "sha256": "sha256:6828b2fcf8733d9f0cd109fd375550cc158dc957ff71a510df70c23a09da0983"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/calculus.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 18530,
-          "sha256": "sha256:9c9fbe08799b3ad3eab3af85575213fff88006cf0c2e242b23fd24f4e8e5f90a"
+          "sha256": "sha256:dc06ef8f4317301147ed367a89b051a0a29b049c7c385cbcc9d108c8ec5e7b6b"
         }
       ]
     }

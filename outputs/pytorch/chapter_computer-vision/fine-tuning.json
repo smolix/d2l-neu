@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/fine-tuning.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:52f6df4cb27d843ceb56ca8bf81637e721450558c88276400fdc5f0f8348901a",
     "max_inline_bytes": 0
   },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.205, train acc 0.921, test acc 0.924\n1426.6 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.258, train acc 0.916, test acc 0.909\n776.4 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25099,
-          "sha256": "sha256:7bce2f2ced377033763656ea09c30d679f652d0a74c5527d6e556859898f3218"
+          "bytes": 25098,
+          "sha256": "sha256:17be7b1b2ca20036be09c73d3afbfe809ce25431726ec78b27298aac2a47a1c9"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.375, train acc 0.833, test acc 0.866\n1208.2 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.359, train acc 0.850, test acc 0.846\n827.9 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25063,
-          "sha256": "sha256:fea39cc2f6cecd55cc8da8a4a245ae929e16a6f5f3864cd6feb0c2c3fd047b4a"
+          "bytes": 25071,
+          "sha256": "sha256:998696b450af1fd657522c7b48dddfc09a0a0c0dcc79387d4bc7fc8aeb0a2dee"
         }
       ]
     },

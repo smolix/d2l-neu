@@ -3,7 +3,7 @@
   "source": "chapter_attention-mechanisms-and-transformers/queries-keys-values.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:c331c425e61294a34df98bc5aa3a46f822d5b083c2df77144f35a38e6963aaf2",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-visualization-2-1.svg",
           "bytes": 18256,
-          "sha256": "sha256:2b46f0633a60e4b8f87883db10f85f2be8332db5417ff6bf22c88dedb572eb42"
+          "sha256": "sha256:8c624580809502ab1b4b81b37c4101e63861b0439b6c1c9bb9141e0c06792a6a"
         }
       ]
     }

@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 23981,
-          "sha256": "sha256:53f137fe343581aa1581e91d0bf1cadaebfbdd6d3c3c2218722759d84c1300b6"
+          "bytes": 24252,
+          "sha256": "sha256:5a5d6da70ba4b1e40f230b7d0a57dfc836cbab35a7ea5f6a95666032b6aa374c"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller and the time travel'\n"
+          "text": "perplexity 7.3, 'time traveller the paid the thing '\n"
         }
       ]
     }

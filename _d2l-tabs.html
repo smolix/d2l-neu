@@ -514,7 +514,9 @@
 // When framework tabs switch, the embed reloads with the new topic.
 (function() {
   var DISCOURSE_URL = 'https://d2l.discourse.group/';
-  var LINK_RE = /^https:\/\/discuss\.d2l\.ai\/t\/(\d+)/;
+  // Topic id from the current d2l.discourse.group links (also accept the
+  // legacy discuss.d2l.ai form, so any un-migrated link still resolves).
+  var LINK_RE = /^https:\/\/(?:discuss\.d2l\.ai|d2l\.discourse\.group)\/t\/(\d+)/;
 
   function createEmbed(topicId) {
     var container = document.getElementById('d2l-discourse-embed');

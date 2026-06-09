@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 59313,
-          "sha256": "sha256:89d9bec200deb859ebe3cc1ab75e22ee63d28b05ef4ca21f354d3431aac8e533"
+          "bytes": 20465,
+          "sha256": "sha256:9ad94346ddc189d965d8d4be70d7cd632bd5ea7441c3b289ec3516fe547eaef9"
         }
       ]
     }

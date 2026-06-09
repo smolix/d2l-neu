@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/hybridize.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:15889d059b3df3d6ffade7936b110dfac8463f0661e80ce7164775c0c50e30b0",
     "max_inline_bytes": 0
   },
@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0991, -0.0743]], grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.0135, 0.0265]], grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0991, -0.0743]], grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.0135, 0.0265]], grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without torchscript: 0.0806 sec\nWith torchscript: 0.0741 sec\n"
+          "text": "Without torchscript: 0.0673 sec\nWith torchscript: 0.0578 sec\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-rw------- 1 smola smola 652K May 29 06:43 my_mlp\r\n"
+          "text": "-rw------- 1 smola smola 652K Jun  8 23:39 my_mlp\r\n"
         }
       ]
     }

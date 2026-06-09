@@ -3,7 +3,7 @@
   "source": "chapter_reinforcement-learning/value-iter.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:60b54ceb8a95fc45ac2513a73f4579bc45bf4ba78de59d87cbd1c0c78ec9e508",
     "max_inline_bytes": 0
   },

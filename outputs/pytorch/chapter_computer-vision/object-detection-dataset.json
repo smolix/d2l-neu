@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/object-detection-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:8fac576fefd25e0df6632ae98935b905c054c19284a3e1b1bb7dc360142109c3",
     "max_inline_bytes": 0
   },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 403637,
-          "sha256": "sha256:cb09095696c1d37707d6ed0cc85e18a91aac3ee673bea6435f39f930b073d954"
+          "bytes": 400721,
+          "sha256": "sha256:0a7a5d6bc18705b080b76d96703e1b9bbc93670bbf87fc7e03280ddfd41294ee"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/anchor.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:8d7cf1ea2c39a4f65533e5a29580965ca4e5b0bd8295980a98b2a504de78db49",
     "max_inline_bytes": 0
   },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95767,
-          "sha256": "sha256:5b106067b9ecb4d88a86b0e96678fa23b0e1d42c6e49491223d40132d823db1a"
+          "sha256": "sha256:ea90f299e437732e1ac5ad8d3f5a9b1a11f6829cb39b25af36c580aa85da6078"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94721,
-          "sha256": "sha256:eab8f036d370617ebb6fbb93b048cffb6cf6771eecc898bc363f44ba59971d8c"
+          "sha256": "sha256:1ad0e1e80362364b1b577be71084fb8713c370b3363c0e9f1cd49f44061e27da"
         }
       ]
     },
@@ -158,7 +158,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96403,
-          "sha256": "sha256:b1ebb82d6ef99efb43f807d804c1e6c495b680622c7638c0b9423ba5cae4d6ab"
+          "sha256": "sha256:26a82be7076ffaf81b0eaaa8905af4102a20b8bd5088a3c70638518dd69641f6"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6088: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
+          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6140: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
         },
         {
           "type": "execute_result",
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 93212,
-          "sha256": "sha256:1415b73a1fdfdc180975b1bc7ae21b2b967948d6b16f76e7b1fc577439172528"
+          "sha256": "sha256:46c27634914fdb2839a8dab966471f27b1c6b62daa12abe572b99f9a407b7689"
         }
       ]
     }

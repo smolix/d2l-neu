@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0.  0. 14.]\n [ 0. 18.  0. 22.  0.  0.  0. 30.]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0.  0. 14.]\n [ 0. 18.  0. 22.  0.  0.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 20993,
-          "sha256": "sha256:1e2110b2913066c185ce0ca63b2cb91b2fb22f4d90ecc59ed08a6863b01f0fa8"
+          "bytes": 20991,
+          "sha256": "sha256:63040fee6725f34c1197897f7d7913bd6d7484283f9ed293631cfb38e6d2ad58"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 20987,
-          "sha256": "sha256:e3e01eac3ad93c30ae79259bb457cc1469d4c8163d65df4f28147e39d259a3da"
+          "bytes": 20994,
+          "sha256": "sha256:55ba0601a0fb0b484030fb9e4fea63177ba88f4438cbc0c52cbd11585bdbf4f4"
         }
       ]
     }

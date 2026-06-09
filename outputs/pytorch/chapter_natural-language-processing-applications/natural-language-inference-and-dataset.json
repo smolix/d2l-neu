@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-and-dataset.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:d5b5620c1958971948c4ff20afac1bc52790918315b7c43dadb00a02df3ac03c",
     "max_inline_bytes": 0
   },

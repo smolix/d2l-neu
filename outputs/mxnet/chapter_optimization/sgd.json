@@ -3,7 +3,7 @@
   "source": "chapter_optimization/sgd.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:f81a1e1eb09e44bd35d1ee85077b1735aa0ebfae197f7975983b8d06f63ff1a2",
     "max_inline_bytes": 0
   },
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.072116, x2: 0.037928\n"
+          "text": "epoch 50, x1: -0.014714, x2: 0.023559\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 22200,
-          "sha256": "sha256:5e93978371ca92afa926b338ea9ef39c695aecbe622550eb1a44dbcda0569919"
+          "bytes": 22196,
+          "sha256": "sha256:726d17009d73513c6f531283ed60b30f0fb0f001aab69e03b1f819853b0d9da5"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.854926, x2: -0.012931\n"
+          "text": "epoch 1000, x1: -0.933054, x2: -0.015397\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 127139,
-          "sha256": "sha256:862c1ea2acb5c9c5bf43f65e10c6451baeb3a8f9241eec26eff63ea42f8d054a"
+          "bytes": 123624,
+          "sha256": "sha256:85e424a4d3e0b820842f12175edd73cce0448add88c5be4392210b51d369b9fc"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.068977, x2: 0.027390\n"
+          "text": "epoch 50, x1: -0.075524, x2: 0.028697\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 24072,
-          "sha256": "sha256:c5f7b47f3b31f2cc0edf0a513f3e1379edb74a6f6e9f891375915755f4bd1ee4"
+          "bytes": 24102,
+          "sha256": "sha256:df290cf46a1eb897cd526a89ec86c57b290661b70bdd2a6c860286b0012130d2"
         }
       ]
     }

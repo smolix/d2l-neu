@@ -3,7 +3,7 @@
   "source": "chapter_natural-language-processing-pretraining/bert-pretraining.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:bacf0e739976b0d72e1775287668d506071251bfa16e878b7b142034d595d3b1",
     "max_inline_bytes": 0
   },
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.625, NSP loss 0.721\n3852.1 sentence pairs/sec on [gpu(0)]\n"
+          "text": "MLM loss 9.626, NSP loss 0.715\n3100.5 sentence pairs/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21547,
-          "sha256": "sha256:ee130c71812ea702c5d8a5e8aefb0945747868e57f8b59bd223a0e73d9e8fccc"
+          "bytes": 21552,
+          "sha256": "sha256:1d20ae7c885ded5657fc731711dfd521fe996b7d9d2de1d9355fddb39b5867da"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n array([-0.19639115,  0.44755322, -0.19270733], device=gpu(0)))"
+          "text": "((1, 6, 128),\n (1, 128),\n array([-0.503242  , -0.9347205 , -0.20324437], device=gpu(0)))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n array([ 0.16631949,  0.23366776, -1.076271  ], device=gpu(0)))"
+          "text": "((1, 10, 128),\n (1, 128),\n array([-0.17844805, -0.8326297 , -0.28727904], device=gpu(0)))"
         }
       ]
     }

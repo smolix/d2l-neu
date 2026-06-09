@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-modern/machine-translation-and-dataset.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:3feb4ddca8ca49596cc6924285696ccde2ab37eb32f953b07d4212b3e79f7a13",
     "max_inline_bytes": 0
   },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:3d609f2ddaa2d0d3e111ce6b401a1a2ae054967e79d8ddd193d855d73715c21b"
+          "sha256": "sha256:d8333a721e41eaea4b1851659eb218c916715940eb30827aeb28d4bcfb456d0d"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[  4 127   3   2   1   1   1   1   1]\n [160  21   3   2   1   1   1   1   1]\n [  6 152   3   2   1   1   1   1   1]]\ndecoder input: [[ 2  6 12  7  0  4  3  1  1]\n [ 2 10 26  4  3  1  1  1  1]\n [ 2  6  7  0  5  3  1  1  1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 6 12  7  0  4  3  1  1  1]\n [10 26  4  3  1  1  1  1  1]\n [ 6  7  0  5  3  1  1  1  1]]\n"
+          "text": "source: [[ 6  0  3  2  1  1  1  1  1]\n [14 34  3  2  1  1  1  1  1]\n [ 4 95  3  2  1  1  1  1  1]]\ndecoder input: [[  2  34  91   0   4   3   1   1   1]\n [  2  27 122   5   3   1   1   1   1]\n [  2   6   7 113   4   3   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 34  91   0   4   3   1   1   1   1]\n [ 27 122   5   3   1   1   1   1   1]\n [  6   7 113   4   3   1   1   1   1]]\n"
         }
       ]
     },

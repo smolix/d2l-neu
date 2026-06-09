@@ -3,7 +3,7 @@
   "source": "chapter_attention-mechanisms-and-transformers/attention-pooling.md",
   "framework": "mxnet",
   "provenance": {
-    "framework_version": "mxnet==2.0.0+cu13.bw.20260529.3",
+    "framework_version": "mxnet==2.0.0",
     "d2l_lib_fingerprint": "sha256:bc3f5cb3b3f1f9f99a1a067c1a738da69263344af887aab1e098aac31aff8eca",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-kernels-and-data-2-1.svg",
           "bytes": 34844,
-          "sha256": "sha256:0706deca2c6b1a9f6bc9bf9d3f03dd6155e8ffdec7437b71f00b6e9ccf5a03f4"
+          "sha256": "sha256:dc05e5ad5ca8b2de02861330f9826052b967905f08ca0ea149983f6510b13837"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-3-1.svg",
-          "bytes": 72227,
-          "sha256": "sha256:3c0269a886fbe773900a686f65c4c3aecc3699a98000b20e945764205325d4ac"
+          "bytes": 69864,
+          "sha256": "sha256:5badc966780e71859abd801913b4ecf4bdc5630cb95e975f7a71a19af7fac2c3"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-4-1.svg",
-          "bytes": 40281,
-          "sha256": "sha256:949739b57ccf84ebfcb412437c5e9df60821272a9bcc61a5582eebfacff727ed"
+          "bytes": 40620,
+          "sha256": "sha256:2ca9698c80ac36bb30b1c9ed61f7bb99e377d06c2a90ff56d103831c236e6bc1"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-1-1.svg",
-          "bytes": 68989,
-          "sha256": "sha256:3c6e4ea094e67193b97a2409dc96405c198764eb27bc74789732d444aca18127"
+          "bytes": 66699,
+          "sha256": "sha256:1f176fa49d26974c449b516780e8a6c277993c3f3920c62ecad8f7dae8a1830b"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-2-1.svg",
-          "bytes": 39973,
-          "sha256": "sha256:165609dc73cb8fc73f10f5a9926736b629937645ab69d85934da44f762b11a01"
+          "bytes": 40045,
+          "sha256": "sha256:44e1f783abe629afc2f862f0684402c567ebb156937ae5a0cfe5c0639be68260"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/kaggle-cifar10.md",
   "framework": "pytorch",
   "provenance": {
-    "framework_version": "torch==2.11.0+cu128",
+    "framework_version": "torch==2.11.0",
     "d2l_lib_fingerprint": "sha256:c159ee00ed4dd809a5efa4f59994438007121e68c3dddb6cd22bfb502ed25c5d",
     "max_inline_bytes": 0
   },
@@ -86,14 +86,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.544, train acc 0.432, best valid acc 0.484\n2469.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.480, train acc 0.462, best valid acc 0.406\n2353.4 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 27315,
-          "sha256": "sha256:2362b789b6fa418b406485b0c32e52984dea83ad7874a28afb3dec70e9806464"
+          "bytes": 28398,
+          "sha256": "sha256:9e59456b306d2d5c0a80ff1204e427a068fb1c7b4b61687dfa1d243049365df5"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.255, train acc 0.515\n2511.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.254, train acc 0.520\n2580.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 23785,
-          "sha256": "sha256:58d2823459c4d1159eccd55ce1627828e4bed88a6d545e61c21939bc8c857c49"
+          "bytes": 24524,
+          "sha256": "sha256:d652c0c19b281404e75b24d8ac20c5136d8ece974a8ed86872d43dc4d67a3bf5"
         }
       ]
     }

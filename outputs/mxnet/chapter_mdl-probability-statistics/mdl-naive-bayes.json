@@ -18,26 +18,6 @@
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/train-images-idx3-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz...\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/train-labels-idx1-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz...\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/t10k-images-idx3-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz...\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Downloading /Users/smola/.mxnet/datasets/mnist/t10k-labels-idx1-ubyte.gz from https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz...\n"
-        },
-        {
           "type": "execute_result",
           "text": "((60000, 28, 28), (60000,))"
         }
@@ -61,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47657,
-          "sha256": "sha256:1cb9bbf7989ad214d250a6bf2823e200b52de67d41466fdff53c568c4ac5bcb6"
+          "bytes": 47953,
+          "sha256": "sha256:b3175c74222af3c88bfaf37794cc24047ea476d1471865e0e8ac10015f45318b"
         }
       ]
     },

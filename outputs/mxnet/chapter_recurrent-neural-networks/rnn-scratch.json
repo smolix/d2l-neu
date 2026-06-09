@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24058,
-          "sha256": "sha256:c1b6e489e9a483b72cfe28e0c5b66c760a7299450f45065ed4eedb702b940ff3"
+          "bytes": 24007,
+          "sha256": "sha256:79bb6ae7dc360a0825e108187512119e50ee408c6d2d4e70ead85f4271767633"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.4, 'time traveller and the paller and '\n"
+          "text": "perplexity 7.3, 'time traveller dimension and the t'\n"
         }
       ]
     }

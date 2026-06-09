@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13771,
-          "sha256": "sha256:6ae07d1c521af14034da726f4aca385f54a1d109708ef4dc754a19989dc78109"
+          "bytes": 13741,
+          "sha256": "sha256:da27f88484992f960f3e44402e9df2dba24b28f668fa953deaa1a12808801b9c"
         }
       ]
     },
@@ -61,6 +61,11 @@
           "type": "stream",
           "name": "stdout",
           "text": "df/dw at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dx at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dy at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dz at -1.0, 0.0, -2.0, 1.0 is -4096.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[23:48:19] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },

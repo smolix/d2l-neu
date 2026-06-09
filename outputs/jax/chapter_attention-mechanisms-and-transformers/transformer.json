@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-1-1.svg",
-          "bytes": 20388,
-          "sha256": "sha256:1ed888d17e436466745196168202dfb0eb7a12ffeec9f23bedff5ff9877209fc"
+          "bytes": 20383,
+          "sha256": "sha256:117521196fdf5715307f8bbfbf3f24471d46b3bb0c30fd840f25ca382db3127a"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-4-1.svg",
-          "bytes": 48809,
-          "sha256": "sha256:cdddfb6039a8e2e48a73b738d1b1e66bff6ce621649f3ca17320957d05e9418f"
+          "bytes": 49888,
+          "sha256": "sha256:c03aa56837e0b37207b347857dd9003ed06c88fae6d8715c848e0002054e8248"
         }
       ]
     },
@@ -144,8 +144,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-7-1.svg",
-          "bytes": 52320,
-          "sha256": "sha256:21d716bc81ce6b057b657c6a8c22981f6d8cbadad9920789a783a9d19c1208cc"
+          "bytes": 52464,
+          "sha256": "sha256:7b8b09c0a2f7aaf490ab13f52a7cde58f1812313b42e2a0ce3187f25ad752859"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-8-1.svg",
-          "bytes": 50883,
-          "sha256": "sha256:feda13939f59f96a0aa433b955a9defdf3213ca6d53de202c05acd6c52de9b58"
+          "bytes": 50525,
+          "sha256": "sha256:465b1f3313054d84fdd19e870eb2dd9bd38ae9b16c760124321d25e59c836a12"
         }
       ]
     }

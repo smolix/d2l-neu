@@ -470,9 +470,9 @@ class MaskLM(nn.Block):
 
     def forward(self, X, pred_positions):
         num_pred_positions = pred_positions.shape[1]
-        pred_positions = pred_positions.reshape(-1).astype('int32')
+        pred_positions = pred_positions.reshape(-1)
         batch_size = X.shape[0]
-        batch_idx = np.arange(0, batch_size, dtype='int32', ctx=X.ctx)
+        batch_idx = np.arange(0, batch_size)
         # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
         # `batch_idx` is `np.array([0, 0, 0, 1, 1, 1])`
         batch_idx = np.repeat(batch_idx, num_pred_positions)

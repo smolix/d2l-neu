@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=9.313225746154785e-10>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=-8.381903171539307e-09>"
         }
       ]
     },
@@ -54,7 +54,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[array([[ 0.01592767, -0.03990521,  0.01728763],\n        [ 0.03136477,  0.08411092,  0.02008048],\n        [ 0.04671421, -0.04491596,  0.00050314],\n        [ 0.01242879,  0.05201752,  0.01982204],\n        [ 0.10036077, -0.08469579,  0.03284318]], dtype=float32),\n array([0., 0., 0.], dtype=float32)]"
+          "text": "[array([[-0.01853608,  0.00695183, -0.01468485],\n        [ 0.07305298, -0.09774628,  0.03812359],\n        [-0.01017417,  0.03027502, -0.1054005 ],\n        [ 0.01337228,  0.02783301,  0.01384597],\n        [-0.07794219,  0.00226284,  0.05527712]], dtype=float32),\n array([0., 0., 0.], dtype=float32)]"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.12473945, 0.        , 0.04197106],\n       [0.11431749, 0.00356993, 0.05608249]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.        , 0.        , 0.        ],\n       [0.        , 0.00855776, 0.        ]], dtype=float32)>"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[0.],\n       [0.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[0.        ],\n       [0.01670468]], dtype=float32)>"
         }
       ]
     }

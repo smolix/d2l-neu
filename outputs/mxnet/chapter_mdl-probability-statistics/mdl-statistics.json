@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0.5286099), array(0.52866274))"
+          "text": "(array(0.5379572), array(0.538011))"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance         = 4\nE[divide by n]   = 2.672  (biased)\nE[divide by n-1] = 4.008  (unbiased)\n"
+          "text": "true variance         = 4\nE[divide by n]   = 2.668  (biased)\nE[divide by n-1] = 4.002  (unbiased)\n"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(-0.04949963), array(0.07748164))"
+          "text": "(array(-0.06892996), array(0.05915427))"
         }
       ]
     },

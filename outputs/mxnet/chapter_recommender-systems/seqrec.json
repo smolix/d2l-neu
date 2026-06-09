@@ -19,35 +19,35 @@
       "outputs": []
     },
     "seqrec-sequential-dataset-with-negative-sampling": {
-      "code_fingerprint": "sha256:5674b904f777624807b4e14b5abb44e994b335653f49a114698b74b61aefa925",
+      "code_fingerprint": "sha256:1b7b86dfaeb8cb920decd37216207b7573f654ed84e79d840e58d5859bd88aca",
       "kind": "text",
       "outputs": []
     },
     "seqrec-load-the-movielens-100k-dataset": {
-      "code_fingerprint": "sha256:733d983f1de4ef5145db8973ee690ebf75bab9806d7de5d267f6cd90cd893b3d",
+      "code_fingerprint": "sha256:51a083adb7df3bcabf246517c3b4f1e6d8934784191b233f1f56bddae27f8085",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 938)"
+          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 363)"
         }
       ]
     },
     "seqrec-train-the-model": {
-      "code_fingerprint": "sha256:ae828433378187124f10a937d94b6e41c545730f019d9ff1fe55f0bc587946cf",
+      "code_fingerprint": "sha256:681b26d4abc9ab4e7424fde9a1e6b62607473d801d6b08c815971478c48ae6b5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.151, test hit rate 0.359, test AUC 0.881\n259.9 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.139, test hit rate 0.386, test AUC 0.890\n261.5 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21503,
-          "sha256": "sha256:789efa4e0ff3e145c4dd35cc116bfc706d7b19a0a741db29f1fd541245a12050"
+          "sha256": "sha256:5c3beba1bed502cd4f488735dca5e518e06697da751fbb59738248ef3e449007"
         }
       ]
     }

@@ -230,7 +230,7 @@ we can pick out terms efficiently.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
 %%tab mxnet, pytorch, jax
-y = d2l.tensor([0, 2], dtype=d2l.int32)
+y = d2l.tensor([0, 2])
 y_hat = d2l.tensor([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
 y_hat[[0, 1], y]
 ```

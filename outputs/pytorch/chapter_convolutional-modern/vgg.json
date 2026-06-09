@@ -30,12 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
+          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\nSequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
         },
         {
           "type": "stream",
@@ -52,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 20987,
-          "sha256": "sha256:8e5b10299f8bc0e3d6c5aa05d9ded2946726373dfb5b87e13e0ff442d8be0c91"
+          "bytes": 20983,
+          "sha256": "sha256:9d0112bce204b6bcaeafc3972bee0e11e80c7cfc51de0aabb18ea3e9f5e95f34"
         }
       ]
     }

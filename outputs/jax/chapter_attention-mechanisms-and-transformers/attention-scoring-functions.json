@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
           "bytes": 14338,
-          "sha256": "sha256:a866eaf6285a71e76592e91a2cc1e95f6ae238a5863f4f0f62c44d9e852102bf"
+          "sha256": "sha256:f9830674d94bbdf8f59b459e76854ab8d370f6ed4c28c68b20f9eaf3dcec7a73"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
           "bytes": 14334,
-          "sha256": "sha256:252e6fea5474c054db60961e3e4d6c1724f97af7900ea728e1a4348f208aa374"
+          "sha256": "sha256:6d799199c89b88a02e8bd33f5a957d61baa3661a595f23c0b7c35f9613c11be3"
         }
       ]
     }

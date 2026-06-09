@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40651,
-          "sha256": "sha256:10818506e1a57bcc98bc9a68177cfd6df62d0fedb5994f57486cdd3ea02d049a"
+          "bytes": 40562,
+          "sha256": "sha256:062c74771355406ec20a883f7d591e5e93b445f7e73d50932d615472136321cb"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19846,
-          "sha256": "sha256:9ded925ab2ae0bb54ec7e2044260fdcd40c6c3b7ae6e989b1b7aa29a7e45680c"
+          "bytes": 17934,
+          "sha256": "sha256:3fb70a672f4a18c0d65b6b21d02a1a6f23a6f1cae9c065eabc135d5b90061a97"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 69108,
-          "sha256": "sha256:339c9cfb571d8cb87667451fda1cefe79b4c0f6bfcb3a6727cb8c6f67e6583e3"
+          "bytes": 69226,
+          "sha256": "sha256:5907f8b1fca10cd7c34064d4e9cb9609db5174c89ba840d6874c6102cc1acdab"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 45462,
-          "sha256": "sha256:d9800fc42849f5ae478de2ae7736f44df05bb3db65ec546ead00c7a89b8c54c7"
+          "bytes": 45761,
+          "sha256": "sha256:195876c8fd2d077cbd782c880ced00fbfc9bc35580fabf566b5c2a188fda8729"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 106296,
-          "sha256": "sha256:da132cf912a9a9c24cfc755194261b0775cb6bcfd8f1502c35383d3198af51d7"
+          "bytes": 106176,
+          "sha256": "sha256:f605160743d71546995324d21035a26a6818f105e51a57ded306ea89d086e00d"
         }
       ]
     }

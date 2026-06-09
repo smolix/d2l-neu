@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 20965,
-          "sha256": "sha256:84636e8e1d9fb78a78453bda14c5afe17e2101f830316bad28752dc20a0e46ee"
+          "bytes": 20959,
+          "sha256": "sha256:d2f2fd80f373ae9d40d0bf8cab8ab511b14cf19ab70d04ca9acb015a0dc1f291"
         }
       ]
     }

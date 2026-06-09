@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 80193,
-          "sha256": "sha256:4bc8e63507301ce89a92eba040b788f1e28246919f21fedc925becc621d7b61a"
+          "bytes": 78041,
+          "sha256": "sha256:e40dc28f4678d5b087b367d2693d070eff6017eb94d9e6a953f2916efca21aee"
         }
       ]
     },

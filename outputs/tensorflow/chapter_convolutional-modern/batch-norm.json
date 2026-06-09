@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
           "bytes": 19979,
-          "sha256": "sha256:dbc8f4e2dff3848341311b7e63ed66f0291c5ae569dcd6bab4181cd111c35da2"
+          "sha256": "sha256:18e5b930eb92e0baf24654602868444009f7d070c977f583380fca48b7b680cc"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([3.827648 , 2.2664073, 3.6154704, 3.8438697, 2.9085608, 1.6605052],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-1.1526475, -1.223989 , -2.284529 ,  3.837822 , -1.3959824,\n         1.3524561], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([0.42868087, 3.9393399 , 3.3521328 , 1.7679564 , 3.3935492 ,\n        3.0150917 ], dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-0.4045437,  1.7166973,  2.166402 , -0.4390127,  1.9595077,\n        -3.2208614], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19977,
-          "sha256": "sha256:68dd54fa14dc564719624f110661fb6f4ec3520d25bd35721a6fc486aca35ba2"
+          "bytes": 19971,
+          "sha256": "sha256:75aeea2320272193b94722b11abf79edd864f367419c1880118f1b5a4f585ea7"
         }
       ]
     }

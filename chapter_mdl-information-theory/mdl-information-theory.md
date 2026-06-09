@@ -715,7 +715,7 @@ We can implement the cross-entropy loss as below.
 ```{.python .input #information-theory-formal-definition-1}
 #@tab mxnet
 def cross_entropy(y_hat, y):
-    ce = -np.log(y_hat[range(len(y_hat)), y.astype('int32')])
+    ce = -np.log(y_hat[range(len(y_hat)), y])
     return ce.mean()
 ```
 

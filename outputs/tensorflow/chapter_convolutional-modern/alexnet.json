@@ -30,12 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Dense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -47,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 20441,
-          "sha256": "sha256:d8075b38593418d1adbe8996abf63d90e891ec61e8c9ae08f83678fdfe3c9d49"
+          "bytes": 20446,
+          "sha256": "sha256:ef18436390cf78a5e63d05dd9557f413347f46b6275d588aedd0683c8eca53b6"
         }
       ]
     }

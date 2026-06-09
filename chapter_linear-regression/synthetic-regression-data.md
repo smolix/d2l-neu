@@ -224,7 +224,7 @@ def get_dataloader(self, train):
     else:
         indices = list(range(self.num_train, self.num_train+self.num_val))
     for i in range(0, len(indices), self.batch_size):
-        batch_indices = d2l.tensor(indices[i: i+self.batch_size], dtype=d2l.int32)
+        batch_indices = d2l.tensor(indices[i: i+self.batch_size])
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 

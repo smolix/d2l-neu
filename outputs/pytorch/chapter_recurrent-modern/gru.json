@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20301,
-          "sha256": "sha256:e47055d127fa96da5e4d6bbdbd522ff1bd1efc146ca3029d60838f4a3181b821"
+          "bytes": 20309,
+          "sha256": "sha256:005cbcf1fc4d9904078650c4ef9477adc08d8ecde48cd80ce5ab266f5b2ab9d6"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20314,
-          "sha256": "sha256:179fc65ecec690f5a88d17cb1bcd9568556a173eecd47a060a6e58a127a694bd"
+          "bytes": 20315,
+          "sha256": "sha256:7c78ebf4ea0d1f325b38f99772bdb7f0a2d47f3eac0a0bb73fb40acaa8f34cdf"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has and the prome the p'"
+          "text": "'it has of the time the pra'"
         }
       ]
     }

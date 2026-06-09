@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.873178)"
+          "text": "array(0.5724895)"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.8166737)"
+          "text": "array(0.7196129)"
         }
       ]
     }

@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0607 21:11:56.380670   41668 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0609 00:06:33.202241   15971 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:9e599fd0992f0d60f55b6baa6ded4170f6373ff32632c374659c2ed065e71047"
+          "sha256": "sha256:215a4842e8776950d41e2628dec1a69ebd4df5312f8c38dbaca2a72275a9236c"
         }
       ]
     },
@@ -117,27 +117,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.679\n"
+          "text": "epoch 1, loss 1.514\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.524\n"
+          "text": "epoch 2, loss 1.590\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.394\n"
+          "text": "epoch 3, loss 1.357\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 1.500\n"
+          "text": "epoch 4, loss 1.311\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 1.557\n"
+          "text": "epoch 5, loss 1.265\n"
         }
       ]
     },
@@ -159,8 +159,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 151713,
-          "sha256": "sha256:38d168ed6f6b73e1821b41071f914f769dac65f816d74c7d8c6909de0572fc5d"
+          "bytes": 152025,
+          "sha256": "sha256:f316ee62496d9a53e6e5f10466bf8100273620125f4ec72e466fd79d3e459d96"
         }
       ]
     }

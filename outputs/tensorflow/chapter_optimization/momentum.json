@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
           "bytes": 23925,
-          "sha256": "sha256:d3b8467eb3595c8d68ca80a469194bd9e8abe20c89309c529c4d517db04c6afb"
+          "sha256": "sha256:3263c29b9e6c8ada02401c6c04c2eb79c73678bb3a22927b084913ae3de40e16"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-2-1.svg",
           "bytes": 22497,
-          "sha256": "sha256:55713a12635daacaf99eedb9e8c58e00616bfd2fb365259e657b82e16ffc46c2"
+          "sha256": "sha256:4e843662aec56e15fee8c0096376578339b311b7bf0e2b5cbf80a845af95436b"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 22393,
-          "sha256": "sha256:543d84830d7d934c939c63ea7b904630c002fe984c870131510928cd305a33e1"
+          "sha256": "sha256:b3063c7402aa6a93e5ef8e4fc19c6713d8263602aea215c179cc3005bfa56c56"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-2-1.svg",
           "bytes": 22401,
-          "sha256": "sha256:c6387a21af7bf22b57cbcee1df2aa103ccda99e20fd70b6978a555224a5b0390"
+          "sha256": "sha256:a0322b0236ddd1fb25b31dc20db86102e554f9a9e91d94ab9b0b343777f26b39"
         }
       ]
     },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-effective-sample-weight-1.svg",
           "bytes": 25361,
-          "sha256": "sha256:037871a233c7c057032f88c195353cc0c8ee243b7eb80559aa7567e3af68b8af"
+          "sha256": "sha256:f410134a667571f7fbaad82c0c9085540d64abd5427b31f367c3d338c1388330"
         }
       ]
     },
@@ -110,14 +110,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 1.072 sec/epoch\n"
+          "text": "loss: 0.243, 1.171 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 18782,
-          "sha256": "sha256:34203974c89d164dcc19f7d708010231765e1b516c46f922dea96aa5cb085d36"
+          "bytes": 18780,
+          "sha256": "sha256:ff17c2738c25c0aa16435f72447fbd019c05ee394837915b8eb99ed834f0ae8b"
         }
       ]
     },
@@ -128,14 +128,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.939 sec/epoch\n"
+          "text": "loss: 0.246, 0.980 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-4-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:dbc8f51722f1b9c17b95032daeccfca8a87e584c035e3ec199d951bb966ca7c9"
+          "bytes": 18783,
+          "sha256": "sha256:03436617b87d9fc6a62d1d972b54ae3bc816f66e0db328a81cb2ebdb54cb7e57"
         }
       ]
     },
@@ -146,14 +146,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.966 sec/epoch\n"
+          "text": "loss: 0.246, 0.934 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-5-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:25cf2a471ccfc36a97f4c416fbf0d4475459efc6e22e2f5a886844fad4e2f7b8"
+          "bytes": 18774,
+          "sha256": "sha256:457296203e65deee2ac299990e6a19855dc5541de9357a9a61a24f8ed3534e2c"
         }
       ]
     },
@@ -164,14 +164,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.250, 1.609 sec/epoch\n"
+          "text": "loss: 0.260, 1.130 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-concise-implementation-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:8686e26d8e6fcf15b93fb1941afca6484b16b222980861a464286984c87a4111"
+          "bytes": 18782,
+          "sha256": "sha256:8a553f06e54a83459409e9a98e5a512760798ae08f993965a47e4312c0446008"
         }
       ]
     },
@@ -184,7 +184,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-scalar-functions-1.svg",
           "bytes": 27279,
-          "sha256": "sha256:a58ea080f8699bbf74ef44da871b15de27493f3671ac1b712dd1d933fe0ee7bf"
+          "sha256": "sha256:19b9e95b7471b4bb8a7682577160149c26ba89c1c04f98920c5c7c159f95688f"
         }
       ]
     }

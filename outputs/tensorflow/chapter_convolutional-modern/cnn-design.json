@@ -40,7 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\nActivation output shape:\t (1, 48, 48, 32)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Activation output shape:\t (1, 48, 48, 32)\n"
         },
         {
           "type": "stream",
@@ -62,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 20690,
-          "sha256": "sha256:889cbdf4c1fe40a9b32083b76574383aac0f2830ebc5b09e8ef551f0104b134e"
+          "bytes": 21636,
+          "sha256": "sha256:e3410a6506dd28700574e74e5daa8d7168259999ce2ae5643566f854bf1cd9d3"
         }
       ]
     }

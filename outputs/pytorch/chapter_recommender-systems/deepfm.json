@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.010, train acc 0.997, test acc 0.933\n249844.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.010, train acc 0.996, test acc 0.937\n193985.7 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
-          "bytes": 32472,
-          "sha256": "sha256:779780a14997144988d8072ea99a643a62972a80c8303b4c1e016376fc2f80e1"
+          "bytes": 31216,
+          "sha256": "sha256:ee8f58d8290e7b95437e113f3baf857f601b13cb4bf4f25cd0d0caef92e2ad77"
         }
       ]
     }

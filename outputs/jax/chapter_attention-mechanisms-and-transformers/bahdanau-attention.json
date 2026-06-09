@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 20426,
-          "sha256": "sha256:7094a01b4b36b1e7410a57b0255e78ebfb950bab799420c865242ddabd345bdb"
+          "bytes": 20425,
+          "sha256": "sha256:9b0f05f4c693d0da5b6cc303b43729aac5ca8e6a3c47e2c553f64e2dfeb73e2d"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 20033,
-          "sha256": "sha256:6884e71aab9ce90c60f231135b1b50580babb58fada8fade54445e9ea76cd1c9"
+          "bytes": 20012,
+          "sha256": "sha256:86bdbf8ef4bb73c3b638da7c0d584eb6ea19bf224fb3e70c963eb50113123cd8"
         }
       ]
     }

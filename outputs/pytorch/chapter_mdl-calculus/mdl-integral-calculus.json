@@ -71,7 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid integral of e^(-x^2-y^2): 3.141593\nexact value pi               : 3.141593\n"
+          "text": "grid integral of e^(-x^2-y^2):"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 3.141593\nexact value pi               : 3.141593\n"
         }
       ]
     },
@@ -100,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45710,
-          "sha256": "sha256:855505c013b5f711c749ea1f00b3139f058f1ca7457d48d1ff6ddb11841f6e79"
+          "sha256": "sha256:3f11c38384eae4c2e8afbf8c96d2560cdfe6bc84b4a65366abcff50d1c70bd02"
         }
       ]
     }

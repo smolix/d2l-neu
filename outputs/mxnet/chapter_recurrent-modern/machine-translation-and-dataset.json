@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:863f7d8eaa0f8d292ebfcc1c6042f8f010c5559ad52864fe7290d135652de2c9"
+          "sha256": "sha256:d8333a721e41eaea4b1851659eb218c916715940eb30827aeb28d4bcfb456d0d"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 15 176   3   2   1   1   1   1   1]\n [ 41  26   5   2   1   1   1   1   1]\n [ 41  26   5   2   1   1   1   1   1]]\ndecoder input: [[  2  45 192   5   3   1   1   1   1]\n [  2  55  14  61   5   3   1   1   1]\n [  2  55  14   0   5   3   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 45 192   5   3   1   1   1   1   1]\n [ 55  14  61   5   3   1   1   1   1]\n [ 55  14   0   5   3   1   1   1   1]]\n"
+          "text": "source: [[ 6  0  3  2  1  1  1  1  1]\n [14 34  3  2  1  1  1  1  1]\n [ 4 95  3  2  1  1  1  1  1]]\ndecoder input: [[  2  34  91   0   4   3   1   1   1]\n [  2  27 122   5   3   1   1   1   1]\n [  2   6   7 113   4   3   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 34  91   0   4   3   1   1   1   1]\n [ 27 122   5   3   1   1   1   1   1]\n [  6   7 113   4   3   1   1   1   1]]\n"
         }
       ]
     },

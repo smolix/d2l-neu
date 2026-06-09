@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-0.0672, grad_fn=<SumBackward0>)"
+          "text": "tensor(0.2215, grad_fn=<SumBackward0>)"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-0.0601, grad_fn=<SumBackward0>)"
+          "text": "tensor(0.1920, grad_fn=<SumBackward0>)"
         }
       ]
     }

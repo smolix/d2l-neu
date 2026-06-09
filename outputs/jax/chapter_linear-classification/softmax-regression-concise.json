@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 22400,
-          "sha256": "sha256:0d5c01b9fed866ff9f4d86e8ccf8c4dff1fcac0bfce7efa6d94f26b59df54b0a"
+          "bytes": 22395,
+          "sha256": "sha256:86f541bf5c2a0e7cfeb5bbc304b1772700cb9014501f28cb0ed283e79f249238"
         }
       ]
     }

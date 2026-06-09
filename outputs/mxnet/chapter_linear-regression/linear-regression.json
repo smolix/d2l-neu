@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.29411 sec'"
+          "text": "'0.59433 sec'"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.00024 sec'"
+          "text": "'0.00129 sec'"
         }
       ]
     },
@@ -52,7 +52,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
           "bytes": 28707,
-          "sha256": "sha256:4adc71a63d6a255ea21add4fd26d27c4a12872af9207c8e31c2901d6a781de25"
+          "sha256": "sha256:330b993493f7c9fb8b09af060d27092b682e14a2126b20e0b3e4d0839dbf3b21"
         }
       ]
     }

@@ -86,14 +86,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.272, valid loss 0.881\n3383.3 examples/sec\n"
+          "text": "train loss 0.296, valid loss 0.848\n2498.9 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 20715,
-          "sha256": "sha256:a842f1fac98ee833a65d2c16cef23a5c5f72e2cefa88eb7d37387391fec619b9"
+          "bytes": 21474,
+          "sha256": "sha256:860331d4405ba7d7c57ee37f2b79fba99f5763a67cbc7f7b2acea409c8739fd5"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.324\n5682.7 examples/sec\n"
+          "text": "train loss 0.249\n4126.6 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 18445,
-          "sha256": "sha256:5c442cee03dc7bcb8bde2ccbf57b320e3e2a04a8457f79ba088232ac4bf3ac67"
+          "bytes": 21373,
+          "sha256": "sha256:60f7386d2bbedaa39cafd320568b083a8423e05d7bab492af17d92d9a5ad1fd8"
         }
       ]
     }

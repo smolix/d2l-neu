@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:b2c5dd994b7f54bdf9d514f89050196a36f31ad96792e348af54dfe823c15da9"
+          "sha256": "sha256:236bf22f2fbca3e49279278483fdadcb04f96e2e3a3cca0a0fa59467a152932e"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:a59e93492004c5c96410fe95eb8b5276e491dc3bd3251aac2a32397437aefed4"
+          "sha256": "sha256:dfa0d7bdba4da05a66176e02db7f346c462860197952441930677ec79987a79f"
         }
       ]
     },
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21781,
-          "sha256": "sha256:a5680b8f0bec07859d3ca3557acfd02a874131299f2abbae386ea1945cf5e4b0"
+          "sha256": "sha256:ddafc06a672c05cd947c980c1214a14fed781b06cf97ee7029c5b0a6e73ac80e"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24512,
-          "sha256": "sha256:d43e303fdb43316eafaa244ec0d34dbcf0dadcabc8693351f90c6509bdd16493"
+          "sha256": "sha256:cfda1bd3f6b3920d138a361cb56101bae6d0097077d6bc2e476da936b4663869"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20169,
-          "sha256": "sha256:3ee8c0d2d83dfaffeffd53181b43f86be80d9494a62dbe34a25a8372c411e3e0"
+          "sha256": "sha256:896ff1c59e099f8bad57e5d73a10c030e215e75bfe2960dcedb1047cc966ec7f"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:3bcd0bbb96bda402d4f59a828b593ab76d30a17c9a42aabf6a06298919d7b366"
+          "sha256": "sha256:58a2eabefeb0d887c19bea041fbab3701e87b03fba1ddae1956fd602a835fc84"
         }
       ]
     }

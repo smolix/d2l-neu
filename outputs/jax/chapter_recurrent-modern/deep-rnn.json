@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 25132,
-          "sha256": "sha256:e3e07386defdfdb19190edca6da1c15900eba5408795207fcb98894ffc08d2eb"
+          "bytes": 25145,
+          "sha256": "sha256:880845e20e95be5caa31e7b8afa28206af7a974f68b0b86d68c3bbbd33040e7a"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24802,
-          "sha256": "sha256:44a62cfc88d66e9f4128ea44c1d49b32aaed2985d46a143cd1b8324b6474446f"
+          "bytes": 24753,
+          "sha256": "sha256:5884f710e6930a8ec3d43cc06c0f196d80c89723965d6b789cdd2ebb14888588"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has move are why only a'"
+          "text": "'it has one man and shat an'"
         }
       ]
     }

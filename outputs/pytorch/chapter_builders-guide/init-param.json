@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([-0.0107, -0.0118,  0.0148,  0.0058]), tensor(0.))"
+          "text": "(tensor([ 0.0058,  0.0072, -0.0036, -0.0068]), tensor(0.))"
         }
       ]
     },
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([-0.5387,  0.0471, -0.0263, -0.3960])\ntensor([[42., 42., 42., 42., 42., 42., 42., 42.]])\n"
+          "text": "tensor([-0.6979, -0.5156, -0.4204,  0.1812])\ntensor([[42., 42., 42., 42., 42., 42., 42., 42.]])\n"
         }
       ]
     },
@@ -65,7 +65,7 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0000,  8.3756,  0.0000, -0.0000],\n        [-7.7614, -0.0000,  0.0000, -5.6971]], grad_fn=<SliceBackward0>)"
+          "text": "tensor([[-0.0000, -0.0000,  7.8192,  5.6185],\n        [ 0.0000, -7.3297, -0.0000, -7.5749]], grad_fn=<SliceBackward0>)"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42.0000,  9.3756,  1.0000,  1.0000], grad_fn=<SelectBackward0>)"
+          "text": "tensor([42.0000,  1.0000,  8.8192,  6.6185], grad_fn=<SelectBackward0>)"
         }
       ]
     }

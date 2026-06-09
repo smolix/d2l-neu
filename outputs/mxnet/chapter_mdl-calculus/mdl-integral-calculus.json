@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993759\nintegral_0^10.0 e^-x dx = 1.000455\nintegral_0^20.0 e^-x dx = 1.000496\nlimit as b -> infinity   = 1.000000\n"
+          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993759\nintegral_0^10.0 e^-x dx = 1.000455\nintegral_0^20.0 e^-x dx = 1.000500\nlimit as b -> infinity   = 1.000000\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.141590118408203\nvolume (exact = pi): 3.141592653589793\n"
+          "text": "volume (Riemann)  : 3.141592502593994\nvolume (exact = pi): 3.141592653589793\n"
         },
         {
           "type": "display_data",
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid integral of e^(-x^2-y^2): 3.141416\nexact value pi               : 3.141593\n"
+          "text": "grid integral of e^(-x^2-y^2): 3.141593\nexact value pi               : 3.141593\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 45726,
-          "sha256": "sha256:26fd9ae990a5d11259b482def647871202164fd6f671d8502995f790af6db356"
+          "sha256": "sha256:0d5e23148cc548df8a245ace01b493013bc9a87bbe65bc5b918605fd16b840fb"
         }
       ]
     }

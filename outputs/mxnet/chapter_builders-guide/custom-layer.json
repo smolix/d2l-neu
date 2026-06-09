@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(5.820766e-10)"
+          "text": "array(3.9540282e-10)"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.        , 0.02670861, 0.02592797],\n       [0.        , 0.        , 0.02631169]])"
+          "text": "array([[0.        , 0.        , 0.        ],\n       [0.02962318, 0.        , 0.        ]])"
         }
       ]
     },

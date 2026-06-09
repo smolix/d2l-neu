@@ -35,12 +35,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\n"
+          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 7, 7, 512)\nSequential output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 20965,
-          "sha256": "sha256:fae03e394fb9c5a3394c1db8286b5e89a7f35623531e51fb47e698e2296f6050"
+          "bytes": 20964,
+          "sha256": "sha256:b11661aa9c09ba396aaaa8c8b2bd02960b9de3d55fdc709cabe84fbeb5b317cd"
         }
       ]
     }

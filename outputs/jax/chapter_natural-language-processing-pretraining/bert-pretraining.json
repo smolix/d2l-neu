@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.454, NSP loss 0.718\n369.9 sentence pairs/sec on [CudaDevice(id=0)]\n"
+          "text": "MLM loss 9.451, NSP loss 0.722\n414.1 sentence pairs/sec on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21539,
-          "sha256": "sha256:29d1faa3618005c816597b53761cc1fe4ab5e16ecc88529ed4ab738a47661b20"
+          "bytes": 21560,
+          "sha256": "sha256:11e5984bd28d793244a16446e2deb69d99c4558570f4fba0b78ce052522da14b"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n Array([-1.2684208 ,  0.55240273,  0.6039375 ], dtype=float32))"
+          "text": "((1, 6, 128),\n (1, 128),\n Array([-1.5587804 ,  0.17919101,  0.43631312], dtype=float32))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n Array([-1.2413045,  0.4050869,  0.7267642], dtype=float32))"
+          "text": "((1, 10, 128),\n (1, 128),\n Array([-1.5398881 , -0.08499939,  0.43592444], dtype=float32))"
         }
       ]
     }

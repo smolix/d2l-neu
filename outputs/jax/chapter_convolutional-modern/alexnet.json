@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 20971,
-          "sha256": "sha256:ac7e94f40108abe210a6ee7091f90cb0c399a994c7d3321ebc48339de8ae316f"
+          "bytes": 20973,
+          "sha256": "sha256:4b442250ae1615e3a63dc308a6defb2c18ab74b0db1b7fc01b869ef1df3a75e0"
         }
       ]
     }

@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24742,
-          "sha256": "sha256:cdab2334b8a45b712e46d5a8b425925baa8ec898ab98d302e5b415084e0e3035"
+          "bytes": 24764,
+          "sha256": "sha256:f25396e724e9625afd35f24267e76743fa32c9eb54230f54dc74bcb5243f8694"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24157,
-          "sha256": "sha256:5b97839b426a38d508d0ff445c8aa29362cc4335ceb7cbd6f60c963f1b473d28"
+          "bytes": 24238,
+          "sha256": "sha256:8524f0f7ee453038539b0a108f23e165d540ab0401601b1b6ff1f0e59989096b"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of the time travell'"
+          "text": "'it has a moment and why no'"
         }
       ]
     }

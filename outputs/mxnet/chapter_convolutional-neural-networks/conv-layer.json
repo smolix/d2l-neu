@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 5.319\nepoch 4, loss 0.893\nepoch 6, loss 0.150\nepoch 8, loss 0.025\nepoch 10, loss 0.004\n"
+          "text": "epoch 2, loss 4.777\nepoch 4, loss 0.821\nepoch 6, loss 0.146\nepoch 8, loss 0.028\nepoch 10, loss 0.006\n"
         },
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[21:10:32] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[23:47:44] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.9891183, -0.9869036]])"
+          "text": "array([[ 0.98376787, -0.99369556]])"
         }
       ]
     }

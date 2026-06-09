@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b65d5bbcd0d6414e8947066cbf49e14b0ba518a66e0cb6c58c636b80b1a945f8",
+    "d2l_lib_fingerprint": "sha256:585eff9e59c0bce47cb706a831584ed26505bb9d58fac8b08c8269a22dd31c45",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.496, train acc 0.805, test acc 0.827\n26517.2 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.496, train acc 0.806, test acc 0.824\n25298.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
           "bytes": 27069,
-          "sha256": "sha256:1ad27949203bca52aa63a3efe599c3254bfbdcf2fe374f2f7e98047d87e932ff"
+          "sha256": "sha256:2a2bc66d81c23bb8ec8dc40efdaefd655d4939dfc591a255e7defbf1c20e6d50"
         }
       ]
     },

@@ -30,17 +30,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: [0.02353456 0.70729584] \nlabel: [1.8385243]\n"
+          "text": "features: [0.8632366 0.6272028] \nlabel: [3.7907596]\n"
         }
       ]
     },
     "synthetic-regression-data-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:485f16ef5b066aaed4c57a9da1ba51190232e401d8bf3c30bbd30c80a0a36d74",
+      "code_fingerprint": "sha256:a553c9a935ecc42978caceb9578a6fa3b2c757d62eb70ce17b83e639908c97e6",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:60375ce4ecfb17e2c89a4dc6ba8d996b8eea421d20ef99d875f86c4d1a07b4bc",
+      "code_fingerprint": "sha256:aa6b6f247886a18d2ae30e5e815e30f7d2233811691a0b15861003cfc61856b0",
       "kind": "text",
       "outputs": [
         {
@@ -51,17 +51,17 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-1": {
-      "code_fingerprint": "sha256:da1cf36c48a5ee9799e4a2275dced2c899c419ebe4d2691a539ac53428b93cde",
+      "code_fingerprint": "sha256:8615c9a9d41d2ac189b090639a99e93e05d64aa5aa200a9e27e3fe27e2752292",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-2": {
-      "code_fingerprint": "sha256:0b251ae4cc79e16d7dfe470c5a81742c22b00bdb2b0f0ac61cb8bd2734e4542b",
+      "code_fingerprint": "sha256:17f94ca6535737e1f1d73a4ab49ca92cf6e0f15ab99703eb39bea15ed7dac864",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-3": {
-      "code_fingerprint": "sha256:05b1b5fb6584b028b9f81b284c46a447207a861079fb0f530d04e18b3c7137f2",
+      "code_fingerprint": "sha256:601c15099775b845758081dcf5a2a5ddb49ebe475d716a20d309683e4e5c76e9",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-4": {
-      "code_fingerprint": "sha256:45b72cef0d47bfe1fcf80f744329e9c9a754a5769b6ade98a9bf928d85928c0a",
+      "code_fingerprint": "sha256:207a940877c666e6f0b048b443aeb9d47d0199d2f5e78ec026896cf90d1ef9d5",
       "kind": "text",
       "outputs": [
         {

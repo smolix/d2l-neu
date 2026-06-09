@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:26fd3b459ea0d9a82d608dd1a3d2c7d24d98966a8a89cdeb936e16b5e256707a",
+    "d2l_lib_fingerprint": "sha256:356ff7a9adff18a086796d54e62a654a7d23e7f2cacb867f784b1cc3b54fa181",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.284, train acc 0.883, test acc 0.839\n825.7 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.408, train acc 0.816, test acc 0.816\n879.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-rnn/sentiment-analysis-rnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25221,
-          "sha256": "sha256:a47a246a7791ffe6eca8225c39fd044668672699ed84f20ee81fa0bd2cc45648"
+          "bytes": 25198,
+          "sha256": "sha256:846309c0d4e18adfe40b4c258adf96b1aec14bfaf2da6702e93c0698efc41f5b"
         }
       ]
     },

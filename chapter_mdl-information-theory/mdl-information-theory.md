@@ -1,155 +1,195 @@
-# Information Theory
+# Entropy, Cross-Entropy, and KL Divergence
 :label:`sec_mdl-information_theory`
 
-The universe is overflowing with information. Information provides a common language across disciplinary rifts: from Shakespeare's Sonnet to researchers' paper on Cornell ArXiv, from Van Gogh's painting Starry Night to Beethoven's music Symphony No. 5, from the first programming language Plankalkül to the state-of-the-art machine learning algorithms. Everything must follow the rules of information theory, no matter the format. With information theory, we can measure and compare how much information is present in different signals. In this section, we will investigate the fundamental concepts of information theory and applications of information theory in machine learning.
+Nearly every model in this book is trained by minimizing a cross-entropy. The
+number your training loop prints is therefore a quantity from *information
+theory*, the field Claude Shannon created in a single 1948 paper
+:cite:`Shannon.1948`, and information theory is what tells you what that number
+*means*: it is a code length. Entropy is the irreducible floor---the cost of
+the data's own randomness; cross-entropy is what your model actually pays; and
+the gap between them, the Kullback--Leibler divergence, is the waste you can
+train away. This section builds those three quantities and the one inequality
+(Gibbs') that relates them, grounds the "extra bits" language in an actual
+coding argument (the Kraft inequality and the Shannon code), explains why
+language models report *perplexity*, and closes with two modern training tricks
+---label smoothing and knowledge distillation---that are one-line consequences
+of the same machinery.
 
-Before we get started, let's outline the relationship between machine learning and information theory. Machine learning aims to extract interesting signals from data and make critical predictions.  On the other hand, information theory studies encoding, decoding, transmitting, and manipulating information. As a result, information theory provides fundamental language for discussing the information processing in machine learned systems. For example, many machine learning applications use the cross-entropy loss as described in :numref:`sec_softmax`.  This loss can be directly derived from information theoretic considerations.
+A note on units before we start. The logarithm base is a pure choice of unit:
+base $2$ gives *bits*, base $e$ gives *nats*. **We work in nats throughout**,
+matching deep-learning practice---every framework's `log` is natural, so the
+loss your training loop prints is already in nats. The one place where base
+$2$ is genuinely natural is coding with binary symbols, and we flag it
+explicitly when we get there. Since $\log_2 x = \ln x / \ln 2$, converting is a
+fixed rescaling: $1\textrm{ bit} = \ln 2 \approx 0.693$ nats and $1\textrm{
+nat} = 1/\ln 2 \approx 1.443$ bits. No argmin in this section---and no trained
+model---changes if you switch.
 
+We import each framework once, up front; everything below uses only these
+names.
 
-## Information
+```{.python .input #information-theory-imports}
+#@tab mxnet
+import math
+from mxnet import autograd, np, npx
+from mxnet.gluon.metric import CrossEntropy
+from mxnet.ndarray import nansum
+npx.set_np()
+```
 
-Let's start with the "soul" of information theory: information. *Information* can be encoded in anything with a particular sequence of one or more encoding formats. Suppose that we task ourselves with trying to define a notion of information.  What could be our starting point?
+```{.python .input #information-theory-imports}
+#@tab pytorch
+import math
+import torch
+```
 
-Consider the following thought experiment.  We have a friend with a deck of cards.  They will shuffle the deck, flip over some cards, and tell us statements about the cards.  We will try to assess the information content of each statement.
+```{.python .input #information-theory-imports}
+#@tab tensorflow
+import math
+import tensorflow as tf
+```
 
-First, they flip over a card and tell us, "I see a card."  This provides us with no information at all.  We were already certain that this was the case so we hope the information should be zero.
+```{.python .input #information-theory-imports}
+#@tab jax
+import math
+import jax
+from jax import numpy as jnp
+import optax
+```
 
-Next, they flip over a card and say, "I see a heart."  This provides us some information, but in reality there are only $4$ different suits that were possible, each equally likely, so we are not surprised by this outcome.  We hope that whatever the measure of information, this event should have low information content.
+## Information and Entropy
 
-Next, they flip over a card and say, "This is the $3$ of spades."  This is more information.  Indeed there were $52$ equally likely possible outcomes, and our friend told us which one it was.  This should be a medium amount of information.
+### Surprise and Self-Information
 
-Let's take this to the logical extreme.  Suppose that finally they flip over every card from the deck and read off the entire sequence of the shuffled deck.  There are $52!$ different orders to the deck, again all equally likely, so we need a lot of information to know which one it is.
+What should a numerical measure of "information" even be? Consider a thought
+experiment. A friend shuffles a deck of cards, flips some over, and reports
+what they see; we try to assess how much each report tells us.
 
-Any notion of information we develop must conform to this intuition.  Indeed, in the next sections we will learn how to compute that these events have $0\textrm{ bits}$, $2\textrm{ bits}$, $~5.7\textrm{ bits}$, and $~225.6\textrm{ bits}$ of information respectively.
+First they flip a card and say, "I see a card." This tells us nothing---we
+were already certain of it---so whatever our measure is, this statement should
+score zero. Next: "I see a heart." Four equally likely suits were possible, so
+this is mildly informative. Then: "It is the three of spades." Now one of $52$
+equally likely outcomes has been pinned down---more information. Finally they
+read off the order of the entire shuffled deck: one outcome out of $52!$, a
+huge amount of information.
 
-If we read through these thought experiments, we see a natural idea.  As a starting point, rather than caring about the knowledge, we may build off the idea that information represents the degree of surprise or the abstract possibility of the event. For example, if we want to describe an unusual event, we need a lot of information. For a common event, we may not need much information.
+The pattern is that information tracks *surprise*: the less probable the
+event, the more we learn from observing it. Shannon turned this into a
+definition. The *self-information* of an event $x$ with probability $p(x)$ is
 
-In 1948, Claude E. Shannon published *A Mathematical Theory of Communication* :cite:`Shannon.1948` establishing the theory of information.  In his article, Shannon introduced the concept of information entropy for the first time. We will begin our journey here.
+$$
+I(x) = -\log p(x),
+$$
 
+measured in nats for the natural logarithm. The four card reports above carry
+$-\ln 1 = 0$, $\ln 4 \approx 1.39$, $\ln 52 \approx 3.95$, and
+$\ln 52! \approx 156.4$ nats respectively. The function $-\log p$ is the
+unique choice (up to the base, i.e., the unit) satisfying the properties we
+implicitly demanded: certain events carry zero information, rarer events carry
+more, and independent events add---$I$ of a joint outcome with probability
+$p_1 p_2$ is $I(p_1) + I(p_2)$, which forces a logarithm
+(:citet:`Csiszar.2008` gives the formal axiomatics; Exercise 5 walks
+through the argument).
 
-### Self-information
+**Bits, a sidebar.** Take the logarithm base $2$ instead and the unit is the
+*bit*: the information in one fair coin flip, or equivalently one binary
+digit, since a uniformly random length-$n$ bit string such as "0010" has
+probability $2^{-n}$ and self-information $-\log_2 2^{-n} = n$ bits. In bits
+the card-deck reports carry $0$, $2$, $\log_2 52 \approx 5.70$, and
+$\log_2 52! \approx 225.6$ bits---the classic numbers. Bits will return when
+we talk about actual binary codes in the coding view below; everywhere else we
+stay in nats.
 
-Since information embodies the abstract possibility of an event, how do we map the possibility to the number of bits? Shannon introduced the terminology *bit* as the unit of information, which was originally created by John Tukey. So what is a "bit" and why do we use it to measure information? Historically, an antique transmitter can only send or receive two types of code: $0$ and $1$.  Indeed, binary encoding is still in common use on all modern digital computers. In this way, any information is encoded by a series of $0$ and $1$. And hence, a series of binary digits of length $n$ contains $n$ bits of information.
+![Self-information $I(x) = -\log p(x)$ in nats as a function of the probability $p$. Certain events ($p = 1$) carry zero information, the fair coin ($p = \tfrac{1}{2}$) carries $\ln 2 \approx 0.693$ nats, and the curve diverges as $p \to 0$: rare means surprising.](../img/mdl-it-self-info-curve.svg)
+:label:`fig_mdl-self-info-curve`
 
-Now, suppose that for any series of codes, each $0$ or $1$ occurs with a probability of $\frac{1}{2}$. Hence, an event $X$ with a series of codes of length $n$, occurs with a probability of $\frac{1}{2^n}$. At the same time, as we mentioned before, this series contains $n$ bits of information. So, can we generalize to a mathematical function which can transfer the probability $p$ to the number of bits? Shannon gave the answer by defining *self-information*
-
-$$I(X) = - \log_2 (p),$$
-
-as the *bits* of information we have received for this event $X$. Note that we will always use base-2 logarithms in this section. For the sake of simplicity, the rest of this section will omit the subscript 2 in the logarithm notation, i.e., $\log(.)$ always refers to $\log_2(.)$. For example, the code "0010" has a self-information
-
-$$I(\textrm{"0010"}) = - \log (p(\textrm{"0010"})) = - \log \left( \frac{1}{2^4} \right) = 4 \textrm{ bits}.$$
-
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** A one-paragraph figure caption around a plot of $I(x)=-\log p(x)$ that turns the card-deck intuition into a curve.
-**Outline:** 1. plot $-\log_2 p$ on $p\in(0,1]$ · 2. annotate $p=1\Rightarrow 0$ bits and $p\to 0\Rightarrow \infty$ · 3. mark the fair-coin point $p=\tfrac12 \Rightarrow 1$ bit.
-**Key results to state:** $I(x)=-\log_2 p(x)$; $I(\text{"0010"})=4$ bits.
-**Diagrams:** `fig_mdl-self-info-curve` — the self-information curve $-\log p$ vs. $p$, decreasing and convex, with the three annotated points.
-**Worked example(s):** read the four card-deck surprises ($0,2,\approx5.7,\approx225.6$ bits) off the curve.
-**Exercises (draft):** show $I$ is the unique (up to base) function with $I(p_1p_2)=I(p_1)+I(p_2)$ and $I(1)=0$.
-**Prereqs / cross-refs:** this subsection; `sec_mdl-random_variables` (expectation).
-:::
-
-We can calculate self information as shown below. Before that, let's first import all the necessary packages in this section.
+:numref:`fig_mdl-self-info-curve` plots the curve: decreasing, convex, zero at
+$p = 1$, infinite at $p = 0$. Computing it is one line.
 
 ```{.python .input #information-theory-self-information}
 #@tab mxnet
-from mxnet import np
-from mxnet.gluon.metric import CrossEntropy
-from mxnet.ndarray import nansum
-import random
-
 def self_information(p):
-    return -np.log2(p)
+    """Self-information -log p, in nats."""
+    return -np.log(p)
 
 self_information(1 / 64)
 ```
 
 ```{.python .input #information-theory-self-information}
 #@tab pytorch
-import torch
-from torch.nn import NLLLoss
-
-def nansum(x):
-    # Define nansum, as pytorch does not offer it inbuilt.
-    return x[~torch.isnan(x)].sum()
-
 def self_information(p):
-    return -torch.log2(torch.tensor(p)).item()
+    """Self-information -log p, in nats."""
+    return -torch.log(torch.tensor(p)).item()
 
 self_information(1 / 64)
 ```
 
 ```{.python .input #information-theory-self-information}
 #@tab tensorflow
-import tensorflow as tf
-
-def log2(x):
-    return tf.math.log(x) / tf.math.log(2.)
-
-def nansum(x):
-    return tf.reduce_sum(tf.where(tf.math.is_nan(
-        x), tf.zeros_like(x), x), axis=-1)
-
 def self_information(p):
-    return -log2(tf.constant(p)).numpy()
+    """Self-information -log p, in nats."""
+    return -tf.math.log(tf.constant(p)).numpy()
 
 self_information(1 / 64)
 ```
 
 ```{.python .input #information-theory-self-information}
 #@tab jax
-import jax
-from jax import numpy as jnp
-import numpy as np
-
-def nansum(x):
-    return jnp.nansum(x)
-
 def self_information(p):
-    return -jnp.log2(jnp.array(p)).item()
+    """Self-information -log p, in nats."""
+    return -jnp.log(jnp.array(p)).item()
 
 self_information(1 / 64)
 ```
 
-## Entropy
+An event of probability $1/64$ carries $\ln 64 \approx 4.16$ nats (exactly
+$6$ bits: it takes six fair-coin flips to have probability $1/64$).
 
-As self-information only measures the information of a single discrete event, we need a more generalized measure for any random variable of either discrete or continuous distribution.
+### Shannon Entropy
 
-
-### Motivating Entropy
-
-Let's try to get specific about what we want.  This will be an informal statement of what are known as the *axioms of Shannon entropy*.  It will turn out that the following collection of common-sense statements force us to a unique definition of information.  A formal version of these axioms, along with several others may be found in :citet:`Csiszar.2008`.
-
-1.  The information we gain by observing a random variable does not depend on what we call the elements, or the presence of additional elements which have probability zero.
-2.  The information we gain by observing two random variables is no more than the sum of the information we gain by observing them separately.  If they are independent, then it is exactly the sum.
-3.  The information gained when observing (nearly) certain events is (nearly) zero.
-
-While proving this fact is beyond the scope of our text, it is important to know that this uniquely determines the form that entropy must take.  The only ambiguity that these allow is in the choice of fundamental units, which is most often normalized by making the choice we saw before that the information provided by a single fair coin flip is one bit.
-
-### Definition
-
-For any random variable $X$ that follows a probability distribution $P$ with a probability density function (p.d.f.) or a probability mass function (p.m.f.) $p(x)$, we measure the expected amount of information through *entropy* (or *Shannon entropy*)
+Self-information scores a single outcome. To score a *random variable*---a
+whole distribution of outcomes---we average. For $X \sim P$ with probability
+mass function (p.m.f.) or probability density function (p.d.f.) $p(x)$, the
+*entropy* (or *Shannon entropy*) of $X$ is the expected self-information,
 
 $$H(X) = - E_{x \sim P} [\log p(x)].$$
 :eqlabel:`eq_mdl-ent_def`
 
-To be specific, if $X$ is discrete, $$H(X) = - \sum_i p_i \log p_i \textrm{, where } p_i = P(X_i).$$
+For discrete $X$ this reads $H(X) = -\sum_i p_i \log p_i$ with
+$p_i = P(X = x_i)$; for continuous $X$ the sum becomes an integral,
+$H(X) = -\int p(x) \log p(x)\,dx$, called the *differential entropy*. Each
+term weighs the surprise $-\log p(x)$ of an outcome by how often it occurs, so
+entropy is the *average surprise* of observing $X$: a distribution
+concentrated on one value never surprises us ($H = 0$), while a spread-out
+distribution surprises us constantly. Why exactly this form? The logarithm is
+forced by additivity over independent observations, the minus sign makes the
+measure positive and decreasing in probability, and the expectation is the
+only consistent way to aggregate outcome-level surprise into a single number
+for the distribution---this is the content of the axiomatic characterizations
+mentioned above.
 
-Otherwise, if $X$ is continuous, we also refer to entropy as *differential entropy*
+A word of caution about the continuous case. Differential entropy is *not*
+the limit of the discrete entropy, and it is *not coordinate-invariant*: under
+an invertible change of variables $y = g(x)$ it shifts by
+$E[\log|\det \partial g/\partial x|]$, so it can even be *negative* (e.g., a
+narrow Gaussian with $\sigma < 1/\sqrt{2\pi e}$). This is one reason deep
+learning almost always works with *relative* quantities such as cross-entropy
+and KL divergence, which *are* invariant under reparameterization---the
+offending Jacobian term cancels between the two densities.
 
-$$H(X) = - \int_x p(x) \log p(x) \; dx.$$
-
-A word of caution about the continuous case. Differential entropy is *not* the limit of the discrete entropy, and it is *not coordinate-invariant*: under an invertible change of variables $y = g(x)$ it shifts by $E[\log|\det \partial g/\partial x|]$, so it can even be *negative* (e.g., a narrow Gaussian with $\sigma < 1/\sqrt{2\pi e}$). This is one reason deep learning almost always works with *relative* quantities such as cross-entropy and KL divergence, which *are* invariant under reparameterization — the offending Jacobian term cancels between the two densities.
-
-We can define entropy as below.
+In code, entropy needs one piece of care: the convention $0 \log 0 = 0$ (an
+outcome of probability zero contributes nothing). Where $p(x) = 0$ the term
+$-p \log p$ has limiting value $0$, but the direct floating-point expression
+`0 * -inf` evaluates to `nan`, so we sum with `nansum`, which drops those
+terms---exactly the convention we want.
 
 ```{.python .input #information-theory-definition}
 #@tab mxnet
 def entropy(p):
-    entropy = - p * np.log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(entropy.as_nd_ndarray())
-    return out
+    """Entropy of a probability vector, in nats."""
+    ent = -p * np.log(p)
+    # `nansum` encodes the convention 0 log 0 = 0
+    return nansum(ent.as_nd_ndarray()).asscalar()
 
 entropy(np.array([0.1, 0.5, 0.1, 0.3]))
 ```
@@ -157,18 +197,24 @@ entropy(np.array([0.1, 0.5, 0.1, 0.3]))
 ```{.python .input #information-theory-definition}
 #@tab pytorch
 def entropy(p):
-    entropy = - p * torch.log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(entropy)
-    return out
+    """Entropy of a probability vector, in nats."""
+    ent = -p * torch.log(p)
+    # `nansum` encodes the convention 0 log 0 = 0
+    return torch.nansum(ent).item()
 
 entropy(torch.tensor([0.1, 0.5, 0.1, 0.3]))
 ```
 
 ```{.python .input #information-theory-definition}
 #@tab tensorflow
+def nansum(x):
+    """Sum, skipping nan entries."""
+    return tf.reduce_sum(tf.where(tf.math.is_nan(x), tf.zeros_like(x), x))
+
 def entropy(p):
-    return nansum(- p * log2(p))
+    """Entropy of a probability vector, in nats."""
+    # `nansum` encodes the convention 0 log 0 = 0
+    return float(nansum(-p * tf.math.log(p)).numpy())
 
 entropy(tf.constant([0.1, 0.5, 0.1, 0.3]))
 ```
@@ -176,387 +222,176 @@ entropy(tf.constant([0.1, 0.5, 0.1, 0.3]))
 ```{.python .input #information-theory-definition}
 #@tab jax
 def entropy(p):
-    return nansum(- p * jnp.log2(p))
+    """Entropy of a probability vector, in nats."""
+    # `nansum` encodes the convention 0 log 0 = 0
+    return jnp.nansum(-p * jnp.log(p)).item()
 
 entropy(jnp.array([0.1, 0.5, 0.1, 0.3]))
 ```
 
-### Interpretations
+The distribution $(0.1, 0.5, 0.1, 0.3)$ has entropy $\approx 1.168$ nats:
+less than the $\ln 4 \approx 1.386$ nats of a uniform distribution on four
+outcomes, because the mass is unevenly spread. That comparison is no accident.
 
-You may be curious: in the entropy definition :eqref:`eq_mdl-ent_def`, why do we use an expectation of a negative logarithm? Here are some intuitions.
+### Entropy Is Maximized by the Uniform Distribution
 
-First, why do we use a *logarithm* function $\log$? Suppose that $p(x) = f_1(x) f_2(x) \ldots, f_n(x)$, where each component function $f_i(x)$ is independent from each other. This means that each $f_i(x)$ contributes independently to the total information obtained from $p(x)$. As discussed above, we want the entropy formula to be additive over independent random variables. Luckily, $\log$ can naturally turn a product of probability distributions to a summation of the individual terms.
+Two basic properties orient everything that follows. First, for discrete $X$
+every term $-p_i \log p_i$ is non-negative, so $H(X) \geq 0$, with equality
+exactly for a point mass (a constant "random" variable). Second, entropy is
+largest when the distribution hedges maximally:
 
-Next, why do we use a *negative* $\log$? Intuitively, more frequent events should contain less information than less common events, since we often gain more information from an unusual case than from an ordinary one. However, $\log$ is monotonically increasing with the probabilities, and indeed negative for all values in $[0, 1]$.  We need to construct a monotonically decreasing relationship between the probability of events and their entropy, which will ideally be always positive (for nothing we observe should force us to forget what we have known). Hence, we add a negative sign in front of $\log$ function.
-
-Last, where does the *expectation* function come from? Consider a random variable $X$. We can interpret the self-information ($-\log(p)$) as the amount of *surprise* we have at seeing a particular outcome.  Indeed, as the probability approaches zero, the surprise becomes infinite.  Similarly, we can interpret the entropy as the average amount of surprise from observing $X$. For example, imagine that a slot machine system emits statistically independent symbols ${s_1, \ldots, s_k}$ with probabilities ${p_1, \ldots, p_k}$ respectively. Then the entropy of this system equals to the average self-information from observing each output, i.e.,
-
-$$H(S) = \sum_i {p_i \cdot I(s_i)} = - \sum_i {p_i \cdot \log p_i}.$$
-
-
-
-### Properties of Entropy
-
-By the above examples and interpretations, we can derive the following properties of entropy :eqref:`eq_mdl-ent_def`. Here, we refer to $X$ as an event and $P$ as the probability distribution of $X$.
-
-* $H(X) \geq 0$ for all discrete $X$ (entropy can be negative for continuous $X$).
-
-* If $X \sim P$ with a p.d.f. or a p.m.f. $p(x)$, and we try to estimate $P$ by a new probability distribution $Q$ with a p.d.f. or a p.m.f. $q(x)$, then $$H(X) = - E_{x \sim P} [\log p(x)] \leq  - E_{x \sim P} [\log q(x)], \textrm{ with equality if and only if } P = Q.$$  Alternatively, $H(X)$ gives a lower bound of the average number of bits needed to encode symbols drawn from $P$.
-
-* If $X \sim P$, then $x$ conveys the maximum amount of information if it spreads evenly among all possible outcomes. Specifically, if the probability distribution $P$ is discrete with $k$-class $\{p_1, \ldots, p_k \}$, then $$H(X) \leq \log(k), \textrm{ with equality if and only if } p_i = \frac{1}{k}, \forall i.$$ If $P$ is a continuous random variable, then the story becomes much more complicated.  However, if we additionally impose that $P$ is supported on a finite interval (with all values between $0$ and $1$), then $P$ has the highest entropy if it is the uniform distribution on that interval.
-
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** The Bernoulli entropy curve as the canonical "entropy peaks at maximal uncertainty" picture.
-**Outline:** 1. plot $H(p) = -p\log_2 p - (1-p)\log_2(1-p)$ on $p\in[0,1]$ · 2. mark the peak at $p=\tfrac12$ ($H=1$ bit) and the endpoints $H(0)=H(1)=0$ · 3. tie to the $H\le\log k$ bound with $k=2$.
-**Key results to state:** $H(p)$ binary entropy; $\max_p H(p) = \log 2 = 1$ bit at $p=\tfrac12$.
-**Diagrams:** `fig_mdl-bernoulli-entropy` — the concave binary-entropy curve $H(p)$ peaking at $p=\tfrac12$, zero at the deterministic endpoints.
-**Worked example(s):** compute $H$ for a biased coin $p=0.1$ and confirm it sits below the peak.
-**Exercises (draft):** show $H(p)$ is concave and symmetric about $p=\tfrac12$.
-**Prereqs / cross-refs:** entropy definition `eq_mdl-ent_def`; max-entropy bound above.
-:::
-
-
-## Mutual Information
-
-::: {.callout-note title="⟢ Planned — content migration (structural)"}
-In the final Part structure, the mutual-information material below (joint/conditional entropy through Applications) **migrates to §5.3** (`sec_mdl-mutual-information`), where it is expanded with variational estimators (MINE, InfoNCE) and the Information Bottleneck. It is retained here for now so this section stays self-contained; cross-references should point forward to `sec_mdl-mutual-information` once §5.3 lands.
-:::
-
-Previously we defined entropy of a single random variable $X$, how about the entropy of a pair random variables $(X, Y)$?  We can think of these techniques as trying to answer the following type of question, "What information is contained in $X$ and $Y$ together compared to each separately?  Is there redundant information, or is it all unique?"
-
-For the following discussion, we always use $(X, Y)$ as a pair of random variables that follows a joint probability distribution $P$ with a p.d.f. or a p.m.f. $p_{X, Y}(x, y)$, while $X$ and $Y$ follow probability distribution $p_X(x)$ and $p_Y(y)$, respectively.
-
-
-### Joint Entropy
-
-Similar to entropy of a single random variable :eqref:`eq_mdl-ent_def`, we define the *joint entropy* $H(X, Y)$ of a pair random variables $(X, Y)$ as
-
-$$H(X, Y) = -E_{(x, y) \sim P} [\log p_{X, Y}(x, y)]. $$
-:eqlabel:`eq_mdl-joint_ent_def`
-
-Precisely, on the one hand, if $(X, Y)$ is a pair of discrete random variables, then
-
-$$H(X, Y) = - \sum_{x} \sum_{y} p_{X, Y}(x, y) \log p_{X, Y}(x, y).$$
-
-On the other hand, if $(X, Y)$ is a pair of continuous random variables, then we define the *differential joint entropy* as
-
-$$H(X, Y) = - \int_{x, y} p_{X, Y}(x, y) \ \log p_{X, Y}(x, y) \;dx \;dy.$$
-
-We can think of :eqref:`eq_mdl-joint_ent_def` as telling us the total randomness in the pair of random variables.  As a pair of extremes, if $X = Y$ are two identical random variables, then the information in the pair is exactly the information in one and we have $H(X, Y) = H(X) = H(Y)$.  On the other extreme, if $X$ and $Y$ are independent then $H(X, Y) = H(X) + H(Y)$.  Indeed we will always have that the information contained in a pair of random variables is no smaller than the entropy of either random variable and no more than the sum of both.
+**Proposition (uniform maximizes entropy).** *If $X$ takes at most $k$ values,
+then*
 
 $$
-H(X), H(Y) \le H(X, Y) \le H(X) + H(Y).
+H(X) \leq \log k,
 $$
 
-Let's implement joint entropy from scratch.
+*with equality if and only if $X$ is uniform on $k$ values.*
 
-```{.python .input #information-theory-joint-entropy}
-#@tab mxnet
-def joint_entropy(p_xy):
-    joint_ent = -p_xy * np.log2(p_xy)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(joint_ent.as_nd_ndarray())
-    return out
-
-joint_entropy(np.array([[0.1, 0.5], [0.1, 0.3]]))
-```
-
-```{.python .input #information-theory-joint-entropy}
-#@tab pytorch
-def joint_entropy(p_xy):
-    joint_ent = -p_xy * torch.log2(p_xy)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(joint_ent)
-    return out
-
-joint_entropy(torch.tensor([[0.1, 0.5], [0.1, 0.3]]))
-```
-
-```{.python .input #information-theory-joint-entropy}
-#@tab tensorflow
-def joint_entropy(p_xy):
-    joint_ent = -p_xy * log2(p_xy)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(joint_ent)
-    return out
-
-joint_entropy(tf.constant([[0.1, 0.5], [0.1, 0.3]]))
-```
-
-```{.python .input #information-theory-joint-entropy}
-#@tab jax
-def joint_entropy(p_xy):
-    joint_ent = -p_xy * jnp.log2(p_xy)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(joint_ent)
-    return out
-
-joint_entropy(jnp.array([[0.1, 0.5], [0.1, 0.3]]))
-```
-
-Notice that this is the same *code* as before, but now we interpret it differently as working on the joint distribution of the two random variables.
-
-
-### Conditional Entropy
-
-The joint entropy defined above the amount of information contained in a pair of random variables.  This is useful, but oftentimes it is not what we care about.  Consider the setting of machine learning.  Let's take $X$ to be the random variable (or vector of random variables) that describes the pixel values of an image, and $Y$ to be the random variable which is the class label.  $X$ should contain substantial information---a natural image is a complex thing.  However, the information contained in $Y$ once the image has been show should be low.  Indeed, the image of a digit should already contain the information about what digit it is unless the digit is illegible.  Thus, to continue to extend our vocabulary of information theory, we need to be able to reason about the information content in a random variable conditional on another.
-
-In the probability theory, we saw the definition of the *conditional probability* to measure the relationship between variables. We now want to analogously define the *conditional entropy* $H(Y \mid X)$.  We can write this as
-
-$$ H(Y \mid X) = - E_{(x, y) \sim P} [\log p(y \mid x)],$$
-:eqlabel:`eq_mdl-cond_ent_def`
-
-where $p(y \mid x) = \frac{p_{X, Y}(x, y)}{p_X(x)}$ is the conditional probability. Specifically, if $(X, Y)$ is a pair of discrete random variables, then
-
-$$H(Y \mid X) = - \sum_{x} \sum_{y} p(x, y) \log p(y \mid x).$$
-
-If $(X, Y)$ is a pair of continuous random variables, then the *differential conditional entropy* is similarly defined as
-
-$$H(Y \mid X) = - \int_x \int_y p(x, y) \ \log p(y \mid x) \;dx \;dy.$$
-
-
-It is now natural to ask, how does the *conditional entropy* $H(Y \mid X)$ relate to the entropy $H(X)$ and the joint entropy $H(X, Y)$?  Using the definitions above, we can express this cleanly as the *chain rule for entropy*:
-
-$$H(X, Y) = H(X) + H(Y \mid X), \quad\textrm{equivalently}\quad H(Y \mid X) = H(X, Y) - H(X).$$
-
-This has an intuitive interpretation: the information in $Y$ given $X$ ($H(Y \mid X)$) is the same as the information in both $X$ and $Y$ together ($H(X, Y)$) minus the information already contained in $X$.  This gives us the information in $Y$ which is not also represented in $X$.
-
-Now, let's implement conditional entropy :eqref:`eq_mdl-cond_ent_def` from scratch.
-
-```{.python .input #information-theory-conditional-entropy}
-#@tab mxnet
-def conditional_entropy(p_xy, p_x):
-    p_y_given_x = p_xy/p_x
-    cond_ent = -p_xy * np.log2(p_y_given_x)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(cond_ent.as_nd_ndarray())
-    return out
-
-conditional_entropy(np.array([[0.1, 0.5], [0.2, 0.3]]), np.array([0.2, 0.8]))
-```
-
-```{.python .input #information-theory-conditional-entropy}
-#@tab pytorch
-def conditional_entropy(p_xy, p_x):
-    p_y_given_x = p_xy/p_x
-    cond_ent = -p_xy * torch.log2(p_y_given_x)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(cond_ent)
-    return out
-
-conditional_entropy(torch.tensor([[0.1, 0.5], [0.2, 0.3]]),
-                    torch.tensor([0.2, 0.8]))
-```
-
-```{.python .input #information-theory-conditional-entropy}
-#@tab tensorflow
-def conditional_entropy(p_xy, p_x):
-    p_y_given_x = p_xy/p_x
-    cond_ent = -p_xy * log2(p_y_given_x)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(cond_ent)
-    return out
-
-conditional_entropy(tf.constant([[0.1, 0.5], [0.2, 0.3]]),
-                    tf.constant([0.2, 0.8]))
-```
-
-```{.python .input #information-theory-conditional-entropy}
-#@tab jax
-def conditional_entropy(p_xy, p_x):
-    p_y_given_x = p_xy/p_x
-    cond_ent = -p_xy * jnp.log2(p_y_given_x)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(cond_ent)
-    return out
-
-conditional_entropy(jnp.array([[0.1, 0.5], [0.2, 0.3]]),
-                    jnp.array([0.2, 0.8]))
-```
-
-### Mutual Information
-
-Given the previous setting of random variables $(X, Y)$, you may wonder: "Now that we know how much information is contained in $Y$ but not in $X$, can we similarly ask how much information is shared between $X$ and $Y$?" The answer will be the *mutual information* of $(X, Y)$, which we will write as $I(X; Y)$ (a semicolon, not a comma — the standard notation, emphasizing that mutual information is a functional of the *two* distributions rather than of the pair $(X,Y)$ as a single object).
-
-Rather than diving straight into the formal definition, let's practice our intuition by first trying to derive an expression for the mutual information entirely based on terms we have constructed before.  We wish to find the information shared between two random variables.  One way we could try to do this is to start with all the information contained in both $X$ and $Y$ together, and then we take off the parts that are not shared.  The information contained in both $X$ and $Y$ together is written as $H(X, Y)$.  We want to subtract from this the information contained in $X$ but not in $Y$, and the information contained in $Y$ but not in $X$.  As we saw in the previous section, this is given by $H(X \mid Y)$ and $H(Y \mid X)$ respectively.  Thus, we have that the mutual information should be
+**Proof.** Write the entropy as an expectation of a concave function's
+argument: $H(X) = E[\log(1/p(X))]$. Since $\log$ is concave, Jensen's
+inequality (:numref:`subsec_mdl-jensen`) gives
 
 $$
-I(X; Y) = H(X, Y) - H(Y \mid X) - H(X \mid Y).
+H(X) = E\!\left[\log \frac{1}{p(X)}\right]
+\leq \log E\!\left[\frac{1}{p(X)}\right]
+= \log \sum_{i\,:\,p_i > 0} p_i \cdot \frac{1}{p_i}
+\leq \log k.
 $$
 
-Here is the intuition for why subtracting *both* private parts isolates the shared part: $H(X,Y)$ counts every bit of randomness in the pair; $H(X\mid Y)$ removes the part private to $X$ and $H(Y\mid X)$ removes the part private to $Y$; what survives is exactly the information common to both, counted once.
+Because $\log$ is *strictly* concave, the first inequality is an equality only
+when $1/p(X)$ is constant almost surely, i.e., $p_i = 1/k$ for all $i$.
+$\blacksquare$
 
-Indeed, this is a valid definition for the mutual information.  If we expand out the definitions of these terms and combine them, a little algebra shows that this is the same as
+For continuous $X$ the analogous statements need constraints to be true at all
+(on a bounded interval the uniform density again maximizes differential
+entropy; under a variance constraint the Gaussian does---see
+:numref:`sec_mdl-distributions`).
 
-$$I(X; Y) = E_{(x, y) \sim P_{X,Y}} \left[ \log\frac{p_{X, Y}(x, y)}{p_X(x) p_Y(y)} \right]. $$
-:eqlabel:`eq_mdl-mut_ent_def`
+The cleanest picture of the proposition is the coin. A Bernoulli variable with
+heads-probability $p$ has the *binary entropy*
+$H(p) = -p \log p - (1-p)\log(1-p)$, plotted in
+:numref:`fig_mdl-bernoulli-entropy`: zero at the deterministic endpoints
+$p \in \{0, 1\}$, concave in between, and maximal at the fair coin
+$p = \tfrac{1}{2}$, where it equals $\ln 2 \approx 0.693$ nats ($= 1$ bit,
+consistent with the $\log k$ bound for $k = 2$). A biased coin with $p = 0.1$
+manages only $H(0.1) \approx 0.325$ nats---you are rarely surprised by a coin
+that almost always lands tails.
 
+![The binary entropy $H(p) = -p \log p - (1-p) \log (1-p)$ in nats, concave and symmetric about $p = \tfrac{1}{2}$, where it peaks at $\ln 2 \approx 0.693$ nats. At the deterministic endpoints $p = 0$ and $p = 1$ the outcome carries no surprise and the entropy vanishes.](../img/mdl-it-bernoulli-entropy.svg)
+:label:`fig_mdl-bernoulli-entropy`
 
-We can summarize all of these relationships in image :numref:`fig_mdl-mutual_information`.  It is an excellent test of intuition to see why the following statements are all also equivalent to $I(X; Y)$.
+Entropy also extends from one random variable to several---the joint entropy
+$H(X, Y)$, the conditional entropy $H(Y \mid X)$, and the *mutual information*
+$I(X; Y)$ that measures what $X$ and $Y$ share. Those quantities power
+contrastive and self-supervised learning, and we develop them in their own
+section, :numref:`sec_mdl-mutual-information`.
 
-* $H(X) - H(X \mid Y)$
-* $H(Y) - H(Y \mid X)$
-* $H(X) + H(Y) - H(X, Y)$
+## Cross-Entropy and KL Divergence
 
-![Mutual information's relationship with joint entropy and conditional entropy.](../img/mdl-it-mutual-information.svg)
-:label:`fig_mdl-mutual_information`
+### The Kullback--Leibler Divergence
 
-
-In many ways we can think of the mutual information :eqref:`eq_mdl-mut_ent_def` as a principled extension of the correlation coefficient we saw in :numref:`sec_mdl-random_variables`.  This allows us to ask not only for linear relationships between variables, but for the maximum information shared between the two random variables of any kind.
-
-Now, let's implement mutual information from scratch.
-
-```{.python .input #information-theory-mutual-information-2}
-#@tab mxnet
-def mutual_information(p_xy, p_x, p_y):
-    p = p_xy / (p_x * p_y)
-    mutual = p_xy * np.log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(mutual.as_nd_ndarray())
-    return out
-
-mutual_information(np.array([[0.1, 0.5], [0.1, 0.3]]),
-                   np.array([0.2, 0.8]), np.array([[0.75, 0.25]]))
-```
-
-```{.python .input #information-theory-mutual-information-2}
-#@tab pytorch
-def mutual_information(p_xy, p_x, p_y):
-    p = p_xy / (p_x * p_y)
-    mutual = p_xy * torch.log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(mutual)
-    return out
-
-mutual_information(torch.tensor([[0.1, 0.5], [0.1, 0.3]]),
-                   torch.tensor([0.2, 0.8]), torch.tensor([[0.75, 0.25]]))
-```
-
-```{.python .input #information-theory-mutual-information-2}
-#@tab tensorflow
-def mutual_information(p_xy, p_x, p_y):
-    p = p_xy / (p_x * p_y)
-    mutual = p_xy * log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(mutual)
-    return out
-
-mutual_information(tf.constant([[0.1, 0.5], [0.1, 0.3]]),
-                   tf.constant([0.2, 0.8]), tf.constant([[0.75, 0.25]]))
-```
-
-```{.python .input #information-theory-mutual-information-2}
-#@tab jax
-def mutual_information(p_xy, p_x, p_y):
-    p = p_xy / (p_x * p_y)
-    mutual = p_xy * jnp.log2(p)
-    # Operator `nansum` will sum up the non-nan number
-    out = nansum(mutual)
-    return out
-
-mutual_information(jnp.array([[0.1, 0.5], [0.1, 0.3]]),
-                   jnp.array([0.2, 0.8]), jnp.array([[0.75, 0.25]]))
-```
-
-### Properties of Mutual Information
-
-Rather than memorizing the definition of mutual information :eqref:`eq_mdl-mut_ent_def`, you only need to keep in mind its notable properties:
-
-* Mutual information is symmetric, i.e., $I(X; Y) = I(Y; X)$.
-* Mutual information is non-negative, i.e., $I(X; Y) \geq 0$.
-* $I(X; Y) = 0$ if and only if $X$ and $Y$ are independent. For example, if $X$ and $Y$ are independent, then knowing $Y$ does not give any information about $X$ and vice versa, so their mutual information is zero.
-* Alternatively, if $X$ is an invertible function of $Y$, then $Y$ and $X$ share all information and $$I(X; Y) = H(Y) = H(X).$$
-
-### Pointwise Mutual Information
-
-When we worked with entropy at the beginning of this chapter, we were able to provide an interpretation of $-\log(p_X(x))$ as how *surprised* we were with the particular outcome.  We may give a similar interpretation to the logarithmic term in the mutual information, which is often referred to as the *pointwise mutual information*:
-
-$$\textrm{pmi}(x, y) = \log\frac{p_{X, Y}(x, y)}{p_X(x) p_Y(y)}.$$
-:eqlabel:`eq_mdl-pmi_def`
-
-We can think of :eqref:`eq_mdl-pmi_def` as measuring how much more or less likely the specific combination of outcomes $x$ and $y$ are compared to what we would expect for independent random outcomes.  If it is large and positive, then these two specific outcomes occur much more frequently than they would compared to random chance (*note*: the denominator is $p_X(x) p_Y(y)$ which is the probability of the two outcomes were independent), whereas if it is large and negative it represents the two outcomes happening far less than we would expect by random chance.
-
-This allows us to interpret the mutual information :eqref:`eq_mdl-mut_ent_def` as the average amount that we were surprised to see two outcomes occurring together compared to what we would expect if they were independent.
-
-### Applications of Mutual Information
-
-Mutual information may be a little abstract in its pure definition, so how does it relate to machine learning? In natural language processing, one of the most difficult problems is the *ambiguity resolution*, or the issue of the meaning of a word being unclear from context. For example, recently a headline in the news reported that "Amazon is on fire". You may wonder whether the company Amazon has a building on fire, or the Amazon rain forest is on fire.
-
-In this case, mutual information can help us resolve this ambiguity. We first find the group of words that each has a relatively large mutual information with the company Amazon, such as e-commerce, technology, and online. Second, we find another group of words that each has a relatively large mutual information with the Amazon rain forest, such as rain, forest, and tropical. When we need to disambiguate "Amazon", we can compare which group has more occurrence in the context of the word Amazon.  In this case the article would go on to describe the forest, and make the context clear.
-
-
-## Kullback–Leibler Divergence
-
-As what we have discussed in :numref:`sec_linear-algebra`, we can use norms to measure distance between two points in space of any dimensionality.  We would like to be able to do a similar task with probability distributions.  There are many ways to go about this, but information theory provides one of the nicest.  We now explore the *Kullback–Leibler (KL) divergence*, which provides a way to measure if two distributions are close together or not.
-
-
-### Definition
-
-Given a random variable $X$ that follows the probability distribution $P$ with a p.d.f. or a p.m.f. $p(x)$, and we estimate $P$ by another probability distribution $Q$ with a p.d.f. or a p.m.f. $q(x)$. Then the *Kullback–Leibler (KL) divergence* (or *relative entropy*) between $P$ and $Q$ is
+In :numref:`sec_linear-algebra` we measured distances between points with
+norms. We now want a notion of "distance" between *distributions*: how badly
+does a model $Q$ misrepresent a truth $P$? Information theory's answer is the
+*Kullback--Leibler (KL) divergence*, also called *relative entropy*. Given a
+random variable $X \sim P$ with p.d.f. or p.m.f. $p(x)$, and a second
+distribution $Q$ with p.d.f. or p.m.f. $q(x)$ that we use to approximate $P$,
 
 $$D_{\textrm{KL}}(P\|Q) = E_{x \sim P} \left[ \log \frac{p(x)}{q(x)} \right].$$
 :eqlabel:`eq_mdl-kl_def`
 
-As with the pointwise mutual information :eqref:`eq_mdl-pmi_def`, we can again provide an interpretation of the logarithmic term:  $-\log \frac{q(x)}{p(x)} = -\log(q(x)) - (-\log(p(x)))$ will be large and positive if we see $x$ far more often under $P$ than we would expect for $Q$, and large and negative if we see the outcome far less than expected.  In this way, we can interpret it as our *relative* surprise at observing the outcome compared to how surprised we would be observing it from our reference distribution.
+The term inside the expectation, $\log p(x) - \log q(x)$, is the difference of
+two surprises: how surprised $Q$ is by the outcome $x$, minus how surprised
+$P$ is. It is positive where $Q$ underestimates ($q(x) < p(x)$: $Q$ is *more*
+surprised than it should be) and negative where $Q$ overestimates. KL averages
+this *relative surprise* over outcomes drawn from the truth $P$---note the
+asymmetry baked into the definition: $P$ supplies both the samples and the
+numerator. In general $D_{\textrm{KL}}(P\|Q) \neq D_{\textrm{KL}}(Q\|P)$, and
+the gap can be dramatic (we exhibit it numerically below); the consequences of
+*which* direction you optimize are taken up in
+:numref:`sec_mdl-divergences-distances`. One more edge case to keep in mind:
+if some outcome has $p(x) > 0$ but $q(x) = 0$---the model declares impossible
+something that actually happens---then $D_{\textrm{KL}}(P\|Q) = \infty$.
 
-Let's implement the KL divergence from Scratch.
-
-Here `p` and `q` are *probability vectors* over the same finite outcome set. KL divergence is non-negative on its own (Gibbs' inequality, below), so we do **not** wrap the result in `abs()` — doing so would teach the false idea that KL needs an absolute value to stay non-negative. The `nansum` is deliberate: where $p(x)=0$ the term is $0\cdot\log_2(0/q)=0\cdot(-\infty)=$ `nan`, which `nansum` drops to encode the convention $0\log 0=0$; the *other* edge case, $p(x)>0$ with $q(x)=0$, instead yields $+\infty$ (not `nan`), which `nansum` keeps — so the code correctly returns $+\infty$ for that divergence, exactly the property at the end of this section.
+Here is the discrete case in code, for `p` and `q` given as probability
+vectors over the same finite outcome set. KL divergence is non-negative on
+its own (Gibbs' inequality, next), so we do **not** wrap the result in
+`abs()`---doing so would teach the false idea that KL needs an absolute value
+to stay non-negative. The `nansum` is deliberate: where $p(x) = 0$ the term is
+the direct floating-point expression for $0 \cdot \log(0/q)$ yields `nan`,
+which `nansum` drops to encode $0 \log 0 = 0$; the *other* edge case,
+$p(x) > 0$ with $q(x) = 0$, instead yields $+\infty$ (not `nan`), which
+`nansum` keeps---so the code correctly returns $+\infty$ for that divergence.
 
 ```{.python .input #information-theory-definition-2}
 #@tab mxnet
 def kl_divergence(p, q):
-    kl = p * np.log2(p / q)
-    out = nansum(kl.as_nd_ndarray())
-    return out.asscalar()
+    """KL(P || Q) for two probability vectors, in nats."""
+    kl = p * np.log(p / q)
+    return nansum(kl.as_nd_ndarray()).asscalar()
 ```
 
 ```{.python .input #information-theory-definition-2}
 #@tab pytorch
 def kl_divergence(p, q):
-    kl = p * torch.log2(p / q)
-    out = nansum(kl)
-    return out.item()
+    """KL(P || Q) for two probability vectors, in nats."""
+    return torch.nansum(p * torch.log(p / q)).item()
 ```
 
 ```{.python .input #information-theory-definition-2}
 #@tab tensorflow
 def kl_divergence(p, q):
-    kl = p * log2(p / q)
-    out = nansum(kl)
-    return out.numpy()
+    """KL(P || Q) for two probability vectors, in nats."""
+    return float(nansum(p * tf.math.log(p / q)).numpy())
 ```
 
 ```{.python .input #information-theory-definition-2}
 #@tab jax
 def kl_divergence(p, q):
-    kl = p * jnp.log2(p / q)
-    out = nansum(kl)
-    return out.item()
+    """KL(P || Q) for two probability vectors, in nats."""
+    return jnp.nansum(p * jnp.log(p / q)).item()
 ```
 
-### KL Divergence Properties
+### Gibbs' Inequality
 
-Let's take a look at some properties of the KL divergence :eqref:`eq_mdl-kl_def`.
+The single most important fact about the KL divergence is that it cannot be
+negative. Everything else in this section---cross-entropy as a sound loss, the
+optimality of code lengths, the label-smoothing optimum---follows from it.
 
-* KL divergence is non-symmetric, i.e., there are $P,Q$ such that $$D_{\textrm{KL}}(P\|Q) \neq D_{\textrm{KL}}(Q\|P).$$
-* KL divergence is non-negative, i.e., $$D_{\textrm{KL}}(P\|Q) \geq 0,$$ with equality if and only if $P = Q$. This is *Gibbs' inequality*, and it is the workhorse from which the rest of this section follows. The proof is one application of Jensen's inequality (convexity; see :numref:`sec_calculus`) to the convex function $-\log$:
+**Proposition (Gibbs' inequality).** *For any distributions $P$ and $Q$ on
+the same space,*
+
 $$
-D_{\textrm{KL}}(P\|Q) = E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right] \ge -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right] = -\log \sum_x q(x) = -\log 1 = 0,
+D_{\textrm{KL}}(P\|Q) \geq 0,
 $$
-using $\sum_x p(x)\,q(x)/p(x) = \sum_x q(x) = 1$. Because $-\log$ is *strictly* convex, equality holds only when $q(x)/p(x)$ is constant $P$-almost surely, i.e., $P=Q$.
-* If there exists an $x$ such that $p(x) > 0$ and $q(x) = 0$, then $D_{\textrm{KL}}(P\|Q) = \infty$.
-* There is a close relationship between KL divergence and mutual information. Besides the relationship shown in :numref:`fig_mdl-mutual_information`, $I(X; Y)$ is also numerically equivalent with the following terms:
-    1. $D_{\textrm{KL}}(P(X, Y)  \ \| \ P(X)P(Y))$;
-    1. $E_Y \{ D_{\textrm{KL}}(P(X \mid Y) \ \| \ P(X)) \}$;
-    1. $E_X \{ D_{\textrm{KL}}(P(Y \mid X) \ \| \ P(Y)) \}$.
 
-  For the first term, we interpret mutual information as the KL divergence between $P(X, Y)$ and the product of $P(X)$ and $P(Y)$, and thus is a measure of how different the joint distribution is from the distribution if they were independent. For the second term, mutual information tells us the average reduction in uncertainty about $Y$ that results from learning the value of the $X$'s distribution. Similarly to the third term.
+*with equality if and only if $P = Q$.*
 
+**Proof.** One application of Jensen's inequality
+(:numref:`subsec_mdl-jensen`) to the convex function $-\log$:
 
-### Example: Gaussians, in Closed Form
+$$
+D_{\textrm{KL}}(P\|Q)
+= E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
+\geq -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right]
+= -\log \sum_x p(x)\,\frac{q(x)}{p(x)}
+= -\log 1 = 0,
+$$
 
-The `kl_divergence` above works on *discrete* probability vectors. For *continuous* distributions the cleanest worked example is the KL divergence between two univariate Gaussians, which has a closed form. For $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
+since $\sum_x q(x) = 1$ (the same computation runs with integrals in the
+continuous case). Because $-\log$ is *strictly* convex, equality holds only
+when the ratio $q(x)/p(x)$ is constant $P$-almost surely; a constant ratio
+between two normalized distributions must be $1$, i.e., $P = Q$.
+$\blacksquare$
+
+### Gaussians, in Closed Form
+
+The `kl_divergence` above works on *discrete* probability vectors. For
+*continuous* distributions the cleanest worked example is the KL divergence
+between two univariate Gaussians, which has a closed form. For
+$P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
 
 $$
 D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,\sigma_2^2)\right)
@@ -564,20 +399,29 @@ D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_
 $$
 :eqlabel:`eq_mdl-gaussian_kl`
 
-These logs are *natural* logs, so the result is in **nats**. Two things are worth reading off :eqref:`eq_mdl-gaussian_kl` directly. First, it is non-negative and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$). Second, it is *not symmetric*: swapping the roles of $P$ and $Q$ changes the value, because the variance ratio and the mean gap enter asymmetrically.
+These logs are natural logs, so the result is in nats. Two things are worth
+reading off :eqref:`eq_mdl-gaussian_kl` directly. First, it is non-negative
+and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$),
+just as Gibbs' inequality demands. Second, it is *not symmetric*: swapping the
+roles of $P$ and $Q$ changes the value, because the variance ratio and the
+mean gap enter asymmetrically. (Deriving :eqref:`eq_mdl-gaussian_kl` is
+Exercise 4.)
 
-Let's verify the formula against a direct Monte-Carlo estimate of $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x) - \log q(x)]$. (Note: no `abs()` anywhere — the divergence comes out non-negative on its own.)
+Let's verify the formula against a direct Monte-Carlo estimate of
+$D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x) - \log q(x)]$. (Note: no
+`abs()` anywhere---the divergence comes out non-negative on its own.)
 
 ```{.python .input #information-theory-example-1}
 #@tab mxnet
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
     """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    return (np.log(sigma2 / sigma1)
+    return (math.log(sigma2 / sigma1)
             + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
             - 0.5)
 
 def gaussian_log_pdf(x, mu, sigma):
-    return -0.5 * np.log(2 * np.pi * sigma ** 2) - (x - mu) ** 2 / (2 * sigma ** 2)
+    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
+            - (x - mu) ** 2 / (2 * sigma ** 2))
 
 def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
     """Monte-Carlo estimate of the same KL by sampling x ~ P."""
@@ -590,13 +434,11 @@ def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
 #@tab pytorch
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
     """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    import math
     return (math.log(sigma2 / sigma1)
             + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
             - 0.5)
 
 def gaussian_log_pdf(x, mu, sigma):
-    import math
     return (-0.5 * math.log(2 * math.pi * sigma ** 2)
             - (x - mu) ** 2 / (2 * sigma ** 2))
 
@@ -611,13 +453,11 @@ def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
 #@tab tensorflow
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
     """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    import math
     return (math.log(sigma2 / sigma1)
             + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
             - 0.5)
 
 def gaussian_log_pdf(x, mu, sigma):
-    import math
     return (-0.5 * math.log(2 * math.pi * sigma ** 2)
             - (x - mu) ** 2 / (2 * sigma ** 2))
 
@@ -632,13 +472,12 @@ def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
 #@tab jax
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
     """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    import math
     return (math.log(sigma2 / sigma1)
             + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
             - 0.5)
 
 def gaussian_log_pdf(x, mu, sigma):
-    return (-0.5 * jnp.log(2 * jnp.pi * sigma ** 2)
+    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
             - (x - mu) ** 2 / (2 * sigma ** 2))
 
 def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
@@ -649,7 +488,10 @@ def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
             - gaussian_log_pdf(x, mu2, sigma2)).mean().item()
 ```
 
-Take $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$ (a unit mean shift, equal variances). The closed form should match the Monte-Carlo estimate to within sampling noise, and both should equal $\tfrac{(\mu_1-\mu_2)^2}{2\sigma^2} = \tfrac{1}{2}$ nats here.
+Take $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$ (a unit mean shift,
+equal variances). The closed form should match the Monte-Carlo estimate to
+within sampling noise, and both should equal
+$\tfrac{(\mu_1-\mu_2)^2}{2\sigma^2} = \tfrac{1}{2}$ nats here.
 
 ```{.python .input #information-theory-example-2}
 closed_form = gaussian_kl(0.0, 1.0, 1.0, 1.0)
@@ -658,7 +500,11 @@ monte_carlo = mc_kl(0.0, 1.0, 1.0, 1.0)
 closed_form, monte_carlo
 ```
 
-Now make the asymmetry explicit. Compare $D_{\textrm{KL}}(P\|Q)$ with $D_{\textrm{KL}}(Q\|P)$ when the two Gaussians have *different variances*, say $P=\mathcal{N}(0,1)$ and $Q=\mathcal{N}(0,4)$ (i.e., $\sigma_2=2$). The two numbers differ — KL is a divergence, not a distance.
+Now make the asymmetry explicit. Compare $D_{\textrm{KL}}(P\|Q)$ with
+$D_{\textrm{KL}}(Q\|P)$ when the two Gaussians have *different variances*, say
+$P=\mathcal{N}(0,1)$ and $Q=\mathcal{N}(0,4)$ (i.e., $\sigma_2=2$). The two
+numbers differ ($\approx 0.318$ vs. $\approx 0.807$ nats)---KL is a
+divergence, not a distance.
 
 ```{.python .input #information-theory-example-3}
 kl_pq = gaussian_kl(0.0, 1.0, 0.0, 2.0)
@@ -667,82 +513,144 @@ kl_qp = gaussian_kl(0.0, 2.0, 0.0, 1.0)
 kl_pq, kl_qp
 ```
 
-## Cross-Entropy
+### Cross-Entropy
 
-If you are curious about applications of information theory in deep learning, here is a quick example. We define the true distribution $P$ with probability distribution $p(x)$, and the estimated distribution $Q$ with probability distribution $q(x)$, and we will use them in the rest of this section.
+The loss we actually implement in classifiers is not the KL divergence but a
+close relative. The *cross-entropy* from $P$ to $Q$ scores outcomes drawn from
+the truth $P$ by the model's surprise,
 
-Say we need to solve a binary classification problem based on given $n$ data examples {$x_1, \ldots, x_n$}. Assume that we encode $1$ and $0$ as the positive and negative class label $y_i$ respectively, and our neural network is parametrized by $\theta$. If we aim to find a best $\theta$ so that $\hat{y}_i= p_{\theta}(y_i \mid x_i)$, it is natural to apply the maximum log-likelihood approach as was seen in :numref:`sec_mdl-maximum_likelihood`. To be specific, for true labels $y_i$ and predictions $\hat{y}_i= p_{\theta}(y_i \mid x_i)$, the probability to be classified as positive is $\pi_i= p_{\theta}(y_i = 1 \mid x_i)$. Hence, the log-likelihood function would be
-
-$$
-\begin{aligned}
-l(\theta) &= \log L(\theta) \\
-  &= \log \prod_{i=1}^n \pi_i^{y_i} (1 - \pi_i)^{1 - y_i} \\
-  &= \sum_{i=1}^n y_i \log(\pi_i) + (1 - y_i) \log (1 - \pi_i). \\
-\end{aligned}
-$$
-
-Maximizing the log-likelihood function $l(\theta)$ is identical to minimizing $- l(\theta)$, and hence we can find the best $\theta$ from here. To generalize the above loss to any distributions, we also called $-l(\theta)$ the *cross-entropy loss* $\textrm{CE}(y, \hat{y})$, where $y$ follows the true distribution $P$ and $\hat{y}$ follows the estimated distribution $Q$.
-
-This was all derived by working from the maximum likelihood point of view.  However, if we look closely we can see that terms like $\log(\pi_i)$ have entered into our computation which is a solid indication that we can understand the expression from an information theoretic point of view.
-
-
-### Formal Definition
-
-Like KL divergence, for a random variable $X$, we can also measure the divergence between the estimating distribution $Q$ and the true distribution $P$ via *cross-entropy*,
-
-$$\textrm{CE}(P, Q) = - E_{x \sim P} [\log(q(x))].$$
+$$\textrm{CE}(P, Q) = - E_{x \sim P} [\log q(x)].$$
 :eqlabel:`eq_mdl-ce_def`
 
-By using properties of entropy discussed above, we can also interpret it as the summation of the entropy $H(P)$ and the KL divergence between $P$ and $Q$, i.e.,
+Adding and subtracting $H(P)$ inside the expectation splits the model's
+surprise into the truth's own surprise plus the relative surprise---that is,
 
 $$\textrm{CE} (P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).$$
 :eqlabel:`eq_mdl-ce_decomp`
 
-This single identity, combined with *Gibbs' inequality* ($D_{\textrm{KL}}(P\|Q)\ge 0$, named above), gives a clean chain that explains why cross-entropy is *the* loss to minimize:
+This single identity, combined with Gibbs' inequality, gives a clean chain
+that explains why cross-entropy is *the* loss to minimize:
 
 $$
-\underbrace{D_{\textrm{KL}}(P\|Q) \ge 0}_{\text{Gibbs}}
+\underbrace{D_{\textrm{KL}}(P\|Q) \ge 0}_{\textrm{Gibbs}}
 \;\Longrightarrow\;
-\underbrace{\textrm{CE}(P,Q) \ge H(P)}_{\text{cross-entropy} \ge \text{entropy}},
-\quad \text{equality iff } P = Q.
+\underbrace{\textrm{CE}(P,Q) \ge H(P)}_{\textrm{cross-entropy} \ \ge\ \textrm{entropy}},
+\quad \textrm{equality iff } P = Q.
 $$
 
-The gap $\textrm{CE}(P,Q) - H(P) = D_{\textrm{KL}}(P\|Q)$ is exactly the *extra bits* you pay for using the wrong codebook $Q$ to describe data that truly comes from $P$. Entropy $H(P)$ is the irreducible floor (the optimal code length); cross-entropy is what you actually pay; KL is the waste. Minimizing cross-entropy in $Q$ therefore drives $Q\to P$ and squeezes the waste to zero — which is the same thing as minimizing KL, since $H(P)$ does not depend on $Q$.
+Entropy $H(P)$ is the irreducible floor; cross-entropy is what you actually
+pay; and the gap $\textrm{CE}(P,Q) - H(P) = D_{\textrm{KL}}(P\|Q)$ is the
+waste. Minimizing cross-entropy in $Q$ therefore drives $Q \to P$ and squeezes
+the waste to zero---which is the same thing as minimizing KL, since $H(P)$
+does not depend on $Q$. (The "floor / payment / waste" language is more than a
+metaphor: in the coding view below, all three quantities become literal code
+lengths.)
 
+Let's verify the decomposition :eqref:`eq_mdl-ce_decomp` numerically on two
+small categorical distributions, and check the asymmetry of KL while we are at
+it.
 
-We can implement the cross-entropy loss as below.
+```{.python .input #information-theory-kl-categorical}
+#@tab mxnet
+p = np.array([0.6, 0.3, 0.1])
+q = np.array([0.2, 0.5, 0.3])
+
+ce_pq = float(-np.sum(p * np.log(q)))
+print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
+      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
+print(f'CE(P, Q) - H(P) = {ce_pq - float(entropy(p)):.4f} nats')
+```
+
+```{.python .input #information-theory-kl-categorical}
+#@tab pytorch
+p = torch.tensor([0.6, 0.3, 0.1])
+q = torch.tensor([0.2, 0.5, 0.3])
+
+ce_pq = -torch.sum(p * torch.log(q)).item()
+print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
+      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
+print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
+```
+
+```{.python .input #information-theory-kl-categorical}
+#@tab tensorflow
+p = tf.constant([0.6, 0.3, 0.1])
+q = tf.constant([0.2, 0.5, 0.3])
+
+ce_pq = float(-tf.reduce_sum(p * tf.math.log(q)).numpy())
+print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
+      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
+print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
+```
+
+```{.python .input #information-theory-kl-categorical}
+#@tab jax
+p = jnp.array([0.6, 0.3, 0.1])
+q = jnp.array([0.2, 0.5, 0.3])
+
+ce_pq = -jnp.sum(p * jnp.log(q)).item()
+print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
+      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
+print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
+```
+
+The forward and reverse KL disagree ($\approx 0.396$ vs. $\approx 0.365$
+nats), and $\textrm{CE} - H$ reproduces the forward KL exactly, as
+:eqref:`eq_mdl-ce_decomp` says it must.
+
+### The Classification Loss
+
+In a $k$-class classification problem, the "truth" for one example is the
+one-hot distribution that puts all its mass on the correct label $y$, and the
+model supplies a predicted distribution
+$\hat{\mathbf{y}} = (\hat{y}_1, \ldots, \hat{y}_k)$. Cross-entropy
+:eqref:`eq_mdl-ce_def` between them collapses to a single term,
+$-\log \hat{y}_{y}$: the model's surprise at the correct class. Averaged over
+$n$ examples, the *cross-entropy loss* is
+
+$$
+\textrm{CE}(\mathbf{y}, \hat{\mathbf{y}})
+= -\frac{1}{n} \sum_{i=1}^n \log \hat{y}_{i, y_i},
+$$
+
+in nats, exactly what every framework's classification loss computes.
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab mxnet
 def cross_entropy(y_hat, y):
+    """Mean cross-entropy loss for predicted probabilities, in nats."""
     ce = -np.log(y_hat[range(len(y_hat)), y])
-    return ce.mean()
+    return float(ce.mean())
 ```
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab pytorch
 def cross_entropy(y_hat, y):
+    """Mean cross-entropy loss for predicted probabilities, in nats."""
     ce = -torch.log(y_hat[range(len(y_hat)), y])
-    return ce.mean()
+    return ce.mean().item()
 ```
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab tensorflow
 def cross_entropy(y_hat, y):
-    # `tf.gather_nd` is used to select specific indices of a tensor.
-    ce = -tf.math.log(tf.gather_nd(y_hat, indices = [[i, j] for i, j in zip(
+    """Mean cross-entropy loss for predicted probabilities, in nats."""
+    ce = -tf.math.log(tf.gather_nd(y_hat, indices=[[i, j] for i, j in zip(
         range(len(y_hat)), y)]))
-    return tf.reduce_mean(ce).numpy()
+    return float(tf.reduce_mean(ce).numpy())
 ```
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab jax
 def cross_entropy(y_hat, y):
+    """Mean cross-entropy loss for predicted probabilities, in nats."""
     ce = -jnp.log(y_hat[jnp.arange(len(y_hat)), y])
-    return ce.mean()
+    return ce.mean().item()
 ```
 
-Now define two tensors for the labels and predictions, and calculate the cross-entropy loss of them.
+Two examples, three classes: the first example's true class is $0$, predicted
+with probability $0.3$; the second's is $2$, predicted with probability $0.5$.
+The loss is $\tfrac{1}{2}(-\ln 0.3 - \ln 0.5) \approx 0.949$ nats.
 
 ```{.python .input #information-theory-formal-definition-2}
 #@tab mxnet
@@ -776,147 +684,494 @@ preds = jnp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-### Properties
-
-As alluded in the beginning of this section, cross-entropy :eqref:`eq_mdl-ce_def` can be used to define a loss function in the optimization problem. It turns out that the following are equivalent:
-
-1. Maximizing predictive probability of $Q$ for distribution $P$, (i.e., $E_{x
-\sim P} [\log (q(x))]$);
-1. Minimizing cross-entropy $\textrm{CE} (P, Q)$;
-1. Minimizing the KL divergence $D_{\textrm{KL}}(P\|Q)$.
-
-The definition of cross-entropy indirectly proves the equivalent relationship between objective 2 and objective 3, as long as the entropy of true data $H(P)$ is constant.
-
-
-### Cross-Entropy as An Objective Function of Multi-class Classification
-
-If we dive deep into the classification objective function with cross-entropy loss $\textrm{CE}$, we will find minimizing $\textrm{CE}$ is equivalent to maximizing the log-likelihood function $L$.
-
-To begin with, suppose that we are given a dataset with $n$ examples, and it can be classified into $k$-classes. For each data example $i$, we represent any $k$-class label $\mathbf{y}_i = (y_{i1}, \ldots, y_{ik})$ by *one-hot encoding*. To be specific, if the  example $i$ belongs to class $j$, then we set the $j$-th entry to $1$, and all other components to $0$, i.e.,
-
-$$ y_{ij} = \begin{cases}1 & j \in J; \\ 0 &\textrm{otherwise.}\end{cases}$$
-
-For instance, if a multi-class classification problem contains three classes $A$, $B$, and $C$, then the labels $\mathbf{y}_i$ can be encoded in {$A: (1, 0, 0); B: (0, 1, 0); C: (0, 0, 1)$}.
-
-
-Assume that our neural network is parametrized by $\theta$. For true label vectors $\mathbf{y}_i$, the network outputs a predicted probability vector $\hat{\mathbf{y}}_i = (\hat{y}_{i1}, \ldots, \hat{y}_{ik})$ whose $j$-th component is the model's predicted probability that example $i$ belongs to class $j$:
-
-$$\hat{y}_{ij} = p_{\theta}(j \mid \mathbf{x}_i).$$
-
-Hence, the *cross-entropy loss* would be
-
-$$
-\textrm{CE}(\mathbf{y}, \hat{\mathbf{y}}) = - \sum_{i=1}^n \mathbf{y}_i \cdot \log \hat{\mathbf{y}}_i
- = - \sum_{i=1}^n \sum_{j=1}^k y_{ij} \log{p_{\theta} (j  \mid  \mathbf{x}_i)}.\\
-$$
-
-On the other side, we can also approach the problem through maximum likelihood estimation. To begin with, let's quickly introduce a $k$-class multinoulli distribution. It is an extension of the Bernoulli distribution from binary class to multi-class. If a random variable $\mathbf{z} = (z_{1}, \ldots, z_{k})$ follows a $k$-class *multinoulli distribution* with probabilities $\mathbf{p} =$ ($p_{1}, \ldots, p_{k}$), i.e., $$p(\mathbf{z}) = p(z_1, \ldots, z_k) = \textrm{Multi} (p_1, \ldots, p_k), \textrm{ where } \sum_{i=1}^k p_i = 1,$$ then the joint probability mass function(p.m.f.) of $\mathbf{z}$ is
-$$\mathbf{p}^\mathbf{z} = \prod_{j=1}^k p_{j}^{z_{j}}.$$
-
-
-It can be seen that the label of each data example, $\mathbf{y}_i$, is following a $k$-class multinoulli distribution with probabilities $\boldsymbol{\pi} =$ ($\pi_{1}, \ldots, \pi_{k}$). Therefore, the joint p.m.f. of each data example $\mathbf{y}_i$ is  $\mathbf{\pi}^{\mathbf{y}_i} = \prod_{j=1}^k \pi_{j}^{y_{ij}}.$
-Hence, the log-likelihood function would be
-
-$$
-\begin{aligned}
-l(\theta)
- = \log L(\theta)
- = \log \prod_{i=1}^n \boldsymbol{\pi}^{\mathbf{y}_i}
- = \log \prod_{i=1}^n \prod_{j=1}^k \pi_{j}^{y_{ij}}
- = \sum_{i=1}^n \sum_{j=1}^k y_{ij} \log{\pi_{j}}.\\
-\end{aligned}
-$$
-
-Since in maximum likelihood estimation, we maximizing the objective function $l(\theta)$ by having $\pi_{j} = p_{\theta} (j  \mid  \mathbf{x}_i)$. Therefore, for any multi-class classification, maximizing the above log-likelihood function $l(\theta)$ is equivalent to minimizing the CE loss $\textrm{CE}(y, \hat{y})$.
-
-
-To test the above proof, let's apply the built-in `CrossEntropy` metric (the negative-log-likelihood under softmax probabilities). Using the same `labels` and `preds` as in the earlier example, we will get the same numerical loss as the previous example up to the 5 decimal place.
+The frameworks' built-in losses compute the same number. One subtlety is worth
+spelling out, because the built-ins typically expect *logits* $\mathbf{z}$
+rather than probabilities, applying softmax internally. Feeding
+$\mathbf{z} = \log \mathbf{q}$ for an already-normalized $\mathbf{q}$ is
+legitimate because softmax inverts the log exactly there:
+$\mathrm{softmax}(\log \mathbf{q})_j = e^{\log q_j} / \sum_i e^{\log q_i}
+= q_j / \sum_i q_i = q_j$. (More generally, softmax is invariant to adding a
+constant to all logits, and $\log$ of a normalized vector is one valid logit
+vector among many.) PyTorch's `NLLLoss` skips the subtlety by taking
+log-probabilities directly; TensorFlow's loss accepts probabilities with
+`from_logits=False`; `optax` wants logits, so we hand it $\log$-probabilities;
+MXNet's metric consumes probabilities.
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
-nll_loss = CrossEntropy()
-# MX 2.0's CrossEntropy operates on np arrays directly (it calls
-# `pred.to_device(label.device)` internally); no `as_nd_ndarray()` cast.
+nll_loss = CrossEntropy()  # operates on predicted probabilities directly
 nll_loss.update([labels], [preds])
 nll_loss.get()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab pytorch
-# Implementation of cross-entropy loss in PyTorch combines `nn.LogSoftmax()`
-# and `nn.NLLLoss()`
-nll_loss = NLLLoss()
-loss = nll_loss(torch.log(preds), labels)
-loss
+# `NLLLoss` consumes log-probabilities; `nn.CrossEntropyLoss` would instead
+# take logits and apply log-softmax itself.
+nll_loss = torch.nn.NLLLoss()
+nll_loss(torch.log(preds), labels)
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab tensorflow
-def nll_loss(y_hat, y):
-    # Convert labels to one-hot vectors.
-    y = tf.keras.utils.to_categorical(y, num_classes= y_hat.shape[1])
-    # We will not calculate negative log-likelihood from the definition.
-    # Rather, we will follow a circular argument. Because NLL is same as
-    # `cross_entropy`, if we calculate cross_entropy that would give us NLL
-    cross_entropy = tf.keras.losses.CategoricalCrossentropy(
-        from_logits = True, reduction = tf.keras.losses.Reduction.NONE)
-    return tf.reduce_mean(cross_entropy(y, y_hat)).numpy()
-
-loss = nll_loss(tf.math.log(preds), labels)
-loss
+# With `from_logits=False` the loss consumes probabilities directly --
+# no softmax round-trip needed.
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+loss_fn(labels, preds).numpy()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab jax
-import optax
-
-loss = optax.softmax_cross_entropy_with_integer_labels(
+# optax expects logits; log-probabilities are valid logits because
+# softmax(log q) = q for a normalized q.
+optax.softmax_cross_entropy_with_integer_labels(
     jnp.log(preds), labels).mean()
-loss
 ```
 
-## Perplexity for Language Models
+Why is *this* the loss that training a probabilistic classifier by maximum
+likelihood produces? We proved that already, in
+:numref:`subsec_mdl-nll-crossentropy`: the average negative log-likelihood of
+any i.i.d. dataset *is* the cross-entropy from the empirical distribution
+$\hat p_{\textrm{data}}$ to the model, so maximizing likelihood, minimizing
+cross-entropy, and minimizing
+$D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$ are one
+and the same optimization---for binary labels, multiclass labels, and
+densities alike. We will not re-derive it here; this section's contribution is
+the *interpretation* of that loss as a code length, which we build next.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** Perplexity is the language-modeling community's exponentiated cross-entropy — "how many equally-likely choices is the model effectively confused among per token."
-**Outline:** 1. define $\textrm{PPL} = b^{H}$ where $H$ is the per-token cross-entropy in base-$b$ units (nats $\to e$, bits $\to 2$) · 2. equivalently the geometric-mean inverse probability $\textrm{PPL} = \left(\prod_i q(x_i)\right)^{-1/N}$ · 3. interpret: uniform over $V$ tokens gives $\textrm{PPL}=V$; a perfect model gives $1$ · 4. connect to the cross-entropy loss already trained (PPL is just $\exp(\textrm{CE})$).
-**Key results to state:** $\textrm{PPL} = b^{H(P,Q)} = \exp\!\big(-\tfrac1N\sum_i \log q(x_i)\big)$; lower bound $\textrm{PPL}\ge b^{H(P)}$ via Gibbs.
-**Diagrams:** none required (reuse the cross-entropy decomposition `eq_mdl-ce_decomp`).
-**Worked example(s):** per-token CE $=\ln 5$ nats $\Rightarrow \textrm{PPL}=5$; tie to the monkey/typesetter/LM exercise already in this section.
-**Exercises (draft):** show PPL is invariant to log base; relate a 15-points-per-word model to bits per character (mirrors current Exercise 3).
-**Prereqs / cross-refs:** cross-entropy `eq_mdl-ce_def`, `eq_mdl-ce_decomp`; main-book language-model / RNN / Transformer chapters (where perplexity is the headline metric).
-:::
+## The Coding View and Perplexity
 
-## Modern Uses of Cross-Entropy and KL
+We have repeatedly promised that entropy is a "floor" and KL the "extra"
+cost. This subsection makes those words literal: they are statements about
+compressing data with binary codes, and the proofs are short enough to give in
+full. Binary codes speak base $2$, so bits briefly take the stage; divide by
+$\ln 2$ (i.e., reinterpret every $\log$ below) and every statement holds in
+nats verbatim.
 
-::: {.callout-note title="⟢ Planned — outline only (not yet written)"}
-**Body framing:** Three places where the cross-entropy / KL machinery shows up in modern training, each a one-line consequence of the identities above.
-**Outline:** 1. **MLE = min cross-entropy = min KL-to-empirical** (capstone): with $P=\hat P_n$ the empirical distribution, $H(\hat P_n)$ is constant, so minimizing CE $=$ minimizing $D_{\textrm{KL}}(\hat P_n\|Q)$ $=$ maximum likelihood · 2. **Label smoothing**: replace the one-hot target with $(1-\epsilon)\,\text{one-hot} + \epsilon\,\text{uniform}$, i.e., minimize CE to a softened $P$ — regularizes overconfident logits · 3. **Knowledge distillation as temperature-$T$ KL**: train the student to match the teacher's softened distribution by minimizing $D_{\textrm{KL}}\!\big(\text{teacher}_T \,\|\, \text{student}_T\big)$ with logits divided by temperature $T$.
-**Key results to state:** $\arg\min_Q \textrm{CE}(\hat P_n, Q) = \arg\min_\theta -\tfrac1n\sum_i \log q_\theta(x_i)$; label-smoothing target $P^\epsilon = (1-\epsilon)\,e_y + \epsilon\,\mathbf{1}/k$; distillation loss $\propto T^2\, D_{\textrm{KL}}(\text{softmax}(z^{\text{tea}}/T)\,\|\,\text{softmax}(z^{\text{stu}}/T))$.
-**Diagrams:** none required (callbacks to `fig_mdl-bernoulli-entropy` and `eq_mdl-ce_decomp`).
-**Worked example(s):** optimal logit gap under label smoothing for a $k$-class problem; show distillation reduces to ordinary CE as $T\to 1$ with a hard teacher.
-**Exercises (draft):** show MLE on i.i.d. data is min-KL to the empirical distribution; derive the optimal softmax output under label smoothing; show the $T^2$ factor keeps gradient magnitudes scale-matched across temperatures.
-**Prereqs / cross-refs:** `eq_mdl-ce_def`, `eq_mdl-ce_decomp`, Gibbs chain above; `sec_mdl-maximum_likelihood`; `sec_softmax`; main-book distillation / RLHF discussions; forward to `sec_mdl-divergences-distances` (KL as one f-divergence) and `sec_mdl-mutual-information` (InfoNCE).
-:::
+### Prefix Codes and the Kraft Inequality
+
+Suppose we must transmit a stream of symbols drawn i.i.d. from a distribution
+$P$ over $k$ outcomes, encoding each outcome $x_i$ as a binary string
+(*codeword*) of length $l_i$. So that the receiver can split the stream back
+into codewords without separators, we require the code to be *prefix-free*: no
+codeword is a prefix of another (like telephone numbers---once a dialed string
+matches a number, no longer number starts the same way). Short codewords are
+precious, and the next proposition says exactly how precious.
+
+**Proposition (Kraft inequality).** *A prefix-free binary code with codeword
+lengths $l_1, \ldots, l_k$ exists if and only if*
+
+$$
+\sum_{i=1}^k 2^{-l_i} \leq 1.
+$$
+
+**Proof.** Identify each codeword $c$ of length $l$ with the dyadic interval
+$[0.c,\, 0.c + 2^{-l}) \subseteq [0, 1)$ of all real numbers whose binary
+expansion starts with $c$ (e.g., the codeword $10$ owns
+$[0.10_2, 0.11_2) = [\tfrac{1}{2}, \tfrac{3}{4})$, of length $2^{-2}$). One
+codeword is a prefix of another exactly when the second's interval sits inside
+the first's, so a prefix-free code corresponds to *disjoint* intervals, whose
+total length $\sum_i 2^{-l_i}$ cannot exceed $1$. Conversely, given lengths
+with $\sum_i 2^{-l_i} \leq 1$, sort them increasingly and lay down intervals
+of length $2^{-l_i}$ left to right; each starts at a multiple of $2^{-l_i}$,
+hence is a dyadic interval, and its binary address is a valid codeword.
+$\blacksquare$
+
+The Kraft inequality turns code design into a budget problem: each symbol
+buys "address space" $2^{-l_i}$ out of a total budget of $1$, and shorter
+codewords cost exponentially more. The optimal spend follows immediately.
+
+**Proposition (entropy bounds the code length).** *Every prefix-free binary
+code for $P$ has expected length $E[l] \geq H_2(P)$ (entropy in bits), and
+the* Shannon code *with lengths $l_i = \lceil \log_2 (1/p_i) \rceil$ is
+prefix-free and achieves $E[l] < H_2(P) + 1$.*
+
+**Proof.** For the lower bound, let $Z = \sum_i 2^{-l_i} \leq 1$ (Kraft) and
+define the distribution $q_i = 2^{-l_i}/Z$, the one *implied* by the code
+lengths. Then $l_i = -\log_2 q_i - \log_2 Z$, so
+
+$$
+E[l] = \sum_i p_i l_i
+= -\sum_i p_i \log_2 q_i - \log_2 Z
+= H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q) - \log_2 Z
+\geq H_2(P),
+$$
+
+since the KL term is non-negative by Gibbs and $-\log_2 Z \geq 0$. For the
+upper bound, the Shannon lengths satisfy
+$2^{-l_i} = 2^{-\lceil \log_2(1/p_i)\rceil} \leq p_i$, so they pass Kraft's
+test ($\sum_i 2^{-l_i} \leq \sum_i p_i = 1$) and a prefix code with these
+lengths exists; and $l_i < \log_2(1/p_i) + 1$ gives
+$E[l] < H_2(P) + 1$. $\blacksquare$
+
+So entropy is, within one bit, *the* price of communicating draws from
+$P$---this is (the source-coding half of) Shannon's theorem, and the
+one-bit slack can be driven to zero by coding long blocks of symbols at once
+:cite:`Cover.Thomas.1999`. Moreover, look at where the KL divergence appeared
+in the proof: if you build your code from the *wrong* distribution $Q$
+(spending $-\log_2 q_i$ bits on symbol $i$, as the Shannon recipe would if it
+believed $Q$), your expected cost on data that is really $P$ is
+
+$$
+-\sum_i p_i \log_2 q_i = \textrm{CE}_2(P, Q) = H_2(P) + D_{\textrm{KL}}^{(2)}(P\|Q).
+$$
+
+Cross-entropy is the price of coding with the wrong codebook, and the KL
+divergence is *literally the extra bits per symbol* you waste. Every "extra
+nats" claim earlier in the section is this statement, rescaled by $\ln 2$.
+
+The bound is tight enough to see in a four-line example. Take
+$P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$, whose
+probabilities are exact powers of two, so the Shannon code wastes nothing; a
+codebook built for the *uniform* distribution instead spends $2$ bits on every
+symbol.
+
+```{.python .input #information-theory-coding}
+p = [1/2, 1/4, 1/8, 1/8]
+lengths = [math.ceil(math.log2(1 / p_i)) for p_i in p]
+kraft = sum(2 ** -l for l in lengths)
+avg_len = sum(p_i * l for p_i, l in zip(p, lengths))
+h_bits = -sum(p_i * math.log2(p_i) for p_i in p)
+
+q = [1/4] * 4   # the wrong codebook: 2 bits for every symbol
+avg_len_q = sum(p_i * 2 for p_i, l in zip(p, lengths))
+kl_bits = sum(p_i * math.log2(p_i / q_i) for p_i, q_i in zip(p, q))
+
+print(f'Shannon lengths {lengths}, Kraft sum = {kraft}')
+print(f'E[l] = {avg_len} bits = H(P) = {h_bits} bits: no waste')
+print(f'uniform codebook: {avg_len_q} bits = H + KL = {h_bits + kl_bits} bits')
+```
+
+A possible Shannon code here is $0,\, 10,\, 110,\, 111$---check that it is
+prefix-free and that its lengths $1, 2, 3, 3$ are the ones computed above.
+
+### Perplexity
+
+Language models are evaluated by exactly the quantity this section has been
+studying: the per-token cross-entropy of held-out text,
+$\textrm{CE} = -\tfrac{1}{N}\sum_{i=1}^N \log q(x_i \mid x_{<i})$ nats, where
+$q$ is the model's predicted next-token distribution. The community
+exponentiates it and calls the result *perplexity*:
+
+$$
+\textrm{PPL} = \exp(\textrm{CE})
+= \exp\!\Big(-\frac{1}{N}\sum_{i=1}^N \log q(x_i \mid x_{<i})\Big)
+= \Big(\prod_{i=1}^N q(x_i \mid x_{<i})\Big)^{-1/N},
+$$
+
+the inverse *geometric mean* of the probabilities the model assigned to what
+actually came next. Exponentiating buys an interpretation: a model that is
+uniformly undecided among $V$ tokens at every step has
+$\textrm{CE} = \ln V$ and hence $\textrm{PPL} = V$, so a perplexity of,
+say, $20$ means the model is, on average, as uncertain as if it were choosing
+uniformly among $20$ tokens---an *effective branching factor*. A perfect model
+has perplexity $1$, and Gibbs' inequality puts the floor at
+$\textrm{PPL} \geq e^{H}$, where $H$ is the per-token entropy of the language
+itself. Because $\textrm{PPL} = b^{\textrm{CE}_b}$ for *any* log base $b$,
+perplexity is also the rare information-theoretic quantity with no unit
+ambiguity: nats and bits give the same number (Exercise 6).
+
+A five-token toy stream makes the bookkeeping concrete.
+
+```{.python .input #information-theory-perplexity}
+q_tok = [0.2, 0.1, 0.4, 0.25, 0.05]   # model prob. of each observed token
+nll = [-math.log(q_i) for q_i in q_tok]
+mean_nll = sum(nll) / len(nll)
+
+print(f'per-token NLL (nats): {[round(v, 3) for v in nll]}')
+print(f'mean NLL = {mean_nll:.4f} nats, perplexity = {math.exp(mean_nll):.2f}')
+```
+
+A mean of $\approx 1.84$ nats per token corresponds to a perplexity of
+$\approx 6.3$: this model is as confused as a uniform choice among six or so
+tokens. Note how the geometric mean punishes confident mistakes---the single
+$0.05$ contributes $3.0$ nats, as much as several good predictions
+combined. When you encounter perplexity as the headline metric in
+:numref:`sec_language-model` and the Transformer chapters, it is this number.
+
+## Modern Uses
+
+The identities of this section are not museum pieces; they are working parts
+of modern training pipelines. We close with two of them---and the punchline
+that both are corollaries of Gibbs' inequality.
+
+### Label Smoothing
+
+A classifier trained on one-hot targets is asked to assign probability $1$ to
+the true class, which a softmax can approach only by driving the true class's
+logit infinitely far above the rest. The result is overconfident models and
+ever-growing weights. *Label smoothing* :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016`
+replaces the one-hot target $\mathbf{e}_y$ with a mixture that reserves a
+small probability $\epsilon$ for the other classes:
+
+$$
+\mathbf{p}^\epsilon = (1 - \epsilon)\, \mathbf{e}_y + \frac{\epsilon}{k}\, \mathbf{1},
+$$
+
+i.e., target probability $1 - \epsilon + \epsilon/k$ for the true class and
+$\epsilon/k$ for each of the other $k - 1$. The training loss is the ordinary
+cross-entropy $\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ to this softened
+target. What prediction does the smoothed loss actually ask for?
+
+**Proposition (the optimal smoothed prediction).** *Over all probability
+vectors $\mathbf{q}$, the cross-entropy
+$\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ is minimized uniquely at
+$\mathbf{q}^* = \mathbf{p}^\epsilon$, where it equals $H(\mathbf{p}^\epsilon)$.*
+
+**Proof.** By :eqref:`eq_mdl-ce_decomp`,
+$\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q}) = H(\mathbf{p}^\epsilon) +
+D_{\textrm{KL}}(\mathbf{p}^\epsilon \| \mathbf{q})$. The first term does not
+depend on $\mathbf{q}$, and by Gibbs' inequality the second is non-negative
+and zero iff $\mathbf{q} = \mathbf{p}^\epsilon$. $\blacksquare$
+
+So the optimum is no longer at infinity: the model is asked to predict
+$1 - \epsilon + \epsilon/k$ on the true class, which a softmax reaches with the
+*finite* logit gap
+
+$$
+z_y - z_j = \log\frac{1 - \epsilon + \epsilon/k}{\epsilon/k}
+= \log\!\Big(1 + \frac{k(1-\epsilon)}{\epsilon}\Big)
+$$
+
+between the true class and each other class. For $k = 10$ classes and
+$\epsilon = 0.1$ that is $\ln 91 \approx 4.51$ nats of logit gap---a
+concrete, attainable target instead of a runaway one. The loss at the optimum
+is the (nonzero) entropy $H(\mathbf{p}^\epsilon)$, which is why a
+label-smoothed loss curve plateaus above zero even when the model is doing
+everything right. Both numbers are easy to check:
+
+```{.python .input #information-theory-label-smoothing}
+k, eps = 10, 0.1
+p_eps = [1 - eps + eps / k] + [eps / k] * (k - 1)
+
+gap = math.log(p_eps[0] / p_eps[1])              # optimal logit gap
+h_p_eps = -sum(t * math.log(t) for t in p_eps)   # CE at the optimum q* = p_eps
+
+z = [10.0] + [0.0] * (k - 1)                     # an overconfident prediction
+z_norm = sum(math.exp(v) for v in z)
+q_conf = [math.exp(v) / z_norm for v in z]
+ce_conf = -sum(t * math.log(s) for t, s in zip(p_eps, q_conf))
+
+print(f'optimal logit gap = ln(91) = {gap:.4f} nats')
+print(f'CE at q* = H(p_eps) = {h_p_eps:.4f} nats')
+print(f'CE at the overconfident q = {ce_conf:.4f} nats')
+```
+
+The overconfident prediction (logit gap $10$) is *worse* under the smoothed
+target than the calibrated one---label smoothing literally penalizes the
+behavior that one-hot targets demand.
+
+### Knowledge Distillation
+
+*Knowledge distillation* :cite:`Hinton.Vinyals.Dean.2015` trains a small
+*student* network to imitate a large *teacher*, transferring not just the
+teacher's argmax but its full distribution over wrong answers (a "2" that
+looks somewhat like a "7" is valuable information). Because a trained
+teacher's softmax is nearly one-hot, both distributions are first *softened*
+with a temperature $T$:
+
+$$
+p_j^{(T)} = \mathrm{softmax}(\mathbf{z}^{\textrm{tea}}/T)_j, \qquad
+q_j^{(T)} = \mathrm{softmax}(\mathbf{z}^{\textrm{stu}}/T)_j,
+$$
+
+and the distillation loss is the KL divergence between the softened
+distributions, scaled by $T^2$:
+
+$$
+\mathcal{L}_{\textrm{distill}}
+= T^2\, D_{\textrm{KL}}\big(\mathbf{p}^{(T)} \,\|\, \mathbf{q}^{(T)}\big).
+$$
+
+Where does the $T^2$ come from? Differentiate the KL term with respect to a
+student logit. Since only $-\sum_j p_j^{(T)} \log q_j^{(T)}$ depends on the
+student, and the derivative of a log-softmax at temperature $T$ is the usual
+softmax-minus-target expression scaled by $1/T$,
+
+$$
+\frac{\partial}{\partial z^{\textrm{stu}}_j}
+D_{\textrm{KL}}\big(\mathbf{p}^{(T)} \| \mathbf{q}^{(T)}\big)
+= \frac{1}{T}\big(q_j^{(T)} - p_j^{(T)}\big).
+$$
+
+For large $T$ the softened distributions flatten toward uniform,
+$\mathrm{softmax}(\mathbf{z}/T)_j \approx \tfrac{1}{k}\big(1 + (z_j - \bar z)/T\big)$
+with $\bar z$ the mean logit, so the difference $q_j^{(T)} - p_j^{(T)}$ itself
+shrinks like $1/T$ and the gradient like $1/T^2$:
+
+$$
+\frac{1}{T}\big(q_j^{(T)} - p_j^{(T)}\big)
+\;\approx\; \frac{1}{k\,T^2}\Big(\big(z^{\textrm{stu}}_j - \bar z^{\textrm{stu}}\big)
+- \big(z^{\textrm{tea}}_j - \bar z^{\textrm{tea}}\big)\Big).
+$$
+
+Multiplying the loss by $T^2$ therefore keeps the gradient magnitude roughly
+constant as the temperature is tuned, so $T$ can be chosen for the *quality*
+of the transferred soft targets without silently rescaling the learning rate
+against any hard-label loss it is mixed with. Let's verify both claims
+numerically: the closed-form gradient matches autograd, and $T^2$ times the
+gradient approaches the limit above instead of vanishing.
+
+```{.python .input #information-theory-distillation}
+#@tab mxnet
+z_tea = np.array([5.0, 2.0, -1.0])
+z_stu = np.array([3.0, 3.0, 0.0])
+z_stu.attach_grad()
+
+for T in (1.0, 2.0, 5.0, 10.0):
+    with autograd.record():
+        p, q = npx.softmax(z_tea / T), npx.softmax(z_stu / T)
+        kl = np.sum(p * (np.log(p) - np.log(q)))
+    kl.backward()
+    closed = (npx.softmax(z_stu / T) - npx.softmax(z_tea / T)) / T
+    err = float(np.abs(z_stu.grad - closed).max())
+    print(f'T={T:4.1f}  |autograd - closed| = {err:.1e}  '
+          f'T^2 grad = {[round(g, 3) for g in (T**2 * z_stu.grad).tolist()]}')
+```
+
+```{.python .input #information-theory-distillation}
+#@tab pytorch
+z_tea = torch.tensor([5.0, 2.0, -1.0])
+
+for T in (1.0, 2.0, 5.0, 10.0):
+    z_stu = torch.tensor([3.0, 3.0, 0.0], requires_grad=True)
+    p, q = torch.softmax(z_tea / T, 0), torch.softmax(z_stu / T, 0)
+    kl = torch.sum(p * (torch.log(p) - torch.log(q)))
+    grad, = torch.autograd.grad(kl, z_stu)
+    closed = (q - p).detach() / T
+    err = (grad - closed).abs().max().item()
+    print(f'T={T:4.1f}  |autograd - closed| = {err:.1e}  '
+          f'T^2 grad = {[round(g, 3) for g in (T**2 * grad).tolist()]}')
+```
+
+```{.python .input #information-theory-distillation}
+#@tab tensorflow
+z_tea = tf.constant([5.0, 2.0, -1.0])
+z_stu = tf.Variable([3.0, 3.0, 0.0])
+
+for T in (1.0, 2.0, 5.0, 10.0):
+    with tf.GradientTape() as tape:
+        p, q = tf.nn.softmax(z_tea / T), tf.nn.softmax(z_stu / T)
+        kl = tf.reduce_sum(p * (tf.math.log(p) - tf.math.log(q)))
+    grad = tape.gradient(kl, z_stu)
+    closed = (q - p) / T
+    err = float(tf.reduce_max(tf.abs(grad - closed)).numpy())
+    print(f'T={T:4.1f}  |autograd - closed| = {err:.1e}  '
+          f'T^2 grad = {[round(g, 3) for g in (T**2 * grad).numpy().tolist()]}')
+```
+
+```{.python .input #information-theory-distillation}
+#@tab jax
+z_tea = jnp.array([5.0, 2.0, -1.0])
+z_stu = jnp.array([3.0, 3.0, 0.0])
+
+def distill_kl(z_stu, T):
+    p, q = jax.nn.softmax(z_tea / T), jax.nn.softmax(z_stu / T)
+    return jnp.sum(p * (jnp.log(p) - jnp.log(q)))
+
+for T in (1.0, 2.0, 5.0, 10.0):
+    grad = jax.grad(distill_kl)(z_stu, T)
+    closed = (jax.nn.softmax(z_stu / T) - jax.nn.softmax(z_tea / T)) / T
+    err = jnp.abs(grad - closed).max().item()
+    print(f'T={T:4.1f}  |autograd - closed| = {err:.1e}  '
+          f'T^2 grad = {[round(g, 3) for g in (T**2 * grad).tolist()]}')
+```
+
+The closed form matches autograd to floating-point precision at every
+temperature, and while the raw gradient decays like $1/T^2$, the $T^2$-scaled
+gradient settles toward the constant limit
+$\tfrac{1}{k}\big((\mathbf{z}^{\textrm{stu}} - \bar z^{\textrm{stu}}) -
+(\mathbf{z}^{\textrm{tea}} - \bar z^{\textrm{tea}})\big) = (-0.667, 0.333,
+0.333)$ here---the scale-matching the $T^2$ factor was designed for. As
+$T \to 1$ the loss reduces to the ordinary KL (and, with a one-hot teacher,
+to the ordinary cross-entropy loss), recovering standard training as a special
+case.
+
+### One Principle, Many Losses
+
+Stepping back: maximum likelihood *is* cross-entropy minimization *is*
+KL-projection of the empirical distribution onto the model family
+(:numref:`subsec_mdl-nll-crossentropy`)---and this section has now equipped
+that one principle with its operational meaning (code length and waste), its
+evaluation metric (perplexity), and two of its modern refinements (smoothed
+targets and distilled teachers). The story continues in two directions: KL is
+just one member of a whole family of divergences, each inducing a different
+generative-modeling objective (:numref:`sec_mdl-divergences-distances`), and
+applying KL to a joint distribution versus the product of its marginals yields
+mutual information, the engine of contrastive representation learning
+(:numref:`sec_mdl-mutual-information`).
 
 ## Summary
 
-* Information theory is a field of study about encoding, decoding, transmitting, and manipulating information.
-* Entropy is the unit to measure how much information is presented in different signals.
-* KL divergence can also measure the divergence between two distributions.
-* Cross-entropy can be viewed as an objective function of multi-class classification. Minimizing cross-entropy loss is equivalent to maximizing the log-likelihood function.
-
+* Self-information $I(x) = -\log p(x)$ measures the surprise of an outcome;
+  entropy $H(P) = -E_{x\sim P}[\log p(x)]$ is the average surprise of a
+  distribution. We measure both in nats (natural log); bits differ by a
+  factor of $\ln 2$.
+* On $k$ outcomes, $0 \leq H(P) \leq \log k$, with the maximum exactly at the
+  uniform distribution (Jensen). Differential entropy of continuous variables
+  is *not* coordinate-invariant and can be negative---one reason deep learning
+  prefers relative quantities.
+* The KL divergence $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x)/q(x)]$ is
+  asymmetric and, by Gibbs' inequality, non-negative with equality iff
+  $P = Q$.
+* Cross-entropy decomposes as
+  $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P\|Q)$: an irreducible floor
+  plus removable waste. Minimizing it in $Q$ is minimizing KL, and on
+  empirical data it is maximum likelihood
+  (:numref:`subsec_mdl-nll-crossentropy`).
+* The coding view makes this literal: entropy is the optimal expected code
+  length (Kraft inequality + Shannon code), cross-entropy is the cost of
+  coding with the wrong distribution, and KL is the extra bits wasted.
+* Perplexity $\textrm{PPL} = \exp(\textrm{CE})$ is the exponentiated
+  per-token cross-entropy of a language model: an effective branching factor,
+  independent of the log base.
+* Label smoothing and knowledge distillation are corollaries of the same
+  identities: the smoothed target makes the cross-entropy optimum a finite,
+  calibrated prediction, and the $T^2$ factor on the distillation KL keeps
+  gradients scale-matched across temperatures.
 
 ## Exercises
 
-1. Verify that the card examples from the first section indeed have the claimed entropy.
-1. Show that the KL divergence $D(p\|q)$ is nonnegative for all distributions $p$ and $q$. Hint: use Jensen's inequality, i.e., use the fact that $-\log x$ is a convex function.
-1. Let's compute the entropy from a few data sources:
-    * Assume that you are watching the output generated by a monkey at a typewriter. The monkey presses any of the $44$ keys of the typewriter at random (you can assume that it has not discovered any special keys or the shift key yet). How many bits of randomness per character do you observe?
-    * Being unhappy with the monkey, you replaced it by a drunk typesetter. It is able to generate words, albeit not coherently. Instead, it picks a random word out of a vocabulary of $2,000$ words. Let's assume that the average length of a word is $4.5$ letters in English. How many bits of randomness per character do you observe now?
-    * Still being unhappy with the result, you replace the typesetter by a high quality language model. The language model can currently obtain a perplexity as low as $15$ points per word. The character *perplexity* of a language model is defined as the inverse of the geometric mean of a set of probabilities, each probability is corresponding to a character in the word. To be specific, if the length of a given word is $l$, then  $\textrm{PPL}(\textrm{word}) = \left[\prod_i p(\textrm{character}_i)\right]^{ -\frac{1}{l}} = \exp \left[ - \frac{1}{l} \sum_i{\log p(\textrm{character}_i)} \right].$  Assume that the test word has 4.5 letters, how many bits of randomness per character do you observe now?
-1. Explain intuitively why $I(X; Y) = H(X) - H(X \mid Y)$.  Then, show this is true by expressing both sides as an expectation with respect to the joint distribution.
-1. What is the KL Divergence between the two Gaussian distributions $\mathcal{N}(\mu_1, \sigma_1^2)$ and $\mathcal{N}(\mu_2, \sigma_2^2)$?
+1. Verify the card-deck numbers from the first subsection: the four reports
+   carry $0$, $\ln 4$, $\ln 52$, and $\ln 52!$ nats. Use Stirling's
+   approximation to estimate $\ln 52!$ and check it against the exact value.
+1. Give a second proof that the uniform distribution maximizes entropy on $k$
+   outcomes, this time from Gibbs' inequality: show that
+   $D_{\textrm{KL}}(P \,\|\, U) = \log k - H(P)$ for the uniform $U$, and
+   conclude.
+1. Let's compute the entropy of a few data sources:
+    * Suppose that you are watching the output generated by a monkey at a
+      typewriter that hits any of the $44$ keys uniformly at random. How many
+      nats (and bits) of randomness per character do you observe?
+    * Unhappy with the monkey, you replace it with a drunk typesetter that
+      picks a random word out of a vocabulary of $2{,}000$ words, with an
+      average word length of $4.5$ letters. How many nats per character now?
+    * Still unhappy, you replace the typesetter with a language model that
+      achieves a per-word perplexity of $15$. How many nats per character
+      does that correspond to?
+1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` for the KL divergence
+   between two univariate Gaussians by writing
+   $E_{x\sim P}[\log p(x) - \log q(x)]$ and using
+   $E_{x \sim P}[x] = \mu_1$, $E_{x\sim P}[(x-\mu_1)^2] = \sigma_1^2$.
+1. Show that self-information is essentially unique: if a continuous,
+   decreasing function $I(p)$ on $(0, 1]$ satisfies $I(1) = 0$ and
+   $I(p_1 p_2) = I(p_1) + I(p_2)$ for all $p_1, p_2$, then
+   $I(p) = -c \log p$ for some constant $c > 0$.
+1. Show that perplexity does not depend on the log base: if
+   $\textrm{CE}_b$ denotes the per-token cross-entropy in base-$b$ units,
+   then $b^{\textrm{CE}_b}$ is the same for every $b$. Then compute the
+   perplexity of a model whose per-token cross-entropy is $\ln 5$ nats.
+1. For label smoothing with $k$ classes and smoothing parameter $\epsilon$,
+   derive the optimal prediction $\mathbf{q}^*$ and the optimal logit gap,
+   and evaluate the gap for $k = 1000$, $\epsilon = 0.1$. What happens to the
+   gap as $\epsilon \to 0$, and why does that recover the one-hot pathology?
+1. For the distillation loss, derive the gradient formula
+   $\partial D_{\textrm{KL}}(\mathbf{p}^{(T)} \| \mathbf{q}^{(T)}) / \partial
+   z^{\textrm{stu}}_j = (q_j^{(T)} - p_j^{(T)})/T$, and show that as
+   $T \to \infty$ the $T^2$-scaled gradient tends to
+   $\tfrac{1}{k}\big((z^{\textrm{stu}}_j - \bar z^{\textrm{stu}}) -
+   (z^{\textrm{tea}}_j - \bar z^{\textrm{tea}})\big)$. What does the loss
+   reduce to at $T = 1$ with a one-hot teacher?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/420)
@@ -936,72 +1191,61 @@ loss
 
 <!-- slides -->
 
-::: {.slide title="Information Theory for Learning"}
-Information theory (Shannon, 1948) gives the right
-language for many things in deep learning:
+::: {.slide title="Information theory: the language of losses"}
+The number your training loop prints is a quantity from information theory
+(Shannon, 1948) — a *code length*, in nats:
 
-- **Self-information** $I(x) = -\log p(x)$ — surprise of
-  observing $x$.
-- **Entropy** $H(X) = -\mathbb{E}[\log p(X)]$ — expected
-  surprise of a distribution.
-- **Cross-entropy** $H(p, q) = -\mathbb{E}_{p}[\log q]$ —
-  what we minimize during classification.
-- **KL divergence** $D_{KL}(p \| q) = H(p, q) - H(p)$ —
-  "extra bits" needed to encode $p$ using $q$.
-- **Mutual information** — how much knowing $X$ reduces
-  uncertainty about $Y$.
+- **Self-information** $I(x) = -\log p(x)$ — the surprise of observing $x$.
+- **Entropy** $H(P) = -\mathbb{E}_P[\log p]$ — average surprise; the
+  irreducible floor.
+- **Cross-entropy** $\mathrm{CE}(P,Q) = -\mathbb{E}_P[\log q]$ — what your
+  model actually pays.
+- **KL divergence** $D_{\mathrm{KL}}(P\|Q) = \mathrm{CE}(P,Q) - H(P)$ — the
+  waste you can train away.
 
-Cross-entropy loss = KL between true and predicted
-distributions, up to a constant.
+Units: nats (natural log) throughout; bits are a $\ln 2$ rescaling.
 :::
 
-::: {.slide title="Self-information"}
-Rare events carry more information than common ones. The log base
-only chooses the unit: bits for base 2, nats for base $e$.
+::: {.slide title="Surprise and entropy"}
+Rare = surprising: $I(x) = -\log p(x)$ is zero for certain events and
+diverges as $p \to 0$:
 
-@information-theory-self-information
-:::
+@fig:mdl-it-self-info-curve
 
-::: {.slide title="Entropy"}
-$H(X) = -\sum_x p(x) \log p(x)$. Maximum at uniform
-distribution; zero at point masses:
+. . .
+
+Entropy averages the surprise, $H(P) = -\sum_x p(x)\log p(x)$:
 
 @information-theory-definition
 :::
 
-::: {.slide title="Joint and conditional entropy"}
-$H(X, Y)$, $H(X \mid Y)$ — and the chain rule
-$H(X, Y) = H(X) + H(Y \mid X)$:
+::: {.slide title="Entropy peaks at maximal uncertainty"}
+On $k$ outcomes, $0 \le H \le \log k$, with the maximum exactly at the
+uniform distribution (Jensen on $\log$). For the coin, the peak is the fair
+coin: $\ln 2 \approx 0.693$ nats.
 
-@information-theory-joint-entropy
-
-. . .
-
-@information-theory-conditional-entropy
+@fig:mdl-it-bernoulli-entropy
 :::
 
-::: {.slide title="Mutual information"}
-$I(X; Y) = H(X) - H(X \mid Y) = H(X) + H(Y) - H(X, Y)$ —
-how much $X$ and $Y$ share. Symmetric, non-negative, zero
-iff independent:
-
-@information-theory-mutual-information-2
-:::
-
-::: {.slide title="KL divergence"}
-$D_{KL}(p \| q) = \sum_x p(x) \log \frac{p(x)}{q(x)} \ge 0$.
-Asymmetric (not a metric); zero iff $p = q$:
+::: {.slide title="KL divergence and Gibbs' inequality"}
+$D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}[\log p(x)/q(x)] \ge 0$, with
+equality iff $P = Q$ (Gibbs, via Jensen on $-\log$). Asymmetric: not a
+metric.
 
 @information-theory-definition-2
-:::
-
-::: {.slide title="Examples"}
-Small distributions make the abstractions concrete: entropy grows
-with uncertainty, while KL is zero only when the distributions match.
-
-@information-theory-example-1
 
 . . .
+
+$\mathrm{CE} = H + \mathrm{KL}$, verified on two categoricals:
+
+@information-theory-kl-categorical
+:::
+
+::: {.slide title="Gaussian KL in closed form"}
+$D_{\mathrm{KL}}(\mathcal{N}(\mu_1,\sigma_1^2)\,\|\,\mathcal{N}(\mu_2,\sigma_2^2))
+= \log\frac{\sigma_2}{\sigma_1} +
+\frac{\sigma_1^2 + (\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac12$ — matches a
+Monte-Carlo estimate, and exposes the asymmetry:
 
 @information-theory-example-2
 
@@ -1010,32 +1254,51 @@ with uncertainty, while KL is zero only when the distributions match.
 @information-theory-example-3
 :::
 
-::: {.slide title="Formal definitions"}
-Entropy, cross-entropy, and KL differ by which distribution supplies
-the expectation and which log-probability is scored.
-
-@information-theory-formal-definition-1
-
-. . .
+::: {.slide title="Cross-entropy is the classification loss"}
+One-hot truth $\Rightarrow$ CE collapses to $-\log \hat y_{\text{true}}$,
+the model's surprise at the correct class — same number as every framework
+built-in (maximum likelihood, by
+the NLL $=$ CE equivalence):
 
 @information-theory-formal-definition-2
 :::
 
-::: {.slide title="Cross-entropy in classification"}
-Multi-class classification: data distribution = one-hot
-on the true class; model = softmax. Cross-entropy =
-NLL of the true class:
+::: {.slide title="The coding view and perplexity"}
+Kraft: prefix codes satisfy $\sum_i 2^{-l_i} \le 1$; Shannon's code achieves
+$H_2 \le \mathbb{E}[l] < H_2 + 1$. Coding with the wrong $Q$ costs
+$\mathrm{CE}$ — KL is *literally the extra bits*:
 
-$$\mathcal{L} = -\sum_i \log q(y_i \mid x_i).$$
+@information-theory-coding
 
-@information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification
+. . .
+
+Language models: $\mathrm{PPL} = \exp(\text{mean NLL})$ — an effective
+branching factor:
+
+@information-theory-perplexity
+:::
+
+::: {.slide title="Label smoothing and distillation"}
+Smoothed target $(1-\epsilon)\,\mathbf{e}_y + \epsilon\,\mathbf{1}/k$ ⟹ the
+CE optimum is a *finite* logit gap (Gibbs):
+
+@information-theory-label-smoothing
+
+. . .
+
+Distillation: $T^2\, D_{\mathrm{KL}}(\text{teacher}_T \|\, \text{student}_T)$;
+the $T^2$ keeps gradients scale-matched:
+
+@information-theory-distillation
 :::
 
 ::: {.slide title="Recap"}
-- Entropy: expected surprise; KL: extra bits;
-  cross-entropy: KL + entropy.
-- Most DL classification = minimizing cross-entropy =
-  minimizing KL to the empirical distribution.
-- Mutual information appears in InfoNCE / contrastive
-  learning, the IB principle, and many others.
+- Entropy = floor, cross-entropy = payment, KL = waste — literally, in code
+  lengths (Kraft + Shannon).
+- Gibbs' inequality ($\mathrm{KL} \ge 0$) powers everything: CE $\ge$ H, the
+  coding bound, the label-smoothing optimum.
+- Minimizing CE = minimizing KL to the data = maximum likelihood.
+- Perplexity = $\exp(\mathrm{CE})$: base-free, an effective branching factor.
+- Next: families of divergences (f-divergences, optimal transport) and
+  mutual information for representation learning.
 :::

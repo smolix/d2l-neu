@@ -16,6 +16,19 @@ GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
                 "device(", "/GPU:", "/device:GPU",
                 "Trainer(", "d2l.train")
 
+# Notebooks that mention GPU-related terms in prose or discussion but whose
+# executable cells are CPU-only. Keep these out of the GPU scheduler bucket.
+CPU_ONLY_NOTEBOOKS = {
+    "chapter_mdl-linear-algebra/mdl-svd-low-rank.ipynb",
+    # MDL part: tiny CPU training loops (gluon.Trainer matches "Trainer(") or
+    # "GPU" appearing only in prose; every cell runs in seconds on CPU.
+    "chapter_mdl-dynamics/mdl-odes-solvers.ipynb",
+    "chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.ipynb",
+    "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
+    "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
+    "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
+}
+
 # Per-framework thread-limiting env vars.
 THREAD_LIMIT_ENV = {
     "pytorch": {
@@ -130,6 +143,8 @@ def notebook_resource(framework, rel, uses_gpu):
     memory-heavy single-GPU notebooks (HEAVY_GPU_NOTEBOOKS) take 2 on one GPU;
     data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each.
     """
+    if rel in CPU_ONLY_NOTEBOOKS:
+        return ('cpu',)
     if rel in MULTI_GPU_NOTEBOOKS:
         return ('gpu', 2, TWO_GPU_SLOTS_PER.get((framework, rel), 1))
     heavy = HEAVY_GPU_NOTEBOOKS.get((framework, rel))
@@ -167,6 +182,8 @@ def file_uses_gpu(filepath, siblings_root):
     except ValueError:
         return False
     parts = rel.parts  # (framework, chapter, file, ...)
+    if len(parts) >= 3 and Path(*parts[1:]).as_posix() in CPU_ONLY_NOTEBOOKS:
+        return False
     if len(parts) >= 2:
         for sibling in siblings_root.iterdir():
             if sibling.is_dir() and sibling.name != parts[0]:

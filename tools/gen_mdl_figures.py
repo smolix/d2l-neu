@@ -162,15 +162,17 @@ def fig_vectors():
     vlabel(axa, (p[0] + 0.12, p[1] + 0.18), r"$(3,2)$", color=BLUE, ha="left")
     clean_axes(axa, lim=((-0.6, 3.8), (-0.6, 2.8)), hide=True)
 
-    # (b) same vector, translation-invariant arrows
+    # (b) same vector, translation-invariant arrows -- all in one color, since
+    # every arrow *is* the same vector
     axb.set_title("(b) a direction")
     axis_cross(axb, (-0.6, 5.6), (-1.6, 4.0))
     v = np.array([3.0, 2.0])
-    bases = [np.array([0.0, 0.0]), np.array([1.2, -1.3]), np.array([2.3, 1.6])]
-    cols = [BLUE, ORANGE, GREEN]
-    for b, c in zip(bases, cols):
-        arrow(axb, b, b + v, color=c, lw=2.2)
-    vlabel(axb, (1.4, 1.25), r"$(3,2)$", color=BLUE, ha="center")
+    # bases chosen off each other's lines so the same-colored arrows stay
+    # visually distinct
+    bases = [np.array([0.0, 0.0]), np.array([1.2, -1.3]), np.array([0.6, 1.8])]
+    for b in bases:
+        arrow(axb, b, b + v, color=BLUE, lw=2.2)
+    vlabel(axb, (2.5, 1.25), r"$(3,2)$", color=BLUE, ha="center")
     clean_axes(axb, lim=((-0.6, 5.6), (-1.6, 4.0)), hide=True)
 
     save(fig, "mdl-la-vectors")
@@ -190,6 +192,62 @@ def fig_vector_add():
     vlabel(ax, (1.7, 1.9), r"$\mathbf{u}+\mathbf{v}$", color=GREEN)
     clean_axes(ax, lim=((-0.6, 4.8), (-0.6, 3.6)), hide=True)
     save(fig, "mdl-la-vector-add")
+
+
+def fig_span():
+    """(a) the span of one nonzero vector is the line through the origin in
+    its direction; (b) two independent vectors u, w span the whole plane: a
+    faint lattice of integer combinations a*u + b*w suggests the coverage, and
+    a dashed parallelogram construction resolves x = 2u + w."""
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 4.2))
+
+    # (a) span of a single vector: the line {t v}
+    axa.set_title("(a) span of one vector")
+    v = np.array([2.0, 1.0])
+    t0, t1 = -1.5, 2.2
+    axis_cross(axa, (-3.5, 5.0), (-2.3, 3.1))
+    axa.plot([t0 * v[0], t1 * v[0]], [t0 * v[1], t1 * v[1]], "--",
+             color=GRAY, lw=1.4)
+    arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
+    vlabel(axa, (v[0] + 0.15, v[1] + 0.35), r"$\mathbf{v}$", color=BLUE,
+           ha="left")
+    # label along the line, rotated to its direction, nudged perpendicular
+    d = v / np.linalg.norm(v)
+    perp = np.array([-d[1], d[0]])
+    lpos = 1.6 * v + 0.45 * perp
+    axa.text(lpos[0], lpos[1], r"$\mathrm{span}(\mathbf{v})$", color=GRAY,
+             fontsize=10, ha="center", va="center",
+             rotation=np.degrees(np.arctan2(d[1], d[0])),
+             rotation_mode="anchor")
+    clean_axes(axa, lim=((-3.5, 5.0), (-2.3, 3.1)), hide=True)
+
+    # (b) two independent vectors span the plane
+    axb.set_title("(b) two independent vectors span the plane")
+    u = np.array([2.0, 1.0])
+    w = np.array([0.5, 1.5])
+    coeffs = range(-1, 4)  # integer combinations a*u + b*w, a, b in -1..3
+    for a in coeffs:  # lines of constant a (along w)
+        p0, p1 = a * u + coeffs[0] * w, a * u + coeffs[-1] * w
+        axb.plot([p0[0], p1[0]], [p0[1], p1[1]], color=LIGHT, lw=0.9)
+    for b in coeffs:  # lines of constant b (along u)
+        p0, p1 = coeffs[0] * u + b * w, coeffs[-1] * u + b * w
+        axb.plot([p0[0], p1[0]], [p0[1], p1[1]], color=LIGHT, lw=0.9)
+    x = 2 * u + w  # (4.5, 3.5)
+    # dashed parallelogram construction: 2u -> x and w -> x
+    axb.plot([2 * u[0], x[0]], [2 * u[1], x[1]], "--", color=GRAY, lw=1.4)
+    axb.plot([w[0], x[0]], [w[1], x[1]], "--", color=GRAY, lw=1.4)
+    arrow(axb, (0, 0), u, color=BLUE, lw=2.4)
+    arrow(axb, (0, 0), w, color=ORANGE, lw=2.4)
+    arrow(axb, (0, 0), x, color=GREEN, lw=2.4)
+    vlabel(axb, (u[0] + 0.2, u[1] - 0.35), r"$\mathbf{u}$", color=BLUE,
+           ha="left")
+    vlabel(axb, (w[0] - 0.25, w[1] + 0.3), r"$\mathbf{w}$", color=ORANGE,
+           ha="right")
+    vlabel(axb, (x[0] + 0.25, x[1] + 0.35),
+           r"$\mathbf{x}=2\mathbf{u}+\mathbf{w}$", color=GREEN, ha="left")
+    clean_axes(axb, lim=((-2.9, 7.9), (-2.9, 7.9)), hide=True)
+
+    save(fig, "mdl-la-span")
 
 
 def fig_angle():
@@ -345,12 +403,14 @@ def fig_hyperplane():
 
 
 def fig_linear_map():
-    """A unit-square grid (light) and its image under a non-trivial 2x2 matrix
-    (skew + scale), so the reader sees a matrix bending space."""
-    A = np.array([[1.4, 0.9], [0.3, 1.2]])
+    """A unit-square grid (light) and its image under the chapter's running
+    matrix A = [[1, 2], [-1, 3]], so the reader sees a matrix bending space.
+    The shaded unit square maps to the shaded parallelogram with vertices
+    (0,0), (1,-1), (3,2), (2,3) -- area |det A| = 5."""
+    A = np.array([[1.0, 2.0], [-1.0, 3.0]])
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 4.2))
 
-    n = 5
+    n = 3
     ts = np.linspace(0, n, 200)
     grid = list(range(n + 1))
 
@@ -362,26 +422,33 @@ def fig_linear_map():
             pts = M @ np.vstack([ts, np.full_like(ts, k)])
             ax.plot(pts[0], pts[1], color=color, lw=lw)
 
-    I = np.eye(2)
+    unit = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+
     axa.set_title("(a) original grid")
-    draw_grid(axa, I, LIGHT, 1.0)
+    draw_grid(axa, np.eye(2), LIGHT, 1.0)
+    # shaded unit square (its image is the shaded parallelogram in (b))
+    axa.add_patch(Polygon(unit, closed=True, facecolor=GREEN, alpha=0.25, lw=0))
     # highlight unit basis vectors
     arrow(axa, (0, 0), (1, 0), color=BLUE, lw=2.2)
     arrow(axa, (0, 0), (0, 1), color=ORANGE, lw=2.2)
     vlabel(axa, (1.0, -0.3), r"$\mathbf{e}_1$", color=BLUE)
     vlabel(axa, (-0.35, 1.0), r"$\mathbf{e}_2$", color=ORANGE)
-    clean_axes(axa, lim=((-0.6, 5.6), (-0.6, 5.6)), hide=True)
+    clean_axes(axa, lim=((-0.6, 3.6), (-0.6, 3.6)), hide=True)
 
     axb.set_title(r"(b) image under $\mathbf{A}$")
     draw_grid(axb, A, LIGHT, 1.0)
-    a1 = A @ np.array([1, 0])
-    a2 = A @ np.array([0, 1])
+    # image of the unit square: parallelogram (0,0), (1,-1), (3,2), (2,3)
+    axb.add_patch(Polygon((A @ unit.T).T, closed=True, facecolor=GREEN,
+                          alpha=0.25, lw=0))
+    a1 = A @ np.array([1, 0])  # (1, -1)
+    a2 = A @ np.array([0, 1])  # (2, 3)
     arrow(axb, (0, 0), a1, color=BLUE, lw=2.4)
     arrow(axb, (0, 0), a2, color=ORANGE, lw=2.4)
-    vlabel(axb, (a1[0] + 0.1, a1[1] - 0.35), r"$\mathbf{A}\mathbf{e}_1$", color=BLUE, ha="left")
-    vlabel(axb, (a2[0] - 0.55, a2[1] + 0.2), r"$\mathbf{A}\mathbf{e}_2$", color=ORANGE, ha="right")
-    L = (n + 0.6) * 1.6
-    clean_axes(axb, lim=((-0.8, L), (-0.8, L * 0.78)), hide=True)
+    vlabel(axb, (a1[0] + 0.15, a1[1] - 0.35), r"$\mathbf{A}\mathbf{e}_1$",
+           color=BLUE, ha="left")
+    vlabel(axb, (a2[0] - 0.3, a2[1] + 0.35), r"$\mathbf{A}\mathbf{e}_2$",
+           color=ORANGE, ha="right")
+    clean_axes(axb, lim=((-0.8, 9.6), (-3.5, 9.6)), hide=True)
 
     save(fig, "mdl-la-linear-map")
 
@@ -594,7 +661,7 @@ def fig_power_iter():
         nxt = A @ cur
         cur = nxt / np.linalg.norm(nxt)
     arrow(axa, (0, 0), dom, color=ORANGE, lw=2.6)
-    axa.text(dom[0] * 1.05 + 0.05, dom[1] * 1.05, r"$\mathbf{v}_1$", color=ORANGE,
+    axa.text(dom[0] * 1.05 + 0.05, dom[1] * 1.05, r"$\mathbf{w}_1$", color=ORANGE,
              fontsize=10, ha="left")
     axa.text(0.06, 1.14, r"$\mathbf{x}_0$", color=GRAY, fontsize=9.5, ha="left")
     clean_axes(axa, lim=((-1.3, 1.3), (-1.3, 1.3)), hide=True)
@@ -617,8 +684,9 @@ def fig_power_iter():
              ha="right", va="bottom", color=GRAY, fontsize=10)
     axb.set_xlabel("iteration $k$")
     axb.set_ylabel(r"$\|A^{k+1}v\|/\|A^k v\|$")
-    axb.annotate(rf"gap $\sim|\lambda_2/\lambda_1|^k="
-                 rf"({abs(lam2/lam1):.2g})^k$",
+    # the *norm ratio* converges at the squared rate (lambda_2/lambda_1)^2
+    axb.annotate(rf"gap $\sim(\lambda_2/\lambda_1)^{{2k}}="
+                 rf"({(lam2 / lam1) ** 2:.2g})^k$",
                  xy=(0.45, 0.35), xycoords="axes fraction", fontsize=9.5,
                  color=GRAY)
     axb.set_aspect("auto")
@@ -917,6 +985,7 @@ FIGURES = [
     # geometry
     fig_vectors,
     fig_vector_add,
+    fig_span,
     fig_angle,
     fig_projection,
     fig_hyperplane,

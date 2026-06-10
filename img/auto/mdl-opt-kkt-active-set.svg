@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="white"/>
+  <polygon points="150,330 150,110 520,110 650,330" fill="#e8f1fb" stroke="#3969ac" stroke-width="4"/>
+  <path d="M185 285 C305 180 470 150 610 190" fill="none" stroke="#d55e00" stroke-width="4"/>
+  <path d="M220 245 C340 155 485 132 620 158" fill="none" stroke="#d55e00" stroke-width="3" opacity=".55"/>
+  <circle cx="520" cy="110" r="8" fill="#111"/>
+  <line x1="520" y1="110" x2="520" y2="35" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="520" y1="110" x2="585" y2="65" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="520" y1="110" x2="455" y2="158" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="78" y="104" font-family="Arial, sans-serif" font-size="19" fill="#3969ac">feasible set</text>
+  <text x="590" y="150" font-family="Arial, sans-serif" font-size="19" fill="#d55e00">level sets</text>
+  <text x="529" y="35" font-family="Arial, sans-serif" font-size="17" fill="#333">active normal</text>
+  <text x="594" y="69" font-family="Arial, sans-serif" font-size="17" fill="#333">corner cone</text>
+  <text x="407" y="174" font-family="Arial, sans-serif" font-size="17" fill="#333">-grad f</text>
+  <text x="532" y="128" font-family="Arial, sans-serif" font-size="18" fill="#111">x*</text>
+</svg>

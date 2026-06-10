@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="white"/>
+  <line x1="90" y1="340" x2="670" y2="340" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="90" y1="340" x2="90" y2="60" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M112 67 C145 130 192 184 245 226 C325 290 430 323 640 340" fill="none" stroke="#3969ac" stroke-width="5"/>
+  <line x1="380" y1="340" x2="380" y2="278" stroke="#777" stroke-width="2" stroke-dasharray="6 6"/>
+  <line x1="90" y1="278" x2="380" y2="278" stroke="#777" stroke-width="2" stroke-dasharray="6 6"/>
+  <text x="612" y="370" font-family="Arial, sans-serif" font-size="20" fill="#333">p(x)</text>
+  <text x="35" y="70" font-family="Arial, sans-serif" font-size="20" fill="#333">I(x)</text>
+  <text x="395" y="275" font-family="Arial, sans-serif" font-size="18" fill="#333">-log p</text>
+  <text x="235" y="115" font-family="Arial, sans-serif" font-size="22" fill="#3969ac">rare events carry more information</text>
+</svg>

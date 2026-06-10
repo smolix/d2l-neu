@@ -812,8 +812,8 @@ Q 350.442479 154.277622 360.649738 161.705008
 " clip-path="url(#p7728e59863)" style="fill: none; stroke-dasharray: 5.6,4.2; stroke-dashoffset: 0; stroke: #7f7f7f; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="patch_12">
-    <path d="M 434.463159 161.669222 
-Q 468.26186 134.520762 502.060561 161.669289 
+    <path d="M 434.208596 161.417768 
+Q 468.260922 122.048922 502.313248 161.415695 
 " clip-path="url(#p7728e59863)" style="fill: none; stroke-dasharray: 5.6,4.2; stroke-dashoffset: 0; stroke: #7f7f7f; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="patch_13">
@@ -1210,8 +1210,8 @@ L 356.727273 151.708099
 " clip-path="url(#p7728e59863)" style="fill: none; stroke: #ff7f0e; stroke-width: 3; stroke-linecap: round"/>
    </g>
    <g id="line2d_2">
-    <path d="M 461.978182 154.378645 
-L 474.545455 141.811372 
+    <path d="M 461.978182 148.016463 
+L 474.545455 135.44919 
 " clip-path="url(#p7728e59863)" style="fill: none; stroke: #ff7f0e; stroke-width: 3; stroke-linecap: round"/>
    </g>
   </g>

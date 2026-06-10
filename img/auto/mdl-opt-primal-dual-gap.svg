@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="white"/>
+  <line x1="95" y1="340" x2="675" y2="340" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="95" y1="340" x2="95" y2="70" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="120" y1="175" x2="650" y2="175" stroke="#666" stroke-width="2" stroke-dasharray="8 8"/>
+  <path d="M130 300 C250 225 345 190 445 175 C525 163 590 170 645 185" fill="none" stroke="#3969ac" stroke-width="5"/>
+  <path d="M130 120 C235 135 330 150 445 175 C540 196 605 220 645 252" fill="none" stroke="#d55e00" stroke-width="5"/>
+  <line x1="520" y1="175" x2="520" y2="220" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="130" y="160" font-family="Arial, sans-serif" font-size="20" fill="#666">p*</text>
+  <text x="210" y="292" font-family="Arial, sans-serif" font-size="20" fill="#3969ac">dual lower bound</text>
+  <text x="430" y="125" font-family="Arial, sans-serif" font-size="20" fill="#d55e00">primal feasible values</text>
+  <text x="533" y="205" font-family="Arial, sans-serif" font-size="18" fill="#333">gap</text>
+  <text x="675" y="366" font-family="Arial, sans-serif" font-size="18" fill="#333">variable</text>
+  <text x="45" y="72" font-family="Arial, sans-serif" font-size="18" fill="#333">value</text>
+</svg>

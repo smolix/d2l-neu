@@ -138,7 +138,7 @@ function broadcasting() {
 // ── saving memory: new allocation vs in-place write ─────────────────
 // NOTE framework variance: this is the PyTorch/TF/MXNet story. JAX arrays
 // are immutable (no in-place); author a jax variant before reusing — see
-// HANDOFF.md "Framework variants".
+// docs/slides-northstar-design.md "Framework variants".
 // Two panels STACKED VERTICALLY (portrait) so the figure fills a slide
 // column at a readable size instead of sitting tiny and wide.
 function savingMemory() {

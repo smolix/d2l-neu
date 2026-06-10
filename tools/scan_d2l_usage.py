@@ -23,6 +23,7 @@ positives (e.g. `d2l.something_not_a_function`) are filtered against the
 real shard set, so we don't add ghost deps.
 """
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -85,6 +86,16 @@ def d2l_refs_per_framework(md_path):
 
 def _write_if_changed(path, content_bytes):
     if path.exists() and path.read_bytes() == content_bytes:
+        # Content unchanged: keep the file byte-identical (no git churn, no
+        # downstream rebuild) but bump its mtime to *now*. This `.d` is pulled
+        # in via `-include`; GNU Make re-makes generated include files and then
+        # RESTARTS, and it keeps restarting as long as the include is older than
+        # its prerequisites (the source .md). Without this touch the .d stays
+        # stale forever and make spins in an infinite restart loop (observed
+        # under GNU Make 4.x on macOS; 3.81 masked it via its grouped-target
+        # misparse). Safe because .executed depends on the *shards named inside*
+        # the .d, not on the .d file's own timestamp.
+        os.utime(path, None)
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content_bytes)

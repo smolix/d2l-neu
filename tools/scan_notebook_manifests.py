@@ -14,11 +14,12 @@ Usage:
     python tools/scan_notebook_manifests.py --output-dir _notebooks
 """
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
 
-from runtime_env import GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS
+from runtime_env import CPU_ONLY_NOTEBOOKS, GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS
 
 
 FRAMEWORKS = ('pytorch', 'tensorflow', 'jax', 'mxnet')
@@ -83,7 +84,10 @@ def source_execution_class(md_path, rel):
     any sibling uses a GPU; scanning the shared source file gives the same
     conservative behavior for all frameworks produced from the file.
     """
-    if notebook_rel(rel) in MULTI_GPU_NOTEBOOKS:
+    nb_rel = notebook_rel(rel)
+    if nb_rel in CPU_ONLY_NOTEBOOKS:
+        return 'cpu'
+    if nb_rel in MULTI_GPU_NOTEBOOKS:
         return 'multi-gpu'
     try:
         text = md_path.read_text(encoding='utf-8')
@@ -96,6 +100,11 @@ def source_execution_class(md_path, rel):
 
 def _write_if_changed(path, content):
     if path.exists() and path.read_bytes() == content:
+        # Unchanged: keep bytes identical but bump mtime to now. MANIFEST.mk is
+        # pulled in with `-include`, so a stale (older-than-source) generated
+        # makefile makes GNU Make restart forever. Touching mtime ends the loop
+        # without rewriting content. See scan_d2l_usage._write_if_changed.
+        os.utime(path, None)
         return False
     path.write_bytes(content)
     return True

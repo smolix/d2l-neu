@@ -20,22 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.5    sum=0.680769  error=0.123950\n"
+          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.1    sum=0.783785  error=0.020934\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eps=0.05   sum=0.794486  error=0.010233\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eps=0.01   sum=0.802710  error=0.002009\n"
+          "text": "eps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\n"
         },
         {
           "type": "stream",
@@ -45,62 +35,50 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:2a56d883925210413c6dfe0788d77c235c5b7410b9f54d99cc2f5d7f86b4c302",
+      "code_fingerprint": "sha256:afca2602eaac3432691c8d9af17c51f16a8ff8eed199c3b224f94b12e6a92399",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 0.0009999991161748767\nRiemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 8.761882781982422e-05\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Riemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
         }
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:38b5eac2bc1a1addab6c0da467edd4205e371057f35a925798abb08cee1d6847",
+      "code_fingerprint": "sha256:e26660519ab1c9f422daf33b83e4fcf67293ab840fc9269657f97d7ed747fc45",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\n"
+          "text": "b=1.0   left-Riemann sum=0.632437  exact 1-e^-b=0.632121\nb=2.0   left-Riemann sum=0.865097  exact 1-e^-b=0.864665\nb=5.0   left-Riemann sum=0.993759  exact 1-e^-b=0.993262\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^5.0  e^-x dx = 0.993759\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "integral_0^10.0 e^-x dx = 1.000455\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "integral_0^20.0 e^-x dx = 1.000500\nlimit as b -> infinity   = 1.000000\n"
+          "text": "b=10.0  left-Riemann sum=1.000455  exact 1-e^-b=0.999955\nb=20.0  left-Riemann sum=1.000500  exact 1-e^-b=1.000000\n"
         }
       ]
     },
-    "integral-surface": {
-      "code_fingerprint": "sha256:be63495fc867a06238f59c49551ec2d699be1e2cf1e9225e5d2237807d494511",
-      "kind": "mixed",
+    "integral-box-volume": {
+      "code_fingerprint": "sha256:4e107b8122df1f63297b7b6163ca19801be8a9ef693074764f87c3d784fd527e",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.141590118408203\nvolume (exact = pi): 3.141592653589793\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 88731,
-          "sha256": "sha256:631198eeda5091f9d799a4e17766fc5f6f117066bcf176d477b89b830395e780"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:b363478ee441f711f2cbd74252cec279adb3491e851565afc3afb585e02f58fc",
+      "code_fingerprint": "sha256:00832b34c39db7455b46f3ac068fad0beda30ac66aea473a930c62cd916f25fa",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +89,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:527bae7a9e50b24d7babf21d7585fc0488cd52ede1ab08fd7455a59d08193412",
+      "code_fingerprint": "sha256:64c6bc39ae2cb32e768bd764ae280000520b6030915a9735fee18e1cc2d4c5e8",
       "kind": "text",
       "outputs": [
         {
@@ -122,20 +100,20 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:508419a930ba9c0056bd503a3f4371a03541d46de8010d47a7a93ad9c3845892",
+      "code_fingerprint": "sha256:9d37d272b2434fbc012d8969fc31ea2dda7f4aecc3e83fbb82c2fea537bc03e9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.87741  error=0.13056\nn=100     Monte Carlo=0.73200  error=0.01486\nn=1000    Monte Carlo=0.74470  error=0.00216\nn=10000   Monte Carlo=0.74809  error=0.00123\nn=100000  Monte Carlo=0.74682  error=0.00003\nRiemann quadrature   =0.74686\n"
+          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.73200  error=1.5e-02\nn=1000    Monte Carlo=0.74470  error=2.1e-03\nn=10000   Monte Carlo=0.74809  error=1.3e-03\nn=100000  Monte Carlo=0.74682  error=3.1e-06\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 45710,
-          "sha256": "sha256:ca2ff6dbcdf14682bc2a2acc8653dc9a6483d3b0d2241072cc6afa10838090e1"
+          "bytes": 43736,
+          "sha256": "sha256:8c642cd14c0eb5c3e4e49a44a41f22ec6e3e0fc6c703a6f41543303767303daf"
         }
       ]
     }

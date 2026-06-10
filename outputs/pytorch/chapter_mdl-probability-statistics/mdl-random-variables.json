@@ -9,29 +9,42 @@
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:a50946bbf74366d3c4acbb7e504a2092bd97c72ed73fcb55f56b2e161b2c9f19",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:23cbae131a267d80f0bc67f8ec379704b2b5637b0e7c4f36cc452cb9aee510df",
+      "code_fingerprint": "sha256:7622d8410f529371cf056ea5c0e1d4b587b41e17abfd57f2760e67ae721c31ae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:efb4d0cd2f1cad282ac4fd490a20c1e8af95ecff8705f0429592e85907f5588e",
+      "code_fingerprint": "sha256:063a39e68d76fcd39af3c6e3e6b0180391e17b1c82455d4b5f9cab68644cfc0a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:841fad7144ee9b0f5f9b9984110b722ed1fca5f58ffbba3d614e0f6acfde75c9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
+          "bytes": 27212,
+          "sha256": "sha256:22736d027d314916419405dc620351f35f2f3dce198b84338d52f42438756e4a"
         }
       ]
     }

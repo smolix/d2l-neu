@@ -48,9 +48,24 @@ A 6-core laptop still gets 1 CPU slot. Each CPU slot is pinned to a dedicated
 cores are split into `CPU_SLOTS` contiguous groups (~8 cores each on a 64-core
 box) and slot *i* gets group *i*.
 
+### CPU-only / macOS hosts
+
+On a host with **no GPU** (e.g. an Apple-silicon Mac) `detect_resources.py`
+reports `0` GPUs, so the queue is served entirely from the CPU pool — only the
+notebooks classified CPU-only (`CPU_ONLY_NOTEBOOKS` in `tools/runtime_env.py`)
+run; GPU notebooks have nothing to schedule onto and are left to the freshness
+gate to *defer* (build-system.md §3.3a). CPU affinity pinning uses
+`os.sched_setaffinity`, which is **Linux-only**; off Linux it degrades to a
+no-op (the slot pool still bounds concurrency, the cores just aren't pinned), so
+the scheduler imports and runs unchanged on macOS. In practice on a laptop you
+rarely invoke the scheduler directly — the single-notebook refresh path
+(`gmake -B _notebooks/<fw>/<ch>/<f>.executed`, via `run_one_notebook.py`) is the
+common CPU-only flow.
+
 The Makefile hands all of this to the scheduler via `SCHED_ENV`
-(`D2L_GPU_SLOTS_PER`, `D2L_GPU_VRAM_PER`, `D2L_GPU_MIB_PER_SLOT`, `D2L_CPU_SLOTS`);
-each is an `?=` Make variable, so any can be overridden on the command line.
+(`D2L_GPU_SLOTS_PER`, `D2L_GPU_VRAM_PER`, `D2L_GPU_MIB_PER_SLOT`, `D2L_CPU_SLOTS`).
+Each is derived once from `detect_resources.py` and can be overridden on the
+command line (e.g. `gmake CPU_SLOTS=2 run-all-notebooks`).
 
 ---
 

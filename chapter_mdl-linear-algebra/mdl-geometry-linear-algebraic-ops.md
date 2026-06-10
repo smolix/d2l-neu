@@ -269,8 +269,11 @@ when the vectors point the same way, and $\cos\theta = -1$ ($\theta = \pi$)
 when they point in opposite directions — precisely the collinear cases of the
 proposition.
 
-Cauchy–Schwarz has a one-picture explanation, shown in
-:numref:`fig_mdl-la-projection`. On the left, the projection of $\mathbf{v}$
+Cauchy–Schwarz also has a one-picture summary, shown in
+:numref:`fig_mdl-la-projection` — a way to *remember* the inequality rather
+than a second proof, since the picture reads off the angle $\theta$ (and with
+it :eqref:`eq_mdl-dot_geom`) that Cauchy–Schwarz itself makes legitimate.
+On the left, the projection of $\mathbf{v}$
 onto $\mathbf{w}$ has signed length $\|\mathbf{v}\|\cos\theta$, and the residual
 $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v}$ meets
 $\mathbf{w}$ at a right angle (we prove both facts in the next section). Because
@@ -404,6 +407,93 @@ scales up to fitting an arbitrary linear model, which is how the singular value
 decomposition produces optimal least-squares solutions in
 :numref:`sec_mdl-svd-low-rank`.
 
+### Span, Bases, and Subspaces
+
+The projection result spoke of "the one-dimensional subspace spanned by
+$\mathbf{w}$," and the planar argument for the dot-product formula reasoned
+inside the plane that two vectors span. These words — *span*, *subspace*,
+*basis* — are the organizing vocabulary of linear algebra, and the
+decompositions later in this chapter lean on them constantly, so let us pin
+them down while the geometry is fresh.
+
+Given vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$, their **span** is the set
+of everything reachable by scaling and adding them:
+
+$$
+\operatorname{span}(\mathbf{v}_1, \ldots, \mathbf{v}_k)
+ = \bigl\{ a_1\mathbf{v}_1 + \cdots + a_k\mathbf{v}_k
+   : a_1, \ldots, a_k \in \mathbb{R} \bigr\}.
+$$
+
+A weighted sum $a_1\mathbf{v}_1 + \cdots + a_k\mathbf{v}_k$ is called a
+*linear combination*, so the span is the set of all linear combinations. In
+$\mathbb{R}^2$ the possibilities are easy to picture
+(:numref:`fig_mdl-la-span`): the span of a single nonzero vector is the line
+through the origin in its direction, while the span of two vectors that do not
+lie on a common line is the entire plane. A span is closed under further
+addition and scaling, and any set of vectors with that closure property is
+called a **subspace**. The complete list of subspaces of $\mathbb{R}^2$ is
+short: the origin alone, the lines through the origin, and $\mathbb{R}^2$
+itself; in $\mathbb{R}^3$, the planes through the origin join the list. Note
+that every subspace contains the origin — scale any of its elements by zero —
+so a line that misses the origin is not a subspace.
+
+![Left: the span of a single nonzero vector $\mathbf{v}$ — all of its scalar multiples — is the line through the origin in its direction, a one-dimensional subspace. Right: two vectors not on a common line span the whole plane; the dashed parallelogram construction resolves $\mathbf{x}$ as $2\mathbf{u} + \mathbf{w}$, coordinates that are unique because $\mathbf{u}$ and $\mathbf{w}$ are linearly independent.](../img/mdl-la-span.svg)
+:label:`fig_mdl-la-span`
+
+A spanning set can be wasteful. If one of the vectors already lies in the span
+of the others, deleting it shrinks the list without shrinking the span. A
+collection with no such redundancy — equivalently, one where the only linear
+combination producing $a_1\mathbf{v}_1 + \cdots + a_k\mathbf{v}_k = \mathbf{0}$
+is the trivial one with every $a_i = 0$ — is called **linearly independent**.
+(We return to the redundant case, *linear dependence*, when we study matrices
+and rank below.) A **basis** of a subspace is a linearly independent set that
+spans it: enough vectors to reach everything, none to spare. The coordinate
+vectors $\mathbf{e}_1 = [1, 0]^\top$ and $\mathbf{e}_2 = [0, 1]^\top$ form the
+*standard basis* of $\mathbb{R}^2$, but the slanted pair in
+:numref:`fig_mdl-la-span` is an equally valid basis. A fundamental theorem,
+which we will use without proof, says that every basis of a given subspace has
+the same number of elements; this common count is the subspace's
+**dimension**. That gives, at last, a precise meaning to the $d$ in
+"$d$-dimensional space": $\mathbb{R}^d$ has dimension $d$ because
+$\mathbf{e}_1, \ldots, \mathbf{e}_d$ is a basis for it.
+
+What independence buys is *coordinates*.
+
+**Proposition (coordinates are unique).** *Let $\mathbf{v}_1, \ldots,
+\mathbf{v}_k$ be a basis of a subspace $S$. Then every $\mathbf{x} \in S$ can
+be written as $\mathbf{x} = a_1\mathbf{v}_1 + \cdots + a_k\mathbf{v}_k$ for
+exactly one choice of coefficients $a_1, \ldots, a_k$.*
+
+**Proof.** At least one representation exists because the basis spans $S$. If
+there were two, say
+$\mathbf{x} = \sum_i a_i \mathbf{v}_i = \sum_i b_i \mathbf{v}_i$, then
+subtracting gives $\sum_i (a_i - b_i)\,\mathbf{v}_i = \mathbf{0}$, and linear
+independence forces $a_i = b_i$ for every $i$. $\blacksquare$
+
+A basis therefore turns an abstract subspace into a concrete copy of
+$\mathbb{R}^k$: once the basis is agreed upon, the coefficient list
+$(a_1, \ldots, a_k)$ *is* the point. Much of applied linear algebra is the art
+of choosing a basis in which a problem's coordinates become simple — the
+eigenvector and singular-vector bases of the next two sections are the premier
+examples.
+
+Finally, two subspaces attach to every matrix $\mathbf{A}$, and they organize
+everything matrices do in the remainder of this chapter. The **column space**
+of $\mathbf{A}$ is the span of its columns; since the product
+$\mathbf{A}\mathbf{v}$ is exactly the linear combination of the columns of
+$\mathbf{A}$ weighted by the entries of $\mathbf{v}$ (a fact we put to work
+when we take up matrices as maps below), the column space is the set of all
+possible *outputs* of $\mathbf{A}$. The **null space** of $\mathbf{A}$ is the
+set of inputs sent to zero, $\{\mathbf{x} : \mathbf{A}\mathbf{x} =
+\mathbf{0}\}$; it is a subspace because if $\mathbf{A}\mathbf{x} =
+\mathbf{A}\mathbf{y} = \mathbf{0}$ then $\mathbf{A}(a\mathbf{x} + b\mathbf{y})
+= a\,\mathbf{A}\mathbf{x} + b\,\mathbf{A}\mathbf{y} = \mathbf{0}$. In words:
+the column space records what a matrix can produce, and the null space records
+what it destroys. We will measure the first when we define the *rank* below,
+and meet both again among the SVD's *four fundamental subspaces* in
+:numref:`sec_mdl-svd-low-rank`.
+
 ## Similarity in High Dimensions
 
 It is reasonable to ask why the *angle* — rather than the raw distance — is so
@@ -473,9 +563,15 @@ working assumption behind embedding-based retrieval and the attention mechanism.
 
 We can watch the concentration happen by sampling random unit vectors and
 histogramming their pairwise cosines as the dimension grows, shown in
-:numref:`fig_mdl-la-cosine-highd`.
+:numref:`fig_mdl-la-cosine-highd`. Very low dimensions are genuinely
+different: in the plane ($d = 2$) the histogram piles up at $\pm 1$ — the
+density is arcsine-shaped, so two random directions are *more* likely to be
+nearly aligned or nearly opposed than nearly orthogonal. Raising the dimension
+reverses the picture: by $d = 10$ the histogram is a bell centered at $0$ with
+standard deviation $1/\sqrt{10} \approx 0.32$, and by $d = 1000$ it has
+collapsed into a spike of width $\approx 0.03$.
 
-![Histograms of the cosine between independent random unit vectors at dimensions $d = 2$, $10$, and $1000$. The $d = 2$ histogram is broad and flat; by $d = 1000$ it is a narrow spike at $0$ of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.](../img/mdl-la-cosine-highd.svg)
+![Histograms of the cosine between independent random unit vectors at dimensions $d = 2$, $10$, and $1000$. In $d = 2$ the mass piles up near $\pm 1$ in an arcsine-shaped density: random directions in the plane are typically far from orthogonal. In moderate dimension the histogram flattens into a bell around $0$, and by $d = 1000$ it is a narrow spike of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.](../img/mdl-la-cosine-highd.svg)
 :label:`fig_mdl-la-cosine-highd`
 
 The higher the dimension, the more sharply the cosine concentrates at $0$:
@@ -487,7 +583,7 @@ In addition to working with vectors, another key object
 that you must understand to go far in linear algebra
 is the *hyperplane*, a generalization to higher dimensions
 of a line (two dimensions) or of a plane (three dimensions).
-In an $d$-dimensional vector space, a hyperplane has $d-1$ dimensions
+In a $d$-dimensional vector space, a hyperplane has $d-1$ dimensions
 and divides the space into two half-spaces.
 
 Let's start with an example.
@@ -529,12 +625,8 @@ side $\mathbf{w}$ points toward, negative on the other, and zero exactly on it.
 This signed distance is precisely the *margin* used by linear classifiers. The
 derivation is just the projection result of the previous section applied to the
 displacement of $\mathbf{x}$ from any point on the hyperplane, which is why the
-projection material had to come first. :numref:`fig_mdl-la-hyperplane` collects
-these facts: the normal $\mathbf{w}$ as an arrow from the origin, two parallel
-level lines $\mathbf{w}\cdot\mathbf{x} = b$ for two offsets $b$ (the larger one
-shifted along $\mathbf{w}$ without any rotation), the half-space
-$\mathbf{w}\cdot\mathbf{x} > b$ lightly shaded, and the signed distance
-$b/\|\mathbf{w}\|$ from the origin to the line.
+projection material had to come first. :numref:`fig_mdl-la-hyperplane`
+collects all of these facts in a single picture.
 
 ![The hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with normal $\mathbf{w}$. Sliding the offset $b$ translates the hyperplane along $\mathbf{w}$ without rotating it; the shaded region is the half-space $\mathbf{w}\cdot\mathbf{x} > b$; and the signed distance from any point to the hyperplane is $(\mathbf{w}\cdot\mathbf{x} - b)/\|\mathbf{w}\|$, the quantity a linear classifier reads off as its margin.](../img/mdl-la-hyperplane.svg)
 :label:`fig_mdl-la-hyperplane`
@@ -663,52 +755,42 @@ ave_0 = jnp.mean(X_train_0, axis=0)
 ave_1 = jnp.mean(X_train_1, axis=0)
 ```
 
-It can be informative to examine these averages in detail, so let's plot what they look like.  In this case, we see that the average indeed resembles a blurry image of a t-shirt.
+It can be informative to examine these averages, so let's plot them side by
+side: each mean is a blurry but immediately recognizable image of its class.
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab mxnet, pytorch
-# Plot average t-shirt
-d2l.set_figsize()
-d2l.plt.imshow(ave_0.reshape(28, 28).tolist(), cmap='Greys')
+# Plot the two class means side by side
+d2l.set_figsize((6, 3))
+_, axes = d2l.plt.subplots(1, 2)
+axes[0].imshow(ave_0.reshape(28, 28).tolist(), cmap='Greys')
+axes[0].set_title('mean t-shirt')
+axes[1].imshow(ave_1.reshape(28, 28).tolist(), cmap='Greys')
+axes[1].set_title('mean trousers')
 d2l.plt.show()
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab tensorflow
-# Plot average t-shirt
-d2l.set_figsize()
-d2l.plt.imshow(tf.reshape(ave_0, (28, 28)), cmap='Greys')
+# Plot the two class means side by side
+d2l.set_figsize((6, 3))
+_, axes = d2l.plt.subplots(1, 2)
+axes[0].imshow(tf.reshape(ave_0, (28, 28)), cmap='Greys')
+axes[0].set_title('mean t-shirt')
+axes[1].imshow(tf.reshape(ave_1, (28, 28)), cmap='Greys')
+axes[1].set_title('mean trousers')
 d2l.plt.show()
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-2}
 #@tab jax
-# Plot average t-shirt
-d2l.set_figsize()
-d2l.plt.imshow(np.array(ave_0.reshape(28, 28)), cmap='Greys')
-d2l.plt.show()
-```
-
-In the second case, we again see that the average resembles a blurry image of trousers.
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
-#@tab mxnet, pytorch
-# Plot average trousers
-d2l.plt.imshow(ave_1.reshape(28, 28).tolist(), cmap='Greys')
-d2l.plt.show()
-```
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
-#@tab tensorflow
-# Plot average trousers
-d2l.plt.imshow(tf.reshape(ave_1, (28, 28)), cmap='Greys')
-d2l.plt.show()
-```
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-3}
-#@tab jax
-# Plot average trousers
-d2l.plt.imshow(np.array(ave_1.reshape(28, 28)), cmap='Greys')
+# Plot the two class means side by side
+d2l.set_figsize((6, 3))
+_, axes = d2l.plt.subplots(1, 2)
+axes[0].imshow(np.array(ave_0.reshape(28, 28)), cmap='Greys')
+axes[0].set_title('mean t-shirt')
+axes[1].imshow(np.array(ave_1.reshape(28, 28)), cmap='Greys')
+axes[1].set_title('mean trousers')
 d2l.plt.show()
 ```
 
@@ -772,6 +854,87 @@ predictions = X_test.reshape(2000, -1) @ w > b
 jnp.mean((predictions.astype(y_test.dtype) == y_test).astype(jnp.float32))
 ```
 
+The result is worth pausing over: this rule classifies about $92\%$ of the
+$2{,}000$ test images correctly, and *nothing was trained*. We computed two
+class means, took their difference as the normal $\mathbf{w}$, and asked of
+each test image only which side of one hyperplane its $784$-dimensional pixel
+vector lies on. To see the geometry of why such a crude rule works, project
+every test image onto the normal — that is, reduce each image to the single
+number $\mathbf{w}\cdot\mathbf{x}$, its (scaled) signed position along the
+direction from "mean t-shirt" to "mean trousers" — and histogram the two
+classes separately.
+
+```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
+#@tab mxnet
+# Histogram of the test images' projections onto the normal direction w
+proj = X_test.reshape(2000, -1).dot(w)
+d2l.set_figsize()
+d2l.plt.hist(proj[y_test == 0].asnumpy(), bins=50, alpha=0.6,
+             label='t-shirts')
+d2l.plt.hist(proj[y_test == 1].asnumpy(), bins=50, alpha=0.6,
+             label='trousers')
+d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
+d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
+d2l.plt.legend()
+d2l.plt.show()
+```
+
+```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
+#@tab pytorch
+# Histogram of the test images' projections onto the normal direction w
+proj = X_test.reshape(2000, -1) @ w
+d2l.set_figsize()
+d2l.plt.hist(proj[y_test == 0].numpy(), bins=50, alpha=0.6,
+             label='t-shirts')
+d2l.plt.hist(proj[y_test == 1].numpy(), bins=50, alpha=0.6,
+             label='trousers')
+d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
+d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
+d2l.plt.legend()
+d2l.plt.show()
+```
+
+```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
+#@tab tensorflow
+# Histogram of the test images' projections onto the normal direction w
+proj = tf.linalg.matvec(tf.reshape(X_test, (2000, -1)), w)
+d2l.set_figsize()
+d2l.plt.hist(tf.boolean_mask(proj, y_test == 0).numpy(), bins=50, alpha=0.6,
+             label='t-shirts')
+d2l.plt.hist(tf.boolean_mask(proj, y_test == 1).numpy(), bins=50, alpha=0.6,
+             label='trousers')
+d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
+d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
+d2l.plt.legend()
+d2l.plt.show()
+```
+
+```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
+#@tab jax
+# Histogram of the test images' projections onto the normal direction w
+proj = X_test.reshape(2000, -1) @ w
+d2l.set_figsize()
+d2l.plt.hist(np.array(proj[y_test == 0]), bins=50, alpha=0.6,
+             label='t-shirts')
+d2l.plt.hist(np.array(proj[y_test == 1]), bins=50, alpha=0.6,
+             label='trousers')
+d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
+d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
+d2l.plt.legend()
+d2l.plt.show()
+```
+
+This is the whole hyperplane story in one plot. Along the single direction
+$\mathbf{w}$, the two classes form two well-separated humps, and the dashed
+threshold — the value of $\mathbf{w}\cdot\mathbf{x}$ at the midpoint of the
+two means — cuts between them; the tails that spill across it are exactly the
+$\approx 8\%$ of images the rule misclassifies. A *learned* linear classifier, such as the softmax
+regression of :numref:`sec_softmax`, improves on this only by moving and
+tilting the same kind of boundary to cut the overlap more cleverly. A deep
+network goes one step further: it learns a new representation under which the
+two humps separate so widely that a hyperplane between them becomes trivial to
+place.
+
 ## Matrices as Linear Maps
 
 ### Linear Transformations
@@ -815,9 +978,10 @@ This is worth considering for a moment.
 We have essentially reduced an infinite problem
 (what happens to any pair of real numbers)
 to a finite one (what happens to these specific vectors).
-These vectors are an example of a *basis*,
-where we can write any vector in our space
-as a weighted sum of these *basis vectors*.
+The vectors $[1,0]^\top$ and $[0,1]^\top$ are exactly the standard basis
+$\mathbf{e}_1, \mathbf{e}_2$ from our discussion of spans and bases: because
+every vector is a (unique) weighted sum of basis vectors, knowing where a
+matrix sends a basis determines where it sends everything.
 
 Let's draw what happens when we use the specific matrix
 
@@ -829,16 +993,16 @@ $$
 $$
 
 If we look at the specific vector $\mathbf{v} = [2, -1]^\top$,
-we see this is $2\cdot[1,0]^\top + -1\cdot[0,1]^\top$,
-and thus we know that the matrix $A$ will send this to
-$2(\mathbf{A}[1,0]^\top) + -1(\mathbf{A}[0,1])^\top = 2[1, -1]^\top - [2,3]^\top = [0, -5]^\top$.
+we see this is $2\cdot[1,0]^\top - [0,1]^\top$,
+and thus we know that the matrix $\mathbf{A}$ will send this to
+$2\,\mathbf{A}[1,0]^\top - \mathbf{A}[0,1]^\top = 2[1, -1]^\top - [2,3]^\top = [0, -5]^\top$.
 If we follow this logic through carefully,
 say by considering the grid of all integer pairs of points,
 we see that what happens is that the matrix multiplication
 can skew, rotate, and scale the grid,
 but the grid structure must remain as you see in :numref:`fig_mdl-la-linear-map`.
 
-![The matrix $\mathbf{A}$ acting on the given basis vectors.  Notice how the entire grid is transported along with it.](../img/mdl-la-linear-map.svg)
+![The matrix $\mathbf{A} = \bigl(\begin{smallmatrix}1 & 2 \\ -1 & 3\end{smallmatrix}\bigr)$ acting on the plane. The basis vectors are sent to $\mathbf{A}\mathbf{e}_1 = (1, -1)^\top$ and $\mathbf{A}\mathbf{e}_2 = (2, 3)^\top$, and the entire grid is transported along with them: lines stay lines, the origin stays put, and equally spaced cells stay equally spaced. The shaded unit square maps to the shaded parallelogram --- its area will be the subject of the determinant below.](../img/mdl-la-linear-map.svg)
 :label:`fig_mdl-la-linear-map`
 
 This is the most important intuitive point
@@ -870,6 +1034,16 @@ and see where our matrix sends them,
 we can start to get a feeling for how the matrix multiplication
 distorts the entire space in whatever dimension space we are dealing with.
 
+Nothing requires the matrix to be square, either. An $m \times n$ matrix takes
+vectors with $n$ entries to vectors with $m$ entries — it is a linear map
+*between* spaces, from $\mathbb{R}^n$ to $\mathbb{R}^m$, and it is still
+determined by where it sends the $n$ basis vectors (whose images are its
+columns). A $2 \times 3$ matrix flattens three-dimensional space onto a plane;
+a $3 \times 2$ matrix lays the plane into three-dimensional space as a
+(generally tilted) plane through the origin. Every fully connected layer of a
+neural network is exactly such a map between spaces of different dimensions,
+composed with a nonlinearity.
+
 ### Orthogonal Matrices
 
 A matrix may skew, rotate, and scale, but a special and important family does
@@ -890,15 +1064,25 @@ $$
 Taking $\mathbf{y} = \mathbf{x}$ shows $\|\mathbf{Q}\mathbf{x}\| =
 \|\mathbf{x}\|$, so an orthogonal map is a rigid motion of space. Since
 $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ means $\mathbf{Q}^{-1} =
-\mathbf{Q}^\top$, such maps are trivially invertible, and as we will see in the
-next section their volume scaling is $\det\mathbf{Q} = \pm 1$ (the sign
-distinguishing rotations from reflections). Orthogonal matrices are the
-"distortion-free" linear maps, and they will turn out to be the building blocks
+\mathbf{Q}^\top$, such maps are trivially invertible, and as we will prove
+when we meet the determinant at the end of this section, their volume scaling
+is $\det\mathbf{Q} = \pm 1$ (the sign distinguishing rotations from
+reflections). Orthogonal matrices are the "distortion-free" linear maps, and
+they will turn out to be the building blocks
 of the two decompositions in the sections that follow: the spectral theorem
 writes a symmetric matrix as $\mathbf{Q}\boldsymbol\Lambda\mathbf{Q}^\top$
 (:numref:`sec_mdl-eigendecompositions`), and the singular value decomposition
 writes *any* matrix as orthogonal–diagonal–orthogonal
 (:numref:`sec_mdl-svd-low-rank`).
+
+Where do orthonormal columns come from in the first place? Any linearly
+independent collection can be converted into an orthonormal basis of its span
+by the *Gram–Schmidt process*: walk through the vectors in order, subtract
+from each one its projection :eqref:`eq_mdl-projection` onto each direction
+already produced, and normalize what remains. In matrix form this algorithm is
+the *QR factorization*. We will not need its details in this chapter — it is
+enough to know that orthonormal bases are cheap to manufacture, which is one
+reason the decompositions built from them are so practical.
 
 ### Linear Dependence, Rank, and Invertibility
 
@@ -917,9 +1101,10 @@ The answer is that indeed we can.
 Let's take $\mathbf{b}_1 = [2,4]^\top$ and $\mathbf{b}_2 = [-1, -2]^\top$
 be the two columns of $\mathbf{B}$.
 Remember that we can write everything transformed by the matrix $\mathbf{B}$
-as a weighted sum of the columns of the matrix:
-like $a_1\mathbf{b}_1 + a_2\mathbf{b}_2$.
-We call this a *linear combination*.
+as a linear combination of the columns of the matrix,
+like $a_1\mathbf{b}_1 + a_2\mathbf{b}_2$ —
+in the language of spans, the outputs of $\mathbf{B}$ fill out exactly its
+column space.
 The fact that $\mathbf{b}_1 = -2\cdot\mathbf{b}_2$
 means that we can write any linear combination of those two columns
 entirely in terms of say $\mathbf{b}_2$ since
@@ -946,7 +1131,7 @@ $\mathbf{v}_1, \ldots, \mathbf{v}_k$ are *linearly dependent*
 if there exist coefficients $a_1, \ldots, a_k$ *not all equal to zero* so that
 
 $$
-\sum_{i=1}^k a_i\mathbf{v_i} = 0.
+\sum_{i=1}^k a_i\mathbf{v}_i = 0.
 $$
 
 In this case, we can solve for one of the vectors
@@ -955,9 +1140,10 @@ and effectively render it redundant.
 Thus, a linear dependence in the columns of a matrix
 is a witness to the fact that our matrix
 is compressing the space down to some lower dimension.
-If there is no linear dependence we say the vectors are *linearly independent*.
-If the columns of a matrix are linearly independent,
-no compression occurs and the operation can be undone.
+If there is no linear dependence we say the vectors are *linearly
+independent* — the same notion we met when defining bases, now read as a
+property of a matrix's columns. If the columns of a matrix are linearly
+independent, no compression occurs and the operation can be undone.
 
 #### Rank
 
@@ -978,7 +1164,7 @@ $$
 $$
 
 has $\textrm{rank}(B)=1$, since the two columns are linearly dependent,
-but either column by itself is not linearly dependent.
+while each column on its own is linearly independent.
 For a more challenging example, we can consider
 
 $$
@@ -994,11 +1180,12 @@ and show that $\mathbf{C}$ has rank two since, for instance,
 the first two columns are linearly independent,
 however any of the $\binom{5}{3} = 10$ collections of three columns are linearly dependent.
 
-Equivalently, the rank is the dimension of the *column space* (the span of the
-columns), and a foundational theorem of linear algebra says this equals the
-dimension of the *row space*. A matrix "compresses space" into a lower dimension
-exactly when its rank is smaller than its number of columns --- equivalently, when
-it has a nontrivial null space (some nonzero $\mathbf{x}$ with $\mathbf{A}\mathbf{x}=\mathbf{0}$).
+Equivalently, the rank is the *dimension of the column space* we defined
+alongside spans and bases, and a foundational theorem of linear algebra says
+this equals the dimension of the *row space*, the span of the rows. A matrix
+"compresses space" into a lower dimension exactly when its rank is smaller
+than its number of columns --- equivalently, when its null space contains some
+nonzero vector.
 
 This procedure, as described, is very inefficient.
 It requires looking at every subset of the columns of our given matrix,
@@ -1108,6 +1295,9 @@ $$
 
 Just as division by a small number can lead to numerical instability,
 so can inversion of a matrix which is close to having low rank.
+In code, this is the difference between calling `linalg.solve(A, b)` — which
+every framework provides, and which factorizes $\mathbf{A}$ without ever
+forming its inverse — and the tempting but inferior `inv(A) @ b`.
 
 Moreover, it is common that the matrix $\mathbf{A}$ is *sparse*,
 which is to say that it contains only a small number of non-zero values.
@@ -1127,27 +1317,23 @@ and generally avoiding inversion in practice is a good rule of thumb.
 ### The Determinant
 The geometric view of linear algebra gives an intuitive way
 to interpret a fundamental quantity known as the *determinant*.
-Consider the grid image from before, but now with a highlighted region (:numref:`fig_mdl-la-determinant`).
-
-![The determinant as a signed area. The unit square spanned by the basis vectors maps to the parallelogram spanned by the columns of $\mathbf{A}$; its (signed) area is the determinant. A matrix that flips orientation gives a negative determinant, and a matrix that collapses the square to a segment gives a determinant of zero.](../img/mdl-la-determinant.svg)
-:label:`fig_mdl-la-determinant`
-
-Look at the highlighted square.  This is a square with edges given
-by $(0, 1)$ and $(1, 0)$ and thus it has area one.
-After $\mathbf{A}$ transforms this square,
-we see that it becomes a parallelogram.
-There is no reason this parallelogram should have the same area
-that we started with, and indeed in the specific case shown here of
+Return to the grid picture of :numref:`fig_mdl-la-linear-map` and watch the
+shaded unit square --- the square with edges $\mathbf{e}_1 = (1,0)^\top$ and
+$\mathbf{e}_2 = (0,1)^\top$, hence with area one. The matrix
 
 $$
 \mathbf{A} = \begin{bmatrix}
 1 & 2 \\
 -1 & 3
-\end{bmatrix},
+\end{bmatrix}
 $$
 
-it is an exercise in coordinate geometry to compute
-the area of this parallelogram and obtain that the area is $5$.
+carries it to the shaded parallelogram with edges
+$\mathbf{A}\mathbf{e}_1 = [1, -1]^\top$ and $\mathbf{A}\mathbf{e}_2 = [2, 3]^\top$.
+There is no reason this parallelogram should have the same area
+that we started with, and indeed an exercise in coordinate geometry
+shows that its area is exactly $5$: this particular matrix
+quintuples areas.
 
 In general, if we have a matrix
 
@@ -1160,39 +1346,49 @@ $$
 
 we can see with some computation that the area
 of the resulting parallelogram is $ad-bc$.
-This area is referred to as the *determinant*.
+This area is referred to as the *determinant*, written $\det\mathbf{A}$.
 
-Let's check this quickly with some example code.
+Let's quickly confirm the worked example in code: for the matrix
+$\mathbf{A}$ above the determinant should come out to
+$1 \cdot 3 - 2 \cdot (-1) = 5$.
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab mxnet
-np.linalg.det(np.array([[1, -1], [2, 3]]))
+np.linalg.det(np.array([[1, 2], [-1, 3]]))
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab pytorch
-torch.det(torch.tensor([[1, -1], [2, 3]], dtype=torch.float32))
+torch.det(torch.tensor([[1, 2], [-1, 3]], dtype=torch.float32))
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab tensorflow
-tf.linalg.det(tf.constant([[1, -1], [2, 3]], dtype=tf.float32))
+tf.linalg.det(tf.constant([[1, 2], [-1, 3]], dtype=tf.float32))
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 #@tab jax
-jnp.linalg.det(jnp.array([[1, -1], [2, 3]], dtype=jnp.float32))
+jnp.linalg.det(jnp.array([[1, 2], [-1, 3]], dtype=jnp.float32))
 ```
 
 The eagle-eyed amongst us will notice
-that this expression can be zero or even negative.
-For the negative term, this is a matter of convention
-taken generally in mathematics:
-if the matrix flips the figure,
-we say the area is negated.
-Let's see now that when the determinant is zero, we learn more.
+that the expression $ad - bc$ can be zero or even negative, and
+:numref:`fig_mdl-la-determinant` shows the three possible regimes side by
+side, each for a different matrix: a positive determinant, where the unit
+square maps to a parallelogram of area $\det\mathbf{A}$; a negative
+determinant, where the parallelogram has area $|\det\mathbf{A}|$ but the map
+has *flipped the orientation* of the plane (the images of $\mathbf{e}_1$ and
+$\mathbf{e}_2$ have traded sides); and a zero determinant, where the square is
+crushed to a segment. The negative case is a matter of convention taken
+generally in mathematics: if the matrix flips the figure, we say the area is
+negated.
 
-Let's consider
+![The determinant as a signed area, shown for three different matrices. The unit square spanned by the basis vectors (dashed) maps to the parallelogram spanned by the columns of each matrix, and the signed area of that parallelogram is the determinant: (a) positive; (b) negative, because the matrix flips orientation; (c) zero, because the matrix collapses the square to a segment.](../img/mdl-la-determinant.svg)
+:label:`fig_mdl-la-determinant`
+
+Let's see now that when the determinant is zero, we learn more.
+Consider
 
 $$
 \mathbf{B} = \begin{bmatrix}
@@ -1203,8 +1399,9 @@ $$
 If we compute the determinant of this matrix,
 we get $2\cdot(-2 ) - 4\cdot(-1) = 0$.
 Given our understanding above, this makes sense.
-$\mathbf{B}$ compresses the square from the original image
-down to a line segment, which has zero area.
+$\mathbf{B}$ compresses the unit square
+down to a line segment, which has zero area ---
+the situation of panel (c) in :numref:`fig_mdl-la-determinant`.
 And indeed, being compressed into a lower dimensional space
 is the only way to have zero area after the transformation.
 Thus we see the following result is true:
@@ -1264,8 +1461,25 @@ each one of which has area given by the determinant.
 We see that for any figure, the determinant gives the (signed) number
 that a matrix scales the area of any figure.
 
-This "scale every figure's area by the same factor" reading has an immediate and
-powerful consequence for *composing* two transformations.
+This "scale every figure's area by the same factor" reading has an immediate
+and powerful consequence for *composing* two transformations. First, a fact
+worth stating on its own: **matrix multiplication is composition of linear
+maps**. Applying $\mathbf{B}$ and then $\mathbf{A}$ to an input $\mathbf{v}$
+produces $\mathbf{A}(\mathbf{B}\mathbf{v})$, and writing out components,
+
+$$
+\bigl(\mathbf{A}(\mathbf{B}\mathbf{v})\bigr)_i
+ = \sum_j a_{ij} (\mathbf{B}\mathbf{v})_j
+ = \sum_j \sum_k a_{ij} b_{jk} v_k
+ = \bigl((\mathbf{A}\mathbf{B})\mathbf{v}\bigr)_i,
+$$
+
+so running the two maps in turn is the same as applying the single matrix
+$\mathbf{A}\mathbf{B}$. This is the real reason matrix multiplication is
+defined by the row-times-column rule — and it explains why the product is
+associative but not commutative: composing functions in the other order
+generally gives a different function. With composition in hand, the
+multiplicativity of the determinant is almost immediate.
 
 **Proposition (multiplicativity of the determinant).** *For square matrices
 $\mathbf{A}$ and $\mathbf{B}$ of the same size,*
@@ -1287,7 +1501,7 @@ expressions and cancelling $V$ (true for any figure, so for one of nonzero area)
 gives the claim. The signed version is consistent too, because each map
 contributes its own orientation flip independently. $\blacksquare$
 
-Two consequences follow without any further work. Taking
+Three consequences follow without any further work. First, taking
 $\mathbf{B} = \mathbf{A}^{-1}$ in :eqref:`eq_mdl-det-multiplicative` and using
 $\det(\mathbf{I}) = 1$ (the identity moves no volume) gives
 
@@ -1297,7 +1511,22 @@ $$
 
 which also re-confirms the unifying theorem: an inverse can exist only when
 $\det(\mathbf{A}) \neq 0$, since otherwise the right-hand side is undefined.
-And looking ahead, multiplicativity is exactly what makes the determinant
+Second, we can pay off the promissory note from the orthogonal-matrices
+subsection. Transposing a matrix does not change its determinant,
+$\det\mathbf{M}^\top = \det\mathbf{M}$ — visible at a glance in two
+dimensions, where both equal $ad - bc$, and true in every dimension. For an
+orthogonal matrix $\mathbf{Q}$, multiplicativity applied to
+$\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ then gives
+
+$$
+\det(\mathbf{Q})^2 = \det(\mathbf{Q}^\top)\det(\mathbf{Q})
+ = \det(\mathbf{Q}^\top\mathbf{Q}) = \det(\mathbf{I}) = 1,
+$$
+
+so $\det\mathbf{Q} = \pm 1$: a rigid motion leaves every area and volume
+unchanged in magnitude, and the sign records whether it is a pure rotation
+($+1$) or involves a reflection ($-1$).
+Third, and looking ahead, multiplicativity is exactly what makes the determinant
 factor cleanly through a diagonalization: once we can write a matrix in terms of
 its eigenvalues in :numref:`sec_mdl-eigendecompositions`, this same identity will
 show that the determinant is simply the *product of the eigenvalues*,
@@ -1311,207 +1540,87 @@ that $n\times n$ matrices scale $n$-dimensional volumes.
 
 ## Tensors and Einstein Summation
 
-In :numref:`sec_linear-algebra` the concept of tensors was introduced.
-In this section, we will dive more deeply into tensor contractions
-(the tensor equivalent of matrix multiplication),
-and see how it can provide a unified view
-on a number of matrix and vector operations.
-
-With matrices and vectors we knew how to multiply them to transform data.
-We need to have a similar definition for tensors if they are to be useful to us.
-Think about matrix multiplication:
+We close with a half page of notation that will pay for itself many times
+over. Every product in this section — dot products, matrix–vector products,
+matrix products, traces — follows one pattern: multiply entries, then sum over
+the index that appears twice,
 
 $$
-\mathbf{C} = \mathbf{A}\mathbf{B},
+\mathbf{v} \cdot \mathbf{w} = \sum_i v_i w_i,
+\qquad
+(\mathbf{A}\mathbf{v})_i = \sum_j a_{ij} v_j,
+\qquad
+(\mathbf{A}\mathbf{B})_{ik} = \sum_j a_{ij} b_{jk},
+\qquad
+\textrm{tr}(\mathbf{A}) = \sum_i a_{ii}.
 $$
 
-or equivalently
-
-$$ c_{i, j} = \sum_{k} a_{i, k}b_{k, j}.$$
-
-This pattern is one we can repeat for tensors.
-For tensors, there is no one case of what
-to sum over that can be universally chosen,
-so we need specify exactly which indices we want to sum over.
-For instance we could consider
-
-$$
-y_{il} = \sum_{jk} x_{ijkl}a_{jk}.
-$$
-
-Such a transformation is called a *tensor contraction*.
-It can represent a far more flexible family of transformations
-that matrix multiplication alone.
-
-As an often-used notational simplification,
-we can notice that the sum is over exactly those indices
-that occur more than once in the expression,
-thus people often work with *Einstein notation*,
-where the summation is implicitly taken over all repeated indices.
-This gives the compact expression:
-
-$$
-y_{il} = x_{ijkl}a_{jk}.
-$$
-
-### Common Examples from Linear Algebra
-
-Let's see how many of the linear algebraic definitions
-we have seen before can be expressed in this compressed tensor notation:
-
-* $\mathbf{v} \cdot \mathbf{w} = \sum_i v_iw_i$
-* $\|\mathbf{v}\|_2^{2} = \sum_i v_iv_i$
-* $(\mathbf{A}\mathbf{v})_i = \sum_j a_{ij}v_j$
-* $(\mathbf{A}\mathbf{B})_{ik} = \sum_j a_{ij}b_{jk}$
-* $\textrm{tr}(\mathbf{A}) = \sum_i a_{ii}$
-
-In this way, we can replace a myriad of specialized notations with short tensor expressions.
-
-### Expressing in Code
-Tensors may flexibly be operated on in code as well.
-As seen in :numref:`sec_linear-algebra`,
-we can create tensors as is shown below.
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
-#@tab mxnet
-# Define tensors
-B = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
-A = np.array([[1, 2], [3, 4]])
-v = np.array([1, 2])
-
-# Print out the shapes
-A.shape, B.shape, v.shape
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
-#@tab pytorch
-# Define tensors
-B = torch.tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
-A = torch.tensor([[1, 2], [3, 4]])
-v = torch.tensor([1, 2])
-
-# Print out the shapes
-A.shape, B.shape, v.shape
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
-#@tab tensorflow
-# Define tensors
-B = tf.constant([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
-A = tf.constant([[1, 2], [3, 4]])
-v = tf.constant([1, 2])
-
-# Print out the shapes
-A.shape, B.shape, v.shape
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-1}
-#@tab jax
-# Define tensors
-B = jnp.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
-A = jnp.array([[1, 2], [3, 4]])
-v = jnp.array([1, 2])
-
-# Print out the shapes
-A.shape, B.shape, v.shape
-```
-
-Einstein summation has been implemented directly.
-The indices that occur in the Einstein summation can be passed as a string,
-followed by the tensors that are being acted upon.
-For instance, to implement matrix multiplication,
-we can consider the Einstein summation seen above
-($\mathbf{A}\mathbf{v} = a_{ij}v_j$)
-and strip out the indices themselves to get the implementation:
+*Einstein notation* makes the pattern the entire definition: write the indexed
+factors, drop the summation sign, and sum over every index that appears more
+than once. Thus $\mathbf{v}\cdot\mathbf{w} = v_i w_i$ and
+$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$. The same rule extends unchanged
+to tensors with any number of axes, where a general *tensor contraction* such
+as $y_{il} = x_{ijkl}\,a_{jk}$ (summing over $j$ and $k$) has no tidy matrix
+notation at all. That is why every framework exposes the rule directly as
+`einsum`: spell out the index pattern as a string, and the framework performs
+the contraction.
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab mxnet
-# Reimplement matrix multiplication
-np.einsum("ij, j -> i", A, v), A.dot(v)
+A = np.array([[1.0, 2.0], [-1.0, 3.0]])
+v = np.array([2.0, -1.0])
+(np.einsum('i,i->', v, v),      # dot product: v.v
+ np.einsum('ij,j->i', A, v),    # matrix-vector product: Av
+ np.einsum('ij,jk->ik', A, A),  # matrix product: AA
+ np.einsum('ii->', A))          # trace: tr(A)
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab pytorch
-# Reimplement matrix multiplication
-torch.einsum("ij, j -> i", A, v), A@v
+A = torch.tensor([[1.0, 2.0], [-1.0, 3.0]])
+v = torch.tensor([2.0, -1.0])
+(torch.einsum('i,i->', v, v),      # dot product: v.v
+ torch.einsum('ij,j->i', A, v),    # matrix-vector product: Av
+ torch.einsum('ij,jk->ik', A, A),  # matrix product: AA
+ torch.einsum('ii->', A))          # trace: tr(A)
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab tensorflow
-# Reimplement matrix multiplication
-tf.einsum("ij, j -> i", A, v), tf.matmul(A, tf.reshape(v, (2, 1)))
+A = tf.constant([[1.0, 2.0], [-1.0, 3.0]])
+v = tf.constant([2.0, -1.0])
+(tf.einsum('i,i->', v, v),      # dot product: v.v
+ tf.einsum('ij,j->i', A, v),    # matrix-vector product: Av
+ tf.einsum('ij,jk->ik', A, A),  # matrix product: AA
+ tf.einsum('ii->', A))          # trace: tr(A)
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 #@tab jax
-# Reimplement matrix multiplication
-jnp.einsum("ij, j -> i", A, v), A @ v
+A = jnp.array([[1.0, 2.0], [-1.0, 3.0]])
+v = jnp.array([2.0, -1.0])
+(jnp.einsum('i,i->', v, v),      # dot product: v.v
+ jnp.einsum('ij,j->i', A, v),    # matrix-vector product: Av
+ jnp.einsum('ij,jk->ik', A, A),  # matrix product: AA
+ jnp.einsum('ii->', A))          # trace: tr(A)
 ```
 
-This is a highly flexible notation.
-For instance if we want to compute
-what would be traditionally written as
-
-$$
-c_{kl} = \sum_{ij} \mathbf{b}_{ijk}\mathbf{a}_{il}v_j.
-$$
-
-it can be implemented via Einstein summation as:
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
-#@tab mxnet
-np.einsum("ijk, il, j -> kl", B, A, v)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
-#@tab pytorch
-torch.einsum("ijk, il, j -> kl", B, A, v)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
-#@tab tensorflow
-tf.einsum("ijk, il, j -> kl", B, A, v)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-3}
-#@tab jax
-jnp.einsum("ijk, il, j -> kl", B, A, v)
-```
-
-This notation is readable and efficient for humans,
-however bulky if for whatever reason
-we need to generate a tensor contraction programmatically.
-For this reason, `einsum` provides an alternative notation
-by providing integer indices for each tensor.
-For example, the same tensor contraction can also be written as:
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
-#@tab mxnet
-# MXNet does not support this type of notation.
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
-#@tab pytorch
-torch.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
-#@tab tensorflow
-# TensorFlow does not support this type of notation.
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-4}
-#@tab jax
-jnp.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
-```
-
-Either notation allows for concise and efficient representation of tensor contractions in code.
+The matrix here is our friend $\mathbf{A}$ from
+:numref:`fig_mdl-la-linear-map` and the vector is $\mathbf{v} = [2, -1]^\top$,
+so the second entry of the output reproduces the worked example
+$\mathbf{A}\mathbf{v} = [0, -5]^\top$. Reading index strings like
+`'ij,jk->ik'` is a skill worth acquiring: batched matrix products
+(`'bij,bjk->bik'`), attention scores, and many custom layers are one `einsum`
+call away, and we will reach for the notation whenever a computation is easier
+to state in indices than in matrices.
 
 ## Summary
 * Vectors can be interpreted geometrically as either points or directions in space.
 * Dot products define the notion of angle to arbitrarily high-dimensional spaces.
+* Spans, subspaces, and bases organize collections of vectors: a basis assigns every vector of a subspace unique coordinates, and the dimension counts the basis vectors. The column space and null space of a matrix record what it can produce and what it destroys.
 * Hyperplanes are high-dimensional generalizations of lines and planes.  They can be used to define decision planes that are often used as the last step in a classification task.
-* Matrix multiplication can be geometrically interpreted as uniform distortions of the underlying coordinates. They represent a very restricted, but mathematically clean, way to transform vectors.
+* Matrix multiplication can be geometrically interpreted as uniform distortions of the underlying coordinates. They represent a very restricted, but mathematically clean, way to transform vectors. Multiplying two matrices composes the corresponding maps.
+* Orthogonal matrices are the rigid motions: they preserve lengths, angles, and (up to a sign recording reflections) volumes.
 * Linear dependence is a way to tell when a collection of vectors are in a lower dimensional space than we would expect (say you have $3$ vectors living in a $2$-dimensional space). The rank of a matrix is the size of the largest subset of its columns that are linearly independent.
 * When a matrix's inverse is defined, matrix inversion allows us to find another matrix that undoes the action of the first. Matrix inversion is useful in theory, but requires care in practice owing to numerical instability.
 * Determinants allow us to measure how much a matrix expands or contracts a space. A nonzero determinant implies an invertible (non-singular) matrix and a zero-valued determinant means that the matrix is non-invertible (singular).
@@ -1542,6 +1651,10 @@ $$
 6. The vectors $e_1 = \begin{bmatrix}1\\0\end{bmatrix}$ and $e_2 = \begin{bmatrix}0\\1\end{bmatrix}$ are orthogonal.  What is the condition on a matrix $A$ so that $Ae_1$ and $Ae_2$ are orthogonal?
 7. How can you write $\textrm{tr}(\mathbf{A}^4)$ in Einstein notation for an arbitrary matrix $A$?
 8. Consider the hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with $\mathbf{w} = [3,4]^\top$ and $b = 10$.  What is the signed distance from the point $\mathbf{x} = [1,1]^\top$ to this hyperplane, and on which side of it does $\mathbf{x}$ lie?
+9. The proof of Cauchy–Schwarz shows that equality holds exactly when one vector is a scalar multiple of the other. Use this to characterize when the triangle inequality $\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$ holds with equality, and check your characterization on $\mathbf{v} = [1,2]^\top$ paired first with $\mathbf{w} = [2,4]^\top$ and then with $\mathbf{w} = [-1,-2]^\top$.
+10. Compute the projection $\operatorname{proj}_{\mathbf{w}}\mathbf{v}$ of $\mathbf{v} = [1,2,3]^\top$ onto $\mathbf{w} = [1,1,1]^\top$. Verify that the residual is orthogonal to $\mathbf{w}$ and confirm the Pythagorean identity :eqref:`eq_mdl-pythagoras` numerically.
+11. In code: sample $1{,}000$ pairs of random unit vectors in $d = 10{,}000$ dimensions (draw Gaussian vectors and normalize them) and compute the cosine of the angle for each pair. Compare the empirical standard deviation to the predicted $1/\sqrt{d} = 0.01$, and report the largest $|\cos\theta|$ you observe.
+12. Show that an orthogonal matrix $\mathbf{Q}$ preserves angles: for nonzero $\mathbf{x}$ and $\mathbf{y}$, the angle between $\mathbf{Q}\mathbf{x}$ and $\mathbf{Q}\mathbf{y}$ equals the angle between $\mathbf{x}$ and $\mathbf{y}$. Conclude that rotating every embedding vector in a dataset by the same orthogonal matrix leaves all cosine similarities unchanged.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/410)
@@ -1590,6 +1703,15 @@ learning:
 @geometry-linear-algebraic-ops-dot-products-and-angles
 :::
 
+::: {.slide title="Span, basis, dimension"}
+- *Span*: everything reachable by scaling and adding a set of vectors.
+- *Basis*: an independent spanning set — every vector gets
+  **unique** coordinates.
+- *Dimension*: the size of any basis.
+- For a matrix: the *column space* is what it can produce,
+  the *null space* is what it destroys.
+:::
+
 ::: {.slide title="Hyperplanes as classifiers"}
 A hyperplane is the set
 $\{\mathbf{x} : \mathbf{w}^\top \mathbf{x} = b\}$.
@@ -1606,13 +1728,14 @@ product gives the prediction. Most of deep learning is
 
 ::: {.slide title="Hyperplanes (cont.)"}
 Changing $\mathbf{w}$ rotates the boundary; changing $b$ shifts it.
-Normalized distance to the boundary is a margin.
+Normalized distance to the boundary is a margin. Projecting onto
+$\mathbf{w}$ shows the two classes as two humps split by the threshold:
 
-@geometry-linear-algebraic-ops-hyperplanes-3
+@geometry-linear-algebraic-ops-hyperplanes-4
 
 . . .
 
-@geometry-linear-algebraic-ops-hyperplanes-4
+@geometry-linear-algebraic-ops-projection-histogram
 :::
 
 ::: {.slide title="Invertibility and determinant"}
@@ -1627,25 +1750,13 @@ factor:
 @geometry-linear-algebraic-ops-determinant
 :::
 
-::: {.slide title="In code"}
-Translate all of this into NumPy / PyTorch:
-
-@geometry-linear-algebraic-ops-expressing-in-code-1
-
-. . .
+::: {.slide title="Einstein summation"}
+One rule: sum over every repeated index —
+$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$.
+A single `einsum` string expresses dot products, matrix–vector and
+matrix–matrix products, and traces, in every framework:
 
 @geometry-linear-algebraic-ops-expressing-in-code-2
-:::
-
-::: {.slide title="In code (cont.)"}
-These final snippets connect the geometric ideas to the actual
-linear-algebra APIs for norms, determinants, and inverses.
-
-@geometry-linear-algebraic-ops-expressing-in-code-3
-
-. . .
-
-@geometry-linear-algebraic-ops-expressing-in-code-4
 :::
 
 ::: {.slide title="Recap"}

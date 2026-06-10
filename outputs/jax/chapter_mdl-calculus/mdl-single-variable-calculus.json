@@ -9,12 +9,12 @@
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:2d8dd4d60ad849833afea6c36d883d996f512d56907ee4697b38cb2eb4919cff",
+      "code_fingerprint": "sha256:0f26c05dca214079767cdf77dd2af1da549b2047f2caaed940fca66ea19f311a",
       "kind": "text",
       "outputs": [
         {
@@ -24,8 +24,19 @@
         }
       ]
     },
+    "single-variable-calculus-autograd-check": {
+      "code_fingerprint": "sha256:a30b624c6ee967acd2aa34c1e19170abd0537d33e0a36492f89161f800c8e252",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "autograd: f'(4) = 8.0\n"
+        }
+      ]
+    },
     "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:e6531e5a477bfcf9aaae688027e6c92b8c8eb204f5a2df05d607641b4d896e9a",
+      "code_fingerprint": "sha256:d1d798fb42e74e07f1f82c49618b35ebdd8920d942e557ceba1ced2e95e14041",
       "kind": "asset",
       "outputs": [
         {
@@ -33,36 +44,41 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15837,
-          "sha256": "sha256:947e59711e8a33c7496a1476e0976401d0524e8991a3f6d32775e71d3bcd895f"
+          "sha256": "sha256:235219568eafd48453adacd2a7fd5e30f752917fbec86a20b98afc15d0b0eb54"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:582cf52962a1bac6a945e822ddacef6035c56a27b71e416974ada200b5cbec5a",
-      "kind": "text",
+      "code_fingerprint": "sha256:3ff9c72d153e76e0387d279b27942f00c7d1cdd92126e537e152065c0b897234",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "eta = 0.05 -> x_10 = +0.34868\neta = 0.50 -> x_10 = +0.00000\neta = 0.90 -> x_10 = +0.10737\neta = 1.00 -> x_10 = +1.00000\neta = 1.10 -> x_10 = +6.19174\n"
-        }
-      ]
-    },
-    "single-variable-calculus-higher-order-derivatives": {
-      "code_fingerprint": "sha256:bf34e98f10f3f746f5b7fb1166b60d8b5adec594ddb0634ed40eeb274cf2f574",
-      "kind": "asset",
-      "outputs": [
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
-          "bytes": 17888,
-          "sha256": "sha256:26fbd65a14a05e9a4367097e9fec7bd85db81a9022939d981af5bdb483465ece"
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
+          "bytes": 25211,
+          "sha256": "sha256:9572837d6fe166670a7def1b3b9690e41dcb797a3d229f3f6be3acd80d10b255"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-error-rate": {
+      "code_fingerprint": "sha256:b391744d52adfa84d77f85e07560d6bcc6993e72e8c70b532c4e91d04e37ade4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 1: max error 2.1e-02 (h = 0.2) vs 5.2e-03 (h = 0.1), ratio = 4.1, prediction 2^2 = 4\nn = 2: max error 1.4e-03 (h = 0.2) vs 1.7e-04 (h = 0.1), ratio = 8.2, prediction 2^3 = 8\nn = 3: max error 6.9e-05 (h = 0.2) vs 4.3e-06 (h = 0.1), ratio = 16.3, prediction 2^4 = 16\n"
         }
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:2bb4050be5f69d4c353184407dfe528e4acc5e0452d67578c3b0891d4eb6698b",
+      "code_fingerprint": "sha256:65ecc62230d48dd24adecba1d269bd5b3108daa4875b6035e364438b4be7bc24",
       "kind": "asset",
       "outputs": [
         {
@@ -70,12 +86,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28558,
-          "sha256": "sha256:34dd04beb22e13082de2e11b1c1c22acd43b988a0b4066bd8342a10c984f054f"
+          "sha256": "sha256:d7d19ee45918d1d988096f44d2a7137aa536e13dd4741f45786946ac6799008f"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:612b6747427c2cbf95864f051c78a973e6b4543c843bb9f385de3ed5dcfa7590",
+      "code_fingerprint": "sha256:72fb276bbb8029d16586e4aef20b561230b1584e5adff934cb49e5db7720bc7e",
       "kind": "text",
       "outputs": [
         {

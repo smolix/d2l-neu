@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-numerical-stability-conditioning.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerical-stability-conditioning-imports": {
+      "code_fingerprint": "sha256:477f0a7f92acb2ac013503704ab72121e239bb17be7cf4daa2a4e64fbbca861a",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-conditioning-finfo": {
+      "code_fingerprint": "sha256:31892f84f621cf31c1963b83c491a01e8b09070bd212ee1f8942e74183425645",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     dtype          eps   smallest normal          max\n   float16    9.766e-04         6.104e-05    6.550e+04\n  bfloat16    7.812e-03         1.175e-38    3.390e+38\n   float32    1.192e-07         1.175e-38    3.403e+38\nbfloat16 eps equals 2^-7: True\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-spacing": {
+      "code_fingerprint": "sha256:dccd88b28d93bdf41243dd11c92621e3d9dcdeb8b88070240fc0d15c17330a70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 + eps   != 1 : True\n1 + eps/2 == 1 : True\ngap between adjacent float32 values near 1    : 1.1920929e-07\ngap between adjacent float32 values near 2^20 : 0.125\nfloat16: exp(x) overflows for x > 11.09\nfloat32: exp(x) overflows for x > 88.72\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-stable-softmax": {
+      "code_fingerprint": "sha256:ec5d5655facecedc5d94dedf4cbc49773f0260cd9b9d20491cf33ea26358dcb6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive,  logits z      : [0.09003057 0.24472848 0.66524094]\nnaive,  logits z + 100: [nan nan nan]\nstable, logits z + 100: [0.09003057 0.24472848 0.66524094]\nnaive and stable agree where both work: True\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-logsumexp": {
+      "code_fingerprint": "sha256:6c7188531f04e46483a39cb71d199b48532dab6d308722cf878c0abc175d51ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive  log(sum(exp(z))) : inf\nstable log_sum_exp(z)   : 1002.4076\nlog softmax             : [-2.4075928  -1.4075928  -0.40759277]\nprobabilities sum to 1  : 1.000013\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-cross-entropy": {
+      "code_fingerprint": "sha256:fc8022c0397e42a4ab2cdec44ea6dc4bf99a9b517ded338181d37f6d3709ab5c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gap    CE from logits    CE via probabilities\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   20          20.0000          20.0000\n   60          60.0000          60.0000\n  103         103.0000              inf\n  104         104.0000              inf\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-log1p": {
+      "code_fingerprint": "sha256:b6b9d951b1bf66ddef7e20d1c3789c2b7568e0d1a5e18213fa53b9476d281655",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 rounds 1 + x to     : 1.0\nlog(1 + x) = 0.0    log1p(x) = 1e-08\na - b in float32            : 2.3841858e-07   (true value 3.0e-07)\namplification (|a|+|b|)/|a-b| ~ 8.4e+06\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-welford": {
+      "code_fingerprint": "sha256:28d8dbd119cf9c6c0387a3e6c9001ee21b0369359f9f4b9fc12c74e875d63111",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive E[x^2] - E[x]^2 :   384.000000\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-hilbert": {
+      "code_fingerprint": "sha256:59e75e03048e2ee4ef36a4a97604c6414370f3192c85008f360e7856d4c259a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " n      kappa   log10 kappa   forward error  correct digits  backward error\n 4    1.6e+04       4.2         3.1e-14         13.5         0.0e+00\n 6    1.5e+07       7.2         1.3e-10          9.9         4.0e-17\n 8    1.5e+10      10.2         8.3e-08          7.1         1.2e-16\n10    1.6e+13      13.2         3.8e-04          3.4         1.1e-16\n12    1.7e+16      16.2         1.0e-01          1.0         9.1e-17\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-normal-equations": {
+      "code_fingerprint": "sha256:aa77624da5318ca74a48ae36f4919eb96fd7c3bc5e13f60889fb880f7fc656a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa(A) = 1.0e+05   kappa(A^T A) = 1.0e+10\nnormal equations: relative error 2.2e-07  (6.7 correct digits)\nSVD (lstsq)     : relative error 1.0e-13  (13.0 correct digits)\n"
+        }
+      ]
+    },
+    "numerical-stability-conditioning-ridge": {
+      "code_fingerprint": "sha256:cc113342f5913175598b24e37bf708f3d3d65e409c8173639e9bd48a45675574",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iterations / kappa: [5.89 5.9  5.94 5.99 6.06 6.15 6.19 6.25 6.  ]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
+          "bytes": 40773,
+          "sha256": "sha256:a6eebd966686efc912bbb065d508daa69bb668b6638483bf983d1aa356535c80"
+        }
+      ]
+    }
+  }
+}

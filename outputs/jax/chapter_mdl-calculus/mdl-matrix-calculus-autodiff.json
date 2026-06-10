@@ -9,12 +9,12 @@
   },
   "cells": {
     "matrix-calculus-autodiff-imports": {
-      "code_fingerprint": "sha256:72c8ffe765144daee3db7148c63ee751b4d7a834abd1736ca5bb5293f8b8d3a8",
+      "code_fingerprint": "sha256:6ede77cccd384bc37ba80fc7c8574c092a8b23ce58d91f5313ce5a72436f9b9e",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-jacobian-finite-diff": {
-      "code_fingerprint": "sha256:26e7d84fc407ef01eb3b1ff11ba820d7f7f24d2f1ca5e47970ba52d81869e566",
+      "code_fingerprint": "sha256:ce9587591ef2872440c76e384691bbe6642a2c872c5370f2fc8818ae2ab8c682",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:e784886ab2356c8e91986b64cea883bfa8646d1d3253d03e0d55e1f1801eacf1",
+      "code_fingerprint": "sha256:8b7ad9575a84eeb9d2cc56bffcc0c456b70e85d8f3bc807431a689db7ae353de",
       "kind": "text",
       "outputs": [
         {
@@ -41,12 +41,12 @@
       ]
     },
     "matrix-calculus-autodiff-dual-numbers": {
-      "code_fingerprint": "sha256:3f20e0015b160b35331653c4492c0d862e1646adf75bec00304920abcb8ae746",
+      "code_fingerprint": "sha256:e23a2883c27b7e779cdb8764e4147cd5d3f093d64a94b0b4cc790a269730d3c6",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-dual-eval": {
-      "code_fingerprint": "sha256:3350f350ab2bbda19c245c908d196bbf616dc94544f05f42dc89862611248570",
+      "code_fingerprint": "sha256:e4423e497383f65c2c6a1c0c273b25b2f1defa5b9f0da91675f5c20f0a6c9387",
       "kind": "text",
       "outputs": [
         {
@@ -57,7 +57,7 @@
       ]
     },
     "matrix-calculus-autodiff-forward-jvp": {
-      "code_fingerprint": "sha256:4798a250fe0d875b805982da420553cad3a27b66d9ee782e26f86567a64f108b",
+      "code_fingerprint": "sha256:916b4b1efc09ef160015fe7a85075587f18560146d2e23f0523abd12c6bd3a69",
       "kind": "text",
       "outputs": [
         {
@@ -68,12 +68,12 @@
       ]
     },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:5ce9f4a9063c8869fc35ed6b70a35ed4c0a0c678b24a5fea5e108b25cccbba64",
+      "code_fingerprint": "sha256:1944f628df6c5f9c48fa0d9562c23bd2a739329c2df580da5023ded795384896",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:ba34cdfa47995c46f2a31ad5fe6a91e7d733e49bcdeb0eac871c254f8c95d168",
+      "code_fingerprint": "sha256:8c2397c3065d5e3e49bc29b4b3c5b2a807131362c690238f7575f96b92705ff8",
       "kind": "text",
       "outputs": [
         {

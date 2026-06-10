@@ -73,11 +73,11 @@ When a concept differs by framework (e.g. JAX arrays are immutable, so the
 in-place memory story changes), expose variants — either separate ids
 (`ndarray-saving-memory`, `ndarray-saving-memory-jax`) or a function that
 branches on a framework argument. Reference the right one per framework in the
-slide (`@fig:<id>@jax`, or a `.only/.except`-scoped slide). See HANDOFF.md §6.
+slide (`@fig:<id>@jax`, or a `.only/.except`-scoped slide). See docs/slides-northstar-design.md §6.
 
 ## Value-bound vs structural
 
 Most diagrams here are **structural** — they draw shapes/relationships and never
 change when a notebook re-runs. A few could be **value-bound** (drawing actual
 numbers). For those, read the values from the executed notebook by cell id at
-render time so a re-run regenerates them. See HANDOFF.md §9.
+render time so a re-run regenerates them. See docs/slides-northstar-design.md §9.

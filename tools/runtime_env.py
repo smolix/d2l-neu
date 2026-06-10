@@ -16,6 +16,19 @@ GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
                 "device(", "/GPU:", "/device:GPU",
                 "Trainer(", "d2l.train")
 
+# Notebooks that mention GPU-related terms in prose or discussion but whose
+# executable cells are CPU-only. Keep these out of the GPU scheduler bucket.
+CPU_ONLY_NOTEBOOKS = {
+    "chapter_mdl-linear-algebra/mdl-svd-low-rank.ipynb",
+    # MDL part: tiny CPU training loops (gluon.Trainer matches "Trainer(") or
+    # "GPU" appearing only in prose; every cell runs in seconds on CPU.
+    "chapter_mdl-dynamics/mdl-odes-solvers.ipynb",
+    "chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.ipynb",
+    "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
+    "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
+    "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
+}
+
 # Per-framework thread-limiting env vars.
 THREAD_LIMIT_ENV = {
     "pytorch": {
@@ -130,6 +143,8 @@ def notebook_resource(framework, rel, uses_gpu):
     memory-heavy single-GPU notebooks (HEAVY_GPU_NOTEBOOKS) take 2 on one GPU;
     data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each.
     """
+    if rel in CPU_ONLY_NOTEBOOKS:
+        return ('cpu',)
     if rel in MULTI_GPU_NOTEBOOKS:
         return ('gpu', 2, TWO_GPU_SLOTS_PER.get((framework, rel), 1))
     heavy = HEAVY_GPU_NOTEBOOKS.get((framework, rel))
@@ -167,6 +182,8 @@ def file_uses_gpu(filepath, siblings_root):
     except ValueError:
         return False
     parts = rel.parts  # (framework, chapter, file, ...)
+    if len(parts) >= 3 and Path(*parts[1:]).as_posix() in CPU_ONLY_NOTEBOOKS:
+        return False
     if len(parts) >= 2:
         for sibling in siblings_root.iterdir():
             if sibling.is_dir() and sibling.name != parts[0]:
@@ -321,27 +338,54 @@ def kill_stale_kernels(venv_dir):
     import signal
     venv_dir = str(Path(venv_dir).resolve())
     killed = 0
-    try:
-        for entry in Path("/proc").iterdir():
-            if not entry.name.isdigit():
-                continue
-            try:
-                exe = (entry / "exe").resolve()
-            except (OSError, PermissionError):
-                continue
-            if not str(exe).startswith(venv_dir):
-                continue
-            try:
-                cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
-            except (OSError, PermissionError):
-                continue
-            if any(b"ipykernel_launcher" in arg for arg in cmdline):
-                pid = int(entry.name)
+    proc_root = Path("/proc")
+    if proc_root.is_dir():
+        # Linux: walk /proc, matching each pid's exe against the venv.
+        try:
+            for entry in proc_root.iterdir():
+                if not entry.name.isdigit():
+                    continue
                 try:
-                    os.kill(pid, signal.SIGKILL)
-                    killed += 1
-                except OSError:
-                    pass
-    except (OSError, PermissionError):
-        pass
+                    exe = (entry / "exe").resolve()
+                except (OSError, PermissionError):
+                    continue
+                if not str(exe).startswith(venv_dir):
+                    continue
+                try:
+                    cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
+                except (OSError, PermissionError):
+                    continue
+                if any(b"ipykernel_launcher" in arg for arg in cmdline):
+                    pid = int(entry.name)
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        killed += 1
+                    except OSError:
+                        pass
+        except (OSError, PermissionError):
+            pass
+        return killed
+
+    # macOS / no /proc: find ipykernel_launcher processes via pgrep, then keep
+    # only those whose command line runs this venv's python (argv[0] holds the
+    # interpreter path under venv_dir).
+    import subprocess
+    try:
+        out = subprocess.run(["pgrep", "-f", "ipykernel_launcher"],
+                             capture_output=True, text=True, timeout=10).stdout
+        pids = [int(x) for x in out.split() if x.strip().isdigit()]
+    except Exception:
+        pids = []
+    for pid in pids:
+        try:
+            cmd = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
+                                 capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            continue
+        if venv_dir in cmd and "ipykernel_launcher" in cmd:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                killed += 1
+            except OSError:
+                pass
     return killed

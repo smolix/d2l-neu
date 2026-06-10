@@ -12,44 +12,33 @@ matrix powers, stability of dynamical systems, PCA, covariance analysis, and the
 Hessian-based view of optimization tractable. As a beginner it is easy to
 overlook eigenvalues; the goal of this section is to convey, with both pictures
 and proofs, just why they are so central. We keep the running thread of
-*iterated maps*---repeatedly applying the same matrix, as a layerless neural
-network does---because it makes the role of the largest eigenvalue unmistakable.
+*iterated maps*---repeatedly applying the same matrix, as a deep *linear*
+network (one with the nonlinearities stripped away) does---because it makes the
+role of the largest eigenvalue unmistakable.
 
-We first load the per-framework library so the computations below have `d2l` and
-`np` in scope. The framework-agnostic checks use plain NumPy; only the small
-worked-verification cells branch per framework.
+Everything we compute in this section is small, dense linear algebra. The
+framework-agnostic checks use plain NumPy; only the short worked-verification
+cells branch per framework, each calling its framework's own `linalg` routines.
 
 ```{.python .input #eigendecomposition-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from IPython import display
 import numpy as np
 ```
 
 ```{.python .input #eigendecomposition-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-from IPython import display
 import numpy as np
 import torch
 ```
 
 ```{.python .input #eigendecomposition-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-from IPython import display
 import numpy as np
 import tensorflow as tf
 ```
 
 ```{.python .input #eigendecomposition-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from IPython import display
 import numpy as np
 import jax
 jax.config.update("jax_enable_x64", True)  # honor explicit float64 (else JAX
@@ -107,7 +96,7 @@ ellipse, and for a *symmetric* matrix the axes of that ellipse lie exactly along
 the eigenvectors, with half-lengths $|\lambda_i|$ (an axis flips when
 $\lambda_i<0$). :numref:`fig_mdl-la-eig-ellipse` draws this for our
 $\operatorname{diag}(2,-1)$ above and for the symmetric
-$[[2,1],[1,2]]$ we analyze below. This is the same "circle becomes an ellipse"
+$[[2,1],[1,2]]$ that we revisit in the exercises. This is the same "circle becomes an ellipse"
 picture that the singular value decomposition will generalize to *every* matrix
 in :numref:`sec_mdl-svd-low-rank`; here the special feature is that one set of
 axes does the whole job.
@@ -195,11 +184,27 @@ tf.linalg.eig(tf.constant([[2, 1], [2, 3]], dtype=tf.float64))
 jnp.linalg.eig(jnp.array([[2, 1], [2, 3]], dtype=jnp.float64))
 ```
 
+:begin_tab:`mxnet`
+MXNet arrays have no complex dtype, so `mxnet.np.linalg.eig` fails whenever the
+spectrum is complex---as it is for the general matrices later in this section.
+The MXNet tab therefore uses plain NumPy for all eigenvalue computations.
+:end_tab:
+
 Note that the library normalizes the eigenvectors to be of length one,
 whereas we took ours to be of arbitrary length.
 Additionally, the choice of sign is arbitrary.
 However, the vectors computed are parallel
 to the ones we found by hand with the same eigenvalues.
+
+A word of algorithmic honesty about what `eig` just did: for $n\ge5$ there is no
+formula in radicals for the roots of the characteristic polynomial, and
+practical libraries never form that polynomial anyway. They instead reduce
+$\mathbf{A}$ to a nearly-triangular *Hessenberg* form and run the shifted *QR
+algorithm*, an iteration that drives the matrix toward triangular form while
+preserving its eigenvalues :cite:`Golub.Van-Loan.1996`. The *power iteration* we
+develop later in this section matters in the complementary regime, when
+$\mathbf{A}$ is too large to factor and only matrix--vector products are
+affordable.
 
 ### Eigendecomposition and What It Computes
 
@@ -260,6 +265,11 @@ $$
 or in other words, just invert each eigenvalue.
 This will work as long as each eigenvalue is non-zero,
 so we see that invertible is the same as having no zero eigenvalues.
+The same recipe defines the *matrix exponential*
+$e^{\mathbf{A}t}=\mathbf{W}e^{\boldsymbol{\Lambda}t}\mathbf{W}^{-1}$, which
+solves the linear differential equation $\dot{\mathbf{x}}=\mathbf{A}\mathbf{x}$;
+there the *real parts* of the eigenvalues decide stability, a story we take up
+in :numref:`sec_mdl-odes-solvers`.
 
 **Determinant and trace from the eigenvalues.** Two quantities we met in
 :numref:`sec_mdl-geometry-linear-algebraic-ops` read off the spectrum directly,
@@ -282,9 +292,9 @@ the product of all the eigenvalues. This matches the geometric picture: whatever
 stretching $\mathbf{W}$ does, $\mathbf{W}^{-1}$ undoes, so the only net volume
 change is by the diagonal $\boldsymbol{\Lambda}$, which scales volumes by the
 product of its entries. Comparing instead the coefficient of $\lambda^{n-1}$ on
-both sides---it is $\sum_i\lambda_i$ on the right, and (expanding the
-determinant) $\sum_i a_{ii}=\operatorname{tr}\mathbf A$ on the left---gives the
-companion identity for the *trace*,
+both sides---it is $(-1)^{n-1}\sum_i\lambda_i$ on the right, and (expanding the
+determinant) $(-1)^{n-1}\sum_i a_{ii}$ on the left, so the common factor
+$(-1)^{n-1}$ cancels---gives the companion identity for the *trace*,
 
 $$
 \operatorname{tr}(\mathbf{A}) = a_{11}+\cdots+a_{nn} = \lambda_1+\cdots+\lambda_n,
@@ -295,7 +305,7 @@ the *sum* of the eigenvalues. So determinant and trace are the product and sum
 of the spectrum; both are *similarity invariants* (unchanged by
 $\mathbf{A}\mapsto\mathbf{W}\mathbf{A}\mathbf{W}^{-1}$). The trace identity
 returns when we estimate $\log\det$ Jacobians with the Hutchinson trace
-estimator.
+estimator in :numref:`sec_mdl-odes-solvers`.
 
 Finally, recall that the rank was the maximum number
 of linearly independent columns of a matrix.
@@ -336,7 +346,10 @@ diagonalizable.*
 $\mathbf{w}_1,\ldots,\mathbf{w}_m$ with distinct eigenvalues
 $\lambda_1,\ldots,\lambda_m$ are dependent, and take a dependence relation
 $\sum_{i=1}^{m} c_i\mathbf{w}_i = \mathbf 0$ with the *fewest* nonzero
-coefficients; relabel so $c_m\neq0$. Apply $\mathbf{A}$ and subtract $\lambda_m$
+coefficients; relabel so $c_m\neq0$. Any such relation has at least *two*
+nonzero coefficients: a single-term relation $c_m\mathbf{w}_m=\mathbf 0$ would
+force $\mathbf{w}_m=\mathbf 0$, and eigenvectors are nonzero by definition.
+Apply $\mathbf{A}$ and subtract $\lambda_m$
 times the relation:
 
 $$
@@ -344,9 +357,10 @@ $$
    = \sum_{i=1}^{m-1} c_i(\lambda_i-\lambda_m)\,\mathbf{w}_i .
 $$
 
-The $\mathbf{w}_m$ term cancels, so we obtain a *shorter* relation. Since the
-$\lambda_i$ are distinct, $\lambda_i-\lambda_m\neq0$, so this shorter relation is
-nontrivial---contradicting minimality. Hence the eigenvectors are independent.
+The $\mathbf{w}_m$ term cancels, so we obtain a *shorter* relation. It is still
+nontrivial: the original relation had a second nonzero coefficient $c_i$ with
+$i<m$, and it survives as $c_i(\lambda_i-\lambda_m)\neq0$ because the
+eigenvalues are distinct---contradicting minimality. Hence the eigenvectors are independent.
 With $n$ distinct eigenvalues we get $n$ independent eigenvectors, which form a
 basis of $\mathbb{R}^n$, so $\mathbf{W}$ is invertible. $\blacksquare$
 
@@ -555,6 +569,18 @@ PSD matrices appear in deep learning.
   :eqref:`eq_mdl-quadform` the second-order Taylor term
   $\tfrac12\mathbf{x}^\top\mathbf{H}\mathbf{x}$ curves *upward* in every direction.
   This is the second-order optimality test we use throughout optimization.
+
+Positive definiteness also has a purely *algorithmic* certificate, the
+*Cholesky factorization*: $\mathbf{A}\succ0$ if and only if
+$\mathbf{A}=\mathbf{L}\mathbf{L}^\top$ for a lower-triangular $\mathbf{L}$ with
+positive diagonal. One direction is immediate---then
+$\mathbf{x}^\top\mathbf{A}\mathbf{x}=\|\mathbf{L}^\top\mathbf{x}\|^2>0$ for
+$\mathbf{x}\neq\mathbf 0$, since such an $\mathbf{L}$ is invertible---and
+attempting the factorization, far cheaper than an eigendecomposition, is the
+standard numerical test for definiteness. It is also how multivariate Gaussians
+are sampled: if $\mathbf{z}$ has independent standard normal entries, then
+$\boldsymbol\mu+\mathbf{L}\mathbf{z}$ has mean $\boldsymbol\mu$ and covariance
+$\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$.
 
 Geometrically, the sign pattern of the eigenvalues is the *shape* of the surface
 $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$, viewed through the eigenvector axes:
@@ -822,34 +848,41 @@ $$
 $$
 :eqlabel:`eq_mdl-power-iter`
 
-Every ratio $|\lambda_i/\lambda_1|<1$, so as $k\to\infty$ the bracketed tail
-decays to $c_1\mathbf{w}_1$ at the geometric rate $|\lambda_2/\lambda_1|$ (the
-slowest-decaying term). Provided $c_1\neq0$---the input has *some* component
+Every ratio $|\lambda_i/\lambda_1|<1$, so as $k\to\infty$ the bracket
+*converges to* $c_1\mathbf{w}_1$: its tail decays to zero at the geometric rate
+$|\lambda_2/\lambda_1|$, set by the slowest-decaying term. Provided
+$c_1\neq0$---the input has *some* component
 along $\mathbf{w}_1$---the iterate aligns with the principal eigenvector and its
 norm grows like $|\lambda_1|^k$, so consecutive norms have ratio
 $\to|\lambda_1|$. This *is* the classical *power iteration* for the dominant
 eigenpair :cite:`Golub.Van-Loan.1996`. :numref:`fig_mdl-la-power-iter` makes the
 convergence concrete for the small symmetric matrix $\mathbf{B}=[[3,1],[1,2]]$,
 which has a genuine strictly dominant real eigenvalue
-$\lambda_1=(5+\sqrt5)/2\approx3.618$ and a clean rate
-$|\lambda_2/\lambda_1|=\tfrac{5-\sqrt5}{5+\sqrt5}=\tfrac{3-\sqrt5}{2}\approx0.382$: the renormalized
-iterates swing onto $\mathbf{w}_1$ while the norm ratio flattens to
-$|\lambda_1|$.
+$\lambda_1=(5+\sqrt5)/2\approx3.618$: the renormalized iterates swing onto
+$\mathbf{w}_1$, their *direction* gap closing at the rate
+$|\lambda_2/\lambda_1|=\tfrac{3-\sqrt5}{2}\approx0.382$, while the norm ratio
+flattens to $\lambda_1$ even faster---at the squared rate
+$(\lambda_2/\lambda_1)^2\approx0.146$, because for a symmetric matrix the
+eigenvectors are orthogonal, so the norm is insensitive, to first order, to the
+remaining misalignment.
 
-![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (red). Right: the ratio of consecutive norms converges to $|\lambda_1|\approx3.618$, with the gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$.](../img/mdl-la-power-iter.svg)
+![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (orange), the direction gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$. Right: the ratio of consecutive norms converges to $\lambda_1\approx3.618$, its gap closing at the squared rate $(\lambda_2/\lambda_1)^2\approx0.146$.](../img/mdl-la-power-iter.svg)
 :label:`fig_mdl-la-power-iter`
 
 Two caveats are worth stating, because they are exactly where the slide-level
 story would mislead. First, **genericity**: the argument needs $c_1\neq0$, but a
 random Gaussian input has $c_1=0$ with probability zero, so the method works
-almost surely. Second, **strict dominance**: if the two largest eigenvalues are a
-*complex-conjugate pair* of equal modulus (as happens for a real random matrix,
-whose eigenvalues come in conjugate pairs), the dominant contribution *rotates*
-rather than settling on a single real direction. The *norm ratio* still converges
-to $|\lambda_1|$---which is why the measurement is clean---but the direction need
-not.
+almost surely. Second, **strict dominance**: if the two largest eigenvalues are
+a *complex-conjugate pair* of equal modulus, the dominant contribution *rotates*
+rather than settling on a single direction, and for a non-normal matrix the
+consecutive-norm ratio $\|\mathbf{A}^{k+1}\mathbf{v}\|/\|\mathbf{A}^{k}\mathbf{v}\|$
+can then oscillate *forever*, never converging. What always converges (for
+generic $\mathbf{v}$) is the averaged growth rate
+$\|\mathbf{A}^{k}\mathbf{v}\|^{1/k}\to\max_i|\lambda_i|$. The random matrices in
+the demonstration below happen to draw a real, strictly dominant eigenvalue, so
+even the simple ratio settles.
 
-The payoff is a one-line numerical fact: run a few dozen iterations on a random
+The payoff is a one-line numerical fact: run a couple hundred iterations on a random
 $5\times5$ matrix, read off the stabilized norm ratio, and compare it to the
 largest eigenvalue modulus. They agree.
 
@@ -906,11 +939,14 @@ rho = float(max(abs(jnp.linalg.eigvals(A))))
 print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
-The stabilized stretching factor is *exactly* the largest eigenvalue modulus---to
-many decimal places, and not by coincidence. (Here $\mathbf{A}$ is a general real
-matrix, so its eigenvalues are complex in general; we take the modulus to measure
-the stretching factor, exactly the strict-dominance caveat above.) This quantity
-has a name: the *spectral radius* $\rho(\mathbf A)=\max_i|\lambda_i|$, the largest
+The stabilized stretching factor matches the largest eigenvalue modulus to ten
+decimal places. One honest disclaimer: in each framework the random draw happens
+to produce a *real*, strictly dominant eigenvalue, which is why the plain
+consecutive-norm ratio converges so cleanly. Had the dominant eigenvalues been a
+complex pair, we would have read off the averaged rate
+$\|\mathbf{A}^k\mathbf{v}\|^{1/k}$ instead, per the caveat above. Either way,
+the quantity being measured has a name: the *spectral radius*
+$\rho(\mathbf A)=\max_i|\lambda_i|$, the largest
 eigenvalue modulus, which we examine next.
 
 #### Aside: PageRank and the Perron--Frobenius Theorem
@@ -955,8 +991,8 @@ the general rule: a real matrix's complex eigenvalues come in conjugate pairs,
 and each pair $re^{\pm i\theta}$ encodes a *scale by $r$ and rotate by $\theta$*
 acting on a two-dimensional invariant plane. It also explains the caveat in the
 power-iteration argument: when the dominant eigenvalues are such a pair, the
-iterate's *length* still grows like $r^k$, but its *direction* spins, so it never
-locks onto a single real eigenvector.
+iterate's *length* still grows like $r^k$ on average, but its *direction* spins,
+so it never locks onto a single real eigenvector.
 
 ```{.python .input #eigendecomposition-complex-rotation}
 theta = np.pi / 6
@@ -1004,13 +1040,15 @@ same transformation at every time step, and backpropagation through time
 multiplies the per-step Jacobians:
 
 $$
-\frac{\partial\mathcal{L}}{\partial\mathbf{h}_0}
-   = \mathbf{J}_T\,\mathbf{J}_{T-1}\cdots\mathbf{J}_1
-   \,\frac{\partial\mathcal{L}}{\partial\mathbf{h}_T},
+\nabla_{\mathbf{h}_0}\mathcal{L}
+   = \mathbf{J}_1^\top\mathbf{J}_2^\top\cdots\mathbf{J}_T^\top
+   \,\nabla_{\mathbf{h}_T}\mathcal{L},
 \qquad \mathbf{J}_t=\frac{\partial\mathbf{h}_t}{\partial\mathbf{h}_{t-1}} .
 $$
 
-This is precisely a product of matrices applied to a vector. If the Jacobians
+This is precisely a product of matrices applied to a vector (and the transposes
+change nothing spectrally: $\mathbf{J}^\top$ has the same eigenvalue moduli as
+$\mathbf{J}$). If the Jacobians
 behave like a single repeated matrix of spectral radius $\rho$, the gradient
 magnitude scales like $\rho^{T}$ over $T$ steps: when $\rho>1$ it explodes, and
 when $\rho<1$ it vanishes---the gradient decays to nothing before it can carry
@@ -1121,7 +1159,7 @@ $$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
 
 Geometrically: $\mathbf{A}$ stretches $\mathbf{v}$ by
 $\lambda$ but doesn't rotate it. If $\mathbf{A}$ is
-diagonalizable: $\mathbf{A} = \mathbf{V}\mathbf{\Lambda}\mathbf{V}^{-1}$
+diagonalizable: $\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^{-1}$
 — a basis change in which the action is just stretching
 along axes.
 
@@ -1170,8 +1208,8 @@ stability arguments:
 ::: {.slide title="Eigenvectors govern long-run behavior"}
 Power iteration: keep multiplying by $\mathbf{A}$. The
 direction converges to the leading eigenvector; the norm
-grows like $\lambda_1^t$, with the gap closing at rate
-$|\lambda_2/\lambda_1|$:
+grows like $\lambda_1^t$, with the *direction* gap closing
+at rate $|\lambda_2/\lambda_1|$:
 
 @fig:mdl-la-power-iter
 

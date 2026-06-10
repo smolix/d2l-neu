@@ -8,7 +8,7 @@
 //
 // COLOR TOKENS must stay in sync with _d2l-slides.scss / _d2l-theme.scss.
 // If the book palette changes, change it here too (or, better, generate
-// this object from the scss tokens — see HANDOFF.md "Theming").
+// this object from the scss tokens — see docs/slides-northstar-design.md "Theming").
 
 export const C = {
   blue:'#2196F3', lblue:'#E3F2FD', amber:'#FB8C00', lamber:'#FFE7C7',
@@ -18,7 +18,7 @@ export const C = {
 
 // Font stacks. Both end in a generic family so a static SVG still reads
 // correctly even where "Source Sans 3" / "JetBrains Mono" aren't loaded
-// (see HANDOFF.md "Fonts in static SVG" for the fidelity caveat).
+// (see docs/slides-northstar-design.md "Fonts in static SVG" for the fidelity caveat).
 //
 // The family names MUST be quoted. "Source Sans 3" contains the token "3",
 // which is not a valid CSS identifier (identifiers cannot start with a

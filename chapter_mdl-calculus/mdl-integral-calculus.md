@@ -76,8 +76,10 @@ $$
 a continuous analogue of a sum: $\sum$ becomes $\int$, the spacing $\epsilon$
 becomes $dx$, and the term $f(x_i)$ becomes $f(x)$. The inner variable is a dummy,
 exactly like a summation index, so $\int_a^b f(x)\,dx = \int_a^b f(z)\,dz$. For
-absolutely integrable $f$---all we ever meet in machine learning---the limit
-exists and does not depend on how the slices are chosen.
+bounded, piecewise-continuous $f$---all we ever meet in machine learning---the
+limit exists and does not depend on how the slices are chosen. (Some hypothesis
+is genuinely needed: for the function that is $1$ on the rationals and $0$
+elsewhere, the rectangle sums never settle on any value at all.)
 
 The definition is honest but not yet a *computation*: only the simplest
 integrands (a line, $\int_a^b x\,dx$) succumb to summing the rectangles by hand.
@@ -202,7 +204,9 @@ Divide by $\epsilon$. Because $f$ is continuous at $x$, its minimum and maximum
 over the shrinking interval $[x,x+\epsilon]$ both converge to the single value
 $f(x)$ (equivalently, the mean value theorem for integrals places the average on
 the curve), so the squeeze forces
-$\lim_{\epsilon\to 0}\frac{F(x+\epsilon)-F(x)}{\epsilon}=f(x)$. That limit is
+$\lim_{\epsilon\to 0}\frac{F(x+\epsilon)-F(x)}{\epsilon}=f(x)$ (for
+$\epsilon<0$ the sliver sits to the left of $x$ and the same bounds apply, with
+both sign flips canceling in the quotient). That limit is
 exactly $F'(x)$. $\blacksquare$
 
 The sliver argument is the whole story: the rate at which accumulated area grows
@@ -248,8 +252,8 @@ G = lambda t: np.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
 eps = 1e-3
 x = np.arange(0., 2., eps)
 F = np.cumsum(eps * f(x))                    # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                # finite-difference derivative of F
-print('max |dF/dx - f|      :', float(np.abs(dFdx - f(x[:-1])).max()))
+dFdx = (F[1:] - F[:-1]) / eps                # telescopes to f(x[1:]) exactly
+print('max |dF/dx - f|      :', float(np.abs(dFdx - f(x[1:])).max()))
 print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(np.array(2.))))
 ```
 
@@ -260,8 +264,8 @@ G = lambda t: torch.log(1 + t**2) / 2        # antiderivative: F(x) = G(x) - G(0
 eps = 1e-3
 x = torch.arange(0., 2., eps)
 F = torch.cumsum(eps * f(x), dim=0)          # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                # finite-difference derivative of F
-print('max |dF/dx - f|      :', float((dFdx - f(x[:-1])).abs().max()))
+dFdx = (F[1:] - F[:-1]) / eps                # telescopes to f(x[1:]) exactly
+print('max |dF/dx - f|      :', float((dFdx - f(x[1:])).abs().max()))
 print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(torch.tensor(2.))))
 ```
 
@@ -272,8 +276,8 @@ G = lambda t: tf.math.log(1 + t**2) / 2      # antiderivative: F(x) = G(x) - G(0
 eps = 1e-3
 x = tf.range(0., 2., eps)
 F = tf.cumsum(eps * f(x))                     # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                 # finite-difference derivative of F
-print('max |dF/dx - f|      :', float(tf.reduce_max(tf.abs(dFdx - f(x[:-1])))))
+dFdx = (F[1:] - F[:-1]) / eps                 # telescopes to f(x[1:]) exactly
+print('max |dF/dx - f|      :', float(tf.reduce_max(tf.abs(dFdx - f(x[1:])))))
 print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(tf.constant(2.))))
 ```
 
@@ -284,14 +288,19 @@ G = lambda t: jnp.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0
 eps = 1e-3
 x = jnp.arange(0., 2., eps)
 F = jnp.cumsum(eps * f(x))                    # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                 # finite-difference derivative of F
-print('max |dF/dx - f|      :', float(jnp.abs(dFdx - f(x[:-1])).max()))
+dFdx = (F[1:] - F[:-1]) / eps                 # telescopes to f(x[1:]) exactly
+print('max |dF/dx - f|      :', float(jnp.abs(dFdx - f(x[1:])).max()))
 print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(jnp.array(2.))))
 ```
 
-The finite-difference derivative of the accumulated area matches $f$ to the level
-of the discretization, and the Riemann total agrees with the antiderivative
-formula---the fundamental theorem made flesh.
+The first comparison is exact in exact arithmetic: differencing the cumulative
+sum *telescopes*, $F(x+\epsilon)-F(x)$ collapsing back to the single term
+$\epsilon f(x+\epsilon)$ that the sum just added. The printed error---a few
+parts in $10^{5}$---is therefore not discretization error at all but pure
+float32 roundoff in the accumulated $F$, amplified by the division by
+$\epsilon$. The Riemann total $F(2)$ agrees with the antiderivative value
+$G(2)$ to about $2\times 10^{-4}$, the expected first-order bias of the
+left-endpoint rule---the fundamental theorem made flesh.
 
 ### Improper Integrals
 
@@ -307,8 +316,9 @@ $$
 :eqlabel:`eq_mdl-improper`
 
 with $\int_{-\infty}^\infty$ defined by splitting at any point and taking both
-limits. The limit may be finite, in which case the integral *converges*, or
-infinite, in which case it *diverges*. Whether the tail is "thin enough" is a
+limits. The limit may be finite, in which case the integral *converges*;
+otherwise---whether the partial integrals grow without bound or merely fail to
+settle---it *diverges*. Whether the tail is "thin enough" is a
 genuine question. The cleanest test case is the power law $x^{-p}$, for which the
 antiderivative gives
 
@@ -325,40 +335,104 @@ $\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergen
 sits exactly at $p=1$. This single threshold is what decides whether a
 heavy-tailed density even has a finite
 normalizer or mean, a recurring concern once we reach probability. The cell
-watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx$, approach its
-limit of $1$.
+watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx = 1$, through
+two lenses at once: the *exact* partial integrals
+$\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative, and a
+left-Riemann approximation of each with $\epsilon = 10^{-3}$.
 
 ```{.python .input #integral-improper}
 #@tab mxnet
 for b in [1., 2., 5., 10., 20.]:
     x = np.arange(0., b, 1e-3)
-    print(f'integral_0^{b:<4} e^-x dx = {float(np.sum(1e-3 * np.exp(-x))):.6f}')
-print('limit as b -> infinity   = 1.000000')
+    left = float(np.sum(1e-3 * np.exp(-x)))
+    exact = 1 - float(np.exp(np.array(-b)))
+    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
 
 ```{.python .input #integral-improper}
 #@tab pytorch
 for b in [1., 2., 5., 10., 20.]:
     x = torch.arange(0., b, 1e-3)
-    print(f'integral_0^{b:<4} e^-x dx = {float(torch.sum(1e-3 * torch.exp(-x))):.6f}')
-print('limit as b -> infinity   = 1.000000')
+    left = float(torch.sum(1e-3 * torch.exp(-x)))
+    exact = 1 - float(torch.exp(torch.tensor(-b)))
+    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
 
 ```{.python .input #integral-improper}
 #@tab tensorflow
 for b in [1., 2., 5., 10., 20.]:
     x = tf.range(0., b, 1e-3)
-    print(f'integral_0^{b:<4} e^-x dx = {float(tf.reduce_sum(1e-3 * tf.exp(-x))):.6f}')
-print('limit as b -> infinity   = 1.000000')
+    left = float(tf.reduce_sum(1e-3 * tf.exp(-x)))
+    exact = 1 - float(tf.exp(-b))
+    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
 
 ```{.python .input #integral-improper}
 #@tab jax
 for b in [1., 2., 5., 10., 20.]:
     x = jnp.arange(0., b, 1e-3)
-    print(f'integral_0^{b:<4} e^-x dx = {float(jnp.sum(1e-3 * jnp.exp(-x))):.6f}')
-print('limit as b -> infinity   = 1.000000')
+    left = float(jnp.sum(1e-3 * jnp.exp(-x)))
+    exact = 1 - float(jnp.exp(-b))
+    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
+
+Read the two columns against each other. The exact partials race up to $1$: the
+*truncation error* of stopping at $b$ is $e^{-b}$, already invisible at six
+decimals by $b=20$. The left-Riemann column tells a subtler story: it
+overshoots and settles near $1.0005$, not $1$. That residue is *discretization
+error*. The left rule samples each slice at its left edge, where the decreasing
+integrand $e^{-x}$ is largest, so every rectangle overcounts slightly; the
+overcounts add up to a bias of
+$\approx \tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr) \to \tfrac{\epsilon}{2}
+= 0.0005$. The two error sources are independent knobs---growing $b$ kills the
+first, shrinking $\epsilon$ the second---and no amount of turning one
+compensates for neglecting the other.
+
+### Integration by Parts
+:label:`subsec_mdl-integration-by-parts`
+
+The fundamental theorem turns every differentiation rule into an integration
+rule, and the product rule is the most profitable conversion.
+
+**Proposition (Integration by parts).** *For continuously differentiable $u$
+and $v$ on $[a,b]$,*
+
+$$
+\int_a^b u(x)\,v'(x)\,dx
+= \Bigl[\,u(x)\,v(x)\,\Bigr]_a^b - \int_a^b u'(x)\,v(x)\,dx ,
+$$
+:eqlabel:`eq_mdl-parts`
+
+*where $[\,h(x)\,]_a^b$ abbreviates $h(b)-h(a)$.*
+
+**Proof.** By the product rule, $uv$ is an antiderivative of $u'v + uv'$, so
+:eqref:`eq_mdl-ftc-eval` gives
+$\int_a^b (u'v + uv')\,dx = [\,u(x)v(x)\,]_a^b$; subtract $\int_a^b u'v\,dx$
+from both sides. $\blacksquare$
+
+The formula is a *trade*, not an evaluation: it moves the derivative from one
+factor onto the other, and the trade pays whenever the new integrand
+$u'v$ is simpler than the old one $uv'$. The model example takes $u(x)=x$ and
+$v'(x)=e^{-x}$, so that $u'=1$ and $v=-e^{-x}$: applying
+:eqref:`eq_mdl-parts` on $[0,b]$ and letting $b\to\infty$,
+
+$$
+\int_0^\infty x\,e^{-x}\,dx
+= \Bigl[\,-x\,e^{-x}\,\Bigr]_0^\infty + \int_0^\infty e^{-x}\,dx
+= 0 + 1 = 1 .
+$$
+
+The boundary term vanishes because $x e^{-x}\to 0$ at both ends, and what
+survives is exactly the improper integral computed above. This particular
+value is the mean of the exponential distribution
+(:numref:`sec_mdl-distributions`), and it shows the form in which the trick
+returns throughout probability: expectations $\int g(x)\,p(x)\,dx$ are
+integrals of products, and shifting a derivative from a factor we cannot handle
+onto one we can is often the only move available. Its most spectacular reprise
+is Hyvärinen's score-matching identity
+(:numref:`sec_mdl-score-matching-diffusion-flow`), where a single integration
+by parts converts an objective involving the *unknowable* score of the data
+distribution into one that can be estimated from samples.
 
 ### A Note on Signed Area
 
@@ -379,7 +453,8 @@ change-of-variables formula below come out right.
 
 Every differentiation rule has an integration counterpart obtained by running the
 fundamental theorem backwards: the sum rule gives linearity, the product rule
-gives integration by parts, and---most useful for us---the chain rule gives the
+gave us integration by parts (:numref:`subsec_mdl-integration-by-parts`),
+and---most useful for us---the chain rule gives the
 *change-of-variables* formula. It is the substitution that tames otherwise
 intractable integrals, and in higher dimensions it cracks open the Gaussian
 normalizer. Read for *densities* rather than areas, the very same formula becomes
@@ -419,69 +494,40 @@ e^{-1}-1 = \int_{e^{0}}^{e^{-1}} 1\,dy = -2\int_0^{1} y\,e^{-y^2}\,dy
 \int_0^{1} y\,e^{-y^2}\,dy = \frac{1-e^{-1}}{2},
 $$
 
-an integral that was hopeless by direct summation.
+a closed form that no amount of rectangle-summing would have revealed.
 
 ### Multiple Integrals and Fubini's Theorem
 
 In higher dimensions we integrate over regions. For $f(x,y)$ on a rectangle
-$U=[a,b]\times[c,d]$, the integral is the (signed) volume under the surface,
-written $\int_U f(x,y)\,dx\,dy$. The teaching cell below builds such a surface so
-the volume is something concrete to picture.
+$U=[a,b]\times[c,d]$, the integral is the (signed) volume trapped between the
+surface $z=f(x,y)$ and the base plane, written $\int_U f(x,y)\,dx\,dy$, and
+Archimedes' recipe survives intact: tile $U$ with $\epsilon\times\epsilon$
+squares, stand a box of height $f$ on each, and total the volumes.
+:numref:`fig_mdl-bell-surface` shows our running example, the two-dimensional
+bell $e^{-x^2-y^2}$ over the box $[-2,2]^2$; the cell totals its boxes.
 
-```{.python .input #integral-surface}
-#@tab mxnet
-g = np.linspace(-6, 6, 121)                  # wide enough to capture the tails
-x, y = np.meshgrid(g, g, indexing='ij')
-z = np.exp(-x**2 - y**2)                      # a 2-D bell over the plane
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.asnumpy(), y.asnumpy(), z.asnumpy(), rstride=8, cstride=8)
-d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-dxy = (12 / 120) ** 2                         # area of one grid cell
-print('volume (Riemann)  :', float(np.sum(dxy * z)))
-print('volume (exact = pi):', float(np.pi))
+![The bell surface $z = e^{-x^2-y^2}$ over the box $U = \lbrack -2,2\rbrack^2$. The double integral $\int_U f\,dx\,dy$ is the volume between the surface and the base plane, approximated by tiling the base with $\epsilon\times\epsilon$ squares and adding the volumes of the boxes standing on them.](../img/mdl-cal-bell-surface.svg)
+:label:`fig_mdl-bell-surface`
+
+```{.python .input #integral-box-volume}
+eps = 1e-2
+x, y = np.meshgrid(np.arange(-2., 2., eps), np.arange(-2., 2., eps),
+                   indexing='ij')
+vol = float(np.sum(eps ** 2 * np.exp(-x**2 - y**2)))
+print(f'Riemann volume over the box [-2, 2]^2 : {vol:.5f}')
+print('exact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane')
 ```
 
-```{.python .input #integral-surface}
-#@tab pytorch
-g = torch.linspace(-6, 6, 121)               # wide enough to capture the tails
-x, y = torch.meshgrid(g, g, indexing='ij')
-z = torch.exp(-x**2 - y**2)                   # a 2-D bell over the plane
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x, y, z, rstride=8, cstride=8)
-d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-dxy = (12 / 120) ** 2                          # area of one grid cell
-print('volume (Riemann)  :', float(torch.sum(dxy * z)))
-print('volume (exact = pi):', float(torch.pi))
-```
+The comparison line hides two teasers. The exact volume over the box involves
+the *error function* $\operatorname{erf}(z)=\tfrac{2}{\sqrt{\pi}}\int_0^z
+e^{-t^2}\,dt$---the Gaussian's antiderivative, suitably normalized, which
+famously has no elementary formula---and as the box grows to the whole plane
+the volume becomes exactly $\pi$. Both facts will fall out of the
+change-of-variables machinery below; for now the cell is simply a concrete
+two-dimensional Riemann sum.
 
-```{.python .input #integral-surface}
-#@tab tensorflow
-g = tf.linspace(-6., 6., 121)                 # wide enough to capture the tails
-x, y = tf.meshgrid(g, g, indexing='ij')
-z = tf.exp(-x**2 - y**2)                       # a 2-D bell over the plane
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x.numpy(), y.numpy(), z.numpy(), rstride=8, cstride=8)
-d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-dxy = (12 / 120) ** 2                          # area of one grid cell
-print('volume (Riemann)  :', float(tf.reduce_sum(dxy * z)))
-print('volume (exact = pi):', float(np.pi))
-```
-
-```{.python .input #integral-surface}
-#@tab jax
-g = jnp.linspace(-6, 6, 121)                 # wide enough to capture the tails
-x, y = jnp.meshgrid(g, g, indexing='ij')
-z = jnp.exp(-x**2 - y**2)                     # a 2-D bell over the plane
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(np.asarray(x), np.asarray(y), np.asarray(z),
-                  rstride=8, cstride=8)
-d2l.plt.xlabel('x'); d2l.plt.ylabel('y')
-dxy = (12 / 120) ** 2                          # area of one grid cell
-print('volume (Riemann)  :', float(jnp.sum(dxy * z)))
-print('volume (exact = pi):', float(jnp.pi))
-```
-
-How do we evaluate such a thing? Discretize the region into $\epsilon\times
+How do we get from grid sums back to the fundamental theorem? Discretize the
+region into $\epsilon\times
 \epsilon$ squares indexed by integers $i,j$; the integral is approximately
 $\sum_{i,j}\epsilon^2 f(\epsilon i, \epsilon j)$. This is just a sum of numbers
 on a grid, and **a finite sum can be totalled in any order**. Summing
@@ -574,14 +620,30 @@ $-\log|\det D\boldsymbol{\phi}|$ correction is the exact mechanism behind
 area theorem here and defer that density specialization to the probability chapter.
 
 The classic payoff is the **Gaussian integral**, which we will meet again as the
-normalizer of the normal distribution. Direct attack on
+normalizer of the normal distribution. It is the *one-dimensional* integral
 
 $$
-\int_{-\infty}^{\infty}\!\!\int_{-\infty}^{\infty} e^{-x^2-y^2}\,dx\,dy
+\int_{-\infty}^{\infty} e^{-x^2}\,dx
 $$
 
-gets nowhere, but polar coordinates $\boldsymbol{\phi}(r,\theta)=(r\cos\theta,
-r\sin\theta)$ crack it open. (The map fails injectivity only at the origin and
+that resists direct attack: $e^{-x^2}$ has no elementary antiderivative (its
+antiderivative is the error function from the bell-volume cell, *defined* as
+that integral rather than expressed in older functions), so the fundamental
+theorem has nothing to grip. The trick is to go *up* a dimension. Square the
+integral, rename the dummy variable in the second copy, and let Fubini
+:eqref:`eq_mdl-fubini` fuse the iterated integrals into one double integral:
+
+$$
+\left(\int_{-\infty}^{\infty} e^{-x^2}\,dx\right)^{\!2}
+= \int_{-\infty}^{\infty} e^{-x^2}\,dx \int_{-\infty}^{\infty} e^{-y^2}\,dy
+= \int_{-\infty}^{\infty}\!\!\int_{-\infty}^{\infty} e^{-x^2-y^2}\,dx\,dy .
+$$
+:eqlabel:`eq_mdl-gauss-square`
+
+The two-dimensional integral has something its one-dimensional parent
+lacked---rotational symmetry---and polar coordinates
+$\boldsymbol{\phi}(r,\theta)=(r\cos\theta, r\sin\theta)$ are built to exploit
+it. (The map fails injectivity only at the origin and
 along the seam $\theta=0\equiv 2\pi$, a set of zero area that the theorem safely
 ignores---the hypotheses need only hold off such a negligible set.) The Jacobian
 determinant is
@@ -599,10 +661,21 @@ $$
 = 2\pi\int_0^\infty r\,e^{-r^2}\,dr = \pi .
 $$
 
-The cell verifies this two-dimensional integral numerically by summing the
-integrand over a fine grid---the same $\pi$ the surface cell above already
-landed on, since its $[-6,6]^2$ box is wide enough that the Gaussian's tails
-beyond it contribute nothing to six decimals.
+Taking the square root of :eqref:`eq_mdl-gauss-square` (the positive one, since
+the integrand is positive) lands the prize:
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi} .
+$$
+
+The same factorization also redeems the bell-volume cell's comparison line:
+over the box, $\bigl(\int_{-2}^{2} e^{-x^2}\,dx\bigr)^2
+= \bigl(\sqrt{\pi}\,\operatorname{erf}(2)\bigr)^2
+= \pi\operatorname{erf}(2)^2 \approx 3.11227$, shy of the full-plane $\pi$ by
+exactly the truncated tails. The cell verifies the two-dimensional integral
+numerically by summing the integrand over a fine grid on $[-6,6]^2$---a box
+wide enough that the Gaussian's tails beyond it contribute nothing to six
+decimals.
 
 ```{.python .input #integral-gaussian}
 #@tab mxnet
@@ -651,8 +724,8 @@ p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
 $$
 :eqlabel:`eq_mdl-density`
 
-The Gaussian integral above is precisely what supplies the normalizer: since
-$\int_{-\infty}^\infty e^{-x^2}\,dx=\sqrt\pi$, the function
+The Gaussian integral above is precisely what supplies the normalizer: we
+showed $\int_{-\infty}^\infty e^{-x^2}\,dx=\sqrt\pi$, so the function
 $p(x)=\tfrac{1}{\sqrt\pi}e^{-x^2}$ integrates to $1$ and is a bona fide density.
 An **expectation** is then an integral average---weighting each value by its
 density,
@@ -717,39 +790,76 @@ domain. The **law of large numbers** is the guarantee that it works: the sample
 average converges to the true expectation, and the central limit theorem pins the
 error at order $1/\sqrt{n}$---a rate that depends only on the sample size $n$, not
 on the dimension. That dimension-free rate is decisive. A grid laid down to
-resolution $\epsilon$ in $d$ dimensions costs $\epsilon^{-d}$ evaluations, so its
-error decays only as $(\text{evaluations})^{-2/d}$ and slows to a crawl as $d$
-grows---the *curse of dimensionality*---while Monte Carlo keeps its
-$(\text{evaluations})^{-1/2}$ rate in every dimension. This is why sampling, not
+resolution $\epsilon$ in $d$ dimensions costs $N=\epsilon^{-d}$ evaluations.
+The left rule we have used throughout has error $\propto\epsilon$, so it buys
+only $N^{-1/d}$; even a *second-order* rule---midpoint or trapezoid, whose
+error is $\propto\epsilon^2$---manages just $N^{-2/d}$. Either way the
+exponent is devoured by the dimension---the *curse of
+dimensionality*---while Monte Carlo keeps its $N^{-1/2}$ in every dimension.
+This is why sampling, not
 grid quadrature, is how expectations are computed at scale; we develop it
 thoroughly when we study random variables in :numref:`sec_mdl-random_variables`.
 The cell makes both halves concrete: it estimates $\int_0^1 e^{-x^2}\,dx$ by
-Monte Carlo against a fine Riemann quadrature, then plots integration error
-against the number of function evaluations on log-log axes.
+Monte Carlo against a midpoint quadrature fine enough to be exact at the
+printed precision, then plots the error rates against the number of function
+evaluations on log-log axes.
 
 ```{.python .input #integral-monte-carlo}
 np.random.seed(1)
-# E[e^{-X^2}], X ~ U[0, 1], by Monte Carlo vs a fine Riemann quadrature.
-quad = float(np.sum(1e-4 * np.exp(-np.arange(0., 1., 1e-4) ** 2)))
+# E[e^{-X^2}], X ~ U[0, 1], by Monte Carlo vs a fine midpoint quadrature
+# (midpoint is second-order: at eps=1e-4 its bias ~ 3e-10, below the print).
+quad = float(np.sum(1e-4 * np.exp(-(np.arange(0., 1., 1e-4) + 5e-5) ** 2)))
 for n in [10, 100, 1000, 10000, 100000]:
     mc = float(np.mean(np.exp(-np.random.rand(n) ** 2)))
-    print(f'n={n:<7} Monte Carlo={mc:.5f}  error={abs(mc - quad):.5f}')
-print(f'Riemann quadrature   ={quad:.5f}')
+    print(f'n={n:<7} Monte Carlo={mc:.5f}  error={abs(mc - quad):.1e}')
+print(f'midpoint quadrature  ={quad:.5f}')
 
-# Error vs work: a grid resolving each axis costs N^{-2/d}; Monte Carlo gives
-# N^{-1/2} in *every* dimension (the law of large numbers).
+# Error vs work: a second-order grid over d dimensions decays as N^{-2/d}
+# (the left rule manages only N^{-1/d}); Monte Carlo gives N^{-1/2} in
+# *every* dimension (the law of large numbers).
 N = np.logspace(1, 6, 50)
-d2l.plot(N, [N ** -0.5, N ** (-2 / 1), N ** (-2 / 4), N ** (-2 / 8)],
+d2l.plot(N, [N ** -0.5, N ** (-2 / 2), N ** (-2 / 6), N ** (-2 / 10)],
          'function evaluations', 'integration error',
          xscale='log', yscale='log',
-         legend=['Monte Carlo (any d)', 'grid d=1', 'grid d=4', 'grid d=8'])
+         legend=['Monte Carlo (any d)', 'grid d=2', 'grid d=6', 'grid d=10'])
 ```
 
-The Monte-Carlo estimate closes in on the quadrature value as $n$ grows, and the
-log-log plot reads off the rates directly as slopes: the grid lines fan out and
-flatten with dimension while the Monte-Carlo line keeps its slope of $-\tfrac12$.
-The two cross near $d=4$, and past it sampling is the only practical choice---the
-quantitative face of the curse of dimensionality.
+The Monte-Carlo estimate closes in on the quadrature value as $n$
+grows---unevenly, as randomness must: the $1/\sqrt{n}$ rate holds *in
+expectation* (about $6\times 10^{-4}$ at $n=10^5$ for this integrand), and an
+individual run can land lucky, as the final row here does. The log-log plot reads the rates off as slopes. The $d=2$
+grid line falls at slope $-1$ and beats Monte Carlo's $-\tfrac12$; at $d=4$ a
+second-order grid would tie exactly ($N^{-2/4}=N^{-1/2}$---we leave that line
+out, since it would sit right on top of the Monte-Carlo line); by $d=6$ and
+$d=10$ the grid has flattened to slopes $-\tfrac13$ and $-\tfrac15$ and loses
+badly. For the first-order left rule the break-even is already $d=2$. Past a
+handful of dimensions, sampling is the only practical choice---the quantitative
+face of the curse of dimensionality.
+
+**Differentiating under the integral sign.** One more interchange earns its
+keep in deep learning: moving a gradient through an integral. When an integrand
+depends on a parameter $\boldsymbol{\theta}$, we will routinely write
+
+$$
+\nabla_{\boldsymbol{\theta}} \int f(x, \boldsymbol{\theta})\,dx
+= \int \nabla_{\boldsymbol{\theta}} f(x, \boldsymbol{\theta})\,dx .
+$$
+
+The swap is not free: the standard sufficient condition (via dominated
+convergence) is that, near the current $\boldsymbol{\theta}$, the integrands'
+derivatives are bounded in magnitude by a single integrable function of $x$.
+The smooth, rapidly decaying densities of deep learning almost always comply,
+but the caveat is not decorative---it fails exactly when the integrand's
+support or its spikes move with $\boldsymbol{\theta}$. Two results we lean on
+later are nothing but this swap: differentiating the normalization
+$\int p_{\boldsymbol{\theta}}(x)\,dx = 1$ under the integral shows the score
+$\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$ has mean zero, the
+seed of Fisher information (:numref:`sec_mdl-maximum_likelihood`); and applying
+it to an expectation gives
+$\nabla_{\boldsymbol{\theta}}\,\mathbb{E}_{x\sim p_{\boldsymbol{\theta}}}[g(x)]
+= \mathbb{E}\bigl[g(x)\,\nabla_{\boldsymbol{\theta}}\log
+p_{\boldsymbol{\theta}}(x)\bigr]$, the score-function (REINFORCE) identity at
+the heart of policy-gradient methods.
 
 ## Summary
 
@@ -761,6 +871,10 @@ quantitative face of the curse of dimensionality.
   differentiation reversed: $\int_a^b f = G(b)-G(a)$ for any antiderivative $G$.
 * **Improper integrals** extend the definition to infinite domains as a limit;
   $\int_1^\infty x^{-p}\,dx$ converges exactly when $p>1$.
+* **Integration by parts** :eqref:`eq_mdl-parts` trades $\int u\,v'$ for a
+  boundary term minus $\int u'\,v$---the product rule run backwards, and the
+  standard device for moving a derivative onto the factor that can absorb it
+  (score matching, expectations of products).
 * **Change of variables** multiplies by the local stretch: $du/dx$ in one
   dimension :eqref:`eq_mdl-change_var`, the Jacobian determinant
   $|\det D\boldsymbol{\phi}|$ for a $C^1$-diffeomorphism in many
@@ -794,6 +908,9 @@ quantitative face of the curse of dimensionality.
    origin breaks absolute integrability.)
 7. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo (average $e^{-x_i^2}$ over
    $x_i$ uniform on $[0,1]$) and compare with a Riemann sum.
+8. Use integration by parts :eqref:`eq_mdl-parts` twice to evaluate
+   $\int_0^\infty u^2 e^{-u}\,du$---the second moment behind the exponential
+   distribution's variance in :numref:`sec_mdl-distributions`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/414)
@@ -848,6 +965,17 @@ $\int_a^b f = G(b)-G(a)$ for any antiderivative $G$.
 @!integral-ftc-check
 :::
 
+::: {.slide title="Integration by parts"}
+The product rule, run backwards through the FTC:
+
+$$\int_a^b u\,v'\,dx = \bigl[\,u\,v\,\bigr]_a^b - \int_a^b u'\,v\,dx.$$
+
+A *trade*: move the derivative onto the factor that can absorb it.
+With $u=x$, $v'=e^{-x}$: $\int_0^\infty x e^{-x}\,dx = 0 + 1 = 1$ —
+the exponential distribution's mean, and the move behind score
+matching's Hyvärinen identity.
+:::
+
 ::: {.slide title="Change of variables"}
 Substitution multiplies by the local stretch:
 
@@ -865,7 +993,9 @@ sum totals in any order, so
 $$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy
 = \int\!\!\left(\int f\,dy\right)dx.$$
 
-@integral-surface
+@fig:mdl-cal-bell-surface
+
+@!integral-box-volume
 :::
 
 ::: {.slide title="Integration meets probability"}
@@ -875,15 +1005,16 @@ an integral; Monte Carlo estimates it by sampling:
 $$\int_{\mathcal X} p = 1, \quad \mathbb{E}[g(X)] = \int g\,p\,dx
 \approx \tfrac1n\textstyle\sum_i g(x_i).$$
 
-The Gaussian normalizer $\int e^{-x^2}=\sqrt\pi$ falls out of the
+The Gaussian normalizer $\int e^{-x^2}\,dx=\sqrt\pi$ falls out of the
 2-D change of variables:
 
-@!integral-density
+@!integral-gaussian
 :::
 
 ::: {.slide title="Recap"}
 - Integral = signed area/volume; defined as a limit of Riemann sums.
 - Fundamental theorem: integration is the inverse of differentiation.
+- Integration by parts: $\int u\,v' = [\,uv\,] - \int u'\,v$.
 - Change of variables scales by $du/dx$ (1-D) or
   $|\det D\boldsymbol{\phi}|$ ($n$-D).
 - Foundation of probability: $\int_{\mathcal X} p = 1$ is a density;

@@ -28,10 +28,12 @@ rank and the four fundamental subspaces (resolving the "efficient rank" promise 
 approximation, principal component analysis, the pseudoinverse and least squares,
 and the condition number that predicts numerical trouble and gradient-descent
 zig-zag. It also underwrites a large share of practical deep learning: PCA, the
-Eckart--Young truncation behind LoRA and other low-rank adapters, and the spectral
-diagnostics used to inspect and constrain trained weights---including spectral
-normalization, which estimates the largest singular value with the very power
-iteration we met in :numref:`sec_mdl-eigendecompositions`.
+Eckart--Young truncation behind LoRA and other low-rank adapters, the
+orthogonalized update steps of the Muon optimizer (the polar decomposition at
+work), and the spectral diagnostics used to inspect and constrain trained
+weights---including spectral normalization, which estimates the largest singular
+value with the very power iteration we met in
+:numref:`sec_mdl-eigendecompositions`.
 
 The worked-verification cells below branch per framework, so we load the
 per-framework library once here; the few that are framework-agnostic also have
@@ -252,7 +254,9 @@ is maximized over unit $\mathbf{x}$ by the Rayleigh proposition at
 $\lambda_1=\sigma_1^2$, attained at $\mathbf{x}=\mathbf{v}_1$. So **$\sigma_1$ is
 the most the matrix can stretch any unit vector**---its operator (spectral) norm
 $\|\mathbf{A}\|_2$. The remaining singular values come from the same problem with
-deflation: $\sigma_k=\max\{\|\mathbf{A}\mathbf{x}\| : \|\mathbf{x}\|=1,\ \mathbf{x}\perp\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}$.
+deflation: $\sigma_k=\max\{\|\mathbf{A}\mathbf{x}\| : \|\mathbf{x}\|=1,\ \mathbf{x}\perp\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}$---the
+Courant--Fischer min-max principle of :numref:`subsec_mdl-rayleigh`, translated
+from Rayleigh quotients to singular values.
 This "maximum stretch" reading is the one that recurs in Eckart--Young, PCA,
 conditioning, and Lipschitz/spectral-norm arguments. The constructive proof is the
 better *first* proof (concrete, reusing machinery we have); the variational one is
@@ -273,7 +277,7 @@ of $\mathbf{A}^\top\mathbf{A}$, the left singular vectors are the eigenvectors o
 $\mathbf{A}\mathbf{A}^\top$, and the squared singular values $\sigma_i^2$ are the
 shared eigenvalues. For a symmetric PSD matrix the SVD and the eigendecomposition
 coincide. In general they differ, and the cleanest warning against conflating
-singular values with eigenvalues is the rotation matrix
+singular values with eigenvalues is the scaled rotation
 
 $$
 \mathbf{A} = \begin{bmatrix} 0 & -2\\ 1 & \phantom{-}0\end{bmatrix},
@@ -287,6 +291,11 @@ are *not* the eigenvalue magnitudes; here even their *geometric mean*
 $\sqrt{\sigma_1\sigma_2}=\sqrt2$ equals $|\lambda|$, which is no accident---it is
 the matrix analog of the rotation-with-scaling reading from
 :numref:`subsec_mdl-complex-rotation`, with $|\det\mathbf{A}|=\sigma_1\sigma_2=|\lambda_1\lambda_2|=2$.
+The determinant identity holds in general: for any square $\mathbf{A}$,
+$|\det\mathbf{A}|=\prod_i\sigma_i$, because orthogonal factors have determinant
+$\pm1$, so the volume scaling of
+:numref:`sec_mdl-geometry-linear-algebraic-ops` is carried entirely by the
+diagonal stretch $\boldsymbol{\Sigma}$.
 
 **The defective shear, finally decomposed.** We can now keep the promise made
 twice in :numref:`sec_mdl-eigendecompositions`. The shear
@@ -378,7 +387,9 @@ backwards.
 rank-deficient rarely has exact zero singular values; rounding leaves tiny
 $\sigma_i$ of size around $\epsilon_{\text{mach}}\,\sigma_1$ instead. The honest
 notion of rank therefore *thresholds*: count the singular values above a tolerance,
-which is exactly what `np.linalg.matrix_rank` does. Building a deliberately rank-2
+which is exactly what `np.linalg.matrix_rank` does---its default cutoff is
+$\sigma_1\,\max(m,n)\,\epsilon_{\text{mach}}$, scaled by both the largest singular
+value and the matrix size. Building a deliberately rank-2
 matrix in $\mathbb{R}^{4\times4}$ shows two singular values collapse to near
 machine zero, so a tolerance recovers the true rank where a test for exact zeros
 would fail.
@@ -406,10 +417,10 @@ $$
 :eqlabel:`eq_mdl-truncated-svd`
 
 is not merely *a* rank-$k$ approximation of $\mathbf{A}$---it is the *provably
-best* one, in both the spectral and Frobenius norms. Eckart and Young (1936)
-proved the Frobenius case and Mirsky (1960) extended it to every unitarily
-invariant norm; we give the spectral-norm statement and proof in full because the
-argument is beautiful.
+best* one, in both the spectral and Frobenius norms. Eckart and Young proved the
+Frobenius case :cite:`Eckart.Young.1936` and Mirsky extended it to every unitarily
+invariant norm :cite:`Mirsky.1960`; we give the spectral-norm statement and proof
+in full because the argument is beautiful.
 
 **Theorem (Eckart--Young--Mirsky).** *For every $k<r$,*
 
@@ -427,8 +438,10 @@ $\mathbf{A}-\mathbf{A}_k=\sum_{i>k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ is its
 a (sub-)SVD whose largest singular value is $\sigma_{k+1}$, so by the variational
 identity :eqref:`eq_mdl-sigma1-variational`,
 $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$. (And
-$\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$, since the Frobenius norm is
-the root-sum-of-squares of the singular values.)
+$\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$, by the identity
+$\|\mathbf{A}\|_F^2=\operatorname{tr}(\mathbf{A}^\top\mathbf{A})=\sum_i\sigma_i^2$:
+the Frobenius norm is the root-sum-of-squares of the singular values. Exercise 2
+asks you to prove this in two lines.)
 
 *No rank-$k$ matrix does better (the dimension-counting argument).* Let
 $\mathbf{B}$ be any matrix with $\operatorname{rank}\mathbf{B}\le k$. Its null
@@ -472,8 +485,9 @@ that shared vector $\mathbf{B}$ is blind ($\mathbf{B}\mathbf{x}=\mathbf 0$) whil
 $\mathbf{A}$ still stretches by at least $\sigma_{k+1}$---so no rank-$k$
 $\mathbf{B}$ can track $\mathbf{A}$ everywhere.
 
-For the **Frobenius** norm---the case PCA relies on---the same conclusion follows
-from a one-line singular-value inequality. *Weyl's inequality for singular values*,
+**Proof (Frobenius case).** For the Frobenius norm---the case PCA relies on---the
+same conclusion follows from a one-line singular-value inequality. *Weyl's
+inequality for singular values*,
 $\sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y})$,
 applied with $\mathbf{X}=\mathbf{A}-\mathbf{B}$, $\mathbf{Y}=\mathbf{B}$ and
 $j=k{+}1$ gives
@@ -498,9 +512,30 @@ $$
 :eqlabel:`eq_mdl-energy-ratio`
 
 so choosing $k$ to capture, say, 95% of the energy is a principled way to set the
-rank. When the singular values decay quickly---as they do for natural images and,
-empirically, for many trained weight matrices---a small $k$ captures almost
-everything, which is exactly the regime in which low-rank compression pays off.
+rank. When the singular values decay quickly---as they do for images with
+large-scale structure and, empirically, for many trained weight matrices---a small
+$k$ captures almost everything, which is exactly the regime in which low-rank
+compression pays off.
+
+**Truncation as denoising.** There is a second, statistical reason to truncate.
+Suppose the matrix you observe is a low-rank signal plus noise,
+$\mathbf{A}=\mathbf{B}+\mathbf{N}$, with $\operatorname{rank}\mathbf{B}=r$ small
+and $\mathbf{N}$ having i.i.d. entries of standard deviation
+$\sigma_{\text{noise}}$. Then the spectrum of $\mathbf{A}$ *splits*: the $r$
+signal values stand essentially where they were, while the noise contributes a
+floor of singular values clustered below roughly
+$(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Truncating just above that floor
+discards almost pure noise, so $\mathbf{A}_k$ can be *closer to the truth*
+$\mathbf{B}$ than the observed $\mathbf{A}$ is. Gavish and Donoho made the cutoff
+precise: for an $n\times n$ matrix with known noise level, the asymptotically
+optimal hard threshold is
+$\tfrac{4}{\sqrt3}\sqrt{n}\,\sigma_{\text{noise}}\approx2.309\,\sqrt{n}\,\sigma_{\text{noise}}$
+:cite:`Gavish.Donoho.2014`---a principled alternative to the 95%-energy dial when
+the data is noisy; Exercise 3 lets you watch the spectrum split. The same
+low-rank-signal premise, with *missing* rather than noisy entries, underlies
+*matrix completion*: recommender systems fill in a sparsely observed ratings
+matrix by seeking the lowest-rank matrix (in practice, the smallest *nuclear norm*
+$\sum_i\sigma_i$, rank's convex surrogate) consistent with the observed entries.
 
 :numref:`fig_mdl-la-eckart-young` makes this concrete on a grayscale image. The
 left panel plots the singular-value spectrum on a log scale (note the rapid decay);
@@ -565,7 +600,7 @@ axes against the eigenvectors of the covariance and reports the
 explained-variance ratio---the two routes agree, as :eqref:`eq_mdl-svd-gram`
 guarantees.
 
-![A 2-D correlated cloud with its principal axes drawn from the origin of the cloud, each scaled by the standard deviation $\sigma_i/\sqrt{n}$ along that direction. The first axis aligns with the direction of maximal variance.](../img/mdl-la-pca.svg)
+![A 2-D correlated cloud with its principal axes drawn from the mean of the cloud, each scaled by the standard deviation $\sigma_i/\sqrt{n}$ along that direction. The first axis aligns with the direction of maximal variance.](../img/mdl-la-pca.svg)
 :label:`fig_mdl-la-pca`
 
 ```{.python .input #svd-pca}
@@ -742,10 +777,13 @@ $$
    = \kappa(\mathbf{A})\,\frac{\|\delta\mathbf{b}\|}{\|\mathbf{b}\|} .
 $$
 
-It is *tight*: align the signal with the least-amplified direction by taking
-$\mathbf{b}=\mathbf{u}_1$ (so $\mathbf{x}=\sigma_1^{-1}\mathbf{v}_1$ has the largest
-possible norm for its right-hand side) and the error with the most-amplified
-direction $\delta\mathbf{b}=\mathbf{u}_n$ (so $\delta\mathbf{x}=\sigma_n^{-1}\mathbf{v}_n$);
+It is *tight*: align the signal with the direction the inverse amplifies least by
+taking $\mathbf{b}=\mathbf{u}_1$, so that $\mathbf{x}=\sigma_1^{-1}\mathbf{v}_1$ is
+the *smallest*-norm solution any unit right-hand side can produce---a small
+$\|\mathbf{x}\|$ in the denominator is exactly what maximizes the relative-error
+ratio---and align the error with the most-amplified direction
+$\delta\mathbf{b}=\mathbf{u}_n$ (so $\delta\mathbf{x}=\sigma_n^{-1}\mathbf{v}_n$ is
+as large as a perturbation of its size can get);
 then both inequalities are equalities. $\blacksquare$
 
 A few consequences are worth recording. An orthogonal matrix has all singular
@@ -783,17 +821,17 @@ zig-zag is the visible cost of a large condition number.
 :label:`fig_mdl-la-condition`
 
 ## The SVD in Modern Deep Learning
-:label:`subsec_mdl-svd-modern-dl`
+:label:`sec_mdl-svd-modern-dl`
 
 The SVD is not a historical artifact; low-rank structure is everywhere in
 contemporary models, and Eckart--Young is the reason it can be exploited cheaply.
 
 **Low-rank adapters (LoRA).** Fine-tuning a large pretrained model by updating
-every weight is expensive. LoRA (Hu et al., 2021) freezes a pretrained weight
-$\mathbf{W}\in\mathbb{R}^{m\times n}$ and learns only a low-rank correction
-$\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$ with $\mathbf{B}\in\mathbb{R}^{m\times r}$,
-$\mathbf{A}\in\mathbb{R}^{r\times n}$, and $r\ll\min(m,n)$. This trades $mn$
-trainable parameters for $r(m+n)$, a ratio of
+every weight is expensive. LoRA :cite:`Hu.Shen.Wallis.ea.2021` freezes a
+pretrained weight $\mathbf{W}\in\mathbb{R}^{m\times n}$ and learns only a low-rank
+correction $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$ with
+$\mathbf{B}\in\mathbb{R}^{m\times r}$, $\mathbf{A}\in\mathbb{R}^{r\times n}$, and
+$r\ll\min(m,n)$. This trades $mn$ trainable parameters for $r(m+n)$, a ratio of
 
 $$
 \frac{r(m+n)}{mn} ,
@@ -801,16 +839,49 @@ $$
 :eqlabel:`eq_mdl-lora-ratio`
 
 which for a $4096\times4096$ layer at rank $r=8$ is $8\cdot8192/4096^2\approx0.39\%$
-of the parameters. The hypothesis that fine-tuning has *intrinsically low rank* is
-what makes this work, and Eckart--Young is the formal backbone: among all rank-$r$
-updates, the truncated SVD is the most expressive one, so a learned rank-$r$
-adapter is operating at the optimal trade-off the theorem describes.
+of the parameters. The hypothesis that fine-tuning updates are *intrinsically low
+rank* is what makes this work. Note what Eckart--Young does and does not say here:
+LoRA *learns* $\mathbf{B}$ and $\mathbf{A}$ by gradient descent rather than
+truncating a known matrix, so the theorem promises nothing about the learned
+adapter itself. What it quantifies is the *ceiling*: if the update that full
+fine-tuning would have made has singular values $\sigma_1\ge\sigma_2\ge\cdots$,
+then no rank-$r$ adapter can come closer to it than $\sigma_{r+1}$ in spectral
+norm ($\sum_{i>r}\sigma_i^2$ in squared Frobenius norm), so the approach can only succeed when
+the true update's spectrum decays fast---which is exactly the empirical finding
+that motivated LoRA. PiSSA makes the link to the SVD literal: it *initializes*
+$\mathbf{B}$ and $\mathbf{A}$ from the truncated SVD of the pretrained weight
+$\mathbf{W}$ itself, so that fine-tuning starts by adapting the principal
+components :cite:`Meng.Wang.Zhang.2024`.
+
+**Orthogonalized updates (Muon).** The polar decomposition
+:eqref:`eq_mdl-polar` is not just a tidy restatement of rotate--scale--rotate; it
+is the engine of Muon :cite:`Jordan.Jin.Boza.ea.2024`, an optimizer adopted in
+recent large-scale language-model training. Write the momentum matrix of a weight
+as $\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. A standard momentum
+step moves along $\mathbf{M}$, which is dominated by its few largest dyads; Muon
+instead steps along the *polar factor*
+$\mathbf{Q}=\mathbf{U}\mathbf{V}^\top$---the rotation part of the update, with
+every stretch factor equalized to $1$---so rare-but-consistent gradient
+directions are not drowned out by the dominant ones. (Equivalently, $\mathbf{U}\mathbf{V}^\top$
+is the steepest-descent direction when distances between weight matrices are
+measured in the spectral norm rather than the Euclidean one
+:cite:`Bernstein.Newhouse.2024`.) Computing an SVD of every weight at every step
+would be hopeless; instead Muon runs a handful of *Newton--Schulz* iterations
+$\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$
+starting from $\mathbf{X}=\mathbf{M}/\|\mathbf{M}\|_F$. Each iteration leaves
+$\mathbf{U}$ and $\mathbf{V}$ untouched and applies the odd polynomial
+$p(\sigma)=\tfrac12(3\sigma-\sigma^3)$ to every singular value, driving each
+nonzero $\sigma_i$ toward the fixed point $1$---so the iterates converge to
+$\mathbf{U}\mathbf{V}^\top$ using nothing but matrix multiplications (in practice
+Muon tunes the polynomial's coefficients so that about five iterations suffice).
+It is the same GPU-friendly bargain that spectral normalization strikes with
+power iteration below.
 
 **Spectral normalization.** Constraining the largest singular value of each weight
 matrix to $1$ caps the per-layer Lipschitz constant
 (:eqref:`eq_mdl-sigma1-variational`: $\sigma_1=\|\mathbf{W}\|_2$ is exactly the most
 a layer can stretch its input), which stabilizes training---originally for GAN
-discriminators (Miyato et al., 2018). The beautiful part is *how* $\sigma_1$ is
+discriminators :cite:`Miyato.Kataoka.Koyama.ea.2018`. The beautiful part is *how* $\sigma_1$ is
 estimated: by **power iteration on $\mathbf{W}^\top\mathbf{W}$**, the very algorithm
 we analyzed in :numref:`sec_mdl-eigendecompositions`, since
 $\sigma_1=\sqrt{\lambda_1(\mathbf{W}^\top\mathbf{W})}$. A couple of iterations per
@@ -824,10 +895,16 @@ instead of an image) reveals its *effective rank* via the energy ratio
 :eqref:`eq_mdl-energy-ratio` and exposes heavy-tailed spectra that correlate with
 generalization. Attention matrices are often empirically near-low-rank, which
 motivates linear-attention approximations that replace the full softmax attention
-with a low-rank surrogate. The one-liner below makes the diagnostic concrete: it
-builds a synthetic weight matrix with a fast-decaying spectrum and reports the rank
-needed for 95% spectral energy and the parameter saving a LoRA of that rank would
-give.
+with a low-rank surrogate; the most prominent recent instance is low-rank
+key--value compression, where DeepSeek-V2's multi-head latent attention stores a
+single low-rank latent in place of the full per-head key and value cache and
+expands it on the fly :cite:`DeepSeek-AI.2024`. The cell below makes the
+diagnostic concrete: it builds a synthetic weight matrix with a fast-decaying
+spectrum and reports the rank needed for 95% spectral energy and the parameter
+saving a LoRA of that rank would give---here rank 18 of 256, about 10.5% of the
+full parameter count. How small that rank is depends entirely on how fast the
+spectrum decays (compare the 0.39% headline above, which assumed $r=8$ suffices),
+which is why the diagnostic is worth running rather than assuming.
 
 ```{.python .input #svd-weight-spectrum}
 rng = np.random.default_rng(2)
@@ -842,7 +919,7 @@ print(f'{m} x {n} matrix; rank for 95% energy: {r95}; '
 ```
 
 **Scaling up.** For matrices too large to factor fully, *randomized SVD*
-(Halko, Martinsson, and Tropp, 2011) computes an accurate rank-$k$ truncation at a
+:cite:`Halko.Martinsson.Tropp.2011` computes an accurate rank-$k$ truncation at a
 fraction of the cost. The mechanism is a *range finder*: draw a random
 $n\times(k{+}p)$ Gaussian matrix $\boldsymbol\Omega$ (a small oversampling $p$ adds
 robustness), form $\mathbf{Y}=\mathbf{A}\boldsymbol\Omega$---a handful of
@@ -917,7 +994,8 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
   it therefore *never fails*, even for the defective shear that had no
   eigenbasis. Equivalently $\sigma_1=\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|=\|\mathbf{A}\|_2$.
 * Rank, range, and the four fundamental subspaces read off the spectrum;
-  numerical rank thresholds the $\sigma_i$ at $\sim\epsilon_{\text{mach}}\sigma_1$.
+  numerical rank thresholds the $\sigma_i$ at
+  $\sim\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
 * **Eckart--Young--Mirsky:** the top-$k$ truncation $\mathbf{A}_k$ is the optimal
   rank-$k$ approximation, with $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ and
   $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The energy ratio is the
@@ -929,23 +1007,35 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
   $\kappa=\sigma_1/\sigma_r$ predicts both error amplification and
   gradient-descent speed, and $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$
   is why the normal equations are worse.
-* SVD powers PCA, LoRA (rank-$r$ updates at $r(m+n)$ parameters), spectral
-  normalization (power iteration on $\mathbf{W}^\top\mathbf{W}$), and weight /
-  attention spectral analysis.
+* SVD powers PCA, LoRA (rank-$r$ updates at $r(m+n)$ parameters), Muon (steps
+  along the polar factor $\mathbf{U}\mathbf{V}^\top$, computed by Newton--Schulz
+  iterations), spectral normalization (power iteration on
+  $\mathbf{W}^\top\mathbf{W}$), and weight / attention spectral analysis.
 
 ## Exercises
 
 1. Compute the SVD of $\operatorname{diag}(3,1)$ by inspection. Then show the
-   rotation $\begin{bmatrix}0&-2\\1&0\end{bmatrix}$ has singular values $\{2,1\}$
-   even though its eigenvalue magnitudes are both $\sqrt2$---i.e.
+   scaled rotation $\begin{bmatrix}0&-2\\1&0\end{bmatrix}$ has singular values
+   $\{2,1\}$ even though its eigenvalue magnitudes are both $\sqrt2$---i.e.
    $\sigma\neq|\lambda|$ for non-symmetric matrices.
-2. Prove the Eckart--Young spectral-norm error
-   $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ directly from
-   :eqref:`eq_mdl-sigma1-variational`, by identifying the SVD of
-   $\mathbf{A}-\mathbf{A}_k$.
-3. Prove that $\hat{\mathbf{x}}=\mathbf{A}^{+}\mathbf{b}$ is the minimum-norm
-   least-squares solution of $\mathbf{A}\mathbf{x}=\mathbf{b}$, and deduce
-   $\mathbf{A}^{+}=\mathbf{A}^{-1}$ when $\mathbf{A}$ is square invertible.
+2. Prove that $\|\mathbf{A}\|_F^2=\sum_i\sigma_i^2$. (*Hint:* first show
+   $\|\mathbf{A}\|_F^2=\operatorname{tr}(\mathbf{A}^\top\mathbf{A})$ directly from
+   the definitions, then evaluate the trace as the sum of the eigenvalues of
+   $\mathbf{A}^\top\mathbf{A}$ using :eqref:`eq_mdl-svd-gram`.) Conclude that
+   multiplying by orthogonal matrices on either side never changes the Frobenius
+   norm.
+3. Generate a rank-5 signal $\mathbf{B}=\mathbf{X}\mathbf{Y}^\top$ with
+   $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{200\times5}$ standard Gaussian, and add
+   noise $\mathbf{N}$ with i.i.d. $\mathcal{N}(0,\sigma_{\text{noise}}^2)$ entries,
+   $\sigma_{\text{noise}}=0.05$. Plot the singular values of
+   $\mathbf{B}+\mathbf{N}$ on a log scale and watch the spectrum split into five
+   signal values and a noise floor near
+   $(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Verify that hard-thresholding at
+   the Gavish--Donoho cutoff
+   $\tfrac{4}{\sqrt3}\sqrt{n}\,\sigma_{\text{noise}}$ recovers the true rank, and
+   check numerically whether the rank-5 truncation of $\mathbf{B}+\mathbf{N}$ is
+   closer to $\mathbf{B}$ (in Frobenius norm) than $\mathbf{B}+\mathbf{N}$ itself
+   is. What happens as you keep more components than 5?
 4. Show that the singular values of any orthogonal matrix are all $1$, hence
    $\kappa=1$. Then prove $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$
    and explain why this makes the normal equations numerically inferior.
@@ -959,10 +1049,24 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
    compute the resulting parameter saving relative to a full update (the
    `#svd-weight-spectrum` cell). How does the answer change if the spectrum decays
    more slowly?
-8. Show that adding a rank-$r$ update $\mathbf{B}\mathbf{A}$ to $\mathbf{W}$ can
-   change at most $r$ of $\mathbf{W}$'s singular values away from their original
-   values. (*Hint:* the perturbation has rank $\le r$; use a dimension-counting
-   argument like the one in :numref:`subsec_mdl-eckart-young`.)
+8. How much can an update $\boldsymbol{\Delta}$ (for instance a rank-$r$ LoRA
+   update $\mathbf{B}\mathbf{A}$) move the singular values of $\mathbf{W}$?
+    1. Derive the *Weyl perturbation bound*
+       $|\sigma_i(\mathbf{W}+\boldsymbol{\Delta})-\sigma_i(\mathbf{W})|\le\sigma_1(\boldsymbol{\Delta})$
+       for every $i$ and *any* update $\boldsymbol{\Delta}$, by setting $j=1$ in
+       Weyl's inequality
+       $\sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y})$
+       from :numref:`subsec_mdl-eckart-young`, applied in both directions.
+    1. Can a rank-*one* update move *all* the singular values? Take
+       $\mathbf{W}=\operatorname{diag}(1,2)$ and
+       $\boldsymbol{\Delta}=0.1\,\mathbf{1}\mathbf{1}^\top$, compute the singular
+       values of $\mathbf{W}+\boldsymbol{\Delta}$ numerically, and check that
+       *both* moved---each by less than $\sigma_1(\boldsymbol{\Delta})=0.2$, as the
+       bound demands.
+    1. Reconcile this with the fact that adding a rank-$r$ update changes
+       $\operatorname{rank}\mathbf{W}$ by at most $r$: a low-rank update can nudge
+       *every* singular value a little, but can create or destroy at most $r$
+       nonzero ones.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/svd)
@@ -1008,7 +1112,7 @@ Gram matrices are never defective, so the SVD **never fails** —
 even the defective shear $[[1,1],[0,1]]$ gets a clean SVD
 ($\sigma = \varphi, 1/\varphi$):
 
-@svd-verify
+@svd-defective-shear
 :::
 
 ::: {.slide title="Eckart--Young: optimal low rank"}
@@ -1048,7 +1152,10 @@ descent. Normal equations square it ($\kappa(\mathbf{A}^\top\mathbf{A})=\kappa^2
 
 ::: {.slide title="SVD in modern deep learning"}
 - **LoRA**: $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$, rank $r$, only
-  $r(m+n)$ params; Eckart--Young says rank-$r$ is the best cheap update.
+  $r(m+n)$ params; Eckart--Young bounds how well *any* rank-$r$ update
+  can track the full one ($\sigma_{r+1}$).
+- **Muon**: step along the polar factor $\mathbf{U}\mathbf{V}^\top$ of the
+  momentum — Newton--Schulz, matmuls only.
 - **Spectral norm**: cap $\sigma_1=\|\mathbf{W}\|_2$ for Lipschitz
   control — estimated by power iteration on $\mathbf{W}^\top\mathbf{W}$.
 - **Weight/attention spectra**: effective rank from the energy ratio.

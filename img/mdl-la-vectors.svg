@@ -533,24 +533,24 @@ L 363.356197 94.573114
    <g id="patch_7">
     <path d="M 309.6 195.77267 
 Q 358.690909 163.045398 405.735245 131.682507 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 399.522603 132.459087 
 L 405.735245 131.682507 
 L 402.628924 137.118569 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_8">
-    <path d="M 345.6 100.86358 
-Q 394.690909 68.136307 441.735245 36.773416 
-" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
-    <path d="M 435.522603 37.549996 
-L 441.735245 36.773416 
-L 438.628924 42.209478 
-" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
+    <path d="M 289.963636 94.318125 
+Q 339.054545 61.590852 386.098881 30.227962 
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
+    <path d="M 379.886239 31.004542 
+L 386.098881 30.227962 
+L 382.99256 35.664024 
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- $(3,2)$ -->
-    <g style="fill: #1f77b4" transform="translate(303.880455 115.068125) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(339.880455 115.068125) scale(0.11 -0.11)">
      <use xlink:href="#Cmr10-28"/>
      <use xlink:href="#Cmr10-33" transform="translate(38.818359 0)"/>
      <use xlink:href="#Cmmi10-3b" transform="translate(88.818359 0)"/>

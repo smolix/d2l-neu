@@ -207,6 +207,62 @@ def fig_significance():
     fl.save(fig, "mdl-prob-significance")
 
 
+def fig_power_curves():
+    """Power of the one-sample two-sided z-test (H0: mu = 0, sigma = 1, at
+    alpha = 0.05) as a function of the sample size n, one curve per true
+    effect size delta:  power(n; delta) = Phi(delta sqrt(n) - z*) +
+    Phi(-delta sqrt(n) - z*) with z* = z_{0.975}.  Every curve starts near
+    alpha and climbs to 1; the n needed to hit the conventional target 0.8
+    scales like 1/delta^2 -- about 8 samples for delta = 1 but ~8 x 10^4 for
+    delta = 0.01."""
+    from math import erf, sqrt
+
+    def Phi(z):  # standard-normal CDF via erf (no scipy dependency)
+        return 0.5 * (1.0 + erf(z / sqrt(2.0)))
+
+    zc = 1.959963984540054  # z_{0.975}, two-sided alpha = 0.05
+    n = np.logspace(0.0, np.log10(2e5), 600)
+
+    def power(delta):
+        return np.array([Phi(delta * sqrt(v) - zc) + Phi(-delta * sqrt(v) - zc)
+                         for v in n])
+
+    fig, ax = plt.subplots(figsize=(6.4, 3.9))
+    # one curve per effect size, a blue family from dark (delta=1) to light
+    deltas = [1.0, 0.5, 0.1, 0.01]
+    blues = ["#114e7c", BLUE, "#5b9bc9", "#9cc2dd"]
+    label_at = [3.0, 12.0, 300.0, 3.0e4]      # n where each curve label sits
+    for delta, col, ln in zip(deltas, blues, label_at):
+        pw = power(delta)
+        ax.plot(n, pw, color=col, lw=2.2)
+        lab = rf"$\delta={delta:g}$"
+        ax.text(ln, np.interp(ln, n, pw) + 0.045, lab, color=col,
+                fontsize=9, ha="center", va="bottom")
+
+    # the conventional power target and the test's size alpha
+    ax.axhline(0.8, color=GRAY, lw=1.1, ls="--")
+    ax.text(1.3, 0.825, "target $0.8$", color=GRAY, fontsize=9, va="bottom")
+    ax.axhline(0.05, color=GRAY, lw=1.0, ls=":")
+    ax.text(1.3, 0.075, r"$\alpha=0.05$", color=GRAY, fontsize=9, va="bottom")
+
+    # where the extreme curves cross the target (power is increasing in n)
+    for delta, col, lab, dx in ((1.0, blues[0], r"$n\approx 8$", 3.5),
+                                (0.01, blues[3], r"$n\approx 8\times 10^4$", 0.12)):
+        pw = power(delta)
+        nstar = float(np.interp(0.8, pw, n))
+        ax.plot([nstar], [0.8], "o", color=col, ms=6, zorder=6)
+        ax.text(nstar * dx, 0.71, lab, color=col, fontsize=9, ha="center")
+
+    ax.set_xscale("log")
+    ax.set_xlim(1, 2e5)
+    ax.set_ylim(0, 1.05)
+    ax.set_yticks([0, 0.5, 1.0])
+    ax.set_xlabel("sample size $n$")
+    ax.set_ylabel("power")
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-power")
+
+
 def fig_bias_variance_u_curve():
     """The bias-variance decomposition as a U-curve: as model complexity grows,
     bias^2 falls and variance rises, and their sum -- the MSE / test error --
@@ -410,14 +466,20 @@ def fig_pdf_cdf():
 
 def fig_chebyshev():
     """Three-atom p.m.f. at {-2,0,2} with masses {p,1-2p,p}: the Chebyshev
-    bracket of half-width 4*sqrt(2p) contains the +/-2 atoms (p>1/8), exactly
-    touches them (p=1/8, the equality case), or excludes them (p<1/8)."""
+    event |X-mu| >= alpha*sigma has half-width 4*sqrt(2p).  For p>1/8 the
+    half-width exceeds 2, so no atom lies in the event; for p=1/8 the +/-2
+    atoms sit exactly at the boundary and carry mass 2p = 1/4, matching the
+    bound -- the equality case; for p<1/8 they lie strictly beyond it with
+    mass 2p < 1/4.  Atoms inside the event are drawn orange."""
     fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.0))
     for ax, p, title in zip(axes, [0.2, 0.125, 0.05],
-                            [r"$p>1/8$", r"$p=1/8$ (tight)", r"$p<1/8$"]):
+                            [r"$p>1/8$", r"$p=1/8$ (equality)", r"$p<1/8$"]):
         atoms, heights = [-2, 0, 2], [p, 1 - 2 * p, p]
         ax.vlines(atoms, 0, heights, color=BLUE, lw=3)
-        ax.plot(atoms, heights, "o", color=BLUE, ms=5)
+        # the +/-2 atoms belong to the event {|X| >= half-width} iff p <= 1/8
+        edge_col = ORANGE if p <= 0.125 else BLUE
+        ax.plot([-2, 2], [p, p], "o", color=edge_col, ms=5)
+        ax.plot([0], [1 - 2 * p], "o", color=BLUE, ms=5)
         hw = 4 * np.sqrt(2 * p)
         ax.annotate("", xy=(hw, -0.07), xytext=(-hw, -0.07),
                     arrowprops=dict(arrowstyle="<->", color=ORANGE, lw=1.3))
@@ -430,17 +492,33 @@ def fig_chebyshev():
 
 
 def fig_covariance():
-    """Three (X,Y) clouds with negative / zero / positive covariance."""
+    """Covariance carries units.  Top row: three (X,Y) clouds with covariance
+    tuned negative / zero / positive, Y measured in dollars.  Bottom row: the
+    *identical* draws with Y restated in cents (Y x 100) -- every sample
+    covariance is multiplied by 100, while each panel's correlation rho is
+    unchanged.  Only the sign of covariance is scale-free."""
     rng = np.random.default_rng(0)
-    fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.3))
-    for ax, c, title in zip(axes, [-0.9, 0.0, 1.2],
-                            [r"cov $<0$", r"cov $=0$", r"cov $>0$"]):
+    fig, axes = plt.subplots(2, 3, figsize=(10.0, 6.2))
+    for j, c in enumerate([-0.9, 0.0, 1.2]):
         X = rng.standard_normal(220); Y = c * X + rng.standard_normal(220)
-        ax.scatter(X, Y, s=10, color=BLUE, alpha=0.5)
-        ax.axhline(0, color=GRAY, lw=0.6); ax.axvline(0, color=GRAY, lw=0.6)
-        ax.set_title(title, fontsize=10.5); ax.set_xlim(-3.6, 3.6); ax.set_ylim(-4, 4)
-        ax.set_xticks([]); ax.set_yticks([])
-        ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+        rho = np.corrcoef(X, Y)[0, 1]          # scale-free: same in both rows
+        for i, scale in enumerate([1.0, 100.0]):
+            ax = axes[i, j]
+            Ys = Y * scale
+            cov = np.cov(X, Ys)[0, 1]          # sample covariance (units!)
+            ax.scatter(X, Ys, s=10, color=BLUE, alpha=0.5)
+            ax.axhline(0, color=GRAY, lw=0.6); ax.axvline(0, color=GRAY, lw=0.6)
+            ax.set_title(rf"cov $\approx {cov:.2f}$", fontsize=10.5)
+            ax.text(0.04, 0.93, rf"$\rho \approx {rho:.2f}$", color=GRAY,
+                    fontsize=9, ha="left", va="top", transform=ax.transAxes)
+            ax.set_xlim(-3.6, 3.6)
+            ax.set_ylim(-4 * scale, 4 * scale)
+            ax.set_yticks([-3 * scale, 0, 3 * scale])
+            ax.set_xticks([])
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+    axes[0, 0].set_ylabel(r"$Y$ in dollars", fontsize=10)
+    axes[1, 0].set_ylabel(r"same data, $Y$ in cents", fontsize=10)
     fl.save(fig, "mdl-prob-covariance")
 
 
@@ -479,15 +557,15 @@ def fig_family_tree():
     arrows mark the *conjugate prior* of each likelihood family (Beta for
     Bernoulli/Binomial, Gamma for Poisson, Dirichlet for Categorical/Multinomial)."""
     fig, ax = plt.subplots(figsize=(7.8, 5.4))
-    ax.add_patch(Rectangle((-0.35, -0.35), 8.7, 4.05, facecolor=LIGHT, alpha=0.16,
+    ax.add_patch(Rectangle((-0.35, -1.75), 8.7, 7.15, facecolor=LIGHT, alpha=0.16,
                            edgecolor=GRAY, lw=1.2, ls="--", zorder=1))
-    ax.text(0.05, 3.55, "exponential family", ha="left", va="top", color=GRAY,
+    ax.text(0.05, 5.25, "exponential family", ha="left", va="top", color=GRAY,
             fontsize=9, style="italic")
     w, h = 1.95, 0.66
     boxes = {"Bernoulli": (0.0, 1.5), "Binomial": (3.0, 2.6), "Poisson": (6.3, 2.9),
              "Gaussian": (6.3, 1.5), "Categorical": (3.0, 0.3),
              "Multinomial": (6.3, 0.3)}
-    priors = {"Beta": (3.0, 4.4), "Gamma": (6.3, 4.4), "Dirichlet": (6.3, -1.4)}
+    priors = {"Beta": (2.6, 4.4), "Gamma": (6.3, 4.4), "Dirichlet": (6.3, -1.4)}
     centers = {k: (x + w / 2, y + h / 2)
                for k, (x, y) in {**boxes, **priors}.items()}
     arrows = [("Bernoulli", "Binomial", r"sum of $n$"),
@@ -502,20 +580,21 @@ def fig_family_tree():
         mid = (c0 + c1) / 2
         ax.text(mid[0], mid[1] + 0.14, lab, ha="center", va="bottom",
                 fontsize=7.0, color=GRAY)
-    # dashed conjugate-prior arrows (prior -> its likelihood family)
-    for s, t in [("Beta", "Binomial"), ("Gamma", "Poisson"),
+    # dashed conjugate-prior arrows (prior -> its likelihood families)
+    for s, t in [("Beta", "Bernoulli"), ("Beta", "Binomial"),
+                 ("Gamma", "Poisson"), ("Dirichlet", "Categorical"),
                  ("Dirichlet", "Multinomial")]:
         c0, c1 = np.array(centers[s]), np.array(centers[t])
         d = c1 - c0
         ax.annotate("", xy=tuple(c1 - d * 0.30), xytext=tuple(c0 + d * 0.30),
                     arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.5, ls="--"))
-    ax.text(-0.3, -1.15, "dashed: conjugate prior", color=GREEN, fontsize=8.5,
+    ax.text(-0.25, -1.55, "dashed: conjugate prior", color=GREEN, fontsize=8.5,
             style="italic", va="center", ha="left")
     for k, (x, y) in boxes.items():
         _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
     for k, (x, y) in priors.items():
         _box(ax, (x, y), w, h, k, fc="#e7f3e7")        # light green for priors
-    ax.set_xlim(-0.5, 8.6); ax.set_ylim(-1.9, 5.2)
+    ax.set_xlim(-0.5, 8.6); ax.set_ylim(-2.1, 5.6)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
 
@@ -643,9 +722,10 @@ def fig_naive_independence():
     # faint and bowed up between the feature nodes, then a bold orange slash
     # across the arc's apex.
     from matplotlib.patches import FancyArrowPatch
-    rad = -0.42                 # arc curvature (bows the edge upward)
-    struck = [(0, 1), (2, 4)]   # (x_1,x_2) neighbors and (x_3,x_d)
-    for i, j in struck:
+    # arc curvature per edge (bows the edge upward); the long (x_3,x_d) arc
+    # bows higher (rad=-0.6) so it clears the "..." glyph sitting between them
+    struck = [(0, 1, -0.42), (2, 4, -0.6)]   # (x_1,x_2) neighbors, (x_3,x_d)
+    for i, j, rad in struck:
         a = np.array([xs[i], y_bot]); b = np.array([xs[j], y_bot])
         # trim the endpoints to the node rims so the edge meets the circles
         u = (b - a) / np.linalg.norm(b - a)
@@ -667,6 +747,73 @@ def fig_naive_independence():
              va="bottom", color=ORANGE, fontsize=8.5)
 
     fl.save(fig, "mdl-prob-naive-independence")
+
+
+def fig_naive_genvdisc():
+    """The generative vs. discriminative routes to a classifier.  Left: a
+    generative model (naive Bayes) learns the prior-weighted class-conditional
+    densities p(x|y=k) p(y=k) -- here two Gaussians with means -/+1.2, sd 0.8,
+    priors 1/2 -- and Bayes' rule flips them into a posterior; the decision
+    flips where the weighted curves tie (x* = 0).  Right: a discriminative
+    model (softmax regression) never models the inputs at all -- it spends its
+    capacity directly on the boundary between the classes."""
+    fig, (axg, axd) = plt.subplots(1, 2, figsize=(9.6, 3.6))
+
+    # --- left: prior-weighted class-conditional densities on a 1-D axis -----
+    x = np.linspace(-3.8, 3.8, 600)
+    sd, prior = 0.8, 0.5
+
+    def wdens(mu):
+        return prior * np.exp(-((x - mu) ** 2) / (2 * sd ** 2)) / (
+            sd * np.sqrt(2 * np.pi))
+
+    y0, y1 = wdens(-1.2), wdens(1.2)
+    for y, col in ((y0, BLUE), (y1, ORANGE)):
+        axg.plot(x, y, color=col, lw=2.2)
+        axg.fill_between(x, 0, y, color=col, alpha=0.14, lw=0)
+    axg.text(-1.2, y0.max() * 1.06, r"$p(x\mid y{=}0)\,p(y{=}0)$",
+             color=BLUE, ha="center", va="bottom", fontsize=9)
+    axg.text(1.2, y1.max() * 1.06, r"$p(x\mid y{=}1)\,p(y{=}1)$",
+             color=ORANGE, ha="center", va="bottom", fontsize=9)
+    # the tie point of the weighted densities is where the decision flips
+    xstar = 0.0
+    ytie = np.interp(xstar, x, y0)
+    axg.axvline(xstar, color=GRAY, lw=1.2, ls="--")
+    axg.annotate("decision flips here", xy=(xstar, ytie),
+                 xytext=(xstar + 1.1, y0.max() * 0.78), color=GRAY,
+                 fontsize=9, ha="left",
+                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
+    axg.text(-3.6, y0.max() * 0.92, "Bayes' rule $\\to$ posterior",
+             color=GRAY, fontsize=8.5, ha="left", va="top")
+    axg.set_title("generative (naive Bayes)", fontsize=11)
+    axg.set_xlabel(r"$x$")
+    axg.set_xticks([xstar]); axg.set_xticklabels([r"$x^\ast$"])
+    axg.set_yticks([]); axg.set_xlim(-3.8, 3.8)
+    axg.set_ylim(0, y0.max() * 1.30)
+    axg.spines["top"].set_visible(False); axg.spines["right"].set_visible(False)
+
+    # --- right: two labeled clouds and only a boundary between them ---------
+    rng = np.random.default_rng(0)
+    m0, m1 = np.array([-1.3, -0.9]), np.array([1.3, 0.9])
+    c0 = m0 + 0.7 * rng.standard_normal((40, 2))
+    c1 = m1 + 0.7 * rng.standard_normal((40, 2))
+    # the perpendicular bisector of the class means: m . x = 0, i.e. the line
+    # y = -(m_x / m_y) x through the origin (the means are symmetric).
+    xx = np.linspace(-3.2, 3.2, 2)
+    yy = -(m1[0] / m1[1]) * xx
+    axd.fill_between(xx, yy, 3.2, color=ORANGE, alpha=0.07, lw=0)
+    axd.fill_between(xx, -3.2, yy, color=BLUE, alpha=0.07, lw=0)
+    axd.scatter(c0[:, 0], c0[:, 1], s=12, color=BLUE, alpha=0.45, lw=0)
+    axd.scatter(c1[:, 0], c1[:, 1], s=12, color=ORANGE, alpha=0.45, lw=0)
+    axd.plot(xx, yy, color="black", lw=2.0, zorder=4)
+    axd.text(0.0, -2.9, "no model of $p(x)$ — only the boundary",
+             color=GRAY, fontsize=9, ha="center", va="center")
+    axd.set_title("discriminative (softmax regression)", fontsize=11)
+    axd.set_xlim(-3.2, 3.2); axd.set_ylim(-3.2, 3.2)
+    axd.set_xticks([]); axd.set_yticks([])
+    axd.spines["top"].set_visible(False); axd.spines["right"].set_visible(False)
+
+    fl.save(fig, "mdl-prob-naive-genvdisc")
 
 
 # =========================================================================== #
@@ -736,6 +883,119 @@ def fig_mle_kl():
     fl.save(fig, "mdl-prob-mle-kl")
 
 
+def fig_mle_fisher():
+    """Fisher information as the curvature of the negative log-likelihood.
+    Contours of the Gaussian NLL(mu, sigma) for n = 30 real draws from
+    N(1, 1.5^2); the dot marks the MLE (sample mean, sample sd), and the
+    overlaid 1-sigma ellipse is the inverse-information covariance
+    I(mu, sigma)^{-1}/n = diag(sigma^2/n, sigma^2/(2n)) that asymptotic
+    normality predicts: the bowl is twice as curved in sigma as in mu, so the
+    ellipse is wider along the mu-axis."""
+    from matplotlib.patches import Ellipse
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(1.0, 1.5, 30)
+    n = len(x)
+    mu_hat, sig_hat = x.mean(), x.std()        # MLE (ddof=0)
+
+    mus = np.linspace(0.1, 2.1, 300)
+    sigs = np.linspace(0.85, 2.2, 300)
+    M, S = np.meshgrid(mus, sigs)
+    nll = n * np.log(S) + ((x[None, None, :] - M[..., None]) ** 2).sum(-1) / (2 * S ** 2)
+    levels = nll.min() + np.array([0.5, 2.0, 4.5, 8.0, 12.5])
+
+    fig, ax = plt.subplots(figsize=(6.0, 3.9))
+    ax.contour(M, S, nll, levels=levels[:1], colors=BLUE, linewidths=1.6)
+    ax.contour(M, S, nll, levels=levels[1:], colors=GRAY, linewidths=1.0)
+    ax.plot([mu_hat], [sig_hat], "o", color=BLUE, ms=7, zorder=6)
+    ax.text(mu_hat, sig_hat - 0.07, r"$(\hat\mu,\hat\sigma)$", color=BLUE,
+            ha="center", va="top", fontsize=10)
+
+    # 1-sigma ellipse of the asymptotic covariance I^{-1}/n (I is diagonal)
+    a = np.sqrt(sig_hat ** 2 / n)              # semi-axis along mu
+    b = np.sqrt(sig_hat ** 2 / (2 * n))        # semi-axis along sigma
+    ax.add_patch(Ellipse((mu_hat, sig_hat), 2 * a, 2 * b, fill=False,
+                         edgecolor=ORANGE, lw=2.2, zorder=5))
+    ax.annotate(r"$I(\hat\mu,\hat\sigma)^{-1}/n$",
+                xy=(mu_hat + a * 0.78, sig_hat + b * 0.66),
+                xytext=(mu_hat + 0.52, sig_hat + 0.42), color=ORANGE,
+                fontsize=10, ha="left",
+                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
+
+    ax.set_xlabel(r"$\mu$")
+    ax.set_ylabel(r"$\sigma$")
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-mle-fisher")
+
+
+def fig_elbo():
+    """The evidence lower bound.  A one-latent-bit model: z in {0,1} with
+    p(z=1) = 1/2 and p(x|z; theta) = N(x; theta + 2z, 1), observing x = 1.5.
+    The blue curve is the evidence log p(x; theta); fixing q to the posterior
+    at theta^(t) = -1.5, the orange ELBO L(q, theta) touches the evidence at
+    theta^(t) and runs below it everywhere else; the gap at any other theta is
+    KL(q || p(z|x; theta)).  The M-step climbs the bound to theta^(t+1)."""
+    x_obs, th_t = 1.5, -1.5
+    th = np.linspace(-2.5, 2.5, 600)
+
+    def log_norm(x, mu):                       # log N(x; mu, 1)
+        return -0.5 * (x - mu) ** 2 - 0.5 * np.log(2 * np.pi)
+
+    def log_evidence(theta):                   # log p(x; theta), z marginalized
+        l0 = np.log(0.5) + log_norm(x_obs, theta)
+        l1 = np.log(0.5) + log_norm(x_obs, theta + 2.0)
+        m = np.maximum(l0, l1)
+        return m + np.log(np.exp(l0 - m) + np.exp(l1 - m))
+
+    # E-step at theta^(t): q(z) = p(z | x; theta^(t))
+    l0t = np.log(0.5) + log_norm(x_obs, th_t)
+    l1t = np.log(0.5) + log_norm(x_obs, th_t + 2.0)
+    q1 = 1.0 / (1.0 + np.exp(l0t - l1t)); q0 = 1.0 - q1
+    entropy = -(q0 * np.log(q0) + q1 * np.log(q1))
+
+    evid = log_evidence(th)
+    elbo = (q0 * (np.log(0.5) + log_norm(x_obs, th))
+            + q1 * (np.log(0.5) + log_norm(x_obs, th + 2.0)) + entropy)
+    th_next = th[np.argmax(elbo)]              # M-step: argmax of the bound
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    ax.plot(th, evid, color=BLUE, lw=2.4)
+    ax.plot(th, elbo, color=ORANGE, lw=2.2)
+    ax.text(2.45, evid[-1] + 0.06, r"$\log p(x;\theta)$", color=BLUE,
+            ha="right", va="bottom", fontsize=10)
+    ax.text(2.45, elbo[-1] - 0.10, r"ELBO $\mathcal{L}(q,\theta)$",
+            color=ORANGE, ha="right", va="top", fontsize=10)
+
+    # the touch point at theta^(t) and the bound's peak at theta^(t+1)
+    y_t = float(log_evidence(np.array([th_t]))[0])
+    y_next = elbo.max()
+    ymin = elbo.min()
+    for tv, yv in ((th_t, y_t), (th_next, y_next)):
+        ax.plot([tv, tv], [ymin, yv], color=GRAY, lw=1.1, ls="--", zorder=2)
+        ax.plot([tv], [yv], "o", color=GRAY, ms=6, zorder=6)
+    ax.text(th_t, ymin - 0.10, r"$\theta^{(t)}$", color=GRAY, ha="center",
+            va="top", fontsize=10)
+    ax.text(th_next, ymin - 0.10, r"$\theta^{(t+1)}$", color=GRAY,
+            ha="center", va="top", fontsize=10)
+
+    # the gap between the curves at some other theta is the KL divergence
+    th_g = 1.4
+    g_lo = float(np.interp(th_g, th, elbo))
+    g_hi = float(np.interp(th_g, th, evid))
+    ax.annotate("", xy=(th_g, g_hi), xytext=(th_g, g_lo),
+                arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.6))
+    ax.text(th_g - 0.12, (g_lo + g_hi) / 2,
+            r"gap $= D_{\mathrm{KL}}(q\,\Vert\,p(z\mid x;\theta))$",
+            color=GREEN, ha="right", va="center", fontsize=9)
+
+    ax.set_xlabel(r"$\theta$")
+    ax.set_ylabel("objective")
+    ax.set_yticks([])
+    ax.set_ylim(ymin - 0.35, evid.max() + 0.30)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-elbo")
+
+
 # =========================================================================== #
 # STATISTICS: the bootstrap                                                   #
 # =========================================================================== #
@@ -799,10 +1059,14 @@ FIGURES = [
     # maximum likelihood
     fig_map_prior,
     fig_mle_kl,
+    fig_mle_fisher,
+    fig_elbo,
     # naive bayes
     fig_naive_independence,
+    fig_naive_genvdisc,
     # statistics
     fig_significance,
+    fig_power_curves,
     fig_bias_variance_u_curve,
     fig_sampling_distribution,
     fig_type_i_ii_matrix,

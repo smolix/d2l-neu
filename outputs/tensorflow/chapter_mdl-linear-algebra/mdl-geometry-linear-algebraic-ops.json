@@ -34,33 +34,20 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:81f01bfce829950a5e47e5fe47ac706db6306de939932ad9607df05dc76b5edd",
+      "code_fingerprint": "sha256:333536a359b7b071e83d9ac42d487745660a4b4de44aeae36c5fa72e3d6cb6d3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
-          "bytes": 11090,
-          "sha256": "sha256:49de63476c70a2424a6435cf706661a6e4b53be4006d839e9c07396320c0c7e8"
-        }
-      ]
-    },
-    "geometry-linear-algebraic-ops-hyperplanes-3": {
-      "code_fingerprint": "sha256:039b9f390ebb2f717f75e5d11294f91223c81f62b4a1da0e5c5e7eaa5856594f",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-3-1.svg",
-          "bytes": 10566,
-          "sha256": "sha256:d0e776b34da5c624bf81650d51652474ffa22a5a2f5dcdaf379c8919d52c42b9"
+          "bytes": 26105,
+          "sha256": "sha256:763548a186fc586286fcefc2d730561c34e2ab57c4e6786dd0ece577647dc705"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:0a1b104a57aea105b2938b93d83f8989287a6e59d613e69d44a818f41c2fac7e",
+      "code_fingerprint": "sha256:d068db9796fd084ec6c82f20406271d4263fb4196803d4a490a991e24dadd8ef",
       "kind": "text",
       "outputs": [
         {
@@ -69,8 +56,21 @@
         }
       ]
     },
+    "geometry-linear-algebraic-ops-projection-histogram": {
+      "code_fingerprint": "sha256:930bd0b9dd870e7f09b53d1e973e38a83b793365b4aea05dc4fd32368fc6c81f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
+          "bytes": 40895,
+          "sha256": "sha256:d0ed1c973cbcfbc200249dd745783711402030e9f6c8c5fbd6d1df2d765bc740"
+        }
+      ]
+    },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:f6a1a6e3a3823ad1bcb998fb550115900022879247637902f0f9f24af1e372b1",
+      "code_fingerprint": "sha256:47e1a626930e8306146c8c0421444078dffb95f90a87780e80da5875e57f29f6",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:3e2d3076a24b6ad4cea0652d453827bdf3fdc984bdc8d0eca36ea1c82602a6ef",
+      "code_fingerprint": "sha256:12fb70647cf9e304c064097bcf34f33959475a32ad5e0368aa6b4bb8f61b4f15",
       "kind": "text",
       "outputs": [
         {
@@ -89,40 +89,15 @@
         }
       ]
     },
-    "geometry-linear-algebraic-ops-expressing-in-code-1": {
-      "code_fingerprint": "sha256:255b2e40145a4ad6f413de392de31b322e8cba8daa8caf139ce7eea4a7fad18b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(TensorShape([2, 2]), TensorShape([2, 2, 3]), TensorShape([2]))"
-        }
-      ]
-    },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:048de4621126a098e80acff951067b601b9a7ab81bbdac784782a35af04d2245",
+      "code_fingerprint": "sha256:2d0a725ca76f56ea5750e295be9ef752797c1fc54f2e2df3dcddb0718a00e15e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2,), dtype=int32, numpy=array([ 5, 11], dtype=int32)>,\n <tf.Tensor: shape=(2, 1), dtype=int32, numpy=\n array([[ 5],\n        [11]], dtype=int32)>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=5.0>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([ 0., -5.], dtype=float32)>,\n <tf.Tensor: shape=(2, 2), dtype=float32, numpy=\n array([[-1.,  8.],\n        [-4.,  7.]], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=4.0>)"
         }
       ]
-    },
-    "geometry-linear-algebraic-ops-expressing-in-code-3": {
-      "code_fingerprint": "sha256:38c5beb25b1cad9052fa8d747daad111c97568ff9bcaa0d10ed3f098af554e3c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 2), dtype=int32, numpy=\narray([[ 90, 126],\n       [102, 144],\n       [114, 162]], dtype=int32)>"
-        }
-      ]
-    },
-    "geometry-linear-algebraic-ops-expressing-in-code-4": {
-      "code_fingerprint": "sha256:8653a18210831b7f5bb9031144d18f7d31ea197206ad78e183c2621b6455a411",
-      "kind": "text",
-      "outputs": []
     }
   }
 }

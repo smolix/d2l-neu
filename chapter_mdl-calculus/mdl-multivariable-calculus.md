@@ -66,6 +66,16 @@ treat $\nabla_{\mathbf{w}} L$ as a column vector throughout; the layout
 conventions that make this choice precise are settled in
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
+One caveat deserves a sentence. The coordinate-at-a-time argument tacitly
+assumed the partials behave well *jointly*: the clean sufficient condition is
+that they exist and are *continuous* near $\mathbf{w}$, in which case
+:eqref:`eq_mdl-nabla_use` holds and $L$ is called *differentiable*. Existence
+of the $N$ partials alone is not enough — $f(x, y) = 2xy/(x^2+y^2)$ with
+$f(0,0) = 0$ has both partials equal to zero at the origin, yet equals $1$
+everywhere on the diagonal $x = y \neq 0$, so no linear approximation can hold
+there. The losses in this book are built from pieces smooth enough that this
+hypothesis costs nothing.
+
 ### Directional Derivatives
 
 Reading :eqref:`eq_mdl-nabla_use` for a perturbation $\boldsymbol{\epsilon} =
@@ -83,97 +93,66 @@ simultaneously. The next section turns this one identity into the geometry of
 gradient descent.
 
 First, let us check that :eqref:`eq_mdl-nabla_use` really does approximate $L$.
-Take
 
-$$
-f(x, y) = \log(e^x + e^y), \qquad \nabla f (x, y) = \left[\frac{e^x}{e^x+e^y}, \frac{e^y}{e^x+e^y}\right].
-$$
-
-At the point $(0, \log 2)$ we have $f = \log 3$ and $\nabla f = [\tfrac13, \tfrac23]$,
-so :eqref:`eq_mdl-nabla_use` predicts
-$f(\epsilon_1, \log 2 + \epsilon_2) \approx \log 3 + \tfrac13\epsilon_1 + \tfrac23\epsilon_2$.
-We compare this against the true value for a small step.
-
-```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
+```{.python .input #multivariable-calculus-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
+import math
 npx.set_np()
-
-def f(x, y):
-    return np.log(np.exp(x) + np.exp(y))
-def grad_f(x, y):
-    return np.array([np.exp(x) / (np.exp(x) + np.exp(y)),
-                     np.exp(y) / (np.exp(x) + np.exp(y))])
-
-epsilon = np.array([0.01, -0.03])
-grad_approx = f(0, np.log(2)) + epsilon.dot(grad_f(0, np.log(2)))
-true_value = f(0 + epsilon[0], np.log(2) + epsilon[1])
-f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
 ```
 
-```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
+```{.python .input #multivariable-calculus-imports}
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
-import numpy as np
-
-def f(x, y):
-    return torch.log(torch.exp(x) + torch.exp(y))
-def grad_f(x, y):
-    return torch.stack([(torch.exp(x) / (torch.exp(x) + torch.exp(y)))[0],
-                        (torch.exp(y) / (torch.exp(x) + torch.exp(y)))[0]])
-
-epsilon = torch.tensor([0.01, -0.03])
-grad_approx = f(torch.tensor([0.]), torch.log(
-    torch.tensor([2.]))) + epsilon.dot(
-    grad_f(torch.tensor([0.]), torch.log(torch.tensor(2.))))
-true_value = f(torch.tensor([0.]) + epsilon[0], torch.log(
-    torch.tensor([2.])) + epsilon[1])
-f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
+import math
 ```
 
-```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
+```{.python .input #multivariable-calculus-imports}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
-import numpy as np
-
-def f(x, y):
-    return tf.math.log(tf.exp(x) + tf.exp(y))
-def grad_f(x, y):
-    return tf.constant([(tf.exp(x) / (tf.exp(x) + tf.exp(y))).numpy(),
-                        (tf.exp(y) / (tf.exp(x) + tf.exp(y))).numpy()])
-
-epsilon = tf.constant([0.01, -0.03])
-grad_approx = f(tf.constant(0.), tf.math.log(tf.constant(2.))) + tf.tensordot(
-    epsilon, grad_f(tf.constant(0.), tf.math.log(tf.constant(2.))), axes=1)
-true_value = f(tf.constant(0.) + epsilon[0], tf.math.log(tf.constant(2.)) + epsilon[1])
-f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
+import math
 ```
 
-```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
+```{.python .input #multivariable-calculus-imports}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-import numpy as np
+import math
+```
 
+Take
+
+$$
+f(x, y) = \log(e^x + e^y), \qquad \nabla f (x, y) = \left[\frac{e^x}{e^x+e^y}, \frac{e^y}{e^x+e^y}\right]^\top.
+$$
+
+At the point $(0, \log 2)$ we have $f = \log 3$ and $\nabla f = [\tfrac13, \tfrac23]^\top$,
+so :eqref:`eq_mdl-nabla_use` predicts
+$f(\epsilon_1, \log 2 + \epsilon_2) \approx \log 3 + \tfrac13\epsilon_1 + \tfrac23\epsilon_2$.
+We compare this against the true value for a small step. The check is
+framework-free scalar arithmetic, so plain Python suffices.
+
+```{.python .input #multivariable-calculus-higher-dimensional-differentiation}
 def f(x, y):
-    return jnp.log(jnp.exp(x) + jnp.exp(y))
-def grad_f(x, y):
-    return jnp.array([jnp.exp(x) / (jnp.exp(x) + jnp.exp(y)),
-                      jnp.exp(y) / (jnp.exp(x) + jnp.exp(y))])
+    return math.log(math.exp(x) + math.exp(y))
 
-epsilon = jnp.array([0.01, -0.03])
-grad_approx = f(jnp.array(0.), jnp.log(jnp.array(2.))) + jnp.dot(
-    epsilon, grad_f(jnp.array(0.), jnp.log(jnp.array(2.))))
-true_value = f(jnp.array(0.) + epsilon[0], jnp.log(jnp.array(2.)) + epsilon[1])
-f'approximation: {float(grad_approx):.6f}, true value: {float(true_value):.6f}'
+def grad_f(x, y):
+    s = math.exp(x) + math.exp(y)
+    return [math.exp(x) / s, math.exp(y) / s]
+
+epsilon = [0.01, -0.03]
+x0, y0 = 0, math.log(2)
+approx = f(x0, y0) + sum(e * g for e, g in zip(epsilon, grad_f(x0, y0)))
+true_value = f(x0 + epsilon[0], y0 + epsilon[1])
+print(f'approximation: {approx:.6f}, true value: {true_value:.6f}')
 ```
 
 The two agree to several digits, as a first-order approximation should for a
@@ -185,7 +164,7 @@ small step.
 
 Equation :eqref:`eq_mdl-nabla_use` tells us how $L$ changes in *any* direction,
 so we can ask which direction makes it decrease fastest. This is the geometric
-content of gradient descent, first introduced in :numref:`sec_autograd`:
+content of gradient descent, first introduced in :numref:`sec_linear_regression`:
 
 1. Start from some initial parameters $\mathbf{w}$.
 2. Find the unit direction $\mathbf{v}$ along which $L$ decreases most rapidly.
@@ -219,7 +198,8 @@ $$
 -\|\nabla L\| \;\le\; \mathbf{v}\cdot\nabla L \;\le\; \|\nabla L\|,
 $$
 
-and the proposition's equality criterion says each bound is attained exactly
+and the Cauchy–Schwarz equality criterion — equality holds exactly for
+collinear vectors — says each bound is attained exactly
 when $\mathbf{v}$ is collinear with $\nabla L$. The upper bound $+\|\nabla L\|$
 is reached by $\mathbf{v} = \nabla L/\|\nabla L\|$ and the lower bound
 $-\|\nabla L\|$ by $\mathbf{v} = -\nabla L/\|\nabla L\|$. $\blacksquare$
@@ -250,9 +230,15 @@ such a direction, so the directional derivative vanishes.
 is orthogonal to every direction tangent to the level set
 $\{\mathbf{x} : L(\mathbf{x}) = c\}$ through that point.*
 
-**Proof.** Let $\mathbf{v}$ be tangent to the level set. Moving along
-$\mathbf{v}$ keeps $L$ constant to first order, so
-$\mathbf{v}\cdot\nabla L = 0$; by the definition of orthogonality from
+**Proof.** A direction $\mathbf{v}$ is *tangent* to the level set at
+$\mathbf{x}$ if $\mathbf{v} = \boldsymbol{\gamma}'(0)$ for some differentiable
+curve $\boldsymbol{\gamma}(t)$ lying in the level set with
+$\boldsymbol{\gamma}(0) = \mathbf{x}$. Along such a curve
+$L(\boldsymbol{\gamma}(t)) = c$ for all $t$, so the derivative of
+$t \mapsto L(\boldsymbol{\gamma}(t))$ at $t = 0$ vanishes. To first order
+$\boldsymbol{\gamma}(t) = \mathbf{x} + t\mathbf{v} + o(t)$, so by
+:eqref:`eq_mdl-nabla_use` that derivative is $\mathbf{v}\cdot\nabla L(\mathbf{x})$.
+Hence $\mathbf{v}\cdot\nabla L = 0$; by the definition of orthogonality from
 :numref:`sec_mdl-geometry-linear-algebraic-ops`, $\mathbf{v}\perp\nabla L$.
 $\blacksquare$
 
@@ -370,13 +356,17 @@ direction can lower $f$ to first order — otherwise we would slide along the
 constraint and improve. By :eqref:`eq_mdl-nabla_use` that means
 $\nabla f(\mathbf{x}^\star)$ has zero component along every direction tangent to
 $\{g = c\}$; it is orthogonal to that surface. But we proved above that
-$\nabla g$ is *also* orthogonal to $\{g = c\}$. Two vectors normal to the same
-surface must be parallel, so at the constrained optimum
+$\nabla g$ is *also* orthogonal to $\{g = c\}$. Provided
+$\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ — the standard *constraint
+qualification*, which guarantees that $\{g = c\}$ really is a smooth
+codimension-one surface near $\mathbf{x}^\star$ with a single normal
+direction — two vectors normal to the same surface must be parallel, so at the
+constrained optimum
 
 $$
 \nabla f(\mathbf{x}^\star) = \lambda\,\nabla g(\mathbf{x}^\star)
 $$
-:eqlabel:`eq_mdl-lagrange`
+:eqlabel:`eq_mdl-lagrange-condition`
 
 for some scalar $\lambda$, the *Lagrange multiplier*. This single picture — the
 contours of $f$ kissing the constraint surface where their gradients align — is
@@ -494,7 +484,7 @@ w, x, y, z = -1, 0, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
 u, v = (a + b)**2, (a - b)**2
 f = (u + v)**2
-print(f'    f at {w}, {x}, {y}, {z} is {f}')
+print(f'f at {w}, {x}, {y}, {z} is {f}')
 
 # Compute the single step partials
 df_du, df_dv = 2*(u + v), 2*(u + v)
@@ -590,7 +580,7 @@ print(f'df/dz at {w}, {x}, {y}, {z} is {z.grad}')
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab pytorch
-# Initialize as ndarrays, then attach gradients
+# Initialize as tensors that require gradients
 w = torch.tensor([-1.], requires_grad=True)
 x = torch.tensor([0.], requires_grad=True)
 y = torch.tensor([-2.], requires_grad=True)
@@ -615,31 +605,28 @@ print(f'df/dz at {w.data.item()}, {x.data.item()}, {y.data.item()}, '
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab tensorflow
-# Initialize as ndarrays, then attach gradients
+# Initialize as Variables, which the tape tracks automatically
 w = tf.Variable(tf.constant([-1.]))
 x = tf.Variable(tf.constant([0.]))
 y = tf.Variable(tf.constant([-2.]))
 z = tf.Variable(tf.constant([1.]))
 # Do the computation like usual, tracking gradients
-with tf.GradientTape(persistent=True) as t:
+with tf.GradientTape() as t:
     a, b = (w + x + y + z)**2, (w + x - y - z)**2
     u, v = (a + b)**2, (a - b)**2
     f = (u + v)**2
 
-# Execute backward pass
-w_grad = t.gradient(f, w).numpy()
-x_grad = t.gradient(f, x).numpy()
-y_grad = t.gradient(f, y).numpy()
-z_grad = t.gradient(f, z).numpy()
+# One backward sweep yields the gradient for all four inputs at once
+w_grad, x_grad, y_grad, z_grad = t.gradient(f, [w, x, y, z])
 
 print(f'df/dw at {w.numpy()}, {x.numpy()}, {y.numpy()}, '
-      f'{z.numpy()} is {w_grad}')
+      f'{z.numpy()} is {w_grad.numpy()}')
 print(f'df/dx at {w.numpy()}, {x.numpy()}, {y.numpy()}, '
-      f'{z.numpy()} is {x_grad}')
+      f'{z.numpy()} is {x_grad.numpy()}')
 print(f'df/dy at {w.numpy()}, {x.numpy()}, {y.numpy()}, '
-      f'{z.numpy()} is {y_grad}')
+      f'{z.numpy()} is {y_grad.numpy()}')
 print(f'df/dz at {w.numpy()}, {x.numpy()}, {y.numpy()}, '
-      f'{z.numpy()} is {z_grad}')
+      f'{z.numpy()} is {z_grad.numpy()}')
 ```
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
@@ -692,11 +679,24 @@ $$
 \qquad\textrm{equivalently}\qquad \mathbf{H}_f = \mathbf{H}_f^\top.
 $$
 
-**Proof sketch.** Both mixed partials measure the same thing: the leading
-correction to $f$ when we perturb in $x_i$ *and* $x_j$. Perturbing first in
-$x_j$ then in $x_i$, versus first in $x_i$ then in $x_j$, produces the same net
-change in $f$; continuity of the second partials lets us pass to the limit and
-conclude the two orders give the same value. $\blacksquare$
+**Proof.** Both mixed partials are limits of the *same* quantity, the
+symmetric second difference
+
+$$
+\Delta_h = \frac{f(\mathbf{x}+h\mathbf{e}_i+h\mathbf{e}_j) - f(\mathbf{x}+h\mathbf{e}_i) - f(\mathbf{x}+h\mathbf{e}_j) + f(\mathbf{x})}{h^2},
+$$
+
+which is symmetric in $i$ and $j$ by inspection. Indeed, write
+$g(t) = f(\mathbf{x}+t\mathbf{e}_i+h\mathbf{e}_j) - f(\mathbf{x}+t\mathbf{e}_i)$,
+so that $\Delta_h = \bigl(g(h)-g(0)\bigr)/h^2$; two applications of the mean
+value theorem — first along $x_i$, then along $x_j$ — give
+$\Delta_h = \frac{\partial^2 f}{\partial x_j \partial x_i}(\boldsymbol{\xi}_h)$
+at some point $\boldsymbol{\xi}_h$ within distance $2h$ of $\mathbf{x}$.
+Swapping the roles of $i$ and $j$ leaves $\Delta_h$ unchanged and gives
+$\Delta_h = \frac{\partial^2 f}{\partial x_i \partial x_j}(\boldsymbol{\xi}'_h)$
+at another nearby point. Let $h \to 0$: by continuity the two expressions
+converge to the two mixed partials at $\mathbf{x}$, and since they are equal
+for every $h$, the limits agree. $\blacksquare$
 
 Symmetry matters because it puts the Hessian in the world of symmetric matrices,
 where the spectral theorem and positive-definiteness from
@@ -744,14 +744,13 @@ points stepping away from the base point, the gap should stay tiny nearby and
 grow with distance.
 
 ```{.python .input #multivariable-calculus-hessians}
-import numpy as np
-
 def f(x, y):
-    return x * np.exp(-x**2 - y**2)
-def quad(x, y):  # 2nd-order Taylor of f at the base point (-1, 0)
-    return np.exp(-1) * (-1 - (x + 1) + (x + 1)**2 + y**2)
+    return x * math.exp(-x**2 - y**2)
 
-for d in [0.0, 0.05, 0.1, 0.3]:           # step d in each coordinate from (-1, 0)
+def quad(x, y):  # 2nd-order Taylor of f at the base point (-1, 0)
+    return math.exp(-1) * (-1 - (x + 1) + (x + 1)**2 + y**2)
+
+for d in [0.0, 0.05, 0.1, 0.3]:  # step d in each coordinate from (-1, 0)
     x, y = -1 + d, d
     print(f'step {d:.2f}: f = {f(x, y):.6f}, '
           f'quadratic = {quad(x, y):.6f}, gap = {abs(f(x, y) - quad(x, y)):.6f}')
@@ -793,11 +792,23 @@ eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
   flat along that eigenvector and second order is *inconclusive*; the behavior
   is decided by higher-order terms.
 
+These local shapes — the bowl, the saddle, and the flat-bottomed trough of the
+semidefinite case — are exactly the quadratic-form surfaces drawn in
+:numref:`fig_mdl-la-psd`.
+
 This is the multivariable generalization of the single-variable test $f'' > 0$:
 there, curvature is a single number; here it is a matrix, and "positive
 curvature" becomes "positive definite." Identity :eqref:`eq_mdl-quadform` makes
 the upward-curving picture precise, writing the quadratic form as a weighted sum
 of squares over the eigenvector directions with the eigenvalues as weights.
+
+The eigenvalue picture also explains why, in high dimension, saddles are the
+rule rather than the exception: a minimum requires *all* $n$ eigenvalues to be
+positive at once, and if the signs at a random critical point behaved like
+independent coin flips, that would happen with probability $2^{-n}$. Indeed,
+the critical points encountered while training deep networks are overwhelmingly
+saddles — one reason gradient methods fare better in practice than the old fear
+of "getting stuck in a bad local minimum" suggests.
 
 ## A Bridge to Matrix Calculus
 
@@ -854,6 +865,14 @@ ideas are treated in full.
 7. Suppose we minimize $f(\mathbf{x}) = g(\mathbf{x}) + h(\mathbf{x})$. Interpret
    the condition $\nabla f = \mathbf{0}$ geometrically in terms of $\nabla g$ and
    $\nabla h$.
+8. Use the Lagrange condition :eqref:`eq_mdl-lagrange-condition` to maximize
+   $f(x, y) = xy$ subject to $g(x, y) = x + y = 1$. First check that
+   $\nabla g \neq \mathbf{0}$ everywhere, so the condition applies; then solve
+   $\nabla f = \lambda \nabla g$ together with the constraint, and confirm your
+   answer by eliminating $y = 1 - x$ and maximizing in one variable. Finally,
+   replace the constraint by $x + y = 1 + \delta$ and show that the maximum
+   value changes by $\lambda\delta$ to first order — the multiplier prices the
+   constraint.
 
 
 :begin_tab:`mxnet`
@@ -922,8 +941,9 @@ to inputs, accumulating partial derivatives:
 :::
 
 ::: {.slide title="Hessians"}
-Curvature in many dimensions. PSD Hessian = local minimum,
-mixed signs = saddle, NSD = maximum:
+Curvature in many dimensions. PD Hessian = local minimum,
+ND = local maximum, mixed signs = saddle; merely PSD/NSD
+(a zero eigenvalue) is inconclusive:
 
 @multivariable-calculus-hessians
 :::
@@ -932,8 +952,9 @@ mixed signs = saddle, NSD = maximum:
 - Gradient: direction of steepest ascent.
 - Hessian: local curvature matrix; eigenvalues classify
   stationary points.
-- Backprop = reverse-mode chain rule, $\mathcal{O}(\text{model size})$
-  per parameter.
+- Backprop = reverse-mode chain rule: one backward sweep costs
+  $\mathcal{O}(\text{model size})$ and yields the gradient for
+  *all* parameters at once.
 - Same calculus everywhere: GD, Newton, conjugate gradient,
   Adam — they're all approximations to the local Taylor
   expansion of the loss.

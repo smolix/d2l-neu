@@ -53,10 +53,10 @@ mxnet = [
     # because the GitHub `release-wheel` action for tag v2.0.0+cu13.bw.20260522
     # failed; run `tools/update_mxnet_wheel.py` once the release is published
     # to switch back to the URL pin.
-    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260608.1/mxnet-2.0.0%2Bcu13.bw.20260608.1-cp312-cp312-linux_x86_64.whl ; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bcu13.bw.20260609.1-cp312-cp312-linux_x86_64.whl ; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon CPU build — sibling release asset (smolix/mxnet, not
     # apache/mxnet). Pulls opencv-python + numpy<2 as the wheel declares.
-    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260529.3/mxnet-2.0.0%2Bmacos.arm64.20260529-cp312-cp312-macosx_11_0_arm64.whl ; python_version == '3.12' and sys_platform == 'darwin'",
+    "mxnet @ https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bmacos.arm64.20260609-cp312-cp312-macosx_26_0_arm64.whl ; python_version == '3.12' and sys_platform == 'darwin'",
 ]
 tensorflow = [
     # `[and-cuda]` is what pulls Blackwell-capable CUDA libs (nccl>=2.27.7,

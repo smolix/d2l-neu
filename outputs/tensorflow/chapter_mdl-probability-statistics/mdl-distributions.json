@@ -9,12 +9,12 @@
   },
   "cells": {
     "distributions-imports": {
-      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "code_fingerprint": "sha256:d8e60c8c5c878c9c1183fff86a587b35cdb884074326ec6852b14b79a5661c58",
       "kind": "text",
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:6e220534ab5b315ee85c2a78b18395a77243555424984546885517c223181c59",
+      "code_fingerprint": "sha256:6796f7c283225efff2858fa4bca5f178357f49823559b84cedba9f8ead0abdc3",
       "kind": "text",
       "outputs": [
         {
@@ -29,33 +29,29 @@
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:21b7e6916f6b96b1e1bead403b66c99cd45dd5c2a9ffbc8012a86ba0429ed8b1",
+      "code_fingerprint": "sha256:f2eb50c56d5ee45770ac72566d155334dbfcad60218295f5d75f3f7a3c421572",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample (random) -> class 0\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample -> class 0\n"
         }
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:d2600432aee891be4e7c118cb1d5ddce56c4077d0a61144a097caa7c1220be3c",
+      "code_fingerprint": "sha256:b043b49bb823bb78a0097aa435abca87c92391f96e97bd67da5de1c99a3ebe81",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean (n+1)/2 = 3.5   var (n^2-1)/12 = 2.9166666666666665\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 3), dtype=int32, numpy=\narray([[1, 2, 5],\n       [6, 1, 6],\n       [5, 5, 6]], dtype=int32)>"
+          "text": "mean (n+1)/2  = 3.5    sample mean: 3.5045\nvar (n^2-1)/12 = 2.917  sample var : 2.937\n"
         }
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:7d779b9f551cce6cbef07015a3547664d18e33a82d294e753d12650071c5fd91",
+      "code_fingerprint": "sha256:092375f10a11815a362fedea30e6940c53ca41c63d8e0090308137c960ce47ba",
       "kind": "text",
       "outputs": [
         {
@@ -65,12 +61,12 @@
         },
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 3), dtype=int32, numpy=\narray([[6, 6, 6],\n       [6, 6, 5],\n       [6, 2, 7]], dtype=int32)>"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=int32, numpy=\narray([[4, 4, 6],\n       [2, 2, 5],\n       [5, 4, 8]], dtype=int32)>"
         }
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:2a33eb3f6c34b0c855f8de27287a4aa2f2f041df6e0bd1f6dcc4e85c8bb9d9e1",
+      "code_fingerprint": "sha256:e7c157c1f99f37b01f378ec22e1a9f62b602876d7aa711f35663da41335968a4",
       "kind": "text",
       "outputs": [
         {
@@ -80,53 +76,62 @@
         },
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[11.,  6.,  3.],\n       [ 2.,  3.,  3.],\n       [ 4.,  4.,  6.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[5., 1., 4.],\n       [3., 3., 5.],\n       [5., 6., 3.]], dtype=float32)>"
+        }
+      ]
+    },
+    "distributions-binomial-to-poisson": {
+      "code_fingerprint": "sha256:6c5a70d485cab7c4f55aa2fce844ad9d8fb99fc673fe313ae55d085490329116",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
+          "bytes": 25789,
+          "sha256": "sha256:4aa5c26617bf9687f46fda2c59aa50d847dd83790fb6577eb2e78e1e47c70e81"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:32bac37b54762d751c234044de3a66efffa8192672f7d5f94ec5b05d91c0fe2a",
+      "code_fingerprint": "sha256:6dd0bbdd18e049d0ef664fb5f2c70da3e6b0dcb3fa2519718f7e704580e8352d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean (a+b)/2 = 2.0   var (b-a)^2/12 = 0.3333333333333333\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[1.0270672, 1.1854489, 1.9729085],\n       [2.4101596, 1.7136242, 2.1105545],\n       [2.3829296, 1.8421383, 1.4159243]], dtype=float32)>"
+          "text": "mean (a+b)/2   = 2.0   sample mean: 1.999\nvar (b-a)^2/12 = 0.333  sample var : 0.334\n"
         }
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:ce40e9b65981f920b96ea8d7fb35f568de69e25f2ac1e47226347686599ef40c",
+      "code_fingerprint": "sha256:a1324981b95be86ff3fdbbf54f83e02ccf7bb5f8589de553a9cfa8cd3d608ca2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.014704465866089\nvar 1/lambda^2 = 4.0  sample var = 4.0655198097229\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.0147042274475098\nvar 1/lambda^2 = 4.0  sample var = 4.0655198097229\n"
         }
       ]
     },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:d2f31020a1bf235beda4b53ec2613348576444daeb88ac1e2e19e2b3aa48bbfa",
+      "code_fingerprint": "sha256:58996cf18e82913fc3d8721674b6567520ec26f83c5a2e0b57acd7833b142f6e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass (≈1): 0.999936580657959\n"
+          "text": "total mass (≈1): 0.9999366998672485\n"
         },
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[ 1.0668802 ,  0.19454929, -0.53082895],\n       [ 0.09190082, -0.17753708, -0.91930884],\n       [-2.0777557 ,  2.0391903 ,  0.80289966]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 3), dtype=float32, numpy=\narray([[ 1.5110626 ,  0.42292204, -0.41969493],\n       [-1.0360372 , -1.2368279 ,  0.47027302],\n       [-0.01397489,  1.1888583 ,  0.60253334]], dtype=float32)>"
         }
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:3ef2139792e62147c59f4202ab56e3d8e43b634d2aef1a8a49acc5ef165dfccf",
+      "code_fingerprint": "sha256:b6f500e9e8c8803aa6f79ba69df10e7f86c0263c0ef42d2d3780b240cec4a35d",
       "kind": "text",
       "outputs": [
         {
@@ -137,34 +142,29 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:f6c20548702415ffd358a9614a1c189910763fce8178b8a8bb7d8241c52089a4",
+      "code_fingerprint": "sha256:3475201bf3b271aef84d10dc66179599512894ca7555fc2359162f69da779b87",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[1.9  0.99]\n [0.99 2.04]]\neigenvalues (≈ 1, 3): [0.98 2.97]\n"
+          "text": "empirical covariance:\n [[1.96 1.03]\n [1.03 2.06]]\neigenvalues (≈ 1, 3): [0.98 3.04]\n"
         }
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:2dbf69f1a89d0031af1e22a23c9988d9c6909295420cc9daa62d76ae9563e78b",
+      "code_fingerprint": "sha256:7a9eebd9244b58e6cc8c2f129abfd326ba900a4c4ee40b38c9a156245883a989",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dA/deta      = 0.668188\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigmoid(eta) = E[x] = p = 0.668188\n"
+          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:39e7520591db315a1a0ccb44e709f3cd0c9f2b002fc0fbb95813b5cf2983324f",
+      "code_fingerprint": "sha256:41d8f7b7c37e88ce6e9de1518ddbf1421f18b83eaec0e2436d217599496a095f",
       "kind": "text",
       "outputs": [
         {

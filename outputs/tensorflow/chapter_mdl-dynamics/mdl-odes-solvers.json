@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-odes-solvers.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "odes-solvers-imports": {
+      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "kind": "text",
+      "outputs": []
+    },
+    "odes-solvers-matrix-exponential": {
+      "code_fingerprint": "sha256:a94a2ad02598832b96022665ae283ad61b2d6c26a30e153f7a94177c4951bf64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of A: [-0.5+1.j -0.5-1.j]\n|series - eigen formula| : 5.6e-17\n|(I+tA/n)^n - eigen|     : 5.4e-08\n||e^{At} x0|| = 0.735759  vs  e^{-t/2}||x0|| = 0.735759\n"
+        }
+      ]
+    },
+    "odes-solvers-euler-rk4-order": {
+      "code_fingerprint": "sha256:1d810a72b5ee1611687118cad2153a30fc794cf4264f72cb3cf54e7a1b51a6ce",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured slope, Euler: 1.040\nmeasured slope, RK4  : 4.022\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
+          "bytes": 29488,
+          "sha256": "sha256:e436f36c1f4b966e47e1344827ce4f67cb3ed927750aee93ba2f0d344fd06b53"
+        }
+      ]
+    },
+    "odes-solvers-stiffness-sweep": {
+      "code_fingerprint": "sha256:c6a91c1941842703d9c621d5178e302c0a36c38943dc7dfa311f45c177754a49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05: x(T) = [3.32526e+03 3.60000e-01] (the long-dead fast mode explodes)\n"
+        }
+      ]
+    },
+    "odes-solvers-neural-ode-train": {
+      "code_fingerprint": "sha256:6a3f1634db8134c72a1670d5cb6bd36eda7856148eb0f4c07b8bf71e34ecc7ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter   0  loss 1.19266\niter 100  loss 0.00005\niter 200  loss 0.00001\niter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0014\n"
+        }
+      ]
+    },
+    "odes-solvers-adjoint-check": {
+      "code_fingerprint": "sha256:e6bf0d020b8f5783e2ef24da18bbd786c6dda24ec0a8a8143f5cfb1598310a91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+        }
+      ]
+    },
+    "odes-solvers-cnf-trace": {
+      "code_fingerprint": "sha256:45170e7e053c5a3109739abce3a36a5c2bbf852b553602c2a6ad9b098f81f8dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+        }
+      ]
+    }
+  }
+}

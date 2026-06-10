@@ -14,24 +14,37 @@
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:53bfcd4ca9567ad2d353c0fdfc197f8701e819d43f3601cd63843309532b8d01",
+      "code_fingerprint": "sha256:39992e45b0d45a25cce2623c4de6f500189b8b94cbaf2c60c9891483ee1bfd2a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:38144d128a7c0004e6d0f060dc0e82878cd21d1f20bf1aa64286924ca37551ea",
+      "code_fingerprint": "sha256:c8214d72750f8c14fa2363129ca10c610026ea1f83bda4435dfebea04a83c942",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:d03ad1ec29ee2639069da50babca93a64f74c9baa5f7764df1cf41fc4754429b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
+          "bytes": 27207,
+          "sha256": "sha256:80684e9d2251813a91b591d79e98d8d3aefca58d45f40ed09cf39cb6069c92a7"
         }
       ]
     }

@@ -21,8 +21,11 @@
 # Parallel-safe (CPU-only, after slide refactor):
 #   slides-*                   make -j4 slides works
 #
-# GPU slots are auto-detected from nvidia-smi (rule of thumb: 11GB per job,
-# so a 24GB GPU runs 2 in parallel). Override on the command line:
+# Host resources (GPUs, cores, RAM) are auto-detected by
+# tools/detect_resources.py — run `make detect` to see the plan. It degrades
+# cleanly with no GPU and on macOS (no /proc), so every CPU-only target below
+# (html, all-quick, slides, pdfs, capture-outputs, and CPU notebooks) runs on
+# an Apple-silicon laptop unchanged. Override detection on the command line:
 # `make NUM_GPUS=2 GPU_SLOTS=4 CPU_SLOTS=2`.
 #
 # All build output is logged to logs/<target>-YYYYMMDD-HHMMSS.log
@@ -30,6 +33,23 @@
 SHELL      := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 .DEFAULT_GOAL := help
+
+# ── Require GNU Make >= 4.3 ────────────────────────────────────────────
+# This build relies on grouped targets (`a b &: prereqs`, GNU Make 4.3+).
+# Older make (notably macOS's system /usr/bin/make = GNU Make 3.81) silently
+# mis-parses `&:` as a target literally named `&`, emitting
+# "overriding commands for target `&'" warnings and building incorrectly.
+# Fail fast with a fix instead. On macOS install a modern make and use `gmake`:
+#   sudo port install gmake     (MacPorts)   — then run `gmake` not `make`
+_mk_maj := $(word 1,$(subst ., ,$(MAKE_VERSION)))
+_mk_min := $(or $(word 2,$(subst ., ,$(MAKE_VERSION))),0)
+_mk_ok  := $(shell [ "$(_mk_maj)" -gt 4 ] 2>/dev/null && echo y || \
+             { [ "$(_mk_maj)" -eq 4 ] && [ "$(_mk_min)" -ge 3 ] && echo y; } 2>/dev/null)
+ifneq ($(_mk_ok),y)
+$(error GNU Make >= 4.3 required, but this is $(MAKE_VERSION) ($(MAKE)). \
+  On macOS the system `make` is 3.81 — install gmake (`sudo port install gmake`) \
+  and run `gmake` instead of `make`. See docs/build-system.md "Building on macOS")
+endif
 
 # Keep auto-generated stamps and manifests around. Without this, Make
 # treats them as "intermediate" and deletes them after the chain that
@@ -50,57 +70,47 @@ RUN_NOTEBOOK_GPU_TARGETS := $(addprefix run-notebooks-gpu-,$(FRAMEWORKS))
 RUN_NOTEBOOK_MULTIGPU_TARGETS := $(addprefix run-notebooks-multigpu-,$(FRAMEWORKS))
 SLIDE_STAMPS := $(addprefix _slides/,$(addsuffix /.built,$(FRAMEWORKS)))
 
-# Auto-detect GPU count and per-GPU memory via nvidia-smi.
-# Returns "<num_gpus> <min_mib>". We use the *minimum* memory across
-# detected GPUs (workers_per_gpu must be uniform — see run_one_notebook.py).
-# Falls back to "0 0" when no GPUs are visible (CPU-only host).
-_GPU_QUERY := $(shell nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk 'BEGIN{n=0;m=0} {n++; if(n==1||$$1<m) m=$$1} END{if(n==0) print "0 0"; else print n, m}')
-DETECTED_NUM_GPUS := $(word 1,$(_GPU_QUERY))
-DETECTED_GPU_MIB  := $(word 2,$(_GPU_QUERY))
-# If no GPU was detected, fall back to NUM_GPUS=1 for slot-to-device mapping.
-NUM_GPUS ?= $(if $(filter 0,$(DETECTED_NUM_GPUS)),1,$(DETECTED_NUM_GPUS))
-
-# ── Per-framework resource footprint ──────────────────────────────────
-# How much of a GPU / how many CPU cores a single notebook of each
-# framework consumes at peak. Used to derive slot counts:
-#   GPU_SLOTS    = NUM_GPUS × (min_GPU_MiB / GPU_MIB_PER_LIGHT)
-#   CPU_SLOTS    = nproc / CPU_PER_LIGHT
-#   <FW>_*_SLOTS = ... using the framework's own footprint
-# All overridable on the command line: `make GPU_MIB_PER_jax=14000 ...`.
+# ── Host resource detection — single source of truth ──────────────────
+# tools/detect_resources.py probes GPUs (nvidia-smi), CPU cores, RAM, and the
+# open-file/process ulimits, then derives every slot count below. It degrades
+# cleanly on a CPU-only host (no nvidia-smi → 0 GPUs) and on macOS (no /proc →
+# sysctl + vm_stat fallback), so the same Makefile runs unchanged on a 4×GPU
+# Linux server and an Apple-silicon laptop. Run `make detect` to see the plan.
 #
-# PyTorch / TensorFlow / MXNet share the lighter 7.5 GiB / 10 cores
-# budget (their EXTRA_ENV_* tuning caps resident VRAM and threads).
-# JAX is heavier (~11.5 GiB / 15 cores) because every JAX process keeps
-# the CPU backend + XLAEigen pool alive — d2l.Module.plot calls
-# d2l.cpu() to host-transfer metrics, so we can't restrict to cuda only.
-GPU_MIB_PER_LIGHT  ?= 7680
-GPU_MIB_PER_jax    ?= 11776
-CPU_PER_LIGHT      ?= 8
-CPU_PER_jax        ?= 8
+# Per-job footprints are read from the environment by detect_resources.py; we
+# export them so command-line overrides reach it, e.g.
+#   make GPU_MIB_PER_jax=14000 run-all-notebooks
+# PyTorch / TensorFlow / MXNet share the lighter 7.5 GiB / 8-core budget (their
+# EXTRA_ENV_* tuning caps resident VRAM and threads). JAX is heavier (~11.5 GiB)
+# because every JAX process keeps the CPU backend + XLA pools alive
+# (d2l.Module.plot host-transfers metrics via d2l.cpu()).
+GPU_MIB_PER_LIGHT ?= 7680
+GPU_MIB_PER_jax   ?= 11776
+CPU_PER_LIGHT     ?= 8
+CPU_PER_jax       ?= 8
+export GPU_MIB_PER_LIGHT GPU_MIB_PER_jax CPU_PER_LIGHT CPU_PER_jax
 
-# Slot helpers. Each evaluates to "max(1, n*m / per)" using shell arith,
-# falling back to 1 on CPU-only hosts where DETECTED_GPU_MIB=0.
-_gpu_slots = $(shell n=$(NUM_GPUS); m=$(DETECTED_GPU_MIB); per=$(1); \
-    if [ "$$m" -lt "$$per" ] || [ "$$per" -le 0 ]; then echo 1; \
-    else echo $$(( n * m / per )); fi)
-_cpu_slots = $(shell n=$$(nproc 2>/dev/null || echo 16); per=$(1); \
-    if [ "$$per" -le 0 ]; then echo 1; \
-    else x=$$(( n / per )); if [ "$$x" -lt 1 ]; then echo 1; else echo $$x; fi; fi)
-
-# Global pool sized for the lightest framework's footprint. `make -j`
-# should be at least GPU_SLOTS + CPU_SLOTS for full saturation.
-# On this 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=6.
-GPU_SLOTS ?= $(call _gpu_slots,$(GPU_MIB_PER_LIGHT))
-CPU_SLOTS ?= $(call _cpu_slots,$(CPU_PER_LIGHT))
+# detect_resources.py is consulted once (its probe is cached in /tmp), and each
+# knob is resolved into a SIMPLY-EXPANDED variable via the _detected helper.
+# Why := and not ?=: a `?=` $(shell …) is recursively expanded, so python would
+# re-run on *every* reference to the variable — dozens of times during a deep
+# `make -n` graph walk. The ifndef guard means a command-line override (e.g.
+# `make CPU_SLOTS=2`) is already defined, so detection is skipped and the
+# override wins. On the 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=6; on a
+# CPU-only laptop: NUM_GPUS=1 (slot→device fallback), GPU_SLOTS=1, CPU_SLOTS=cores/8.
+_DR := python3 tools/detect_resources.py --get
+define _detected
+ifndef $(1)
+$(1) := $$(shell $$(_DR) $(1))
+endif
+endef
+$(foreach v,NUM_GPUS GPU_SLOTS CPU_SLOTS,$(eval $(call _detected,$(v))))
 
 # Multi-GPU notebooks use exactly 2 GPUs at <=GPU_MIB_PER_LIGHT each, so they
 # are memory-packed onto disjoint GPU pairs (verified: 3 fit on a 24 GiB card
 # across all 4 frameworks). tools/detect_resources.py is the single source for
 # the packing plan (pairs × per_pair) and the jax preallocation fraction.
-NUM_GPU_PAIRS         ?= $(shell python3 tools/detect_resources.py --get NUM_GPU_PAIRS)
-MULTIGPU_PER_PAIR     ?= $(shell python3 tools/detect_resources.py --get MULTIGPU_PER_PAIR)
-MULTIGPU_SLOTS        ?= $(shell python3 tools/detect_resources.py --get MULTIGPU_SLOTS)
-JAX_MGPU_MEM_FRACTION ?= $(shell python3 tools/detect_resources.py --get JAX_MGPU_MEM_FRACTION)
+$(foreach v,NUM_GPU_PAIRS MULTIGPU_PER_PAIR MULTIGPU_SLOTS JAX_MGPU_MEM_FRACTION,$(eval $(call _detected,$(v))))
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 
@@ -128,35 +138,39 @@ export PYTHONUNBUFFERED := 1
 help:
 	@echo "d2l-neu Build System"
 	@echo ""
-	@echo "Targets:"
-	@echo "  html                    Build HTML book (multi-framework tabs)"
-	@echo "  pdf-<fw>               Build PDF for one framework"
-	@echo "  pdfs                    Build PDFs for all frameworks (safe with -j4)"
-	@echo "  pdf                     Alias for pdf-pytorch"
-	@echo "  notebooks-<fw>         Generate notebooks for one framework"
-	@echo "  notebooks               Generate notebooks for all frameworks"
-	@echo "  run-notebooks-<fw>     Execute notebooks for one framework (CPU/GPU queues)"
-	@echo "  run-all-notebooks       Execute all frameworks (CPU/GPU queues)"
-	@echo "  capture-outputs         Bless executed _notebooks/ → committed outputs/ store [FILES=...]"
-	@echo "  audit-outputs           Report stale notebooks (code drift) + store integrity"
-	@echo "  verify-outputs-fresh    Render gate: fail on stale inline outputs / orphaned ids"
-	@echo "  refresh-stale           Re-execute only stale notebooks, then re-capture"
-	@echo "  render-fresh            refresh-stale, then rebuild slides + html + pdfs"
-	@echo "  slides-<fw>            Build slides for one framework (CPU)"
-	@echo "  slides                  Build slides for all frameworks"
-	@echo "  lib                     Build d2l Python package"
-	@echo "  venv-<fw>              Sync UV environment for one framework"
-	@echo "  kernels                 Register d2l-<fw> ipykernels (for VS Code)"
-	@echo "  clean                   Remove build artifacts (keep data/)"
-	@echo "  veryclean               Remove everything including data/"
-	@echo "  all                     Full pipeline: generate, execute, rebuild with outputs"
-	@echo "  all-quick               Build html + pdfs + notebooks + slides + lib (no execution)"
+	@echo "Targets ([any]=runs on macOS/CPU, [GPU]=needs NVIDIA GPUs):"
+	@echo "  html                    [any] Build HTML book from committed outputs/ (CPU-only)"
+	@echo "  all-quick               [any] html + pdfs + slides + notebooks + lib, NO execution"
+	@echo "  pdf-<fw> / pdfs         [any] Build PDF(s) from committed outputs (pdfs safe with -j4)"
+	@echo "  slides-<fw> / slides    [any] Build slides (CPU; slides safe with -j4)"
+	@echo "  notebooks-<fw>         [any] Generate (not execute) notebooks for one framework"
+	@echo "  notebooks               [any] Generate notebooks for all frameworks"
+	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
+	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
+	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
+	@echo "  lib                     [any] Build d2l Python package"
+	@echo "  venv-<fw> / kernels     [any] Sync UV env / register ipykernels (for VS Code)"
+	@echo "  detect                  [any] Print the auto-detected resource + parallelism plan"
+	@echo "  run-notebooks-<fw>     [GPU*] Execute notebooks for one framework (CPU notebooks OK)"
+	@echo "  run-all-notebooks      [GPU*] Execute all frameworks (CPU/GPU queues)"
+	@echo "  refresh-stale          [GPU*] Re-execute only stale notebooks, then re-capture"
+	@echo "  render-fresh           [GPU*] refresh-stale, then rebuild slides + html + pdfs"
+	@echo "  all                     [GPU] Full pipeline: generate, execute, rebuild with outputs"
+	@echo "  clean / veryclean       [any] Remove build artifacts (veryclean also drops data/)"
+	@echo "  (*) CPU-only notebooks run anywhere; GPU notebooks are skipped/deferred without a GPU."
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
 	@echo "           GPU_SLOTS=$(GPU_SLOTS)  CPU_SLOTS=$(CPU_SLOTS)"
 	@echo "           FILES=$(FILES)  SLIDES_FILTER=$(SLIDES_FILTER)"
 	@echo "Frameworks: $(FRAMEWORKS)"
 	@echo "Logs:       $(LOGDIR)/<target>-YYYYMMDD-HHMMSS.log"
+
+# ── Resource detection ─────────────────────────────────────
+# Print the auto-detected host resources + the parallelism plan the build will
+# use. Handy first command on a new machine (works on macOS / CPU-only).
+.PHONY: detect
+detect:
+	@python3 tools/detect_resources.py --report
 
 # ── d2l library ────────────────────────────────────────────
 
@@ -517,8 +531,7 @@ $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
 # slots than the global pool. Today only JAX is heavier than "light";
 # caps for other frameworks would just equal the global pool, which is
 # the same as "no cap" — `run_one_notebook.py` treats 0/unset as no cap.
-JAX_GPU_SLOTS ?= $(call _gpu_slots,$(GPU_MIB_PER_jax))
-JAX_CPU_SLOTS ?= $(call _cpu_slots,$(CPU_PER_jax))
+$(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS,$(eval $(call _detected,$(v))))
 
 # Memory-and-thread-conservative defaults for JAX. PREALLOCATE=false: don't
 # grab 75 % of GPU on init (1.6 GiB instead of ~19 GiB resident). OMP/BLAS=2:
@@ -575,7 +588,7 @@ EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 # ulimits (tools/detect_resources.py: nofile//FD_PER_MXNET_JOB etc.) rather than
 # a hardcoded 2; the board fix + the verified 3/GPU run make higher concurrency
 # safe. Override with MXNET_GPU_SLOTS=N on the command line.
-MXNET_GPU_SLOTS ?= $(shell python3 tools/detect_resources.py --get MXNET_GPU_SLOTS)
+$(eval $(call _detected,MXNET_GPU_SLOTS))
 MXNET_CPU_SLOTS ?= 2
 # MXNET_CUDNN_LIB_CHECKING=0: the 20260607.1 wheel is compiled against cuDNN
 # 9.23 but the only pip-available nvidia-cudnn-cu13 is 9.22 (ABI-compatible —
@@ -657,9 +670,7 @@ run-notebooks-%: _notebooks/%/.generated
 # throughout — one combined tail instead of four.
 # Resource env handed to the unified scheduler (tools/notebook_scheduler.py):
 # per-GPU slot capacity + per-GPU VRAM (heterogeneous-aware) + CPU slots.
-GPU_SLOTS_PER    ?= $(shell python3 tools/detect_resources.py --get GPU_SLOTS_PER)
-GPU_VRAM_PER     ?= $(shell python3 tools/detect_resources.py --get GPU_VRAM_PER)
-GPU_MIB_PER_SLOT ?= $(shell python3 tools/detect_resources.py --get GPU_MIB_PER_SLOT)
+$(foreach v,GPU_SLOTS_PER GPU_VRAM_PER GPU_MIB_PER_SLOT,$(eval $(call _detected,$(v))))
 SCHED_ENV = D2L_GPU_SLOTS_PER='$(GPU_SLOTS_PER)' D2L_GPU_VRAM_PER='$(GPU_VRAM_PER)' \
 	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS)
 

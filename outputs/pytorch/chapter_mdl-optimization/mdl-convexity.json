@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-convexity.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convexity-imports": {
+      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
+      "kind": "text",
+      "outputs": []
+    },
+    "convexity-three-lenses": {
+      "code_fingerprint": "sha256:6cc018d2e7f46988b466d938a7d9d9f0fa2a5b29726a0efcfde1b3b101a3ef3b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "worst chord violation over 1000 trials:   -2.46e-03\nworst tangent violation over 1000 trials: -4.95e-02\nHessian eigenvalues: [ 6.273  18.6557]\n"
+        }
+      ]
+    },
+    "convexity-jensen-mc": {
+      "code_fingerprint": "sha256:74d4ae8f562bb8ac7e2d551f74cb0d0f4250903dcdbf0abe7169216cb2cc1ff5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[exp(X)] = 1.6466  vs  exp(E[X]) = 0.9998  (theory: sqrt(e) = 1.6487 vs 1)\nAM >= GM in all trials: True,  smallest AM/GM ratio = 1.0002\nmin KL(p||q) = 0.1331 >= 0,  max |KL(p||p)| = 0.0\n"
+        }
+      ]
+    },
+    "convexity-basins": {
+      "code_fingerprint": "sha256:3485f237ed0a8df80978806e7f060a153c99432225050396f46a34c4207862ce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "convex bowl: all 500 runs end at x = 0.500000  (spread 6.7e-16)\ndouble well: 271 runs -> x = -1.0575  (g = -0.5148)\n             229 runs -> x = 0.9304  (g = 0.4833)\n"
+        }
+      ]
+    },
+    "convexity-lse-hessian": {
+      "code_fingerprint": "sha256:4f2d64186d69a44897daaf814af28df6a3e98c87b4195a8cc446436de6d2e99c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\nmax |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
+        }
+      ]
+    },
+    "convexity-pl-rate": {
+      "code_fingerprint": "sha256:7451f142e1cb4e38a53fad78b63bf2de819f5f3b2192143587df1c0187ce2bdd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "PL constant on [-5, 5]: mu = 0.1755\nmin f'' = -4.00  (f is not convex)\nsuccessive gap ratios: [0.6293 0.2907 0.25   0.25   0.25  ]\n"
+        }
+      ]
+    }
+  }
+}

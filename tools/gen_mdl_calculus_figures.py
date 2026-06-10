@@ -197,6 +197,55 @@ def fig_gd_step():
     fl.save(fig, "mdl-cal-gd-step")
 
 
+def fig_descent_lemma():
+    """The descent lemma as a picture.  For $f(x)=\\sin(2x)$ the slope is
+    $L$-Lipschitz with $L=4=\\max|f''|$, so the quadratic
+    $q(s)=f(x)+f'(x)(s-x)+\\frac{L}{2}(s-x)^2$ is a *ceiling* over the whole
+    graph ($q-f$ is convex with minimum $0$ at the base point).  Stepping to the
+    parabola's minimizer --- the gradient step with $\\eta=1/L$ --- is guaranteed
+    a drop of $f'(x)^2/2L$ even on the ceiling; the function, trapped below,
+    drops at least as much (here visibly more: the bound is a worst-case floor)."""
+    f = lambda t: np.sin(2 * t)
+    df = lambda t: 2 * np.cos(2 * t)
+    x0, L = 0.3, 4.0
+    y0, g = f(x0), df(x0)                      # 0.564642, 1.650671
+    q = lambda t: y0 + g * (t - x0) + 0.5 * L * (t - x0) ** 2
+    xp = x0 - g / L                            # parabola minimizer -0.112668
+    qp, fp = q(xp), f(xp)                      # 0.224053, -0.223434
+    xs = np.linspace(-0.9, 0.9, 400)
+
+    fig, ax = plt.subplots(figsize=(5.8, 4.2))
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
+    ax.plot(xs, q(xs), "--", color=ORANGE, lw=2.0, zorder=4)
+    # the minimizer of the ceiling = the eta = 1/L gradient step
+    ax.plot([xp, xp], [-0.95, qp], ":", color=GRAY, lw=1.1, zorder=2)
+    ax.plot([xp, x0], [y0, y0], ":", color=GRAY, lw=1.1, zorder=2)
+    ax.plot([x0], [y0], "o", color="black", ms=5, zorder=6)
+    ax.text(0.36, 0.47, r"$(x,\,f(x))$", ha="left", va="top", fontsize=9)
+    ax.plot([xp], [qp], "o", color=ORANGE, ms=5, zorder=6)
+    ax.plot([xp], [fp], "o", color=BLUE, ms=5, zorder=6)
+    ax.text(xp, -1.02, r"$x-f'(x)/L$  ($\eta=1/L$)", ha="center", va="top",
+            fontsize=9, color=GRAY)
+    # guaranteed drop: from the starting height down to the ceiling's minimum
+    fl.arrow(ax, (xp, y0), (xp, qp), color=ORANGE, lw=1.8, mut=12)
+    ax.annotate(r"guaranteed drop $f'(x)^2/2L\approx 0.341$",
+                xy=(xp - 0.02, (y0 + qp) / 2), xytext=(0.12, 1.04),
+                ha="center", fontsize=9, color=ORANGE,
+                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.0,
+                                connectionstyle="arc3,rad=0.25"))
+    # the function, trapped below the ceiling, drops even further
+    fl.arrow(ax, (xp, qp), (xp, fp), color=BLUE, lw=1.8, mut=12)
+    ax.annotate("actual drop", xy=(xp - 0.02, (qp + fp) / 2),
+                xytext=(-0.32, 0.0), ha="right", va="center", fontsize=9,
+                color=BLUE,
+                arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0,
+                                connectionstyle="arc3,rad=-0.2"))
+    ax.set_xlim(-0.9, 0.9); ax.set_ylim(-1.15, 1.6)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-descent-lemma")
+
+
 def fig_relu_corner():
     """Two convex kinks and their subdifferentials. Left: $|x|$, whose corner at 0
     admits a fan of supporting lines with slopes sweeping $[-1,1]$. Right: ReLU,
@@ -396,6 +445,32 @@ def fig_rect_trans():
     axb.spines["top"].set_visible(False); axb.spines["right"].set_visible(False)
 
     fl.save(fig, "mdl-cal-rect-trans")
+
+
+def fig_bell_surface():
+    """The bell surface $z=e^{-x^2-y^2}$ over the box $[-2,2]^2$: the double
+    integral is the volume between the surface and the base plane, approximated
+    by tiling the base with $\\epsilon\\times\\epsilon$ squares and standing a
+    box of height $f$ on each (a few shown near $(0.5,-0.4)$)."""
+    f = lambda X, Y: np.exp(-X ** 2 - Y ** 2)
+    fig = plt.figure(figsize=(6.0, 4.8))
+    ax = fig.add_subplot(projection="3d")
+    g = np.linspace(-2.0, 2.0, 80)
+    X, Y = np.meshgrid(g, g)
+    ax.plot_surface(X, Y, np.exp(-X ** 2 - Y ** 2), color=BLUE, alpha=0.45,
+                    linewidth=0, antialiased=True)
+    # a 2x2 patch of epsilon-by-epsilon Riemann boxes near (0.5, -0.4),
+    # each of height f at the cell's center
+    eps = 0.25
+    for cx, cy in [(0.25, -0.65), (0.5, -0.65), (0.25, -0.4), (0.5, -0.4)]:
+        h = float(f(cx + eps / 2, cy + eps / 2))
+        ax.bar3d(cx, cy, 0.0, eps, eps, h, color=ORANGE, alpha=0.55,
+                 shade=False, edgecolor=ORANGE, linewidth=0.6)
+    ax.text(0.0, 0.0, 1.04, r"$e^{-x^2-y^2}$", fontsize=11, ha="center")
+    ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
+    ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+    ax.view_init(elev=24, azim=-60)
+    fl.save(fig, "mdl-cal-bell-surface")
 
 
 def fig_sum_order():
@@ -660,6 +735,62 @@ def fig_tangent_plane():
 # Matrix calculus & automatic differentiation                                 #
 # =========================================================================== #
 
+def fig_jacobian_ellipse():
+    """Up close, a differentiable map is a linear map.  The nonlinear
+    $\\mathbf f(x,y)=(x+\\sin y,\\ y+x^2/2)$ carries a small circle and grid
+    around $\\mathbf x_0=(0.5,0.5)$ (left) into the output plane (right), where
+    the true image (blue) is nearly indistinguishable from the ellipse
+    $\\mathbf f(\\mathbf x_0)+\\mathbf J(\\mathbf x_0)\\boldsymbol\\delta$
+    predicted by the Jacobian (orange dashed); the small mismatch is the
+    $o(\\|\\boldsymbol\\delta\\|)$ remainder."""
+    F = lambda x, y: (x + np.sin(y), y + 0.5 * x ** 2)
+    x0, y0 = 0.5, 0.5
+    J = np.array([[1.0, np.cos(y0)], [x0, 1.0]])    # [[1, 0.8776], [0.5, 1]]
+    fx0 = np.array(F(x0, y0))                       # ~ (0.979, 0.625)
+    r, hw = 0.35, 0.45
+    th = np.linspace(0.0, 2 * np.pi, 200)
+    circ = np.stack([x0 + r * np.cos(th), y0 + r * np.sin(th)])
+    lines = np.linspace(-hw, hw, 7)
+    ts = np.linspace(-hw, hw, 60)
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.8))
+
+    # --- (a) input plane: light grid + circle of perturbations around x0 ---
+    for c in lines:
+        axa.plot(x0 + ts, np.full_like(ts, y0 + c), color=LIGHT, lw=0.8,
+                 zorder=1)
+        axa.plot(np.full_like(ts, x0 + c), y0 + ts, color=LIGHT, lw=0.8,
+                 zorder=1)
+    axa.plot(circ[0], circ[1], color=BLUE, lw=2.2, zorder=3)
+    axa.plot([x0], [y0], "o", color="black", ms=5, zorder=4)
+    axa.text(x0 + 0.05, y0 + 0.05, r"$\mathbf{x}_0$", fontsize=11, zorder=4)
+    axa.set_title("input plane", fontsize=11)
+    axa.set_xlim(x0 - hw - 0.1, x0 + hw + 0.1)
+    axa.set_ylim(y0 - hw - 0.1, y0 + hw + 0.1)
+    axa.set_aspect("equal")
+    axa.axis("off")
+
+    # --- (b) output plane: warped grid, true image vs. Jacobian ellipse ---
+    for c in lines:
+        gx, gy = F(x0 + ts, y0 + c)
+        axb.plot(gx, gy, color=LIGHT, lw=0.8, zorder=1)
+        gx, gy = F(np.full_like(ts, x0 + c), y0 + ts)
+        axb.plot(gx, gy, color=LIGHT, lw=0.8, zorder=1)
+    img = np.stack(F(circ[0], circ[1]))             # the true image f(circle)
+    ell = fx0[:, None] + J @ (circ - [[x0], [y0]])  # the Jacobian's prediction
+    axb.plot(img[0], img[1], color=BLUE, lw=2.2, zorder=3)
+    axb.plot(ell[0], ell[1], "--", color=ORANGE, lw=2.0, zorder=4)
+    axb.plot([fx0[0]], [fx0[1]], "o", color="black", ms=5, zorder=5)
+    axb.text(1.52, 1.02, r"$\mathbf{f}$", color=BLUE, fontsize=12, zorder=5)
+    axb.text(0.98, 0.02, r"$\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$",
+             color=ORANGE, fontsize=10, ha="center", zorder=5)
+    axb.set_title("output plane", fontsize=11)
+    axb.set_aspect("equal")
+    axb.axis("off")
+
+    fl.save(fig, "mdl-cal-jacobian-ellipse")
+
+
 def fig_fwd_vs_rev():
     """Forward- vs reverse-mode AD on a chain x -> a -> b -> L.  Both evaluate
     left-to-right (gray); forward propagates a tangent (JVP) the same direction,
@@ -694,11 +825,13 @@ def fig_fwd_vs_rev():
 
 
 def fig_tape_dag():
-    """The computational graph (Wengert list) of $(uv+u)^2$ is a *diamond*: the
-    input $u$ fans out to both the product $uv$ and the later $+u$, and the two
-    paths reconverge at $q$, so reverse mode must *accumulate* $u$'s adjoint from
-    its two children rather than overwrite it."""
-    fig, ax = plt.subplots(figsize=(6.6, 3.0))
+    """The computational graph (tape) of $y=r\\cdot r$ with $r=uv+u$.  It is a
+    diamond, not a chain: $u$ fans out to the product $t=uv$ and the sum
+    $r=t+u$, and $r$ feeds *both* arguments of $y=r\\cdot r$ (the doubled
+    edge).  Because a value can feed several consumers, the backward pass
+    accumulates each adjoint over outgoing edges with ``+=``; here $\\bar r$
+    receives the contribution $\\bar y\\,r$ twice."""
+    fig, ax = plt.subplots(figsize=(6.8, 3.0))
 
     def box(c, label, color=LIGHT, w=0.9):
         cx, cy = c
@@ -707,9 +840,9 @@ def fig_tape_dag():
                      facecolor=color, edgecolor="black", lw=1.2, zorder=3))
         ax.text(cx, cy, label, ha="center", va="center", fontsize=10.5, zorder=4)
 
-    pos = {"u": (0.0, 1.7), "v": (0.0, 0.3), "p": (2.1, 1.0),
-           "q": (4.1, 1.0), "z": (6.1, 1.0)}
-    half = {"u": 0.45, "v": 0.45, "p": 0.65, "q": 0.7, "z": 0.65}
+    pos = {"u": (0.0, 1.7), "v": (0.0, 0.3), "t": (2.1, 1.0),
+           "r": (4.1, 1.0), "y": (6.3, 1.0)}
+    half = {"u": 0.45, "v": 0.45, "t": 0.65, "r": 0.7, "y": 0.7}
 
     def link(a, b):
         c0, c1 = np.array(pos[a], float), np.array(pos[b], float)
@@ -717,15 +850,25 @@ def fig_tape_dag():
         fl.arrow(ax, c0 + d * (half[a] + 0.05), c1 - d * (half[b] + 0.05),
                  color=GRAY, lw=1.4, mut=12)
 
-    for a, b in [("u", "p"), ("v", "p"), ("p", "q"), ("u", "q"), ("q", "z")]:
+    for a, b in [("u", "t"), ("v", "t"), ("t", "r"), ("u", "r")]:
         link(a, b)
+    # r feeds *both* arguments of y = r * r: a doubled edge (two parallel arcs)
+    p0 = (pos["r"][0] + half["r"] + 0.05, pos["r"][1])
+    p1 = (pos["y"][0] - half["y"] - 0.05, pos["y"][1])
+    for rad in (0.25, -0.25):
+        ax.annotate("", xy=p1, xytext=p0,
+                    arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.4,
+                                    shrinkA=0, shrinkB=0, mutation_scale=12,
+                                    connectionstyle=f"arc3,rad={rad}"))
     box(pos["u"], "$u$"); box(pos["v"], "$v$")
-    box(pos["p"], r"$p=uv$", color=BLUE, w=1.3)
-    box(pos["q"], r"$q=p+u$", color=BLUE, w=1.4)
-    box(pos["z"], r"$z=q^2$", color=ORANGE, w=1.3)
+    box(pos["t"], r"$t=uv$", color=BLUE, w=1.3)
+    box(pos["r"], r"$r=t+u$", color=BLUE, w=1.4)
+    box(pos["y"], r"$y=r\cdot r$", color=ORANGE, w=1.4)
     ax.text(1.0, 2.05, r"$u$ fans out (diamond)", color=GRAY, fontsize=8.5,
             ha="center")
-    ax.set_xlim(-0.7, 7.0); ax.set_ylim(-0.3, 2.4)
+    ax.text(5.2, 0.25, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
+            color=ORANGE, fontsize=8.5, ha="center")
+    ax.set_xlim(-0.7, 7.2); ax.set_ylim(-0.3, 2.4)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-tape-dag")
 
@@ -742,6 +885,7 @@ FIGURES = [
     fig_zero_second,
     fig_secant_to_tangent,
     fig_gd_step,
+    fig_descent_lemma,
     fig_relu_corner,
     fig_mvt,
     fig_smooth_not_analytic,
@@ -749,6 +893,7 @@ FIGURES = [
     fig_riemann,
     fig_sub_area,
     fig_rect_trans,
+    fig_bell_surface,
     fig_sum_order,
     fig_cov_jacobian,
     # multivariable calculus (chain-rule graphs + gradient geometry)
@@ -758,6 +903,7 @@ FIGURES = [
     fig_taylor_quadratic,
     fig_tangent_plane,
     # matrix calculus & autodiff
+    fig_jacobian_ellipse,
     fig_fwd_vs_rev,
     fig_tape_dag,
 ]

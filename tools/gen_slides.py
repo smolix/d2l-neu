@@ -86,7 +86,7 @@ _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
 #                           emitted without a `#| label:` so
 #                           inject_outputs.py skips it
 #   @fig:diagram-id       → inline a committed SVG diagram (img/auto/<id>.svg)
-#                           so it inherits the page's loaded fonts (HANDOFF §5.3)
+#                           so it inherits the page's loaded fonts (docs/slides-northstar-design.md §5.3)
 #   @fig:diagram-id@jax   → prefer a fw variant (img/auto/<id>-jax.svg), else
 #                           fall back to img/auto/<id>.svg
 _PLACEHOLDER_RE = re.compile(
@@ -315,7 +315,7 @@ def _slide_applies(attrs, framework):
     A slide with `only=` renders only for the listed frameworks; one with
     `except=` renders for all but the listed ones. Used when a concept's
     *framing* (not just its code) differs by framework — e.g. JAX
-    immutability vs. PyTorch in-place writes (HANDOFF §6). Comma-separated.
+    immutability vs. PyTorch in-place writes (docs/slides-northstar-design.md §6). Comma-separated.
     """
     only = attrs.get('only')
     if only is not None:
@@ -336,7 +336,7 @@ def _inline_diagram(fig_id, forced_fw, framework, slide_path, warnings):
     Resolution: `@fig:<id>@<fw>` prefers `img/auto/<id>-<fw>.svg` and falls
     back to `img/auto/<id>.svg`; `@fig:<id>` uses `img/auto/<id>.svg`
     directly. The SVG is inlined (not `<img>`-referenced) so its text
-    inherits the page's Source Sans 3 / JetBrains Mono (HANDOFF §5.3/§5.4).
+    inherits the page's Source Sans 3 / JetBrains Mono (docs/slides-northstar-design.md §5.3/§5.4).
     """
     candidates = []
     if forced_fw:

@@ -9,12 +9,12 @@
   },
   "cells": {
     "eigendecomposition-imports": {
-      "code_fingerprint": "sha256:73760d4b168714eccb6f55de66fdb0d51710ff861c2bdac14a59990a9c6d3c9d",
+      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
       "kind": "text",
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:c858ecb2cc14f0ce7536b9a168a20cd57cba645661a0b40591cc627645de76b4",
+      "code_fingerprint": "sha256:cd0fbec3049dd9840e6b077b218b69392f094f6f62b97d5570dde8c9e81b9d19",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:a0038b2a0ec4964ade7e201d23b885d954d2390b00b7fe9af06fad85a295c989",
+      "code_fingerprint": "sha256:0eaf151bf936fbfab6b01a24c5f98e175827a4fe1281687816f583108c8a9670",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:cce9f1c958ba85b30f49a803c2b94ca9a4a594a75d747798fb407523de086bac",
+      "code_fingerprint": "sha256:eb5e89b6965ed6eb923337ad7010c007907ac6651e8d0e3456af652d16c74c7a",
       "kind": "text",
       "outputs": [
         {
@@ -45,7 +45,7 @@
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:363f88ff52060ccea9ec5ac4fbb5a57f508873cd08101a23bad83936592b02de",
+      "code_fingerprint": "sha256:797a93c614798c68bdb194be8e7f47bdc2bc1d9d4bb3e6f82a0d6269e95b5bd9",
       "kind": "text",
       "outputs": [
         {
@@ -56,7 +56,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:a6cc5d39d85ba8fa32979086cc9a733acc9087ad9981a083052a9ec6d4bcf89f",
+      "code_fingerprint": "sha256:49121a62b516aaec98b5c93a3399a6ec853c5265a672b9f6cfa073ab8f7727c7",
       "kind": "text",
       "outputs": [
         {

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="white"/>
+  <path d="M90 320 C210 120 410 110 610 320" fill="none" stroke="#3969ac" stroke-width="5"/>
+  <path d="M120 300 C250 230 430 230 560 300" fill="none" stroke="#d55e00" stroke-width="4"/>
+  <path d="M155 255 C300 185 460 185 605 255" fill="none" stroke="#d55e00" stroke-width="3" opacity=".55"/>
+  <path d="M220 205 C340 155 470 155 590 205" fill="none" stroke="#d55e00" stroke-width="3" opacity=".35"/>
+  <circle cx="378" cy="230" r="8" fill="#111"/>
+  <line x1="378" y1="230" x2="378" y2="125" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="378" y1="230" x2="468" y2="282" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="54" y="338" font-family="Arial, sans-serif" font-size="20" fill="#3969ac">constraint g(x)=0</text>
+  <text x="575" y="210" font-family="Arial, sans-serif" font-size="20" fill="#d55e00">level sets of f</text>
+  <text x="390" y="138" font-family="Arial, sans-serif" font-size="18" fill="#333">grad f</text>
+  <text x="478" y="292" font-family="Arial, sans-serif" font-size="18" fill="#333">grad g</text>
+  <text x="337" y="256" font-family="Arial, sans-serif" font-size="18" fill="#111">x*</text>
+</svg>

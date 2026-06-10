@@ -8,42 +8,48 @@
     "max_inline_bytes": 0
   },
   "cells": {
+    "multivariable-calculus-imports": {
+      "code_fingerprint": "sha256:720c8cac788b6d4f2dcec522b1ae5cc9299ce45283757112e2f80cfeaa6b6f25",
+      "kind": "text",
+      "outputs": []
+    },
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:072646d8cc72eeeb8b9755f4dce692f44b35eee1a06bdefe0fa139a87c719d77",
+      "code_fingerprint": "sha256:ad7cc023384390934b1ba76921e3591e8b66ae04d6428439ae5384578b6ad910",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "'approximation: 1.081946, true value: 1.082124'"
+          "type": "stream",
+          "name": "stdout",
+          "text": "approximation: 1.081946, true value: 1.082124\n"
         }
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:5a1de58af0d913ca84c7cdb968ea8cec4b6e3b213b9b146a6635ce57e6abcd02",
+      "code_fingerprint": "sha256:d70c93f23ad50d4752d891cc81861899bbb1cca751186e8dafb6be260e6d5e10",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13741,
-          "sha256": "sha256:da27f88484992f960f3e44402e9df2dba24b28f668fa953deaa1a12808801b9c"
+          "bytes": 13771,
+          "sha256": "sha256:e287ee46899ff9449d4c1ef517214f7a49062b87dcf4d7678e4cf5a0eb1d3f96"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:72999a9cf2386bfc5338647434d95c1aef4ab0707834adb4ff7ad7b608777d32",
+      "code_fingerprint": "sha256:43297e375a811a8d3d6b7c5bc772d9a49595b755dbb80b31ab30047142c7e1ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:d17e8bfd2c4e94980c6bcc413c56b22eacf2bb121bc80fdc79b17f2facaef80a",
+      "code_fingerprint": "sha256:6e8fbab10566ac53b6773787171b595fee4d27dcd074aecb5f0c8ed4375eb24f",
       "kind": "text",
       "outputs": [
         {
@@ -54,23 +60,18 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:74b8280c106a58b9b1686d15b15d9d6b05ac74642caed168e32b2d7b8bb8f12b",
+      "code_fingerprint": "sha256:7fe26bd23456e5aea961d1f4a67d2408c51aeaa583107c1e82955afe2db7f6f7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "df/dw at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dx at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dy at -1.0, 0.0, -2.0, 1.0 is -4096.0\ndf/dz at -1.0, 0.0, -2.0, 1.0 is -4096.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[23:48:19] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:a30fcd3b979a1c9c853ae35d3352716f03caa131c591c3ea6a10eb28239bb635",
+      "code_fingerprint": "sha256:dadd4fdb92956f9f45f4a8589b688671e650540bebf8114d9bfc8374357ad3f6",
       "kind": "text",
       "outputs": [
         {

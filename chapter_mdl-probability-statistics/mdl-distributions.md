@@ -11,8 +11,8 @@ let the trials become many and rare and the binomial collapses to the Poisson;
 let them become many and ordinary and the *central limit theorem* sends it to the
 Gaussian. The categorical generalizes the Bernoulli from two outcomes to $K$, and
 its softmax parameterization is the output layer of every classifier. At the end
-we will see that *all* of these---and more---are special cases of one form, the
-*exponential family*, which is the reason their maximum-likelihood losses are the
+we will see that *almost all* of these---and more---are special cases of one form,
+the *exponential family*, which is the reason their maximum-likelihood losses are the
 clean, convex objectives we minimize in practice and the reason each has a
 *conjugate prior* that makes Bayesian updating as simple as counting.
 
@@ -20,12 +20,12 @@ This is the punchline worth keeping in view, and :numref:`fig_mdl-prob-family-tr
 draws it: the distributions are nodes, the construction and limit relationships
 are arrows, and the whole picture sits inside the exponential-family envelope.
 
-![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows mark the *conjugate-prior* tier sitting above the data distributions: the Beta is conjugate to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
+![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node---the conjugate priors included---lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
 For each distribution we keep to a tight template: its mass or density function,
 where it *arises* in machine learning, its mean and variance *derived* rather than
-asserted, and at most one compact teaching cell that evaluates the law and draws a
+asserted, and a compact teaching cell that evaluates the law and draws a
 sample. We treat the discrete distributions first, then the continuous ones, then
 unify them. The worked cells branch per framework, so we load each library once
 here. The framework-agnostic formula checks use plain NumPy.
@@ -35,6 +35,7 @@ here. The framework-agnostic formula checks use plain NumPy.
 %matplotlib inline
 from d2l import mxnet as d2l
 import numpy as np
+from scipy.special import factorial
 ```
 
 ```{.python .input #distributions-imports}
@@ -50,6 +51,7 @@ import torch
 %matplotlib inline
 from d2l import tensorflow as d2l
 import numpy as np
+from scipy.special import factorial
 import tensorflow as tf
 ```
 
@@ -58,9 +60,15 @@ import tensorflow as tf
 %matplotlib inline
 from d2l import jax as d2l
 import numpy as np
+from scipy.special import factorial
 import jax
 from jax import numpy as jnp
 ```
+
+:begin_tab:`mxnet`
+The MXNet tabs in this section work in plain NumPy, by design: every computation
+here is elementary array arithmetic, so nothing framework-specific is needed.
+:end_tab:
 
 ## Discrete Distributions
 
@@ -168,7 +176,11 @@ $$
 and the negative log-likelihood of the categorical,
 $-\sum_k y_k\log p_k$ with $\mathbf y$ the one-hot label, is exactly the softmax
 *cross-entropy* loss (:numref:`subsec_mdl-nll-crossentropy`, :numref:`sec_softmax`).
-The Bernoulli is the case $K=2$.
+The Bernoulli is the case $K=2$. To *sample* a class rather than score one, the
+*Gumbel-max trick* perturbs each logit with independent Gumbel noise and takes the
+argmax---an exact categorical sampler, and the basis of the Gumbel-softmax
+relaxation that lets gradients flow through discrete choices
+:cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017`.
 
 The *multinomial* is its count version, the categorical analogue of how the
 binomial sums Bernoullis. Drawing $n$ independent categorical samples and counting
@@ -189,29 +201,32 @@ normalizes, and draws one sample.
 
 ```{.python .input #distributions-categorical}
 #@tab mxnet
+rng = np.random.default_rng(0)
 z = np.array([2.0, 1.0, 0.1, -1.0])            # logits over K = 4 classes
 p_cat = np.exp(z) / np.exp(z).sum()            # softmax -> categorical
-draw = int(np.random.choice(len(p_cat), p=p_cat.tolist()))
+draw = int(rng.choice(len(p_cat), p=p_cat))
 print('categorical p =', p_cat.round(3), ' sum =', float(p_cat.sum()))
-print('one sample (random) -> class', draw)
+print('one sample -> class', draw)
 ```
 
 ```{.python .input #distributions-categorical}
 #@tab pytorch
+torch.manual_seed(0)
 z = torch.tensor([2.0, 1.0, 0.1, -1.0])        # logits over K = 4 classes
 p_cat = torch.softmax(z, dim=0)                # softmax -> categorical
 draw = int(torch.multinomial(p_cat, 1))
 print('categorical p =', p_cat.numpy().round(3), ' sum =', float(p_cat.sum()))
-print('one sample (random) -> class', draw)
+print('one sample -> class', draw)
 ```
 
 ```{.python .input #distributions-categorical}
 #@tab tensorflow
+tf.random.set_seed(0)
 z = tf.constant([2.0, 1.0, 0.1, -1.0])         # logits over K = 4 classes
 p_cat = tf.nn.softmax(z)                        # softmax -> categorical
 draw = int(tf.random.categorical(tf.math.log(p_cat)[None], 1)[0, 0])
 print('categorical p =', p_cat.numpy().round(3), ' sum =', float(tf.reduce_sum(p_cat)))
-print('one sample (random) -> class', draw)
+print('one sample -> class', draw)
 ```
 
 ```{.python .input #distributions-categorical}
@@ -220,7 +235,7 @@ z = jnp.array([2.0, 1.0, 0.1, -1.0])           # logits over K = 4 classes
 p_cat = jax.nn.softmax(z)                        # softmax -> categorical
 draw = int(jax.random.categorical(jax.random.PRNGKey(0), z))
 print('categorical p =', np.asarray(p_cat).round(3), ' sum =', float(p_cat.sum()))
-print('one sample (random) -> class', draw)
+print('one sample -> class', draw)
 ```
 
 ### Discrete Uniform
@@ -244,38 +259,16 @@ $$
 $$
 
 The mean is the midpoint, by symmetry; the variance grows like $n^2$, since a wider
-range of equally likely values is more spread out. A sampling cell suffices.
+range of equally likely values is more spread out. The law is framework-free
+counting, so one compact NumPy check---formulas against a large sample---suffices.
 
 ```{.python .input #distributions-discrete-uniform}
-#@tab mxnet
+rng = np.random.default_rng(0)
 n = 6
-sample = np.random.randint(1, n + 1, size=(3, 3))
-print('mean (n+1)/2 =', (n + 1) / 2, '  var (n^2-1)/12 =', (n**2 - 1) / 12)
-sample
-```
-
-```{.python .input #distributions-discrete-uniform}
-#@tab pytorch
-n = 6
-sample = torch.randint(1, n + 1, size=(3, 3))
-print('mean (n+1)/2 =', (n + 1) / 2, '  var (n^2-1)/12 =', (n**2 - 1) / 12)
-sample
-```
-
-```{.python .input #distributions-discrete-uniform}
-#@tab tensorflow
-n = 6
-sample = tf.random.uniform((3, 3), 1, n + 1, dtype=tf.int32)
-print('mean (n+1)/2 =', (n + 1) / 2, '  var (n^2-1)/12 =', (n**2 - 1) / 12)
-sample
-```
-
-```{.python .input #distributions-discrete-uniform}
-#@tab jax
-n = 6
-sample = jax.random.randint(jax.random.PRNGKey(0), (3, 3), 1, n + 1)
-print('mean (n+1)/2 =', (n + 1) / 2, '  var (n^2-1)/12 =', (n**2 - 1) / 12)
-sample
+sample = rng.integers(1, n + 1, 10000)           # 10,000 die rolls
+print('mean (n+1)/2  =', (n + 1) / 2, '   sample mean:', float(sample.mean()))
+print('var (n^2-1)/12 =', round((n**2 - 1) / 12, 3), ' sample var :',
+      float(sample.var().round(3)))
 ```
 
 ### Binomial
@@ -315,21 +308,32 @@ $$
 $$
 
 Two one-line sums replace a page of algebra---the payoff of seeing the binomial as
-*built from* Bernoullis. We evaluate the pmf and draw samples below.
+*built from* Bernoullis. The pmf has its own elegant structure: successive terms
+differ by the simple ratio
+
+$$
+\frac{P(X=k+1)}{P(X=k)} = \frac{n-k}{k+1}\cdot\frac{p}{1-p},
+$$
+
+so the whole pmf builds up from $P(X=0)=(1-p)^n$ by repeated multiplication, with
+never a factorial in sight---which is how the cells below tabulate it.
 
 ```{.python .input #distributions-binomial}
 #@tab mxnet
-from scipy.special import comb
+rng = np.random.default_rng(0)
 n, p = 10, 0.4
-k = np.arange(n + 1)
-pmf = comb(n, k) * p**k * (1 - p)**(n - k)
+pmf = np.zeros(n + 1)
+pmf[0] = (1 - p)**n
+for k in range(n):                               # successive-ratio recursion
+    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
 print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
 print('P(X=k):', pmf.round(3))
-np.random.binomial(n, p, size=(3, 3))           # sample counts of successes
+rng.binomial(n, p, size=(3, 3))                  # sample counts of successes
 ```
 
 ```{.python .input #distributions-binomial}
 #@tab pytorch
+torch.manual_seed(0)
 n, p = 10, 0.4
 m = torch.distributions.Binomial(n, torch.tensor(p))
 k = torch.arange(n + 1.)
@@ -342,21 +346,22 @@ m.sample((3, 3))                                 # sample counts of successes
 ```{.python .input #distributions-binomial}
 #@tab tensorflow
 n, p = 10, 0.4
-m = tf.random.stateless_binomial((3, 3), [1, 2], n, p)
-from scipy.special import comb
-k = np.arange(n + 1)
-pmf = comb(n, k) * p**k * (1 - p)**(n - k)
+pmf = np.zeros(n + 1)
+pmf[0] = (1 - p)**n
+for k in range(n):                               # successive-ratio recursion
+    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
 print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
 print('P(X=k):', pmf.round(3))
-m                                                # sample counts of successes
+tf.random.stateless_binomial((3, 3), [0, 0], n, p)  # sample counts of successes
 ```
 
 ```{.python .input #distributions-binomial}
 #@tab jax
-from scipy.special import comb
 n, p = 10, 0.4
-k = np.arange(n + 1)
-pmf = comb(n, k) * p**k * (1 - p)**(n - k)
+pmf = np.zeros(n + 1)
+pmf[0] = (1 - p)**n
+for k in range(n):                               # successive-ratio recursion
+    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
 print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
 print('P(X=k):', pmf.round(3))
 # sum n Bernoulli trials -> counts of successes
@@ -367,14 +372,16 @@ jax.random.bernoulli(jax.random.PRNGKey(0), p, (3, 3, n)).sum(-1)
 
 What if the trials become *many* and each *rare*? Standing at a bus stop, the
 chance of an arrival in any tiny sub-interval is small, but there are many such
-intervals. Split one minute into $n$ slices, model each as
-$\mathrm{Bernoulli}(p/n)$, and the count is $\mathrm{Binomial}(n,p/n)$. Its mean is
-$n\cdot p/n=p$ for every $n$, and its variance $n\cdot\tfrac pn(1-\tfrac pn)\to p$.
+intervals. Let $\lambda$ be the expected number of arrivals per minute. Split the
+minute into $n$ slices, model each as $\mathrm{Bernoulli}(\lambda/n)$, and the
+count is $\mathrm{Binomial}(n,\lambda/n)$. Its mean is $n\cdot\lambda/n=\lambda$
+for every $n$, and its variance
+$n\cdot\tfrac{\lambda}{n}(1-\tfrac{\lambda}{n})\to\lambda$.
 The moments stabilize, which signals that a limiting distribution exists.
 
 **The limit, derived.** Take $\mathrm{Binomial}(n,p_n)$ with $n\to\infty$ and
 $p_n\to0$ such that $np_n\to\lambda$---the *law of rare events*. Writing
-$p_n=\lambda/n$, the pmf at a fixed $k$ factors into three pieces:
+$p_n=\lambda/n$, the pmf at a fixed $k$ factors into four pieces:
 
 $$
 \binom{n}{k}\Bigl(\frac\lambda n\Bigr)^k\Bigl(1-\frac\lambda n\Bigr)^{n-k}
@@ -393,8 +400,8 @@ P(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad k=0,1,2,\dots
 $$
 :eqlabel:`eq_mdl-poisson_pmf`
 
-with $\lambda>0$ the *rate*, the average count per unit time. Writing $X\sim
-\mathrm{Poisson}(\lambda)$.
+with $\lambda>0$ the *rate*, the average count per unit time; we write
+$X\sim\mathrm{Poisson}(\lambda)$.
 
 **Where it arises.** Counts of rare events with no fixed ceiling: click counts,
 photons on a sensor, mutations in a genome, requests hitting a server.
@@ -408,21 +415,24 @@ $$
 
 Mean equals variance is the Poisson fingerprint---over-dispersed count data (where
 the empirical variance exceeds the mean) is the standard sign that a plain Poisson
-model is too simple.
+model is too simple. The standard fix, a Poisson whose rate is *itself random*,
+reappears later in this section as the Gamma--Poisson mixture, better known as the
+*negative binomial*.
 
 ```{.python .input #distributions-poisson}
 #@tab mxnet
-from scipy.special import factorial
+rng = np.random.default_rng(0)
 lam = 4.0
 k = np.arange(15)
 pmf = np.exp(-lam) * lam**k / factorial(k)
 print('mean = var = lambda =', lam)
 print('P(X=k):', pmf.round(3))
-np.random.poisson(lam, size=(3, 3))             # sample event counts
+rng.poisson(lam, size=(3, 3))                   # sample event counts
 ```
 
 ```{.python .input #distributions-poisson}
 #@tab pytorch
+torch.manual_seed(0)
 lam = 4.0
 m = torch.distributions.Poisson(lam)
 k = torch.arange(15.)
@@ -434,7 +444,7 @@ m.sample((3, 3))                                 # sample event counts
 
 ```{.python .input #distributions-poisson}
 #@tab tensorflow
-from scipy.special import factorial
+tf.random.set_seed(0)
 lam = 4.0
 k = np.arange(15)
 pmf = np.exp(-lam) * lam**k / factorial(k)
@@ -445,7 +455,6 @@ tf.random.poisson((3, 3), lam)                  # sample event counts
 
 ```{.python .input #distributions-poisson}
 #@tab jax
-from scipy.special import factorial
 lam = 4.0
 k = np.arange(15)
 pmf = np.exp(-lam) * lam**k / factorial(k)
@@ -454,14 +463,39 @@ print('P(X=k):', pmf.round(3))
 jax.random.poisson(jax.random.PRNGKey(0), lam, (3, 3))  # sample event counts
 ```
 
+**Watching the limit happen.** The derivation above is not just symbol-pushing; it
+is visible. The cell below overlays the pmf of $\mathrm{Binomial}(n,\lambda/n)$ for
+growing $n$ on its $\mathrm{Poisson}(\lambda)$ limit, building every pmf by the
+same successive-ratio trick we used for the binomial (for the Poisson the ratio is
+simply $P(X=k+1)/P(X=k)=\lambda/(k+1)$). Already at $n=20$ the curves nearly agree,
+and at $n=100$ they coincide to plotting accuracy.
+
+```{.python .input #distributions-binomial-to-poisson}
+lam, ks = 4.0, np.arange(15)
+
+def binomial_pmf(n, p):                # successive-ratio recursion, no factorials
+    pmf = [(1 - p)**n]
+    for k in range(len(ks) - 1):
+        pmf.append(pmf[-1] * max(n - k, 0) / (k + 1) * p / (1 - p))
+    return np.array(pmf)
+
+poisson_pmf = [np.exp(-lam)]
+for k in range(len(ks) - 1):
+    poisson_pmf.append(poisson_pmf[-1] * lam / (k + 1))
+d2l.plot(ks, [binomial_pmf(n, lam / n) for n in (5, 20, 100)]
+         + [np.array(poisson_pmf)], xlabel='k', ylabel='P(X=k)',
+         legend=[f'Binomial({n}, 4/{n})' for n in (5, 20, 100)] + ['Poisson(4)'])
+```
+
 ## Continuous Distributions
 
 A continuous random variable is described by a *probability density* (pdf)
 $p(x)\ge0$ with $\int p(x)\,dx=1$; probabilities are areas under it and
 expectations are integral averages (:numref:`sec_mdl-integral_calculus`). The five
 laws below run from the structureless (uniform) to the universal (Gaussian) to the
-vector-valued (multivariate Gaussian), with the exponential and Laplace as the
-$[0,\infty)$ and heavy-tailed-symmetric cases.
+vector-valued (multivariate Gaussian), with the exponential covering waiting times
+on $[0,\infty)$ and the Laplace the symmetric case with heavier-than-Gaussian
+tails.
 :numref:`fig_mdl-prob-continuous-pdfs` overlays the three densities on the whole
 line so their tail behavior is directly comparable: the Gaussian's thin
 $e^{-x^2}$ tail, the Laplace's heavier $e^{-|x|}$ tail and sharp peak, and the
@@ -496,39 +530,18 @@ $$
 $$
 
 These are the continuous mirrors of the discrete-uniform formulas (with the range
-$b-a$ playing the role of $n$). The default generator samples $U(0,1)$, so we
-shift and scale.
+$b-a$ playing the role of $n$). The default generator samples $U(0,1)$; shifting
+and scaling gives any $U(a,b)$, and as with the discrete uniform one compact NumPy
+check suffices.
 
 ```{.python .input #distributions-continuous-uniform}
-#@tab mxnet
+rng = np.random.default_rng(0)
 a, b = 1.0, 3.0
-sample = (b - a) * np.random.rand(3, 3) + a
-print('mean (a+b)/2 =', (a + b) / 2, '  var (b-a)^2/12 =', (b - a)**2 / 12)
-sample
-```
-
-```{.python .input #distributions-continuous-uniform}
-#@tab pytorch
-a, b = 1.0, 3.0
-sample = (b - a) * torch.rand(3, 3) + a
-print('mean (a+b)/2 =', (a + b) / 2, '  var (b-a)^2/12 =', (b - a)**2 / 12)
-sample
-```
-
-```{.python .input #distributions-continuous-uniform}
-#@tab tensorflow
-a, b = 1.0, 3.0
-sample = (b - a) * tf.random.uniform((3, 3)) + a
-print('mean (a+b)/2 =', (a + b) / 2, '  var (b-a)^2/12 =', (b - a)**2 / 12)
-sample
-```
-
-```{.python .input #distributions-continuous-uniform}
-#@tab jax
-a, b = 1.0, 3.0
-sample = jax.random.uniform(jax.random.PRNGKey(0), (3, 3), minval=a, maxval=b)
-print('mean (a+b)/2 =', (a + b) / 2, '  var (b-a)^2/12 =', (b - a)**2 / 12)
-sample
+sample = (b - a) * rng.random(10000) + a         # shift-and-scale U(0,1)
+print('mean (a+b)/2   =', (a + b) / 2, '  sample mean:',
+      float(sample.mean().round(3)))
+print('var (b-a)^2/12 =', round((b - a)**2 / 12, 3), ' sample var :',
+      float(sample.var().round(3)))
 ```
 
 ### Exponential
@@ -678,15 +691,17 @@ and latent distribution throughout deep generative modeling.
 
 ```{.python .input #distributions-gaussian}
 #@tab mxnet
+rng = np.random.default_rng(0)
 mu, sigma = 0.0, 1.0
 x = np.arange(-4, 4, 0.01)
 p = np.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
 print('total mass (≈1):', float((0.01 * p).sum().round(4)))
-np.random.normal(mu, sigma, size=(3, 3))        # sample from N(mu, sigma^2)
+rng.normal(mu, sigma, size=(3, 3))              # sample from N(mu, sigma^2)
 ```
 
 ```{.python .input #distributions-gaussian}
 #@tab pytorch
+torch.manual_seed(0)
 mu, sigma = 0.0, 1.0
 x = torch.arange(-4, 4, 0.01)
 p = torch.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
@@ -696,6 +711,7 @@ torch.normal(mu, sigma, size=(3, 3))            # sample from N(mu, sigma^2)
 
 ```{.python .input #distributions-gaussian}
 #@tab tensorflow
+tf.random.set_seed(0)
 mu, sigma = 0.0, 1.0
 x = tf.range(-4, 4, 0.01)
 p = tf.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
@@ -813,8 +829,9 @@ $$
 
 **The geometry is the eigendecomposition.** The exponent is a quadratic form in
 $\boldsymbol\Sigma^{-1}$, so its level sets---the contours of equal density---are
-*ellipsoids*. The covariance $\boldsymbol\Sigma$ is symmetric PSD, so it has an
-orthonormal eigenbasis $\boldsymbol\Sigma=\mathbf W\boldsymbol\Lambda\mathbf W^\top$
+*ellipsoids*. The covariance $\boldsymbol\Sigma$ is symmetric positive definite, so
+it has an orthonormal eigenbasis
+$\boldsymbol\Sigma=\mathbf W\boldsymbol\Lambda\mathbf W^\top$ with all $\lambda_i>0$
 by the spectral theorem (:numref:`subsec_mdl-spectral-theorem`), and the contour
 ellipsoid's *axes point along the eigenvectors $\mathbf w_i$ with half-lengths
 proportional to $\sqrt{\lambda_i}$*: the principal directions of spread are the
@@ -861,9 +878,10 @@ directions we built in.
 
 ```{.python .input #distributions-mvn}
 #@tab mxnet
+rng = np.random.default_rng(0)
 mu_v = np.array([0., 0.])
 Sigma = np.array([[2., 1.], [1., 2.]])
-sample = np.random.multivariate_normal(mu_v, Sigma, size=5000)
+sample = rng.multivariate_normal(mu_v, Sigma, size=5000)
 emp = np.cov(sample.T)
 vals, vecs = np.linalg.eigh(emp)
 print('empirical covariance:\n', emp.round(2))
@@ -872,6 +890,7 @@ print('eigenvalues (≈ 1, 3):', vals.round(2))   # Sigma has eigenvalues 1 and 
 
 ```{.python .input #distributions-mvn}
 #@tab pytorch
+torch.manual_seed(0)
 mu_v = torch.zeros(2)
 Sigma = torch.tensor([[2., 1.], [1., 2.]])
 sample = torch.distributions.MultivariateNormal(mu_v, Sigma).sample((5000,))
@@ -883,9 +902,10 @@ print('eigenvalues (≈ 1, 3):', vals.numpy().round(2))  # Sigma eigenvalues 1 a
 
 ```{.python .input #distributions-mvn}
 #@tab tensorflow
+rng = np.random.default_rng(0)
 mu_v = np.array([0., 0.])
 Sigma = np.array([[2., 1.], [1., 2.]])
-sample = np.random.multivariate_normal(mu_v, Sigma, size=5000)
+sample = rng.multivariate_normal(mu_v, Sigma, size=5000)
 emp = np.cov(sample.T)
 vals, vecs = np.linalg.eigh(emp)
 print('empirical covariance:\n', emp.round(2))
@@ -905,10 +925,10 @@ print('eigenvalues (≈ 1, 3):', np.asarray(vals).round(2))  # Sigma eigenvalues
 
 ## The Exponential Family
 
-Here is the unifying punchline. Every distribution above---Bernoulli, categorical,
-binomial, Poisson, exponential, Gaussian, Laplace (with fixed location)---is a
-special case of one form, the *exponential family*. A distribution belongs to it if
-its density (or mass) can be written
+Here is the unifying punchline. Nearly every distribution above---Bernoulli,
+categorical, binomial, Poisson, exponential, Gaussian, Laplace (with fixed
+location)---is a special case of one form, the *exponential family*. A distribution
+belongs to it if its density (or mass) can be written
 
 $$
 p(\mathbf x\mid\boldsymbol\eta) = h(\mathbf x)\,\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)\bigr).
@@ -956,6 +976,16 @@ parameter is negative, $\eta_2=-1/(2\sigma^2)<0$, which is what forces the
 tail-suppressing $e^{-x^2}$ decay. The exact split between $h$, $\eta$, and $T$ is
 not unique; what matters is that the distribution *fits the form at all*.
 
+Membership has edges worth knowing. The conspicuous absentees from the list above
+are the two *uniforms*: when the endpoints are unknown parameters, the support of
+$U(a,b)$ (and likewise of $U(n)$) moves with those parameters, whereas every member
+of :eqref:`eq_mdl-exp_family` has the fixed, parameter-free support of its base
+measure $h$---the classic counterexample. Heavy-tailed laws such as the Cauchy and
+Student-$t$ live outside the family too, and for them the exclusion has teeth: they
+admit no finite-dimensional conjugate prior, and their negative log-likelihoods are
+not convex in the parameters---both conveniences are exponential-family privileges,
+as the rest of this section shows.
+
 ### Where the Form Comes From: Maximum Entropy
 
 The exponential form is not an arbitrary template---it is exactly what *maximizing
@@ -963,7 +993,8 @@ entropy* produces. The two maximum-entropy remarks we made earlier are the same
 statement seen twice: the discrete uniform is the maximum-entropy distribution on a
 finite set when we fix *nothing* but the support, and the Gaussian is the
 maximum-entropy distribution on the line when we fix the *mean and variance*. In
-general, maximizing the entropy $H[p]=-\int p\log p$ subject to fixing the expected
+general, maximizing the entropy *relative to the base measure* $h$,
+$H_h[p]=-\int p\log\tfrac{p}{h}$, subject to fixing the expected
 sufficient statistics $\mathbb E[T(\mathbf x)]=\boldsymbol\tau$ has, by a Lagrange
 multiplier argument, the solution
 
@@ -973,7 +1004,12 @@ $$
 
 which is precisely :eqref:`eq_mdl-exp_family`---the multipliers $\boldsymbol\eta$
 are the natural parameters and $A(\boldsymbol\eta)$ is again the normalizer
-:cite:`Murphy.2022`. So the exponential family is the *least-committal* family
+:cite:`Murphy.2022,Wainwright.Jordan.2008`. (The base measure is doing real work
+here: with plain Shannon entropy, i.e. $h\equiv1$, fixing the mean on
+$\{0,1,2,\dots\}$ yields the *geometric* distribution, and only entropy relative to
+$h(k)=1/k!$ yields the Poisson. For the uniform and the Gaussian above, $h$ is
+constant, so plain entropy was the right notion all along.) So the exponential
+family is the *least-committal* family
 consistent with knowing a fixed set of averages: the uniform fixes none, the
 Bernoulli/categorical fix the class probabilities, and the Gaussian fixes the first
 two moments.
@@ -1077,8 +1113,8 @@ and three new continuous laws---the **Beta**, the **Gamma**, and the
 distributions we have met. A prior is **conjugate** to a likelihood when the
 posterior belongs to the *same family* as the prior, so Bayesian updating just moves
 the parameters rather than changing the shape of the distribution. This closes the
-tree: a second tier of nodes sits above the data distributions, joined to them by
-"conjugate prior" links.
+tree: a tier of prior nodes flanks the data distributions in
+:numref:`fig_mdl-prob-family-tree`, joined to them by "conjugate prior" links.
 
 ### Beta--Bernoulli: Counting with Pseudo-Counts
 
@@ -1114,18 +1150,21 @@ $$
 :eqlabel:`eq_mdl-beta_posterior`
 
 This is the **pseudo-count** picture, the cleanest intuition in Bayesian statistics:
-$\alpha-1$ and $\beta-1$ act as *imaginary* heads and tails seen before any real
-data, and observing $x$ real heads and $n-x$ real tails simply adds them on. The
-posterior mean
+under the posterior mean, $\alpha$ and $\beta$ act as *phantom* heads and tails seen
+before any real data, and observing $x$ real heads and $n-x$ real tails simply adds
+the real counts to the phantom ones. The posterior mean
 
 $$
 \mathbb E[p\mid x] = \frac{\alpha+x}{\alpha+\beta+n}
 $$
 
-interpolates between the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood
-frequency $x/n$, and slides toward the data as $n$ grows---the same flattening of the
-prior we saw turn MAP into MLE in :numref:`subsec_mdl-map`. The cell verifies the
-update on a small sample.
+is literally the heads-frequency with the phantom flips included; it interpolates
+between the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood frequency
+$x/n$, and slides toward the data as $n$ grows---the same flattening of the prior we
+saw turn MAP into MLE in :numref:`subsec_mdl-map`. With the uniform prior
+$\alpha=\beta=1$ it becomes *Laplace's rule of succession* $(x+1)/(n+2)$: estimate a
+probability by adding one phantom observation of each outcome. The cell verifies
+the update on a small sample.
 
 ```{.python .input #distributions-conjugate}
 alpha, beta = 2.0, 2.0                           # Beta prior pseudo-counts
@@ -1147,7 +1186,10 @@ The other discrete laws have their own conjugate partners, built the same way.
 * **Gamma--Poisson.** The **Gamma** distribution
   $\mathrm{Gamma}(\lambda\mid\alpha,\beta)\propto\lambda^{\alpha-1}e^{-\beta\lambda}$
   is a density on the rate $\lambda>0$; it is conjugate to the Poisson, and observing
-  counts $x_1,\dots,x_n$ updates it to $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$---pseudo-events over a pseudo-window.
+  counts $x_1,\dots,x_n$ updates it to $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$---pseudo-events over a pseudo-window. Averaging the Poisson over this Gamma
+  uncertainty in its rate yields the *negative binomial*: a random rate inflates the
+  variance above the mean, which is exactly the over-dispersion that flags a
+  too-simple Poisson model.
 * **Dirichlet--Multinomial.** The **Dirichlet** distribution
   $\mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)\propto\prod_k p_k^{\alpha_k-1}$ is the
   multivariate Beta, a density over probability vectors on the simplex; it is
@@ -1170,6 +1212,21 @@ inference.
 
 ## Summary
 
+The ten laws of this section in one view:
+
+| Law | pmf or pdf | Mean | Variance | Where it shows up in DL |
+|:--|:--|:--|:--|:--|
+| $\mathrm{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | binary classifier output, BCE loss |
+| $\mathrm{Categorical}(\mathbf p)$ | $p_k$ | $\mathbf p$ | $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$ (one-hot coding) | softmax output, cross-entropy loss |
+| Uniform $U(n)$ | $1/n$ | $(n+1)/2$ | $(n^2-1)/12$ | index sampling, shuffling |
+| $\mathrm{Binomial}(n,p)$ | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | success counts over $n$ trials |
+| $\mathrm{Poisson}(\lambda)$ | $\lambda^k e^{-\lambda}/k!$ | $\lambda$ | $\lambda$ | rare-event counts |
+| Uniform $U(a,b)$ | $1/(b-a)$ on $[a,b]$ | $(a+b)/2$ | $(b-a)^2/12$ | raw randomness, initialization |
+| $\mathrm{Exp}(\lambda)$ | $\lambda e^{-\lambda x}$, $x\ge0$ | $1/\lambda$ | $1/\lambda^2$ | waiting times, survival |
+| $\mathcal N(\mu,\sigma^2)$ | $\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2}$ | $\mu$ | $\sigma^2$ | MSE noise model, CLT, priors |
+| $\mathrm{Laplace}(\mu,b)$ | $\frac{1}{2b}e^{-\lvert x-\mu\rvert/b}$ | $\mu$ | $2b^2$ | MAE loss, $L_1$ sparsity prior |
+| $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ | :eqref:`eq_mdl-mvn_pdf` | $\boldsymbol\mu$ | $\boldsymbol\Sigma$ | latent priors, Gaussian processes |
+
 * Distributions form a *family*, not a list: Bernoulli is the seed; summing $n$
   gives the **Binomial** ($\mu=np$, $\sigma^2=np(1-p)$, derived as a sum of
   Bernoullis); the many-rare limit gives the **Poisson** ($\mu=\sigma^2=\lambda$,
@@ -1187,8 +1244,10 @@ inference.
 * Means and variances follow from elegant structure---linearity of expectation,
   limits, and standard integrals---not memorization.
 * The **exponential family** $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top
-  T(\mathbf x)-A(\boldsymbol\eta))$ unifies all of them; it is exactly the
-  maximum-entropy family for a fixed set of expected sufficient statistics. Its
+  T(\mathbf x)-A(\boldsymbol\eta))$ unifies almost all of them (the uniforms, whose
+  support moves with their parameters, stay outside); it is exactly the
+  maximum-entropy family---entropy taken relative to the base measure $h$---for a
+  fixed set of expected sufficient statistics. Its
   log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
   and $A$ is convex, which is exactly why exponential-family maximum likelihood (the
   basis of the standard deep-learning losses) is a convex problem.
@@ -1301,9 +1360,9 @@ Take $\mathrm{Binomial}(n, \lambda/n)$ and let $n\to\infty$:
 $$\binom{n}{k}\Bigl(\tfrac{\lambda}{n}\Bigr)^k\Bigl(1-\tfrac{\lambda}{n}\Bigr)^{n-k}
 \longrightarrow \frac{\lambda^k e^{-\lambda}}{k!}.$$
 
-Mean $=$ variance $=\lambda$.
+Mean $=$ variance $=\lambda$. Watch the limit happen:
 
-@distributions-poisson
+@distributions-binomial-to-poisson
 :::
 
 ::: {.slide title="Continuous distributions"}
@@ -1338,8 +1397,9 @@ $\boldsymbol\Sigma$, with half-lengths $\propto\sqrt{\lambda_i}$:
 @distributions-mvn
 :::
 
-::: {.slide title="The exponential family unifies them all"}
-Every distribution above fits one form:
+::: {.slide title="The exponential family unifies them"}
+Nearly every distribution above fits one form
+(the uniforms stay outside):
 
 $$p(\mathbf{x}\mid\boldsymbol\eta) =
 h(\mathbf{x})\exp\bigl(\boldsymbol\eta^\top T(\mathbf{x}) - A(\boldsymbol\eta)\bigr).$$

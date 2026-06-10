@@ -9,8 +9,12 @@ single idea that turns a probabilistic model into a trainable objective. This
 section states the principle, proves the three equivalences that make it
 operational---likelihood becomes a *negative log-likelihood*, the negative
 log-likelihood *is* the cross-entropy to the data, and the Gaussian case *is*
-mean squared error---and then shows how putting a prior back in recovers
-$L_2$ regularization. We keep the running coin-flip example throughout because it
+mean squared error---then asks how good the resulting estimates are
+(consistency, asymptotic normality, and the Fisher information), shows how
+putting a prior back in recovers $L_2$ regularization, and ends where modern
+generative models begin: when latent variables make the likelihood intractable,
+a lower bound---the ELBO---and the EM algorithm rescue the principle. We keep
+the running coin-flip example throughout because it
 is small enough to solve by hand, which lets us check every claim against the
 answer we already know.
 
@@ -65,6 +69,10 @@ $$
 $$
 :eqlabel:`eq_mdl-max_like`
 
+(When $\boldsymbol{\theta}$ is continuous, $P(\boldsymbol{\theta}\mid X)$ is a
+*density*, and "most probable" means the *mode* of that density---a subtlety
+that will matter when we discuss MAP estimation in :numref:`subsec_mdl-map`.)
+
 This looks like it requires a prior, and Bayes' rule makes the dependence
 explicit:
 
@@ -77,9 +85,12 @@ Two of the three pieces drop out of the $\mathop{\mathrm{argmax}}$, but for
 so it can never change which $\boldsymbol{\theta}$ wins---dropping it is free, no
 assumption required. The prior $P(\boldsymbol{\theta})$ is a different matter:
 discarding it is a *modelling choice*. Only if we hold *no* prior belief that one
-parameter value is better than another---an *uninformative prior*, e.g. that the
+parameter value is better than another---a *flat (uniform) prior*, e.g. that the
 coin's bias is equally likely to be any value in $[0,1]$---is
 $P(\boldsymbol{\theta})$ constant in $\boldsymbol{\theta}$ and free to drop too.
+(We say "flat" rather than the common "uninformative" deliberately: a prior flat
+in $\theta$ is not flat in a transformed parameter such as $\theta^2$, a wrinkle
+we return to in :numref:`subsec_mdl-map`.)
 What remains is the **likelihood** $P(X \mid \boldsymbol{\theta})$, the
 probability the data assigns under each parameter, and the principle in its
 working form:
@@ -90,7 +101,7 @@ $$
 :eqlabel:`eq_mdl-mle`
 
 We restore the prior $P(\boldsymbol{\theta})$ deliberately in
-:numref:`subsec_mdl-map`; everything until then assumes it is uninformative.
+:numref:`subsec_mdl-map`; everything until then assumes it is flat.
 
 ### A Worked Example: The Coin
 
@@ -169,10 +180,10 @@ likelihood :eqref:`eq_mdl-coin-like` gives $\hat\theta = n_H/(n_H+n_T)$: the MLE
 of a coin's bias is *always* the empirical frequency of heads, our first sign
 that maximum likelihood recovers the "obvious" estimator.
 
-## The Negative Log-Likelihood
+### The Negative Log-Likelihood
 
 The closed-form trick above does not survive contact with a real model: with
-billions of parameters there is no characteristic-polynomial to factor, and we
+billions of parameters there is no polynomial to factor, and we
 optimize numerically instead. But the likelihood itself is a numerically hostile
 object. With $n$ independent data points it is a product of $n$ probabilities,
 
@@ -325,9 +336,11 @@ one rescaling.
 Dividing the NLL :eqref:`eq_mdl-nll` by the number of examples turns it into an
 average---the natural per-example loss---and that average has an
 information-theoretic name. Let $\hat p_{\textrm{data}}$ be the *empirical
-distribution*, which places mass $1/n$ on each observed $x_i$ (working in natural
-logarithms, so the units are *nats*; switching to bits merely rescales every
-quantity by $\ln 2$ and changes no $\mathop{\mathrm{argmin}}$).
+distribution*, which places mass $1/n$ on each *observation*; masses at repeated
+values stack, so an outcome $x$ that occurs $n_x$ times in the sample carries
+total mass $\hat p_{\textrm{data}}(x) = n_x/n$, its empirical frequency. (We work
+in natural logarithms, so the units are *nats*; switching to bits merely rescales
+every quantity by $\ln 2$ and changes no $\mathop{\mathrm{argmin}}$.)
 
 **Proposition (MLE = minimum cross-entropy).** *Maximizing the likelihood is the
 same as minimizing the cross-entropy from the empirical distribution
@@ -340,13 +353,18 @@ $$
 \textrm{CE}(\hat p_{\textrm{data}}, p_{\boldsymbol{\theta}}) = -\!\!\sum_{x} \hat p_{\textrm{data}}(x)\log p_{\boldsymbol{\theta}}(x).
 $$
 
-**Proof.** Take the average negative log-likelihood and rewrite the sum over
-data points as a sum over distinct outcomes weighted by their empirical
-frequency. Because each $x_i$ carries empirical mass $\hat p_{\textrm{data}}(x_i)=1/n$,
+**Proof.** Take the average negative log-likelihood and regroup the sum over
+data points into a sum over *distinct outcomes*, pooling the observations with
+$x_i = x$. Each observation contributes mass $1/n$, so outcome $x$ receives
+total mass $n_x/n = \hat p_{\textrm{data}}(x)$. On the coin this regrouping is
+concrete: the nine head-flips pool into nine copies of $\log p_{\boldsymbol{\theta}}(\textrm{H})$,
+so heads enters the average with weight $\hat p_{\textrm{data}}(\textrm{H}) = 9/13$,
+and tails with weight $4/13$. In general,
 
 $$
 \frac{1}{n}\,\ell(\boldsymbol{\theta})
   = -\frac{1}{n}\sum_{i=1}^n \log p_{\boldsymbol{\theta}}(x_i)
+  = -\sum_{x} \frac{n_x}{n}\,\log p_{\boldsymbol{\theta}}(x)
   = -\sum_{x} \hat p_{\textrm{data}}(x)\,\log p_{\boldsymbol{\theta}}(x)
   = \textrm{CE}\!\left(\hat p_{\textrm{data}},\, p_{\boldsymbol{\theta}}\right),
 $$
@@ -373,7 +391,11 @@ $$
 This is the deepest reading of the section: maximum likelihood is the
 *KL-projection* of the empirical distribution onto the model family---it picks
 the $p_{\boldsymbol{\theta}}$ closest to the data in the only sense that matters
-for coding. Training cannot drive the cross-entropy below the floor
+for coding. The projection reading even survives a *misspecified* model: when no
+$p_{\boldsymbol{\theta}}$ equals the data-generating distribution, the MLE
+converges not to a "true parameter" (there is none) but to the parameter whose
+$p_{\boldsymbol{\theta}}$ is KL-closest to it :cite:`White.1982`. Training
+cannot drive the cross-entropy below the floor
 $H(\hat p_{\textrm{data}})$, the irreducible cost of the data's own randomness;
 all it can remove is the KL gap, as :numref:`fig_mdl-mle-kl` shows. As a special
 case, the *categorical* NLL of a classifier with one-hot labels is precisely the
@@ -381,6 +403,42 @@ softmax cross-entropy loss of :numref:`sec_softmax`.
 
 ![Minimizing the negative log-likelihood is minimizing the KL divergence to the data. The per-example cross-entropy splits into the entropy $H(\hat p_{\textrm{data}})$, an irreducible floor set by the data's own randomness, plus $D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$, the only part training can remove. As the model improves, the KL slice shrinks and the cross-entropy descends toward---but never below---the floor.](../img/mdl-prob-mle-kl.svg)
 :label:`fig_mdl-mle-kl`
+
+### From Probabilities to Densities
+
+Everything so far was phrased for discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
+is a genuine probability. For continuous data we replace probabilities by
+densities $p$, and the only worry is that the probability of observing *any
+exact* real value is zero, so the naive likelihood is $0$ for every
+$\boldsymbol{\theta}$. The resolution is to ask for a match only to within a small
+tolerance $\epsilon$, then watch the $\epsilon$ cancel.
+
+For i.i.d. observations $x_1,\ldots,x_n$, the probability that each lands in a
+window of width $\epsilon$ is, to first order,
+
+$$
+P\big(X_i \in [x_i, x_i+\epsilon]\ \forall i \mid \boldsymbol{\theta}\big)
+  \approx \epsilon^n \prod_{i=1}^n p(x_i\mid\boldsymbol{\theta}).
+$$
+
+Taking the negative log,
+
+$$
+-\log P\big(X_i \in [x_i, x_i+\epsilon]\ \forall i\mid\boldsymbol{\theta}\big)
+  \approx -n\log\epsilon - \sum_{i} \log p(x_i\mid\boldsymbol{\theta}).
+$$
+
+The tolerance enters only through the additive constant $-n\log\epsilon$, which is
+free of $\boldsymbol{\theta}$. Demanding four digits of precision or four hundred
+changes that constant but never the minimizer, so we drop it and minimize
+
+$$
+-\sum_{i} \log p(x_i\mid\boldsymbol{\theta})
+$$
+
+exactly as in the discrete case. Maximum likelihood thus operates on continuous
+variables by swapping probabilities for densities and nothing more---and the most
+important density to swap in is the Gaussian, which we do next.
 
 ### Gaussian NLL Is Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
@@ -436,23 +494,41 @@ Each row is one line of algebra---take the density, drop the
 $\boldsymbol{\theta}$-free constants---of exactly the kind we just did for the
 Gaussian. Picking a loss *is* picking a noise model.
 
-### Why Maximum Likelihood Works
+## Estimator Theory: Why Maximum Likelihood Works
 
 A fair worry is whether $\hat{\boldsymbol{\theta}}$ is any good. The first
 reassurance is the same KL picture. Drawing genuinely i.i.d. data from a true
 distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL is, by the law of
 large numbers, an estimate of the *expected* cross-entropy
-$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$, which the
-proposition above shows is minimized exactly at the truth
-$\boldsymbol{\theta}=\boldsymbol{\theta}^\star$ (the KL term vanishes there).
-Minimizing the empirical average therefore targets the right minimizer, and as
-$n\to\infty$ the empirical objective converges to the population one. This is the
-formal content of *consistency*: for a well-specified model the MLE converges in
-probability to the true parameter, $\hat{\boldsymbol{\theta}}\xrightarrow{P}\boldsymbol{\theta}^\star$.
-The coin made this concrete: $\hat\theta = n_H/(n_H+n_T) \to \theta^\star$ by the
-law of large numbers. Consistency, asymptotic unbiasedness, and efficiency are
-the estimator-quality notions of :numref:`sec_mdl-statistics`; here they describe
-the MLE specifically.
+$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$, and the
+decomposition $\textrm{CE} = H + D_{\textrm{KL}}$ shows that this population
+objective is minimized exactly at the truth
+$\boldsymbol{\theta}=\boldsymbol{\theta}^\star$, where the KL term vanishes.
+"Exactly at" needs one hypothesis we have so far left implicit: the model must be
+**identifiable**---distinct parameters must give distinct distributions,
+$\boldsymbol{\theta}\neq\boldsymbol{\theta}'\Rightarrow p_{\boldsymbol{\theta}}\neq p_{\boldsymbol{\theta}'}$---or
+else several parameters tie for the minimum and "the" true parameter is not even
+well defined. This is no pedantic footnote: neural networks fail identifiability
+spectacularly, since permuting the hidden units of a layer (together with their
+weights) changes the parameter vector but not the function it computes, so for
+such models consistency can only ever be a statement about the fitted
+*distribution* $p_{\hat{\boldsymbol{\theta}}}$, never about the parameter vector
+itself.
+
+Minimizing the empirical average therefore targets the right minimizer. One more
+dose of honesty: the law of large numbers makes the empirical objective converge
+to the population one at each *fixed* $\boldsymbol{\theta}$, and pointwise
+convergence of objectives does not by itself force their *minimizers* to
+converge---for that, the convergence must be *uniform* over the parameter space.
+With identifiability and uniform convergence in hand, the conclusion is a genuine
+theorem (e.g., Theorem 9.13 of :cite:`Wasserman.2013`): for a well-specified
+model the MLE is **consistent**, converging in probability to the true parameter,
+$\hat{\boldsymbol{\theta}}\xrightarrow{P}\boldsymbol{\theta}^\star$. The coin
+made this concrete: $\hat\theta = n_H/(n_H+n_T) \to \theta^\star$ directly by the
+law of large numbers, and the Bernoulli family is identifiable---different biases
+give different distributions. Consistency, asymptotic unbiasedness, and
+efficiency are the estimator-quality notions of :numref:`sec_mdl-statistics`;
+here they describe the MLE specifically.
 
 Consistency says only *where* $\hat{\boldsymbol{\theta}}$ lands; the sharper
 statement is *how fast* and *how tightly* it concentrates. Under mild regularity
@@ -469,8 +545,8 @@ where $I(\boldsymbol{\theta})$ is the **Fisher information** defined just below
 :cite:`Bishop.2006,Wasserman.2013`. Two things are worth extracting. First, the
 error shrinks at the $1/\sqrt{n}$ rate, so the standard error of each component
 falls like $1/\sqrt n$---halving it costs four times the data. Second, the limiting variance is exactly
-$I(\boldsymbol{\theta}^\star)^{-1}$, and the Cramér--Rao bound of
-:numref:`sec_mdl-statistics` says *no* unbiased estimator can have smaller
+$I(\boldsymbol{\theta}^\star)^{-1}$, and the Cramér--Rao bound stated below
+(:eqref:`eq_mdl-cramer-rao`) says *no* unbiased estimator can have smaller
 variance than $I(\boldsymbol{\theta}^\star)^{-1}/n$. The MLE attains that floor in
 the limit: it is **asymptotically efficient**---asymptotically, the best estimator
 there is. The qualifier matters. At finite $n$ the MLE is generally only
@@ -480,20 +556,20 @@ so systematically underestimates $\sigma^2$, the biased estimator worked out in
 :numref:`sec_mdl-statistics`. Maximum likelihood is optimal *in the limit*, not a
 guarantee of unbiasedness at every sample size.
 
-#### Fisher Information and the Score
+### Fisher Information and the Score
 
 To make :eqref:`eq_mdl-asymptotic-normality` quantitative we need the object
 $I(\boldsymbol{\theta})$ it contains. Define the **score** as the gradient of the
 log-likelihood with respect to the parameters,
-$s(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})$.
+$s(x;\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})$.
 The score is the per-example version of the NLL gradient we already met: setting
-$\sum_i s(\boldsymbol{\theta}) = \mathbf 0$ is exactly the first-order condition
+$\sum_i s(x_i;\boldsymbol{\theta}) = \mathbf 0$ is exactly the first-order condition
 that locates $\hat{\boldsymbol{\theta}}$. At the true parameter the score has
 mean zero, and its variance is the **Fisher information**,
 
 $$
-I(\boldsymbol{\theta}) = \operatorname{Var}_{\boldsymbol{\theta}}\!\big[\,s(\boldsymbol{\theta})\,\big]
-  = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(\boldsymbol{\theta})\,s(\boldsymbol{\theta})^\top\,\big]
+I(\boldsymbol{\theta}) = \operatorname{Var}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,\big]
+  = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,s(x;\boldsymbol{\theta})^\top\,\big]
   = -\,\mathbb{E}_{\boldsymbol{\theta}}\!\big[\nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\big],
 $$
 :eqlabel:`eq_mdl-fisher`
@@ -504,15 +580,38 @@ sharply peaked log-likelihood---large curvature, large $I$---pins the parameter
 down tightly, so the estimate has small variance; a flat one leaves
 $\boldsymbol{\theta}$ poorly determined. That is precisely what
 :eqref:`eq_mdl-asymptotic-normality` says, $\operatorname{Var}(\hat{\boldsymbol{\theta}}) \approx I(\boldsymbol{\theta}^\star)^{-1}/n$.
+:numref:`fig_mdl-prob-mle-fisher` draws the picture for a Gaussian's two
+parameters: the NLL is a bowl around the MLE, and the inverse of its curvature is
+the ellipse within which the estimate scatters.
+
+![Fisher information is the curvature of the negative log-likelihood. Contours show the NLL for a Gaussian's parameters $(\mu, \sigma)$ over $n=30$ draws from $\mathcal{N}(1, 1.5^2)$; the dot marks the maximum-likelihood estimate, and the overlaid ellipse is the inverse-information covariance $I(\hat\mu,\hat\sigma)^{-1}/n$ that asymptotic normality predicts for the estimate's spread. Per observation $I = \operatorname{diag}(1/\sigma^2,\ 2/\sigma^2)$: the bowl is twice as curved in $\sigma$ as in $\mu$, so the data pin down the scale more tightly than the mean and the ellipse is correspondingly wider along the $\mu$-axis.](../img/mdl-prob-mle-fisher.svg)
+:label:`fig_mdl-prob-mle-fisher`
+
+The curvature intuition is a theorem about *every* estimator, not just the MLE.
+The **Cramér--Rao bound** states that any *unbiased* estimator $\tilde\theta$
+built from $n$ i.i.d. observations obeys
+
+$$
+\operatorname{Var}\big(\tilde\theta\big) \;\ge\; \frac{1}{n\,I(\theta)}
+$$
+:eqlabel:`eq_mdl-cramer-rao`
+
+(stated here for a scalar parameter; for vectors the statement reads
+$\operatorname{Cov}(\tilde{\boldsymbol{\theta}}) \succeq I(\boldsymbol{\theta})^{-1}/n$
+in the positive-semidefinite order) :cite:`Wasserman.2013`. Information caps
+precision: no cleverness in constructing the estimator can beat the curvature the
+model itself supplies, and comparing with :eqref:`eq_mdl-asymptotic-normality`
+shows the MLE's limiting variance meets this floor exactly---the precise content
+of "asymptotically efficient."
 
 The coin closes the loop on itself. A single flip has log-likelihood
 $\log p(x\mid\theta) = x\log\theta + (1-x)\log(1-\theta)$ for $x\in\{0,1\}$, so
 the score and its derivative are
 
 $$
-s(\theta) = \frac{x}{\theta} - \frac{1-x}{1-\theta},
+s(x;\theta) = \frac{x}{\theta} - \frac{1-x}{1-\theta},
 \qquad
-\frac{d}{d\theta}\, s(\theta) = -\frac{x}{\theta^2} - \frac{1-x}{(1-\theta)^2}.
+\frac{d}{d\theta}\, s(x;\theta) = -\frac{x}{\theta^2} - \frac{1-x}{(1-\theta)^2}.
 $$
 
 Taking $-\mathbb{E}[\,\cdot\,]$ with $\mathbb{E}[x]=\theta$ collapses the two
@@ -526,12 +625,17 @@ I(\theta) = \frac{1}{\theta} + \frac{1}{1-\theta} = \frac{1}{\theta(1-\theta)},
 $$
 :eqlabel:`eq_mdl-coin-fisher`
 
-The prediction is therefore that the MLE $\hat\theta = n_H/n$ over $n$ flips has
-variance about $\theta(1-\theta)/n$. We can check that this is *exactly* right
-here---$\hat\theta$ is a scaled binomial count, whose variance is
+Note that the per-flip information $1/(\theta(1-\theta))$ is *smallest* at
+$\theta = 1/2$: fair coins are the hardest to pin down, each flip carrying the
+least information about the bias. The prediction of
+:eqref:`eq_mdl-asymptotic-normality` is that the MLE $\hat\theta = n_H/n$ over
+$n$ flips has variance about $\theta(1-\theta)/n$---which, by
+:eqref:`eq_mdl-coin-fisher`, is also the Cramér--Rao floor
+:eqref:`eq_mdl-cramer-rao` for this problem. We can check that this is *exactly*
+right here---$\hat\theta$ is a scaled binomial count, whose variance is
 $\theta(1-\theta)/n$ on the nose---and confirm it by simulation: run the
 $n$-flip experiment many times and compare the spread of the resulting estimates
-to the Cramér--Rao floor :eqref:`eq_mdl-coin-fisher`.
+to the floor.
 
 ```{.python .input #maximum-likelihood-fisher-information}
 # A framework-agnostic numpy simulation of the coin MLE's variance.
@@ -548,15 +652,15 @@ empirical_var, cramer_rao
 
 The empirical variance of the maximum-likelihood estimates matches the
 Cramér--Rao floor $\theta(1-\theta)/n$ to two or three digits: the coin's MLE is
-not merely consistent, it is as tight as :eqref:`eq_mdl-asymptotic-normality`
-permits. This is the concrete content of "asymptotically efficient," and it is
+not merely consistent, it is as tight as :eqref:`eq_mdl-cramer-rao`
+permits. This is asymptotic efficiency made concrete, and it is
 why the curvature of a loss surface---its Fisher information, or empirically its
 Hessian---tells us how trustworthy a fitted parameter is.
 
 ## MAP Estimation: Priors as Regularizers
 :label:`subsec_mdl-map`
 
-We dropped the prior $P(\boldsymbol{\theta})$ by declaring it uninformative.
+We dropped the prior $P(\boldsymbol{\theta})$ by declaring it flat.
 Keeping it instead turns maximum likelihood into *maximum a posteriori* (MAP)
 estimation---and the prior reappears as a regularizer. Maximizing the full
 posterior :eqref:`eq_mdl-max_like` and taking negative logs,
@@ -573,6 +677,8 @@ $$
 The objective is the familiar data-fit term plus a penalty: the negative
 log-prior. A prior concentrated near small parameters penalizes large ones, which
 is precisely what a regularizer does.
+
+### Gaussian Priors Are Weight Decay
 
 **Proposition (Gaussian prior = $L_2$ / weight decay).** *A Gaussian prior
 $\boldsymbol{\theta}\sim\mathcal{N}(\mathbf 0,\tau^2 \mathbf I)$ contributes the
@@ -612,10 +718,76 @@ mean, and the MAP estimate sits between them.
 
 The figure also reads off the two limits. As the prior flattens ($\tau\to\infty$,
 or $b\to\infty$) the penalty vanishes and $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}
-\to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$---the uninformative-prior assumption
+\to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$---the flat-prior assumption
 we started with. And as the data grows the NLL bowl deepens faster than the fixed
-prior, so the data term dominates and MAP again approaches the MLE. Regularization
-matters most precisely when data is scarce.
+prior, so the data term dominates and MAP again approaches the MLE. A bookkeeping
+footnote makes the second limit quantitative: deep-learning code minimizes the
+*mean* per-example loss rather than the sum, and dividing the MAP objective by
+$n$ rescales the weight decay to $\lambda = \sigma^2/(n\tau^2)$---the prior's
+pull on the averaged loss literally fades as $1/n$. Regularization matters most
+precisely when data is scarce.
+
+### A Beta Prior on the Coin
+:label:`subsec_mdl-beta-map`
+
+Weight decay is MAP for regression; the running coin deserves the same
+treatment, and it closes the example for good. A prior on a coin's bias must
+live on $[0,1]$, and the natural family is the **Beta distribution**
+$p(\theta)\propto\theta^{a-1}(1-\theta)^{b-1}$ with shape parameters $a, b > 0$,
+the conjugate prior of :numref:`sec_mdl-distributions`: multiplying by the
+likelihood :eqref:`eq_mdl-coin-like` just shifts the exponents by the observed
+counts, so the posterior is again a Beta (:eqref:`eq_mdl-beta_posterior`),
+
+$$
+P(\theta\mid X) \;\propto\; \theta^{\,n_H + a - 1}\,(1-\theta)^{\,n_T + b - 1}.
+$$
+
+MAP asks for the mode of this density. That is the same single-variable
+maximization we solved for the likelihood itself---the posterior has the shape
+$\theta^{\alpha}(1-\theta)^{\beta}$ with $\alpha = n_H+a-1$ and
+$\beta = n_T+b-1$, and whenever both exponents are positive (e.g. $a, b \ge 1$
+on our data) the maximum is interior---so the answer is the same ratio, "head
+exponent over total exponent":
+
+$$
+\hat\theta_{\textrm{MAP}} \;=\; \frac{n_H + a - 1}{n + a + b - 2},
+\qquad n = n_H + n_T.
+$$
+:eqlabel:`eq_mdl-beta-map`
+
+The reading is **pseudo-counts**: the prior behaves exactly like $a-1$ phantom
+heads and $b-1$ phantom tails appended to the data before taking the empirical
+frequency. A $\mathrm{Beta}(2,2)$ prior adds one phantom flip of each kind,
+turning our $9$-of-$13$ coin into $(9+1)/(13+2) = 2/3$, pulled from
+$9/13\approx 0.692$ toward $1/2$; a $\mathrm{Beta}(30,30)$ prior would all but
+pin the estimate near a fair coin until the data outweighed its $58$ phantom
+flips. And as $n$ grows, any fixed stock of phantom flips washes out:
+$\hat\theta_{\textrm{MAP}}\to\hat\theta_{\textrm{MLE}}$, the data-swamps-the-prior
+limit we just met.
+
+Two subtleties in :eqref:`eq_mdl-beta-map` repay attention, because they are
+routinely garbled. First, the *flat* prior $\mathrm{Beta}(1,1)$---uniform on
+$[0,1]$---gives $\hat\theta_{\textrm{MAP}} = n_H/n$: **MAP under a uniform prior
+is exactly the MLE**, zero phantom flips, no smoothing at all. In particular the
+"add-one" (Laplace) smoothing rule $(n_H+1)/(n+2)$, despite a common folklore
+attribution, is *not* the uniform-prior MAP; read as pseudo-counts, it is the MAP
+under $\mathrm{Beta}(2,2)$. Second, the mode is not the mean. The posterior mean
+is
+
+$$
+\mathbb{E}[\theta\mid X] \;=\; \frac{n_H + a}{n + a + b},
+$$
+
+which under the flat prior becomes $(n_H+1)/(n+2)$---**Laplace's rule of
+succession**, precisely the add-one rule. So add-one smoothing *is* a Bayes
+estimate under the uniform prior, just a different summary: the posterior
+**mean**, not the posterior **mode**. (Numerically it coincides with the
+$\mathrm{Beta}(2,2)$ mode, which is why the two are so often conflated.) Naive
+Bayes (:numref:`sec_mdl-naive_bayes`) leans on exactly this smoothing to keep
+never-observed feature--class pairs from annihilating its products; the
+pseudo-count accounting built here is what justifies it.
+
+### The Posterior Mode Is Not the Posterior
 
 One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
 restores the prior but still reports a single point---the *mode* of the posterior
@@ -627,51 +799,251 @@ rather than plugging in one $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}$. That
 average propagates parameter *uncertainty* into the prediction, where the mode
 discards it---and the mode is not even reparameterization-invariant, since a
 nonlinear change of variables moves the peak of a density but not its integral.
+Maximum likelihood does not suffer this wobble: it is **equivariant** under
+reparameterization---if $\hat\theta$ is the MLE of $\theta$, then $g(\hat\theta)$
+is the MLE of $g(\theta)$ for any one-to-one $g$, so the MLE of the coin's
+log-odds is simply $\log\frac{9/13}{4/13} = \log\frac{9}{4}$
+:cite:`Wasserman.2013`. The reason is that relabeling the parameter axis moves
+no maximum: likelihood values are attached to points, while densities carry a
+Jacobian---and MAP inherits the prior density's Jacobian, and with it the
+dependence on how the parameter happens to be written down.
 Marginalizing over the posterior is its own subject, beyond our scope here
 :cite:`Murphy.2022,mackay2003information`; the point is only that MAP is one more
 *point estimate*---maximum likelihood with a penalty---and should not be mistaken
 for the full Bayesian treatment.
 
-## Continuous Variables
+## Latent Variables, EM, and the ELBO
+:label:`sec_mdl-latent-em-elbo`
 
-Everything above was phrased for discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
-is a genuine probability. For continuous data we replace probabilities by
-densities $p$, and the only worry is that the probability of observing *any
-exact* real value is zero, so the naive likelihood is $0$ for every
-$\boldsymbol{\theta}$. The resolution is to ask for a match only to within a small
-tolerance $\epsilon$, then watch the $\epsilon$ cancel.
-
-For i.i.d. observations $x_1,\ldots,x_N$, the probability that each lands in a
-window of width $\epsilon$ is, to first order,
+Every likelihood so far has been a product of terms we could log and
+differentiate directly. The most interesting generative models are not so
+obliging. They posit a **latent variable** $z$---an unobserved cluster identity,
+a topic, the "seed" a generator decodes into an image---and define the joint
+distribution
 
 $$
-P\big(X_i \in [x_i, x_i+\epsilon]\ \forall i \mid \boldsymbol{\theta}\big)
-  \approx \epsilon^N \prod_{i=1}^N p(x_i\mid\boldsymbol{\theta}).
+p(x, z; \boldsymbol{\theta}) = p(z; \boldsymbol{\theta})\, p(x \mid z; \boldsymbol{\theta}),
 $$
 
-Taking the negative log,
+of which we observe only $x$. The likelihood of an observation is then a
+*marginal*, obtained by summing (for continuous latents, integrating) the latent
+out:
 
 $$
--\log P\big(X_i \in [x_i, x_i+\epsilon]\ \forall i\mid\boldsymbol{\theta}\big)
-  \approx -N\log\epsilon - \sum_{i} \log p(x_i\mid\boldsymbol{\theta}).
+p(x;\boldsymbol{\theta}) = \sum_{z} p(z;\boldsymbol{\theta})\, p(x\mid z;\boldsymbol{\theta}).
+$$
+:eqlabel:`eq_mdl-marginal-lik`
+
+### Why Latent Variables Break the Recipe
+
+The canonical example is the **Gaussian mixture model** (GMM): the latent
+$z \in \{1,\ldots,K\}$ picks a component with probability
+$P(z = k) = \pi_k$, and the observation is then drawn from that component,
+$x \mid z{=}k \sim \mathcal{N}(\mu_k, \sigma_k^2)$. The data's NLL is
+
+$$
+\ell(\boldsymbol{\theta})
+  = -\sum_{i=1}^n \log\Big(\sum_{k=1}^K \pi_k\, \mathcal{N}(x_i;\, \mu_k, \sigma_k^2)\Big),
+\qquad \boldsymbol{\theta} = (\pi_k, \mu_k, \sigma_k)_{k=1}^K.
 $$
 
-The tolerance enters only through the additive constant $-N\log\epsilon$, which is
-free of $\boldsymbol{\theta}$. Demanding four digits of precision or four hundred
-changes that constant but never the minimizer, so we drop it and minimize
+The trouble is the sum *inside* the logarithm. Until now every log reached an
+individual density and the NLL split into clean per-example, per-parameter
+pieces; here the log stops at the mixture, every parameter appears inside every
+term through the shared sum, and no closed form solves the first-order
+conditions. Contrast the *complete-data* problem: if an oracle revealed each
+$z_i$, the likelihood would factor by component, and maximum likelihood would
+collapse to the estimators we already own---the fraction of points in component
+$k$ for $\pi_k$ (the coin), and the per-component sample mean and variance for
+$\mu_k, \sigma_k^2$ (the Gaussian). Plain gradient descent on
+$\ell(\boldsymbol{\theta})$ remains possible, but the structure of the
+problem---easy if complete, hard only because $z$ is missing---suggests
+something better: *guess the missing labels probabilistically, then solve the
+easy problem.*
+
+### The Evidence Lower Bound
+
+Let $q(z)$ be any distribution over the latent with $q(z) > 0$ wherever
+$p(x,z;\boldsymbol{\theta}) > 0$---our probabilistic guess. Insert it into the
+marginal and apply Jensen's inequality---$\log$ is concave, so
+$\log \mathbb{E}[\cdot] \ge \mathbb{E}[\log(\cdot)]$ (:numref:`sec_convexity`):
 
 $$
--\sum_{i} \log p(x_i\mid\boldsymbol{\theta})
+\log p(x;\boldsymbol{\theta})
+  = \log \sum_z q(z)\, \frac{p(x,z;\boldsymbol{\theta})}{q(z)}
+  \;\ge\; \sum_z q(z) \log \frac{p(x,z;\boldsymbol{\theta})}{q(z)}
+  \;=:\; \mathcal{L}(q, \boldsymbol{\theta}).
+$$
+:eqlabel:`eq_mdl-elbo`
+
+The right-hand side is the **evidence lower bound** (**ELBO**). The name comes
+from calling the marginal log-likelihood $\log p(x;\boldsymbol{\theta})$ the
+*evidence*: it plays for the latent $z$ exactly the role the denominator $P(X)$
+played for the parameters in Bayes' rule at the start of this section---the
+marginal probability of what we actually observed. Expanding the fraction splits
+the bound into two readable pieces,
+
+$$
+\mathcal{L}(q,\boldsymbol{\theta})
+  = \mathbb{E}_{q}\big[\log p(x,z;\boldsymbol{\theta})\big] + H(q),
 $$
 
-exactly as in the discrete case. Maximum likelihood thus operates on continuous
-variables by swapping probabilities for densities and nothing more; the Gaussian
-NLL of :numref:`subsec_mdl-gaussian-mse` is precisely this construction.
+the expected *complete-data* log-likelihood---the easy objective, averaged over
+the guess---plus the entropy of the guess, which does not involve
+$\boldsymbol{\theta}$ at all (:numref:`sec_mdl-information_theory`). How much
+does the bound give away? Exactly a KL divergence:
+
+**Proposition (the ELBO gap is a KL).** *For every $q$ and every
+$\boldsymbol{\theta}$,*
+
+$$
+\log p(x;\boldsymbol{\theta})
+  = \mathcal{L}(q,\boldsymbol{\theta})
+  + D_{\textrm{KL}}\big(q(z)\,\|\,p(z\mid x;\boldsymbol{\theta})\big).
+$$
+:eqlabel:`eq_mdl-elbo-gap`
+
+*Hence $\mathcal{L}(q,\boldsymbol{\theta}) \le \log p(x;\boldsymbol{\theta})$,
+with equality if and only if $q$ is the posterior
+$p(z\mid x;\boldsymbol{\theta})$.*
+
+**Proof.** Expand the KL term using Bayes' rule,
+$p(z\mid x;\boldsymbol{\theta}) = p(x,z;\boldsymbol{\theta})/p(x;\boldsymbol{\theta})$:
+
+$$
+D_{\textrm{KL}}\big(q \,\|\, p(z\mid x;\boldsymbol{\theta})\big)
+  = \mathbb{E}_q\!\left[\log \frac{q(z)\, p(x;\boldsymbol{\theta})}{p(x,z;\boldsymbol{\theta})}\right]
+  = \log p(x;\boldsymbol{\theta}) - \mathcal{L}(q,\boldsymbol{\theta}),
+$$
+
+where $\log p(x;\boldsymbol{\theta})$ exits the expectation because it does not
+involve $z$. Rearranging gives :eqref:`eq_mdl-elbo-gap`; since the KL divergence
+is nonnegative and vanishes exactly when its arguments agree, the bound and its
+equality condition follow. $\blacksquare$
+
+:numref:`fig_mdl-prob-elbo` draws the resulting geometry: for a fixed guess the
+ELBO is a curve running everywhere below the evidence, and choosing $q$ well
+pinches the two together at the current parameters.
+
+![The evidence and its lower bound. For a fixed guess $q$, the ELBO $\mathcal{L}(q,\theta)$ runs below the evidence $\log p(x;\theta)$ at every $\theta$, and the gap between the curves is the KL divergence from $q$ to the posterior $p(z\mid x;\theta)$. The E-step of EM picks $q$ to be the posterior at the current iterate $\theta^{(t)}$, closing the gap so the bound touches the evidence there; the M-step climbs the bound to its peak $\theta^{(t+1)}$. Because the bound touches the evidence at $\theta^{(t)}$ and never exceeds it anywhere, the evidence at $\theta^{(t+1)}$ is at least what it was at $\theta^{(t)}$.](../img/mdl-prob-elbo.svg)
+:label:`fig_mdl-prob-elbo`
+
+### Expectation--Maximization
+
+The proposition turns the intractable problem into **coordinate ascent** on
+$\mathcal{L}(q, \boldsymbol{\theta})$. For a dataset $X = \{x_1,\ldots,x_n\}$ of
+independent observations the bound applies example by example and sums, with one
+guess $q_i$ per data point. The **expectation--maximization** (EM) algorithm
+alternates the two coordinates :cite:`Dempster.Laird.Rubin.1977`:
+
+* **E-step.** Hold $\boldsymbol{\theta}^{(t)}$ fixed and maximize over the
+  guesses: by the equality condition of :eqref:`eq_mdl-elbo-gap`, the best
+  $q_i$ is the posterior, $q_i^{(t)}(z) = p(z \mid x_i; \boldsymbol{\theta}^{(t)})$.
+  This closes every gap, making the bound *tight*:
+  $\sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t)}) = \log p(X;\boldsymbol{\theta}^{(t)})$.
+* **M-step.** Hold the guesses fixed and maximize over the parameters:
+  $\boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z; \boldsymbol{\theta})\big]$
+  (the entropy terms do not involve $\boldsymbol{\theta}$). This is the *easy*,
+  complete-data objective, with soft assignments standing in for the oracle's
+  labels.
+
+**Proposition (EM never decreases the likelihood).** *Each EM iteration
+satisfies $\log p(X;\boldsymbol{\theta}^{(t+1)}) \ge \log p(X;\boldsymbol{\theta}^{(t)})$.*
+
+**Proof.** Chain three facts:
+
+$$
+\log p(X;\boldsymbol{\theta}^{(t+1)})
+  \;\ge\; \sum_i \mathcal{L}\big(q_i^{(t)}, \boldsymbol{\theta}^{(t+1)}\big)
+  \;\ge\; \sum_i \mathcal{L}\big(q_i^{(t)}, \boldsymbol{\theta}^{(t)}\big)
+  \;=\; \log p(X;\boldsymbol{\theta}^{(t)}).
+$$
+
+The first inequality is the ELBO bound :eqref:`eq_mdl-elbo` at the new
+parameters; the second is the definition of the M-step; the equality is the
+tightness the E-step bought. $\blacksquare$
+
+For the Gaussian mixture both steps are closed-form. The E-step computes
+**responsibilities**, the posterior probability that point $i$ came from
+component $k$,
+
+$$
+r_{ik} = \frac{\pi_k\, \mathcal{N}(x_i;\, \mu_k, \sigma_k^2)}
+              {\sum_{j} \pi_j\, \mathcal{N}(x_i;\, \mu_j, \sigma_j^2)},
+$$
+
+and the M-step refits each component by responsibility-weighted counting and
+averaging: with effective counts $n_k = \sum_i r_{ik}$,
+
+$$
+\pi_k = \frac{n_k}{n}, \qquad
+\mu_k = \frac{1}{n_k}\sum_{i} r_{ik}\, x_i, \qquad
+\sigma_k^2 = \frac{1}{n_k}\sum_{i} r_{ik}\,(x_i - \mu_k)^2.
+$$
+:eqlabel:`eq_mdl-gmm-mstep`
+
+These are the coin's counting estimator and the Gaussian's mean and variance
+estimators, softened: instead of voting for one component, each point spreads
+its single vote across components in proportion to its responsibilities
+(exercise 10 derives the $\mu_k$ update). The cell below runs EM on a
+two-component mixture in plain NumPy and prints the log-likelihood as it climbs.
+
+```{.python .input #maximum-likelihood-em-gmm}
+# EM for a two-component 1-D Gaussian mixture, in plain numpy.
+rng = onp.random.default_rng(42)
+# 300 points from N(-2, 0.8^2) and 200 from N(1.5, 0.6^2)
+x = onp.concatenate([rng.normal(-2.0, 0.8, 300), rng.normal(1.5, 0.6, 200)])
+
+def gauss(x, mu, sigma):
+    return onp.exp(-0.5 * ((x - mu) / sigma)**2) / (sigma * onp.sqrt(2 * onp.pi))
+
+# Deliberately poor start: equal weights, overlapping components
+pi, mu, sigma = onp.array([0.5, 0.5]), onp.array([-0.5, 0.5]), onp.array([1.0, 1.0])
+for step in range(31):
+    # E-step: responsibilities r[i, k], the posterior of component k given x_i
+    joint = pi * gauss(x[:, None], mu, sigma)
+    r = joint / joint.sum(axis=1, keepdims=True)
+    if step % 5 == 0:  # the log-likelihood never decreases
+        print(f'step {step:2d}, log-likelihood {onp.log(joint.sum(axis=1)).sum():.2f}')
+    # M-step: refit each component by responsibility-weighted averaging
+    n_k = r.sum(axis=0)
+    pi, mu = n_k / len(x), (r * x[:, None]).sum(axis=0) / n_k
+    sigma = onp.sqrt((r * (x[:, None] - mu)**2).sum(axis=0) / n_k)
+print(f'pi = {pi.round(3)}, mu = {mu.round(3)}, sigma = {sigma.round(3)}')
+```
+
+The trace behaves exactly as the proposition demands: the log-likelihood rises
+monotonically, gains most of its ground in the first few iterations, and then
+flatlines at a stationary point; the recovered weights, means, and scales land
+near the generating values $(0.6, 0.4)$, $(-2, 1.5)$, $(0.8, 0.6)$, the small
+residual gaps being finite-sample error, not a failure of EM. Two cautions
+temper the success. EM is *ascent*, not global optimization: the mixture
+likelihood is multimodal---at minimum because relabeling the components permutes
+the parameters without changing the model, the same identifiability failure we
+met in the estimator theory above---and EM can stall at a poor local maximum, so
+practice restarts it from several initializations. And strictly speaking the GMM
+likelihood is *unbounded*---let one component collapse onto a single data point
+with $\sigma_k \to 0$---so the honest guarantee is convergence to a stationary
+point, with degenerate spikes excluded by a floor on $\sigma_k$ or a prior.
+
+The bound, not the closed-form M-step, is the part that scales. A *variational
+autoencoder* keeps the ELBO but replaces the per-point E-step with a neural
+network $q_{\boldsymbol{\phi}}(z\mid x)$---an *amortized* guess, trained jointly
+with the generator by stochastic gradient ascent on the ELBO, because for a deep
+decoder the true posterior is no longer available in closed form. Diffusion
+models walk further down the same road: their training objective is the ELBO of
+a deep chain of latent variables (:numref:`sec_mdl-score-matching-diffusion-flow`).
+And the two divergences in this section are deliberately mirrored:
+:numref:`sec_mdl-divergences-distances` recasts maximum likelihood itself as
+*forward*-KL minimization, while the ELBO gap :eqref:`eq_mdl-elbo-gap` measures
+the guess against the posterior in the *reverse* orientation,
+$D_{\textrm{KL}}(q\,\|\,p)$---a distinction with real modelling consequences,
+taken up in detail there.
 
 ## Summary
 
 * The **maximum likelihood** principle picks the parameters that make the
-  observed data most probable; with an uninformative prior, Bayes' rule reduces
+  observed data most probable; with a flat prior, Bayes' rule reduces
   the posterior mode to $\mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} P(X\mid\boldsymbol{\theta})$.
 * We optimize the **negative log-likelihood** $-\sum_i \log p(x_i\mid\boldsymbol{\theta})$:
   the log fixes underflow and makes gradients an additive sum, while the sign
@@ -683,16 +1055,26 @@ NLL of :numref:`subsec_mdl-gaussian-mse` is precisely this construction.
   KL-projection onto the model family. Categorical NLL is softmax cross-entropy,
   **fixed-variance Gaussian NLL is mean squared error**, and a Laplace model gives
   mean absolute error: picking a loss is picking a noise model.
-* The MLE is **consistent** and, under regularity conditions, **asymptotically
-  normal** with limiting variance the inverse **Fisher information**
-  $I(\boldsymbol{\theta}^\star)^{-1}/n$---so it attains the Cramér--Rao bound and
-  is *asymptotically efficient*. At finite $n$ it is generally only
+* The MLE is **consistent** (given identifiability and uniform convergence) and,
+  under regularity conditions, **asymptotically normal** with limiting variance
+  the inverse **Fisher information** $I(\boldsymbol{\theta}^\star)^{-1}/n$---so
+  it attains the Cramér--Rao bound :eqref:`eq_mdl-cramer-rao` and is
+  *asymptotically efficient*. At finite $n$ it is generally only
   asymptotically unbiased (:numref:`sec_mdl-statistics`).
 * **MAP** estimation restores the prior, adding its negative log as a penalty: a
-  Gaussian prior is exactly $L_2$ / weight decay ($\lambda=\sigma^2/\tau^2$), a
-  Laplace prior is $L_1$ / sparsity, and MAP $\to$ MLE as the prior flattens or
-  the data grows. MAP is still a *point estimate* (the posterior mode), not full
+  Gaussian prior is exactly $L_2$ / weight decay ($\lambda=\sigma^2/\tau^2$; for
+  the averaged loss, $\sigma^2/(n\tau^2)$), a Laplace prior is $L_1$ / sparsity,
+  and a Beta prior on the coin adds **pseudo-counts**---with MAP under the flat
+  Beta(1,1) prior being the plain MLE, while add-one smoothing is the posterior
+  *mean* (rule of succession). MAP $\to$ MLE as the prior flattens or the data
+  grows, and it is still a *point estimate* (the posterior mode), not full
   Bayesian inference, which integrates over the posterior.
+* When the model has **latent variables** the likelihood is a marginal with a
+  sum inside the log. The **ELBO** lower-bounds it for every guess $q$, with gap
+  exactly $D_{\textrm{KL}}(q \,\|\, p(z\mid x;\boldsymbol{\theta}))$; **EM**
+  alternates closing the gap (E-step: $q$ = posterior) with climbing the bound
+  (M-step), and never decreases the likelihood. VAEs and diffusion models train
+  on the same bound with amortized guesses.
 * Maximum likelihood extends to continuous variables unchanged---probabilities
   become densities, and the matching-tolerance $\epsilon$ drops out as a constant.
 
@@ -723,7 +1105,20 @@ NLL of :numref:`subsec_mdl-gaussian-mse` is precisely this construction.
    mean $\mu$, compute the score $\frac{d}{d\mu}\log p(x\mid\mu)$ and show the
    Fisher information is $I(\mu)=1/\sigma^2$. Conclude that the sample-mean MLE
    over $n$ observations has variance $\sigma^2/n$, attaining the Cramér--Rao
-   bound exactly. (*Hint:* use :eqref:`eq_mdl-fisher`.)
+   bound :eqref:`eq_mdl-cramer-rao` exactly. (*Hint:* use :eqref:`eq_mdl-fisher`.)
+9. Simulate the asymptotic normality :eqref:`eq_mdl-asymptotic-normality` of the
+   coin's MLE: fix $\theta^\star = 0.3$, run many independent experiments of
+   $n = 200$ flips each, and for each compute $\hat\theta = n_H/n$. Plot a
+   histogram of $\sqrt{n}\,(\hat\theta - \theta^\star)$ and overlay the density
+   of $\mathcal{N}\big(0,\ \theta^\star(1-\theta^\star)\big)$. How good is the
+   match? Repeat with $n = 10$ and explain what you see.
+10. Derive the GMM M-step for the means: holding the responsibilities $r_{ik}$
+    fixed, show that maximizing the expected complete-data log-likelihood
+    $\sum_i \sum_k r_{ik}\big[\log \pi_k + \log \mathcal{N}(x_i;\,\mu_k,\sigma_k^2)\big]$
+    over $\mu_k$ yields the responsibility-weighted mean of
+    :eqref:`eq_mdl-gmm-mstep`. Then derive the $\pi_k$ update by maximizing over
+    the weights subject to $\sum_k \pi_k = 1$. (*Hint:* use a Lagrange
+    multiplier for the constraint.)
 
 
 :begin_tab:`mxnet`
@@ -751,7 +1146,7 @@ observed data most probable.
 $$\hat{\boldsymbol\theta} = \arg\max_{\boldsymbol\theta} \prod_i p(x_i \mid \boldsymbol\theta)
             = \arg\min_{\boldsymbol\theta} -\sum_i \log p(x_i \mid \boldsymbol\theta).$$
 
-With an uninformative prior, the posterior mode is just the
+With a flat prior, the posterior mode is just the
 likelihood maximizer. The log fixes underflow, makes the
 gradient an additive sum, and flips "maximize probability"
 into "minimize a loss."
@@ -795,7 +1190,7 @@ The entropy is an irreducible floor; training only removes the
 KL gap, so MLE is the **KL-projection** of the data onto the
 model family:
 
-@fig:mdl-mle-kl
+@fig:mdl-prob-mle-kl
 
 It is also *consistent* and, under regularity conditions,
 asymptotically normal,
@@ -820,6 +1215,33 @@ Gaussian prior $\Rightarrow$ $L_2$ / weight decay
 @fig:mdl-prob-map-prior
 :::
 
+::: {.slide title="Latent variables and the ELBO"}
+With latents $z$, the likelihood is a marginal
+$p(x;\boldsymbol\theta)=\sum_z p(z;\boldsymbol\theta)\,p(x\mid z;\boldsymbol\theta)$
+— a sum *inside* the log (mixtures, VAEs, diffusion). For any
+guess $q(z)$, Jensen gives the **evidence lower bound**:
+
+$$\log p(x;\boldsymbol\theta) \ge
+  \mathbb E_q[\log p(x,z;\boldsymbol\theta)] + H(q)
+  = \mathcal L(q,\boldsymbol\theta),$$
+
+and the gap is exactly
+$D_{\textrm{KL}}(q \,\|\, p(z\mid x;\boldsymbol\theta))$ —
+zero iff $q$ is the posterior:
+
+@fig:mdl-prob-elbo
+:::
+
+::: {.slide title="EM: coordinate ascent on the ELBO"}
+**E-step**: set $q_i = p(z\mid x_i;\boldsymbol\theta^{(t)})$ —
+the bound touches the evidence. **M-step**: maximize the
+expected complete-data log-likelihood — counting and averaging,
+softened by responsibilities. The likelihood never decreases.
+A two-component GMM by EM:
+
+@maximum-likelihood-em-gmm
+:::
+
 ::: {.slide title="Recap"}
 - MLE: maximize $\sum_i \log p(x_i \mid \boldsymbol\theta)$;
   equivalently minimize the NLL.
@@ -829,5 +1251,8 @@ Gaussian prior $\Rightarrow$ $L_2$ / weight decay
 - Most "losses" in DL are NLLs of suitable conditional
   distributions; MSE is the Gaussian case.
 - Priors become regularizers: Gaussian $\to$ weight decay,
-  Laplace $\to$ sparsity.
+  Laplace $\to$ sparsity, Beta $\to$ pseudo-counts.
+- Latent variables: the ELBO lower-bounds the evidence with a
+  KL gap; EM closes the gap, then climbs the bound — the same
+  bound VAEs and diffusion models train on.
 :::

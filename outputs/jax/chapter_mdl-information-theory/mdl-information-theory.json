@@ -8,78 +8,53 @@
     "max_inline_bytes": 0
   },
   "cells": {
+    "information-theory-imports": {
+      "code_fingerprint": "sha256:f187ea6b711b40d119412cb2c3cf131877f8a81701401ffdbddfd69e1eb10f8d",
+      "kind": "text",
+      "outputs": []
+    },
     "information-theory-self-information": {
-      "code_fingerprint": "sha256:161dedecd3455c51a12f320beb6a7102ce2b41f4719841b2b02da6634fc0a134",
+      "code_fingerprint": "sha256:22d2fed447f6371b598bc29c4d0ad1a34a92f84ec82e1e01b9e84309035d6f74",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "6.0"
+          "text": "4.158883094787598"
         }
       ]
     },
     "information-theory-definition": {
-      "code_fingerprint": "sha256:c80dab9d1d478320e48fa19b6a41f78d24524120e2b71cd6e2c47bb44801ece9",
+      "code_fingerprint": "sha256:83653d0363c4d33f577f107928151e4d1d8dca6b8d16f6133d4f090c6c53d19a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(1.6854753, dtype=float32)"
-        }
-      ]
-    },
-    "information-theory-joint-entropy": {
-      "code_fingerprint": "sha256:5085aa0dd9b8af702b6a551bc1fd49a47f1052991e5589bef4358705bc1ba586",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array(1.6854753, dtype=float32)"
-        }
-      ]
-    },
-    "information-theory-conditional-entropy": {
-      "code_fingerprint": "sha256:e4f3c0caa0158afa0edee415328dc5d0fe6ad8df7b3b1601ea9fe596746cb7db",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array(0.86354727, dtype=float32)"
-        }
-      ]
-    },
-    "information-theory-mutual-information-2": {
-      "code_fingerprint": "sha256:0e41b1b30bee6f51d57eebc5fc2689006c3ed69f909ffff7e6bad8381821b267",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array(0.71946037, dtype=float32)"
+          "text": "1.1682825088500977"
         }
       ]
     },
     "information-theory-definition-2": {
-      "code_fingerprint": "sha256:1817881492cf1c1cc2a405a8eb6bb202dafdf9ae28847227e345e9f59466a6ac",
+      "code_fingerprint": "sha256:c80b810aed75a1b1fbcdc67b02d1e46d8f8026fb0d714f70d8a0bb6d67618c5f",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-1": {
-      "code_fingerprint": "sha256:70e29b2a37f3c017c1df608f33a26550ad25d17b1db9f198b3a7e9c11e2cba1c",
+      "code_fingerprint": "sha256:68078840585915e3ea9575904d5647cc2a722e66f2464c288b700502cc2adf9e",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-2": {
-      "code_fingerprint": "sha256:4e9faf269f5ff3d45be29c16d937875cd56887a64a4a148633c321cc740ac5c3",
+      "code_fingerprint": "sha256:d79db989b7f59b054749b3236070327a332cde946a624d1bfeb0356cec3fbe55",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.49771034717559814)"
+          "text": "(0.5, 0.49771028757095337)"
         }
       ]
     },
     "information-theory-example-3": {
-      "code_fingerprint": "sha256:008326dff4da1b3b5f9c6d8cf85992516638e1a2ca3c62ebfeb33a486a790652",
+      "code_fingerprint": "sha256:78fa5d153b914236f2a7f204f6053e09c08d68c74c31a5202349d2fab58eb4bd",
       "kind": "text",
       "outputs": [
         {
@@ -88,13 +63,34 @@
         }
       ]
     },
+    "information-theory-kl-categorical": {
+      "code_fingerprint": "sha256:f15a3e47361aac115f25536ef450294de9a509aa9d78b716b4e3e68fd179ab3c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KL(P||Q) = 0.3961 nats, KL(Q||P) = 0.3653 nats\nCE(P, Q) - H(P) = 0.3961 nats\n"
+        }
+      ]
+    },
     "information-theory-formal-definition-1": {
-      "code_fingerprint": "sha256:ba4433c7f5ab8b17e43311703e5ffd18c525ac3ca82f0797115138e1a14a2cfc",
+      "code_fingerprint": "sha256:026c5f322c5bf40ed02c4c763fdbc126933aa084d870b19074479a49eefd8af8",
       "kind": "text",
       "outputs": []
     },
     "information-theory-formal-definition-2": {
-      "code_fingerprint": "sha256:cdae0c979eddd72ca6b4ad7b4c4b3cf529715ae57da62af509c7ad280ce10257",
+      "code_fingerprint": "sha256:23f54ca9c3409336787a269a1543a746bfc11e7566c46805c9a8a824095ef3d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.9485599994659424"
+        }
+      ]
+    },
+    "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
+      "code_fingerprint": "sha256:fa84ff6c8edaa3bb4f2e56ce3a13f053e2972daf7b7b6d90a0b9ec8074e2dfd8",
       "kind": "text",
       "outputs": [
         {
@@ -103,13 +99,47 @@
         }
       ]
     },
-    "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:f07ff8781610851533b422bfd26eec7fefef6247c7bc2c0d201d6269f74dd576",
+    "information-theory-coding": {
+      "code_fingerprint": "sha256:0d1857132c98d2a28d35f5bc14d2b6d71091e1491d9ea0070e5798dee6448b2f",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "Array(0.94856, dtype=float32)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "Shannon lengths [1, 2, 3, 3], Kraft sum = 1.0\nE[l] = 1.75 bits = H(P) = 1.75 bits: no waste\nuniform codebook: 2.0 bits = H + KL = 2.0 bits\n"
+        }
+      ]
+    },
+    "information-theory-perplexity": {
+      "code_fingerprint": "sha256:407c2953651fea83156d1d728dbbe2080186404c86f0ca6e130a27fe723a1d97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-token NLL (nats): [1.609, 2.303, 0.916, 1.386, 2.996]\nmean NLL = 1.8421 nats, perplexity = 6.31\n"
+        }
+      ]
+    },
+    "information-theory-label-smoothing": {
+      "code_fingerprint": "sha256:ab2a0a823ceb1d923b18bfc01c1b3f5376b9f0eff58013f5eca95b170a533fcb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "optimal logit gap = ln(91) = 4.5109 nats\nCE at q* = H(p_eps) = 0.5003 nats\nCE at the overconfident q = 0.9004 nats\n"
+        }
+      ]
+    },
+    "information-theory-distillation": {
+      "code_fingerprint": "sha256:a8ec66a9d219645ba1744817d6324374da9af3fb079da90ec584a1aaeb4405da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T= 1.0  |autograd - closed| = 6.0e-08  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.9e-09  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 5.6e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 3.3e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

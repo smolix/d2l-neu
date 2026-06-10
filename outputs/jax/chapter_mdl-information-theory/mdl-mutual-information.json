@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-mutual-information.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mutual-information-imports": {
+      "code_fingerprint": "sha256:aaab2f6248ddf030f6a7998eeb85fe94d803cfe51ea66db756a0030d37324d5d",
+      "kind": "text",
+      "outputs": []
+    },
+    "mutual-information-joint-conditional": {
+      "code_fingerprint": "sha256:f39c440d7aca634b7ece1b17ca714587cd15003be885959417a249994b914170",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "marginals: p_x = [0.5 0.5], p_y = [0.3 0.7]\nH(X,Y) = 1.2799, H(X) = 0.6931, H(Y) = 0.6109 nats\nH(Y|X) = 0.5867 = H(X,Y) - H(X) = 0.5867 nats\n"
+        }
+      ]
+    },
+    "mutual-information-discrete-joint": {
+      "code_fingerprint": "sha256:4a53bf4a7dd3db9101b628fa09f3f084a88e9fd6ca474333bfa6f52306279f8f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "I(X;Y) = 0.0242 nats (KL form) = 0.0242 nats (entropy identity)\n       = 0.0349 bits\n"
+        }
+      ]
+    },
+    "mutual-information-gaussian-binned": {
+      "code_fingerprint": "sha256:6f9590275323664c06dc4718d005b1749e4227de97b4a9ff2a384874d28cee62",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rho = 0.00: binned = 0.0027, closed form = -0.0000 nats\nrho = 0.30: binned = 0.0504, closed form = 0.0472 nats\nrho = 0.60: binned = 0.2235, closed form = 0.2231 nats\nrho = 0.90: binned = 0.8111, closed form = 0.8304 nats\nrho = 0.99: binned = 1.7829, closed form = 1.9585 nats\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
+          "bytes": 27873,
+          "sha256": "sha256:810224ce2d710e21458c3b3681d8bb3b15d455a371436c8402805591cd81dc9f"
+        }
+      ]
+    },
+    "mutual-information-pmi-corpus": {
+      "code_fingerprint": "sha256:ba6edd029fb08c3409f56defd98db09861e06c8f00121387d347a0eee7772dcf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pmi(new, york) =  1.517 nats (count 38)\npmi(machine, learning) =  1.372 nats (count 46)\npmi(the, day) =  0.336 nats (count 168)\npmi(the, york) = -1.109 nats (count 11)\nI(first; second) = 0.4146 nats\n"
+        }
+      ]
+    },
+    "mutual-information-nonlinear-correlation": {
+      "code_fingerprint": "sha256:7c856ff11e29037611a34e018b26d2198f3f6daa755830a77f52cca4edcbae9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
+        }
+      ]
+    },
+    "mutual-information-dpi-check": {
+      "code_fingerprint": "sha256:34ff172e9c7c79c9778355953ee7229f0f07850de41e5338f8af161b49fdace6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "I(X;Y) = 0.3681,  I(X;Z) = 0.1201 nats  (DPI: smaller)\nI(X;Z|Y) = 0.0000  (Markov: zero)\nchain rule, both orders: 0.3681 = 0.3681\n"
+        }
+      ]
+    },
+    "mutual-information-log-n-ceiling": {
+      "code_fingerprint": "sha256:278d9d14e463b7738327b12bcff14eb5a484096dbbecd6f7e6122bf8e055d52f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
+          "bytes": 29955,
+          "sha256": "sha256:2f85bc5ef811ffd9a556871b345f20a9d6b4008699789c6cedac459e43aaecbd"
+        }
+      ]
+    },
+    "mutual-information-perfect-critic-bounds": {
+      "code_fingerprint": "sha256:5dfd7d07dcb72a1ef2cf62272813185ec878a7be93b1ebdc7d684aa775f14225",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+        }
+      ]
+    },
+    "mutual-information-infonce-train": {
+      "code_fingerprint": "sha256:735e1707bd1172eff199897ce1479bbfcf13dca0f96106c97394d6d7fc64ba40",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.569 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.405 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.757 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.882 nats\ntrue I(X;Y) = 1.959 nats\n"
+        }
+      ]
+    },
+    "mutual-information-ib-plane": {
+      "code_fingerprint": "sha256:0e996401693b4494b7b1aa9bdf1fe23ddf92faeebd1b68f6fb9aaa228403de03",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta =  1.0: I(X;Z) = 0.000, I(Y;Z) = 0.000 nats\nbeta =  1.5: I(X;Z) = 0.382, I(Y;Z) = 0.284 nats\nbeta =  2.0: I(X;Z) = 0.731, I(Y;Z) = 0.487 nats\nbeta =  4.0: I(X;Z) = 1.283, I(Y;Z) = 0.689 nats\nbeta = 16.0: I(X;Z) = 2.080, I(Y;Z) = 0.798 nats\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
+          "bytes": 31736,
+          "sha256": "sha256:d343ebe8b75b6c836c602b651bbf4be7ab5ecc56cd24c1ac9f4faba9315f07ff"
+        }
+      ]
+    },
+    "mutual-information-fano": {
+      "code_fingerprint": "sha256:2e82779a49141d3f683fcc1c4c50717e60c3c2dcc417824100b784efdce3a891",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\ncertifying that much MI needs N > e^I = 581 samples\n"
+        }
+      ]
+    }
+  }
+}

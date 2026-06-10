@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-constrained-optimization-duality.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "constrained-imports": {
+      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "kind": "text",
+      "outputs": []
+    },
+    "constrained-simplex-projection": {
+      "code_fingerprint": "sha256:233d79e5a203f4a1c494505612b03fe84f39630d1560d18bba6d16ca770ad70b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "x* = [0.0676 0.     0.5823 0.0467 0.     0.3034]  sum = 1.000000\nKKT residuals: stationarity 5.6e-17 | comp. slack 0.0e+00 | dual feas. 0.0e+00\nf(x*) = 0.158962 <= best random feasible 0.162139\n"
+        }
+      ]
+    },
+    "constrained-svm-dual": {
+      "code_fingerprint": "sha256:d8f19a5ef66ad42c8deb97598e525d6d0c952ebded324baad2cd9ba8190cf758",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 4.4e-16\n"
+        }
+      ]
+    },
+    "constrained-water-filling": {
+      "code_fingerprint": "sha256:070ef898471b5e9dda5eafff2298725d84a2e73b5c545103670670c9b27e0146",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "water level w = 1.433333  p* = [1.3333 1.0333 0.6333 0.     0.    ]  total = 3.000000\nwet channels filled to common level: [1.433333 1.433333 1.433333]\ndry channels above the waterline:    True\nmu = 1/w = 0.697674 vs finite-difference dU*/dP = 0.697674\n"
+        }
+      ]
+    },
+    "constrained-duality-gap": {
+      "code_fingerprint": "sha256:a92f227ec6fcc31232faa2c2a718207d98e56ba65d4008e72036c2bca52261a0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "p* = -0.2500,  d* = -0.5000 at lambda = 1.00,  gap = 0.2500\nweak duality g(lambda) <= p* everywhere: True\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
+          "bytes": 26638,
+          "sha256": "sha256:394206a554f39b9f23617fbc2d5ce3e71dfa1389170df09be7f8c3fed37e49eb"
+        }
+      ]
+    }
+  }
+}

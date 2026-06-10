@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47953,
-          "sha256": "sha256:891fc535c19ae0e2cb7e46ae251567c92705174bf0b2487761a9b9d85949232e"
+          "bytes": 47657,
+          "sha256": "sha256:2a3a4f2927311ef1cae5d9ca01be6104d7874b3804239fb8131e01b91057c646"
         }
       ]
     },

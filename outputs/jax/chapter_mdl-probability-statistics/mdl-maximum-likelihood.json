@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20952,
-          "sha256": "sha256:ffa890131fea00ddb08eef3eeed1045e656596c9499295cc1fc798b8304eaeff"
+          "sha256": "sha256:49df78ecbe92dda0ef7cb22d27a314b4718706d8b2d1b74722ec17b84673f461"
         }
       ]
     },
@@ -43,6 +43,17 @@
         {
           "type": "execute_result",
           "text": "(np.float64(0.0010385371777499998), 0.00105)"
+        }
+      ]
+    },
+    "maximum-likelihood-em-gmm": {
+      "code_fingerprint": "sha256:20267b6f608335fa0d8aa4b6c6cd505c66b71520e6b674d2f2781f265824026b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step  0, log-likelihood -1289.53\nstep  5, log-likelihood -845.69\nstep 10, log-likelihood -845.45\nstep 15, log-likelihood -845.45\nstep 20, log-likelihood -845.45\nstep 25, log-likelihood -845.45\nstep 30, log-likelihood -845.45\npi = [0.594 0.406], mu = [-2.055  1.494], sigma = [0.715 0.625]\n"
         }
       ]
     }

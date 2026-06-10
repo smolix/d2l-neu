@@ -24,58 +24,74 @@
         }
       ]
     },
+    "single-variable-calculus-autograd-check": {
+      "code_fingerprint": "sha256:d305bad68833e8a5fd28dc7351a59328a713cb441bb3326daaf38043788a0ab2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "autograd: f'(4) = 8.0\n"
+        }
+      ]
+    },
     "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:21430e7bd8f447e1645353be2c6df0c52609835144b5fd9f98ada955ec86161f",
+      "code_fingerprint": "sha256:a647adc73c991a14bdbb6cc3c280248febe3828f8fcb5cd6527f3adce5a12e0f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15838,
-          "sha256": "sha256:e6218504c123c1e90b9dad84fbdc1f73637d37f405e4cee94a5967149e4ad0fc"
+          "bytes": 15841,
+          "sha256": "sha256:215f6c0585642eb9bdd5af82bd435bd20bcaa3c298560ef512b2532d519311b6"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:51325f91601ad83f52e15cb322b27bbbd02943cef4b360788c3f1622a615e1f0",
-      "kind": "text",
+      "code_fingerprint": "sha256:7d99bb9093c520c577aeff94005543093cec15a58e23c99d79c6a5f6420c9d76",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "eta = 0.05 -> x_10 = +0.34868\neta = 0.50 -> x_10 = +0.00000\neta = 0.90 -> x_10 = +0.10737\neta = 1.00 -> x_10 = +1.00000\neta = 1.10 -> x_10 = +6.19174\n"
-        }
-      ]
-    },
-    "single-variable-calculus-higher-order-derivatives": {
-      "code_fingerprint": "sha256:98e577a691fd365f203b9a09ad8f459e69106a23b809920c28df9549c0ad9e50",
-      "kind": "asset",
-      "outputs": [
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-single-variable-calculus/single-variable-calculus-higher-order-derivatives-1.svg",
-          "bytes": 17887,
-          "sha256": "sha256:5223be93f42b6d642960e986650ae8b9f0025c663f646085ae4cd6575a20a394"
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
+          "bytes": 25211,
+          "sha256": "sha256:fe977591a3f431f3638dbcfd24b7c397db4c6e28525f1b3f7d3e42a05afc79c3"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-error-rate": {
+      "code_fingerprint": "sha256:15a0f72f6d6d0f4518298d078174f48905b54bb602da268681eb943a76f8b707",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 1: max error 2.1e-02 (h = 0.2) vs 5.2e-03 (h = 0.1), ratio = 4.1, prediction 2^2 = 4\nn = 2: max error 1.4e-03 (h = 0.2) vs 1.7e-04 (h = 0.1), ratio = 8.2, prediction 2^3 = 8\nn = 3: max error 6.9e-05 (h = 0.2) vs 4.3e-06 (h = 0.1), ratio = 16.3, prediction 2^4 = 16\n"
         }
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:f074265b73d2a3dc3b2561842ea513cdc1594cc2fd9da12c464a3d9818444129",
+      "code_fingerprint": "sha256:32ab84dd1899e4b019e40fbf855c4455e931f33e717e584b75fae3833d119f82",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28558,
-          "sha256": "sha256:718c7d1321d425128ca8e2c87fd7637bf09586d0cfc786612f014e226d2daedd"
+          "bytes": 28556,
+          "sha256": "sha256:bbb3c3f02275d22944024bcd29aae735d7c417b26ddf7cc362d4c2090322647c"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:980af328acf4db2da2625da49fc4476007532d8dace32e8c4150137ece0e8b78",
+      "code_fingerprint": "sha256:14fe573c53c8b01cd901979878345a223c5a28ca5a56773dad00de42845464d6",
       "kind": "text",
       "outputs": [
         {

@@ -9,12 +9,12 @@
   },
   "cells": {
     "matrix-calculus-autodiff-imports": {
-      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "code_fingerprint": "sha256:123976fc389e816815d4e8218f55ce6e0275ee505b9454dd0af33bcd56e97b93",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-jacobian-finite-diff": {
-      "code_fingerprint": "sha256:d9a8ba360878b142742770eb4ca7241fe98146b32e05699048aa6492a13f8ad9",
+      "code_fingerprint": "sha256:35541fbc3726f3a984b55fced4a633d3a007c4cc75f819ad8cebdd7abcf4834b",
       "kind": "text",
       "outputs": [
         {
@@ -25,23 +25,23 @@
       ]
     },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:6aec0e8851507f60eda7a9c503514592df1151f0b5d6bd47b2fba0b16c12608c",
+      "code_fingerprint": "sha256:c8d7c60ed118cbf9bcc116faf4200cacf05ce4b456ed70acfef4ee23428e6c88",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax Jacobian rows sum to zero: True\nd loss / d z = p - y : [ 0.253716 -0.943388  0.689672]\n"
+          "text": "softmax Jacobian matches autograd: True\nd loss / d z : [ 0.253716 -0.943388  0.689672]\np - y        : [ 0.253716 -0.943388  0.689672]\n"
         }
       ]
     },
     "matrix-calculus-autodiff-dual-numbers": {
-      "code_fingerprint": "sha256:b2698a38e181cb98b355dbe6c511d3cef38e58dc3093e7dec7f961d084608db0",
+      "code_fingerprint": "sha256:c2394b942a40a4700a7f332663c9d9183add61a3a0f2422d22738e88bd72d1c3",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-dual-eval": {
-      "code_fingerprint": "sha256:27ef282030e0ad4b3436682c19bdd30bbdbd554a25c5f74ac6df2c8d35aaa587",
+      "code_fingerprint": "sha256:4863a6aee0bf2475bce2cc7474ccd4f5affee434d078ea85fe5abd0f1eb3d34f",
       "kind": "text",
       "outputs": [
         {
@@ -52,7 +52,7 @@
       ]
     },
     "matrix-calculus-autodiff-forward-jvp": {
-      "code_fingerprint": "sha256:550036c6e2108941599495ccf1504a1c3a9717f2bf9467880665170a89b3e0ae",
+      "code_fingerprint": "sha256:adb73d128da3d367abf227f869abce30b6783162453750860ba2e5b29f2b1043",
       "kind": "text",
       "outputs": [
         {
@@ -63,18 +63,18 @@
       ]
     },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:b1bfe3deabd86277d20cde15469b6962a912d6b7b43c24001215773fc2a919af",
+      "code_fingerprint": "sha256:b5c296d148b20de3ba9b03be20fe03e040ba5282e339965ed89487d25eea1b70",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:9bbf34e14b4a013fe852b0ea83c7aae07c7ed6588bcdb63acb384f79190f08bd",
+      "code_fingerprint": "sha256:addbacc9915470b9bc69544a0f3b515ac1a6be7255ec939e6bdf910ce054fdde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\nclosed form: dy/du = 16.0000  dy/dv = -16.0000\n"
+          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\ntensorflow : dy/du = 16.0000  dy/dv = -16.0000\n"
         }
       ]
     }

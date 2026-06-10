@@ -9,39 +9,39 @@
   },
   "cells": {
     "matrix-calculus-autodiff-imports": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:fb00426f4d1fc313669a47dd768b63fd16cb0f3daec6b050ed2e53c2137dbd01",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-jacobian-finite-diff": {
-      "code_fingerprint": "sha256:5d32b151bf14d472425c02eeddc01f8057ea761333f05d13d3acf02863d6ee7f",
+      "code_fingerprint": "sha256:851cd019a89af62e67bd771156bcd2f1ec9284d42c78244ea91e43e5fe98953d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear approx: [0.499    0.997424]\nexact        : [0.498996 0.997424]\nerror / |delta|: 0.0015819444529976167\n"
+          "text": "linear approx: [0.499    0.997424]\nexact        : [0.498996 0.997424]\nerror / |delta|: 0.0015819444529976163\n"
         }
       ]
     },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:09e6192144fcbfffc8b5bc284c5a3526a3728ffa33d39033627cf9f429215990",
+      "code_fingerprint": "sha256:093e52993531e08a12f5b4252464aae696a65f35b7178368c834a43817047aac",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax Jacobian rows sum to zero: True\nd loss / d z = p - y : [ 0.253716 -0.943388  0.689672]\n"
+          "text": "softmax Jacobian matches autograd: True\nd loss / d z : [ 0.253716 -0.943388  0.689672]\np - y        : [ 0.253716 -0.943388  0.689672]\n"
         }
       ]
     },
     "matrix-calculus-autodiff-dual-numbers": {
-      "code_fingerprint": "sha256:e73214bd58f0282eb5f6a0826a42397ba3eced79091a5663fb6656e76428dcc4",
+      "code_fingerprint": "sha256:4dcdbca36a76c3e000bc32f91c1e1c8124cc4483d548a518ca7121b5559268af",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-dual-eval": {
-      "code_fingerprint": "sha256:047ce299b88e9ccc1679c1788640908bf385fae04342dffde4b496517a9f0da5",
+      "code_fingerprint": "sha256:9165fdeda8bf8faa80e0c3187c246437f09d6b770727b186267741f757cdff9f",
       "kind": "text",
       "outputs": [
         {
@@ -52,7 +52,7 @@
       ]
     },
     "matrix-calculus-autodiff-forward-jvp": {
-      "code_fingerprint": "sha256:db3bca91fb065e5b14c650f5b09588f0becb7c84180df1cc4e6fc80ebb3ccafa",
+      "code_fingerprint": "sha256:29d085d0adc35c722335b5c88ab0a943c121d95d6abe23236ba3171d3fbe4f50",
       "kind": "text",
       "outputs": [
         {
@@ -63,18 +63,18 @@
       ]
     },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:0a5ea3d3f2484a3ac6b6ec18d81db4e3335550c9d26bbf1e20728390d9e2a943",
+      "code_fingerprint": "sha256:c12fd7a549130fec4bc7ff409452b27fdde28e6cd2d3b8ab55e5fab840d0e3e2",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:279168792149d54413d6f53d34d6ede5354ff0b70e0a72b9f20b5f634d0d8423",
+      "code_fingerprint": "sha256:61825ba95bd8b58b0abfbca6855a598e20a7c4edff6a34657b0f1d44dce5575b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\nclosed form: dy/du = 16.0000  dy/dv = -16.0000\n"
+          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\nmxnet      : dy/du = 16.0000  dy/dv = -16.0000\n"
         }
       ]
     }

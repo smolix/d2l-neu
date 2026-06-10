@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-divergences-distances.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "divergences-distances-imports": {
+      "code_fingerprint": "sha256:7112e7fc12295fd15e5f5de35b691ed2f127f77efc1fef15825d685d073dc2ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "divergences-distances-f-table": {
+      "code_fingerprint": "sha256:b451189656f190cd5d252817efe5ab228459650c6f51ab0d663ed3ae4c9edf85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KL           D_f(P||Q) = 0.3961   D_f(Q||P) = 0.3653\nreverse KL   D_f(P||Q) = 0.3653   D_f(Q||P) = 0.3961\nchi^2        D_f(P||Q) = 1.0133   D_f(Q||P) = 0.8000\nHellinger^2  D_f(P||Q) = 0.1862   D_f(Q||P) = 0.1862\nTV           D_f(P||Q) = 0.4000   D_f(Q||P) = 0.4000\nJS           D_f(P||Q) = 0.0911   D_f(Q||P) = 0.0911\nJS via the mixture formula: 0.0911\n"
+        }
+      ]
+    },
+    "divergences-distances-f-gan-bound": {
+      "code_fingerprint": "sha256:9bfee2009c540a72d9a51d00e56ff27f04fe7b5d5df627178be277a859e467b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact chi^2(P||Q)           = 1.0133\nbound at the optimal critic = 1.0133\nbound at a perturbed critic (scale 0.5): 0.9678\nbound at a perturbed critic (scale 1.0): 0.3661\nbound at a perturbed critic (scale 2.0): 0.9600\n"
+        }
+      ]
+    },
+    "divergences-distances-fwd-rev-kl": {
+      "code_fingerprint": "sha256:788af465585f8d9744e8d7a741c851163db1bc900b1afacf8752a7d278b1409d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward KL             mu = -0.800, sigma = 1.929, KL = 0.558 nats\nreverse KL             mu = -1.998, sigma = 0.603, KL = 0.356 nats\nreverse KL, 2nd start  mu = +1.995, sigma = 0.607, KL = 1.202 nats\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
+          "bytes": 37614,
+          "sha256": "sha256:a43de27aa3d1594ccaf8942dc66a62c0e1cf83856b3ce89f9e5a23a8f62d551e"
+        }
+      ]
+    },
+    "divergences-distances-pinsker": {
+      "code_fingerprint": "sha256:ffd0bd365f7ec60021acbbfe32940860a026fe0014bfa82aeffd53e6fc8336bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
+        }
+      ]
+    },
+    "divergences-distances-mmd": {
+      "code_fingerprint": "sha256:5cda62755515327590bbc70aadf114f9683a6576889843446756ab0615ee49d5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MMD^2, same distribution : +0.00054\nMMD^2, mean shifted 0.5  : +0.05890\n"
+        }
+      ]
+    },
+    "divergences-distances-w1": {
+      "code_fingerprint": "sha256:621f5ef9f84e3f43baea4dee9698d4303cb66c512f5d2d583a10362993bf2821",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 via the CDF formula : 1.7000000000\nW1 via the primal LP   : 1.7000000000\n"
+        }
+      ]
+    },
+    "divergences-distances-sinkhorn": {
+      "code_fingerprint": "sha256:ddbf1571b8b70270dce109a4eebc0b76f077f656110a0664891d4c80c6454780",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\nepsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+        }
+      ]
+    },
+    "divergences-distances-score": {
+      "code_fingerprint": "sha256:40fee0ea1abd28e1f4d1c5ac27dfb1c17043e4841039b8cbf639ded69ac9c866",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mixture score, max |analytic - numerical|: 3.52e-04\nscore change from rescaling p by 2.7    : 1.82e-12\nFisher divergence N(0,1)||N(1,1): quadrature 0.500000, closed form 0.500000\n"
+        }
+      ]
+    },
+    "divergences-distances-stein": {
+      "code_fingerprint": "sha256:761e4ffcdb0c6fd0dea062181cb6fd7d2ede9346756d5d1523682d1ee422ee31",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+        }
+      ]
+    }
+  }
+}

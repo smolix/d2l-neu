@@ -25,47 +25,40 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:89e31a64978eff146202b9db6d205461788ac847c0731d287939586688f224da",
+      "code_fingerprint": "sha256:4f98eb60bda48303fa2b9e87d25e2cc00d5cca33369f38a5db133a12a9b4919f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 0.0009999991161748767\nRiemann F(2) vs G(2)-G(0): 0.8045181035995483 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 2.9802322387695312e-05\nRiemann F(2) vs G(2)-G(0): 0.8045181035995483 0.8047189712524414\n"
         }
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:9a2049c74f72c99f9f34dbe70cc3cf004ff5269cca600987dc2f57cd8835a1df",
+      "code_fingerprint": "sha256:f7faab5f8b2f3dff98e1828acbfef31c535d4d7b282665d7ab56305390acf46d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_0^1.0  e^-x dx = 0.632437\nintegral_0^2.0  e^-x dx = 0.865097\nintegral_0^5.0  e^-x dx = 0.993759\nintegral_0^10.0 e^-x dx = 1.000455\nintegral_0^20.0 e^-x dx = 1.000500\nlimit as b -> infinity   = 1.000000\n"
+          "text": "b=1.0   left-Riemann sum=0.632437  exact 1-e^-b=0.632121\nb=2.0   left-Riemann sum=0.865097  exact 1-e^-b=0.864665\nb=5.0   left-Riemann sum=0.993759  exact 1-e^-b=0.993262\nb=10.0  left-Riemann sum=1.000455  exact 1-e^-b=0.999955\nb=20.0  left-Riemann sum=1.000500  exact 1-e^-b=1.000000\n"
         }
       ]
     },
-    "integral-surface": {
-      "code_fingerprint": "sha256:89567325dfad0733a92137fdf064350930c7146ea11c37acc46671f086365555",
-      "kind": "mixed",
+    "integral-box-volume": {
+      "code_fingerprint": "sha256:43f5e2aa4fd4ff2343873354b2470cacfc7ad881bb1a824c483d79fd68ec566a",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "volume (Riemann)  : 3.141592502593994\nvolume (exact = pi): 3.141592653589793\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "mdl-integral-calculus/integral-surface-1.png",
-          "bytes": 88770,
-          "sha256": "sha256:abce4cf3df42aa31e451c145f0832283d75d632599b332de4df80bb26eaa59f8"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:b1b58389fd4273a1697cb643b5ce5363a926f69836d21219e20df065045341b5",
+      "code_fingerprint": "sha256:9af8a409fa67580473f07fbf2952398254cca520c33a98e206da104b9e0586bf",
       "kind": "text",
       "outputs": [
         {
@@ -76,31 +69,31 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:a795912a33195319e8277ef2252afa7d80a0c0a0a3135106354a4f1c21f940b2",
+      "code_fingerprint": "sha256:6bd5dc200c3246c4510a7b3ac0e9a9e5cf1a934d6acb98707f7af15466055b40",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
+          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: 0.0\n"
         }
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:8ac22dec08034c4a9e3e782e45856b3a2c1227644a3d848e4ffd1e3e35fce87e",
+      "code_fingerprint": "sha256:ec8f622c4f8c0fb90bd6e98fb5cdc851f762fd3e2f7ee9e783e71af8361369a5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.77087  error=0.02401\nn=100     Monte Carlo=0.76976  error=0.02290\nn=1000    Monte Carlo=0.75317  error=0.00631\nn=10000   Monte Carlo=0.74551  error=0.00135\nn=100000  Monte Carlo=0.74690  error=0.00004\nRiemann quadrature   =0.74686\n"
+          "text": "n=10      Monte Carlo=0.77087  error=2.4e-02\nn=100     Monte Carlo=0.76976  error=2.3e-02\nn=1000    Monte Carlo=0.75317  error=6.3e-03\nn=10000   Monte Carlo=0.74551  error=1.3e-03\nn=100000  Monte Carlo=0.74690  error=7.1e-05\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 45726,
-          "sha256": "sha256:0d5e23148cc548df8a245ace01b493013bc9a87bbe65bc5b918605fd16b840fb"
+          "bytes": 43756,
+          "sha256": "sha256:099fdd523e5436c5833dee41380d5d32d5fe2c908e4d09b4d5fa9801934be3a0"
         }
       ]
     }

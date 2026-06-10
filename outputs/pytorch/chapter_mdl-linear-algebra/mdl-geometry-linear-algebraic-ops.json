@@ -34,33 +34,20 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:ad18e5b3db08d7606bf2dba3f4d5700dc06f34acbb0ffad634e2a0cdf21d23f3",
+      "code_fingerprint": "sha256:30ae6e03573415c01bfe3e0797dcfe598616437e2a683bed427c84b3bae1b51d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
-          "bytes": 11090,
-          "sha256": "sha256:bcfad6dc7cf5124b6f44fe01275a26625e713a38c043a40b5ddad87852a9aa40"
-        }
-      ]
-    },
-    "geometry-linear-algebraic-ops-hyperplanes-3": {
-      "code_fingerprint": "sha256:fb3d1fd6478b51a8393af6f0a25105a5c33eef93295a35d893111cb2c9862d3c",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-3-1.svg",
-          "bytes": 10566,
-          "sha256": "sha256:2bdd52e56f487df8674519c9c529fd59218bf4341e3caa1d14b719ee74c9cb55"
+          "bytes": 26105,
+          "sha256": "sha256:2602daf585d99b4a6630d79fedd79e6318f5a8d160f167040d5375b26582f94b"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:0dcde7a017ed288e34dae8020ef2f27f6b193e45106b61ece32c7c49bc768ade",
+      "code_fingerprint": "sha256:1b91c24cdf4b79069fac0b0fd4fbb779a415f90cdfa726903550eca709b8c7f2",
       "kind": "text",
       "outputs": [
         {
@@ -69,8 +56,21 @@
         }
       ]
     },
+    "geometry-linear-algebraic-ops-projection-histogram": {
+      "code_fingerprint": "sha256:2b96c6b31baa1b4e6ad524c78f48dee700685fa039f18c9226f578d9657a3f32",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
+          "bytes": 39575,
+          "sha256": "sha256:0782dc44811d8ca9e17b6e12d3e35061987ee326fc9558cfbd49c3908a1524e6"
+        }
+      ]
+    },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:0d08976acab2ec9a13f3b4afeebb7fb460305fd39a4592bbb5af78c4522ddd5f",
+      "code_fingerprint": "sha256:de62d9ed9677ebc0680cb5af4a1cfc34d8506af6fff8b07d2b90547d303d4ea5",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:e17746e9196b882ab50fb242c3dae50ee9a6aa76c81e5edc38b830db480b0a12",
+      "code_fingerprint": "sha256:77b3c90fdc65d5ff116d5f212531a09d774dfa3786af62cd169fbdb04339dde9",
       "kind": "text",
       "outputs": [
         {
@@ -89,43 +89,13 @@
         }
       ]
     },
-    "geometry-linear-algebraic-ops-expressing-in-code-1": {
-      "code_fingerprint": "sha256:3ffed9381ced55162912bcbc60b620f262f9d27dcf5ae07ac3a89c4c68cc7bdd",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(torch.Size([2, 2]), torch.Size([2, 2, 3]), torch.Size([2]))"
-        }
-      ]
-    },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:9617d6cb1e9a4d93d0adb79e74209969fc64d5463484757594668708be27f081",
+      "code_fingerprint": "sha256:e084de6b0acb7e220ee841d6037994d9e5cad0c6dc358896d71a0d6f86252c06",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([ 5, 11]), tensor([ 5, 11]))"
-        }
-      ]
-    },
-    "geometry-linear-algebraic-ops-expressing-in-code-3": {
-      "code_fingerprint": "sha256:a63df8f635e3a38ffb3ed59231375037ba49ef5d33a85f8fc7c16dd0ee21f2cf",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor([[ 90, 126],\n        [102, 144],\n        [114, 162]])"
-        }
-      ]
-    },
-    "geometry-linear-algebraic-ops-expressing-in-code-4": {
-      "code_fingerprint": "sha256:6942e3664800d55d00f7d90e33db763bae4427c3e578f231c760e3be174c687c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor([[ 90, 126],\n        [102, 144],\n        [114, 162]])"
+          "text": "(tensor(5.),\n tensor([ 0., -5.]),\n tensor([[-1.,  8.],\n         [-4.,  7.]]),\n tensor(4.))"
         }
       ]
     }

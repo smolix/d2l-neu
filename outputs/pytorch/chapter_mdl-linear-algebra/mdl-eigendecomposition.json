@@ -9,12 +9,12 @@
   },
   "cells": {
     "eigendecomposition-imports": {
-      "code_fingerprint": "sha256:87f57ae83a86bcf0cac2ac5ee7a2ea8ed720c2aac4e9a0cc8b109432874b7d2b",
+      "code_fingerprint": "sha256:6ec2266b2b6066bcd3a46a2d46ed3efa626bb03503c262f56d592de8b37c9153",
       "kind": "text",
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:31aa2a5024be9ebfd8d9924fbf25cd93c9f6d9445a30d15bb0bc777dbd6a66e7",
+      "code_fingerprint": "sha256:9df5381c18267c741ac6c9c3f11c942b301e6ef706a08ae1225caa4d1e23b2c3",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:0addc74f0263ddaa96d413f18b87871dd762cbe86424b497db4f5155dfd20ba2",
+      "code_fingerprint": "sha256:04339ed9b888ed638a42ba51484920cee0be4877710740354eea108b461a5c34",
       "kind": "text",
       "outputs": [
         {
@@ -35,17 +35,17 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:c884ad426f0e8f24c349be3dc0550b8f147c41eaebb269e4e8365c513e7de23b",
+      "code_fingerprint": "sha256:20a6f7ff63d5f58e91293277c90ad7df239eafd811fb4a7f94f2938d6cb058d6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([9.0803+0.j, 0.9923+0.j, 4.9539+0.j, 2.9734+0.j])"
+          "text": "tensor([0.9923+0.j, 9.0803+0.j, 4.9539+0.j, 2.9734+0.j])"
         }
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:736d23ad9dcae188184fddae8a7a5a8efec7c0b0b6c452833098aed5a6811cc7",
+      "code_fingerprint": "sha256:27ae89fbe2b2f7d253dd86a6a7be4343f5bb9d19ad8fd3b2055dae6820b24465",
       "kind": "text",
       "outputs": [
         {
@@ -56,7 +56,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:cc18042a51bef83b6f470fe9973c3c2934831e02ecf343bbdc14bb1e8d729607",
+      "code_fingerprint": "sha256:2bc8daa5eaec7e7d9939615def8ba389100d6882b94a8b2f52ff85dc5e525245",
       "kind": "text",
       "outputs": [
         {

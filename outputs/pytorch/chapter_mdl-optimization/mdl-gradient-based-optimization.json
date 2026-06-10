@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-gradient-based-optimization.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gradient-based-optimization-imports": {
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "kind": "text",
+      "outputs": []
+    },
+    "gradient-based-optimization-steepest-direction": {
+      "code_fingerprint": "sha256:427af6fc6dd703997b973f23dffa999bbb8518424da1f5e5aa932c6dc2a501ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "steepest -grad/|grad|:  slope = -10.1980,  f(x + eta d) - f(x) = -0.101498\ndiagonal -(1,1)/sqrt(2):  slope =  -8.4853,  f(x + eta d) - f(x) = -0.084578\naxis     (-1,0):  slope =  -2.0000,  f(x + eta d) - f(x) = -0.019950\nuphill   +(1,1)/sqrt(2):  slope =  +8.4853,  f(x + eta d) - f(x) = +0.085128\nbest of 3600 sampled unit directions: [-0.1959 -0.9806]  vs  -grad/|grad| = [-0.1961 -0.9806]\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-backtracking": {
+      "code_fingerprint": "sha256:f365867f74aac517e03c982e9e0bece62842d57cb52e7b4d857083072c106845",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fixed eta = 0.3 from x0 = 3:  |x_6| = 6.52e+103  (diverged)\naccepted steps: [0.03125 0.0625  0.125   0.25    0.5     1.      1.      1.     ] ...\nbacktracking from x0 = 3:  f(x_25) = 1.09e-04  (monotone descent)\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-eta-sweep": {
+      "code_fingerprint": "sha256:ce64e0e395784750c7cd94f6ea59e1c307628964755b6f42fca2be8b12ad78f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " eta    |1-eta*1|  |1-eta*10|  spectral radius   |x_60|\n0.020     0.980      0.800         0.980       3.0e-01\n0.100     0.900      0.000         0.900       1.8e-03\n0.182     0.818      0.818         0.818       8.3e-06\n0.190     0.810      0.900         0.900       1.8e-03\n0.200     0.800      1.000         1.000       1.0e+00\n0.210     0.790      1.100         1.100       3.0e+02\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-contraction": {
+      "code_fingerprint": "sha256:61c360d44ccc74636cc0ace726a27921de3bc4c0d90bb4737a8139fb025cb9e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-mode factors x_1/x_0 = [ 0.818182 -0.818182]  predicted 1 - eta* lambda = [ 0.818182 -0.818182]\nmeasured contraction |x_k+1| / |x_k|: min 0.818182, max 0.818182\npredicted (kappa-1)/(kappa+1) = 0.818182\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-momentum": {
+      "code_fingerprint": "sha256:7a3fea35e68441b735eec0dbfc4c16283bb7dd37396ecd3b35d0b941227d07d3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa      GD   heavy ball   Nesterov     GD/kappa   HB/sqrt(kappa)\n   10      69        27         43          6.9         8.5\n  100     691        93        155          6.9         9.3\n 1000    6908       315        508          6.9        10.0\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-sgd-variance": {
+      "code_fingerprint": "sha256:304bc09e2a5eb36dc0bbb2fac2219cff59423d38ba89c72b25d1bce38a84aad8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single-example gradient noise  tr Sigma = 1.1447\nb =  1:  measured E|g_hat - g|^2 = 1.15464   predicted tr Sigma / b = 1.14466\nb =  4:  measured E|g_hat - g|^2 = 0.28471   predicted tr Sigma / b = 0.28617\nb = 16:  measured E|g_hat - g|^2 = 0.07119   predicted tr Sigma / b = 0.07154\nb = 64:  measured E|g_hat - g|^2 = 0.01824   predicted tr Sigma / b = 0.01789\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-sgd-schedule": {
+      "code_fingerprint": "sha256:a55e7cad79b674d0135354f4ae0dbeca4f96709dfb8b23c4a28f5862769ea567",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fixed eta = 0.8:     mean gap, last 1000 steps = 2.34e-02\nfixed eta = 0.4:     mean gap, last 1000 steps = 1.08e-02\ndecay 0.8/(1+k/100): mean gap, last 1000 steps = 5.67e-04\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
+          "bytes": 100458,
+          "sha256": "sha256:333bfc90c7e9764870477639a10b005289783a0b516da211b538d6e502348c26"
+        }
+      ]
+    },
+    "gradient-based-optimization-newton": {
+      "code_fingerprint": "sha256:fe4b3d56721b9a264bc1dbf23b4fc4c6601feea78147fa28fe022b211f384d6c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.0e-17\nagrees with the SGD section optimum: True\n"
+        }
+      ]
+    }
+  }
+}

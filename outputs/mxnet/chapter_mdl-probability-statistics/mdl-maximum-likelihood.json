@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20951,
-          "sha256": "sha256:a2854e4f335cfbd304b08d5c6032245299598a2a7aba6cc5fd71abdb544d2bc5"
+          "sha256": "sha256:b6c0709159eab4f1586f720ef0908fc3f2795e5426b5018534892be715fa9942"
         }
       ]
     },
@@ -30,11 +30,6 @@
       "code_fingerprint": "sha256:6fa7097e1f52a962b2b1b3e79b7645d3eb51ef90ff94a16cc1e21731d4f58e38",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[23:48:47] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"
@@ -48,6 +43,17 @@
         {
           "type": "execute_result",
           "text": "(0.00103853717775, 0.00105)"
+        }
+      ]
+    },
+    "maximum-likelihood-em-gmm": {
+      "code_fingerprint": "sha256:24e7905887f7dfd18b9f27f766204e607a53b10db4c9f6d6eab6cb7d34f84c14",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step  0, log-likelihood -1289.53\nstep  5, log-likelihood -845.69\nstep 10, log-likelihood -845.45\nstep 15, log-likelihood -845.45\nstep 20, log-likelihood -845.45\nstep 25, log-likelihood -845.45\nstep 30, log-likelihood -845.45\npi = [0.594 0.406], mu = [-2.055  1.494], sigma = [0.715 0.625]\n"
         }
       ]
     }

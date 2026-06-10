@@ -9,29 +9,42 @@
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:877a7cd75cdaf6950c9841b498d471b60b6d30014d8fcfce4a5dbd99b3725f9d",
+      "code_fingerprint": "sha256:0543cb47ed0254334141d86efa4fbca36f53e23ac5fcfb8194907ee2a8ebe882",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:af958e6cdf566457c6394da74e692a43a89731e2abfb531c41c21eaeb19e994c",
+      "code_fingerprint": "sha256:5ef3461d1e5b8e3310f54af63fd95859142fb4a997fde860702b9b2975eabb63",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 0.9954\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:5f8f4448aff956be51dd31124f25ca16ded9d6e4b77ca7478bfe31fb4e7ee772",
+      "code_fingerprint": "sha256:2c630eda63b4a5dec3cc84cd6d0e03f0a8cc2ef63dcc8a09a8f762e82830d4d9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.621\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:809dae717f8c5982f5592bc6f2333b9a12198583326296a391ceb17017e63e89",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
+          "bytes": 27212,
+          "sha256": "sha256:c4ea17a6fbca78c3db6eb4f5a15aa82ddeca7337e7533b623761af8a1894b3a7"
         }
       ]
     }

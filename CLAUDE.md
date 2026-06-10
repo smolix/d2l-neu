@@ -9,6 +9,37 @@ without re-executing notebooks.
 
 ## Getting started (orientation — read before building)
 
+> **macOS / which `make`.** Every `make` below means **GNU Make ≥ 4.3**. macOS's
+> system `/usr/bin/make` is 3.81 and the Makefile stops immediately with a
+> pointer here (it uses 4.3+ grouped targets). Install a modern make and run
+> **`gmake`**: `sudo port install gmake` (MacPorts). Everything in this section
+> works on an Apple-silicon laptop with **no GPU**.
+
+**Fresh clone? One-time setup** (CPU-only — no GPU, no framework venvs):
+
+```bash
+./bootstrap.sh                          # git-lfs + .venv-build (Quarto); pulls LFS assets
+gmake html                              # render the whole book from committed outputs/
+python3 -m http.server 8000 -d _book    # preview at http://localhost:8000/
+```
+
+**Which target?** (`[any]` runs on macOS/CPU; `[GPU]` needs NVIDIA GPUs)
+
+| You want to… | Command | Needs |
+|---|---|---|
+| Render the book (HTML, all 4 framework tabs) | `gmake html` | `[any]` |
+| Render everything from the store (html+pdfs+slides+lib, no execution) | `gmake all-quick` | `[any]` |
+| Build PDFs / slides | `gmake pdfs` / `gmake slides` | `[any]` |
+| Refresh one CPU notebook's outputs | `gmake -B _notebooks/<fw>/<ch>/<f>.executed && gmake capture-outputs FILES=<ch>/<f>.md` | `[any]`* |
+| See the detected resource / parallelism plan | `gmake detect` | `[any]` |
+| Execute **all** notebooks + rebuild (full pipeline) | `gmake all` | `[GPU]` |
+| Re-execute only stale notebooks, then re-render | `gmake render-fresh` | `[GPU]`* |
+
+**No GPU is needed to render the book, PDFs, or slides, or to re-run CPU
+notebooks.** Only executing CUDA/GPU notebooks needs a GPU box; on a GPU-less
+host the freshness gate *defers* (warns about) stale GPU notebooks instead of
+failing (`*` — see the capability-aware gate below).
+
 **Repo shape.** Source `.md` files (in `chapter_*/`) are the source of truth;
 the preprocessor `tools/d2l_preprocess.py` runs with `SOURCE=.` (this repo, not
 `../d2l-en`) and emits `chapter_*/*.qmd` which are **generated + gitignored** —

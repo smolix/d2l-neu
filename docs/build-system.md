@@ -63,6 +63,51 @@ about Quarto, numbering, or cross-refs changes.
 
 ---
 
+## 0.1 Building on macOS (and any CPU-only host)
+
+The whole RENDER half of the diagram above runs on an Apple-silicon (or Intel)
+Mac with **no GPU and no framework venvs** — only `.venv-build` (Quarto). Two
+host facts trip people up; handle both up front:
+
+1. **Use GNU Make ≥ 4.3 — i.e. `gmake`, not the system `make`.** macOS ships
+   `/usr/bin/make` = **GNU Make 3.81**, which silently mis-parses the build's
+   grouped-target rules (`a b &: prereqs`, a 4.3 feature) as a target literally
+   named `&` and builds incorrectly. The Makefile now **fails fast** with this
+   message rather than mis-building:
+
+   ```
+   *** GNU Make >= 4.3 required, but this is 3.81 … install gmake
+       (`sudo port install gmake`) and run `gmake` instead of `make`.
+   ```
+
+   Install it once (`sudo port install gmake`, MacPorts) and use `gmake`
+   everywhere. `bootstrap.sh` checks for it too.
+
+2. **No GPU is fine — the build detects it and degrades.**
+   `tools/detect_resources.py` (run `gmake detect`) probes the host with no
+   hard dependency on Linux: GPUs via `nvidia-smi` (absent → 0 GPUs, CPU-only),
+   cores via `os.cpu_count()`, and RAM via `sysctl`+`vm_stat` (there is no
+   `/proc` on macOS). Slot counts derive from that, so the same Makefile sizes
+   itself to a laptop or a 4×GPU server unchanged.
+
+**What needs a GPU, and what doesn't:**
+
+| Task | Command | GPU? |
+|------|---------|------|
+| Render HTML / PDF / slides from `outputs/` | `gmake html` / `pdfs` / `slides` | **No** |
+| Render everything-but-execute | `gmake all-quick` | **No** |
+| Re-execute a **CPU** notebook + re-capture | `gmake -B _notebooks/<fw>/<ch>/<f>.executed && gmake capture-outputs FILES=…` | **No** |
+| Edit/run a CPU notebook in VS Code | (kernel `d2l-<fw>`) | **No** |
+| Execute a **CUDA / multi-GPU** notebook | `gmake run-notebooks-<fw>` / `gmake all` | **Yes** |
+
+On a GPU-less host the freshness gate is **capability-aware** (§3.3a): it
+renders the whole book and only *defers* (warns about, never fails on) stale
+notebooks it lacks the GPUs to re-execute. So you can always `gmake html` here;
+you only *re-run* what your hardware supports. First-time setup on a fresh Mac:
+`./bootstrap.sh` then `gmake html` (see §11.0).
+
+---
+
 ## 1. Why decouple
 
 Today every site target (`html`, `slides`, `pdf`) hard-depends on a locally

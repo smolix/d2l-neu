@@ -338,27 +338,54 @@ def kill_stale_kernels(venv_dir):
     import signal
     venv_dir = str(Path(venv_dir).resolve())
     killed = 0
-    try:
-        for entry in Path("/proc").iterdir():
-            if not entry.name.isdigit():
-                continue
-            try:
-                exe = (entry / "exe").resolve()
-            except (OSError, PermissionError):
-                continue
-            if not str(exe).startswith(venv_dir):
-                continue
-            try:
-                cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
-            except (OSError, PermissionError):
-                continue
-            if any(b"ipykernel_launcher" in arg for arg in cmdline):
-                pid = int(entry.name)
+    proc_root = Path("/proc")
+    if proc_root.is_dir():
+        # Linux: walk /proc, matching each pid's exe against the venv.
+        try:
+            for entry in proc_root.iterdir():
+                if not entry.name.isdigit():
+                    continue
                 try:
-                    os.kill(pid, signal.SIGKILL)
-                    killed += 1
-                except OSError:
-                    pass
-    except (OSError, PermissionError):
-        pass
+                    exe = (entry / "exe").resolve()
+                except (OSError, PermissionError):
+                    continue
+                if not str(exe).startswith(venv_dir):
+                    continue
+                try:
+                    cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
+                except (OSError, PermissionError):
+                    continue
+                if any(b"ipykernel_launcher" in arg for arg in cmdline):
+                    pid = int(entry.name)
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        killed += 1
+                    except OSError:
+                        pass
+        except (OSError, PermissionError):
+            pass
+        return killed
+
+    # macOS / no /proc: find ipykernel_launcher processes via pgrep, then keep
+    # only those whose command line runs this venv's python (argv[0] holds the
+    # interpreter path under venv_dir).
+    import subprocess
+    try:
+        out = subprocess.run(["pgrep", "-f", "ipykernel_launcher"],
+                             capture_output=True, text=True, timeout=10).stdout
+        pids = [int(x) for x in out.split() if x.strip().isdigit()]
+    except Exception:
+        pids = []
+    for pid in pids:
+        try:
+            cmd = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
+                                 capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            continue
+        if venv_dir in cmd and "ipykernel_launcher" in cmd:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                killed += 1
+            except OSError:
+                pass
     return killed

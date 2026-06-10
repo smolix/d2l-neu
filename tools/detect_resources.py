@@ -21,12 +21,56 @@ during one parse without re-shelling nvidia-smi each time.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 
 CACHE = "/tmp/.d2l_resources.json"
 CACHE_TTL = 8.0  # seconds
+
+
+def _macos_mem():
+    """Return (total_mib, avail_mib) on macOS, or (0, 0) elsewhere.
+
+    macOS has no ``/proc/meminfo``. Total RAM comes from ``sysctl
+    hw.memsize``; the allocatable-without-swapping estimate is the sum of
+    free + inactive + speculative + purgeable pages reported by ``vm_stat``
+    (the closest analogue to Linux's ``MemAvailable``). Best-effort: any
+    failure falls back to treating all RAM as available, or (0, 0) if even
+    the total is unreadable.
+    """
+    if sys.platform != "darwin":
+        return 0, 0
+    try:
+        total = int(subprocess.run(
+            ["sysctl", "-n", "hw.memsize"],
+            capture_output=True, text=True, timeout=5).stdout.strip())
+    except Exception:
+        return 0, 0
+    total_mib = total // (1024 * 1024)
+    avail_mib = total_mib  # conservative fallback if vm_stat is unreadable
+    try:
+        out = subprocess.run(
+            ["vm_stat"], capture_output=True, text=True, timeout=5).stdout
+        page = 4096
+        m = re.search(r"page size of (\d+) bytes", out)
+        if m:
+            page = int(m.group(1))
+        counts = {}
+        for line in out.splitlines():
+            mm = re.match(r'"?([A-Za-z][\w \-]+?)"?:\s+(\d+)\.', line)
+            if mm:
+                counts[mm.group(1).strip()] = int(mm.group(2))
+        free_pages = (counts.get("Pages free", 0)
+                      + counts.get("Pages inactive", 0)
+                      + counts.get("Pages speculative", 0)
+                      + counts.get("Pages purgeable", 0))
+        if free_pages:
+            avail_mib = min(total_mib, free_pages * page // (1024 * 1024))
+    except Exception:
+        pass
+    return total_mib, avail_mib
 
 # ── Per-job footprints (overridable via env) ─────────────────────────────
 # VRAM (MiB) a single notebook of each class needs at peak. "LIGHT" =
@@ -72,6 +116,9 @@ def _detect():
         ncpu = os.cpu_count() or 16
 
     # RAM: MemAvailable is the kernel's estimate of allocatable-without-swap.
+    # Linux exposes it via /proc/meminfo; macOS has no /proc, so fall back to
+    # sysctl + vm_stat (_macos_mem). Either way a 0 here means "RAM unknown",
+    # which derive() treats as "do not bound concurrency on RAM".
     mem_total_mib = mem_avail_mib = 0
     try:
         with open("/proc/meminfo") as f:
@@ -82,7 +129,7 @@ def _detect():
         mem_total_mib = info.get("MemTotal", 0) // 1024
         mem_avail_mib = info.get("MemAvailable", info.get("MemFree", 0)) // 1024
     except Exception:
-        pass
+        mem_total_mib, mem_avail_mib = _macos_mem()
 
     # ulimits.
     try:

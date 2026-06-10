@@ -14,6 +14,7 @@ Usage:
     python tools/scan_notebook_manifests.py --output-dir _notebooks
 """
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -99,6 +100,11 @@ def source_execution_class(md_path, rel):
 
 def _write_if_changed(path, content):
     if path.exists() and path.read_bytes() == content:
+        # Unchanged: keep bytes identical but bump mtime to now. MANIFEST.mk is
+        # pulled in with `-include`, so a stale (older-than-source) generated
+        # makefile makes GNU Make restart forever. Touching mtime ends the loop
+        # without rewriting content. See scan_d2l_usage._write_if_changed.
+        os.utime(path, None)
         return False
     path.write_bytes(content)
     return True

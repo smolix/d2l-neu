@@ -1000,7 +1000,7 @@ independent), so a layout change never needs a notebook to run.
 
 ## 12. Tie-in: the slides redesign
 
-The slide-quality work in `docs/slides/HANDOFF.md` is exactly the workload this
+The slide-quality work in `docs/slides-northstar-design.md` is exactly the workload this
 decoupling unblocks. Its diagrams already follow the same philosophy — authored
 SVGs committed to `img/auto/<id>.svg`, reviewable, no build dependency. With the
 outputs store in place:
@@ -1009,7 +1009,7 @@ outputs store in place:
   `@fig:<id>` inlining can all be iterated and rendered **CPU-only**, with the
   executed code/outputs supplied by the committed store.
 - A code edit + re-run + capture refreshes the deck's outputs by cell id with **no
-  slide-source change** (HANDOFF §9), exactly as today — except now it doesn't
+  slide-source change** (docs/slides-northstar-design.md §9), exactly as today — except now it doesn't
   require a populated `_notebooks/` on the rendering machine.
 - Distinguish the two SVG kinds: **`img/auto/`** = authored diagrams (committed,
   plain git, hand-curated); **`outputs/<fw>/…/*.svg`** = matplotlib output
@@ -1064,7 +1064,7 @@ outputs store in place:
 
 - `docs/architecture.md` — component inventory and the *current* (coupled) flow
   this supersedes.
-- `docs/slides/HANDOFF.md` — the slide-quality redesign this unblocks.
+- `docs/slides-northstar-design.md` — the slide-quality redesign this unblocks.
 - `CLAUDE.md` — repo rules (source-of-truth `.md`, `make` targets, gh/HTTPS).
 
 ---

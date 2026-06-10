@@ -1,39 +1,38 @@
-# Handoff: generating d2l slide decks in the style of §2.1
+# North-star slide design — building decks in the style of §2.1
 
-You are an agent working in the **`d2l-neu`** repository on a server where
-notebooks have been **executed** and slides can be **rendered** (`make slides`
-works, `_notebooks/<fw>/` is populated). Your job: produce a slide deck for one
-chapter section that matches — visually and conceptually — the reference deck
-built for **§2.1 Data Manipulation** (`chapter_preliminaries/ndarray.md`).
+The **design spec and per-section workflow** for d2l's "north-star" slide decks:
+how to produce a deck for a chapter section that matches — visually and
+conceptually — the reference deck built for **§2.1 Data Manipulation**
+(`chapter_preliminaries/ndarray.md`). Read it before authoring a new deck.
 
-This packet is the brief. Read it fully before generating anything.
+Pair it with **`docs/slides.md`**, the living reference for grammar, visual
+vocabulary, the diagram + deploy workflow, and the quality rules / overflow
+sweep: **this** document is the *conceptual* brief (§3) and the per-section
+workflow (§7); cross-check specifics against `docs/slides.md`.
 
-> **Status (current).** Everything this packet once called "to-be-added"
-> has **landed**, plus more. Where we are:
+> **Status.** The migration to north-star decks is **gradual and ongoing** —
+> a section goes live in its north-star form only once one exists; the rest
+> stay as their legacy deck. Where we are:
 >
-> - **Three reference decks built:** §2.1 `ndarray`, §2.3 `linear-algebra`,
+> - **Reference decks built:** §2.1 `ndarray`, §2.3 `linear-algebra`,
 >   §2.4 `calculus`. **§2.5 `autograd` is next** — its notebook is updated
 >   (no-grad, higher-order, forward/reverse, a compute-graph figure) and its
 >   `autograd-comp-graph` diagram exists; the deck outline awaits sign-off.
+>   Most other sections are still legacy decks.
 > - **The diagram engine lives in the repo** at `diagrams/` (modules:
->   `ndarray`, `linear-algebra`, `calculus`, `autograd`), rendered SVGs in
+>   `ndarray`, `linear-algebra`, `calculus`, `autograd`, …), rendered SVGs in
 >   `img/auto/`. `gen_slides.py` supports `@fig:<id>` (inline diagram),
 >   `@-<id>` (code-only), `@!<id>` (output-only), and `only=`/`except=`
 >   per-slide framework scoping.
-> - **Execution now runs on the laptop too.** All four frameworks have CPU
->   builds on Apple Silicon (UV darwin extras + the macOS mxnet wheel), so a
->   single Mac can now *execute → capture → render* a section end-to-end —
->   you no longer need the GPU box just to refresh one chapter's outputs.
-> - **Gradual migration is mechanized.** A deck goes live in its north-star
->   form only when one exists; the rest stay as the old deck.
->   `tools/northstar_slides.py` auto-detects which decks are north-star (by
->   the vocabulary in their slides block); `build_slides_index.py` badges
->   them "new"; `stage_northstar_slides.sh` + `upload_northstar_r2.sh` push
->   only the north-star decks to R2, untouched legacy decks frozen.
-> - **`docs/slides.md` is the living reference** for grammar, visual
->   vocabulary, the diagram + deploy workflow, and the quality rules /
->   overflow sweep. This packet is the *conceptual* brief (§3) and the
->   per-section workflow (§7); cross-check specifics against `docs/slides.md`.
+> - **Execution runs on the laptop too.** All four frameworks have CPU builds
+>   on Apple Silicon (UV darwin extras + the macOS mxnet wheel), so a single
+>   Mac can *execute → capture → render* a section end-to-end — no GPU box
+>   needed just to refresh one chapter's outputs.
+> - **Gradual migration is mechanized.** `tools/northstar_slides.py`
+>   auto-detects which decks are north-star (by the vocabulary in their slides
+>   block); `build_slides_index.py` badges them "new"; `stage_northstar_slides.sh`
+>   + `upload_northstar_r2.sh` push only the north-star decks to R2, leaving
+>   untouched legacy decks frozen.
 
 ---
 
@@ -41,10 +40,9 @@ This packet is the brief. Read it fully before generating anything.
 
 | Artifact | What it is | Where |
 |---|---|---|
-| `north-star.html` | The **visual** exemplar — a standalone reveal.js deck of §2.1. Open it; this is the bar. | this packet |
-| `chapter_preliminaries/ndarray.md`, `<!-- slides -->` block | The **structural** exemplar — how that deck is authored *in the repo's own format* (already committed). | repo |
-| `diagrams/` | The **diagram engine** + the 8 §2.1 diagrams + a renderer. Reusable as-is. | this packet → copy into repo tooling |
-| `diagrams/contact-sheet.html` | All 8 diagrams on one page. | this packet |
+| `north-star.html` | The **visual** exemplar — a standalone reveal.js deck of §2.1. Open it; this is the bar. | `docs/slides/north-star.html` |
+| `chapter_preliminaries/ndarray.md`, `<!-- slides -->` block | The **structural** exemplar — how that deck is authored *in the repo's own format*. | repo |
+| `diagrams/` | The **diagram engine** + the per-chapter diagram modules + a renderer (`render.mjs`). | repo root |
 
 The deck and the repo's slide block are two views of the same thing. The deck
 shows what "good" looks like; the slide block shows how to express it in
@@ -388,17 +386,17 @@ Two things to mind:
 
 ---
 
-## 11. Packet contents
+## 11. Related files (where this lives in the repo)
 
 ```
-HANDOFF.md                     ← this file
-north-star.html                ← the §2.1 reference deck (visual exemplar)
-diagrams/
-  engine.mjs                   ← DOM-free SVG helpers (+ palette tokens C)
-  ndarray.mjs                  ← the 8 §2.1 diagrams (worked examples)
-  registry.mjs                 ← id → fn map; add chapters here
-  render.mjs                   ← node CLI → standalone img/auto/<id>.svg
-  README.md                    ← helper reference + "add a diagram" recipe
-  contact-sheet.html           ← all 8 diagrams on one page
-  out/                         ← the 8 rendered SVGs (golden reference)
+docs/slides-northstar-design.md   ← this file (the design spec + workflow)
+docs/slides.md                    ← living reference (grammar, visual vocabulary, deploy)
+docs/slides/north-star.html       ← the §2.1 reference deck (visual exemplar — the bar)
+diagrams/                         ← the diagram engine (repo root)
+  engine.mjs                      ← DOM-free SVG helpers (+ palette tokens C)
+  registry.mjs                    ← id → fn map; add chapters here
+  render.mjs                      ← node CLI → standalone img/auto/<id>.svg
+  README.md                       ← helper reference + "add a diagram" recipe
+  ndarray.mjs, linear-algebra.mjs, calculus.mjs, autograd.mjs, …  ← per-chapter diagram modules
+img/auto/<id>.svg                 ← the committed rendered diagrams the slides include
 ```

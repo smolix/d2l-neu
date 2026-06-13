@@ -54,6 +54,7 @@ _KERAS_EPOCH_RE = re.compile(r'^Epoch\s+\d+/\d+\s*$')
 _NOISY_SLIDE_OUTPUT_RE = re.compile(
     r'^(WARNING:|WARNING:absl:|INFO:tensorflow:|I\d{4} |W\d{4} |'
     r'INFO:root:|'
+    r'\[\d{2}:\d{2}:\d{2}\] |'
     r'All log messages before absl::InitializeLog\(\)|'
     r'Downloading .* from https?://|'
     r'Found \d+ files belonging to \d+ classes\.|'
@@ -64,6 +65,8 @@ _NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
     'AWS dependencies are not imported',
     '/home/smola/d2l/d2l-neu/',
     '/tmp/ipykernel_',
+    'Storage type fallback detected',
+    'StorageManager',
 )
 
 

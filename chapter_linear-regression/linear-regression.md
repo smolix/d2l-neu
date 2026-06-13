@@ -812,134 +812,288 @@ and ultimately, evaluation on previously unseen data.
 
 <!-- slides -->
 
-::: {.slide title="Linear regression in one model"}
-The simplest predictive model: a **linear function** of the inputs
-plus a bias.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.1]{.kicker}
 
-$$\hat{y} = \mathbf{w}^\top \mathbf{x} + b.$$
-
-- Fit `w` and `b` to minimize **squared error** on training data.
-- Has a **closed-form solution** for problems where it scales,
-  but the *iterative* recipe (gradient descent on minibatches)
-  generalizes to everything that follows.
-- Connects neatly to the **Gaussian noise model** —
-  squared loss = negative log-likelihood under
-  $\mathcal{N}(0, \sigma^2)$.
-
-@!linear-regression-the-normal-distribution-and-squared-loss-2
+Linear Regression<br>The straight line through the data, and the recipe that fits everything after it.
+:::
 :::
 
-::: {.slide title="Squared loss from Gaussian noise"}
-Assume the target is the linear prediction plus fixed-variance
-Gaussian noise:
+::: {.slide title="Predicting a number"}
+[Motivation]{.kicker}
 
-$$y^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b + \epsilon^{(i)},
-  \quad \epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2).$$
+::: {.cols .vc}
+::: {.col}
+- Collect house sales: each has an **area**, an **age**, a **price**.
+- Bigger houses cost more, not exactly but **on average**.
+- *Regression* draws the line and turns it into a **prediction**.
 
-Then
-
-$$p(y^{(i)} \mid \mathbf{x}^{(i)}, \mathbf{w}, b)
-  = \frac{1}{\sqrt{2\pi\sigma^2}}
-    \exp\left(-\frac{(y^{(i)} - \hat{y}^{(i)})^2}{2\sigma^2}\right).$$
-
-For independent examples, the negative log-likelihood is
-
-$$-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w},b)
-  = \textrm{const} +
-    \frac{1}{2\sigma^2}\sum_i (y^{(i)}-\hat{y}^{(i)})^2.$$
-
-With fixed $\sigma$, maximum likelihood and minimizing squared
-error choose the same parameters.
+::: {.d2l-note}
+Features $\mathbf{x}$, label $y$. We want $E[Y \mid \mathbf{x}]$.
+:::
 :::
 
-::: {.slide title="The model and the loss"}
-For one example $\mathbf{x}^{(i)} \in \mathbb{R}^d$ and target
-$y^{(i)} \in \mathbb{R}$, the model predicts
-
-$$\hat{y}^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b.$$
-
-Squared loss on the training set of $n$ examples:
-
-$$L(\mathbf{w}, b)
-  = \frac{1}{n} \sum_{i=1}^{n}
-    \tfrac{1}{2}\left(\hat{y}^{(i)} - y^{(i)}\right)^2.$$
-
-Convex in $(\mathbf{w}, b)$ — every local minimum is global.
+::: {.col .fig .big}
+![A line fit to one-dimensional data: the model is the line, each gap is an error.](../img/fit-linreg.svg){width=86%}
+:::
+:::
 :::
 
-::: {.slide title="Two ways to fit"}
-**Closed form** (when it fits in memory):
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-$$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
+[The Model]{.dtitle}
 
-Doesn't generalize beyond linear models.
+[a weighted sum, a loss, and how to minimize it]{.dsub}
+:::
+:::
+
+::: {.slide title="The linear model"}
+[The Model]{.kicker}
+
+Stack $d$ features into $\mathbf{x}\in\mathbb{R}^d$ and weights into
+$\mathbf{w}\in\mathbb{R}^d$. The prediction is one **dot product** plus a bias:
+
+$$\hat{y} = w_1 x_1 + \cdots + w_d x_d + b = \mathbf{w}^\top \mathbf{x} + b.$$
 
 . . .
 
-**Minibatch SGD** (the recipe we'll keep using):
+For a whole dataset, the design matrix $\mathbf{X}\in\mathbb{R}^{n\times d}$
+holds one example per row, and all predictions come at once:
 
-$$\mathbf{w} \leftarrow \mathbf{w} -
-  \frac{\eta}{|\mathcal{B}|}
-    \sum_{i \in \mathcal{B}} \nabla_\mathbf{w}\,\ell^{(i)}(\mathbf{w}, b).$$
+$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b.$$
 
-- Sample minibatch $\mathcal{B}$.
-- Compute gradient of the average loss on it.
-- Step in the negative-gradient direction.
+::: {.d2l-note}
+The bias $b$ lets the line miss the origin: an **affine**, not merely linear, map.
+:::
 :::
 
-::: {.slide title="Vectorization for speed"}
-Same operation, two implementations. Set up two 10 000-element
-vectors:
+::: {.slide title="How wrong are we? Squared loss"}
+[The Model]{.kicker}
 
-@linear-regression
+::: {.cols .vc}
+::: {.col}
+Penalize each gap between prediction and target by its **square**:
+
+$$L(\mathbf{w}, b)
+  = \frac{1}{n} \sum_{i=1}^{n}
+    \tfrac{1}{2}\bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2.$$
+
+Large errors hurt **quadratically**. The loss is **convex** in
+$(\mathbf{w}, b)$, so every local minimum is the global one.
+:::
+
+::: {.col .fig}
+![Each vertical gap is a residual; squared loss sums their squares.](../img/fit-linreg.svg){width=82%}
+:::
+:::
+:::
+
+::: {.slide title="Two ways to fit"}
+[The Model]{.kicker}
+
+**Closed form**, by setting the gradient to zero:
+
+$$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
+
+Exact, but it needs a matrix inverse and works **only** for linear models.
+
+. . .
+
+**Minibatch SGD**, the iterative recipe we reuse for every model after this:
+
+$$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) -
+  \frac{\eta}{|\mathcal{B}|}
+    \sum_{i \in \mathcal{B}} \nabla_{(\mathbf{w}, b)}\,\ell^{(i)}(\mathbf{w}, b).$$
+:::
+
+::: {.slide title="The closed form is a projection"}
+[The Model · geometry]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+As $\mathbf{w}$ varies, $\mathbf{X}\mathbf{w}$ sweeps the **column space**
+of $\mathbf{X}$. The best fit is the point in that subspace **closest** to
+$\mathbf{y}$: the orthogonal **projection**.
+
+The leftover residual $\mathbf{y}-\mathbf{X}\mathbf{w}^*$ is **perpendicular**
+to every feature column, which is exactly
+$\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
+:::
+
+::: {.col .fig .big}
+![Projecting a vector onto a direction: the residual meets it at a right angle.](../img/mdl-la-projection.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Minibatch SGD, step by step"}
+[The Model]{.kicker}
+
+- **Initialize** $\mathbf{w}, b$ at random.
+- **Sample** a minibatch $\mathcal{B}$ of examples ($|\mathcal{B}|$ between 32 and 256).
+- **Average** the per-example gradients on $\mathcal{B}$.
+- **Step** a small distance $\eta$ (the *learning rate*) downhill.
+
+. . .
+
+::: {.d2l-note .rule}
+A full batch is accurate but slow; a single point is noisy. A **minibatch** is the
+practical middle, and the work is one matrix multiply, not a Python loop.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Vectorization]{.dtitle}
+
+[why we never write the inner loop in Python]{.dsub}
+:::
+:::
+
+::: {.slide title="Two ways to add two vectors"}
+[Vectorization]{.kicker}
+
+Start with two 1000-element vectors of ones, and add them two ways:
+**one element at a time**, or with a single call to `+`.
 
 @linear-regression-vectorization-for-speed-1
+
+::: {.d2l-note}
+The math is identical. Only the *number of trips* into the Python interpreter differs.
+:::
 :::
 
-::: {.slide title="Loop vs. vectorized add"}
-Adding element-by-element in a Python loop:
+::: {.slide title="Loop versus one library call"}
+[Vectorization]{.kicker}
+
+A Python loop dispatches $n$ separate tensor ops, one per element:
 
 @linear-regression-vectorization-for-speed-2
 
 . . .
 
-The same answer in one library call:
+The overloaded `+` hands the whole array to one compiled kernel:
 
 @linear-regression-vectorization-for-speed-3
 
-Roughly **3 orders of magnitude faster** on this size — Python's
-interpreter overhead is the killer; the C kernel barely breaks a
-sweat.
+The vectorized call is **dramatically faster**, anywhere from tenfold to a
+thousandfold here: push inner loops down into the library, never Python.
 :::
 
-::: {.slide title="Why squared loss?"}
-Assume each label is the linear prediction plus Gaussian noise:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Loss Meets Probability]{.dtitle}
+
+[where squared error comes from]{.dsub}
+:::
+:::
+
+::: {.slide title="Why squared loss? Gaussian noise"}
+[Loss Meets Probability]{.kicker}
+
+Assume each label is the linear prediction plus fixed-variance noise:
 
 $$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
   \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
 
-Then minimizing **squared error** is exactly maximizing the
-**Gaussian log-likelihood** of the observed labels.
+. . .
 
-@linear-regression-the-normal-distribution-and-squared-loss-1
+The negative log-likelihood of the data is, up to a constant,
+
+$$-\log P(\mathbf{y}\mid\mathbf{X})
+  = \textrm{const} +
+    \frac{1}{2\sigma^2}\sum_i \bigl(y^{(i)}-\hat{y}^{(i)}\bigr)^2.$$
+
+So **maximum likelihood under Gaussian noise** *is* minimizing squared error.
 :::
 
-::: {.slide title="Visualizing the connection"}
-Plot a few normal densities — different means and variances:
+::: {.slide title="The normal density"}
+[Loss Meets Probability]{.kicker}
 
-@linear-regression-the-normal-distribution-and-squared-loss-2
+::: {.cols .vc}
+::: {.col}
+The bell curve we are assuming for the errors:
 
-Squared loss assumes the **errors** look like one of these bells
-centered at the model's prediction.
+@linear-regression-the-normal-distribution-and-squared-loss-1
+
+Shifting the **mean** slides it; growing the **variance** flattens it.
+:::
+
+::: {.col .fig}
+@!linear-regression-the-normal-distribution-and-squared-loss-2
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[A Neural Network]{.dtitle}
+
+[linear regression as the simplest net]{.dsub}
+:::
+:::
+
+::: {.slide title="Linear regression as one neuron"}
+[A Neural Network]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Wire every input $x_1,\ldots,x_d$ **directly** to a single output $o_1$.
+
+The output is the same weighted sum $\sum_i w_i x_i + b$, so linear regression
+is a **single-layer, fully connected** network: $d$ inputs, one computed neuron.
+:::
+
+::: {.col .fig .big}
+![Linear regression drawn as a one-layer network: inputs feed a single output.](../img/singleneuron.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="The biological analogy"}
+[A Neural Network]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The cartoon that inspired the name: dendrites collect inputs $x_i$, weighted by
+synaptic strengths $w_i$; the nucleus sums them; the axon carries the result on.
+
+::: {.d2l-note .warn}
+Inspiration, not blueprint: planes were inspired by birds, but aeronautics is
+not ornithology.
+:::
+:::
+
+::: {.col .fig .big}
+![A biological neuron: dendrites in, nucleus sums, axon out.](../img/neuron.svg){width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
-- **Loss:** mean squared error — convex, single global optimum.
-- **Optimizer:** minibatch SGD steps in the gradient direction;
-  closed form exists but doesn't generalize.
-- **Vectorize** every inner loop — orders of magnitude faster
-  than Python iteration.
-- Squared loss is the **MLE** under Gaussian noise — sets the
-  template for matching loss functions to noise models.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$, an affine map.
+- **Loss:** mean squared error, convex with one global optimum.
+- **Closed form** is an orthogonal **projection** onto the column space.
+:::
+
+::: {.col}
+- **Minibatch SGD** is the recipe we reuse for everything ahead.
+- **Vectorize**: one kernel call, never a Python inner loop.
+- Squared loss **is** Gaussian maximum likelihood, the template for matching
+  losses to noise models.
+:::
+:::
 :::

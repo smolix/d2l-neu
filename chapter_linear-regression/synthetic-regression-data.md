@@ -426,47 +426,107 @@ we use from here on.
 
 <!-- slides -->
 
-::: {.slide title="Synthetic data with a known answer"}
-Before we train a model we need **data**. For pedagogy, we'll
-synthesize it — known weights, known noise, and a guaranteed
-correct answer to compare against:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.3]{.kicker}
 
-$$\mathbf{y} = \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon},
-  \quad \boldsymbol{\epsilon} \sim \mathcal{N}(0, \sigma^2 I).$$
-
-This chapter:
-
-- Subclass `DataModule` to generate the synthetic batch.
-- Roll a hand-written minibatch sampler (to see how it works).
-- Swap in the framework's built-in dataloader (the version we'll
-  actually use).
+Synthetic regression **data**<br>Build a dataset whose answer you already know, so a failed fit can only be the *algorithm's* fault.
+:::
 :::
 
-::: {.slide title="Synthetic data module"}
-A `DataModule` subclass that draws features and computes labels
-in `__init__`:
+::: {.slide title="Why fabricate the data?"}
+[Motivation]{.kicker}
 
-@synthetic-regression-data
+::: {.cols .vc}
+::: {.col}
+On **real** data, a poor result has three suspects at once: a wrong
+model, a broken optimizer, or pathological data.
+
+**Synthetic** data removes the third. We *choose* the generative law,
+so the data is provably learnable:
+
+$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon},
+  \qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,\sigma^2 I).$$
+
+::: {.d2l-note}
+Recover $\mathbf{w}^*,b^*$ → the method works. Miss them → the bug is
+yours, full stop.
+:::
+:::
+
+::: {.col .narrow}
+The dataset lives in a `DataModule` (§3.2): *where the batches come from*,
+kept separate from the model.
+
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Generating the data]{.dtitle}
+
+[a DataModule that knows the ground truth]{.dsub}
+:::
+:::
+
+::: {.slide title="A DataModule that builds itself" except="jax"}
+[Generating the data]{.kicker}
+
+Draw $\mathbf{X}\sim\mathcal{N}(0,1)$, apply the true line, add tiny noise,
+all inside `__init__` ($n=2000$ examples, two features):
+
+@synthetic-regression-data-generating-the-dataset-1
+
+::: {.d2l-note}
+`save_hyperparameters()` stores every argument as an attribute.
+:::
+:::
+
+::: {.slide title="A DataModule that builds itself" only="jax"}
+[Generating the data]{.kicker}
+
+JAX randomness is **functional**: thread a `key` in, `split` it for
+independent $\mathbf{X}$ and $\boldsymbol{\epsilon}$ draws (same `key` in
+→ same dataset out):
 
 @synthetic-regression-data-generating-the-dataset-1
 :::
 
-::: {.slide title="Known ground truth"}
-Instantiate with the true `w = [2, -3.4]`, `b = 4.2`:
+::: {.slide title="Fix the ground truth, then peek"}
+[Generating the data]{.kicker}
+
+Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$ — the
+numbers we will try to recover later:
 
 @synthetic-regression-data-generating-the-dataset-2
-:::
 
-::: {.slide title="Inspecting one example"}
-Each row of `features` is a vector in $\mathbb{R}^2$; the
-corresponding `label` is a scalar:
+. . .
+
+Each feature row is a vector in $\mathbb{R}^2$; each label is a scalar:
 
 @synthetic-regression-data-generating-the-dataset-3
 :::
 
-::: {.slide title="A handwritten dataloader"}
-`get_dataloader` shuffles indices, then yields minibatches of
-size `batch_size`:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Reading the data]{.dtitle}
+
+[minibatches, by hand and by framework]{.dsub}
+:::
+:::
+
+::: {.slide title="A minibatch sampler, by hand"}
+[Reading the data]{.kicker}
+
+Training reads the data in **shuffled minibatches**. Roll the loader
+ourselves to see exactly what that means: permute the indices, then
+slice out `batch_size` rows at a time:
 
 @synthetic-regression-data-reading-the-dataset-1
 
@@ -474,39 +534,101 @@ size `batch_size`:
 
 @synthetic-regression-data-reading-the-dataset-2
 
-Educational, but slow — Python loops over indices, no
-prefetching, no parallelism.
+::: {.d2l-note .warn}
+Transparent, but it loads everything in memory, loops in Python, and
+never prefetches.
+:::
 :::
 
-::: {.slide title="The framework dataloader"}
-For real work, wrap features and labels in the framework's
-built-in dataset / dataloader (workers, prefetch, GPU pinning):
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The built-in loader]{.dtitle}
+
+[same interface, production speed]{.dsub}
+:::
+:::
+
+::: {.slide title="Hand the work to the framework" except="jax"}
+[The built-in loader]{.kicker}
+
+The framework's loader shuffles, prefetches, and parallelizes for us.
+Wrap the tensors once...
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 
 . . .
 
+...then rewire `get_dataloader` to use it (training vs. validation split):
+
 @synthetic-regression-data-concise-implementation-of-the-data-loader-2
 :::
 
-::: {.slide title="Same minibatch interface"}
-Identical iteration protocol from the caller's POV:
+::: {.slide title="Hand the work to the framework" only="jax"}
+[The built-in loader]{.kicker}
+
+JAX ships no loader, so borrow TensorFlow's and unwrap it to NumPy. The
+one twist is `drop_remainder=train`:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-1
+
+::: {.d2l-note}
+`get_dataloader` then just slices the train/val range and calls this.
+:::
+:::
+
+::: {.slide title="Same interface, drop-in" except="jax"}
+[The built-in loader]{.kicker}
+
+The caller sees an identical protocol, one minibatch at a time:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-3
 
 . . .
 
-`len(dl)` reports the number of batches per epoch — convenient
-for progress bars:
+And it knows its own length, so `len(dl)` is the batches per epoch
+($\lceil 1000/32\rceil = 32$: 31 full, one of 8):
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-4
 :::
 
+::: {.slide title="Same interface, drop-in" only="jax"}
+[The built-in loader]{.kicker}
+
+The caller sees an identical protocol, one minibatch at a time:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-3
+
+. . .
+
+JAX reports **31**, not 32: `drop_remainder=True` discards the partial
+last batch so every minibatch has one shape...
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-4
+
+::: {.d2l-note .rule}
+...which keeps a `@jax.jit` step from recompiling for a smaller last
+batch. We lose 8 examples per epoch, here negligible.
+:::
+:::
+
 ::: {.slide title="Recap"}
-- Synthetic data → ground-truth `w`, `b` you can compare against
-  later.
-- `DataModule` subclasses encapsulate "where do batches come
-  from?" once, reusable across models.
-- Hand-rolled iterator vs. framework dataloader — same protocol;
-  framework version wins on speed and ergonomics.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Synthetic data** fixes $\mathbf{w}^*,b^*$ up front, so you can check
+  recovery later, the first test for any new method.
+- A `DataModule` packages *where batches come from*, reusable across
+  models.
+:::
+
+::: {.col}
+- **Hand-rolled vs. built-in** loader: one protocol; the framework
+  version shuffles, prefetches, parallelizes.
+- **Watch the framing:** JAX threads a PRNG `key` and drops the partial
+  batch ($31$ vs. $32$).
+:::
+:::
 :::

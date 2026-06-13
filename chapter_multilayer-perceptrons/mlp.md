@@ -720,194 +720,357 @@ remains the sensible default for the models we build next.
 
 <!-- slides -->
 
-::: {.slide title="MLPs add nonlinear hidden layers"}
-A **multilayer perceptron** (MLP) is a stack of
-fully-connected layers separated by elementwise
-nonlinearities. The simplest deep network — and the
-foundation everything else in this book builds on.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.1]{.kicker}
 
-A linear classifier draws one hyperplane per class.
-That's not enough for most things we want to model:
-
-- **Body temperature → health risk** — U-shaped, not
-  even monotonic.
-- **Cat vs dog from pixels** — the meaning of pixel
-  $(13, 17)$ depends on its neighbors.
-- **XOR** — the canonical small problem a linear model
-  *provably* cannot solve.
+Multilayer Perceptrons<br>Stack affine layers with a **nonlinearity** between them, and the simplest deep network is born.
+:::
 :::
 
-::: {.slide title="The fix: alternate linear and nonlinear"}
-Stack linear layers with a **nonlinearity** between them.
-The linear layers mix features; the nonlinearity lets the
-composition curve, fold, and twist the decision surface.
+::: {.slide title="A linear model draws one straight boundary"}
+[Motivation]{.kicker}
 
-That's it. Two ingredients, deep architectures from there.
+::: {.cols .vc}
+::: {.col}
+Softmax regression maps inputs to outputs through a *single*
+affine map. That forces **monotonic, line-shaped** decisions,
+too rigid for most things worth modelling:
+
+- **Body temperature → risk** rises on *both* sides of 37°C.
+- **Cat vs dog**: pixel $(13,17)$ means nothing without its
+  neighbours.
+- **XOR**: a line *provably* cannot separate it.
+
+::: {.d2l-note}
+We want a model that learns its *own* features, then puts a
+linear predictor on top.
+:::
 :::
 
-::: {.slide title="Architecture"}
-An MLP is a stack of fully-connected layers. The middle
-layers are *hidden* — neither input nor output:
+::: {.col .fig .big}
+![Two classes that no single straight line can separate.](../img/mdl-mlp-xor.svg)
+:::
+:::
+:::
 
-![One hidden layer with five units, four inputs, three outputs.](../img/mlp.svg){width=58%}
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-Math for the one-hidden-layer case (minibatch
-$\mathbf{X} \in \mathbb{R}^{n \times d}$, hidden width $h$,
-$q$ outputs):
+[From Linear to Nonlinear]{.dtitle}
+
+[hidden layers, and why they need a kink]{.dsub}
+:::
+:::
+
+::: {.slide title="The idea: insert hidden layers"}
+[Architecture]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Stack fully-connected layers. The middle ones are *hidden*:
+neither input nor output. Every unit sees every unit below
+it.
+
+We read the first layers as a learned **representation** and
+the last as a linear **predictor** on top of it.
+:::
+
+::: {.col .fig .big}
+![One hidden layer: 4 inputs, 5 hidden units, 3 outputs, all fully connected.](../img/mlp.svg)
+:::
+:::
+:::
+
+::: {.slide title="One hidden layer, written out"}
+[Architecture]{.kicker}
+
+For a minibatch $\mathbf{X} \in \mathbb{R}^{n \times d}$,
+hidden width $h$, and $q$ outputs:
 
 $$\mathbf{H} = \mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}, \qquad
   \mathbf{O} = \mathbf{H} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
 
-Two layers. Two weight matrices. Two biases. So far it
-looks like genuine progress.
+. . .
+
+Two weight matrices, two biases. It *looks* like we have
+bought ourselves a more powerful model.
 :::
 
-::: {.slide title="Why naïve stacking doesn't help"}
-Plug $\mathbf{H}$ from the first equation into the second:
+::: {.slide title="But two affine maps collapse into one"}
+[The catch]{.kicker}
+
+Substitute $\mathbf{H}$ into the output layer:
 
 $$\mathbf{O} = (\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)})\,\mathbf{W}^{(2)} + \mathbf{b}^{(2)}
-            = \mathbf{X}\,\underbrace{\mathbf{W}^{(1)}\mathbf{W}^{(2)}}_{=\mathbf{W}} + \underbrace{\mathbf{b}^{(1)}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}}_{=\mathbf{b}}.$$
+            = \mathbf{X}\,\underbrace{\mathbf{W}^{(1)}\mathbf{W}^{(2)}}_{=\,\mathbf{W}} + \underbrace{\mathbf{b}^{(1)}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}}_{=\,\mathbf{b}}.$$
 
-A composition of affine maps is just another affine map.
-The hidden layer adds *zero* expressive power — same model
-class as plain softmax regression.
+. . .
 
-You need a **nonlinearity** between the layers, or stacking
-is wasted.
+An affine function of an affine function is **still affine**.
+The hidden layer added *zero* expressive power.
+
+::: {.d2l-note .warn}
+Stacking linear layers is wasted effort: we are back to
+plain softmax regression.
+:::
 :::
 
-::: {.slide title="Activation functions: the missing ingredient"}
-Insert an elementwise nonlinearity $\sigma$ after every
-hidden layer:
+::: {.slide title="The missing ingredient: a nonlinearity"}
+[The fix]{.kicker}
 
-$$\mathbf{H} = \sigma(\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}),\qquad
+Apply an elementwise nonlinearity $\sigma$ *after* every
+hidden affine map:
+
+$$\mathbf{H} = \sigma\!\left(\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right),\qquad
   \mathbf{O} = \mathbf{H} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
 
-Now the network represents a **piecewise nonlinear**
-function — and stacking actually buys us something.
+. . .
 
-**Universal approximation theorem** (Cybenko 1989):
-a single hidden layer with enough units, plus a sane
-$\sigma$, can approximate any continuous function
-arbitrarily well.
-
-Caveat: "enough units" can be exponentially many. Depth
-trades width for parameter efficiency — the modern reason
-deep nets work.
+Now the layers can no longer be merged: the network bends,
+folds, and curves its decision surface. Two ingredients
+(**affine + nonlinear**), and every architecture in this book
+follows.
 :::
 
-::: {.slide title="Setup"}
-@mlp-multilayer-perceptrons
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[A Concrete Win: XOR]{.dtitle}
+
+[one ReLU layer untangles the impossible case]{.dsub}
+:::
 :::
 
-::: {.slide title="ReLU — the modern default"}
-$$\mathrm{ReLU}(x) = \max(0, x).$$
+::: {.slide title="XOR: impossible for a line, easy after a fold"}
+[Why nonlinearity matters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Label each corner of the unit square by whether its
+coordinates *differ*. The two classes sit on **opposite
+diagonals** (left), so no straight line works.
+
+One hidden layer $\mathbf{h} = \operatorname{ReLU}(\mathbf{x}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$
+then **folds** the two label-1 corners onto the same point
+(right), and now a single line separates them.
+:::
+
+::: {.col .fig .big}
+![Left: XOR in the input space, not linearly separable. Right: after the ReLU hidden map the class-1 corners coincide and a line works.](../img/mdl-mlp-xor.svg)
+:::
+:::
+:::
+
+::: {.slide title="A hand-built two-unit network computes XOR" only="pytorch"}
+[Why nonlinearity matters · verify]{.kicker}
+
+With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
+$\mathbf{b}^{(1)} = (0,\,{-1})$, $\mathbf{w}^{(2)} = (1,\,{-2})^\top$ and a ReLU, the
+output column is exactly the XOR of the two inputs:
+
+@mlp-xor
+
+::: {.d2l-note}
+We *constructed* these weights; the rest of the book is about
+having optimization **discover** such representations.
+:::
+:::
+
+::: {.slide title="How far does this go? Universal approximation"}
+[Expressive power]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Universal approximation theorem.** A single hidden layer
+with enough units and *any* sane $\sigma$ can approximate any
+continuous function on a bounded domain, to arbitrary
+accuracy (Cybenko 1989; Hornik 1991).
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+"Enough units" can be **exponentially** many; the theorem
+says a fit *exists*, not that SGD finds it, nor that it
+generalizes.
+:::
+:::
+:::
+
+. . .
+
+This is why we reach for **depth**: a deep net often
+represents the same function far more compactly than a shallow
+one would, trading width for layers.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Activation Functions]{.dtitle}
+
+[ReLU, sigmoid, tanh, and when to use each]{.dsub}
+:::
+:::
+
+::: {.slide title="ReLU: the modern default"}
+[Activations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\operatorname{ReLU}(x) = \max(0, x).$$
 
 @mlp-relu-function-1
-
-Three reasons it dominates:
-
-- **Doesn't saturate on the right** — gradient is exactly
-  1 for any $x > 0$. No vanishing gradient.
-- **Cheap** — one comparison, one max. No exponential.
-- **Sparse activations** — half the units output zero on
-  average; acts as implicit regularization.
 :::
 
-::: {.slide title="ReLU's derivative"}
-The derivative is just the step function — 0 for negative
-inputs, 1 for positive:
+::: {.col .narrow}
+Keep the positive part, zero the rest. Why it won:
 
-$$\mathrm{ReLU}'(x) = \mathbb{1}[x > 0].$$
+- **No right-side saturation:** gradient is exactly $1$
+  for $x>0$.
+- **Cheap:** a single comparison, no exponential.
+- **Sparse:** about half the units output $0$.
+:::
+:::
+:::
+
+::: {.slide title="ReLU's gradient: a clean on/off switch"}
+[Activations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The derivative is a step: $0$ on the left, $1$ on the right:
+
+$$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
 @mlp-relu-function-2
 :::
 
-::: {.slide title="Dead ReLU"}
-A unit whose pre-activation is always negative gets zero
-gradient and never updates again — a permanently silent
-neuron.
-
-The fix: **LeakyReLU / PReLU** —
-$\max(0, x) + \alpha\min(0, x)$, with a small slope on the
-left to keep gradient flowing.
+::: {.col .narrow}
+::: {.d2l-note .warn}
+**Dead ReLU:** a unit pushed negative for *every* example
+gets zero gradient forever. *LeakyReLU / PReLU*,
+$\max(0,x)+\alpha\min(0,x)$, leak a little signal to keep it
+alive.
+:::
+:::
+:::
 :::
 
-::: {.slide title="Sigmoid — squashes to (0, 1)"}
-$$\sigma(x) = \frac{1}{1 + e^{-x}}.$$
+::: {.slide title="Sigmoid: squashing into (0, 1)"}
+[Activations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\operatorname{sigmoid}(x) = \frac{1}{1 + e^{-x}}.$$
 
 @mlp-sigmoid-function-1
-
-The original neural net activation (1960s–2000s). Today
-mostly used for:
-
-- **Output layers** in binary classification
-  (probability ∈ (0, 1)).
-- **Gates** in LSTM/GRU and attention (still ∈ (0, 1)).
-
-For *hidden* layers it's been replaced by ReLU: see why on
-the next slide.
 :::
 
-::: {.slide title="Why sigmoid hurts deep nets"}
-$$\sigma'(x) = \sigma(x)(1 - \sigma(x)).$$
+::: {.col .narrow}
+A smooth, differentiable threshold, and the original neuron
+activation. Today it lives mostly at the **edges** of a net:
+
+- **Binary output**, read as a probability.
+- **Gates** in LSTM/GRU and attention.
+:::
+:::
+:::
+
+::: {.slide title="Why sigmoid stalls deep networks"}
+[Activations · the catch]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\operatorname{sigmoid}'(x) = \operatorname{sigmoid}(x)\,(1 - \operatorname{sigmoid}(x)).$$
 
 @mlp-sigmoid-function-2
-
-Maximum gradient is $\sigma'(0) = 0.25$. Worse, $\sigma'$
-**vanishes** for $|x| \gtrsim 5$.
-
-In a 10-layer net with sigmoid activations, the backward
-pass multiplies $\le 0.25$ at every layer — gradients shrink
-by $\le 4^{-10} \approx 10^{-6}$ before reaching the input
-layer. That's the **vanishing gradient** problem ReLU
-solved.
 :::
 
-::: {.slide title="Tanh — sigmoid's symmetric cousin"}
-$$\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1.$$
+::: {.col .narrow}
+The gradient peaks at just $0.25$ and **vanishes** past
+$|x|\gtrsim 5$. Multiply $\le 0.25$ through ten layers and the
+signal shrinks by $\sim\!10^{-6}$: the **vanishing-gradient**
+problem ReLU fixed.
+:::
+:::
+:::
+
+::: {.slide title="Tanh: sigmoid's zero-centered cousin"}
+[Activations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\tanh(x) = \frac{1 - e^{-2x}}{1 + e^{-2x}} = 2\,\operatorname{sigmoid}(2x) - 1.$$
 
 @mlp-tanh-function-1
-
-Range $(-1, 1)$ — **zero-centered**, which mildly helps
-optimization. Default in RNNs (LSTM cell update, GRU
-candidate hidden state) where bounded activations are
-useful.
 :::
 
-::: {.slide title="Tanh's derivative"}
-Still saturates at both tails — same vanishing-gradient
-issue as sigmoid:
+::: {.col .narrow}
+Same S-shape, but range $(-1,1)$ and **zero-centered**, which
+mildly eases optimization. The default inside RNN cells, where
+bounded activations help.
 
-@mlp-tanh-function-2
+::: {.d2l-note .warn}
+Still saturates at both tails, so its gradient vanishes just
+like sigmoid's.
+:::
+:::
+:::
 :::
 
-::: {.slide title="Cheat sheet"}
-| | Range | Saturates? | Use case |
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Wrap-up]{.dtitle}
+
+[choosing an activation, plus what comes next]{.dsub}
+:::
+:::
+
+::: {.slide title="Activation cheat sheet"}
+[Reference]{.kicker}
+
+| | Range | Saturates? | Typical use |
 |---|---|---|---|
-| **ReLU** | $[0, \infty)$ | only at $x{<}0$ (dead) | default for hidden |
+| **ReLU** | $[0, \infty)$ | left only (can die) | default hidden layer |
 | **LeakyReLU / PReLU** | $\mathbb{R}$ | no | when ReLU dies |
-| **GELU** ($x\Phi(x)$) | $\approx \mathbb{R}$ | barely | Transformers, modern LLMs |
+| **GELU** $\,x\Phi(x)$ | $\approx\mathbb{R}$ | barely | Transformers, LLMs |
 | **Sigmoid** | $(0, 1)$ | both ends | gates, binary output |
 | **Tanh** | $(-1, 1)$ | both ends | RNN cells |
 | **Softmax** | simplex | one end | multiclass output |
 
-Default: ReLU for hidden layers, GELU if you're imitating
-modern Transformer models, sigmoid/softmax at outputs to
-turn logits into probabilities.
+::: {.d2l-note}
+Reach for **ReLU** in hidden layers, **GELU** to mimic modern
+Transformers, and **sigmoid / softmax** at the output to turn
+logits into probabilities.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- An MLP = several affine layers, with an *elementwise*
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- An **MLP** = affine layers with an *elementwise*
   nonlinearity between them.
-- The nonlinearity is essential — without it the stack
-  collapses to a single affine map.
-- One sufficiently wide hidden layer is a universal
-  approximator. Depth makes the same expressiveness
-  *parameter-efficient*.
-- **ReLU** is the modern default. Sigmoid and tanh persist
-  in specific roles (output, gates, RNNs) where their
-  bounded ranges are useful.
-- The whole rest of this chapter is about *training* MLPs:
-  forward pass, backprop, init, regularization.
+- The nonlinearity is **essential**; drop it and the stack
+  collapses to one affine map.
+- **XOR** is the smallest proof: one ReLU layer re-represents
+  the data so a line works.
+:::
+
+::: {.col}
+- One wide hidden layer is a **universal approximator**;
+  depth makes that power *parameter-efficient*.
+- **ReLU** is the default; sigmoid and tanh survive in
+  gates, outputs, and RNN cells.
+- Next: actually **training** MLPs, via the forward pass,
+  backprop, initialization, and regularization.
+:::
+:::
 :::

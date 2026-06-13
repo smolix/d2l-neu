@@ -256,80 +256,199 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 
 <!-- slides -->
 
-::: {.slide title="The shared classifier base"}
-A small `Classifier` base class that every classification model
-in the book inherits from. Same role as `d2l.Module` for
-regression — but with classification-specific defaults:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.3]{.kicker}
 
-- A **validation step** that reports loss **and** accuracy.
-- An **accuracy** helper that compares the argmax of the predicted
-  scores to the true labels.
-
-Subclasses just supply `forward` (and a custom `loss` if not
-plain cross-entropy).
+The base **classification** model<br>One forward pass, read two ways: a *loss* to train on and an *accuracy* to report.
+:::
 :::
 
-::: {.slide title="Scores, probabilities, decisions"}
-Classifiers usually produce a vector of scores
-$\mathbf{o}\in\mathbb{R}^q$. The training loss may turn
-scores into probabilities, but the deployed decision is often
-just
+::: {.slide title="One forward pass, two readings"}
+[Motivation]{.kicker}
 
-$$\hat{y}=\arg\max_j o_j.$$
+::: {.cols .vc}
+::: {.col}
+A classifier scores the classes, then the picture **forks**:
 
-Keep the roles separate:
+- **train** on a smooth **loss** that gradient descent can minimize;
+- **report** a hard **accuracy**, the number benchmarks care about.
 
-- **scores/logits:** differentiable quantities the model outputs;
-- **loss:** smooth training signal, e.g. cross-entropy;
-- **accuracy:** discrete evaluation metric after taking argmax.
-
-Accuracy is what many benchmarks report, but it is not a useful
-gradient: one tiny score change usually leaves argmax unchanged.
+::: {.d2l-note}
+We collect both, once, in a `Classifier` base class so every model
+in the book inherits them for free.
+:::
 :::
 
-::: {.slide title="Base classifier imports"}
-@classification-the-base-classification-model
+::: {.col .fig .big}
+![One forward pass produces the logits $\mathbf{o}$; the top branch softmaxes them and reads the differentiable loss, the bottom branch takes the $\arg\max$ to a decision and counts it.](../img/mdl-clf-loss-accuracy.svg)
+:::
+:::
 :::
 
-::: {.slide title="The `Classifier` class"}
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The `Classifier` base class]{.dtitle}
+
+[what every model inherits, what each supplies]{.dsub}
+:::
+:::
+
+::: {.slide title="Inherit the loop, supply the model"}
+[The base class]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`Classifier` extends the `d2l.Module` scaffold from the regression
+chapter, adding classification defaults.
+
+- **Inherited:** a validation step (loss + accuracy) and a default
+  optimizer.
+- **Supplied by a subclass:** its `forward` pass, and a `loss` only
+  if plain cross-entropy will not do.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Same payoff as `Module` itself: write the model-specific part once,
+get the training and evaluation machinery for free.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Validation reports loss *and* accuracy" except="jax"}
+[The base class]{.kicker}
+
+The override logs two curves per validation batch, where regression
+logged one:
+
+@classification-the-classifier-class-1
+
+::: {.d2l-note}
+Averaging over `num_val_batches` is slightly off on a short last
+batch; we ignore that to keep the code simple.
+:::
+:::
+
+::: {.slide title="Validation under JAX: stateless, functional" only="jax"}
+[The base class]{.kicker}
+
+Flax modules carry no state, so the step threads `params` and `state`
+explicitly and the loss returns **auxiliary data** (used later by
+BatchNorm, a placeholder otherwise):
+
 @classification-the-classifier-class-1
 :::
 
-::: {.slide title="Default optimizer hook"}
-A default `configure_optimizers` on `Module` so subclasses don't
-have to write it:
+::: {.slide title="A default optimizer, installed once"}
+[The base class]{.kicker}
+
+`configure_optimizers` is a hook the `Trainer` calls at startup. We
+put plain minibatch **SGD** on `Module` itself, so no subclass repeats
+it (later chapters override to switch optimizers):
 
 @classification-the-classifier-class-2
 :::
 
-::: {.slide title="Accuracy"}
-Take the **argmax** along the class axis, compare with the true
-label element-wise, and average. The result is the fraction of
-correctly-classified examples in the batch:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Accuracy]{.dtitle}
+
+[the hard-decision metric, in four lines]{.dsub}
+:::
+:::
+
+::: {.slide title="Why a classifier needs *two* numbers"}
+[Scores, loss, decision]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The same logits $\mathbf{o}$ feed two branches with different jobs.
+
+. . .
+
+**Loss** (top) softmaxes to probabilities and is *differentiable*, so
+it trains the model, and keeps rewarding confidence past the point the
+decision is right.
+
+. . .
+
+**Accuracy** (bottom) is $\arg\max$ then compare: a *discrete* count
+whose gradient is zero almost everywhere, so it cannot be optimized
+directly.
+:::
+
+::: {.col .fig}
+![Logits $(1.0, 2.2, 0.3)$: softmax $\to (0.21, 0.69, 0.10)$ and cross-entropy $\ell=0.37$ on top; $\arg\max=1$ matches $y=1$, one correct, on the bottom.](../img/mdl-clf-loss-accuracy.svg)
+:::
+:::
+:::
+
+::: {.slide title="Accuracy in four lines"}
+[Scores, loss, decision]{.kicker}
+
+`argmax` along the class axis, compare with the label element-wise,
+average the 0/1 hits:
 
 @classification-accuracy-1
 
-The validation step then reports both the loss (lower is better)
-and accuracy (higher is better) every epoch.
+::: {.d2l-note}
+The `astype` matches dtypes before `==`, since the comparison is
+type-sensitive. JAX adds `@jax.jit` and runs the forward pass from
+`params`; the arithmetic is identical.
+:::
 :::
 
-::: {.slide title="Why report both loss and accuracy?"}
-Two models can have the same accuracy but different confidence.
-Cross-entropy still notices whether the correct class received
-probability 0.51 or 0.99.
+::: {.slide title="Finding the weights to score" only="mxnet"}
+[Scores, loss, decision]{.kicker}
 
-Use both during training:
+Gluon's `collect_params` misses the bare `np.ndarray` weights that
+from-scratch models use, so MXNet adds a recursive fallback (the other
+frameworks expose parameters uniformly and need none):
 
-- **loss** detects calibration and optimization progress;
-- **accuracy** tracks the hard decision quality students and
-  benchmarks usually care about;
-- disagreement between them is diagnostic, not a bug.
+@classification-accuracy-2
+:::
+
+::: {.slide title="Report both, for complementary reasons"}
+[Scores, loss, decision]{.kicker}
+
+Two classifiers can hit the **same accuracy** while one is confidently
+right and the other barely so.
+
+. . .
+
+Only the **loss** separates a correct-class probability of $0.51$ from
+$0.99$, which is why it, not accuracy, is what we optimize.
+
+. . .
+
+::: {.d2l-note .rule}
+When the two disagree (accuracy flat while loss still drops) that is a
+diagnostic about optimization and calibration, **not a bug**.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- `Classifier(d2l.Module)` adds **accuracy reporting** to the
-  base scaffold from the regression chapter.
-- One line for accuracy: `argmax → ==y → mean`.
-- The same training loop now drives every classification model
-  we'll build through the rest of the book.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- `Classifier(d2l.Module)` adds a **loss + accuracy** validation step
+  and a default **SGD** optimizer.
+- A new model supplies only `forward` (and a custom `loss`), inheriting
+  the whole loop.
+:::
+
+::: {.col}
+- **Accuracy** = fraction whose $\arg\max$ matches the label:
+  `argmax → == y → mean`.
+- Discrete, so we **train on the loss** and **watch accuracy** beside
+  it.
+:::
+:::
 :::

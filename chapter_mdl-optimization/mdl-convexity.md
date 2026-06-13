@@ -1065,102 +1065,428 @@ all stand on results proved here.
 
 <!-- slides -->
 
-::: {.slide title="Convexity: the line between proof and hope"}
-For a **convex** problem:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §24]{.kicker}
 
-- every local minimum is *global* --- no saddles, no spurious basins
-- gradient descent's rates become **global guarantees**
-- one inequality (Jensen's) powers half of information theory
-
-. . .
-
-And deep networks are *not* convex --- we will see exactly what
-breaks and what survives.
+The line between "gradient descent provably works" and "we hope"<br>**convex sets · three lenses · Jensen · global rates · what deep nets break**.
+:::
 :::
 
-::: {.slide title="Convex sets"}
-A set is convex when every segment between its points stays inside:
+::: {.slide title="Why convexity?"}
+[Motivation]{.kicker}
 
-$$\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C \quad \textrm{for } \theta \in [0, 1]$$
+::: {.cols .vc}
+::: {.col}
+For a **convex** problem the guarantees are airtight:
+
+- every local minimum is *global*: no saddles, no spurious basins
+- a single gradient certifies *every* other point in the domain
+- the rates of the last section become **global**, every-start
+
+Convexity also names the easy pieces of deep learning (the softmax
+loss, the regularizers, projections, the SVM dual), and tells you
+exactly what stacking nonlinear layers forfeits.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+All code here is a few lines of plain **NumPy**: no framework, no GPU.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Convex sets]{.dtitle}
+
+[the segment between any two points stays inside]{.dsub}
+:::
+:::
+
+::: {.slide title="A set is convex when chords stay inside"}
+[Convex sets]{.kicker}
+
+A set $C$ is **convex** if every segment between two of its points
+never leaves it:
+
+$$\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C \qquad \textrm{for all } \mathbf{x}, \mathbf{y} \in C,\ \theta \in [0, 1].$$
 
 @fig:mdl-opt-convex-vs-nonconvex-set
 
-. . .
-
-Catalog: half-spaces, norm balls, the simplex, the PSD cone.
-**Intersections** preserve convexity; unions do not.
+Left stays inside; the crescent's chord tunnels *outside*. Right: the
+two convex sets deep learning lives on, the simplex and a half-space.
 :::
 
-::: {.slide title="Three lenses, one property"}
-Chord above graph ⟺ tangent below graph ⟺ Hessian PSD:
+::: {.slide title="New convex sets from old"}
+[Convex sets]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Intersections preserve convexity** (a point in every $C_i$ is a point
+in their meet). Unions do not: $[0,1]\cup[2,3]$ has a chord that escapes.
+
+This one fact is a factory:
+
+- simplex = one hyperplane $\cap$ $n$ half-spaces
+- PSD cone $= \bigcap_{\mathbf{z}}\{A : \mathbf{z}^\top A\mathbf{z} \ge 0\}$
+- every polyhedron $\{A\mathbf{x} \preceq \mathbf{b}\}$
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+The catalog: half-spaces, norm balls, the simplex, the PSD cone.
+
+Affine maps and convex hulls round it out.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Three lenses on a convex function]{.dtitle}
+
+[chord, tangent, Hessian, and the kink repair]{.dsub}
+:::
+:::
+
+::: {.slide title="The chord lens and the first-order lens"}
+[Three lenses]{.kicker}
 
 @fig:mdl-opt-chord-above-graph
 
 . . .
 
-Subgradients extend the tangent lens to corners
-($\partial|x|(0) = [-1, 1]$). All three lenses, checked numerically:
+Two pictures of one property: the **chord** joining two points lies
+*above* the graph; the **tangent** at any point lies *below* it. A
+single gradient at $\mathbf{x}$ thus certifies every $\mathbf{y}$, however far.
+:::
+
+::: {.slide title="Three lenses, one verdict"}
+[Three lenses]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$f(\theta\mathbf{x}+(1-\theta)\mathbf{y}) \le \theta f(\mathbf{x}) + (1-\theta) f(\mathbf{y})$$
+
+is equivalent, for smooth $f$, to the tangent under-estimator, and to
+
+$$\nabla^2 f(\mathbf{x}) \succeq 0 \quad \textrm{everywhere.}$$
+
+Pick the cheapest lens: the chord needs no derivatives, the first-order
+one feeds every proof, the Hessian is the workhorse for smooth losses.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+**Strong convexity** adds a floor, $\nabla^2 f \succeq \mu I$: a bowl
+with guaranteed curvature, and $\kappa = L/\mu$ is the condition number.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Subgradients: the tangent lens at a corner"}
+[Three lenses]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\ell_1$ and the hinge have kinks, so no gradient exists there. A
+**subgradient** $\mathbf{g}$ keeps the under-estimate anyway:
+
+$$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{g}^\top(\mathbf{y}-\mathbf{x}).$$
+
+At a corner the slopes *fan out*: $\partial|x|(0) = [-1, 1]$. Optimality
+survives verbatim: $\mathbf{x}^\star$ is a minimizer iff
+$\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Subgradients carry Jensen, local-equals-global, and descent through
+ReLU-style kinks.
+:::
+:::
+:::
+:::
+
+::: {.slide title="All three lenses, checked numerically"}
+[Three lenses]{.kicker}
+
+On the least-squares loss in two weights: a thousand random chords, a
+thousand random tangents, and the Hessian's eigenvalues.
 
 @convexity-three-lenses
+
+Both worst "violations" are *negative*, and $X^\top X$ has positive
+eigenvalues. Sampling can only ever refute convexity; the Hessian is the
+one that proves it.
 :::
 
-::: {.slide title="Jensen's inequality"}
-The chord inequality, lifted to expectations:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-$$f(\mathbb{E}[X]) \;\le\; \mathbb{E}[f(X)]$$
+[Jensen's inequality]{.dtitle}
 
-Proof: supporting line at $\mathbb{E}[X]$, then take expectations.
+[the chord, lifted to expectations]{.dsub}
+:::
+:::
 
-- $-\log$ convex ⇒ $D_{\mathrm{KL}}(p\|q) \ge 0$, equality iff $p = q$
-- $\log$ concave ⇒ AM $\ge$ GM; the ELBO gap is a Jensen gap
+::: {.slide title="Jensen: the function of the mean undershoots"}
+[Jensen]{.kicker}
+
+The chord inequality, with weights read as a probability distribution
+and then as an expectation:
+
+$$f(\mathbb{E}[X]) \;\le\; \mathbb{E}[f(X)].$$
+
+. . .
+
+**Proof in two lines:** take a subgradient at $\boldsymbol{\mu}=\mathbb{E}[X]$,
+so $f(X) \ge f(\boldsymbol{\mu}) + \mathbf{g}^\top(X-\boldsymbol{\mu})$
+pointwise; take expectations, the linear term has mean zero.
+
+::: {.d2l-note}
+The graph bends up, so spreading $X$ out can only push $\mathbb{E}[f(X)]$ above
+$f(\mathbb{E}[X])$. For concave $f$ the inequality flips.
+:::
+:::
+
+::: {.slide title="One inequality, three classics"}
+[Jensen]{.kicker}
+
+Apply Jensen to the right convex (or concave) function and out fall the
+staples of the probabilistic chapters:
+
+- $-\log$ is convex $\Rightarrow$ $D_{\mathrm{KL}}(p\,\|\,q) \ge 0$, with equality iff $p=q$
+- $\log$ is concave $\Rightarrow$ AM $\ge$ GM
+- the **ELBO gap** is precisely the slack in Jensen on a concave $\log$
 
 @convexity-jensen-mc
+
+A Jensen gap of $\sqrt{e}$ vs $1$ that no sampling closes (it is geometry,
+not noise), AM $\ge$ GM in every draw, and KL nonnegative throughout.
 :::
 
-::: {.slide title="Local = global --- and global rates"}
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Why it matters]{.dtitle}
+
+[local equals global, and a global rate]{.dsub}
+:::
+:::
+
+::: {.slide title="Every local minimum is global"}
+[The payoff]{.kicker}
+
 @fig:mdl-opt-local-equals-global
 
 . . .
 
-Same GD, same step size, 500 random starts:
+A convex function cannot ambush you: if a better point existed anywhere,
+the chord toward it would already descend *inside your neighborhood*. So
+"no local improvement" means "no improvement anywhere," and stationary
+$\Rightarrow$ global.
+:::
+
+::: {.slide title="The dividing line, as an experiment"}
+[The payoff]{.kicker}
+
+The *same* gradient-descent loop and step size, from 500 random starts,
+on a convex bowl and on a tilted double well:
 
 @convexity-basins
 
-. . .
-
-- smooth convex: $f(\mathbf{x}_k) - f^\star \le L\|\mathbf{x}_0 - \mathbf{x}^\star\|^2 / (2k)$
-- $\mu$-strongly convex: $(1 - \mu/L)^k$ --- linear, $\kappa = L/\mu$
+The bowl collapses all 500 runs onto one point (spread at machine
+epsilon). The double well splits them across two basins. Convexity is a
+property of the landscape, and it alone decides whether the start matters.
 :::
 
-::: {.slide title="Recognizing convexity without a Hessian"}
-Nonnegative sums · affine pre-composition · pointwise max ·
-monotone composition ⇒ hinge, $\ell_1$, logistic, cross-entropy
-all certified in one line each.
+::: {.slide title="Local steps become global rates"}
+[The payoff]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Chaining the descent lemma through the first-order lens upgrades
+"eventually flat" to "the optimum, this fast":
+
+$$f(\mathbf{x}_k) - f^\star \le \frac{L\,\|\mathbf{x}_0 - \mathbf{x}^\star\|^2}{2k}$$
+
+and with strong convexity it sharpens to a geometric rate
+
+$$f(\mathbf{x}_k) - f^\star \le \bigl(1 - \tfrac{\mu}{L}\bigr)^{k}\bigl(f(\mathbf{x}_0) - f^\star\bigr).$$
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Both bounds are **dimension-free**: a million parameters cost no more
+iterations than two. The deep reason first-order methods scale.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Recognizing convexity]{.dtitle}
+
+[a calculus, and the softmax workhorse]{.dsub}
+:::
+:::
+
+::: {.slide title="A calculus of convex functions"}
+[Recognizing convexity]{.kicker}
+
+Most convexity proofs are *assembled*, not computed. Four operations
+preserve convexity:
+
+::: {.d2l-note .rule}
+nonnegative sums · affine pre-composition · pointwise max ·
+**monotone** convex composition
+:::
 
 . . .
 
-Log-sum-exp: $\nabla \mathrm{lse} = \mathrm{softmax}$, and
-$\nabla^2 \mathrm{lse} = \mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$
-= a **covariance** ⇒ PSD. Its conjugate is negative entropy.
+So in one line each: the **hinge** is a max of affines; $\ell_1$ a sum of
+such maxes; **logistic** is the convex $\log(1+e^t)$ after an affine map;
+ridge-anything is strongly convex. The one missing rule, *non-monotone*
+inner maps, is where deep networks exit the theory.
+:::
+
+::: {.slide title="Log-sum-exp: its Hessian is a covariance"}
+[Recognizing convexity]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The function behind every softmax cross-entropy:
+
+$$\nabla\,\mathrm{lse} = \mathrm{softmax} = \mathbf{s}, \qquad \nabla^2\mathrm{lse} = \mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top.$$
+
+That Hessian is the **covariance of a one-hot draw** from $\mathbf{s}$, so
+$\mathbf{v}^\top\nabla^2\mathrm{lse}\,\mathbf{v} = \mathrm{Var}(v_I) \ge 0$:
+PSD, hence $\mathrm{lse}$ is convex.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+The one **zero** eigenvalue (direction $\mathbf{1}$) is the shift
+invariance behind the stable softmax. Its conjugate is negative entropy.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Confirming the covariance, by sampling"}
+[Recognizing convexity]{.kicker}
+
+Eigenvalues of the analytic Hessian, the covariance identity by Monte
+Carlo, and the predicted flat direction:
 
 @convexity-lse-hessian
+
+Every eigenvalue is nonnegative down to one numerical zero, and 200k
+one-hot draws reproduce the analytic Hessian: it really is a covariance
+you can sample from.
 :::
 
-::: {.slide title="Reality check: deep nets are non-convex"}
-Minimizer sets of convex functions are convex --- but permutation
-symmetry scatters equivalent minima everywhere ⇒ deep losses are
-non-convex *by construction*.
+::: {.slide}
+::: {.divider}
+[06]{.dnum}
 
-. . .
+[Reality check]{.dtitle}
 
-What survives: the **PL condition**
-$\tfrac12\|\nabla f\|^2 \ge \mu (f - f^\star)$ keeps the linear
-rate with no convexity:
+[deep nets are non-convex, and what survives]{.dsub}
+:::
+:::
+
+::: {.slide title="Deep networks are non-convex by construction"}
+[Reality check]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Take $f(a,b) = (ab-1)^2$, a two-weight linear model. Its minima form the
+hyperbola $\{ab=1\}$, a **non-convex set**, but minimizer sets of convex
+functions *are* convex. So $f$ cannot be convex.
+
+Real networks inherit this: permuting hidden units leaves the function
+unchanged, scattering equivalent minima everywhere. Convexity is not
+bruised by deep learning, it is demolished by the architecture.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+The minimizers $(1,1)$ and $(-1,-1)$ average to the origin, where
+$f = 1 > 0$: not a minimum.
+:::
+:::
+:::
+:::
+
+::: {.slide title="What survives: the PL condition"}
+[Reality check]{.kicker}
+
+The linear-rate proof never used convexity in its second half, only
+
+$$\tfrac12\|\nabla f\|^2 \ge \mu\,(f - f^\star) \qquad \textrm{(Polyak--Łojasiewicz).}$$
+
+PL says the gradient is small only where the value is near-optimal, so
+flat spots sit only at the bottom: linear convergence with *no* convexity.
 
 @convexity-pl-rate
 
-. . .
+The gap contracts by a constant factor on $x^2 + 3\sin^2 x$, whose Hessian
+dips to $-4$. One current account of why huge overparameterized nets train.
+:::
 
-And GD's **implicit bias** picks the minimum: min-norm for least
-squares, max-margin for separable logistic regression.
+::: {.slide title="Which minimum? Implicit bias decides"}
+[Reality check]{.kicker}
+
+When many minima exist, gradient descent does not choose arbitrarily, it
+has an **implicit bias**:
+
+- least squares from $\mathbf{w}_0 = \mathbf{0}$: the iterates stay in the
+  row space, so the limit is the *minimum-norm* interpolant ($X^+\mathbf{y}$)
+- separable logistic regression: the direction converges to the
+  *max-margin* separator, the SVM solution never asked for
+
+Which minimum an optimizer prefers is part of what a trained model *is*.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Convex set:** chords stay inside; **intersection** is the factory.
+- **Three lenses:** chord, tangent under-estimator, PSD Hessian;
+  **subgradients** extend the tangent to kinks.
+- **Jensen:** $f(\mathbb{E}[X]) \le \mathbb{E}[f(X)]$ gives KL $\ge 0$,
+  AM $\ge$ GM, the ELBO gap.
+:::
+
+::: {.col}
+- **Payoff:** local $=$ global; rates $O(1/k)$ and $(1-\mu/L)^k$,
+  both dimension-free.
+- **Calculus** certifies hinge, $\ell_1$, logistic, softmax; log-sum-exp's
+  Hessian *is* the softmax covariance.
+- **Deep nets** are non-convex, but **PL** keeps the rate and **implicit
+  bias** picks the minimum.
+:::
+:::
+
+::: {.d2l-note}
+Convex theory is the idealization the working optimizer approximates, and
+its instruments (descent lemma, PL, rates) we carry into non-convex territory.
+:::
 :::

@@ -1674,97 +1674,413 @@ $$
 
 <!-- slides -->
 
-::: {.slide title="Geometry of Linear Algebra"}
-The geometric intuitions behind the linear algebra used
-throughout the book. Two viewpoints on a vector $\mathbf{v}$:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · Math Appendix]{.kicker}
 
-- A *position* — a point in space.
-- A *direction* — an arrow from the origin.
-
-Most of deep learning works in the second view. From it
-we get dot products (similarity), angles, projections,
-hyperplanes (decision boundaries), and determinants
-(volume changes).
+The geometry under the algebra<br>**angles, projections, hyperplanes, and how matrices move space**.
+:::
 :::
 
-::: {.slide title="Vectors as geometry"}
-The same array can name a point or a displacement. Deep learning
-mostly uses the displacement view: directions, lengths, and angles.
+::: {.slide title="Why a geometric view"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A vector is a list of numbers, but reading it as a **picture** is where the
+intuition lives.
+
+- A vector is a **point**, or equally an **arrow** (a direction).
+- The **dot product** measures alignment, giving angles and similarity.
+- A **hyperplane** is the decision boundary of every linear classifier.
+- A **matrix** is a map that skews, rotates, and scales space.
+
+::: {.d2l-note}
+These pictures are the foundation for the **eigendecomposition** and the
+**SVD** in the sections that follow.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-hyperplane.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Vectors and their geometry]{.dtitle}
+
+[points, directions, dot products, projection]{.dsub}
+:::
+:::
+
+::: {.slide title="Two readings of a vector"}
+[Vectors]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The same array names a **point** (its coordinates) or a **direction** (an
+arrow that may start anywhere). Deep learning mostly uses the direction view:
 
 @geometry-linear-algebraic-ops-geometry-of-vectors
+
+Reading it as a direction makes **addition** visual: follow one arrow, then
+the next, tip to tail.
 :::
 
-::: {.slide title="Dot products and angles"}
-$\mathbf{u}^\top \mathbf{v} = \|\mathbf{u}\| \|\mathbf{v}\| \cos\theta$.
-Cosine similarity = normalized dot product. The metric
-behind kernel methods, attention, and contrastive
-learning:
+::: {.col .fig .big}
+![](../img/mdl-la-vectors.svg)
+:::
+:::
+:::
+
+::: {.slide title="Dot products and the angle"}
+[Vectors]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The dot product is tied to the **angle** between two vectors:
+
+$$\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\,\|\mathbf{w}\|\cos\theta.$$
+
+The law of cosines proves it in the plane the two vectors span, so it holds
+in *any* dimension. Solving for $\theta$:
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
 :::
 
-::: {.slide title="Span, basis, dimension"}
-- *Span*: everything reachable by scaling and adding a set of vectors.
-- *Basis*: an independent spanning set — every vector gets
-  **unique** coordinates.
-- *Dimension*: the size of any basis.
-- For a matrix: the *column space* is what it can produce,
-  the *null space* is what it destroys.
+::: {.col .fig}
+![](../img/mdl-la-angle.svg)
+:::
+:::
 :::
 
-::: {.slide title="Hyperplanes as classifiers"}
-A hyperplane is the set
-$\{\mathbf{x} : \mathbf{w}^\top \mathbf{x} = b\}$.
-Linear classifiers split space with one — sign of the dot
-product gives the prediction. Most of deep learning is
-"learn good features so a hyperplane works":
+::: {.slide title="Why the angle is always defined"}
+[Vectors]{.kicker}
 
-@geometry-linear-algebraic-ops-hyperplanes-1
+$\arccos$ only accepts inputs in $[-1, 1]$, so we need a guarantee.
+
+::: {.d2l-note .rule}
+**Cauchy–Schwarz.** $\;|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$, with equality iff $\mathbf{v}$ and $\mathbf{w}$ are collinear.
+:::
 
 . . .
 
-@geometry-linear-algebraic-ops-hyperplanes-2
+The proof needs only one fact: a squared length is never negative, so
+$q(t) = \|\mathbf{v} - t\mathbf{w}\|^2 \ge 0$ is a parabola that cannot dip
+below zero, forcing its discriminant $\le 0$. Dividing through shows the
+cosine never leaves $[-1, 1]$, so $\theta$ is always a genuine angle.
 :::
 
-::: {.slide title="Hyperplanes (cont.)"}
-Changing $\mathbf{w}$ rotates the boundary; changing $b$ shifts it.
-Normalized distance to the boundary is a margin. Projecting onto
-$\mathbf{w}$ shows the two classes as two humps split by the threshold:
+::: {.slide title="Projection and orthogonality"}
+[Vectors]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+How much of $\mathbf{v}$ points along $\mathbf{w}$? Drop $\mathbf{v}$ onto the
+line through $\mathbf{w}$:
+
+$$\operatorname{proj}_{\mathbf{w}}\mathbf{v}
+ = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w}.$$
+
+The residual $\mathbf{r}$ leaves at a **right angle**, so Cauchy–Schwarz is
+just "a leg is no longer than the hypotenuse." Two vectors are **orthogonal**
+when $\mathbf{v}\cdot\mathbf{w} = 0$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-projection.svg)
+:::
+:::
+:::
+
+::: {.slide title="Span, basis, dimension"}
+[Vectors]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Span**: everything reachable by scaling and adding a set of vectors.
+- **Basis**: an independent spanning set, so every vector gets **unique**
+  coordinates.
+- **Dimension**: the size of any basis.
+
+::: {.d2l-note}
+Two subspaces ride on every matrix: the **column space** is what it can
+produce, the **null space** is what it sends to zero.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-span.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Similarity in high dimensions]{.dtitle}
+
+[cosine similarity and near-orthogonality]{.dsub}
+:::
+:::
+
+::: {.slide title="Cosine similarity"}
+[High dimensions]{.kicker}
+
+Comparing direction, not magnitude, is often what we want: an image and a
+dimmed copy point the same way, so they should score as identical.
+
+$$\cos\theta = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|}
+ \;\in\; [-1, 1].$$
+
+. . .
+
+This is the signal behind **embedding retrieval**, the scaled dot products
+inside **attention**, and the alignment objective of **contrastive learning**.
+:::
+
+::: {.slide title="Random vectors are nearly orthogonal"}
+[High dimensions]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Drop two unrelated vectors into $\mathbb{R}^d$: what cosine do we expect?
+
+::: {.d2l-note .rule}
+For a random unit vector, $\;\mathbb{E}[\cos\theta] = 0$ and
+$\operatorname{Var}(\cos\theta) = \tfrac{1}{d}$.
+:::
+
+So the cosine concentrates at $0$ with width $1/\sqrt{d}$. A cosine well
+above $0$ is then unlikely to be an accident, which is exactly **why** cosine
+similarity is a useful signal.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-cosine-highd.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Hyperplanes and decision boundaries]{.dtitle}
+
+[the primitive every classifier shares]{.dsub}
+:::
+:::
+
+::: {.slide title="A hyperplane as a decision boundary"}
+[Hyperplanes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The set $\{\mathbf{x} : \mathbf{w}\cdot\mathbf{x} = b\}$ is a plane with
+**normal** $\mathbf{w}$, sitting at distance $b/\|\mathbf{w}\|$ from the
+origin. Sliding $b$ translates it without rotating.
+
+For any point, the **signed distance**
+$(\mathbf{w}\cdot\mathbf{x} - b)/\|\mathbf{w}\|$ is positive on one side and
+negative on the other. That number is exactly a linear classifier's **margin**.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-hyperplane.svg)
+:::
+:::
+:::
+
+::: {.slide title="A classifier with nothing trained"}
+[Hyperplanes]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Take Fashion-MNIST t-shirts and trousers. Average each class: the means are
+blurry but recognizable. The line between them, $\mathbf{w} = \overline{\mathbf{x}}_1 - \overline{\mathbf{x}}_0$, is our normal.
+:::
+
+::: {.col .fig .big}
+@!geometry-linear-algebraic-ops-hyperplanes-2
+:::
+:::
+:::
+
+::: {.slide title="One hyperplane, ~92% correct"}
+[Hyperplanes]{.kicker}
+
+Classify each $784$-dimensional image by the side it falls on, with the
+threshold at the midpoint of the two means' projections:
 
 @geometry-linear-algebraic-ops-hyperplanes-4
 
 . . .
 
-@geometry-linear-algebraic-ops-projection-histogram
+Over $2{,}000$ test images, this hand-built rule is right about **92%** of the
+time, and nothing was learned.
 :::
 
-::: {.slide title="Invertibility and determinant"}
-Square matrices are invertible iff they don't collapse
-volumes. The determinant measures the signed volume scale
-factor:
+::: {.slide title="The whole story in one projection"}
+[Hyperplanes]{.kicker}
 
-@geometry-linear-algebraic-ops-invertibility
+::: {.cols .vc}
+::: {.col .narrow}
+Reduce every image to one number, $\mathbf{w}\cdot\mathbf{x}$, its position
+along the normal. The two classes form two humps; the dashed threshold cuts
+between them.
+
+A *learned* classifier just tilts this boundary to trim the overlap; a deep
+net learns features that pull the humps apart.
+:::
+
+::: {.col .fig .big}
+@!geometry-linear-algebraic-ops-projection-histogram
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Matrices as linear maps]{.dtitle}
+
+[skew, rotate, scale, and the determinant]{.dsub}
+:::
+:::
+
+::: {.slide title="A matrix moves the whole grid"}
+[Linear maps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A matrix is fixed by where it sends the **basis vectors**, namely its columns.
+Every other vector follows as a weighted sum, so the entire grid is carried
+along: lines stay lines, the origin stays put, cells stay evenly spaced.
+
+::: {.d2l-note}
+Matrices cannot bend space, only **skew, rotate, and scale** it. Multiplying
+two matrices **composes** their maps.
+:::
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-la-linear-map.svg)
+:::
+:::
+:::
+
+::: {.slide title="Orthogonal matrices: the rigid motions"}
+[Linear maps]{.kicker}
+
+A square matrix is **orthogonal** when $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$.
+Such maps preserve every dot product, hence all **lengths and angles**:
+
+$$(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y})
+ = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\,\mathbf{y}
+ = \mathbf{x}\cdot\mathbf{y}.$$
 
 . . .
+
+They are the pure rotations and reflections: the distortion-free building
+blocks of both the spectral theorem and the SVD.
+:::
+
+::: {.slide title="The determinant is signed area"}
+[Linear maps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The unit square maps to a parallelogram; its **signed area** is $\det\mathbf{A}$.
+The sign records orientation, and a **zero** determinant means space was
+crushed to a lower dimension.
+
+For our grid matrix, $\det = 1\cdot3 - 2\cdot(-1) = 5$:
 
 @geometry-linear-algebraic-ops-determinant
 :::
 
-::: {.slide title="Einstein summation"}
-One rule: sum over every repeated index —
-$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$.
-A single `einsum` string expresses dot products, matrix–vector and
-matrix–matrix products, and traces, in every framework:
+::: {.col .fig}
+![](../img/mdl-la-determinant.svg)
+:::
+:::
+:::
+
+::: {.slide title="One equivalence ties it together"}
+[Linear maps]{.kicker}
+
+::: {.d2l-note .rule}
+For a square matrix: $\det\mathbf{A} = 0$ $\iff$ the columns are linearly
+dependent $\iff$ $\mathbf{A}$ is **not** invertible.
+:::
+
+. . .
+
+When it *is* invertible, $\mathbf{A}^{-1}$ undoes the map. We confirm the
+$2\times2$ formula by multiplying back to the identity:
+
+@geometry-linear-algebraic-ops-invertibility
+
+::: {.d2l-note .warn}
+In practice prefer `linalg.solve(A, b)` over `inv(A) @ b`: it is more stable
+and never forms the (often dense) inverse.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Einstein summation]{.dtitle}
+
+[one rule for every product]{.dsub}
+:::
+:::
+
+::: {.slide title="Sum over the repeated index"}
+[Einstein notation]{.kicker}
+
+Dot products, matrix–vector, matrix–matrix, and traces are one pattern:
+multiply entries, then sum the index that appears twice.
+
+$$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}\,b_{jk}.$$
+
+. . .
+
+`einsum` makes the index string the whole definition, and the second entry
+below reproduces our worked example $\mathbf{A}\mathbf{v} = [0, -5]^\top$:
 
 @geometry-linear-algebraic-ops-expressing-in-code-2
 :::
 
 ::: {.slide title="Recap"}
-- Vectors as directions; dot products = cosine
-  similarity; matrices = linear maps; determinant =
-  volume scale.
-- Hyperplanes are the decision-boundary primitive of every
-  linear classifier and every linear layer.
-- These geometric pictures keep being useful all the way
-  up to attention and high-dim embeddings.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- A vector is a **point or a direction**; the **dot product** gives angles.
+- **Cauchy–Schwarz** makes the angle well-defined; **projection** splits a
+  vector into parallel + orthogonal parts.
+- In high dimensions, random directions are **nearly orthogonal**, which is
+  why cosine similarity works.
+:::
+
+::: {.col}
+- A **hyperplane** is the decision boundary of every linear classifier.
+- A **matrix** skews, rotates, and scales; the **determinant** is its volume
+  scale, zero exactly when it collapses space.
+- **Einstein notation** writes every product as one index pattern.
+:::
+:::
+
+::: {.d2l-note}
+These pictures carry straight into the **eigendecomposition** and the **SVD**,
+and all the way up to attention and embeddings.
+:::
 :::

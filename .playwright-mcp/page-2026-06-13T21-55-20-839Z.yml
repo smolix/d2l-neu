@@ -1,0 +1,240 @@
+- generic [active] [ref=e1]:
+  - application [ref=e2]:
+    - generic:
+      - heading "A regression rigged to overfit" [level=1] [ref=e4]
+      - generic:
+        - generic:
+          - heading [level=1]: Weight Decay
+          - generic:
+            - paragraph:
+              - generic: Dive into Deep Learning · §3.7
+            - paragraph:
+              - text: Taming overfitting by
+              - strong: shrinking the weights
+              - text: Weight decay, the
+              - generic:
+                - generic:
+                  - generic:
+                    - math:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: ℓ
+                            - generic: "2"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - text: ℓ
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic: "2"
+              - text: penalty, and why a smaller weight vector means a simpler model.
+        - generic:
+          - heading [level=2]: When more data is not an option
+          - paragraph:
+            - generic: Motivation
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - text: Overfitting fades with
+                  - strong: more data
+                  - text: — but data is often costly or fixed.
+                - listitem:
+                  - text: Dropping features is
+                  - strong: too blunt
+                  - text: ": with"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: k
+                      - generic:
+                        - generic: k
+                  - text: inputs there are
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: (
+                              - generic:
+                                - generic:
+                                  - generic: k
+                                  - generic: −
+                                  - generic: "1"
+                                  - generic: +
+                                  - generic: d
+                                - generic:
+                                  - generic: k
+                                  - generic: −
+                                  - generic: "1"
+                              - generic: )
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: (
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic: k−1
+                                    - generic:
+                                      - generic: k−1+d
+                            - generic: )
+                  - text: degree-
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: d
+                      - generic:
+                        - generic: d
+                  - text: monomials.
+                - listitem:
+                  - text: Instead,
+                  - strong: restrict the values
+                  - text: the weights may take.
+              - generic:
+                - paragraph:
+                  - text: Among all
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: f
+                      - generic:
+                        - generic: f
+                  - text: ", the constant"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: f
+                              - generic: =
+                              - generic: "0"
+                      - generic:
+                        - generic: f =
+                        - generic: "0"
+                  - text: is the
+                  - emphasis: simplest
+                  - text: . Measure complexity by
+                  - strong: how far the weights sit from zero
+                  - text: .
+            - generic:
+              - paragraph:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - math:
+                          - generic:
+                            - generic:
+                              - generic: ∥
+                              - generic: w
+                              - generic:
+                                - generic: ∥
+                                - generic: "2"
+                                - generic: "2"
+                              - generic: =
+                              - generic:
+                                - generic: ∑
+                                - generic: i
+                              - generic:
+                                - generic: w
+                                - generic: i
+                                - generic: "2"
+                      - generic:
+                        - generic:
+                          - text: ∥w
+                          - generic:
+                            - text: ∥
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: "2"
+                                    - generic: "2"
+                          - text: =
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: i
+                                  - generic: ∑
+                          - generic:
+                            - text: w
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: i
+                                    - generic: "2"
+              - paragraph: A single number that grows as the weights stretch away from the origin.
+        - text: In In In In In Out In Out In In Out
+    - link [ref=e6] [cursor=pointer]:
+      - /url: "#"
+    - generic [ref=e8]:
+      - generic "Toggle Chalkboard (b)" [ref=e9] [cursor=pointer]
+      - generic "Toggle Notes Canvas (c)" [ref=e11] [cursor=pointer]
+    - link "1 / 16" [ref=e19] [cursor=pointer]:
+      - /url: "#/title-slide"
+    - text: Speaker notes
+    - generic [ref=e21]: A regression rigged to overfit
+  - navigation [ref=e22]:
+    - list [ref=e23]:
+      - listitem [ref=e24] [cursor=pointer]: Slides
+      - listitem [ref=e26] [cursor=pointer]: Tools
+      - listitem [ref=e28] [cursor=pointer]: Close
+    - list [ref=e31]:
+      - listitem [ref=e32] [cursor=pointer]: A regression rigged to overfit
+      - listitem [ref=e33] [cursor=pointer]: Weight Decay
+      - listitem [ref=e34] [cursor=pointer]: When more data is not an option
+      - listitem [ref=e35] [cursor=pointer]: Add the size of the weights to the loss
+      - listitem [ref=e36] [cursor=pointer]: Ridge shrinks, lasso selects
+      - listitem [ref=e37] [cursor=pointer]: Why it is called weight decay
+      - listitem [ref=e38] [cursor=pointer]: 01 From Scratch a...
+      - listitem [ref=e39] [cursor=pointer]: Setup
+      - listitem [ref=e40] [cursor=pointer]: The penalty, then the model
+      - listitem [ref=e41] [cursor=pointer]: "\\lambda = 0: the model overfits"
+      - listitem [ref=e42] [cursor=pointer]: "\\lambda = 3: generalization wins"
+      - listitem [ref=e43] [cursor=pointer]: 02 The Built-In Way...
+      - listitem [ref=e44] [cursor=pointer]: Decay lives in the optimizer
+      - listitem [ref=e45] [cursor=pointer]: Same effect, less code
+      - listitem [ref=e46] [cursor=pointer]: Two readings worth keeping
+      - listitem [ref=e47] [cursor=pointer]: Summary
+  - navigation [ref=e48]:
+    - link "Dive into Deep Learning" [ref=e50] [cursor=pointer]:
+      - /url: ../../../index.html
+      - img "Dive into Deep Learning" [ref=e51]
+    - list [ref=e52]:
+      - listitem [ref=e53]:
+        - link "Book Chapter" [ref=e54] [cursor=pointer]:
+          - /url: ../../../index.html
+      - listitem [ref=e55]:
+        - link "Slides" [ref=e56] [cursor=pointer]:
+          - /url: ../../index.html
+      - listitem [ref=e57]:
+        - link "Courses" [ref=e58] [cursor=pointer]:
+          - /url: https://courses.d2l.ai
+      - listitem [ref=e59]:
+        - link "GitHub" [ref=e60] [cursor=pointer]:
+          - /url: https://github.com/smolix/d2l-neu
+      - listitem [ref=e61]:
+        - link "Discuss" [ref=e62] [cursor=pointer]:
+          - /url: https://d2l.discourse.group
+  - button "Presenter view" [ref=e63] [cursor=pointer]:
+    - img [ref=e64]

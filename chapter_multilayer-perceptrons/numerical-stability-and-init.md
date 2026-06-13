@@ -469,158 +469,231 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 
 <!-- slides -->
 
-::: {.slide title="Why initialization matters"}
-**Why was deep learning hard before 2012?** Nobody could
-*train* deep networks reliably — gradients either died at
-zero or blew up to infinity.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.4]{.kicker}
 
-Three ingredients fixed it:
-
-1. **Non-saturating activations** — ReLU and friends.
-2. **Careful weight initialization** — Xavier, Kaiming.
-3. **Symmetry breaking** — random init, not zero init.
-
-This deck makes the failure modes concrete.
+Numerical stability & **initialization**<br>Why deep nets once refused to train, and the variance rule that fixed them.
+:::
 :::
 
-::: {.slide title="The chain rule turns the gradient into a product"}
-For an $L$-layer network with hidden states
-$\mathbf{h}^{(1)}, \mathbf{h}^{(2)}, \ldots$, the gradient
-of the loss with respect to a weight in layer $\ell$ is
+::: {.slide title="Why does the starting point matter so much?"}
+[Motivation]{.kicker}
 
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^{(\ell)}} =
-\underbrace{\frac{\partial \mathcal{L}}{\partial \mathbf{h}^{(L)}}}_{\text{loss}}
-\cdot \underbrace{\frac{\partial \mathbf{h}^{(L)}}{\partial \mathbf{h}^{(L-1)}}}_{\mathbf{M}_L}
-\cdots
-\underbrace{\frac{\partial \mathbf{h}^{(\ell+1)}}{\partial \mathbf{h}^{(\ell)}}}_{\mathbf{M}_{\ell+1}}
-\cdot \frac{\partial \mathbf{h}^{(\ell)}}{\partial \mathbf{W}^{(\ell)}}.$$
+::: {.cols .vc}
+::: {.col}
+A deep net composes many layers before any loss is seen. The **initial**
+weights decide whether a signal survives the trip, forward and back.
 
-It's a **product** of $L - \ell$ Jacobian matrices. Two
-ways this product can misbehave:
+Three ideas made deep training routine:
 
-- All Jacobians have spectral radius $< 1$ → product
-  shrinks geometrically → **vanishing gradient**.
-- All Jacobians have spectral radius $> 1$ → product
-  grows geometrically → **exploding gradient**.
+1. **Non-saturating activations** (ReLU).
+2. **Variance-preserving init** (Xavier, He).
+3. **Symmetry breaking** (random, never constant).
+
+::: {.d2l-note}
+Get init wrong and the gradient either **dies** at zero or **blows up** to NaN before learning starts.
+:::
 :::
 
-::: {.slide title="Setup"}
-@numerical-stability-and-init-numerical-stability-and-initialization
+::: {.col .fig}
+![A 2-layer MLP: input $\to$ affine + ReLU $\to$ hidden $\to$ affine $\to$ logits.](../img/mdl-mlp-arch.svg){width=78%}
+:::
+:::
 :::
 
-::: {.slide title="Vanishing — sigmoid is the culprit"}
-@numerical-stability-and-init-vanishing-gradients
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-The sigmoid's derivative peaks at $\sigma'(0) = 0.25$ and
-collapses to zero at the tails. In a 10-layer stack
-$0.25^{10} \approx 10^{-6}$ — gradients at layer 1 are a
-*millionth* of those near the output. ReLU fixes this:
-derivative is exactly 1 wherever the unit is active.
+[Unstable Gradients]{.dtitle}
+
+[why the chain rule makes depth dangerous]{.dsub}
+:::
 :::
 
-::: {.slide title="Exploding — random-matrix products"}
-Multiply 100 random $4\times4$ Gaussian matrices and watch
-the entries:
+::: {.slide title="The gradient is a product down the chain"}
+[Unstable Gradients]{.kicker}
+
+Backprop multiplies one Jacobian per layer. For a weight in layer $\ell$,
+
+$$\partial_{\mathbf{W}^{(\ell)}} \mathbf{o} =
+\underbrace{\mathbf{M}^{(L)} \cdots \mathbf{M}^{(\ell+1)}}_{L-\ell \text{ Jacobians}}\,
+\mathbf{v}^{(\ell)},
+\qquad \mathbf{M}^{(k)} = \partial_{\mathbf{h}^{(k-1)}} \mathbf{h}^{(k)}.$$
+
+![Forward pass builds $z, h, o, L$; the backward sweep multiplies a gradient back through every node.](../img/mdl-mlp-backprop-graph.svg){width=86%}
+:::
+
+::: {.slide title="Two ways a long product misbehaves"}
+[Unstable Gradients]{.kicker}
+
+Whether the product grows or shrinks is set by the Jacobians' **scale**.
+
+. . .
+
+- Factors with spectral radius $< 1$ $\Rightarrow$ the product **shrinks geometrically** $\Rightarrow$ *vanishing* gradient: bottom layers stop learning.
+
+. . .
+
+- Factors with spectral radius $> 1$ $\Rightarrow$ the product **grows geometrically** $\Rightarrow$ *exploding* gradient: updates overshoot, loss goes to NaN.
+
+::: {.d2l-note .rule}
+A constant per-layer factor $\rho$ compounds to $\rho^{\,L-\ell}$. Only $\rho \approx 1$ stays usable across depth.
+:::
+:::
+
+::: {.slide title="Vanishing: the sigmoid saturates"}
+[Unstable Gradients · vanishing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The sigmoid's derivative **peaks at $0.25$** and is flat at zero in both tails.
+
+Stack ten such layers and $0.25^{10} \approx 10^{-6}$: the bottom layer sees a millionth of the gradient.
+
+::: {.d2l-note}
+ReLU's derivative is exactly **1** wherever a unit is active, so it does not attenuate the signal. Hence ReLU is the modern default.
+:::
+:::
+
+::: {.col .fig .big}
+@!numerical-stability-and-init-vanishing-gradients
+:::
+:::
+:::
+
+::: {.slide title="Exploding: a product of random matrices"}
+[Unstable Gradients · exploding]{.kicker}
+
+Multiply one hundred $\mathcal{N}(0,1)$ matrices: with variance $\sigma^2 = 1$ each factor is too large, so the entries run away.
 
 @numerical-stability-and-init-exploding-gradients
 
-Random Gaussian matrices have spectral radius $> 1$, so
-the product diverges. Same effect on gradients in a deep
-net with poorly scaled weights — loss goes to NaN in a
-few hundred steps.
+A poorly scaled initialization does exactly this to the gradient: entries near $10^{24}$ after a few hundred layers.
 :::
 
-::: {.slide title="Crash modes you'll actually see"}
-- **Loss spikes mid-training** — exploding gradient on a
-  bad batch.
-- **Loss is NaN from step 1** — exploding init.
-- **Loss won't go down** — vanishing gradient (or learning
-  rate too small).
+::: {.slide title="The three crashes you will actually see"}
+[Unstable Gradients · in practice]{.kicker}
+
+- **Loss is NaN from step 1** $\to$ exploding *initialization* (weights too large).
+
+. . .
+
+- **Loss spikes mid-training** $\to$ exploding gradient on a bad batch.
+
+. . .
+
+- **Loss refuses to drop** $\to$ vanishing gradient (saturated activations), or a learning rate that is simply too small.
 :::
 
-::: {.slide title="The fix: keep variance constant through depth"}
-Forward pass through a linear layer with $n_{\text{in}}$
-inputs:
+::: {.slide title="Random init breaks a hidden symmetry"}
+[Unstable Gradients · symmetry]{.kicker}
 
-$$o_i = \sum_{j=1}^{n_{\text{in}}} w_{ij}\, x_j.$$
+Set every weight in a layer to the same constant $c$:
 
-If $w_{ij} \sim \mathcal{N}(0, \sigma^2)$ and inputs are
-i.i.d. with variance $\gamma^2$:
+- Every hidden unit computes the **same** function.
+- Every unit gets the **same** gradient.
+- After each update the weights are **still** identical.
 
-$$\mathbb{E}[o_i] = 0,\quad
-\mathrm{Var}[o_i] = n_{\text{in}}\, \sigma^2\, \gamma^2.$$
+An $h$-unit layer is then stuck behaving like a **single** unit, forever.
 
-For variance to be preserved layer-to-layer ($\mathrm{Var}[o] = \gamma^2$):
-
-$$\boxed{\sigma^2 = \frac{1}{n_{\text{in}}}}.$$
-
-Same argument for the **backward** pass gives
-$\sigma^2 = 1/n_{\text{out}}$. Can't satisfy both — so
-**Xavier** averages them.
+::: {.d2l-note .warn}
+Gradient descent alone never breaks this tie. **Random** initialization does; so does dropout. Bias may still start at $0$.
+:::
 :::
 
-::: {.slide title="Xavier and Kaiming"}
-**Xavier / Glorot** (2010):
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-$$\sigma^2 = \frac{2}{n_{\text{in}} + n_{\text{out}}}.$$
+[Variance-Preserving Init]{.dtitle}
 
-Preserves variance both forward and backward.
-Designed for $\tanh$ / sigmoid.
-
-**Kaiming / He** (2015):
-
-$$\sigma^2 = \frac{2}{n_{\text{in}}}.$$
-
-Same idea, but compensates for ReLU *halving* the
-post-activation variance. Default for modern CNNs and
-Transformers.
-
-Both ship as defaults in every framework. Bias starts at 0.
+[keep the signal's scale constant through depth]{.dsub}
+:::
 :::
 
-::: {.slide title="Symmetry breaking"}
-Set every weight to the same constant $c$:
+::: {.slide title="Keep the variance constant, layer to layer"}
+[Initialization]{.kicker}
 
-- Every hidden unit in a layer computes the *same* thing.
-- Every gradient is the same.
-- After every update, the weights are *still* the same.
-- An $h$-unit layer behaves like a 1-unit layer forever.
+For a linear layer $o_i = \sum_{j=1}^{n_\textrm{in}} w_{ij} x_j$ with i.i.d. zero-mean weights ($\textrm{Var} = \sigma^2$) and inputs ($\textrm{Var} = \gamma^2$):
 
-Initialize **randomly** — even tiny noise breaks the
-permutation symmetry between hidden units. (SGD alone
-doesn't.)
+$$\mathbb{E}[o_i] = 0,
+\qquad
+\textrm{Var}[o_i] = n_\textrm{in}\, \sigma^2\, \gamma^2.$$
+
+. . .
+
+To carry the input's variance through unchanged ($\textrm{Var}[o] = \gamma^2$), the only knob is $\sigma^2$:
+
+$$\sigma^2 = \frac{1}{n_\textrm{in}}.$$
 :::
 
-::: {.slide title="Modern building blocks"}
-Init alone gets you "trains a 10-layer net without NaN".
-Modern best practice for hundreds of layers stacks more on
-top:
+::: {.slide title="Forward and backward disagree, so compromise"}
+[Initialization]{.kicker}
 
-- **BatchNorm / LayerNorm** — re-normalize activations to
-  unit variance *during* training, removing the burden from
-  init.
-- **Residual connections** — $h^{(\ell+1)} = h^{(\ell)} + f(h^{(\ell)})$
-  gives the gradient a direct path back, so the multiplicative
-  shrinkage doesn't compound.
-- **GroupNorm / RMSNorm** — variants robust to small
-  batch sizes / sequence models.
-- **Mixed-precision training** — keep master weights in
-  fp32 to avoid underflow even when activations are fp16.
+The same variance count run **backward** through $\mathbf{W}^\top$ sums over the $n_\textrm{out}$ outputs instead:
 
-The chapter on Modern CNNs revisits these.
+$$\text{forward: } n_\textrm{in}\,\sigma^2 = 1
+\qquad
+\text{backward: } n_\textrm{out}\,\sigma^2 = 1.$$
+
+Both cannot hold at once unless $n_\textrm{in} = n_\textrm{out}$, so **Xavier** splits the difference by averaging the two fan sizes.
+
+::: {.d2l-note .rule}
+Preserve the activation scale on the way in **and** the gradient scale on the way out: one $\sigma^2$, two demands.
+:::
+:::
+
+::: {.slide title="Xavier and He: one factor of two apart"}
+[Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Xavier / Glorot** (2010), for $\tanh$ and sigmoid:
+
+$$\sigma^2 = \frac{2}{n_\textrm{in} + n_\textrm{out}}.$$
+
+**He / Kaiming** (2015), for ReLU:
+
+$$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+ReLU zeroes half a symmetric signal, **halving** its variance, so He **doubles** the weight variance to compensate.
+:::
+
+Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as framework defaults.
+:::
+:::
+:::
+
+::: {.slide title="Init is the floor, not the ceiling"}
+[Beyond]{.kicker}
+
+Good init buys a deep net that trains without NaNs. To reach **hundreds** of layers, modern architecture re-normalizes *during* training:
+
+- **BatchNorm / LayerNorm** rescale activations to unit variance each step, lifting the burden off init.
+- **Residual connections** $\mathbf{h}^{(\ell+1)} = \mathbf{h}^{(\ell)} + f(\mathbf{h}^{(\ell)})$ give the gradient a shortcut, so shrinkage stops compounding.
+
+We return to both in the chapters on modern CNNs.
 :::
 
 ::: {.slide title="Recap"}
-- Gradients in a deep net are products of per-layer
-  Jacobians — they vanish or explode without care.
-- **Vanishing**: saturated activations (sigmoid/tanh) +
-  small weights → no gradient at the bottom layers.
-- **Exploding**: large weights → NaN.
-- Two complementary fixes: **non-saturating activations**
-  (ReLU) and **variance-preserving init** (Xavier /
-  Kaiming).
-- Random init breaks symmetry between units; zero init
-  collapses every hidden layer to a single neuron.
-- BatchNorm + residuals + careful init together get you
-  to 100+ layers reliably.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- A deep gradient is a **product of per-layer Jacobians** — it vanishes or explodes without care.
+- **Vanishing:** saturating activations (sigmoid/tanh) crush the signal; ReLU keeps it.
+- **Exploding:** over-large weights drive the product, and the loss, to NaN.
+:::
+
+::: {.col}
+- **Fix the scale:** init weights so $\textrm{Var}$ is preserved — **Xavier** ($\tanh$) and **He** (ReLU).
+- **Break the symmetry:** random init, never a constant.
+- **At scale:** normalization + residuals + careful init together reach 100+ layers.
+:::
+:::
 :::

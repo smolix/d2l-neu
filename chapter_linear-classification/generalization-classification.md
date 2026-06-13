@@ -592,3 +592,314 @@ in :numref:`sec_generalization_deep`.
 1. What is the VC dimension of axis-aligned rectangles on two-dimensional data?
 
 [Discussions](https://d2l.discourse.group/t/6829)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · Linear Classification]{.kicker}
+
+**Generalization** in Classification<br>How much should you trust a test score, and can we ever guarantee generalization *before* we see the data?
+:::
+:::
+
+::: {.slide title="Memorizing is not learning"}
+[Why this matters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Train accuracy is **free**: on distinct inputs a model can memorize every
+label on epoch one, then look them up.
+
+The score we care about is the **population error**, on data we never
+trained on. Three questions stand between us and trusting it:
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+1. How many test points pin down the error?
+2. What if we reuse the same test set?
+3. Why expect a *trained* model to beat memorizing at all?
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Test Set]{.dtitle}
+
+[what a held-out score can, and cannot, tell you]{.dsub}
+:::
+:::
+
+::: {.slide title="Two errors: one we measure, one we want"}
+[The Test Set]{.kicker}
+
+On a *fresh* set $\mathcal{D}$ of $n$ points, the **empirical error** is the
+miss rate we can compute; the **population error** is the one we actually
+care about, over the whole distribution, which we never see:
+
+$$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\!\left(f(\mathbf{x}^{(i)}) \neq y^{(i)}\right)
+\qquad\text{vs.}\qquad
+\epsilon(f) = E_{(\mathbf{x},y)\sim P}\,\mathbf{1}\!\left(f(\mathbf{x}) \neq y\right).$$
+
+::: {.d2l-note}
+For a **fixed** $f$, the test miss rate is just a **sample mean** of a
+$\{0,1\}$ random variable: an *unbiased* estimate of $\epsilon(f)$.
+:::
+:::
+
+::: {.slide title="The square-root law of test error"}
+[The Test Set · convergence]{.kicker}
+
+The indicator $\mathbf{1}(f(X)\neq Y)$ is **Bernoulli**. By the central limit
+theorem the test error concentrates on the true error, with standard
+deviation shrinking as $\sigma/\sqrt{n}$:
+
+$$\epsilon_\mathcal{D}(f) \approx \epsilon(f) \pm \mathcal{O}(1/\sqrt{n}).$$
+
+. . .
+
+::: {.d2l-note .rule}
+The $\sqrt{n}$ tax: **2× the precision costs 4× the data**; 10× the
+precision costs 100×. This rate is usually the best statistics can offer.
+:::
+:::
+
+::: {.slide title="So how big a test set?"}
+[The Test Set · sample size]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A Bernoulli variance is largest at error $0.5$, so it is capped:
+$\sigma^2=\epsilon(1-\epsilon)\le 0.25$.
+
+Want **95% confidence** that $\epsilon_\mathcal{D}(f)$ lands within
+$\pm 0.01$ of $\epsilon(f)$? Fit two standard deviations in that window:
+
+$$2\sqrt{0.25/n}\le 0.01 \;\Longrightarrow\; n\approx 10{,}000.$$
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+This is *exactly* the test-set size of many famous benchmarks, and why a
+$0.01$ improvement can be a real result.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Asymptotics vs. an honest finite-sample bound"}
+[The Test Set · finite samples]{.kicker}
+
+The $\sqrt{n}$ law is asymptotic. Because the loss is bounded, **Hoeffding's
+inequality** gives a guarantee that holds at *any* $n$:
+
+$$P\!\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\!\left(-2nt^2\right).$$
+
+. . .
+
+::: {.d2l-note}
+Same target ($\pm 0.01$ at 95%), honest finite-sample answer:
+$n\approx 18{,}500$ vs. the asymptotic $10{,}000$. Guarantees that hold for
+*every* $n$ are a bit more conservative, but in the same ballpark.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Reusing the Test Set]{.dtitle}
+
+[why a held-out set decays the moment you peek twice]{.dsub}
+:::
+:::
+
+::: {.slide title="The 3am idea"}
+[Test-Set Reuse]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+You evaluate model $f_1$ once, by the book, and report a clean confidence
+interval. That night you dream up $f_2$, tune it, and it *looks* better.
+
+Now you reach for the final evaluation, and realize: you **no longer have a
+test set**. The data is still on disk, but it is no longer pristine.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+Every score you read off a held-out set leaks a little of it. Read it
+enough times and nothing is held out.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Two ways reuse betrays you"}
+[Test-Set Reuse]{.kicker}
+
+::: {.cols}
+::: {.col}
+**False discovery.** One classifier has a 5% chance of a misleading score.
+Test 20 of them and you have little power to rule out that *one* looks good
+by chance. This is multiple hypothesis testing.
+:::
+
+::: {.col}
+**Adaptive overfitting.** $f_2$ was chosen *after* you saw $f_1$'s test
+score, so the choice depends on the test set. Once that information leaks to
+the modeler, it is no longer a true test set.
+:::
+:::
+:::
+
+::: {.slide title="Treat a test set as a scarce resource"}
+[Test-Set Reuse · in practice]{.kicker}
+
+The worst-case theory is bleak, but real life is usually kinder. Hygiene
+that keeps you honest:
+
+::: {.d2l-note .rule}
+- Curate a **real** test set; consult it as **rarely** as possible.
+- **Correct** confidence intervals for multiple comparisons.
+- Be most careful when **stakes are high** and the set is **small**.
+- Run rounds: **demote** each spent test set to a validation set.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Statistical Learning Theory]{.dtitle}
+
+[guaranteeing generalization *a priori*, from the model class alone]{.dsub}
+:::
+:::
+
+::: {.slide title="The a-priori dream: uniform convergence"}
+[Learning Theory]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A test set is *post hoc*: it tells you a model generalized, never that it
+*should*. Learning theory wants a guarantee from the **model class**
+$\mathcal{F}$ alone.
+
+The dream is **uniform convergence**: with probability $\ge 1-\delta$,
+*every* $f\in\mathcal{F}$ has its empirical error close to its true error at
+once. Then minimizing training error is safe.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+A single fixed $f$ always generalizes. The danger is **picking** one out of
+many that got a lucky score.
+:::
+:::
+:::
+:::
+
+::: {.slide title="The complexity trade-off"}
+[Learning Theory]{.kicker}
+
+Whether uniform convergence can hold depends entirely on how flexible
+$\mathcal{F}$ is:
+
+. . .
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .warn}
+**Memorizers** are *too flexible*: zero training error, no generalization.
+No uniform-convergence result can save them.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note}
+A **single fixed** $f$ generalizes perfectly but fits nothing. Useful models
+live in between: flexible enough to fit, rigid enough to generalize.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Shattering: when can a line realize any labeling?" layout="figure"}
+[Learning Theory · VC dimension]{.kicker}
+
+A class **shatters** a set of points if it can realize *every* $\pm$ labeling
+of them. A line in the plane shatters any **3** points, but no line realizes
+the **XOR** labeling of **4**.
+
+![All $2^3=8$ labelings of 3 points are linearly separable (left); the XOR labeling of 4 points is not (right). So plane lines shatter 3 points but not 4.](../img/mdl-clf-shattering.svg){width=82%}
+:::
+
+::: {.slide title="VC dimension and the VC bound"}
+[Learning Theory · the bound]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The **VC dimension** is the largest set a class can shatter. Lines in the
+plane: $3$. Linear models in $d$ dimensions: $d+1$.
+
+Vapnik and Chervonenkis bound the gap by VC dimension and sample size:
+
+$$\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < c\sqrt{(\mathrm{VC}-\log\delta)/n}$$
+
+with probability $\ge 1-\delta$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+Fix the class and $\delta$: the gap shrinks at the familiar
+$\mathcal{O}(1/\sqrt{n})$ rate, now *uniformly* over the whole class.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Why this breaks for deep networks"}
+[Learning Theory · the paradox]{.kicker}
+
+VC bounds are gorgeous theory, but for deep nets they are essentially
+**vacuous**: they demand absurd sample counts (perhaps trillions).
+
+::: {.d2l-note .warn}
+A deep net can fit **random labels**, so its VC dimension is enormous, yet it
+generalizes well on real data, and often *better* as it gets larger and
+deeper. Classical complexity measures do not explain this.
+:::
+
+The mystery of deep-network generalization returns in
+:numref:`sec_generalization_deep`.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Test set** = an unbiased estimate of the true error; it converges at
+  $\mathcal{O}(1/\sqrt{n})$. About **10k** points give $\pm 0.01$ at 95%.
+- **Asymptotic vs finite:** Hoeffding is honest at any $n$, and a little more
+  conservative (~18.5k).
+- **Reuse decays it:** false discovery + adaptive overfitting. Treat a test
+  set as scarce.
+:::
+
+::: {.col}
+- **Learning theory** seeks *a-priori* guarantees via **uniform convergence**
+  over a class $\mathcal{F}$.
+- **VC dimension** = largest shatterable set ($d+1$ for linear); it bounds the
+  gap, again at $\mathcal{O}(1/\sqrt{n})$.
+- **Deep nets** defy these bounds, generalizing despite huge capacity, a
+  puzzle we revisit later.
+:::
+:::
+:::

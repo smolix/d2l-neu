@@ -1041,104 +1041,345 @@ rates), and its conditioning consequences continue in
 
 <!-- slides -->
 
-::: {.slide title="Constrained Optimization and Duality"}
-One idea, three guises: at a constrained optimum there is **no
-feasible descent direction**.
+::: {.slide}
+::: {.cover}
+[Mathematics for Deep Learning · Optimization]{.kicker}
 
-- Equality constraints → Lagrange multipliers,
-  $\nabla f = -\nu \nabla g$
-- Inequality constraints → the KKT conditions
-- Convex feasible sets → projections and projected GD
-
-And every multiplier is a *price*: what relaxing its constraint
-is worth.
+Reading a constrained problem and its dual<br>**Lagrange multipliers · KKT · projections · duality**.
+:::
 :::
 
-::: {.slide title="Lagrange: gradients align"}
-Slide along the constraint while $\nabla f$ has a tangential
-component, and $f$ drops. At the optimum the level set *kisses*
-the constraint --- gradients parallel:
+::: {.slide title="One idea, three guises"}
+[Motivation]{.kicker}
 
-$$\nabla f(\mathbf{x}^\star) + \nu^\star \nabla g(\mathbf{x}^\star) = \mathbf{0}$$
+::: {.cols .vc}
+::: {.col}
+At an unconstrained minimum the gradient vanishes. At a *constrained*
+minimum it need not, but there is **no feasible descent direction**: no
+move that both stays feasible and lowers $f$.
 
-valid wherever $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ (the
-constraint qualification):
+- **Equality** constraints give Lagrange multipliers, $\nabla f = -\nu\,\nabla g$.
+- **Inequality** constraints give the KKT conditions.
+- **Convex** feasible sets make it an algorithm: projected gradient descent.
 
+::: {.d2l-note}
+Every multiplier is a **price**: what relaxing its constraint is worth.
+:::
+:::
+
+::: {.col .fig}
 @fig:mdl-opt-lagrange-tangency
 :::
+:::
+:::
 
-::: {.slide title="KKT: pricing the active set"}
-$$\mathcal{L} = f + \textstyle\sum_i \lambda_i g_i + \sum_j \nu_j h_j, \qquad \lambda_i \ge 0$$
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-Stationarity + feasibility + $\lambda_i \ge 0$ +
-**complementary slackness** $\lambda_i g_i = 0$: each constraint
-is active ($g_i = 0$) or free ($\lambda_i = 0$). $-\nabla f$ lies
-in the cone of active normals:
+[Lagrange multipliers]{.dtitle}
 
-@fig:mdl-opt-kkt-active-set
+[equality constraints and tangency]{.dsub}
+:::
+:::
+
+::: {.slide title="No feasible descent forces tangency"}
+[Lagrange]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Where a level set of $f$ *crosses* the constraint, $\nabla f$ has a
+component **along** it, so sliding feasibly lowers $f$. Only where the
+curves are **tangent** does every feasible move stall, and tangency of
+the curves means their normals are parallel:
+
+$$\nabla f(\mathbf{x}^\star) + \nu^\star\,\nabla g(\mathbf{x}^\star) = \mathbf{0}.$$
+
+Valid wherever $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$, the
+**constraint qualification**.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-lagrange-tangency
+:::
+:::
+:::
+
+::: {.slide title="The Lagrangian packages it"}
+[Lagrange]{.kicker}
+
+Parallel gradients *and* feasibility become joint stationarity of one
+function of more variables:
+
+$$\mathcal{L}(\mathbf{x}, \nu) = f(\mathbf{x}) + \nu\, g(\mathbf{x}),
+\qquad
+\nabla_{\mathbf{x}}\mathcal{L} = \mathbf{0},\;\; \partial_\nu \mathcal{L} = g = 0.$$
 
 . . .
 
-Convex problem + KKT point ⇒ **global** optimum (three-line proof).
+Closest point on a hyperplane $\mathbf{a}^\top\mathbf{x} = b$: stationarity
+forces $\mathbf{x}$ *along the normal* $\mathbf{a}$, giving
+$\mathbf{x}^\star = \tfrac{b}{\|\mathbf{a}\|^2}\,\mathbf{a}$.
+
+::: {.d2l-note}
+Already a shadow price: $\partial p^\star/\partial b = -\nu^\star$. The
+multiplier tracks how the optimum moves when the constraint moves.
+:::
 :::
 
-::: {.slide title="Projections and projected GD"}
-$\Pi_C(\mathbf{y})$ = nearest feasible point. Projections are
-**nonexpansive**, so
-$\mathbf{x} \leftarrow \Pi_C(\mathbf{x} - \eta \nabla f(\mathbf{x}))$
-keeps GD's guarantees; its fixed points are the constrained optima.
-KKT solves the simplex projection in closed form up to one
-threshold --- sort, shift, clip (= sparsemax):
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-@constrained-simplex-projection
+[The KKT conditions]{.dtitle}
+
+[inequalities and the active set]{.dsub}
+:::
 :::
 
-::: {.slide title="Duality: bounds for free"}
-$$g(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu})$$
+::: {.slide title="Active, inactive, and a one-way push"}
+[KKT]{.kicker}
 
-- *Always concave* (inf of affine functions) --- even for
-  non-convex primals
-- **Weak duality**: $d^\star \le p^\star$ --- every dual point
-  certifies a lower bound
-- **Slater**: convex + strictly feasible point ⇒ $d^\star = p^\star$
-- Shadow prices: $\lambda_i^\star = -\partial p^\star / \partial u_i$
+::: {.cols .vc}
+::: {.col}
+With $g_i(\mathbf{x}) \le 0$, each constraint is **inactive**
+($g_i < 0$, locally irrelevant) or **active** ($g_i = 0$, pushing back
+like an equality). At the optimum $-\nabla f$ is a *nonnegative*
+combination of the active outward normals, in their **cone**.
 
+An inequality multiplier carries a sign: $\lambda_i \ge 0$. It can push
+*one way only*, into the feasible side.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-kkt-active-set
+:::
+:::
+:::
+
+::: {.slide title="Four conditions, one workhorse"}
+[KKT]{.kicker}
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .rule}
+**Stationarity:** $\nabla f + \sum_i \lambda_i \nabla g_i + \sum_j \nu_j \nabla h_j = \mathbf{0}$
+
+**Primal feas.:** $g_i \le 0,\;\; h_j = 0$
+
+**Dual feas.:** $\lambda_i \ge 0$
+
+**Comp. slackness:** $\lambda_i\, g_i = 0$
+:::
+:::
+
+::: {.col}
+**Complementary slackness** *finds the active set*: for each $i$, either
+$g_i = 0$ (active, $\lambda_i$ free) or $\lambda_i = 0$ (slack, priced at
+zero). The pattern of zero multipliers tells you which constraints shaped
+the answer.
+:::
+:::
+
+. . .
+
+Convex $f, g_i$ and affine $h_j$: a KKT point is a **global** minimum, by
+a three-line convexity argument. KKT *is* the answer.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Projections]{.dtitle}
+
+[making constraints an algorithm]{.dsub}
+:::
+:::
+
+::: {.slide title="Project, then it is an algorithm"}
+[Projections]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\Pi_C(\mathbf{y})$ is the nearest feasible point. On a convex set it is
+**nonexpansive** ($\|\Pi_C\mathbf{x} - \Pi_C\mathbf{y}\| \le \|\mathbf{x} - \mathbf{y}\|$),
+so appending it keeps gradient descent's guarantees:
+
+$$\mathbf{x}_{t+1} = \Pi_C\!\left(\mathbf{x}_t - \eta\,\nabla f(\mathbf{x}_t)\right).$$
+
+Its **fixed points are exactly the constrained optima**, equivalent to KKT.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+You have run **PGD** in disguise: gradient **clipping** projects onto a
+ball; non-negativity is a projection onto the orthant; max-norm weight
+caps project each row.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Simplex projection = sort, shift, clip"}
+[Projections]{.kicker}
+
+Projecting onto $\{\mathbf{x} \ge 0,\, \sum_i x_i = 1\}$ is a QP the KKT
+conditions solve in closed form up to one threshold $\tau$:
+
+$$x_i^\star = \max(y_i - \tau,\, 0),
+\qquad \textstyle\sum_i \max(y_i - \tau,\, 0) = 1.$$
+
+Soft-threshold then renormalize. This is **sparsemax**: genuinely sparse
+attention weights, with complementary slackness choosing the zeros.
+
+@!constrained-simplex-projection
+
+::: {.d2l-note}
+Three coordinates came back **exactly zero**, the active sign constraints;
+every KKT residual sits at machine precision.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Duality]{.dtitle}
+
+[bounds for free, and shadow prices]{.dsub}
+:::
+:::
+
+::: {.slide title="The dual function: bounds for free"}
+[Duality]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Minimize the Lagrangian over $\mathbf{x}$ to promote the multipliers to
+variables:
+
+$$g(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x}}\, \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}).$$
+
+- *Always concave* (an infimum of affine functions), **even for a
+  non-convex primal**.
+- **Weak duality**: $d^\star \le p^\star$ always. Every dual point
+  *certifies* a lower bound.
+:::
+
+::: {.col .fig}
 @fig:mdl-opt-primal-dual-gap
 :::
-
-::: {.slide title="The SVM dual, solved by projected ascent"}
-Max margin ⇒ QP; eliminate $(\mathbf{w}, b)$ from the Lagrangian:
-
-$$\max_{\boldsymbol{\alpha} \succeq 0} \textstyle\sum_i \alpha_i - \tfrac12 \sum_{i,j} \alpha_i \alpha_j y_i y_j \mathbf{x}_i^\top \mathbf{x}_j$$
-
-Support vectors = active constraints ($\alpha_i > 0$ ⇔ margin
-exactly 1). Projected gradient ascent + clip solves it; primal =
-dual to machine precision:
-
-@constrained-svm-dual
+:::
 :::
 
-::: {.slide title="Water-filling and a visible gap"}
-KKT on the power-allocation problem: pour power into the quiet
-channels until a common level $w$; $\mu = 1/w$ is the *measured*
-marginal value of power:
+::: {.slide title="Strong duality and shadow prices"}
+[Duality]{.kicker}
 
-@constrained-water-filling
+::: {.cols}
+::: {.col}
+**Slater:** convex problem $+$ one strictly feasible point $\Rightarrow$
+$d^\star = p^\star$, the gap closes.
 
-. . .
+The dual is *always convex*, often the easier problem, and at strong
+duality solving it *solves the primal*.
+:::
 
-And when convexity fails, weak duality survives but the gap can
-be real --- here $p^\star = -\tfrac14$, $d^\star = -\tfrac12$:
+::: {.col}
+::: {.d2l-note .rule}
+**Shadow price:**
 
-@constrained-duality-gap
+$$\lambda_i^\star = -\frac{\partial p^\star}{\partial u_i}.$$
+
+Relax constraint $i$ by a unit and the optimum improves by $\lambda_i^\star$.
+:::
+:::
+:::
+
+Slack constraints cost nothing; only binding ones command a price.
+:::
+
+::: {.slide title="Worked: the SVM dual"}
+[Duality at work]{.kicker}
+
+Eliminate $(\mathbf{w}, b)$ from the max-margin Lagrangian and the dual is
+a concave QP over the orthant, made for projected gradient *ascent*:
+
+$$\max_{\boldsymbol{\alpha} \succeq 0}\;\; \mathbf{1}^\top \boldsymbol{\alpha} - \tfrac12 \boldsymbol{\alpha}^\top Q\, \boldsymbol{\alpha},
+\qquad
+\boldsymbol{\alpha} \leftarrow \max(\mathbf{0},\, \boldsymbol{\alpha} + \eta\,(\mathbf{1} - Q\boldsymbol{\alpha})).$$
+
+@!constrained-svm-dual
+
+::: {.d2l-note}
+The four nonzero $\alpha_i$ are exactly the points at **margin 1**, the
+support vectors. Primal meets dual at $10^{-16}$: strong duality, observed.
+:::
+:::
+
+::: {.slide title="Worked: water-filling"}
+[Duality at work]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Allocate power across noisy channels. KKT pours power until every wet
+channel reaches a **common level** $w$, leaving high-noise channels dry:
+
+$$p_i^\star = \max(w - n_i,\, 0),
+\qquad \textstyle\sum_i \max(w - n_i, 0) = P.$$
+
+Bisection on $w$ finds it. The multiplier $\mu = 1/w$ is the marginal
+value of power, measured here by finite differences.
+:::
+
+::: {.col .fig}
+@!constrained-water-filling
+:::
+:::
+:::
+
+::: {.slide title="A duality gap you can see"}
+[Duality at work]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Weak duality never fails; strong duality can. Minimize the *concave*
+$f_0 = -x^2$ on $[0,1]$ s.t. $x \le \tfrac12$:
+
+$$p^\star = -\tfrac14, \qquad d^\star = -\tfrac12.$$
+
+A strictly feasible point exists, yet the gap is real: Slater certifies
+strong duality only for **convex** problems.
+:::
+
+::: {.col .fig}
+@!constrained-duality-gap
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- No feasible descent ⇒ Lagrange / KKT; complementary slackness
-  finds the active set.
-- Projections are nonexpansive; projected GD = GD + snap back.
-- Dual: always concave, always a lower bound; Slater closes the
-  gap; multipliers are shadow prices.
-- SVM dual and water-filling: duality you can run; non-convexity:
-  a gap you can see.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- A constrained optimum has **no feasible descent direction**, made
+  precise by Lagrange and **KKT**; complementary slackness finds the
+  active set.
+- **Projections** onto convex sets are nonexpansive; projected GD is
+  gradient descent plus a snap back to feasibility.
+:::
+
+::: {.col}
+- The **dual** is always concave and always a lower bound; Slater closes
+  the gap; multipliers are **shadow prices**.
+- **SVM dual** and **water-filling** are duality you can run;
+  non-convexity leaves a gap you can see.
+:::
+:::
+
+::: {.d2l-note}
+Many sub-problems of deep learning, projections, clipped updates,
+last-layer fits, live inside this convex toolkit.
+:::
 :::

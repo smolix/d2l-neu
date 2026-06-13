@@ -1,0 +1,833 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - heading "A regression rigged to overfit" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - heading "Weight Decay" [level=1] [ref=e8]
+        - generic [ref=e9]:
+          - paragraph [ref=e10]: Dive into Deep Learning · §3.7
+          - paragraph [ref=e11]:
+            - text: Taming overfitting by
+            - strong [ref=e12]: shrinking the weights
+            - text: Weight decay, the
+            - generic [ref=e14]:
+              - math [ref=e16]:
+                - generic [ref=e19]:
+                  - generic [ref=e20]: ℓ
+                  - generic [ref=e21]: "2"
+              - generic [ref=e24]:
+                - text: ℓ
+                - generic [ref=e29]: "2"
+            - text: penalty, and why a smaller weight vector means a simpler model.
+      - generic [ref=e33]:
+        - heading "When more data is not an option" [level=2] [ref=e34]
+        - paragraph [ref=e35]: Motivation
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - list [ref=e38]:
+              - listitem [ref=e39]:
+                - text: Overfitting fades with
+                - strong [ref=e40]: more data
+                - text: — but data is often costly or fixed.
+              - listitem [ref=e41]:
+                - text: Dropping features is
+                - strong [ref=e42]: too blunt
+                - text: ": with"
+                - generic [ref=e44]:
+                  - math [ref=e46]:
+                    - generic [ref=e49]: k
+                  - generic [ref=e51]: k
+                - text: inputs there are
+                - generic [ref=e53]:
+                  - math [ref=e55]:
+                    - generic [ref=e57]:
+                      - generic [ref=e58]: (
+                      - generic [ref=e59]:
+                        - generic [ref=e60]:
+                          - generic [ref=e61]: k
+                          - generic [ref=e62]: −
+                          - generic [ref=e63]: "1"
+                          - generic [ref=e64]: +
+                          - generic [ref=e65]: d
+                        - generic [ref=e66]:
+                          - generic [ref=e67]: k
+                          - generic [ref=e68]: −
+                          - generic [ref=e69]: "1"
+                      - generic [ref=e70]: )
+                  - generic [ref=e73]:
+                    - generic [ref=e74]: (
+                    - generic [ref=e78]:
+                      - generic [ref=e80]: k−1
+                      - generic [ref=e82]: k−1+d
+                    - generic [ref=e86]: )
+                - text: degree-
+                - generic [ref=e88]:
+                  - math [ref=e90]:
+                    - generic [ref=e93]: d
+                  - generic [ref=e95]: d
+                - text: monomials.
+              - listitem [ref=e96]:
+                - text: Instead,
+                - strong [ref=e97]: restrict the values
+                - text: the weights may take.
+            - paragraph [ref=e99]:
+              - text: Among all
+              - generic [ref=e101]:
+                - math [ref=e103]:
+                  - generic [ref=e106]: f
+                - generic [ref=e108]: f
+              - text: ", the constant"
+              - generic [ref=e110]:
+                - math [ref=e112]:
+                  - generic [ref=e114]:
+                    - generic [ref=e115]: f
+                    - generic [ref=e116]: =
+                    - generic [ref=e117]: "0"
+                - generic [ref=e118]:
+                  - generic [ref=e119]: f =
+                  - generic [ref=e120]: "0"
+              - text: is the
+              - emphasis [ref=e121]: simplest
+              - text: . Measure complexity by
+              - strong [ref=e122]: how far the weights sit from zero
+              - text: .
+          - generic [ref=e123]:
+            - paragraph [ref=e124]:
+              - generic [ref=e127]:
+                - math [ref=e129]:
+                  - generic [ref=e131]:
+                    - generic [ref=e132]: ∥
+                    - generic [ref=e133]: w
+                    - generic [ref=e134]:
+                      - generic [ref=e135]: ∥
+                      - generic [ref=e136]: "2"
+                      - generic [ref=e137]: "2"
+                    - generic [ref=e138]: =
+                    - generic [ref=e139]:
+                      - generic [ref=e140]: ∑
+                      - generic [ref=e141]: i
+                    - generic [ref=e142]:
+                      - generic [ref=e143]: w
+                      - generic [ref=e144]: i
+                      - generic [ref=e145]: "2"
+                - generic [ref=e146]:
+                  - generic [ref=e147]:
+                    - text: ∥w
+                    - generic [ref=e148]:
+                      - text: ∥
+                      - generic [ref=e152]:
+                        - generic [ref=e153]: "2"
+                        - generic [ref=e154]: "2"
+                    - text: =
+                  - generic [ref=e158]:
+                    - generic [ref=e162]:
+                      - generic [ref=e163]: i
+                      - generic [ref=e164]: ∑
+                    - generic [ref=e168]:
+                      - text: w
+                      - generic [ref=e172]:
+                        - generic [ref=e173]: i
+                        - generic [ref=e174]: "2"
+            - paragraph [ref=e178]: A single number that grows as the weights stretch away from the origin.
+      - generic [ref=e179]:
+        - heading "Add the size of the weights to the loss" [level=2] [ref=e180]
+        - paragraph [ref=e181]: The idea
+        - paragraph [ref=e182]:
+          - text: Penalize a large weight vector by adding its squared norm to the objective, scaled by a knob
+          - generic [ref=e184]:
+            - math [ref=e186]:
+              - generic [ref=e188]:
+                - generic [ref=e189]: λ
+                - generic [ref=e190]: ≥
+                - generic [ref=e191]: "0"
+            - generic [ref=e192]:
+              - generic [ref=e193]: λ ≥
+              - generic [ref=e194]: "0"
+          - text: ":"
+        - paragraph [ref=e195]:
+          - generic [ref=e198]:
+            - math [ref=e200]:
+              - generic [ref=e202]:
+                - generic [ref=e203]: L
+                - generic [ref=e204]: (
+                - generic [ref=e205]: w
+                - generic [ref=e206]: ","
+                - generic [ref=e207]: b
+                - generic [ref=e208]: )
+                - generic [ref=e209]: +
+                - generic [ref=e210]:
+                  - generic [ref=e211]: λ
+                  - generic [ref=e212]: "2"
+                - generic [ref=e213]: ∥
+                - generic [ref=e214]: w
+                - generic [ref=e215]:
+                  - generic [ref=e216]: ∥
+                  - generic [ref=e217]: "2"
+                  - generic [ref=e218]: "2"
+                - generic [ref=e219]: .
+            - generic [ref=e220]:
+              - generic [ref=e221]: L(w, b) +
+              - generic [ref=e222]:
+                - generic [ref=e227]:
+                  - generic [ref=e228]: "2"
+                  - generic [ref=e230]: λ
+                - text: ∥w
+                - generic [ref=e234]:
+                  - text: ∥
+                  - generic [ref=e238]:
+                    - generic [ref=e239]: "2"
+                    - generic [ref=e240]: "2"
+                - text: .
+        - generic [ref=e244]:
+          - list [ref=e245]:
+            - listitem [ref=e246]:
+              - generic [ref=e248]:
+                - math [ref=e250]:
+                  - generic [ref=e252]:
+                    - generic [ref=e253]: λ
+                    - generic [ref=e254]: =
+                    - generic [ref=e255]: "0"
+                - generic [ref=e256]:
+                  - generic [ref=e257]: λ =
+                  - generic [ref=e258]: "0"
+              - text: recovers the plain loss; larger
+              - generic [ref=e260]:
+                - math [ref=e262]:
+                  - generic [ref=e265]: λ
+                - generic [ref=e267]: λ
+              - text: pulls
+              - generic [ref=e269]:
+                - math [ref=e271]:
+                  - generic [ref=e274]: w
+                - generic [ref=e276]: w
+              - text: harder toward zero.
+            - listitem [ref=e277]:
+              - text: The
+              - generic [ref=e279]:
+                - math [ref=e281]:
+                  - generic [ref=e285]:
+                    - generic [ref=e286]: "1"
+                    - generic [ref=e287]: "2"
+                - generic [ref=e294]:
+                  - generic [ref=e296]: "2"
+                  - generic [ref=e299]: "1"
+              - text: "is cosmetic: it cancels the"
+              - generic [ref=e304]:
+                - math [ref=e306]:
+                  - generic [ref=e309]: "2"
+                - generic [ref=e311]: "2"
+              - text: from differentiating the square.
+          - paragraph [ref=e313]:
+            - generic [ref=e315]:
+              - math [ref=e317]:
+                - generic [ref=e320]:
+                  - generic [ref=e321]: ℓ
+                  - generic [ref=e322]: "2"
+              - generic [ref=e325]:
+                - text: ℓ
+                - generic [ref=e330]: "2"
+            - text: "-regularized linear regression is the classic"
+            - strong [ref=e334]: ridge regression
+            - text: ; the
+            - generic [ref=e336]:
+              - math [ref=e338]:
+                - generic [ref=e341]:
+                  - generic [ref=e342]: ℓ
+                  - generic [ref=e343]: "1"
+              - generic [ref=e346]:
+                - text: ℓ
+                - generic [ref=e351]: "1"
+            - text: version is
+            - strong [ref=e355]: lasso
+            - text: .
+      - generic [ref=e356]:
+        - heading "Ridge shrinks, lasso selects" [level=2] [ref=e357]
+        - paragraph [ref=e358]: The geometry
+        - paragraph [ref=e359]:
+          - text: A budget
+          - generic [ref=e361]:
+            - math [ref=e363]:
+              - generic [ref=e365]:
+                - generic [ref=e366]: ∥
+                - generic [ref=e367]: w
+                - generic [ref=e368]: ∥
+                - generic [ref=e369]: ≤
+                - generic [ref=e370]: t
+            - generic [ref=e371]:
+              - generic [ref=e372]: ∥w∥ ≤
+              - generic [ref=e373]: t
+          - text: turns the penalty into a
+          - emphasis [ref=e374]: constraint
+          - text: ": the answer is where a loss contour first touches the constraint region."
+        - img
+        - paragraph [ref=e375]:
+          - text: Loss contours centred on the unconstrained optimum
+          - generic [ref=e377]:
+            - math [ref=e379]:
+              - generic [ref=e382]:
+                - generic [ref=e383]: w
+                - generic [ref=e384]: ^
+            - generic [ref=e390]:
+              - generic [ref=e391]: w
+              - text: ^
+          - text: grow until they meet the constraint at
+          - generic [ref=e393]:
+            - math [ref=e395]:
+              - generic [ref=e398]:
+                - generic [ref=e399]: w
+                - generic [ref=e400]: ⋆
+            - generic [ref=e403]:
+              - text: w
+              - generic [ref=e408]: ⋆
+          - text: . Left (
+          - generic [ref=e410]:
+            - math [ref=e412]:
+              - generic [ref=e415]:
+                - generic [ref=e416]: ℓ
+                - generic [ref=e417]: "2"
+            - generic [ref=e420]:
+              - text: ℓ
+              - generic [ref=e425]: "2"
+          - text: "ball): contact is tangential, so both coordinates shrink. Right ("
+          - generic [ref=e430]:
+            - math [ref=e432]:
+              - generic [ref=e435]:
+                - generic [ref=e436]: ℓ
+                - generic [ref=e437]: "1"
+            - generic [ref=e440]:
+              - text: ℓ
+              - generic [ref=e445]: "1"
+          - text: "diamond): contact is at a corner, forcing"
+          - generic [ref=e450]:
+            - math [ref=e452]:
+              - generic [ref=e455]:
+                - generic [ref=e456]: w
+                - generic [ref=e457]: "2"
+            - generic [ref=e460]:
+              - text: w
+              - generic [ref=e465]: "2"
+          - text: to exactly zero.
+        - paragraph [ref=e470]:
+          - text: A round ball touches
+          - strong [ref=e471]: off-axis
+          - text: (everything shrinks); a pointed diamond touches at a
+          - strong [ref=e472]: corner
+          - text: (sparsity). This is why lasso does feature selection and ridge does not.
+      - generic [ref=e473]:
+        - heading "Why it is called weight decay" [level=2] [ref=e474]
+        - paragraph [ref=e475]: The update
+        - generic [ref=e476]:
+          - generic [ref=e477]:
+            - paragraph [ref=e478]:
+              - text: The penalty adds
+              - generic [ref=e480]:
+                - math [ref=e482]:
+                  - generic [ref=e484]:
+                    - generic [ref=e485]: λ
+                    - generic [ref=e486]: w
+                - generic [ref=e488]: λw
+              - text: "to the gradient, so each SGD step gains a shrink factor:"
+            - paragraph [ref=e489]:
+              - generic [ref=e492]:
+                - math [ref=e494]:
+                  - generic [ref=e496]:
+                    - generic [ref=e497]: w
+                    - generic [ref=e498]: ←
+                    - generic [ref=e499]: (
+                    - generic [ref=e500]: "1"
+                    - generic [ref=e501]: −
+                    - generic [ref=e502]: η
+                    - generic [ref=e503]: λ
+                    - generic [ref=e504]: )
+                    - generic [ref=e505]: w
+                    - generic [ref=e506]: −
+                    - generic [ref=e507]:
+                      - generic [ref=e508]: η
+                      - generic [ref=e509]:
+                        - generic [ref=e510]: ∣
+                        - generic [ref=e511]: B
+                        - generic [ref=e512]: ∣
+                    - text: ⁣
+                    - generic [ref=e513]:
+                      - generic [ref=e514]: ∑
+                      - generic [ref=e515]:
+                        - generic [ref=e516]: i
+                        - generic [ref=e517]: ∈
+                        - generic [ref=e518]: B
+                    - generic [ref=e519]:
+                      - generic [ref=e520]: x
+                      - generic [ref=e521]:
+                        - generic [ref=e522]: (
+                        - generic [ref=e523]: i
+                        - generic [ref=e524]: )
+                    - generic [ref=e525]: (
+                    - generic [ref=e526]:
+                      - generic [ref=e527]: w
+                      - generic [ref=e528]: ⊤
+                    - generic [ref=e529]:
+                      - generic [ref=e530]: x
+                      - generic [ref=e531]:
+                        - generic [ref=e532]: (
+                        - generic [ref=e533]: i
+                        - generic [ref=e534]: )
+                    - generic [ref=e535]: +
+                    - generic [ref=e536]: b
+                    - generic [ref=e537]: −
+                    - generic [ref=e538]:
+                      - generic [ref=e539]: "y"
+                      - generic [ref=e540]:
+                        - generic [ref=e541]: (
+                        - generic [ref=e542]: i
+                        - generic [ref=e543]: )
+                    - generic [ref=e544]: )
+                    - generic [ref=e545]: .
+                - generic [ref=e546]:
+                  - generic [ref=e547]: w ←
+                  - generic [ref=e548]: (1 −
+                  - generic [ref=e549]: ηλ) w −
+                  - generic [ref=e550]:
+                    - generic [ref=e555]:
+                      - generic [ref=e556]: ∣B∣
+                      - generic [ref=e558]: η
+                    - generic [ref=e565]:
+                      - generic [ref=e567]: i∈B
+                      - generic [ref=e568]: ∑
+                    - generic [ref=e572]:
+                      - text: x
+                      - generic [ref=e578]: (i)
+                    - generic [ref=e579]: (
+                    - generic [ref=e580]:
+                      - text: w
+                      - generic [ref=e585]: ⊤
+                    - generic [ref=e586]:
+                      - text: x
+                      - generic [ref=e592]: (i)
+                    - text: +
+                  - generic [ref=e593]: b −
+                  - generic [ref=e594]:
+                    - generic [ref=e595]:
+                      - text: "y"
+                      - generic [ref=e601]: (i)
+                    - generic [ref=e602]: )
+                    - text: .
+            - paragraph [ref=e603]:
+              - text: Before fitting the data at all, every weight is
+              - strong [ref=e604]: decayed
+              - text: toward zero by the factor
+              - generic [ref=e606]:
+                - math [ref=e608]:
+                  - generic [ref=e610]:
+                    - generic [ref=e611]: "1"
+                    - generic [ref=e612]: −
+                    - generic [ref=e613]: η
+                    - generic [ref=e614]: λ
+                - generic [ref=e615]:
+                  - generic [ref=e616]: 1 −
+                  - generic [ref=e617]: ηλ
+              - text: .
+          - generic [ref=e618]:
+            - paragraph [ref=e620]:
+              - generic [ref=e622]:
+                - math [ref=e624]:
+                  - generic [ref=e627]: λ
+                - generic [ref=e629]: λ
+              - text: is a
+              - strong [ref=e630]: continuous
+              - text: complexity dial — unlike deleting features, it never forces a hard choice.
+            - paragraph [ref=e632]:
+              - text: Usually the
+              - strong [ref=e633]: bias is left undecayed
+              - text: .
+      - generic [ref=e635]:
+        - paragraph [ref=e636]: "01"
+        - paragraph [ref=e637]: From Scratch
+        - paragraph [ref=e638]: a problem built to overfit, then regularized
+      - generic [ref=e639]:
+        - heading "Setup" [level=2] [ref=e640]
+        - paragraph [ref=e641]: From Scratch
+        - paragraph [ref=e642]: "One import cell brings in the framework and the d2l helpers used throughout:"
+        - generic [ref=e644]:
+          - code [ref=e647]:
+            - generic [ref=e648]: "%matplotlib inline"
+            - generic [ref=e649]: from d2l import torch as d2l
+            - generic [ref=e650]: import torch
+            - generic [ref=e651]: from torch import nn
+          - button "Copy to Clipboard" [ref=e652]
+        - paragraph [ref=e653]: From Scratch
+        - generic [ref=e654]:
+          - generic [ref=e655]:
+            - paragraph [ref=e656]:
+              - text: The label is a tiny linear signal in
+              - strong [ref=e657]: 200 inputs
+              - text: ", plus faint noise:"
+            - paragraph [ref=e658]:
+              - generic [ref=e661]:
+                - math [ref=e663]:
+                  - generic [ref=e665]:
+                    - generic [ref=e666]: "y"
+                    - generic [ref=e667]: =
+                    - generic [ref=e668]: "0.05"
+                    - generic [ref=e669]: +
+                    - generic [ref=e670]:
+                      - generic [ref=e671]: ∑
+                      - generic [ref=e672]:
+                        - generic [ref=e673]: i
+                        - generic [ref=e674]: =
+                        - generic [ref=e675]: "1"
+                      - generic [ref=e676]: "200"
+                    - generic [ref=e677]: "0.01"
+                    - generic [ref=e678]:
+                      - generic [ref=e679]: x
+                      - generic [ref=e680]: i
+                    - generic [ref=e681]: +
+                    - generic [ref=e682]: ϵ
+                    - generic [ref=e683]: ","
+                    - generic [ref=e684]: ϵ
+                    - generic [ref=e685]: ∼
+                    - generic [ref=e686]: "N"
+                    - generic [ref=e687]: (
+                    - generic [ref=e688]: "0"
+                    - generic [ref=e689]: ","
+                    - generic [ref=e690]:
+                      - generic [ref=e691]: "0.01"
+                      - generic [ref=e692]: "2"
+                    - generic [ref=e693]: )
+                    - generic [ref=e694]: .
+                - generic [ref=e695]:
+                  - generic [ref=e696]: y =
+                  - generic [ref=e697]: 0.05 +
+                  - generic [ref=e698]:
+                    - generic [ref=e702]:
+                      - generic [ref=e704]: i=1
+                      - generic [ref=e705]: ∑
+                      - generic [ref=e707]: "200"
+                    - text: "0.01"
+                    - generic [ref=e711]:
+                      - text: x
+                      - generic [ref=e716]: i
+                    - text: +
+                  - generic [ref=e720]: ϵ, ϵ ∼
+                  - generic [ref=e721]:
+                    - text: N(0, 0.0
+                    - generic [ref=e722]:
+                      - text: "1"
+                      - generic [ref=e727]: "2"
+                    - text: ).
+            - generic [ref=e729]:
+              - code [ref=e732]:
+                - generic [ref=e733]: "class Data(d2l.DataModule):"
+                - generic [ref=e734]: "def __init__(self, num_train, num_val, num_inputs, batch_size):"
+                - generic [ref=e735]: self.save_hyperparameters()
+                - generic [ref=e736]: n = num_train + num_val
+                - generic [ref=e737]: self.X = d2l.randn(n, num_inputs)
+                - generic [ref=e738]: noise = d2l.randn(n, 1) * 0.01
+                - generic [ref=e739]: w, b = d2l.ones((num_inputs, 1)) * 0.01, 0.05
+                - generic [ref=e740]: self.y = d2l.matmul(self.X, w) + b + noise
+                - generic [ref=e741]: "def get_dataloader(self, train):"
+                - generic [ref=e742]: i = slice(0, self.num_train) if train else slice(self.num_train, None)
+                - generic [ref=e743]: return self.get_tensorloader([self.X, self.y], train, i)
+              - button "Copy to Clipboard" [ref=e744]
+          - paragraph [ref=e747]:
+            - text: Only
+            - strong [ref=e748]: "20"
+            - text: training examples for
+            - strong [ref=e749]: "200"
+            - text: parameters — ten times more knobs than data points. Overfitting is guaranteed.
+      - generic [ref=e750]:
+        - heading "The penalty, then the model" [level=2] [ref=e751]
+        - paragraph [ref=e752]: From Scratch
+        - generic [ref=e753]:
+          - generic [ref=e754]:
+            - paragraph [ref=e755]: "The penalty is a single line:"
+            - generic [ref=e757]:
+              - code [ref=e760]:
+                - generic [ref=e761]: "def l2_penalty(w):"
+                - generic [ref=e762]: return d2l.reduce_sum(w**2) / 2
+              - button "Copy to Clipboard" [ref=e763]
+            - paragraph [ref=e764]: "Subclass the scratch regressor and fold it into the loss:"
+            - generic [ref=e766]:
+              - code [ref=e769]:
+                - generic [ref=e770]: "class WeightDecayScratch(d2l.LinearRegressionScratch):"
+                - generic [ref=e771]: "def __init__(self, num_inputs, lambd, lr, sigma=0.01):"
+                - generic [ref=e772]: super().__init__(num_inputs, lr, sigma)
+                - generic [ref=e773]: self.save_hyperparameters()
+                - generic [ref=e775]: "def loss(self, y_hat, y):"
+                - generic [ref=e776]: return (super().loss(y_hat, y) +
+                - generic [ref=e777]: self.lambd * l2_penalty(self.w))
+              - button "Copy to Clipboard" [ref=e778]
+          - paragraph [ref=e781]:
+            - text: "Nothing else changes: same linear model, same squared loss. The penalty rides along, scaled by"
+            - code [ref=e782]: lambd
+            - text: .
+      - generic [ref=e783]:
+        - 'heading ": the model overfits" [level=2] [ref=e784]':
+          - generic [ref=e786]:
+            - math [ref=e788]:
+              - generic [ref=e790]:
+                - generic [ref=e791]: λ
+                - generic [ref=e792]: =
+                - generic [ref=e793]: "0"
+            - generic [ref=e794]:
+              - generic [ref=e795]: λ =
+              - generic [ref=e796]: "0"
+          - text: ": the model overfits"
+        - paragraph [ref=e797]: From Scratch · no decay
+        - generic [ref=e799]:
+          - code [ref=e802]:
+            - generic [ref=e803]: train_scratch(0)
+          - button "Copy to Clipboard" [ref=e804]
+        - figure [ref=e807]:
+          - paragraph [ref=e808]:
+            - img
+        - code [ref=e811]: "L2 norm of w: 0.009237665683031082 Consider using tensor.detach() first. (Triggered internally at ... print('L2 norm of w:', float(l2_penalty(model.w)))"
+        - paragraph [ref=e812]: Training loss plunges while validation loss stalls — and the weight norm is large. A textbook overfit.
+      - generic [ref=e813]:
+        - 'heading ": generalization wins" [level=2] [ref=e814]':
+          - generic [ref=e816]:
+            - math [ref=e818]:
+              - generic [ref=e820]:
+                - generic [ref=e821]: λ
+                - generic [ref=e822]: =
+                - generic [ref=e823]: "3"
+            - generic [ref=e824]:
+              - generic [ref=e825]: λ =
+              - generic [ref=e826]: "3"
+          - text: ": generalization wins"
+        - paragraph [ref=e827]: From Scratch · with decay
+        - generic [ref=e829]:
+          - code [ref=e832]:
+            - generic [ref=e833]: train_scratch(3)
+          - button "Copy to Clipboard" [ref=e834]
+        - figure [ref=e837]:
+          - paragraph [ref=e838]:
+            - img
+        - code [ref=e841]: "L2 norm of w: 0.0003676383930724114"
+        - paragraph [ref=e842]:
+          - text: Training loss is now
+          - emphasis [ref=e843]: higher
+          - text: ", but validation loss drops and the weight norm shrinks by an order of magnitude. That gap closing is the payoff."
+      - generic [ref=e845]:
+        - paragraph [ref=e846]: "02"
+        - paragraph [ref=e847]: The Built-In Way
+        - paragraph [ref=e848]: where the framework keeps the decay
+      - generic [ref=e849]:
+        - heading "Decay lives in the optimizer" [level=2] [ref=e850]
+        - paragraph [ref=e851]: Concise · PyTorch
+        - paragraph [ref=e852]:
+          - text: Pass
+          - code [ref=e853]: weight_decay
+          - text: "per parameter group — here only the weight is decayed, the bias is left alone:"
+        - generic [ref=e855]:
+          - code [ref=e858]:
+            - generic [ref=e859]: "class WeightDecay(d2l.LinearRegression):"
+            - generic [ref=e860]: "def __init__(self, wd, lr):"
+            - generic [ref=e861]: super().__init__(lr)
+            - generic [ref=e862]: self.save_hyperparameters()
+            - generic [ref=e863]: self.wd = wd
+            - generic [ref=e864]: "def configure_optimizers(self):"
+            - generic [ref=e865]: return torch.optim.SGD([
+            - generic [ref=e866]: "{'params': self.net.weight, 'weight_decay': self.wd},"
+            - generic [ref=e867]: "{'params': self.net.bias}], lr=self.lr)"
+          - button "Copy to Clipboard" [ref=e868]
+        - paragraph [ref=e870]:
+          - text: "No penalty term in the loss: the optimizer adds"
+          - generic [ref=e872]:
+            - math [ref=e874]:
+              - generic [ref=e876]:
+                - generic [ref=e877]: λ
+                - generic [ref=e878]: w
+            - generic [ref=e880]: λw
+          - text: to the gradient itself, for free.
+      - generic [ref=e881]:
+        - heading "Same effect, less code" [level=2] [ref=e882]
+        - paragraph [ref=e883]: Concise · result
+        - paragraph [ref=e884]:
+          - text: Fit with
+          - code [ref=e885]: wd = 3
+          - text: "— the validation curve and shrunken weight norm match the from-scratch run:"
+        - generic [ref=e887]:
+          - code [ref=e890]:
+            - generic [ref=e891]: model = WeightDecay(wd=3, lr=0.01)
+            - generic [ref=e892]: model.board.yscale='log'
+            - generic [ref=e893]: trainer.fit(model, data)
+            - generic [ref=e894]: print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
+          - button "Copy to Clipboard" [ref=e895]
+        - figure [ref=e898]:
+          - paragraph [ref=e899]:
+            - img
+        - code [ref=e902]: "L2 norm of w: 0.0006117779412306845"
+        - paragraph [ref=e904]:
+          - text: A framework’s
+          - code [ref=e905]: weight_decay
+          - text: adds
+          - generic [ref=e907]:
+            - math [ref=e909]:
+              - generic [ref=e911]:
+                - generic [ref=e912]: λ
+                - generic [ref=e913]: w
+            - generic [ref=e915]: λw
+          - text: to the
+          - emphasis [ref=e916]: gradient
+          - text: ", while the scratch penalty added"
+          - generic [ref=e918]:
+            - math [ref=e920]:
+              - generic [ref=e922]:
+                - generic [ref=e924]:
+                  - generic [ref=e925]: λ
+                  - generic [ref=e926]: "2"
+                - generic [ref=e927]: ∥
+                - generic [ref=e928]: w
+                - generic [ref=e929]:
+                  - generic [ref=e930]: ∥
+                  - generic [ref=e931]: "2"
+            - generic [ref=e933]:
+              - generic [ref=e938]:
+                - generic [ref=e940]: "2"
+                - generic [ref=e943]: λ
+              - text: ∥w
+              - generic [ref=e947]:
+                - text: ∥
+                - generic [ref=e952]: "2"
+          - text: to the
+          - emphasis [ref=e953]: loss
+          - text: — so the converged norms need not match exactly, only the effect.
+      - generic [ref=e954]:
+        - heading "Two readings worth keeping" [level=2] [ref=e955]
+        - paragraph [ref=e956]: Beyond linear models
+        - generic [ref=e957]:
+          - paragraph [ref=e960]:
+            - strong [ref=e961]: Adaptive optimizers.
+            - text: Inside an Adam-style update the loss penalty gets rescaled per coordinate and stops being uniform shrinkage.
+            - emphasis [ref=e962]: Decoupling
+            - text: it restores the intent — this is
+            - strong [ref=e963]: AdamW
+            - text: ", a default for large models."
+          - paragraph [ref=e966]:
+            - strong [ref=e967]: Bayesian view.
+            - text: The penalty is a Gaussian
+            - emphasis [ref=e968]: prior
+            - generic [ref=e970]:
+              - math [ref=e972]:
+                - generic [ref=e974]:
+                  - generic [ref=e975]: w
+                  - generic [ref=e976]: ∼
+                  - generic [ref=e977]: "N"
+                  - generic [ref=e978]: (
+                  - generic [ref=e979]: "0"
+                  - generic [ref=e980]: ","
+                  - generic [ref=e981]:
+                    - generic [ref=e982]: λ
+                    - generic [ref=e983]:
+                      - generic [ref=e984]: −
+                      - generic [ref=e985]: "1"
+                  - generic [ref=e986]: I
+                  - generic [ref=e987]: )
+              - generic [ref=e988]:
+                - generic [ref=e989]: w ∼
+                - generic [ref=e990]:
+                  - text: N(0,
+                  - generic [ref=e991]:
+                    - text: λ
+                    - generic [ref=e997]: −1
+                  - text: I)
+            - text: ", and the regularized fit is the"
+            - strong [ref=e998]: MAP
+            - text: estimate. A bigger
+            - generic [ref=e1000]:
+              - math [ref=e1002]:
+                - generic [ref=e1005]: λ
+              - generic [ref=e1007]: λ
+            - text: is a stronger prior belief that weights are small.
+        - paragraph [ref=e1008]: For deep networks we simply apply the same decay to every layer’s weights — a simple, effective default.
+      - generic [ref=e1009]:
+        - heading "Summary" [level=2] [ref=e1010]
+        - paragraph [ref=e1011]: Wrap-up
+        - generic [ref=e1012]:
+          - list [ref=e1014]:
+            - listitem [ref=e1015]:
+              - strong [ref=e1016]: Weight decay
+              - text: = original loss
+              - generic [ref=e1018]:
+                - math [ref=e1020]:
+                  - generic [ref=e1022]:
+                    - generic [ref=e1023]: +
+                    - generic [ref=e1025]:
+                      - generic [ref=e1026]: λ
+                      - generic [ref=e1027]: "2"
+                    - generic [ref=e1028]: ∥
+                    - generic [ref=e1029]: w
+                    - generic [ref=e1030]:
+                      - generic [ref=e1031]: ∥
+                      - generic [ref=e1032]: "2"
+                      - generic [ref=e1033]: "2"
+                - generic [ref=e1035]:
+                  - text: +
+                  - generic [ref=e1041]:
+                    - generic [ref=e1043]: "2"
+                    - generic [ref=e1046]: λ
+                  - text: ∥w
+                  - generic [ref=e1050]:
+                    - text: ∥
+                    - generic [ref=e1054]:
+                      - generic [ref=e1055]: "2"
+                      - generic [ref=e1056]: "2"
+              - text: .
+            - listitem [ref=e1060]:
+              - text: Per step it
+              - strong [ref=e1061]: shrinks
+              - text: the weights by
+              - generic [ref=e1063]:
+                - math [ref=e1065]:
+                  - generic [ref=e1067]:
+                    - generic [ref=e1068]: "1"
+                    - generic [ref=e1069]: −
+                    - generic [ref=e1070]: η
+                    - generic [ref=e1071]: λ
+                - generic [ref=e1072]:
+                  - generic [ref=e1073]: 1 −
+                  - generic [ref=e1074]: ηλ
+              - text: before the data update.
+            - listitem [ref=e1075]:
+              - generic [ref=e1077]:
+                - math [ref=e1079]:
+                  - generic [ref=e1082]: λ
+                - generic [ref=e1084]: λ
+              - text: is a continuous complexity dial; tune it on a
+              - strong [ref=e1085]: validation set
+              - text: .
+          - list [ref=e1087]:
+            - listitem [ref=e1088]:
+              - strong [ref=e1089]: "Geometry:"
+              - text: ridge shrinks (round ball), lasso selects (pointed diamond).
+            - listitem [ref=e1090]:
+              - text: Frameworks expose decay in the
+              - strong [ref=e1091]: optimizer
+              - text: (or layer / gradient transform).
+            - listitem [ref=e1092]:
+              - text: "Same idea scales up:"
+              - strong [ref=e1093]: AdamW
+              - text: for big models, a Gaussian
+              - strong [ref=e1094]: prior
+              - text: in disguise.
+  - navigation [ref=e1095]:
+    - link "Dive into Deep Learning" [ref=e1097] [cursor=pointer]:
+      - /url: ../../../index.html
+      - img "Dive into Deep Learning" [ref=e1098]
+    - list [ref=e1099]:
+      - listitem [ref=e1100]:
+        - link "Book Chapter" [ref=e1101] [cursor=pointer]:
+          - /url: ../../../index.html
+      - listitem [ref=e1102]:
+        - link "Slides" [ref=e1103] [cursor=pointer]:
+          - /url: ../../index.html
+      - listitem [ref=e1104]:
+        - link "Courses" [ref=e1105] [cursor=pointer]:
+          - /url: https://courses.d2l.ai
+      - listitem [ref=e1106]:
+        - link "GitHub" [ref=e1107] [cursor=pointer]:
+          - /url: https://github.com/smolix/d2l-neu
+      - listitem [ref=e1108]:
+        - link "Discuss" [ref=e1109] [cursor=pointer]:
+          - /url: https://d2l.discourse.group
+  - button "Presenter view" [ref=e1110]:
+    - img [ref=e1111]

@@ -762,95 +762,244 @@ curb overfitting, the first of many regularizers we will meet.
 
 <!-- slides -->
 
-::: {.slide title="Linear regression from scratch"}
-End-to-end linear regression with **nothing** but tensor ops:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.4]{.kicker}
 
-1. **Model** — a `Module` with `w` and `b` parameters and a
-   `forward`.
-2. **Loss** — squared error.
-3. **Optimizer** — minibatch SGD, written by hand.
-4. **Training loop** — the `Trainer`'s `fit_epoch`, also from
-   scratch.
-
-The next chapter does the same with `nn.LazyLinear` + `MSELoss` +
-`SGD` in two lines. This one shows what those two lines hide.
+Linear regression **from scratch**<br>Building a model, a loss, an optimizer, and a training loop with nothing but tensors and autograd.
 :::
 
-::: {.slide title="Parameters"}
-Initialize `w` randomly (small Gaussian), `b` at zero:
+The two-line `nn.Linear` + `MSELoss` of the next section hides four moving parts. We build every one of them by hand once, so that when we later customize a layer, a loss, or an optimizer, we know exactly what we are reaching into.
+:::
 
-@linear-regression-scratch-linear-regression-implementation-from-scratch
+::: {.slide title="Four parts, one object graph"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A trainable model is four pieces that fit together:
+
+1. a **model** holding parameters `w`, `b` and a `forward`,
+2. a **loss** scoring its predictions,
+3. an **optimizer** that nudges the parameters,
+4. a **training loop** that drives all three over the data.
+
+::: {.d2l-note}
+We slot them into the `Module` / `Trainer` / `DataModule` classes from :numref:`sec_oo-design`, so each piece has one obvious home.
+:::
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Model]{.dtitle}
+
+[parameters and the forward pass]{.dsub}
+:::
+:::
+
+::: {.slide title="Parameters: small random w, zero b"}
+[The Model]{.kicker}
+
+We need parameters before we can optimize them. Draw `w` from a tiny Gaussian (to break symmetry), set `b` to zero:
 
 @linear-regression-scratch-defining-the-model-1
 
-`requires_grad=True` (or the framework equivalent) so autograd
-tracks them.
+::: {.d2l-note}
+`requires_grad=True` (or the framework's equivalent) tells autograd to track `w` and `b` so their gradients can flow back from the loss.
+:::
 :::
 
-::: {.slide title="Forward pass"}
-The model is one matrix-vector product plus a bias —
-$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$:
+::: {.slide title="Forward pass: one matrix-vector product"}
+[The Model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The whole model is an affine map: multiply the feature matrix by the weights and add the bias.
+
+$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$$
 
 @linear-regression-scratch-defining-the-model-2
+
+::: {.d2l-note}
+$\mathbf{Xw}$ is a vector, $b$ a scalar; **broadcasting** adds $b$ to every entry.
+:::
 :::
 
-::: {.slide title="Loss"}
-Squared error per example, averaged across the batch:
+::: {.col .narrow}
+::: {.d2l-note .rule}
+This single line is the only "architecture" in linear regression. Deep nets just stack many of them with nonlinearities between.
+:::
+:::
+:::
+:::
 
-$$\ell(\hat{y}, y) = \tfrac{1}{2}(\hat{y} - y)^2.$$
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Loss & Optimizer]{.dtitle}
+
+[what to minimize, and how]{.dsub}
+:::
+:::
+
+::: {.slide title="Loss: mean squared error"}
+[Loss]{.kicker}
+
+Squared error per example, averaged over the minibatch:
+
+$$\ell(\hat{y}, y) = \tfrac{1}{2}\,(\hat{y} - y)^2$$
 
 @linear-regression-scratch-defining-the-loss-function
+
+::: {.d2l-note}
+The $\tfrac12$ makes the gradient just $\hat{y}-y$; averaging (not summing) keeps the step size independent of batch size.
+:::
 :::
 
-::: {.slide title="Optimizer: minibatch SGD"}
-The update rule
-$\theta \leftarrow \theta - \eta \nabla_\theta L$
-written out by hand:
+::: {.slide title="A stateless loss" only="jax"}
+[Loss · JAX]{.kicker}
+
+JAX/Flax modules **hold no parameters** of their own. The loss takes the parameter pytree explicitly and runs the forward pass through `state.apply_fn`, so `jax.grad` has something to differentiate:
+
+@linear-regression-scratch-defining-the-loss-function@jax
+
+::: {.d2l-note .rule}
+"Parameters in, loss out" is what makes the function pure, and therefore `jit`- and `grad`-friendly.
+:::
+:::
+
+::: {.slide title="The optimizer: minibatch SGD by hand" except="tensorflow,jax"}
+[Optimizer]{.kicker}
+
+The update rule $\;\theta \leftarrow \theta - \eta\,\nabla_\theta L\;$ is the entire algorithm. We walk the parameters and subtract the gradient, in place:
 
 @linear-regression-scratch-defining-the-optimization-algorithm-1
 
 . . .
 
-The model class wires it up in `configure_optimizers`:
+`configure_optimizers` hands the parameters to it:
 
 @linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
-::: {.slide title="Training step"}
-What happens once per minibatch — forward, loss, backward, step:
+::: {.slide title="Minibatch SGD: assign through Variables" only="tensorflow"}
+[Optimizer · TensorFlow]{.kicker}
 
-@linear-regression-scratch-training-1
-:::
+A `tf.Variable` is updated in place with `assign_sub`. The same rule $\theta \leftarrow \theta - \eta\,\nabla_\theta L$, applied to each (gradient, variable) pair:
 
-::: {.slide title="The whole epoch"}
-The `Trainer` walks the train and val loaders once per epoch,
-calling the steps:
-
-@linear-regression-scratch-training-2
+@linear-regression-scratch-defining-the-optimization-algorithm-1
 
 . . .
 
-Run training on the synthetic dataset:
-
-@linear-regression-scratch-training-3
+@linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
-::: {.slide title="Did it learn the right thing?"}
-We **know** the true `w` and `b` — compare with the learned
-values:
+::: {.slide title="Minibatch SGD as an Optax transform" only="jax"}
+[Optimizer · JAX]{.kicker}
+
+Optax expresses an optimizer as a pair of pure functions: `init` builds the state, `update` turns gradients into the increment $-\eta\,\mathbf{g}$. Our hand-rolled SGD wraps them in a `GradientTransformation`:
+
+@linear-regression-scratch-defining-the-optimization-algorithm-1
+
+::: {.d2l-note}
+`init` returns an empty state pytree, so even this from-scratch optimizer stays fully `jit`-traceable.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Training]{.dtitle}
+
+[the loop that ties it together]{.dsub}
+:::
+:::
+
+::: {.slide title="One minibatch: four steps, in order"}
+[Training]{.kicker}
+
+Strip away the bookkeeping and every step of training is the same four moves on a minibatch:
+
+1. **Zero** the gradients (autograd *accumulates* them).
+2. **Forward + loss**, with the gradient machinery recording.
+3. **Backward** to fill each parameter's gradient.
+4. **Update** the parameters, *outside* the gradient graph.
+
+. . .
+
+::: {.d2l-note .warn}
+Skip step 1 and stale gradients leak between batches; drop the no-grad guard in step 4 and the update itself gets differentiated.
+:::
+:::
+
+::: {.slide title="Reproducibility: fix the seed" only="pytorch"}
+[Training · PyTorch]{.kicker}
+
+So the run is repeatable, we seed the global RNG before building the model. The figures and recovered parameters on the next slides are exactly what this produces:
+
+@-linear-regression-scratch-training-seed
+:::
+
+::: {.slide title="Run it: loss falls to the noise floor"}
+[Training]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+We instantiate the model, the synthetic dataset from :numref:`sec_synthetic-regression-data`, and a `Trainer`, then fit for ten epochs at learning rate `0.03`:
+
+@-linear-regression-scratch-training-3
+
+The `fit` call drives the four-step loop over every minibatch and plots both losses live.
+:::
+
+::: {.col .fig .big}
+@!linear-regression-scratch-training-3
+
+::: {.d2l-note}
+Train and validation loss fall together and flatten near $\sigma^2/2$, with **no gap**: a 2-D linear model on 1000 points has no room to overfit.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Did it recover the true parameters?"}
+[Training]{.kicker}
+
+We synthesized the data, so we know the true $\mathbf{w}=[2,-3.4]$ and $b=4.2$. Compare them with what training learned:
 
 @linear-regression-scratch-training-4
 
-Tiny differences come from finite training data + noise; tighter
-than that requires either more data or a better optimizer.
+::: {.d2l-note}
+Off by less than $10^{-3}$. Exact recovery needs linearly independent features; in practice we care about accurate *prediction*, not recovering the truth.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- A `Module` for linear regression boils down to `__init__`,
-  `forward`, `loss`, `configure_optimizers`.
-- A hand-rolled SGD is ~10 lines.
-- The `Trainer.fit_epoch` glue is what pytorch / tensorflow /
-  jax / mxnet's training APIs hide.
-- Synthetic data lets us check that the optimizer recovered the
-  ground-truth parameters.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- A `Module` for linear regression is just `__init__`, `forward`, `loss`, `configure_optimizers`.
+- The **loss** is mean squared error; the **optimizer** is a ten-line minibatch SGD.
+:::
+
+::: {.col}
+- Training is one **four-step loop** (zero, forward, backward, update) run over minibatches.
+- Synthetic data let us confirm SGD **recovered the ground-truth** $\mathbf{w}, b$.
+:::
+:::
+
+::: {.d2l-note}
+Next: the same model in two lines of framework API, then richer losses, optimizers, and regularizers built on this skeleton.
+:::
 :::

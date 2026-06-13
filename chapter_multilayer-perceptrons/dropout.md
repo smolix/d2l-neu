@@ -574,168 +574,305 @@ seed for a family of stochastic-regularization methods.
 
 <!-- slides -->
 
-::: {.slide title="Dropout regularizes by thinning"}
-**Dropout** (Srivastava, Hinton et al., 2014) is the
-simplest and most widely used regularizer for neural
-networks:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.6]{.kicker}
 
-> *During training, set each hidden unit to zero
-> independently with probability* $p$. *Rescale the
-> survivors by* $1/(1-p)$. *Turn it off at test time.*
-
-Counterintuitive — we actively damage the network
-mid-training — but the trick is rock-solid. It still
-ships in modern Transformers (~10% rate standard).
+Regularizing with **dropout**<br>Randomly silence hidden units during training, and a network that would have memorized instead generalizes.
+:::
 :::
 
-::: {.slide title="Why we need it"}
-Modern networks are **overparameterized** — more weights
-than training examples. Without a regularizer, gradient
-descent happily memorizes the training set.
+::: {.slide title="A network with room to memorize"}
+[Motivation]{.kicker}
 
-Two complementary reasons dropout helps:
+::: {.cols .vc}
+::: {.col}
+Modern nets are **overparameterized**: more weights than
+training points. Past the interpolation threshold, plain
+gradient descent can drive *training* error to zero by
+memorizing.
 
-- **Noise injection** = smoothness regularization
-  (Bishop 1995). Robustness to hidden-unit dropout forces
-  the network to be a smoother function of its inputs.
-- **Anti-co-adaptation**: a unit can't rely on any
-  *specific* upstream unit being present, so it picks up
-  signal from a broader, redundant set of features.
+::: {.d2l-note}
+We want a knob that keeps capacity but discourages the
+model from leaning too hard on the training set.
+:::
 :::
 
-::: {.slide title="What dropout looks like"}
-On every minibatch we randomly zero a fraction of hidden
-units; the network on this iteration is a *thinned*
-subnetwork. Across iterations we sample many subnetworks:
+::: {.col .fig .big}
+![Test error past the interpolation threshold — capacity alone does not buy generalization.](../img/mdl-mlp-double-descent.svg)
+:::
+:::
+:::
 
-![Two of the five hidden units zeroed by a single dropout draw. Each iteration samples a different subset.](../img/dropout2.svg){width=82%}
+::: {.slide title="Dropout: damage the network on purpose"}
+[The idea]{.kicker}
 
-At test time dropout is **off** — we use the full
-network. Effectively we average exponentially many
-thinned subnetworks (a kind of cheap ensemble).
+Srivastava, Hinton et al. (2014) gave a strikingly simple
+recipe:
+
+> *Each training step, set each hidden unit to zero
+> independently with probability* $p$, *then rescale the
+> survivors by* $1/(1-p)$. *At test time, turn it off.*
+
+. . .
+
+Counterintuitive — we actively cripple the network
+mid-training — yet it is one of the most reliable
+regularizers ever found, and it still ships in modern
+Transformers.
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Why It Works]{.dtitle}
+
+[three views: a thinned net, an ensemble, broken co-adaptation]{.dsub}
+:::
+:::
+
+::: {.slide title="View 1: each step trains a thinned subnetwork"}
+[Why It Works]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Zeroing units removes them from this step's forward and
+backward pass. What is left is a *thinned* subnetwork; the
+next step samples a different one.
+
+::: {.d2l-note}
+Here $h_2$ and $h_5$ are dropped, so the output cannot
+depend on them — no single unit can dominate.
+:::
+:::
+
+::: {.col .fig .big}
+![A single dropout draw: two of five hidden units zeroed, leaving a thinned network.](../img/dropout2.svg)
+:::
+:::
+:::
+
+::: {.slide title="View 2: an exponentially large ensemble"}
+[Why It Works]{.kicker}
+
+A net with $n$ hidden units has $2^n$ possible masks —
+$2^n$ thinned subnetworks, all **sharing one set of
+weights**.
+
+. . .
+
+- **Train:** sample one mask per step; the update nudges
+  the shared weights to help *that* subnetwork.
+- **Test:** run the full net with dropout off — this
+  approximates *averaging* all $2^n$ subnetworks.
+
+Ensembles average away their members' idiosyncrasies, so
+we expect dropout to **reduce variance**. It is cheap
+model averaging.
+:::
+
+::: {.slide title="View 3: noise breaks co-adaptation"}
+[Why It Works]{.kicker}
+
+Because no unit can count on any *specific* partner being
+present, each is pushed to learn a feature that is useful
+on its own:
+
+- **Anti-co-adaptation** — robust, redundant features
+  instead of brittle conspiracies of neurons.
+- **Smoothness** — Bishop (1995) showed that injecting
+  noise is equivalent to Tikhonov ($\ell_2$) regularization
+  *on the learned function*.
+
+::: {.d2l-note}
+Three lenses, one mechanism: structured noise during
+training.
+:::
 :::
 
 ::: {.slide title="The arithmetic: keep the expectation"}
-Per hidden unit $h$, replace with
+[Why It Works]{.kicker}
+
+Replace each activation $h$ with the random variable
 
 $$h' = \begin{cases}
-0 & \text{with probability } p, \\
+0 & \text{with probability } p, \\[2pt]
 \dfrac{h}{1 - p} & \text{otherwise.}
 \end{cases}$$
 
-The **rescaling** $1/(1-p)$ is what makes
-$\mathbb{E}[h'] = h$. Without it, expected activations
-shrink by $(1-p)$ during training but recover their full
-scale at test time → train/test mismatch.
+The factor $1/(1-p)$ is the *unique* constant that keeps
+$\mathbb{E}[h'] = p\cdot 0 + (1-p)\dfrac{h}{1-p} = h$.
 
-This is "inverted dropout"; the version every modern
+::: {.d2l-note .rule}
+Unbiased by design — so test-time code needs no change.
+This is **inverted dropout**, the version every modern
 framework uses.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[From Scratch]{.dtitle}
+
+[mask, rescale, and drop in the forward pass]{.dsub}
+:::
 :::
 
 ::: {.slide title="Setup"}
+[From Scratch]{.kicker}
+
 @dropout
 :::
 
-::: {.slide title="Implementing it"}
-Sample a Bernoulli mask, multiply, rescale:
+::: {.slide title="A dropout layer in three lines"}
+[From Scratch]{.kicker}
+
+Sample a Bernoulli keep-mask from a uniform draw, multiply,
+and rescale the survivors:
 
 @dropout-implementation-from-scratch-1
 
-. . .
+::: {.d2l-note}
+`mask` keeps an entry when its $U[0,1]$ sample exceeds $p$;
+dividing by $1-p$ restores the expected value.
+:::
+:::
 
-Quick check on a 2×8 input:
+::: {.slide title="Sanity check on a 2×8 input"}
+[From Scratch]{.kicker}
 
 @dropout-implementation-from-scratch-2
 
-- $p = 0$ → identity (no dropout).
-- $p = 0.5$ → about half the entries zero, the rest
-  doubled.
-- $p = 1.0$ → all zeros (degenerate).
+. . .
+
+- $p = 0$ → identity, nothing dropped.
+- $p = 0.5$ → about half the entries zero, survivors
+  **doubled** ($1/(1-0.5)=2$).
+- $p = 1$ → everything dropped (degenerate).
 :::
 
-::: {.slide title="Where to put dropout"}
-After the activation, before the next linear layer:
+::: {.slide title="Where dropout goes in an MLP"}
+[From Scratch]{.kicker}
 
-```
-Linear → ReLU → Dropout(p₁) → Linear → ReLU → Dropout(p₂) → Linear
-```
+::: {.cols .vc}
+::: {.col}
+Apply it to each hidden layer's **output, after the
+activation**:
 
-Convention: *less* on early layers (low-level features
-need to be reliable), *more* later (high-level features
-overfit).
+`Linear → ReLU → Dropout → Linear → ReLU → Dropout → Linear`
 
-Typical values:
-
-- MLPs / Transformers: 0.1–0.5.
-- CNNs: 0–0.2 (BatchNorm largely supplants dropout).
-- Just before the classifier head: 0.5 is standard.
+::: {.d2l-note}
+Convention: a smaller rate near the input (low-level
+features must stay reliable), larger deeper in. Active in
+training only.
+:::
 :::
 
-::: {.slide title="MLP with dropout"}
+::: {.col .fig}
+![Dropout sits on the hidden activations of the MLP.](../img/mdl-mlp-arch.svg)
+:::
+:::
+:::
+
+::: {.slide title="The model"}
+[From Scratch]{.kicker}
+
+Two hidden layers, dropout gated on `self.training` so it
+vanishes at test time:
+
 @dropout-defining-the-model
 :::
 
-::: {.slide title="Training"}
-Two hidden layers (256 each), dropout 0.5 between them:
+::: {.slide title="Training it"}
+[From Scratch]{.kicker}
+
+Two 256-unit hidden layers, dropout $0.5$ between them, on
+Fashion-MNIST:
 
 @dropout-training
 
-Validation accuracy is better than the plain MLP from the
-previous deck — the gap between train and test loss
-shrinks visibly. Dropout shines when capacity exceeds the
-data.
+The train and validation curves track closely — the gap a
+plain MLP of this size would show is held in check.
 :::
 
-::: {.slide title="Framework version"}
-`nn.Dropout(p)` is a stock layer. It also handles the
-**train vs. eval mode** switch — call `model.eval()` and
-dropout becomes a no-op:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Concise]{.dtitle}
+
+[one stock layer, train/eval handled for you]{.dsub}
+:::
+:::
+
+::: {.slide title="Just add a Dropout layer"}
+[Concise]{.kicker}
+
+`nn.Dropout(p)` is a stock layer that also knows the
+**train vs. eval** switch: in eval mode it becomes a
+no-op, with no rescaling needed.
 
 @dropout-concise-implementation-1
+:::
 
-. . .
+::: {.slide title="JAX: dropout needs a fresh PRNG key" only="jax"}
+[Concise]{.kicker}
+
+Flax's `nn.Dropout` pulls randomness from a named
+`dropout` key, so the loss threads one through
+`apply`. A new key each epoch keeps the mask stochastic:
+
+@dropout-concise-implementation-2
+:::
+
+::: {.slide title="Train the concise model"}
+[Concise]{.kicker}
+
+Same hyperparameters, same result — the layer does the
+masking and rescaling internally:
 
 @dropout-concise-implementation-3
 :::
 
-::: {.slide title="Why dropout works (the modern view)"}
-Several complementary explanations, none complete on its own:
+::: {.slide title="Dropout today"}
+[Currency]{.kicker}
 
-- **Bayesian model averaging** — training samples a
-  different thinned network each step; testing averages
-  $\sim 2^n$ subnetworks → cheap ensemble.
-- **Stochastic regularization** — equivalent to adding
-  Gaussian noise; Bishop showed this is Tikhonov
-  ($\ell_2$) regularization *on the function*.
-- **Anti-co-adaptation** — forces redundant features.
-- **Variance bound** — caps the variance the network puts
-  into any one direction in feature space.
+Dropout was transformative for the dense vision nets of
+the mid-2010s; its role has since narrowed.
+
+- **CNNs** mostly replace it with **batch norm**, which
+  supplies similar noise-driven regularization.
+- **Transformers** use it lightly (rates $0.0$–$0.1$),
+  often only on the **classifier head**.
+
+::: {.d2l-note}
+Still a cheap, reliable regularizer that combines well with
+weight decay and data augmentation — and the seed of a
+whole family of stochastic-regularization methods.
+:::
 :::
 
-::: {.slide title="Dropout in 2026"}
-Modern deep nets often replace dropout with **BatchNorm
-/ LayerNorm**, which provides similar regularization
-"for free".
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
 
-But dropout remains alive and well:
-
-- **Transformers** — rate 0.1 by default in attention and
-  FFN sublayers.
-- **Final classifier heads** — 0.5 right before the
-  output projection is still a standard recipe.
+::: {.cols}
+::: {.col}
+- **Dropout** zeros each hidden unit with probability $p$
+  during training, then rescales survivors by $1/(1-p)$.
+- The rescaling keeps $\mathbb{E}[h']=h$ — **inverted
+  dropout** — so test-time code is unchanged.
+- **Off at test time:** the full network runs, unmasked.
 :::
 
-::: {.slide title="Recap"}
-- **Dropout**: zero each hidden unit with prob $p$
-  during training; rescale survivors by $1/(1-p)$ to
-  preserve expectations.
-- **Off at test time** — full network in use.
-- Place after activation, before next linear layer; rates
-  0.1–0.5 typical.
-- Equivalent to (a) injecting noise = smoothness
-  regularization, and (b) ensembling exponentially many
-  thinned subnetworks.
-- One of the cheapest, most reliable regularizers —
-  combines well with weight decay, layer norm, and
-  data augmentation.
+::: {.col}
+- Place it **after the activation**, before the next
+  linear layer; typical rates $0.1$–$0.5$.
+- Three views: a **thinned subnetwork** each step, an
+  implicit **$2^n$ ensemble**, broken **co-adaptation**.
+- `nn.Dropout(p)` does it all and respects train/eval.
+:::
+:::
 :::

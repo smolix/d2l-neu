@@ -592,3 +592,288 @@ We leave you with a few rules of thumb:
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17978)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.6]{.kicker}
+
+Generalization<br>Why fitting the training data is **not** the goal, and how to tell memorizing apart from learning.
+:::
+:::
+
+::: {.slide title="Two students, one exam"}
+[Why this matters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Ellie** memorizes every past answer: 100% on seen questions, lost on new ones.
+- **Irene** spots the pattern: a steady 90%, seen or unseen.
+
+We want predictions on *tomorrow's* data, not yesterday's.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+The goal is a **pattern that generalizes**, not a lookup table of the training set.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Two Errors]{.dtitle}
+
+[the statistic we see vs. the expectation we want]{.dsub}
+:::
+:::
+
+::: {.slide title="Training error vs. generalization error"}
+[Two Errors]{.kicker}
+
+**Training error**, an average over the data we *have*:
+$$R_\textrm{emp} = \tfrac1n \sum_{i=1}^n l\bigl(\mathbf{x}^{(i)}, y^{(i)}, f\bigr)$$
+
+. . .
+
+**Generalization error**, an expectation over data we will *never fully see*:
+$$R = E_{(\mathbf{x},y)\sim P}\bigl[\,l(\mathbf{x}, y, f)\,\bigr]$$
+
+::: {.d2l-note .rule}
+We can never compute $R$. We **estimate** it on held-out data: a fixed model on fresh samples is just mean estimation.
+:::
+:::
+
+::: {.slide title="The IID assumption"}
+[Two Errors]{.kicker}
+
+Train and test are drawn **independently** from the **identical** distribution $P(X,Y)$.
+
+. . .
+
+The training error is a *biased* gauge of $R$: the model was chosen *using* that very data, so it flatters itself.
+
+::: {.d2l-note .warn}
+Drop IID, let the distribution shift from $P$ to $Q$, and without a further assumption nothing can be said about generalization at all.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Model Complexity]{.dtitle}
+
+[the bias–variance trade-off and the U-curve]{.dsub}
+:::
+:::
+
+::: {.slide title="The bias–variance trade-off"}
+[Model Complexity]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Too **simple** → misses the signal: high **bias** (underfitting).
+- Too **flexible** → chases the noise: high **variance** (overfitting).
+
+Test error is their sum, and it bottoms out at a **sweet spot**.
+:::
+
+::: {.col .fig .big}
+![Bias falls and variance rises with complexity; the test error they sum to is U-shaped.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Reading the gap"}
+[Model Complexity]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Both errors high, **small gap** → too simple. *Underfitting*; reach for more capacity.
+- Train error far below test → severe *overfitting*.
+
+The *generalization gap* is $R - R_\textrm{emp}$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+Overfitting is not always bad: the best deep models often fit training data far better than holdout. We chase low $R$, and mind the gap only when it blocks us.
+:::
+:::
+:::
+:::
+
+::: {.slide title="What makes a model complex?"}
+[Model Complexity]{.kicker}
+
+A model that can fit **any** labeling has told us nothing (Popper's falsifiability).
+
+. . .
+
+Complexity is more than parameter *count*: it is also the **range of values** parameters may take. Kernel methods have infinitely many parameters yet stay controlled.
+
+::: {.d2l-note .rule}
+Low training error alone never certifies low generalization error, on its own it cannot rule it out either.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The Demo]{.dtitle}
+
+[fit polynomials of growing degree to a noisy cubic]{.dsub}
+:::
+:::
+
+::: {.slide title="Polynomial fitting is linear regression"}
+[The Demo]{.kicker}
+
+Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as features and it is plain least squares (higher degree = more capacity). A degree-3 target, just **20** training points so high degrees can overfit:
+
+@-generalization-polynomial-curve-fitting-2
+:::
+
+::: {.slide title="One fit per degree, scored on both splits"}
+[The Demo]{.kicker}
+
+Fit the first $d{+}1$ power columns by least squares; record the loss on train **and** on held-out test.
+
+@-generalization-polynomial-curve-fitting-3
+:::
+
+::: {.slide title="Under, just right, over" only="pytorch"}
+[The Demo · result]{.kicker}
+
+@generalization-polynomial-curve-fitting-4
+
+. . .
+
+::: {.d2l-note .warn}
+Degree 19 drives **training** error to zero while **test** error explodes past $10^{13}$, the signature of overfitting.
+:::
+:::
+
+::: {.slide title="Sweep the degree: the U-curve, measured" only="pytorch"}
+[The Demo · result]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Train loss falls monotonically. Test loss dips to the sweet spot near degree 3, then blows up, exactly the shape the theory drew.
+
+@!generalization-polynomial-curve-fitting-5
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+This is the bias–variance U-curve, now traced from real numbers rather than sketched.
+:::
+:::
+:::
+:::
+
+::: {.slide title="What the sweep produces" except="pytorch"}
+[The Demo · result]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Sweep the degree from 1 to 19: training loss falls monotonically, while test loss dips to a sweet spot near the true degree 3, then explodes as surplus capacity fits noise.
+:::
+
+::: {.col .fig}
+![Measured test error first falls, then rises: the U-curve, traced by fitting polynomials of growing degree.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="More data, more room"}
+[The Demo]{.kicker}
+
+Fix the model: **fewer** samples means more, and more severe, overfitting.
+
+. . .
+
+So complexity should grow with data, not ahead of it. Deep nets beat linear models only once there are *many thousands* of examples, which is why big datasets fuelled their rise.
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Model Selection]{.dtitle}
+
+[keep the test set honest with a validation split]{.dsub}
+:::
+:::
+
+::: {.slide title="Never select on the test set"}
+[Model Selection]{.kicker}
+
+Touch the test data to *choose* a model and you overfit it silently, and unlike training data, nothing is left to catch you.
+
+. . .
+
+So split **three** ways: train, **validation** (for model selection), test (touched once). Most "test" accuracy in practice is really *validation* accuracy.
+:::
+
+::: {.slide title="K-fold cross-validation"}
+[Model Selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+When data is too scarce to spare a validation set: split into $K$ folds, train on $K{-}1$, validate on the held-out one, rotate, and **average** the $K$ scores.
+:::
+
+::: {.col .fig .big}
+![Each of the K folds serves once as the validation set; average the K validation scores.](../img/mdl-mlp-kfold.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[A Modern Twist]{.dtitle}
+
+[when more capacity helps again]{.dsub}
+:::
+:::
+
+::: {.slide title="Double descent"}
+[A Modern Twist]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The classical U is only half the story for huge models. Once capacity is large enough to **interpolate** the data, pushing it further often makes test error **fall again**.
+:::
+
+::: {.col .fig .big}
+![Past the interpolation threshold, test error descends a second time, the over-parametrized regime of deep learning.](../img/mdl-mlp-double-descent.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Rules of thumb"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Generalization**, not training fit, is the goal: mind the gap $R - R_\textrm{emp}$.
+- **Bias–variance:** test error is U-shaped in complexity; aim for the sweet spot.
+- **Complexity** = parameter count *and* the range of values they may take.
+:::
+
+::: {.col}
+- Select models with a **validation set** or **K-fold CV**, never the test set.
+- **More data** rarely hurts; let complexity grow with it.
+- All of this rests on **IID**, and huge models can defy the classical U via **double descent**.
+:::
+:::
+:::

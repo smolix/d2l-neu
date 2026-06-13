@@ -482,56 +482,226 @@ Dimensionality and storage for networks are automatically inferred
 
 <!-- slides -->
 
-::: {.slide title="Framework linear regression"}
-The same model, same data, same training — using the framework's
-high-level layers and built-in losses:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.5]{.kicker}
 
-- **Model:** one `LazyLinear` (or equivalent) instead of hand-rolled
-  `w`, `b`.
-- **Loss:** built-in `MSELoss` (no factor of ½).
-- **Optimizer:** built-in `SGD`.
-
-End result: ~5 lines of model code instead of 30. Same convergence
-on synthetic data.
+Linear regression, the **concise** way<br>The same model as before, rebuilt from a framework's batteries-included layers, losses, and optimizers.
+:::
 :::
 
-::: {.slide title="Model setup"}
-Wrap a single linear layer with the right output dimension. The
-"lazy" variant defers the input-dim shape until the first forward:
+::: {.slide title="From hand-rolled to high-level"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Last section we wrote *every* piece by hand: the weight vector, the
+forward pass, the squared error, the update step.
+
+Those pieces are so universal that frameworks ship them, tuned and
+tested. We swap each one for its built-in counterpart:
+
+::: {.d2l-note}
+**Layer** replaces `w`, `b` · **loss** replaces our squared error ·
+**optimizer** replaces the update loop.
+:::
+:::
+
+::: {.col .narrow}
+| By hand | Built-in |
+|---|---|
+| `w`, `b` | a **layer** |
+| MSE math | a **loss** |
+| update step | an **optimizer** |
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Model]{.dtitle}
+
+[a single linear layer]{.dsub}
+:::
+:::
+
+::: {.slide title="Linear regression is one neuron"}
+[The Model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A fully connected layer with **one output**: every input feature wires
+straight to a single scalar, exactly the picture of linear regression.
+
+The same import line we always start from:
 
 @linear-regression-concise-concise-implementation-of-linear-regression
-
-@linear-regression-concise-defining-the-model-1
 :::
 
-::: {.slide title="Module hooks"}
-Hook the layer into our `Module` interface (`forward`,
-`configure_optimizers`):
+::: {.col .fig .big}
+![](../img/singleneuron.svg)
+:::
+:::
+:::
+
+::: {.slide title="One layer, not a weight vector" except="jax,tensorflow,mxnet"}
+[The Model]{.kicker}
+
+`LazyLinear(1)` is the whole model. The **lazy** variant defers the
+input dimension until the first forward pass, so we never compute it
+by hand:
+
+@linear-regression-concise-defining-the-model-1
+
+::: {.d2l-note .rule}
+Lazy shape inference pays off in deep nets (conv layers, variable-length
+sequences) where the input size is tedious to work out.
+:::
+:::
+
+::: {.slide title="One layer, not a weight vector" only="mxnet"}
+[The Model]{.kicker}
+
+`Dense(1)` is the whole model. Gluon **infers** the input dimension on
+the first forward pass, so we specify only the single output:
+
+@linear-regression-concise-defining-the-model-1
+
+::: {.d2l-note}
+Initialize the weights now; storage is allocated lazily at first use.
+:::
+:::
+
+::: {.slide title="One layer, not a weight vector" only="tensorflow"}
+[The Model]{.kicker}
+
+`Dense(1)` is the whole model. Keras **infers** the input dimension on
+the first forward pass, so we specify only the single output:
+
+@linear-regression-concise-defining-the-model-1
+
+::: {.d2l-note}
+The `RandomNormal` initializer breaks symmetry; storage is allocated at
+first use.
+:::
+:::
+
+::: {.slide title="One layer, declared functionally" only="jax"}
+[The Model]{.kicker}
+
+Flax modules are **dataclasses**: declare fields, build sub-modules in
+`setup`. The layer's parameters live outside the object, threaded in
+explicitly later:
+
+@linear-regression-concise-defining-the-model-1
+
+::: {.d2l-note .rule}
+JAX keeps state functional, so the model holds *no* mutable weights.
+:::
+:::
+
+::: {.slide title="The forward pass is a one-liner"}
+[The Model]{.kicker}
+
+`forward` just calls the layer. All the matrix--vector arithmetic we
+wrote by hand now lives inside it:
 
 @linear-regression-concise-defining-the-model-2
 :::
 
-::: {.slide title="Loss and optimizer"}
-Built-in MSE — note it omits the $1/2$ factor we used by hand:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Loss & Optimizer]{.dtitle}
+
+[two more pieces, off the shelf]{.dsub}
+:::
+:::
+
+::: {.slide title="Loss: built-in mean squared error" except="mxnet"}
+[Loss & Optimizer]{.kicker}
+
+The framework's MSE replaces our hand-written squared error:
 
 @linear-regression-concise-defining-the-loss-function
 
-. . .
-
-Same SGD, instantiated with one call:
-
-@linear-regression-concise-defining-the-optimization-algorithm
+::: {.d2l-note}
+It omits the $\tfrac{1}{2}$ factor we used by hand, and averages over the
+minibatch by default.
+:::
 :::
 
-::: {.slide title="Train"}
-Identical loop — the `Trainer` doesn't care that the model is now
-a thin wrapper around a built-in layer:
+::: {.slide title="Loss: built-in mean squared error" only="mxnet"}
+[Loss & Optimizer]{.kicker}
+
+Gluon's `L2Loss` replaces our hand-written squared error, with one
+quirk:
+
+@linear-regression-concise-defining-the-loss-function
+
+::: {.d2l-note .warn}
+`L2Loss` *includes* the $\tfrac{1}{2}$ factor, so we multiply by 2 to
+recover plain MSE before averaging.
+:::
+:::
+
+::: {.slide title="Optimizer: minibatch SGD in one call"}
+[Loss & Optimizer]{.kicker}
+
+The update loop becomes a single optimizer object, handed the
+parameters and the learning rate:
+
+@linear-regression-concise-defining-the-optimization-algorithm
+
+::: {.d2l-note}
+The same `optim`/`Trainer` family also gives momentum, Adam, and more
+by swapping one line.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Training]{.dtitle}
+
+[the scaffold never changed]{.dsub}
+:::
+:::
+
+::: {.slide title="The same Trainer drives it all"}
+[Training]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Our `Trainer`, `Module`, and `DataModule` from :numref:`sec_oo-design`
+don't care that the model is now a built-in layer.
+
+The training loop is **identical** to the from-scratch version.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide title="Fit on the synthetic data"}
+[Training]{.kicker}
+
+Same data, same ten epochs, same `fit` call. The loss curve converges
+just as before:
 
 @linear-regression-concise-training-1
 :::
 
-::: {.slide title="Compare with ground truth"}
-Pull weights and bias back out of the layer:
+::: {.slide title="Recover the learned parameters" except="jax"}
+[Training]{.kicker}
+
+Reach into the layer for its weight and bias:
 
 @linear-regression-concise-training-2
 
@@ -539,15 +709,46 @@ Pull weights and bias back out of the layer:
 
 @linear-regression-concise-training-3
 
-Errors are tiny — same recovery as the from-scratch version, less
-glue code.
+::: {.d2l-note}
+Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
+generated the data from.
+:::
 :::
 
-::: {.slide title="Recap"}
-- **From scratch** taught us what was happening; **concise** is
-  what we'll actually use.
-- The high-level layers / losses / optimizers compose with the
-  same `Module` / `Trainer` scaffold.
-- Same minibatch loop, same convergence; one-line layer instead
-  of hand-rolled parameters.
+::: {.slide title="Recover the learned parameters" only="jax"}
+[Training]{.kicker}
+
+Parameters live in the training **state**, not the model, so we pass it
+in to read `kernel` and `bias`:
+
+@linear-regression-concise-training-2
+
+. . .
+
+@linear-regression-concise-training-3
+
+::: {.d2l-note}
+Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
+generated the data from.
+:::
+:::
+
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **From scratch** showed *what* happens; **concise** is what we
+  actually use day to day.
+- A single **layer** stands in for `w`, `b`; a built-in **loss** and
+  **optimizer** replace the rest.
+:::
+
+::: {.col}
+- The `Module` / `Trainer` / `DataModule` scaffold is **unchanged**;
+  only the model's internals got shorter.
+- Same minibatch loop, same convergence: ~5 lines of model code, error
+  order $10^{-4}$.
+:::
+:::
 :::

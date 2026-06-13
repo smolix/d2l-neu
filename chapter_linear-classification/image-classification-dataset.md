@@ -327,87 +327,170 @@ We now have a slightly more realistic dataset to use for classification. Fashion
 
 <!-- slides -->
 
-::: {.slide title="Fashion-MNIST as a reusable dataset"}
-**Fashion-MNIST** is the workhorse dataset for the rest of this
-chapter:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.2]{.kicker}
 
-- 10 classes (T-shirt / trouser / pullover / …) of 28×28 grayscale
-  images; 60 k train, 10 k test.
-- Drop-in replacement for MNIST — same shape, same API, harder.
-- We'll wrap it in a `DataModule` so every classifier we build can
-  reuse the same loaders.
+The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will classify for the rest of this chapter.
 
 @!image-classification-dataset-visualization-2
 :::
+:::
 
-::: {.slide title="Dataset setup"}
-Imports and the `FashionMNIST` `DataModule` shell:
+::: {.slide title="Why a new benchmark?"}
+[Motivation]{.kicker}
 
-@image-classification-dataset-the-image-classification-dataset
+::: {.cols .vc}
+::: {.col}
+- **MNIST** (handwritten digits) is solved: a *linear* model already tops 95%, so models are hard to tell apart.
+- We want data where a weak model is **clearly outpaced** by a richer one.
+- **Fashion-MNIST**: a drop-in replacement with the same shape and API but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+:::
+
+::: {.col .fig .big}
+@!image-classification-dataset-visualization-2
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Loading the Data]{.dtitle}
+
+[a reusable DataModule per framework]{.dsub}
+:::
+:::
+
+::: {.slide title="Wrap it once, reuse everywhere"}
+[Loading]{.kicker}
+
+A `DataModule` owns this framework's download, transform, and `train`/`val` splits, so every model we build later just asks for batches:
 
 @image-classification-dataset-loading-the-dataset-1
 :::
 
-::: {.slide title="Instantiate Fashion-MNIST"}
-Instantiate (resizing to 32×32 to match later ConvNet inputs):
+::: {.slide title="60 000 train, 10 000 test"}
+[Loading]{.kicker}
+
+Instantiate it, resizing to $32\times32$ to match the ConvNet inputs in later chapters:
 
 @image-classification-dataset-loading-the-dataset-2
+
+::: {.d2l-note}
+Ten classes $\times$ 6 000 train images each $= 60\,000$; 1 000 each in test.
+:::
 :::
 
-::: {.slide title="What does one example look like?"}
-Read one image from the loader and check its shape:
+::: {.slide title="One image: channel-first" only="pytorch,mxnet"}
+[Loading · layout]{.kicker}
+
+PyTorch and MXNet store images **channel-first**, $c \times h \times w$, with the color axis before height and width:
+
+@-image-classification-dataset-loading-the-dataset-3
+
+::: {.d2l-note .rule}
+Shape is `(1, 32, 32)`: one grayscale channel, then $32\times32$ pixels.
+:::
+:::
+
+::: {.slide title="One image: channel-last" only="tensorflow,jax"}
+[Loading · layout]{.kicker}
+
+TensorFlow and JAX store images **channel-last**, $h \times w \times c$, with the color axis at the end:
 
 @image-classification-dataset-loading-the-dataset-3
 
-A single-channel 32×32 image after the resize. PyTorch/MXNet put the
-channel first $(c, h, w)$; TensorFlow/JAX put it last $(h, w, c)$.
+::: {.d2l-note .rule}
+Same image, axes reordered to `(32, 32, 1)`. `get_dataloader` hands each framework its native layout, so later chapters never think about it.
+:::
 :::
 
-::: {.slide title="Human-readable labels"}
-The dataset stores labels as integers 0–9. A small helper turns
-each label into its English name (T-shirt, Trouser, Pullover, …):
+::: {.slide title="Labels as words, not integers"}
+[Loading]{.kicker}
+
+The dataset stores labels as integers 0–9. A tiny helper maps them to names so our spot-checks are readable:
 
 @image-classification-dataset-loading-the-dataset-4
 :::
 
-::: {.slide title="Minibatches"}
-Wrap the framework dataloader so train and val each yield batches
-in the same shape:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Reading Minibatches]{.dtitle}
+
+[the iterator that feeds training]{.dsub}
+:::
+:::
+
+::: {.slide title="The data iterator"}
+[Minibatches]{.kicker}
+
+`get_dataloader` shuffles the training split and serves a `batch_size`-sized minibatch each step:
 
 @image-classification-dataset-reading-a-minibatch-1
+:::
 
-. . .
+::: {.slide title="What one minibatch looks like" except="mxnet"}
+[Minibatches]{.kicker}
+
+Pull one batch and read its shapes off directly:
 
 @image-classification-dataset-reading-a-minibatch-2
 
-A batch of 64 32×32 grayscale images plus 64 integer labels.
+::: {.d2l-note}
+64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer labels. A full pass over the training set is I/O-cheap (a second or two), so loading is **not** the training bottleneck.
+:::
 :::
 
-::: {.slide title="Throughput sanity check"}
-Time one full epoch through the loader. Slow loading bottlenecks
-training as much as the model itself:
+::: {.slide title="What one minibatch looks like" only="mxnet"}
+[Minibatches]{.kicker}
 
-@image-classification-dataset-reading-a-minibatch-3
+Pull one batch and read its shapes off directly:
+
+@-image-classification-dataset-reading-a-minibatch-2
+
+::: {.d2l-note}
+`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first images plus their labels. A full pass over the training set is I/O-cheap, so loading is **not** the training bottleneck.
+:::
 :::
 
-::: {.slide title="Visualization helpers"}
-A grid plotter we'll reuse for spot-checks:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-@image-classification-dataset-visualization-1
+[Looking at the Data]{.dtitle}
 
-. . .
+[always eyeball what you train on]{.dsub}
+:::
+:::
 
-Bound to the dataset as a method that pulls one batch and labels
-each tile with the class name:
+::: {.slide title="See the data before you model it"}
+[Visualization]{.kicker}
+
+A `visualize` method pulls one validation batch and tiles the images, each captioned with its class name. Eyeballing data is a cheap, powerful sanity check:
 
 @image-classification-dataset-visualization-2
+
+::: {.d2l-note}
+A false-color palette improves contrast; the pixels are genuinely grayscale.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Fashion-MNIST: 10 classes, 28×28 grayscale, harder than MNIST.
-- A `DataModule` subclass owns the framework's
-  `train` / `val_dataloader`, label decoding, and a `visualize`
-  helper.
-- Always sanity-check throughput — slow I/O caps training speed.
-- Same data API drives every model in this chapter.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Fashion-MNIST**: 10 clothing classes, $28\times28$ grayscale, harder than MNIST but the same size and API.
+- A `DataModule` owns each framework's download, transforms, and `train`/`val` loaders.
+:::
+
+::: {.col}
+- **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
+- Always **look at your data**; loading stays off the training critical path.
+:::
+:::
 :::

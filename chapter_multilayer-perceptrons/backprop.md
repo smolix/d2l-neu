@@ -367,3 +367,312 @@ and training requires significantly more memory than prediction.
     1. What are the advantages and disadvantages over training on a smaller minibatch?
 
 [Discussions](https://d2l.discourse.group/t/102)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.3]{.kicker}
+
+What `backward()` actually does<br>**forward propagation · computational graphs · backpropagation**.
+:::
+:::
+
+::: {.slide title="Under the hood of a gradient"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Training so far: a **forward pass** computes the loss, then one call to
+`backward()` hands us every gradient. Today we open that black box.
+
+- **Forward**: push the input through the net, storing each intermediate value.
+- **Backward**: walk the *same* graph in reverse, accumulating gradients by the **chain rule**.
+- One rule does it all, and it explains why training costs the memory it does.
+
+::: {.d2l-note}
+You can lean on autograd forever, but knowing *how* gradients flow is what
+separates a shallow understanding from a real one.
+:::
+:::
+
+::: {.col .fig}
+![A one-hidden-layer MLP: input, an affine map, a nonlinearity, a second affine map.](../img/mdl-mlp-arch.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Forward Propagation]{.dtitle}
+
+[computing and storing each intermediate value]{.dsub}
+:::
+:::
+
+::: {.slide title="The forward pass, one layer at a time"}
+[Forward Propagation]{.kicker}
+
+For input $\mathbf{x}\in\mathbb{R}^d$, a one-hidden-layer net (no bias, for
+clarity) computes a chain of **intermediate variables**:
+
+::: {.d2l-note .rule}
+$$\mathbf{z}= \mathbf{W}^{(1)}\mathbf{x}, \qquad
+  \mathbf{h}= \phi(\mathbf{z}), \qquad
+  \mathbf{o}= \mathbf{W}^{(2)}\mathbf{h}.$$
+:::
+
+The loss is $L = l(\mathbf{o}, y)$; the $\ell_2$ penalty is
+$s = \tfrac{\lambda}{2}(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{(2)}\|_\textrm{F}^2)$.
+
+. . .
+
+The objective we actually minimize bundles both:
+
+$$J = L + s.$$
+:::
+
+::: {.slide title="Forward propagation as a graph"}
+[Forward Propagation]{.kicker}
+
+Squares are **variables**, circles are **operators**; arrows show data flow,
+running input (lower-left) to output (upper-right):
+
+![Computational graph of forward propagation: input and weights flow rightward and upward into the loss $L$, the regularizer $s$, and the objective $J$.](../img/forward.svg)
+
+::: {.d2l-note}
+Every arrow is a dependency. The graph is the *only* thing the framework
+needs to record to later compute gradients.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Backpropagation]{.dtitle}
+
+[the same graph, traversed in reverse]{.dsub}
+:::
+:::
+
+::: {.slide title="The chain rule is the whole algorithm"}
+[Backpropagation]{.kicker}
+
+For $\mathsf{Y}=f(\mathsf{X})$ and $\mathsf{Z}=g(\mathsf{Y})$, the chain rule
+composes derivatives:
+
+::: {.d2l-note .rule}
+$$\frac{\partial \mathsf{Z}}{\partial \mathsf{X}}
+  = \textrm{prod}\!\left(\frac{\partial \mathsf{Z}}{\partial \mathsf{Y}},
+                         \frac{\partial \mathsf{Y}}{\partial \mathsf{X}}\right).$$
+:::
+
+$\textrm{prod}$ multiplies after any needed transpose or reshape: matrix
+multiplication for vectors, its tensor counterpart otherwise. It hides the
+bookkeeping so we can think one node at a time.
+:::
+
+::: {.slide title="Backward through our network"}
+[Backpropagation]{.kicker}
+
+Seed $\partial J/\partial L = \partial J/\partial s = 1$ at the top, then walk
+back. Each step multiplies the incoming gradient by one **local** derivative:
+
+$$\frac{\partial J}{\partial \mathbf{o}} = \frac{\partial L}{\partial \mathbf{o}},
+\qquad
+\frac{\partial J}{\partial \mathbf{h}} = {\mathbf{W}^{(2)}}^\top\frac{\partial J}{\partial \mathbf{o}},
+\qquad
+\frac{\partial J}{\partial \mathbf{z}} = \frac{\partial J}{\partial \mathbf{h}}\odot\phi'(\mathbf{z}).$$
+
+. . .
+
+The parameter gradients fall out along the way, each picking up its weight-decay term:
+
+$$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mathbf{o}}\,\mathbf{h}^\top + \lambda\mathbf{W}^{(2)},
+\qquad
+\frac{\partial J}{\partial \mathbf{W}^{(1)}} = \frac{\partial J}{\partial \mathbf{z}}\,\mathbf{x}^\top + \lambda\mathbf{W}^{(1)}.$$
+:::
+
+::: {.slide title="One move, everywhere"}
+[Backpropagation · the trick]{.kicker}
+
+Strip away the symbols and every backward step is the same gesture: at each
+node, **multiply the gradient arriving from downstream by the node's local
+derivative**.
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .rule}
+**Add** node $d = a + b$<br>$\partial d/\partial a = \partial d/\partial b = 1$<br>→ *passes* the gradient through unchanged.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note .rule}
+**Multiply** node $e = d\,c$<br>$\partial e/\partial d = c,\ \partial e/\partial c = d$<br>→ *scales* the gradient by the other input.
+:::
+:::
+:::
+
+Every backward equation in this section is an instance of this one rule.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[A Worked Example]{.dtitle}
+
+[real numbers through the graph]{.dsub}
+:::
+:::
+
+::: {.slide title="A tiny graph, by hand"}
+[Worked Example]{.kicker}
+
+Take $e = (a+b)\,c$ at $a=2,\ b=1,\ c=-3$. **Forward:** $d = a+b = 3$, then
+$e = d\,c = -9$.
+
+. . .
+
+**Backward:** seed $\partial e/\partial e = 1$. The multiply node gives
+$\partial e/\partial d = c = -3$; the add node passes that through to both inputs:
+
+$$\frac{\partial e}{\partial a} = -3,\qquad
+  \frac{\partial e}{\partial b} = -3,\qquad
+  \frac{\partial e}{\partial c} = d = 3.$$
+
+::: {.d2l-note}
+Add broadcasts, multiply scales: exactly the two moves from the last slide.
+:::
+:::
+
+::: {.slide title="The forward pass, with numbers"}
+[Worked Example]{.kicker}
+
+Now the real network, shrunk to $d=h=2$, $q=1$, ReLU activation, $\lambda=0$,
+squared-error loss, and
+
+$$\mathbf{x}=\begin{bmatrix}1\\2\end{bmatrix},\quad
+  \mathbf{W}^{(1)}=\begin{bmatrix}1&-1\\0&\phantom{-}1\end{bmatrix},\quad
+  \mathbf{W}^{(2)}=[\,2\ \ {-1}\,],\quad y=0.$$
+
+Pushing forward: $\mathbf{z}=[-1,\,2]^\top$, so
+$\mathbf{h}=\phi(\mathbf{z})=[0,\,2]^\top$ (**the first unit is dead**), then
+$o=-2$ and $L=2$.
+:::
+
+::: {.slide title="The backward sweep" layout="figure"}
+[Worked Example]{.kicker}
+
+Seed $1$ at $L$, walk left. **Add** nodes pass the gradient, **multiply** nodes
+scale it; the dead ReLU unit ($z_1=-1$) zeros everything flowing into the top
+row of $\mathbf{W}^{(1)}$, so no signal means no learning.
+
+![Forward (black) carries values from $\mathbf{x}$ to the loss $L$; backpropagation (blue) walks the same graph in reverse, multiplying each node's local derivative to accumulate $\partial L/\partial\mathbf{W}^{(2)}$ and $\partial L/\partial\mathbf{W}^{(1)}$. The dead first unit zeros the top row of $\partial L/\partial\mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
+:::
+
+::: {.slide title="The dying ReLU, made concrete"}
+[Worked Example]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+At the hidden layer, $\phi'(z) = \mathbf{1}[z>0]$ acts as a **gate**:
+
+$$\frac{\partial L}{\partial \mathbf{z}}
+  = \frac{\partial L}{\partial \mathbf{h}}\odot\phi'(\mathbf{z})
+  = [-4,\,2]^\top \odot [0,\,1]^\top = [0,\,2]^\top.$$
+
+So the parameter gradient is
+
+$$\frac{\partial L}{\partial \mathbf{W}^{(1)}}
+  = \frac{\partial L}{\partial \mathbf{z}}\,\mathbf{x}^\top
+  = \begin{bmatrix}0&0\\2&4\end{bmatrix}.$$
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+The top row is **all zero**: the dead unit receives no gradient, so its
+weights never update. This is the *dying ReLU* in one matrix.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Why It Matters]{.dtitle}
+
+[autograd, and the cost of remembering]{.dsub}
+:::
+:::
+
+::: {.slide title="From the chain rule to autograd"}
+[Why It Matters]{.kicker}
+
+What we did by hand is exactly what `backward()` does: record the graph on the
+forward pass, seed a $1$ at the scalar loss, and sweep in reverse, multiplying
+each local derivative to accumulate **every** parameter gradient in a *single*
+pass.
+
+::: {.d2l-note .rule}
+This output-to-input sweep is **reverse-mode automatic differentiation**,
+cheap precisely when there are *many parameters* and *one scalar loss*: the
+deep-learning regime.
+:::
+
+We develop the mechanics, including when *forward mode* is preferable, in the
+autograd chapter.
+:::
+
+::: {.slide title="Forward and backward depend on each other"}
+[Why It Matters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The two passes are interlocked:
+
+- Forward uses the **current parameters** (set by the last backward step).
+- Backward reuses the **stored intermediates** $\mathbf{h}, \mathbf{z}, \ldots$ from the forward pass.
+
+So training **alternates** them, and must **retain every intermediate** until
+the backward pass consumes it.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+That stored state is why **training needs far more memory than prediction**:
+it grows with depth and batch size, and is the usual cause of out-of-memory
+errors.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Forward propagation** computes and stores intermediates, input to output.
+- **Backpropagation** sweeps the same graph in reverse, accumulating gradients by the chain rule.
+- The whole algorithm is one move: **add** passes the gradient, **multiply** scales it.
+:::
+
+::: {.col}
+- A **dead ReLU** zeros a gradient row: no signal, no learning.
+- This reverse sweep is **reverse-mode autodiff**, cheap for many-parameter, scalar-loss models.
+- Retaining intermediates is why **training is memory-hungry**.
+:::
+:::
+
+::: {.d2l-note}
+`backward()` is this section, run automatically, and now you know what it
+computes.
+:::
+:::

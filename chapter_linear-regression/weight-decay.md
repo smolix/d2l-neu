@@ -650,95 +650,271 @@ Different sets of parameters can have different update behaviors within the same
 
 <!-- slides -->
 
-::: {.slide title="Weight decay limits overfitting"}
-The simplest **regularization** technique in the book —
-add a penalty on the squared norm of the weights:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.7]{.kicker}
 
-$$L_{\text{reg}}(\mathbf{w}, b) =
-  L(\mathbf{w}, b) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2.$$
-
-The gradient gains a $+\lambda\mathbf{w}$ term, so the
-update subtracts $\eta\lambda\mathbf{w}$ and weights
-*decay* toward zero each step. One hyperparameter
-$\lambda$ (`wd` in code) controls how much.
-
-Why? An overparameterized model fit to a tiny dataset
-memorizes the noise. Capping how big the weights can grow
-keeps the fit tame.
+Taming overfitting by **shrinking the weights**<br>Weight decay, the $\ell_2$ penalty, and why a smaller weight vector means a simpler model.
+:::
 :::
 
-::: {.slide title="Setup"}
-@weight-decay
+::: {.slide title="When more data is not an option"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Overfitting fades with **more data** — but data is often costly or fixed.
+- Dropping features is **too blunt**: with $k$ inputs there are $\binom{k-1+d}{k-1}$ degree-$d$ monomials.
+- Instead, **restrict the values** the weights may take.
+
+::: {.d2l-note}
+Among all $f$, the constant $f=0$ is the *simplest*. Measure complexity by **how far the weights sit from zero**.
+:::
 :::
 
-::: {.slide title="A regression that overfits"}
-Generate a tiny dataset (20 train, 100 val) where the truth has
-**200 inputs** but only a small total signal:
+::: {.col .narrow}
+$$\|\mathbf{w}\|_2^2 = \sum_i w_i^2$$
 
-$$y = 0.05 + \sum_{i=1}^{200} 0.01\,x_i + \epsilon,
-  \quad \epsilon \sim \mathcal{N}(0, 0.01^2).$$
-
-Far more parameters than data — perfect overfitting setup:
-
-@weight-decay-high-dimensional-linear-regression
+A single number that grows as the weights stretch away from the origin.
+:::
+:::
 :::
 
-::: {.slide title="The L2 penalty"}
-The penalty itself is one line:
+::: {.slide title="Add the size of the weights to the loss"}
+[The idea]{.kicker}
 
-@weight-decay-defining-ell-2-norm-penalty
-:::
+Penalize a large weight vector by adding its squared norm to the objective, scaled by a knob $\lambda \ge 0$:
 
-::: {.slide title="Adding weight decay to the model"}
-Subclass the from-scratch linear regression to add the penalty
-into the loss:
-
-@weight-decay-defining-the-model-1
-
-@weight-decay-defining-the-model-2
-:::
-
-::: {.slide title="Without regularization → overfit"}
-$\lambda = 0$: the model fits the 20 training examples almost
-perfectly while validation loss explodes:
-
-@weight-decay-training-without-regularization
-:::
-
-::: {.slide title="With weight decay → controlled"}
-$\lambda = 3$: training loss is *higher*, but validation loss is
-much lower. Generalization wins:
-
-@weight-decay-using-weight-decay
-
-The training-vs-validation gap is the regularization payoff.
-:::
-
-::: {.slide title="The framework version"}
-Most optimizers accept a `weight_decay` argument that adds the
-$\lambda \mathbf{w}$ gradient term automatically — same idea, no
-manual penalty code:
-
-@weight-decay-concise-implementation-1
+$$L(\mathbf{w}, b) \;+\; \frac{\lambda}{2}\,\|\mathbf{w}\|_2^2.$$
 
 . . .
 
-@weight-decay-concise-implementation-2
+- $\lambda = 0$ recovers the plain loss; larger $\lambda$ pulls $\mathbf{w}$ harder toward zero.
+- The $\tfrac{1}{2}$ is cosmetic: it cancels the $2$ from differentiating the square.
 
-(Note: framework `weight_decay` typically applies to **all**
-parameters; if you don't want bias decay, exclude it explicitly
-via parameter groups.)
+::: {.d2l-note .rule}
+$\ell_2$-regularized linear regression is the classic **ridge regression**; the $\ell_1$ version is **lasso**.
+:::
 :::
 
-::: {.slide title="Recap"}
-- $\ell_2$-regularized loss = original loss + $\frac{\lambda}{2}
-  \|\mathbf{w}\|_2^2$.
-- Per-step effect: gradient gets $+\lambda \mathbf{w}$, so
-  the update shrinks weights by subtracting
-  $\eta\lambda\mathbf{w}$.
-- Hyperparameter $\lambda$ ("`wd`" in code) trades training
-  fit for generalization. Tune it on a validation set.
-- Frameworks expose this as the optimizer's `weight_decay=` arg.
-- The same idea generalizes — $\ell_1$ (sparsity), elastic net,
-  dropout, etc. — but $\ell_2$ is the default first try.
+::: {.slide title="Ridge shrinks, lasso selects"}
+[The geometry]{.kicker}
+
+A budget $\|\mathbf{w}\| \le t$ turns the penalty into a *constraint*: the answer is where a loss contour first touches the constraint region.
+
+![Loss contours centred on the unconstrained optimum $\hat{\mathbf{w}}$ grow until they meet the constraint at $\mathbf{w}^\star$. Left ($\ell_2$ ball): contact is tangential, so both coordinates shrink. Right ($\ell_1$ diamond): contact is at a corner, forcing $w_2$ to exactly zero.](../img/mdl-linreg-ridge-geometry.svg){width=82%}
+
+::: {.d2l-note}
+A round ball touches **off-axis** (everything shrinks); a pointed diamond touches at a **corner** (sparsity). This is why lasso does feature selection and ridge does not.
+:::
+:::
+
+::: {.slide title="Why it is called weight decay"}
+[The update]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The penalty adds $\lambda\mathbf{w}$ to the gradient, so each SGD step gains a shrink factor:
+
+$$\mathbf{w} \leftarrow (1 - \eta\lambda)\,\mathbf{w}
+  \;-\; \frac{\eta}{|\mathcal{B}|}\!\sum_{i \in \mathcal{B}}
+  \mathbf{x}^{(i)}\bigl(\mathbf{w}^\top\mathbf{x}^{(i)} + b - y^{(i)}\bigr).$$
+
+Before fitting the data at all, every weight is **decayed** toward zero by the factor $1 - \eta\lambda$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+$\lambda$ is a **continuous** complexity dial — unlike deleting features, it never forces a hard choice.
+:::
+
+::: {.d2l-note}
+Usually the **bias is left undecayed**.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[From Scratch]{.dtitle}
+
+[a problem built to overfit, then regularized]{.dsub}
+:::
+:::
+
+::: {.slide title="Setup"}
+[From Scratch]{.kicker}
+
+One import cell brings in the framework and the d2l helpers used throughout:
+
+@weight-decay
+:::
+
+::: {.slide title="A regression rigged to overfit"}
+[From Scratch]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The label is a tiny linear signal in **200 inputs**, plus faint noise:
+
+$$y = 0.05 + \sum_{i=1}^{200} 0.01\,x_i + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 0.01^2).$$
+
+@-weight-decay-high-dimensional-linear-regression
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+Only **20** training examples for **200** parameters — ten times more knobs than data points. Overfitting is guaranteed.
+:::
+:::
+:::
+:::
+
+::: {.slide title="The penalty, then the model"}
+[From Scratch]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The penalty is a single line:
+
+@weight-decay-defining-ell-2-norm-penalty
+
+Subclass the scratch regressor and fold it into the loss:
+
+@weight-decay-defining-the-model-1
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+Nothing else changes: same linear model, same squared loss. The penalty rides along, scaled by `lambd`.
+:::
+:::
+:::
+:::
+
+::: {.slide title="$\lambda = 0$: the model overfits"}
+[From Scratch · no decay]{.kicker}
+
+@weight-decay-training-without-regularization
+
+Training loss plunges while validation loss stalls — and the weight norm is large. A textbook overfit.
+:::
+
+::: {.slide title="$\lambda = 3$: generalization wins"}
+[From Scratch · with decay]{.kicker}
+
+@weight-decay-using-weight-decay
+
+Training loss is now *higher*, but validation loss drops and the weight norm shrinks by an order of magnitude. That gap closing is the payoff.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The Built-In Way]{.dtitle}
+
+[where the framework keeps the decay]{.dsub}
+:::
+:::
+
+::: {.slide title="Decay lives in the optimizer" only="pytorch"}
+[Concise · PyTorch]{.kicker}
+
+Pass `weight_decay` per parameter group — here only the weight is decayed, the bias is left alone:
+
+@weight-decay-concise-implementation-1
+
+::: {.d2l-note}
+No penalty term in the loss: the optimizer adds $\lambda\mathbf{w}$ to the gradient itself, for free.
+:::
+:::
+
+::: {.slide title="Decay lives in the optimizer" only="mxnet"}
+[Concise · MXNet]{.kicker}
+
+Gluon's `Trainer` takes `wd` directly; set `wd_mult = 0` on the bias so only the weights decay:
+
+@weight-decay-concise-implementation-1
+
+::: {.d2l-note}
+One `Trainer` argument replaces the hand-written penalty.
+:::
+:::
+
+::: {.slide title="Decay as a layer regularizer" only="tensorflow"}
+[Concise · TensorFlow]{.kicker}
+
+Keras attaches the penalty to the layer via `kernel_regularizer`, then surfaces it through `net.losses`:
+
+@weight-decay-concise-implementation-1
+
+::: {.d2l-note .warn}
+Keras' `l2(wd)` has **no** $\tfrac{1}{2}$ factor, so we pass `wd / 2` to match the convention used from scratch.
+:::
+:::
+
+::: {.slide title="Decay as a gradient transform" only="jax"}
+[Concise · JAX]{.kicker}
+
+Optax has no `weight_decay` in `sgd`, so we **chain** transforms and `mask` the decay to the kernel:
+
+@weight-decay-concise-implementation-1
+
+::: {.d2l-note}
+`add_decayed_weights` injects $\lambda\mathbf{w}$ into the gradient; the mask spares the bias.
+:::
+:::
+
+::: {.slide title="Same effect, less code"}
+[Concise · result]{.kicker}
+
+Fit with `wd = 3` — the validation curve and shrunken weight norm match the from-scratch run:
+
+@weight-decay-concise-implementation-2
+
+::: {.d2l-note}
+A framework's `weight_decay` adds $\lambda\mathbf{w}$ to the *gradient*, while the scratch penalty added $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss* — so the converged norms need not match exactly, only the effect.
+:::
+:::
+
+::: {.slide title="Two readings worth keeping"}
+[Beyond linear models]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+::: {.d2l-note .rule}
+**Adaptive optimizers.** Inside an Adam-style update the loss penalty gets rescaled per coordinate and stops being uniform shrinkage. *Decoupling* it restores the intent — this is **AdamW**, a default for large models.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note .rule}
+**Bayesian view.** The penalty is a Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \lambda^{-1}\mathbf{I})$, and the regularized fit is the **MAP** estimate. A bigger $\lambda$ is a stronger prior belief that weights are small.
+:::
+:::
+:::
+
+For deep networks we simply apply the same decay to every layer's weights — a simple, effective default.
+:::
+
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Weight decay** = original loss $+\ \tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$.
+- Per step it **shrinks** the weights by $1 - \eta\lambda$ before the data update.
+- $\lambda$ is a continuous complexity dial; tune it on a **validation set**.
+:::
+
+::: {.col}
+- **Geometry:** ridge shrinks (round ball), lasso selects (pointed diamond).
+- Frameworks expose decay in the **optimizer** (or layer / gradient transform).
+- Same idea scales up: **AdamW** for big models, a Gaussian **prior** in disguise.
+:::
+:::
 :::

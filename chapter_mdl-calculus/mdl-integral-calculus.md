@@ -931,92 +931,375 @@ the heart of policy-gradient methods.
 
 <!-- slides -->
 
-::: {.slide title="Integration"}
-Differentiation gives slopes; integration gives totals.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §23.4]{.kicker}
 
-$$\int_a^b f(x)\, dx = \text{signed area under } f \text{ on } [a, b].$$
+How much of something is there in total<br>**Riemann sums · the fundamental theorem · change of variables · probability**.
+:::
+:::
 
-We need integrals to define probabilities ($\int p(x)\,dx = 1$),
-expectations ($\mathbb{E}[X] = \int x\, p(x)\, dx$), and the
-change-of-variables rule that powers normalizing flows.
+::: {.slide title="Why integration"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Differentiation answered a *local* question: how does $f$ change
+when we nudge $x$? Integration answers a *global* one: how much is
+there in total.
+
+- An **area** under a curve, a **volume** under a surface.
+- Every continuous **probability** is an integral, $\int p = 1$.
+- Every **expectation** is an integral average, $\int x\,p(x)\,dx$.
+- The **change-of-variables** rule powers normalizing flows.
+
+The fundamental theorem welds it to differentiation, which is what
+makes any of it computable.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-riemann.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The integral and the theorem]{.dtitle}
+
+[a limit of sums, and how to compute it]{.dsub}
+:::
 :::
 
 ::: {.slide title="The definite integral as a limit"}
-Chop $[a,b]$ into slices of width $\epsilon$, sum the rectangles,
-shrink $\epsilon$:
+[The integral]{.kicker}
 
-$$\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\sum_i \epsilon\, f(x_i).$$
+::: {.cols .vc}
+::: {.col}
+Archimedes' recipe: chop $[a,b]$ into $N$ slices of width
+$\epsilon$, stand a rectangle of height $f(x_i)$ on each, and add.
+As the slices shrink, the staircase squeezes onto the curve:
 
-Refining the partition converges (here to $\tfrac12\log 5$), but
-slowly and with no closed form:
+$$\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\ \sum_i \epsilon\, f(x_i).$$
 
-@!integral-riemann-converge
+The continuous analogue of a sum: $\sum \to \int$, spacing
+$\epsilon \to dx$.
 :::
 
-::: {.slide title="Fundamental theorem of calculus"}
-Let area-so-far be $F(x)=\int_a^x f$. The $\epsilon$-sliver of new
-area is $\approx \epsilon f(x)$, so
+::: {.col .fig .big}
+![](../img/mdl-cal-riemann.svg)
+:::
+:::
+:::
+
+::: {.slide title="Watching the limit converge"}
+[The integral]{.kicker}
+
+The definition is honest but slow. Refine the partition for
+$\int_0^2 \tfrac{x}{1+x^2}\,dx = \tfrac12\log 5$ and the left-rule
+sum marches toward the truth, the error shrinking in step with
+$\epsilon$:
+
+@!integral-riemann-converge
+
+. . .
+
+First-order convergence: cut $\epsilon$ by ten, cut the error by
+ten. It works, but it is slow and gives no closed form. We need a
+better idea.
+:::
+
+::: {.slide title="The fundamental theorem of calculus"}
+[The integral]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Let the upper limit *move*: the **area-so-far** function
+$F(x)=\int_a^x f$ accumulates signed area out to $x$. Nudge $x$ by
+$\epsilon$ and only one thin sliver of new area appears, of height
+$f(x)$, so
 
 $$\frac{dF}{dx}(x) = f(x).$$
 
-Integration is differentiation reversed:
-$\int_a^b f = G(b)-G(a)$ for any antiderivative $G$.
+The rate at which area grows *is* the current height. Finding areas
+becomes the search for an **antiderivative**.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-sub-area.svg)
+:::
+:::
+:::
+
+::: {.slide title="Integration is differentiation reversed"}
+[The integral]{.kicker}
+
+If $G'=f$ then every definite integral is a difference of two values:
+
+$$\int_a^b f(x)\,dx = G(b) - G(a).$$
+
+Hard sums become table lookups. We check it numerically: build $F$
+as a cumulative Riemann sum, finite-difference it, and compare
+against $f$ itself.
 
 @!integral-ftc-check
+
+::: {.d2l-note}
+The error is float32 roundoff, not discretization: differencing the
+cumulative sum *telescopes* back to the term it just added.
+:::
+:::
+
+::: {.slide title="Improper integrals"}
+[The integral]{.kicker}
+
+Densities live on unbounded domains, so we integrate to infinity as
+a limit, $\int_a^\infty f = \lim_{b\to\infty}\int_a^b f$. The power
+law is the cleanest test:
+
+$$\int_1^\infty x^{-p}\,dx = \begin{cases}\dfrac{1}{p-1}, & p>1\ \text{(converges)},\\[1ex]\infty, & p\le 1\ \text{(diverges)}.\end{cases}$$
+
+::: {.d2l-note .rule}
+The threshold $p=1$ decides whether a heavy-tailed density has a
+finite normalizer or mean at all.
+:::
+:::
+
+::: {.slide title="Two errors, two knobs"}
+[The integral]{.kicker}
+
+Watch a convergent improper integral, $\int_0^\infty e^{-x}\,dx=1$,
+through two lenses: the exact partials $1-e^{-b}$ and a left-Riemann
+sum of each:
+
+@!integral-improper
+
+. . .
+
+The partials race to $1$ as $b$ grows (*truncation* error
+$e^{-b}$); the left rule settles near $1.0005$, not $1$
+(*discretization* error $\approx\tfrac{\epsilon}{2}$). Two
+independent knobs: neither fixes the other.
 :::
 
 ::: {.slide title="Integration by parts"}
-The product rule, run backwards through the FTC:
+[The integral]{.kicker}
+
+The product rule, run backwards through the theorem:
 
 $$\int_a^b u\,v'\,dx = \bigl[\,u\,v\,\bigr]_a^b - \int_a^b u'\,v\,dx.$$
 
-A *trade*: move the derivative onto the factor that can absorb it.
-With $u=x$, $v'=e^{-x}$: $\int_0^\infty x e^{-x}\,dx = 0 + 1 = 1$ —
-the exponential distribution's mean, and the move behind score
-matching's Hyvärinen identity.
+A *trade*, not an evaluation: move the derivative onto the factor
+that can absorb it. With $u=x$, $v'=e^{-x}$,
+
+$$\int_0^\infty x\,e^{-x}\,dx = \bigl[\,-x\,e^{-x}\,\bigr]_0^\infty + \int_0^\infty e^{-x}\,dx = 1,$$
+
+the mean of the exponential, and the move behind score matching's
+Hyvärinen identity.
 :::
 
-::: {.slide title="Change of variables"}
-Substitution multiplies by the local stretch:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Change of variables]{.dtitle}
+
+[the chain rule, run backwards]{.dsub}
+:::
+:::
+
+::: {.slide title="Substitution in one dimension"}
+[Change of variables]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Reparametrize through $y=u(x)$. A sliver of width $\epsilon$ at $x$
+maps to one of width $\epsilon\,u'(x)$, so matching areas forces the
+local **stretch** factor:
 
 $$\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,\frac{du}{dx}\,dx.$$
 
-In $n$ dimensions the stretch is the **Jacobian determinant**
-$|\det D\boldsymbol{\phi}|$ — the volume-scaling factor, and the
-engine behind normalizing flows.
+With the right $u$ this collapses hard integrals to trivial ones.
 :::
 
-::: {.slide title="Multiple integrals & Fubini"}
-$\int_U f\, d\mathbf{x}$ is the volume under a surface; a finite
-sum totals in any order, so
+::: {.col .fig}
+![](../img/mdl-cal-rect-trans.svg)
+:::
+:::
+:::
 
-$$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy
-= \int\!\!\left(\int f\,dy\right)dx.$$
+::: {.slide title="Change of variables in many dimensions"}
+[Change of variables]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+For a $C^1$-diffeomorphism $\boldsymbol{\phi}$, the scalar stretch
+$\tfrac{du}{dx}$ becomes the **Jacobian determinant**:
+
+$$\int_{\boldsymbol{\phi}(U)}\! f\,d\mathbf{x} = \int_{U}\! f(\boldsymbol{\phi}(\mathbf{x}))\,\bigl|\det D\boldsymbol{\phi}\bigr|\,d\mathbf{x}.$$
+
+The determinant is exactly the factor by which a linear map scales
+volume, so a tiny cube of volume $d\mathbf{x}$ becomes a
+parallelepiped of volume $|\det D\boldsymbol{\phi}|\,d\mathbf{x}$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-cov-jacobian.svg)
+:::
+:::
+
+::: {.d2l-note}
+Read for *densities* instead of areas, this same factor (as
+$-\log|\det D\boldsymbol{\phi}|$) is the engine behind
+**normalizing flows**.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Higher dimensions]{.dtitle}
+
+[Fubini, and the Gaussian integral]{.dsub}
+:::
+:::
+
+::: {.slide title="Multiple integrals: a volume under a surface"}
+[Fubini]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For $f(x,y)$ on a box, $\int_U f\,d\mathbf{x}$ is the volume between
+the surface and the base plane. Archimedes' recipe survives: tile
+the base with $\epsilon\times\epsilon$ squares, stand a box on each,
+and total the volumes.
+
+Our running example is the bell $e^{-x^2-y^2}$ over $[-2,2]^2$.
+:::
+
+::: {.col .fig .big}
 @fig:mdl-cal-bell-surface
+:::
+:::
+:::
+
+::: {.slide title="Fubini: sum in any order"}
+[Fubini]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A grid sum totals in **any order**. Summing columns-first and
+passing to the limit splits the double integral into iterated
+single ones:
+
+$$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy = \int\!\!\left(\int f\,dy\right)dx.$$
+
+(It needs $f$ absolutely integrable, the rule in machine learning.)
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-sum-order.svg)
+:::
+:::
+:::
+
+::: {.slide title="The box volume, numerically"}
+[Fubini]{.kicker}
+
+Total the boxes on a fine grid over $[-2,2]^2$. The exact value
+hides the **error function** $\operatorname{erf}$, the Gaussian's
+antiderivative, which has no elementary formula:
 
 @!integral-box-volume
+
+::: {.d2l-note}
+Over the whole plane this volume becomes exactly $\pi$. Both facts
+fall out of the change of variables next.
+:::
 :::
 
-::: {.slide title="Integration meets probability"}
-A density is a normalized non-negative function; an expectation is
-an integral; Monte Carlo estimates it by sampling:
+::: {.slide title="The Gaussian integral"}
+[Fubini]{.kicker}
 
-$$\int_{\mathcal X} p = 1, \quad \mathbb{E}[g(X)] = \int g\,p\,dx
-\approx \tfrac1n\textstyle\sum_i g(x_i).$$
+The one-dimensional $\int_{-\infty}^\infty e^{-x^2}\,dx$ has no
+elementary antiderivative. Go *up* a dimension: square it and let
+Fubini fuse the copies, then polar coordinates make it elementary,
 
-The Gaussian normalizer $\int e^{-x^2}\,dx=\sqrt\pi$ falls out of the
-2-D change of variables:
+$$\left(\int e^{-x^2}\,dx\right)^{\!2} = \iint e^{-x^2-y^2}\,dx\,dy = \int_0^\infty\!\!\int_0^{2\pi}\! r\,e^{-r^2}\,d\theta\,dr = \pi.$$
+
+The polar map contributes Jacobian $|\det D\boldsymbol{\phi}|=r$,
+the factor that cracks it open. So $\int e^{-x^2}\,dx=\sqrt\pi$:
 
 @!integral-gaussian
 :::
 
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Integration meets probability]{.dtitle}
+
+[densities, expectations, and Monte Carlo]{.dsub}
+:::
+:::
+
+::: {.slide title="Densities and expectations"}
+[Probability]{.kicker}
+
+This is why a deep-learning reader needs integration. A continuous
+**density** is a non-negative function that is normalized; an
+**expectation** is an integral average:
+
+$$\int_{\mathcal X} p = 1, \qquad \mathbb{E}[g(X)] = \int_{\mathcal X} g(x)\,p(x)\,dx.$$
+
+The Gaussian integral supplies the normalizer: $p(x)=\tfrac{1}{\sqrt\pi}e^{-x^2}$
+integrates to $1$, and symmetry sends its mean to $0$.
+
+@!integral-density
+:::
+
+::: {.slide title="Monte Carlo beats the curse of dimensionality"}
+[Probability]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+With no closed form, **Monte Carlo** estimates an expectation by
+sampling, $\mathbb{E}[g(X)] \approx \tfrac1n\sum_i g(x_i)$, at rate
+$1/\sqrt n$ *in every dimension*.
+
+A grid to resolution $\epsilon$ in $d$ dimensions costs
+$N=\epsilon^{-d}$ points and decays only as $N^{-2/d}$: the exponent
+is devoured by $d$. Past a handful of dimensions, sampling is the
+only practical choice.
+:::
+
+::: {.col .fig .big}
+@!integral-monte-carlo
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
-- Integral = signed area/volume; defined as a limit of Riemann sums.
-- Fundamental theorem: integration is the inverse of differentiation.
-- Integration by parts: $\int u\,v' = [\,uv\,] - \int u'\,v$.
-- Change of variables scales by $du/dx$ (1-D) or
-  $|\det D\boldsymbol{\phi}|$ ($n$-D).
-- Foundation of probability: $\int_{\mathcal X} p = 1$ is a density;
-  expectation is an integral.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Integral** = signed area or volume, a limit of Riemann sums.
+- **Fundamental theorem**: $F'=f$, so integration is the inverse of
+  differentiation, $\int_a^b f = G(b)-G(a)$.
+- **By parts**: $\int u\,v' = [\,uv\,] - \int u'\,v$ moves a
+  derivative onto the factor that can absorb it.
+:::
+
+::: {.col}
+- **Change of variables** scales by $du/dx$ in 1-D, the Jacobian
+  $|\det D\boldsymbol{\phi}|$ in $n$-D, the engine of normalizing flows.
+- **Fubini** evaluates a multiple integral as iterated single ones.
+- **Probability**: a density is $\int p = 1$; an expectation is an
+  integral, estimated by Monte Carlo when it has no closed form.
+:::
+:::
 :::

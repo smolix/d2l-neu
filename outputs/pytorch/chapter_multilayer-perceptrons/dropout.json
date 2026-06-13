@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8.,  0.,  0.,  0.],\n        [16., 18.,  0., 22., 24.,  0., 28., 30.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
+          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8., 10., 12., 14.],\n        [ 0.,  0.,  0., 22., 24.,  0., 28.,  0.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
         }
       ]
     },
@@ -35,33 +35,33 @@
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:9338beb4cb81e5ac29cc505f1d55567cbd3a9e4f7fc77af77b6cbc822ff0568d",
+      "code_fingerprint": "sha256:c336939c5eb9ad13caca6a631715c6900c81570ddd76ee7e42b642c4cb117741",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 21511,
-          "sha256": "sha256:f1da2483be8a946c0ac52ec09135ddad127cf4828286097b697065766940ce40"
+          "bytes": 23746,
+          "sha256": "sha256:e9e0fa63a6a01f16cf4327b94afd186acfe0e99e6b5f19a90552065cc9eaface"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:72e931c6d3d5682b891ac86ab12ad106576b7f477a4d7c2520214253b522cbdb",
+      "code_fingerprint": "sha256:1146638fb3a5c3b4c009ac6db266a486344b87737f6baccf945f3d80c6e30e27",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:f32700b7dcca569b98aaa88d49bd5180d8bfb86c5c5590f6879a16679765adb3",
+      "code_fingerprint": "sha256:3501c09e72a7ee1a76fb87e9899a80caa8dfccd26891a2c0b345f80cd4e1d8fb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 21509,
-          "sha256": "sha256:4f1b4b3afaeab00bc94c2f4684f9f91e94b61076039a307b9a6bc868040a5134"
+          "bytes": 23741,
+          "sha256": "sha256:4a0babee848e2e317d8b252238fe75ae172c1eec8ade784567b0d72e69b94d48"
         }
       ]
     }

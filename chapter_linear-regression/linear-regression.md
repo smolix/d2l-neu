@@ -6,20 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Linear Regression
 :label:`sec_linear_regression`
 
-*Regression* problems pop up whenever we want to predict a numerical value.
-Common examples include predicting prices (of homes, stocks, etc.),
-predicting the length of stay (for patients in the hospital),
-forecasting demand (for retail sales), among numerous others.
-Not every prediction problem is one of classical regression.
-Later on, we will introduce classification problems,
-where the goal is to predict membership among a set of categories.
+Suppose you are about to buy a house and want to know what a fair price is.
+You collect recent sales in the neighborhood, and for each one you note its
+area, its age, and the price it fetched. Plotting price against area, the points
+scatter around a rising line: bigger houses cost more, not exactly but on
+average. *Linear regression* is the tool that draws that line---and, with more
+than one feature, the corresponding plane or hyperplane---and turns it into a
+prediction for a house you have not seen.
 
-As a running example, suppose that we wish
-to estimate the prices of houses (in dollars)
-based on their area (in square feet) and age (in years).
-To develop a model for predicting house prices,
-we need to get our hands on data,
-including the sales price, area, and age for each home.
+Regression problems arise whenever we want to predict a numerical value: the
+price of a home or a stock, a patient's length of stay in hospital, the demand
+for a product next quarter. Not every prediction is of this kind---later we turn
+to *classification*, where the target is a category rather than a number---but
+regression is the natural place to begin, and the running example we return to
+throughout this chapter is predicting house prices from area and age.
 In the terminology of machine learning,
 the dataset is called a *training dataset* or *training set*,
 and each row (containing the data corresponding to one sale)
@@ -275,6 +275,18 @@ when the matrix $\mathbf X^\top \mathbf X$ is invertible,
 i.e., when the columns of the design matrix
 are linearly independent :cite:`Golub.Van-Loan.1996`.
 
+This solution has a clean geometric reading. As $\mathbf{w}$ varies, the vector
+of predictions $\mathbf{X}\mathbf{w}$ ranges over the *column space* of
+$\mathbf{X}$---all linear combinations of the feature columns. Minimizing
+$\|\mathbf{y}-\mathbf{X}\mathbf{w}\|^2$ therefore asks for the point in that
+subspace closest to the observed labels $\mathbf{y}$, which is exactly the
+*orthogonal projection* of $\mathbf{y}$ onto the column space. The residual
+$\mathbf{y}-\mathbf{X}\mathbf{w}^*$ is what is left over, and it must be
+perpendicular to every feature column---precisely the statement
+$\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$ we just derived.
+The same orthogonal-projection idea, for projecting onto a single direction, is
+developed with a picture in :numref:`sec_mdl-geometry-linear-algebraic-ops`.
+
 
 
 While simple problems like linear regression
@@ -404,16 +416,10 @@ Given the model $\hat{\mathbf{w}}^\top \mathbf{x} + \hat{b}$,
 we can now make *predictions* for a new example,
 e.g., predicting the sales price of a previously unseen house
 given its area $x_1$ and age $x_2$.
-Deep learning practitioners have taken to calling the prediction phase *inference*
-but this is a bit of a misnomer---*inference* refers broadly
-to any conclusion reached on the basis of evidence,
-including both the values of the parameters
-and the likely label for an unseen instance.
-If anything, in the statistics literature
-*inference* more often denotes parameter inference
-and this overloading of terminology creates unnecessary confusion
-when deep learning practitioners talk to statisticians.
-In the following we will stick to *prediction* whenever possible.
+Deep learning practitioners often call the prediction phase *inference*. This is
+a mild misnomer: in statistics, *inference* more often means estimating
+parameters than scoring new points, so the overloaded term can confuse when the
+two communities talk. We will say *prediction* throughout.
 
 
 
@@ -481,8 +487,14 @@ d = a + b
 f'{time.time() - t:.5f} sec'
 ```
 
-The second method is dramatically faster than the first.
-Vectorizing code often yields order-of-magnitude speedups.
+The second method is dramatically faster than the first. The reason is not that
+addition itself got cheaper but that we replaced $n$ round-trips through the
+Python interpreter---one per element, each dispatching a separate tensor
+operation---with a single call into a compiled linear-algebra kernel. The speedup
+therefore grows with the vector length and varies widely across frameworks and
+hardware (here, anywhere from roughly tenfold to a thousandfold), but the
+qualitative lesson is universal: push inner loops down into vectorized library
+calls rather than writing them out in Python.
 Moreover, we push more of the mathematics to the library
 so we do not have to write as many calculations ourselves,
 reducing the potential for errors and increasing portability of the code.
@@ -770,6 +782,7 @@ and ultimately, evaluation on previously unseen data.
     1. How could you fix it? What happens if you add a small amount of coordinate-wise independent Gaussian noise to all entries of $\mathbf{X}$?
     1. What is the expected value of the design matrix $\mathbf{X}^\top \mathbf{X}$ in this case?
     1. What happens with stochastic gradient descent when $\mathbf{X}^\top \mathbf{X}$ does not have full rank?
+    1. The standard remedy for a (near-)singular $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before inverting. Relate this to the $\ell_2$ penalty introduced in :numref:`sec_weight_decay`, and show that the resulting estimator $\mathbf{w}^* = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$ is well defined for every $\lambda>0$.
 1. Assume that the noise model governing the additive noise $\epsilon$ is the exponential distribution. That is, $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
     1. Write out the negative log-likelihood of the data under the model $-\log P(\mathbf y \mid \mathbf X)$.
     1. Can you find a closed form solution?

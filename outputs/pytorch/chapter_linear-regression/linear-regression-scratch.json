@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8c796544c9e5269b7f7931dd1c404edca2ea9e79734fbd6ec566dc63005dffda",
+    "d2l_lib_fingerprint": "sha256:fb5f428057358f4b76af64ffd98bab6c2cd17791fc5b1902aa91751388a2a833",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,27 +48,37 @@
       "kind": "text",
       "outputs": []
     },
+    "linear-regression-scratch-training-seed": {
+      "code_fingerprint": "sha256:75354b93bc1394827464e81a1371f4932fdabb31d4ecb210805f8a2dfc2e845a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<torch._C.Generator at 0x10c81e050>"
+        }
+      ]
+    },
     "linear-regression-scratch-training-3": {
-      "code_fingerprint": "sha256:fe57197f8b25fb750c2bbbca8f4f7a4001901d6186087077a23d1e1925ad621f",
+      "code_fingerprint": "sha256:dfb755bd3a060a71479cc0f6cb38c6df25dce1d9363aa463f7852c9b7e2140cc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 19127,
-          "sha256": "sha256:ec071b7111355924668ec00a0f99aa6f80c1d3024926eda92ec3ad761fb56edd"
+          "bytes": 19122,
+          "sha256": "sha256:ec856b2adc001c24b53d235db7ee0ce4f4f18d3a8019bf50714d7eef6994584e"
         }
       ]
     },
     "linear-regression-scratch-training-4": {
-      "code_fingerprint": "sha256:2b00b557edb04da3b7257827bcb386e446420ebeefbd9c5477485d84551a6311",
+      "code_fingerprint": "sha256:993b1f6fc0aa7bf37c1a32cd7dc3225243b04f6a4474254969d7573cfb235f96",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 0.0003, -0.0003])\nerror in estimating b: tensor([0.0009])\n"
+          "text": "error in estimating w: tensor([ 3.5524e-05, -3.0398e-04])\nerror in estimating b: tensor([0.0003])\n"
         }
       ]
     }

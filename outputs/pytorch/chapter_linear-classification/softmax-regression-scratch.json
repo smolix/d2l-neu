@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[0.1209, 0.2722, 0.2565, 0.1528, 0.1975],\n         [0.1475, 0.3048, 0.2013, 0.2133, 0.1331]]),\n tensor([1., 1.]))"
+          "text": "(tensor([[0.1918, 0.2085, 0.1928, 0.1239, 0.2829],\n         [0.1410, 0.1600, 0.3041, 0.2584, 0.1365]]),\n tensor([1., 1.]))"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22390,
-          "sha256": "sha256:27c3ad589d51875b1ea5f1ca33b38b4f181e727bc20e2bafa01e7847f542b7f3"
+          "bytes": 22393,
+          "sha256": "sha256:2a24383458881e87bfeb0927cb72b9ce895eef9747f4317308831b261ab7b406"
         }
       ]
     },
@@ -96,16 +96,27 @@
         }
       ]
     },
+    "softmax-regression-scratch-prediction-accuracy": {
+      "code_fingerprint": "sha256:5e82e621a2d4d72775bf431e9499d8805400dba2276ac6b348663f5813fc1239",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Test accuracy: 0.823\n"
+        }
+      ]
+    },
     "softmax-regression-scratch-prediction-2": {
-      "code_fingerprint": "sha256:0c815742ac3f72a84067443b5fc67db3e55d87302527df4ba82c84ddf5e3261a",
+      "code_fingerprint": "sha256:273ba18196f27c1408ee9b17e6d9f55efb75644ee820d7832faecfc1ad6dfbb3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 51904,
-          "sha256": "sha256:25c385375d0b296e196a39bdff9cea0b2c0e633b8089313059f82b5b2136bab6"
+          "bytes": 49549,
+          "sha256": "sha256:78c585a865f68d601423706d0ff8d60253f6df64e0655c6c8da6f594a1491107"
         }
       ]
     }

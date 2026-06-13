@@ -33,7 +33,7 @@ The classical machine-learning texts listed in the previous chapter (**Linear Ne
 **Tutorials and notes**
 
 - [CS229 Machine Learning lecture notes — Andrew Ng & Tengyu Ma (Stanford)](https://cs229.stanford.edu/main_notes.pdf) — free PDF; derives logistic and softmax (multinomial) regression and the cross-entropy loss from the exponential-family / GLM viewpoint.
-- [Information Theory — *Dive into Deep Learning*](https://d2l.ai/chapter_appendix-mathematics-for-deep-learning/information-theory.html) — this book's own chapter (in the *Mathematics for Deep Learning* part) on entropy, cross-entropy, and KL divergence, the information-theoretic background behind the softmax loss.
+- [Information Theory — *this book's Mathematics for Deep Learning appendix*](../chapter_mdl-information-theory/index.html) — entropy, cross-entropy, and KL divergence developed in full, the information-theoretic background behind the softmax cross-entropy loss.
 
 **Foundational papers**
 

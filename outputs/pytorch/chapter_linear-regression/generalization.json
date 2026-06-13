@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/generalization.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-polynomial-curve-fitting-1": {
+      "code_fingerprint": "sha256:4490b1ace73974f5bc0dc310e133a637f1974cfbb039b62801ce1beef0032b63",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-2": {
+      "code_fingerprint": "sha256:2e88ed25f554916af1bcb4396b99318b917fc701887abe58818c8b375a446b59",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-3": {
+      "code_fingerprint": "sha256:a5a6b45ce127a8a544c9b9a753e6126f40d11933221f93f52ae623dd018e9385",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-4": {
+      "code_fingerprint": "sha256:acae4f527afd858195748d058562be425d8a5fe84f8e86690cb89e09d85215b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "underfitting (degree 1) : train   1.6698   test       1.7318\njust right   (degree 3) : train   0.0136   test       0.0129\noverfitting   (degree 19): train   0.0000   test 49270853259149.2422\n"
+        }
+      ]
+    },
+    "generalization-polynomial-curve-fitting-5": {
+      "code_fingerprint": "sha256:4f0fb7a6fea42901ac6a5c7ced401473337fd6841ba13e70208514132aa67702",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
+          "bytes": 22244,
+          "sha256": "sha256:993481ec303491d0aee1153498c1ddac2be0081220291f4865e05512d7d1059f"
+        }
+      ]
+    }
+  }
+}

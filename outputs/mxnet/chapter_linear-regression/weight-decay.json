@@ -29,66 +29,66 @@
       "outputs": []
     },
     "weight-decay-defining-the-model-2": {
-      "code_fingerprint": "sha256:c87063bdd75fb67daf772720462ca95c2fe1ac54af1b447175c7d684ab443bc2",
+      "code_fingerprint": "sha256:1edda1928961bd45342c780689ffc5717833ff75e9c323f6b9dd9240605ba521",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-training-without-regularization": {
-      "code_fingerprint": "sha256:04378b80e6d6f7ce42b5f2e3433cb0a680da87d8584ec5a692c3014fe229f7c5",
+      "code_fingerprint": "sha256:f62cf26fb934bdb6f1ea4e305be67c046d8601d82c79523a62b617b390bdcc3d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.010537543334066868\n"
+          "text": "L2 norm of w: 0.0114810261875391\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 27701,
-          "sha256": "sha256:91934c054dc917d1a183b4e578374ca206837426528502fca8cbc453b97f0df0"
+          "bytes": 22655,
+          "sha256": "sha256:779026e2fbd7eaaddce147a0eedd16c073e7d92b8fa147963e1f2a50cdcf8e2d"
         }
       ]
     },
     "weight-decay-using-weight-decay": {
-      "code_fingerprint": "sha256:1ac010ef0467806bc827001c0fde5a5537c9978aa002dad02f9240c68f0f4df6",
+      "code_fingerprint": "sha256:eb32abc6d3a7d22a61592a2cadcb3b5a26b39ca6c04584174f059e005e00b636",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0013858482707291842\n"
+          "text": "L2 norm of w: 0.0010342157911509275\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 19269,
-          "sha256": "sha256:930ccafc48a91ff69572fa235d22b4a8721e8f5e1eaa7f834bf7de58cc1e5dee"
+          "bytes": 26843,
+          "sha256": "sha256:b3935ca536fde3ea00df633e60709f3187f0801a8c9f316aecadcb9e7dfde36c"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:d9c6fcbab39944647426c29ce26e62826c3e94edadeaf456ad31c147836ea534",
+      "code_fingerprint": "sha256:15adb39db4b8fc6c7ed2934ade6e820af9b37e6aa0a0b6f79a3ba101473c7ad6",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:1679f314f9c74744daaa8c14ecc8f7202829e10b445a416fc2f0bbec50d7a494",
+      "code_fingerprint": "sha256:0f9d0414b94c71160a47037590d2f2b7e5281fa0578ed77eea204f6c4ffa5124",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.001529658678919077\n"
+          "text": "L2 norm of w: 0.0013246915768831968\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 23355,
-          "sha256": "sha256:1608ae7037170791ffcfd7edb2ce93ebaffb810a018fec9bcad0302432790bef"
+          "bytes": 25225,
+          "sha256": "sha256:8d1f1cdd176ea61a92a4f403592314c21533a939dab39a02d6ca2ede88760aa0"
         }
       ]
     }

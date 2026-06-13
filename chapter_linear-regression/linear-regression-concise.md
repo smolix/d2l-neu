@@ -6,36 +6,17 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation of Linear Regression
 :label:`sec_linear_concise`
 
-Deep learning has witnessed a sort of Cambrian explosion
-over the past decade.
-The sheer number of techniques, applications, and algorithms by far surpasses the
-progress of previous decades. 
-This is due to a fortuitous combination of multiple factors,
-one of which is the powerful free tools
-offered by a number of open-source deep learning frameworks.
-Theano :cite:`Bergstra.Breuleux.Bastien.ea.2010`,
-DistBelief :cite:`Dean.Corrado.Monga.ea.2012`,
-and Caffe :cite:`Jia.Shelhamer.Donahue.ea.2014`
-arguably represent the
-first generation of such models 
-that found widespread adoption.
-In contrast to earlier (seminal) works like
-SN2 (Simulateur Neuristique) :cite:`Bottou.Le-Cun.1988`,
-which provided a Lisp-like programming experience,
-modern frameworks offer automatic differentiation
-and the convenience of Python.
-These frameworks allow us to automate and modularize
-the repetitive work of implementing gradient-based learning algorithms.
-
-In :numref:`sec_linear_scratch`, we relied only on
-(i) tensors for data storage and linear algebra;
-and (ii) automatic differentiation for calculating gradients.
-In practice, because data iterators, loss functions, optimizers,
-and neural network layers
-are so common, modern libraries implement these components for us as well.
-In this section, we will show you how to implement
-the linear regression model from :numref:`sec_linear_scratch`
-concisely by using high-level APIs of deep learning frameworks.
+In :numref:`sec_linear_scratch` we implemented every piece of linear regression
+by hand: we initialized the weights, coded the forward pass, wrote out the squared
+error, and ran the parameter update ourselves.
+You *should* know how to do this, and doing it once is instructive.
+But because data iterators, loss functions, optimizers, and neural network layers
+are so common, modern deep learning frameworks package all of them as reusable,
+heavily optimized, well-tested components, freeing us to focus on the model
+rather than on low-level bookkeeping.
+In this section we rebuild the very same model from :numref:`sec_linear_scratch`
+using these high-level APIs, showing exactly which hand-rolled piece each
+framework primitive replaces.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -70,6 +51,13 @@ import optax
 ```
 
 ## Defining the Model
+
+Each component from :numref:`sec_linear_scratch` has a direct counterpart here.
+The hand-rolled weight vector $\mathbf{w}$ and bias $b$ are replaced by a single
+*layer*; our manual squared-error computation is replaced by a built-in *loss*;
+and our explicit parameter-update loop is replaced by an *optimizer* object.
+The next three subsections walk through these substitutions one by one, and the
+training loop afterwards stays exactly as it was.
 
 When we implemented linear regression from scratch
 in :numref:`sec_linear_scratch`,
@@ -349,7 +337,7 @@ to train our model.
 ```{.python .input #linear-regression-concise-training-1}
 model = LinearRegression(lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
-trainer = d2l.Trainer(max_epochs=3)
+trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
@@ -447,11 +435,11 @@ In PyTorch, the `data` module provides tools for data processing,
 the `nn` module defines a large number of neural network layers and common loss functions.
 We can initialize the parameters by replacing their values
 with methods ending with `_`.
-Note that we need to specify the input dimensions of the network.
-While this is trivial for now, it can have significant knock-on effects
-when we want to design complex networks with many layers.
-Careful considerations of how to parametrize these networks
-is needed to allow portability.
+Because we used `nn.LazyLinear`, the input dimensions are inferred automatically
+on the first forward pass, so we never have to specify them by hand.
+This lazy shape inference pays off in deeper networks (convolutional layers,
+variable-length sequences), where computing the input size of each layer by hand
+would be tedious and error-prone.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -473,6 +461,7 @@ Dimensionality and storage for networks are automatically inferred
 1. How does the solution change as you vary the amount of data generated?
     1. Plot the estimation error for $\hat{\mathbf{w}} - \mathbf{w}$ and $\hat{b} - b$ as a function of the amount of data. Hint: increase the amount of data logarithmically rather than linearly, i.e., 5, 10, 20, 50, ..., 10,000 rather than 1000, 2000, ..., 10,000.
     2. Why is the suggestion in the hint appropriate?
+1. Time the from-scratch implementation of :numref:`sec_linear_scratch` against the concise one here, training each for 10, 100, and 1,000 epochs on the same synthetic dataset. Which is faster, and does the gap grow with the number of epochs? What does this tell you about the overhead of Python-level parameter bookkeeping versus framework-optimized operations?
 
 
 :begin_tab:`mxnet`

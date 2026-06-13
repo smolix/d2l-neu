@@ -319,6 +319,23 @@ class SGD(d2l.HyperParameters):  #@save
         return optax.GradientTransformation(self.init, self.update)
 ```
 
+Each optimization step has four parts, and their order matters. **(1) Zero the
+gradients:** autograd *accumulates* gradients by default (:numref:`sec_autograd`),
+so the gradient left over from the previous minibatch must be cleared first.
+**(2) Forward pass and loss**, computed with the gradient machinery recording.
+**(3) Backward pass**, which fills each parameter's gradient with
+$\partial L/\partial \theta$ averaged over the minibatch. **(4) Update:** subtract
+$\eta$ times the gradient from each parameter, *in place*. This last step must run
+*outside* the gradient graph---so that the update itself is not differentiated and
+does not extend the graph---which is why it sits under a no-tracking guard
+(PyTorch's `torch.no_grad()`; the other frameworks express the same idea through
+their `GradientTape`, `autograd.record()`, or functional value-and-gradient, as
+the notes above describe). Forget step (1) and stale gradients leak from one batch
+into the next; forget the guard in step (4) and the update either errors or
+silently grows the graph. Strip away the bookkeeping and training a neural network
+is exactly this four-step loop, run on minibatch after minibatch---which is what
+`fit_epoch` implements below.
+
 We next define the `configure_optimizers` method, which returns an instance of the `SGD` class.
 
 ```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-2  n=14}
@@ -605,8 +622,13 @@ and we will usually want to use a three-way split,
 one set for training, 
 a second for hyperparameter selection,
 and the third reserved for the final evaluation.
-We elide these details for now but will revise them
-later.
+We elide these details for now and develop model selection, validation, and the
+train/validation/test split in :numref:`sec_generalization_basics`.
+
+```{.python .input #linear-regression-scratch-training-seed}
+%%tab pytorch
+torch.manual_seed(1)
+```
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
 model = LinearRegressionScratch(2, lr=0.03)
@@ -614,6 +636,14 @@ data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
+
+The `fit` call above produces a live plot of the training and validation loss
+against the epoch. Both curves fall together and flatten near the irreducible
+noise floor (with $\sigma = 0.01$ the per-example squared loss bottoms out around
+$\sigma^2/2 \approx 5\times 10^{-5}$). Crucially, the validation curve tracks the
+training curve with **no gap**: a two-dimensional linear model fit on 1000
+examples has no capacity to overfit. We return to the train/validation gap, and
+what to do when it opens, in :numref:`sec_generalization_basics`.
 
 Because we synthesized the dataset ourselves,
 we know precisely what the true parameters are.
@@ -680,6 +710,13 @@ In the coming sections, we will see how to do this
 both *more concisely* (avoiding boilerplate code)
 and *more efficiently* (using our GPUs to their full potential).
 
+The hand-rolled SGD above is the simplest member of a large family: momentum,
+AdaGrad, RMSProp, and Adam all replace that single update line, and learning-rate
+schedules anneal $\eta$ over the course of training; these are developed in
+:numref:`chap_optimization`. The squared loss, likewise, is a modelling
+choice---in :numref:`sec_weight_decay` we add a penalty on $\|\mathbf{w}\|$ to
+curb overfitting, the first of many regularizers we will meet.
+
 
 
 ## Exercises
@@ -700,7 +737,7 @@ and *more efficiently* (using our GPUs to their full potential).
 1. Why is the `reshape` method needed in the `loss` function?
 1. Experiment using different learning rates to find out how quickly the loss function value drops. Can you reduce the
    error by increasing the number of epochs of training?
-1. Try implementing a different loss function, such as the absolute value loss `(y_hat - d2l.reshape(y, y_hat.shape)).abs().sum()`.
+1. Try implementing a different loss function, such as the absolute value loss `(y_hat - d2l.reshape(y, y_hat.shape)).abs().mean()`. (If you *sum* rather than average, the gradient scales with the batch size, so you must lower the learning rate to compensate.)
     1. Check what happens for regular data.
     1. Check whether there is a difference in behavior if you actively perturb some entries, such as $y_5 = 10000$, of $\mathbf{y}$.
     1. Can you think of a cheap solution for combining the best aspects of squared loss and absolute value loss?

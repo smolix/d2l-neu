@@ -29,33 +29,33 @@
       "outputs": []
     },
     "mlp-implementation-training": {
-      "code_fingerprint": "sha256:327e8c81bac81d46aaf92bc87aca0d876ea31f677b1d8a741b09f807982fc261",
+      "code_fingerprint": "sha256:aec591138c74e9f9cf4d228a9d195bc5095f191d638193398c06bf32d18c8aef",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 20994,
-          "sha256": "sha256:104866d4cbbef3412eddc2f819f294175f60febd932b73e6956c5dbd00ba1966"
+          "bytes": 24820,
+          "sha256": "sha256:bac94411503dcab21c25d1f0c6d9afbaabb7f5fe2bf8a481a5a7f42dc12d02e9"
         }
       ]
     },
     "mlp-implementation-model-2-2": {
-      "code_fingerprint": "sha256:2fff6121b5f743c4552e9ac55ec70071bc295dea50832b014383355f7651b55b",
+      "code_fingerprint": "sha256:2f88647ba46de1c3ea3f2c6635f8b8110918f38ff74291874e21c73cd0b76bb1",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-training-2": {
-      "code_fingerprint": "sha256:0e48a61798de3b6eee15f2100e44bdbe15e0147a7de0066226b42c45a64ac691",
+      "code_fingerprint": "sha256:303b24976dc250d74639988239e8ad27163939ffcb27d551d6b3485679b6c422",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 20000,
-          "sha256": "sha256:8f8f9a54d70e88edbff25b6e750a26cac6738d716d335e38f06adae7b636bd9a"
+          "bytes": 23819,
+          "sha256": "sha256:3eb1d8e22f555f571b82347d9b74c40abd73962641a5a2f7636f90e25a7de0e0"
         }
       ]
     }

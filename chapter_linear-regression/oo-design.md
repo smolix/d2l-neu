@@ -6,40 +6,28 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Object-Oriented Design for Implementation
 :label:`sec_oo-design`
 
-In our introduction to linear regression,
-we walked through various components
-including
-the data, the model, the loss function,
-and the optimization algorithm.
-Indeed,
-linear regression is
-one of the simplest machine learning models.
-Training it,
-however, uses many of the same components that other models in this book require.
-Therefore, 
-before diving into the implementation details
-it is worth 
-designing some of the APIs
-that we use throughout. 
-Treating components in deep learning
-as objects,
-we can start by
-defining classes for these objects
-and their interactions.
-This object-oriented design
-for implementation
-will greatly
-streamline the presentation and you might even want to use it in your projects.
+Almost every model in this book follows the same loop: load data, run a forward
+pass, compute the loss, update the parameters, and repeat. If we wrote that loop
+from scratch for each new model, a small change to the training procedure (say,
+adding gradient clipping or a learning-rate schedule) would force us to touch
+every chapter. The fix, borrowed from libraries such as
+[Lightning](https://lightning.ai/), is to write the loop once inside a reusable
+`Trainer` class and let the model and the data vary as subclasses of `Module` and
+`DataModule`:
 
+* **`Module`** holds the model parameters, the `forward` pass, the loss, and the
+  optimizer. Every model in the book is a subclass.
+* **`DataModule`** holds a dataset and serves its training and validation data
+  loaders. Every dataset is a subclass.
+* **`Trainer`** owns the epoch loop: it feeds batches from the `DataModule` into
+  the `Module` and applies the optimizer.
 
-Inspired by open-source libraries such as [PyTorch Lightning](https://www.pytorchlightning.ai/),
-at a high level
-we wish to have three classes: 
-(i) `Module` contains models, losses, and optimization methods; 
-(ii) `DataModule` provides data loaders for training and validation; 
-(iii) both classes are combined using the `Trainer` class, which allows us to
-train models on a variety of hardware platforms. 
-Most code in this book adapts `Module` and `DataModule`. We will touch upon the `Trainer` class only when we discuss GPUs, CPUs, parallel training, and optimization algorithms.
+Most chapters subclass only `Module` and `DataModule`; we return to the `Trainer`
+itself when we reach GPUs, parallel training, and optimization.
+:numref:`fig_oo_design` shows how the three fit together.
+
+![The three base classes and how they fit together. `Trainer.fit` drives a `Module` (which holds the model, loss, and optimizer) over data served by a `DataModule`; new models and datasets are written as subclasses.](../img/mdl-linreg-oo-classes.svg)
+:label:`fig_oo_design`
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab mxnet
@@ -727,8 +715,12 @@ this degree of modularity pays dividends throughout the book in terms of concise
 
 ## Exercises
 
-1. Locate full implementations of the above classes that are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l). We strongly recommend that you look at the implementation in detail once you have gained some more familiarity with deep learning modeling.
-1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have dived into the full implementation of the `HyperParameters` class, can you explain why?
+1. The `add_to_class` decorator works by calling `setattr(Class, obj.__name__, obj)`. (a) Add a method `greet(self)` to the existing class `A` *after* the instance `a` has been created, using `@add_to_class(A)`, and verify that `a.greet()` works. (b) What happens if you define `greet` *without* the decorator and then call `a.greet()`? Why?
+1. The `Module` class keeps the optimizer in `configure_optimizers`, a *method of the model*, rather than passing it as an argument to `Trainer`. What are the advantages of this design choice? Can you think of a case where putting the optimizer on the model is awkward?
+1. Extend `DataModule` with a `test_dataloader` method and extend `Trainer.fit` to run a final evaluation pass on the test set after training. What invariant must the test loader satisfy that the validation loader need not?
+1. The `save_hyperparameters` implementation uses Python's `inspect` module to capture the caller's local variables. Can you implement a version that does *not* use `inspect`, for example by requiring the caller to pass the local namespace explicitly? What are the trade-offs?
+1. (Advanced) The `ProgressBoard.draw` method is *asynchronous*: it hands values to a background thread rather than plotting immediately. Sketch a synchronous alternative. Under what conditions would the synchronous version be slower? When would the two perform identically?
+1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have studied the full implementation of the `HyperParameters` class, can you explain why?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6645)

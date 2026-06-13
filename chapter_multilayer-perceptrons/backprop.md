@@ -80,9 +80,8 @@ for a single data example,
 
 $$L = l(\mathbf{o}, y).$$
 
-As we will see the definition of $\ell_2$ regularization
-to be introduced later,
-given the hyperparameter $\lambda$,
+Recall the $\ell_2$ regularization term (:numref:`sec_weight_decay`): given
+the hyperparameter $\lambda$,
 the regularization term is
 
 $$s = \frac{\lambda}{2} \left(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{(2)}\|_\textrm{F}^2\right),$$
@@ -161,7 +160,7 @@ and $\partial J/\partial \mathbf{W}^{(2)}$.
 To accomplish this, we apply the chain rule
 and calculate, in turn, the gradient of
 each intermediate variable and parameter.
-The order of calculations are reversed
+The order of calculations is reversed
 relative to those performed in forward propagation,
 since we need to start with the outcome of the computational graph
 and work our way towards the parameters.
@@ -173,7 +172,7 @@ and the regularization term $s$:
 $$\frac{\partial J}{\partial L} = 1 \; \textrm{and} \; \frac{\partial J}{\partial s} = 1.$$
 
 Next, we compute the gradient of the objective function
-with respect to variable of the output layer $\mathbf{o}$
+with respect to the output-layer variable $\mathbf{o}$
 according to the chain rule:
 
 $$
@@ -235,7 +234,79 @@ $$
 = \frac{\partial J}{\partial \mathbf{z}} \mathbf{x}^\top + \lambda \mathbf{W}^{(1)}.
 $$
 
+### A Worked Example
 
+Symbols can hide what backpropagation actually *does*, so let us push real
+numbers through a graph. We follow the one rule that produced every equation
+above: at each node, multiply the gradient arriving from downstream by the
+node's *local* derivative.
+
+Start with the simplest non-trivial graph, $e = (a + b)\,c$, evaluated at
+$a = 2$, $b = 1$, $c = -3$. The *forward pass* computes the intermediate
+$d = a + b = 3$ and then $e = d\,c = -9$. For the *backward pass* we seed
+$\partial e/\partial e = 1$ and walk back. The multiply node $e = d\,c$ has
+local derivatives $\partial e/\partial d = c = -3$ and
+$\partial e/\partial c = d = 3$. The add node $d = a + b$ has
+$\partial d/\partial a = \partial d/\partial b = 1$, so it simply *passes its
+incoming gradient through* to both inputs. Chaining,
+
+$$\frac{\partial e}{\partial a} = \frac{\partial e}{\partial d}\frac{\partial d}{\partial a} = -3,\quad
+  \frac{\partial e}{\partial b} = -3,\quad
+  \frac{\partial e}{\partial c} = 3.$$
+
+This is the whole algorithm in miniature: *add* nodes broadcast the upstream
+gradient unchanged, *multiply* nodes scale it by the other input. Every backward
+equation in this section is an instance of this one move.
+
+Now run the same machinery on a network of the form above, shrunk to
+$d = h = 2$ inputs and hidden units, $q = 1$ output, with ReLU activation
+$\phi(z) = \max(0, z)$ and (for clarity) no regularization, $\lambda = 0$. Take
+
+$$\mathbf{x} = \begin{bmatrix} 1 \\ 2 \end{bmatrix},\quad
+  \mathbf{W}^{(1)} = \begin{bmatrix} 1 & -1 \\ 0 & \phantom{-}1 \end{bmatrix},\quad
+  \mathbf{W}^{(2)} = \begin{bmatrix} 2 & -1 \end{bmatrix},\quad y = 0,$$
+
+and squared-error loss $L = \tfrac12 (o - y)^2$. The *forward pass* gives
+$\mathbf{z} = \mathbf{W}^{(1)}\mathbf{x} = [-1,\ 2]^\top$, so
+$\mathbf{h} = \phi(\mathbf{z}) = [0,\ 2]^\top$ (the first unit is dead),
+$o = \mathbf{W}^{(2)}\mathbf{h} = -2$, and $L = \tfrac12(-2)^2 = 2$. For the
+*backward pass*, $\partial L/\partial o = o - y = -2$, and then, reading the
+section's equations top to bottom,
+
+$$\frac{\partial L}{\partial \mathbf{W}^{(2)}} = \frac{\partial L}{\partial o}\,\mathbf{h}^\top = -2\,[0,\ 2] = [0,\ -4],$$
+
+$$\frac{\partial L}{\partial \mathbf{h}} = {\mathbf{W}^{(2)}}^\top \frac{\partial L}{\partial o} = [-4,\ 2]^\top,\qquad
+  \frac{\partial L}{\partial \mathbf{z}} = \frac{\partial L}{\partial \mathbf{h}} \odot \phi'(\mathbf{z}) = [-4,\ 2]^\top \odot [0,\ 1]^\top = [0,\ 2]^\top,$$
+
+using $\phi'(z) = \mathbf{1}[z > 0]$, which is exactly where the *dead* first
+unit blocks the gradient. Finally,
+
+$$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \frac{\partial L}{\partial \mathbf{z}}\,\mathbf{x}^\top
+  = \begin{bmatrix} 0 \\ 2 \end{bmatrix}[1,\ 2]
+  = \begin{bmatrix} 0 & 0 \\ 2 & 4 \end{bmatrix}.$$
+
+:numref:`fig_mdl-mlp-backprop-graph` traces these numbers through the graph,
+forward in black and backward in blue. Notice that the row of
+$\partial L/\partial \mathbf{W}^{(1)}$ feeding the dead unit is entirely zero:
+no gradient means no learning signal, the concrete face of the "dying ReLU" we
+met in :numref:`sec_mlp`. You can confirm every number here in a few lines with
+automatic differentiation (:numref:`sec_autograd`); doing so is a good way to
+convince yourself the framework is running exactly this computation.
+
+![The worked example as a computational graph, with $\lambda=0$. The forward pass (black) carries values from the input $\mathbf{x}$ to the loss $L$; backpropagation (blue) walks the same graph in reverse, multiplying each node's local derivative to accumulate the gradients $\partial L/\partial\mathbf{W}^{(2)}$ and $\partial L/\partial\mathbf{W}^{(1)}$. The dead first ReLU unit ($z_1=-1$) zeros the gradient flowing into the top row of $\mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
+:label:`fig_mdl-mlp-backprop-graph`
+
+### From the Chain Rule to Autograd
+
+What we have just done by hand is precisely what a deep learning framework does
+when you call `backward()`: it records the computational graph during the forward
+pass, seeds a gradient of $1$ at the scalar objective, and sweeps the graph in
+reverse, multiplying the local derivative at each node (our $\textrm{prod}$) to
+accumulate the gradient with respect to every parameter in a *single* pass. This
+output-to-input sweep is *reverse-mode* automatic differentiation, and it is cheap
+exactly when there are many parameters and one scalar loss, the deep learning
+regime. We use it throughout the book and developed its mechanics, including when
+the opposite *forward mode* is preferable, in :numref:`sec_autograd`.
 
 ## Training Neural Networks
 

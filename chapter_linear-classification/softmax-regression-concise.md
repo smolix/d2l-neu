@@ -137,20 +137,25 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 ## Softmax Revisited
 :label:`subsec_softmax-implementation-revisited`
 
-In :numref:`sec_softmax_scratch` we calculated our model's output
-and applied the cross-entropy loss. While this is perfectly
-reasonable mathematically, it is risky computationally, because of
-numerical underflow and overflow in the exponentiation.
+In :numref:`sec_softmax_scratch` we computed the softmax explicitly
+and then took its logarithm inside the cross-entropy loss. To keep that
+version usable we had to *clamp* the probabilities away from zero, a
+band-aid that prevents $\log 0$ but still forms the overflow-prone
+softmax first and silently kills the gradient on any clamped entry.
+Here we remove the problem at its source rather than patch its symptom.
 
 Recall that the softmax function computes probabilities via
 $\hat y_j = \frac{\exp(o_j)}{\sum_k \exp(o_k)}$.
 If some of the $o_k$ are very large, i.e., very positive,
 then $\exp(o_k)$ might be larger than the largest number
-we can have for certain data types. This is called *overflow*. Likewise,
-if every argument is a very large negative number, we will get *underflow*.
-For instance, single precision floating point numbers approximately
-cover the range of $10^{-38}$ to $10^{38}$. As such, if the largest term in $\mathbf{o}$
-lies outside roughly $[-88, 88]$, the result will not be representable in FP32.
+we can have for certain data types. This is called *overflow*.
+Conversely, a strongly negative $o_k$ makes
+$\exp(o_k)$ *underflow* to $0$. Single-precision floats span roughly
+$10^{-38}$ to $10^{38}$, so $\exp$ overflows once an argument exceeds about
+$88$ and underflows to $0$ once it drops below about $-88$. A single large
+positive logit therefore overflows the numerator, while strongly negative
+logits underflow individual terms to $0$: harmless in the sum, but fatal
+once we take a logarithm.
 A way round this problem is to subtract $\bar{o} \stackrel{\textrm{def}}{=} \max_k o_k$ from
 all entries:
 
@@ -182,14 +187,30 @@ $$
 o_j - \bar{o} - \log \sum_k \exp (o_k - \bar{o}).
 $$
 
-This avoids both overflow and underflow.
-We will want to keep the conventional softmax function handy
-in case we ever want to evaluate the output probabilities by our model.
-But instead of passing softmax probabilities into our new loss function,
-we just
-pass the logits and compute the softmax and its log
-all at once inside the cross-entropy loss function,
-which does smart things like the ["LogSumExp trick"](https://en.wikipedia.org/wiki/LogSumExp).
+This avoids both overflow and underflow. We are not quite done, though,
+because the object we actually need is not $\log \hat y_j$ but the loss.
+For an example with true class $y$, the cross-entropy loss is
+$\ell = -\log \hat y_y$. Substituting the stabilized expression above turns
+the loss into a function of the **logits alone**:
+
+$$
+\ell(y, \mathbf{o}) = \log \sum_{k} \exp(o_k) - o_y =
+\underbrace{\bar{o} + \log \sum_{k} \exp(o_k - \bar{o})}_{\textrm{numerically stable}} - o_y,
+\qquad \bar{o} = \max_k o_k.
+$$
+
+The first term, $\log \sum_k \exp(o_k)$, is the *log-sum-exp* function, a
+smooth upper bound on $\max_k o_k$; the second equality is the only safe way
+to evaluate it, since every exponent $o_k - \bar{o} \leq 0$. This is precisely
+what the built-in cross-entropy loss computes when handed raw logits: it never
+forms the softmax probabilities at all, so neither $\exp$ of a large number nor
+$\log$ of a zero ever occurs. Because the fused loss differentiates this exact
+expression, its gradient is the clean
+$\partial_{o_j}\ell = \mathrm{softmax}(\mathbf{o})_j - y_j$ derived in
+:numref:`subsec_softmax_and_derivatives`, with no clamp to perturb it. We keep
+the explicit softmax of :numref:`sec_softmax_scratch` only for *reading off*
+predicted probabilities at inference time; for the loss we pass logits and let
+the fused operation do the rest.
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab pytorch
@@ -241,6 +262,17 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 ```
 
+Each framework exposes this fused loss under a slightly different name, but
+all four take **logits**, not probabilities: passing softmax outputs would
+apply the softmax twice. PyTorch's `F.cross_entropy` consumes logits by
+definition; TensorFlow uses `SparseCategoricalCrossentropy(from_logits=True)`;
+JAX/Optax provides `softmax_cross_entropy_with_integer_labels`; and MXNet's
+`SoftmaxCrossEntropyLoss` (with its default `from_logits=False`) applies the
+stable softmax internally. Correspondingly, the model's `forward` returns raw
+logits and contains **no** softmax: the loss owns that step. We defined this
+`loss` on the base `Classifier` (note the `#@save`), so every classifier in
+the rest of the book inherits the numerically stable version.
+
 ## Training
 
 Next we train our model. We use Fashion-MNIST images, flattened to 784-dimensional feature vectors.
@@ -252,9 +284,9 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-As before, this algorithm converges to a solution
-that is reasonably accurate,
-albeit this time with fewer lines of code than before.
+As before, training converges to about 83--84% validation accuracy, the
+same solution as the from-scratch version of :numref:`sec_softmax_scratch`
+(read it off the validation curve), now in far fewer lines of code.
 
 
 ## Summary
@@ -264,14 +296,16 @@ a framework fails to cover all the corner cases entirely. Again, this is due to 
 
 As such, we strongly urge you to review *both* the bare bones and the elegant versions of many of the implementations that follow. While we emphasize ease of understanding, the implementations are nonetheless usually quite performant (convolutions are the big exception here). It is our intention to allow you to build on these when you invent something new that no framework can give you.
 
+The fused cross-entropy loss in this section is a case in point: it is not merely fewer lines than the from-scratch version, it is the *correct* implementation, the one you should reach for rather than hand-roll, because it computes the log-sum-exp directly and never materializes an unstable softmax.
+
 
 ## Exercises
 
 1. Deep learning uses many different number formats, including FP64 double precision (used extremely rarely),
 FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (very unstable), TF32 (a new format from NVIDIA), and INT8. Compute the smallest and largest argument of the exponential function for which the result does not lead to numerical underflow or overflow.
 1. INT8 is a very limited format consisting of integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant). How could you extend its dynamic range without using more bits? Do standard multiplication and addition still work?
-1. Increase the number of epochs for training. Why might the validation accuracy decrease after a while? How could we fix this?
-1. What happens as you increase the learning rate? Compare the loss curves for several learning rates. Which one works better? When?
+1. Take the from-scratch `softmax` of :numref:`sec_softmax_scratch` and feed it the logits $\mathbf{o} = (1000, 0, 0)$. What do you get, and why? Now compute the loss for the same logits with the framework's `cross_entropy`, passing the logits directly. Why is it finite? Verify that on *benign* logits, e.g., $\mathbf{o} = (2, 1, 0)$, the two routes agree to floating-point precision.
+1. Show, using the identity $\ell = \log\sum_k \exp(o_k) - o_y$, that adding the same constant $c$ to every logit leaves the loss unchanged. Why does this make subtracting $\bar{o} = \max_k o_k$ a free and safe choice?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)

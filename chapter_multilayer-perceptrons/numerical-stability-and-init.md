@@ -7,26 +7,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_numerical_stability`
 
 
-Thus far, every model that we have implemented
-required that we initialize its parameters
-according to some pre-specified distribution.
-Until now, we took the initialization scheme for granted,
-glossing over the details of how these choices are made.
-You might have even gotten the impression that these choices
-are not especially important.
-On the contrary, the choice of initialization scheme
-plays a significant role in neural network learning,
-and it can be crucial for maintaining numerical stability.
-Moreover, these choices can be tied up in interesting ways
-with the choice of the nonlinear activation function.
-Which function we choose and how we initialize parameters
-can determine how quickly our optimization algorithm converges.
-Poor choices here can cause us to encounter
-exploding or vanishing gradients while training.
-In this section, we delve into these topics in greater detail
-and discuss some useful heuristics
-that you will find useful
-throughout your career in deep learning.
+Every model so far has required us to initialize its parameters
+from some chosen distribution, and we have taken those choices for granted.
+They are not innocuous.
+The initialization scheme interacts with the choice of activation function
+to determine whether gradients flow at a usable scale,
+or instead *vanish* (so learning stalls) or *explode* (so it diverges),
+and hence how fast, or whether, optimization converges at all.
+This section makes the failure modes concrete
+and develops the variance-preserving heuristics
+(Xavier and He initialization) that fix them.
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab mxnet
@@ -262,12 +252,12 @@ the network's expressive power.
 The hidden layer would behave
 as if it had only a single unit.
 Note that while minibatch stochastic gradient descent would not break this symmetry,
-dropout regularization (to be introduced later) would!
+dropout regularization (:numref:`sec_dropout`) would!
 
 
 ## Parameter Initialization
 
-One way of addressing---or at least mitigating---the
+One way of addressing (or at least mitigating) the
 issues raised above is through careful initialization.
 As we will see later,
 additional care during optimization
@@ -277,14 +267,17 @@ and suitable regularization can further enhance stability.
 ### Default Initialization
 
 In the previous sections, e.g., in :numref:`sec_linear_concise`,
-we used a normal distribution
-to initialize the values of our weights.
-If we do not specify the initialization method, the framework will
-use a default random initialization method, which often works well in practice
-for moderate problem sizes.
-
-
-
+we initialized weights by drawing them from a normal distribution
+with a small, fixed standard deviation.
+If we do not specify an initialization method at all,
+every framework falls back to a default scheme,
+and those defaults are *not* arbitrary:
+each samples from a distribution whose spread is tied to the layer's fan-in
+(a Xavier- or He-like rule of exactly the kind we derive below).
+These defaults work well for moderately sized networks.
+They become unreliable, however, as depth grows.
+The variance analysis that follows explains both *why* they work
+and *where* they break, and what to reach for instead.
 
 
 
@@ -326,14 +319,21 @@ $$
 \end{aligned}
 $$
 
+Here we used $E[w_{ij}^2] = \textrm{Var}[w_{ij}] = \sigma^2$,
+which holds because the weights have zero mean
+($\textrm{Var}[w] = E[w^2] - E[w]^2 = E[w^2]$),
+and likewise $E[x_j^2] = \gamma^2$.
+
 One way to keep the variance fixed
 is to set $n_\textrm{in} \sigma^2 = 1$.
 Now consider backpropagation.
-There we face a similar problem,
-albeit with gradients being propagated from the layers closer to the output.
-Using the same reasoning as for forward propagation,
-we see that the gradients' variance can blow up
-unless $n_\textrm{out} \sigma^2 = 1$,
+A gradient signal flowing *back* through this layer
+is multiplied by $\mathbf{W}^\top$,
+so by the identical variance computation,
+now summing over the $n_\textrm{out}$ outputs the layer feeds,
+its variance is scaled by $n_\textrm{out} \sigma^2$.
+Keeping the *backward* signal's variance fixed
+therefore requires $n_\textrm{out} \sigma^2 = 1$,
 where $n_\textrm{out}$ is the number of outputs of this layer.
 This leaves us in a dilemma:
 we cannot possibly satisfy both conditions simultaneously.
@@ -362,11 +362,45 @@ prompts us to initialize according to
 
 $$U\left(-\sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}, \sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}\right).$$
 
-Though the assumption for nonexistence of nonlinearities
+Though the assumption that there are no nonlinearities
 in the above mathematical reasoning
 can be easily violated in neural networks,
 the Xavier initialization method
 turns out to work well in practice.
+
+
+### He Initialization
+:label:`subsec_he_init`
+
+The Xavier analysis above assumed a layer *without nonlinearities*.
+The argument breaks in a specific, fixable way once we insert a ReLU.
+Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation.
+If the pre-activations are symmetric about zero,
+as they are when the weights have zero mean,
+then ReLU discards, in expectation, *half* of them,
+and for the surviving half it passes the value through unchanged.
+Its effect on the variance of a zero-mean, symmetric signal
+is therefore to **halve** it: $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$.
+
+Propagating this through the same forward computation as before,
+the variance of the layer output is now
+$\textrm{Var}[o_i] = \tfrac{1}{2} n_\textrm{in} \sigma^2 \gamma^2$,
+with the extra factor of $\tfrac{1}{2}$ coming from the rectifier.
+To keep the variance fixed across layers
+we must compensate by *doubling* the weight variance:
+
+$$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
+
+This is *He* (or *Kaiming*) *initialization* :cite:`He.Zhang.Ren.ea.2015`,
+and it is the standard choice for the ReLU-family activations
+this chapter uses throughout.
+Because Xavier and He differ only by this factor of two
+and by which fan size they key on, they are easy to confuse;
+the rule of thumb is **Xavier for $\tanh$ and sigmoid, He for ReLU**.
+Most frameworks ship both as named initializers
+(e.g., PyTorch's `kaiming_normal_`, in fact the default for `nn.Linear`),
+and we return to invoking them through the parameter-initialization API
+in :numref:`chap_computation`.
 
 
 ### Beyond
@@ -384,6 +418,12 @@ For instance,
 10,000-layer neural networks without architectural tricks
 by using a carefully-designed initialization method.
 
+In very deep networks, normalization layers (:numref:`sec_batch_norm`)
+and residual connections (:numref:`sec_resnet`)
+largely remove this burden from initialization
+by re-centering activations during training;
+we cover them in later chapters.
+
 If the topic interests you we suggest
 a deep dive into this module's offerings,
 reading the papers that proposed and analyzed each heuristic,
@@ -398,12 +438,15 @@ Vanishing and exploding gradients are common issues in deep networks. Great care
 Initialization heuristics are needed to ensure that the initial gradients are neither too large nor too small.
 Random initialization is key to ensuring that symmetry is broken before optimization.
 Xavier initialization keeps the variance of activations and gradients roughly constant across layers by scaling weights according to the number of inputs and outputs.
+For ReLU networks, He initialization scales the weight variance to $2/n_\textrm{in}$ to compensate for the rectifier halving the activation variance.
 ReLU activation functions mitigate the vanishing gradient problem. This can accelerate convergence.
 
 ## Exercises
 
 1. Can you design other cases where a neural network might exhibit symmetry that needs breaking, besides the permutation symmetry in an MLP's layers?
 1. Can we initialize all weight parameters in linear regression or in softmax regression to the same value?
+1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations, $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively?
+1. Initialize a deep stack of linear layers (say 50 layers, width 100) three ways, with weights $\sim\mathcal{N}(0,1)$, Xavier, and He, feed in a unit-variance input, and plot $\textrm{Var}[\mathbf{h}^{(\ell)}]$ as a function of depth $\ell$. Which scheme keeps the variance flat? Now insert a ReLU after each layer and repeat. Do your observations match the theory?
 1. Look up analytic bounds on the eigenvalues of the product of two matrices. What does this tell you about ensuring that gradients are well conditioned?
 1. If we know that some terms diverge, can we fix this after the fact? Look at the paper on layerwise adaptive rate scaling  for inspiration :cite:`You.Gitman.Ginsburg.2017`.
 

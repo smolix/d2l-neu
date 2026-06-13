@@ -40,7 +40,7 @@ are both monomials of degree 3.
 Note that the number of terms with degree $d$
 blows up rapidly as $d$ grows larger.
 Given $k$ variables, the number of monomials
-of degree $d$ is ${k - 1 + d} \choose {k - 1}$.
+of degree $d$ is $\binom{k-1+d}{k-1}$.
 Even small changes in degree, say from $2$ to $3$,
 dramatically increase the complexity of our model.
 Thus we often need a more fine-grained tool
@@ -187,6 +187,19 @@ For example, if our model only relies on a few features,
 then we may not need to collect, store, or transmit data
 for the other (dropped) features. 
 
+These two penalties are easiest to compare geometrically. For a corresponding
+budget $t$, minimizing $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|^2$ is
+equivalent to minimizing $L(\mathbf{w})$ subject to $\|\mathbf{w}\| \le t$, and
+the regularized solution is the first point at which a loss contour meets the
+constraint region (:numref:`fig_ridge_geometry`). For the $\ell_2$ ball this
+contact is generically *tangential*, so every coordinate shrinks but none
+vanishes; for the $\ell_1$ diamond it typically lands on a *corner*, setting some
+coordinates exactly to zero. This is the geometric reason lasso performs feature
+selection while ridge does not.
+
+![Weight decay as a constraint. The elliptical contours of the training loss $L(\mathbf{w})$, centred on the unconstrained optimum $\hat{\mathbf{w}}$, grow until they meet the constraint region at the regularized solution $\mathbf{w}^\star$. Left: the $\ell_2$ ball is met *tangentially*, shrinking both coordinates. Right: the $\ell_1$ diamond is met at a *corner*, forcing $w_2$ to exactly zero---the sparsity that distinguishes lasso from ridge.](../img/mdl-linreg-ridge-geometry.svg)
+:label:`fig_ridge_geometry`
+
 Using the same notation in :eqref:`eq_linreg_batch_update`,
 minibatch stochastic gradient descent updates
 for $\ell_2$-regularized regression as follows:
@@ -212,11 +225,27 @@ Whether we include a corresponding bias penalty $b^2$
 can vary across implementations, 
 and may vary across layers of a neural network.
 Often, we do not regularize the bias term.
-Besides,
-although $\ell_2$ regularization may not be equivalent to weight decay for other optimization algorithms,
-the idea of regularization through
-shrinking the size of weights
-still holds true.
+For plain minibatch stochastic gradient descent, adding
+$\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss and applying the shrink-and-update
+rule above are one and the same. This equivalence is special to SGD: for adaptive
+optimizers such as Adam, a penalty placed inside the loss is rescaled by the
+optimizer's per-coordinate second-moment estimates and no longer acts as uniform
+weight shrinkage. *Decoupling* the decay from the loss gradient---shrinking every
+weight by a fixed fraction at each step---restores the intended behavior; this is
+the decoupled-weight-decay variant AdamW, introduced by
+:citet:`Loshchilov.Hutter.2019` and now a default optimizer for large models. We
+take up optimizers in detail in :numref:`sec_adam`.
+
+Finally, weight decay has a clean probabilistic reading. Recall from
+:numref:`subsec_normal_distribution_and_squared_loss` that minimizing the squared
+loss is maximum likelihood estimation under Gaussian observation noise. Adding the
+penalty $\frac{\lambda}{2}\|\mathbf{w}\|^2$ amounts to placing an isotropic
+Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \lambda^{-1}\mathbf{I})$
+on the weights and returning the *maximum a posteriori* (MAP) estimate; the
+regularization constant $\lambda$ plays the role of the prior precision, so a
+larger $\lambda$ encodes a stronger prior belief that the weights are small. This
+recovers the classical *ridge regression* estimator---a correspondence you will
+make precise in the exercises.
 
 ## High-Dimensional Linear Regression
 
@@ -353,7 +382,7 @@ The following code fits our model on the training set with 20 examples and evalu
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab pytorch
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 
 def train_scratch(lambd):    
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
@@ -365,7 +394,7 @@ def train_scratch(lambd):
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab tensorflow
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 
 def train_scratch(lambd):    
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
@@ -377,7 +406,7 @@ def train_scratch(lambd):
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab jax
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 
 def train_scratch(lambd):    
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
@@ -390,7 +419,7 @@ def train_scratch(lambd):
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab mxnet
 data = Data(num_train=20, num_val=100, num_inputs=200, batch_size=5)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 
 def train_scratch(lambd):    
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
@@ -534,13 +563,15 @@ class WeightDecay(d2l.LinearRegression):
             optax.sgd(self.lr))
 ```
 
-The plot looks similar to that when
-we implemented weight decay from scratch.
-However, this version runs faster
-and is easier to implement,
-benefits that will become more
-pronounced as you address larger problems
-and this work becomes more routine.
+This version runs faster and is easier to implement than the from-scratch code,
+benefits that grow more pronounced on larger problems and as this work becomes
+routine. One subtlety is worth flagging: a framework's `weight_decay` adds the
+term $\lambda\mathbf{w}$ to the *gradient*, whereas our from-scratch penalty added
+$\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss*. When the loss omits the
+$\frac{1}{2}$ factor---as PyTorch's `nn.MSELoss` does---the two correspond to
+slightly different effective values of $\lambda$, so the converged
+$\|\mathbf{w}\|^2$ need not match the from-scratch value exactly, even though the
+regularizing effect is the same.
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab pytorch
@@ -578,16 +609,10 @@ trainer.fit(model, data)
 print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
-So far, we have touched upon one notion of
-what constitutes a simple linear function.
-However, even for simple nonlinear functions, the situation can be much more complex. To see this, the concept of [reproducing kernel Hilbert space (RKHS)](https://en.wikipedia.org/wiki/Reproducing_kernel_Hilbert_space)
-allows one to apply tools introduced
-for linear functions in a nonlinear context.
-Unfortunately, RKHS-based algorithms
-tend to scale poorly to large, high-dimensional data.
-In this book we will often adopt the common heuristic
-whereby weight decay is applied
-to all layers of a deep network.
+So far we have measured complexity through the norm of a *linear* function's
+weights. The same principle extends to the nonlinear functions a deep network
+computes: in practice we simply apply weight decay to the parameters of every
+layer---a simple, effective heuristic we adopt throughout the book.
 
 ## Summary
 
@@ -600,7 +625,7 @@ Different sets of parameters can have different update behaviors within the same
 
 ## Exercises
 
-1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation accuracy as a function of $\lambda$. What do you observe?
+1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe?
 1. Use a validation set to find the optimal value of $\lambda$. Is it really the optimal value? Does this matter?
 1. What would the update equations look like if instead of $\|\mathbf{w}\|^2$ we used $\sum_i |w_i|$ as our penalty of choice ($\ell_1$ regularization)?
 1. We know that $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Can you find a similar equation for matrices (see the Frobenius norm in :numref:`subsec_lin-algebra-norms`)?

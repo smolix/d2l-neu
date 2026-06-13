@@ -70,7 +70,7 @@ that have generalized well
 on similar problems in the past,
 and certifying generalization *post hoc*
 through empirical evaluations.
-When we get to :numref:`chap_perceptrons`,
+When we get to :numref:`sec_generalization_deep`,
 we will revisit generalization
 and provide a light introduction
 to the vast scientific literature
@@ -204,7 +204,7 @@ Fortunately, because our random variable is bounded,
 we can obtain valid finite sample bounds
 by applying an inequality due to Hoeffding (1963):
 
-$$P(\epsilon_\mathcal{D}(f) - \epsilon(f) \geq t) < \exp\left( - 2n t^2 \right).$$
+$$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\left( - 2n t^2 \right).$$
 
 Solving for the smallest dataset size
 that would allow us to conclude
@@ -212,8 +212,8 @@ with 95% confidence that the distance $t$
 between our estimate $\epsilon_\mathcal{D}(f)$
 and the true error rate $\epsilon(f)$
 does not exceed $0.01$,
-you will find that roughly 15,000 examples are required
-as compared to the 10,000 examples suggested
+you will find that roughly 18,500 examples are required,
+as compared with the 10,000 examples suggested
 by the asymptotic analysis above.
 If you go deeper into statistics
 you will find that this trend holds generally.
@@ -462,7 +462,7 @@ the difference between the empirical error
 and the population error as a function
 of the VC dimension and the number of samples:
 
-$$P\left(R[p, f] - R_\textrm{emp}[\mathbf{X}, \mathbf{Y}, f] < \alpha\right) \geq 1-\delta
+$$P\left(\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < \alpha\right) \geq 1-\delta
 \ \textrm{ for }\ \alpha \geq c \sqrt{(\textrm{VC} - \log \delta)/n}.$$
 
 Here $\delta > 0$ is the probability that the bound is violated,
@@ -480,9 +480,16 @@ and for each find some model $f$ in the class
 that agrees with that labeling.
 For example, linear models on $d$-dimensional inputs
 have VC dimension $d+1$.
-It is easy to see that a line can assign
-any possible labeling to three points in two dimensions,
-but not to four.
+As :numref:`fig_mdl-clf-shattering` illustrates,
+a line in the plane can realize *every* labeling
+of three points in general position,
+but no line can realize the XOR labeling of four points,
+so the VC dimension of two-dimensional linear classifiers
+is exactly $3$ (matching $d+1$ with $d=2$).
+
+![A linear classifier in two dimensions shatters any 3 points in general position (all $2^3$ labelings are realizable by a halfplane) but cannot shatter 4 points (the XOR labeling, with one class on each diagonal, has no linear separator). Hence the VC dimension of lines in the plane is 3.](../img/mdl-clf-shattering.svg)
+:label:`fig_mdl-clf-shattering`
+
 Unfortunately, the theory tends to be
 overly pessimistic for more complex models
 and obtaining this guarantee typically requires
@@ -556,15 +563,15 @@ Unfortunately, while these complexity measures
 have become broadly useful tools in statistical theory,
 they turn out to be powerless
 (as straightforwardly applied)
-for explaining why deep neural networks generalize.
+for explaining why deep neural networks generalize :cite:`zhang2021understanding`.
 Deep neural networks often have millions of parameters (or more),
 and can easily assign random labels to large collections of points.
 Nevertheless, they generalize well on practical problems
 and, surprisingly, they often generalize better,
 when they are larger and deeper,
 despite incurring higher VC dimensions.
-In the next chapter, we will revisit generalization
-in the context of deep learning.
+We revisit generalization in the context of deep learning
+in :numref:`sec_generalization_deep`.
 
 ## Exercises
 

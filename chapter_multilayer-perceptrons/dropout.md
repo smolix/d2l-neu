@@ -69,13 +69,27 @@ break up co-adapted genes.
 While such a justification of this theory is certainly up for debate,
 the dropout technique itself has proved enduring,
 and various forms of dropout are implemented
-in most deep learning libraries. 
+in most deep learning libraries.
+
+A third, perhaps more illuminating, perspective is due to
+:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves.
+A network with $n$ hidden units has $2^n$ possible dropout masks,
+each defining a *thinned* subnetwork that shares its weights
+with all the others.
+On each training step we sample one such mask,
+so the gradient update nudges the shared weights
+in a direction that helps that particular thinned network.
+Running the full network at test time then approximates
+*averaging* the predictions of all $2^n$ subnetworks.
+From this angle dropout is cheap model averaging,
+which is exactly why we expect it to reduce variance:
+ensembles average away the idiosyncrasies of their members.
 
 
 The key challenge is how to inject this noise.
 One idea is to inject it in an *unbiased* manner
-so that the expected value of each layer---while fixing
-the others---equals the value it would have taken absent noise.
+so that the expected value of each layer (while fixing
+the others) equals the value it would have taken absent noise.
 In Bishop's work, he added Gaussian noise
 to the inputs to a linear model.
 At each training iteration, he added noise
@@ -103,7 +117,10 @@ h' =
 \end{aligned}
 $$
 
-By design, the expectation remains unchanged, i.e., $E[h'] = h$.
+By design, the expectation remains unchanged,
+since $E[h'] = p \cdot 0 + (1-p) \cdot \frac{h}{1-p} = h$.
+This is why we divide by $1-p$ and by no other constant:
+it is the unique factor that restores the original expected value.
 
 ```{.python .input #dropout}
 %%tab mxnet
@@ -380,7 +397,7 @@ hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
 data = d2l.FashionMNIST(batch_size=256)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
@@ -502,21 +519,42 @@ trainer.fit(model, data)
 
 ## Summary
 
-Beyond controlling the number of dimensions and the size of the weight vector, dropout is yet another tool for avoiding overfitting. Often tools are used jointly.
-Note that dropout is
-used only during training:
-it replaces an activation $h$ with a random variable with expected value $h$.
+*Inverted dropout* replaces each hidden activation $h$ with a random variable
+$h'$ that is zero with probability $p$ and $h/(1-p)$ otherwise. The rescaling by
+$1/(1-p)$ keeps $E[h'] = h$, so the network's expected behavior at test time
+matches training without any change to the test-time code. Dropout is *off at
+test time*: the full network runs, with no masking and no rescaling.
+
+Three complementary views explain why dropout helps. The first is *noise
+injection*: zeroing activations at random is, following Bishop, equivalent to
+Tikhonov regularization on the learned function, which favors smoothness. The
+second is *anti-co-adaptation*: because no hidden unit can count on any specific
+partner being present, each unit is pushed to learn broadly useful features. The
+third is the *implicit ensemble*: every training step trains a different thinned
+subnetwork, and evaluating the full network at test time approximates averaging
+the predictions of all $2^n$ of them :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
+
+A word on currency. Dropout was transformative for the fully connected vision
+networks of the mid-2010s, but its role has narrowed since. Convolutional
+networks typically replace it with batch normalization (see
+:numref:`sec_batch_norm`), which supplies similar noise-driven regularization,
+and large transformer-based language models use it lightly (rates around 0.0 to
+0.1) or not at all in their core layers, reserving it mostly for final
+classifier heads. It nonetheless remains a cheap, reliable regularizer that
+combines well with weight decay and data augmentation, and it is the conceptual
+seed for a family of stochastic-regularization methods.
 
 
 ## Exercises
 
 1. What happens if you change the dropout probabilities for the first and second layers? In particular, what happens if you switch the ones for both layers? Design an experiment to answer these questions, describe your results quantitatively, and summarize the qualitative takeaways.
-1. Increase the number of epochs and compare the results obtained when using dropout with those when not using it.
+1. Train the same architecture without dropout for the same number of epochs. Plot the train and test loss curves for both runs on the same axes. How wide is the train/test gap with and without dropout?
 1. What is the variance of the activations in each hidden layer when dropout is and is not applied? Draw a plot to show how this quantity evolves over time for both models.
 1. Why is dropout not typically used at test time?
+1. *Monte Carlo dropout.* At test time, instead of disabling dropout, keep it on and run $T = 20$ forward passes per example, then average the softmax outputs. Compare the resulting accuracy and the calibration (predicted confidence versus actual accuracy) against the standard single-pass evaluation. How does this procedure relate to ensemble methods? (See :citet:`Gal.Ghahramani.2016`.)
 1. Using the model in this section as an example, compare the effects of using dropout and weight decay. What happens when dropout and weight decay are used at the same time? Are the results additive? Are there diminished returns (or worse)? Do they cancel each other out?
-1. What happens if we apply dropout to the individual weights of the weight matrix rather than the activations?
-1. Invent another technique for injecting random noise at each layer that is different from the standard dropout technique. Can you develop a method that outperforms dropout on the Fashion-MNIST dataset (for a fixed architecture)?
+1. What happens if we apply dropout to the individual weights of the weight matrix rather than the activations? (This variant is known as *DropConnect*.) Implement it and compare it against standard dropout on Fashion-MNIST, holding the architecture and training budget fixed.
+1. Invent another technique for injecting random noise at each layer that differs from both dropout and DropConnect, for example adding Gaussian noise to the activations. For a fixed architecture and training budget, can you develop a method that matches or outperforms dropout on Fashion-MNIST?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/100)

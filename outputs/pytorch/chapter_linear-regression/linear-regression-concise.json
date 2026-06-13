@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bff6bd982be4d64591ff4055b7f27ca643bd9cd83050b1517f5f4bee0b97d59d",
+    "d2l_lib_fingerprint": "sha256:a93afc810668826f23fe04125bd345529ee5727702a164ec8a858bd80917cf89",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,31 +34,31 @@
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:13cafd76271d02c6ca8183cbd2faee90da070ab993945e87058e2d33cab4e3b5",
+      "code_fingerprint": "sha256:f07d0e02b39fa462bb89493fa1dc8ba156665bc9e19af1ac834ab93109a967b6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 20979,
-          "sha256": "sha256:09fa0aeb8502e9b14b83282828e60192a72170ff57dcab4da9a6c046ce44f631"
+          "bytes": 19009,
+          "sha256": "sha256:e0f716abee6e1ee50a4af786411b28302bc1e5695a5e179e3f4657bc5e386ab3"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:fff38b7353c3706801ad80d92aed97c4beaea940e37aed779754aa4e7a9d8b30",
+      "code_fingerprint": "sha256:30b679614c9e88b2e757266d10e176f8b46208319e885c2d93644c20c70ca59e",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:a6bd1af8f3fcf5318f1743522cd97cbce57385d347cff72e7e7ab8e3cdc49c66",
+      "code_fingerprint": "sha256:e5d0b4c9b319d1c967941f130abe0b07f8e197ea186e4ba45097f32bbe961f8f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 0.0060, -0.0135])\nerror in estimating b: tensor([0.0130])\n"
+          "text": "error in estimating w: tensor([-0.0001, -0.0002])\nerror in estimating b: tensor([-0.0004])\n"
         }
       ]
     }

@@ -212,6 +212,7 @@ Next we need to implement the cross-entropy loss function
 (introduced in :numref:`subsec_softmax-regression-loss-func`).
 This may be the most common loss function
 in all of deep learning.
+Recall from :numref:`subsec_softmax-regression-loss-func` that minimizing cross-entropy is equivalent to maximizing the log-likelihood of the correct labels under our categorical model. It is the natural loss for classification.
 At the moment, applications of deep learning
 easily cast as classification problems
 far outnumber those better treated as regression problems.
@@ -297,7 +298,7 @@ def cross_entropy(y_hat, y):  #@save
 cross_entropy(y_hat, y)
 ```
 
-Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form.
+Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form. The proper fix, fusing softmax and cross-entropy via the log-sum-exp trick, is derived in :numref:`subsec_softmax-implementation-revisited`.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab pytorch, mxnet, tensorflow
@@ -385,7 +386,21 @@ preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 
-We are more interested in the images we label *incorrectly*. We visualize them by
+How well do we do overall? We sweep the whole validation set and average the
+per-example correct/incorrect flags returned by `accuracy`:
+
+```{.python .input #softmax-regression-scratch-prediction-accuracy}
+%%tab pytorch
+correct = []
+for X_i, y_i in data.val_dataloader():
+    with torch.no_grad():
+        correct.append(model.accuracy(model(X_i), y_i, averaged=False))
+print(f'Test accuracy: {torch.cat(correct).mean():.3f}')
+```
+
+The overall test accuracy is approximately 83%, consistent with the training
+curve: the ceiling of a linear model on Fashion-MNIST. We are more interested in
+the images we label *incorrectly*. We visualize them by
 comparing their actual labels
 (first line of text output)
 with the predictions from the model
@@ -399,16 +414,30 @@ labels = [a+'\n'+b for a, b in zip(
 data.visualize([X, y], labels=labels)
 ```
 
-## Summary
+## Summary and Discussion
 
-By now we are starting to get some experience
-with solving linear regression
-and classification problems.
-With it, we have reached what would arguably be
-the state of the art of 1960--1970s of statistical modeling.
-In the next section, we will show you how to leverage
-deep learning frameworks to implement this model
-much more efficiently.
+In this section we built softmax regression entirely from scratch: the softmax
+operation, the cross-entropy loss, parameter initialization, the forward pass, and
+training on Fashion-MNIST. Breaking each piece open by hand is the purpose. Once
+you have seen these five moving parts separately, the one-liner in
+:numref:`sec_softmax_concise` is not magic but notation.
+
+**What the training curve tells you.** After 10 epochs with minibatch SGD the
+model converges to roughly 83% validation accuracy. That ceiling is not a
+hyperparameter problem; it is the limit of linear separability on Fashion-MNIST.
+The ten classes are not linearly separable in pixel space (shirts and pullovers
+look nearly identical to a linear model). The misclassification visualization at
+the end of the section makes this concrete. Replacing the flat linear layer with
+even a single hidden layer (Chapter 5) pushes past it.
+
+**Why the clip is only a band-aid.** Our `cross_entropy` clips the softmax output
+away from zero before taking the log. This prevents the worst NaN failures, but
+the naive `softmax` function itself can overflow for large logits (`exp(100)` is
+infinity in float32). The right fix, subtracting $\max_k o_k$ before
+exponentiating and then fusing softmax and log into a single numerically stable
+operation, is derived in :numref:`subsec_softmax-implementation-revisited`. The
+concise implementation applies that fix automatically; always use the framework's
+built-in cross-entropy when you are not explicitly studying the internals.
 
 ## Exercises
 

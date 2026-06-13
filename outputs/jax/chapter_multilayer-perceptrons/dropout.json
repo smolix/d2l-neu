@@ -25,12 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0.  0. 14.]\n [ 0. 18.  0. 22.  0.  0.  0. 30.]]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "dropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0.  0. 14.]\n [ 0. 18.  0. 22.  0.  0.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -40,38 +35,38 @@
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:e04a43635c00a555170637fb1c19346c44238e8d4740941eca2f6eab92f1d4df",
+      "code_fingerprint": "sha256:88f9f42668bd53439790a3e7c922102648a4b713addfa65c608d28d151b7810d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 20991,
-          "sha256": "sha256:63040fee6725f34c1197897f7d7913bd6d7484283f9ed293631cfb38e6d2ad58"
+          "bytes": 24833,
+          "sha256": "sha256:ae98b9c1f163eacd21fc103f28840d18728e82edcb6f2160bdb31468e7ec1981"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:f4feb0e2bd2d3161f12ff603a97289a51dcd414b4832e2b59d0ae40f71d52dba",
+      "code_fingerprint": "sha256:6000ecd3d297e4a2675addb781c0ff37717f1bd15490a8a4c8da6128b47d84c0",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-2": {
-      "code_fingerprint": "sha256:5f1358f476d15a958f13255d663d31587722d6454ee15f383024a4cf9a872a8f",
+      "code_fingerprint": "sha256:a2d2518e9c51807142d102f925af0818624d9947ee9e2d3e58a139e8833242a4",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:80446f15096267ad684d390bd58630284e08298c56209125ef663b9ceba7bb75",
+      "code_fingerprint": "sha256:27dde9797df3937821f677ecc92b085526d9ec323e51ac98b12c22c24fc9387a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 20994,
-          "sha256": "sha256:55ba0601a0fb0b484030fb9e4fea63177ba88f4438cbc0c52cbd11585bdbf4f4"
+          "bytes": 24817,
+          "sha256": "sha256:059cc15d79bf43f5d779b88078936f1074456595c9126cda7dbedc323c85cd05"
         }
       ]
     }

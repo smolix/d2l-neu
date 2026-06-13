@@ -52,18 +52,26 @@ among the pixels for now,
 so we can think of this as a classification dataset
 with 784 input features and 10 classes.
 To begin, we will implement an MLP
-with one hidden layer and 256 hidden units.
+with one hidden layer and 256 hidden units
+(:numref:`fig_mdl-mlp-arch`).
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
 Typically, we choose the layer widths to be divisible by larger powers of 2.
-This is computationally efficient due to the way
-memory is allocated and addressed in hardware.
+This improves computational efficiency because the matrix-multiplication kernels
+on modern hardware (CPUs and GPUs) are tuned for operand dimensions that align
+to SIMD vector widths and tensor-core tile sizes.
+
+![The two-layer MLP of this section: a batched input is flattened to 784 features, mapped by an affine layer to a 256-dimensional hidden representation, passed through a ReLU, then mapped by a second affine layer to 10 logits.](../img/mdl-mlp-arch.svg)
+:label:`fig_mdl-mlp-arch`
 
 Again, we will represent our parameters with several tensors.
 Note that *for every layer*, we must keep track of
 one weight matrix and one bias vector.
 As always, we allocate memory
 for the gradients of the loss with respect to these parameters.
+We use small Gaussian noise ($\sigma = 0.01$) as a simple starting point;
+principled strategies for choosing this scale are the subject of
+:numref:`sec_numerical_stability`.
 
 :begin_tab:`mxnet`
 In the code below, we first define and initialize the parameters
@@ -159,7 +167,7 @@ def relu(X):
 ```{.python .input #mlp-implementation-model-1}
 %%tab pytorch
 def relu(X):
-    return torch.clamp(X, min=0)
+    return torch.maximum(X, torch.zeros_like(X))
 ```
 
 ```{.python .input #mlp-implementation-model-1}
@@ -196,7 +204,7 @@ is exactly the same as for softmax regression. We define the model, data, and tr
 ```{.python .input #mlp-implementation-training}
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
 data = d2l.FashionMNIST(batch_size=256)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
@@ -297,9 +305,17 @@ trainer.fit(model, data)
 
 ## Summary
 
-Now that we have more practice in designing deep networks, the step from a single to multiple layers of deep networks does not pose such a significant challenge any longer. In particular, we can reuse the training algorithm and data loader. Note, though, that implementing MLPs from scratch is nonetheless messy: naming and keeping track of the model parameters makes it difficult to extend models. For instance, imagine wanting to insert another layer between layers 42 and 43. This might now be layer 42b, unless we are willing to perform sequential renaming. Moreover, if we implement the network from scratch, it is much more difficult for the framework to perform meaningful performance optimizations.
+We have now built and trained a working multilayer perceptron, a network with a hidden layer and a nonlinearity, in both a from-scratch and a concise form. The from-scratch version makes the new ingredients concrete: two weight matrices, two bias vectors, a hand-rolled ReLU, and a two-step forward computation. The concise version shows that `nn.Sequential` absorbs all of that bookkeeping into a four-element stack. The training loop, the loss function, and the data loader are unchanged from softmax regression, a first sign that the modular design pays off.
 
-Nonetheless, you have now reached the state of the art of the late 1980s when fully connected deep networks were the method of choice for neural network modeling. Our next conceptual step will be to consider images. Before we do so, we need to review a number of statistical basics and details on how to compute models efficiently.
+The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". Hand-rolled forward passes are also harder for the framework to optimize. `nn.Sequential` removes both problems at once.
+
+Three questions remain open, and each is the subject of one of the next sections:
+
+* **How do gradients flow through this stack, and what can go wrong as it gets deeper?** (:numref:`sec_backprop`, :numref:`sec_numerical_stability`)
+* **Why does such a flexible model generalize to unseen data at all?** (:numref:`sec_generalization_deep`)
+* **How can we regularize it to generalize better?** (:numref:`sec_dropout`)
+
+Answering them turns this small working model into a reliable building block.
 
 
 ## Exercises
@@ -316,8 +332,8 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 1. Measure the speed of tensor--matrix multiplications for well-aligned and misaligned matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and 1032.
     1. How does this change between GPUs and CPUs?
     1. Determine the memory bus width of your CPU and GPU.
-1. Try out different activation functions. Which one works best?
-1. Is there a difference between weight initializations of the network? Does it matter?
+1. Try out different activation functions. Which one works best on Fashion-MNIST? Compare at least ReLU, tanh, sigmoid, and GELU (`torch.nn.functional.gelu` in PyTorch, `jax.nn.gelu` in JAX). (*Hint:* for sigmoid and tanh you may need to retune the learning rate.) GELU is the default in modern transformer architectures; can you see why from how it behaves on this task?
+1. Compare the effect of three initialization scales on training: (a) small Gaussian noise with $\sigma = 0.001$; (b) the value used in this section, $\sigma = 0.01$; (c) large Gaussian noise with $\sigma = 0.1$. Plot the training and validation curves for each. Why does $\sigma$ matter? (*Hint:* consider what happens to the activations on the very first forward pass.) The principled answer is developed in :numref:`sec_numerical_stability`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/92)

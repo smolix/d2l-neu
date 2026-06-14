@@ -88,6 +88,45 @@ into a nonnegative number.
 Each row sums up to 1,
 as is required for a probability. Caution: the code above is *not* robust against very large or very small arguments. While it is sufficient to illustrate what is happening, you should *not* use this code verbatim for any serious purpose. Deep learning frameworks have such protections built in and we will be using the built-in softmax going forward.
 
+To see the failure rather than just assert it, feed in a logit that is large
+on the scale of $\exp$. A score of $1000$ overflows `exp` to infinity in
+float32, so the naive ratio becomes $\infty/\infty$, which evaluates to `NaN`.
+The framework's `softmax` subtracts the per-row maximum before exponentiating
+(the log-sum-exp trick of :numref:`subsec_softmax-implementation-revisited`) and
+returns a finite distribution on exactly the same input:
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab pytorch
+z = torch.tensor([1000., 0., 0.])
+naive = torch.exp(z) / torch.exp(z).sum()  # exp(1000) overflows -> nan
+stable = torch.softmax(z, dim=0)           # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab mxnet
+z = np.array([1000., 0., 0.])
+naive = np.exp(z) / np.exp(z).sum()        # exp(1000) overflows -> nan
+stable = npx.softmax(z, axis=0)            # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab tensorflow
+z = tf.constant([1000., 0., 0.])
+naive = tf.exp(z) / tf.reduce_sum(tf.exp(z))  # exp(1000) overflows -> nan
+stable = tf.nn.softmax(z, axis=0)             # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab jax
+z = jnp.array([1000., 0., 0.])
+naive = jnp.exp(z) / jnp.exp(z).sum()      # exp(1000) overflows -> nan
+stable = jax.nn.softmax(z, axis=0)         # built-in uses the log-sum-exp trick
+naive, stable
+```
+
 ```{.python .input #softmax-regression-scratch-the-softmax-3}
 %%tab mxnet
 X = d2l.rand(2, 5)
@@ -212,6 +251,7 @@ Next we need to implement the cross-entropy loss function
 (introduced in :numref:`subsec_softmax-regression-loss-func`).
 This may be the most common loss function
 in all of deep learning.
+Recall from :numref:`subsec_softmax-regression-loss-func` that minimizing cross-entropy is equivalent to maximizing the log-likelihood of the correct labels under our categorical model. It is the natural loss for classification.
 At the moment, applications of deep learning
 easily cast as classification problems
 far outnumber those better treated as regression problems.
@@ -297,7 +337,7 @@ def cross_entropy(y_hat, y):  #@save
 cross_entropy(y_hat, y)
 ```
 
-Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form.
+Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form. The proper fix, fusing softmax and cross-entropy via the log-sum-exp trick, is derived in :numref:`subsec_softmax-implementation-revisited`.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab pytorch, mxnet, tensorflow
@@ -385,7 +425,21 @@ preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 
-We are more interested in the images we label *incorrectly*. We visualize them by
+How well do we do overall? We sweep the whole validation set and average the
+per-example correct/incorrect flags returned by `accuracy`:
+
+```{.python .input #softmax-regression-scratch-prediction-accuracy}
+%%tab pytorch
+correct = []
+for X_i, y_i in data.val_dataloader():
+    with torch.no_grad():
+        correct.append(model.accuracy(model(X_i), y_i, averaged=False))
+print(f'Test accuracy: {torch.cat(correct).mean():.3f}')
+```
+
+The overall test accuracy is approximately 83%, consistent with the training
+curve: the ceiling of a linear model on Fashion-MNIST. We are more interested in
+the images we label *incorrectly*. We visualize them by
 comparing their actual labels
 (first line of text output)
 with the predictions from the model
@@ -399,16 +453,30 @@ labels = [a+'\n'+b for a, b in zip(
 data.visualize([X, y], labels=labels)
 ```
 
-## Summary
+## Summary and Discussion
 
-By now we are starting to get some experience
-with solving linear regression
-and classification problems.
-With it, we have reached what would arguably be
-the state of the art of 1960--1970s of statistical modeling.
-In the next section, we will show you how to leverage
-deep learning frameworks to implement this model
-much more efficiently.
+In this section we built softmax regression entirely from scratch: the softmax
+operation, the cross-entropy loss, parameter initialization, the forward pass, and
+training on Fashion-MNIST. Breaking each piece open by hand is the purpose. Once
+you have seen these five moving parts separately, the one-liner in
+:numref:`sec_softmax_concise` is not magic but notation.
+
+**What the training curve tells you.** After 10 epochs with minibatch SGD the
+model converges to roughly 83% validation accuracy. That ceiling is not a
+hyperparameter problem; it is the limit of linear separability on Fashion-MNIST.
+The ten classes are not linearly separable in pixel space (shirts and pullovers
+look nearly identical to a linear model). The misclassification visualization at
+the end of the section makes this concrete. Replacing the flat linear layer with
+even a single hidden layer (Chapter 5) pushes past it.
+
+**Why the clip is only a band-aid.** Our `cross_entropy` clips the softmax output
+away from zero before taking the log. This prevents the worst NaN failures, but
+the naive `softmax` function itself can overflow for large logits (`exp(100)` is
+infinity in float32). The right fix, subtracting $\max_k o_k$ before
+exponentiating and then fusing softmax and log into a single numerically stable
+operation, is derived in :numref:`subsec_softmax-implementation-revisited`. The
+concise implementation applies that fix automatically; always use the framework's
+built-in cross-entropy when you are not explicitly studying the internals.
 
 ## Exercises
 
@@ -446,104 +514,283 @@ much more efficiently.
 
 <!-- slides -->
 
-::: {.slide title="Softmax regression from scratch"}
-The same recipe as linear regression, with two new pieces:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.4]{.kicker}
 
-1. **Softmax** turns logits into a probability distribution.
-2. **Cross-entropy** is the loss for distributions.
-
-Wired into the same `Module` / `Trainer` scaffold from the
-regression chapter — `Classifier` adds accuracy reporting and we
-inherit the rest.
+Softmax regression **from scratch**<br>The whole classifier, opened up: the softmax, the cross-entropy loss, and the training loop, each built by hand.
+:::
 :::
 
-::: {.slide title="Sums along an axis"}
-Quick reminder before defining softmax — sum along chosen axes:
+::: {.slide title="The same recipe, two new pieces"}
+[Motivation]{.kicker}
 
-@softmax-regression-scratch-softmax-regression-implementation-from-scratch
+::: {.cols .vc}
+::: {.col}
+Linear regression mapped inputs to **one** number. A classifier maps
+them to a **distribution over classes**. Two new parts do that:
+
+1. **Softmax** turns raw scores (logits) into probabilities.
+2. **Cross-entropy** is the loss that scores a distribution.
+
+::: {.d2l-note}
+Everything else, the `Module` / `Trainer` scaffold, is **reused** from
+the regression chapter; `Classifier` just adds accuracy reporting.
+:::
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-clf-loss-accuracy.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Softmax]{.dtitle}
+
+[from scores to a probability distribution]{.dsub}
+:::
+:::
+
+::: {.slide title="First, a reminder: sums along an axis"}
+[The Softmax]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Softmax normalizes each row, so we need a **per-row** sum. `axis=1`
+collapses the columns; `keepdims` holds the shape for broadcasting:
 
 @softmax-regression-scratch-the-softmax-1
 :::
 
-::: {.slide title="Softmax"}
+::: {.col .narrow}
+::: {.d2l-note}
+`axis=0` sums **down** columns, `axis=1` sums **across** rows.
+`keepdims=True` keeps a length-1 axis so the result still broadcasts
+against `X`.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Softmax: exponentiate, sum, divide"}
+[The Softmax]{.kicker}
+
 $$\mathrm{softmax}(\mathbf{X})_{ij}
   = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
 
-Three steps: exponentiate, sum across the class axis, divide.
+Three steps: exponentiate every score, sum across the class axis, divide
+each row by its total:
 
 @softmax-regression-scratch-the-softmax-2
 
-. . .
+::: {.d2l-note .warn}
+Naive `exp` **overflows** for large logits. Fine for teaching; never use
+it in production. The stable fix arrives in §4.5.
+:::
+:::
 
-Result: every row is non-negative and **sums to 1** — a valid
-probability distribution over classes:
+::: {.slide title="The output is a real distribution"}
+[The Softmax]{.kicker}
+
+Feed in any matrix: every entry becomes non-negative and **each row sums
+to 1**, exactly what a probability distribution over classes requires:
 
 @softmax-regression-scratch-the-softmax-3
 :::
 
-::: {.slide title="The model"}
-Flatten each 28×28 image into a 784-vector, hit one linear layer
-that outputs 10 logits — one per class:
+::: {.slide title="Why it is only a teaching version"}
+[The Softmax]{.kicker}
+
+Watch the warning bite. A single logit of $1000$ sends $\exp$ to infinity
+in float32, the ratio is $\infty/\infty$, and the whole row turns to `NaN`.
+The framework's `softmax` shifts by the row maximum first and stays finite
+on the identical input:
+
+@softmax-regression-scratch-the-softmax-overflow
+
+::: {.d2l-note .warn}
+One `NaN` poisons every downstream gradient. The stable fix, fusing softmax
+and log via log-sum-exp, arrives in §4.5.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The Model]{.dtitle}
+
+[one linear layer, ten logits]{.dsub}
+:::
+:::
+
+::: {.slide title="Parameters: a 784×10 weight matrix"}
+[The Model]{.kicker}
+
+Each $28\times28$ image flattens to a length-784 vector; with 10 classes
+the weights are a $784\times10$ matrix `W` plus a length-10 bias `b`.
+Initialize `W` with Gaussian noise, `b` with zeros:
 
 @softmax-regression-scratch-the-model-1
+:::
 
-. . .
+::: {.slide title="Forward pass: flatten → linear → softmax"}
+[The Model]{.kicker}
 
-The forward pass = flatten → linear → softmax:
+The model is one expression: reshape the batch to rows of 784, apply the
+affine map $\mathbf{X}\mathbf{W}+\mathbf{b}$, then softmax into
+per-class probabilities:
 
 @softmax-regression-scratch-the-model-2
 :::
 
-::: {.slide title="Cross-entropy loss"}
-For label `y` (an integer class), the loss on one example is just
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-$$\ell = -\log \hat{y}_{y}$$
+[Cross-Entropy Loss]{.dtitle}
 
-— the negative log of the *predicted probability of the correct
-class*. Here are two examples with 3 classes:
+[the loss for a predicted distribution]{.dsub}
+:::
+:::
+
+::: {.slide title="The loss for distributions"}
+[Cross-Entropy Loss]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For an integer label `y`, the loss on one example is just the negative
+log-probability the model assigned to the **correct** class:
+
+$$\ell = -\log \hat{y}_{y}.$$
+
+We pick out $\hat{y}_y$ for every row with fancy indexing, no Python
+loop. True labels `0` and `2` select the highlighted probabilities:
 
 @softmax-regression-scratch-the-cross-entropy-loss-1
 :::
 
-::: {.slide title="Implementing it"}
-One line — fancy indexing pulls out `y_hat[i, y[i]]` for each
-example, then negative log:
+::: {.col .narrow}
+::: {.d2l-note}
+Minimizing cross-entropy maximizes the **log-likelihood** of the correct
+labels. It keeps rewarding higher confidence, nudging $0.51\to0.99$ even
+after the decision is already right.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Average over the batch"}
+[Cross-Entropy Loss]{.kicker}
+
+Take the negative log of each selected probability, then average. A tiny
+clip keeps the log finite when a probability underflows to 0:
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
+:::
 
-. . .
+::: {.slide title="Register it as the loss"}
+[Cross-Entropy Loss]{.kicker}
+
+Attach `cross_entropy` as the model's `loss`, and every reused training
+utility now knows how to optimize this classifier:
 
 @softmax-regression-scratch-the-cross-entropy-loss-3
 :::
 
-::: {.slide title="Train"}
-10 epochs on Fashion-MNIST. The base `Classifier` already handles
-the validation loop and accuracy reporting:
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Train & Predict]{.dtitle}
+
+[fit on Fashion-MNIST, then inspect mistakes]{.dsub}
+:::
+:::
+
+::: {.slide title="Train on Fashion-MNIST"}
+[Training]{.kicker}
+
+Ten epochs of minibatch SGD on Fashion-MNIST. The inherited `Classifier`
+runs the validation loop and plots train/validation loss alongside
+validation accuracy, no extra code:
 
 @softmax-regression-scratch-training
 :::
 
-::: {.slide title="Predicting"}
-Pull a fresh validation batch and look at predicted vs. true
-classes:
+::: {.slide title="Predict on a fresh batch"}
+[Prediction]{.kicker}
+
+Take the argmax of the model's outputs over a fresh validation batch,
+one predicted class per image:
 
 @softmax-regression-scratch-prediction-1
+:::
 
-. . .
+::: {.slide title="Look at the mistakes"}
+[Prediction]{.kicker}
 
-Tile the misclassified images, captioned with `predicted / true`:
+The interesting cases are the **errors**. Tile the misclassified images,
+each captioned `true / predicted`:
 
 @softmax-regression-scratch-prediction-2
+:::
 
-Linear models cap out around ~83% on Fashion-MNIST — easy classes
-right, ambiguous shirt-vs-pullover wrong.
+::: {.slide title="How accurate, overall?" only="pytorch"}
+[Prediction]{.kicker}
+
+Sweep the whole validation set and average the per-example correct flags:
+
+@softmax-regression-scratch-prediction-accuracy
+
+::: {.d2l-note}
+About **83%**, and that is the *ceiling* of a linear model on
+Fashion-MNIST, not a tuning problem. The next slide shows why.
+:::
+:::
+
+::: {.slide title="Why a linear model caps out"}
+[The ceiling]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A linear classifier draws **straight** decision boundaries. In pixel
+space shirts and pullovers overlap, and no hyperplane separates them.
+
+The capacity of lines is finite: in the plane a line shatters any 3
+points but **never** the 4-point XOR pattern. A single hidden layer
+(Chapter 5) bends the boundary and pushes past 83%.
+:::
+
+::: {.col .fig}
+![](../img/mdl-clf-shattering.svg)
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- **Softmax** = exp + row-sum normalization → probabilities.
-- **Cross-entropy** = $-\log p_\text{correct}$, the standard
-  classification loss.
-- A 10-output linear layer + softmax + CE loss is *the* baseline
-  classifier — anything fancier (MLPs, CNNs) just replaces the
-  forward pass.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Softmax** = exp, row-sum, divide → a probability distribution over
+  classes.
+- **Cross-entropy** = $-\log \hat{y}_{\text{true}}$, averaged over the
+  batch: the natural classification loss.
+- **Model** = flatten → one linear layer ($784\times10$) → softmax.
+:::
+
+::: {.col}
+- **Training** reuses the regression `Trainer`; `Classifier` adds
+  accuracy reporting for free.
+- **~83%** is the linear ceiling on Fashion-MNIST; richer models just
+  replace the forward pass.
+- The naive softmax is numerically fragile; production code fuses
+  softmax and log (§4.5).
+:::
+:::
 :::

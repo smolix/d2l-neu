@@ -1151,79 +1151,374 @@ $\begin{bmatrix}1&1\\1&1\end{bmatrix}$.
 
 <!-- slides -->
 
-::: {.slide title="Eigenvectors and Dynamics"}
-A square matrix $\mathbf{A}$ has **eigenvalue** $\lambda$
-and **eigenvector** $\mathbf{v}$ when
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §22.2]{.kicker}
 
-$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
-
-Geometrically: $\mathbf{A}$ stretches $\mathbf{v}$ by
-$\lambda$ but doesn't rotate it. If $\mathbf{A}$ is
-diagonalizable: $\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^{-1}$
-— a basis change in which the action is just stretching
-along axes.
-
-Why we care: matrix powers $\mathbf{A}^t$ are governed by
-$\lambda^t$. Repeated application of $\mathbf{A}$ aligns
-arbitrary inputs with the dominant eigenvector. That's the
-heart of vanishing/exploding gradients in RNNs, of
-PageRank, and of every iterative solver.
+The directions a matrix only *stretches*<br>**eigenvalues, the spectral theorem, and the spectral radius**.
+:::
 :::
 
-::: {.slide title="Circle becomes an ellipse"}
-A symmetric $\mathbf{A}$ sends the unit circle to an ellipse
-whose axes lie *along the eigenvectors*, with half-lengths
-$|\lambda_i|$ (an axis flips when $\lambda_i<0$):
+::: {.slide title="Why eigenvalues?"}
+[Motivation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+A matrix distorts space: it skews, rotates, rescales. Along special
+directions, the **eigenvectors**, the distortion is a *pure stretch*.
+
+- An **eigenbasis** decouples the map into independent 1-D stretches.
+- Powers $\mathbf{A}^t$ then reduce to scalar powers $\lambda^t$; iterating
+  $\mathbf{A}$ aligns any input with the dominant eigenvector.
+
+::: {.d2l-note}
+This drives PCA, covariance, the Hessian view of optimization, PageRank, and
+vanishing / exploding gradients.
+:::
+:::
+
+::: {.col .fig .big}
 @fig:mdl-la-eig-ellipse
 :::
-
-::: {.slide title="A concrete example"}
-Use a small matrix so the geometry is visible: applying
-$\mathbf{A}$ to an eigenvector changes scale but not direction.
-
-@eigendecomposition-an-example
+:::
 :::
 
-::: {.slide title="Symmetric ⇒ orthonormal eigenbasis; sign of λ = shape"}
-**Spectral theorem.** $\mathbf{A}=\mathbf{A}^\top \Rightarrow
-\mathbf{A}=\mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$ with
-$\mathbf{W}$ orthogonal, $\lambda_i$ real. Then
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Eigenvalues & eigenvectors]{.dtitle}
+
+[definition, geometry, the decomposition]{.dsub}
+:::
+:::
+
+::: {.slide title="The defining equation"}
+[The objects]{.kicker}
+
+A scalar $\lambda$ and **nonzero** vector $\mathbf{v}$ are an *eigenpair* of
+$\mathbf{A}$ when
+
+$$\mathbf{A}\mathbf{v} = \lambda\mathbf{v}.$$
+
+. . .
+
+Take $\mathbf{A}=\operatorname{diag}(2,-1)$: it doubles the $x$-axis and
+flips the $y$-axis. The axes themselves only change *length*, not
+direction, so $[1,0]^\top$ and $[0,1]^\top$ are eigenvectors with
+$\lambda = 2$ and $\lambda = -1$.
+
+::: {.d2l-note .rule}
+$\lambda = 0$ is allowed and signals a **non-invertible** matrix; only
+$\mathbf{v}=\mathbf 0$ is excluded.
+:::
+:::
+
+::: {.slide title="The circle becomes an ellipse"}
+[The objects]{.kicker}
+
+For a **symmetric** matrix, the ellipse axes lie along the eigenvectors (green), with half-lengths $|\lambda_i|$:
+
+![](../img/mdl-la-eig-ellipse.svg){width=82%}
+:::
+
+::: {.slide title="Finding eigenvalues"}
+[The objects]{.kicker}
+
+$\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$ rearranges to
+$(\mathbf{A}-\lambda\mathbf{I})\mathbf{v}=\mathbf 0$. A nonzero solution
+exists only when that matrix is **singular**:
+
+$$\det(\mathbf{A}-\lambda\mathbf{I}) = 0.$$
+
+. . .
+
+For $\mathbf{A}=\bigl[\begin{smallmatrix}2&1\\2&3\end{smallmatrix}\bigr]$ this is
+$(2-\lambda)(3-\lambda)-2=(4-\lambda)(1-\lambda)$, so $\lambda=1,4$ with
+eigenvectors $[1,-1]^\top$ and $[1,2]^\top$ (each defined up to scale).
+:::
+
+::: {.slide title="Check it with `eig`"}
+[The objects]{.kicker}
+
+The library returns the same $\lambda=1,4$, with eigenvectors normalized to
+unit length (and an arbitrary sign), parallel to the ones we found by hand:
+
+@eigendecomposition-an-example
+
+::: {.d2l-note}
+Real libraries never form the characteristic polynomial: they run the
+shifted **QR algorithm** on a Hessenberg reduction.
+:::
+:::
+
+::: {.slide title="The eigendecomposition"}
+[The objects]{.kicker}
+
+Stack the eigenvectors as columns of $\mathbf{W}$ and the eigenvalues on the
+diagonal of $\boldsymbol{\Lambda}$. Then $\mathbf{A}\mathbf{W}=\mathbf{W}\boldsymbol{\Lambda}$, and if $\mathbf{W}$ is invertible (a *diagonalizable* matrix):
+
+$$\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^{-1}.$$
+
+. . .
+
+Powers become trivial because the inner factors telescope:
+
+$$\mathbf{A}^n = \mathbf{W}\boldsymbol{\Lambda}^n\mathbf{W}^{-1}
+\quad\Longrightarrow\quad \text{just raise each } \lambda_i \text{ to the } n.$$
+:::
+
+::: {.slide title="Determinant & trace from the spectrum"}
+[The objects]{.kicker}
+
+The characteristic polynomial factors as
+$p(\lambda)=\prod_i(\lambda_i-\lambda)$. Reading off two coefficients gives
+
+$$\det\mathbf{A} = \prod_i \lambda_i,
+\qquad
+\operatorname{tr}\mathbf{A} = \sum_i \lambda_i.$$
+
+. . .
+
+Determinant is the **product**, trace the **sum** of the eigenvalues, and a
+diagonalizable matrix's **rank** is the number of nonzero $\lambda_i$. All
+three are unchanged by a change of basis.
+:::
+
+::: {.slide title="When does an eigenbasis exist?"}
+[The objects]{.kicker}
+
+Diagonalizability is about *counting* eigenvectors. For each $\lambda$,
+
+$$1 \le \underbrace{\dim(\text{eigenspace})}_{\text{geometric}} \le \underbrace{\text{root multiplicity}}_{\text{algebraic}}.$$
+
+. . .
+
+An eigenbasis exists **iff** these are equal for every $\lambda$.
+*$n$ distinct eigenvalues* guarantee it. The shear
+$\bigl[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\bigr]$ fails: $\lambda=1$
+has algebraic multiplicity $2$ but only a $1$-D eigenspace, so it is
+**defective**, not diagonalizable.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Symmetric matrices]{.dtitle}
+
+[the spectral theorem, positive definiteness, Rayleigh]{.dsub}
+:::
+:::
+
+::: {.slide title="The spectral theorem"}
+[Symmetry]{.kicker}
+
+::: {.d2l-note .rule}
+Every **real symmetric** $\mathbf{A}=\mathbf{A}^\top$ has a full *orthonormal*
+eigenbasis with *real* eigenvalues:
+$\;\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$,
+$\;\mathbf{W}^\top\mathbf{W}=\mathbf{I}$.
+:::
+
+. . .
+
+**(i) eigenvalues are real.** With the conjugate inner product,
+$\lambda\|\mathbf{v}\|^2 = \mathbf{v}^*\!\mathbf{A}\mathbf{v} = (\mathbf{A}\mathbf{v})^*\mathbf{v} = \bar\lambda\|\mathbf{v}\|^2$, so $\lambda=\bar\lambda$.
+
+. . .
+
+**(ii) distinct eigenvalues give orthogonal eigenvectors.** Sliding $\mathbf{A}=\mathbf{A}^\top$ across the inner product,
+$\lambda\langle\mathbf{u},\mathbf{v}\rangle = \langle\mathbf{A}\mathbf{u},\mathbf{v}\rangle = \langle\mathbf{u},\mathbf{A}\mathbf{v}\rangle = \mu\langle\mathbf{u},\mathbf{v}\rangle$, so $(\lambda-\mu)\langle\mathbf{u},\mathbf{v}\rangle=0$.
+
+. . .
+
+**(iii)** a clean induction on the $\mathbf{A}$-invariant orthogonal complement
+$\mathbf{w}_1^{\perp}$ fills out the basis. Geometrically $\mathbf{A}=\mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$ is **rotate** (onto the axes), **scale**, **rotate back**, the ellipse picture, now guaranteed.
+
+::: {.d2l-note .rule}
+Applied to $\mathbf{A}^\top\mathbf{A}$ (always symmetric, PSD), the same theorem
+builds the **SVD** for *every* matrix.
+:::
+:::
+
+::: {.slide title="The sign of λ is the shape"}
+[Symmetry]{.kicker}
+
+Rotating $\mathbf{x}$ into the eigenbasis turns the quadratic form into a
+weighted sum of squares,
 $\mathbf{x}^\top\mathbf{A}\mathbf{x}=\sum_i\lambda_i(\mathbf{w}_i^\top\mathbf{x})^2$,
-so the eigenvalue signs are the surface shape — bowl (PD),
-trough (PSD), saddle (indefinite):
+so the eigenvalue signs *are* the surface shape:
 
 @fig:mdl-la-psd
 :::
 
-::: {.slide title="Gershgorin circles"}
-Cheap eigenvalue bounds without computing them:
-eigenvalues lie in the union of disks centered at
-$a_{ii}$ with radius $\sum_{j \ne i} |a_{ij}|$. Useful for
-stability arguments:
+::: {.slide title="Positive definiteness, in code"}
+[Symmetry]{.kicker}
+
+$\mathbf{A}\succ0$ iff every $\lambda_i>0$; $\mathbf{A}\succeq0$ iff every
+$\lambda_i\ge0$. A Gram matrix $\mathbf{X}^\top\mathbf{X}$ is always PSD,
+and PD exactly when $\mathbf{X}$ has full column rank:
+
+@eigendecomposition-psd-gram
+
+::: {.d2l-note}
+Full rank gives two positive eigenvalues (PD); dependent columns give a
+zero eigenvalue (PSD, not PD). This is the Hessian "is it a minimum?" test.
+:::
+:::
+
+::: {.slide title="Eigenvalues as extreme stretches"}
+[Symmetry]{.kicker}
+
+The same weighted-average view bounds the **Rayleigh quotient**: it is a
+convex combination of the eigenvalues, so
+
+$$\lambda_n \le \frac{\mathbf{x}^\top\mathbf{A}\mathbf{x}}{\mathbf{x}^\top\mathbf{x}} \le \lambda_1,$$
+
+with the extremes hit at $\mathbf{w}_1$ and $\mathbf{w}_n$.
+
+. . .
+
+So $\lambda_{\max}$ and $\lambda_{\min}$ are the largest and smallest
+stretches. Their ratio $\kappa=\lambda_{\max}/\lambda_{\min}$ is the
+**condition number**, what makes a steep-and-flat bowl slow to descend.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Locating & iterating]{.dtitle}
+
+[Gershgorin discs, power iteration, the spectral radius]{.dsub}
+:::
+:::
+
+::: {.slide title="Gershgorin discs"}
+[Dynamics]{.kicker}
+
+Bound the spectrum *without computing it*: every eigenvalue lies in the
+union of discs centered at $a_{ii}$ with radius the off-diagonal row sum
+$r_i=\sum_{j\neq i}|a_{ij}|$.
 
 @fig:mdl-la-gershgorin
 :::
 
-::: {.slide title="Eigenvectors govern long-run behavior"}
-Power iteration: keep multiplying by $\mathbf{A}$. The
-direction converges to the leading eigenvector; the norm
-grows like $\lambda_1^t$, with the *direction* gap closing
-at rate $|\lambda_2/\lambda_1|$:
+::: {.slide title="Gershgorin: the bound is tight enough to use"}
+[Dynamics]{.kicker}
+
+For the symmetric matrix above, the four discs give the ranges $[0.7,1.3]$,
+$[2.4,3.6]$, $[4.2,5.8]$, $[8.1,9.9]$, and the true eigenvalues land inside
+each:
+
+@eigendecomposition-gershgorin-circle-theorem
+
+::: {.d2l-note .rule}
+Strict diagonal dominance with positive diagonal keeps $0$ out of every
+disc, a no-computation proof of invertibility.
+:::
+:::
+
+::: {.slide title="Power iteration"}
+[Dynamics]{.kicker}
+
+Why does iterating $\mathbf{A}$ pick out one direction? Expand
+$\mathbf{v}_0$ in the eigenbasis and apply $\mathbf{A}$ $k$ times:
+
+$$\mathbf{A}^k\mathbf{v}_0
+  = \lambda_1^k\Bigl(c_1\mathbf{w}_1
+     + \sum_{i\ge2} c_i\bigl(\tfrac{\lambda_i}{\lambda_1}\bigr)^{k}\mathbf{w}_i\Bigr).$$
+
+Every ratio $|\lambda_i/\lambda_1|<1$, so the tail decays: the iterate
+aligns with $\mathbf{w}_1$ and the norm grows like $|\lambda_1|^k$.
+:::
+
+::: {.slide title="Power iteration, watched"}
+[Dynamics]{.kicker}
+
+The direction gap closes at rate $|\lambda_2/\lambda_1|$; the norm ratio
+settles onto $\lambda_1$ even faster:
 
 @fig:mdl-la-power-iter
+:::
 
-. . .
+::: {.slide title="Power iteration, to ten decimals"}
+[Dynamics]{.kicker}
+
+On a random $5\times5$ matrix, the stabilized norm ratio matches
+$\max_i|\lambda_i|$ to ten decimal places:
 
 @eigendecomposition-power-iteration
 :::
 
+::: {.slide title="Complex eigenvalues are rotations"}
+[Dynamics]{.kicker}
+
+A planar rotation by $\theta$ fixes *no* real direction, so it has no real
+eigenvector: its eigenvalues are the conjugate pair
+$e^{\pm i\theta}$, modulus $1$ (length preserved), argument $\pm\theta$
+(the angle):
+
+@eigendecomposition-complex-rotation
+
+::: {.d2l-note}
+A real matrix's complex eigenvalues come in pairs $re^{\pm i\theta}$: scale
+by $r$, rotate by $\theta$. That is why power iteration can *spin* instead
+of settling.
+:::
+:::
+
+::: {.slide title="Spectral radius & deep networks"}
+[The payoff]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The single number governing iterated maps is the **spectral radius**
+$\rho(\mathbf{A})=\max_i|\lambda_i|$, the stretch we just measured.
+
+- Backprop-through-time multiplies per-step Jacobians: the gradient scales
+  like $\rho^{T}$.
+- $\rho>1$ **explodes**, $\rho<1$ **vanishes**: either kills long-range
+  learning.
+- For random weights the circular law gives $\rho\!\sim\!\sqrt{n}$, hence
+  the $1/\sqrt{\text{fan-in}}$ initialization that keeps $\rho\approx1$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Keep $\rho\approx1$: the principle behind orthogonal init, gradient
+clipping, and LSTM/GRU gating.
+:::
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
-- $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$: $\mathbf{A}$
-  acts as scaling along the eigenvector axes.
-- Largest $|\lambda|$ controls long-run iterated dynamics.
-- Symmetric matrices have orthonormal eigenvectors and
-  real eigenvalues — the basis for PCA.
-- Vanishing/exploding RNN gradients = "iterated map" with
-  bad spectral radius.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$: eigenvectors are stretched, not
+  rotated; the circle becomes an ellipse.
+- $\mathbf{A}=\mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^{-1}$ turns powers,
+  $\det$, and $\operatorname{tr}$ into scalar facts.
+- **Symmetric** $\Rightarrow$ orthonormal eigenbasis, real $\lambda$, the
+  workhorse behind PCA and the SVD.
+:::
+
+::: {.col}
+- The **sign** of $\lambda$ decides positive definiteness; the **spread**
+  decides conditioning.
+- **Gershgorin** localizes $\lambda$ cheaply; **power iteration** finds the
+  dominant one.
+- The **spectral radius** $\rho$ governs stability, from RNN gradients to
+  weight initialization.
+:::
+:::
+
+::: {.d2l-note}
+Keeping the largest eigenvalue modulus near $1$ is the thread tying this
+section to deep-network training.
+:::
 :::

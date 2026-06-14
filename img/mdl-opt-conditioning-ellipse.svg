@@ -1325,9 +1325,14 @@ z
      <use xlink:href="#Cmr10-31" transform="translate(57.080078 -25.4) scale(0.7)"/>
     </g>
    </g>
+   <g id="patch_4">
+    <path d="M 137.557228 99.612363 
+Q 120.277256 102.346302 102.997284 105.080241 
+" style="fill: none; stroke: #2ca02c; stroke-width: 0.7; stroke-linecap: round"/>
+   </g>
    <g id="text_2">
     <!-- $\sigma_n^2$ -->
-    <g style="fill: #2ca02c" transform="translate(105.286154 93.673725) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(141.535385 100.838279) scale(0.09 -0.09)">
      <defs>
       <path id="Cmmi10-6e" d="M 494 109 
 Q 494 147 500 166 
@@ -3754,7 +3759,7 @@ L 318.792013 296.840883
 L 318.792013 296.840883 
 " clip-path="url(#pd056b08f10)" style="fill: none; stroke: #cfcfcf; stroke-width: 0.9"/>
    </g>
-   <g id="patch_4">
+   <g id="patch_5">
     <path d="M 326.250629 160.918125 
 Q 353.671725 160.918125 379.080359 160.918125 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linecap: round"/>
@@ -3763,7 +3768,7 @@ L 379.080359 160.918125
 L 373.480359 163.718125 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
-   <g id="patch_5">
+   <g id="patch_6">
     <path d="M 326.250629 160.918125 
 Q 326.250629 116.139663 326.250629 73.373663 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linecap: round"/>
@@ -3811,9 +3816,14 @@ z
      <use xlink:href="#Cmmi10-b8" transform="translate(217.337031 0.109375)"/>
     </g>
    </g>
+   <g id="patch_7">
+    <path d="M 362.786356 100.451952 
+Q 345.510826 102.788195 328.235297 105.124438 
+" style="fill: none; stroke: #2ca02c; stroke-width: 0.7; stroke-linecap: round"/>
+   </g>
    <g id="text_5">
     <!-- $\sigma_n^2+\lambda$ -->
-    <g style="fill: #2ca02c" transform="translate(330.515245 93.673725) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(366.764476 100.838279) scale(0.09 -0.09)">
      <use xlink:href="#Cmmi10-be" transform="translate(0 0.109375)"/>
      <use xlink:href="#Cmr10-32" transform="translate(63.156953 38.373438) scale(0.7)"/>
      <use xlink:href="#Cmmi10-6e" transform="translate(57.080078 -25.4) scale(0.7)"/>

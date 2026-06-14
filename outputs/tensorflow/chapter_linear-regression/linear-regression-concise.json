@@ -34,31 +34,31 @@
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:a08eafcea1acd71630baf7a48e594f0b76ed5a39f03dfe971a278c94fe2c4654",
+      "code_fingerprint": "sha256:a98029877c50df8fa21eb13ef09abae0ec43ff189bed877b4057a23f0fe1d01d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 18906,
-          "sha256": "sha256:59e4a641efc71273185e152dfad8f452440f086eb23238113659296127c53e4f"
+          "bytes": 19009,
+          "sha256": "sha256:b6a360100ef638972f6c8712b894fb49c324cc11c43cb681645711062a8ad3e5"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:e972373d7c7a8c46f0d020a2eb41d2741722cf2678bee1f6822b99981de5d7f4",
+      "code_fingerprint": "sha256:f1244f0c154a89fc072c62e7277e2aba6f3b4b992095ec453172ab3344988f29",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:3b4391fa2c28422521ada4937fff34481a3a8a9a816f1a423f4010270a6d317e",
+      "code_fingerprint": "sha256:59299348c5c6c2b6b14cd64d9050d101eb8b29929605da22a56e3cc34dfcbcaa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.0071975  -0.01557302]\nerror in estimating b: [0.01208115]\n"
+          "text": "error in estimating w: [-0.00022316  0.00025868]\nerror in estimating b: [-6.4373016e-05]\n"
         }
       ]
     }

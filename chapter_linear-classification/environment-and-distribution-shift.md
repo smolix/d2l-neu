@@ -42,7 +42,8 @@ without any coincident improvement in credit-worthiness.
 Take a minute to digest this because similar issues abound
 in many applications of machine learning:
 by introducing our model-based decisions to the environment,
-we might break the model.
+we might break the model. This is a machine-learning incarnation of *Goodhart's law*:
+when a measure becomes a target, it ceases to be a good measure.
 
 While we cannot possibly give these topics
 a complete treatment in one section,
@@ -255,17 +256,21 @@ More importantly, *all* the roadside had been rendered
 with the *same* texture and the roadside detector
 learned about this "feature" very quickly.
 
-A similar thing happened to the US Army
-when they first tried to detect tanks in the forest.
-They took aerial photographs of the forest without tanks,
-then drove the tanks into the forest
-and took another set of pictures.
-The classifier appeared to work *perfectly*.
-Unfortunately, it had merely learned
-how to distinguish trees with shadows
-from trees without shadows---the first set
-of pictures was taken in the early morning,
-the second set at noon.
+A famous (and possibly apocryphal) cautionary tale makes the same point.
+As the story goes, the US Army once tried to train a neural network
+to detect tanks hidden among trees.
+They photographed a forest with no tanks,
+then drove tanks in and photographed it again,
+and the classifier appeared to work *perfectly* on held-out images,
+until it failed in the field.
+It had supposedly learned not to find tanks
+but to tell the tank-free photos from the rest:
+the two image sets differed in lighting and shadow
+(one set was taken in the early morning, the other at noon), not in their tanks.
+Whether or not it happened exactly this way, the lesson is exact.
+A spurious feature correlated with the label in your sample,
+but absent in deployment,
+is enough to fool a model that never saw the distinction you actually care about.
 
 ### Nonstationary Distributions
 
@@ -355,10 +360,11 @@ $$\mathop{\mathrm{minimize}}_f \frac{1}{n} \sum_{i=1}^n \beta_i l(f(\mathbf{x}_i
 
 Alas, we do not know that ratio,
 so before we can do anything useful we need to estimate it.
-Many methods are available,
-including some fancy operator-theoretic approaches
-that attempt to recalibrate the expectation operator directly
-using a minimum-norm or a maximum entropy principle.
+Many methods are available. One direct family matches the means of the
+reweighted source and the target features in a reproducing-kernel Hilbert
+space (*kernel mean matching*, closely related to the *maximum mean discrepancy*
+two-sample test :cite:`Gretton.Borgwardt.Rasch.ea.2012`), solving for the weights
+without ever estimating the densities $p(\mathbf{x})$ and $q(\mathbf{x})$ separately.
 Note that for any such approach, we need samples
 drawn from both distributions---the "true" $p$, e.g.,
 by access to test data, and the one used
@@ -422,6 +428,10 @@ for correcting covariate shift:
 1. Train a binary classifier using logistic regression to get the function $h$.
 1. Weigh training data using $\beta_i = \exp(h(\mathbf{x}_i))$ or better $\beta_i = \min(\exp(h(\mathbf{x}_i)), c)$ for some constant $c$.
 1. Use weights $\beta_i$ for training on $\{(\mathbf{x}_1, y_1), \ldots, (\mathbf{x}_n, y_n)\}$ in :eqref:`eq_weighted-empirical-risk-min`.
+
+Clipping the weights at a ceiling $c$ trades a little bias for much lower variance:
+when source and target barely overlap, a handful of examples acquire enormous weights
+$\beta_i$ that would otherwise dominate, and destabilize, the weighted objective.
 
 Note that the above algorithm relies on a crucial assumption.
 For this scheme to work, we need that each data example
@@ -513,6 +523,10 @@ where $p(y_j)$ is the $j^\textrm{th}$ element of the $k$-dimensional label distr
 If our classifier is sufficiently accurate to begin with,
 then the confusion matrix $\mathbf{C}$ will be invertible,
 and we get a solution $p(\mathbf{y}) = \mathbf{C}^{-1} \mu(\hat{\mathbf{y}})$.
+This confusion-matrix estimator goes back to :citet:`Saerens.Latinne.Decaestecker.2002`;
+:citet:`Lipton.Wang.Smola.2018` showed that, treating the trained classifier as a
+black box, it yields *consistent* estimates of the target label distribution under
+the label-shift assumption (an approach they call black-box shift estimation).
 
 Because we observe the labels on the source data,
 it is easy to estimate the distribution $q(y)$.
@@ -570,11 +584,6 @@ $$\begin{aligned}&\textrm{model } f_t \longrightarrow \textrm{data }  \mathbf{x}
 
 In many cases the environment remembers what we did. Not necessarily in an adversarial manner but it will just remember and the response will depend on what happened before. For instance, a coffee boiler controller will observe different temperatures depending on whether it was heating the boiler previously. PID (proportional-integral-derivative) controller algorithms are a popular choice there.
 Likewise, a user's behavior on a news site will depend on what we showed them previously (e.g., they will read most news only once). Many such algorithms form a model of the environment in which they act so as to make their decisions appear less random.
-Recently,
-control theory (e.g., PID variants) has also been used
-to automatically tune hyperparameters
-to achieve better disentangling and reconstruction quality,
-and improve the diversity of generated text and the reconstruction quality of generated images :cite:`Shao.Yao.Sun.ea.2020`.
 
 
 
@@ -655,12 +664,326 @@ The risk is the expectation of the loss over the entire population of data drawn
 Under the corresponding assumptions, covariate and label shift can be detected and corrected for at test time. Failure to account for this bias can become problematic at test time.
 In some cases, the environment may remember automated actions and respond in surprising ways. We must account for this possibility when building models and continue to monitor live systems, open to the possibility that our models and the environment will become entangled in unanticipated ways.
 
+Although the ideas above predate the current era of large pretrained models,
+distribution shift has only become more central since: a foundation model is
+deployed on domains, users, and time periods quite unlike its training corpus,
+so covariate, label, and concept shift are now everyday operational realities
+rather than corner cases. Curated benchmarks such as WILDS
+:cite:`Koh.Sagawa.Marklund.ea.2021` collect real-world shifts (across hospitals,
+cameras, countries, and time) and show that models with strong in-distribution
+accuracy can still degrade sharply out of distribution. For deeper, methods-level
+treatments of the corrections sketched here, see the references on the chapter's
+cover page.
+
 ## Exercises
 
-1. What could happen when we change the behavior of a search engine? What might the users do? What about the advertisers?
-1. Implement a covariate shift detector. Hint: build a classifier.
-1. Implement a covariate shift corrector.
-1. Besides distribution shift, what else could affect how the empirical risk approximates the risk?
+1. If you change the behavior of a search engine, how might users respond? How might advertisers respond? Explain why this is an instance of the feedback loop described for the loan/footwear example at the start of the section.
+1. Starting from the risk under the target distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting identity :eqref:`eq_weighted-empirical-risk-min`, and state precisely the assumption on the supports of $p(\mathbf{x})$ and $q(\mathbf{x})$ under which the importance weights $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
+1. Implement a covariate shift detector. Take any labeled dataset and create a shifted copy of the features (e.g., add Gaussian noise, or subsample by thresholding one feature). Train a logistic-regression classifier to distinguish "original" from "shifted" inputs and report its accuracy. Relate the accuracy to how detectable the shift is, and to the classifier-as-shift-detector idea in :numref:`subsec_covariate-shift-correction`. *Hint: if the classifier cannot beat chance, the two distributions are indistinguishable from these features.*
+1. Implement a covariate shift corrector. Using the classifier from the previous exercise, compute weights $\beta_i=\exp(h(\mathbf{x}_i))$, retrain your downstream model with weighted empirical risk minimization :eqref:`eq_weighted-empirical-risk-min`, and compare its target-domain accuracy with and without reweighting. What happens to the variance of the $\beta_i$ as the shift grows, and how does clipping $\beta_i\leftarrow\min(\beta_i,c)$ help?
+1. You have a $k$-class classifier and its validation confusion matrix $\mathbf{C}$. Show that the linear system $\mathbf{C}\, p(\mathbf{y})=\mu(\hat{\mathbf{y}})$ follows from the law of total probability under the label-shift assumption, and explain why $\mathbf{C}$ must be invertible for the estimate $p(\mathbf{y})=\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ to be usable.
+1. Besides distribution shift, what else could make the empirical risk a poor approximation of the risk? *Hint: think about dependence between examples, and about the loss not matching the deployment objective.*
 
 
 [Discussions](https://d2l.discourse.group/t/105)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.7]{.kicker}
+
+When the world stops matching the training set<br>**Distribution shift**: how it breaks models, and what we can do about it.
+:::
+:::
+
+::: {.slide title="The question we skipped"}
+[Why this matters]{.kicker}
+
+We fit models to data and measure test accuracy. But we rarely ask **where the data came from** or **what the prediction will be used for**.
+
+. . .
+
+::: {.d2l-note .warn}
+A loan model finds that **Oxfords repay, sneakers default**. Approve everyone in Oxfords, and soon *everyone* wears Oxfords, with no change in who actually repays. The decision **broke the signal**.
+:::
+
+. . .
+
+This is **Goodhart's law**: *when a measure becomes a target, it ceases to be a good measure.* Deploying a model can perturb the very distribution it was trained on.
+:::
+
+::: {.slide title="Train here, deploy there"}
+[The setup]{.kicker}
+
+Training data is drawn from a **source** distribution $p_S(\mathbf{x}, y)$; at test time we meet a **target** $p_T(\mathbf{x}, y)$ that may differ.
+
+. . .
+
+::: {.d2l-note}
+**With no link between $p_S$ and $p_T$, robust learning is impossible.** Suppose the inputs are unchanged, $p_S(\mathbf{x})=p_T(\mathbf{x})$, but every label flips, $p_S(y\mid\mathbf{x})=1-p_T(y\mid\mathbf{x})$: "cats" become "dogs" overnight. No algorithm can tell this apart from no shift at all.
+:::
+
+The way out is **structure**: assume *how* the world may change, and that assumption buys us detection, sometimes correction.
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Three Kinds of Shift]{.dtitle}
+
+[what stays fixed tells you what to do]{.dsub}
+:::
+:::
+
+::: {.slide title="Covariate shift: the inputs move"}
+[Three kinds of shift]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The input distribution $P(\mathbf{x})$ changes, but the **labeling rule** $P(y\mid\mathbf{x})$ holds.
+
+The natural assumption when **$\mathbf{x}$ causes $y$**: a cat is a cat whether photographed or drawn.
+
+::: {.d2l-note}
+Train on **photos**, test on **cartoons** of the same animals. Same labels, very different pixels, and trouble without a plan to adapt.
+:::
+:::
+
+::: {.col .fig}
+![Source: photographs. Target: cartoons. $P(\mathbf{x})$ shifts; the cat-vs-dog rule does not.](../img/cat-dog-train.png){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Label shift: the mix moves"}
+[Three kinds of shift]{.kicker}
+
+The label frequencies $P(y)$ change, but each class still **looks the same**: $P(\mathbf{x}\mid y)$ is fixed.
+
+. . .
+
+The natural assumption when **$y$ causes $\mathbf{x}$**: diseases cause symptoms, so as an outbreak shifts how common a diagnosis is, the symptom pattern per disease is unchanged.
+
+. . .
+
+::: {.d2l-note .rule}
+**Why prefer it when both could apply?** Its corrections live in **label space** (low-dimensional categories), not in high-dimensional input space, exactly the cheap side in deep learning.
+:::
+:::
+
+::: {.slide title="Concept shift: the labels themselves move"}
+[Three kinds of shift]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Now the **definition** of a label drifts: $P(y\mid\mathbf{x})$ changes because what counts as the answer changed.
+
+What people call a *soft drink* depends on **where you ask** ("soda", "pop", "coke").
+
+::: {.d2l-note}
+Diagnostic criteria, fashion, and job titles all drift this way, usually **slowly**, across time or geography, which is what makes it correctable.
+:::
+:::
+
+::: {.col .fig}
+![Concept shift: the name for the same drink across the US (PopVsSoda.com, CC-BY: Alan McConchie).](../img/popvssoda.png){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[When It Bites]{.dtitle}
+
+[spurious features and slow drift]{.dsub}
+:::
+:::
+
+::: {.slide title="The model learned the wrong thing"}
+[When it bites]{.kicker}
+
+A blood-test startup drew **healthy controls from students**, sick patients from the clinic. The classifier hit near-perfect accuracy, on age, hormones, and diet, **not the disease**.
+
+. . .
+
+::: {.d2l-note .warn}
+**The tank fable.** A net "detects tanks" perfectly on held-out images, then fails in the field. The tank photos were shot at noon, the empty ones at dawn: it learned the **lighting**, never the tank.
+:::
+
+A spurious feature, present in your sample but gone at deployment, fools a model that never saw the distinction you care about.
+:::
+
+::: {.slide title="Slow drift, stale model"}
+[When it bites]{.kicker}
+
+The subtler failure: the distribution moves **gradually** (a *nonstationary* world) and the model is never refreshed.
+
+. . .
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note}
+A **spam filter** stops working once spammers craft messages unlike any seen before.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note}
+A **recommender** keeps pushing Santa hats long after Christmas.
+:::
+:::
+:::
+
+The signal did not break all at once, it eroded while nobody was watching.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Correcting Shift]{.dtitle}
+
+[reweighting the risk we cannot see]{.dsub}
+:::
+:::
+
+::: {.slide title="Risk vs. empirical risk"}
+[The frame]{.kicker}
+
+What we *want* to minimize is the **risk**: expected loss under the true distribution $p(\mathbf{x}, y)$.
+
+$$R(f) = \mathbb{E}_{(\mathbf{x}, y)\sim p}\,[\,l(f(\mathbf{x}), y)\,].$$
+
+. . .
+
+We cannot evaluate it, so we minimize the **empirical risk**, the average loss on the training sample, and *hope* the two agree.
+
+$$\hat{R}(f) = \frac{1}{n}\sum_{i=1}^{n} l(f(\mathbf{x}_i), y_i).$$
+
+. . .
+
+Under shift, the training sample comes from the **wrong** distribution, so this hope fails, unless we correct the average.
+:::
+
+::: {.slide title="Reweight to the right distribution"}
+[Covariate shift correction]{.kicker}
+
+Labeled data comes from source $q(\mathbf{x})$, but we care about target $p(\mathbf{x})$. Because $p(y\mid\mathbf{x})=q(y\mid\mathbf{x})$, one identity fixes the risk:
+
+$$\mathbb{E}_{p}[\,l\,] = \mathbb{E}_{q}\!\left[\,\frac{p(\mathbf{x})}{q(\mathbf{x})}\, l\,\right].$$
+
+. . .
+
+So **reweight each example** by how much more likely it is under the target than the source, and minimize a *weighted* empirical risk:
+
+$$\beta_i = \frac{p(\mathbf{x}_i)}{q(\mathbf{x}_i)}, \qquad \min_f\ \frac{1}{n}\sum_{i=1}^{n}\beta_i\, l(f(\mathbf{x}_i), y_i).$$
+:::
+
+::: {.slide title="A classifier estimates the weights"}
+[Covariate shift correction]{.kicker}
+
+We do not know $p/q$. But **train a classifier to tell source from target** ($z=+1$ for target, $-1$ for source), and the odds *are* the ratio:
+
+$$\frac{P(z{=}1\mid\mathbf{x})}{P(z{=}{-}1\mid\mathbf{x})} = \frac{p(\mathbf{x})}{q(\mathbf{x})}.$$
+
+. . .
+
+With a logistic model $P(z{=}1\mid\mathbf{x})=\sigma(h(\mathbf{x}))$ this collapses to $\beta_i = \exp(h(\mathbf{x}_i))$. We need only **unlabeled** target features $\mathbf{x}\sim p$.
+
+. . .
+
+::: {.d2l-note .rule}
+**Clip** $\beta_i\leftarrow\min(\exp(h(\mathbf{x}_i)), c)$. When the domains barely overlap, a few examples grab enormous weights, a little bias for much less variance.
+:::
+:::
+
+::: {.slide title="Label shift: invert a confusion matrix"}
+[Label shift correction]{.kicker}
+
+Here $P(y)$ shifts while $P(\mathbf{x}\mid y)$ is fixed, so the weights are label ratios $\beta_i=p(y_i)/q(y_i)$, and we never touch the high-dimensional inputs.
+
+. . .
+
+Take an off-the-shelf classifier, measure its $k\times k$ **confusion matrix** $\mathbf{C}$ on a source validation set, and the **average prediction** $\mu(\hat{\mathbf{y}})$ on the (unlabeled) target. They are linked by total probability:
+
+$$\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}}) \quad\Longrightarrow\quad p(\mathbf{y}) = \mathbf{C}^{-1}\mu(\hat{\mathbf{y}}).$$
+
+. . .
+
+If the classifier is decent (so $\mathbf{C}$ is invertible), this recovers the target label mix, then form $\beta_i$ and reweight.
+:::
+
+::: {.slide title="Concept shift: just keep up"}
+[Concept shift correction]{.kicker}
+
+When the labels are redefined, there is no clever reweighting, the old answers are simply wrong.
+
+. . .
+
+But genuine concept shift is almost always **gradual** (ads, news, a slowly degrading camera lens). So we do the obvious thing:
+
+::: {.d2l-note}
+Keep the current weights and **take a few update steps on fresh data**, rather than retraining from scratch. Let the model track the moving target.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Beyond Passive Prediction]{.dtitle}
+
+[when the environment reacts to you]{.dsub}
+:::
+:::
+
+::: {.slide title="A taxonomy of learning problems"}
+[The bigger picture]{.kicker}
+
+Everything above assumed we *passively predict*. The environment can also **react**:
+
+. . .
+
+- **Batch:** train once, deploy, never update (the smart catdoor).
+- **Online:** data arrives one point at a time; predict, then learn from the outcome.
+- **Bandits:** online, but a finite set of actions, so stronger guarantees.
+- **Control & RL:** the environment **remembers** and responds, possibly adversarially (a thermostat, a chess opponent, other cars).
+
+. . .
+
+A strategy that is safe in a stationary world can fail once the world adapts to it, an arbitrage trade vanishes the moment it is exploited.
+:::
+
+::: {.slide title="Predictions become decisions"}
+[Fairness & feedback]{.kicker}
+
+Deploying a model is rarely *just* prediction, it **automates decisions** about people, where **accuracy is seldom the right measure** (the costs of different errors differ).
+
+. . .
+
+::: {.d2l-note .warn}
+**Predictive policing runaway loop.** More patrols → more crime *recorded* in that area → the model predicts even more crime there → still more patrols. The data feeds back into the model, and the loop runs away.
+:::
+
+Watch for feedback loops, cost-sensitive errors, and whether you are solving the right problem at all.
+:::
+
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Shift** = train and test distributions differ; failing to notice is a top cause of deployment disasters.
+- **Three kinds:** *covariate* ($P(\mathbf{x})$ moves, $\mathbf{x}\!\to\!y$), *label* ($P(y)$ moves, $y\!\to\!\mathbf{x}$), *concept* (the labels themselves move).
+:::
+
+::: {.col}
+- **Correct** covariate shift by reweighting with $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$, estimated by a source-vs-target classifier; label shift by inverting the confusion matrix.
+- **Beware the environment:** it may remember your actions and feed them back. Keep monitoring live systems.
+:::
+:::
+:::

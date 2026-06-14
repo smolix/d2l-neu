@@ -34,7 +34,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 
-from matplotlib.patches import FancyBboxPatch, Polygon, Rectangle
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Polygon, Rectangle
 
 
 # --------------------------------------------------------------------------- #
@@ -177,8 +177,8 @@ def fig_gd_step():
     fig, ax = plt.subplots(figsize=(5.6, 4.0))
     ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
     ax.plot(xs, f(x0) + df(x0) * (xs - x0), "--", color=ORANGE, lw=1.6, zorder=2)
-    ax.plot([x0, x0], [0, f(x0)], ":", color=GRAY, lw=1.0)
-    ax.plot([x1, x1], [0, f(x1)], ":", color=GRAY, lw=1.0)
+    ax.plot([x0, x0], [-0.18, f(x0)], ":", color=GRAY, lw=1.0)
+    ax.plot([x1, x1], [-0.18, f(x1)], ":", color=GRAY, lw=1.0)
     fl.arrow(ax, (x0, -0.18), (x1, -0.18), color=GREEN, lw=2.0, mut=13)
     ax.text((x0 + x1) / 2, -0.42, r"$-\eta f'(x)$", ha="center", va="top",
             color=GREEN, fontsize=10)
@@ -188,9 +188,9 @@ def fig_gd_step():
     ax.text(x1 - 0.08, f(x1) + 0.06, r"$x-\eta f'(x)$", ha="right", va="bottom",
             color=GREEN, fontsize=9)
     ax.annotate(r"drop $\approx \eta\,[f'(x)]^2$", xy=(x1, f(x1)),
-                xytext=(-2.15, 1.8), fontsize=9.5, color=GRAY,
+                xytext=(1.15, 1.95), fontsize=9.5, color=GRAY, ha="center",
                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0,
-                                connectionstyle="arc3,rad=0.25"))
+                                connectionstyle="arc3,rad=-0.3"))
     ax.set_xlim(-2.4, 2.4); ax.set_ylim(-0.65, 2.25)
     ax.set_xticks([]); ax.set_yticks([])
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
@@ -214,33 +214,34 @@ def fig_descent_lemma():
     qp, fp = q(xp), f(xp)                      # 0.224053, -0.223434
     xs = np.linspace(-0.9, 0.9, 400)
 
-    fig, ax = plt.subplots(figsize=(5.8, 4.2))
+    fig, ax = plt.subplots(figsize=(6.0, 4.4))
     ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
     ax.plot(xs, q(xs), "--", color=ORANGE, lw=2.0, zorder=4)
     # the minimizer of the ceiling = the eta = 1/L gradient step
     ax.plot([xp, xp], [-0.95, qp], ":", color=GRAY, lw=1.1, zorder=2)
     ax.plot([xp, x0], [y0, y0], ":", color=GRAY, lw=1.1, zorder=2)
     ax.plot([x0], [y0], "o", color="black", ms=5, zorder=6)
-    ax.text(0.36, 0.47, r"$(x,\,f(x))$", ha="left", va="top", fontsize=9)
+    ax.text(0.38, 0.45, r"$(x,\,f(x))$", ha="left", va="top", fontsize=10.5)
     ax.plot([xp], [qp], "o", color=ORANGE, ms=5, zorder=6)
     ax.plot([xp], [fp], "o", color=BLUE, ms=5, zorder=6)
     ax.text(xp, -1.02, r"$x-f'(x)/L$  ($\eta=1/L$)", ha="center", va="top",
-            fontsize=9, color=GRAY)
-    # guaranteed drop: from the starting height down to the ceiling's minimum
+            fontsize=10, color=GRAY)
+    # guaranteed drop: from the starting height down to the ceiling's minimum;
+    # label lifted high and left so it never crowds the rising orange parabola
     fl.arrow(ax, (xp, y0), (xp, qp), color=ORANGE, lw=1.8, mut=12)
     ax.annotate(r"guaranteed drop $f'(x)^2/2L\approx 0.341$",
-                xy=(xp - 0.02, (y0 + qp) / 2), xytext=(0.12, 1.04),
-                ha="center", fontsize=9, color=ORANGE,
+                xy=(xp - 0.02, (y0 + qp) / 2), xytext=(-0.12, 1.42),
+                ha="center", fontsize=10, color=ORANGE,
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.0,
                                 connectionstyle="arc3,rad=0.25"))
     # the function, trapped below the ceiling, drops even further
     fl.arrow(ax, (xp, qp), (xp, fp), color=BLUE, lw=1.8, mut=12)
     ax.annotate("actual drop", xy=(xp - 0.02, (qp + fp) / 2),
-                xytext=(-0.32, 0.0), ha="right", va="center", fontsize=9,
+                xytext=(-0.34, 0.02), ha="right", va="center", fontsize=10,
                 color=BLUE,
                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0,
                                 connectionstyle="arc3,rad=-0.2"))
-    ax.set_xlim(-0.9, 0.9); ax.set_ylim(-1.15, 1.6)
+    ax.set_xlim(-0.95, 0.95); ax.set_ylim(-1.18, 1.72)
     ax.set_xticks([]); ax.set_yticks([])
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-descent-lemma")
@@ -295,16 +296,19 @@ def fig_mvt():
     fig, ax = plt.subplots(figsize=(5.8, 4.0))
     ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
     ax.plot([a, b], [f(a), f(b)], "-", color=GRAY, lw=1.6, zorder=2)
-    ax.plot(xs, f(xi) + slope * (xs - xi), "--", color=ORANGE, lw=2.0, zorder=4)
-    for x, lab in [(a, "$a$"), (b, "$b$")]:
+    # the parallel tangent, trimmed so it does not shoot off to the frame edge
+    xt = np.linspace(a - 0.05, b + 0.15, 200)
+    ax.plot(xt, f(xi) + slope * (xt - xi), "--", color=ORANGE, lw=2.0, zorder=4)
+    # endpoint dots, each labelled snug beside its own point (not adrift below)
+    for x, lab, dx in [(a, "$a$", -0.16), (b, "$b$", 0.18)]:
         ax.plot([x], [f(x)], "o", color="black", ms=5, zorder=5)
-        ax.text(x, f(x) - 0.28, lab, ha="center", va="top", fontsize=10)
+        ax.text(x + dx, f(x) - 0.06, lab, ha="center", va="top", fontsize=12)
     ax.plot([xi], [f(xi)], "o", color=ORANGE, ms=6, zorder=6)
-    ax.text(xi, f(xi) + 0.16, r"$\xi$", ha="center", va="bottom", color=ORANGE,
-            fontsize=12)
-    ax.text((a + b) / 2 + 0.3, f((a + b) / 2) - 0.7, "secant", color=GRAY,
-            fontsize=9, ha="center")
-    ax.set_xlim(a - 0.3, b + 0.6)
+    ax.text(xi, f(xi) + 0.14, r"$\xi$", ha="center", va="bottom", color=ORANGE,
+            fontsize=13)
+    ax.text((a + b) / 2 + 0.25, f((a + b) / 2) - 0.62, "secant", color=GRAY,
+            fontsize=10, ha="center")
+    ax.set_xlim(a - 0.35, b + 0.65); ax.set_ylim(-0.18, 1.62)
     ax.set_xticks([]); ax.set_yticks([])
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-mvt")
@@ -397,53 +401,81 @@ def fig_sub_area():
 
 
 def fig_rect_trans():
-    """A single thin rectangle under change of variables u(x): the sliver of
-    width epsilon at x maps to a sliver of width epsilon*u'(x); to make the two
-    areas agree we rescale the height by the derivative du/dx."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.6, 3.4))
+    """Change of variables y=u(x) as one curve seen through two rulers.  The SAME
+    function ``f`` (and the same height ``f(u(x))``) is drawn over the x-axis
+    (left) and over the y=u-axis (right); both slivers stand on a solid baseline.
+    The base interval of width epsilon at x is the *image* of width epsilon*u'(x)
+    after u, so the right sliver is wider by exactly the local stretch du/dx --
+    which is the factor :eqref:`eq_mdl-change_var` inserts so the two areas agree.
+    Numbers are real: u(x)=x^2/2 here, so at x0 the stretch is u'(x0)=x0."""
+    # one curve f, low and broad so the slivers stand well clear of it
+    f = lambda t: 0.30 + 0.42 * np.exp(-0.5 * ((t - 2.0) / 1.05) ** 2)
+    u = lambda t: 0.5 * t ** 2          # the substitution; u'(x)=x is the stretch
+    x0, eps = 1.05, 0.40
+    du = x0                              # local stretch u'(x0) = x0 = 1.05
+    h = f(u(x0))                         # the shared height f(u(x0)) = f(y0)
+    y0 = u(x0)                           # 0.551 -- where the image sliver sits
+    weps = eps * du                      # stretched width epsilon * u'(x)
 
-    # left: f(u(x)) on the x-axis, a thin rectangle of width eps at x
-    fu = lambda t: 0.55 + 0.6 * np.exp(-0.5 * ((t - 1.5) / 0.9) ** 2)
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.6, 4.0))
+    base = -0.045                        # y of the solid baseline both stand on
+
+    def baseline(ax, x1):
+        """A solid x-axis the rectangle visibly sits on, with an arrowhead."""
+        ax.annotate("", xy=(x1, base), xytext=(-0.05, base),
+                    arrowprops=dict(arrowstyle="-|>", color="black", lw=1.3,
+                                    shrinkA=0, shrinkB=0, mutation_scale=13),
+                    zorder=4)
+
+    def height_label(ax, x_left, text, color):
+        """Vertical measure of the sliver height, labelled to its left so the
+        text never lands on the curve."""
+        ax.annotate("", xy=(x_left, base), xytext=(x_left, h),
+                    arrowprops=dict(arrowstyle="<->", color=color, lw=1.1),
+                    zorder=5)
+        ax.text(x_left - 0.10, (base + h) / 2, text, ha="right", va="center",
+                color=color, fontsize=12)
+
+    # ---- (a) the x-world: narrow sliver of width epsilon on the x-axis ----
     xs = np.linspace(0.0, 3.0, 400)
-    x0, eps = 1.2, 0.42
-    h = fu(x0)
-    axa.plot(xs, fu(xs), color=BLUE, lw=2.0, zorder=3)
-    axa.add_patch(Rectangle((x0, 0), eps, h, facecolor=BLUE, alpha=0.25,
-                            edgecolor=BLUE, lw=1.4, zorder=2))
-    axa.annotate("", xy=(x0 + eps, -0.12), xytext=(x0, -0.12),
-                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.0))
-    axa.text(x0 + eps / 2, -0.22, r"$\epsilon$", ha="center", va="top",
-             color=GRAY)
-    axa.text(x0 + eps / 2, h + 0.07, r"$f(u(x))$", ha="center", va="bottom",
-             color=BLUE, fontsize=10)
-    axa.set_title(r"(a) width $\epsilon$, area $\approx \epsilon\,f(u(x))$",
-                  fontsize=10.5)
-    axa.set_xlim(0, 3); axa.set_ylim(-0.35, 1.4)
-    axa.set_xticks([x0]); axa.set_xticklabels(["$x$"])
-    axa.set_yticks([])
-    axa.spines["top"].set_visible(False); axa.spines["right"].set_visible(False)
+    axa.plot(xs, f(u(xs)), color=BLUE, lw=2.4, zorder=3)
+    axa.add_patch(Rectangle((x0, base), eps, h - base, facecolor=BLUE, alpha=0.26,
+                            edgecolor=BLUE, lw=1.5, zorder=2))
+    baseline(axa, 3.05)
+    height_label(axa, x0, r"$f(u(x))$", BLUE)
+    axa.annotate("", xy=(x0 + eps, base - 0.10), xytext=(x0, base - 0.10),
+                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1))
+    axa.text(x0 + eps / 2, base - 0.17, r"$\epsilon$", ha="center", va="top",
+             color=GRAY, fontsize=12)
+    axa.set_title(r"width $\epsilon$ at $x$,  height $f(u(x))$", fontsize=12)
+    axa.set_xlim(-0.55, 3.05); axa.set_ylim(-0.40, 0.92)
+    axa.set_xticks([x0]); axa.set_xticklabels(["$x$"], fontsize=12)
+    axa.set_yticks([]); axa.axis("off")
 
-    # right: f(y) on the y=u-axis, the stretched rectangle of width eps*u'
-    fy = lambda t: 0.55 + 0.6 * np.exp(-0.5 * ((t - 1.9) / 1.1) ** 2)
-    ys = np.linspace(0.0, 3.6, 400)
-    u0, du = 1.4, 1.55          # u(x) and the local stretch factor du/dx > 1
-    weps = eps * du
-    hh = fy(u0)
-    axb.plot(ys, fy(ys), color=BLUE, lw=2.0, zorder=3)
-    axb.add_patch(Rectangle((u0, 0), weps, hh, facecolor=ORANGE, alpha=0.25,
-                            edgecolor=ORANGE, lw=1.4, zorder=2))
-    axb.annotate("", xy=(u0 + weps, -0.12), xytext=(u0, -0.12),
-                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.0))
-    axb.text(u0 + weps / 2, -0.22, r"$\epsilon\,\frac{du}{dx}$", ha="center",
-             va="top", color=GRAY, fontsize=10)
-    axb.text(u0 + weps / 2, hh + 0.07, r"$f(y)$", ha="center", va="bottom",
-             color=ORANGE, fontsize=10)
-    axb.set_title(r"(b) width $\epsilon\,\frac{du}{dx}$, same area", fontsize=10.5)
-    axb.set_xlim(0, 3.6); axb.set_ylim(-0.35, 1.4)
-    axb.set_xticks([u0]); axb.set_xticklabels(["$u(x)$"])
-    axb.set_yticks([])
-    axb.spines["top"].set_visible(False); axb.spines["right"].set_visible(False)
+    # ---- (b) the y=u-world: the IMAGE sliver, wider by u'(x), same height ----
+    ys = np.linspace(0.0, 3.0, 400)
+    axb.plot(ys, f(ys), color=BLUE, lw=2.4, zorder=3)
+    axb.add_patch(Rectangle((y0, base), weps, h - base, facecolor=ORANGE,
+                            alpha=0.30, edgecolor=ORANGE, lw=1.5, zorder=2))
+    baseline(axb, 3.05)
+    height_label(axb, y0, r"$f(y)$", ORANGE)
+    axb.annotate("", xy=(y0 + weps, base - 0.10), xytext=(y0, base - 0.10),
+                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1))
+    axb.text(y0 + weps / 2, base - 0.17, r"$\epsilon\,u'(x)$", ha="center",
+             va="top", color=GRAY, fontsize=12)
+    axb.set_title(r"width $\epsilon\,\dfrac{du}{dx}$ at $y=u(x)$,  same height",
+                  fontsize=12)
+    axb.set_xlim(-0.55, 3.05); axb.set_ylim(-0.40, 0.92)
+    axb.set_xticks([y0]); axb.set_xticklabels(["$u(x)$"], fontsize=12)
+    axb.set_yticks([]); axb.axis("off")
 
+    # the map y = u(x) carrying the base interval from (a) to (b)
+    fig.text(0.5, 0.585, r"$y=u(x)$", ha="center", va="center", color=GRAY,
+             fontsize=12)
+    fig.patches.append(
+        FancyArrowPatch((0.45, 0.50), (0.55, 0.50),
+                        transform=fig.transFigure, arrowstyle="-|>",
+                        mutation_scale=16, color=GRAY, lw=1.5))
     fl.save(fig, "mdl-cal-rect-trans")
 
 
@@ -453,118 +485,165 @@ def fig_bell_surface():
     by tiling the base with $\\epsilon\\times\\epsilon$ squares and standing a
     box of height $f$ on each (a few shown near $(0.5,-0.4)$)."""
     f = lambda X, Y: np.exp(-X ** 2 - Y ** 2)
-    fig = plt.figure(figsize=(6.0, 4.8))
+    fig = plt.figure(figsize=(6.2, 5.0))
     ax = fig.add_subplot(projection="3d")
-    g = np.linspace(-2.0, 2.0, 80)
-    X, Y = np.meshgrid(g, g)
-    ax.plot_surface(X, Y, np.exp(-X ** 2 - Y ** 2), color=BLUE, alpha=0.45,
-                    linewidth=0, antialiased=True)
-    # a 2x2 patch of epsilon-by-epsilon Riemann boxes near (0.5, -0.4),
-    # each of height f at the cell's center
+    ax.computed_zorder = False           # we control draw order explicitly
+
+    # faint epsilon-by-epsilon tiling of the base plane (z=0), so the Riemann
+    # boxes visibly *stand on* a grid covering the domain
     eps = 0.25
-    for cx, cy in [(0.25, -0.65), (0.5, -0.65), (0.25, -0.4), (0.5, -0.4)]:
+    ticks = np.arange(-2.0, 2.0 + 1e-9, eps)
+    for t in ticks:
+        ax.plot([t, t], [-2.0, 2.0], [0, 0], color=LIGHT, lw=0.5, zorder=0)
+        ax.plot([-2.0, 2.0], [t, t], [0, 0], color=LIGHT, lw=0.5, zorder=0)
+
+    # the translucent surface first, light enough that the front boxes read
+    g = np.linspace(-2.0, 2.0, 90)
+    X, Y = np.meshgrid(g, g)
+    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.30,
+                    linewidth=0, antialiased=True, zorder=2)
+
+    # then a single clean row of boxes marching out along the near (-y) edge,
+    # each rising to the surface height at its cell centre; drawn on top so they
+    # read as crisp solid columns, tops sitting on the bell.
+    for cx in [0.0, 0.25, 0.5, 0.75]:
+        cy = -0.5
         h = float(f(cx + eps / 2, cy + eps / 2))
-        ax.bar3d(cx, cy, 0.0, eps, eps, h, color=ORANGE, alpha=0.55,
-                 shade=False, edgecolor=ORANGE, linewidth=0.6)
-    ax.text(0.0, 0.0, 1.04, r"$e^{-x^2-y^2}$", fontsize=11, ha="center")
+        ax.bar3d(cx, cy, 0.0, eps, eps, h, color=ORANGE, alpha=0.95,
+                 shade=True, edgecolor="white", linewidth=0.5, zorder=5)
+
+    ax.text(-0.2, 0.0, 1.18, r"$z=e^{-x^2-y^2}$", fontsize=12, ha="center")
     ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-    ax.view_init(elev=24, azim=-60)
+    ax.set_zlim(0, 1.05)
+    ax.view_init(elev=26, azim=-52)
     fl.save(fig, "mdl-cal-bell-surface")
 
 
 def fig_sum_order():
-    """A grid of epsilon-by-epsilon squares summed columns-first (1) then adding
-    the column totals together (2): the discretization behind Fubini."""
+    """The discretization behind Fubini, on one grid.  (1) Sum the cells *within*
+    each column (vertical sweep); this collapses every column to a single total,
+    drawn as the orange strip of cells along the grid's own bottom edge -- same
+    width, aligned to the columns, part of the same hatch.  (2) Add those column
+    totals left to right (horizontal sweep along the orange strip).  Reordering a
+    finite sum changes nothing."""
     nx, ny = 6, 4
-    fig, ax = plt.subplots(figsize=(5.4, 3.8))
+    fig, ax = plt.subplots(figsize=(5.8, 4.4))
 
-    # the grid of unit squares
+    # the grid of epsilon-by-epsilon cells (the region being summed)
     for i in range(nx):
         for j in range(ny):
             ax.add_patch(Rectangle((i, j), 1, 1, facecolor=LIGHT, alpha=0.30,
-                                   edgecolor=GRAY, lw=0.8))
+                                   edgecolor=GRAY, lw=0.8, zorder=1))
 
-    # (1) sum within one column (vertical sweep), highlighted
+    # (1) sum WITHIN one column: highlight it blue, sweep up through it
     col = 2
     for j in range(ny):
-        ax.add_patch(Rectangle((col, j), 1, 1, facecolor=BLUE, alpha=0.30,
-                               edgecolor=BLUE, lw=1.2))
-    fl.arrow(ax, (col + 0.5, -0.3), (col + 0.5, ny + 0.05), color=BLUE, lw=2.0)
-    ax.text(col + 0.5, ny + 0.35, "(1)", ha="center", va="bottom", color=BLUE,
-            fontsize=12)
+        ax.add_patch(Rectangle((col, j), 1, 1, facecolor=BLUE, alpha=0.32,
+                               edgecolor=BLUE, lw=1.3, zorder=2))
+    fl.arrow(ax, (col + 0.5, 0.18), (col + 0.5, ny - 0.18), color=BLUE, lw=2.2,
+             mut=15)
+    ax.text(col + 0.5, ny + 0.28, "(1) sum each column", ha="center",
+            va="bottom", color=BLUE, fontsize=12)
 
-    # (2) sum the column totals together (horizontal sweep), highlighted band
-    ax.add_patch(Rectangle((0, ny + 0.6), nx, 0.7, facecolor=ORANGE, alpha=0.22,
-                           edgecolor=ORANGE, lw=1.2))
-    fl.arrow(ax, (-0.3, ny + 0.95), (nx + 0.3, ny + 0.95), color=ORANGE, lw=2.0)
-    ax.text(nx + 0.55, ny + 0.95, "(2)", ha="left", va="center", color=ORANGE,
-            fontsize=12)
+    # the column totals: an orange strip of cells along the grid's bottom edge,
+    # SAME width and aligned to the columns (one cell = one column's total), so
+    # it is part of the same grid rather than floating above it.
+    strip_y = -1.25
+    for i in range(nx):
+        fc = ORANGE if i != col else BLUE   # the highlighted column's total
+        ax.add_patch(Rectangle((i, strip_y), 1, 1, facecolor=fc, alpha=0.30,
+                               edgecolor=ORANGE, lw=1.1, zorder=2))
+    # a thin connector showing the blue column collapses onto its orange total
+    ax.annotate("", xy=(col + 0.5, strip_y + 1.0), xytext=(col + 0.5, -0.05),
+                arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.1,
+                                shrinkA=1, shrinkB=1, mutation_scale=11),
+                zorder=3)
 
-    # epsilon side labels on one corner square
-    ax.annotate("", xy=(1, -0.35), xytext=(0, -0.35),
+    # (2) add the column totals together: horizontal sweep along the orange strip
+    fl.arrow(ax, (0.18, strip_y + 0.5), (nx - 0.18, strip_y + 0.5),
+             color=ORANGE, lw=2.2, mut=15)
+    ax.text(nx / 2, strip_y - 0.30, "(2) add the column totals", ha="center",
+            va="top", color=ORANGE, fontsize=12)
+
+    # epsilon side labels on the top-left corner cell (clear of every sweep)
+    ax.annotate("", xy=(1, ny + 0.12), xytext=(0, ny + 0.12),
                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=0.9))
-    ax.text(0.5, -0.5, r"$\epsilon$", ha="center", va="top", color=GRAY)
-    ax.annotate("", xy=(-0.35, 1), xytext=(-0.35, 0),
+    ax.text(0.5, ny + 0.20, r"$\epsilon$", ha="center", va="bottom", color=GRAY,
+            fontsize=11)
+    ax.annotate("", xy=(-0.18, ny), xytext=(-0.18, ny - 1),
                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=0.9))
-    ax.text(-0.5, 0.5, r"$\epsilon$", ha="right", va="center", color=GRAY)
+    ax.text(-0.30, ny - 0.5, r"$\epsilon$", ha="right", va="center", color=GRAY,
+            fontsize=11)
 
-    ax.set_xlim(-1.0, nx + 1.2)
-    ax.set_ylim(-0.9, ny + 1.7)
+    ax.set_xlim(-0.9, nx + 0.5)
+    ax.set_ylim(strip_y - 0.95, ny + 0.95)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "mdl-cal-sum-order")
 
 
 def fig_cov_jacobian():
-    """Change of variables in 2-D: the unit square mapped by a linear phi to a
-    parallelogram, the area ratio being |det Dphi|, beside the 1-D
-    rectangle-stretch idea (a segment scaled by u'(x))."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.8))
+    """Change of variables, 1-D beside 2-D.  (a) The scalar substitution scales a
+    segment of length epsilon by u'(x).  (b) A linear phi sends the unit square
+    (area 1) to a parallelogram whose area is the local volume factor
+    |det Dphi|.  The det is computed from the real matrix."""
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.6, 4.2),
+                                   gridspec_kw={"width_ratios": [1.0, 1.25]})
 
     # --- (a) the 1-D analog: a segment of length eps stretched to eps*u' ---
-    eps, du = 0.8, 1.9
-    axa.set_title(r"(a) 1-D: length $\times\,\frac{du}{dx}$", fontsize=10.5)
-    axa.plot([0, eps], [1.4, 1.4], color=BLUE, lw=6, solid_capstyle="butt",
+    eps, du = 0.85, 1.85
+    yb, yo = 1.55, 0.45                  # heights of the two segments
+    axa.set_title(r"1-D:  length $\times\ u'(x)$", fontsize=12)
+    # a faint left rule the two segments both start from (the common origin)
+    axa.plot([0, 0], [yo - 0.22, yb + 0.22], color=LIGHT, lw=1.2, zorder=1)
+    axa.plot([0, eps], [yb, yb], color=BLUE, lw=7, solid_capstyle="butt",
              zorder=3)
-    axa.plot([0, eps * du], [0.4, 0.4], color=ORANGE, lw=6, solid_capstyle="butt",
+    axa.plot([0, eps * du], [yo, yo], color=ORANGE, lw=7, solid_capstyle="butt",
              zorder=3)
-    fl.arrow(axa, (eps / 2, 1.28), (eps * du / 2, 0.52), color=GRAY, lw=1.3,
-             mut=11)
-    axa.text(eps / 2, 1.6, r"$\epsilon$", ha="center", va="bottom", color=BLUE)
-    axa.text(eps * du / 2, 0.12, r"$\epsilon\,\frac{du}{dx}$", ha="center",
-             va="top", color=ORANGE, fontsize=10)
-    axa.set_xlim(-0.3, 2.0); axa.set_ylim(-0.1, 2.1)
+    # end ticks so the lengths read cleanly
+    for x, y, c in [(eps, yb, BLUE), (eps * du, yo, ORANGE)]:
+        axa.plot([x, x], [y - 0.10, y + 0.10], color=c, lw=1.5, zorder=4)
+    fl.arrow(axa, (eps / 2, yb - 0.16), (eps * du / 2, yo + 0.16), color=GRAY,
+             lw=1.4, mut=13)
+    axa.text(eps / 2, yb + 0.20, r"$\epsilon$", ha="center", va="bottom",
+             color=BLUE, fontsize=12)
+    axa.text(eps * du / 2, yo - 0.20, r"$\epsilon\,u'(x)$", ha="center",
+             va="top", color=ORANGE, fontsize=12)
+    axa.set_xlim(-0.35, 1.75); axa.set_ylim(0.0, 2.05)
+    axa.set_aspect("equal")
     axa.axis("off")
 
     # --- (b) the 2-D version: unit square -> parallelogram under phi ---
     A = np.array([[1.5, 0.6], [0.4, 1.3]])   # linear phi = matrix multiply
-    det = np.linalg.det(A)
+    det = np.linalg.det(A)                    # 1.71
     unit = np.array([[0, 0], [1, 0], [1, 1], [0, 1]]).T
     img = A @ unit
-    axb.set_title(r"(b) 2-D: area $\times\,|\det D\phi|$", fontsize=10.5)
+    axb.set_title(r"2-D:  area $\times\ |\det D\phi|$", fontsize=12)
     # original unit square (faint) with its area shaded
-    axb.add_patch(Polygon(unit.T, closed=True, facecolor=BLUE, alpha=0.18,
-                          edgecolor=BLUE, lw=1.6))
+    axb.add_patch(Polygon(unit.T, closed=True, facecolor=BLUE, alpha=0.20,
+                          edgecolor=BLUE, lw=1.6, zorder=2))
     # image parallelogram
-    axb.add_patch(Polygon(img.T, closed=True, facecolor=ORANGE, alpha=0.22,
-                          edgecolor=ORANGE, lw=2))
+    axb.add_patch(Polygon(img.T, closed=True, facecolor=ORANGE, alpha=0.24,
+                          edgecolor=ORANGE, lw=2, zorder=2))
     # the basis edges of the square and their images
     fl.arrow(axb, (0, 0), (1, 0), color=BLUE, lw=1.8)
     fl.arrow(axb, (0, 0), (0, 1), color=BLUE, lw=1.8)
     fl.arrow(axb, (0, 0), A @ np.array([1, 0]), color=ORANGE, lw=1.8)
     fl.arrow(axb, (0, 0), A @ np.array([0, 1]), color=ORANGE, lw=1.8)
-    # the mapping arrow phi, arcing over the top from the square to the image
-    axb.annotate("", xy=(1.45, 1.95), xytext=(0.45, 1.05),
-                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.3,
-                                 connectionstyle="arc3,rad=-0.35"))
-    axb.text(0.95, 1.78, r"$\phi$", ha="center", va="center", color=GRAY,
-             fontsize=13)
-    axb.text(0.42, 0.34, "area $1$", ha="center", va="center", color=BLUE,
-             fontsize=9)
-    axb.text(1.55, 1.05, rf"area $|\det D\phi|={abs(det):.2g}$",
-             ha="center", va="center", color=ORANGE, fontsize=9)
-    axb.set_xlim(-0.4, 2.4); axb.set_ylim(-0.4, 2.4)
+    # the mapping arrow phi, arcing high over BOTH shapes; the label sits above
+    # the arc's apex, well clear of the curve.
+    axb.annotate("", xy=(1.9, 1.92), xytext=(0.5, 1.28),
+                 arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.4,
+                                 mutation_scale=14,
+                                 connectionstyle="arc3,rad=-0.32"), zorder=4)
+    axb.text(1.18, 2.16, r"$\phi$", ha="center", va="center", color=GRAY,
+             fontsize=14)
+    axb.text(0.32, 0.30, "area $1$", ha="center", va="center", color=BLUE,
+             fontsize=11)
+    axb.text(1.46, 0.92, rf"area $|\det D\phi|={abs(det):.2g}$",
+             ha="center", va="center", color=ORANGE, fontsize=11)
+    axb.set_xlim(-0.35, 2.45); axb.set_ylim(-0.35, 2.45)
     axb.set_aspect("equal")
     axb.axis("off")
 
@@ -682,16 +761,23 @@ def fig_taylor_quadratic():
 
     fig = plt.figure(figsize=(6.0, 4.8))
     ax = fig.add_subplot(projection="3d")
+    ax.computed_zorder = False
     gx, gy = np.linspace(-2.2, 0.7, 60), np.linspace(-1.4, 1.4, 60)
     X, Y = np.meshgrid(gx, gy)
     ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.45, linewidth=0,
-                    antialiased=True)
+                    antialiased=True, zorder=2)
     px, py = np.linspace(-1.8, -0.2, 30), np.linspace(-0.8, 0.8, 30)
     PX, PY = np.meshgrid(px, py)
-    ax.plot_surface(PX, PY, q(PX, PY), color=ORANGE, alpha=0.6, linewidth=0,
-                    antialiased=True)
-    ax.scatter([x0], [y0], [f(x0, y0)], color="black", s=26)
-    ax.text(x0, y0, f(x0, y0) - 0.14, r"$(-1,0)$", fontsize=9)
+    ax.plot_surface(PX, PY, q(PX, PY), color=ORANGE, alpha=0.55, linewidth=0,
+                    antialiased=True, zorder=3)
+    # base point on top of both surfaces, with a leader to a label set clear in
+    # the empty space below-front (so it is never swallowed by the orange bowl)
+    ax.scatter([x0], [y0], [f(x0, y0)], color="black", s=42, zorder=6,
+               depthshade=False)
+    ax.plot([x0, x0], [y0, y0], [f(x0, y0), f(x0, y0) - 0.42], color="black",
+            lw=0.9, zorder=6)
+    ax.text(x0, y0, f(x0, y0) - 0.52, r"$(-1,0)$", fontsize=11, ha="center",
+            va="top", zorder=6)
     ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
     ax.view_init(elev=22, azim=-58)
@@ -705,29 +791,43 @@ def fig_tangent_plane():
     graph-space companion to ``gradient is normal to the level set''."""
     f = lambda X, Y: 0.35 * X ** 2 + 0.6 * Y ** 2
     fx, fy = lambda X, Y: 0.70 * X, lambda X, Y: 1.20 * Y
-    x0, y0 = 1.1, -0.8
+    x0, y0 = 1.35, -0.5      # gradient leans toward +x so its arrow reads long
     z0, gx0, gy0 = f(x0, y0), fx(x0, y0), fy(x0, y0)
     plane = lambda X, Y: z0 + gx0 * (X - x0) + gy0 * (Y - y0)
 
     fig = plt.figure(figsize=(6.2, 5.0))
     ax = fig.add_subplot(projection="3d")
+    ax.computed_zorder = False
+    zbase = -0.2
+
+    # clean level-set ellipses on the base plane (0.35x^2+0.6y^2=c => ellipse),
+    # drawn as full parametric curves so they never break into dashes
+    th = np.linspace(0, 2 * np.pi, 200)
+    for c in [0.25, 0.7, 1.3, 2.1]:
+        ax.plot(np.sqrt(c / 0.35) * np.cos(th), np.sqrt(c / 0.6) * np.sin(th),
+                zbase, color=GRAY, lw=0.9, zorder=1)
+
     gx, gy = np.linspace(-1.8, 1.8, 60), np.linspace(-1.8, 1.8, 60)
     X, Y = np.meshgrid(gx, gy)
-    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.35, linewidth=0)
+    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.35, linewidth=0, zorder=2)
     px, py = np.linspace(x0 - 0.7, x0 + 0.7, 20), np.linspace(y0 - 0.7, y0 + 0.7, 20)
     PX, PY = np.meshgrid(px, py)
-    ax.plot_surface(PX, PY, plane(PX, PY), color=ORANGE, alpha=0.5, linewidth=0)
-    ax.scatter([x0], [y0], [z0], color="black", s=26)
-    zbase = -0.2
-    ax.contour(X, Y, f(X, Y), levels=np.linspace(0.3, 3.0, 6), colors=GRAY,
-               linewidths=0.9, offset=zbase)
-    g = np.array([gx0, gy0]); g = g / np.linalg.norm(g) * 0.9
-    ax.quiver(x0, y0, zbase, g[0], g[1], 0.0, color=ORANGE, lw=2.0)
-    ax.text(x0 + g[0], y0 + g[1] - 0.15, zbase, r"$\nabla f$", color=ORANGE,
-            fontsize=11)
+    ax.plot_surface(PX, PY, plane(PX, PY), color=ORANGE, alpha=0.5, linewidth=0,
+                    zorder=3)
+    ax.scatter([x0], [y0], [z0], color="black", s=34, zorder=6,
+               depthshade=False)
+
+    # the gradient on the base plane, normal to the level set, pointing uphill;
+    # rooted under the base point and long enough to read as a vector
+    g = np.array([gx0, gy0]); g = g / np.linalg.norm(g) * 1.25
+    ax.quiver(x0, y0, zbase + 0.01, g[0], g[1], 0.0, color=ORANGE, lw=2.6,
+              arrow_length_ratio=0.16, zorder=5)
+    # label placed beyond the arrowhead, nudged off the shaft so they don't clash
+    ax.text(x0 + g[0] + 0.22, y0 + g[1] - 0.34, zbase, r"$\nabla f$",
+            color=ORANGE, fontsize=13, ha="left", va="top", zorder=6)
     ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-    ax.view_init(elev=24, azim=-52)
+    ax.view_init(elev=30, azim=-60)
     fl.save(fig, "mdl-cal-tangent-plane")
 
 
@@ -805,14 +905,17 @@ def fig_fwd_vs_rev():
             edge(ax, c0, c1)
         for lab, c in zip(chain, centers):
             node(ax, c, f"${lab}$", r=0.26)
+        # both panels' arcs bulge the same way (downward toward the chain);
+        # the reverse panel travels right-to-left, so its rad sign is flipped.
+        rad = -0.3 if direction == "fwd" else 0.3
         for c0, c1 in zip(centers, centers[1:]):       # derivative propagation
             a, b = (c0, c1) if direction == "fwd" else (c1, c0)
-            ax.annotate("", xy=(b[0], b[1] + 0.6), xytext=(a[0], a[1] + 0.6),
+            ax.annotate("", xy=(b[0], b[1] + 0.58), xytext=(a[0], a[1] + 0.58),
                         arrowprops=dict(arrowstyle="->", color=dual_color,
-                                        lw=1.7, connectionstyle="arc3,rad=-0.3"))
-        ax.text(2.25, 1.5, dual_label, ha="center", color=dual_color, fontsize=9)
+                                        lw=1.7, connectionstyle=f"arc3,rad={rad}"))
+        ax.text(2.25, 1.02, dual_label, ha="center", color=dual_color, fontsize=9)
         ax.set_title(title, fontsize=10.5, loc="left")
-        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.7, 1.9)
+        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.7, 1.3)
         ax.set_aspect("equal"); ax.axis("off")
 
     draw(axt, "fwd", BLUE,
@@ -831,44 +934,50 @@ def fig_tape_dag():
     edge).  Because a value can feed several consumers, the backward pass
     accumulates each adjoint over outgoing edges with ``+=``; here $\\bar r$
     receives the contribution $\\bar y\\,r$ twice."""
-    fig, ax = plt.subplots(figsize=(6.8, 3.0))
+    fig, ax = plt.subplots(figsize=(7.2, 3.2))
+    hh = 0.3                                    # box half-height
+    pos = {"u": (0.0, 2.0), "v": (0.0, 0.4), "t": (2.3, 0.95),
+           "r": (4.4, 1.4), "y": (6.5, 1.4)}
+    hw = {"u": 0.42, "v": 0.42, "t": 0.72, "r": 0.8, "y": 0.8}
 
-    def box(c, label, color=LIGHT, w=0.9):
-        cx, cy = c
-        ax.add_patch(FancyBboxPatch((cx - w / 2, cy - 0.3), w, 0.6,
+    def box(k, label, color=LIGHT):
+        cx, cy = pos[k]; w = hw[k]
+        ax.add_patch(FancyBboxPatch((cx - w, cy - hh), 2 * w, 2 * hh,
                      boxstyle="round,pad=0.02,rounding_size=0.12",
                      facecolor=color, edgecolor="black", lw=1.2, zorder=3))
         ax.text(cx, cy, label, ha="center", va="center", fontsize=10.5, zorder=4)
 
-    pos = {"u": (0.0, 1.7), "v": (0.0, 0.3), "t": (2.1, 1.0),
-           "r": (4.1, 1.0), "y": (6.3, 1.0)}
-    half = {"u": 0.45, "v": 0.45, "t": 0.65, "r": 0.7, "y": 0.7}
+    def port(k, c):                             # a named point on a box's border
+        cx, cy = pos[k]; w = hw[k]
+        dx = {"E": w, "W": -w, "NE": w, "SE": w, "NW": -w, "SW": -w}[c]
+        dy = {"E": 0, "W": 0, "NE": hh, "SE": -hh, "NW": hh, "SW": -hh}[c]
+        return (cx + dx, cy + dy)
 
-    def link(a, b):
-        c0, c1 = np.array(pos[a], float), np.array(pos[b], float)
-        d = (c1 - c0) / np.linalg.norm(c1 - c0)
-        fl.arrow(ax, c0 + d * (half[a] + 0.05), c1 - d * (half[b] + 0.05),
-                 color=GRAY, lw=1.4, mut=12)
-
-    for a, b in [("u", "t"), ("v", "t"), ("t", "r"), ("u", "r")]:
-        link(a, b)
-    # r feeds *both* arguments of y = r * r: a doubled edge (two parallel arcs)
-    p0 = (pos["r"][0] + half["r"] + 0.05, pos["r"][1])
-    p1 = (pos["y"][0] - half["y"] - 0.05, pos["y"][1])
-    for rad in (0.25, -0.25):
-        ax.annotate("", xy=p1, xytext=p0,
+    def link(p, q, rad=0.0):                    # arrowhead lands on the target port
+        ax.annotate("", xy=q, xytext=p, zorder=2,
                     arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.4,
                                     shrinkA=0, shrinkB=0, mutation_scale=12,
                                     connectionstyle=f"arc3,rad={rad}"))
-    box(pos["u"], "$u$"); box(pos["v"], "$v$")
-    box(pos["t"], r"$t=uv$", color=BLUE, w=1.3)
-    box(pos["r"], r"$r=t+u$", color=BLUE, w=1.4)
-    box(pos["y"], r"$y=r\cdot r$", color=ORANGE, w=1.4)
-    ax.text(1.0, 2.05, r"$u$ fans out (diamond)", color=GRAY, fontsize=8.5,
+
+    # Each edge emerges from the source's NE/SE/E corner and enters the target's
+    # NW/SW corner, so no arrow cuts through a box.
+    link(port("u", "SE"), port("t", "NW"))      # u -> t
+    link(port("v", "NE"), port("t", "SW"))      # v -> t
+    link(port("t", "NE"), port("r", "SW"))      # t -> r
+    link(port("u", "E"),  port("r", "NW"))      # u -> r  (skips over the low t box)
+    # r feeds BOTH arguments of y = r*r: two clean parallel edges (NE->NW, SE->SW)
+    link(port("r", "NE"), port("y", "NW"))
+    link(port("r", "SE"), port("y", "SW"))
+
+    box("u", "$u$"); box("v", "$v$")
+    box("t", r"$t=uv$", color=BLUE)
+    box("r", r"$r=t+u$", color=BLUE)
+    box("y", r"$y=r\cdot r$", color=ORANGE)
+    ax.text(0.0, 2.66, r"$u$ fans out (diamond)", color=GRAY, fontsize=8.5,
             ha="center")
-    ax.text(5.2, 0.25, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
+    ax.text(5.45, 0.52, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
             color=ORANGE, fontsize=8.5, ha="center")
-    ax.set_xlim(-0.7, 7.2); ax.set_ylim(-0.3, 2.4)
+    ax.set_xlim(-1.0, 7.6); ax.set_ylim(-0.1, 3.05)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-tape-dag")
 

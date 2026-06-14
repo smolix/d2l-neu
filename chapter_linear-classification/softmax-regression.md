@@ -161,8 +161,8 @@ While it turns out that treating classification
 as a vector-valued regression problem works surprisingly well,
 it is nonetheless unsatisfactory in the following ways:
 
-* There is no guarantee that the outputs $o_i$ sum up to $1$ in the way we expect probabilities to behave.
-* There is no guarantee that the outputs $o_i$ are even nonnegative, even if their outputs sum up to $1$, or that they do not exceed $1$.
+* There is no guarantee that the outputs $o_i$ sum to $1$ in the way we expect probabilities to behave.
+* There is no guarantee that the $o_i$ are nonnegative, nor that they lie in $[0, 1]$.
 
 Both aspects render the estimation problem difficult to solve
 and the solution very brittle to outliers.
@@ -214,6 +214,12 @@ $$
 \operatorname*{argmax}_j \hat y_j = \operatorname*{argmax}_j o_j.
 $$
 
+For two classes the redundant parametrization noted above becomes explicit. Writing the single logit gap $o = o_1 - o_2$,
+
+$$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1) + \exp(o_2)} = \frac{1}{1 + \exp(-o)} = \sigma(o),$$
+:eqlabel:`eq_softmax_to_sigmoid`
+
+the *logistic sigmoid* $\sigma$. Binary logistic regression is thus softmax regression with the redundant logit removed. More generally, adding the same constant $c$ to every logit, $o_j \mapsto o_j + c$, multiplies both numerator and denominator of :eqref:`eq_softmax_y_and_o` by $\exp(c)$ and so leaves $\hat{\mathbf{y}}$ unchanged: only the *differences* of logits are identifiable. We may therefore pin one of them, say $o_q \equiv 0$, without changing any prediction, which is precisely the "one fewer" affine function we alluded to when motivating the linear model. This translation invariance returns in the exercises and underlies the numerically stable implementation.
 
 The idea of a softmax dates back to :citet:`Gibbs.1902`,
 who adapted ideas from physics.
@@ -246,6 +252,7 @@ of $n$ examples with dimensionality (number of inputs) $d$.
 Moreover, assume that we have $q$ categories in the output.
 Then the weights satisfy $\mathbf{W} \in \mathbb{R}^{d \times q}$
 and the bias satisfies $\mathbf{b} \in \mathbb{R}^{1\times q}$.
+Note the layout: with examples stacked in the *rows* of $\mathbf{X}$, this $\mathbf{W}$ is the transpose of the per-example $\mathbf{W}$ in $\mathbf{o} = \mathbf{W}\mathbf{x} + \mathbf{b}$ above, so that the product $\mathbf{X}\mathbf{W}$ pairs each example with its logits row by row.
 
 $$ \begin{aligned} \mathbf{O} &= \mathbf{X} \mathbf{W} + \mathbf{b}, \\ \hat{\mathbf{Y}} & = \mathrm{softmax}(\mathbf{O}). \end{aligned} $$
 :eqlabel:`eq_minibatch_softmax_reg`
@@ -258,8 +265,13 @@ for each row of $\mathbf{O}$, exponentiate all entries
 and then normalize them by the sum.
 Note, though, that care must be taken
 to avoid exponentiating and taking logarithms of large numbers,
-since this can cause numerical overflow or underflow.
-Deep learning frameworks take care of this automatically.
+since this can cause numerical overflow or underflow:
+$\exp(o_k)$ overflows once $o_k$ is a few hundred, and the small
+probabilities it produces underflow to $0$ before we take their logarithm.
+The standard fix subtracts $\max_k o_k$ before exponentiating and fuses the
+softmax and the logarithm into a single *log-sum-exp* computation; we derive it,
+and explain why frameworks fold it into the loss and consume raw logits, in
+:numref:`subsec_softmax-implementation-revisited`.
 
 ## Loss Function
 :label:`subsec_softmax-regression-loss-func`
@@ -278,7 +290,17 @@ for the mean squared error loss in
 The softmax function gives us a vector $\hat{\mathbf{y}}$,
 which we can interpret as the (estimated) conditional probabilities
 of each class, given any input $\mathbf{x}$,
-such as $\hat{y}_1$ = $P(y=\textrm{cat} \mid \mathbf{x})$.
+such as $\hat{y}_1 = P(y=\textrm{cat} \mid \mathbf{x})$.
+These are probabilities by construction, but a word of caution: a model trained
+to minimize cross-entropy is generally *not* calibrated, so a reported
+confidence of $0.9$ does not mean the prediction is right $90\%$ of the time.
+Modern deep networks tend to be systematically overconfident
+([Guo, Pleiss, Sun and Weinberger, 2017](https://arxiv.org/abs/1706.04599)). A
+simple and effective remedy, *temperature scaling*, divides the logits by a
+single learned $T > 0$ before the softmax, which is exactly the temperature $T$
+of the Boltzmann distribution above; because it scales every logit by the same
+factor $1/T$ it preserves their order, leaving the predicted class (the
+$\operatorname{argmax}$) untouched while sharpening or softening the confidences.
 In the following we assume that for a dataset
 with features $\mathbf{X}$ the labels $\mathbf{Y}$
 are represented using a one-hot encoding label vector.
@@ -344,15 +366,18 @@ $$
 \begin{aligned}
 l(\mathbf{y}, \hat{\mathbf{y}}) &=  - \sum_{j=1}^q y_j \log \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} \\
 &= \sum_{j=1}^q y_j \log \sum_{k=1}^q \exp(o_k) - \sum_{j=1}^q y_j o_j \\
-&= \log \sum_{k=1}^q \exp(o_k) - \sum_{j=1}^q y_j o_j.
+&= \log \sum_{k=1}^q \exp(o_k) - \sum_{j=1}^q y_j o_j
+= g(\mathbf{o}) - \mathbf{y}^\top \mathbf{o},
 \end{aligned}
 $$
 
-To understand a bit better what is going on,
-consider the derivative with respect to any logit $o_j$. We get
+using $\sum_j y_j = 1$ in the last step and writing
+$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an exponential-family negative log-likelihood: a convex log-partition term minus a linear data term. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
 
 $$
-\partial_{o_j} l(\mathbf{y}, \hat{\mathbf{y}}) = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} - y_j = \mathrm{softmax}(\mathbf{o})_j - y_j.
+\partial_{o_j} g(\mathbf{o}) = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} = \mathrm{softmax}(\mathbf{o})_j,
+\quad \textrm{hence} \quad
+\partial_{o_j} l(\mathbf{y}, \hat{\mathbf{y}}) = \mathrm{softmax}(\mathbf{o})_j - y_j.
 $$
 
 In other words, the derivative is the difference
@@ -364,10 +389,13 @@ In this sense, it is very similar
 to what we saw in regression,
 where the gradient was the difference
 between the observation $y$ and estimate $\hat{y}$.
-This is not a coincidence.
-In any exponential family model,
-the gradients of the log-likelihood are given by precisely this term.
-This fact makes computing gradients easy in practice.
+This is not a coincidence: in any exponential-family model the
+log-likelihood gradient is exactly this "prediction minus observation" residual,
+which makes the gradient cheap and the loss convex in $\mathbf{o}$.
+The second derivative tells the rest of the story; it is the covariance of
+$\mathrm{softmax}(\mathbf{o})$, so the Hessian of $g$ is positive semidefinite.
+We work this out in the exercises and revisit log-partition convexity in the
+optimization part.
 
 Now consider the case where we observe not just a single outcome
 but an entire distribution over outcomes.
@@ -383,86 +411,11 @@ just that the interpretation is slightly more general.
 It is the expected value of the loss for a distribution over labels.
 This loss is called the *cross-entropy loss* and it is
 one of the most commonly used losses for classification problems.
-We can demystify the name by introducing just the basics of information theory.
-In a nutshell, it measures the number of bits needed to encode what we see, $\mathbf{y}$,
-relative to what we predict that should happen, $\hat{\mathbf{y}}$.
-We provide a very basic explanation in the following. For further
-details on information theory see
-:citet:`Cover.Thomas.1999` or :citet:`mackay2003information`.
 
-
-
-## Information Theory Basics
+#### Why "cross-entropy"?
 :label:`subsec_info_theory_basics`
 
-Many deep learning papers use intuition and terms from information theory.
-To make sense of them, we need some common language.
-This is a survival guide.
-*Information theory* deals with the problem
-of encoding, decoding, transmitting,
-and manipulating information (also known as data).
-
-### Entropy
-
-The central idea in information theory is to quantify the
-amount of information contained in data.
-This places a limit on our ability to compress data.
-For a distribution $P$ its *entropy*, $H[P]$, is defined as:
-
-$$H[P] = \sum_j - P(j) \log P(j).$$
-:eqlabel:`eq_softmax_reg_entropy`
-
-One of the fundamental theorems of information theory states
-that in order to encode data drawn randomly from the distribution $P$,
-we need at least $H[P]$ "nats" to encode it :cite:`Shannon.1948`.
-If you wonder what a "nat" is, it is the equivalent of bit
-but when using a code with base $e$ rather than one with base 2.
-Thus, one nat is $\frac{1}{\log(2)} \approx 1.44$ bit.
-
-
-### Surprisal
-
-You might be wondering what compression has to do with prediction.
-Imagine that we have a stream of data that we want to compress.
-If it is always easy for us to predict the next token,
-then this data is easy to compress.
-Take the extreme example where every token in the stream
-always takes the same value.
-That is a very boring data stream!
-And not only is it boring, but it is also easy to predict.
-Because the tokens are always the same,
-we do not have to transmit any information
-to communicate the contents of the stream.
-Easy to predict, easy to compress.
-
-However if we cannot perfectly predict every event,
-then we might sometimes be surprised.
-Our surprise is greater when an event is assigned lower probability.
-Claude Shannon settled on $\log \frac{1}{P(j)} = -\log P(j)$
-to quantify one's *surprisal* at observing an event $j$
-having assigned it a (subjective) probability $P(j)$.
-The entropy defined in :eqref:`eq_softmax_reg_entropy`
-is then the *expected surprisal*
-when one assigned the correct probabilities
-that truly match the data-generating process.
-
-
-### Cross-Entropy Revisited
-
-So if entropy is the level of surprise experienced
-by someone who knows the true probability,
-then you might be wondering, what is cross-entropy?
-The cross-entropy *from* $P$ *to* $Q$, denoted $H(P, Q)$,
-is the expected surprisal of an observer with subjective probabilities $Q$
-upon seeing data that was actually generated according to probabilities $P$.
-This is given by $H(P, Q) \stackrel{\textrm{def}}{=} \sum_j - P(j) \log Q(j)$.
-The lowest possible cross-entropy is achieved when $P=Q$.
-In this case, the cross-entropy from $P$ to $Q$ is $H(P, P)= H(P)$.
-
-In short, we can think of the cross-entropy classification objective
-in two ways: (i) as maximizing the likelihood of the observed data;
-and (ii) as minimizing our surprisal (and thus the number of bits)
-required to communicate the labels.
+The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the average number of nats you must spend to encode them when you know $P$ :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the extra bits our predictions waste relative to the truth. This MLE-versus-code-length duality is worth keeping in mind whenever cross-entropy appears. We develop entropy, cross-entropy, and the Kullback--Leibler divergence, together with the coding argument behind the "bits" language, in :numref:`sec_mdl-information_theory`; the classic references are :citet:`Cover.Thomas.1999` and :citet:`mackay2003information`.
 
 ## Summary and Discussion
 
@@ -480,10 +433,10 @@ behaves very similarly
 to the derivative of squared error;
 namely by taking the difference between
 the expected behavior and its prediction.
-And, while we were only able to
-scratch the very surface of it,
-we encountered exciting connections
-to statistical physics and information theory.
+Along the way we encountered exciting connections
+to statistical physics (the Boltzmann distribution behind the softmax) and to
+information theory (cross-entropy as a code length), the latter taken up in
+:numref:`sec_mdl-information_theory`.
 
 While this is enough to get you on your way,
 and hopefully enough to whet your appetite,
@@ -518,7 +471,10 @@ that can be executed most efficiently on modern GPUs.
 1. We can explore the connection between exponential families and softmax in some more depth.
     1. Compute the second derivative of the cross-entropy loss $l(\mathbf{y},\hat{\mathbf{y}})$ for softmax.
     1. Compute the variance of the distribution given by $\mathrm{softmax}(\mathbf{o})$ and show that it matches the second derivative computed above.
-1. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$.
+1. The softmax has a familiar two-class special case.
+    1. Verify :eqref:`eq_softmax_to_sigmoid`: for $q = 2$ the softmax reduces to the logistic sigmoid of the logit difference, $\hat{y}_1 = \sigma(o_1 - o_2)$, recovering binary logistic regression.
+    1. Show that adding a constant to all logits leaves $\hat{\mathbf{y}}$ unchanged. Conclude that softmax regression carries one redundant degree of freedom per example, and that we may fix $o_q \equiv 0$ without loss.
+1. The next two exercises concern coding; see :numref:`sec_mdl-information_theory` for the information-theoretic background. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$.
     1. What is the problem if we try to design a binary code for it?
     1. Can you design a better code? Hint: what happens if we try to encode two independent observations? What if we encode $n$ observations jointly?
 1. When encoding signals transmitted over a physical wire, engineers do not always use binary codes. For instance, [PAM-3](https://en.wikipedia.org/wiki/Ternary_signal) uses three signal levels $\{-1, 0, 1\}$ as opposed to two levels $\{0, 1\}$. How many ternary units do you need to transmit an integer in the range $\{0, \ldots, 7\}$? Why might this be a better idea in terms of electronics?
@@ -545,5 +501,277 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
     1. Which choice of $\alpha$ corresponds to doubling the temperature? Which choice corresponds to halving it?
     1. What happens if we let the temperature approach $0$?
     1. What happens if we let the temperature approach $\infty$?
+    1. Argue that scaling all logits by $1/T$ cannot change the $\operatorname{argmax}$, hence not the accuracy, yet it does change the cross-entropy. Why does this make temperature scaling a useful tool for post-hoc calibration?
 
 [Discussions](https://d2l.discourse.group/t/46)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.1]{.kicker}
+
+From scores to probabilities to a loss<br>**one-hot labels · the softmax · cross-entropy**.
+:::
+:::
+
+::: {.slide title="From *how much* to *which class*"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Regression answered *how much?* Classification asks *which category?*: spam or inbox, cat or dog or chicken.
+
+- A linear layer still produces one **score** per class.
+- The **softmax** turns those scores into a probability distribution.
+- **Cross-entropy** measures how surprised that distribution is by the truth.
+
+::: {.d2l-note}
+The whole section is one pipeline: **scores $\to$ probabilities $\to$ loss**.
+:::
+:::
+
+::: {.col .fig .big}
+![A single linear layer maps four pixel features to three class scores.](../img/softmaxreg.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Labels & the Linear Model]{.dtitle}
+
+[one-hot encoding and one score per class]{.dsub}
+:::
+:::
+
+::: {.slide title="One-hot: a label is a vector"}
+[Labels]{.kicker}
+
+Classes have **no natural order**, so we do not encode "cat, chicken, dog" as $1, 2, 3$. Instead each label is a **one-hot vector**, a 1 in its class slot and 0 elsewhere:
+
+$$y \in \{(1,0,0),\ (0,1,0),\ (0,0,1)\}.$$
+
+. . .
+
+This puts the label in the same space as a probability vector, so we can compare prediction and truth coordinate by coordinate.
+:::
+
+::: {.slide title="One affine function per class"}
+[Linear Model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+With 4 features and 3 classes we need a $3\times4$ weight matrix and a bias per class, packed into a single **fully connected layer**:
+
+$$\mathbf{o} = \mathbf{W}\mathbf{x} + \mathbf{b}.$$
+
+Each output $o_i$ depends on **every** input. These raw scores are the **logits**; they are not yet probabilities.
+:::
+
+::: {.col .fig .big}
+![Every input feeds every output: the output layer is fully connected.](../img/softmaxreg.svg)
+:::
+:::
+:::
+
+::: {.slide title="Why not just regress onto the labels?"}
+[Linear Model]{.kicker}
+
+We could try to fit $\mathbf{o}$ directly to the one-hot $\mathbf{y}$. But raw logits make poor probabilities:
+
+::: {.d2l-note .warn}
+Nothing forces $o_i \ge 0$, and nothing forces $\sum_i o_i = 1$.
+:::
+
+. . .
+
+A linear score can run past 1 or below 0, so a "probability" of buying a mansion could exceed 100%. We need a map that **squishes** any score vector onto valid probabilities.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The Softmax]{.dtitle}
+
+[exponentiate, then normalize]{.dsub}
+:::
+:::
+
+::: {.slide title="The softmax: squish scores to probabilities"}
+[The Softmax]{.kicker}
+
+Exponentiate each score (now nonnegative), then divide by the row sum (now sums to 1):
+
+$$\hat{y}_i = \mathrm{softmax}(\mathbf{o})_i = \frac{\exp(o_i)}{\sum_j \exp(o_j)}.$$
+
+. . .
+
+The denominator $\sum_j \exp(o_j)$ is the **partition function**, the same normalizer Boltzmann used for energy states in a gas, with energy playing the role of (negative) score.
+:::
+
+::: {.slide title="Softmax keeps the ranking"}
+[The Softmax]{.kicker}
+
+The exponential is monotone, so the largest score stays the largest probability:
+
+$$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
+
+. . .
+
+So to *predict* a class we never need to compute the softmax; we read off the biggest logit. The softmax matters for the **loss**, not the decision.
+:::
+
+::: {.slide title="Only differences of logits matter"}
+[The Softmax · invariance]{.kicker}
+
+Add the same constant $c$ to every logit. Numerator and denominator both pick up a factor $\exp(c)$, which cancels:
+
+$$\mathrm{softmax}(\mathbf{o} + c\mathbf{1}) = \mathrm{softmax}(\mathbf{o}).$$
+
+. . .
+
+The scores carry **one redundant degree of freedom**: we may pin $o_q \equiv 0$ without changing any prediction. (This same shift, with $c = -\max_k o_k$, is the trick that makes the computation numerically stable.)
+:::
+
+::: {.slide title="Two classes: softmax *is* the sigmoid"}
+[The Softmax · special case]{.kicker}
+
+With $q = 2$, only the logit gap $o = o_1 - o_2$ survives:
+
+$$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1)+\exp(o_2)} = \frac{1}{1 + \exp(-o)} = \sigma(o).$$
+
+. . .
+
+Binary **logistic regression** is just softmax regression with the redundant logit removed: the same model, one class folded away.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Cross-Entropy Loss]{.dtitle}
+
+[maximum likelihood over discrete labels]{.dsub}
+:::
+:::
+
+::: {.slide title="Maximum likelihood becomes a sum of losses"}
+[Loss]{.kicker}
+
+The model reads $\hat{\mathbf{y}}$ as conditional class probabilities. Over an i.i.d. dataset the likelihood factorizes; taking $-\log$ turns the product into a sum:
+
+$$-\log P(\mathbf{Y}\mid\mathbf{X}) = \sum_{i=1}^n l\bigl(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)}\bigr).$$
+
+. . .
+
+Minimizing this negative log-likelihood is exactly the recipe we used for squared error, now over discrete categories.
+:::
+
+::: {.slide title="The cross-entropy loss"}
+[Loss]{.kicker}
+
+For a one-hot label $\mathbf{y}$ the per-example loss keeps only the true class's term:
+
+$$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_{\text{true}}.$$
+
+. . .
+
+It is $\ge 0$, and $0$ only with certainty on the right class, which finite logits can never quite reach. Predict the truth with high confidence and the loss is small; predict it with near-zero probability and the loss blows up.
+:::
+
+::: {.slide title="A clean gradient: prediction minus truth"}
+[Loss · the payoff]{.kicker}
+
+Substitute the softmax into the loss and it collapses to a log-partition term minus a linear term, $l = g(\mathbf{o}) - \mathbf{y}^\top\mathbf{o}$ with $g(\mathbf{o}) = \log\sum_k \exp(o_k)$. Differentiate:
+
+$$\partial_{o_j}\, l(\mathbf{y}, \hat{\mathbf{y}}) = \mathrm{softmax}(\mathbf{o})_j - y_j = \hat{y}_j - y_j.$$
+
+. . .
+
+The gradient is the **residual**, predicted probability minus observed label, exactly as in linear regression. This "prediction minus truth" form is shared by *every* exponential-family model, and it makes the loss convex in $\mathbf{o}$.
+:::
+
+::: {.slide title="Why \"cross-entropy\"?"}
+[Loss · information theory]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Entropy** $H[P] = \sum_j -P(j)\log P(j)$ is the average bits needed to encode draws from $P$. **Cross-entropy** $H(P, Q) = \sum_j -P(j)\log Q(j)$ is the cost of coding $P$'s draws with a wrong model $Q$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Our loss **is** $H(\mathbf{y}, \hat{\mathbf{y}})$.
+:::
+:::
+:::
+
+. . .
+
+So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth, a duality worth remembering whenever cross-entropy appears.
+:::
+
+::: {.slide title="Probabilities, but not *calibrated*"}
+[Loss · a modern caveat]{.kicker}
+
+The softmax outputs *look* like probabilities, but a network trained to minimize cross-entropy is generally **not calibrated**: a reported confidence of $0.9$ does not mean it is right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
+
+. . .
+
+::: {.d2l-note .rule}
+**Temperature scaling** divides the logits by a single learned $T > 0$ before the softmax, exactly the Boltzmann temperature from earlier.
+:::
+
+Because $1/T$ scales every logit by the same factor, it preserves their order: the predicted class (the $\arg\max$) is **untouched** while the confidences sharpen ($T<1$) or soften ($T>1$).
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Two Faces of the Scores]{.dtitle}
+
+[the same logits drive training and evaluation]{.dsub}
+:::
+:::
+
+::: {.slide title="One score vector, two jobs"}
+[Synthesis]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A single forward pass produces logits $\mathbf{o}$; the picture **forks**.
+
+- **Train:** softmax $\to$ probabilities $\to$ cross-entropy. Smooth and differentiable, so gradient descent minimizes it.
+- **Evaluate:** $\arg\max \to$ a hard class $\to$ accuracy. Discrete with zero gradient, the number we report.
+
+Both branches read the **same** scores.
+:::
+
+::: {.col .fig .big}
+![Logits $(1.0, 2.2, 0.3)$ fork: softmax gives probabilities $(0.21, 0.69, 0.10)$ and cross-entropy $\ell = 0.37$; argmax gives the hard class for accuracy.](../img/mdl-clf-loss-accuracy.svg)
+:::
+:::
+:::
+
+::: {.slide title="Summary"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **One-hot** labels live in probability space; a **linear layer** emits one logit per class.
+- **Softmax** $\hat{y}_i \propto \exp(o_i)$ squishes logits to a distribution; it preserves the ranking and depends only on logit **differences**.
+- Two classes recover the **logistic sigmoid**.
+:::
+
+::: {.col}
+- **Cross-entropy** $= -\log \hat{y}_{\text{true}}$ is the negative log-likelihood, equivalently a code length.
+- Its gradient is the **residual** $\hat{\mathbf{y}} - \mathbf{y}$: convex, cheap, shared by all exponential families.
+- The **same logits** train the model (softmax + loss) and evaluate it (argmax + accuracy).
+:::
+:::
+:::

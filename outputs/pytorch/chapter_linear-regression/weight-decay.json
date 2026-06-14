@@ -29,71 +29,71 @@
       "outputs": []
     },
     "weight-decay-defining-the-model-2": {
-      "code_fingerprint": "sha256:24160f481c7c2ea7c47a8913549bf3c7e36a304b4d65ef4476c017f0c11963c0",
+      "code_fingerprint": "sha256:d1f780e006633354518dfa7f2c782aec4dcfe181aa615e2728af9b5ed78253ca",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-training-without-regularization": {
-      "code_fingerprint": "sha256:449258462b0382a8dc9d7b962a6846f1f2e1ff4422026631463f90155a48c1b8",
+      "code_fingerprint": "sha256:860aac217501e3675fedd37e07139bcc15afb4cfd77a8f2c8bdbca8cc6874b56",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/ipykernel_15905/2946282728.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
+          "name": "stdout",
+          "text": "L2 norm of w: 0.009237665683031082\n"
         },
         {
           "type": "stream",
-          "name": "stdout",
-          "text": "L2 norm of w: 0.008117367513477802\n"
+          "name": "stderr",
+          "text": "/var/folders/9c/qyn117295pgd7503chdsk_000000gn/T/ipykernel_99649/1135735378.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 24974,
-          "sha256": "sha256:253dbacefb2f089232e6ca91a4f517361b422087dd716757da4d9fd1b0c5b3c5"
+          "bytes": 23684,
+          "sha256": "sha256:3ed4e5fb279a27bb6e63137e6c4096c65a07de5b5373e34f34087f08eef95fa9"
         }
       ]
     },
     "weight-decay-using-weight-decay": {
-      "code_fingerprint": "sha256:0ac69735eb89446a47fbcd8d8255fd2958c867bd9d8731822f48a2900f632eb0",
+      "code_fingerprint": "sha256:24ac3ef6eab8244b26b0dadf22291614380add33bbe9ee3b5eb88fef741ff33a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0015510052908211946\n"
+          "text": "L2 norm of w: 0.0003676383930724114\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 22690,
-          "sha256": "sha256:fa5a352577960147e55133a8fedb11a2d6ad2c3f3f19e4c400dc39e004ed0c96"
+          "bytes": 22118,
+          "sha256": "sha256:32b8b5fabf586afafd26c309028be34f7c18412ba02b09fb82cb5227efe06500"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:8a350eb6aec2151874c7ea0237f6b73dd9b4a1c3be6ff6a113340bc568a158b0",
+      "code_fingerprint": "sha256:0584a20482ac30b8c9e46022c369754949185ea74af42c594cb9173b655e00c4",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:e15fefab74d14057b43735e8387d77aa8696cca3f7a6fc3705006c1eae2fcf68",
+      "code_fingerprint": "sha256:508896a2ba97dafc4577ae146f40c3695f3c89b637c9b7c9a25e1237b9bb071d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.013015990145504475\n"
+          "text": "L2 norm of w: 0.0006117779412306845\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 26120,
-          "sha256": "sha256:f31cc9c9ccb321632d7510b617acb251f9bb3b615bb103ebd3a0f1aeb3f261da"
+          "bytes": 27256,
+          "sha256": "sha256:8b3d7f0ac4aa4ed23e3817b48ee8348cbd0587f471c3a4d15b24fe43e4a8ee5b"
         }
       ]
     }

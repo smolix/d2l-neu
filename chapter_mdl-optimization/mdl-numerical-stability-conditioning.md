@@ -1036,79 +1036,402 @@ reference remains :citet:`Higham.2002`.
 
 <!-- slides -->
 
-::: {.slide title="Numerical Stability and Conditioning"}
-The math can be right and the loss still goes to `NaN`. Two questions
-assign the blame:
+# Numerical Stability and Conditioning
 
-- Did the **algorithm** solve a nearby problem? (backward error)
-- Do nearby problems have wildly different answers? (conditioning)
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §24.4]{.kicker}
 
-Fixes are *reformulations*, not more bits: max-subtraction, log-space,
-Welford, ridge.
+Why the math is right but the loss is `NaN`<br>**floating point · stable softmax · cancellation · conditioning**.
+:::
 :::
 
-::: {.slide title="Floating point: a number system with gaps"}
-$x = (-1)^s (1.m)_2\, 2^e$: huge range, fixed *relative* precision
-$\varepsilon_{\text{mach}}$ --- fp32: $2^{-23}$, fp16: $2^{-10}$,
-bfloat16: $2^{-7}$ (fp32's exponent range, 7 mantissa bits).
+::: {.slide title="The math is right; the loss is NaN"}
+[Motivation]{.kicker}
 
-@fig:mdl-opt-fp-number-line
+::: {.cols .vc}
+::: {.col}
+Every proof in this chapter was over $\mathbb{R}$. Your GPU computes
+over a finite, gappy imitation. When an answer is wrong, two questions
+split the blame:
+
+- Did the **algorithm** solve a nearby problem? *(backward error)*
+- Do nearby problems have wildly different answers? *(conditioning)*
+
+::: {.d2l-note}
+The fixes are **reformulations**, not more bits: max-subtraction,
+log-space, Welford, ridge.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-fp-number-line.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Floating point]{.dtitle}
+
+[a number system with gaps]{.dsub}
+:::
+:::
+
+::: {.slide title="A number system with gaps"}
+[Floating point]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A float is base-2 scientific notation with a fixed digit budget:
+
+$$x = (-1)^s\,(1.m_1\ldots m_p)_2\; 2^{e}.$$
+
+The exponent buys **range**; the mantissa fixes **relative** precision.
+Between powers of two the spacing is constant, so the *absolute* gap
+**doubles** at every power, and each format ends in an overflow cliff.
+
+::: {.d2l-note .rule}
+Machine epsilon $\varepsilon_{\text{mach}} = 2^{-p}$ is the gap from
+$1$ to its successor: $\mathrm{fl}(x) = x(1+\delta)$,
+$|\delta| \le \tfrac12 \varepsilon_{\text{mach}}$.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-fp-number-line.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Three formats, three bargains"}
+[Floating point]{.kicker}
+
+Read each row as a different deal: fp32 spends bits on precision; fp16
+keeps precision but its tiny exponent range falls off both cliffs;
+**bfloat16** keeps fp32's range and sacrifices the mantissa.
+
+@!numerical-stability-conditioning-finfo
+
+::: {.d2l-note}
+bfloat16's epsilon is $2^{-7}$, **not** $2^{-8}$: the eighth "bit" is
+the implicit leading $1$, which fills no gap.
+:::
+:::
+
+::: {.slide title="Where the cliffs are"}
+[Floating point]{.kicker}
+
+Because $e^x$ turns additive scale into multiplicative scale, a modest
+*logit* overflows: fp32 dies at $x \approx 88.7$, fp16 at $x \approx 11.1$.
+
+@!numerical-stability-conditioning-spacing
+
+::: {.d2l-note .warn}
+fp16 gradients below $6\times10^{-5}$ vanish, so mixed precision scales
+the loss before the backward pass. **Loss scaling is underflow
+management**, nothing more.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Softmax & cross-entropy]{.dtitle}
+
+[the one-line bug, and the shift that fixes it]{.dsub}
+:::
+:::
+
+::: {.slide title="Softmax overflows; subtract the max"}
+[Stable softmax]{.kicker}
+
+The most common stability bug is one line: $\mathrm{softmax}$
+exponentiates logits, so any logit past $88.7$ makes the numerator
+`inf` and the ratio `NaN`. But softmax is **shift-invariant**:
+
+$$\mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z}),$$
+
+so shift by $c = \max_i z_i$: every exponent $\le 0$, the denominator
+sits in $[1, n]$, and overflow is impossible.
 
 . . .
 
-@numerical-stability-conditioning-finfo
+@!numerical-stability-conditioning-stable-softmax
 :::
 
-::: {.slide title="Stable softmax: subtract the max"}
-$e^x$ overflows fp32 at $x \approx 88.7$ --- but softmax is
-shift-invariant, so shift by $c = \max_i z_i$: every exponent
-$\le 0$, denominator in $[1, n]$.
+::: {.slide title="Log-sum-exp: an exact, safe identity"}
+[Stable softmax]{.kicker}
 
-@numerical-stability-conditioning-stable-softmax
+The softmax normalizer earns its own operator. The same shift turns it
+into an exact rewriting (not just an invariance):
 
-. . .
+$$\mathrm{lse}(\mathbf{z}) = \log\textstyle\sum_j e^{z_j}
+= c + \log\textstyle\sum_j e^{z_j - c},
+\qquad \max_j z_j \le \mathrm{lse}(\mathbf{z}) \le \max_j z_j + \log n.$$
 
-Same shift makes log-sum-exp exact and safe:
-$\mathrm{lse}(\mathbf{z}) = c + \log \sum_j e^{z_j - c}$.
+Logits near $1000$ overflow even float64; in log space they are
+effortless:
+
+@!numerical-stability-conditioning-logsumexp
+
+::: {.d2l-note .rule}
+A *soft maximum*, within $\log n$ of the true max, and the reason
+naive Bayes sums logs instead of multiplying probabilities.
+:::
 :::
 
 ::: {.slide title="Pass logits, not probabilities"}
-Cross-entropy from logits is one stable lse:
-$-\log \mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y$.
-Via probabilities, the loss underflows, clips, or explodes ---
-differently in every framework:
+[Stable softmax]{.kicker}
 
-@numerical-stability-conditioning-cross-entropy
+Cross-entropy is computable straight from logits with one stable lse:
+
+$$-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y.$$
+
+The via-probabilities route forces the loss through the representable
+range of probabilities, and **fails differently in every framework**:
+
+@!numerical-stability-conditioning-cross-entropy
 :::
 
-::: {.slide title="Catastrophic cancellation and Welford"}
-Subtracting near-equal numbers amplifies old rounding error by
-$(|a|+|b|)/|a-b|$. Cure = reformulate:
-$m_k = m_{k-1} + \frac{x_k - m_{k-1}}{k}$,
-$M_k = M_{k-1} + (x_k - m_{k-1})(x_k - m_k)$:
+::: {.slide title="Same cell, four different failures" only="pytorch,mxnet"}
+[Stable softmax]{.kicker}
 
-@numerical-stability-conditioning-welford
+The label is the *unlikely* class, so the true loss is the logit gap.
+From logits it is exact at every gap; via probabilities it fails:
+
+::: {.d2l-note .warn}
+**PyTorch / MXNet.** Matches until $e^{-t}$ falls among the subnormals:
+at gap $103$ the loss reads $103.2789$ (wrong in the first decimal, no
+warning), and at gap $104$ it underflows to `inf`.
 :::
 
-::: {.slide title="Conditioning: digits lost = log10 kappa"}
-Forward error $\le \kappa \times$ backward error. A backward-stable
-solver is blameless --- the *problem* amplifies. Hilbert matrices,
-digit by digit:
-
-@numerical-stability-conditioning-hilbert
+The lesson generalizes: losses and likelihoods should **live in log
+space from birth**; convert to probabilities last, for human eyes only.
 :::
 
-::: {.slide title="Ridge is preconditioning"}
-$\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I}) =
-\frac{\sigma_1^2 + \lambda}{\sigma_n^2 + \lambda}$: monotone down in
-$\lambda$. One knob, two payoffs --- accurate solves *and* fast GD:
+::: {.slide title="Same cell, four different failures" only="jax"}
+[Stable softmax]{.kicker}
 
-@numerical-stability-conditioning-ridge
+The label is the *unlikely* class, so the true loss is the logit gap.
+From logits it is exact at every gap; via probabilities it fails:
 
-. . .
+::: {.d2l-note .warn}
+**JAX.** XLA does not linger in the subnormal range, so $e^{-t}$
+underflows to $0$ one gap *earlier* than PyTorch: the loss is already
+`inf` at gap $103$.
+:::
 
-- Never exponentiate a raw logit; live in log space.
-- Reformulate subtractions away; Welford over
-  $\mathbb{E}[x^2] - \mathbb{E}[x]^2$.
-- $\kappa$: one number, two consequences; ridge lowers it.
+The lesson generalizes: losses and likelihoods should **live in log
+space from birth**; convert to probabilities last, for human eyes only.
+:::
+
+::: {.slide title="Same cell, four different failures" only="tensorflow"}
+[Stable softmax]{.kicker}
+
+The label is the *unlikely* class, so the true loss is the logit gap.
+From logits it is exact at every gap; via probabilities it fails:
+
+::: {.d2l-note .warn}
+**TensorFlow.** The most insidious: Keras clips probabilities to
+$[10^{-7}, 1{-}10^{-7}]$, so every row reads $16.1181 = -\log 10^{-7}$.
+No `inf`, no `NaN`: the gradient just silently stopped depending on
+the model.
+:::
+
+The lesson generalizes: losses and likelihoods should **live in log
+space from birth**; convert to probabilities last, for human eyes only.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Catastrophic cancellation]{.dtitle}
+
+[the silent killer: subtracting near-equal numbers]{.dsub}
+:::
+:::
+
+::: {.slide title="Subtraction annihilates digits"}
+[Cancellation]{.kicker}
+
+Subtracting nearly equal numbers is *exact*, yet it strips the leading
+digits they agreed on, exposing the trailing noise. Relative error is
+amplified by $\tfrac{|a| + |b|}{|a - b|}\,u$, which blows up precisely
+when $a \approx b$. In float32, $1 + 10^{-8}$ rounds to $1$, so
+$\log(1+x)$ returns $0$, but `log1p` is exact:
+
+@!numerical-stability-conditioning-log1p
+
+::: {.d2l-note .rule}
+Standard victims: $\log(1{+}x)$, $e^x{-}1$ near $0$ (`log1p`, `expm1`);
+$1{-}\cos x$; the quadratic formula near a double root. **Reformulate;
+don't add bits.**
+:::
+:::
+
+::: {.slide title="Welford beats E[x²] − E[x]²" except="mxnet"}
+[Cancellation]{.kicker}
+
+The one-pass variance formula $\mathbb{E}[x^2] - \mathbb{E}[x]^2$
+subtracts two numbers near $\mu^2$ to get $\sigma^2$, amplification
+$\mu^2/\sigma^2$. Welford keeps a running mean and *centered* sum of
+squares, so nothing large is ever subtracted:
+
+$$m_k = m_{k-1} + \frac{x_k - m_{k-1}}{k},
+\qquad M_k = M_{k-1} + (x_k - m_{k-1})(x_k - m_k).$$
+
+Mean $10^9$, true variance $1$, $10^5$ samples, all in float64:
+
+@!numerical-stability-conditioning-welford
+
+::: {.d2l-note}
+The naive formula is off by a factor of several hundred *in double
+precision*; Welford agrees with the two-pass reference to eight digits.
+This is how `BatchNorm` tracks running moments.
+:::
+:::
+
+::: {.slide title="Welford beats E[x²] − E[x]²" only="mxnet"}
+[Cancellation]{.kicker}
+
+The one-pass variance formula $\mathbb{E}[x^2] - \mathbb{E}[x]^2$
+subtracts two numbers near $\mu^2$ to get $\sigma^2$, amplification
+$\mu^2/\sigma^2$. Welford keeps a running mean and *centered* sum of
+squares, so nothing large is ever subtracted:
+
+$$m_k = m_{k-1} + \frac{x_k - m_{k-1}}{k},
+\qquad M_k = M_{k-1} + (x_k - m_{k-1})(x_k - m_k).$$
+
+Mean $10^9$, true variance $1$, $10^5$ samples, all in float64:
+
+@!numerical-stability-conditioning-welford
+
+::: {.d2l-note .warn}
+The naive answer is pure amplified noise; here it even comes out
+**negative** ($-256$), a variance below zero, its sign hostage to the
+summation order. This is what `BatchNorm` avoids with running moments.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Conditioning]{.dtitle}
+
+[one number, two consequences]{.dsub}
+:::
+:::
+
+::: {.slide title="Backward and forward error"}
+[Conditioning]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+**Forward error** is what you want: $\|\hat{\mathbf{x}} - \mathbf{x}\|$.
+**Backward error** judges the algorithm: the smallest input
+perturbation for which $\hat{\mathbf{x}}$ is *exactly* right. The
+condition number converts one into the other:
+
+$$\frac{\|\hat{\mathbf{x}} - \mathbf{x}\|}{\|\hat{\mathbf{x}}\|}
+\le \kappa(\mathbf{A})\,\varepsilon.$$
+
+::: {.d2l-note .rule}
+correct digits $\approx$ format digits $-\,\log_{10}\kappa(\mathbf{A})$.
+A backward-stable float64 solve carries $\approx 16$; $\kappa = 10^k$
+costs you $k$.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-conditioning-ellipse.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Hilbert matrices: κ eats digits"}
+[Conditioning]{.kicker}
+
+$\kappa$ of the Hilbert matrix $H_{ij} = 1/(i{+}j{-}1)$ grows
+exponentially. Solving $\mathbf{H}\mathbf{x} = \mathbf{b}$ with
+$\mathbf{x} = \mathbf{1}$, watch the digits fall as the rule of thumb
+predicts:
+
+@!numerical-stability-conditioning-hilbert
+
+::: {.d2l-note}
+The **backward** error never leaves the $10^{-16}$ floor; the solver
+is *blameless* at every row. The matrix, not the algorithm, amplifies
+the error.
+:::
+:::
+
+::: {.slide title="Normal equations square the pain"}
+[Conditioning]{.kicker}
+
+Solving least squares via $\mathbf{A}^\top\mathbf{A}\,\mathbf{w} =
+\mathbf{A}^\top\mathbf{b}$ replaces $\kappa(\mathbf{A})$ with its
+**square**:
+
+$$\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2.$$
+
+With $\kappa(\mathbf{A}) = 10^5$, that is five extra digits lost versus
+an SVD/QR solve on $\mathbf{A}$ directly:
+
+@!numerical-stability-conditioning-normal-equations
+
+::: {.d2l-note}
+This is why `lstsq` exists and frameworks solve least squares by QR or
+SVD, never by forming $\mathbf{A}^\top\mathbf{A}$.
+:::
+:::
+
+::: {.slide title="Ridge regularization is preconditioning"}
+[Conditioning]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Adding $\lambda\|\mathbf{w}\|^2$ lifts every eigenvalue of
+$\mathbf{A}^\top\mathbf{A}$ by $\lambda$, so
+$\kappa = \tfrac{\sigma_1^2 + \lambda}{\sigma_n^2 + \lambda}\downarrow 1$:
+the valley rounds into a bowl. Because $\kappa$ is **one number with two
+consequences**, the same $\lambda$ pays twice, accurate solves *and* fast
+gradient descent.
+
+@!numerical-stability-conditioning-ridge
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-conditioning-ellipse.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Floating point:** relative precision $\varepsilon_{\text{mach}}$,
+  gaps that double, overflow cliffs ($e^x$ dies at $x\approx 88.7$ in fp32).
+- **Stable softmax:** subtract the max; log-sum-exp is exact; compute
+  cross-entropy from logits as $\mathrm{lse}(\mathbf{z}) - z_y$.
+:::
+
+::: {.col}
+- **Cancellation:** reformulate, don't add bits (`log1p`, Welford).
+- **Conditioning:** forward $\le \kappa \times$ backward error; normal
+  equations square $\kappa$, ridge lowers it.
+:::
+:::
+
+::: {.d2l-note}
+$\kappa$: **one number, two consequences**, and ridge is the one knob
+that helps both. Reformulations, not more bits.
+:::
 :::

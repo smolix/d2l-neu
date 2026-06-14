@@ -1086,87 +1086,315 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
 
 <!-- slides -->
 
-::: {.slide title="The SVD: rotate--scale--rotate"}
-Every $m\times n$ matrix factors as
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §22.3]{.kicker}
 
-$$\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top,$$
-
-with $\mathbf{U},\mathbf{V}$ orthogonal and
-$\sigma_1\ge\sigma_2\ge\cdots\ge0$. Read right to left:
-$\mathbf{V}^\top$ rotates, $\boldsymbol{\Sigma}$ stretches by
-$\sigma_i$, $\mathbf{U}$ rotates again. Two frames, one stretch
-($\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$) — the eigen-picture
-made universal:
-
-@fig:mdl-la-svd-action
+The one factorization that **never fails**<br>**SVD, Eckart--Young, and the geometry of low rank**
+:::
 :::
 
-::: {.slide title="Where singular values come from"}
-The SVD *is* the spectral theorem applied to the symmetric PSD
-matrix $\mathbf{A}^\top\mathbf{A}$:
+::: {.slide title="The picture, made universal"}
+[Motivation]{.kicker}
 
-$$\sigma_i = \sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})},
-\qquad \mathbf{u}_i = \mathbf{A}\mathbf{v}_i/\sigma_i.$$
+::: {.cols .vc}
+::: {.col}
+The eigendecomposition was powerful but *picky*: it wants a square,
+ideally symmetric matrix, and a defective one has no eigenbasis at all.
 
-Gram matrices are never defective, so the SVD **never fails** —
-even the defective shear $[[1,1],[0,1]]$ gets a clean SVD
-($\sigma = \varphi, 1/\varphi$):
+The **singular value decomposition** is the same rotate--scale--rotate
+idea applied to **every** matrix, rectangular or defective alike.
 
-@svd-defective-shear
+::: {.d2l-note}
+One factorization yields rank, low-rank approximation, PCA, the
+pseudoinverse, and the condition number.
+:::
+:::
+
+::: {.col .fig}
+![A general $\mathbf{A}$ bends the unit circle to an ellipse; the SVD names the two frames that do it.](../img/mdl-la-svd-action.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The factorization]{.dtitle}
+
+[rotate, scale, rotate]{.dsub}
+:::
+:::
+
+::: {.slide title="Rotate--scale--rotate"}
+[The factorization]{.kicker}
+
+Every $m\times n$ matrix factors as
+$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ ($\mathbf{U},\mathbf{V}$
+orthogonal, $\sigma_1\ge\cdots\ge0$). Reading right to left, $\mathbf{V}^\top$
+**rotates**, $\boldsymbol{\Sigma}$ **scales** by $\sigma_i$, $\mathbf{U}$
+**rotates**, one stretch $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$:
+
+@fig:mdl-la-svd-action
+
+. . .
+
+The top one is the Rayleigh quotient again:
+$\sigma_1=\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|=\|\mathbf{A}\|_2$, the
+most $\mathbf{A}$ can stretch any unit vector (its **spectral norm**).
+:::
+
+::: {.slide title="Where the singular values come from"}
+[The factorization]{.kicker}
+
+The SVD is not a new mystery: it is the **spectral theorem** in disguise.
+
+. . .
+
+**(1)** $\mathbf{A}^\top\mathbf{A}$ is symmetric and PSD
+($\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}=\|\mathbf{A}\mathbf{x}\|^2\ge0$),
+so it has an orthonormal eigenbasis $\mathbf{v}_i$ with eigenvalues $\lambda_i\ge0$.
+
+. . .
+
+**(2)** Take square roots and push through $\mathbf{A}$:
+$\;\sigma_i=\sqrt{\lambda_i}$, $\;\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$.
+
+. . .
+
+**(3)** The output frame is orthonormal *for free*:
+$\mathbf{u}_i^\top\mathbf{u}_j=\sigma_i^{-1}\sigma_j^{-1}\,
+\mathbf{v}_i^\top\mathbf{A}^\top\mathbf{A}\,\mathbf{v}_j=\delta_{ij}$.
+
+::: {.d2l-note .rule}
+Gram matrices are never defective, so **the SVD never fails**, for any matrix,
+rectangular or defective.
+:::
+:::
+
+::: {.slide title="The defective shear, finally decomposed"}
+[The factorization]{.kicker}
+
+The shear $\begin{bmatrix}1&1\\0&1\end{bmatrix}$ is *defective*: one
+eigenvalue $\lambda=1$, only a one-dimensional eigenspace, **no
+eigenbasis**.
+
+. . .
+
+Its SVD is perfectly clean. The singular values are the golden ratio
+and its reciprocal ($\sigma_1\sigma_2=|\det\mathbf{A}|=1$):
+
+@!svd-defective-shear
+:::
+
+::: {.slide title="Two frames, one stretch"}
+[The factorization]{.kicker}
+
+The action $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$ verifies in one
+line: reconstruction is exact, and the squared singular values are the
+eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
+
+@svd-verify
+:::
+
+::: {.slide title="Rank & the four fundamental subspaces"}
+[The factorization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\operatorname{rank}\mathbf{A}$ is just the number of nonzero
+$\sigma_i$. The singular vectors split into the row/null space (input)
+and column/left-null space (output); $\mathbf{A}$ is a clean bijection
+between the row and column spaces.
+
+::: {.d2l-note}
+In floating point, *threshold* tiny $\sigma_i$: numerical rank counts
+$\sigma_i>\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
+:::
+:::
+
+::: {.col .fig .big}
+![$\mathbf{A}$ maps the row space onto the column space and crushes the null space to zero.](../img/mdl-la-svd-subspaces.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Numerical rank in practice"}
+[The factorization]{.kicker}
+
+A deliberately rank-2 matrix in $\mathbb{R}^{4\times4}$: two singular
+values collapse to machine zero, so a tolerance recovers the true rank
+where a test for exact zeros would fail.
+
+@svd-numerical-rank
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Low-rank approximation]{.dtitle}
+
+[keep the heavy terms, drop the light ones]{.dsub}
+:::
 :::
 
 ::: {.slide title="Eckart--Young: optimal low rank"}
-Truncating to the top $k$ terms,
-$\mathbf{A}_k=\sum_{i\le k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$,
-is the **best** rank-$k$ approximation:
-$\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$. Fast-decaying spectra
-compress almost for free:
+[Approximation]{.kicker}
 
-@fig:mdl-la-eckart-young
+Keep the top $k$ dyads, $\mathbf{A}_k=\sum_{i\le k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$.
+
+::: {.d2l-note .rule}
+$\mathbf{A}_k$ is the **provably best** rank-$k$ approximation:
+$\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$, and $\|\cdot\|_F^2=\sum_{i>k}\sigma_i^2$ (the case PCA uses).
+:::
+
+. . .
+
+*Why no rank-$k$ $\mathbf{B}$ does better,* by dimension counting:
+$\dim\ker\mathbf{B}\ge n-k$, and $\mathcal{V}=\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_{k+1}\}$ has dim $k+1$.
+
+. . .
+
+They **overfill** $\mathbb{R}^n$: $(n-k)+(k+1)>n$, so a unit $\mathbf{x}$ lives in both, with $\mathbf{B}\mathbf{x}=\mathbf 0$.
+
+. . .
+
+There $\mathbf{B}$ is blind while $\mathbf{A}$ still stretches:
+$\|(\mathbf{A}-\mathbf{B})\mathbf{x}\|=\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}$. The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ is the compression dial.
+:::
+
+::: {.slide title="A visual proof on an image"}
+[Approximation]{.kicker}
+
+The spectrum decays fast (log scale, left), so rank-20 already looks
+essentially correct while storing a fraction of the numbers, the
+discarded $\sigma_i$ carrying little energy.
+
+![Singular-value spectrum and rank-$k$ reconstructions, each labeled with its relative Frobenius error.](../img/mdl-la-eckart-young.svg){width=92%}
 :::
 
 ::: {.slide title="PCA = Eckart--Young on centered data"}
-Principal directions are the right singular vectors $\mathbf{v}_i$
-of the centered data; variance explained by component $i$ is
-$\sigma_i^2/n$:
+[Approximation]{.kicker}
 
-@fig:mdl-la-pca
+::: {.cols .vc}
+::: {.col}
+*Center* the data, then the top right singular vectors $\mathbf{v}_i$
+are the principal directions; component $i$ explains variance
+$\sigma_i^2/n$. The SVD axes and the covariance eigenvalues agree exactly:
 
-. . .
-
-@svd-pca
+@!svd-pca
 :::
 
-::: {.slide title="Least squares & conditioning"}
-Pseudoinverse $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$
-gives min-norm least squares; condition number
-$\kappa=\sigma_1/\sigma_r$ amplifies error and slows gradient
-descent. Normal equations square it ($\kappa(\mathbf{A}^\top\mathbf{A})=\kappa^2$):
-
-@fig:mdl-la-condition
-
-. . .
-
-@svd-least-squares
+::: {.col .fig}
+![Principal axes scaled by $\sigma_i/\sqrt{n}$; the first aligns with the direction of maximal variance.](../img/mdl-la-pca.svg){width=100%}
+:::
+:::
 :::
 
-::: {.slide title="SVD in modern deep learning"}
-- **LoRA**: $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$, rank $r$, only
-  $r(m+n)$ params; Eckart--Young bounds how well *any* rank-$r$ update
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Solving & conditioning]{.dtitle}
+
+[the pseudoinverse and the one number to watch]{.dsub}
+:::
+:::
+
+::: {.slide title="Pseudoinverse & least squares"}
+[Solving]{.kicker}
+
+Invert the nonzero singular values and transpose the rotations,
+$\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$. The
+SVD basis decouples the problem, so $\mathbf{A}^{+}\mathbf{b}$ is the
+**minimum-norm least-squares** solution. `pinv` and `lstsq` agree, and forming
+$\mathbf{A}^\top\mathbf{A}$ squares the conditioning:
+
+@!svd-least-squares
+:::
+
+::: {.slide title="The condition number"}
+[Solving]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\kappa(\mathbf{A})=\sigma_1/\sigma_r$ is *one number, two
+consequences*: it bounds error amplification in a solve and the
+gradient-descent contraction $(\kappa-1)/(\kappa+1)$ on a quadratic
+bowl.
+
+::: {.d2l-note .warn}
+Forming $\mathbf{A}^\top\mathbf{A}$ *squares* it,
+$\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$, which is why the
+normal equations are numerically worse.
+:::
+:::
+
+::: {.col .fig .big}
+![Well-conditioned bowl (near-circular, a straight path) versus ill-conditioned (elongated, a zig-zag).](../img/mdl-la-condition.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[In modern deep learning]{.dtitle}
+
+[low rank is everywhere]{.dsub}
+:::
+:::
+
+::: {.slide title="The SVD in modern deep learning"}
+[Applications]{.kicker}
+
+- **LoRA** learns a rank-$r$ correction $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$
+  at $r(m+n)$ params; Eckart--Young bounds how well *any* rank-$r$ update
   can track the full one ($\sigma_{r+1}$).
-- **Muon**: step along the polar factor $\mathbf{U}\mathbf{V}^\top$ of the
-  momentum — Newton--Schulz, matmuls only.
-- **Spectral norm**: cap $\sigma_1=\|\mathbf{W}\|_2$ for Lipschitz
-  control — estimated by power iteration on $\mathbf{W}^\top\mathbf{W}$.
-- **Weight/attention spectra**: effective rank from the energy ratio.
+- **Spectral norm** caps $\sigma_1=\|\mathbf{W}\|_2$ for Lipschitz control,
+  estimated by power iteration on $\mathbf{W}^\top\mathbf{W}$.
+
+::: {.d2l-note}
+**Muon** even optimizes *through* the SVD, stepping along the polar factor
+$\mathbf{U}\mathbf{V}^\top$ of the momentum (Newton--Schulz, matmuls only).
+:::
+:::
+
+::: {.slide title="Effective rank, measured"}
+[Applications]{.kicker}
+
+How small a rank suffices depends entirely on how fast the spectrum
+decays, so the diagnostic is worth running. Here rank 18 of 256 holds
+95% of the spectral energy, a LoRA at 10.5% of the parameters:
 
 @svd-weight-spectrum
 :::
 
 ::: {.slide title="Recap"}
-- Every matrix is rotate--scale--rotate;
-  $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$ — the SVD never fails.
-- Top-$k$ truncation is the *optimal* low-rank approximation (Eckart--Young).
-- PCA, pseudoinverse, and $\kappa$ all fall out of one factorization.
-- $\kappa=\sigma_1/\sigma_r$ is the one number to watch.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Rotate, scale, rotate:** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
+  $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$, never fails.
+- **Eckart--Young:** top-$k$ truncation is the *optimal* low-rank
+  approximation; the energy ratio is the dial.
+- **PCA** is Eckart--Young on centered data.
+:::
+
+::: {.col}
+- **Pseudoinverse** $\mathbf{A}^{+}$ gives min-norm least squares.
+- **$\kappa=\sigma_1/\sigma_r$** is the one number to watch; the normal
+  equations square it.
+- Powers PCA, LoRA, Muon, and spectral normalization.
+:::
+:::
+
+::: {.d2l-note}
+Rank, range, approximation, PCA, and conditioning: all from one
+factorization.
+:::
 :::

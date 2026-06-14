@@ -94,8 +94,12 @@ run = [
 ]
 # Build extra: tools needed to render HTML/PDF from .qmd sources.
 # `quarto-cli` installs the Quarto CLI into the venv's bin/.
+# `playwright` drives tools/check_slide_overflow.py (headless chromium
+# measures rendered slide heights against the 720px box). After `uv sync`,
+# run `.venv-build/bin/python -m playwright install chromium` once.
 build = [
     "quarto-cli",
+    "playwright",
 ]
 
 [build-system]

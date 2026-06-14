@@ -13,81 +13,91 @@
       "kind": "text",
       "outputs": []
     },
+    "mlp-xor": {
+      "code_fingerprint": "sha256:454ed424dc10cdc3d6738fc4c124eb141ca28389d44488c0acbcf2d9c6439a67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0., 0., 0.],\n        [0., 1., 1.],\n        [1., 0., 1.],\n        [1., 1., 0.]])"
+        }
+      ]
+    },
     "mlp-relu-function-1": {
-      "code_fingerprint": "sha256:5eb3488f9d2aa6576f298b0a8483ec2c5e72b942e006dbf6f7ab06ebd62be262",
+      "code_fingerprint": "sha256:746fff92321fc81728ad1ddacc0e30969d154e469d8fa5515187ecc2c2e46506",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
-          "bytes": 16904,
-          "sha256": "sha256:baf8bf00fbc25483a11beb08c5b2defcfce326eaa90d1d589d8fe26375b7f124"
+          "bytes": 16908,
+          "sha256": "sha256:623e345d440cba82e97cd620debcbe238a9a83610dcbb6c12726f1ed2b2df871"
         }
       ]
     },
     "mlp-relu-function-2": {
-      "code_fingerprint": "sha256:7c5f62adfbe1b0c131359f2d376a5f18310ee711c7fadc65cd4a2ab7a6bc32de",
+      "code_fingerprint": "sha256:7d11837feabf8e4bdf7308d4632cc081b44b4b3fe29fdb4f9cebca120ff3d55e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
-          "bytes": 21206,
-          "sha256": "sha256:ac4afec2cd30c1704f216dc64e926510b96c069a4c2e9998196929d548ade1c6"
+          "bytes": 21210,
+          "sha256": "sha256:b1d8049ae7bb4b3f6b00e662f666e26d13b5e1c662d25e05a494dd857fbc7116"
         }
       ]
     },
     "mlp-sigmoid-function-1": {
-      "code_fingerprint": "sha256:a6208599fda7231186df100f868a0c635b265c4470784244a7cfe78c2d2ea2f4",
+      "code_fingerprint": "sha256:5399fda34f24efdc9d4b66b2443ae420deb5ed4e8f8e1f28d79ff7b1e51c91a3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21785,
-          "sha256": "sha256:953ac80e285f1825408a0c99e75563c3847723c1a0b66d8f0c31c67787ae3fcf"
+          "bytes": 21790,
+          "sha256": "sha256:3ed1dbda7957bd6ce0fdfc3b450d467005cec322838dbd11329a4cefcefb821c"
         }
       ]
     },
     "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:b2a9c2dc101d212bb138cf2a48b1c2a3015cdd0bfd0987da6237a4c7c63759b5",
+      "code_fingerprint": "sha256:f891da08c763455c49c79d3fb2cf00dba47fca151b5421cb580fbafeae98a718",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24520,
-          "sha256": "sha256:52217831bc2b8634c5c03fbbd62070db4ce602e66ef09b853123e56c9592b44e"
+          "bytes": 24524,
+          "sha256": "sha256:97221e184aeb422514222666dd14ddee7c9c4686773eb05c7d80c10ac2ff60b9"
         }
       ]
     },
     "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:fbb426660ae12bad99752ecf8b62c4167b7ac9702871472fea15ea54585596e7",
+      "code_fingerprint": "sha256:d43b3849ec0c7258636e2b032202c290f2ccf9ad43d23f35a2ffbea19007923e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20176,
-          "sha256": "sha256:d9c3c6798254d210701922da7e32074489065f544e043f366d9854ca147f7e92"
+          "bytes": 20170,
+          "sha256": "sha256:63b2799db406a19f550a72c8fe35e82e48d6f22f9334a519573aa4c41125048d"
         }
       ]
     },
     "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:9d16e4f7d80229ab3f6214970faa97944b28f34b80d959b5208a97c11a3882e5",
+      "code_fingerprint": "sha256:b6424ba4ceceabc339d847d4488d98d6bf2fcb2ecbddf0989c7b4627d4c5cc1b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
-          "bytes": 22744,
-          "sha256": "sha256:7b949c830baa65fed9cd467c39b63acc2cbef1f2bb1be3a0ed8a4bba4f846391"
+          "bytes": 22748,
+          "sha256": "sha256:2adf207d602f2adcba5af11e05abbd9b12373640045025dda941efd3561c49f9"
         }
       ]
     }

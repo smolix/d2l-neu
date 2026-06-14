@@ -303,6 +303,9 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         return gluon.Trainer(params, 'sgd', {'learning_rate': self.lr})
 
     def get_scratch_params(self):
+        # collect_params() only finds Parameters declared via Gluon's Parameter
+        # API. For from-scratch models that store weights as bare np.ndarrays, we
+        # walk the object's attributes recursively and gather those instead.
         params = []
         for attr in dir(self):
             a = getattr(self, attr)
@@ -313,6 +316,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         return params
 
     def parameters(self):
+        # Return the Gluon ParameterDict when the model uses Gluon layers; fall
+        # back to the bare-array scan for from-scratch implementations.
         params = self.collect_params()
         return params if isinstance(params, dict) and len(
             params.keys()) else self.get_scratch_params()

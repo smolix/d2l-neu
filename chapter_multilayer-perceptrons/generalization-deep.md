@@ -14,9 +14,9 @@ was only an intermediate goal.
 Our real quest all along was to discover *general patterns*
 on the basis of which we can make accurate predictions
 even on new examples drawn from the same underlying population.
-Machine learning researchers are *consumers* of optimization algorithms.
-Sometimes, we must even develop new optimization algorithms.
-But at the end of the day, optimization is merely a means to an end.
+Optimization is merely a means to an end: machine learning researchers
+consume optimization algorithms, and sometimes invent new ones,
+but always in service of a statistical goal.
 At its core, machine learning is a statistical discipline
 and we wish to optimize training loss only insofar
 as some statistical principle (known or unknown)
@@ -76,11 +76,12 @@ of the state of research and practice.
 ## Revisiting Overfitting and Regularization
 
 According to the "no free lunch" theorem of :citet:`wolpert1995no`,
-any learning algorithm generalizes better on data with certain distributions, and worse with other distributions.
+any learning algorithm generalizes better on some data distributions
+and worse on others.
 Thus, given a finite training set,
-a model relies on certain assumptions: 
-to achieve human-level performance
-it may be useful to identify *inductive biases* 
+a model must rely on assumptions, or *inductive biases*.
+To achieve human-level performance
+it can help to choose inductive biases
 that reflect how humans think about the world.
 Such inductive biases show preferences 
 for solutions with certain properties.
@@ -140,11 +141,13 @@ further by making the model *even more expressive*,
 e.g., adding layers, nodes, or training
 for a larger number of epochs.
 Stranger yet, the pattern relating the generalization gap
-to the *complexity* of the model (as captured, for example, in the depth or width of the networks)
+to the *complexity* of the model
+(as captured, for example, in the depth or width of the networks)
 can be non-monotonic,
 with greater complexity hurting at first
 but subsequently helping in a so-called "double-descent" pattern
-:cite:`nakkiran2021deep`.
+:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`,
+which we examine in detail below.
 Thus the deep learning practitioner possesses a bag of tricks,
 some of which seemingly restrict the model in some fashion
 and others that seemingly make it even more expressive,
@@ -160,8 +163,52 @@ arbitrary labels even for large datasets,
 and despite the use of familiar methods such as $\ell_2$ regularization,
 traditional complexity-based generalization bounds,
 e.g., those based on the VC dimension
-or Rademacher complexity of a hypothesis class
+or Rademacher complexity of a hypothesis class,
 cannot explain why neural networks generalize.
+(We develop the mechanics of these classical bounds,
+including VC dimension and Rademacher complexity,
+in :numref:`chap_classification_generalization`.)
+
+### Double Descent
+
+The most striking of these phenomena deserves its own picture.
+Classical theory predicts a *U-shaped* test-error curve:
+as we add capacity, error first falls (we stop underfitting)
+and then rises (we begin overfitting),
+with a sweet spot in between
+(recall :numref:`fig_capacity_vs_error` from :numref:`sec_generalization_basics`).
+Deep networks do not obey this.
+As we keep adding capacity past the point
+where the model can exactly fit the training set,
+the so-called *interpolation threshold*,
+where the number of parameters is roughly the number of training examples,
+the test error first spikes sharply at the threshold
+and then *descends a second time*,
+often dropping below the classical sweet spot.
+This non-monotone, two-valley shape is called *double descent*
+:cite:`Belkin.Hsu.Ma.ea.2019`,
+and it has been observed not only as we grow the model
+but also as we train for more epochs or add more data
+:cite:`nakkiran2021deep` (:numref:`fig_double_descent`).
+
+![Classical bias--variance theory predicts the U-shaped curve on the left: test error falls, then rises as capacity grows, with a sweet spot in between. Deep networks follow it only up to the *interpolation threshold*, where the model can just fit the training set (here $\#$parameters $\approx \#$examples) and the test error spikes. Beyond it lies the *over-parametrized regime*, where adding still more capacity makes the test error *descend a second time*, often below the classical optimum. The training error (gray) falls monotonically to zero at the threshold and stays there.](../img/mdl-mlp-double-descent.svg)
+:label:`fig_double_descent`
+
+Why should bigger be better past the point of perfectly fitting the data?
+The interpolation threshold is where a model has *just barely* enough
+capacity to fit the training set: it is forced into a single,
+often jagged, high-variance solution.
+Past the threshold there are *many* parameter settings
+that interpolate the data,
+and the training procedure, gradient descent from a small initialization,
+selects among them,
+favouring smooth, small-norm solutions that happen to generalize.
+The phenomenon thus reframes "more capacity"
+not as "more overfitting" but as
+"more room for the optimizer to find a simple interpolant."
+It is the cleanest single picture of why the classical complexity
+intuition fails for deep networks,
+and we return below to *why* gradient descent prefers such solutions.
 
 ## Inspiration from Nonparametrics
 
@@ -304,9 +351,9 @@ weight decay remains a popular tool.
 However, researchers have noted
 that typical strengths of $\ell_2$ regularization
 are insufficient to prevent the networks
-from interpolating the data :cite:`zhang2021understanding` and thus the benefits if interpreted
-as regularization might only make sense
-in combination with the early stopping criterion.
+from interpolating the data :cite:`zhang2021understanding`.
+Their benefit, *if* interpreted as classical regularization,
+may therefore make sense only in combination with early stopping.
 Absent early stopping, it is possible
 that just like the number of layers
 or number of nodes (in deep learning)
@@ -316,11 +363,38 @@ not because they meaningfully constrain
 the power of the neural network
 but rather because they somehow encode inductive biases
 that are better compatible with the patterns
-found in datasets of interests.
+found in datasets of interest.
 Thus, classical regularizers remain popular
 in deep learning implementations,
 even if the theoretical rationale
 for their efficacy may be radically different.
+
+### Implicit Regularization
+
+A growing body of work suggests that the strongest regularizer
+in deep learning may be one we never write down: the optimizer itself.
+Among the many parameter settings that interpolate the training data,
+stochastic gradient descent does not pick one at random.
+Starting from a small initialization,
+it is biased toward solutions with small norm and "flat" minima,
+which tend to generalize.
+This is not merely empirical.
+For linearly separable data,
+gradient descent on the logistic loss provably converges
+to the *maximum-margin* (minimum-norm) separator,
+even with no explicit penalty :cite:`Soudry.Hoffer.Nacson.ea.2018`.
+This *implicit bias* helps explain why over-parametrized networks,
+which classical theory says should overfit catastrophically,
+instead find simple, generalizing solutions,
+and why the interventions above (weight decay, early stopping)
+help by *nudging* an already-benign bias
+rather than by brute-force capacity control.
+A striking illustration is *grokking*:
+on small algorithmic tasks, networks first memorize the training set
+and only much later, after many further steps of training,
+suddenly generalize,
+a reminder that optimization *dynamics*, not just architecture,
+govern generalization :cite:`Power.Burda.Edwards.ea.2022`.
 
 Notably, deep learning researchers have also built
 on techniques first popularized
@@ -371,3 +445,332 @@ despite the concerted efforts of many brilliant researchers.
 1. Beyond generalization, describe another benefit of early stopping.
 
 [Discussions](https://d2l.discourse.group/t/7473)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.5]{.kicker}
+
+Why over-parametrized networks **generalize**<br>**double descent · the interpolation regime · implicit bias**.
+:::
+:::
+
+::: {.slide title="Optimization is a means; generalization is the goal"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Fitting the training data is only the intermediate step. The real quest
+is to find patterns that **predict well on unseen data**.
+
+- For deep networks, fitting is **easy**: they can interpolate almost
+  any training set, even random labels.
+- So nearly every gain comes from **closing the generalization gap**, not
+  from reducing training error.
+- Yet *why* deep networks generalize remains a **major open question**.
+:::
+
+::: {.col .fig .big}
+![Bigger past the interpolation threshold is *better*, not worse: the deep-learning surprise this section explains.](../img/mdl-mlp-double-descent.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Overfitting, revisited]{.dtitle}
+
+[inductive bias and the interpolation regime]{.dsub}
+:::
+:::
+
+::: {.slide title="No free lunch: every model needs a bias"}
+[Overfitting]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+No algorithm generalizes better on **all** distributions. Given finite
+data, a model must lean on **inductive biases** that prefer some
+solutions over others.
+
+- A deep MLP is biased toward functions built by **composing simpler
+  ones**.
+- Good biases match how the world is structured.
+
+::: {.d2l-note}
+The **generalization gap** is the difference between test and training
+error. A large gap means we have **overfit**.
+:::
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+**Classical recipe** to close the gap: make the model *less* complex.
+
+- fewer features
+- fewer nonzero parameters
+- smaller parameters
+:::
+:::
+:::
+:::
+
+::: {.slide title="Deep networks break the classical picture"}
+[Overfitting]{.kicker}
+
+Modern networks are expressive enough to **perfectly fit every training
+example**, even millions of them, even random labels.
+
+. . .
+
+So the classical levers behave strangely:
+
+- All candidate architectures already reach **zero training error**, so
+  the only avenue left is reducing overfitting.
+- Making a model **more** expressive (more layers, nodes, epochs) often
+  *lowers* test error.
+
+. . .
+
+::: {.d2l-note .warn}
+Because nets fit arbitrary labels, **VC-dimension and Rademacher bounds
+cannot explain** why they generalize at all.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Double descent]{.dtitle}
+
+[the U-curve, and what lies past it]{.dsub}
+:::
+:::
+
+::: {.slide title="The classical bias-variance tradeoff"}
+[Double descent]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Classical theory predicts a **U-shaped** test-error curve as capacity
+grows:
+
+$$\underbrace{\text{error}}_{\text{test}} \;=\;
+\underbrace{\text{bias}^2}_{\downarrow\ \text{with capacity}} \;+\;
+\underbrace{\text{variance}}_{\uparrow\ \text{with capacity}}.$$
+
+Too little capacity **underfits**; too much **overfits**; a **sweet
+spot** sits in between.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+This is the left half of the picture on the next slide, and it is *all*
+the classical story predicts.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Double descent: the curve has two valleys" layout="figure"}
+![Classical theory predicts the U-shaped curve on the left: test error falls, then rises, with a sweet spot between. Deep networks follow it only up to the *interpolation threshold*, where the model can just fit the training set ($\#$parameters $\approx \#$examples) and the test error spikes. Past it lies the *over-parametrized regime*, where adding still more capacity makes the test error *descend a second time*, often below the classical optimum. Training error (gray) falls to zero at the threshold and stays there.](../img/mdl-mlp-double-descent.svg){width=70%}
+:::
+
+::: {.slide title="Why bigger is better past the threshold"}
+[Double descent]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+At the **interpolation threshold** the model has *just barely* enough
+capacity to fit the data, forcing a single, jagged, high-variance
+solution.
+
+Past it, **many** parameter settings interpolate the data. Gradient
+descent from a small initialization selects among them, favoring
+**smooth, small-norm** solutions that generalize.
+
+::: {.d2l-note .rule}
+Reframe "more capacity" not as "more overfitting" but as **more room for
+the optimizer to find a simple interpolant**.
+:::
+:::
+
+::: {.col .narrow}
+Double descent appears as we grow the model **and** as we train for more
+epochs or add more data.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Why gradient descent finds simple solutions]{.dtitle}
+
+[implicit bias, grokking, and the kernel view]{.dsub}
+:::
+:::
+
+::: {.slide title="The strongest regularizer is the optimizer"}
+[Implicit bias]{.kicker}
+
+Among all settings that interpolate the data, **SGD does not pick one at
+random**. From a small start it drifts toward small-norm, **flat**
+minima.
+
+. . .
+
+This is provable, not just empirical:
+
+::: {.d2l-note .rule}
+On **separable** data, gradient descent on the logistic loss converges to
+the **maximum-margin** (minimum-norm) separator, with **no** explicit
+penalty.
+:::
+
+So explicit tricks (weight decay, early stopping) **nudge** an
+already-benign bias rather than brute-forcing capacity down.
+:::
+
+::: {.slide title="Grokking: dynamics, not just architecture"}
+[Implicit bias]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+On small algorithmic tasks, a network first **memorizes** the training
+set, with test accuracy flat near chance.
+
+Then, after **many more** steps at zero training loss, it **suddenly
+generalizes**: test accuracy jumps late.
+
+::: {.d2l-note}
+A vivid reminder that optimization **dynamics**, not architecture alone,
+govern generalization.
+:::
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+The same architecture, same data, same loss: only **time spent training**
+changes the outcome.
+:::
+:::
+:::
+:::
+
+::: {.slide title="A nonparametric lens: the neural tangent kernel"}
+[Implicit bias]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Networks *have* parameters, yet often behave like **nonparametric**
+models, whose complexity grows with the data (think $k$-nearest
+neighbors, which **memorizes** and still generalizes).
+
+As a randomly initialized MLP grows **infinitely wide**, it becomes
+equivalent to a **kernel method** for a fixed kernel:
+
+::: {.d2l-note .rule}
+the **neural tangent kernel**, a distance function the architecture
+induces.
+:::
+:::
+
+::: {.col .narrow}
+Over-parametrized nets *interpolate* the data, so the nonparametric
+intuition is often the more reliable one.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Regularization in practice]{.dtitle}
+
+[early stopping and classical penalties, reinterpreted]{.dsub}
+:::
+:::
+
+::: {.slide title="Early stopping: fit clean data first"}
+[Practice]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+With label noise, networks fit the **cleanly labeled** examples first and
+only later interpolate the **mislabeled** ones.
+
+Stop while the clean data is fit but the noise is not, and you have
+provably **generalized**.
+
+::: {.d2l-note}
+**Patience criterion:** monitor validation error each epoch; stop when it
+fails to improve by $\epsilon$ for a few epochs. It also saves training
+time and money.
+:::
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+Matters most under **label noise** or intrinsic label variability. On
+clean, separable data it changes little.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Classical penalties, reinterpreted"}
+[Practice]{.kicker}
+
+Weight decay adds a norm penalty to the loss:
+
+$$\ell_2\ (\text{ridge}):\ \lambda\lVert\mathbf{w}\rVert_2^2
+\qquad
+\ell_1\ (\text{lasso}):\ \lambda\lVert\mathbf{w}\rVert_1.$$
+
+. . .
+
+But at typical strengths, $\ell_2$ is **too weak** to stop a network from
+interpolating the data.
+
+::: {.d2l-note}
+So its benefit may come not from **constraining capacity** but from
+**encoding a better inductive bias**, much like the choice of distance
+in $k$-NN. Often it helps only **together with early stopping**. (Dropout
+is the next such tool.)
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Deep nets are **over-parametrized**: they interpolate the training set,
+  so gains come from **closing the generalization gap**.
+- **Double descent:** past the interpolation threshold, more capacity
+  makes test error **descend again**; the classical U-curve is only half
+  the story.
+- Classical complexity bounds **cannot** explain this.
+:::
+
+::: {.col}
+- **Implicit bias:** SGD prefers smooth, small-norm interpolants (provably
+  max-margin on separable data): the optimizer is the regularizer.
+- **Nonparametric view:** infinitely wide nets become **kernel methods**.
+- **In practice:** early stopping and weight decay help by **nudging**
+  that bias, not by brute-force capacity control.
+:::
+:::
+
+::: {.d2l-note}
+Why certain choices improve generalization remains, for the most part, a
+**massive open question**.
+:::
+:::

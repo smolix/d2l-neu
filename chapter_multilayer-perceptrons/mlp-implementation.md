@@ -52,18 +52,26 @@ among the pixels for now,
 so we can think of this as a classification dataset
 with 784 input features and 10 classes.
 To begin, we will implement an MLP
-with one hidden layer and 256 hidden units.
+with one hidden layer and 256 hidden units
+(:numref:`fig_mdl-mlp-arch`).
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
 Typically, we choose the layer widths to be divisible by larger powers of 2.
-This is computationally efficient due to the way
-memory is allocated and addressed in hardware.
+This improves computational efficiency because the matrix-multiplication kernels
+on modern hardware (CPUs and GPUs) are tuned for operand dimensions that align
+to SIMD vector widths and tensor-core tile sizes.
+
+![The two-layer MLP of this section: a batched input is flattened to 784 features, mapped by an affine layer to a 256-dimensional hidden representation, passed through a ReLU, then mapped by a second affine layer to 10 logits.](../img/mdl-mlp-arch.svg)
+:label:`fig_mdl-mlp-arch`
 
 Again, we will represent our parameters with several tensors.
 Note that *for every layer*, we must keep track of
 one weight matrix and one bias vector.
 As always, we allocate memory
 for the gradients of the loss with respect to these parameters.
+We use small Gaussian noise ($\sigma = 0.01$) as a simple starting point;
+principled strategies for choosing this scale are the subject of
+:numref:`sec_numerical_stability`.
 
 :begin_tab:`mxnet`
 In the code below, we first define and initialize the parameters
@@ -159,7 +167,7 @@ def relu(X):
 ```{.python .input #mlp-implementation-model-1}
 %%tab pytorch
 def relu(X):
-    return torch.clamp(X, min=0)
+    return torch.maximum(X, torch.zeros_like(X))
 ```
 
 ```{.python .input #mlp-implementation-model-1}
@@ -196,7 +204,7 @@ is exactly the same as for softmax regression. We define the model, data, and tr
 ```{.python .input #mlp-implementation-training}
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
 data = d2l.FashionMNIST(batch_size=256)
-trainer = d2l.Trainer(max_epochs=10)
+trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
@@ -297,9 +305,17 @@ trainer.fit(model, data)
 
 ## Summary
 
-Now that we have more practice in designing deep networks, the step from a single to multiple layers of deep networks does not pose such a significant challenge any longer. In particular, we can reuse the training algorithm and data loader. Note, though, that implementing MLPs from scratch is nonetheless messy: naming and keeping track of the model parameters makes it difficult to extend models. For instance, imagine wanting to insert another layer between layers 42 and 43. This might now be layer 42b, unless we are willing to perform sequential renaming. Moreover, if we implement the network from scratch, it is much more difficult for the framework to perform meaningful performance optimizations.
+We have now built and trained a working multilayer perceptron, a network with a hidden layer and a nonlinearity, in both a from-scratch and a concise form. The from-scratch version makes the new ingredients concrete: two weight matrices, two bias vectors, a hand-rolled ReLU, and a two-step forward computation. The concise version shows that `nn.Sequential` absorbs all of that bookkeeping into a four-element stack. The training loop, the loss function, and the data loader are unchanged from softmax regression, a first sign that the modular design pays off.
 
-Nonetheless, you have now reached the state of the art of the late 1980s when fully connected deep networks were the method of choice for neural network modeling. Our next conceptual step will be to consider images. Before we do so, we need to review a number of statistical basics and details on how to compute models efficiently.
+The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". Hand-rolled forward passes are also harder for the framework to optimize. `nn.Sequential` removes both problems at once.
+
+Three questions remain open, and each is the subject of one of the next sections:
+
+* **How do gradients flow through this stack, and what can go wrong as it gets deeper?** (:numref:`sec_backprop`, :numref:`sec_numerical_stability`)
+* **Why does such a flexible model generalize to unseen data at all?** (:numref:`sec_generalization_deep`)
+* **How can we regularize it to generalize better?** (:numref:`sec_dropout`)
+
+Answering them turns this small working model into a reliable building block.
 
 
 ## Exercises
@@ -316,8 +332,8 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 1. Measure the speed of tensor--matrix multiplications for well-aligned and misaligned matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and 1032.
     1. How does this change between GPUs and CPUs?
     1. Determine the memory bus width of your CPU and GPU.
-1. Try out different activation functions. Which one works best?
-1. Is there a difference between weight initializations of the network? Does it matter?
+1. Try out different activation functions. Which one works best on Fashion-MNIST? Compare at least ReLU, tanh, sigmoid, and GELU (`torch.nn.functional.gelu` in PyTorch, `jax.nn.gelu` in JAX). (*Hint:* for sigmoid and tanh you may need to retune the learning rate.) GELU is the default in modern transformer architectures; can you see why from how it behaves on this task?
+1. Compare the effect of three initialization scales on training: (a) small Gaussian noise with $\sigma = 0.001$; (b) the value used in this section, $\sigma = 0.01$; (c) large Gaussian noise with $\sigma = 0.1$. Plot the training and validation curves for each. Why does $\sigma$ matter? (*Hint:* consider what happens to the activations on the very first forward pass.) The principled answer is developed in :numref:`sec_numerical_stability`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/92)
@@ -337,137 +353,270 @@ Nonetheless, you have now reached the state of the art of the late 1980s when fu
 
 <!-- slides -->
 
-::: {.slide title="Implementing an MLP two ways"}
-The simplest **multilayer perceptron** — two affine layers
-with a ReLU between them — trained end-to-end on
-Fashion-MNIST (28×28 grayscale, 10 classes).
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.2]{.kicker}
 
-```
-  X (batch, 784)
-       │ Linear  784 → 256
-       │ ReLU
-       │ Linear  256 → 10
-       ▼
-  logits (batch, 10)
-```
-
-We'll build it twice — **from scratch** (manage the
-weights by hand) and **concise** (`nn.Sequential`) — to
-make concrete what the framework's abstraction buys you.
+Implementing a **multilayer perceptron**<br>One hidden layer, one nonlinearity, two ways to build it.
+:::
 :::
 
-::: {.slide title="Why one hidden layer of 256 is reasonable"}
-For Fashion-MNIST (784 inputs → 10 outputs):
+::: {.slide title="The whole model on one slide"}
+[What we are building]{.kicker}
 
-- **256 hidden units** = roughly 200k parameters. Big
-  enough to memorize the training set in principle, small
-  enough to actually train fast.
-- **Powers of 2** for layer widths are a habit, not magic —
-  matmul kernels are tuned for them; nothing breaks if you
-  use 250 instead.
-- **Single hidden layer** because Fashion-MNIST is easy. A
-  proper deep net wouldn't help much without convolutions
-  (next chapter).
+::: {.cols .vc}
+::: {.col}
+A batched image is **flattened** to 784 features, mapped by
+an **affine layer + ReLU** to a 256-dim hidden vector, then
+by a **second affine layer** to 10 logits.
 
-These are *hyperparameters* — not learned. We set them by
-hand, train, and see what works.
+- One hidden layer, one nonlinearity.
+- Same loss, loaders, and `Trainer` as softmax regression.
+
+::: {.d2l-note}
+That ReLU between the two affine maps is the *entire*
+difference from a linear classifier.
+:::
 :::
 
-::: {.slide title="Setup"}
+::: {.col .fig .big}
+![](../img/mdl-mlp-arch.svg)
+:::
+:::
+:::
+
+::: {.slide title="Why these sizes?"}
+[Design choices]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Fashion-MNIST: $784$ inputs, $10$ classes. We pick **256**
+hidden units, giving $\approx 200\text{k}$ parameters.
+
+- **Width 256:** big enough to fit the data, small enough
+  to train in seconds.
+- **A power of 2** because matmul kernels are tuned for
+  SIMD/tensor-core tile sizes (nothing breaks at 250).
+- **One hidden layer** suffices here; spatial structure
+  waits for convolutions.
+
+::: {.d2l-note .rule}
+Depth, width, and learning rate are **hyperparameters**:
+chosen by hand, not learned.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-mlp-arch.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[From Scratch]{.dtitle}
+
+[parameters, ReLU, and forward by hand]{.dsub}
+:::
+:::
+
+::: {.slide title="Import the framework"}
+[From Scratch]{.kicker}
+
+One imports cell; everything else builds on `d2l`:
+
 @mlp-implementation-implementation-of-multilayer-perceptrons
 :::
 
-::: {.slide title="Parameters from scratch"}
-Two weight matrices, two bias vectors. Init: small Gaussian
-$\mathcal{N}(0, \sigma^2)$ for weights, zero for biases.
+::: {.slide title="Parameters: two weights, two biases"}
+[From Scratch]{.kicker}
 
-$$\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256},\quad
-  \mathbf{b}^{(1)} \in \mathbb{R}^{256},$$
-$$\mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10},\quad
-  \mathbf{b}^{(2)} \in \mathbb{R}^{10}.$$
-
-Total: $784 \cdot 256 + 256 + 256 \cdot 10 + 10 = 203\,530$
-parameters.
-
+::: {.cols .vc}
+::: {.col}
 @mlp-implementation-initializing-model-parameters
 :::
 
-::: {.slide title="ReLU and forward pass"}
-First, our own ReLU — just `max(X, 0)` elementwise:
+::: {.col .narrow}
+Weights start as small Gaussian noise ($\sigma=0.01$) to break symmetry, biases at zero:
+
+$$\mathbf{W}^{(1)}\!\in\mathbb{R}^{784\times256},\;
+  \mathbf{b}^{(1)}\!\in\mathbb{R}^{256}$$
+$$\mathbf{W}^{(2)}\!\in\mathbb{R}^{256\times10},\;
+  \mathbf{b}^{(2)}\!\in\mathbb{R}^{10}$$
+
+::: {.d2l-note}
+$784\cdot256 + 256 + 256\cdot10 + 10 = 203{,}530$ learnable numbers.
+:::
+:::
+:::
+:::
+
+::: {.slide title="ReLU, by hand"}
+[From Scratch]{.kicker}
+
+To see there is no magic, we write the activation ourselves
+rather than calling the built-in. It is just $\max(x, 0)$,
+applied elementwise:
 
 @mlp-implementation-model-1
 
-. . .
+::: {.d2l-note}
+Zero out the negatives, pass the positives through. That one
+kink is what lets a stack of affine maps bend.
+:::
+:::
 
-Then the forward pass:
+::: {.slide title="The forward pass is two lines"}
+[From Scratch]{.kicker}
 
-$$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),\quad
+Flatten, then an affine-ReLU, then a second affine, exactly
+the data flow in the diagram:
+
+$$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),
+\qquad
   \mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}.$$
-
-Image pixels are flattened to a 784-vector first — we're
-ignoring spatial structure. (CNNs in the next chapter
-fix this.)
 
 @mlp-implementation-model-2
 :::
 
-::: {.slide title="Training"}
-Same `Trainer`, same Fashion-MNIST loaders, same
-cross-entropy loss as softmax regression. *Only* the model
-class changed:
+::: {.slide title="Train it"}
+[From Scratch]{.kicker}
 
-@mlp-implementation-training
+The loss, the loaders, and the `Trainer` are **unchanged**
+from softmax regression. Only the model class is new:
 
-About 1–2 percentage points better than plain softmax
-regression on the same data. A nonlinearity earns its keep.
+@!mlp-implementation-training
+
+::: {.d2l-note}
+Validation accuracy climbs to $\approx 0.87$ over 30 epochs,
+a small but real gain over a linear classifier. The
+nonlinearity earns its keep.
+:::
 :::
 
-::: {.slide title="The concise version"}
-Stack the same architecture using the framework's container.
-Lazy linear layers infer input shapes; `ReLU` is built in:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Concise]{.dtitle}
+
+[let the framework keep the books]{.dsub}
+:::
+:::
+
+::: {.slide title="The same model, declared" except="jax"}
+[Concise]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Stack the layers in the framework's container. Lazy linear
+layers infer their input size; `ReLU` and `Flatten` come
+built in:
 
 @mlp-implementation-model-2-2
-
-That's the whole architecture: 6 layers in a `Sequential`
-(`Flatten` + 2 `Linear` + 1 `ReLU` + glue), zero hand-rolled
-parameter management.
-
-Both versions produce the *same* model. The framework just
-removes the bookkeeping.
 :::
 
-::: {.slide title="Same training, same accuracy"}
+::: {.col .narrow}
+::: {.d2l-note .rule}
+`Sequential` *is* the forward pass: apply each layer in
+turn. No hand-written `forward`, no parameter bookkeeping.
+:::
+
+Same architecture as the diagram, four lines instead of two
+classes.
+:::
+:::
+:::
+
+::: {.slide title="The same model, declared" only="jax"}
+[Concise]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Flax builds the network inside one `@nn.compact` method:
+declare each layer where it is applied and the parameters
+are registered for you.
+
+@mlp-implementation-model-2-2
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+No hand-written parameter dictionary: `nn.Dense` registers
+its weights the first time it is called.
+:::
+
+Same architecture as the diagram, one compact method.
+:::
+:::
+:::
+
+::: {.slide title="Same loop, same result"}
+[Concise]{.kicker}
+
+Reusing the very same `trainer` and data, the concise model
+converges just like the scratch one:
+
 @mlp-implementation-training-2
 
-Identical convergence behavior. Built-in `Linear` and
-`ReLU` give you exactly what the from-scratch version
-computes — one of them is just easier to read and harder
-to bug.
+::: {.d2l-note}
+Both versions compute the *same* function. One is just
+easier to read and harder to get wrong.
+:::
 :::
 
-::: {.slide title="What's left to learn"}
-We have a working MLP — but the real questions are open:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-- **Initialization** — pick $\sigma$ so activations don't
-  explode or vanish through depth.
-- **Generalization** — why does it do well on unseen data?
-- **Regularization** — dropout, weight decay, etc.
-- **Backprop** — how gradients flow through arbitrary stacks.
+[What's next]{.dtitle}
 
-Each is the topic of one of the next decks.
+[from a working MLP to a reliable one]{.dsub}
+:::
+:::
+
+::: {.slide title="Four open questions"}
+[Where this goes]{.kicker}
+
+We have a working MLP. Making it *reliable* is the rest of
+this part:
+
+- **Initialization:** choose $\sigma$ so signals neither
+  vanish nor explode through depth.
+- **Backprop:** how gradients flow through an arbitrary
+  stack.
+- **Generalization:** why a flexible model does well on
+  unseen data at all.
+- **Regularization:** dropout, weight decay, and friends.
+
+::: {.d2l-note}
+Each question is the subject of one of the next sections.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- An MLP is a softmax classifier with one or more
-  **hidden layers + nonlinearity** between affine
-  transforms.
-- From scratch: 4 parameter tensors, hand-rolled ReLU,
-  explicit matmuls. Useful to understand; tedious to ship.
-- Concise: `Sequential(Flatten, Linear, ReLU, Linear)` —
-  same model, less bookkeeping.
-- Hyperparameters (depth, width, learning rate) live
-  outside the model class; the same training loop works
-  for any of them.
-- Beats softmax regression on Fashion-MNIST by a small
-  but real margin — first taste of "depth helps".
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- An **MLP** = a linear classifier plus a hidden layer and
+  a **nonlinearity** between affine maps.
+- **From scratch:** four parameter tensors, a hand-rolled
+  ReLU, a two-line forward. Concrete, but tedious to ship.
+- **Concise:** declare the layer stack; the framework owns
+  the parameters and the forward pass.
+:::
+
+::: {.col}
+- Both forms compute the **same** model.
+- The **training loop is unchanged** from softmax
+  regression (modularity paying off).
+- Hyperparameters (depth, width, lr) live **outside** the
+  model; the same loop trains any of them.
+- Beats a linear classifier on Fashion-MNIST: a first
+  taste of *depth helps*.
+:::
+:::
 :::

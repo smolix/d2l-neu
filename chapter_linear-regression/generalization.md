@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Generalization
 :label:`sec_generalization_basics`
 
@@ -89,7 +94,8 @@ than to the underlying distribution is called *overfitting*,
 and techniques for combatting overfitting
 are often called *regularization* methods.
 While it is no substitute for a proper introduction
-to statistical learning theory (see :citet:`Vapnik98,boucheron2005theory`),
+to statistical learning theory (:numref:`chap_classification_generalization`
+gives a first, rigorous taste; see also :citet:`Vapnik98,boucheron2005theory`),
 we will give you just enough intuition to get going.
 We will revisit generalization in many chapters
 throughout the book,
@@ -222,6 +228,13 @@ with those observations that we *in fact* make.
 
 Now what precisely constitutes an appropriate
 notion of model complexity is a complex matter.
+The classical way to make the trade-off precise is the *bias--variance
+decomposition*: a model too simple to capture the signal makes a systematic error
+(high *bias*, i.e., underfitting), while a model flexible enough to chase the
+noise in a particular training set varies wildly from one dataset to the next
+(high *variance*, i.e., overfitting). Their sum traces the U-shaped curve of
+:numref:`fig_capacity_vs_error`, and we derive the decomposition formally in
+:numref:`sec_mdl-statistics`.
 Often, models with more parameters
 are able to fit a greater number
 of arbitrarily assigned labels.
@@ -262,6 +275,15 @@ on our holdout data to certify generalization
 after the fact.
 Error on the holdout data, i.e., validation set,
 is called the *validation error*.
+
+This classical "more capacity means more overfitting" picture is, however,
+*incomplete* for the heavily overparametrized models at the heart of modern deep
+learning. Once a model is large enough to *interpolate* its training data (drive
+training error to zero), pushing capacity even higher often makes test error
+*fall again* rather than rise---the *double descent* phenomenon
+:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`. We take up this modern story, and
+why the classical complexity intuition breaks down, in
+:numref:`sec_generalization_deep`.
 
 ## Underfitting or Overfitting?
 
@@ -335,10 +357,99 @@ and both underfitting and overfitting in :numref:`fig_capacity_vs_error`.
 ![Influence of model complexity on underfitting and overfitting.](../img/capacity-vs-error.svg)
 :label:`fig_capacity_vs_error`
 
+To see this concretely, let us generate data from a known cubic and fit
+polynomials of growing degree to a small training set.
+
+```{.python .input #generalization-polynomial-curve-fitting-1}
+%%tab pytorch
+%matplotlib inline
+import math
+import numpy as np
+from d2l import torch as d2l
+```
+
+```{.python .input #generalization-polynomial-curve-fitting-1}
+%%tab tensorflow
+%matplotlib inline
+import math
+import numpy as np
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #generalization-polynomial-curve-fitting-1}
+%%tab jax
+%matplotlib inline
+import math
+import numpy as np
+from d2l import jax as d2l
+```
+
+```{.python .input #generalization-polynomial-curve-fitting-1}
+%%tab mxnet
+%matplotlib inline
+import math
+import numpy as np
+from d2l import mxnet as d2l
+```
+
+We draw inputs $x$ uniformly from $[-1, 1]$, build a design matrix whose $i$-th
+column is $x^i$, and generate labels from a degree-3 target
+$y = 5 + 1.2 x - 3.4 x^2 + 5.6 x^3$ plus a little Gaussian noise. We deliberately
+keep the training set small so that high-degree models have room to overfit.
+
+```{.python .input #generalization-polynomial-curve-fitting-2}
+np.random.seed(0)
+max_degree = 20                  # highest polynomial degree we will fit
+n_train, n_test = 20, 100        # few training points, so high degrees overfit
+true_w = np.zeros(max_degree)
+true_w[:4] = np.array([5, 1.2, -3.4, 5.6])
+
+x = np.random.uniform(-1, 1, size=n_train + n_test)
+poly = np.power(x.reshape(-1, 1), np.arange(max_degree))   # column i holds x**i
+labels = poly @ true_w + np.random.normal(scale=0.1, size=n_train + n_test)
+```
+
+Fitting the first $d+1$ columns by least squares gives the best degree-$d$
+polynomial; we record its loss on both the training and the held-out test split.
+
+```{.python .input #generalization-polynomial-curve-fitting-3}
+def fit_degree(d):
+    cols = slice(0, d + 1)
+    w, *_ = np.linalg.lstsq(poly[:n_train, cols], labels[:n_train], rcond=None)
+    err = poly[:, cols] @ w - labels
+    return (err[:n_train] ** 2).mean(), (err[n_train:] ** 2).mean()
+```
+
+A degree-1 polynomial is too rigid to capture a cubic, so it errs on both splits
+(*underfitting*); degree 3 matches the true model, with low error on both; and a
+degree-19 polynomial has enough freedom to interpolate the 20 training points
+almost exactly, driving training error toward zero while test error explodes
+(*overfitting*).
+
+```{.python .input #generalization-polynomial-curve-fitting-4}
+for name, d in [('underfitting (degree 1) ', 1),
+                ('just right   (degree 3) ', 3),
+                ('overfitting   (degree 19)', 19)]:
+    train_mse, test_mse = fit_degree(d)
+    print(f'{name}: train {train_mse:8.4f}   test {test_mse:12.4f}')
+```
+
+Sweeping the degree from 1 to 19 traces out exactly the U-shaped test-error curve
+that :numref:`fig_capacity_vs_error` sketches: error first falls as the model
+gains the capacity to represent the signal, then rises as the surplus capacity is
+spent fitting noise. Training error, by contrast, only ever decreases.
+
+```{.python .input #generalization-polynomial-curve-fitting-5}
+degrees = list(range(1, max_degree))
+mse = np.array([fit_degree(d) for d in degrees])
+d2l.plot(degrees, [mse[:, 0], mse[:, 1]], xlabel='polynomial degree',
+         ylabel='loss', legend=['train', 'test'], yscale='log')
+```
+
 
 ### Dataset Size
 
-As the above bound already indicates,
+Beyond model complexity,
 another big consideration
 to bear in mind is dataset size.
 Fixing our model, the fewer samples
@@ -402,8 +513,10 @@ real-world test data is seldom discarded after just one use.
 We can seldom afford a new test set for each round of experiments.
 In fact, recycling benchmark data for decades
 can have a significant impact on the
-development of algorithms,
-e.g., for [image classification](https://paperswithcode.com/sota/image-classification-on-imagenet)
+development of algorithms---as documented when researchers rebuilt fresh test
+sets for long-standing benchmarks and watched accuracy drop
+:cite:`Recht.Roelofs.Schmidt.ea.2019`. This effect is visible, e.g., for
+[image classification](https://paperswithcode.com/sota/image-classification-on-imagenet)
 and [optical character recognition](https://paperswithcode.com/sota/image-classification-on-mnist).
 
 The common practice for addressing the problem of *training on the test set*
@@ -462,6 +575,7 @@ We leave you with a few rules of thumb:
 1. Why is the $K$-fold cross-validation error estimate biased?
 1. The VC dimension is defined as the maximum number of points that can be classified with arbitrary labels $\{\pm 1\}$ by a function of a class of functions. Why might this not be a good idea for measuring how complex the class of functions is? Hint: consider the magnitude of the functions.
 1. Your manager gives you a difficult dataset on which your current algorithm does not perform so well. How would you justify to him that you need more data? Hint: you cannot increase the data but you can decrease it.
+1. Re-run the polynomial-fitting experiment above with `n_train` set to 10, 40, and 100. At what degree does the test loss start to climb in each case? Relate your finding to the rule of thumb that more complex models require more data.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/96)
@@ -478,3 +592,288 @@ We leave you with a few rules of thumb:
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17978)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.6]{.kicker}
+
+Generalization<br>Why fitting the training data is **not** the goal, and how to tell memorizing apart from learning.
+:::
+:::
+
+::: {.slide title="Two students, one exam"}
+[Why this matters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Ellie** memorizes every past answer: 100% on seen questions, lost on new ones.
+- **Irene** spots the pattern: a steady 90%, seen or unseen.
+
+We want predictions on *tomorrow's* data, not yesterday's.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+The goal is a **pattern that generalizes**, not a lookup table of the training set.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Two Errors]{.dtitle}
+
+[the statistic we see vs. the expectation we want]{.dsub}
+:::
+:::
+
+::: {.slide title="Training error vs. generalization error"}
+[Two Errors]{.kicker}
+
+**Training error**, an average over the data we *have*:
+$$R_\textrm{emp} = \tfrac1n \sum_{i=1}^n l\bigl(\mathbf{x}^{(i)}, y^{(i)}, f\bigr)$$
+
+. . .
+
+**Generalization error**, an expectation over data we will *never fully see*:
+$$R = E_{(\mathbf{x},y)\sim P}\bigl[\,l(\mathbf{x}, y, f)\,\bigr]$$
+
+::: {.d2l-note .rule}
+We can never compute $R$. We **estimate** it on held-out data: a fixed model on fresh samples is just mean estimation.
+:::
+:::
+
+::: {.slide title="The IID assumption"}
+[Two Errors]{.kicker}
+
+Train and test are drawn **independently** from the **identical** distribution $P(X,Y)$.
+
+. . .
+
+The training error is a *biased* gauge of $R$: the model was chosen *using* that very data, so it flatters itself.
+
+::: {.d2l-note .warn}
+Drop IID, let the distribution shift from $P$ to $Q$, and without a further assumption nothing can be said about generalization at all.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Model Complexity]{.dtitle}
+
+[the bias–variance trade-off and the U-curve]{.dsub}
+:::
+:::
+
+::: {.slide title="The bias–variance trade-off"}
+[Model Complexity]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Too **simple** → misses the signal: high **bias** (underfitting).
+- Too **flexible** → chases the noise: high **variance** (overfitting).
+
+Test error is their sum, and it bottoms out at a **sweet spot**.
+:::
+
+::: {.col .fig .big}
+![Bias falls and variance rises with complexity; the test error they sum to is U-shaped.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Reading the gap"}
+[Model Complexity]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Both errors high, **small gap** → too simple. *Underfitting*; reach for more capacity.
+- Train error far below test → severe *overfitting*.
+
+The *generalization gap* is $R - R_\textrm{emp}$.
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+Overfitting is not always bad: the best deep models often fit training data far better than holdout. We chase low $R$, and mind the gap only when it blocks us.
+:::
+:::
+:::
+:::
+
+::: {.slide title="What makes a model complex?"}
+[Model Complexity]{.kicker}
+
+A model that can fit **any** labeling has told us nothing (Popper's falsifiability).
+
+. . .
+
+Complexity is more than parameter *count*: it is also the **range of values** parameters may take. Kernel methods have infinitely many parameters yet stay controlled.
+
+::: {.d2l-note .rule}
+Low training error alone never certifies low generalization error, on its own it cannot rule it out either.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The Demo]{.dtitle}
+
+[fit polynomials of growing degree to a noisy cubic]{.dsub}
+:::
+:::
+
+::: {.slide title="Polynomial fitting is linear regression"}
+[The Demo]{.kicker}
+
+Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as features and it is plain least squares (higher degree = more capacity). A degree-3 target, just **20** training points so high degrees can overfit:
+
+@-generalization-polynomial-curve-fitting-2
+:::
+
+::: {.slide title="One fit per degree, scored on both splits"}
+[The Demo]{.kicker}
+
+Fit the first $d{+}1$ power columns by least squares; record the loss on train **and** on held-out test.
+
+@-generalization-polynomial-curve-fitting-3
+:::
+
+::: {.slide title="Under, just right, over" only="pytorch"}
+[The Demo · result]{.kicker}
+
+@generalization-polynomial-curve-fitting-4
+
+. . .
+
+::: {.d2l-note .warn}
+Degree 19 drives **training** error to zero while **test** error explodes past $10^{13}$, the signature of overfitting.
+:::
+:::
+
+::: {.slide title="Sweep the degree: the U-curve, measured" only="pytorch"}
+[The Demo · result]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Train loss falls monotonically. Test loss dips to the sweet spot near degree 3, then blows up, exactly the shape the theory drew.
+
+@!generalization-polynomial-curve-fitting-5
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+This is the bias–variance U-curve, now traced from real numbers rather than sketched.
+:::
+:::
+:::
+:::
+
+::: {.slide title="What the sweep produces" except="pytorch"}
+[The Demo · result]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Sweep the degree from 1 to 19: training loss falls monotonically, while test loss dips to a sweet spot near the true degree 3, then explodes as surplus capacity fits noise.
+:::
+
+::: {.col .fig}
+![Measured test error first falls, then rises: the U-curve, traced by fitting polynomials of growing degree.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="More data, more room"}
+[The Demo]{.kicker}
+
+Fix the model: **fewer** samples means more, and more severe, overfitting.
+
+. . .
+
+So complexity should grow with data, not ahead of it. Deep nets beat linear models only once there are *many thousands* of examples, which is why big datasets fuelled their rise.
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Model Selection]{.dtitle}
+
+[keep the test set honest with a validation split]{.dsub}
+:::
+:::
+
+::: {.slide title="Never select on the test set"}
+[Model Selection]{.kicker}
+
+Touch the test data to *choose* a model and you overfit it silently, and unlike training data, nothing is left to catch you.
+
+. . .
+
+So split **three** ways: train, **validation** (for model selection), test (touched once). Most "test" accuracy in practice is really *validation* accuracy.
+:::
+
+::: {.slide title="K-fold cross-validation"}
+[Model Selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+When data is too scarce to spare a validation set: split into $K$ folds, train on $K{-}1$, validate on the held-out one, rotate, and **average** the $K$ scores.
+:::
+
+::: {.col .fig .big}
+![Each of the K folds serves once as the validation set; average the K validation scores.](../img/mdl-mlp-kfold.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[A Modern Twist]{.dtitle}
+
+[when more capacity helps again]{.dsub}
+:::
+:::
+
+::: {.slide title="Double descent"}
+[A Modern Twist]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The classical U is only half the story for huge models. Once capacity is large enough to **interpolate** the data, pushing it further often makes test error **fall again**.
+:::
+
+::: {.col .fig .big}
+![Past the interpolation threshold, test error descends a second time, the over-parametrized regime of deep learning.](../img/mdl-mlp-double-descent.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Rules of thumb"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Generalization**, not training fit, is the goal: mind the gap $R - R_\textrm{emp}$.
+- **Bias–variance:** test error is U-shaped in complexity; aim for the sweet spot.
+- **Complexity** = parameter count *and* the range of values they may take.
+:::
+
+::: {.col}
+- Select models with a **validation set** or **K-fold CV**, never the test set.
+- **More data** rarely hurts; let complexity grow with it.
+- All of this rests on **IID**, and huge models can defy the classical U via **double descent**.
+:::
+:::
+:::

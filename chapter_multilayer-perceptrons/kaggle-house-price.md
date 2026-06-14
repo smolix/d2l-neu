@@ -18,8 +18,9 @@ The data is fairly generic and does not exhibit exotic structure
 that might require specialized models (as audio or video might).
 This dataset, collected by :citet:`De-Cock.2011`,
 covers house prices in Ames, Iowa from the period 2006--2010.
-It is considerably larger than the famous [Boston housing dataset](https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.names) of Harrison and Rubinfeld (1978),
-boasting both more examples and more features.
+It was assembled as a modern, larger alternative to the small
+end-of-century teaching datasets that preceded it, boasting both more
+examples and more features.
 
 
 In this section, we will walk you through details of
@@ -64,23 +65,6 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 import pandas as pd
-```
-
-## Downloading Data
-
-Throughout the book, we will train and test models
-on various downloaded datasets.
-Here, we implement two utility functions
-for downloading and extracting zip or tar files.
-Again, we skip implementation details of
-such utility functions.
-
-```{.python .input #kaggle-house-price-downloading-data  n=2}
-def download(url, folder, sha1_hash=None):
-    """Download a file to folder and return the local filepath."""
-
-def extract(filename, folder):
-    """Extract a zip/tar file into folder."""
 ```
 
 ## Kaggle
@@ -148,9 +132,11 @@ has links for downloading the data.
 
 To get started, we will read in and process the data
 using `pandas`, which we introduced in :numref:`sec_pandas`.
-For convenience, we can download and cache
-the Kaggle housing dataset.
-If a file corresponding to this dataset already exists in the cache directory and its SHA-1 matches `sha1_hash`, our code will use the cached file to avoid clogging up your Internet with redundant downloads.
+For convenience, we use the `d2l.download` helper to fetch and cache
+the Kaggle housing dataset. It performs hash-checked caching: if a file
+corresponding to this dataset already exists in the cache directory and its
+SHA-1 matches `sha1_hash`, the cached copy is reused, avoiding redundant
+downloads (its implementation details live in the d2l library).
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
 class KaggleHouse(d2l.DataModule):
@@ -205,18 +191,27 @@ rescaling features to zero mean and unit variance:
 
 $$x \leftarrow \frac{x - \mu}{\sigma},$$
 
-where $\mu$ and $\sigma$ denote mean and standard deviation, respectively.
-To verify that this indeed transforms
-our feature (variable) such that it has zero mean and unit variance,
-note that $E[\frac{x-\mu}{\sigma}] = \frac{\mu - \mu}{\sigma} = 0$
-and that $E[(x-\mu)^2] = (\sigma^2 + \mu^2) - 2\mu^2+\mu^2 = \sigma^2$.
-Intuitively, we standardize the data
-for two reasons.
-First, it proves convenient for optimization.
-Second, because we do not know *a priori*
-which features will be relevant,
-we do not want to penalize coefficients
-assigned to one feature more than any other.
+where $\mu$ and $\sigma$ denote the feature's mean and standard deviation.
+By the definition of mean and variance, the rescaled feature has
+$E\!\left[\frac{x-\mu}{\sigma}\right] = 0$ and
+$\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1$,
+so every column now lives on the same zero-mean, unit-variance scale.
+Crucially, we compute $\mu$ and $\sigma$ from the *training* set only and
+apply the very same transformation to the test set. Using statistics that
+include the test data would let information about the test distribution
+seep into our preprocessing, optimistically biasing every evaluation we
+make afterwards. This pitfall, *test-set leakage*, is one of the most
+common ways a model looks better offline than it ever does in deployment.
+
+Intuitively, we standardize the data for three reasons.
+First, it proves convenient for optimization, putting all coordinates on a
+comparable scale. Second, because we do not know *a priori*
+which features will be relevant, we do not want to penalize coefficients
+assigned to one feature more than any other (a single scale lets weight
+decay treat them even-handedly). Third, it makes our mean-imputation step
+coherent: after standardization, filling a missing value with the column
+mean is exactly filling it with $0$, the same neutral value regardless of
+the feature's original units.
 
 Next we deal with discrete values.
 These include features such as "MSZoning".
@@ -268,7 +263,7 @@ data.train.shape
 
 ## Error Measure
 
-To get started we will train a linear model with squared loss. Not surprisingly, our linear model will not lead to a competition-winning submission but it does provide a sanity check to see whether there is meaningful information in the data. If we cannot do better than random guessing here, then there might be a good chance that we have a data processing bug. And if things work, the linear model will serve as a baseline giving us some intuition about how close the simple model gets to the best reported models, giving us a sense of how much gain we should expect from fancier models.
+Before choosing a model, we need to decide what "good" means: the loss we train against and the metric we are scored on. Whatever model we fit, getting it to beat random guessing is a first sanity check that there is meaningful signal in the data and no data-processing bug, and the first working model becomes a baseline that tells us how much room fancier models have to improve. So the choice of error measure comes first.
 
 With house prices, as with stock prices,
 we care about relative quantities
@@ -316,6 +311,16 @@ in :numref:`subsec_generalization-model-selection`, where we discussed how to de
 with model selection.
 We will put this to good use to select the model design
 and to adjust the hyperparameters.
+The idea is shown in :numref:`fig_kfold`: we partition the data into $K$
+equal folds and run $K$ training rounds. In round $i$, fold $i$ is held out
+for validation and the model is trained on the remaining $K-1$ folds; our
+generalization estimate is the average of the $K$ validation scores. With
+only about $1500$ training examples here, this reuse of the data gives a far
+steadier estimate than any single train/validation split would.
+
+![In $K$-fold cross-validation with $K=5$, the data is partitioned into five equal folds. In each round $i$, fold $i$ is held out as the validation set (orange) and the model is trained on the remaining four folds (blue). The generalization estimate is the average of the five validation scores.](../img/mdl-mlp-kfold.svg)
+:label:`fig_kfold`
+
 We first need a function that returns
 the $i^\textrm{th}$ fold of the data
 in a $K$-fold cross-validation procedure.
@@ -340,10 +345,27 @@ def k_fold_data(data, k):
 ```
 
 The average validation error is returned
-when we train $K$ times in the $K$-fold cross-validation.
+when we train $K$ times in the $K$-fold cross-validation. We pass in a
+`model_fn` that builds a fresh model for each fold, so the *same*
+cross-validation loop can score a linear baseline or an MLP without change.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch
+def k_fold(trainer, data, k, model_fn):
+    val_loss, models = [], []
+    for i, data_fold in enumerate(k_fold_data(data, k)):
+        model = model_fn()
+        model.board.yscale='log'
+        if i != 0: model.board.display = False
+        trainer.fit(model, data_fold)
+        val_loss.append(float(model.board.data['val_loss'][-1].y))
+        models.append(model)
+    print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+    return models
+```
+
+```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
+%%tab mxnet, tensorflow
 def k_fold(trainer, data, k, lr):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
@@ -376,9 +398,8 @@ def k_fold(trainer, data, k, lr):
 
 ## Model Selection
 
-In this example, we pick an untuned set of hyperparameters
-and leave it up to the reader to improve the model.
-Finding a good choice can take time,
+We now have everything we need to compare model designs by their
+$K$-fold cross-validation score. Finding a good choice can take time,
 depending on how many variables one optimizes over.
 With a large enough dataset,
 and the normal sorts of hyperparameters,
@@ -388,10 +409,87 @@ However, if we try an unreasonably large number of options
 we might find that our validation
 performance is no longer representative of the true error.
 
-```{.python .input #kaggle-house-price-model-selection}
+One honest caveat before we run the numbers. On *structured tabular data*
+like this dataset, gradient-boosted tree ensembles (XGBoost and LightGBM)
+typically outperform deep networks, including MLPs
+:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`, and the
+public leaderboard for this competition reflects that: the top submissions
+are almost always tree-based, with neural networks some distance behind. This
+does not diminish what we learn here, since the preprocessing pipeline,
+log-RMSE loss, and $K$-fold cross-validation apply to *any* model class.
+But it does set honest expectations about where neural networks shine
+(images, text, audio, and sequences) and where they currently do not
+(small-to-medium tabular data).
+
+We start with a linear model. It is a fast, honest baseline that
+sanity-checks the pipeline. One subtlety is easy to get wrong and worth
+stating plainly: a baseline is only meaningful if it is *trained
+competently*. Plain minibatch SGD on these standardized features needs more
+than a handful of passes to converge, so we give the linear model a healthy
+$100$ epochs at learning rate $0.03$ (a larger rate diverges on the
+log-price target). Trained this way the linear model already reaches a
+cross-validated log error well under $0.05$; stopping at the customary ten
+epochs would instead leave it badly underfit (closer to $0.18$), which would
+flatter every model we compared against it.
+
+```{.python .input #kaggle-house-price-model-selection-linear}
+%%tab pytorch
+trainer = d2l.Trainer(max_epochs=100)
+linear_models = k_fold(trainer, data, k=5,
+                       model_fn=lambda: d2l.LinearRegression(lr=0.03))
+```
+
+```{.python .input #kaggle-house-price-model-selection-linear}
+%%tab mxnet, tensorflow, jax
 trainer = d2l.Trainer(max_epochs=10)
 models = k_fold(trainer, data, k=5, lr=0.01)
 ```
+
+Can a small neural network do better? Now that we have weight decay
+(:numref:`sec_weight_decay`), dropout (:numref:`sec_dropout`), and sensible
+initialization (:numref:`sec_numerical_stability`) in hand, we can try the
+simplest possible upgrade: a single hidden layer with a ReLU
+nonlinearity. The dataset is tiny (about $1460$ rows, $331$ features after
+one-hot encoding), so capacity is the enemy. We therefore keep the network
+*small* and lean on regularization: a modest $32$-unit hidden layer, a light
+dropout of $0.1$, and a small amount of $L_2$ weight decay ($10^{-4}$) added
+straight into SGD. A wider net or aggressive dropout (the $0.5$ that is
+common on large datasets) simply overfits or fails to train on data this
+small. We reuse the squared-error loss from `LinearRegression` and only
+override the optimizer to attach weight decay.
+
+```{.python .input #kaggle-house-price-mlp-model}
+%%tab pytorch
+class KaggleMLP(d2l.LinearRegression):
+    def __init__(self, lr, num_hiddens=32, dropout=0.1, weight_decay=1e-4):
+        super(d2l.LinearRegression, self).__init__()
+        self.save_hyperparameters()
+        self.net = nn.Sequential(nn.LazyLinear(num_hiddens), nn.ReLU(),
+                                 nn.Dropout(dropout), nn.LazyLinear(1))
+
+    def configure_optimizers(self):
+        return torch.optim.SGD(self.parameters(), lr=self.lr,
+                               weight_decay=self.weight_decay)
+```
+
+We train it with the *same* $K$-fold loop, learning rate, and epoch budget
+as the linear baseline, so the only thing that changes is the model.
+
+```{.python .input #kaggle-house-price-mlp-select}
+%%tab pytorch
+trainer = d2l.Trainer(max_epochs=100)
+models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
+```
+
+On this run the small MLP edges out the (now competently trained) linear
+baseline: both land near a cross-validated log error of $0.03$, with the MLP
+a hair lower. The lesson is deliberately undramatic. A nonlinear model helps
+a little here, but only once it is small enough and regularized enough to
+survive a dataset of barely a thousand rows; the bulk of the gain over a
+careless $0.18$ baseline came simply from training *either* model to
+convergence. And as the caveat above promised, a gradient-boosted tree
+ensemble would still be the stronger tabular choice. The exercises invite you
+to try one and see.
 
 Notice that sometimes the number of training errors
 for a set of hyperparameters can be very low,
@@ -418,7 +516,9 @@ The following code will generate a file called `submission.csv`.
 %%tab pytorch
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Taking exponentiation of predictions in the logarithm scale
+# Each model predicts a log-price; exponentiate back to a price, then average
+# across the K folds. (Averaging in log space, then exponentiating, makes this
+# a geometric mean of the per-fold price predictions.)
 ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
@@ -476,15 +576,40 @@ The steps are quite simple:
 
 ## Summary and Discussion
 
-Real data often contains a mix of different data types and needs to be preprocessed.
-Rescaling real-valued data to zero mean and unit variance is a good default. So is replacing missing values with their mean.
-Furthermore, transforming categorical features into indicator features allows us to treat them like one-hot vectors.
-When we tend to care more about
-the relative error than about the absolute error,
-we can 
-measure the discrepancy in the logarithm of the prediction.
-To select the model and adjust the hyperparameters,
-we can use $K$-fold cross-validation .
+Real data is messy: a mix of numeric and categorical features, with missing
+values and wildly different scales. The preprocessing pipeline in this
+section (mean imputation, standardization with statistics fit on the training
+set only to avoid test-set leakage, and one-hot encoding of categoricals) is
+a sensible default that applies far beyond this competition. When the target
+spans an order of magnitude, predicting the *logarithm* of the price and
+scoring with root-mean-squared log error converts an asymmetric dollar-scale
+problem into one where a $10\%$ error on a $\$100{,}000$ house and on a
+$\$1{,}000{,}000$ house are penalized equally, which is what we actually care
+about.
+
+$K$-fold cross-validation is the right tool when training data is limited
+(about $1500$ examples here): it spends $K$ training runs to buy a stable
+estimate of generalization error, and that same loop doubles as the
+infrastructure for hyperparameter search.
+
+Two caveats belong in any honest account of this pipeline. First, none of it
+is specific to neural networks. The same preprocessing, loss design, and
+cross-validation loop work with any model class, including the
+gradient-boosted tree ensembles (XGBoost, LightGBM) that routinely beat deep
+networks on medium-sized tabular data
+:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`. On images,
+text, and audio the balance tips the other way, which is where the rest of
+this book lives. Second, model capacity matters: adding hidden layers, tuning
+the dropout rate, and searching over learning rate and weight decay can
+improve substantially on the baseline shown here, which is exactly what the
+exercises ask you to do.
+
+Looking ahead, the moves we made here recur throughout supervised learning.
+Feature scaling and imputation reappear in nearly every tabular pipeline, and
+the competition recipe (download, preprocess, match the loss to the metric,
+cross-validate, refit, submit) generalizes directly: later chapters apply the
+same cross-validation discipline to image datasets, sequence tasks, and the
+fine-tuning of pretrained models.
 
 
 
@@ -495,6 +620,8 @@ we can use $K$-fold cross-validation .
 1. Improve the score by tuning the hyperparameters through $K$-fold cross-validation.
 1. Improve the score by improving the model (e.g., layers, weight decay, and dropout).
 1. What happens if we do not standardize the continuous numerical features as we have done in this section?
+1. Swap the linear model for a gradient-boosted tree model (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or LightGBM if installed), trained on the same preprocessed features. How does its cross-validated log-RMSE compare? Why might tree ensembles have an edge on data like this?
+1. Revisit the preprocessing choices. How does median imputation compare to mean imputation? What changes if you encode high-cardinality categorical features with target encoding or a learned embedding instead of one-hot vectors?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/106)
@@ -514,176 +641,405 @@ we can use $K$-fold cross-validation .
 
 <!-- slides -->
 
-::: {.slide title="House prices: a full ML pipeline"}
-**House Prices: Advanced Regression Techniques** —
-predict sale prices of Ames, Iowa houses from 80 numeric
-and categorical features. A small but realistic end-to-end
-ML exercise.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.7]{.kicker}
 
-What makes it interesting:
+Predicting **house prices** on Kaggle<br>An end-to-end machine-learning pipeline: messy real data in, a scored prediction out.
+:::
+:::
 
-- **1460 train / 1459 test** — small data.
-- **80 mixed features** — needs preprocessing.
-- **Missing values** in dozens of columns.
-- **Targets vary 10×** ($65k–$755k) — wrong loss
-  overweights expensive houses.
+::: {.slide title="The model is five lines; the pipeline is the lesson"}
+[Motivation]{.kicker}
 
-The MLP is 5 lines. The lesson is the **pipeline** around
-it — preprocessing, the right loss, CV, submission.
+::: {.cols .vc}
+::: {.col}
+The Ames, Iowa housing competition: **1460** labelled houses, **80**
+mixed features, predict the sale price of **1459** more.
+
+- raw data is **heterogeneous** (numbers *and* categories) and has
+  **missing** values;
+- prices span **10×**, so the wrong loss over-weights mansions;
+- only **~1500** rows, so one train/val split is noisy.
+
+::: {.d2l-note}
+Preprocess, match the loss to the metric, cross-validate, submit. That
+recipe outlives any single model.
+:::
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .rule}
+Everything here works for **any** model class, not just neural nets.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The competition]{.dtitle}
+
+[what Kaggle is, and what this dataset asks]{.dsub}
+:::
 :::
 
 ::: {.slide title="Kaggle in 30 seconds"}
-Kaggle hosts open ML competitions. Download train + test
-CSVs, train locally, upload predictions, get scored on a
-held-out portion of the test set.
+[The competition]{.kicker}
 
-![Kaggle competition page.](../img/kaggle.png){width=80%}
+::: {.cols .vc}
+::: {.col}
+Kaggle hosts open ML competitions. Download the train and test CSVs,
+train locally, upload predictions, get scored on a held-out slice of
+the test set.
+
+::: {.d2l-note}
+A **public/private** split on the test labels keeps everyone honest
+about overfitting the leaderboard.
+:::
 :::
 
-::: {.slide title="The House Prices page"}
-![The competition's data tab — download and inspect.](../img/house-pricing.png){width=82%}
-
-Real-world ML practice: data isn't preprocessed for you,
-the leaderboard tells you instantly if you're better than
-baseline, and the public/private split keeps people honest
-about overfitting.
+::: {.col .fig .big}
+![The Kaggle competition platform: pick a competition, grab the data, submit predictions.](../img/kaggle.png){width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Setup and data download"}
-A reusable hash-checked download helper we'll keep using
-throughout the book:
+::: {.slide title="The House Prices competition page"}
+[The competition]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The data is generic on purpose: no images, audio, or sequences, just a
+spreadsheet of house attributes and one price column.
+
+That makes it the perfect first capstone, the whole job is the
+**pipeline** around the model.
+:::
+
+::: {.col .fig .big}
+![The "Data" tab holds the train/test CSVs; the leaderboard scores each submission instantly.](../img/house-pricing.png){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Reading & preprocessing]{.dtitle}
+
+[from a messy DataFrame to clean tensors]{.dsub}
+:::
+:::
+
+::: {.slide title="One imports cell, then read the CSVs"}
+[Setup]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A single per-framework imports cell. We read the data with `pandas`
+and `d2l.download`, a reusable hash-checked cache we lean on throughout
+the book:
 
 @kaggle-house-price-predicting-house-prices-on-kaggle
-
-. . .
-
-@kaggle-house-price-downloading-data
 :::
 
-::: {.slide title="Reading the data"}
-Wrap train and test CSVs in a `KaggleHouse(d2l.DataModule)`:
+::: {.col .narrow}
+::: {.d2l-note}
+`download` verifies a file's **SHA-1** and reuses the cached copy, so
+re-running never re-fetches.
+:::
+:::
+:::
+:::
 
-@kaggle-house-price-accessing-and-reading-the-dataset-1
+::: {.slide title="Wrap train and test in a DataModule"}
+[Reading the data]{.kicker}
 
-. . .
+::: {.cols .vc}
+::: {.col}
+A `KaggleHouse(d2l.DataModule)` holds the raw train and test frames:
+
+@-kaggle-house-price-accessing-and-reading-the-dataset-1
+:::
+
+::: {.col .narrow}
+Train carries the label column, test does not, and that is what we predict:
 
 @kaggle-house-price-accessing-and-reading-the-dataset-2
 :::
+:::
+:::
 
-::: {.slide title="What the rows look like"}
+::: {.slide title="What a few rows look like"}
+[Reading the data]{.kicker}
+
 @kaggle-house-price-data-preprocessing-1
 
-Mixed numeric and categorical columns; lots of missing
-values; final column is the target `SalePrice`. Models eat
-tensors, not DataFrames — preprocessing is mandatory.
+Numbers (`LotFrontage`), categories (`MSZoning`, `SaleType`), an `Id`
+that carries no signal, and the target `SalePrice`. Models eat tensors,
+not DataFrames, so preprocessing is mandatory.
 :::
 
-::: {.slide title="Three preprocessing transforms"}
-**Fit statistics on train**, then apply the same transform
-to train and test — so test data is mapped with the
-training-time statistics (no test-set leakage):
+::: {.slide title="Three transforms turn features into tensors"}
+[Preprocessing]{.kicker}
 
-1. **Numeric NaN → mean.** Simple imputation; median or
-   zero are alternatives.
-2. **Standardize** numeric columns to mean 0, std 1 —
-   makes optimization well-conditioned across wildly
-   different scales.
-3. **One-hot encode** categorical columns. `NaN` becomes
-   its own category — missing-as-a-signal.
+::: {.cols .vc}
+::: {.col}
+1. **Impute** missing numbers with the column **mean**.
+2. **Standardize** each numeric column to mean 0, variance 1, so wildly
+   different scales become comparable.
+3. **One-hot encode** every category; a missing category becomes its
+   own column (missing-as-signal).
 :::
 
-::: {.slide title="The transforms in code"}
-@kaggle-house-price-data-preprocessing-2
-
-. . .
-
-@kaggle-house-price-data-preprocessing-3
-
-After preprocessing: ~330 columns of well-scaled floats.
+::: {.col .narrow}
+::: {.d2l-note .warn}
+Fit the mean and std on **train only**, then apply them to test. Using
+test statistics is **leakage** and flatters every later score.
+:::
+:::
+:::
 :::
 
-::: {.slide title="Choosing the right loss"}
-Plain squared error penalizes a $10k mistake on a $70k
-house the same as on a $700k house. The *relative* error
-is more honest — predict the **logarithm** of the price:
+::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)"}
+[Preprocessing]{.kicker}
 
-$$\text{RMSLE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \big(\log y_i - \log \hat y_i\big)^2}.$$
+@-kaggle-house-price-data-preprocessing-2
+:::
 
-The official Kaggle metric for this competition. Mistakes
-are measured **as percentages**, not dollars.
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The right loss]{.dtitle}
+
+[match what you train to what you are scored on]{.dsub}
+:::
+:::
+
+::: {.slide title="Prices are relative, so score the logarithm"}
+[Error measure]{.kicker}
+
+A \$100k miss on a \$125k house is a disaster; on a \$4M house it is a
+great prediction. We care about **relative** error, so predict
+$\log(\text{price})$ and score the root-mean-squared log error:
+
+$$\textrm{RMSLE} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}\big(\log y_i - \log \hat{y}_i\big)^2}.$$
+
+::: {.d2l-note .rule}
+This is the **official** Kaggle metric here. Errors are penalized as
+percentages, not dollars.
+:::
 :::
 
 ::: {.slide title="Loss in code"}
+[Error measure]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The data loader hands back features and the **log** of the price, so an
+ordinary squared-error loss already trains against log-RMSE:
+
 @kaggle-house-price-error-measure
 :::
 
+::: {.col .narrow}
+::: {.d2l-note}
+Taking the log in the loader means the model and loss code stay
+completely standard.
+:::
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[K-fold cross-validation]{.dtitle}
+
+[a stable score from a small dataset]{.dsub}
+:::
+:::
+
 ::: {.slide title="K-fold cross-validation"}
-With ~1500 training examples, a single 80/20 split is
-noisy. **K-fold CV**: split into $K$ folds, train $K$
-times holding each fold out, average the scores.
+[Model selection]{.kicker}
 
-```
-fold 1:  [ val ][ train ][ train ][ train ][ train ]
-fold 2:  [train][  val  ][ train ][ train ][ train ]
-fold 3:  [train][ train ][  val  ][ train ][ train ]
-fold 4:  [train][ train ][ train ][  val  ][ train ]
-fold 5:  [train][ train ][ train ][ train ][  val  ]
-```
+::: {.cols .vc}
+::: {.col}
+With ~1500 rows, one 80/20 split is noisy. Split the data into $K$
+folds; train $K$ times, each time holding out a different fold;
+**average** the $K$ validation scores.
 
-Costs $K\times$ more compute; gives a stable estimate of
-generalization error.
+::: {.d2l-note}
+Costs $K\times$ the compute, buys a far steadier estimate, and the same
+loop doubles as the hyperparameter search.
+:::
+:::
+
+::: {.col .fig .big}
+![Each round holds out one fold for validation (orange) and trains on the other four (blue); the estimate is the mean of the five scores.](../img/mdl-mlp-kfold.svg){width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="K-fold in code"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Slice out fold $i$ for validation, keep the rest to train:
+
 @kaggle-house-price-k-fold-cross-validation-1
-
-. . .
-
-@kaggle-house-price-k-fold-cross-validation-2
 :::
 
-::: {.slide title="Model selection"}
-@kaggle-house-price-model-selection
+::: {.col}
+Fit a fresh model per fold, average the held-out losses:
 
-In practice you'd grid- or random-search over learning
-rate, hidden size, weight decay, dropout. Same loop,
-different hyperparameters. Pick the config with the lowest
-**average** val score.
+@-kaggle-house-price-k-fold-cross-validation-2
+:::
+:::
 :::
 
-::: {.slide title="Submitting predictions"}
-Final step: re-fit on **all** training data (no
-validation hold-out), predict the test set, write the
-Kaggle-format CSV:
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
 
-@kaggle-house-price-submitting-predictions-on-kaggle
+[Model selection]{.dtitle}
 
-![Upload the CSV; Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=84%}
+[a competent baseline, then a small MLP]{.dsub}
+:::
+:::
+
+::: {.slide title="A baseline only counts if it is trained to convergence" only="pytorch"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Start with a linear model, a fast honest baseline, but train it **competently**: 100 epochs at lr 0.03, not the customary ten:
+
+@!kaggle-house-price-model-selection-linear
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+Stopping at 10 epochs leaves it underfit (~0.18) and flatters every model compared against it.
+:::
+:::
+:::
+:::
+
+::: {.slide title="A linear baseline to sanity-check the pipeline" except="pytorch"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Start with a linear model run through the same K-fold loop, a quick,
+honest baseline that confirms the pipeline works:
+
+@kaggle-house-price-model-selection-linear
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+At a brief 10 epochs it is still **underfit** (log error ~0.18); train
+it longer and the score drops sharply.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Can a small MLP do better?" only="pytorch"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The dataset is tiny, so capacity is the enemy. Keep the net **small**
+and lean on regularization: one 32-unit hidden layer, light dropout,
+a little weight decay:
+
+@-kaggle-house-price-mlp-model
+:::
+
+::: {.col .narrow}
+::: {.d2l-note}
+We reuse `LinearRegression`'s squared-error loss and only override the
+optimizer to attach weight decay.
+:::
+:::
+:::
+:::
+
+::: {.slide title="Same loop, only the model changes" only="pytorch"}
+[Model selection]{.kicker}
+
+Train the MLP with the **same** K-fold loop, learning rate, and epoch budget as the baseline:
+
+@!kaggle-house-price-mlp-select
+
+The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The gain is deliberately modest: on small tabular data, gradient-boosted trees would still win.
+:::
+
+::: {.slide title="Submit: ensemble the folds, write the CSV"}
+[Submitting]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Average the $K$ models' predictions (in price space), then write a
+Kaggle-format `submission.csv`:
+
+@-kaggle-house-price-submitting-predictions-on-kaggle
+:::
+
+::: {.col .fig}
+![Upload the CSV and Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="The general competition recipe"}
-Same shape works for almost any tabular ML competition:
+[Wrap-up]{.kicker}
 
-1. **Download** train + test data.
-2. **Preprocess** — impute, scale, encode (combined stats).
-3. **Choose the right loss** — match the scoring metric.
-4. **K-fold CV** for generalization estimate + HP search.
-5. **Refit on all training data** with the best HPs.
-6. **Submit** predictions in the host's format.
+::: {.cols}
+::: {.col}
+1. **Download** the train and test data.
+2. **Preprocess**: impute, standardize, one-hot (stats fit on train).
+3. **Match the loss** to the scoring metric.
+4. **K-fold CV** for a generalization estimate and HP search.
+:::
 
-GBDTs (XGBoost / LightGBM) usually win tabular; nets shine
-on images, text, audio. The pipeline is the same.
+::: {.col}
+5. **Refit** with the chosen hyperparameters.
+6. **Submit** in the host's format.
+
+::: {.d2l-note}
+Trees (XGBoost, LightGBM) usually win small tabular data; nets shine on
+images, text, audio. The pipeline is identical.
+:::
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Real-world ML is mostly **pipeline**, not model
-  architecture.
-- Heterogeneous tabular data → impute, standardize,
-  one-hot encode.
-- Match the loss to the metric — log-RMSE for prices, not
-  squared error.
-- K-fold CV for stable generalization estimates on small
-  data.
-- Refit on full data before final predictions.
-- The MLP is a few lines; everything around it is the lesson.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Real ML is mostly **pipeline**, not architecture.
+- Heterogeneous data: **impute, standardize, one-hot**, with statistics
+  fit on **train only** (no leakage).
+- **Match the loss to the metric**: log-RMSE for prices.
+:::
+
+::: {.col}
+- **K-fold CV** gives a stable estimate on small data and drives HP
+  search.
+- **Refit** on the chosen settings, then submit.
+- The model is a few lines; **everything around it is the lesson**.
+:::
+:::
 :::

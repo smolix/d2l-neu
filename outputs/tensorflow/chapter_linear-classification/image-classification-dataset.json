@@ -28,28 +28,28 @@
         }
       ]
     },
-    "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:5c3f07e2b1ee7ea88ff8d612cabfb67529030e452911c9cc76784c2eb8980996",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(28, 28)"
-        }
-      ]
-    },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:8a1ec451e188fe59821af4c4c7b6b4356b72673ae0e5555234ef916000504b19",
+      "code_fingerprint": "sha256:91e5c437de55dae616fdafebdba5e392a5dac6641eb939c5cd594d410fa78f14",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:6d29237ea8a10e47f22ee5f9657cb10f011986005a4ba383d71283de75424751",
+      "code_fingerprint": "sha256:f0500eb91d81c0e0e876ad519ed1e876672e0f460a842d719b3f128083d1648b",
       "kind": "text",
       "outputs": []
     },
+    "image-classification-dataset-loading-the-dataset-3": {
+      "code_fingerprint": "sha256:ff23dcaf20a3c1701d5bbe07b9f3eaee78a1ef31bb472d83d77cced764e222dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([32, 32, 1])"
+        }
+      ]
+    },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:4ce2fb0bb715bd9edaefec9cd8ff2eebb2df65be4b45c24499c04fa9b17d5f84",
+      "code_fingerprint": "sha256:4f703b47e5745170aec6321a062f83232092dd87e436d8feb81dfde00d6f2dd9",
       "kind": "text",
       "outputs": [
         {
@@ -60,30 +60,30 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:1145cdb0ba477de6a856cfd258de0892164c167e60e06db3bc98e8c4cf10cf38",
+      "code_fingerprint": "sha256:95ce5c079c7df8e17f952b09763ff05215fd136039953dc2e4de32ede6ed3f12",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.64 sec'"
+          "text": "'0.15 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-1": {
-      "code_fingerprint": "sha256:080c7e2e4f1520574a817693de59c474f564637cfd2bac7037365f39571681b2",
+      "code_fingerprint": "sha256:a95d4ede82a1132040587a5ec2d60f2ccce9e1ce678acc87edb657d6d89efe16",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:a825b9b41957076ddb05eaf3ce1324d1d2e6a20e7b8ec54e33eb466ce7403ac6",
+      "code_fingerprint": "sha256:f822348fa0758955896deb57f2662bb2203ecb0e76921e21fd287e0b552ca7d6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
-          "bytes": 49046,
-          "sha256": "sha256:c7919d4236cc3e76dabe9502dd090a3523637c9e82581a75f3bccf1c5b1d27c5"
+          "bytes": 48470,
+          "sha256": "sha256:1f649f40f194de25cbe053575acb97edb9dc15074b31cfe3d062d7184b5e014e"
         }
       ]
     }

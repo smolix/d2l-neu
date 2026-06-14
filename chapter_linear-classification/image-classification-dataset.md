@@ -8,15 +8,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-One widely used dataset for image classification is the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998` of handwritten digits. At the time of its release in the 1990s it posed a formidable challenge to most machine learning algorithms, consisting of 60,000 images of $28 \times 28$ pixel resolution (plus a test dataset of 10,000 images). To put things into perspective, back in 1995, a Sun SPARCStation 5 with a whopping 64MB of RAM and a blistering 5 MFLOPs was considered state-of-the-art equipment for machine learning at AT&T Bell Laboratories. Achieving high accuracy on digit recognition was a key component in automating letter sorting for the USPS in the 1990s. Deep networks such as LeNet-5 :cite:`LeCun.Jackel.Bottou.ea.1995`, support vector machines with invariances :cite:`Scholkopf.Burges.Vapnik.1996`, and tangent distance classifiers :cite:`Simard.LeCun.Denker.ea.1998` all could reach error rates below 1%. 
+One widely used benchmark for image classification is [MNIST](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998`, a dataset of 70,000 handwritten-digit images ($28 \times 28$ pixels, 10 classes). MNIST shaped a generation of machine learning research, but today even simple linear models exceed 95% accuracy, so differences between strong and weak models are hard to see. To compare models meaningfully we need a dataset where a linear baseline is clearly outpaced by a richer one.
 
-For over a decade, MNIST served as *the* point of reference for comparing machine learning algorithms. 
-While it had a good run as a benchmark dataset,
-even simple models by today's standards achieve classification accuracy over 95%,
-making it unsuitable for distinguishing between strong models and weaker ones. Even more, the dataset allows for *very* high levels of accuracy, not typically seen in many classification problems. This skewed algorithmic development towards specific families of algorithms that can take advantage of clean datasets, such as active set methods and boundary-seeking active set algorithms.
-Today, MNIST serves as more of a sanity check than as a benchmark. ImageNet :cite:`Deng.Dong.Socher.ea.2009` poses a much 
-more relevant challenge. Unfortunately, ImageNet is too large for many of the examples and illustrations in this book, as it would take too long to train to make the examples interactive. As a substitute we will focus our discussion in the coming sections on the qualitatively similar, but much smaller Fashion-MNIST
-dataset :cite:`Xiao.Rasul.Vollgraf.2017` which was released in 2017. It contains images of 10 categories of clothing at $28 \times 28$ pixel resolution.
+We therefore use **Fashion-MNIST** :cite:`Xiao.Rasul.Vollgraf.2017`, a drop-in replacement released in 2017. It has exactly the same structure (60,000 training and 10,000 test images of $28 \times 28$ grayscale pixels, in 10 classes) but the classes are clothing categories (t-shirt, trouser, pullover, and so on) that are harder to tell apart, which makes accuracy differences between models clearly visible. For large-scale experiments the standard benchmark is ImageNet :cite:`Deng.Dong.Socher.ea.2009` (1.2 million images, 1000 classes), but it is too large to keep our examples interactive; Fashion-MNIST teaches the same lessons at a fraction of the compute cost.
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab mxnet
@@ -128,12 +122,9 @@ data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
 ```
 
-The images are grayscale and upscaled to $32 \times 32$ pixels in resolution above. This is similar to the original MNIST dataset which consisted of (binary) black and white images. Note, though, that most modern image data has three channels (red, green, blue) and that hyperspectral images can have in excess of 100 channels (the HyMap sensor has 126 channels).
-By convention we store an image as a $c \times h \times w$ tensor, where $c$ is the number of color channels, $h$ is the height and $w$ is the width.
+We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below.
 
-```{.python .input #image-classification-dataset-loading-the-dataset-3}
-data.train[0][0].shape
-```
+A single grayscale image, so $c = 1$. Most modern photographs have $c = 3$ channels (red, green, blue); hyperspectral sensors such as HyMap record over 100.
 
 
 
@@ -210,6 +201,20 @@ def get_dataloader(self, train):
                                drop_remainder=train).map(resize_fn))
 ```
 
+Now that the loader is defined, let us read one image and confirm where the channel axis lands.
+
+```{.python .input #image-classification-dataset-loading-the-dataset-3}
+%%tab mxnet, pytorch
+X, y = next(iter(data.train_dataloader()))
+X[0].shape  # channel-first: (channels, height, width)
+```
+
+```{.python .input #image-classification-dataset-loading-the-dataset-3}
+%%tab tensorflow, jax
+X, y = next(iter(data.train_dataloader()))
+X[0].shape  # channel-last: (height, width, channels)
+```
+
 To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-2}
@@ -217,7 +222,7 @@ X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let's look at the time it takes to read the images. Even though it is a built-in loader, it is not blazingly fast. Nonetheless, this is sufficient since processing images with a deep network takes quite a bit longer. Hence it is good enough that training a network will not be I/O constrained.
+Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
@@ -228,13 +233,13 @@ f'{time.time() - tic:.2f} sec'
 
 ## Visualization
 
-We will often be using the Fashion-MNIST dataset. A convenience function `show_images` can be used to visualize the images and the associated labels. 
-Skipping implementation details, we just show the interface below: we only need to know how to invoke `d2l.show_images` rather than how it works
-for such utility functions.
+We will often be using the Fashion-MNIST dataset. A convenience function `show_images` lays out a list of images in a grid with optional per-image titles. The `d2l` library provides it; here we show only its interface. The full implementation (matplotlib grid layout) lives in the library source, so the cell below is a stub: knowing how to call it is what matters for our purposes.
 
 ```{.python .input #image-classification-dataset-visualization-1}
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     """Plot a list of images."""
+    # Full implementation lives in the d2l library (d2l/torch.py et al.).
+    # This stub declares the interface; the rendered notebook uses the library version.
     raise NotImplementedError
 ```
 
@@ -295,16 +300,14 @@ We are now ready to work with the Fashion-MNIST dataset in the sections that fol
 
 ## Summary
 
-We now have a slightly more realistic dataset to use for classification. Fashion-MNIST is an apparel classification dataset consisting of images representing 10 categories. We will use this dataset in subsequent sections and chapters to evaluate various network designs, from a simple linear model to advanced residual networks. As we commonly do with images, we read them as a tensor of shape (batch size, number of channels, height, width). For now, we only have one channel as the images are grayscale (the visualization above uses a false color palette for improved visibility). 
-
-Lastly, data iterators are a key component for efficient performance. For instance, we might use GPUs for efficient image decompression, video transcoding, or other preprocessing. Whenever possible, you should rely on well-implemented data iterators that exploit high-performance computing to avoid slowing down your training loop.
+We now have a slightly more realistic dataset to use for classification. Fashion-MNIST is an apparel classification dataset consisting of images representing 10 categories. We will use this dataset in subsequent sections and chapters to evaluate various network designs, from a simple linear model to advanced residual networks. As we commonly do with images, we read them as a tensor of shape (batch size, number of channels, height, width). For now, we only have one channel as the images are grayscale (the visualization above uses a false color palette for improved visibility). A well-implemented data iterator keeps this loading off the critical path, so that training speed is set by the model rather than by I/O.
 
 
 ## Exercises
 
-1. Does reducing the `batch_size` (for instance, to 1) affect the reading performance?
-1. The data iterator performance is important. Do you think the current implementation is fast enough? Explore various options to improve it. Use a system profiler to find out where the bottlenecks are.
-1. Check out the framework's online API documentation. Which other datasets are available?
+1. Time one full training epoch at `batch_size` of 1, 16, 64, 256, and 1024. Plot throughput (images per second) against `batch_size`. Why does throughput rise with batch size up to a point and then plateau?
+1. Set `num_workers=0` (single-threaded loading) and compare against the default multi-worker setting. Under what conditions does increasing `num_workers` stop helping?
+1. PyTorch stores tensors in channel-first order $(c, h, w)$, while TensorFlow and JAX use channel-last $(h, w, c)$. Read the `get_dataloader` implementations for all four frameworks. Which step introduces the channel dimension, and where does the layout differ?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/48)
@@ -324,86 +327,166 @@ Lastly, data iterators are a key component for efficient performance. For instan
 
 <!-- slides -->
 
-::: {.slide title="Fashion-MNIST as a reusable dataset"}
-**Fashion-MNIST** is the workhorse dataset for the rest of this
-chapter:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.2]{.kicker}
 
-- 10 classes (T-shirt / trouser / pullover / …) of 28×28 grayscale
-  images; 60 k train, 10 k test.
-- Drop-in replacement for MNIST — same shape, same API, harder.
-- We'll wrap it in a `DataModule` so every classifier we build can
-  reuse the same loaders.
+The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will classify for the rest of this chapter.
 
 @!image-classification-dataset-visualization-2
 :::
+:::
 
-::: {.slide title="Dataset setup"}
-Imports and the `FashionMNIST` `DataModule` shell:
+::: {.slide title="Why a new benchmark?"}
+[Motivation]{.kicker}
 
-@image-classification-dataset-the-image-classification-dataset
+::: {.cols .vc}
+::: {.col}
+- **MNIST** (handwritten digits) is solved: a *linear* model already tops 95%, so models are hard to tell apart.
+- We want data where a weak model is **clearly outpaced** by a richer one.
+- **Fashion-MNIST**: a drop-in replacement with the same shape and API but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+:::
+
+::: {.col .fig .big}
+@!image-classification-dataset-visualization-2
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Loading the Data]{.dtitle}
+
+[a reusable DataModule per framework]{.dsub}
+:::
+:::
+
+::: {.slide title="Wrap it once, reuse everywhere"}
+[Loading]{.kicker}
+
+A `DataModule` owns this framework's download, transform, and `train`/`val` splits, so every model we build later just asks for batches:
 
 @image-classification-dataset-loading-the-dataset-1
 :::
 
-::: {.slide title="Instantiate Fashion-MNIST"}
-Instantiate (resizing to 32×32 to match later ConvNet inputs):
+::: {.slide title="60 000 train, 10 000 test"}
+[Loading]{.kicker}
+
+Instantiate it, resizing to $32\times32$ to match the ConvNet inputs in later chapters:
 
 @image-classification-dataset-loading-the-dataset-2
+
+::: {.d2l-note}
+Ten classes $\times$ 6 000 train images each $= 60\,000$; 1 000 each in test.
+:::
 :::
 
-::: {.slide title="What does one example look like?"}
-Each train item is a `(C, H, W)` image tensor + an integer label:
+::: {.slide title="One image: channel-first" only="pytorch,mxnet"}
+[Loading · layout]{.kicker}
+
+PyTorch and MXNet store images **channel-first**, $c \times h \times w$, with the color axis before height and width:
+
+@-image-classification-dataset-loading-the-dataset-3
+
+::: {.d2l-note .rule}
+Shape is `(1, 32, 32)`: one grayscale channel, then $32\times32$ pixels.
+:::
+:::
+
+::: {.slide title="One image: channel-last" only="tensorflow,jax"}
+[Loading · layout]{.kicker}
+
+TensorFlow and JAX store images **channel-last**, $h \times w \times c$, with the color axis at the end:
 
 @image-classification-dataset-loading-the-dataset-3
 
-A 1×32×32 grayscale image — single channel, after the resize.
+::: {.d2l-note .rule}
+Same image, axes reordered to `(32, 32, 1)`. `get_dataloader` hands each framework its native layout, so later chapters never think about it.
+:::
 :::
 
-::: {.slide title="Human-readable labels"}
-The dataset stores labels as integers 0–9. A small helper turns
-each label into its English name (T-shirt, Trouser, Pullover, …):
+::: {.slide title="Labels as words, not integers"}
+[Loading]{.kicker}
+
+The dataset stores labels as integers 0–9. A tiny helper maps them to names so our spot-checks are readable:
 
 @image-classification-dataset-loading-the-dataset-4
 :::
 
-::: {.slide title="Minibatches"}
-Wrap the framework dataloader so train and val each yield batches
-in the same shape:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Reading Minibatches]{.dtitle}
+
+[the iterator that feeds training]{.dsub}
+:::
+:::
+
+::: {.slide title="The data iterator"}
+[Minibatches]{.kicker}
+
+`get_dataloader` shuffles the training split and serves a `batch_size`-sized minibatch each step:
 
 @image-classification-dataset-reading-a-minibatch-1
+:::
 
-. . .
+::: {.slide title="What one minibatch looks like" except="mxnet"}
+[Minibatches]{.kicker}
+
+Pull one batch and read its shapes off directly:
 
 @image-classification-dataset-reading-a-minibatch-2
 
-A batch of 64 32×32 grayscale images plus 64 integer labels.
+::: {.d2l-note}
+64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer labels. A full pass over the training set is I/O-cheap (a second or two), so loading is **not** the training bottleneck.
+:::
 :::
 
-::: {.slide title="Throughput sanity check"}
-Time one full epoch through the loader. Slow loading bottlenecks
-training as much as the model itself:
+::: {.slide title="What one minibatch looks like" only="mxnet"}
+[Minibatches]{.kicker}
 
-@image-classification-dataset-reading-a-minibatch-3
+Pull one batch and read its shapes off directly:
+
+@-image-classification-dataset-reading-a-minibatch-2
+
+::: {.d2l-note}
+`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first images plus their labels. A full pass over the training set is I/O-cheap, so loading is **not** the training bottleneck.
+:::
 :::
 
-::: {.slide title="Visualization helpers"}
-A grid plotter we'll reuse for spot-checks:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-@image-classification-dataset-visualization-1
+[Looking at the Data]{.dtitle}
 
-. . .
+[always eyeball what you train on]{.dsub}
+:::
+:::
 
-Bound to the dataset as a method that pulls one batch and labels
-each tile with the class name:
+::: {.slide title="See the data before you model it"}
+[Visualization]{.kicker}
+
+A `visualize` method tiles one validation batch, each image captioned with its class name. Eyeballing data is a cheap, powerful sanity check:
 
 @image-classification-dataset-visualization-2
 :::
 
 ::: {.slide title="Recap"}
-- Fashion-MNIST: 10 classes, 28×28 grayscale, harder than MNIST.
-- A `DataModule` subclass owns the framework's
-  `train` / `val_dataloader`, label decoding, and a `visualize`
-  helper.
-- Always sanity-check throughput — slow I/O caps training speed.
-- Same data API drives every model in this chapter.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Fashion-MNIST**: 10 clothing classes, $28\times28$ grayscale, harder than MNIST but the same size and API.
+- A `DataModule` owns each framework's download, transforms, and `train`/`val` loaders.
+:::
+
+::: {.col}
+- **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
+- Always **look at your data**; loading stays off the training critical path.
+:::
+:::
 :::

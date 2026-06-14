@@ -19,43 +19,43 @@
       "outputs": []
     },
     "mlp-implementation-model-1": {
-      "code_fingerprint": "sha256:e8db8fecee7a7dd3acd3b2076c8f3b301b9a227476551879cad5202cb883fcd1",
+      "code_fingerprint": "sha256:eb88b21b8b2dee17f779a9b197e7bcf6c6b29f0785ebc67a6711bf4f24d024aa",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-model-2": {
-      "code_fingerprint": "sha256:ebc94053800fd4d3d7c2e7c83768efa6d22a44b4462b67e5bbe16d7f205b9d39",
+      "code_fingerprint": "sha256:176d7eb7d9cedc0a1eb4511525c654f7e5a6f2f288bfd17b90e05b0f02df4fe2",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-training": {
-      "code_fingerprint": "sha256:c914b7ea022c475efa3d1ab986ba53b2fb29d1e0b1c16083bf0f0e6a9173c22f",
+      "code_fingerprint": "sha256:f52f74a1afa2b10728e89fef25a811f2dd5c053ee8fdb74d344778a5ab2f0f62",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 20995,
-          "sha256": "sha256:6a8738820fce96ef03dd2dafac94011d87e1f3ff62fc62e8c0561de428922e7f"
+          "bytes": 24820,
+          "sha256": "sha256:6f7a77c028c9931e6b1c7bc71fc1e944a298b045d5aaac665ca3c90f25017742"
         }
       ]
     },
     "mlp-implementation-model-2-2": {
-      "code_fingerprint": "sha256:bda37a2912c6e5fb7e3d4a6028b2127a913a6e238223b0f18e99e126f0b4b20b",
+      "code_fingerprint": "sha256:4a8e51ee9449e6d81d3c3f4fdb2f14dae24d1b6e50671349986baa3dfdd1bbfc",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-training-2": {
-      "code_fingerprint": "sha256:357171bed85dd337abfa6eb037f2167d17452b65ddbc878cb7bf06ae6725e713",
+      "code_fingerprint": "sha256:1f0f45458054c17c663940c46020b8d0b268ffaa358af701a8a59bae31942dbd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 20471,
-          "sha256": "sha256:32f036fded61a5ae244c9030d1fa838ac08d0b807c3ff82be62e68c4d994a19e"
+          "bytes": 24325,
+          "sha256": "sha256:13aca4cb6edd1c23ce095fa244e71f1f5b716bd183799e131f409fe1b48a6677"
         }
       ]
     }

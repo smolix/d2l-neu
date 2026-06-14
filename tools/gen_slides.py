@@ -503,6 +503,19 @@ def generate_slides_qmd(src_path, framework, warnings):
 
     out = []
     out.append('---')
+    # Set an explicit document `title:` (the file H1). This is load-bearing,
+    # not cosmetic: without it, Quarto's jupyter engine auto-derives a title
+    # by *promoting a body `##` heading* (the one near the last code cell),
+    # which both spawns a phantom leading title-slide AND steals that
+    # heading out of the body, merging two slides into one (overflow). With
+    # an explicit title, the heading stays put and the auto title-slide is a
+    # predictable duplicate of the real `# H1` cover, which
+    # _strip_phantom_title_slide() removes from the rendered HTML. The deck
+    # then opens cleanly on its `# H1` cover. See docs/slides.md.
+    if file_title:
+        _t = translate_directives(file_title)
+        _t_yaml = _t.replace('\\', '\\\\').replace('"', '\\"')
+        out.append(f'title: "{_t_yaml}"')
     out.append('format:')
     out.append('  revealjs:')
     out.append('    theme: [simple, ../../../_d2l-slides.scss]')
@@ -564,6 +577,33 @@ def _dedupe_labels(text: str) -> str:
             return m.group(0)
         return f'{prefix}{label}-fig{seen[label]}{suffix}'
     return _LABEL_RE.sub(sub, text)
+
+
+# A bogus `<section id="title-slide" class="quarto-title-block ...">` that
+# Quarto's jupyter engine emits *before* the real `# H1` cover. Quarto
+# auto-derives a document `title` from a body heading when a deck has
+# `{python}` cells whose last code cell is followed by a heading + prose
+# (the markdown engine and code-terminated decks are unaffected, which is
+# why some decks phantom and others don't). The deck already carries its
+# real cover as `<section ... class="title-slide slide level1 ...">` (the
+# `# H1`), so this auto title-slide is a meaningless leading slide. The
+# real cover is *never* `quarto-title-block`, so keying on that class
+# strips only the phantom. See docs/slides.md "Phantom leading slide".
+_PHANTOM_TITLE_SLIDE_RE = re.compile(
+    r'<section id="title-slide" class="quarto-title-block\b'
+    r'[^"]*">.*?</section>\s*',
+    re.DOTALL)
+
+
+def _strip_phantom_title_slide(html: str) -> str:
+    """Remove Quarto's auto-generated `quarto-title-block` cover slide.
+
+    Returns the HTML with the (at most one) leading phantom title-slide
+    removed so every deck opens on its real `# H1` cover. Content-
+    independent: it never matches the real cover (`title-slide slide
+    level1`), only the auto-derived `quarto-title-block` section.
+    """
+    return _PHANTOM_TITLE_SLIDE_RE.sub('', html, count=1)
 
 
 # ──────────────────────────────────────────────────────────
@@ -840,10 +880,14 @@ def main():
                     shared_libs, deck_html.parent) + '/'
                 old_ref = f'{deck_html.stem}_files/libs/'
                 text = deck_html.read_text(encoding='utf-8')
-                if old_ref in text:
-                    deck_html.write_text(
-                        text.replace(old_ref, rel_libs),
-                        encoding='utf-8')
+                new_text = text.replace(old_ref, rel_libs)
+                # Strip Quarto's phantom auto-title-slide so the deck
+                # opens on its real `# H1` cover (see
+                # _strip_phantom_title_slide). Applies to every deck;
+                # a no-op when no phantom is present.
+                new_text = _strip_phantom_title_slide(new_text)
+                if new_text != text:
+                    deck_html.write_text(new_text, encoding='utf-8')
                 if per_deck_libs.exists():
                     shutil.rmtree(per_deck_libs)
                 if files_dir.exists():

@@ -217,8 +217,10 @@ def fig_sgd_noise_ball():
                 color=GRAY, fontsize=9.5, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
 
-    ax.text(-1.78, 1.42, "gradient descent", color=BLUE, fontsize=9.5,
-            ha="center", va="bottom")
+    # heading set just above the GD start point so the descending line stays
+    # below it and never strikes through the text.
+    ax.text(-2.02, 1.70, "gradient descent", color=BLUE, fontsize=9.5,
+            ha="left", va="bottom")
     ax.text(-0.45, 0.95, r"SGD, fixed $\eta$", color=ORANGE, fontsize=9.5,
             ha="left", va="bottom")
 
@@ -288,12 +290,14 @@ def fig_chord_above_graph():
               ha="right", fontsize=11)
     fl.vlabel(axb, (y0 + 0.12, f(y0) + 0.10), r"$\mathbf{y}$", color=BLUE,
               ha="left", fontsize=11)
-    xlab = 2.15
-    axb.text(xlab, f(x0) + fp(x0) * (xlab - x0) - 0.18,
+    # label the tangent (global under-estimator) in the open band below the
+    # x-axis; right-anchored so it clears the dashed gap line at y0 and never
+    # crosses the curve, the line, or the faint axes.
+    axb.text(1.3, -1.12,
              r"$f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})$",
-             color=GREEN, fontsize=8.5, ha="center", va="top")
+             color=GREEN, fontsize=8.5, ha="right", va="center")
     fl.axis_cross(axb, (-3.6, 3.6), (-0.6, 3.0))
-    fl.clean_axes(axb, lim=((-3.6, 3.6), (-1.4, 3.0)), hide=True)
+    fl.clean_axes(axb, lim=((-3.6, 3.6), (-1.6, 3.0)), hide=True)
 
     fl.save(fig, "mdl-opt-chord-above-graph")
 
@@ -480,7 +484,10 @@ def fig_lagrange_tangency():
               r"$\nabla g$", color=BLUE, fontsize=10)
     fl.vlabel(ax, xstar - 0.50 * xstar + np.array([-0.02, -0.20]),
               r"$\nabla f$", color=ORANGE, fontsize=10)
-    fl.vlabel(ax, xstar + np.array([0.17, -0.14]), r"$\mathbf{x}^\star$",
+    # x* label set well to the lower-right of the optimum, in the open band
+    # between the constraint circle and the level sets -- clear of both the
+    # blue grad g (up-right) and the orange grad f (down-left) arrows.
+    fl.vlabel(ax, xstar + np.array([0.30, -0.24]), r"$\mathbf{x}^\star$",
               color="black", fontsize=11)
 
     # ---- a non-optimal feasible point: grad f crosses the constraint ----
@@ -599,90 +606,127 @@ def fig_kkt_active_set():
 def fig_primal_dual_gap():
     """The supporting-line picture of duality (sec_mdl-constrained-
     optimization-duality, Duality): map every x to (u, t) = (constraint value,
-    objective value); evaluating the dual at lambda lowers a line of slope
-    -lambda until it supports the image from below, and its height at u = 0 is
-    g(lambda) <= p*.  Both panels are exact computations:
+    objective value); the *image set* G of all such pairs is shaded.  Evaluating
+    the dual at lambda lowers a line of slope -lambda until it supports G from
+    below; its height at the axis u = 0 is the dual value g(lambda) <= p*.  Both
+    panels are exact computations, with only the single *best* supporting line
+    drawn so the one idea reads cleanly:
 
-    (a) convex (min x^2 s.t. 1 - x <= 0): the image is the parabola
-        t = (1-u)^2; the best supporting line (lambda* = 2) touches it at
-        (0, p*) -- strong duality, d* = p* = 1;
+    (a) convex (min x^2 s.t. 1 - x <= 0): the image boundary is the parabola
+        t = (1-u)^2 and G is convex; the best supporting line (lambda* = 2) is
+        tangent at (0, p*) -- strong duality, d* = p* = 1, the line meets the
+        axis exactly at p*;
     (b) the chapter's non-convex example (min -x^2 s.t. x - 1/2 <= 0 on
-        [0, 1]): the image t = -(u + 1/2)^2 is dented from below, every
-        supporting line passes under the dent at u = 0, and the best one
-        (lambda* = 1) certifies only d* = -1/2 < p* = -1/4: a duality gap.
+        [0, 1]): the image boundary t = -(u + 1/2)^2 is dented, so G is not
+        convex; the best supporting line (lambda* = 1) passes *under* the dent
+        and meets the axis at d* = -1/2 < p* = -1/4 -- a visible duality gap.
+
+    Design: G is shaded (everything on/above the boundary curve is achievable-
+    or-dominated), the feasible slice u <= 0 of the boundary is drawn thick in
+    orange, and exactly one green supporting line is shown per panel with its
+    axis intercept marked.  Earlier versions also drew a *suboptimal* dashed
+    line; it crossed the curve and the optimal line and made the panel unreadable
+    (the author's "lots of lines intersecting"), so it is gone -- "lower the line
+    until it supports" is carried by an arrow on the single optimal line.
     """
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.2, 4.1))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 4.5))
 
-    # ---- (a) convex: strong duality ----
+    def axis_labels(ax, xr, yr):
+        """Faint origin cross with the two value-axis names tucked at the far
+        ends, clear of the curve and every annotation."""
+        fl.axis_cross(ax, xr, yr)
+        ax.text(xr[1], -0.04 * (yr[1] - yr[0]), "constraint value  $u$",
+                color=GRAY, fontsize=9.5, ha="right", va="top")
+        # objective-axis name set just right of the vertical axis at the top,
+        # so it never collides with the curve in the upper-left.
+        ax.text(0.04 * (xr[1] - xr[0]), yr[1], "objective value  $t$",
+                color=GRAY, fontsize=9.5, ha="left", va="top")
+
+    # =================== (a) convex: strong duality =================== #
     axa.set_title("(a) convex $+$ Slater: strong duality")
-    u = np.linspace(-0.85, 1.45, 300)
-    axa.plot(u, (1 - u) ** 2, color=BLUE, lw=2.2, zorder=3)
+    xr_a, yr_a = (-1.25, 1.85), (-1.45, 3.8)
+    u = np.linspace(-0.95, 1.7, 340)
+    boundary_a = (1 - u) ** 2
+    # the image set G = {(u, t) : t >= (1-u)^2}: shade everything above the
+    # boundary so "support from below" is literally what the green line does.
+    axa.fill_between(u, boundary_a, yr_a[1], color=BLUE, alpha=0.08, lw=0,
+                     zorder=1)
+    axa.plot(u, boundary_a, color=BLUE, lw=2.0, zorder=3)
     uf = u[u <= 0]
-    axa.plot(uf, (1 - uf) ** 2, color=ORANGE, lw=3.2, zorder=4)
+    axa.plot(uf, (1 - uf) ** 2, color=ORANGE, lw=3.4, zorder=4)
     p_star_a = 1.0                            # min over u <= 0 of (1-u)^2
-    axa.axhline(p_star_a, color=GRAY, lw=1.2, ls=(0, (5, 3)), zorder=2)
-    # best supporting line, slope -lambda* = -2: tangent at (0, p*)
-    us = np.linspace(-0.85, 1.0, 2)
-    axa.plot(us, 1 - 2 * us, color=GREEN, lw=1.8, zorder=3)
-    # a suboptimal supporting line (lambda = 1): height at u=0 is g(1) = 3/4
-    axa.plot(us, 0.75 - us, color=GRAY, lw=1.1, ls=(0, (3, 3)), zorder=2)
-    axa.plot(0, 0.75, "o", color=GRAY, ms=4.5, zorder=5)
-    axa.text(0.09, 0.66, r"$g(\lambda)$", color=GRAY, fontsize=9, ha="left",
-             va="top")
-    axa.plot(0, p_star_a, "o", color="black", ms=6, zorder=6)
-    axa.text(0.09, 1.13, r"$d^\star=p^\star$", color="black", fontsize=9.5,
-             ha="left", va="bottom")
-    axa.text(-0.85, 1.06, r"$p^\star$", color=GRAY, fontsize=10, ha="left",
-             va="bottom")
-    axa.text(-0.62, 2.95, r"feasible: $u\leq0$", color=ORANGE, fontsize=9,
-             ha="center", va="bottom")
-    axa.text(0.78, -0.78, r"slope $-\lambda^\star$", color=GREEN, fontsize=9,
-             ha="center", va="center", rotation=-39)
-    fl.axis_cross(axa, (-1.05, 1.6), (-1.3, 3.6))
-    axa.text(1.58, -0.18, "constraint value $u$", color=GRAY, fontsize=9,
-             ha="right", va="top")
-    axa.text(-0.06, 3.55, "objective value", color=GRAY, fontsize=9,
-             ha="right", va="top")
-    fl.clean_axes(axa, lim=((-1.05, 1.6), (-1.45, 3.7)), hide=True,
-                  equal=False)
 
-    # ---- (b) non-convex: a duality gap ----
-    axb.set_title("(b) non-convex: duality gap")
-    u = np.linspace(-0.5, 0.5, 300)           # image of x in [0, 1]
-    axb.plot(u, -(u + 0.5) ** 2, color=BLUE, lw=2.2, zorder=3)
-    uf = u[u <= 0]
-    axb.plot(uf, -(uf + 0.5) ** 2, color=ORANGE, lw=3.2, zorder=4)
-    p_star_b = -0.25                          # min over u <= 0: the dent
-    axb.axhline(p_star_b, color=GRAY, lw=1.2, ls=(0, (5, 3)), zorder=2)
-    # best supporting line, slope -lambda* = -1: touches both endpoints,
-    # passes *under* the dent with height d* = -1/2 at u = 0
-    us = np.linspace(-0.66, 0.56, 2)
-    axb.plot(us, -0.5 - us, color=GREEN, lw=1.8, zorder=3)
-    # a suboptimal supporting line (lambda = 2): g(2) = -1
-    axb.plot(np.linspace(-0.62, 0.18, 2), -1 - 2 * np.linspace(-0.62, 0.18, 2),
-             color=GRAY, lw=1.1, ls=(0, (3, 3)), zorder=2)
-    axb.plot(0, p_star_b, "o", color="black", ms=6, zorder=6)
-    axb.plot(0, -0.5, "o", color=GREEN, ms=6, zorder=6)
-    axb.text(-0.045, -0.205, r"$p^\star$", color="black", fontsize=10,
-             ha="right", va="bottom")
-    axb.text(-0.045, -0.545, r"$d^\star$", color=GREEN, fontsize=10,
-             ha="right", va="top")
-    axb.annotate("", xy=(0.045, -0.255), xytext=(0.045, -0.495),
-                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1))
-    axb.text(0.085, -0.375, "duality gap", color=GRAY, fontsize=9.5,
+    # best supporting line, slope -lambda* = -2: tangent to G at (0, p*).  The
+    # tangency at (0, p*) plus the shaded G already say "lowered until it
+    # supports G"; an extra arrow only crowded the panel, so we let the geometry
+    # and the caption carry that, keeping the picture uncluttered.
+    line = lambda uu: 1 - 2 * uu
+    us = np.array([-0.55, 1.32])
+    axa.plot(us, line(us), color=GREEN, lw=2.0, zorder=3)
+    # the dual value is the line's height at u = 0; here it equals p*.
+    axa.plot(0, p_star_a, "o", color="black", ms=7, zorder=6)
+
+    # labels, each in clear space.
+    axa.text(0.16, p_star_a + 0.30, r"$d^\star=p^\star$", color="black",
+             fontsize=11, ha="left", va="center")
+    axa.text(-0.93, 1.62, r"feasible" "\n" r"slice $u\leq0$", color=ORANGE,
+             fontsize=9.5, ha="center", va="center")
+    axa.text(-0.62, 3.05, r"$G=\{(g(x),f_0(x))\}$", color=BLUE, fontsize=9.5,
              ha="left", va="center")
-    axb.text(-0.36, 0.10, r"feasible: $u\leq0$", color=ORANGE, fontsize=9,
-             ha="center", va="bottom")
-    axb.text(0.33, -0.93, r"slope $-\lambda^\star$", color=GREEN, fontsize=9,
-             ha="center", va="center", rotation=-37)
-    fl.axis_cross(axb, (-0.78, 0.72), (-1.32, 0.42))
-    axb.text(0.70, -0.05, "constraint value $u$", color=GRAY, fontsize=9,
-             ha="right", va="top")
-    axb.text(-0.025, 0.40, "objective value", color=GRAY, fontsize=9,
-             ha="right", va="top")
-    fl.clean_axes(axb, lim=((-0.78, 0.72), (-1.38, 0.52)), hide=True,
-                  equal=False)
+    # slope tag on the green line, well down-right where it sits clearly alone
+    # below both the curve and the x-axis label.
+    axa.text(1.02, line(1.02) + 0.07, r"slope $-\lambda^\star$", color=GREEN,
+             fontsize=9.5, ha="left", va="bottom", rotation=-31,
+             rotation_mode="anchor")
+    axis_labels(axa, xr_a, yr_a)
+    fl.clean_axes(axa, lim=(xr_a, yr_a), hide=True, equal=False)
 
+    # =============== (b) non-convex: a duality gap =============== #
+    axb.set_title("(b) non-convex: duality gap")
+    xr_b, yr_b = (-0.92, 0.92), (-1.35, 0.72)
+    u = np.linspace(-0.5, 0.5, 300)           # image of x in [0, 1]
+    boundary_b = -(u + 0.5) ** 2
+    axb.fill_between(u, boundary_b, yr_b[1], color=BLUE, alpha=0.09, lw=0,
+                     zorder=1)
+    axb.plot(u, boundary_b, color=BLUE, lw=2.0, zorder=3)
+    uf = u[u <= 0]
+    axb.plot(uf, -(uf + 0.5) ** 2, color=ORANGE, lw=3.4, zorder=4)
+    p_star_b = -0.25                          # min over u <= 0: the dent
+    d_star_b = -0.5                           # best dual value at u = 0
+
+    # best supporting line, slope -lambda* = -1: touches both endpoints of the
+    # boundary and passes *under* the dent, meeting the axis at d* < p*.
+    line = lambda uu: -0.5 - uu
+    us = np.array([-0.72, 0.78])
+    axb.plot(us, line(us), color=GREEN, lw=2.0, zorder=3)
+    axb.plot(0, p_star_b, "o", color="black", ms=7, zorder=6)
+    axb.plot(0, d_star_b, "o", color=GREEN, ms=7, zorder=6)
+
+    # the gap: a clean vertical double-arrow between p* and d* on the axis, with
+    # the two value labels pushed to opposite sides so nothing overlaps.  The
+    # gap arrow is offset a hair right of the axis and its label sits further
+    # right again, clear of both the arrow and the p*/d* dots.
+    xg = 0.045
+    axb.annotate("", xy=(xg, p_star_b - 0.012), xytext=(xg, d_star_b + 0.012),
+                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.4))
+    axb.text(0.10, 0.5 * (p_star_b + d_star_b), "duality gap", color=GRAY,
+             fontsize=9, ha="left", va="center")
+    axb.text(-0.045, p_star_b, r"$p^\star$", color="black", fontsize=11,
+             ha="right", va="center")
+    axb.text(-0.045, d_star_b, r"$d^\star$", color=GREEN, fontsize=11,
+             ha="right", va="center")
+
+    axb.text(-0.5, 0.16, r"feasible slice $u\leq0$", color=ORANGE,
+             fontsize=10, ha="left", va="center")
+    axb.text(0.40, -0.42, r"dented $G$", color=BLUE, fontsize=9.5,
+             ha="left", va="center")
+    axb.text(0.40, line(0.40) + 0.05, r"slope $-\lambda^\star$", color=GREEN,
+             fontsize=9.5, ha="left", va="bottom", rotation=-37,
+             rotation_mode="anchor")
+    axis_labels(axb, xr_b, yr_b)
+    fl.clean_axes(axb, lim=(xr_b, yr_b), hide=True, equal=False)
+
+    fig.subplots_adjust(wspace=0.16)
     fl.save(fig, "mdl-opt-primal-dual-gap")
 
 
@@ -728,21 +772,28 @@ def fig_fp_number_line():
     ax.add_patch(plt.Polygon([[0, -0.16], [0.25, -0.16], [0.25, 0.16],
                               [0, 0.16]], closed=True, facecolor=ORANGE,
                              alpha=0.15, lw=0))
+    # Two stacked gray captions on the left, well separated in height: the top
+    # one names the shaded subnormal band, the lower one marks the 0.25 boundary
+    # as the smallest normal.  Both are left-anchored at x ~ 0 so neither runs
+    # into the eps_mach marker over x = 1.
     ax.annotate("subnormals $\\to$ underflow to $0$", xy=(0.12, 0.17),
-                xytext=(0.02, 0.62), color=GRAY, fontsize=9, ha="left",
+                xytext=(0.02, 0.74), color=GRAY, fontsize=9, ha="left",
                 va="center",
                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
-    ax.text(0.25, 0.45, "smallest normal", color=GRAY, fontsize=8,
-            ha="left", va="center", rotation=0)
-    ax.annotate("", xy=(0.25, 0.16), xytext=(0.33, 0.38),
+    ax.annotate("smallest normal", xy=(0.25, 0.155), xytext=(0.02, 0.48),
+                color=GRAY, fontsize=7.5, ha="left", va="center",
                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8))
 
-    # eps_mach: the gap from 1 to its right neighbor 1 + 2^-p
+    # eps_mach: the gap from 1 to its right neighbor 1 + 2^-p.  The label sits
+    # up and to the right of the little gap, joined by a short leader, so it
+    # clears the "smallest normal" caption to its left entirely.
     eps = 2.0 ** -p
     ax.annotate("", xy=(1 + eps, 0.30), xytext=(1, 0.30),
                 arrowprops=dict(arrowstyle="<->", color="black", lw=1.1))
-    ax.text(1 + eps / 2, 0.40, r"$\varepsilon_{\mathrm{mach}}$",
-            color="black", fontsize=10, ha="center", va="bottom")
+    ax.annotate(r"$\varepsilon_{\mathrm{mach}}$", xy=(1 + eps / 2, 0.32),
+                xytext=(1.55, 0.56), color="black", fontsize=10,
+                ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color="black", lw=0.7))
 
     # gap doubling: matched double-arrows under one gap of each binade
     for lo in (1.0, 2.0):
@@ -807,8 +858,13 @@ def fig_conditioning_ellipse():
         fl.arrow(ax, (0, 0), (0, ey), color=GREEN, lw=1.8)
         ax.text(ex * 0.58, -0.30, axis_labels[0], color=GREEN, fontsize=9,
                 ha="center", va="top")
-        ax.text(0.10, ey * 0.78, axis_labels[1], color=GREEN, fontsize=9,
-                ha="left", va="center")
+        # the slow-axis (vertical) curvature label is set out to the right with
+        # a short leader, so the orange zig-zag -- which swings along the *fast*
+        # horizontal axis right across the vertical arrow -- never sits on it.
+        ax.annotate(axis_labels[1], xy=(0.0, ey * 0.62),
+                    xytext=(0.95, ey * 0.70), color=GREEN, fontsize=9,
+                    ha="left", va="center",
+                    arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.7))
         # real GD at the optimal step for this Hessian
         eta = 2.0 / (h[0] + h[1])
         x = x0.copy()

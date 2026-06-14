@@ -286,7 +286,7 @@ We can pass data through the model to make the framework finally initialize para
 **Lazy initialization** lets you declare a layer's *output*
 size without specifying its *input* size:
 
-```python
+```{.python #lazy-init-exercises}
 nn.LazyLinear(256)   # only num_outputs!
 ```
 

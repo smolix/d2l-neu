@@ -45,12 +45,12 @@ L 309.04316 -1
 " clip-path="url(#p5598ea0c52)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="line2d_2">
-    <path d="M 274.11 179.255172 
+    <path d="M 274.11 193.019586 
 L 274.11 68.757517 
 " clip-path="url(#p5598ea0c52)" style="fill: none; stroke-dasharray: 1,1.65; stroke-dashoffset: 0; stroke: #7f7f7f"/>
    </g>
    <g id="line2d_3">
-    <path d="M 207.708 179.255172 
+    <path d="M 207.708 193.019586 
 L 207.708 161.575548 
 " clip-path="url(#p5598ea0c52)" style="fill: none; stroke-dasharray: 1,1.65; stroke-dashoffset: 0; stroke: #7f7f7f"/>
    </g>
@@ -401,17 +401,17 @@ z
     </g>
    </g>
    <g id="patch_6">
-    <path d="M 63.800826 47.785656 
-Q 107.41851 137.441991 204.672942 160.852684 
+    <path d="M 241.029282 36.442583 
+Q 259.683997 106.174747 209.846952 159.31121 
 " style="fill: none; stroke: #7f7f7f; stroke-linecap: round"/>
-    <path d="M 201.42313 158.11613 
-L 204.672942 160.852684 
-L 200.533812 161.810601 
+    <path d="M 213.832367 157.83932 
+L 209.846952 159.31121 
+L 211.060688 155.239743 
 " style="fill: none; stroke: #7f7f7f; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- drop $\approx \eta\,[f'(x)]^2$ -->
-    <g style="fill: #7f7f7f" transform="translate(23.475 41.611034) scale(0.095 -0.095)">
+    <g style="fill: #7f7f7f" transform="translate(202.1575 30.14069) scale(0.095 -0.095)">
      <defs>
       <path id="DejaVuSans-64" d="M 2906 2969 
 L 2906 4863 

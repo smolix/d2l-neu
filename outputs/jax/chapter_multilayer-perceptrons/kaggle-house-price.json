@@ -13,18 +13,13 @@
       "kind": "text",
       "outputs": []
     },
-    "kaggle-house-price-downloading-data": {
-      "code_fingerprint": "sha256:d5647bd6195bf3dbb6882abcaa221f8e71c906670226cf5c7a50cd0dc883f822",
-      "kind": "text",
-      "outputs": []
-    },
     "kaggle-house-price-accessing-and-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:ee6de742d8b7fb7cdac7ddf523847dfb30fee9751800698657d2dd1e84e6f797",
+      "code_fingerprint": "sha256:a95a35e316ae09e2027fb634d15b512feb75e54583a58ad6f1b3735614ffa91b",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-accessing-and-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:9d431890b4adde8d9274185442b27d277ba9f9657506f314e3d16a3375bfc43b",
+      "code_fingerprint": "sha256:62634d590c0f951c06834f55b97a80770360eb933dd9b86f7c963e579081a4e4",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +30,7 @@
       ]
     },
     "kaggle-house-price-data-preprocessing-1": {
-      "code_fingerprint": "sha256:0137db1f555cdbe8e971ddfc9ea18c5742b83789b39a7e126cdfc696eaf35f40",
+      "code_fingerprint": "sha256:79165ccc4536d86d0426111b3e01af4290cbc0d713bdb4870321f985f40e71ad",
       "kind": "text",
       "outputs": [
         {
@@ -46,12 +41,12 @@
       ]
     },
     "kaggle-house-price-data-preprocessing-2": {
-      "code_fingerprint": "sha256:12e615f7246ece4da1a9e0a815fedd9fa33b4e9f45ee7f3a5534ad58e143ac4d",
+      "code_fingerprint": "sha256:9855261473d08abd2bf0dde92cec162da2b7095326837672a8d38af62684ebe2",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-data-preprocessing-3": {
-      "code_fingerprint": "sha256:39d2a0398d6b76f9f5b8ea03881ece28885d429ebb7ed2e392d3b0ed32bb6823",
+      "code_fingerprint": "sha256:73f8773b22b0224e014e0f538dbdb4561e92af10deb4e521a166824e683b5e6a",
       "kind": "text",
       "outputs": [
         {
@@ -61,40 +56,40 @@
       ]
     },
     "kaggle-house-price-error-measure": {
-      "code_fingerprint": "sha256:70371d1a291bc29b882f1f4e117ee82f8446c3a36bb590e90ec6f3aa3ef2a309",
+      "code_fingerprint": "sha256:8d23af9df04eacb8b40771e11970b9e384dad351dd006b6a91f31ba7a0966d91",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-1": {
-      "code_fingerprint": "sha256:77140939cdb9bc54791d0a8e8bb565eef56891575375a078bd39b99036a62c85",
+      "code_fingerprint": "sha256:4e64b02d9818e55a0b49ade3cf02075d7e26f44558560be50f1bbb8227b8edb4",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:4ca3816fba186f9fc849c586ceff41bf08a03b171ecb125e0286e53ac8ce9ba8",
+      "code_fingerprint": "sha256:34a53ffdd7bf0615dc5d7e04059099d90e908027381fe1d598a53534275434a8",
       "kind": "text",
       "outputs": []
     },
-    "kaggle-house-price-model-selection": {
-      "code_fingerprint": "sha256:35cc26a330fb4de408eee97ce3534bbae300da46e11c2a39f18023a14746b6a2",
+    "kaggle-house-price-model-selection-linear": {
+      "code_fingerprint": "sha256:06de3f123e6d0a1e47cfda66b29f249687b3ad0c587a1880bc32ded122d5f68c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.17837441504001617\n"
+          "text": "average validation log mse = 0.17959756672382354\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "kaggle-house-price/kaggle-house-price-model-selection-1.svg",
-          "bytes": 21315,
-          "sha256": "sha256:5134e3e4503dec9e1e242fb2e2aff4a20a7e64c5a69ddf246dad4695d430ddd8"
+          "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
+          "bytes": 21317,
+          "sha256": "sha256:86cc06ab5e9f3a4179d7c591dc7e9653261e35da7978b9ac6b74e02f3d256a97"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:82fe29739913e347796887e9853f629acb7f9d3c5ef6332728cf2e847ca6ce4d",
+      "code_fingerprint": "sha256:8772e3b34b75e13b64e5f5fd8c5a0cecbf35a06bfc330e1ce7c21ff7064be5f6",
       "kind": "text",
       "outputs": []
     }

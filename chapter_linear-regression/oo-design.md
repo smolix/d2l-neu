@@ -6,40 +6,28 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Object-Oriented Design for Implementation
 :label:`sec_oo-design`
 
-In our introduction to linear regression,
-we walked through various components
-including
-the data, the model, the loss function,
-and the optimization algorithm.
-Indeed,
-linear regression is
-one of the simplest machine learning models.
-Training it,
-however, uses many of the same components that other models in this book require.
-Therefore, 
-before diving into the implementation details
-it is worth 
-designing some of the APIs
-that we use throughout. 
-Treating components in deep learning
-as objects,
-we can start by
-defining classes for these objects
-and their interactions.
-This object-oriented design
-for implementation
-will greatly
-streamline the presentation and you might even want to use it in your projects.
+Almost every model in this book follows the same loop: load data, run a forward
+pass, compute the loss, update the parameters, and repeat. If we wrote that loop
+from scratch for each new model, a small change to the training procedure (say,
+adding gradient clipping or a learning-rate schedule) would force us to touch
+every chapter. The fix, borrowed from libraries such as
+[Lightning](https://lightning.ai/), is to write the loop once inside a reusable
+`Trainer` class and let the model and the data vary as subclasses of `Module` and
+`DataModule`:
 
+* **`Module`** holds the model parameters, the `forward` pass, the loss, and the
+  optimizer. Every model in the book is a subclass.
+* **`DataModule`** holds a dataset and serves its training and validation data
+  loaders. Every dataset is a subclass.
+* **`Trainer`** owns the epoch loop: it feeds batches from the `DataModule` into
+  the `Module` and applies the optimizer.
 
-Inspired by open-source libraries such as [PyTorch Lightning](https://www.pytorchlightning.ai/),
-at a high level
-we wish to have three classes: 
-(i) `Module` contains models, losses, and optimization methods; 
-(ii) `DataModule` provides data loaders for training and validation; 
-(iii) both classes are combined using the `Trainer` class, which allows us to
-train models on a variety of hardware platforms. 
-Most code in this book adapts `Module` and `DataModule`. We will touch upon the `Trainer` class only when we discuss GPUs, CPUs, parallel training, and optimization algorithms.
+Most chapters subclass only `Module` and `DataModule`; we return to the `Trainer`
+itself when we reach GPUs, parallel training, and optimization.
+:numref:`fig_oo_design` shows how the three fit together.
+
+![The three base classes and how they fit together. `Trainer.fit` drives a `Module` (which holds the model, loss, and optimizer) over data served by a `DataModule`; new models and datasets are written as subclasses.](../img/mdl-linreg-oo-classes.svg)
+:label:`fig_oo_design`
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab mxnet
@@ -727,8 +715,12 @@ this degree of modularity pays dividends throughout the book in terms of concise
 
 ## Exercises
 
-1. Locate full implementations of the above classes that are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l). We strongly recommend that you look at the implementation in detail once you have gained some more familiarity with deep learning modeling.
-1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have dived into the full implementation of the `HyperParameters` class, can you explain why?
+1. The `add_to_class` decorator works by calling `setattr(Class, obj.__name__, obj)`. (a) Add a method `greet(self)` to the existing class `A` *after* the instance `a` has been created, using `@add_to_class(A)`, and verify that `a.greet()` works. (b) What happens if you define `greet` *without* the decorator and then call `a.greet()`? Why?
+1. The `Module` class keeps the optimizer in `configure_optimizers`, a *method of the model*, rather than passing it as an argument to `Trainer`. What are the advantages of this design choice? Can you think of a case where putting the optimizer on the model is awkward?
+1. Extend `DataModule` with a `test_dataloader` method and extend `Trainer.fit` to run a final evaluation pass on the test set after training. What invariant must the test loader satisfy that the validation loader need not?
+1. The `save_hyperparameters` implementation uses Python's `inspect` module to capture the caller's local variables. Can you implement a version that does *not* use `inspect`, for example by requiring the caller to pass the local namespace explicitly? What are the trade-offs?
+1. (Advanced) The `ProgressBoard.draw` method is *asynchronous*: it hands values to a background thread rather than plotting immediately. Sketch a synchronous alternative. Under what conditions would the synchronous version be slower? When would the two perform identically?
+1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have studied the full implementation of the `HyperParameters` class, can you explain why?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6645)
@@ -748,88 +740,285 @@ this degree of modularity pays dividends throughout the book in terms of concise
 
 <!-- slides -->
 
-::: {.slide title="Reusable training abstractions"}
-Three recurring abstractions appear in every model we'll build:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.2]{.kicker}
 
-- **`Module`** — the model: parameters, `forward`, `loss`,
-  optimizer.
-- **`DataModule`** — the data: train and val loaders.
-- **`Trainer`** — the loop that fits a `Module` to a `DataModule`.
-
-This chapter builds the scaffolding once. The rest of the book
-just **subclasses** these three.
+Object-oriented design for **implementation**<br>Write the training loop *once*; let every new model and dataset be a *subclass*.
+:::
 :::
 
-::: {.slide title="The class shell"}
-Long class definitions don't fit one slide / one cell. Define the
-class **shell first**, then attach methods incrementally:
+::: {.slide title="One loop, written once"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Almost every model in this book runs the **same loop**: load a batch,
+forward, compute loss, update, repeat.
+
+. . .
+
+Rewrite that loop per model and one tweak (gradient clipping, an LR
+schedule) means touching *every* chapter. Instead, factor it into three
+collaborating classes:
+
+::: {.d2l-note}
+**`Module`** is the model · **`DataModule`** is the data ·
+**`Trainer`** owns the loop. New work = a new *subclass*.
+:::
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Notebook-friendly utilities]{.dtitle}
+
+[three helpers that make classes teachable]{.dsub}
+:::
+:::
+
+::: {.slide title="Define a class, then grow it"}
+[Utilities]{.kicker}
+
+A notebook wants short cells, so declare the **shell** first and instantiate it...
+
+@oo-design-utilities-2
+
+. . .
+
+...then attach a method later with `@add_to_class`, which `setattr`s it onto the class, so the bound method sees `self`:
+
+@oo-design-utilities-3
+:::
+
+::: {.slide title="`add_to_class`, in three lines"}
+[Utilities]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The whole trick: a decorator that writes the function onto a class
+object. Python's class namespace is mutable, so this works even on a
+class that already has instances.
 
 @oo-design-utilities-1
 :::
 
-::: {.slide title="The `add_to_class` trick"}
-@oo-design-utilities-2
-
-@oo-design-utilities-3
-
-The decorator just rebinds `func` onto `Class` — Python's class
-namespace is mutable.
+::: {.col .narrow}
+::: {.d2l-note .rule}
+We use it throughout the book to split one class across several cells,
+each next to the prose that explains it.
+:::
+:::
+:::
 :::
 
-::: {.slide title="`HyperParameters`"}
-Almost every class wants `self.lr = lr`, `self.batch_size = …`
-boilerplate in `__init__`. The `HyperParameters` mixin auto-saves
-constructor args as attributes:
+::: {.slide title="Stop hand-copying constructor args"}
+[Utilities]{.kicker}
 
-@oo-design-utilities-4
+Every `__init__` is full of `self.lr = lr; self.n = n; ...`. The
+`HyperParameters` mixin captures the caller's arguments and saves them
+as attributes automatically:
 
 @oo-design-utilities-5
 
-One call (`save_hyperparameters()`) and every constructor arg is
-ready as `self.<name>`.
+. . .
+
+One `save_hyperparameters()` call and `self.a`, `self.b` exist; an
+`ignore=` list opts arguments out. (Full implementation in
+:numref:`sec_utils`.)
 :::
 
-::: {.slide title="`ProgressBoard`"}
-A live training-loss plot — call `draw(x, y, label)` from the
-training loop and the curve appears point-by-point:
+::: {.slide title="`ProgressBoard`: watch the loss fall, live"}
+[Utilities]{.kicker}
 
-@oo-design-utilities-6
+::: {.cols .vc}
+::: {.col}
+`draw(x, y, label)` adds a point and the curve animates as training runs; `every_n` thins noisy series by averaging neighbours:
+
+@-oo-design-utilities-7
+:::
+
+::: {.col .fig}
+@!oo-design-utilities-7
+:::
+:::
+:::
+
+::: {.slide title="Why `draw` is asynchronous"}
+[Utilities]{.kicker}
+
+The reason previews a theme of the whole book. Frameworks get their
+speed by **compiling** the step (`torch.compile`, `jax.jit`,
+`tf.function`, `hybridize`) and running the device *ahead* of Python.
 
 . . .
 
-@oo-design-utilities-7
+A `print` or plot inside that step breaks the trace; asking for a number
+*blocks* until the device catches up.
 
-(The full implementation lives in `d2l`. We just need the API.)
+::: {.d2l-note .rule}
+So `draw` only **queues** the point and returns at once; a background
+thread does the device-to-host copy and the slow rendering. Keep the hot
+path pure and compiled; push logging off to the side.
+:::
 :::
 
-::: {.slide title="`Module`: models"}
-A `Module` knows how to **forward**, compute its **loss**, and
-hand back its **optimizer**. Every model we'll write is a subclass:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-@oo-design-models
+[The three base classes]{.dtitle}
+
+[Module · DataModule · Trainer]{.dsub}
+:::
 :::
 
-::: {.slide title="`DataModule`: data"}
-A `DataModule` knows how to give back a **train** and a **val**
-dataloader, and a small `get_dataloader(train: bool)` hook
-subclasses override:
+::: {.slide title="`Module`: the model" except="jax"}
+[Base classes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Every model subclasses `Module` and supplies three things:
+
+- **`forward`** / `loss`: the prediction and how wrong it is.
+- **`training_step`**: loss on one batch (plots it for free).
+- **`configure_optimizers`**: the optimizer to use.
+
+::: {.d2l-note}
+`Module` extends the framework's own net base (`nn.Module`,
+`nn.Block`, `tf.keras.Model`), so an instance is callable: `model(X)`
+runs `forward`.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide title="`Module`: the model" only="jax"}
+[Base classes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+In Flax a module **is a dataclass**: no `__init__`, fields declared by
+type annotation. The same contract, written functionally:
+
+- `forward` / `__call__`: the prediction.
+- **`training_step`** returns *(loss, grads)* via
+  `jax.value_and_grad`, since parameters are passed in, not stored.
+- `configure_optimizers`: the optax optimizer.
+
+::: {.d2l-note .rule}
+Parameters live *outside* the module; every step is a pure function of
+them.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide title="`DataModule`: where batches come from"}
+[Base classes]{.kicker}
+
+A `DataModule` serves a **train** and a **validation** loader, both
+through one `get_dataloader(train)` hook that subclasses override. This
+is the *entire* base class:
 
 @oo-design-data
+
+::: {.d2l-note}
+A loader is a generator yielding one batch at a time, fed straight into
+`Module.training_step`.
+:::
 :::
 
-::: {.slide title="`Trainer`: the loop"}
-A `Trainer` ties them together: it owns the loop over epochs,
-drives `model.training_step` / `validation_step`, and updates the
-progress board:
+::: {.slide title="`Trainer`: it owns the loop" except="jax"}
+[Base classes]{.kicker}
 
-@oo-design-training
+::: {.cols .vc}
+::: {.col}
+`fit(model, data)` wires the two together: prepare the loaders, hand the
+optimizer over, then run `fit_epoch` for `max_epochs`. The body is short:
+
+```{.python #oo-design-exercises-1}
+def fit(self, model, data):
+    self.prepare_data(data)
+    self.prepare_model(model)
+    self.optim = model.configure_optimizers()
+    for self.epoch in range(self.max_epochs):
+        self.fit_epoch()
+```
+
+::: {.d2l-note}
+`fit_epoch` stays abstract here; we enrich `Trainer` for GPUs and
+parallel training in later chapters.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-linreg-oo-classes.svg)
+:::
+:::
+:::
+
+::: {.slide title="`Trainer`: threading state, the JAX way" only="jax"}
+[Base classes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+JAX has no mutable `self.params`, so `fit` takes an explicit PRNG `key`,
+splits it for init and dropout, and bundles parameters, optimizer, and
+RNG into a single immutable `TrainState`:
+
+::: {.d2l-note .rule}
+Same `fit(model, data)` contract; the state is passed *through* each
+step rather than stored on the object.
+:::
+:::
+
+::: {.col .narrow}
+```{.python #oo-design-exercises-2}
+root = key or d2l.get_key()
+p_key, d_key = jax.random.split(root)
+params = model.apply_init(
+    dummy, key=...)['params']
+self.state = TrainState.create(
+    apply_fn=model.apply,
+    params=params, tx=optim, ...)
+```
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- **Three classes** (`Module`, `DataModule`, `Trainer`) form the
-  scaffold for every model in the book.
-- `add_to_class` lets us define a class once and add methods
-  later — friendly to slide-sized cells.
-- `HyperParameters` removes the constructor-boilerplate noise.
-- `ProgressBoard` gives us live loss curves with one call.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Three classes** scaffold every model: `Module` (the model),
+  `DataModule` (the data), `Trainer` (the loop).
+- New model or dataset = a **subclass**; the loop is written once.
+- `add_to_class` splits a class across notebook cells;
+  `HyperParameters` kills `__init__` boilerplate.
+:::
+
+::: {.col}
+- `ProgressBoard` plots the loss live, **asynchronously**: the
+  compile-and-stay-busy theme that recurs all book.
+- **Watch the framing:** JAX is functional (a dataclass `Module`,
+  parameters and a `TrainState` threaded through `fit`).
+:::
+:::
 :::

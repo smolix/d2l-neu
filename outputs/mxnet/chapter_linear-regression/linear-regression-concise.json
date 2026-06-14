@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:97cc595c32663313df530fd6c9120144446de1d9ee62e2a21128e291547c073f",
+    "d2l_lib_fingerprint": "sha256:458ce06e17c94f697ace10fb0b805faea5e4c14af8e7f3d6ab55e5c6849e6dc2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,31 +34,31 @@
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:975d54d7c09d7c2f6d2b6de2a25a546ca232987198536b50ec394b6007b9d71b",
+      "code_fingerprint": "sha256:78b755e0fe1ee76cd02140b42877de45a4a6560626a9a2af314c2feba0a208b4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 18904,
-          "sha256": "sha256:9711826b62bef4d13f073896925ffb3cc68238260ef8bba9eddde4e547e670bd"
+          "bytes": 18985,
+          "sha256": "sha256:e2cd67af1051b4d1f1be68fc46b23db8311e4485913797627da238cb16d345f8"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:e8e4353eb88143f6683e31e32a2b9e7fc50e441f8fc770ca87d4695115b80e4c",
+      "code_fingerprint": "sha256:b9508c1cb1c474cc21e7fa83f2872b7045c6aae18037199acf26695e09b79739",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:45af94bdaec69a08856aa3a2a1943a9e7e205b6aafefb79ce43c6bd0a55a250c",
+      "code_fingerprint": "sha256:fe0d43edb972af9939add1b936f5a663ee83ad50c6daa667bc44f80d9048bd0e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.00818729 -0.00879717]\nerror in estimating b: [0.01145124]\n"
+          "text": "error in estimating w: [-0.00032878  0.00026965]\nerror in estimating b: [0.00060034]\n"
         }
       ]
     }

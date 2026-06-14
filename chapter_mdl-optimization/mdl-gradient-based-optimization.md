@@ -1065,90 +1065,349 @@ number returns as a *numerical* villain in
 
 <!-- slides -->
 
-::: {.slide title="Gradient-Based Optimization"}
-Why does the negative gradient work, how fast does it converge,
-and what breaks it?
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §24.1]{.kicker}
 
-- Descent directions: everything within $90^\circ$ of $-\nabla f$
-- Smoothness: guaranteed progress for $\eta < 2/L$
-- The condition number $\kappa$ sets the price
-- Momentum: $\kappa \to \sqrt{\kappa}$; SGD: noise vs. cost;
-  Newton: exact but unaffordable
+What moves every neural network<br>**why $-\nabla f$ works, how fast it converges, and what breaks it**.
+:::
 :::
 
-::: {.slide title="Steepest descent via Cauchy-Schwarz"}
-To first order, a step $\eta\,\mathbf{d}$ changes $f$ by
-$\eta\,\nabla f^\top \mathbf{d}$ --- descent iff
-$\nabla f^\top \mathbf{d} < 0$. Among unit directions the most
-negative slope is $-\nabla f / \|\nabla f\|$, by Cauchy--Schwarz:
+::: {.slide title="The foundations under the optimizer zoo"}
+[Motivation]{.kicker}
 
-@gradient-based-optimization-steepest-direction
+::: {.cols .vc}
+::: {.col}
+Before momentum, Adam, and learning-rate schedules, three questions
+have closed-form answers on quadratics:
+
+- **Why** does a negative-gradient step make progress?
+- **How fast** does it converge?
+- **What** throttles it?
+
+One number runs through all three: the **condition number**
+$\kappa = \lambda_{\max}/\lambda_{\min}$, read off the Hessian.
+
+::: {.d2l-note}
+Develop the theory where it is exact (quadratics), then add momentum and
+noise to make it practical.
+:::
 :::
 
-::: {.slide title="The descent lemma, without knowing L"}
-$L$-smoothness traps $f$ under a quadratic ceiling, so
-
-$$f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \eta\big(1 - \tfrac{L\eta}{2}\big)\|\nabla f(\mathbf{x}_k)\|^2$$
-
-Telescoping: $\min_k \|\nabla f\|^2 \le 2L(f_0 - f^\star)/K$ ---
-**no convexity needed**, the guarantee that applies to deep nets.
-
-. . .
-
-Don't know $L$? Backtrack until the Armijo condition holds:
-
-@gradient-based-optimization-backtracking
-:::
-
-::: {.slide title="Quadratics: the condition number rules"}
-Per mode, GD multiplies by $1 - \eta\lambda_i$: stability needs
-$\eta < 2/L$, and the optimal step contracts by
-$(\kappa-1)/(\kappa+1)$ --- cost linear in $\kappa$.
-
+::: {.col .fig}
 @fig:mdl-opt-gd-bowl-vs-valley
-
-. . .
-
-@gradient-based-optimization-eta-sweep
+:::
+:::
 :::
 
-::: {.slide title="Momentum: a damped oscillator"}
-Velocity with memory cancels the zig-zag and accumulates the
-crawl; tuned heavy ball contracts at
-$(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$, and Nesterov's look-ahead
-makes $\sqrt{\kappa}$ a theorem beyond quadratics --- *optimal*
-for first-order methods.
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-@fig:mdl-opt-momentum-damping
+[Directions & smoothness]{.dtitle}
+
+[where to step, and how far to trust it]{.dsub}
+:::
+:::
+
+::: {.slide title="Steepest descent is a theorem"}
+[Directions]{.kicker}
+
+A small step $\eta\,\mathbf{d}$ changes $f$ by $\eta\,\nabla f^\top\mathbf{d}$
+to first order, so $\mathbf{d}$ is a **descent direction** when
+$\nabla f^\top\mathbf{d} < 0$. By Cauchy--Schwarz the steepest unit
+direction is unique:
+
+$$\min_{\|\mathbf{d}\|=1}\nabla f^\top\mathbf{d} = -\|\nabla f\|,
+\qquad \mathbf{d}^\star = -\frac{\nabla f}{\|\nabla f\|}.$$
+
+::: {.d2l-note}
+Descent fills an entire **half-space** (everything within $90^\circ$ of
+$-\nabla f$); the gradient is the *greediest* choice, not the only one.
+:::
+:::
+
+::: {.slide title="Every negative slope really descends"}
+[Directions]{.kicker}
+
+On $f(x,y)=\tfrac12(x^2+10y^2)$: compare the first-order slope with the
+actual decrease, then scan $3600$ directions for the most negative slope.
+
+@!gradient-based-optimization-steepest-direction
+
+The brute-force winner lands on $-\nabla f/\|\nabla f\|$, to grid
+resolution.
+:::
+
+::: {.slide title="L-smoothness erects a ceiling"}
+[Smoothness]{.kicker}
+
+The slope goes stale as we move. Bound how fast: $f$ is **$L$-smooth**
+when $\|\nabla f(\mathbf{x})-\nabla f(\mathbf{y})\|\le L\|\mathbf{x}-\mathbf{y}\|$,
+i.e. every Hessian eigenvalue lies in $[-L,L]$. That traps the graph
+under a quadratic ceiling and gives the **descent lemma**:
+
+$$f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \eta\big(1 - \tfrac{L\eta}{2}\big)\|\nabla f(\mathbf{x}_k)\|^2.$$
 
 . . .
+
+::: {.d2l-note .rule}
+Gain $\eta\|\nabla f\|^2$ grows linearly; the curvature tax
+$\tfrac{L}{2}\eta^2\|\nabla f\|^2$ grows quadratically. Progress for
+$0<\eta<2/L$, best at $\eta=1/L$.
+:::
+:::
+
+::: {.slide title="The one guarantee deep nets keep"}
+[Smoothness]{.kicker}
+
+Telescoping the lemma at $\eta=1/L$, with $f$ merely bounded below by
+$f^\star$:
+
+$$\min_{0\le k<K}\|\nabla f(\mathbf{x}_k)\|^2 \;\le\; \frac{2L\,(f(\mathbf{x}_0)-f^\star)}{K}.$$
+
+. . .
+
+::: {.d2l-note}
+**No convexity needed.** Gradient descent reliably finds points where
+the gradient is *small* at rate $O(1/K)$. It does not promise a minimum,
+only stationarity. This theorem applies *verbatim* to training a network.
+:::
+:::
+
+::: {.slide title="Backtracking: a step near 1/L without knowing L"}
+[Smoothness]{.kicker}
+
+The local curvature varies, so no fixed step fits everywhere. Start
+optimistic and halve $\eta$ until the **Armijo** sufficient-decrease
+condition holds, here on the quartic $f(x)=\tfrac14 x^4$:
+
+@!gradient-based-optimization-backtracking
+
+Fixed $\eta=0.3$ diverges from $x_0=3$; backtracking accepts $0.031$,
+then doubles as the valley flattens. A line search is curvature
+estimation by trial.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The condition number]{.dtitle}
+
+[the quadratic model, solved exactly]{.dsub}
+:::
+:::
+
+::: {.slide title="Gradient descent decouples into modes"}
+[Quadratics]{.kicker}
+
+Near a minimum every smooth $f$ is a quadratic
+$\tfrac12\mathbf{x}^\top A\mathbf{x}$. In the eigenbasis of $A$ the
+iteration $\mathbf{x}_{k+1}=(I-\eta A)\mathbf{x}_k$ splits into $n$
+**independent** geometric recursions, one per curvature eigenvalue:
+
+$$c_i^{(k)} = (1-\eta\lambda_i)^k\,c_i^{(0)}.$$
+
+- **Stability** needs $|1-\eta\lambda_i|<1$ for all modes: $\eta<2/L$.
+- **Speed** is set by the slowest: $\rho(\eta)=\max_i|1-\eta\lambda_i|$.
+
+::: {.d2l-note .rule}
+The $2/L$ the descent lemma offered as *sufficient* is now *necessary*:
+past it the stiffest mode oscillates with growing amplitude.
+:::
+:::
+
+::: {.slide title="The whole theory of step sizes, in six rows"}
+[Quadratics]{.kicker}
+
+Sweep $\eta$ across the ceiling on $A=\mathrm{diag}(1,10)$, so $L=10$ and
+the ceiling is $\eta=0.2$:
+
+@!gradient-based-optimization-eta-sweep
+
+Tiny $\eta$ is stable but glacial; $\eta=2/11$ balances the extreme modes
+and wins ($\rho=0.818$); at $\eta=0.2$ the stiff mode bounces forever;
+one tick past, it explodes.
+:::
+
+::: {.slide title="The valley picture"}
+[Quadratics]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+The optimal step contracts by exactly $(\kappa-1)/(\kappa+1)$, so the
+cost of gradient descent is **linear in $\kappa$**.
+
+Stability chains the step to the *steep* mode while the *flat* mode
+barely moves: the zig-zag is the visible price of a large $\kappa$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-gd-bowl-vs-valley
+:::
+:::
+:::
+
+::: {.slide title="Convexity upgrades stationarity to optimality"}
+[Quadratics]{.kicker}
+
+The $\kappa$-law generalizes from quadratics to convex functions. Each
+hypothesis upgrades *what* converges and *how fast*:
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .rule}
+**smooth only**
+$\;\min_k\|\nabla f\|^2 = O(1/k)$ (stationarity)
+
+**+ convex**
+$\;f-f^\star = O(1/k)$ (global values)
+:::
+:::
+
+::: {.col}
+::: {.d2l-note .rule}
+**+ $\mu$-strongly convex**
+$\;\|\mathbf{x}_k-\mathbf{x}^\star\|^2 \le (1-\tfrac{1}{\kappa})^k$
+
+linear, $O(\kappa\log\tfrac1\varepsilon)$ steps
+:::
+:::
+:::
+
+Stated here; proved with convexity in the next section.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Momentum, noise, curvature]{.dtitle}
+
+[making it practical at scale]{.dsub}
+:::
+:::
+
+::: {.slide title="Momentum is a damped oscillator"}
+[Acceleration]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Give the iterate a velocity with memory,
+$\mathbf{v}_{k+1}=\beta\mathbf{v}_k-\eta\nabla f$. In each mode this is a
+mass-spring-damper and $\beta$ is the damping knob: too little
+over-damps (crawls), too much under-damps (rings), critical damping
+returns fastest.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-momentum-damping
+:::
+:::
+:::
+
+::: {.slide title="Inertia buys the $\sqrt{\kappa}$ law"}
+[Acceleration]{.kicker}
+
+Tuned heavy ball contracts every mode at
+$(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$; Nesterov's look-ahead makes
+$\sqrt{\kappa}$ a theorem beyond quadratics, and these rates are
+*optimal* for first-order methods. Race all three to $10^{-6}$:
 
 @gradient-based-optimization-momentum
+
+GD's count is linear in $\kappa$ ($6{,}908$ at $\kappa=1000$); heavy ball
+grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup). At one gradient
+per step, the speedup is essentially free.
 :::
 
-::: {.slide title="SGD: unbiased noise and the noise ball"}
-Minibatch gradients: $\mathbb{E}[\hat{\mathbf{g}}_b] = \nabla f$,
-variance $\mathrm{tr}\,\Sigma / b$. Fixed $\eta$ converges to a
-**noise ball** of squared radius $\approx \eta\sigma^2 / (2\lambda)$;
-Robbins--Monro decay reaches the optimum.
+::: {.slide title="Minibatch noise: unbiased, variance $\propto 1/b$"}
+[Stochastic gradients]{.kicker}
 
+A training loss averages over data, so the exact gradient costs a full
+pass. A random minibatch estimate is unbiased with variance that falls
+like $1/b$:
+
+$$\mathbb{E}[\hat{\mathbf{g}}_b] = \nabla f, \qquad
+\mathbb{E}\big[\|\hat{\mathbf{g}}_b - \nabla f\|^2\big] = \frac{\mathrm{tr}\,\Sigma}{b}.$$
+
+::: {.d2l-note}
+Noise *energy* falls like $1/b$, so *amplitude* falls like $1/\sqrt{b}$:
+$100\times$ the compute buys only $10\times$ less noise, which is why huge
+batches show diminishing returns.
+:::
+:::
+
+::: {.slide title="Fixed-step SGD rattles in a noise ball"}
+[Stochastic gradients]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+A contraction plus constant noise injection has a nonzero fixed point:
+SGD descends like GD, then **rattles** inside a ball of squared radius
+
+$$\mathbb{E}[x_\infty^2] \approx \frac{\eta\,\sigma^2}{2\lambda}.$$
+
+Halving $\eta$ halves the ball, which is exactly why schedules decay
+$\eta$.
+:::
+
+::: {.col .fig .big}
 @fig:mdl-opt-sgd-noise-ball
+:::
+:::
+:::
 
-. . .
+::: {.slide title="Decay reaches the optimum; fixed steps plateau"}
+[Stochastic gradients]{.kicker}
 
-@gradient-based-optimization-sgd-schedule
+Robbins--Monro decay ($\sum\eta_k=\infty,\ \sum\eta_k^2<\infty$) quenches
+the noise while still travelling far, on the logistic toy:
+
+@!gradient-based-optimization-sgd-schedule
+
+Fixed $\eta$ stalls at a floor; $1/k$ grinds on, turning the *rate class*
+geometric to polynomial.
 :::
 
 ::: {.slide title="Why not Newton?"}
-$\mathbf{x}_{k+1} = \mathbf{x}_k - (\nabla^2 f)^{-1}\nabla f$:
-affine-invariant, no $\kappa$, digits double per step --- and
-$O(d^3)$ per step at $d = 10^9$.
+[Curvature as information]{.kicker}
 
-@gradient-based-optimization-newton
+Newton minimizes the local quadratic exactly,
+$\mathbf{x}_{k+1}=\mathbf{x}_k-(\nabla^2 f)^{-1}\nabla f$: **affine-invariant**,
+immune to $\kappa$, with digits doubling per step.
+
+@!gradient-based-optimization-newton
 
 . . .
 
-Deep learning keeps the idea, not the price: L-BFGS (low-rank),
-Adam (diagonal) --- curvature surrogates fed by minibatch
-gradients.
+::: {.d2l-note .warn}
+The catch is arithmetic: $O(d^2)$ memory and $O(d^3)$ time per step. At
+$d=10^9$, eight exabytes before the first FLOP. Deep learning keeps the
+*idea*: L-BFGS (low-rank), Adam (diagonal), fed by minibatch gradients.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Steepest descent** is Cauchy--Schwarz; descent fills a half-space.
+- **$L$-smoothness** gives the descent lemma and $O(1/K)$ stationarity, the one guarantee with **no convexity**.
+- On quadratics GD decouples per mode: stability $\eta<2/L$, cost **linear in $\kappa$**.
+:::
+
+::: {.col}
+- **Convexity** upgrades to global optimality; **momentum** turns $\kappa\to\sqrt{\kappa}$, optimal for first-order.
+- **SGD** is unbiased with $1/b$ variance and a noise ball; decay reaches the optimum.
+- **Newton** ignores $\kappa$ but costs $O(d^3)$, hence its cheap shadows.
+:::
+:::
+
+::: {.d2l-note}
+Every learning-rate recipe in the main book is an elaboration of this
+ledger: gain versus curvature tax, signal versus noise.
+:::
 :::

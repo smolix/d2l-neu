@@ -194,12 +194,51 @@ def kill_active_subprocesses(grace_sec=3):
         _active_pgids.discard(pgid)
 
 
-def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
+_SELF_KERNEL_NAME = "d2l-self"
+_self_kernel_dir = None
+
+
+def ensure_self_kernelspec():
+    """Create (once) an ephemeral kernelspec that launches THIS interpreter.
+
+    Notebooks are run under the framework venv's python (run_one_notebook.py is
+    invoked as `.venv-<fw>/bin/python`), so `sys.executable` is always the right
+    interpreter. Relying on the ambient `python3` kernelspec is fragile: on hosts
+    with an always-active conda base (e.g. the Vast image's `/venv/main`), jupyter
+    resolves `python3` to that base's kernelspec — a different interpreter with no
+    mxnet/torch — and every notebook fails with `ModuleNotFoundError`. Pinning the
+    kernel to an absolute `sys.executable` makes execution independent of whatever
+    base env the host keeps active, and needs no `make kernels` step.
+
+    Returns the JUPYTER_PATH data dir holding the spec.
+    """
+    global _self_kernel_dir
+    if _self_kernel_dir is not None:
+        return _self_kernel_dir
+    import tempfile
+    base = tempfile.mkdtemp(prefix="d2l-kernel-")
+    spec_dir = os.path.join(base, "kernels", _SELF_KERNEL_NAME)
+    os.makedirs(spec_dir, exist_ok=True)
+    spec = {
+        "argv": [sys.executable, "-m", "ipykernel_launcher", "-f", "{connection_file}"],
+        "display_name": "d2l (self)",
+        "language": "python",
+    }
+    with open(os.path.join(spec_dir, "kernel.json"), "w") as fh:
+        json.dump(spec, fh)
+    _self_kernel_dir = base
+    return base
+
+
+def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
                      cpu_affinity=None):
     """Execute a single notebook in-place via jupyter nbconvert.
 
     cuda_devices: str or None.  If set, passed as CUDA_VISIBLE_DEVICES.
     cpu_affinity: set of CPU indices, or None for no restriction.
+    kernel: kernelspec name to run with. Defaults to an ephemeral spec pinned to
+        the current interpreter (see ensure_self_kernelspec) so execution does not
+        depend on the host's ambient `python3` kernelspec.
     Returns (success: bool, elapsed: float, stderr: str).
 
     The nbconvert child runs in a new session (`start_new_session=True`),
@@ -216,6 +255,13 @@ def execute_notebook(nb_path, timeout=600, kernel="python3", cuda_devices=None,
         if cuda_devices == "":
             from runtime_env import CPU_ONLY_ENV
             env.update(CPU_ONLY_ENV)
+
+    if kernel is None:
+        kernel = _SELF_KERNEL_NAME
+        self_dir = ensure_self_kernelspec()
+        env["JUPYTER_PATH"] = (
+            self_dir + os.pathsep + env["JUPYTER_PATH"]
+            if env.get("JUPYTER_PATH") else self_dir)
 
     cmd = [
         sys.executable, "-m", "jupyter", "nbconvert",

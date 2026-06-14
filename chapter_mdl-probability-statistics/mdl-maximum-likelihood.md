@@ -1139,120 +1139,332 @@ taken up in detail there.
 
 <!-- slides -->
 
-::: {.slide title="Maximum Likelihood"}
-**Maximum likelihood**: pick the parameters that make the
-observed data most probable.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.3]{.kicker}
 
-$$\hat{\boldsymbol\theta} = \arg\max_{\boldsymbol\theta} \prod_i p(x_i \mid \boldsymbol\theta)
-            = \arg\min_{\boldsymbol\theta} -\sum_i \log p(x_i \mid \boldsymbol\theta).$$
-
-With a flat prior, the posterior mode is just the
-likelihood maximizer. The log fixes underflow, makes the
-gradient an additive sum, and flips "maximize probability"
-into "minimize a loss."
+The principle that turns a probabilistic model into a trainable loss<br>**maximum likelihood**.
+:::
 :::
 
-::: {.slide title="A concrete example"}
-For 9 heads and 4 tails, the likelihood curve peaks at
-$\hat\theta = 9/13$ — the observed fraction of heads. The
-MLE of a coin's bias is always the empirical frequency:
+::: {.slide title="Why maximum likelihood?"}
+[Motivation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+Pick the parameters that make the observed data most probable. It is the
+single principle behind nearly every loss in the book.
+
+- An **operational** recipe (the NLL you minimize).
+- A **geometry** (a KL projection onto the model family).
+- An **efficiency** guarantee (the Fisher / Cramér–Rao floor).
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-mle-kl
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The principle and the coin]{.dtitle}
+
+[from Bayes to the likelihood, and the log trick]{.dsub}
+:::
+:::
+
+::: {.slide title="Likelihood and the flat prior"}
+[The principle]{.kicker}
+
+Start from the posterior and drop what does not depend on $\boldsymbol\theta$:
+
+$$\hat{\boldsymbol\theta} = \operatorname*{argmax}_{\boldsymbol\theta}
+\frac{P(X\mid\boldsymbol\theta)\,P(\boldsymbol\theta)}{P(X)}.$$
+
+$P(X)$ is constant; a **flat prior** drops $P(\boldsymbol\theta)$ too.
+
+::: {.d2l-note .rule}
+$\hat{\boldsymbol\theta}_{\text{MLE}} =
+\operatorname*{argmax}_{\boldsymbol\theta} P(X\mid\boldsymbol\theta)$ —
+maximum likelihood is MAP with no prior.
+:::
+:::
+
+::: {.slide title="The coin: a likelihood surface"}
+[The coin]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For $9$ heads and $4$ tails, $P(X\mid\theta)=\theta^9(1-\theta)^4$.
+Setting the derivative to zero gives
+
+$$\hat\theta = \frac{n_H}{n_H+n_T} = \frac{9}{13}.$$
+
+The MLE of a coin's bias is always the observed frequency.
+:::
+
+::: {.col .fig}
 @maximum-likelihood-a-concrete-example
 :::
+:::
+:::
 
-::: {.slide title="Numerical optimization (NLL)"}
-No closed form for billions of parameters: minimize the NLL
-by gradient descent. Sums of logs behave numerically;
-the gradient is a per-example sum, so SGD works on minibatches:
+::: {.slide title="The negative log-likelihood"}
+[The log trick]{.kicker}
+
+A product of probabilities underflows; the log turns it into a sum and the
+gradient into a per-example sum (so SGD works):
+
+$$\ell(\boldsymbol\theta) = -\sum_{i=1}^n \log p(x_i\mid\boldsymbol\theta).$$
 
 @maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
 :::
 
-::: {.slide title="Every loss is an NLL"}
-The everyday losses are negative log-likelihoods of a chosen
-conditional distribution:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-- **Cross-entropy** = NLL of a categorical $p(y \mid x)$;
-  the average NLL *is* the cross-entropy to the data, hence
-  $\min$ KL to the empirical distribution.
-- **MSE** = NLL of a Gaussian $p(y \mid x)$ with fixed
-  variance: $-\log\prod \mathcal N(y_i;\hat y_i,\sigma^2)
-  = \tfrac{1}{2\sigma^2}\sum_i (y_i-\hat y_i)^2 + \text{const}$.
-- **MAE** = NLL of a Laplace $p(y \mid x)$.
+[Maximum likelihood is minimizing a loss]{.dtitle}
 
-So "minimize the loss" is "do MLE," and picking a loss is
-picking a noise model.
+[cross-entropy, mean squared error, and the KL projection]{.dsub}
+:::
 :::
 
-::: {.slide title="Why it works: KL projection + Fisher"}
-Cross-entropy $=H(\hat p_{\textrm{data}})+D_{\textrm{KL}}(\hat p_{\textrm{data}}\|p_{\boldsymbol\theta})$.
-The entropy is an irreducible floor; training only removes the
-KL gap, so MLE is the **KL-projection** of the data onto the
-model family:
+::: {.slide title="MLE = minimum cross-entropy"}
+[Equivalences]{.kicker}
+
+Pool the data by outcome, $\hat p_{\text{data}}(x)=n_x/n$. Then
+
+$$\tfrac1n\,\ell(\boldsymbol\theta) =
+\operatorname{CE}\bigl(\hat p_{\text{data}}, p_{\boldsymbol\theta}\bigr)
+= -\sum_x \hat p_{\text{data}}(x)\log p_{\boldsymbol\theta}(x).$$
+
+. . .
+
+*Proof.* Group identical observations and divide by $n>0$ — an
+argmin-preserving rescaling. $\blacksquare$ So **maximizing likelihood is
+minimizing cross-entropy to the data**.
+:::
+
+::: {.slide title="MLE is a KL projection"}
+[KL geometry]{.kicker}
+
+Cross-entropy splits into an irreducible floor plus a gap:
+
+$$\operatorname{CE}(\hat p_{\text{data}}, p_{\boldsymbol\theta})
+= H(\hat p_{\text{data}}) + D_{\mathrm{KL}}\bigl(\hat p_{\text{data}}\,\|\,p_{\boldsymbol\theta}\bigr).$$
 
 @fig:mdl-prob-mle-kl
 
-It is also *consistent* and, under regularity conditions,
-asymptotically normal,
-$\sqrt n(\hat{\boldsymbol\theta}-\boldsymbol\theta^\star)\to
-\mathcal N(\mathbf 0, I(\boldsymbol\theta^\star)^{-1})$, with
-**Fisher information** $I(\boldsymbol\theta)$ — attaining the
-Cramér–Rao floor (asymptotically efficient). For the coin,
-$\operatorname{Var}(\hat\theta)\approx\theta(1-\theta)/n$.
+Training removes only the KL term, so the MLE is the model **closest in
+KL** to the empirical distribution.
 :::
 
-::: {.slide title="MAP: priors are regularizers"}
-Keep the prior $P(\boldsymbol\theta)$ and its negative log is
-a penalty on the NLL:
+::: {.slide title="Gaussian NLL = mean squared error"}
+[Loss ↔ noise]{.kicker}
 
-$$\hat{\boldsymbol\theta}_{\textrm{MAP}} = \arg\min_{\boldsymbol\theta}
-  \big[-\textstyle\sum_i \log p(x_i\mid\boldsymbol\theta) - \log P(\boldsymbol\theta)\big].$$
+With a fixed-variance Gaussian noise model,
 
-Gaussian prior $\Rightarrow$ $L_2$ / weight decay
-($\lambda=\sigma^2/\tau^2$); Laplace prior $\Rightarrow$ $L_1$
-/ sparsity. MAP $\to$ MLE as the prior flattens or data grows:
+$$-\log\!\prod_i \mathcal N(y_i;\hat y_i,\sigma^2)
+= \frac{1}{2\sigma^2}\sum_i (y_i-\hat y_i)^2 + \tfrac{n}{2}\log(2\pi\sigma^2).$$
+
+. . .
+
+The second term is $\boldsymbol\theta$-free, so the argmin is least
+squares.
+
+::: {.d2l-note .rule}
+Choosing a loss **is** choosing a noise model: Gaussian → MSE,
+Bernoulli → BCE, categorical → CE, Laplace → MAE.
+:::
+:::
+
+::: {.slide title="From probabilities to densities"}
+[Continuous data]{.kicker}
+
+For a continuous $x_i$, the probability of the $\epsilon$-window is
+$\approx \epsilon\,p(x_i\mid\boldsymbol\theta)$, contributing a constant
+$-n\log\epsilon$ to the NLL.
+
+. . .
+
+That constant is $\boldsymbol\theta$-free and drops — the same NLL machine
+runs unchanged on densities.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Why maximum likelihood works]{.dtitle}
+
+[consistency, Fisher information, the Cramér–Rao floor]{.dsub}
+:::
+:::
+
+::: {.slide title="Consistency"}
+[Estimator theory]{.kicker}
+
+The population objective is $\operatorname{CE}(p_{\theta^\star},p_{\boldsymbol\theta})$,
+minimized where the KL vanishes — at the truth $\theta^\star$. With
+identifiability and regularity, $\hat{\boldsymbol\theta}\xrightarrow{P}\theta^\star$.
+
+::: {.d2l-note}
+Networks are typically consistent *as distributions*, not as parameter
+vectors — many weight settings express the same function.
+:::
+:::
+
+::: {.slide title="Fisher information"}
+[Curvature = information]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The score is $s = \nabla_{\boldsymbol\theta}\log p$; the Fisher information
+is its variance, equivalently the expected NLL curvature:
+
+$$I(\boldsymbol\theta) = \operatorname{Var}[s] =
+-\,\mathbb E\bigl[\nabla^2\log p\bigr].$$
+
+A sharper NLL bowl pins the estimate down tighter. For the coin,
+$I(\theta)=1/(\theta(1-\theta))$.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-mle-fisher
+:::
+:::
+:::
+
+::: {.slide title="Cramér–Rao: the efficiency floor"}
+[Curvature = information]{.kicker}
+
+No unbiased estimator beats the inverse Fisher information, and the MLE
+attains it asymptotically:
+
+$$\operatorname{Var}(\tilde\theta) \ge \frac{1}{n\,I(\theta)}, \qquad
+\sqrt{n}\,(\hat{\boldsymbol\theta}-\theta^\star) \xrightarrow{d}
+\mathcal N\bigl(\mathbf 0, I(\theta^\star)^{-1}\bigr).$$
+
+A simulation lands right on the floor:
+
+@maximum-likelihood-fisher-information
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[MAP: priors as regularizers]{.dtitle}
+
+[weight decay, sparsity, pseudo-counts]{.dsub}
+:::
+:::
+
+::: {.slide title="A Gaussian prior is weight decay"}
+[MAP]{.kicker}
+
+Keep the prior; its negative log is a penalty on the NLL. A
+$\mathcal N(\mathbf 0,\tau^2 I)$ prior contributes
+$\tfrac{1}{2\tau^2}\|\boldsymbol\theta\|_2^2$:
+
+$$\hat{\boldsymbol\theta}_{\text{MAP}} =
+\operatorname*{argmin}_{\boldsymbol\theta}\Bigl[
+-\textstyle\sum_i\log p(x_i\mid\boldsymbol\theta) +
+\tfrac{1}{2\tau^2}\|\boldsymbol\theta\|_2^2\Bigr].$$
 
 @fig:mdl-prob-map-prior
+
+::: {.d2l-note}
+With Gaussian data this is **ridge regression**, $\lambda=\sigma^2/\tau^2$;
+a Laplace prior gives $\ell_1$ / sparsity.
+:::
 :::
 
-::: {.slide title="Latent variables and the ELBO"}
-With latents $z$, the likelihood is a marginal
-$p(x;\boldsymbol\theta)=\sum_z p(z;\boldsymbol\theta)\,p(x\mid z;\boldsymbol\theta)$
-— a sum *inside* the log (mixtures, VAEs, diffusion). For any
-guess $q(z)$, Jensen gives the **evidence lower bound**:
+::: {.slide title="A Beta prior on the coin"}
+[MAP]{.kicker}
 
-$$\log p(x;\boldsymbol\theta) \ge
-  \mathbb E_q[\log p(x,z;\boldsymbol\theta)] + H(q)
-  = \mathcal L(q,\boldsymbol\theta),$$
+A $\text{Beta}(a,b)$ prior shifts the optimum by pseudo-counts:
 
-and the gap is exactly
-$D_{\textrm{KL}}(q \,\|\, p(z\mid x;\boldsymbol\theta))$ —
-zero iff $q$ is the posterior:
+$$\hat\theta_{\text{MAP}} = \frac{n_H + a - 1}{n + a + b - 2}.$$
+
+$\text{Beta}(1,1)$ recovers the MLE; as $n$ grows the prior washes out.
+
+::: {.d2l-note .rule}
+MAP returns the posterior **mode** — a point estimate, not the full
+posterior; the posterior mean differs (Laplace's rule).
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Latent variables, the ELBO, and EM]{.dtitle}
+
+[Jensen's bound and coordinate ascent]{.dsub}
+:::
+:::
+
+::: {.slide title="Why latents break the recipe"}
+[Latent variables]{.kicker}
+
+With latents $z$ the likelihood is a marginal,
+$p(x;\boldsymbol\theta)=\sum_z p(x,z;\boldsymbol\theta)$ — a **sum inside
+the log** (mixtures, VAEs, diffusion) that couples all parameters.
+
+::: {.d2l-note}
+The *complete-data* problem (if we knew $z$) would be easy; the plan is to
+use that easy problem as a stepping stone.
+:::
+:::
+
+::: {.slide title="The evidence lower bound"}
+[ELBO]{.kicker}
+
+For any $q(z)$, Jensen gives a lower bound whose gap is a KL:
+
+$$\log p(x;\boldsymbol\theta) =
+\underbrace{\mathbb E_q[\log p(x,z;\boldsymbol\theta)] + H(q)}_{\mathcal L(q,\boldsymbol\theta)}
++ D_{\mathrm{KL}}\bigl(q(z)\,\|\,p(z\mid x;\boldsymbol\theta)\bigr).$$
 
 @fig:mdl-prob-elbo
+
+The bound is tight exactly when $q$ is the posterior $p(z\mid x)$.
 :::
 
 ::: {.slide title="EM: coordinate ascent on the ELBO"}
-**E-step**: set $q_i = p(z\mid x_i;\boldsymbol\theta^{(t)})$ —
-the bound touches the evidence. **M-step**: maximize the
-expected complete-data log-likelihood — counting and averaging,
-softened by responsibilities. The likelihood never decreases.
-A two-component GMM by EM:
+[EM]{.kicker}
+
+**E-step** $q_i = p(z\mid x_i;\boldsymbol\theta^{(t)})$ closes the gap;
+**M-step** maximizes the expected complete-data log-likelihood. Each step
+raises the evidence, so it never decreases:
 
 @maximum-likelihood-em-gmm
+
+::: {.d2l-note .rule}
+The same bound VAEs and diffusion models are trained on — EM is its
+exact-posterior special case.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- MLE: maximize $\sum_i \log p(x_i \mid \boldsymbol\theta)$;
-  equivalently minimize the NLL.
-- Average NLL = cross-entropy to the data = KL to the
-  empirical distribution; consistent and (asymptotically)
-  efficient via the Fisher information when well-specified.
-- Most "losses" in DL are NLLs of suitable conditional
-  distributions; MSE is the Gaussian case.
-- Priors become regularizers: Gaussian $\to$ weight decay,
-  Laplace $\to$ sparsity, Beta $\to$ pseudo-counts.
-- Latent variables: the ELBO lower-bounds the evidence with a
-  KL gap; EM closes the gap, then climbs the bound — the same
-  bound VAEs and diffusion models train on.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- MLE = maximize $\sum_i\log p(x_i\mid\boldsymbol\theta)$ = minimize the NLL.
+- Average NLL = cross-entropy to the data = KL projection; consistent and asymptotically efficient (Fisher / Cramér–Rao).
+- Most DL losses are NLLs of a noise model; MSE is the Gaussian case.
+:::
+
+::: {.col}
+- Priors become regularizers: Gaussian → weight decay, Laplace → sparsity, Beta → pseudo-counts.
+- Latents: the ELBO lower-bounds the evidence with a KL gap; EM closes it then climbs.
+- One principle threads classifiers, regressors, and generative models.
+:::
+:::
 :::

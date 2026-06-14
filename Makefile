@@ -698,9 +698,21 @@ _pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/bui
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
 	@touch $@
 
+# PDF toolchain preflight: XeLaTeX (texlive-xetex) renders the .tex, and Quarto
+# shells out to rsvg-convert (librsvg2-bin) for every SVG→PDF. Both are easy to
+# be missing on a render box; without this the build failed deep inside quarto
+# with a cryptic "_pdf/<fw>/Dive-into-Deep-Learning.tex: No such file" instead
+# of naming the missing tool. Order-only prereq of every PDF target, so it runs
+# once before the parallel renders.
+.PHONY: pdf-preflight
+pdf-preflight:
+	@command -v xelatex >/dev/null 2>&1 || { echo "ERROR: xelatex not found on PATH — install TeX Live (e.g. apt install texlive-xetex texlive-latex-recommended texlive-fonts-recommended) for PDF builds."; exit 1; }
+	@command -v rsvg-convert >/dev/null 2>&1 || { echo "ERROR: rsvg-convert not found on PATH — install librsvg2-bin (Quarto converts SVG→PDF with it)."; exit 1; }
+	@echo "PDF toolchain OK: $$(xelatex --version 2>/dev/null | head -1), rsvg-convert $$(rsvg-convert --version 2>/dev/null)"
+
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
 define PDF_RULE
-_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-build/.synced
+_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-build/.synced pdf-preflight
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building PDF ($(1)) ==="
 	@{ \
@@ -750,6 +762,9 @@ pdfs: $(addprefix pdf-,$(FRAMEWORKS))
 _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
+	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a
+	@# failed deck render propagates through the `| tee` and aborts the recipe
+	@# before `touch $@` — a failed slide build no longer stamps .built.
 	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
 		--render --workers 16 \
@@ -780,6 +795,10 @@ all:
 
 rebuild-book-artifacts:
 	@echo "=== Rebuilding slides, HTML, and PDFs with current notebook outputs ==="
+	@# Fail fast if the committed output images are unmaterialized Git-LFS
+	@# pointers — slides render before the html verify-fresh gate, so without
+	@# this they'd bake broken figures before anything noticed. (`git lfs pull`)
+	@python3 tools/audit_outputs.py --check-lfs
 	@rm -f $(SLIDE_STAMPS)
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
@@ -799,10 +818,12 @@ all-quick:
 	$(MAKE) rebuild-book-artifacts
 
 check-all-artifacts:
-	@test -f _book/index.html || { echo "ERROR: missing _book/index.html"; exit 1; }
 	@test -f _slides/index.html || { echo "ERROR: missing _slides/index.html"; exit 1; }
-	@test -f _book/slides/index.html || { echo "ERROR: missing _book/slides/index.html"; exit 1; }
-	@echo "Verified full build artifacts: _book/index.html and _book/slides/index.html"
+	@# Deep gate: core pages + zero broken (LFS-pointer) images + per-framework
+	@# PDFs + full per-framework slide-deck coverage. Replaces the old
+	@# "two index files exist" check that let OOM-dropped decks and broken
+	@# images ship silently.
+	@python3 tools/check_book_artifacts.py
 
 # ── Clean ──────────────────────────────────────────────────
 

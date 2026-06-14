@@ -636,6 +636,7 @@ def main():
     files = list(CHAPTER_NUMBERING.keys())
 
     warnings = []
+    render_failures = []   # (framework, deck path, error) across all frameworks
     for fw in args.frameworks:
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} slides ===')
@@ -737,6 +738,20 @@ def main():
                 if py.exists():
                     base_env['QUARTO_PYTHON'] = str(py)
                     break
+
+            # Quarto's launcher hard-defaults Deno/V8 to
+            # --max-old-space-size=8192 (8 GiB). A single-project render of a
+            # full framework's ~150 decks exhausts that heap and aborts
+            # mid-run with rc=133 (V8 OOM "allocation failure"), silently
+            # dropping every deck past ~#92 — e.g. all of the multilayer-
+            # perceptrons chapter. The launcher appends QUARTO_DENO_V8_OPTIONS
+            # *after* its 8192 default and V8 honours the last occurrence of a
+            # flag, so this raises the ceiling. 24 GiB per process × the
+            # frameworks rendered in parallel stays well under a render box's
+            # RAM. Respect a caller-supplied value.
+            base_env.setdefault(
+                'QUARTO_DENO_V8_OPTIONS',
+                '--max-old-space-size=24576,--max-heap-size=24576')
 
             error_dir = fw_dir.parent / 'errors' / fw
             error_dir.mkdir(parents=True, exist_ok=True)
@@ -842,6 +857,7 @@ def main():
                 for rel in rel_paths
             ]
             failures = [(q, err) for q, ok, err in results if not ok]
+            render_failures.extend((fw, q, err) for q, err in failures)
             print(f'  Rendered {total - len(failures)} / {total} '
                   f'({len(failures)} failed) in {elapsed:.0f}s (rc={rc})')
 
@@ -906,6 +922,19 @@ def main():
             print(f'  ... and {len(warnings) - 30} more')
 
     print(f'\nDone. Slides in {args.output}/')
+
+    # A non-empty render-failure set MUST be fatal. Previously main()
+    # returned 0 even when quarto dropped decks (e.g. the V8-heap OOM that
+    # silently lost ~40% of decks past ~#92), so the Makefile `.built` stamp
+    # was touched and the broken slide set shipped. Exit non-zero so
+    # `make slides` fails loudly and the stamp is not written.
+    if render_failures:
+        print(f'\nERROR: {len(render_failures)} slide deck(s) failed to '
+              f'render — see _slides/errors/. Failing the build.',
+              file=sys.stderr)
+        for fw, q, _ in render_failures[:40]:
+            print(f'  [{fw}] {q}', file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

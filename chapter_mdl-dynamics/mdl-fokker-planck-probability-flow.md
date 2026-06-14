@@ -1095,96 +1095,281 @@ flows (:numref:`sec_mdl-continuous-normalizing-flows`).
 
 <!-- slides -->
 
-::: {.slide title="From Paths to Densities"}
-One SDE path: jagged, unrepeatable. A *cloud* of paths: a density
-$p_t(\mathbf{x})$ that evolves **deterministically**.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §27.3]{.kicker}
 
-- Drift **transports** the cloud; diffusion **smooths** it
-- One PDE governs the movie: **Fokker--Planck**
-- Two payoffs: a deterministic twin ODE, and a reverse SDE
-- Both need exactly one unknown: the **score**
-  $\nabla_{\mathbf{x}} \log p_t$
+The cloud's law of motion<br>**Fokker–Planck, the probability-flow ODE, and the reverse SDE**.
+:::
+:::
+
+::: {.slide title="One PDE rules the cloud"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+One SDE path is jagged and unrepeatable. The *cloud* of paths is a density
+$p_t(\mathbf x)$ that evolves **deterministically**.
+
+- Drift transports it, diffusion smooths it.
+- Two payoffs: a deterministic twin ODE, and a reverse SDE.
+- Both need one unknown: the **score** $\nabla\log p_t$.
+:::
+
+::: {.col .fig}
+@fig:mdl-dyn-sde-paths
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[From paths to densities]{.dtitle}
+
+[the two viewpoints and the vector-calculus toolkit]{.dsub}
+:::
+:::
+
+::: {.slide title="One particle, or the whole cloud"}
+[Two viewpoints]{.kicker}
+
+The Lagrangian view follows one realization; the Eulerian view tracks the
+time-marginal $p_t(\mathbf x)$, which averages over all noise and is therefore
+**reproducible**. A hundred thousand OU walkers land on the analytic Gaussians:
 
 @fokker-planck-cloud-marginals
 :::
 
-::: {.slide title="The Fokker--Planck Equation"}
-Itô's lemma on a test function + integration by parts:
+::: {.slide title="Three facts from vector calculus"}
+[The toolkit]{.kicker}
 
-$$\partial_t p_t = -\nabla \cdot (\mathbf{f}\, p_t) + \tfrac12 g^2\, \Delta p_t$$
+- **Divergence** $\nabla\cdot\mathbf v$ — net flux per unit volume.
+- **Laplacian** $\Delta h$ — how far $h$ sits below its neighborhood average.
+- **By parts** $\int h\,(\nabla\cdot\mathbf v) = -\int \nabla h\cdot\mathbf v$.
 
-- $-\nabla \cdot (\mathbf{f} p)$: advection --- probability streams
-  along the drift
-- $\tfrac12 g^2 \Delta p$: diffusion --- raises $p$ below its
-  neighborhood average ($\mathbf{f} = \mathbf{0}$ ⇒ heat equation)
-
-. . .
-
-A Gaussian solves the OU equation **iff** $\dot m = -\theta m$,
-$\dot v = \sigma^2 - 2\theta v$ --- so the OU kernel solves it, and
-$\mathcal{N}(0, \sigma^2/2\theta)$ is the steady state.
+::: {.d2l-note}
+These three identities are the entire machinery behind everything that
+follows.
+:::
 :::
 
-::: {.slide title="Probability Is Conserved"}
-Deterministic flow $\dot{\mathbf{x}} = \mathbf{v}$: mass in a region
-changes only by boundary flux $p\mathbf{v}$ --- the **continuity
-equation** $\partial_t p + \nabla \cdot (p \mathbf{v}) = 0$:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The Fokker–Planck equation]{.dtitle}
+
+[derivation, term reading, the OU check]{.dsub}
+:::
+:::
+
+::: {.slide title="Itô + by parts → a PDE"}
+[Derivation]{.kicker}
+
+Take a test function $\phi$: Itô gives
+$d\phi=(\nabla\phi\cdot\mathbf f+\tfrac12 g^2\Delta\phi)dt+\text{noise}$. Take
+$\mathbb E[\cdot]=\int(\cdot)\,p_t$, kill the Itô term, and integrate by parts
+onto $p_t$:
+
+::: {.d2l-note .rule}
+$$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
+:::
+:::
+
+::: {.slide title="Drift transports, diffusion smooths"}
+[Reading the PDE]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$-\nabla\cdot(\mathbf f p)$ streams probability along the drift;
+$\tfrac12 g^2\Delta p$ raises $p$ wherever it dips below its neighborhood.
+With $\mathbf f=\mathbf 0$ it is the **heat equation**, variance growing
+linearly.
+:::
+
+::: {.col .fig}
+@fig:mdl-dyn-ou-mean-reversion
+:::
+:::
+:::
+
+::: {.slide title="The Ornstein–Uhlenbeck check"}
+[A closed-form solution]{.kicker}
+
+A Gaussian $\mathcal N(m(t),v(t))$ solves the OU Fokker–Planck **iff**
+
+$$\dot m = -\theta m, \qquad \dot v = \sigma^2 - 2\theta v$$
+
+(match coefficients of $(x-m)^0,(x-m)^1,(x-m)^2$). The steady state gives
+$\mathcal N(0,\sigma^2/2\theta)$; numerically the residual is tiny:
+
+@fokker-planck-ou-residual
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Continuity and the probability-flow ODE]{.dtitle}
+
+[conservation, diffusion as transport, the deterministic twin]{.dsub}
+:::
+:::
+
+::: {.slide title="Probability is conserved"}
+[Continuity]{.kicker}
+
+For a deterministic velocity $\dot{\mathbf x}=\mathbf v$, mass changes only
+through boundary flux:
+
+$$\partial_t q_t + \nabla\cdot(q_t\mathbf v) = 0.$$
 
 @fig:mdl-dyn-fokker-planck-flux
 
-. . .
-
-One-line identity ($\nabla p = p \nabla \log p$), signs and all:
-
-$$\tfrac12 g^2 \Delta p = \nabla \cdot \big(p \cdot \tfrac{+1}{2} g^2 \nabla \log p\big)$$
-
-⇒ Fokker--Planck **is** a continuity equation with velocity
-$\mathbf{v}_t = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t$.
+Along a path, $\tfrac{d}{dt}\log q_t = -\nabla\cdot\mathbf v$ — the flow's
+log-density rule.
 :::
 
-::: {.slide title="The Probability-Flow ODE"}
-$$\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t) - \tfrac12 g^2 \nabla \log p_t(\mathbf{x})$$
+::: {.slide title="Diffusion is transport in disguise"}
+[The key identity]{.kicker}
 
-Same marginals $p_t$ as the SDE --- smooth, non-crossing trajectories,
-deterministic sampling, exact likelihood via the CNF integral:
+Because $\nabla p = p\,\nabla\log p$,
+
+$$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\cdot \mathbf{+}\tfrac12 g^2\,\nabla\log p\bigr).$$
+
+. . .
+
+**Sign trap:** standalone it carries a **plus**; the minus appears only after
+folding into continuity form. The wrong sign misses by a factor of two:
+
+@fokker-planck-diffusion-identity
+:::
+
+::: {.slide title="The probability-flow ODE"}
+[The deterministic twin]{.kicker}
+
+Folding the identity into Fokker–Planck gives a continuity equation with
+velocity
+
+$$\frac{d\mathbf x}{dt} = \mathbf f(\mathbf x,t) - \tfrac12 g(t)^2\,\nabla\log p_t(\mathbf x).$$
+
+::: {.d2l-note .rule}
+This ODE has the **same time-marginals** as the SDE — by uniqueness of the
+linear transport PDE. It is smooth, invertible, and exactly likelihood-able.
+:::
+:::
+
+::: {.slide title="One cloud, two dynamics"}
+[The showcase]{.kicker}
+
+Same marginals, different choreography — SDE paths cross and rattle, ODE
+trajectories glide and never cross. The clouds are statistically
+indistinguishable ($\mathrm{KS} < 0.009$):
 
 @fokker-planck-pf-ode-overlay
 :::
 
-::: {.slide title="The Score Function"}
-$$\mathbf{s}_t(\mathbf{x}) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x})$$
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
 
-- Points uphill on the log-density; zero at modes *and* troughs
-- Gaussian: $-(\mathbf{x} - \boldsymbol{\mu})/\sigma^2$; mixture:
-  responsibility-weighted springs
-- Ignores the normalizer: $\nabla \log (\tilde p / Z) = \nabla \log \tilde p$
-  --- learnable where the density is not
+[The score function]{.dtitle}
 
+[geometry, worked forms, normalizer-invariance]{.dsub}
+:::
+:::
+
+::: {.slide title="The one unknown"}
+[The score]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\mathbf s_t(\mathbf x)=\nabla_{\mathbf x}\log p_t(\mathbf x)$ points uphill on
+the log-density and vanishes at modes. Gaussian:
+$-(\mathbf x-\boldsymbol\mu)/\sigma^2$, a spring to the mean; a mixture gives
+responsibility-weighted springs.
+:::
+
+::: {.col .fig}
 @fig:mdl-dyn-score-field
 :::
-
-::: {.slide title="Time Reversal (Anderson)"}
-Bayes on one Euler step: the reverse of a diffusion is a diffusion,
-
-$$d\mathbf{X} = \big[\mathbf{f} - g^2 \nabla \log p_t\big]\,dt + g\, d\bar{\mathbf{W}}$$
-
-- Factor of 2 vs the PF-ODE: undo forward smoothing **and**
-  pre-compensate the re-injected noise
-- One dial: drift $\mathbf{f} - \tfrac{1+\lambda^2}{2} g^2 \nabla \log p_t$,
-  noise $\lambda g$ --- same marginals for every $\lambda$
-
-@fig:mdl-dyn-forward-reverse
+:::
 :::
 
-::: {.slide title="Noise Back into Data"}
-Reverse SDE + closed-form mixture score = a diffusion sampler with
-**zero training**. From $\mathcal{N}(0,1)$ back to the bimodal data
-density:
+::: {.slide title="Why scores beat densities"}
+[Normalizer-invariance]{.kicker}
+
+For $p=\tilde p/Z$, $\nabla\log p = \nabla\log\tilde p$ since
+$\nabla\log Z = 0$. An energy model $p\propto e^{-E}$ has score $-\nabla E$ —
+no intractable $Z$:
+
+@fokker-planck-mixture-score
+
+::: {.d2l-note .rule}
+A network can represent the score without ever normalizing — why score
+matching works where density estimation fails.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Time reversal]{.dtitle}
+
+[Anderson's theorem and the factor of two]{.dsub}
+:::
+:::
+
+::: {.slide title="Anderson's reverse-time SDE"}
+[Time reversal]{.kicker}
+
+Running the diffusion backward from the terminal Gaussian:
+
+$$d\mathbf X = \bigl[\mathbf f - g(t)^2\,\nabla\log p_t(\mathbf X)\bigr]dt + g(t)\,d\bar{\mathbf W}.$$
+
+@fig:mdl-dyn-forward-reverse
+
+A Bayesian Euler step shows why: the marginal $p_t$ acts as a prior that bends
+each reversed step toward where the data was.
+:::
+
+::: {.slide title="The factor of two"}
+[Time reversal]{.kicker}
+
+One family covers both samplers,
+$\mathbf b_\lambda = \mathbf f - \tfrac{1+\lambda^2}{2}g^2\nabla\log p_t$ with
+noise $\lambda g$, all sharing the marginals $p_t$.
+
+::: {.d2l-note}
+$\lambda=0$ is the PF-ODE (undo smoothing once); $\lambda=1$ is Anderson
+(undo, **and** pre-compensate the noise it re-injects). Swap the true score
+for a network and this loop is a diffusion model:
+:::
 
 @fokker-planck-reverse-sde
+:::
 
-. . .
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
 
-Swap the closed-form score for a neural network and this *is* a
-diffusion model --- learning it is next.
+::: {.cols}
+::: {.col}
+- Fokker–Planck: $\partial_t p = -\nabla\cdot(\mathbf f p)+\tfrac12 g^2\Delta p$ — drift transports, diffusion smooths.
+- Transport identity (plus sign!) makes it a continuity equation.
+- PF-ODE: same marginals as the SDE, deterministic, exactly likelihood-able.
+:::
+
+::: {.col}
+- Score $\nabla\log p_t$: normalizer-free, points to data, learnable.
+- Reverse SDE drift corrects by $g^2\nabla\log p_t$ — twice the ODE's.
+- The single unknown in all three: the score.
+:::
+:::
+
+::: {.d2l-note}
+Next: **learn** that score — score matching, diffusion, and flow matching.
+:::
 :::

@@ -1323,89 +1323,283 @@ integrated by exactly the solvers of this section.
 
 <!-- slides -->
 
-::: {.slide title="An ODE is a velocity field"}
-$$\dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), t), \qquad \mathbf{x}(0) = \mathbf{x}_0$$
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §27.1]{.kicker}
 
-Arrows everywhere; a solution follows them. The **flow map**
-$\Phi_t$ moves all of space: $\Phi_{t+s} = \Phi_t \circ \Phi_s$,
-inverse $\Phi_{-t}$.
+A velocity field and the curves it generates<br>**ODEs, numerical solvers, and Neural ODEs**.
+:::
+:::
 
+::: {.slide title="Every continuous model is an ODE"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Give a velocity at every point and time; the solution is the curve that
+follows it. This one idea reappears as:
+
+- a **ResNet** = an Euler solver,
+- **backprop** = the adjoint ODE,
+- a **normalizing flow**'s log-density = a trace integral.
+:::
+
+::: {.col .fig .big}
 @fig:mdl-dyn-ode-field
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Vector fields and well-posedness]{.dtitle}
+
+[the IVP, the flow map, Picard–Lindelöf]{.dsub}
+:::
+:::
+
+::: {.slide title="The initial-value problem"}
+[The objects]{.kicker}
+
+A velocity field $\mathbf f$ and a start $\mathbf x_0$ define
+
+$$\dot{\mathbf x}(t) = \mathbf f(\mathbf x(t),t), \qquad \mathbf x(0)=\mathbf x_0,
+\qquad \mathbf x(t) = \mathbf x_0 + \int_0^t \mathbf f(\mathbf x(s),s)\,ds.$$
 
 . . .
 
-**Picard--Lindelöf**: Lipschitz field $\Rightarrow$ exactly one
-trajectory per point (the Picard operator is a contraction).
-Without it: $\dot{x} = \sqrt{|x|}$ fans out of $0$;
-$\dot{x} = x^2$ blows up at $t = 1/x_0$.
+Euler's method is just the left-endpoint Riemann sum of that integral.
 :::
 
-::: {.slide title="Linear ODEs: the matrix exponential"}
-$$e^{At} = \sum_{k} \frac{(At)^k}{k!} = V e^{\Lambda t} V^{-1}
-\qquad\Rightarrow\qquad \mathbf{x}(t) = \sum_i c_i\, e^{\lambda_i t}\, \mathbf{v}_i$$
+::: {.slide title="The flow map"}
+[The objects]{.kicker}
 
-Independent scalar modes along eigendirections. **Stability
-dictionary**: $\operatorname{Re}\lambda$ decides decay/growth,
-$\operatorname{Im}\lambda$ rotation; nodes, spirals, saddles,
-centers. Nonlinear fixed points: same verdict from the Jacobian.
+Collect all solutions into the map $\Phi_t(\mathbf x_0) = \mathbf x(t)$:
+
+$$\Phi_0 = \mathrm{id}, \qquad \Phi_{t+s} = \Phi_t\circ\Phi_s, \qquad
+\Phi_t^{-1} = \Phi_{-t}.$$
+
+::: {.d2l-note .rule}
+Invertibility is a **theorem**, not an architecture choice — the seed of
+continuous normalizing flows.
+:::
+:::
+
+::: {.slide title="Picard–Lindelöf: one and only one"}
+[Well-posedness]{.kicker}
+
+If $\mathbf f$ is continuous in $t$ and $L$-**Lipschitz** in $\mathbf x$, the
+IVP has a unique solution.
+
+. . .
+
+*Proof.* The Picard operator
+$(P\varphi)(t)=\mathbf x_0+\int_0^t\mathbf f(\varphi(s),s)\,ds$ is a
+contraction on a short interval ($\delta < 1/L$); Banach's fixed point gives
+existence + uniqueness, then patch intervals to cover $[0,T]$. $\blacksquare$
+:::
+
+::: {.slide title="When uniqueness fails"}
+[Counterexamples]{.kicker}
+
+Drop the Lipschitz bound and solutions fan out — $\dot x=\sqrt{|x|}$ from
+$x(0)=0$ can wait any time $c$ then leave as $(t-c)^2/4$:
+
+![](../img/mdl-dyn-uniqueness-fan.svg){width=72%}
+
+Drop the growth bound and $\dot x = x^2$ blows up in finite time at
+$t=1/x_0$.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Linear ODEs and stability]{.dtitle}
+
+[the matrix exponential, eigenvalues, phase portraits]{.dsub}
+:::
+:::
+
+::: {.slide title="The matrix exponential"}
+[Linear systems]{.kicker}
+
+For $\dot{\mathbf x}=A\mathbf x$ the solution is
+$\mathbf x(t)=e^{At}\mathbf x_0$, where
+
+$$e^{At} = \sum_{k=0}^{\infty}\frac{(At)^k}{k!} = V e^{\Lambda t}V^{-1}.$$
+
+. . .
+
+The eigenbasis decouples the system into independent scalar modes
+$e^{\lambda_i t}$ — exactly the §22 eigendecomposition at work.
+:::
+
+::: {.slide title="Three ways to the same map"}
+[Linear systems]{.kicker}
+
+Power series, eigendecomposition, and the Euler limit $(I+tA/n)^n$ all agree,
+and the norm decays exactly as the theory predicts:
 
 @odes-solvers-matrix-exponential
 :::
 
-::: {.slide title="March: Euler and Runge--Kutta"}
-$$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n, t_n)$$
+::: {.slide title="The stability dictionary"}
+[Linear systems]{.kicker}
 
-Local error $O(h^{p+1})$, $T/h$ steps, $e^{LT}$ amplification
-$\Rightarrow$ global $O(h^p)$. Euler: $p = 1$. RK4 (four probe
-slopes, Simpson weights): $p = 4$. Log--log error vs. $h$ =
-straight lines with the predicted slopes:
+Each mode's size is $|e^{\lambda_i t}| = e^{(\operatorname{Re}\lambda_i)t}$:
+
+::: {.d2l-note .rule}
+$\operatorname{Re}\lambda < 0$ → decay; $\operatorname{Re}\lambda > 0$ →
+blow-up; $\operatorname{Im}\lambda \ne 0$ → rotation. Eigenvalues are the
+stability certificate.
+:::
+:::
+
+::: {.slide title="Phase portraits"}
+[Linear systems]{.kicker}
+
+The eigenvalue signature names the picture — node, saddle, spiral, center:
+
+![](../img/mdl-dyn-phase-portraits.svg){width=86%}
+
+At a nonlinear fixed point the **Jacobian** $\partial\mathbf f/\partial\mathbf x$
+gives the same verdict (Hartman–Grobman).
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Numerical solvers]{.dtitle}
+
+[Euler, Runge–Kutta, stiffness]{.dsub}
+:::
+:::
+
+::: {.slide title="Forward Euler, order one"}
+[Solvers]{.kicker}
+
+$$\mathbf x_{n+1} = \mathbf x_n + h\,\mathbf f(\mathbf x_n,t_n).$$
+
+. . .
+
+Local error $O(h^2)$ per step; unrolling $N=T/h$ steps and summing a geometric
+series gives global error $O(h)$ — amplified by the stability factor
+$e^{LT}$. The general rule: local $O(h^{p+1})$ → global $O(h^p)$.
+:::
+
+::: {.slide title="Runge–Kutta: probe inside the step"}
+[Solvers]{.kicker}
+
+RK4 samples four slopes ($k_1$ at the start, two at the midpoint, one at the
+end) and Simpson-weights them $\tfrac16(k_1+2k_2+2k_3+k_4)$ — global order
+$4$, so halving $h$ cuts error by $16$.
 
 @odes-solvers-euler-rk4-order
+
+The measured slopes are $1.0$ (Euler) and $4.0$ (RK4), matching theory.
 :::
 
 ::: {.slide title="Stiffness: stable or sorry"}
-On $\dot{x} = -\lambda x$: forward Euler iterates
-$(1 - h\lambda)^n$ --- stable iff $h < 2/\lambda$. Backward Euler
-iterates $(1 + h\lambda)^{-n}$ --- stable for **every** $h$.
+[Solvers]{.kicker}
 
-A long-dead fast mode still caps the explicit step: that is
-**stiffness**; implicit methods delete the cap (and pay one
-equation solve per step).
+On $\dot x=-\lambda x$, forward Euler is stable only for $h < 2/\lambda$; a
+fast dead mode then forces a tiny step. **Backward** Euler is stable for every
+$h$ (A-stable) at the cost of one solve per step:
 
 @odes-solvers-stiffness-sweep
 :::
 
-::: {.slide title="A ResNet is an Euler solver"}
-$$\mathbf{x}_{l+1} = \mathbf{x}_l + \mathbf{f}_\theta(\mathbf{x}_l)
-\;\;=\;\; \textrm{one Euler step, } h = 1$$
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
 
-Depth = integration time. Limit: the **Neural ODE**
-$\dot{\mathbf{x}} = \mathbf{f}_\theta(\mathbf{x}, t)$. Train by
-backprop through the unrolled solver --- a weight-shared ResNet:
+[Neural ODEs and continuous flows]{.dtitle}
+
+[ResNet = Euler, the adjoint, the trace trick]{.dsub}
+:::
+:::
+
+::: {.slide title="A ResNet is an Euler step"}
+[Architecture]{.kicker}
+
+$\mathbf x_{l+1} = \mathbf x_l + \mathbf f_\theta(\mathbf x_l)$ is one Euler
+step at $h=1$; depth becomes integration time:
+
+![](../img/mdl-dyn-resnet-as-euler.svg){width=86%}
+:::
+
+::: {.slide title="The Neural ODE limit"}
+[Architecture]{.kicker}
+
+Shrink the step and the stack becomes
+$\dot{\mathbf x}=\mathbf f_\theta(\mathbf x,t)$,
+$\mathbf x(T)=\mathbf x_0+\int_0^T\mathbf f_\theta\,dt$. A 1-hidden-layer net
+learns a circle→ellipse flow:
 
 @odes-solvers-neural-ode-train
+
+::: {.d2l-note}
+Lipschitz $\mathbf f_\theta$ → the map is invertible by Picard–Lindelöf:
+invertibility is **inherited, not engineered**.
+:::
 :::
 
 ::: {.slide title="The adjoint = backprop in continuous time"}
-$$\dot{\mathbf{a}} = -\Big(\frac{\partial \mathbf{f}}{\partial \mathbf{x}}\Big)^{\!\top}\!\mathbf{a},
-\qquad
-\frac{\partial L}{\partial \theta} = \int_0^T \Big(\frac{\partial \mathbf{f}}{\partial \theta}\Big)^{\!\top}\!\mathbf{a}\, dt$$
+[Adjoint]{.kicker}
 
-Backward ODE, one **VJP** per step; backprop is the *discrete*
-adjoint. Verified: discrete = finite differences ($10^{-10}$),
-discrete $\to$ continuous at rate $O(h)$:
+Run an adjoint $\mathbf a(t)=\partial L/\partial\mathbf x(t)$ backward:
+
+$$\dot{\mathbf a} = -\Bigl(\tfrac{\partial\mathbf f}{\partial\mathbf x}\Bigr)^{\!\top}\mathbf a,
+\qquad \frac{\partial L}{\partial\theta} = \int_0^T
+\Bigl(\tfrac{\partial\mathbf f}{\partial\theta}\Bigr)^{\!\top}\mathbf a\,dt.$$
 
 @odes-solvers-adjoint-check
+
+::: {.d2l-note .rule}
+Discretizing the adjoint ODE **is** the backprop recursion — but with $O(1)$
+memory instead of storing every step.
+:::
 :::
 
 ::: {.slide title="Densities along the flow"}
-$$\frac{d}{dt}\log p_t(\mathbf{x}(t)) = -\operatorname{tr}\Big(\frac{\partial \mathbf{f}}{\partial \mathbf{x}}\Big)$$
+[Continuous flows]{.kicker}
 
-$\det(I + hJ) = 1 + h\operatorname{tr}J + O(h^2)$: the
-log-det-Jacobian becomes a **trace integral** --- exact
-likelihoods for free-form fields (CNF), with
-$\operatorname{tr} \approx \boldsymbol{\epsilon}^\top J \boldsymbol{\epsilon}$
-one VJP per sample (Hutchinson, FFJORD):
+A flow transports density by the **trace** of its Jacobian, replacing a
+log-determinant:
+
+$$\frac{d}{dt}\log p_t(\mathbf x(t)) = -\operatorname{tr}\Bigl(\tfrac{\partial\mathbf f}{\partial\mathbf x}\Bigr).$$
+
+. . .
+
+Hutchinson's estimator $\operatorname{tr}(M)=\mathbb E[\boldsymbol\epsilon^\top M\boldsymbol\epsilon]$
+turns that into one vector–Jacobian product (the FFJORD trick):
 
 @odes-solvers-cnf-trace
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- An IVP is a velocity field; Picard–Lindelöf gives a unique, invertible flow under a Lipschitz bound.
+- Linear systems: $e^{At}=Ve^{\Lambda t}V^{-1}$; eigenvalues set decay, growth, and rotation.
+- Euler is $O(h)$, RK4 is $O(h^4)$; stiffness forces implicit steps.
+:::
+
+::: {.col}
+- ResNet = Euler step; the Neural ODE is its continuous limit, invertible for free.
+- The adjoint ODE is backprop in continuous time, at $O(1)$ memory.
+- Density flows by $-\operatorname{tr}(\partial\mathbf f/\partial\mathbf x)$; Hutchinson makes it one VJP.
+:::
+:::
+
+::: {.d2l-note}
+Next: add **noise** to the velocity field — stochastic differential
+equations.
+:::
 :::

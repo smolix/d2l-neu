@@ -1469,90 +1469,282 @@ optimal transport) of the path the model chose to learn.
 
 <!-- slides -->
 
-::: {.slide title="One regression, then one integral"}
-The whole modern generative stack:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §27.4]{.kicker}
 
-- **Train**: fit a score $\mathbf{s}_{\boldsymbol{\theta}}$ or velocity
-  $\mathbf{v}_{\boldsymbol{\theta}}$ by *least squares* against a
-  closed-form, per-sample target
-- **Sample**: solve the learned ODE/SDE with a numerical integrator
+One regression, then one integral<br>**score matching, diffusion, and flow matching**.
+:::
+:::
 
-. . .
+::: {.slide title="Why learn a score?"}
+[Motivation]{.kicker}
 
-The key enabler: the intractable marginal target is the **conditional
-mean** of a tractable one — and regression fits conditional means
-automatically.
+::: {.cols .vc}
+::: {.col}
+An energy model $p_\theta = e^{-E_\theta}/Z_\theta$ needs the intractable
+$Z_\theta$ at every step. The **score** sidesteps it:
+
+$$\nabla_{\mathbf x}\log p_\theta = -\nabla_{\mathbf x} E_\theta,
+\qquad \nabla\log Z_\theta = 0.$$
+
+Anything done with scores alone is normalizer-free.
+:::
+
+::: {.col .fig}
+@fig:mdl-dyn-score-field
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Learning the score]{.dtitle}
+
+[explicit → implicit → denoising]{.dsub}
+:::
 :::
 
 ::: {.slide title="Score matching, made tractable"}
-Fisher divergence needs the unknown $\nabla \log p$. Two escapes:
+[The objective]{.kicker}
 
-- **Hyvärinen**: integrate by parts —
-  $\mathbb{E}_p [ \tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2 + \nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} ]$,
-  but the divergence costs $O(d)$ passes
-- **Denoising (Vincent)**: noise the data, regress on
-  $-\boldsymbol{\epsilon}/\sigma$ — the marginal score is the posterior
-  mean of conditional scores
+The Fisher divergence
+$\tfrac12\mathbb E_p\|\mathbf s_\theta-\nabla\log p\|^2$ still contains the
+unknown score. Hyvärinen integrates by parts:
+
+$$J_{\mathrm{ESM}} = \mathbb E_p\bigl[\tfrac12\|\mathbf s_\theta\|^2
++ \nabla\cdot\mathbf s_\theta\bigr] + C.$$
+
+. . .
+
+Tractable — but $\nabla\cdot\mathbf s_\theta$ costs $O(d)$ backward passes.
+:::
+
+::: {.slide title="The regression lemma"}
+[The engine]{.kicker}
+
+::: {.d2l-note .rule}
+$\mathbb E\|\mathbf v(X)-Y\|^2 = \mathbb E\|\mathbf v(X)-\mathbf m(X)\|^2
++ \text{const}$, where $\mathbf m(X)=\mathbb E[Y\mid X]$.
+:::
+
+*Proof.* Insert $\pm\mathbf m(X)$; the cross term vanishes by the tower rule.
+$\blacksquare$ Least squares against a noisy target fits its **conditional
+mean** — used once for scores, once for velocities.
+:::
+
+::: {.slide title="Denoising score matching & Tweedie"}
+[Denoising]{.kicker}
+
+Perturb $\tilde{\mathbf x}=\mathbf x+\sigma\boldsymbol\epsilon$; the
+conditional score is closed-form $-\boldsymbol\epsilon/\sigma$. Regressing on
+it (Vincent) recovers the marginal score, and rearranging gives Tweedie:
+
+$$\mathbb E[\mathbf x\mid\tilde{\mathbf x}]
+= \tilde{\mathbf x} + \sigma^2\,\nabla\log p_\sigma(\tilde{\mathbf x}).$$
+
+::: {.d2l-note}
+Estimating the score and optimal denoising are the **same function**.
+:::
+:::
+
+::: {.slide title="A score network in 1-D"}
+[Denoising]{.kicker}
+
+A tiny MLP trained by denoising score matching matches the analytic score,
+landing on the irreducible loss floor:
 
 @score-matching-diffusion-flow-dsm-train
 :::
 
-::: {.slide title="DDPM is a discretized SDE"}
-$$\mathbf{x}_t = \sqrt{1 - \beta_t}\, \mathbf{x}_{t-1} + \sqrt{\beta_t}\, \boldsymbol{\epsilon}_t$$
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-- = Euler–Maruyama on the VP-SDE (to first order in $\beta_t$)
-- exact marginal: $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}$
-- $\boldsymbol{\epsilon}$-loss = denoising score matching, reweighted
+[Score-based diffusion]{.dtitle}
+
+[forward noise, DDPM, Langevin, DDIM, guidance]{.dsub}
+:::
+:::
+
+::: {.slide title="One noise level → all of them"}
+[Forward process]{.kicker}
+
+Small $\sigma$ approximates $p$ but ignores empty space; large $\sigma$ covers
+but blurs. The fix: a noise-conditional score $\mathbf s_\theta(\mathbf x,t)$
+trained along a forward SDE (VE or VP), then a reverse pass to generate:
+
+![](../img/mdl-dyn-forward-reverse.svg){width=82%}
+:::
+
+::: {.slide title="Two clocks"}
+[Conventions]{.kicker}
+
+Diffusion runs data→noise and samples backward; flow matching runs
+noise→data and samples forward. To compare, substitute $t\to 1-t$:
+
+![](../img/mdl-dyn-time-conventions.svg){width=82%}
+:::
+
+::: {.slide title="DDPM is three propositions"}
+[DDPM]{.kicker}
+
+1. The DDPM step is Euler–Maruyama on the VP-SDE (to $O(\beta_t)$).
+2. Exact marginal $\mathbf x_t=\sqrt{\bar\alpha_t}\,\mathbf x_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$, $\bar\alpha_t=\prod_s(1-\beta_s)$.
+3. The simple $\|\boldsymbol\epsilon-\boldsymbol\epsilon_\theta\|^2$ loss is denoising score matching, reweighted by $\lambda(t)=1-\bar\alpha_t$.
 
 @score-matching-diffusion-flow-ddpm-marginal
 :::
 
-::: {.slide title="Langevin, DDIM, guidance"}
-Three moves, all score calculus:
+::: {.slide title="Langevin: stationary but slow"}
+[Sampling]{.kicker}
 
-- **Langevin**: $d\mathbf{X} = \tfrac12 \nabla \log p\, dt + d\mathbf{W}$
-  has stationary density $p$ — but mixes slowly across modes ⇒ anneal
-- **DDIM**: reuse the predicted noise instead of redrawing ⇒
-  deterministic, big steps, same network
-- **CFG**: $\nabla \log p_t(\mathbf{x} \mid y) = \nabla \log p_t(\mathbf{x}) + \nabla \log p_t(y \mid \mathbf{x})$,
-  then *extrapolate* with $\gamma > 1$
+$dX = \tfrac12\nabla\log p\,dt + dW$ has stationary density $p$ (substitute
+$\rho=p$ into Fokker–Planck → $0$). But it mixes slowly across modes:
 
 @score-matching-diffusion-flow-langevin
+
+::: {.d2l-note}
+From one mode, almost no walker crosses ($P(X>0)=0.012$). Fix: anneal the
+noise, or use predictor–corrector.
+:::
 :::
 
-::: {.slide title="Flow matching: prescribe the path"}
-Pick conditional paths with known velocities; the marginal velocity is
-their posterior mean, and **CFM has the same gradients as FM** — the
-regression lemma again.
+::: {.slide title="DDIM and guidance"}
+[Sampling]{.kicker}
 
-Simplest path = a straight line:
-$\mathbf{x}_t = (1-t)\mathbf{x}_0 + t \mathbf{x}_1$, target
-$\mathbf{x}_1 - \mathbf{x}_0$ (rectified flow):
+**DDIM** predicts $\hat{\mathbf x}_0$ from $\boldsymbol\epsilon_\theta$ and
+re-uses it — deterministic, big steps, same network ($\eta$ interpolates back
+to DDPM). **Guidance** is Bayes on scores:
 
-@score-matching-diffusion-flow-cfm-train
+$$\nabla\log p_t(\mathbf x\mid y) = \nabla\log p_t(\mathbf x) + \nabla\log p_t(y\mid\mathbf x),
+\quad \tilde{\mathbf s} = (1-\gamma)\mathbf s_\varnothing + \gamma\,\mathbf s_y.$$
+
+::: {.d2l-note}
+$\gamma>1$ tilts toward $y$ — effective, but no longer a consistent noised
+marginal.
+:::
 :::
 
-::: {.slide title="Steps buy quality — geometry sets the price"}
-Euler-sampling the learned two-moons flow:
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Flow matching]{.dtitle}
+
+[prescribe the path, regress the velocity]{.dsub}
+:::
+:::
+
+::: {.slide title="Probability paths and velocities"}
+[Flow matching]{.kicker}
+
+Prescribe a path $(p_t)$ from noise to data; its velocity obeys the continuity
+equation. The intractable marginal velocity is again a posterior mean:
+
+$$\mathbf u_t(\mathbf x) = \mathbb E\bigl[\mathbf u_t(\mathbf x\mid\mathbf z)\mid\mathbf x_t=\mathbf x\bigr].$$
+
+Same disease as score matching — same cure.
+:::
+
+::: {.slide title="The conditional flow-matching theorem"}
+[Flow matching]{.kicker}
+
+::: {.d2l-note .rule}
+The tractable CFM loss (closed-form per-pair velocity) and the intractable FM
+loss have the **same gradients**.
+:::
+
+*Proof.* Apply the regression lemma with target
+$\mathbf u_t(\mathbf x\mid\mathbf z)$; its conditional mean is the marginal
+velocity. $\blacksquare$ Identical structure to Vincent's theorem.
+:::
+
+::: {.slide title="Rectified flow: straight paths"}
+[Flow matching]{.kicker}
+
+The simplest path is a straight line,
+$\mathbf x_t=(1-t)\mathbf x_0+t\mathbf x_1$, with constant target
+$\mathbf x_1-\mathbf x_0$. Conditional paths are straight; the marginal flow
+bends only where paths cross:
+
+![](../img/mdl-dyn-fm-paths.svg){width=78%}
+:::
+
+::: {.slide title="Gaussian → two moons"}
+[Flow matching]{.kicker}
+
+A small MLP trained by the rectified-flow loss, then Euler-integrated, sharpens
+the crescents as step count grows:
 
 @score-matching-diffusion-flow-cfm-panels
-
-. . .
-
-Benamou–Brenier: $W_2^2$ = least kinetic energy of any bridging flow,
-achieved by straight constant-speed transport. Curvature = wasted
-energy = wasted solver steps; reflow and OT couplings straighten.
 :::
 
-::: {.slide title="Sampling = solving the learned dynamics"}
-Solver error vs model error, and solver *order*:
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Optimal transport and sampling]{.dtitle}
+
+[straightness, solver order, the unifying table]{.dsub}
+:::
+:::
+
+::: {.slide title="Straight = optimal"}
+[Benamou–Brenier]{.kicker}
+
+$$W_2^2(p_0,p_1) = \min_{(p_t,\mathbf v_t)}\int_0^1\!\!\int\|\mathbf v_t\|^2 p_t.$$
+
+Any bridging flow costs at least $W_2^2$ (Jensen); the minimizer moves each
+particle in a straight line at constant speed.
+
+::: {.d2l-note .rule}
+Curvature = wasted kinetic energy = wasted solver steps. **Reflow** and
+OT couplings straighten the paths.
+:::
+:::
+
+::: {.slide title="Steps buy quality; order sets the price"}
+[Sampling]{.kicker}
+
+Error falls with steps until model bias dominates; a higher-order solver buys
+orders of magnitude at equal cost — Heun at $20$ steps beats Euler at $40$:
 
 @score-matching-diffusion-flow-steps-quality
 
 . . .
 
 @score-matching-diffusion-flow-euler-vs-heun
+:::
 
-EDM ≈ Heun + tuned schedule ⇒ ~35 NFE. One table unifies DDPM /
-score-SDE / PF-ODE / DDIM / flow matching: {path, regression, sampler}.
+::: {.slide title="One template, many names"}
+[Sampling]{.kicker}
+
+Every method here is the same recipe: **a probability path, a closed-form
+conditional regression target, and a numerical integrator**.
+
+::: {.d2l-note .rule}
+DDPM, score-SDE, PF-ODE, DDIM, and flow matching differ only in the path, the
+loss reweighting, and whether the sampler injects noise.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Score sidesteps $Z$; DSM (Vincent) regresses on $-\boldsymbol\epsilon/\sigma$; Tweedie = optimal denoising.
+- DDPM = VP-SDE discretized; $\bar\alpha_t$ marginal; $\boldsymbol\epsilon$-loss = reweighted DSM.
+- Langevin mixes slowly; DDIM is deterministic; guidance is Bayes on scores.
+:::
+
+::: {.col}
+- Flow matching prescribes the path; CFM = FM by the same regression lemma.
+- Rectified flow uses straight conditionals; Benamou–Brenier: straight = least energy.
+- One thread: an intractable marginal average **is** a tractable conditional expectation, and regression finds it.
+:::
+:::
 :::

@@ -1048,90 +1048,261 @@ discretization is, step for step, DDPM's forward chain
 
 <!-- slides -->
 
-::: {.slide title="Stochastic Differential Equations"}
-Diffusion models run on a **forward noising SDE**:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §27.2]{.kicker}
 
-$$d\mathbf{X} = \underbrace{\mathbf{f}(\mathbf{X},t)\,dt}_{\textrm{drift}} + \underbrace{g(t)\,d\mathbf{W}}_{\textrm{diffusion}}$$
-
-The plan: define the noise ($W_t$), learn its calculus (Itô),
-simulate it (Euler--Maruyama), and master the one example that
-diffusion models use (Ornstein--Uhlenbeck).
-
-One scaling law powers everything: $\Delta W \sim \sqrt{\Delta t}$,
-so $(dW)^2 = dt$.
+Brownian motion, Itô's calculus, and the SDE<br>**the forward process of every diffusion model**.
+:::
 :::
 
-::: {.slide title="Brownian motion"}
-The $\pm\sqrt{\Delta t}$ random walk's limit. Defining properties:
-$W_0 = 0$, independent increments,
-$W_t - W_s \sim \mathcal{N}(0, t-s)$, continuous paths.
+::: {.slide title="Why add noise?"}
+[Motivation]{.kicker}
 
-- $\operatorname{Var}(W_t) = t$, $\operatorname{Cov}(W_s, W_t) = \min(s,t)$
-- nowhere differentiable: $\Delta W/\Delta t = \xi/\sqrt{\Delta t} \to \pm\infty$
+::: {.cols .vc}
+::: {.col}
+A deterministic flow is invertible — it cannot smoothly turn data into pure
+Gaussian noise. Add a random kick:
+
+$$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
++ \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
+
+Goal: carry $p_{\text{data}}$ to $\mathcal N(\mathbf 0, \sigma^2 I)$.
+:::
+
+::: {.col .fig}
+@fig:mdl-dyn-sde-paths
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Brownian motion]{.dtitle}
+
+[axioms, covariance, simulation]{.dsub}
+:::
+:::
+
+::: {.slide title="The Wiener process"}
+[Brownian motion]{.kicker}
+
+The $\pm\sqrt{\Delta t}$ random walk has a non-degenerate limit $W_t$:
+$W_0=0$, independent increments, $W_t-W_s\sim\mathcal N(0,t-s)$, continuous
+paths. Simulate with $\Delta W = \sqrt{\Delta t}\,\xi$, $\xi\sim\mathcal N(0,1)$.
+
+![](../img/mdl-dyn-brownian-paths.svg){width=80%}
+:::
+
+::: {.slide title="Covariance and non-differentiability"}
+[Brownian motion]{.kicker}
+
+$$\operatorname{Cov}(W_s,W_t) = \min(s,t).$$
+
+*Proof.* Split $W_t = W_s + (W_t-W_s)$; the cross term factorizes by
+independence and both factors are mean-zero. $\blacksquare$
+
+. . .
+
+But $\Delta W/\Delta t = \xi/\sqrt{\Delta t}\to\pm\infty$ — paths are
+**nowhere differentiable**. We must integrate, never differentiate.
 
 @sdes-brownian-paths
 :::
 
-::: {.slide title="Quadratic variation: (dW)^2 = dt"}
-For smooth paths $\sum (\Delta x_i)^2 \to 0$; for Brownian motion
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-$$\sum_i (\Delta W_i)^2 \to t \quad \textrm{(in mean square)}$$
+[Itô calculus]{.dtitle}
 
-Squared noise accumulates *deterministically*. Consequence: Taylor's
-second-order term survives, and the chain rule gains a correction
-(Itô's lemma):
+[quadratic variation, the integral, the chain rule]{.dsub}
+:::
+:::
 
-$$d\phi = \left(\phi_t + f\,\phi_x + \tfrac12 g^2 \phi_{xx}\right) dt + g\,\phi_x\,dW$$
+::: {.slide title="Quadratic variation"}
+[Why ordinary calculus fails]{.kicker}
+
+For a smooth path $\sum(\Delta x_i)^2\to 0$. For Brownian motion it converges
+to the elapsed time:
+
+$$\sum_i (\Delta W_i)^2 \longrightarrow t.$$
+
+![](../img/mdl-dyn-qv-convergence.svg){width=78%}
+:::
+
+::: {.slide title="The Itô multiplication table"}
+[Why ordinary calculus fails]{.kicker}
+
+*Proof.* $\mathbb E[\sum(\Delta W_i)^2]=\sum\Delta t_i=t$ exactly, and the
+variance is $\sum 2\Delta t_i^2 \le 2\delta t\to 0$. $\blacksquare$
+
+::: {.d2l-note .rule}
+$$(dW)^2 = dt, \qquad dW\,dt = 0, \qquad (dt)^2 = 0.$$
+A squared increment is no longer negligible — it is $dt$.
+:::
+:::
+
+::: {.slide title="The Itô integral locks the left endpoint"}
+[The integral]{.kicker}
+
+Evaluate the integrand *before* the increment,
+$\int_0^t G_s\,dW_s = \lim\sum G_{t_i}(W_{t_{i+1}}-W_{t_i})$. Then
+$G_{t_i}\perp\Delta W_i$, so
+
+$$\mathbb E\Bigl[\textstyle\int_0^t G\,dW\Bigr] = 0, \qquad
+\mathbb E\Bigl[\bigl(\textstyle\int_0^t G\,dW\bigr)^2\Bigr]
+= \int_0^t \mathbb E[G_s^2]\,ds.$$
+
+The **Itô isometry** turns a stochastic variance into an ordinary integral.
+:::
+
+::: {.slide title="Itô's lemma: a chain rule with a correction"}
+[The chain rule]{.kicker}
+
+Expand $\phi(X)$ to second order; since $(dX)^2=g^2\,dt$ survives,
+
+$$d\phi = \bigl(\phi_t + f\,\phi_x + \tfrac12 g^2\,\phi_{xx}\bigr)dt + g\,\phi_x\,dW.$$
 
 . . .
 
-The correction made visible --- $W_t^2$ vs the naive
-$\int 2W\,dW$; the gap is exactly $t$:
+The $\tfrac12 g^2\phi_{xx}$ term is the seed of the Fokker–Planck diffusion.
+Check $\phi=x^2$, $X=W$: $d(W^2)=2W\,dW+dt$, so $\int_0^t W\,dW=\tfrac12(W_t^2-t)$:
 
 @sdes-ito-correction
 :::
 
-::: {.slide title="Euler-Maruyama: Euler + a noise kick"}
-$$X_{n+1} = X_n + f(X_n, t_n)\,\Delta t + g(X_n, t_n)\sqrt{\Delta t}\,\xi_n$$
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
-Convergence orders:
+[SDEs and Euler–Maruyama]{.dtitle}
 
-- **strong** (pathwise): $\tfrac12$ in general, **1 for additive
-  noise** $g(t)$ --- every SDE in this chapter
-- **weak** (marginals): 1 always --- the one diffusion models need
+[the precise meaning, simulation, convergence]{.dsub}
+:::
+:::
 
-Measured on the same Brownian increments --- OU slope $1.02$,
-GBM slope $0.45$:
+::: {.slide title="An SDE is a distribution over paths"}
+[The objects]{.kicker}
+
+$dX = f\,dt + g\,dW$ means
+$X_t = X_0 + \int_0^t f\,ds + \int_0^t g\,dW_s$. Here $f$ is the mean velocity
+($\mathbb E[dX]=f\,dt$) and $g^2$ the variance rate
+($\operatorname{Var}(dX)=g^2\,dt$); a solution is an **ensemble** of jittery
+paths, and $g=0$ recovers the ODE.
+
+![](../img/mdl-dyn-sde-paths.svg){width=70%}
+:::
+
+::: {.slide title="Euler–Maruyama: Euler plus a √Δt kick"}
+[Simulation]{.kicker}
+
+$$X_{n+1} = X_n + f(X_n,t_n)\,\Delta t + g(X_n,t_n)\sqrt{\Delta t}\,\xi_n.$$
+
+The noise scales as $\sqrt{\Delta t}$, not $\Delta t$; $g=0$ is exactly forward
+Euler:
+
+@sdes-euler-maruyama
+:::
+
+::: {.slide title="Strong vs weak convergence"}
+[Convergence]{.kicker}
+
+**Strong** error (same Brownian path) is $O(\sqrt{\Delta t})$ in general,
+$O(\Delta t)$ for additive noise. **Weak** error (matching marginals) is
+$O(\Delta t)$ always — and weak is what diffusion models need.
 
 @sdes-em-strong-order
+
+Measured slopes: additive OU $\approx 1$, multiplicative GBM $\approx 0.5$.
 :::
 
-::: {.slide title="Ornstein-Uhlenbeck: the one SDE to know"}
-$$dX = -\theta X\,dt + \sigma\,dW$$
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
 
-Mean reversion vs noise. Itô on $e^{\theta t} X$ solves it:
+[The Ornstein–Uhlenbeck process]{.dtitle}
 
-$$X_t \mid X_0 \sim \mathcal{N}\!\left(X_0 e^{-\theta t},\; \tfrac{\sigma^2}{2\theta}(1 - e^{-2\theta t})\right)$$
-
-Gaussian at every time; forgets $X_0$; stationary law
-$\mathcal{N}(0, \sigma^2/2\theta)$:
-
-@fig:mdl-dyn-sde-paths
+[mean reversion, exact solution, the VP marginal]{.dsub}
+:::
 :::
 
-::: {.slide title="Variance-preserving, exactly"}
-Choose $\sigma^2 = 2\theta$, write $\bar{\alpha}_t = e^{-2\theta t}$:
+::: {.slide title="Mean reversion vs noise"}
+[OU]{.kicker}
 
-$$X_t = \sqrt{\bar{\alpha}_t}\,X_0 + \sqrt{1-\bar{\alpha}_t}\,\epsilon$$
+$$dX = -\theta X\,dt + \sigma\,dW, \qquad \theta > 0.$$
 
-Unit-variance data $\Rightarrow$
-$\operatorname{Var}(X_t) = \bar{\alpha}_t + (1 - \bar{\alpha}_t) = 1$
-for **all** $t$ --- the DDPM forward marginal in continuous time.
+A restoring drift pulls toward $0$ while constant diffusion pushes out:
 
-@sdes-vp-normalization
+![](../img/mdl-dyn-ou-mean-reversion.svg){width=72%}
+:::
+
+::: {.slide title="Solved by an integrating factor"}
+[OU]{.kicker}
+
+Apply Itô to $e^{\theta t}X$ — the correction vanishes ($\phi_{xx}=0$) and the
+drift cancels:
+
+$$X_t = X_0 e^{-\theta t} + \sigma\!\int_0^t e^{-\theta(t-s)}\,dW_s.$$
 
 . . .
 
-Variance pinned at 1; the *distribution* still morphs from bimodal
-to Gaussian ($\mathbb{E}[X^4]$: $1 \to 3$).
+The isometry gives the variance, so the transition kernel is
+
+$$X_t\mid X_0 \sim \mathcal N\!\Bigl(X_0 e^{-\theta t},\;
+\tfrac{\sigma^2}{2\theta}\bigl(1-e^{-2\theta t}\bigr)\Bigr).$$
+:::
+
+::: {.slide title="The stationary distribution"}
+[OU]{.kicker}
+
+As $t\to\infty$ the mean dies and the variance saturates, independent of the
+start:
+
+$$X_\infty \sim \mathcal N\!\bigl(0,\ \sigma^2/(2\theta)\bigr),$$
+
+with relaxation time $1/\theta$. The path cloud and its endpoint histogram
+confirm it:
+
+@sdes-ou-cloud
+:::
+
+::: {.slide title="Variance-preserving = DDPM's forward marginal"}
+[VP]{.kicker}
+
+Choose $\sigma^2 = 2\theta$ and write $\bar\alpha_t = e^{-2\theta t}$:
+
+$$X_t = \sqrt{\bar\alpha_t}\,X_0 + \sqrt{1-\bar\alpha_t}\,\epsilon,
+\qquad \operatorname{Var}(X_t) = 1\ \ \forall t.$$
+
+@sdes-vp-normalization
+
+::: {.d2l-note .rule}
+This is exactly DDPM's forward marginal in continuous time; the VP-SDE is
+$dX=-\tfrac12\beta(t)X\,dt+\sqrt{\beta(t)}\,dW$.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Brownian motion: $\mathcal N(0,t)$ increments, $\operatorname{Cov}=\min(s,t)$, nowhere differentiable.
+- Quadratic variation $(dW)^2=dt$ forces a new calculus.
+- Itô integral: zero mean, isometry; Itô's lemma adds $\tfrac12 g^2\phi_{xx}$.
+:::
+
+::: {.col}
+- An SDE is a law over paths; Euler–Maruyama adds a $\sqrt{\Delta t}$ kick; weak order $1$.
+- OU mean-reverts to $\mathcal N(0,\sigma^2/2\theta)$.
+- VP normalization ($\sigma^2=2\theta$) is DDPM's forward marginal.
+:::
+:::
+
+::: {.d2l-note}
+Next: track the whole **density** — the Fokker–Planck equation.
+:::
 :::

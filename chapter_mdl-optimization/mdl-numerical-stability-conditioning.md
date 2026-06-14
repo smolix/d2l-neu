@@ -1040,7 +1040,7 @@ reference remains :citet:`Higham.2002`.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Math for DL]{.kicker}
+[Dive into Deep Learning · §24.4]{.kicker}
 
 Why the math is right but the loss is `NaN`<br>**floating point · stable softmax · cancellation · conditioning**.
 :::
@@ -1127,12 +1127,12 @@ the implicit leading $1$, which fills no gap.
 Because $e^x$ turns additive scale into multiplicative scale, a modest
 *logit* overflows: fp32 dies at $x \approx 88.7$, fp16 at $x \approx 11.1$.
 
-@numerical-stability-conditioning-spacing
+@!numerical-stability-conditioning-spacing
 
 ::: {.d2l-note .warn}
 fp16 gradients below $6\times10^{-5}$ vanish, so mixed precision scales
 the loss before the backward pass. **Loss scaling is underflow
-management** — nothing more.
+management**, nothing more.
 :::
 :::
 
@@ -1151,7 +1151,7 @@ management** — nothing more.
 
 The most common stability bug is one line: $\mathrm{softmax}$
 exponentiates logits, so any logit past $88.7$ makes the numerator
-`inf` and the ratio `NaN`. But softmax is **shift-invariant** —
+`inf` and the ratio `NaN`. But softmax is **shift-invariant**:
 
 $$\mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z}),$$
 
@@ -1160,7 +1160,7 @@ sits in $[1, n]$, and overflow is impossible.
 
 . . .
 
-@numerical-stability-conditioning-stable-softmax
+@!numerical-stability-conditioning-stable-softmax
 :::
 
 ::: {.slide title="Log-sum-exp: an exact, safe identity"}
@@ -1176,10 +1176,10 @@ $$\mathrm{lse}(\mathbf{z}) = \log\textstyle\sum_j e^{z_j}
 Logits near $1000$ overflow even float64; in log space they are
 effortless:
 
-@numerical-stability-conditioning-logsumexp
+@!numerical-stability-conditioning-logsumexp
 
 ::: {.d2l-note .rule}
-A *soft maximum*, within $\log n$ of the true max — and the reason
+A *soft maximum*, within $\log n$ of the true max, and the reason
 naive Bayes sums logs instead of multiplying probabilities.
 :::
 :::
@@ -1192,9 +1192,9 @@ Cross-entropy is computable straight from logits with one stable lse:
 $$-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y.$$
 
 The via-probabilities route forces the loss through the representable
-range of probabilities — and **fails differently in every framework**:
+range of probabilities, and **fails differently in every framework**:
 
-@numerical-stability-conditioning-cross-entropy
+@!numerical-stability-conditioning-cross-entropy
 :::
 
 ::: {.slide title="Same cell, four different failures" only="pytorch,mxnet"}
@@ -1238,7 +1238,7 @@ From logits it is exact at every gap; via probabilities it fails:
 ::: {.d2l-note .warn}
 **TensorFlow.** The most insidious: Keras clips probabilities to
 $[10^{-7}, 1{-}10^{-7}]$, so every row reads $16.1181 = -\log 10^{-7}$.
-No `inf`, no `NaN` — the gradient just silently stopped depending on
+No `inf`, no `NaN`: the gradient just silently stopped depending on
 the model.
 :::
 
@@ -1261,14 +1261,11 @@ space from birth**; convert to probabilities last, for human eyes only.
 
 Subtracting nearly equal numbers is *exact*, yet it strips the leading
 digits they agreed on, exposing the trailing noise. Relative error is
-amplified by
+amplified by $\tfrac{|a| + |b|}{|a - b|}\,u$, which blows up precisely
+when $a \approx b$. In float32, $1 + 10^{-8}$ rounds to $1$, so
+$\log(1+x)$ returns $0$, but `log1p` is exact:
 
-$$\frac{|a| + |b|}{|a - b|}\,u,$$
-
-which blows up precisely when $a \approx b$. In float32, $1 + 10^{-8}$
-rounds to $1$, so $\log(1+x)$ returns $0$ — but `log1p` is exact:
-
-@numerical-stability-conditioning-log1p
+@!numerical-stability-conditioning-log1p
 
 ::: {.d2l-note .rule}
 Standard victims: $\log(1{+}x)$, $e^x{-}1$ near $0$ (`log1p`, `expm1`);
@@ -1281,7 +1278,7 @@ don't add bits.**
 [Cancellation]{.kicker}
 
 The one-pass variance formula $\mathbb{E}[x^2] - \mathbb{E}[x]^2$
-subtracts two numbers near $\mu^2$ to get $\sigma^2$ — amplification
+subtracts two numbers near $\mu^2$ to get $\sigma^2$, amplification
 $\mu^2/\sigma^2$. Welford keeps a running mean and *centered* sum of
 squares, so nothing large is ever subtracted:
 
@@ -1303,7 +1300,7 @@ This is how `BatchNorm` tracks running moments.
 [Cancellation]{.kicker}
 
 The one-pass variance formula $\mathbb{E}[x^2] - \mathbb{E}[x]^2$
-subtracts two numbers near $\mu^2$ to get $\sigma^2$ — amplification
+subtracts two numbers near $\mu^2$ to get $\sigma^2$, amplification
 $\mu^2/\sigma^2$. Welford keeps a running mean and *centered* sum of
 squares, so nothing large is ever subtracted:
 
@@ -1315,7 +1312,7 @@ Mean $10^9$, true variance $1$, $10^5$ samples, all in float64:
 @!numerical-stability-conditioning-welford
 
 ::: {.d2l-note .warn}
-The naive answer is pure amplified noise — here it even comes out
+The naive answer is pure amplified noise; here it even comes out
 **negative** ($-256$), a variance below zero, its sign hostage to the
 summation order. This is what `BatchNorm` avoids with running moments.
 :::
@@ -1368,7 +1365,7 @@ predicts:
 @!numerical-stability-conditioning-hilbert
 
 ::: {.d2l-note}
-The **backward** error never leaves the $10^{-16}$ floor — the solver
+The **backward** error never leaves the $10^{-16}$ floor; the solver
 is *blameless* at every row. The matrix, not the algorithm, amplifies
 the error.
 :::
@@ -1390,7 +1387,7 @@ an SVD/QR solve on $\mathbf{A}$ directly:
 
 ::: {.d2l-note}
 This is why `lstsq` exists and frameworks solve least squares by QR or
-SVD — never by forming $\mathbf{A}^\top\mathbf{A}$.
+SVD, never by forming $\mathbf{A}^\top\mathbf{A}$.
 :::
 :::
 
@@ -1400,14 +1397,11 @@ SVD — never by forming $\mathbf{A}^\top\mathbf{A}$.
 ::: {.cols .vc}
 ::: {.col}
 Adding $\lambda\|\mathbf{w}\|^2$ lifts every eigenvalue of
-$\mathbf{A}^\top\mathbf{A}$ by $\lambda$:
-
-$$\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I})
-= \frac{\sigma_1^2 + \lambda}{\sigma_n^2 + \lambda}\;\downarrow\;1.$$
-
-The elongated valley rounds into a bowl. And because $\kappa$ is **one
-number with two consequences**, the same $\lambda$ pays twice:
-accurate solves *and* fast gradient descent.
+$\mathbf{A}^\top\mathbf{A}$ by $\lambda$, so
+$\kappa = \tfrac{\sigma_1^2 + \lambda}{\sigma_n^2 + \lambda}\downarrow 1$:
+the valley rounds into a bowl. Because $\kappa$ is **one number with two
+consequences**, the same $\lambda$ pays twice, accurate solves *and* fast
+gradient descent.
 
 @!numerical-stability-conditioning-ridge
 :::
@@ -1430,14 +1424,14 @@ accurate solves *and* fast gradient descent.
 :::
 
 ::: {.col}
-- **Cancellation:** reformulate, don't add bits — `log1p`, Welford.
+- **Cancellation:** reformulate, don't add bits (`log1p`, Welford).
 - **Conditioning:** forward $\le \kappa \times$ backward error; normal
   equations square $\kappa$, ridge lowers it.
 :::
 :::
 
 ::: {.d2l-note}
-$\kappa$: **one number, two consequences** — and ridge is the one knob
+$\kappa$: **one number, two consequences**, and ridge is the one knob
 that helps both. Reformulations, not more bits.
 :::
 :::

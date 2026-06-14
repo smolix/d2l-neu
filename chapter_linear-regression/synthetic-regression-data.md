@@ -499,7 +499,7 @@ independent $\mathbf{X}$ and $\boldsymbol{\epsilon}$ draws (same `key` in
 ::: {.slide title="Fix the ground truth, then peek"}
 [Generating the data]{.kicker}
 
-Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$ — the
+Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$, the
 numbers we will try to recover later:
 
 @synthetic-regression-data-generating-the-dataset-2
@@ -524,19 +524,14 @@ Each feature row is a vector in $\mathbb{R}^2$; each label is a scalar:
 ::: {.slide title="A minibatch sampler, by hand"}
 [Reading the data]{.kicker}
 
-Training reads the data in **shuffled minibatches**. Roll the loader
-ourselves to see exactly what that means: permute the indices, then
-slice out `batch_size` rows at a time:
+Roll the minibatch loader ourselves: permute the indices, then `yield` `batch_size` rows at a time (one batch is $32\times2$ features, $32\times1$ labels).
 
 @synthetic-regression-data-reading-the-dataset-1
 
 . . .
 
-@synthetic-regression-data-reading-the-dataset-2
-
 ::: {.d2l-note .warn}
-Transparent, but it loads everything in memory, loops in Python, and
-never prefetches.
+Transparent, but it loads everything in memory, loops in Python, and never prefetches.
 :::
 :::
 
@@ -568,14 +563,9 @@ Wrap the tensors once...
 ::: {.slide title="Hand the work to the framework" only="jax"}
 [The built-in loader]{.kicker}
 
-JAX ships no loader, so borrow TensorFlow's and unwrap it to NumPy. The
-one twist is `drop_remainder=train`:
+JAX ships no loader, so borrow TensorFlow's and unwrap it to NumPy. The one twist is `drop_remainder=train`; `get_dataloader` then slices the train/val range and calls this.
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
-
-::: {.d2l-note}
-`get_dataloader` then just slices the train/val range and calls this.
-:::
 :::
 
 ::: {.slide title="Same interface, drop-in" except="jax"}

@@ -435,22 +435,19 @@ One imports cell; everything else builds on `d2l`:
 
 ::: {.cols .vc}
 ::: {.col}
-Each layer owns a weight matrix and a bias. Weights start as
-small Gaussian noise ($\sigma = 0.01$) to break symmetry;
-biases start at zero.
-
 @mlp-implementation-initializing-model-parameters
 :::
 
 ::: {.col .narrow}
+Weights start as small Gaussian noise ($\sigma=0.01$) to break symmetry, biases at zero:
+
 $$\mathbf{W}^{(1)}\!\in\mathbb{R}^{784\times256},\;
   \mathbf{b}^{(1)}\!\in\mathbb{R}^{256}$$
 $$\mathbf{W}^{(2)}\!\in\mathbb{R}^{256\times10},\;
   \mathbf{b}^{(2)}\!\in\mathbb{R}^{10}$$
 
 ::: {.d2l-note}
-$784\cdot256 + 256 + 256\cdot10 + 10 = 203{,}530$ learnable
-numbers.
+$784\cdot256 + 256 + 256\cdot10 + 10 = 203{,}530$ learnable numbers.
 :::
 :::
 :::
@@ -490,7 +487,7 @@ $$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),
 The loss, the loaders, and the `Trainer` are **unchanged**
 from softmax regression. Only the model class is new:
 
-@mlp-implementation-training
+@!mlp-implementation-training
 
 ::: {.d2l-note}
 Validation accuracy climbs to $\approx 0.87$ over 30 epochs,

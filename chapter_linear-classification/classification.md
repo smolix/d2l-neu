@@ -334,11 +334,7 @@ batch; we ignore that to keep the code simple.
 :::
 
 ::: {.slide title="Validation under JAX: stateless, functional" only="jax"}
-[The base class]{.kicker}
-
-Flax modules carry no state, so the step threads `params` and `state`
-explicitly and the loss returns **auxiliary data** (used later by
-BatchNorm, a placeholder otherwise):
+Flax modules carry no state, so the step threads `params`/`state` explicitly:
 
 @classification-the-classifier-class-1
 :::
@@ -405,11 +401,7 @@ type-sensitive. JAX adds `@jax.jit` and runs the forward pass from
 :::
 
 ::: {.slide title="Finding the weights to score" only="mxnet"}
-[Scores, loss, decision]{.kicker}
-
-Gluon's `collect_params` misses the bare `np.ndarray` weights that
-from-scratch models use, so MXNet adds a recursive fallback (the other
-frameworks expose parameters uniformly and need none):
+Gluon's `collect_params` misses bare-array weights, so MXNet adds a recursive fallback:
 
 @classification-accuracy-2
 :::

@@ -1067,7 +1067,7 @@ all stand on results proved here.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24]{.kicker}
+[Dive into Deep Learning · §24.2]{.kicker}
 
 The line between "gradient descent provably works" and "we hope"<br>**convex sets · three lenses · Jensen · global rates · what deep nets break**.
 :::
@@ -1110,15 +1110,14 @@ All code here is a few lines of plain **NumPy**: no framework, no GPU.
 ::: {.slide title="A set is convex when chords stay inside"}
 [Convex sets]{.kicker}
 
-A set $C$ is **convex** if every segment between two of its points
-never leaves it:
-
-$$\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C \qquad \textrm{for all } \mathbf{x}, \mathbf{y} \in C,\ \theta \in [0, 1].$$
+A set $C$ is **convex** if every segment between two of its points never
+leaves it: $\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C$ for all
+$\mathbf{x}, \mathbf{y} \in C$, $\theta \in [0, 1]$.
 
 @fig:mdl-opt-convex-vs-nonconvex-set
 
 Left stays inside; the crescent's chord tunnels *outside*. Right: the
-two convex sets deep learning lives on, the simplex and a half-space.
+simplex and a half-space.
 :::
 
 ::: {.slide title="New convex sets from old"}
@@ -1222,7 +1221,7 @@ ReLU-style kinks.
 On the least-squares loss in two weights: a thousand random chords, a
 thousand random tangents, and the Hessian's eigenvalues.
 
-@convexity-three-lenses
+@!convexity-three-lenses
 
 Both worst "violations" are *negative*, and $X^\top X$ has positive
 eigenvalues. Sampling can only ever refute convexity; the Hessian is the
@@ -1269,7 +1268,7 @@ staples of the probabilistic chapters:
 - $\log$ is concave $\Rightarrow$ AM $\ge$ GM
 - the **ELBO gap** is precisely the slack in Jensen on a concave $\log$
 
-@convexity-jensen-mc
+@!convexity-jensen-mc
 
 A Jensen gap of $\sqrt{e}$ vs $1$ that no sampling closes (it is geometry,
 not noise), AM $\ge$ GM in every draw, and KL nonnegative throughout.
@@ -1304,7 +1303,7 @@ $\Rightarrow$ global.
 The *same* gradient-descent loop and step size, from 500 random starts,
 on a convex bowl and on a tilted double well:
 
-@convexity-basins
+@!convexity-basins
 
 The bowl collapses all 500 runs onto one point (spread at machine
 epsilon). The double well splits them across two basins. Convexity is a
@@ -1393,7 +1392,7 @@ invariance behind the stable softmax. Its conjugate is negative entropy.
 Eigenvalues of the analytic Hessian, the covariance identity by Monte
 Carlo, and the predicted flat direction:
 
-@convexity-lse-hessian
+@!convexity-lse-hessian
 
 Every eigenvalue is nonnegative down to one numerical zero, and 200k
 one-hot draws reproduce the analytic Hessian: it really is a covariance
@@ -1443,7 +1442,7 @@ $$\tfrac12\|\nabla f\|^2 \ge \mu\,(f - f^\star) \qquad \textrm{(Polyak--Łojasie
 PL says the gradient is small only where the value is near-optimal, so
 flat spots sit only at the bottom: linear convergence with *no* convexity.
 
-@convexity-pl-rate
+@!convexity-pl-rate
 
 The gap contracts by a constant factor on $x^2 + 3\sin^2 x$, whose Hessian
 dips to $-4$. One current account of why huge overparameterized nets train.

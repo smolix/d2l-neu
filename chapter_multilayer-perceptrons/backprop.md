@@ -113,7 +113,7 @@ Notice that the directions of the arrows
 (which illustrate data flow)
 are primarily rightward and upward.
 
-![Computational graph of forward propagation.](../img/forward.svg)
+![Computational graph of forward propagation.](../img/mdl-mlp-forward-graph.svg)
 :label:`fig_forward`
 
 ## Backpropagation
@@ -440,7 +440,7 @@ $$J = L + s.$$
 Squares are **variables**, circles are **operators**; arrows show data flow,
 running input (lower-left) to output (upper-right):
 
-![Computational graph of forward propagation: input and weights flow rightward and upward into the loss $L$, the regularizer $s$, and the objective $J$.](../img/forward.svg)
+![Computational graph of forward propagation: input and weights flow rightward and upward into the loss $L$, the regularizer $s$, and the objective $J$.](../img/mdl-mlp-forward-graph.svg)
 
 ::: {.d2l-note}
 Every arrow is a dependency. The graph is the *only* thing the framework

@@ -470,13 +470,9 @@ Pull one batch and read its shapes off directly:
 ::: {.slide title="See the data before you model it"}
 [Visualization]{.kicker}
 
-A `visualize` method pulls one validation batch and tiles the images, each captioned with its class name. Eyeballing data is a cheap, powerful sanity check:
+A `visualize` method tiles one validation batch, each image captioned with its class name. Eyeballing data is a cheap, powerful sanity check:
 
 @image-classification-dataset-visualization-2
-
-::: {.d2l-note}
-A false-color palette improves contrast; the pixels are genuinely grayscale.
-:::
 :::
 
 ::: {.slide title="Recap"}

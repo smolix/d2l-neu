@@ -416,7 +416,8 @@ $\approx 88$, and **underflows to $0$** below $\approx -88$.
 ::: {.d2l-note .warn}
 Feed the from-scratch softmax the logits $\mathbf{o}=(1000, 0, 0)$:
 $\exp(1000)=\infty$, the ratio is $\infty/\infty=$ `NaN`, and one
-`NaN` poisons the entire backward pass.
+`NaN` poisons the entire backward pass. We watched this happen in §4.4;
+the fused loss below never forms that ratio.
 :::
 :::
 

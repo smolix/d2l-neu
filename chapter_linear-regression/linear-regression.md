@@ -455,7 +455,7 @@ c = d2l.zeros(n)
 t = time.time()
 for i in range(n):
     c[i] = a[i] + b[i]
-f'{time.time() - t:.5f} sec'
+print(f'{time.time() - t:.5f} sec')
 ```
 
 ```{.python .input #linear-regression-vectorization-for-speed-2}
@@ -464,7 +464,7 @@ c = tf.Variable(d2l.zeros(n))
 t = time.time()
 for i in range(n):
     c[i].assign(a[i] + b[i])
-f'{time.time() - t:.5f} sec'
+print(f'{time.time() - t:.5f} sec')
 ```
 
 ```{.python .input #linear-regression-vectorization-for-speed-2}
@@ -476,7 +476,7 @@ c = d2l.zeros(n)
 t = time.time()
 for i in range(n):
     c = c.at[i].set(a[i] + b[i])
-f'{time.time() - t:.5f} sec'
+print(f'{time.time() - t:.5f} sec')
 ```
 
 Alternatively, we rely on the overloaded `+` operator to compute the elementwise sum.
@@ -484,7 +484,7 @@ Alternatively, we rely on the overloaded `+` operator to compute the elementwise
 ```{.python .input #linear-regression-vectorization-for-speed-3}
 t = time.time()
 d = a + b
-f'{time.time() - t:.5f} sec'
+print(f'{time.time() - t:.5f} sec')
 ```
 
 The second method is dramatically faster than the first. The reason is not that
@@ -971,18 +971,23 @@ The math is identical. Only the *number of trips* into the Python interpreter di
 ::: {.slide title="Loop versus one library call"}
 [Vectorization]{.kicker}
 
+::: {.cols}
+::: {.col}
 A Python loop dispatches $n$ separate tensor ops, one per element:
 
 @linear-regression-vectorization-for-speed-2
+:::
 
-. . .
-
+::: {.col}
 The overloaded `+` hands the whole array to one compiled kernel:
 
 @linear-regression-vectorization-for-speed-3
+:::
+:::
 
-The vectorized call is **dramatically faster**, anywhere from tenfold to a
-thousandfold here: push inner loops down into the library, never Python.
+::: {.d2l-note .rule}
+The printed times tell the story: the single library call beats the loop by orders of magnitude. Push inner loops into the library, never Python.
+:::
 :::
 
 ::: {.slide}
@@ -1001,17 +1006,25 @@ thousandfold here: push inner loops down into the library, never Python.
 Assume each label is the linear prediction plus fixed-variance noise:
 
 $$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
-  \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
+  \quad \epsilon \sim \mathcal{N}(0, \sigma^2)
+  \;\Rightarrow\;
+  P(y\mid\mathbf{x}) = \tfrac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\!\Bigl(-\tfrac{(y-\hat{y})^2}{2\sigma^2}\Bigr).$$
 
 . . .
 
-The negative log-likelihood of the data is, up to a constant,
+The negative log-likelihood of the whole dataset is then
 
 $$-\log P(\mathbf{y}\mid\mathbf{X})
-  = \textrm{const} +
-    \frac{1}{2\sigma^2}\sum_i \bigl(y^{(i)}-\hat{y}^{(i)}\bigr)^2.$$
+  = \textrm{const} + \frac{1}{2\sigma^2}\sum_i \bigl(y^{(i)}-\hat{y}^{(i)}\bigr)^2.$$
 
-So **maximum likelihood under Gaussian noise** *is* minimizing squared error.
+. . .
+
+The constant and $\sigma$ drop out, so **maximum likelihood under Gaussian noise** *is* minimizing squared error.
+
+::: {.d2l-note .rule}
+The template: match the loss to the noise model. §3.7 adds a *prior* on $\mathbf{w}$ to this same likelihood and recovers weight decay.
+:::
 :::
 
 ::: {.slide title="The normal density"}

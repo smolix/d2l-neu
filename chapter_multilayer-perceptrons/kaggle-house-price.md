@@ -759,15 +759,19 @@ re-running never re-fetches.
 ::: {.slide title="Wrap train and test in a DataModule"}
 [Reading the data]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 A `KaggleHouse(d2l.DataModule)` holds the raw train and test frames:
 
-@kaggle-house-price-accessing-and-reading-the-dataset-1
+@-kaggle-house-price-accessing-and-reading-the-dataset-1
+:::
 
-. . .
-
-Train has the label column; test does not, that is what we predict:
+::: {.col .narrow}
+Train carries the label column, test does not, and that is what we predict:
 
 @kaggle-house-price-accessing-and-reading-the-dataset-2
+:::
+:::
 :::
 
 ::: {.slide title="What a few rows look like"}
@@ -801,24 +805,10 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="The transforms in code"}
+::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)"}
 [Preprocessing]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-One method does all three steps, sharing the train/test frames so the
-fitted statistics line up:
-
 @-kaggle-house-price-data-preprocessing-2
-:::
-
-::: {.col .narrow}
-One-hot encoding explodes the width, **79 raw features become 331**
-columns of well-scaled floats:
-
-@kaggle-house-price-data-preprocessing-3
-:::
-:::
 :::
 
 ::: {.slide}
@@ -902,13 +892,13 @@ loop doubles as the hyperparameter search.
 
 ::: {.cols .vc}
 ::: {.col}
-Slice out fold $i$ as validation, keep the rest for training:
+Slice out fold $i$ for validation, keep the rest to train:
 
 @kaggle-house-price-k-fold-cross-validation-1
 :::
 
 ::: {.col}
-Fit a fresh model per fold and average the held-out losses:
+Fit a fresh model per fold, average the held-out losses:
 
 @-kaggle-house-price-k-fold-cross-validation-2
 :::
@@ -930,16 +920,14 @@ Fit a fresh model per fold and average the held-out losses:
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model: a fast, honest baseline. But train it
-**competently**, 100 epochs at lr 0.03, not the customary ten:
+Start with a linear model, a fast honest baseline, but train it **competently**: 100 epochs at lr 0.03, not the customary ten:
 
-@kaggle-house-price-model-selection-linear
+@!kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Stopping at 10 epochs leaves it underfit (~0.18) and flatters every
-model you compare against it.
+Stopping at 10 epochs leaves it underfit (~0.18) and flatters every model compared against it.
 :::
 :::
 :::
@@ -989,14 +977,11 @@ optimizer to attach weight decay.
 ::: {.slide title="Same loop, only the model changes" only="pytorch"}
 [Model selection]{.kicker}
 
-Train the MLP with the **same** K-fold loop, learning rate, and epoch
-budget as the baseline:
+Train the MLP with the **same** K-fold loop, learning rate, and epoch budget as the baseline:
 
-@kaggle-house-price-mlp-select
+@!kaggle-house-price-mlp-select
 
-The small MLP edges out the competent linear baseline (~0.028 vs
-~0.032). The gain is deliberately modest: on small tabular data,
-gradient-boosted trees would still win.
+The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The gain is deliberately modest: on small tabular data, gradient-boosted trees would still win.
 :::
 
 ::: {.slide title="Submit: ensemble the folds, write the CSV"}

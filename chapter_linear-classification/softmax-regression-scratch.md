@@ -88,6 +88,45 @@ into a nonnegative number.
 Each row sums up to 1,
 as is required for a probability. Caution: the code above is *not* robust against very large or very small arguments. While it is sufficient to illustrate what is happening, you should *not* use this code verbatim for any serious purpose. Deep learning frameworks have such protections built in and we will be using the built-in softmax going forward.
 
+To see the failure rather than just assert it, feed in a logit that is large
+on the scale of $\exp$. A score of $1000$ overflows `exp` to infinity in
+float32, so the naive ratio becomes $\infty/\infty$, which evaluates to `NaN`.
+The framework's `softmax` subtracts the per-row maximum before exponentiating
+(the log-sum-exp trick of :numref:`subsec_softmax-implementation-revisited`) and
+returns a finite distribution on exactly the same input:
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab pytorch
+z = torch.tensor([1000., 0., 0.])
+naive = torch.exp(z) / torch.exp(z).sum()  # exp(1000) overflows -> nan
+stable = torch.softmax(z, dim=0)           # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab mxnet
+z = np.array([1000., 0., 0.])
+naive = np.exp(z) / np.exp(z).sum()        # exp(1000) overflows -> nan
+stable = npx.softmax(z, axis=0)            # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab tensorflow
+z = tf.constant([1000., 0., 0.])
+naive = tf.exp(z) / tf.reduce_sum(tf.exp(z))  # exp(1000) overflows -> nan
+stable = tf.nn.softmax(z, axis=0)             # built-in uses the log-sum-exp trick
+naive, stable
+```
+
+```{.python .input #softmax-regression-scratch-the-softmax-overflow}
+%%tab jax
+z = jnp.array([1000., 0., 0.])
+naive = jnp.exp(z) / jnp.exp(z).sum()      # exp(1000) overflows -> nan
+stable = jax.nn.softmax(z, axis=0)         # built-in uses the log-sum-exp trick
+naive, stable
+```
+
 ```{.python .input #softmax-regression-scratch-the-softmax-3}
 %%tab mxnet
 X = d2l.rand(2, 5)
@@ -563,6 +602,22 @@ to 1**, exactly what a probability distribution over classes requires:
 @softmax-regression-scratch-the-softmax-3
 :::
 
+::: {.slide title="Why it is only a teaching version"}
+[The Softmax]{.kicker}
+
+Watch the warning bite. A single logit of $1000$ sends $\exp$ to infinity
+in float32, the ratio is $\infty/\infty$, and the whole row turns to `NaN`.
+The framework's `softmax` shifts by the row maximum first and stays finite
+on the identical input:
+
+@softmax-regression-scratch-the-softmax-overflow
+
+::: {.d2l-note .warn}
+One `NaN` poisons every downstream gradient. The stable fix, fusing softmax
+and log via log-sum-exp, arrives in §4.5.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
@@ -636,11 +691,13 @@ Take the negative log of each selected probability, then average. A tiny
 clip keeps the log finite when a probability underflows to 0:
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
+:::
 
-. . .
+::: {.slide title="Register it as the loss"}
+[Cross-Entropy Loss]{.kicker}
 
-Register it as the model's `loss`, and every reused training utility now
-knows how to optimize this classifier:
+Attach `cross_entropy` as the model's `loss`, and every reused training
+utility now knows how to optimize this classifier:
 
 @softmax-regression-scratch-the-cross-entropy-loss-3
 :::
@@ -665,15 +722,17 @@ validation accuracy, no extra code:
 @softmax-regression-scratch-training
 :::
 
-::: {.slide title="Predict, then look at the mistakes"}
+::: {.slide title="Predict on a fresh batch"}
 [Prediction]{.kicker}
 
 Take the argmax of the model's outputs over a fresh validation batch,
 one predicted class per image:
 
 @softmax-regression-scratch-prediction-1
+:::
 
-. . .
+::: {.slide title="Look at the mistakes"}
+[Prediction]{.kicker}
 
 The interesting cases are the **errors**. Tile the misclassified images,
 each captioned `true / predicted`:

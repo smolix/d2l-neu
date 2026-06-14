@@ -896,7 +896,7 @@ ideas are treated in full.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Appendix · Calculus]{.kicker}
+[Dive into Deep Learning · §23.2]{.kicker}
 
 Differentiation in many variables<br>**the gradient · its geometry · the chain rule · the Hessian**.
 :::
@@ -911,7 +911,7 @@ A deep network's loss depends on millions of weights, yet training rests
 on a single question: **how does the loss change when we nudge the
 parameters?**
 
-- The **gradient** $\nabla_{\mathbf{w}} L$ is the answer — the derivative in many dimensions.
+- The **gradient** $\nabla_{\mathbf{w}} L$ is the answer, the derivative in many dimensions.
 - It points the way **downhill**, the engine of every optimizer.
 - The **chain rule**, organized by the gradient, *is* backpropagation.
 - The **Hessian** tells a minimum from a saddle.
@@ -967,7 +967,7 @@ They agree to several digits, as a first-order approximation should.
 [Gradients]{.kicker}
 
 Read the approximation along a unit direction $\mathbf{u}$ and the rate of
-change of $L$ there — the **directional derivative** — is the gradient's
+change of $L$ there (the **directional derivative**) is the gradient's
 projection onto $\mathbf{u}$:
 
 $$\frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\,h\to 0\,}\; \mathbf{u}\cdot\nabla_{\mathbf{w}} L.$$
@@ -994,7 +994,7 @@ simultaneously. The rest of the geometry falls out of this single identity.
 ::: {.cols .vc}
 ::: {.col}
 Along a unit direction $\mathbf{v}$, the change in $L$ is
-$\|\nabla L\|\cos\theta$ — the direction enters only through $\theta$.
+$\|\nabla L\|\cos\theta$, so the direction enters only through $\theta$.
 
 ::: {.d2l-note .rule}
 By Cauchy–Schwarz, $-\|\nabla L\| \le \mathbf{v}\cdot\nabla L \le \|\nabla L\|$:
@@ -1017,7 +1017,7 @@ $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L$.
 ::: {.cols .vc}
 ::: {.col}
 On the **base plane**, $L$ does not change along a level set, so
-$\nabla L$ is **normal to the contours** — longest where they bunch.
+$\nabla L$ is **normal to the contours**, longest where they bunch.
 
 One dimension up, on the **graph**, the same equation is the
 **tangent plane** $z = f(\mathbf{x}_0) + \nabla f \cdot (\mathbf{x}-\mathbf{x}_0)$.
@@ -1038,11 +1038,11 @@ crossing the contours square on.
 ::: {.cols .vc}
 ::: {.col}
 If $\nabla L(\mathbf{x}_0) \neq \mathbf{0}$, stepping along $-\nabla L$
-*lowers* $L$ — so $\mathbf{x}_0$ is no minimum. Contrapositively:
+*lowers* $L$, so $\mathbf{x}_0$ is no minimum. Contrapositively:
 
 ::: {.d2l-note .rule}
 A minimum forces $\nabla L(\mathbf{x}_0) = \mathbf{0}$. Such points are
-**critical points** — necessary, not sufficient.
+**critical points**: necessary, not sufficient.
 :::
 
 For $f(x) = 3x^4-4x^3-12x^2$, the critical points $x=-1,0,2$ have values
@@ -1059,7 +1059,7 @@ $-5, 0, -32$; the plot confirms the minimum at $x=2$.
 [Geometry]{.kicker}
 
 Minimize $f$ subject to $g(\mathbf{x}) = c$. At the optimum no move *along*
-the constraint can lower $f$, so $\nabla f$ is normal to $\{g=c\}$ — but so
+the constraint can lower $f$, so $\nabla f$ is normal to $\{g=c\}$, and so
 is $\nabla g$. Two normals to one surface are parallel:
 
 $$\nabla f(\mathbf{x}^\star) = \lambda\,\nabla g(\mathbf{x}^\star).$$
@@ -1110,7 +1110,7 @@ the first-order coefficient gives the whole rule:
 > Sum, over **every directed path** from input to output, the **product**
 > of the edge derivatives along it.
 
-Here $y$ reaches $f$ by three paths, including a skip edge $y\to u\to f$ —
+Here $y$ reaches $f$ by three paths, including a skip edge $y\to u\to f$,
 the same mechanism by which LSTM gates and residual connections shape
 gradient flow.
 :::
@@ -1124,45 +1124,29 @@ gradient flow.
 ::: {.slide title="Forward sweep: one derivative"}
 [Chain rule]{.kicker}
 
-Push an input forward through the graph and the single-step partials
-multiply out. Tidy, but it computes only $\partial f/\partial w$:
+Push an input forward through the graph and the single-step partials multiply out. One forward sweep returns only $\partial f/\partial w$, with no head start on the other inputs:
 
-@multivariable-calculus-the-backpropagation-algorithm-1
-
-. . .
-
-It gives **no head start** on $\partial f/\partial x$ — we organized the
-work around how *one input* affects everything.
+@!multivariable-calculus-the-backpropagation-algorithm-1
 :::
 
 ::: {.slide title="Backward sweep: the whole gradient"}
 [Chain rule]{.kicker}
 
-Keep $\partial f$ in every *numerator* and walk the graph from the output
-**backward**. Computing $\tfrac{\partial f}{\partial u}, \tfrac{\partial f}{\partial v}$
-once, then reusing them, yields **all** input derivatives in one sweep:
+Walk the graph from the output **backward**, keeping $\partial f$ in every *numerator*: compute $\tfrac{\partial f}{\partial u}, \tfrac{\partial f}{\partial v}$ once, reuse them, and **all** four input derivatives fall out in a single sweep. This *is* backpropagation.
 
-@multivariable-calculus-the-backpropagation-algorithm-2
-
-::: {.d2l-note .rule}
-Differentiating from the output back toward the inputs *is*
-**backpropagation**: a forward pass, then a reuse-everything backward pass.
-:::
+@!multivariable-calculus-the-backpropagation-algorithm-2
 :::
 
 ::: {.slide title="What the framework runs"}
 [Chain rule]{.kicker}
 
-`f.backward()` does exactly this hand-computed backward pass — one sweep,
-the gradient with respect to all four inputs:
+`f.backward()` runs exactly this backward pass. The four gradients match our by-hand sweep to the digit:
 
-@multivariable-calculus-the-backpropagation-algorithm-3
+@!multivariable-calculus-the-backpropagation-algorithm-3
 
 . . .
 
-The automatic answer matches our by-hand sweep. *Why* this is reverse-mode
-autodiff, a chain of vector–Jacobian products, is the matrix-calculus
-section.
+*Why* it is reverse-mode autodiff, a chain of vector–Jacobian products, is the matrix-calculus section.
 :::
 
 ::: {.slide}
@@ -1187,7 +1171,7 @@ $\partial^2 f/\partial x_i\partial x_j = \partial^2 f/\partial x_j\partial x_i$,
 so $\mathbf{H}_f = \mathbf{H}_f^\top$.
 :::
 
-Symmetry puts $\mathbf{H}$ in the world of the spectral theorem — exactly
+Symmetry puts $\mathbf{H}$ in the world of the spectral theorem, exactly
 what the second-derivative test needs.
 :::
 
@@ -1197,7 +1181,7 @@ what the second-derivative test needs.
 ::: {.cols .vc}
 ::: {.col}
 Just as the gradient gives the best *linear* fit, the Hessian gives the
-best *quadratic* fit — the **second-order Taylor approximation**:
+best *quadratic* fit, the **second-order Taylor approximation**:
 
 $$f(\mathbf{x}) \approx f(\mathbf{x}_0) + \nabla f \cdot (\mathbf{x}-\mathbf{x}_0) + \tfrac12 (\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H} f\, (\mathbf{x}-\mathbf{x}_0).$$
 
@@ -1214,16 +1198,11 @@ out.
 ::: {.slide title="Holding the quadratic to account"}
 [Hessian]{.kicker}
 
-Stepping away from the base point $(-1, 0)$, the gap between $f$ and its
-Taylor quadratic $q$ should stay tiny nearby and grow with distance:
+Stepping from the base point $(-1, 0)$, the gap between $f$ and its Taylor quadratic $q$ stays tiny nearby and grows with distance:
 
-@multivariable-calculus-hessians
+@!multivariable-calculus-hessians
 
-. . .
-
-The gap is **third order** in the step — double the step, eight times the
-gap — which is exactly what "best quadratic" means. Iterating *fit and jump
-to the minimum* is Newton's method.
+The gap is **third order** (double the step, eight times the gap), which is what "best quadratic" means. Iterating *fit and jump to the minimum* is Newton's method.
 :::
 
 ::: {.slide title="The second-derivative test"}
@@ -1231,7 +1210,7 @@ to the minimum* is Newton's method.
 
 At a critical point the picture is purely quadratic; the curvature
 $\mathbf{v}^\top\mathbf{H}\mathbf{v}$ along $\mathbf{v}$ decides everything,
-through the **definiteness** of $\mathbf{H}$ — read off its eigenvalues:
+through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
 
 ![](../img/mdl-la-psd.svg)
 
@@ -1245,13 +1224,13 @@ Mixed signs → **saddle**. A zero eigenvalue → second order is silent.
 [Hessian]{.kicker}
 
 A minimum needs **all** $n$ eigenvalues positive at once. If their signs
-behaved like coin flips, that is probability $2^{-n}$ — vanishing in high
+behaved like coin flips, that is probability $2^{-n}$, vanishing in high
 dimension.
 
 . . .
 
 So the critical points met while training deep nets are overwhelmingly
-**saddles**, not the bad local minima once feared — one reason gradient
+**saddles**, not the bad local minima once feared, one reason gradient
 methods do so well in practice.
 :::
 
@@ -1261,17 +1240,17 @@ methods do so well in practice.
 ::: {.cols}
 ::: {.col}
 - The **gradient** is the derivative in many dimensions: $\boldsymbol{\epsilon}\cdot\nabla L$ is the first-order change, and its projection gives the slope in any direction.
-- $-\nabla L$ is **steepest descent**, and $\nabla L \perp$ the level sets — the geometry of gradient descent.
+- $-\nabla L$ is **steepest descent**, and $\nabla L \perp$ the level sets: the geometry of gradient descent.
 :::
 
 ::: {.col}
-- The **chain rule** sums products of edge derivatives over paths; run **backward** it reuses everything — that is **backpropagation**.
+- The **chain rule** sums products of edge derivatives over paths; run **backward** it reuses everything: that is **backpropagation**.
 - The symmetric **Hessian** gives the quadratic fit; its eigenvalues separate minimum, maximum, and saddle.
 :::
 :::
 
 ::: {.d2l-note}
-Every optimizer in this book — GD, momentum, Adam, Newton — reads the local
+Every optimizer in this book (GD, momentum, Adam, Newton) reads the local
 Taylor expansion of the loss and moves against the gradient.
 :::
 :::

@@ -945,16 +945,13 @@ How much of something is there in total<br>**Riemann sums · the fundamental the
 ::: {.cols .vc}
 ::: {.col}
 Differentiation answered a *local* question: how does $f$ change
-when we nudge $x$? Integration answers a *global* one: how much is
-there in total.
+when we nudge $x$? Integration answers a *global* one, how much is
+there in total, and the fundamental theorem welds the two together.
 
 - An **area** under a curve, a **volume** under a surface.
 - Every continuous **probability** is an integral, $\int p = 1$.
 - Every **expectation** is an integral average, $\int x\,p(x)\,dx$.
 - The **change-of-variables** rule powers normalizing flows.
-
-The fundamental theorem welds it to differentiation, which is what
-makes any of it computable.
 :::
 
 ::: {.col .fig}

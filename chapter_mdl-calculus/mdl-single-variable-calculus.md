@@ -709,7 +709,7 @@ That measure-zero set is the entire reason SGD shrugs: a randomly drawn point la
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §22.1]{.kicker}
+[Dive into Deep Learning · §23.1]{.kicker}
 
 The local linear model behind every optimizer<br>**the derivative · gradient descent · curvature · Taylor · corners**.
 :::
@@ -730,7 +730,7 @@ Freeze every weight but one and the loss becomes a curve $f(x)$ in a single vari
 :::
 
 ::: {.col .fig}
-![Zoom in on a smooth curve and it flattens onto a line — the tangent at the base point.](../img/mdl-cal-zoom-sequence.svg){width=98%}
+![Zoom in on a smooth curve and it flattens onto a line, the tangent at the base point.](../img/mdl-cal-zoom-sequence.svg){width=98%}
 :::
 :::
 :::
@@ -748,11 +748,13 @@ Freeze every weight but one and the loss becomes a curve $f(x)$ in a single vari
 ::: {.slide title="Every smooth curve is a line, up close"}
 [The derivative]{.kicker}
 
-The founding idea of calculus: zoom in on any smooth function and the wiggles flatten until the graph is *indistinguishable from a straight line*. The same curve over three shrinking windows:
+The founding idea of calculus: zoom in on any smooth function and the wiggles flatten until the graph is *indistinguishable from a straight line*, the tangent, whose slope is all that is left to pin down.
 
+::: {.cols .vc}
+::: {.col .fig .big}
 @fig:mdl-cal-zoom-sequence
-
-That line is the tangent; its slope is the only number left to pin down.
+:::
+:::
 :::
 
 ::: {.slide title="From secant to tangent"}
@@ -764,7 +766,7 @@ The **difference quotient** is the slope of the *secant* through two nearby poin
 
 $$\frac{f(x+\epsilon) - f(x)}{\epsilon}.$$
 
-As $\epsilon \to 0$ the second point slides in and the secant rotates into the tangent — its limiting slope is the **derivative** $f'(x)$.
+As $\epsilon \to 0$ the second point slides in and the secant rotates into the tangent, whose limiting slope is the **derivative** $f'(x)$.
 :::
 
 ::: {.col .fig}
@@ -776,15 +778,15 @@ As $\epsilon \to 0$ the second point slides in and the secant rotates into the t
 ::: {.slide title="Watch the slope settle"}
 [The derivative]{.kicker}
 
-For $f(x) = x^2 + 1701(x-4)^3$ the secant slope at $x=4$ marches toward $8$ as $\epsilon$ shrinks (the cubic makes the early error visible):
+The secant slope of $f(x) = x^2 + 1701(x-4)^3$ at $x=4$ marches toward $8$ as $\epsilon$ shrinks:
 
 @single-variable-calculus-differential-calculus-4
 
 . . .
 
-The table only *creeps* toward the limit. Autograd computes it *exactly* — no $\epsilon$, no truncation error:
+The table only *creeps*; autograd returns it *exactly*, no $\epsilon$:
 
-@single-variable-calculus-autograd-check
+@!single-variable-calculus-autograd-check
 :::
 
 ::: {.slide title="The small-change identity"}
@@ -796,7 +798,7 @@ Rearranging the limit gives the most useful equation in the section:
 $$f(x+\epsilon) \approx f(x) + \epsilon\,f'(x).$$
 :::
 
-*Nudge the input by $\epsilon$, the output moves by $\epsilon$ times the derivative.* The derivative is the **exchange rate** between an input change and the output change it buys — and the differentiation rules, gradient descent, and Taylor series are all this one line wearing a different face.
+*Nudge the input by $\epsilon$, the output moves by $\epsilon$ times the derivative.* The derivative is the **exchange rate** between an input change and the output change it buys, and the differentiation rules, gradient descent, and Taylor series are all this one line wearing a different face.
 :::
 
 ::: {.slide}
@@ -814,7 +816,7 @@ $$f(x+\epsilon) \approx f(x) + \epsilon\,f'(x).$$
 
 ::: {.cols .vc}
 ::: {.col}
-Read as a function of the displacement, $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$ is the **tangent line** at $x$ — the best straight-line model of $f$ nearby.
+Read as a function of the displacement, $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$ is the **tangent line** at $x$, the best straight-line model of $f$ nearby.
 
 Drawn at three points of $\sin$ (using $\tfrac{d}{dx}\sin = \cos$), each line hugs the curve in a neighborhood and peels away beyond it.
 :::
@@ -834,7 +836,7 @@ Now we *choose* the step. Take $\epsilon = -\eta\,f'(x)$ with step size $\eta > 
 
 $$\approx \eta\,[f'(x)]^2 \ge 0.$$
 
-Whatever the sign of $f'$, stepping against it lowers $f$ — by an amount proportional to the slope *squared*. Iterating is **gradient descent**, $x_{t+1} = x_t - \eta f'(x_t)$.
+Whatever the sign of $f'$, stepping against it lowers $f$, by an amount proportional to the slope *squared*. Iterating is **gradient descent**, $x_{t+1} = x_t - \eta f'(x_t)$.
 :::
 
 ::: {.col .fig}
@@ -854,7 +856,7 @@ Whatever the sign of $f'$, stepping against it lowers $f$ — by an amount propo
 ::: {.col}
 If the slope is $L$-Lipschitz, the curvature erects a **quadratic ceiling** $f(x) + f'(x)s + \tfrac{L}{2}s^2$ that touches the graph at the base point.
 
-Stepping to the ceiling's minimizer — the gradient step with $\eta = 1/L$ — drops $f$ by at least $\tfrac{1}{2L}[f'(x)]^2$:
+Stepping to the ceiling's minimizer (the gradient step with $\eta = 1/L$) drops $f$ by at least $\tfrac{1}{2L}[f'(x)]^2$:
 
 $$f\!\left(x - \eta f'(x)\right) \le f(x) - \eta\!\left(1 - \tfrac{L\eta}{2}\right)[f'(x)]^2.$$
 
@@ -866,13 +868,17 @@ A strict decrease for every $0 < \eta < 2/L$.
 ::: {.slide title="Five step sizes, five regimes"}
 [Optimization]{.kicker}
 
-Gradient descent on $f(x) = x^2$ (so $L = 2$, safe range $\eta < 1$) from $x_0 = 1$. Each $\eta$ lands in its own regime after ten steps:
+::: {.cols .vc}
+::: {.col .fig .big}
+@!single-variable-calculus-gradient-descent
+:::
 
-@single-variable-calculus-gradient-descent
+::: {.col}
+Gradient descent on $f(x) = x^2$ ($L = 2$) from $x_0 = 1$, ten steps each.
 
-. . .
-
-Creep ($\eta{=}0.05$), one-shot ($\tfrac12{=}1/L$), zig-zag ($0.9$), bounce ($1.0$), diverge ($1.1$) — the threshold $\eta = 2/L$ is exactly where the lemma's guarantee expires.
+Creep ($\eta{=}0.05$), one-shot ($\tfrac12{=}1/L$), zig-zag ($0.9$), bounce ($1.0$), diverge ($1.1$): the threshold $\eta = 2/L$ is where the lemma's guarantee expires.
+:::
+:::
 :::
 
 ::: {.slide}
@@ -888,19 +894,19 @@ Creep ($\eta{=}0.05$), one-shot ($\tfrac12{=}1/L$), zig-zag ($0.9$), bounce ($1.
 ::: {.slide title="The second derivative is curvature"}
 [Curvature]{.kicker}
 
-At a stationary point ($f'=0$) the *sign* of $f''$ decides the shape: up into a **minimum**, down into a **maximum**, flat is **undecided** — the second-derivative test.
+At a stationary point ($f'=0$) the *sign* of $f''$ decides the shape: up into a **minimum**, down into a **maximum**, flat is **undecided**. This is the second-derivative test.
 
 ::: {.cols}
 ::: {.col .fig}
-![$f'' > 0$: slope rising, a bowl — local **min**.](../img/mdl-cal-pos-second.svg){width=98%}
+![$f'' > 0$: slope rising, a bowl, local **min**.](../img/mdl-cal-pos-second.svg){width=98%}
 :::
 
 ::: {.col .fig}
-![$f'' < 0$: slope falling, a dome — local **max**.](../img/mdl-cal-neg-second.svg){width=98%}
+![$f'' < 0$: slope falling, a dome, local **max**.](../img/mdl-cal-neg-second.svg){width=98%}
 :::
 
 ::: {.col .fig}
-![$f'' = 0$: slope constant, a line — inconclusive.](../img/mdl-cal-zero-second.svg){width=98%}
+![$f'' = 0$: slope constant, a line, inconclusive.](../img/mdl-cal-zero-second.svg){width=98%}
 :::
 :::
 :::
@@ -928,19 +934,13 @@ It is why a positive slope means $f$ climbs, and what makes the Taylor remainder
 
 ::: {.cols .vc}
 ::: {.col}
-Matching value, slope, **and** curvature gives the best local *parabola* — it hugs the curve over a wider window than the tangent.
+Matching value, slope, **and** curvature gives the best local *parabola*, which hugs the curve over a wider window than the tangent. It has a minimum of its own, so jump straight to it: **Newton's method** $x_{t+1} = x_t - f'(x_t)/f''(x_t)$.
 
-A parabola has a minimum of its own, so jump straight to it. That step is **Newton's method**:
-
-::: {.d2l-note .rule}
-$$x_{t+1} = x_t - \frac{f'(x_t)}{f''(x_t)}.$$
-:::
-
-Gradient descent with the hand-tuned $\eta$ replaced by the curvature-adapted $1/f''(x_t)$: sharp curvature, caution; gentle, boldness.
+This is gradient descent with $\eta$ replaced by the curvature-adapted $1/f''(x_t)$: sharp curvature, caution; gentle, boldness.
 :::
 
 ::: {.col .fig}
-![The best quadratic matches $f$'s value, slope, and curvature at the base point.](../img/mdl-cal-taylor-quadratic.svg){width=96%}
+![The best quadratic at the base point.](../img/mdl-cal-taylor-quadratic.svg){width=74%}
 :::
 :::
 :::
@@ -966,11 +966,11 @@ For $e^x$ at $x_0 = 0$, raising the degree visibly tightens the fit to the curve
 ::: {.slide title="Each derivative buys a power of closeness"}
 [Curvature]{.kicker}
 
-The Lagrange remainder makes "the approximation improves near $x_0$" quantitative: the error shrinks like $|x - x_0|^{n+1}$. So halving the window should divide the worst error by $2^{n+1}$:
+The Lagrange remainder makes "the approximation improves near $x_0$" quantitative: the error shrinks like $|x - x_0|^{n+1}$, so halving the window should divide the worst error by $2^{n+1}$:
 
-@single-variable-calculus-taylor-error-rate
+@!single-variable-calculus-taylor-error-rate
 
-The measured ratios land right on the predicted $4$, $8$, $16$ — the cubic's error falls sixteenfold per halving, which is why higher degree hugs the curve over wider windows.
+The measured ratios land right on the predicted $4$, $8$, $16$: each extra matched derivative buys a power of closeness, which is why higher degree hugs the curve over wider windows.
 :::
 
 ::: {.slide title="Smooth is not analytic"}
@@ -980,7 +980,7 @@ The measured ratios land right on the predicted $4$, $8$, $16$ — the cubic's e
 ::: {.col}
 A warning before we lean on infinite series. The function $f(x) = e^{-1/x^2}$ is smooth everywhere, yet *every* derivative at $0$ vanishes.
 
-Its Taylor series at $0$ is identically zero: it converges on the whole line, but **to the zero function** — agreeing with $f$ only at the origin. Convergence of the series is not convergence *to $f$*.
+Its Taylor series at $0$ is identically zero: it converges on the whole line, but **to the zero function**, agreeing with $f$ only at the origin. Convergence of the series is not convergence *to $f$*.
 :::
 
 ::: {.col .fig}
@@ -1020,7 +1020,7 @@ Optimality relaxes from $f'(x)=0$ to the inclusion $0 \in \partial f(x)$.
 ::: {.slide title="The split is in the difference quotient"}
 [Nonsmooth]{.kicker}
 
-The one-sided quotients of $|x|$ at $0$ never agree — slope $+1$ from the right, $-1$ from the left, at every scale:
+The one-sided quotients of $|x|$ at $0$ never agree: slope $+1$ from the right, $-1$ from the left, at every scale:
 
 @single-variable-calculus-one-sided
 
@@ -1030,10 +1030,10 @@ That gap *is* the corner: the two-sided derivative exists only when the one-side
 ::: {.slide title="Why SGD shrugs"}
 [Nonsmooth]{.kicker}
 
-At each kink, autograd just returns *one fixed element* of the subdifferential — all four frameworks report $\mathrm{ReLU}'(0) = 0$ — and lets the chain rule carry it through.
+At each kink, autograd just returns *one fixed element* of the subdifferential (all four frameworks report $\mathrm{ReLU}'(0) = 0$) and lets the chain rule carry it through.
 
 ::: {.d2l-note}
-Chained through a composition, that choice can fail to be a subgradient *at the kink*. But the kinks form a **measure-zero set**, and between random init, minibatch noise, and float jitter, training essentially never lands exactly on one — so every step it actually takes is the honest derivative of a locally smooth function.
+Chained through a composition, that choice can fail to be a subgradient *at the kink*. But the kinks form a **measure-zero set**, and between random init, minibatch noise, and float jitter, training essentially never lands exactly on one, so every step it actually takes is the honest derivative of a locally smooth function.
 :::
 :::
 
@@ -1050,7 +1050,7 @@ Chained through a composition, that choice can fail to be a subgradient *at the 
 ::: {.col}
 - Second derivative = **curvature**; its sign is the min/max test.
 - Quadratic term → **Newton's method** $x_{t+1} = x_t - f'(x_t)/f''(x_t)$.
-- At corners use the **subgradient** ($0 \in \partial f$); SGD shrugs — kinks are measure-zero.
+- At corners use the **subgradient** ($0 \in \partial f$); SGD shrugs, since kinks are measure-zero.
 :::
 :::
 :::

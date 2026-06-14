@@ -58,6 +58,19 @@ _NOISY_SLIDE_OUTPUT_RE = re.compile(
     r'All log messages before absl::InitializeLog\(\)|'
     r'Downloading .* from https?://|'
     r'Found \d+ files belonging to \d+ classes\.|'
+    # MXNet oneDNN / storage-fallback C++ warning continuation lines. The
+    # warning's first (timestamped) line is matched above / via the path
+    # substring below; these are its field lines. Anchored at line start so
+    # they can only match the C++ logger's fixed-format chatter, never
+    # legitimate Python teaching output:
+    #   operator = stack
+    #   input/output storage types = [default, ...]
+    #   params = {}
+    #   context.dev_mask = cpu
+    r'operator = \w|'
+    r'(?:input|output) storage types = \[|'
+    r'params = \{\}\s*$|'
+    r'context\.dev_mask = |'
     r'<keras\.src\.callbacks\.history\.History at )')
 _NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
     'UserWarning:',
@@ -67,6 +80,14 @@ _NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
     '/tmp/ipykernel_',
     'Storage type fallback detected',
     'StorageManager',
+    # MXNet oneDNN / storage-fallback C++ warning (utils.h:521). Stderr
+    # interleaving mangles the leading "[HH:MM:SS]" bracket on continuation
+    # copies, so the anchored timestamp regex above misses the corrupted
+    # variants; this source-path fragment is the logger's own and matches
+    # every variant. The next two catch the verbose body + suppress hint:
+    'mxnet/src/imperative',
+    'Execution of the operator above will fallback',
+    'MXNET_STORAGE_FALLBACK_LOG_VERBOSE',
 )
 
 

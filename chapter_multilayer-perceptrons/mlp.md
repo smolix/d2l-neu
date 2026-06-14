@@ -937,7 +937,7 @@ Keep the positive part, zero the rest. Why it won:
 :::
 :::
 
-::: {.slide title="ReLU's gradient: a clean on/off switch"}
+::: {.slide title="ReLU's gradient: a clean on/off switch" except="tensorflow"}
 [Activations]{.kicker}
 
 ::: {.cols .vc}
@@ -947,6 +947,29 @@ The derivative is a step: $0$ on the left, $1$ on the right:
 $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
 @mlp-relu-function-2
+:::
+
+::: {.col .narrow}
+::: {.d2l-note .warn}
+**Dead ReLU:** a unit pushed negative for *every* example
+gets zero gradient forever. *LeakyReLU / PReLU*,
+$\max(0,x)+\alpha\min(0,x)$, leak a little signal to keep it
+alive.
+:::
+:::
+:::
+:::
+
+::: {.slide title="ReLU's gradient: a clean on/off switch" only="tensorflow"}
+[Activations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The derivative is a step: $0$ on the left, $1$ on the right:
+
+$$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
+
+@!mlp-relu-function-2
 :::
 
 ::: {.col .narrow}

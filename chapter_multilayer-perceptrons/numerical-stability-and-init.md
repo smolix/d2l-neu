@@ -497,7 +497,7 @@ Get init wrong and the gradient either **dies** at zero or **blows up** to NaN b
 :::
 
 ::: {.col .fig}
-![A 2-layer MLP: input $\to$ affine + ReLU $\to$ hidden $\to$ affine $\to$ logits.](../img/mdl-mlp-arch.svg){width=78%}
+![A 2-layer MLP: input $\to$ affine + ReLU $\to$ hidden $\to$ affine $\to$ logits.](../img/mdl-mlp-arch.svg){width=58%}
 :::
 :::
 :::
@@ -563,14 +563,20 @@ ReLU's derivative is exactly **1** wherever a unit is active, so it does not att
 :::
 :::
 
-::: {.slide title="Exploding: a product of random matrices"}
+::: {.slide title="Exploding: a product of random matrices" except="tensorflow"}
 [Unstable Gradients · exploding]{.kicker}
 
-Multiply one hundred $\mathcal{N}(0,1)$ matrices: with variance $\sigma^2 = 1$ each factor is too large, so the entries run away.
+Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
 
 @numerical-stability-and-init-exploding-gradients
+:::
 
-A poorly scaled initialization does exactly this to the gradient: entries near $10^{24}$ after a few hundred layers.
+::: {.slide title="Exploding: a product of random matrices" only="tensorflow"}
+[Unstable Gradients · exploding]{.kicker}
+
+Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
+
+@-numerical-stability-and-init-exploding-gradients
 :::
 
 ::: {.slide title="The three crashes you will actually see"}
@@ -685,13 +691,13 @@ We return to both in the chapters on modern CNNs.
 
 ::: {.cols}
 ::: {.col}
-- A deep gradient is a **product of per-layer Jacobians** — it vanishes or explodes without care.
+- A deep gradient is a **product of per-layer Jacobians**, so it vanishes or explodes without care.
 - **Vanishing:** saturating activations (sigmoid/tanh) crush the signal; ReLU keeps it.
 - **Exploding:** over-large weights drive the product, and the loss, to NaN.
 :::
 
 ::: {.col}
-- **Fix the scale:** init weights so $\textrm{Var}$ is preserved — **Xavier** ($\tanh$) and **He** (ReLU).
+- **Fix the scale:** init weights so $\textrm{Var}$ is preserved, via **Xavier** ($\tanh$) and **He** (ReLU).
 - **Break the symmetry:** random init, never a constant.
 - **At scale:** normalization + residuals + careful init together reach 100+ layers.
 :::

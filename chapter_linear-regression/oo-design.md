@@ -787,15 +787,13 @@ collaborating classes:
 ::: {.slide title="Define a class, then grow it"}
 [Utilities]{.kicker}
 
-A full class is a long block, but a notebook wants short cells. So
-declare the **shell** first, instantiate it...
+A notebook wants short cells, so declare the **shell** first and instantiate it...
 
 @oo-design-utilities-2
 
 . . .
 
-...then attach a method *after the fact* with `@add_to_class` — it just
-`setattr`s the function onto the class, so the bound method sees `self`:
+...then attach a method later with `@add_to_class`, which `setattr`s it onto the class, so the bound method sees `self`:
 
 @oo-design-utilities-3
 :::
@@ -842,10 +840,9 @@ One `save_hyperparameters()` call and `self.a`, `self.b` exist; an
 
 ::: {.cols .vc}
 ::: {.col}
-`draw(x, y, label)` adds a point; the curve animates as training runs.
-`every_n` thins noisy series by averaging neighbours:
+`draw(x, y, label)` adds a point and the curve animates as training runs; `every_n` thins noisy series by averaging neighbours:
 
-@oo-design-utilities-7
+@-oo-design-utilities-7
 :::
 
 ::: {.col .fig}
@@ -890,9 +887,9 @@ path pure and compiled; push logging off to the side.
 ::: {.col}
 Every model subclasses `Module` and supplies three things:
 
-- **`forward`** / `loss` — the prediction and how wrong it is.
-- **`training_step`** — loss on one batch (plots it for free).
-- **`configure_optimizers`** — the optimizer to use.
+- **`forward`** / `loss`: the prediction and how wrong it is.
+- **`training_step`**: loss on one batch (plots it for free).
+- **`configure_optimizers`**: the optimizer to use.
 
 ::: {.d2l-note}
 `Module` extends the framework's own net base (`nn.Module`,
@@ -915,10 +912,10 @@ runs `forward`.
 In Flax a module **is a dataclass**: no `__init__`, fields declared by
 type annotation. The same contract, written functionally:
 
-- `forward` / `__call__` — the prediction.
+- `forward` / `__call__`: the prediction.
 - **`training_step`** returns *(loss, grads)* via
   `jax.value_and_grad`, since parameters are passed in, not stored.
-- `configure_optimizers` — the optax optimizer.
+- `configure_optimizers`: the optax optimizer.
 
 ::: {.d2l-note .rule}
 Parameters live *outside* the module; every step is a pure function of
@@ -955,7 +952,7 @@ A loader is a generator yielding one batch at a time, fed straight into
 `fit(model, data)` wires the two together: prepare the loaders, hand the
 optimizer over, then run `fit_epoch` for `max_epochs`. The body is short:
 
-```python
+```{.python #oo-design-exercises-1}
 def fit(self, model, data):
     self.prepare_data(data)
     self.prepare_model(model)
@@ -992,7 +989,7 @@ step rather than stored on the object.
 :::
 
 ::: {.col .narrow}
-```python
+```{.python #oo-design-exercises-2}
 root = key or d2l.get_key()
 p_key, d_key = jax.random.split(root)
 params = model.apply_init(
@@ -1018,7 +1015,7 @@ self.state = TrainState.create(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live, **asynchronously** — the
+- `ProgressBoard` plots the loss live, **asynchronously**: the
   compile-and-stay-busy theme that recurs all book.
 - **Watch the framing:** JAX is functional (a dataclass `Module`,
   parameters and a `TrainState` threaded through `fit`).

@@ -663,7 +663,7 @@ Taming overfitting by **shrinking the weights**<br>Weight decay, the $\ell_2$ pe
 
 ::: {.cols .vc}
 ::: {.col}
-- Overfitting fades with **more data** — but data is often costly or fixed.
+- Overfitting fades with **more data**, but data is often costly or fixed.
 - Dropping features is **too blunt**: with $k$ inputs there are $\binom{k-1+d}{k-1}$ degree-$d$ monomials.
 - Instead, **restrict the values** the weights may take.
 
@@ -725,7 +725,7 @@ Before fitting the data at all, every weight is **decayed** toward zero by the f
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-$\lambda$ is a **continuous** complexity dial — unlike deleting features, it never forces a hard choice.
+$\lambda$ is a **continuous** complexity dial: unlike deleting features, it never forces a hard choice.
 :::
 
 ::: {.d2l-note}
@@ -758,16 +758,14 @@ One import cell brings in the framework and the d2l helpers used throughout:
 
 ::: {.cols .vc}
 ::: {.col}
-The label is a tiny linear signal in **200 inputs**, plus faint noise:
-
-$$y = 0.05 + \sum_{i=1}^{200} 0.01\,x_i + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 0.01^2).$$
+A tiny linear signal in **200 inputs** plus faint noise, $y = 0.05 + \sum_i 0.01\,x_i + \epsilon$:
 
 @-weight-decay-high-dimensional-linear-regression
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Only **20** training examples for **200** parameters — ten times more knobs than data points. Overfitting is guaranteed.
+**20** examples for **200** parameters: 10× more knobs than data. Overfitting is guaranteed.
 :::
 :::
 :::
@@ -800,7 +798,7 @@ Nothing else changes: same linear model, same squared loss. The penalty rides al
 
 @weight-decay-training-without-regularization
 
-Training loss plunges while validation loss stalls — and the weight norm is large. A textbook overfit.
+Training loss plunges, validation loss stalls, weight norm large: a textbook overfit.
 :::
 
 ::: {.slide title="$\lambda = 3$: generalization wins"}
@@ -824,7 +822,7 @@ Training loss is now *higher*, but validation loss drops and the weight norm shr
 ::: {.slide title="Decay lives in the optimizer" only="pytorch"}
 [Concise · PyTorch]{.kicker}
 
-Pass `weight_decay` per parameter group — here only the weight is decayed, the bias is left alone:
+Pass `weight_decay` per parameter group: here only the weight is decayed, the bias is left alone:
 
 @weight-decay-concise-implementation-1
 
@@ -860,45 +858,73 @@ Keras' `l2(wd)` has **no** $\tfrac{1}{2}$ factor, so we pass `wd / 2` to match t
 ::: {.slide title="Decay as a gradient transform" only="jax"}
 [Concise · JAX]{.kicker}
 
-Optax has no `weight_decay` in `sgd`, so we **chain** transforms and `mask` the decay to the kernel:
+Optax has no `weight_decay` in `sgd`, so we **chain** transforms and `mask` the decay to the kernel. `add_decayed_weights` injects $\lambda\mathbf{w}$ into the gradient; the mask spares the bias.
 
 @weight-decay-concise-implementation-1
-
-::: {.d2l-note}
-`add_decayed_weights` injects $\lambda\mathbf{w}$ into the gradient; the mask spares the bias.
-:::
 :::
 
 ::: {.slide title="Same effect, less code"}
 [Concise · result]{.kicker}
 
-Fit with `wd = 3` — the validation curve and shrunken weight norm match the from-scratch run:
+Fit with `wd = 3`: the validation curve matches the from-scratch run.
 
-@weight-decay-concise-implementation-2
+::: {.cols .vc}
+::: {.col .fig}
+@!weight-decay-concise-implementation-2
+:::
 
+::: {.col}
 ::: {.d2l-note}
-A framework's `weight_decay` adds $\lambda\mathbf{w}$ to the *gradient*, while the scratch penalty added $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss* — so the converged norms need not match exactly, only the effect.
+A framework's `weight_decay` adds $\lambda\mathbf{w}$ to the *gradient*; the scratch penalty added $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss*. Converged norms need not match exactly, only the effect.
+:::
+:::
 :::
 :::
 
-::: {.slide title="Two readings worth keeping"}
+::: {.slide title="The adaptive-optimizer reading: AdamW"}
+[Beyond linear models]{.kicker}
+
+Inside an Adam-style update each coordinate gets its own step size, so folding the penalty into the gradient rescales it per coordinate: it stops being uniform shrinkage.
+
+. . .
+
+::: {.d2l-note .rule}
+*Decoupling* the decay from the adaptive step restores the intent of plain $1-\eta\lambda$ shrinkage. This is **AdamW**, a default for training large models.
+:::
+
+For deep networks we simply apply the same decay to every layer's weights: a simple, effective default.
+:::
+
+::: {.slide title="The Bayesian reading: a prior on the weights"}
 [Beyond linear models]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
+Put a zero-mean Gaussian **prior** on $\mathbf{w}$:
+
+$$\mathbf{w}\sim\mathcal{N}(\mathbf{0},\lambda^{-1}\mathbf{I})
+  \;\Rightarrow\;
+  -\log p(\mathbf{w}) = \tfrac{\lambda}{2}\|\mathbf{w}\|^2 + \textrm{const}.$$
+
+. . .
+
+Add it to the Gaussian-noise NLL from §3.1:
+
+$$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\frac{1}{2\sigma^2}\sum(\hat{y}-y)^2}
+  \;\; \underbrace{-\log p(\mathbf{w})}_{=\,\frac{\lambda}{2}\|\mathbf{w}\|^2}
+  \;\Rightarrow\; \textrm{MAP} = \textrm{ridge}.$$
+
+. . .
+
 ::: {.d2l-note .rule}
-**Adaptive optimizers.** Inside an Adam-style update the loss penalty gets rescaled per coordinate and stops being uniform shrinkage. *Decoupling* it restores the intent — this is **AdamW**, a default for large models.
+**MAP = MLE + a prior.** §3.1 got squared loss from Gaussian *noise*; weight decay adds a Gaussian *prior* on $\mathbf{w}$, with $\lambda$ the prior precision.
 :::
 :::
 
-::: {.col}
-::: {.d2l-note .rule}
-**Bayesian view.** The penalty is a Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \lambda^{-1}\mathbf{I})$, and the regularized fit is the **MAP** estimate. A bigger $\lambda$ is a stronger prior belief that weights are small.
+::: {.col .fig}
+![A Gaussian prior centred at zero pulls the maximum-likelihood estimate back toward the origin.](../img/mdl-prob-map-prior.svg){width=92%}
 :::
 :::
-:::
-
-For deep networks we simply apply the same decay to every layer's weights — a simple, effective default.
 :::
 
 ::: {.slide title="Summary"}

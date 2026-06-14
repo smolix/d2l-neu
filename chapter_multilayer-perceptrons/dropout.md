@@ -599,7 +599,7 @@ model from leaning too hard on the training set.
 :::
 
 ::: {.col .fig .big}
-![Test error past the interpolation threshold — capacity alone does not buy generalization.](../img/mdl-mlp-double-descent.svg)
+![Test error past the interpolation threshold: capacity alone does not buy generalization.](../img/mdl-mlp-double-descent.svg)
 :::
 :::
 :::
@@ -616,8 +616,8 @@ recipe:
 
 . . .
 
-Counterintuitive — we actively cripple the network
-mid-training — yet it is one of the most reliable
+Counterintuitive (we actively cripple the network
+mid-training), yet it is one of the most reliable
 regularizers ever found, and it still ships in modern
 Transformers.
 :::
@@ -643,7 +643,7 @@ next step samples a different one.
 
 ::: {.d2l-note}
 Here $h_2$ and $h_5$ are dropped, so the output cannot
-depend on them — no single unit can dominate.
+depend on them, and no single unit can dominate.
 :::
 :::
 
@@ -656,7 +656,7 @@ depend on them — no single unit can dominate.
 ::: {.slide title="View 2: an exponentially large ensemble"}
 [Why It Works]{.kicker}
 
-A net with $n$ hidden units has $2^n$ possible masks —
+A net with $n$ hidden units has $2^n$ possible masks, so
 $2^n$ thinned subnetworks, all **sharing one set of
 weights**.
 
@@ -664,7 +664,7 @@ weights**.
 
 - **Train:** sample one mask per step; the update nudges
   the shared weights to help *that* subnetwork.
-- **Test:** run the full net with dropout off — this
+- **Test:** run the full net with dropout off, which
   approximates *averaging* all $2^n$ subnetworks.
 
 Ensembles average away their members' idiosyncrasies, so
@@ -679,9 +679,9 @@ Because no unit can count on any *specific* partner being
 present, each is pushed to learn a feature that is useful
 on its own:
 
-- **Anti-co-adaptation** — robust, redundant features
+- **Anti-co-adaptation:** robust, redundant features
   instead of brittle conspiracies of neurons.
-- **Smoothness** — Bishop (1995) showed that injecting
+- **Smoothness:** Bishop (1995) showed that injecting
   noise is equivalent to Tikhonov ($\ell_2$) regularization
   *on the learned function*.
 
@@ -705,7 +705,7 @@ The factor $1/(1-p)$ is the *unique* constant that keeps
 $\mathbb{E}[h'] = p\cdot 0 + (1-p)\dfrac{h}{1-p} = h$.
 
 ::: {.d2l-note .rule}
-Unbiased by design — so test-time code needs no change.
+Unbiased by design, so test-time code needs no change.
 This is **inverted dropout**, the version every modern
 framework uses.
 :::
@@ -730,21 +730,28 @@ framework uses.
 ::: {.slide title="A dropout layer in three lines"}
 [From Scratch]{.kicker}
 
-Sample a Bernoulli keep-mask from a uniform draw, multiply,
-and rescale the survivors:
+Sample a Bernoulli keep-mask from a uniform draw, multiply, then rescale the survivors by $1/(1-p)$ to restore the expectation:
 
 @dropout-implementation-from-scratch-1
-
-::: {.d2l-note}
-`mask` keeps an entry when its $U[0,1]$ sample exceeds $p$;
-dividing by $1-p$ restores the expected value.
-:::
 :::
 
-::: {.slide title="Sanity check on a 2×8 input"}
+::: {.slide title="Sanity check on a 2×8 input" except="tensorflow"}
 [From Scratch]{.kicker}
 
 @dropout-implementation-from-scratch-2
+
+. . .
+
+- $p = 0$ → identity, nothing dropped.
+- $p = 0.5$ → about half the entries zero, survivors
+  **doubled** ($1/(1-0.5)=2$).
+- $p = 1$ → everything dropped (degenerate).
+:::
+
+::: {.slide title="Sanity check on a 2×8 input" only="tensorflow"}
+[From Scratch]{.kicker}
+
+@-dropout-implementation-from-scratch-2
 
 . . .
 
@@ -777,11 +784,8 @@ training only.
 :::
 :::
 
-::: {.slide title="The model"}
+::: {.slide title="The model: two hidden layers, dropout gated on training"}
 [From Scratch]{.kicker}
-
-Two hidden layers, dropout gated on `self.training` so it
-vanishes at test time:
 
 @dropout-defining-the-model
 :::
@@ -792,9 +796,9 @@ vanishes at test time:
 Two 256-unit hidden layers, dropout $0.5$ between them, on
 Fashion-MNIST:
 
-@dropout-training
+@!dropout-training
 
-The train and validation curves track closely — the gap a
+The train and validation curves track closely: the gap a
 plain MLP of this size would show is held in check.
 :::
 
@@ -831,7 +835,7 @@ Flax's `nn.Dropout` pulls randomness from a named
 ::: {.slide title="Train the concise model"}
 [Concise]{.kicker}
 
-Same hyperparameters, same result — the layer does the
+Same hyperparameters, same result: the layer does the
 masking and rescaling internally:
 
 @dropout-concise-implementation-3
@@ -850,7 +854,7 @@ the mid-2010s; its role has since narrowed.
 
 ::: {.d2l-note}
 Still a cheap, reliable regularizer that combines well with
-weight decay and data augmentation — and the seed of a
+weight decay and data augmentation, and the seed of a
 whole family of stochastic-regularization methods.
 :::
 :::
@@ -862,8 +866,8 @@ whole family of stochastic-regularization methods.
 ::: {.col}
 - **Dropout** zeros each hidden unit with probability $p$
   during training, then rescales survivors by $1/(1-p)$.
-- The rescaling keeps $\mathbb{E}[h']=h$ — **inverted
-  dropout** — so test-time code is unchanged.
+- The rescaling keeps $\mathbb{E}[h']=h$ (**inverted
+  dropout**), so test-time code is unchanged.
 - **Off at test time:** the full network runs, unmasked.
 :::
 

@@ -1153,7 +1153,7 @@ $\begin{bmatrix}1&1\\1&1\end{bmatrix}$.
 
 ::: {.slide}
 ::: {.cover}
-[Math for Deep Learning · §22.2]{.kicker}
+[Dive into Deep Learning · §22.2]{.kicker}
 
 The directions a matrix only *stretches*<br>**eigenvalues, the spectral theorem, and the spectral radius**.
 :::
@@ -1168,13 +1168,12 @@ A matrix distorts space: it skews, rotates, rescales. Along special
 directions, the **eigenvectors**, the distortion is a *pure stretch*.
 
 - An **eigenbasis** decouples the map into independent 1-D stretches.
-- Matrix powers $\mathbf{A}^t$ then reduce to scalar powers $\lambda^t$.
-- Iterating $\mathbf{A}$ (a deep *linear* net) aligns any input with the
-  dominant eigenvector.
+- Powers $\mathbf{A}^t$ then reduce to scalar powers $\lambda^t$; iterating
+  $\mathbf{A}$ aligns any input with the dominant eigenvector.
 
 ::: {.d2l-note}
-This one idea drives PCA, covariance, the Hessian view of optimization,
-PageRank, and vanishing / exploding gradients.
+This drives PCA, covariance, the Hessian view of optimization, PageRank, and
+vanishing / exploding gradients.
 :::
 :::
 
@@ -1218,11 +1217,9 @@ $\mathbf{v}=\mathbf 0$ is excluded.
 ::: {.slide title="The circle becomes an ellipse"}
 [The objects]{.kicker}
 
-The cleanest picture: a matrix sends the unit circle to an ellipse. For a
-**symmetric** matrix the ellipse axes lie *along the eigenvectors* (green),
-with half-lengths $|\lambda_i|$ (an axis flips when $\lambda_i<0$).
+For a **symmetric** matrix, the ellipse axes lie along the eigenvectors (green), with half-lengths $|\lambda_i|$:
 
-@fig:mdl-la-eig-ellipse
+![](../img/mdl-la-eig-ellipse.svg){width=82%}
 :::
 
 ::: {.slide title="Finding eigenvalues"}
@@ -1317,25 +1314,31 @@ has algebraic multiplicity $2$ but only a $1$-D eigenspace, so it is
 ::: {.slide title="The spectral theorem"}
 [Symmetry]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Every **real symmetric** matrix $\mathbf{A}=\mathbf{A}^\top$ has a full
-*orthonormal* eigenbasis with *real* eigenvalues:
-
-$$\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top,
-\qquad \mathbf{W}^\top\mathbf{W}=\mathbf{I}.$$
-
-Geometrically: $\mathbf{W}^\top$ rotates the eigenvectors onto the axes,
-$\boldsymbol{\Lambda}$ stretches along each, $\mathbf{W}$ rotates back, the
-ellipse picture, now guaranteed.
-:::
-
-::: {.col .narrow}
 ::: {.d2l-note .rule}
-Applied to $\mathbf{A}^\top\mathbf{A}$ (always symmetric, PSD), it builds the
-**SVD** for *every* matrix.
+Every **real symmetric** $\mathbf{A}=\mathbf{A}^\top$ has a full *orthonormal*
+eigenbasis with *real* eigenvalues:
+$\;\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$,
+$\;\mathbf{W}^\top\mathbf{W}=\mathbf{I}$.
 :::
-:::
+
+. . .
+
+**(i) eigenvalues are real.** With the conjugate inner product,
+$\lambda\|\mathbf{v}\|^2 = \mathbf{v}^*\!\mathbf{A}\mathbf{v} = (\mathbf{A}\mathbf{v})^*\mathbf{v} = \bar\lambda\|\mathbf{v}\|^2$, so $\lambda=\bar\lambda$.
+
+. . .
+
+**(ii) distinct eigenvalues give orthogonal eigenvectors.** Sliding $\mathbf{A}=\mathbf{A}^\top$ across the inner product,
+$\lambda\langle\mathbf{u},\mathbf{v}\rangle = \langle\mathbf{A}\mathbf{u},\mathbf{v}\rangle = \langle\mathbf{u},\mathbf{A}\mathbf{v}\rangle = \mu\langle\mathbf{u},\mathbf{v}\rangle$, so $(\lambda-\mu)\langle\mathbf{u},\mathbf{v}\rangle=0$.
+
+. . .
+
+**(iii)** a clean induction on the $\mathbf{A}$-invariant orthogonal complement
+$\mathbf{w}_1^{\perp}$ fills out the basis. Geometrically $\mathbf{A}=\mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$ is **rotate** (onto the axes), **scale**, **rotate back**, the ellipse picture, now guaranteed.
+
+::: {.d2l-note .rule}
+Applied to $\mathbf{A}^\top\mathbf{A}$ (always symmetric, PSD), the same theorem
+builds the **SVD** for *every* matrix.
 :::
 :::
 
@@ -1438,11 +1441,13 @@ The direction gap closes at rate $|\lambda_2/\lambda_1|$; the norm ratio
 settles onto $\lambda_1$ even faster:
 
 @fig:mdl-la-power-iter
+:::
 
-. . .
+::: {.slide title="Power iteration, to ten decimals"}
+[Dynamics]{.kicker}
 
 On a random $5\times5$ matrix, the stabilized norm ratio matches
-$\max_i|\lambda_i|$ to ten decimals:
+$\max_i|\lambda_i|$ to ten decimal places:
 
 @eigendecomposition-power-iteration
 :::

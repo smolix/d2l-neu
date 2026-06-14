@@ -945,7 +945,7 @@ mixed modes, and checkpointing is the subject of Griewank and Walther's monograp
 
 ::: {.slide}
 ::: {.cover}
-[Math for Deep Learning · §23 · Calculus]{.kicker}
+[Dive into Deep Learning · §23.3]{.kicker}
 
 Why `loss.backward()` is cheap<br>**Jacobians · the chain rule · forward- and reverse-mode autodiff**.
 :::
@@ -959,7 +959,7 @@ Why `loss.backward()` is cheap<br>**Jacobians · the chain rule · forward- and 
 A network layer maps **vectors to vectors**, $\mathbf f:\mathbb R^n\to\mathbb R^m$, so its derivative is a *matrix*: the **Jacobian**.
 
 - It is the best local **linear** map: up close, $\mathbf f$ *is* a matrix.
-- The chain rule becomes **Jacobian multiplication** -- one long product per network.
+- The chain rule becomes **Jacobian multiplication**, one long product per network.
 - That product is **associative**, and the cheap order to evaluate it *is* backpropagation.
 - We then build both flavours of autodiff in a few dozen lines of Python.
 :::
@@ -998,7 +998,7 @@ Row $i$ collects the partials of output $i$; column $j$ says how every output re
 :::
 :::
 
-A small circle of inputs lands on (nearly) an **ellipse** -- its image under $\mathbf J$. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder.
+A small circle of inputs lands on (nearly) an **ellipse**, its image under $\mathbf J$. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder.
 :::
 
 ::: {.slide title="One object, three familiar faces"}
@@ -1007,7 +1007,7 @@ A small circle of inputs lands on (nearly) an **ellipse** -- its image under $\m
 The Jacobian quietly contains everything we already know about derivatives:
 
 ::: {.d2l-note .rule}
-**Scalar map** ($m=1$): $\mathbf J$ is one *row* -- the gradient $\partial f/\partial\mathbf x$.
+**Scalar map** ($m=1$): $\mathbf J$ is one *row*, the gradient $\partial f/\partial\mathbf x$.
 
 **Vector map:** the full $m\times n$ matrix of partials.
 
@@ -1020,13 +1020,11 @@ One construction recovers the slope, the gradient, and the matrix of second deri
 ::: {.slide title="The numerical signature of a derivative"}
 [The Jacobian]{.kicker}
 
-The linear model must beat its own error: halve $\boldsymbol\delta$ and the error should fall *fourfold*. Check $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ against a finite difference:
+The linear model must beat its own error: halve $\boldsymbol\delta$ and the error should fall *fourfold*. Check $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ against a finite difference, prediction vs truth:
 
-@matrix-calculus-autodiff-jacobian-finite-diff
+@!matrix-calculus-autodiff-jacobian-finite-diff
 
-. . .
-
-The error relative to $\|\boldsymbol\delta\|$ is tiny -- and shrinking $\boldsymbol\delta$ tenfold shrinks it a hundredfold. That is the $o(\|\boldsymbol\delta\|)$ fingerprint.
+The error relative to $\|\boldsymbol\delta\|$ is tiny, and shrinking $\boldsymbol\delta$ tenfold shrinks it a hundredfold: the $o(\|\boldsymbol\delta\|)$ fingerprint.
 :::
 
 ::: {.slide}
@@ -1042,7 +1040,7 @@ The error relative to $\|\boldsymbol\delta\|$ is tiny -- and shrinking $\boldsym
 ::: {.slide title="Composition multiplies Jacobians"}
 [Chain rule]{.kicker}
 
-The multivariate chain rule -- a sum over paths -- is, in matrix form, just a product of Jacobians:
+The multivariate chain rule (a sum over paths) is, in matrix form, just a product of Jacobians:
 
 ::: {.d2l-note .rule}
 $$\mathbf J_{\mathbf g\circ\mathbf f}=\mathbf J_{\mathbf g}\,\mathbf J_{\mathbf f},
@@ -1050,7 +1048,7 @@ $$\mathbf J_{\mathbf g\circ\mathbf f}=\mathbf J_{\mathbf g}\,\mathbf J_{\mathbf 
 \mathbf J = \mathbf J_L\,\mathbf J_{L-1}\cdots\mathbf J_1.$$
 :::
 
-A depth-$L$ network is a composition $\mathbf f_L\circ\cdots\circ\mathbf f_1$, so its end-to-end derivative is **one long matrix product** -- one local Jacobian per layer.
+A depth-$L$ network is a composition $\mathbf f_L\circ\cdots\circ\mathbf f_1$, so its end-to-end derivative is **one long matrix product**, one local Jacobian per layer.
 :::
 
 ::: {.slide title="Two shapes dominate the product"}
@@ -1076,7 +1074,7 @@ Couples no coordinates, so $\mathbf J=\operatorname{diag}(\varphi')$.
 :::
 :::
 
-So $\mathbf J=\operatorname{diag}(\boldsymbol\varphi_L')\,\mathbf W_L\cdots\operatorname{diag}(\boldsymbol\varphi_1')\,\mathbf W_1$: weights interleaved with cheap diagonal masks. For ReLU that mask is just zeros and ones -- why a backward pass through an activation costs $O(n)$.
+So $\mathbf J=\operatorname{diag}(\boldsymbol\varphi_L')\,\mathbf W_L\cdots\operatorname{diag}(\boldsymbol\varphi_1')\,\mathbf W_1$: weights interleaved with cheap diagonal masks. For ReLU that mask is just zeros and ones, which is why a backward pass through an activation costs $O(n)$.
 :::
 
 ::: {.slide title="Associativity is the whole story"}
@@ -1125,11 +1123,9 @@ No table needed: the least-squares gradient is the rank-one outer product a line
 ::: {.slide title="The cancellation that fuses softmax with cross-entropy"}
 [Identities]{.kicker}
 
-The softmax Jacobian is $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$; composed with cross-entropy it collapses to $\mathbf p-\mathbf y$ -- predicted minus true. Verify against autograd:
+The softmax Jacobian $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$, composed with cross-entropy, collapses to $\mathbf p-\mathbf y$ whatever the Jacobian, which is why the two are fused into one stable primitive. Verify against autograd:
 
-@matrix-calculus-autodiff-softmax-jacobian
-
-The logit gradient lands on $\mathbf p-\mathbf y$ no matter what the intermediate Jacobian looks like -- which is why the two are always fused into one stable primitive.
+@matrix-calculus-autodiff-softmax-jacobian@pytorch
 :::
 
 ::: {.slide}
@@ -1145,7 +1141,7 @@ The logit gradient lands on $\mathbf p-\mathbf y$ no matter what the intermediat
 ::: {.slide title="An algebra that carries derivatives"}
 [Forward mode]{.kicker}
 
-Adjoin a symbol $\varepsilon\neq0$ with $\varepsilon^2=0$ -- the exact encoding of *discard second-order terms*:
+Adjoin a symbol $\varepsilon\neq0$ with $\varepsilon^2=0$, the exact encoding of *discard second-order terms*:
 
 $$(a+b\varepsilon)(c+d\varepsilon)=ac+(ad+bc)\varepsilon.$$
 
@@ -1161,13 +1157,9 @@ Differentiation is free: seed the input's $\varepsilon$-part with $1$, read the 
 ::: {.slide title="A 15-line class differentiates for free"}
 [Forward mode]{.kicker}
 
-A handful of overloaded operators *is* forward-mode AD. Differentiate $f(x)=\sin(x^2)+e^x$ at $x=1.3$:
+A handful of overloaded operators *is* forward-mode AD: the $\varepsilon$-part returns $f'(x)=2x\cos(x^2)+e^x$ in one pass, no formula for $f'$ written. Differentiate $f(x)=\sin(x^2)+e^x$ at $x=1.3$:
 
 @matrix-calculus-autodiff-dual-eval
-
-. . .
-
-The $\varepsilon$-part matches the hand derivative $2x\cos(x^2)+e^x$ -- value and derivative from a *single* evaluation, no formula for $f'$ ever written.
 :::
 
 ::: {.slide title="One pass per input: cheap when tall"}
@@ -1175,10 +1167,10 @@ The $\varepsilon$-part matches the hand derivative $2x\cos(x^2)+e^x$ -- value an
 
 ::: {.cols .vc}
 ::: {.col}
-With a *vector* tangent, one forward pass carries a **Jacobian--vector product** $\mathbf J\mathbf v$ -- never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off **column** $j$.
+With a *vector* tangent, one forward pass carries a **Jacobian–vector product** $\mathbf J\mathbf v$, never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off **column** $j$.
 
 ::: {.d2l-note}
-Forward mode costs one pass per **input**. Cheap for *tall* Jacobians ($m\gg n$) -- and exactly wrong for a deep net, whose loss is one scalar over millions of inputs.
+Forward mode costs one pass per **input**. Cheap for *tall* Jacobians ($m\gg n$), and exactly wrong for a deep net, whose loss is one scalar over millions of inputs.
 :::
 :::
 
@@ -1203,7 +1195,7 @@ Forward mode costs one pass per **input**. Cheap for *tall* Jacobians ($m\gg n$)
 
 ::: {.cols .vc}
 ::: {.col}
-Reverse mode multiplies *left-to-right*, carrying a **vector--Jacobian product** $\mathbf u^\top\mathbf J$ -- one pass per **output**.
+Reverse mode multiplies *left-to-right*, carrying a **vector–Jacobian product** $\mathbf u^\top\mathbf J$, one pass per **output**.
 
 A scalar loss is a single-row Jacobian ($m=1$), so **one** backward sweep yields the *entire* gradient.
 
@@ -1228,7 +1220,7 @@ Record each op as a node with a *backward* closure; replay in reverse topologica
 For $r=uv+u$, $y=r^2$, the value $r$ feeds **both** arguments of $y$, so its adjoint arrives **twice**.
 
 ::: {.d2l-note}
-A node's adjoint is the *sum* over its outgoing edges -- the chain rule's "sum over paths", which is why the tape accumulates with `+=`, not `=`.
+A node's adjoint is the *sum* over its outgoing edges, the chain rule's "sum over paths", which is why the tape accumulates with `+=`, not `=`.
 :::
 :::
 
@@ -1241,11 +1233,9 @@ A node's adjoint is the *sum* over its outgoing edges -- the chain rule's "sum o
 ::: {.slide title="Thirty lines reproduce loss.backward()"}
 [Reverse mode]{.kicker}
 
-One forward pass records the tape; one backward pass yields both partials. Check against the framework's own autograd:
+One forward pass records the tape; one backward pass yields both partials, matching the framework's own autograd. Real engines change only the details (tensor nodes, VJP backwards, a larger primitive set), but the skeleton is exactly this:
 
-@matrix-calculus-autodiff-tape-check
-
-Real engines change only the details -- nodes hold *tensors* (each backward is a VJP), the primitive set is large, the graph is eager or traced -- but the skeleton is exactly this, and exactly what backprop does.
+@matrix-calculus-autodiff-tape-check@pytorch
 :::
 
 ::: {.slide title="Never form the Jacobian"}
@@ -1257,7 +1247,7 @@ A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; 
 If you are assembling a Jacobian, you have probably written down a matrix you could have multiplied through. Frameworks expose `jvp` / `vjp`; you **compose** them.
 :::
 
-One order up, the **Hessian--vector product** $\mathbf H\mathbf v$ comes from *forward-over-reverse* -- curvature in a direction without ever forming $\mathbf H$, which is what makes Newton and CG scale.
+One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ comes from *forward-over-reverse*: curvature in a direction without ever forming $\mathbf H$, which is what makes Newton and CG scale.
 :::
 
 ::: {.slide title="Recap"}
@@ -1273,7 +1263,7 @@ One order up, the **Hessian--vector product** $\mathbf H\mathbf v$ comes from *f
 ::: {.col}
 - **Forward mode** (dual numbers, JVP): one *column* per pass, cheap when tall.
 - **Reverse mode** (the tape, VJP): one *row* per pass, cheap when wide.
-- A loss is maximally wide, so **backprop is reverse-mode AD** -- the full gradient at $2$--$4\times$ one forward pass, paid for in stored activations.
+- A loss is maximally wide, so **backprop is reverse-mode AD**: the full gradient at $2$–$4\times$ one forward pass, paid for in stored activations.
 :::
 :::
 

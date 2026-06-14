@@ -1676,7 +1676,7 @@ $$
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Math Appendix]{.kicker}
+[Dive into Deep Learning · §22.1]{.kicker}
 
 The geometry under the algebra<br>**angles, projections, hyperplanes, and how matrices move space**.
 :::
@@ -1740,14 +1740,18 @@ the next, tip to tail.
 ::: {.slide title="Dot products and the angle"}
 [Vectors]{.kicker}
 
+Why is the dot product tied to the **angle**? The two vectors span a plane, so
+measure $\|\mathbf{v}-\mathbf{w}\|^2$ two ways and equate.
+
+. . .
+
+Algebra gives $\|\mathbf{v}\|^2 - 2\,\mathbf{v}\cdot\mathbf{w} + \|\mathbf{w}\|^2$; the law of cosines gives $\|\mathbf{v}\|^2 + \|\mathbf{w}\|^2 - 2\,\|\mathbf{v}\|\,\|\mathbf{w}\|\cos\theta$.
+
+. . .
+
 ::: {.cols .vc}
 ::: {.col}
-The dot product is tied to the **angle** between two vectors:
-
-$$\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\,\|\mathbf{w}\|\cos\theta.$$
-
-The law of cosines proves it in the plane the two vectors span, so it holds
-in *any* dimension. Solving for $\theta$:
+Cancel the common terms: $\;\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\,\|\mathbf{w}\|\cos\theta$, so $\theta=\arccos\!\big(\mathbf{v}\cdot\mathbf{w}/\|\mathbf{v}\|\,\|\mathbf{w}\|\big)$.
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
 :::
@@ -1789,6 +1793,9 @@ $$\operatorname{proj}_{\mathbf{w}}\mathbf{v}
 The residual $\mathbf{r}$ leaves at a **right angle**, so Cauchy–Schwarz is
 just "a leg is no longer than the hypotenuse." Two vectors are **orthogonal**
 when $\mathbf{v}\cdot\mathbf{w} = 0$.
+
+This is least squares in one dimension (the best fit leaves an orthogonal
+residual); the **SVD** scales the same idea to any matrix.
 :::
 
 ::: {.col .fig}
@@ -1849,16 +1856,19 @@ inside **attention**, and the alignment objective of **contrastive learning**.
 
 ::: {.cols .vc}
 ::: {.col}
-Drop two unrelated vectors into $\mathbb{R}^d$: what cosine do we expect?
+Drop two unrelated unit vectors into $\mathbb{R}^d$: what cosine do we expect?
 
 ::: {.d2l-note .rule}
 For a random unit vector, $\;\mathbb{E}[\cos\theta] = 0$ and
 $\operatorname{Var}(\cos\theta) = \tfrac{1}{d}$.
 :::
 
-So the cosine concentrates at $0$ with width $1/\sqrt{d}$. A cosine well
-above $0$ is then unlikely to be an accident, which is exactly **why** cosine
-similarity is a useful signal.
+*Why:* rotate so $\mathbf{u}=\mathbf{e}_1$, so $\cos\theta=v_1$. Symmetry
+$\mathbf{v}\mapsto-\mathbf{v}$ kills the mean; $\sum_i v_i^2=1$ with all
+coordinates alike gives $\mathbb{E}[v_1^2]=\tfrac{1}{d}$.
+
+So the cosine concentrates at $0$ with width $1/\sqrt{d}$: a cosine well above
+$0$ is unlikely to be an accident, which is **why** cosine similarity works.
 :::
 
 ::: {.col .fig}
@@ -2004,6 +2014,11 @@ crushed to a lower dimension.
 For our grid matrix, $\det = 1\cdot3 - 2\cdot(-1) = 5$:
 
 @geometry-linear-algebraic-ops-determinant
+
+Composed maps multiply their area scalings,
+$\det(\mathbf{A}\mathbf{B})=\det\mathbf{A}\,\det\mathbf{B}$. Two payoffs:
+$\det\mathbf{Q}=\pm1$ for orthogonal $\mathbf{Q}$, and (next section)
+$\det\mathbf{A}=\prod_i\lambda_i$, the per-axis stretches multiplied.
 :::
 
 ::: {.col .fig}
@@ -2022,14 +2037,12 @@ dependent $\iff$ $\mathbf{A}$ is **not** invertible.
 
 . . .
 
-When it *is* invertible, $\mathbf{A}^{-1}$ undoes the map. We confirm the
-$2\times2$ formula by multiplying back to the identity:
+When invertible, $\mathbf{A}^{-1}$ undoes the map; the $2\times2$ formula checks out, multiplying back to the identity:
 
 @geometry-linear-algebraic-ops-invertibility
 
 ::: {.d2l-note .warn}
-In practice prefer `linalg.solve(A, b)` over `inv(A) @ b`: it is more stable
-and never forms the (often dense) inverse.
+Prefer `linalg.solve(A, b)` over `inv(A) @ b`: stabler, and it never forms the inverse.
 :::
 :::
 
@@ -2046,17 +2059,12 @@ and never forms the (often dense) inverse.
 ::: {.slide title="Sum over the repeated index"}
 [Einstein notation]{.kicker}
 
-Dot products, matrix–vector, matrix–matrix, and traces are one pattern:
-multiply entries, then sum the index that appears twice.
+Dot products, matrix–vector, matrix–matrix, and traces are one pattern,
+$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}\,b_{jk}$: multiply entries, sum the
+repeated index. `einsum` makes that index string the whole definition (the
+matrix–vector call recovers our worked $\mathbf{A}\mathbf{v} = [0, -5]^\top$):
 
-$$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}\,b_{jk}.$$
-
-. . .
-
-`einsum` makes the index string the whole definition, and the second entry
-below reproduces our worked example $\mathbf{A}\mathbf{v} = [0, -5]^\top$:
-
-@geometry-linear-algebraic-ops-expressing-in-code-2
+@-geometry-linear-algebraic-ops-expressing-in-code-2
 :::
 
 ::: {.slide title="Recap"}

@@ -1067,7 +1067,7 @@ number returns as a *numerical* villain in
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Math · §2]{.kicker}
+[Dive into Deep Learning · §24.1]{.kicker}
 
 What moves every neural network<br>**why $-\nabla f$ works, how fast it converges, and what breaks it**.
 :::
@@ -1089,12 +1089,12 @@ One number runs through all three: the **condition number**
 $\kappa = \lambda_{\max}/\lambda_{\min}$, read off the Hessian.
 
 ::: {.d2l-note}
-Develop the theory where it is exact (quadratics), then add momentum
-and noise that make it practical at scale.
+Develop the theory where it is exact (quadratics), then add momentum and
+noise to make it practical.
 :::
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-opt-gd-bowl-vs-valley
 :::
 :::
@@ -1133,7 +1133,7 @@ $-\nabla f$); the gradient is the *greediest* choice, not the only one.
 On $f(x,y)=\tfrac12(x^2+10y^2)$: compare the first-order slope with the
 actual decrease, then scan $3600$ directions for the most negative slope.
 
-@gradient-based-optimization-steepest-direction
+@!gradient-based-optimization-steepest-direction
 
 The brute-force winner lands on $-\nabla f/\|\nabla f\|$, to grid
 resolution.
@@ -1182,7 +1182,7 @@ The local curvature varies, so no fixed step fits everywhere. Start
 optimistic and halve $\eta$ until the **Armijo** sufficient-decrease
 condition holds, here on the quartic $f(x)=\tfrac14 x^4$:
 
-@gradient-based-optimization-backtracking
+@!gradient-based-optimization-backtracking
 
 Fixed $\eta=0.3$ diverges from $x_0=3$; backtracking accepts $0.031$,
 then doubles as the valley flattens. A line search is curvature
@@ -1224,7 +1224,7 @@ past it the stiffest mode oscillates with growing amplitude.
 Sweep $\eta$ across the ceiling on $A=\mathrm{diag}(1,10)$, so $L=10$ and
 the ceiling is $\eta=0.2$:
 
-@gradient-based-optimization-eta-sweep
+@!gradient-based-optimization-eta-sweep
 
 Tiny $\eta$ is stable but glacial; $\eta=2/11$ balances the extreme modes
 and wins ($\rho=0.818$); at $\eta=0.2$ the stiff mode bounces forever;
@@ -1259,10 +1259,10 @@ hypothesis upgrades *what* converges and *how fast*:
 ::: {.col}
 ::: {.d2l-note .rule}
 **smooth only**
-$\;\min_k\|\nabla f\|^2 = O(1/k)$ — stationarity
+$\;\min_k\|\nabla f\|^2 = O(1/k)$ (stationarity)
 
 **+ convex**
-$\;f-f^\star = O(1/k)$ — global values
+$\;f-f^\star = O(1/k)$ (global values)
 :::
 :::
 
@@ -1318,7 +1318,7 @@ $\sqrt{\kappa}$ a theorem beyond quadratics, and these rates are
 @gradient-based-optimization-momentum
 
 GD's count is linear in $\kappa$ ($6{,}908$ at $\kappa=1000$); heavy ball
-grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup) — at one gradient
+grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup). At one gradient
 per step, the speedup is essentially free.
 :::
 
@@ -1334,7 +1334,7 @@ $$\mathbb{E}[\hat{\mathbf{g}}_b] = \nabla f, \qquad
 
 ::: {.d2l-note}
 Noise *energy* falls like $1/b$, so *amplitude* falls like $1/\sqrt{b}$:
-$100\times$ the compute buys only $10\times$ less noise — why huge
+$100\times$ the compute buys only $10\times$ less noise, which is why huge
 batches show diminishing returns.
 :::
 :::
@@ -1349,7 +1349,7 @@ SGD descends like GD, then **rattles** inside a ball of squared radius
 
 $$\mathbb{E}[x_\infty^2] \approx \frac{\eta\,\sigma^2}{2\lambda}.$$
 
-Halving $\eta$ halves the ball — which is exactly why schedules decay
+Halving $\eta$ halves the ball, which is exactly why schedules decay
 $\eta$.
 :::
 
@@ -1363,13 +1363,12 @@ $\eta$.
 [Stochastic gradients]{.kicker}
 
 Robbins--Monro decay ($\sum\eta_k=\infty,\ \sum\eta_k^2<\infty$) quenches
-the noise while still travelling far. On the logistic toy:
+the noise while still travelling far, on the logistic toy:
 
-@gradient-based-optimization-sgd-schedule
+@!gradient-based-optimization-sgd-schedule
 
-Fixed $\eta$ stalls at an $\eta$-proportional floor (halving $\eta$ halves
-it); the $1/k$ schedule grinds on as a power law. Noise changes the
-*rate class*, geometric to polynomial.
+Fixed $\eta$ stalls at a floor; $1/k$ grinds on, turning the *rate class*
+geometric to polynomial.
 :::
 
 ::: {.slide title="Why not Newton?"}
@@ -1379,12 +1378,12 @@ Newton minimizes the local quadratic exactly,
 $\mathbf{x}_{k+1}=\mathbf{x}_k-(\nabla^2 f)^{-1}\nabla f$: **affine-invariant**,
 immune to $\kappa$, with digits doubling per step.
 
-@gradient-based-optimization-newton
+@!gradient-based-optimization-newton
 
 . . .
 
 ::: {.d2l-note .warn}
-The catch is arithmetic: $O(d^2)$ memory and $O(d^3)$ time per step — at
+The catch is arithmetic: $O(d^2)$ memory and $O(d^3)$ time per step. At
 $d=10^9$, eight exabytes before the first FLOP. Deep learning keeps the
 *idea*: L-BFGS (low-rank), Adam (diagonal), fed by minibatch gradients.
 :::
@@ -1396,14 +1395,14 @@ $d=10^9$, eight exabytes before the first FLOP. Deep learning keeps the
 ::: {.cols}
 ::: {.col}
 - **Steepest descent** is Cauchy--Schwarz; descent fills a half-space.
-- **$L$-smoothness** gives the descent lemma and $O(1/K)$ stationarity — the one guarantee with **no convexity**.
+- **$L$-smoothness** gives the descent lemma and $O(1/K)$ stationarity, the one guarantee with **no convexity**.
 - On quadratics GD decouples per mode: stability $\eta<2/L$, cost **linear in $\kappa$**.
 :::
 
 ::: {.col}
 - **Convexity** upgrades to global optimality; **momentum** turns $\kappa\to\sqrt{\kappa}$, optimal for first-order.
 - **SGD** is unbiased with $1/b$ variance and a noise ball; decay reaches the optimum.
-- **Newton** ignores $\kappa$ but costs $O(d^3)$ — hence its cheap shadows.
+- **Newton** ignores $\kappa$ but costs $O(d^3)$, hence its cheap shadows.
 :::
 :::
 

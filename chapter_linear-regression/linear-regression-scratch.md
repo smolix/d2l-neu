@@ -865,6 +865,30 @@ The $\tfrac12$ makes the gradient just $\hat{y}-y$; averaging (not summing) keep
 :::
 :::
 
+::: {.slide title="The gradient, by hand"}
+[Loss]{.kicker}
+
+What is it that `loss.backward()` will compute? For one example $\ell = \tfrac12(\hat{y}-y)^2$ with $\hat{y}=\mathbf{w}^\top\mathbf{x}+b$, the chain rule gives:
+
+$$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y}-y)\,\mathbf{x},
+  \qquad
+  \frac{\partial \ell}{\partial b} = (\hat{y}-y).$$
+
+. . .
+
+Averaged over a minibatch $\mathcal{B}$, that is the entire gradient the optimizer consumes:
+
+$$\nabla_{\mathbf{w}} L = \frac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}(\hat{y}^{(i)}-y^{(i)})\,\mathbf{x}^{(i)},
+  \qquad
+  \nabla_{b} L = \frac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}(\hat{y}^{(i)}-y^{(i)}).$$
+
+. . .
+
+::: {.d2l-note .rule}
+The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives a large push, in the direction of $\mathbf{x}$. This is exactly what `loss.backward()` fills in and what the SGD step subtracts.
+:::
+:::
+
 ::: {.slide title="A stateless loss" only="jax"}
 [Loss · JAX]{.kicker}
 
@@ -880,15 +904,9 @@ JAX/Flax modules **hold no parameters** of their own. The loss takes the paramet
 ::: {.slide title="The optimizer: minibatch SGD by hand" except="tensorflow,jax"}
 [Optimizer]{.kicker}
 
-The update rule $\;\theta \leftarrow \theta - \eta\,\nabla_\theta L\;$ is the entire algorithm. We walk the parameters and subtract the gradient, in place:
+The update rule $\;\theta \leftarrow \theta - \eta\,\nabla_\theta L\;$ is the entire algorithm: walk the parameters and subtract the gradient in place. `configure_optimizers` then hands the parameters to it.
 
 @linear-regression-scratch-defining-the-optimization-algorithm-1
-
-. . .
-
-`configure_optimizers` hands the parameters to it:
-
-@linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
 ::: {.slide title="Minibatch SGD: assign through Variables" only="tensorflow"}
@@ -906,13 +924,9 @@ A `tf.Variable` is updated in place with `assign_sub`. The same rule $\theta \le
 ::: {.slide title="Minibatch SGD as an Optax transform" only="jax"}
 [Optimizer · JAX]{.kicker}
 
-Optax expresses an optimizer as a pair of pure functions: `init` builds the state, `update` turns gradients into the increment $-\eta\,\mathbf{g}$. Our hand-rolled SGD wraps them in a `GradientTransformation`:
+Optax expresses an optimizer as two pure functions, `init` (empty state) and `update` (gradients to the increment $-\eta\,\mathbf{g}$), wrapped in a `GradientTransformation`:
 
-@linear-regression-scratch-defining-the-optimization-algorithm-1
-
-::: {.d2l-note}
-`init` returns an empty state pytree, so even this from-scratch optimizer stays fully `jit`-traceable.
-:::
+@-linear-regression-scratch-defining-the-optimization-algorithm-1
 :::
 
 ::: {.slide}

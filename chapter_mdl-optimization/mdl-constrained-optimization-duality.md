@@ -1043,7 +1043,7 @@ rates), and its conditioning consequences continue in
 
 ::: {.slide}
 ::: {.cover}
-[Mathematics for Deep Learning · Optimization]{.kicker}
+[Dive into Deep Learning · §24.3]{.kicker}
 
 Reading a constrained problem and its dual<br>**Lagrange multipliers · KKT · projections · duality**.
 :::
@@ -1297,6 +1297,35 @@ Relax constraint $i$ by a unit and the optimum improves by $\lambda_i^\star$.
 :::
 
 Slack constraints cost nothing; only binding ones command a price.
+:::
+
+::: {.slide title="Weight decay is a norm constraint"}
+[Duality at work]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The two faces of $\ell_2$ regularization are one Lagrangian apart:
+
+$$\underbrace{\min_{\mathbf{w}}\, L(\mathbf{w}) + \lambda\|\mathbf{w}\|^2}_{\text{penalty}}
+\;\Longleftrightarrow\;
+\underbrace{\min_{\mathbf{w}}\, L(\mathbf{w}) \;\text{s.t.}\; \|\mathbf{w}\|^2 \le r^2}_{\text{constraint}}.$$
+
+The penalty weight $\lambda$ **is** the multiplier of the norm
+constraint, so the shadow price reads $\lambda = -\partial p^\star/\partial r^2$:
+$\lambda$ prices the weight budget. Sweeping $\lambda$ traces the
+regularization path, and each $\lambda$ matches some radius $r$.
+
+::: {.d2l-note}
+This is **weight decay** (§3.7), seen from the constraint side. The
+$\ell_1$ ball's *corner* meets the contours on an axis, so lasso zeros
+coordinates where ridge only shrinks them.
+:::
+:::
+
+::: {.col .fig}
+![Squared-loss contours meeting the $\ell_2$ ball tangentially off-axis (ridge, shrinks) and the $\ell_1$ diamond at a corner (lasso, sparsifies).](../img/mdl-linreg-ridge-geometry.svg){width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="Worked: the SVM dual"}

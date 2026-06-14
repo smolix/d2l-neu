@@ -19,32 +19,34 @@
       "outputs": []
     },
     "linear-regression-vectorization-for-speed-2": {
-      "code_fingerprint": "sha256:5d5e297c42f2602ce6b922e443750bf8d49019b575b6e541952300afcd187e9a",
+      "code_fingerprint": "sha256:b61820af89bf2ad31e33e51fbbe05d0deb57d644f16d43fa5a8afaa005a1e6fc",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "'0.59433 sec'"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.10472 sec\n"
         }
       ]
     },
     "linear-regression-vectorization-for-speed-3": {
-      "code_fingerprint": "sha256:f857b4232aeec53974718a0c78dcd60afc48c9c6180de76b6ac92cbb617d9d15",
+      "code_fingerprint": "sha256:24c86dd1023550276e24bd055f293f17064577a90d7bd0b20bffc0088e62bda4",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "'0.00129 sec'"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.00016 sec\n"
         }
       ]
     },
     "linear-regression-the-normal-distribution-and-squared-loss-1": {
-      "code_fingerprint": "sha256:c5a824352ada3d43d83d61785501f9498ec36382a6d6faa76ca9f8000e90b49e",
+      "code_fingerprint": "sha256:abec1f0c20c21a9d710e2c75de01b762b90c4502cdc605d046fdb109dda57dce",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-the-normal-distribution-and-squared-loss-2": {
-      "code_fingerprint": "sha256:7c5c1d491994b31d7ef290760329938921e8df343758de26235a89c5749e369b",
+      "code_fingerprint": "sha256:4d0495a813c9cfba2fa88c62f7849035742f3ef3217daab7210bc07ecc30b22e",
       "kind": "asset",
       "outputs": [
         {
@@ -52,7 +54,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
           "bytes": 28707,
-          "sha256": "sha256:330b993493f7c9fb8b09af060d27092b682e14a2126b20e0b3e4d0839dbf3b21"
+          "sha256": "sha256:62172460a61c2cad9b3e3a973733066afd04e3c8e5de846e151bed21799a404c"
         }
       ]
     }

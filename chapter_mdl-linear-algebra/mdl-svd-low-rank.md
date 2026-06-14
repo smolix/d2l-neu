@@ -1088,7 +1088,7 @@ exactly---the construction of :numref:`subsec_mdl-svd-via-ata` made flesh.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §22 · Linear Algebra]{.kicker}
+[Dive into Deep Learning · §22.3]{.kicker}
 
 The one factorization that **never fails**<br>**SVD, Eckart--Young, and the geometry of low rank**
 :::
@@ -1131,37 +1131,46 @@ pseudoinverse, and the condition number.
 [The factorization]{.kicker}
 
 Every $m\times n$ matrix factors as
-$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, with
-$\mathbf{U},\mathbf{V}$ orthogonal and
-$\sigma_1\ge\sigma_2\ge\cdots\ge0$. Read right to left:
+$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ ($\mathbf{U},\mathbf{V}$
+orthogonal, $\sigma_1\ge\cdots\ge0$). Reading right to left, $\mathbf{V}^\top$
+**rotates**, $\boldsymbol{\Sigma}$ **scales** by $\sigma_i$, $\mathbf{U}$
+**rotates**, one stretch $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$:
 
 @fig:mdl-la-svd-action
 
-$\mathbf{V}^\top$ **rotates** the input frame onto the axes,
-$\boldsymbol{\Sigma}$ **scales** axis $i$ by $\sigma_i$, $\mathbf{U}$
-**rotates** onto the output frame: one stretch,
-$\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$.
+. . .
+
+The top one is the Rayleigh quotient again:
+$\sigma_1=\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|=\|\mathbf{A}\|_2$, the
+most $\mathbf{A}$ can stretch any unit vector (its **spectral norm**).
 :::
 
 ::: {.slide title="Where the singular values come from"}
 [The factorization]{.kicker}
 
-The SVD *is* the spectral theorem applied to the symmetric PSD matrix
-$\mathbf{A}^\top\mathbf{A}$ (which $\|\mathbf{A}\mathbf{x}\|^2\ge0$
-makes PSD). Diagonalize it, take square roots:
-
-$$\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})},\qquad
-\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i.$$
+The SVD is not a new mystery: it is the **spectral theorem** in disguise.
 
 . . .
 
-::: {.d2l-note .rule}
-The output frame is orthonormal *for free*:
+**(1)** $\mathbf{A}^\top\mathbf{A}$ is symmetric and PSD
+($\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}=\|\mathbf{A}\mathbf{x}\|^2\ge0$),
+so it has an orthonormal eigenbasis $\mathbf{v}_i$ with eigenvalues $\lambda_i\ge0$.
+
+. . .
+
+**(2)** Take square roots and push through $\mathbf{A}$:
+$\;\sigma_i=\sqrt{\lambda_i}$, $\;\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$.
+
+. . .
+
+**(3)** The output frame is orthonormal *for free*:
 $\mathbf{u}_i^\top\mathbf{u}_j=\sigma_i^{-1}\sigma_j^{-1}\,
 \mathbf{v}_i^\top\mathbf{A}^\top\mathbf{A}\,\mathbf{v}_j=\delta_{ij}$.
-:::
 
-Gram matrices are never defective, so **the SVD never fails**.
+::: {.d2l-note .rule}
+Gram matrices are never defective, so **the SVD never fails**, for any matrix,
+rectangular or defective.
+:::
 :::
 
 ::: {.slide title="The defective shear, finally decomposed"}
@@ -1176,7 +1185,7 @@ eigenbasis**.
 Its SVD is perfectly clean. The singular values are the golden ratio
 and its reciprocal ($\sigma_1\sigma_2=|\det\mathbf{A}|=1$):
 
-@svd-defective-shear
+@!svd-defective-shear
 :::
 
 ::: {.slide title="Two frames, one stretch"}
@@ -1234,21 +1243,26 @@ where a test for exact zeros would fail.
 ::: {.slide title="Eckart--Young: optimal low rank"}
 [Approximation]{.kicker}
 
-The dyadic sum $\mathbf{A}=\sum_i\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$
-lists rank-one pieces by importance. Keep the top $k$:
-
-$$\mathbf{A}_k=\sum_{i\le k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top.$$
-
-. . .
+Keep the top $k$ dyads, $\mathbf{A}_k=\sum_{i\le k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$.
 
 ::: {.d2l-note .rule}
 $\mathbf{A}_k$ is the **provably best** rank-$k$ approximation:
-$\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ and
-$\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$.
+$\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$, and $\|\cdot\|_F^2=\sum_{i>k}\sigma_i^2$ (the case PCA uses).
 :::
 
-The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ is the dial:
-fast-decaying spectra compress almost for free.
+. . .
+
+*Why no rank-$k$ $\mathbf{B}$ does better,* by dimension counting:
+$\dim\ker\mathbf{B}\ge n-k$, and $\mathcal{V}=\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_{k+1}\}$ has dim $k+1$.
+
+. . .
+
+They **overfill** $\mathbb{R}^n$: $(n-k)+(k+1)>n$, so a unit $\mathbf{x}$ lives in both, with $\mathbf{B}\mathbf{x}=\mathbf 0$.
+
+. . .
+
+There $\mathbf{B}$ is blind while $\mathbf{A}$ still stretches:
+$\|(\mathbf{A}-\mathbf{B})\mathbf{x}\|=\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}$. The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ is the compression dial.
 :::
 
 ::: {.slide title="A visual proof on an image"}
@@ -1268,9 +1282,9 @@ discarded $\sigma_i$ carrying little energy.
 ::: {.col}
 *Center* the data, then the top right singular vectors $\mathbf{v}_i$
 are the principal directions; component $i$ explains variance
-$\sigma_i^2/n$. The SVD axes and the covariance eigenvectors agree:
+$\sigma_i^2/n$. The SVD axes and the covariance eigenvalues agree exactly:
 
-@svd-pca
+@!svd-pca
 :::
 
 ::: {.col .fig}
@@ -1295,9 +1309,10 @@ $\sigma_i^2/n$. The SVD axes and the covariance eigenvectors agree:
 Invert the nonzero singular values and transpose the rotations,
 $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$. The
 SVD basis decouples the problem, so $\mathbf{A}^{+}\mathbf{b}$ is the
-**minimum-norm least-squares** solution. `pinv` and `lstsq` agree:
+**minimum-norm least-squares** solution. `pinv` and `lstsq` agree, and forming
+$\mathbf{A}^\top\mathbf{A}$ squares the conditioning:
 
-@svd-least-squares
+@!svd-least-squares
 :::
 
 ::: {.slide title="The condition number"}
@@ -1312,7 +1327,7 @@ bowl.
 
 ::: {.d2l-note .warn}
 Forming $\mathbf{A}^\top\mathbf{A}$ *squares* it,
-$\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$ — why the
+$\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$, which is why the
 normal equations are numerically worse.
 :::
 :::
@@ -1339,10 +1354,13 @@ normal equations are numerically worse.
 - **LoRA** learns a rank-$r$ correction $\Delta\mathbf{W}=\mathbf{B}\mathbf{A}$
   at $r(m+n)$ params; Eckart--Young bounds how well *any* rank-$r$ update
   can track the full one ($\sigma_{r+1}$).
-- **Muon** steps along the polar factor $\mathbf{U}\mathbf{V}^\top$ of the
-  momentum, computed by Newton--Schulz iterations (matmuls only).
 - **Spectral norm** caps $\sigma_1=\|\mathbf{W}\|_2$ for Lipschitz control,
   estimated by power iteration on $\mathbf{W}^\top\mathbf{W}$.
+
+::: {.d2l-note}
+**Muon** even optimizes *through* the SVD, stepping along the polar factor
+$\mathbf{U}\mathbf{V}^\top$ of the momentum (Newton--Schulz, matmuls only).
+:::
 :::
 
 ::: {.slide title="Effective rank, measured"}
@@ -1360,8 +1378,8 @@ decays, so the diagnostic is worth running. Here rank 18 of 256 holds
 
 ::: {.cols}
 ::: {.col}
-- **Rotate--scale--rotate:** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
-  $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$ — never fails.
+- **Rotate, scale, rotate:** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
+  $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$, never fails.
 - **Eckart--Young:** top-$k$ truncation is the *optimal* low-rank
   approximation; the energy ratio is the dial.
 - **PCA** is Eckart--Young on centered data.

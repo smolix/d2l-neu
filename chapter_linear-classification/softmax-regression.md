@@ -715,6 +715,20 @@ Our loss **is** $H(\mathbf{y}, \hat{\mathbf{y}})$.
 So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth, a duality worth remembering whenever cross-entropy appears.
 :::
 
+::: {.slide title="Probabilities, but not *calibrated*"}
+[Loss · a modern caveat]{.kicker}
+
+The softmax outputs *look* like probabilities, but a network trained to minimize cross-entropy is generally **not calibrated**: a reported confidence of $0.9$ does not mean it is right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
+
+. . .
+
+::: {.d2l-note .rule}
+**Temperature scaling** divides the logits by a single learned $T > 0$ before the softmax, exactly the Boltzmann temperature from earlier.
+:::
+
+Because $1/T$ scales every logit by the same factor, it preserves their order: the predicted class (the $\arg\max$) is **untouched** while the confidences sharpen ($T<1$) or soften ($T>1$).
+:::
+
 ::: {.slide}
 ::: {.divider}
 [04]{.dnum}

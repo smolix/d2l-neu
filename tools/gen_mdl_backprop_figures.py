@@ -184,7 +184,109 @@ def fig_backprop_graph():
     fl.save(fig, "mdl-mlp-backprop-graph")
 
 
-FIGURES = [fig_backprop_graph]
+def fig_mdl_mlp_forward_graph():
+    r"""Computational graph of the *forward* pass, in the same house style as
+    :func:`fig_backprop_graph` so the two read as a matched pair.
+
+    This replaces the legacy hand-drawn ``forward.svg`` (black/white
+    glyph-outline squares-and-circles).  It draws the full forward computation
+    the section describes, including the weight-decay branch:
+
+        x --(x W1)--> z --(phi)--> h --(x W2)--> o --(loss)--> L
+        W1, W2 --(reg)--> s,   then   J = L + s.
+
+    Everything flows left-to-right and bottom-to-top, in black (``FWD``): this is
+    the forward pass *only*, with no backward (blue) sweep.  Node shapes,
+    palette roles (GREEN input, BLUE intermediates, ORANGE loss/objective, GRAY
+    given parameters), fonts, box size, and the ``fl.arrow`` helper match the
+    backprop graph exactly.  No numbers are shown here: the figure is the
+    schematic the prose calls for, and its numeric twin is the backprop graph."""
+    fig, ax = plt.subplots(figsize=(11.2, 5.6))
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 8.0)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    bw, bh = 2.05, 1.05             # node box size -- identical to backprop graph
+    y_chain = 1.45                  # row A (bottom): the x -> ... -> L chain
+    y_param = 4.20                  # row B (middle): the weight matrices
+    y_obj = 6.55                    # row C (top): regularizer s, objective J
+    centres = [1.55, 5.0, 8.0, 11.0, 14.3]   # x of x, z, h, o, L (as backprop)
+
+    def node(cx, cy, name, color):
+        """A rounded node box with a single symbol, in the shared house style:
+        the same FancyBboxPatch + twin-fill look as the backprop graph's
+        ``node``, minus the numeric value caption (this figure is schematic)."""
+        x0, y0 = cx - bw / 2, cy - bh / 2
+        for fc, a in [(color, 0.12), ("none", 1.0)]:
+            ax.add_patch(FancyBboxPatch(
+                (x0, y0), bw, bh,
+                boxstyle="round,pad=0.02,rounding_size=0.12",
+                linewidth=1.8, edgecolor=color, facecolor=fc, alpha=a))
+        ax.text(cx, cy, name, ha="center", va="center",
+                fontsize=13, color=color)
+        return dict(l=x0, r=x0 + bw, cx=cx, t=y0 + bh, b=y0, cy=cy)
+
+    # --- row A: main chain, input -> intermediates -> loss ---
+    nx = node(centres[0], y_chain, r"$\mathbf{x}$", GREEN)
+    nz = node(centres[1], y_chain, r"$\mathbf{z}$", BLUE)
+    nh = node(centres[2], y_chain, r"$\mathbf{h}$", BLUE)
+    no = node(centres[3], y_chain, r"$\mathbf{o}$", BLUE)
+    nL = node(centres[4], y_chain, r"$L$", ORANGE)
+    chain = [nx, nz, nh, no, nL]
+
+    # forward arrows along the chain (black, above the row), labelled with the op.
+    # The two affine transitions also receive a weight dropping in from above, so
+    # their labels are nudged left of the arrow midpoint to clear that drop-arrow.
+    fwd_ops = [(r"$\times\,\mathbf{W}^{(1)}$", -0.55), (r"$\phi$", 0.0),
+               (r"$\times\,\mathbf{W}^{(2)}$", -0.55), (r"$l(\mathbf{o},y)$", 0.0)]
+    yf = y_chain + bh / 2 + 0.05
+    for (a, b), (op, dx) in zip(zip(chain[:-1], chain[1:]), fwd_ops):
+        x0, x1 = a["r"] + 0.12, b["l"] - 0.12
+        fl.arrow(ax, (x0, yf), (x1, yf), color=FWD, lw=2.0, mut=13)
+        ax.text((x0 + x1) / 2 + dx, yf + 0.30, op, ha="center", va="bottom",
+                fontsize=11.5, color=FWD)
+
+    # --- row B: the weight matrices, sitting above their affine transitions ---
+    # (GRAY = "given" parameters, distinct from the BLUE computed intermediates.)
+    cW1 = (nx["r"] + nz["l"]) / 2        # above the x -> z affine arrow
+    cW2 = (nh["r"] + no["l"]) / 2        # above the h -> o affine arrow
+    nW1 = node(cW1, y_param, r"$\mathbf{W}^{(1)}$", GRAY)
+    nW2 = node(cW2, y_param, r"$\mathbf{W}^{(2)}$", GRAY)
+
+    # Each weight drops straight down into its affine forward-arrow.
+    for nW in (nW1, nW2):
+        fl.arrow(ax, (nW["cx"], nW["b"] - 0.02), (nW["cx"], yf + 0.02),
+                 color=FWD, lw=1.8, mut=12)
+
+    # --- row C: regularizer s (from the weights) and objective J = L + s ---
+    cs = (cW1 + cW2) / 2                 # s centred over the two weight nodes
+    ns = node(cs, y_obj, r"$s$", BLUE)
+    nJ = node(centres[4], y_obj, r"$J$", ORANGE)   # J directly above L
+
+    # Both weights feed up into the regularizer s (the weight-decay branch).
+    for nW in (nW1, nW2):
+        fl.arrow(ax, (nW["cx"], nW["t"] + 0.02), (ns["cx"], ns["b"] - 0.02),
+                 color=FWD, lw=1.8, mut=12)
+    ax.text(cs, ns["t"] + 0.18, r"$\frac{\lambda}{2}\|\cdot\|_\mathrm{F}^2$",
+            ha="center", va="bottom", fontsize=11.5, color=FWD)
+
+    # The objective combines s (rightward) and the loss L (rising):  J = L + s.
+    fl.arrow(ax, (ns["r"] + 0.12, y_obj), (nJ["l"] - 0.12, y_obj),
+             color=FWD, lw=2.0, mut=13)
+    fl.arrow(ax, (nL["cx"], nL["t"] + 0.02), (nJ["cx"], nJ["b"] - 0.02),
+             color=FWD, lw=2.0, mut=13)
+    ax.text((ns["r"] + nJ["l"]) / 2, y_obj + 0.30, r"$J=L+s$",
+            ha="center", va="bottom", fontsize=11.5, color=FWD)
+
+    # --- corner direction label, echoing the backprop graph (forward only) ---
+    ax.text(centres[0] - bw / 2, y_obj + 0.95, r"forward $\rightarrow$",
+            ha="left", va="center", fontsize=11, color=FWD, fontweight="bold")
+
+    fl.save(fig, "mdl-mlp-forward-graph")
+
+
+FIGURES = [fig_backprop_graph, fig_mdl_mlp_forward_graph]
 
 
 def main():

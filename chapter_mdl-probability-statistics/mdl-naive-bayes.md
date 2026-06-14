@@ -244,69 +244,240 @@ Images are in fact the *hard* case for the naive assumption, because adjacent pi
 
 <!-- slides -->
 
-::: {.slide title="Naive Bayes: Bayes' rule for classification"}
-Predict the most likely label given the features. Estimating
-$p(y \mid \mathbf{x})$ directly is hopeless --- $2^d$ inputs --- so go
-*generative* with Bayes' rule:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.4]{.kicker}
 
-$$p(y \mid \mathbf{x}) \;\propto\; p(\mathbf{x} \mid y)\, p(y).$$
-
-We still owe a model for $p(\mathbf{x} \mid y)$, a distribution over all
-$2^d$ feature patterns.
+The simplest probabilistic classifier<br>**count, smooth, and argmax**.
+:::
 :::
 
-::: {.slide title="The naive assumption"}
+::: {.slide title="Why not fit p(y | x) directly?"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A classifier wants $\hat y = \operatorname{argmax}_y p(y\mid\mathbf x)$.
+Estimating that table directly is hopeless: $2^d$ feature patterns —
+$2^{784}$ for MNIST, more than atoms in the universe.
+
+::: {.d2l-note}
+The fix: model how each class **generates** features, then flip with
+Bayes.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-naive-genvdisc
+:::
+:::
+:::
+
+::: {.slide title="Bayes' rule → a generative classifier"}
+[The route]{.kicker}
+
+Flip to the generative direction; the label-independent denominator drops:
+
+$$\hat y = \operatorname*{argmax}_y\, p(y\mid\mathbf x)
+= \operatorname*{argmax}_y\, p(\mathbf x\mid y)\,p(y).$$
+
+. . .
+
+We still owe a model for $p(\mathbf x\mid y)$ — a distribution over all
+$2^d$ patterns. No savings *yet*.
+:::
+
+::: {.slide title="Generative vs. discriminative"}
+[Two routes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Generative** (here): learn class-conditionals $p(\mathbf x\mid y)$ + prior, flip through Bayes.
+- **Discriminative** (softmax / logistic): fit the boundary $p(y\mid\mathbf x)$ directly.
+
+::: {.d2l-note}
+Generative needs fewer samples but has a higher error floor;
+discriminative wins given enough data.
+:::
+:::
+
+::: {.col .fig}
+![](../img/mdl-prob-naive-genvdisc.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The naive assumption]{.dtitle}
+
+[conditional independence, and what it buys]{.dsub}
+:::
+:::
+
+::: {.slide title="The factorization"}
+[Independence]{.kicker}
+
 Assume features are **conditionally independent given the label**:
 
-$$p(\mathbf{x} \mid y) = \prod_{i=1}^d p(x_i \mid y).$$
+$$p(\mathbf x\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 
-Wrong --- image pixels are obviously correlated --- but cheap:
-$\mathcal{O}(d)$ parameters, not $\mathcal{O}(2^d)$. And the classifier
-only needs the *argmax* to be right, not the probabilities. Hence
+. . .
 
-$$\hat{y} = \mathop{\mathrm{argmax}}_y \; p(y) \prod_{i=1}^d p(x_i \mid y).$$
+::: {.d2l-note .rule}
+This collapses $\mathcal O(2^d)$ parameters to $\mathcal O(d)$ per class —
+the curse of dimensionality broken by fiat.
+:::
+:::
+
+::: {.slide title="The graphical model"}
+[Independence]{.kicker}
+
+The label fans out to every feature; **no** edges run between features —
+the right panel shows the dependence we throw away:
+
+![](../img/mdl-prob-naive-independence.svg){width=78%}
+
+The assumption is false (pixels are correlated), but the classifier only
+needs the **argmax** right, not calibrated probabilities.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Log space and linearity]{.dtitle}
+
+[underflow, the log-sum, and why naive Bayes is linear]{.dsub}
+:::
 :::
 
 ::: {.slide title="Predict in log space"}
-A product of $784$ probabilities underflows --- in single precision
-nearly every class score becomes an exact zero. $\log$ preserves
-the argmax and turns the product into a sum:
+[Numerical]{.kicker}
 
-$$\hat{y} = \mathop{\mathrm{argmax}}_y \; \log p(y)
-   + \sum_{i=1}^d \log p(x_i \mid y).$$
+Multiplying $784$ probabilities underflows — in single precision nearly
+every class score becomes an exact zero. Since $\log$ is increasing it
+preserves the argmax and turns the product into a sum:
+
+$$\hat y = \operatorname*{argmax}_y\, \log p(y) +
+\sum_{i=1}^d \log p(x_i\mid y).$$
 :::
 
-::: {.slide title="Training is counting"}
-Both ingredients are maximum-likelihood frequencies: the class prior
-$p(y)$ and the per-pixel firing rate $p(x_i = 1 \mid y)$. Laplace
-smoothing $(n_{iy}+1)/(n_y+2)$ --- one phantom observation per outcome,
-the posterior mean under a uniform prior --- keeps log-probabilities
-finite.
+::: {.slide title="The score is affine → linear classifier"}
+[Linearity]{.kicker}
+
+For binary pixels, $\log p(x_i\mid y) = x_i\log p_{iy} + (1-x_i)\log(1-p_{iy})$,
+so each class score is
+
+$$s_y(\mathbf x) = \mathbf w_y^\top\mathbf x + b_y.$$
+
+::: {.d2l-note .rule}
+Naive Bayes draws the **same kind of decision hyperplanes** as softmax
+regression — only the way it fits the weights differs.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Training is counting]{.dtitle}
+
+[priors, likelihoods, and Laplace smoothing]{.dsub}
+:::
+:::
+
+::: {.slide title="Maximum likelihood = frequencies"}
+[Counting]{.kicker}
+
+Both ingredients are counts: the class prior $\hat p(y)=n_y/n$ and the
+per-pixel firing rate, Laplace-smoothed so a never-seen pixel cannot send
+a log-score to $-\infty$:
+
+$$\hat p(x_i=1\mid y) = \frac{n_{iy}+1}{n_y+2}.$$
 
 @naive-bayes-train
+
+::: {.d2l-note}
+The $+1/+2$ is the posterior mean under a $\text{Beta}(1,1)$ prior — a
+prior acting as a regularizer.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[MNIST, end to end]{.dtitle}
+
+[binarize, learn templates, 84% accuracy]{.dsub}
+:::
+:::
+
+::: {.slide title="Load and binarize"}
+[MNIST]{.kicker}
+
+Threshold each $28\times28$ grayscale image at $128$ to get binary pixels
+$x_i\in\{0,1\}$:
+
+@naive-bayes-load
+
+A Gaussian naive Bayes would instead keep a per-class mean and variance
+for each continuous pixel.
 :::
 
 ::: {.slide title="What the model learns"}
-Each class is just an averaged template --- ten blurry digits. The blur
-*is* the naive assumption: per-pixel rates, no pixel co-occurrence.
+[MNIST]{.kicker}
+
+Each class is just an averaged template — ten ghostly digits. The blur
+**is** the naive assumption: per-pixel marginals, nothing about
+co-occurrence.
 
 @naive-bayes-templates
 :::
 
 ::: {.slide title="Classify and evaluate"}
-Score by summing log-likelihoods, take the argmax. About $84\%$ on
-MNIST --- well above chance, but capped by the independence assumption
-(modern nets: $<1\%$ error). A great teaching classifier, honest about
-its own failure.
+[MNIST]{.kicker}
+
+Sum the log-likelihoods, take the argmax:
 
 @naive-bayes-predict
+
+::: {.d2l-note .rule}
+**84.27%** — far above $10\%$ chance, far below modern nets ($<1\%$
+error). The gap is the honest price of a wrong independence assumption.
+:::
+:::
+
+::: {.slide title="Where it shines: text"}
+[Domain]{.kicker}
+
+Pixels are tightly coupled, so the assumption hurts. **Words** in a
+bag-of-words model are far closer to independent — naive Bayes dominated
+spam filtering for decades.
+
+::: {.d2l-note}
+The multinomial event model counts word occurrences (with a $+|V|$
+denominator) instead of presence/absence.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Bayes' rule + conditional independence $=$ naive Bayes.
-- Breaks the curse of dimensionality: $\mathcal{O}(d)$ not
-  $\mathcal{O}(2^d)$ parameters.
-- Training is one counting pass (MLE); smooth, then predict in logs.
-- Strong baseline where features really are near-independent (text);
-  bad on images, where they are not.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Bayes' rule + conditional independence = naive Bayes.
+- Breaks the curse of dimensionality: $\mathcal O(d)$ not $\mathcal O(2^d)$ parameters.
+- Training is one counting pass; smooth, then predict in log space.
+:::
+
+::: {.col}
+- The log-space score is affine → a **linear** classifier, like softmax.
+- Laplace smoothing = a $\text{Beta}$ prior.
+- Great where features are near-independent (text); weak on images — the textbook generative-vs-discriminative lesson.
+:::
+:::
 :::

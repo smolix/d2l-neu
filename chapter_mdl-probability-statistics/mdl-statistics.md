@@ -579,51 +579,118 @@ The two intervals answer different questions and do not overlap, a direct conseq
 
 <!-- slides -->
 
-::: {.slide title="Estimator Quality"}
-The language of estimators that ML borrows:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.5]{.kicker}
 
-- **Estimator** $\hat\theta_n = \hat f(x_1,\ldots,x_n)$ — a
-  procedure that turns data into a guess (sample mean, MLE).
-- **Bias** $\mathbb{E}[\hat\theta] - \theta$ — systematic error.
-- **Variance** $\operatorname{Var}(\hat\theta)$ — noise across
-  datasets.
-- **Consistency** — $\hat\theta_n \xrightarrow{P} \theta$ as
-  data accumulates.
-
-An estimator is judged by its *sampling distribution*: where
-the estimates center, and how widely they spread.
+Estimators, hypothesis tests, and confidence intervals<br>**statistics for practitioners**.
+:::
 :::
 
-::: {.slide title="Sampling distribution: center vs spread"}
-Repeat the experiment on fresh datasets. Bias is the offset
-of the center from $\theta$; variance is the spread. Usually
-one is traded for the other:
+::: {.slide title="Why statistics?"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A trained model is a guess made from random data. Statistics says how far
+that guess sits from the truth, whether an improvement is real, and how
+much to trust a number.
+
+- Bias–variance = the under/overfit U-curve.
+- p-values behind every A/B test and benchmark claim.
+- Confidence intervals behind the error bars on a loss curve.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-sampling-distribution
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Estimators and their quality]{.dtitle}
+
+[bias, variance, MSE, consistency, efficiency]{.dsub}
+:::
+:::
+
+::: {.slide title="An estimator is a random variable"}
+[Estimators]{.kicker}
+
+$\hat\theta_n = \hat f(x_1,\dots,x_n)$ is computed from a random sample, so
+it has a **sampling distribution** — it would land somewhere else on a
+fresh dataset.
+
+::: {.d2l-note}
+That randomness is the whole subject: how much would the answer move, and
+is it centered on the truth?
+:::
+:::
+
+::: {.slide title="Bias and variance"}
+[Estimators]{.kicker}
+
+$$\operatorname{Bias}(\hat\theta_n) = \mathbb E[\hat\theta_n] - \theta,
+\qquad
+\operatorname{Var}(\hat\theta_n) = \mathbb E\bigl[(\hat\theta_n - \mathbb E[\hat\theta_n])^2\bigr].$$
+
+Bias is a systematic offset (it does **not** wash out with more data);
+variance is measured against the estimator's own center, not the truth.
 
 @fig:mdl-prob-sampling-distribution
 :::
 
-::: {.slide title="The bias–variance decomposition"}
-**Proposition.** $\operatorname{MSE}(\hat\theta) =
-\operatorname{Bias}(\hat\theta)^2 + \operatorname{Var}(\hat\theta)$.
+::: {.slide title="Consistency and efficiency"}
+[Estimators]{.kicker}
 
-Center at $\mu=\mathbb{E}[\hat\theta]$, expand
-$(\hat\theta-\theta)^2 = ((\hat\theta-\mu)+(\mu-\theta))^2$;
-the cross term vanishes because $\hat\theta-\mu$ has mean $0$.
-No interference between systematic and random error.
+**Consistent**: $\hat\theta_n\xrightarrow{P}\theta$ — guaranteed if both
+bias and variance vanish (the law of large numbers is the prototype).
+
+. . .
+
+**Efficient**: smallest variance among unbiased estimators. The
+Cramér–Rao bound is the floor; the MLE reaches it asymptotically.
 :::
 
-::: {.slide title="Same picture as generalization"}
-Bias falls and variance rises with model complexity; their
-sum (the test error) is a U-curve. Regularization trades a
-little bias for a lot of variance reduction:
+::: {.slide title="MSE: the honest scorecard"}
+[Estimators]{.kicker}
 
-@fig:mdl-prob-bias-variance-u-curve
+$\operatorname{MSE}(\hat\theta_n) = \mathbb E[(\hat\theta_n-\theta)^2]$
+folds both errors into one number.
+
+::: {.d2l-note .rule}
+**Proposition.**
+$\operatorname{MSE}(\hat\theta_n) =
+\operatorname{Bias}(\hat\theta_n)^2 + \operatorname{Var}(\hat\theta_n).$
+:::
+:::
+
+::: {.slide title="Proof: the cross term vanishes"}
+[Estimators]{.kicker}
+
+Let $\mu=\mathbb E[\hat\theta_n]$ and split
+$\hat\theta_n-\theta = (\hat\theta_n-\mu) + (\mu-\theta)$.
+
+. . .
+
+Squaring and taking expectations, the cross term is
+$2(\mu-\theta)\,\mathbb E[\hat\theta_n-\mu] = 0$, leaving
+$\operatorname{Var} + \operatorname{Bias}^2$. $\blacksquare$
+
+::: {.d2l-note}
+Markov then gives $P(|\hat\theta_n-\theta|>\varepsilon)\le
+\operatorname{MSE}/\varepsilon^2$ — small MSE forces consistency.
+:::
 :::
 
 ::: {.slide title="Verify it in code"}
-Build the sampling distribution from many datasets, then
-check $\operatorname{MSE} =
-\operatorname{Bias}^2 + \operatorname{Var}$ numerically:
+[Estimators]{.kicker}
+
+Ten thousand sample means of $n=30$ Gaussian draws; the two sides of the
+decomposition agree to floating point:
 
 @statistics-sampling-distribution
 
@@ -632,91 +699,210 @@ check $\operatorname{MSE} =
 @statistics-verify-decomposition
 :::
 
-::: {.slide title="Why variance divides by n−1"}
-Deviations are measured from $\bar x$ (which minimizes them),
-so dividing by $n$ underestimates $\sigma^2$. One degree of
-freedom is spent estimating the mean; $1/(n-1)$ corrects it:
+::: {.slide title="The U-curve = generalization"}
+[Estimators]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+As model complexity grows, bias falls and variance rises; expected test
+error is their sum plus irreducible noise:
+
+$$\text{err} = \operatorname{Bias}^2 + \operatorname{Var} + \sigma^2.$$
+
+Regularization deliberately adds bias to cut variance more.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-bias-variance-u-curve
+:::
+:::
+:::
+
+::: {.slide title="Why divide by n − 1?"}
+[Estimators]{.kicker}
+
+Deviations from $\bar x$ are too small (it minimizes them), so dividing by
+$n$ is biased low.
+
+::: {.d2l-note .rule}
+**Proposition.** $s^2 = \tfrac{1}{n-1}\sum_i (x_i-\bar x)^2$ has
+$\mathbb E[s^2]=\sigma^2$ — one degree of freedom is spent estimating
+$\bar x$.
+:::
 
 @statistics-unbiased-variance
 :::
 
-::: {.slide title="Hypothesis testing"}
-Weigh evidence against a default $H_0$. Two errors:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-- **Type I** ($\alpha$) — reject a true $H_0$ (false positive).
-- **Type II** ($\beta$) — keep a false $H_0$; **power** $=1-\beta$.
+[Hypothesis testing]{.dtitle}
 
+[null & alternative, test statistic, p-value, power]{.dsub}
+:::
+:::
+
+::: {.slide title="Two kinds of error"}
+[Testing]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+We never prove $H_0$ — only reject it or fail to:
+
+$$\alpha = P(\text{reject}\mid H_0), \qquad
+\beta = P(\text{fail}\mid H_A).$$
+
+$\alpha$ = significance (false positive); $1-\beta$ = power.
+:::
+
+::: {.col .fig}
 @fig:mdl-prob-type-i-ii-matrix
 :::
-
-::: {.slide title="Power and sample size"}
-Detection probability grows with effect size $\delta$ and sample
-size $n$; required $n \propto 1/\delta^2$. Tiny gains need huge
-test sets — $\delta=1$ takes $\approx 8$ samples, $\delta=0.01$
-takes $\approx 80{,}000$:
-
-@fig:mdl-prob-power
+:::
 :::
 
-::: {.slide title="p-values and significance"}
-The $p$-value is $P_{H_0}(\text{data this extreme})$ — reject
-when $p \le \alpha$. It is *not* $P(H_0\mid\text{data})$:
+::: {.slide title="Significance and power"}
+[Testing]{.kicker}
+
+Fix $\alpha$ (often $0.05$) and target power (often $0.8$). The sample size
+to detect an effect scales as $n\propto 1/\delta^2$:
+
+@fig:mdl-prob-power
+
+::: {.d2l-note}
+A $0.01$ improvement needs tens of thousands of test examples to confirm —
+why marginal benchmark gains are fragile.
+:::
+:::
+
+::: {.slide title="The five-step recipe"}
+[Testing]{.kicker}
+
+1. State $H_0$ and $H_A$.
+2. Fix $\alpha$ and a target power → required $n$.
+3. Collect data.
+4. Compute the statistic $T(x)$ and its p-value.
+5. Reject $H_0$ iff $p\le\alpha$.
+
+::: {.d2l-note .rule}
+A p-value is $P(\text{data this extreme}\mid H_0)$ — **not**
+$P(H_0\mid\text{data})$.
+:::
+:::
+
+::: {.slide title="The rejection region"}
+[Testing]{.kicker}
+
+$p = P_{H_0}\bigl(|T| \ge |t_{\text{obs}}|\bigr)$; land in the tails of
+total mass $\alpha$ and reject:
 
 @fig:mdl-prob-significance
 
-. . .
-
-**Multiple testing.** Run $m$ tests under a true null and the
-chance of a spurious win is $1-(1-\alpha)^m$. Reporting only the
-winner is *$p$-hacking*; Bonferroni tests each at $\alpha/m$, and
-at ML scale one controls the *FDR* (Benjamini–Hochberg).
+::: {.d2l-note}
+Run $m$ tests and $P(\ge 1\text{ false win}) = 1-(1-\alpha)^m$. Bonferroni
+tests at $\alpha/m$; at ML scale, control the false-discovery rate.
+:::
 :::
 
-::: {.slide title="A worked test: permutation"}
-Is model B better than model A, or just lucky seeds? Under $H_0$
-the labels are exchangeable: shuffle them, recompute the gap, and
-see how rare the observed gap is:
+::: {.slide title="A worked test: two models"}
+[Testing]{.kicker}
+
+Under $H_0$ the labels are exchangeable, so **shuffle** them, recompute the
+accuracy gap, and repeat. The p-value is the fraction of shuffles at least
+as extreme:
 
 @statistics-permutation-test
 
+The $0.73\%$ gap is real here — but only just, with $20$ seeds.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Quantifying uncertainty]{.dtitle}
+
+[confidence intervals and the bootstrap]{.dsub}
+:::
+:::
+
+::: {.slide title="What a confidence interval is"}
+[Intervals]{.kicker}
+
+A random interval $C_n$ with $P_\theta(C_n \ni \theta)\ge 1-\alpha$ for all
+$\theta$. The **interval** is random; $\theta$ is fixed.
+
 . . .
 
-$p \approx 0.02 \le 0.05$: reject $H_0$ — though a *real* $0.8\%$
-gap only just cleared the bar with 20 seeds.
+Correct reading: across many repetitions, $95\%$ of the constructed
+intervals trap $\theta$ — *not* that this one does with probability $0.95$
+(that is a Bayesian credible interval, which needs a prior).
 :::
 
-::: {.slide title="Confidence intervals"}
-$\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$ contains $\mu$ in
-$\approx 95\%$ of repeated datasets (central limit theorem).
-Half-width shrinks like $1/\sqrt n$ — 4× the data to halve it:
+::: {.slide title="The Gaussian interval"}
+[Intervals]{.kicker}
+
+By the CLT, $T=(\hat\mu_n-\mu)/(\hat\sigma_n/\sqrt n)$ is approximately
+standard normal, giving
+
+$$\Bigl[\hat\mu_n - 1.96\,\tfrac{\hat\sigma_n}{\sqrt n},\;
+\hat\mu_n + 1.96\,\tfrac{\hat\sigma_n}{\sqrt n}\Bigr].$$
 
 @statistics-confidence-interval
+
+::: {.d2l-note}
+Half-width shrinks like $1/\sqrt n$ — four times the data to halve the
+error bar.
+:::
 :::
 
-::: {.slide title="The bootstrap"}
-Most statistics (median, accuracy, AUC, BLEU) have *no*
-closed-form standard error. Resample the data $n$ times **with
-replacement**, $B$ times, and recompute $\hat\theta$:
+::: {.slide title="The bootstrap: any statistic, no formula"}
+[Intervals]{.kicker}
 
-- spread of $\{\hat\theta^\ast\}$ = standard error,
-- central percentiles = confidence interval.
+Substitute the empirical distribution for the unknown one: resample $n$
+points **with replacement**, recompute the statistic, repeat:
 
 @fig:mdl-prob-bootstrap
 
-. . .
+::: {.d2l-note .rule}
+Works for the median, AUC, accuracy, BLEU — anywhere no closed-form
+standard error exists.
+:::
+:::
+
+::: {.slide title="Bootstrap in code"}
+[Intervals]{.kicker}
+
+The bootstrap SE and a percentile interval for a skewed sample's median:
 
 @statistics-bootstrap
+
+. . .
+
+The mean's Gaussian interval lands elsewhere — same data, different
+statistic, different answer:
+
+@statistics-bootstrap-contrast
 :::
 
 ::: {.slide title="Recap"}
-- Estimator quality = bias + variance; their squares sum to MSE.
-- Same trade-off as under/overfitting — regularization slides
-  along the U-curve.
-- Unbiased variance divides by $n-1$ (one degree of freedom spent).
-- Tests control $\alpha$, want power; $p$-value is about data given
-  $H_0$, not $H_0$ given data. Many tests → correct for multiplicity.
-- Confidence intervals quantify uncertainty; width $\propto 1/\sqrt n$
-  (LLN drives consistency, CLT the Gaussian shape).
-- Bootstrap: resample with replacement for a standard error / CI of
-  *any* statistic, even when no formula exists.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Estimators are random; quality = bias, variance, and their sum, MSE = $\operatorname{Bias}^2+\operatorname{Var}$.
+- Consistent when both vanish; the U-curve is under/overfitting as one identity; $n-1$ pays for one degree of freedom.
+:::
+
+::: {.col}
+- Testing: control $\alpha$, want power $\ge 0.8$; the p-value is data-given-null, not null-given-data; correct for multiplicity.
+- Intervals shrink like $1/\sqrt n$; the bootstrap gives error bars for any statistic.
+:::
+:::
+
+::: {.d2l-note}
+The MSE split, the U-curve, and the CLT are the same few ideas in
+different clothes throughout the book.
+:::
 :::

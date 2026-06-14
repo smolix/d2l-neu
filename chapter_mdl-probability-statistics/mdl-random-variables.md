@@ -1055,92 +1055,373 @@ $|\det A|$ and the density thins by the same factor.
 
 <!-- slides -->
 
-::: {.slide title="Continuous Random Variables"}
-Continuous random variables and their summaries:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.1]{.kicker}
 
-- **PDF** $p(x)\ge0$ with $\int p = 1$; $P(X \in A) = \int_A p$.
-- **CDF** $F(x)=\int_{-\infty}^x p = P(X\le x)$, with $F'=p$.
-- **Mean** $\mu = \mathbb{E}[X] = \int x\, p(x)\, dx$.
-- **Variance** $\sigma^2 = \mathbb{E}[X^2]-\mu^2$ — spread.
-- **Covariance / correlation** — joint variation, raw and
-  normalized to $[-1,1]$.
-
-These are the building blocks of every probabilistic
-analysis in the book.
+Densities, moments, and joint distributions<br>**the continuous language of deep learning**.
+:::
 :::
 
-::: {.slide title="From discrete to continuous"}
-Discrete variables assign *mass* to points; a single point
-then has probability zero in the continuous world. Continuous
-variables assign *density*, and probability is area:
-$P(X\in(a,b]) = \int_a^b p$.
+::: {.slide title="Why continuous probability?"}
+[Motivation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+Pixels, weights, activations, and noise are all continuous. A single
+exact outcome now has probability **zero** — probability lives in
+*areas*, not points.
+
+- Density $p$, mean, variance, covariance, the matrix $\boldsymbol\Sigma$.
+- The toolkit behind SGD, VAEs, normalizing flows, and Bayesian inference.
+
+::: {.d2l-note}
+The continuous analogue of discrete probability: same ideas, **integration
+in place of summation**.
+:::
+:::
+
+::: {.col .fig .big}
 @fig:mdl-prob-pdf-area
 :::
+:::
+:::
 
-::: {.slide title="Density to probability, in code"}
-The density is not a probability — only its integral is. A
-Riemann sum recovers $P(-2 < X \le 3)$ from the density and
-confirms the total mass is $1$:
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Densities and the c.d.f.]{.dtitle}
+
+[the dartboard argument, $p\ge 0$, $\int p = 1$, and $F' = p$]{.dsub}
+:::
+:::
+
+::: {.slide title="The density appears"}
+[The dartboard]{.kicker}
+
+Shrink the bin around $x$ by $10\times$ and the probability it catches
+shrinks by $10\times$. The surviving constant of proportionality is the
+**density**:
+
+$$P\bigl(X \in [x, x+\epsilon]\bigr) \approx \epsilon\, p(x).$$
+
+. . .
+
+So $P(X = x) = 0$ for every fixed point, and $p(x)$ may exceed $1$ —
+a density is a *rate*, not a probability.
+:::
+
+::: {.slide title="Probability is area"}
+[Two defining properties]{.kicker}
+
+A density is non-negative and integrates to one; probability of an
+interval is the area beneath it:
+
+$$p(x)\ge 0, \qquad \int_{-\infty}^{\infty} p(x)\,dx = 1, \qquad
+P\bigl(X\in(a,b]\bigr) = \int_a^b p(x)\,dx.$$
+
+. . .
+
+A Riemann sum over a two-bump mixture confirms the total mass is $1$ and
+recovers $P(-2 < X \le 3)$ from the density alone:
 
 @random-variables-density-to-probability
 :::
 
-::: {.slide title="PDF and CDF: derivative and integral"}
-The c.d.f. accumulates the density; the density is its slope.
-Area under $p$ over $(a,b]$ equals the rise $F(b)-F(a)$ —
-the fundamental theorem of calculus, $F'=p$:
+::: {.slide title="The c.d.f. and the FTC"}
+[The c.d.f.]{.kicker}
+
+The cumulative distribution accumulates the density,
+$F(x) = \int_{-\infty}^x p = P(X \le x)$, rising monotonically from $0$
+to $1$.
+
+::: {.d2l-note .rule}
+**Proposition.** If $p$ is continuous, $F'(x) = p(x)$ — the density is
+the *slope* of the c.d.f. (fundamental theorem of calculus).
+:::
+
+The same number two ways: the area under $p$ over $(a,b]$ equals the rise
+$F(b)-F(a)$.
 
 @fig:mdl-prob-pdf-cdf
 :::
 
-::: {.slide title="Mean, variance, standard deviation"}
-$\mathbb{E}$ is linear: $\mathbb{E}[X+Y]=\mathbb{E}[X]+\mathbb{E}[Y]$,
-*no independence needed*. Variance scales as
-$\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$; $\sigma=\sqrt{\textrm{Var}}$
-restores the original units.
+::: {.slide title="The c.d.f. unifies and samples"}
+[The c.d.f.]{.kicker}
+
+One object covers every kind of variable: a **staircase** for discrete
+mass, a smooth curve for continuous density, and anything in between for
+mixtures.
+
+. . .
+
+Its inverse $F^{-1}(q)$ is the $q$-th **quantile**, and gives free
+sampling: if $U\sim\text{Uniform}[0,1]$ then $F^{-1}(U)$ has c.d.f. $F$
+(*inverse-transform sampling*).
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Mean, variance, and tail bounds]{.dtitle}
+
+[linearity, the computational form, Markov, Chebyshev]{.dsub}
+:::
+:::
+
+::: {.slide title="The mean is linear"}
+[Moments]{.kicker}
+
+The mean is the density-weighted center,
+$\mu_X = \mathbb E[X] = \int x\,p(x)\,dx$.
+
+::: {.d2l-note .rule}
+**Proposition.** $\mathbb E[aX+b] = a\,\mathbb E[X] + b$ and
+$\mathbb E[X+Y] = \mathbb E[X] + \mathbb E[Y]$ — **no independence
+needed**.
+:::
+
+The sum rule follows by splitting the joint expectation through the
+marginals; it is why we can move $\mathbb E$ freely through a network's
+losses.
+:::
+
+::: {.slide title="Variance and its computational form"}
+[Moments]{.kicker}
+
+Variance is the mean squared deviation,
+$\sigma_X^2 = \mathbb E[(X-\mu_X)^2]$.
+
+::: {.d2l-note .rule}
+**Proposition.** $\operatorname{Var}(X) = \mathbb E[X^2] - \mu_X^2$
+and $\operatorname{Var}(aX+b) = a^2\operatorname{Var}(X)$.
+:::
+
+. . .
+
+*Proof.* Expand $(X-\mu_X)^2 = X^2 - 2\mu_X X + \mu_X^2$ and take
+expectations. A shift $b$ cancels inside the deviation $a(X-\mu_X)$, so
+only $a^2$ survives the square. $\blacksquare$
+:::
+
+::: {.slide title="Markov's inequality"}
+[Tail bounds]{.kicker}
+
+For a **non-negative** $X$ and any $a>0$,
+
+$$P(X \ge a) \le \frac{\mathbb E[X]}{a}.$$
+
+. . .
+
+*Proof.* Pointwise $X \ge a\,\mathbf 1_{\{X\ge a\}}$; take expectations
+and use $\mathbb E[\mathbf 1_{\{X\ge a\}}] = P(X\ge a)$. $\blacksquare$
+
+::: {.d2l-note}
+No distributional assumption at all — it bounds gradient norms, incomes,
+and file sizes alike.
+:::
 :::
 
 ::: {.slide title="Chebyshev: σ is a yardstick"}
-For *any* distribution with finite variance,
+[Tail bounds]{.kicker}
 
-$$P\bigl(|X-\mu| \ge \alpha\sigma\bigr) \le \tfrac{1}{\alpha^2}.$$
+Standard deviation measures distance in *universal* units:
 
-Proof: Markov's inequality $P(Z\ge a)\le \mathbb{E}[Z]/a$ applied
-to $Z=(X-\mu)^2$. The bound is sharp — the three-atom example
-attains it with equality at $p=1/8$:
+$$P\bigl(|X-\mu_X| \ge \alpha\,\sigma_X\bigr) \le \frac{1}{\alpha^2}.$$
+
+*Proof.* Apply Markov to $Z = (X-\mu_X)^2$ with $a = \alpha^2\sigma_X^2$.
+$\blacksquare$ The bound is **sharp** — the three-atom example attains
+equality at $p=\tfrac18$:
 
 @fig:mdl-prob-chebyshev
 :::
 
-::: {.slide title="Several variables: joint and marginal"}
-A joint density $p(x,y)$ integrates to $1$. *Marginalize* by
-integrating out the unwanted variable, $p_X(x)=\int p(x,y)\,dy$
-— integrating the joint up a vertical strip:
+::: {.slide title="When moments fail: Cauchy"}
+[Counterexample]{.kicker}
+
+For $p(x) = \dfrac{1}{\pi(1+x^2)}$ the mean is an undefined
+$\infty-\infty$ and the variance integral diverges like $\log R$.
+Partial sums of $\mathbb E[X^2]$ blow up rather than settle:
+
+@random-variables-cauchy-diverges
+
+::: {.d2l-note}
+Symmetry is not enough — *absolute* integrability is what a finite mean
+requires. Heavy tails break the usual toolbox.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Several variables]{.dtitle}
+
+[marginals, conditioning, covariance, change of variables]{.dsub}
+:::
+:::
+
+::: {.slide title="Joint and marginal densities"}
+[Several variables]{.kicker}
+
+A joint density $p(x,y)\ge 0$ integrates to $1$ over the plane.
+**Marginalize** by integrating out the variable you do not care about:
+
+$$p_X(x) = \int_{-\infty}^{\infty} p_{X,Y}(x,y)\,dy.$$
+
+Integrate the joint up a vertical strip at $x$ to get the marginal height
+there:
 
 @fig:mdl-prob-marginal
 :::
 
-::: {.slide title="Covariance and correlation"}
-Covariance $\textrm{Cov}(X,Y)=\mathbb{E}[XY]-\mathbb{E}[X]\mathbb{E}[Y]$
-measures *linear* co-variation (in mixed units); correlation
-$\rho=\textrm{Cov}/(\sigma_X\sigma_Y)\in[-1,1]$ normalizes it —
-the cosine between centered variables.
+::: {.slide title="Conditioning and independence"}
+[Conditioning]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Slice the joint at $Y=y$ and renormalize:
+
+$$p_{X\mid Y}(x\mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}.$$
+
+Chain rule $p_{X,Y} = p_{X\mid Y}\,p_Y$ gives **Bayes' rule** for
+densities. $X \perp Y$ exactly when the joint factorizes — the slice
+shape stops depending on $y$.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-conditional-slice
+:::
+:::
+:::
+
+::: {.slide title="Conditional expectation & the tower"}
+[Conditioning]{.kicker}
+
+$\mathbb E[X\mid Y=y] = \int x\,p_{X\mid Y}(x\mid y)\,dx$ averages within a
+slice.
+
+::: {.d2l-note .rule}
+**Tower / Eve's law.**
+$\mathbb E[X] = \mathbb E\bigl[\mathbb E[X\mid Y]\bigr]$ and
+$\operatorname{Var}(X) = \mathbb E[\operatorname{Var}(X\mid Y)] +
+\operatorname{Var}(\mathbb E[X\mid Y])$.
+:::
+
+Total variance = **unexplained** (within-slice spread) +
+**explained** (spread of slice means) — the engine of ANOVA and every
+latent-variable model.
+:::
+
+::: {.slide title="Covariance"}
+[Co-variation]{.kicker}
+
+$\operatorname{Cov}(X,Y) = \mathbb E[XY] - \mathbb E[X]\,\mathbb E[Y]$
+measures *linear* co-variation, in mixed units:
+
+$$\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y)
++ 2\operatorname{Cov}(X,Y).$$
 
 @fig:mdl-prob-covariance
 
+::: {.d2l-note}
+Zero covariance is **weaker** than independence: with $Y$ uniform on
+$\{-2,\dots,2\}$ and $X=Y^2$, covariance is $0$ yet $X$ is a function of
+$Y$.
+:::
+:::
+
+::: {.slide title="Correlation is a cosine"}
+[Co-variation]{.kicker}
+
+Normalize covariance to kill the units:
+$\rho = \operatorname{Cov}(X,Y)/(\sigma_X\sigma_Y) \in [-1,1]$.
+
+*Proof of the bound.* $\operatorname{Var}(tX+Y)\ge 0$ is a non-negative
+quadratic in $t$; its discriminant gives
+$\operatorname{Cov}^2 \le \operatorname{Var}(X)\operatorname{Var}(Y)$,
+with equality iff $Y = aX+b$. $\blacksquare$
+
 . . .
+
+So $\rho = \cos\theta$ between centered variables — Cauchy–Schwarz in
+probabilistic dress:
 
 @fig:mdl-prob-correlation
 :::
 
+::: {.slide title="The covariance matrix → PCA"}
+[Co-variation]{.kicker}
+
+Stack pairwise covariances into $\Sigma_{ij} = \operatorname{Cov}(X_i,X_j)$.
+It is symmetric and **positive semidefinite**, since
+$\mathbf a^\top\Sigma\,\mathbf a = \operatorname{Var}\bigl(\textstyle\sum_i a_i X_i\bigr) \ge 0$.
+
+::: {.d2l-note .rule}
+Gaussian contours are ellipses whose axes are the **eigenvectors** of
+$\Sigma$ with half-lengths $\propto\sqrt{\lambda_i}$ — finding them is
+PCA (§22 spectral theorem in action).
+:::
+:::
+
+::: {.slide title="Change of variables for densities"}
+[Pushforward]{.kicker}
+
+Map $Y=g(X)$. To conserve probability, density thins by the local
+stretch:
+
+$$p_Y(y) = p_X\bigl(g^{-1}(y)\bigr)\,\left|\frac{dg^{-1}}{dy}(y)\right|.$$
+
+. . .
+
+In many dimensions this becomes a log-determinant of the Jacobian:
+
+$$\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\bigl|\det J_g(\mathbf x)\bigr|.$$
+
+::: {.d2l-note .rule}
+Log-dets **add** under composition → a normalizing flow stacks layers
+and just sums one $-\log|\det J_g|$ per layer.
+:::
+:::
+
+::: {.slide title="Change of variables, verified"}
+[Pushforward]{.kicker}
+
+For $X\sim\mathcal N(0,1)$ and $Y = e^X$, the formula gives the log-normal
+$p_Y(y) = \tfrac{1}{y\sqrt{2\pi}}\exp\!\bigl(-\tfrac12(\log y)^2\bigr)$.
+A histogram of $e^X$ matches it exactly:
+
+@random-variables-change-of-variables
+
+::: {.d2l-note}
+The naive guess $p_X(\log y)$ peaks at $y=1$; the Jacobian correction
+moves the true peak to $y=e^{-1}$.
+:::
+:::
+
 ::: {.slide title="Recap"}
-- PDF integrates to $1$; probability is area; $F'=p$ ties
-  density and c.d.f. by the FTC.
-- $\mathbb{E}$ linear; $\textrm{Var}=\mathbb{E}[X^2]-\mu^2$;
-  $\sigma$ is a Chebyshev yardstick.
-- Covariance = linear co-variation; correlation =
-  covariance normalized = cosine of an angle.
-- Foundation for cross-entropy, KL divergence, and
-  expectations through stochastic gradients.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Density $p\ge 0$, $\int p = 1$; probability is area; $F'=p$ (FTC).
+- $\mathbb E$ is linear (no independence); $\operatorname{Var}=\mathbb E[X^2]-\mu^2$.
+- $\sigma$ is a Chebyshev yardstick: $P(|X-\mu|\ge\alpha\sigma)\le1/\alpha^2$, and it is sharp.
+- Cauchy: check integrability, not just symmetry.
+:::
+
+::: {.col}
+- Marginalize by integrating out; condition by slicing + renormalizing; Bayes for densities.
+- Tower / Eve: total = explained + unexplained variance.
+- Covariance is linear co-variation; correlation is its cosine in $[-1,1]$; $\Sigma\succeq 0$ → ellipse axes = PCA.
+- Change of variables: the Jacobian keeps mass; log-dets sum → normalizing flows.
+:::
+:::
+
+::: {.d2l-note}
+Next: the **named distributions** — the specific shapes this machinery
+describes.
+:::
 :::

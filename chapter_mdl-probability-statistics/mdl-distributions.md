@@ -1318,122 +1318,358 @@ The ten laws of this section in one view:
 
 <!-- slides -->
 
-::: {.slide title="A family, not a list"}
-A dozen distributions cover almost everything, and they
-connect: Bernoulli is the seed, and a few construction and
-limit arrows generate the rest, all inside one envelope.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.2]{.kicker}
 
+The distributions a practitioner needs<br>**from Bernoulli to the Gaussian — and the family they belong to**.
+:::
+:::
+
+::: {.slide title="A family, not a list"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A dozen distributions cover almost everything in practice, and they
+**connect**: Bernoulli is the seed; construction and limit arrows grow
+the rest; conjugate priors close the tree — all inside one envelope.
+
+::: {.d2l-note}
+Learn the *map*, not a flat list of formulas.
+:::
+:::
+
+::: {.col .fig .big}
 @fig:mdl-prob-family-tree
 :::
-
-::: {.slide title="Setup"}
-One per-framework imports cell; the worked cells below evaluate
-each law and draw a sample.
-
-@distributions-imports
+:::
 :::
 
-::: {.slide title="Discrete distributions"}
-Mass functions $p_k = P(X=k)$, $\sum_k p_k = 1$:
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-- **Bernoulli** — one coin flip; binary-classifier output.
-- **Categorical** — $K$ outcomes; softmax layer, cross-entropy.
-- **Binomial** — count of successes in $n$ Bernoullis.
-- **Poisson** — count of rare events.
+[Discrete distributions]{.dtitle}
+
+[Bernoulli · Categorical · Uniform · Binomial · Poisson]{.dsub}
+:::
+:::
+
+::: {.slide title="Bernoulli: the seed"}
+[Discrete]{.kicker}
+
+One coin flip: $P(X=1)=p$, $P(X=0)=1-p$. Because $X^2 = X$, both moments
+collapse instantly: $\mathbb E[X]=p$, $\operatorname{Var}(X)=p(1-p)$.
+
+@distributions-bernoulli
+
+::: {.d2l-note .rule}
+Every binary classifier outputs a Bernoulli; its negative log-likelihood
+**is** binary cross-entropy.
+:::
+:::
+
+::: {.slide title="Categorical: softmax in disguise"}
+[Discrete]{.kicker}
+
+$K$ outcomes with $P(X=k)=p_k$. A network produces the $p_k$ from logits
+through the softmax $p_k = e^{z_k}/\sum_j e^{z_j}$, and the NLL is exactly
+cross-entropy.
+
+@distributions-categorical
+
+::: {.d2l-note}
+The **Gumbel-max** trick samples a categorical exactly; its soft version
+makes discrete choices differentiable.
+:::
+:::
+
+::: {.slide title="The discrete gallery"}
+[Discrete]{.kicker}
+
+Four laws, one picture — mass on the integers:
 
 @fig:mdl-prob-discrete-pmfs
+
+Uniform spreads mass evenly ($\mu=\tfrac{n+1}{2}$); the others concentrate
+it where events are likely.
 :::
 
-::: {.slide title="Binomial mean/variance, the elegant way"}
-$X=\sum_i X_i$ is a sum of $n$ Bernoullis, so linearity and
-independence give the moments for free:
+::: {.slide title="Binomial: moments for free"}
+[Discrete]{.kicker}
 
-$$\mu = \sum_i \mathbb{E}[X_i] = np, \quad
-\sigma^2 = \sum_i \mathrm{Var}(X_i) = np(1-p).$$
+A Binomial is a **sum of $n$ Bernoullis**, $X=\sum_i X_i$, so linearity
+and independence hand us the moments with no algebra:
+
+$$\mu = \sum_i \mathbb E[X_i] = np, \qquad
+\sigma^2 = \sum_i \operatorname{Var}(X_i) = np(1-p).$$
 
 @distributions-binomial
 :::
 
-::: {.slide title="Poisson = the many-rare limit of the binomial"}
-Take $\mathrm{Binomial}(n, \lambda/n)$ and let $n\to\infty$:
+::: {.slide title="Poisson: the many-rare limit"}
+[Discrete]{.kicker}
+
+Take $\text{Binomial}(n,\lambda/n)$ and send $n\to\infty$:
 
 $$\binom{n}{k}\Bigl(\tfrac{\lambda}{n}\Bigr)^k\Bigl(1-\tfrac{\lambda}{n}\Bigr)^{n-k}
 \longrightarrow \frac{\lambda^k e^{-\lambda}}{k!}.$$
 
-Mean $=$ variance $=\lambda$. Watch the limit happen:
-
 @distributions-binomial-to-poisson
+
+::: {.d2l-note}
+Mean $=$ variance $=\lambda$ is the Poisson fingerprint —
+**over-dispersion** (variance $>$ mean) signals a too-simple model.
+:::
 :::
 
-::: {.slide title="Continuous distributions"}
-Densities $p(x)\ge 0$, $\int p = 1$:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-- **Uniform** — raw randomness; $U(0,1)$ powers sampling.
-- **Exponential** — memoryless waiting times.
-- **Gaussian** — CLT limit; MSE noise model; max entropy.
-- **Laplace** — $L_1$/MAE loss; sparsity prior.
+[Continuous distributions]{.dtitle}
 
+[Uniform · Exponential · Gaussian · Laplace · Multivariate Gaussian]{.dsub}
+:::
+:::
+
+::: {.slide title="Uniform: raw randomness"}
+[Continuous]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Density $\tfrac{1}{b-a}$ on $[a,b]$; mean $\tfrac{a+b}{2}$, variance
+$\tfrac{(b-a)^2}{12}$.
+
+The unit uniform powers inverse-transform sampling, Monte Carlo,
+dropout masks, and initialization.
+
+@distributions-continuous-uniform
+:::
+
+::: {.col .fig}
 @fig:mdl-prob-continuous-pdfs
+:::
+:::
+:::
+
+::: {.slide title="Exponential: memorylessness"}
+[Continuous]{.kicker}
+
+Waiting times: $p(x)=\lambda e^{-\lambda x}$, $F(x)=1-e^{-\lambda x}$,
+mean $1/\lambda$, variance $1/\lambda^2$.
+
+$$P(X > s+t \mid X > s) = e^{-\lambda t} = P(X > t).$$
+
+@distributions-exponential
+
+::: {.d2l-note .rule}
+The **only** memoryless continuous law — the continuous partner of the
+Poisson, and the source of $X=-\log U/\lambda$ sampling.
+:::
 :::
 
 ::: {.slide title="Gaussian: the CLT limit"}
-Standardized sums converge to $\mathcal{N}(\mu,\sigma^2)$ for
-*any* iid finite-variance summands. Normalizer
-$\int e^{-x^2/2}dx=\sqrt{2\pi}$ via the polar trick.
+[Continuous]{.kicker}
 
-$$p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2}.$$
+Standardized sums of *any* iid finite-variance terms converge to it:
+
+$$p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\Bigr).$$
 
 @distributions-gaussian
+
+::: {.d2l-note}
+It is also the **maximum-entropy** law for a fixed mean and variance —
+the least-committal choice consistent with those two numbers.
+:::
 :::
 
-::: {.slide title="Multivariate Gaussian = covariance geometry"}
-Contours are ellipsoids whose axes are the eigenvectors of
-$\boldsymbol\Sigma$, with half-lengths $\propto\sqrt{\lambda_i}$:
+::: {.slide title="The normalizer: a polar trick"}
+[Continuous]{.kicker}
 
-@fig:mdl-prob-mvn-contours
+Why $\sqrt{2\pi}$? Square the integral and switch to polar coordinates:
+
+$$I^2 = \!\int\!\!\int e^{-(x^2+y^2)/2}\,dx\,dy
+= \!\int_0^{2\pi}\!\!\int_0^{\infty} e^{-r^2/2}\,r\,dr\,d\theta = 2\pi.$$
 
 . . .
+
+The Jacobian factor $r$ makes the radial integral elementary, so
+$I=\sqrt{2\pi}$ — a one-line miracle that no $1$-D substitution gives.
+:::
+
+::: {.slide title="Laplace: the L1 sibling"}
+[Continuous]{.kicker}
+
+$p(x)=\tfrac{1}{2b}e^{-|x-\mu|/b}$ — a sharp peak and heavier (exponential)
+tails than the Gaussian; variance $2b^2$.
+
+@distributions-laplace
+
+::: {.d2l-note .rule}
+Its NLL is $|y-\hat y|$ (MAE); as a prior it gives the $\ell_1$ /
+LASSO penalty; its ML location estimator is the **median**, not the mean.
+:::
+:::
+
+::: {.slide title="Multivariate Gaussian: covariance geometry"}
+[Continuous]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$p(\mathbf x)\propto \exp\!\Bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top
+\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\Bigr).$$
+
+Contours are ellipsoids: axes along the **eigenvectors** of
+$\boldsymbol\Sigma$, half-lengths $\propto\sqrt{\lambda_i}$. Isotropy =
+spheres = independent coordinates.
 
 @distributions-mvn
 :::
 
-::: {.slide title="The exponential family unifies them"}
-Nearly every distribution above fits one form
-(the uniforms stay outside):
+::: {.col .fig}
+@fig:mdl-prob-mvn-contours
+:::
+:::
+:::
 
-$$p(\mathbf{x}\mid\boldsymbol\eta) =
-h(\mathbf{x})\exp\bigl(\boldsymbol\eta^\top T(\mathbf{x}) - A(\boldsymbol\eta)\bigr).$$
+::: {.slide title="Closed under conditioning"}
+[Continuous]{.kicker}
 
-The log-partition $A$ generates moments:
-$\nabla A(\boldsymbol\eta) = \mathbb{E}[T(\mathbf{x})]$,
-and $A$ is convex — why MLE losses are clean.
+Partition $\mathbf x=(\mathbf x_1,\mathbf x_2)$. Then $\mathbf x_1\mid\mathbf x_2$
+is Gaussian with
+
+$$\boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 +
+\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
+\quad
+\boldsymbol\Sigma_{1\mid 2} = \boldsymbol\Sigma_{11} -
+\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.$$
+
+::: {.d2l-note .rule}
+Conditional mean is **linear** in $\mathbf x_2$; the Schur-complement
+covariance is the entire engine of Gaussian-process regression.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The exponential family]{.dtitle}
+
+[one form, maximum entropy, the moment property]{.dsub}
+:::
+:::
+
+::: {.slide title="One form to rule them"}
+[Unification]{.kicker}
+
+$$p(\mathbf x\mid\boldsymbol\eta) = h(\mathbf x)\,
+\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)\bigr).$$
+
+Base measure $h$, **natural parameters** $\boldsymbol\eta$, sufficient
+statistics $T$, log-partition $A$. Bernoulli ($\eta=\operatorname{logit}p$,
+$A=\operatorname{softplus}$), Poisson ($\eta=\log\lambda$), and Gaussian
+all fit.
+
+::: {.d2l-note}
+The uniforms, Cauchy, and Student-$t$ stay outside — their support moves
+with the parameters.
+:::
+:::
+
+::: {.slide title="Where the form comes from"}
+[Unification]{.kicker}
+
+Maximize entropy $H_h[p]$ subject to fixed averages
+$\mathbb E[T(\mathbf x)] = \boldsymbol\tau$. The Lagrange multipliers
+*are* the natural parameters, and the maximizer is exactly
+$p\propto h\,e^{\boldsymbol\eta^\top T}$.
+
+::: {.d2l-note .rule}
+The exponential family is the **least-committal** family consistent with a
+chosen set of expected statistics.
+:::
+:::
+
+::: {.slide title="The moment property"}
+[Unification]{.kicker}
+
+Differentiating the log-partition recovers the moments:
+
+$$\nabla A(\boldsymbol\eta) = \mathbb E[T(\mathbf x)], \qquad
+\nabla^2 A(\boldsymbol\eta) = \operatorname{Cov}(T) \succeq 0.$$
+
+So $A$ is **convex** and the MLE equation is moment matching,
+$\mathbb E[T] = \bar T$. Autograd confirms $dA/d\eta=\sigma(\eta)$ for the
+Bernoulli:
 
 @distributions-exp-family
 :::
 
-::: {.slide title="Conjugate priors: updating is counting"}
-Every exponential-family likelihood has a conjugate prior;
-the posterior stays in the prior's family:
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
 
-- **Beta** $\to$ Bernoulli / Binomial
-- **Gamma** $\to$ Poisson
-- **Dirichlet** $\to$ Categorical / Multinomial
+[Conjugate priors]{.dtitle}
 
-A $\mathrm{Beta}(\alpha,\beta)$ prior and $x$ heads in $n$ flips
-give a $\mathrm{Beta}(\alpha+x,\beta+n-x)$ posterior — the
-prior parameters are *pseudo-counts*.
+[Beta · Gamma · Dirichlet — updating is counting]{.dsub}
+:::
+:::
+
+::: {.slide title="Beta–Bernoulli: pseudo-counts"}
+[Priors]{.kicker}
+
+A $\text{Beta}(\alpha,\beta)$ prior times a Bernoulli likelihood with $x$
+heads in $n$ flips gives a $\text{Beta}(\alpha+x,\beta+n-x)$ posterior —
+$\alpha,\beta$ act as **phantom** heads and tails:
+
+$$\mathbb E[\theta\mid X] = \frac{\alpha+x}{\alpha+\beta+n}.$$
 
 @distributions-conjugate
+
+::: {.d2l-note}
+$\alpha=\beta=1$ recovers Laplace's rule of succession $(x+1)/(n+2)$.
+:::
+:::
+
+::: {.slide title="The rest of the tier"}
+[Priors]{.kicker}
+
+::: {.cols}
+::: {.col}
+**Gamma → Poisson.** Pseudo-events over a pseudo-window; marginalizing
+the rate gives the over-dispersed negative binomial.
+:::
+
+::: {.col}
+**Dirichlet → Categorical.** A multivariate Beta: one pseudo-count per
+class on the simplex.
+:::
+:::
+
+::: {.d2l-note .rule}
+**General fact.** Every exponential-family likelihood has a conjugate
+prior of the same form; its hyperparameters are pseudo-data
+$(\boldsymbol\nu,\kappa)$.
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Bernoulli $\to$ Binomial $\to$ Poisson / Gaussian by sums
-  and limits; Categorical $\to$ Multinomial.
-- Means/variances from linearity, limits, simple integrals.
-- The Gaussian is central (CLT, max entropy); it is closed
-  under linear maps and conditioning (Schur complement).
-- The exponential family unifies them; $\nabla A = \mathbb{E}[T]$,
-  and its convex $A$ is why deep-learning losses are clean.
-- Each has a conjugate prior (Beta, Gamma, Dirichlet); Bayesian
-  updating just adds pseudo-counts.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Bernoulli → Binomial → Poisson / Gaussian by sums and limits; Categorical → Multinomial.
+- Moments from linearity, limits, and a few integrals.
+- Gaussian is central: CLT, max entropy, closed under linear maps and conditioning (Schur complement).
+:::
+
+::: {.col}
+- The exponential family unifies them; $\nabla A=\mathbb E[T]$, $A$ convex → clean, convex MLE losses.
+- Each member has a conjugate prior (Beta / Gamma / Dirichlet) — Bayesian updating is just adding counts.
+- The named shapes are the vocabulary; maximum likelihood is the grammar (next).
+:::
+:::
 :::

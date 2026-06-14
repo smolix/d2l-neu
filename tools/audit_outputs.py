@@ -44,6 +44,14 @@ from pathlib import Path
 import capture_outputs as cap
 from scan_notebook_manifests import source_execution_class
 
+
+def _rel(path, root):
+    """Path relative to root for display; absolute if outside the tree."""
+    try:
+        return path.relative_to(root)
+    except ValueError:
+        return path
+
 FRAMEWORKS = cap.FRAMEWORKS
 
 
@@ -154,6 +162,31 @@ def collect(repo_root, store_dir, nb_root, frameworks):
     return records
 
 
+_LFS_POINTER_SIG = b'version https://git-lfs.github.com/spec/v1'
+_IMG_EXTS = ('.svg', '.png', '.jpg', '.jpeg', '.gif')
+
+
+def unmaterialized_lfs_pointers(store_dir):
+    """Image assets under the store that are still un-smudged Git-LFS pointer
+    files (≈130 bytes of `version https://git-lfs...`) instead of real content.
+
+    These ship into _book/ and break HTML images, and the PDF SVG→PDF step
+    (rsvg-convert chokes on the pointer text: "Start tag expected, '<' not
+    found"). The cause is rendering on a tree where `git lfs pull` never ran
+    (e.g. git-lfs absent at clone). Catching this before render turns a silent
+    broken upload into an actionable `git lfs pull`."""
+    out = []
+    for p in Path(store_dir).rglob('*'):
+        if p.suffix.lower() not in _IMG_EXTS or not p.is_file():
+            continue
+        try:
+            if p.stat().st_size < 300 and _LFS_POINTER_SIG in p.read_bytes()[:120]:
+                out.append(p)
+        except OSError:
+            continue
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__,
@@ -164,6 +197,10 @@ def main():
     ap.add_argument('--frameworks', default=','.join(FRAMEWORKS))
     ap.add_argument('--verify-fresh', action='store_true',
                     help='render gate: fail on hard-stale (inline) or integrity errors')
+    ap.add_argument('--check-lfs', action='store_true',
+                    help='fast gate: fail if any store image is an unmaterialized '
+                         'Git-LFS pointer (run before slides, which precede the '
+                         'verify-fresh html gate)')
     ap.add_argument('--stale', action='store_true',
                     help='print minimal re-execution set (source paths)')
     ap.add_argument('--json', action='store_true', help='machine-readable output')
@@ -178,6 +215,18 @@ def main():
         print(f'No store at {args.store_dir}/ — run `make capture-outputs` first',
               file=sys.stderr)
         return 1
+
+    if args.check_lfs:
+        ptrs = unmaterialized_lfs_pointers(store_dir)
+        if ptrs:
+            print(f'FAIL (check-lfs): {len(ptrs)} committed output image(s) are '
+                  f'unmaterialized Git-LFS pointers, not real files. Run '
+                  f'`git lfs pull` before rendering.', file=sys.stderr)
+            for p in ptrs[:10]:
+                print(f'      {_rel(p, repo_root)}', file=sys.stderr)
+            return 1
+        print('  ✓ store images materialized (no Git-LFS pointers).')
+        return 0
 
     records = collect(repo_root, store_dir, nb_root, frameworks)
 
@@ -247,6 +296,15 @@ def main():
         print('\n  ✓ store is clean and fresh.')
 
     if args.verify_fresh:
+        ptrs = unmaterialized_lfs_pointers(store_dir)
+        if ptrs:
+            print(f'\nFAIL (verify-fresh): {len(ptrs)} committed output image(s) '
+                  f'are unmaterialized Git-LFS pointers, not real files. Rendering '
+                  f'would ship broken images and break the PDF build. Run '
+                  f'`git lfs pull` to materialize them.', file=sys.stderr)
+            for p in ptrs[:10]:
+                print(f'      {_rel(p, repo_root)}', file=sys.stderr)
+            return 1
         gpus = host_gpu_count()
         # GPUs each resource class needs to *execute*. A stale notebook the
         # current host cannot run (it has fewer GPUs than the class needs) is

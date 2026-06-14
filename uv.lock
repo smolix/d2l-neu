@@ -1508,7 +1508,7 @@ dependencies = [
     { name = "scipy-openblas32", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl", hash = "sha256:02661d7310171e34e3264b0777b2e5d4885c3ad5823dac55ffc541e6e0de0bf2" },
+    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl", hash = "sha256:bfeeb8fdb94722d42d825aeb0c87d457a20cecbba214dbbaa9d10072581ea1ed" },
 ]
 
 [package.metadata]

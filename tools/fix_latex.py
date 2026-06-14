@@ -148,15 +148,24 @@ def fix_all(content):
                   content[intro_m.start():])
 
     # ── Phase 6: Appendix ──
-    # Find the first appendix chapter (ch 22 = "Mathematics for Deep Learning")
-    app_m = re.search(r'\\setcounter\{chapter\}\{21\}', content)
-    if app_m:
-        content = (content[:app_m.start()] +
-                  '\\appendix\\setcounter{chapter}{0}\n' +
-                  content[app_m.start():])
-        # Fix the setcounter values for appendix chapters
-        content = content.replace('\\setcounter{chapter}{21}', '\\setcounter{chapter}{0}')
-        content = content.replace('\\setcounter{chapter}{22}', '\\setcounter{chapter}{1}')
+    # The "Mathematics for Deep Learning" appendix (logical chapters 22+)
+    # renders with \appendix lettering (A, B, C, …), sections nested (A.1…).
+    # Phase 2 gave each appendix chapter \setcounter{chapter}{ch-1}; under
+    # \appendix we want them counted from 0 (→A), so remap every appendix
+    # counter N>=21 → N-21 (22→A, 23→B, 24→C, …). The previous code hardcoded
+    # only 21→0 and 22→1, so chapters 24+ kept their global numbers and
+    # rendered as A, B, X, Y, Z… (and \Alph overflows past 26).
+    first_app = re.search(r'\\setcounter\{chapter\}\{21\}', content)
+    if first_app:
+        idx = first_app.start()
+        head, tail = content[:idx], content[idx:]
+
+        def _shift_appendix(m):
+            n = int(m.group(1))
+            return f'\\setcounter{{chapter}}{{{n - 21}}}' if n >= 21 else m.group(0)
+
+        tail = re.sub(r'\\setcounter\{chapter\}\{(\d+)\}', _shift_appendix, tail)
+        content = head + '\\appendix\n' + tail
 
     # ── Phase 7: Remove the "X" empty chapter (from zreferences) ──
     content = re.sub(r'\\chapter\{\\texorpdfstring[^}]*\}[^\n]*\n', '', content)

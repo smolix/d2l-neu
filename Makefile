@@ -720,9 +720,13 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-bu
 		python3 tools/fix_latex.py _pdf/$(1)/Dive-into-Deep-Learning.tex; \
 		cd _pdf/$(1) && xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \
 		xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \
+		xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \
 		cd "$(CURDIR)"; \
-		if [ -f _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf ]; then \
-			mv _pdf/$(1)/_pdf/Dive-into-Deep-Learning.pdf _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf; \
+		: 'Publish the fix_latex-patched PDF (hierarchical chapter/section'; \
+		: 'numbering) — NOT quartos own pre-fix compile under _pdf/$(1)/_pdf/.'; \
+		if [ -f _pdf/$(1)/Dive-into-Deep-Learning.pdf ]; then \
+			mkdir -p _pdf/$(1)/_pdf; \
+			mv -f _pdf/$(1)/Dive-into-Deep-Learning.pdf _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf; \
 		fi; \
 		if [ -f _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf ]; then \
 			mkdir -p _book/pdf; \
